@@ -190,6 +190,20 @@ typedef struct CvLSVMFilterObject{
     float *H;
 } CvLSVMFilterObject;
 
+typedef struct CvLSVMFilterObjectCaskad{
+    CvLSVMFilterPosition V;
+    float fineFunction[4];
+    int sizeX;
+    int sizeY;
+    int numFeatures;
+    float *H;
+    float *H_PCA;
+    float Hypothesis, Deformation;
+    float Hypothesis_PCA, Deformation_PCA;
+    int deltaX;
+    int deltaY;
+} CvLSVMFilterObjectCaskad;
+
 // data type: STRUCT CvLatentSvmDetector
 // structure contains internal representation of trained Latent SVM detector
 // num_filters			- total number of filters (root plus part) in model
@@ -208,6 +222,19 @@ typedef struct CvLatentSvmDetector
     float score_threshold;
 }
 CvLatentSvmDetector;
+
+typedef struct CvLatentSvmDetectorCaskad
+{
+    int num_filters;
+    int num_components;
+    int* num_part_filters;
+    CvLSVMFilterObjectCaskad** filters;
+    float* b;
+    float score_threshold;
+    float *pca;
+    int pca_size;
+}
+CvLatentSvmDetectorCaskad;
 
 // data type: STRUCT CvObjectDetection
 // structure contains the bounding box and confidence level for detected object
@@ -326,6 +353,41 @@ private:
     vector<CvLatentSvmDetector*> detectors;
     vector<string> classNames;
 };
+
+namespace lsvmcascade
+{
+class CV_EXPORTS LatentSvmDetector
+{
+public:
+    struct CV_EXPORTS ObjectDetection
+    {
+        ObjectDetection();
+        ObjectDetection( const Rect& rect, float score, int classID=-1 );
+        Rect rect;
+        float score;
+        int classID;
+    };
+
+    LatentSvmDetector();
+    LatentSvmDetector( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+    virtual ~LatentSvmDetector();
+
+    virtual void clear();
+    virtual bool empty() const;
+    bool load( const vector<string>& filenames, const vector<string>& classNames=vector<string>() );
+
+    virtual void detect( const Mat& image,
+                         vector<ObjectDetection>& objectDetections,
+                         float overlapThreshold=0.5f);
+
+    const vector<string>& getClassNames() const;
+    size_t getClassCount() const;
+
+private:
+    vector<CvLatentSvmDetectorCaskad*> detectors;
+    vector<string> classNames;
+};
+}
 
 CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
 CV_EXPORTS_W void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, CV_OUT vector<int>& weights, int groupThreshold, double eps=0.2);
