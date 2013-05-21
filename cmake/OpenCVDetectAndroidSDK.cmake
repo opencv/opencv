@@ -176,7 +176,8 @@ macro(android_get_compatible_target VAR)
 endmacro()
 
 unset(__android_project_chain CACHE)
-#add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
+
+# add_android_project(target_name ${path} NATIVE_DEPS opencv_core LIBRARY_DEPS ${OpenCV_BINARY_DIR} SDK_TARGET 11)
 macro(add_android_project target path)
   # parse arguments
   set(android_proj_arglist NATIVE_DEPS LIBRARY_DEPS SDK_TARGET IGNORE_JAVA IGNORE_MANIFEST)
@@ -210,6 +211,16 @@ macro(add_android_project target path)
     ocv_check_dependencies(${android_proj_NATIVE_DEPS})
   else()
     ocv_check_dependencies(${android_proj_NATIVE_DEPS} opencv_java)
+  endif()
+
+  if(EXISTS "${path}/jni/Android.mk" )
+    # find if native_app_glue is used
+    file(STRINGS "${path}/jni/Android.mk" NATIVE_APP_GLUE REGEX ".*(call import-module,android/native_app_glue)" )
+    if(NATIVE_APP_GLUE)
+      if(ANDROID_NATIVE_API_LEVEL LESS 9 OR NOT EXISTS "${ANDROID_NDK}/sources/android/native_app_glue")
+        set(OCV_DEPENDENCIES_FOUND FALSE)
+      endif()
+    endif()
   endif()
 
   if(OCV_DEPENDENCIES_FOUND AND android_proj_sdk_target AND ANDROID_EXECUTABLE AND ANT_EXECUTABLE AND ANDROID_TOOLS_Pkg_Revision GREATER 13 AND EXISTS "${path}/${ANDROID_MANIFEST_FILE}")
@@ -268,9 +279,6 @@ macro(add_android_project target path)
       file(STRINGS "${path}/jni/Android.mk" JNI_LIB_NAME REGEX "LOCAL_MODULE[ ]*:=[ ]*.*" )
       string(REGEX REPLACE "LOCAL_MODULE[ ]*:=[ ]*([a-zA-Z_][a-zA-Z_0-9]*)[ ]*" "\\1" JNI_LIB_NAME "${JNI_LIB_NAME}")
 
-      # find using of native app glue to determine native activity
-      file(STRINGS "${path}/jni/Android.mk" NATIVE_APP_GLUE REGEX ".*(call import-module,android/native_app_glue)" )
-
       if(JNI_LIB_NAME)
         ocv_include_modules_recurse(${android_proj_NATIVE_DEPS})
         ocv_include_directories("${path}/jni")
@@ -291,9 +299,9 @@ macro(add_android_project target path)
             )
 
         get_target_property(android_proj_jni_location "${JNI_LIB_NAME}" LOCATION)
-    if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
-        add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
-    endif()
+        if (NOT (CMAKE_BUILD_TYPE MATCHES "debug"))
+            add_custom_command(TARGET ${JNI_LIB_NAME} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-unneeded "${android_proj_jni_location}")
+        endif()
       endif()
     endif()
 

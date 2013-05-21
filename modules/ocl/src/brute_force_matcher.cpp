@@ -844,8 +844,8 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch2Collection(const oclMat &quer
     if (query.empty() || trainCollection.empty())
         return;
 
-    typedef void (*caller_t)(const oclMat & query, const oclMat & trains, const oclMat & masks,
-                             const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance);
+    // typedef void (*caller_t)(const oclMat & query, const oclMat & trains, const oclMat & masks,
+    //                          const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance);
 
     CV_Assert(query.channels() == 1 && query.depth() < CV_64F);
 
@@ -992,7 +992,7 @@ void cv::ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat &query, std::vec
 
 // radiusMatchSingle
 void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchSingle(const oclMat &query, const oclMat &train,
-        oclMat &trainIdx, oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
+        oclMat &trainIdx,   oclMat &distance, oclMat &nMatches, float maxDistance, const oclMat &mask)
 {
     if (query.empty() || train.empty())
         return;
@@ -1094,9 +1094,9 @@ void cv::ocl::BruteForceMatcher_OCL_base::radiusMatchCollection(const oclMat &qu
     if (query.empty() || empty())
         return;
 
+#if 0
     typedef void (*caller_t)(const oclMat & query, const oclMat * trains, int n, float maxDistance, const oclMat * masks,
                              const oclMat & trainIdx, const oclMat & imgIdx, const oclMat & distance, const oclMat & nMatches);
-#if 0
     static const caller_t callers[3][6] =
     {
         {
