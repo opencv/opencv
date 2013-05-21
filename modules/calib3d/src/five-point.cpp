@@ -487,17 +487,17 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    const double dist = 50.0;
+    const float dist = 50.0;
     Mat Q;
 
     triangulatePoints(P0, P1, points1, points2, Q);
-    Mat Q3_inv(1, Q.cols, Q.type()); // CV_64Fc1
+    Mat Q3_inv(1, Q.cols, Q.type());
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
     Q3_inv.row(0) = 1.0 / Q.row(3); // FMUL faster than FDIV (only once)
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) /= 1.0; // Q.row(3) /= Q.row(3);
     //Q.row(0) *= Q3_inv.row(0);
     //Q.row(1) *= Q3_inv.row(0);
     //Q.row(2) *= Q3_inv.row(0);
@@ -512,7 +512,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) /= 1.0; // Q.row(3) /= Q.row(3);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
@@ -523,7 +523,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) /= 1.0; // Q.row(3) /= Q.row(3);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
@@ -534,7 +534,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     Q.row(0) /= Q.row(3);
     Q.row(1) /= Q.row(3);
     Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) /= 1.0; // Q.row(3) /= Q.row(3);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;
