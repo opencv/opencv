@@ -206,10 +206,10 @@ void LatentSVMDetectorCaskadTest::run( int /* start_from */)
     string img_path_cat = string(ts->get_data_path()) + "latentsvmdetector/cat.png";
     string img_path_cars = string(ts->get_data_path()) + "latentsvmdetector/cars.png";
 
-    string model_path_cat = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/cat.xml";
-    string model_path_car = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007/car.xml";
+    string model_path_cat = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007_caskad/cat.xml";
+    string model_path_car = string(ts->get_data_path()) + "latentsvmdetector/models_VOC2007_caskad/car.xml";
 
-    string true_res_path = string(ts->get_data_path()) + "latentsvmdetector/results.xml";
+    string true_res_path = string(ts->get_data_path()) + "latentsvmdetector/results_caskad.xml";
 
 
 #ifdef HAVE_TBB
