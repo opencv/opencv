@@ -68,9 +68,7 @@
 #include "opencv2/ocl.hpp"
 
 #include "utility.hpp"
-#include "interpolation.hpp"
 
 #include "opencv2/core/private.hpp"
 
 #endif
-

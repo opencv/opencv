@@ -185,10 +185,10 @@ __kernel void data_step_down(__global T *src, int src_rows,
         for (int d = 0; d < cndisp; ++d)
         {
             float dst_reg;
-            dst_reg  = src[(d * src_rows + (2*y+0)) * src_step + 2*x+0];
-            dst_reg += src[(d * src_rows + (2*y+1)) * src_step + 2*x+0];
-            dst_reg += src[(d * src_rows + (2*y+0)) * src_step + 2*x+1];
-            dst_reg += src[(d * src_rows + (2*y+1)) * src_step + 2*x+1];
+            dst_reg  = src[(d * src_rows + min(2*y+0, src_rows-1)) * src_step + 2*x+0];
+            dst_reg += src[(d * src_rows + min(2*y+1, src_rows-1)) * src_step + 2*x+0];
+            dst_reg += src[(d * src_rows + min(2*y+0, src_rows-1)) * src_step + 2*x+1];
+            dst_reg += src[(d * src_rows + min(2*y+1, src_rows-1)) * src_step + 2*x+1];
 
             dst[(d * dst_rows + y) * dst_step + x] = saturate_cast(dst_reg);
         }

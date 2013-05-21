@@ -72,28 +72,21 @@ namespace stereoBM
 ////////////////////////////////////////////////////////////////////////
 static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterCap)
 {
-    Context *clCxt = input.clCxt;
-
     String kernelName = "prefilter_xsobel";
-    cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
     size_t localThreads[3]  = { blockSize, blockSize, 1 };
 
-    openCLVerifyKernel(clCxt, kernel,  localThreads);
-    openCLSafeCall(clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&input.data));
-    openCLSafeCall(clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&output.data));
-    openCLSafeCall(clSetKernelArg(kernel, 2, sizeof(cl_int), (void *)&input.rows));
-    openCLSafeCall(clSetKernelArg(kernel, 3, sizeof(cl_int), (void *)&input.cols));
-    openCLSafeCall(clSetKernelArg(kernel, 4, sizeof(cl_int), (void *)&prefilterCap));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&input.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&output.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&input.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&input.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&prefilterCap));
 
-    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 3, NULL,
-                                          globalThreads, localThreads, 0, NULL, NULL));
-
-    clFinish((cl_command_queue)clCxt->oclCommandQueue());
-    openCLSafeCall(clReleaseKernel(kernel));
-
+    openCLExecuteKernel(Context::getContext(), &stereobm, kernelName,
+        globalThreads, localThreads, args, -1, -1);
 }
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////common////////////////////////////////////
@@ -113,16 +106,13 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 {
     int winsz2 = winSize >> 1;
 
-    Context *clCxt = left.clCxt;
-
     String kernelName = "stereoKernel";
-    cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     disp.setTo(Scalar_<unsigned char>::all(0));
     minSSD_buf.setTo(Scalar_<unsigned int>::all(0xFFFFFFFF));
 
     size_t minssd_step = minSSD_buf.step / minSSD_buf.elemSize();
-    size_t local_mem_size = (BLOCK_W + N_DISPARITIES * (BLOCK_W + 2 * winsz2)) *
+    size_t local_mem_size = (N_DISPARITIES * (BLOCK_W + 2 * winsz2)) *
                             sizeof(cl_uint);
     //size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, 1,1};
@@ -131,26 +121,23 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
                                1
                              };
 
-    openCLVerifyKernel(clCxt, kernel, localThreads);
-    openCLSafeCall(clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&left.data));
-    openCLSafeCall(clSetKernelArg(kernel, 1, sizeof(cl_mem), (void *)&right.data));
-    openCLSafeCall(clSetKernelArg(kernel, 2, sizeof(cl_mem), (void *)&minSSD_buf.data));
-    openCLSafeCall(clSetKernelArg(kernel, 3, sizeof(cl_int), (void *)&minssd_step));
-    openCLSafeCall(clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *)&disp.data));
-    openCLSafeCall(clSetKernelArg(kernel, 5, sizeof(cl_int), (void *)&disp.step));
-    openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&left.cols));
-    openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&left.rows));
-    openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_int), (void *)&left.step));
-    openCLSafeCall(clSetKernelArg(kernel, 9, sizeof(cl_int), (void *)&maxdisp));
-    openCLSafeCall(clSetKernelArg(kernel, 10, sizeof(cl_int), (void *)&winsz2));
-    openCLSafeCall(clSetKernelArg(kernel, 11, local_mem_size, (void *)NULL));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&left.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&right.data));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&minSSD_buf.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&minssd_step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&disp.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&disp.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&left.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&left.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&left.step));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&maxdisp));
+    args.push_back(std::make_pair(local_mem_size, (void *)NULL));
 
-    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 2, NULL,
-                                          globalThreads, localThreads, 0, NULL, NULL));
-
-
-    clFinish((cl_command_queue)clCxt->oclCommandQueue());
-    openCLSafeCall(clReleaseKernel(kernel));
+    char opt [128];
+    sprintf(opt, "-D radius=%d", winsz2);
+    openCLExecuteKernel(Context::getContext(), &stereobm, kernelName,
+        globalThreads, localThreads, args, -1, -1, opt);
 }
 ////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////postfilter_textureness///////////////////////
@@ -158,10 +145,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 static void postfilter_textureness(oclMat &left, int winSize,
                             float avergeTexThreshold, oclMat &disparity)
 {
-    Context *clCxt = left.clCxt;
-
     String kernelName = "textureness_kernel";
-    cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereobm, kernelName);
 
     size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, blockSize ,1};
@@ -172,22 +156,19 @@ static void postfilter_textureness(oclMat &left, int winSize,
 
     size_t local_mem_size = (localThreads[0] + localThreads[0] + (winSize / 2) * 2) * sizeof(float);
 
-    openCLVerifyKernel(clCxt, kernel,  localThreads);
-    openCLSafeCall(clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&disparity.data));
-    openCLSafeCall(clSetKernelArg(kernel, 1, sizeof(cl_int), (void *)&disparity.rows));
-    openCLSafeCall(clSetKernelArg(kernel, 2, sizeof(cl_int), (void *)&disparity.cols));
-    openCLSafeCall(clSetKernelArg(kernel, 3, sizeof(cl_int), (void *)&disparity.step));
-    openCLSafeCall(clSetKernelArg(kernel, 4, sizeof(cl_mem), (void *)&left.data));
-    openCLSafeCall(clSetKernelArg(kernel, 5, sizeof(cl_int), (void *)&left.rows));
-    openCLSafeCall(clSetKernelArg(kernel, 6, sizeof(cl_int), (void *)&left.cols));
-    openCLSafeCall(clSetKernelArg(kernel, 7, sizeof(cl_int), (void *)&winSize));
-    openCLSafeCall(clSetKernelArg(kernel, 8, sizeof(cl_float), (void *)&avergeTexThreshold));
-    openCLSafeCall(clSetKernelArg(kernel, 9, local_mem_size, NULL));
-    openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 2, NULL,
-                                          globalThreads, localThreads, 0, NULL, NULL));
-
-    clFinish((cl_command_queue)clCxt->oclCommandQueue());
-    openCLSafeCall(clReleaseKernel(kernel));
+    std::vector< std::pair<size_t, const void *> > args;
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&disparity.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&disparity.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&disparity.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&disparity.step));
+    args.push_back(std::make_pair(sizeof(cl_mem), (void *)&left.data));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&left.rows));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&left.cols));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&winSize));
+    args.push_back(std::make_pair(sizeof(cl_float), (void *)&avergeTexThreshold));
+    args.push_back(std::make_pair(local_mem_size, (void*)NULL));
+    openCLExecuteKernel(Context::getContext(), &stereobm, kernelName,
+        globalThreads, localThreads, args, -1, -1);
 }
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////operator/////////////////////////////////

@@ -362,6 +362,9 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     typedef sp<Camera> (*Android23ConnectFuncType)(int);
     typedef sp<Camera> (*Android3DConnectFuncType)(int, int);
 
+    const int BACK_CAMERA_INDEX = 99;
+    const int FRONT_CAMERA_INDEX = 98;
+
     enum {
     CAMERA_SUPPORT_MODE_2D = 0x01, /* Camera Sensor supports 2D mode. */
     CAMERA_SUPPORT_MODE_3D = 0x02, /* Camera Sensor supports 3D mode. */
@@ -373,7 +376,51 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     const char Android23ConnectName[] = "_ZN7android6Camera7connectEi";
     const char Android3DConnectName[] = "_ZN7android6Camera7connectEii";
 
-    LOGD("CameraHandler::initCameraConnect(%p, %d, %p, %p)", callback, cameraId, userData, prevCameraParameters);
+    int localCameraIndex = cameraId;
+
+#if !defined(ANDROID_r2_2_0)
+    if (cameraId == BACK_CAMERA_INDEX)
+    {
+        LOGD("Back camera selected");
+        for (int i = 0; i < Camera::getNumberOfCameras(); i++)
+        {
+            CameraInfo info;
+            Camera::getCameraInfo(i, &info);
+            if (info.facing == CAMERA_FACING_BACK)
+            {
+                localCameraIndex = i;
+                break;
+            }
+        }
+    }
+    else if (cameraId == FRONT_CAMERA_INDEX)
+    {
+        LOGD("Front camera selected");
+        for (int i = 0; i < Camera::getNumberOfCameras(); i++)
+        {
+            CameraInfo info;
+            Camera::getCameraInfo(i, &info);
+            if (info.facing == CAMERA_FACING_FRONT)
+            {
+                localCameraIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (localCameraIndex == BACK_CAMERA_INDEX)
+    {
+        LOGE("Back camera not found!");
+        return NULL;
+    }
+    else if (localCameraIndex == FRONT_CAMERA_INDEX)
+    {
+        LOGE("Front camera not found!");
+        return NULL;
+    }
+#endif
+
+    LOGD("CameraHandler::initCameraConnect(%p, %d, %p, %p)", callback, localCameraIndex, userData, prevCameraParameters);
 
     sp<Camera> camera = 0;
 
@@ -381,8 +428,8 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
     if (!CameraHALHandle)
     {
-    LOGE("Cannot link to \"libcamera_client.so\"");
-    return NULL;
+        LOGE("Cannot link to \"libcamera_client.so\"");
+        return NULL;
     }
 
     // reset errors
@@ -390,24 +437,24 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
 
     if (Android22ConnectFuncType Android22Connect = (Android22ConnectFuncType)dlsym(CameraHALHandle, Android22ConnectName))
     {
-    LOGD("Connecting to CameraService v 2.2");
-    camera = Android22Connect();
+        LOGD("Connecting to CameraService v 2.2");
+        camera = Android22Connect();
     }
     else if (Android23ConnectFuncType Android23Connect = (Android23ConnectFuncType)dlsym(CameraHALHandle, Android23ConnectName))
     {
-    LOGD("Connecting to CameraService v 2.3");
-    camera = Android23Connect(cameraId);
+        LOGD("Connecting to CameraService v 2.3");
+        camera = Android23Connect(localCameraIndex);
     }
     else if (Android3DConnectFuncType Android3DConnect = (Android3DConnectFuncType)dlsym(CameraHALHandle, Android3DConnectName))
     {
-    LOGD("Connecting to CameraService v 3D");
-    camera = Android3DConnect(cameraId, CAMERA_SUPPORT_MODE_2D);
+        LOGD("Connecting to CameraService v 3D");
+        camera = Android3DConnect(localCameraIndex, CAMERA_SUPPORT_MODE_2D);
     }
     else
     {
-    dlclose(CameraHALHandle);
-    LOGE("Cannot connect to CameraService. Connect method was not found!");
-    return NULL;
+        dlclose(CameraHALHandle);
+        LOGE("Cannot connect to CameraService. Connect method was not found!");
+        return NULL;
     }
 
     dlclose(CameraHALHandle);
@@ -422,7 +469,7 @@ CameraHandler* CameraHandler::initCameraConnect(const CameraCallback& callback, 
     camera->setListener(handler);
 
     handler->camera = camera;
-    handler->cameraId = cameraId;
+    handler->cameraId = localCameraIndex;
 
     if (prevCameraParameters != 0)
     {

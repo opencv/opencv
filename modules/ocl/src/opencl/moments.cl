@@ -1,3 +1,48 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Sen Liu, swjtuls1987@126.com
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other oclMaterials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors as is and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
 #if defined (DOUBLE_SUPPORT)
 
 #ifdef cl_khr_fp64
@@ -609,22 +654,33 @@ __kernel void CvMoments_D5( __global float* src_data, int src_rows, int src_cols
     int y = wgidy*TILE_SIZE;  // real Y index of pixel
     int x = wgidx*TILE_SIZE;  // real X index of pixel
     int kcn = (cn==2)?2:4;
-    int rstep = min(src_step/4, TILE_SIZE);
+    src_step /= sizeof(*src_data);
+    int rstep = min(src_step, TILE_SIZE);
     tileSize_height = min(TILE_SIZE, src_rows - y);
     tileSize_width = min(TILE_SIZE, src_cols -x);
-    if(tileSize_width < TILE_SIZE)
-        for(int i = tileSize_width; i < rstep; i++ )
-            *((__global float*)src_data+(y+lidy)*src_step/4+x+i) = 0;
+    int maxIdx = mul24(src_rows, src_cols);
+    int yOff = (y+lidy)*src_step;
+    int index;
+    if(tileSize_width < TILE_SIZE && yOff < src_rows)
+        for(int i = tileSize_width; i < rstep && (yOff+x+i) < maxIdx; i++ )
+            *(src_data+yOff+x+i) = 0;
     if( coi > 0 )
         for(int i=0; i < tileSize_width; i+=VLEN_F)
         {
+#pragma unroll
             for(int j=0; j<4; j++)
-                tmp_coi[j] = *(src_data+(y+lidy)*src_step/4+(x+i+j)*kcn+coi-1);
+            {
+                index = yOff+(x+i+j)*kcn+coi-1;
+                if (index < maxIdx)
+                    tmp_coi[j] = *(src_data+index);
+                else
+                    tmp_coi[j] = 0;
+            }
             tmp[i/VLEN_F] = (float4)(tmp_coi[0],tmp_coi[1],tmp_coi[2],tmp_coi[3]);
         }
     else
-        for(int i=0; i < tileSize_width; i+=VLEN_F)
-            tmp[i/VLEN_F] = (float4)(*(src_data+(y+lidy)*src_step/4+x+i),*(src_data+(y+lidy)*src_step/4+x+i+1),*(src_data+(y+lidy)*src_step/4+x+i+2),*(src_data+(y+lidy)*src_step/4+x+i+3));
+        for(int i=0; i < tileSize_width && (yOff+x+i) < maxIdx; i+=VLEN_F)
+            tmp[i/VLEN_F] = (*(__global float4 *)(src_data+yOff+x+i));
     float4 zero = (float4)(0);
     float4 full = (float4)(255);
     if( binary )
@@ -714,35 +770,59 @@ __kernel void CvMoments_D5( __global float* src_data, int src_rows, int src_cols
         // accumulate moments computed in each tile
         dst_step /= sizeof(F);
 
+        int dst_x_off = mad24(wgidy, dst_cols, wgidx);
+        int dst_off = 0;
+        int max_dst_index = 10 * blocky * get_global_size(1);
+
         // + m00 ( = m00' )
-        *(dst_m + mad24(DST_ROW_00 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[0];
+        dst_off = mad24(DST_ROW_00 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[0];
 
         // + m10 ( = m10' + x*m00' )
-        *(dst_m + mad24(DST_ROW_10 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[1] + xm;
+        dst_off = mad24(DST_ROW_10 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[1] + xm;
 
         // + m01 ( = m01' + y*m00' )
-        *(dst_m + mad24(DST_ROW_01 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[2] + ym;
+        dst_off = mad24(DST_ROW_01 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[2] + ym;
 
         // + m20 ( = m20' + 2*x*m10' + x*x*m00' )
-        *(dst_m + mad24(DST_ROW_20 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[3] + x * (mom[1] * 2 + xm);
+        dst_off = mad24(DST_ROW_20 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[3] + x * (mom[1] * 2 + xm);
 
         // + m11 ( = m11' + x*m01' + y*m10' + x*y*m00' )
-        *(dst_m + mad24(DST_ROW_11 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[4] + x * (mom[2] + ym) + y * mom[1];
+        dst_off = mad24(DST_ROW_11 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[4] + x * (mom[2] + ym) + y * mom[1];
 
         // + m02 ( = m02' + 2*y*m01' + y*y*m00' )
-        *(dst_m + mad24(DST_ROW_02 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[5] + y * (mom[2] * 2 + ym);
+        dst_off = mad24(DST_ROW_02 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[5] + y * (mom[2] * 2 + ym);
 
         // + m30 ( = m30' + 3*x*m20' + 3*x*x*m10' + x*x*x*m00' )
-        *(dst_m + mad24(DST_ROW_30 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
+        dst_off = mad24(DST_ROW_30 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[6] + x * (3. * mom[3] + x * (3. * mom[1] + xm));
 
         // + m21 ( = m21' + x*(2*m11' + 2*y*m10' + x*m01' + x*y*m00') + y*m20')
-        *(dst_m + mad24(DST_ROW_21 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
+        dst_off = mad24(DST_ROW_21 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[7] + x * (2 * (mom[4] + y * mom[1]) + x * (mom[2] + ym)) + y * mom[3];
 
         // + m12 ( = m12' + y*(2*m11' + 2*x*m01' + y*m10' + x*y*m00') + x*m02')
-        *(dst_m + mad24(DST_ROW_12 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
+        dst_off = mad24(DST_ROW_12 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[8] + y * (2 * (mom[4] + x * mom[2]) + y * (mom[1] + xm)) + x * mom[5];
 
         // + m03 ( = m03' + 3*y*m02' + 3*y*y*m01' + y*y*y*m00' )
-        *(dst_m + mad24(DST_ROW_03 * blocky, dst_step, mad24(wgidy, dst_cols, wgidx))) = mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
+        dst_off = mad24(DST_ROW_03 * blocky, dst_step, dst_x_off);
+        if (dst_off < max_dst_index)
+            *(dst_m + dst_off) = mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
     }
 }
 

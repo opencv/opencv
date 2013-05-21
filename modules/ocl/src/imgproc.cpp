@@ -1012,10 +1012,8 @@ namespace cv
             warpPerspective_gpu(src, dst, coeffs, interpolation);
         }
 
-
         ////////////////////////////////////////////////////////////////////////
         // integral
-
         void integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
         {
             CV_Assert(src.type() == CV_8UC1);
@@ -1029,13 +1027,24 @@ namespace cv
             int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
 
             oclMat t_sum , t_sqsum;
-            t_sum.create(src.cols, src.rows, CV_32SC1);
-            t_sqsum.create(src.cols, src.rows, CV_32FC1);
-
             int w = src.cols + 1, h = src.rows + 1;
-            sum.create(h, w, CV_32SC1);
+            int depth;
+            if( src.cols * src.rows <= 2901 * 2901 ) //2901 is the maximum size for int when all values are 255
+            {
+                t_sum.create(src.cols, src.rows, CV_32SC1);
+                sum.create(h, w, CV_32SC1);
+            }
+            else
+            {
+                 //Use float to prevent overflow
+                t_sum.create(src.cols, src.rows, CV_32FC1);
+                sum.create(h, w, CV_32FC1);
+            }
+            t_sqsum.create(src.cols, src.rows, CV_32FC1);
             sqsum.create(h, w, CV_32FC1);
-            int sum_offset = sum.offset / vlen, sqsum_offset = sqsum.offset / vlen;
+            depth = sum.depth();
+            int sum_offset = sum.offset / vlen;
+            int sqsum_offset = sqsum.offset / vlen;
 
             std::vector<std::pair<size_t , const void *> > args;
             args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&src.data ));
@@ -1048,7 +1057,7 @@ namespace cv
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step));
             size_t gt[3] = {((vcols + 1) / 2) * 256, 1, 1}, lt[3] = {256, 1, 1};
-            openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_cols", gt, lt, args, -1, -1);
+            openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_cols", gt, lt, args, -1, depth);
             args.clear();
             args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
             args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sqsum.data ));
@@ -1062,9 +1071,9 @@ namespace cv
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum_offset));
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sqsum_offset));
             size_t gt2[3] = {t_sum.cols  * 32, 1, 1}, lt2[3] = {256, 1, 1};
-            openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_rows", gt2, lt2, args, -1, -1);
-            //std::cout << "tested" << std::endl;
+            openCLExecuteKernel(src.clCxt, &imgproc_integral, "integral_rows", gt2, lt2, args, -1, depth);
         }
+
         void integral(const oclMat &src, oclMat &sum)
         {
             CV_Assert(src.type() == CV_8UC1);
@@ -1074,10 +1083,18 @@ namespace cv
             int vcols = (pre_invalid + src.cols + vlen - 1) / vlen;
 
             oclMat t_sum;
-            t_sum.create(src.cols, src.rows, CV_32SC1);
-
             int w = src.cols + 1, h = src.rows + 1;
-            sum.create(h, w, CV_32SC1);
+            int depth;
+            if(src.cols * src.rows <= 2901 * 2901)
+            {
+                t_sum.create(src.cols, src.rows, CV_32SC1);
+                sum.create(h, w, CV_32SC1);
+            }else
+            {
+                 t_sum.create(src.cols, src.rows, CV_32FC1);
+                 sum.create(h, w, CV_32FC1);
+            }
+            depth = sum.depth();
             int sum_offset = sum.offset / vlen;
 
             std::vector<std::pair<size_t , const void *> > args;
@@ -1090,7 +1107,7 @@ namespace cv
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&src.step ));
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t_sum.step));
             size_t gt[3] = {((vcols + 1) / 2) * 256, 1, 1}, lt[3] = {256, 1, 1};
-            openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_cols", gt, lt, args, -1, -1);
+            openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_cols", gt, lt, args, -1, depth);
             args.clear();
             args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&t_sum.data ));
             args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum.data ));
@@ -1100,7 +1117,7 @@ namespace cv
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum.step));
             args.push_back( std::make_pair( sizeof(cl_int) , (void *)&sum_offset));
             size_t gt2[3] = {t_sum.cols  * 32, 1, 1}, lt2[3] = {256, 1, 1};
-            openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_rows", gt2, lt2, args, -1, -1);
+            openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_rows", gt2, lt2, args, -1, depth);
             //std::cout << "tested" << std::endl;
         }
 

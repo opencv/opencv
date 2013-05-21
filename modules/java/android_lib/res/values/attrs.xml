@@ -4,8 +4,8 @@
        <attr name="show_fps" format="boolean"/>
        <attr name="camera_id" format="integer" >
           <enum name="any" value="-1" />
-          <enum name="back" value="0" />
-          <enum name="front" value="1" />
+          <enum name="back" value="99" />
+          <enum name="front" value="98" />
        </attr>
     </declare-styleable>
 </resources>

@@ -1219,8 +1219,6 @@ static void resizeGeneric_( const Mat& src, Mat& dst,
                             const int* yofs, const void* _beta,
                             int xmin, int xmax, int ksize )
 {
-    typedef typename HResize::value_type T;
-    typedef typename HResize::buf_type WT;
     typedef typename HResize::alpha_type AT;
 
     const AT* beta = (const AT*)_beta;

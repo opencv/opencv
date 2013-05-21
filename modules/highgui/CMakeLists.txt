@@ -76,7 +76,26 @@ set(highgui_srcs
 
 file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
-if(HAVE_QT)
+if(HAVE_QT5)
+  set(CMAKE_AUTOMOC ON)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+  QT5_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
+  list(APPEND highgui_srcs src/window_QT.cpp src/window_QT.h ${_RCC_OUTFILES})
+
+  foreach(dt5_dep Core Gui Widgets Test Concurrent)
+    add_definitions(${Qt5${dt5_dep}_DEFINITIONS})
+    include_directories(${Qt5${dt5_dep}_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt5${dt5_dep}_LIBRARIES})
+  endforeach()
+
+  if(HAVE_QT_OPENGL)
+    add_definitions(${Qt5OpenGL_DEFINITIONS})
+    include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt5OpenGL_LIBRARIES})
+  endif()
+
+elseif(HAVE_QT)
   if (HAVE_QT_OPENGL)
     set(QT_USE_QTOPENGL TRUE)
   endif()

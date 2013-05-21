@@ -43,11 +43,10 @@
 //
 //M*/
 
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "precomp.hpp"
 
-#ifndef CL_VERSION_1_2
-#define CL_VERSION_1_2 0
-#endif
+using namespace std;
 
 namespace cv
 {
@@ -160,30 +159,44 @@ namespace cv
                 CV_Error(-1, "Image forma is not supported");
                 break;
             }
-#if CL_VERSION_1_2
-            cl_image_desc desc;
-            desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-            desc.image_width      = mat.cols;
-            desc.image_height     = mat.rows;
-            desc.image_depth      = 0;
-            desc.image_array_size = 1;
-            desc.image_row_pitch  = 0;
-            desc.image_slice_pitch = 0;
-            desc.buffer           = NULL;
-            desc.num_mip_levels   = 0;
-            desc.num_samples      = 0;
-            texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
-#else
-            texture = clCreateImage2D(
-                (cl_context)mat.clCxt->oclContext(),
-                CL_MEM_READ_WRITE,
-                &format,
-                mat.cols,
-                mat.rows,
-                0,
-                NULL,
-                &err);
+#ifdef CL_VERSION_1_2
+            //this enables backwards portability to
+            //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
+            if(Context::getContext()->supportsFeature(Context::CL_VER_1_2))
+            {
+                cl_image_desc desc;
+                desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
+                desc.image_width      = mat.cols;
+                desc.image_height     = mat.rows;
+                desc.image_depth      = 0;
+                desc.image_array_size = 1;
+                desc.image_row_pitch  = 0;
+                desc.image_slice_pitch = 0;
+                desc.buffer           = NULL;
+                desc.num_mip_levels   = 0;
+                desc.num_samples      = 0;
+                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
+            }
+            else
 #endif
+            {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+                texture = clCreateImage2D(
+                    (cl_context)mat.clCxt->oclContext(),
+                    CL_MEM_READ_WRITE,
+                    &format,
+                    mat.cols,
+                    mat.rows,
+                    0,
+                    NULL,
+                    &err);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+            }
             size_t origin[] = { 0, 0, 0 };
             size_t region[] = { mat.cols, mat.rows, 1 };
 
@@ -196,7 +209,7 @@ namespace cv
                 clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
                 clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
-           }
+            }
             else
             {
                 devData = (cl_mem)mat.data;
@@ -212,7 +225,6 @@ namespace cv
             openCLSafeCall(err);
             return texture;
         }
-
         void releaseTexture(cl_mem& texture)
         {
             openCLFree(texture);

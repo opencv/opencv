@@ -68,7 +68,7 @@ TEST_P(Dft, C2C)
 
     cv::dft(a, b_gold, dft_flags);
     cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), dft_flags);
-    EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), a.size().area() * 1e-4, "");
+    EXPECT_MAT_NEAR(b_gold, cv::Mat(d_b), a.size().area() * 1e-4);
 }
 
 TEST_P(Dft, R2C)
@@ -81,11 +81,11 @@ TEST_P(Dft, R2C)
     cv::dft(a, b_gold, cv::DFT_COMPLEX_OUTPUT | dft_flags);
 
     b_gold_roi = b_gold(cv::Rect(0, 0, d_b.cols, d_b.rows));
-    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4, "");
+    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4);
 
     cv::Mat c_gold;
     cv::dft(b_gold, c_gold, cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
-    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4, "");
+    EXPECT_MAT_NEAR(b_gold_roi, cv::Mat(d_b), a.size().area() * 1e-4);
 }
 
 TEST_P(Dft, R2CthenC2R)
@@ -95,7 +95,7 @@ TEST_P(Dft, R2CthenC2R)
     cv::ocl::oclMat d_b, d_c;
     cv::ocl::dft(cv::ocl::oclMat(a), d_b, a.size(), 0);
     cv::ocl::dft(d_b, d_c, a.size(), cv::DFT_SCALE | cv::DFT_INVERSE | cv::DFT_REAL_OUTPUT);
-    EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4, "");
+    EXPECT_MAT_NEAR(a, d_c, a.size().area() * 1e-4);
 }
 
 
