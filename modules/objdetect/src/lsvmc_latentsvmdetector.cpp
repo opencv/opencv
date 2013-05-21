@@ -20,7 +20,7 @@ const int pca_size = 31;
 // OUTPUT
 // trained Latent SVM detector in internal representation
 */
-CvLatentSvmDetectorCaskad* cvLoadLatentSvmDetector(const char* filename)
+CvLatentSvmDetectorCaskad* cvLoadLatentSvmDetectorCaskad(const char* filename)
 {
     CvLatentSvmDetectorCaskad* detector = 0;
     CvLSVMFilterObjectCaskad** filters = 0;
@@ -57,7 +57,7 @@ CvLatentSvmDetectorCaskad* cvLoadLatentSvmDetector(const char* filename)
 // detector             - CvLatentSvmDetectorCaskad structure to be released
 // OUTPUT
 */
-void cvReleaseLatentSvmDetector(CvLatentSvmDetectorCaskad** detector)
+void cvReleaseLatentSvmDetectorCaskad(CvLatentSvmDetectorCaskad** detector)
 {
     free((*detector)->b);
     free((*detector)->num_part_filters);
@@ -90,7 +90,7 @@ void cvReleaseLatentSvmDetector(CvLatentSvmDetectorCaskad** detector)
 // OUTPUT
 // sequence of detected objects (bounding boxes and confidence levels stored in CvObjectDetection structures)
 */
-CvSeq* cvLatentSvmDetectObjects(IplImage* image,
+CvSeq* cvLatentSvmDetectObjectsCaskad(IplImage* image,
                                 CvLatentSvmDetectorCaskad* detector,
                                 CvMemStorage* storage,
                                 float overlap_threshold)
@@ -187,7 +187,7 @@ LatentSvmDetector::~LatentSvmDetector()
 void LatentSvmDetector::clear()
 {
     for( size_t i = 0; i < detectors.size(); i++ )
-        cvReleaseLatentSvmDetector( &detectors[i] );
+        cvReleaseLatentSvmDetectorCaskad( &detectors[i] );
     detectors.clear();
 
     classNames.clear();
@@ -238,7 +238,7 @@ bool LatentSvmDetector::load( const vector<string>& filenames, const vector<stri
         if( filename.length() < 5 || filename.substr(filename.length()-4, 4) != ".xml" )
             continue;
 
-        CvLatentSvmDetectorCaskad* detector = cvLoadLatentSvmDetector( filename.c_str() );
+        CvLatentSvmDetectorCaskad* detector = cvLoadLatentSvmDetectorCaskad( filename.c_str() );
         if( detector )
         {
             detectors.push_back( detector );
@@ -264,7 +264,7 @@ void LatentSvmDetector::detect( const Mat& image,
     {
         IplImage image_ipl = image;
         CvMemStorage* storage = cvCreateMemStorage(0);
-        CvSeq* detections = cvLatentSvmDetectObjects( &image_ipl, (CvLatentSvmDetectorCaskad*)(detectors[classID]), storage, overlapThreshold);
+        CvSeq* detections = cv::lsvmcascade::cvLatentSvmDetectObjectsCaskad( &image_ipl, (CvLatentSvmDetectorCaskad*)(detectors[classID]), storage, overlapThreshold);
 
         // convert results
         objectDetections.reserve( objectDetections.size() + detections->total );

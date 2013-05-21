@@ -262,6 +262,13 @@ typedef struct CvObjectDetection
 */
 CVAPI(CvLatentSvmDetector*) cvLoadLatentSvmDetector(const char* filename);
 
+namespace cv
+{
+namespace lsvmcascade
+{
+CVAPI(CvLatentSvmDetectorCaskad*) cvLoadLatentSvmDetectorCaskad(const char* filename);
+}
+}
 /*
 // release memory allocated for CvLatentSvmDetector structure
 //
@@ -273,6 +280,14 @@ CVAPI(CvLatentSvmDetector*) cvLoadLatentSvmDetector(const char* filename);
 */
 CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 
+namespace cv
+{
+namespace lsvmcascade
+{
+
+CVAPI(void) cvReleaseLatentSvmDetectorCaskad(CvLatentSvmDetectorCaskad** detector);
+}
+}
 /*
 // find rectangular regions in the given image that are likely
 // to contain objects and corresponding confidence levels
@@ -298,7 +313,17 @@ CVAPI(CvSeq*) cvLatentSvmDetectObjects(IplImage* image,
                                 CvMemStorage* storage,
                                 float overlap_threshold CV_DEFAULT(0.5f),
                                 int numThreads CV_DEFAULT(-1));
+namespace cv
+{
+namespace lsvmcascade
+{
 
+CVAPI(CvSeq*) cvLatentSvmDetectObjectsCaskad(IplImage* image,
+                                CvLatentSvmDetectorCaskad* detector,
+                                CvMemStorage* storage,
+                                float overlap_threshold CV_DEFAULT(0.5f));
+}
+}
 #ifdef __cplusplus
 }
 
