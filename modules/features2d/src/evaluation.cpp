@@ -67,7 +67,7 @@ template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _
     if( d > 0 )
     {
         d = std::sqrt(d);
-        double s = 1/(2*a);
+        _Tp s = 1/(2*a);
         x1 = (-b - d)*s;
         x2 = (-b + d)*s;
         if( x1 > x2 )
