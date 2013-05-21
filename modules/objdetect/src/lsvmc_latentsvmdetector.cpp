@@ -1,7 +1,6 @@
 #include "precomp.hpp"
 #include "_lsvmc_parser.h"
 #include "_lsvmc_matching.h"
-
 namespace cv
 {
 namespace lsvmcascade
@@ -57,7 +56,7 @@ CvLatentSvmDetectorCaskad* cvLoadLatentSvmDetectorCaskad(const char* filename)
 // detector             - CvLatentSvmDetectorCaskad structure to be released
 // OUTPUT
 */
-void cvReleaseLatentSvmDetectorCaskad(CvLatentSvmDetectorCaskad** detector)
+CVAPI(void) cvReleaseLatentSvmDetectorCaskad(CvLatentSvmDetectorCaskad** detector)
 {
     free((*detector)->b);
     free((*detector)->num_part_filters);
@@ -187,7 +186,7 @@ LatentSvmDetector::~LatentSvmDetector()
 void LatentSvmDetector::clear()
 {
     for( size_t i = 0; i < detectors.size(); i++ )
-        cvReleaseLatentSvmDetectorCaskad( &detectors[i] );
+      cv::lsvmcascade::cvReleaseLatentSvmDetectorCaskad( &detectors[i] );
     detectors.clear();
 
     classNames.clear();

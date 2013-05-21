@@ -261,7 +261,6 @@ typedef struct CvObjectDetection
 // trained Latent SVM detector in internal representation
 */
 CVAPI(CvLatentSvmDetector*) cvLoadLatentSvmDetector(const char* filename);
-
 namespace cv
 {
 namespace lsvmcascade
@@ -284,7 +283,6 @@ namespace cv
 {
 namespace lsvmcascade
 {
-
 CVAPI(void) cvReleaseLatentSvmDetectorCaskad(CvLatentSvmDetectorCaskad** detector);
 }
 }
@@ -324,6 +322,7 @@ CVAPI(CvSeq*) cvLatentSvmDetectObjectsCaskad(IplImage* image,
                                 float overlap_threshold CV_DEFAULT(0.5f));
 }
 }
+
 #ifdef __cplusplus
 }
 
