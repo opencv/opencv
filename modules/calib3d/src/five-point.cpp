@@ -453,7 +453,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     _points1.getMat().copyTo(points1);
     _points2.getMat().copyTo(points2);
 
-    int npoints = points1.checkVector(2);
+    const int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
     const double ifocal = 1 / focal;
@@ -487,21 +487,17 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    const float dist = 50.0;
+    const float dist = 50.0f;
     Mat Q;
 
     triangulatePoints(P0, P1, points1, points2, Q);
-    Mat Q3_inv(1, Q.cols, Q.type());
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
-    Q3_inv.row(0) = 1.0 / Q.row(3); // FMUL faster than FDIV (only once)
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3); // inverse row_3 (slow FDIV)
+    Q.row(0) = Q.row(0).mul( Q3.row(3) );
+    Q.row(1) = Q.row(1).mul( Q3.row(3) );
+    Q.row(2) = Q.row(2).mul( Q3.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
-    //Q.row(0) *= Q3_inv.row(0);
-    //Q.row(1) *= Q3_inv.row(0);
-    //Q.row(2) *= Q3_inv.row(0);
-    //Q.row(3) *= Q3_inv.row(0); // old: Q.row(3) /= Q.row(3); ==> Q.row(3) = 1.0; why not the easy way ?
+
     mask1 = (Q.row(2) < dist) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
@@ -509,9 +505,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P2, points1, points2, Q);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q3.row(3) );
+    Q.row(1) = Q.row(1).mul( Q3.row(3) );
+    Q.row(2) = Q.row(2).mul( Q3.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
@@ -520,9 +517,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P3, points1, points2, Q);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q3.row(3) );
+    Q.row(1) = Q.row(1).mul( Q3.row(3) );
+    Q.row(2) = Q.row(2).mul( Q3.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
@@ -531,9 +529,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P4, points1, points2, Q);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q3.row(3) );
+    Q.row(1) = Q.row(1).mul( Q3.row(3) );
+    Q.row(2) = Q.row(2).mul( Q3.row(3) );
     Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
