@@ -587,7 +587,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
     }
     else
     {
-//        _m = cvCreateMat( 1, count, CV_64FC2 );
+    //    _m = cvCreateMat( 1, count, CV_64FC2 );
         CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
     }
 
