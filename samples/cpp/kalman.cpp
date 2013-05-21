@@ -12,7 +12,7 @@ static inline Point calcPoint(Point2f center, double R, double angle)
 
 static void help()
 {
-    printf( "\nExamle of c calls to OpenCV's Kalman filter.\n"
+    printf( "\nExample of c calls to OpenCV's Kalman filter.\n"
 "   Tracking of rotating point.\n"
 "   Rotation speed is constant.\n"
 "   Both state and measurements vectors are 1D (a point angle),\n"

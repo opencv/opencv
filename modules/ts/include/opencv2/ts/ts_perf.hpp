@@ -1,16 +1,6 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-#  include "cvconfig.h"
-#endif
-
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#  ifdef BUILD_SHARED_LIBS
-#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#  endif
-#endif
-
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
 

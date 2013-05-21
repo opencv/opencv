@@ -280,10 +280,10 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
           */
          if (useLogSampling)
                 {
-                     retina = new cv::Retina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = cv::createRetina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = new cv::Retina(inputImage.size());
+             retina = cv::createRetina(inputImage.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         retina->write("RetinaDefaultParameters.xml");

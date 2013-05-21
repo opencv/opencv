@@ -191,8 +191,8 @@ VideoCapture
 ------------
 .. ocv:class:: VideoCapture
 
-Class for video capturing from video files or cameras.
-The class provides C++ API for capturing video from cameras or for reading video files. Here is how the class can be used: ::
+Class for video capturing from video files, image sequences or cameras.
+The class provides C++ API for capturing video from cameras or for reading video files and image sequences. Here is how the class can be used: ::
 
     #include "opencv2/opencv.hpp"
 
@@ -241,7 +241,7 @@ VideoCapture constructors.
 .. ocv:cfunction:: CvCapture* cvCaptureFromCAM( int device )
 .. ocv:cfunction:: CvCapture* cvCaptureFromFile( const char* filename )
 
-    :param filename: name of the opened video file
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
 
     :param device: id of the opened video capturing device (i.e. a camera index). If there is a single camera connected, just pass 0.
 
@@ -258,7 +258,7 @@ Open video file or a capturing device for video capturing
 .. ocv:pyfunction:: cv2.VideoCapture.open(filename) -> retval
 .. ocv:pyfunction:: cv2.VideoCapture.open(device) -> retval
 
-    :param filename: name of the opened video file
+    :param filename: name of the opened video file (eg. video.avi) or image sequence (eg. img%02d.jpg)
 
     :param device: id of the opened video capturing device (i.e. a camera index).
 

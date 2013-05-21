@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 namespace cv
 {
