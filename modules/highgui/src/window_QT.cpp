@@ -2473,35 +2473,33 @@ void DefaultViewPort::saveView()
     if (!fileName.isEmpty()) //save the picture
     {
         QString extension = fileName.right(3);
-
-        //   (no need anymore) create the image resized to receive the 'screenshot'
-        //    image2Draw_qt_resized = QImage(viewport()->width(), viewport()->height(),QImage::Format_RGB888);
-
-        QPainter saveimage(&image2Draw_qt_resized);
-        this->render(&saveimage);
+        
+        // Create a new pixmap to render the viewport into
+        QPixmap viewportPixmap(viewport()->size());
+        viewport()->render(&viewportPixmap);
 
         // Save it..
         if (QString::compare(extension, "png", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "PNG");
+            viewportPixmap.save(fileName, "PNG");
             return;
         }
 
         if (QString::compare(extension, "jpg", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "JPG");
+            viewportPixmap.save(fileName, "JPG");
             return;
         }
 
         if (QString::compare(extension, "bmp", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "BMP");
+            viewportPixmap.save(fileName, "BMP");
             return;
         }
 
         if (QString::compare(extension, "jpeg", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "JPEG");
+            viewportPixmap.save(fileName, "JPEG");
             return;
         }
 
