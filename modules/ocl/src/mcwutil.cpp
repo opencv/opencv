@@ -43,7 +43,6 @@
 //
 //M*/
 
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "precomp.hpp"
 
 using namespace std;
