@@ -53,7 +53,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpumat.hpp"
-#include "opencv2/ts/ts_perf.hpp"
+#include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 #include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"

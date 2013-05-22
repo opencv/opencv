@@ -128,6 +128,8 @@ namespace cv
             std::vector<cl_device_id> devices;
             std::vector<String> devName;
             String platName;
+            String clVersion;
+
             cl_context oclcontext;
             cl_command_queue clCmdQueue;
             int devnum;
@@ -260,7 +262,7 @@ namespace cv
 
         int setDevMemType(DevMemRW rw_type, DevMemType mem_type)
         {
-            if( (mem_type == DEVICE_MEM_PM && 
+            if( (mem_type == DEVICE_MEM_PM &&
                  Context::getContext()->impl->unified_memory == 0) )
                 return -1;
             gDeviceMemRW = rw_type;
@@ -303,6 +305,7 @@ namespace cv
             const static int max_name_length = 256;
             char deviceName[max_name_length];
             char plfmName[max_name_length];
+            char clVersion[256];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
 
@@ -322,6 +325,8 @@ namespace cv
                     ocltmpinfo.PlatformName = String(plfmName);
                     ocltmpinfo.impl->platName = String(plfmName);
                     ocltmpinfo.impl->oclplatform = platforms[i];
+                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, sizeof(clVersion), clVersion, NULL));
+                    ocltmpinfo.impl->clVersion = clVersion;
                     for(unsigned j = 0; j < numsdev; ++j)
                     {
                         ocltmpinfo.impl->devices.push_back(devices[j]);
@@ -424,13 +429,13 @@ namespace cv
         }
 
         void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                 size_t widthInBytes, size_t height, 
+                                 size_t widthInBytes, size_t height,
                                  DevMemRW rw_type, DevMemType mem_type, void* hptr)
         {
             cl_int status;
             if(hptr && (mem_type==DEVICE_MEM_UHP || mem_type==DEVICE_MEM_CHP))
-                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, 
-                                          gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type], 
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext,
+                                          gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
                                           widthInBytes * height, hptr, &status);
             else
                 *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
@@ -985,6 +990,8 @@ namespace cv
                 return impl->double_support == 1;
             case CL_UNIFIED_MEM:
                 return impl->unified_memory == 1;
+            case CL_VER_1_2:
+                return impl->clVersion.find("OpenCL 1.2") != String::npos;
             default:
                 return false;
             }

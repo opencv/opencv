@@ -127,7 +127,6 @@ floodFill_CnIR( Mat& image, Point seed,
                _Tp newVal, ConnectedComp* region, int flags,
                std::vector<FFillSegment>* buffer )
 {
-    typedef typename DataType<_Tp>::channel_type _CTp;
     _Tp* img = (_Tp*)(image.data + image.step * seed.y);
     Size roi = image.size();
     int i, L, R;
@@ -279,7 +278,6 @@ floodFillGrad_CnIR( Mat& image, Mat& msk,
                    Diff diff, ConnectedComp* region, int flags,
                    std::vector<FFillSegment>* buffer )
 {
-    typedef typename DataType<_Tp>::channel_type _CTp;
     int step = (int)image.step, maskStep = (int)msk.step;
     uchar* pImage = image.data;
     _Tp* img = (_Tp*)(pImage + step*seed.y);
@@ -610,7 +608,7 @@ int cv::floodFill( InputOutputArray _image, InputOutputArray _mask,
                 &comp, flags, &buffer);
     else
         CV_Error(CV_StsUnsupportedFormat, "");
-    
+
     if( rect )
         *rect = comp.rect;
     return comp.area;

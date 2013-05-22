@@ -1665,6 +1665,17 @@ static int icvSetPropertyCAM_V4L(CvCaptureCAM_V4L* capture, int property_id, dou
             width = height = 0;
         }
         break;
+    case CV_CAP_PROP_FPS:
+        struct v4l2_streamparm setfps;
+        memset (&setfps, 0, sizeof(struct v4l2_streamparm));
+        setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+        setfps.parm.capture.timeperframe.numerator = 1;
+        setfps.parm.capture.timeperframe.denominator = value;
+        if (xioctl (capture->deviceHandle, VIDIOC_S_PARM, &setfps) < 0){
+            fprintf(stderr, "HIGHGUI ERROR: V4L: Unable to set camera FPS\n");
+            retval=0;
+        }
+        break;
     default:
         retval = icvSetControl(capture, property_id, value);
     }

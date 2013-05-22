@@ -196,7 +196,7 @@ void cv::ocl::oclMat::upload(const Mat &m)
         // try to use host ptr
         createEx(wholeSize, m.type(), gDeviceMemRW, gDeviceMemType, m.datastart);
         if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP)
-            openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, 
+            openCLMemcpy2D(clCxt, data, step, m.datastart, m.step,
                            wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
     }
 
@@ -571,11 +571,16 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, Stri
         CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
 #ifdef CL_VERSION_1_2
-    if(dst.offset == 0 && dst.cols == dst.wholecols)
+    //this enables backwards portability to
+    //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
+    if(Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+        dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
+            (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else
+#endif
     {
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -583,17 +588,8 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, Stri
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
         openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                            localThreads, args, -1, -1, compile_option);
+            localThreads, args, -1, -1, compile_option);
     }
-#else
-    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
-    openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                        localThreads, args, -1, -1, compile_option);
-#endif
 }
 
 static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, String kernelName)
@@ -887,7 +883,7 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
 }
 
-void cv::ocl::oclMat::createEx(Size size, int type, 
+void cv::ocl::oclMat::createEx(Size size, int type,
                                DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
     createEx(size.height, size.width, type, rw_type, mem_type, hptr);
@@ -898,7 +894,7 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
     createEx(_rows, _cols, _type, gDeviceMemRW, gDeviceMemType);
 }
 
-void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, 
+void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
                                DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
     clCxt = Context::getContext();
@@ -919,7 +915,7 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), 
+        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
                             rows, rw_type, mem_type, hptr);
 
         if (esz * cols == step)

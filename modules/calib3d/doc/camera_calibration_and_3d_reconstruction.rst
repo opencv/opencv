@@ -1486,6 +1486,6 @@ The function reconstructs 3-dimensional points (in homogeneous coordinates) by u
 
 .. [SteweniusCFS] Stewénius, H., Calibrated Fivepoint solver. http://www.vis.uky.edu/~stewe/FIVEPOINT/
 
-.. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://gregslabaugh.name/publications/euler.pdf
+.. [Slabaugh] Slabaugh, G.G. Computing Euler angles from a rotation matrix. http://www.soi.city.ac.uk/~sbbh653/publications/euler.pdf (verified: 2013-04-15)
 
 .. [Zhang2000] Z. Zhang. A Flexible New Technique for Camera Calibration. IEEE Transactions on Pattern Analysis and Machine Intelligence, 22(11):1330-1334, 2000.
