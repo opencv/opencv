@@ -54,8 +54,8 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
 {
     CV_Assert( img.type() == CV_8UC1 && (blockSize*blockSize) <= 2048 );
 
-    size_t ptidx, ptsize = pts.size();
-
+    int ptidx, ptsize = (int)pts.size();
+    if (0 == ptsize) return;
     const uchar* ptr00 = img.ptr<uchar>();
     const int step = (int)(img.step/img.elemSize1());
     const int r = blockSize / 2;
