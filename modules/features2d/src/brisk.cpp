@@ -236,7 +236,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   // get the total number of points
   const int rings = (int)radiusList.size();
-  CV_Assert(rings > 0 && radiusList.size() == numberList.size());
+  CV_Assert(rings > 0 && rings == (int)numberList.size());
   points_ = 0; // remember the total number of points
   for (int ring = 0; ring < rings; ring++)
   {
@@ -553,20 +553,22 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   size_t ksize = keypoints.size();
   std::vector<int> kscales; // remember the scale per keypoint
   kscales.resize(ksize);
-  static const float ln_2 = 0.693147180559945f; // log2() C99
-  static const float inv_lb_scalerange = ln_2 / (float)std::log(scalerange_);
-  static const float inv_basicSize06 = 1 / (basicSize_ * 0.6f);
+  const float scale_fac = scales_ / (float)std::log(scalerange_); // 64/log()*(ln_2/ln_2)
+  const float inv_basicSize06 = 1 / (basicSize_ * 0.6f);
+  const int scales_1 = (int) scales_ - 1;
   std::vector<cv::KeyPoint>::iterator beginning = keypoints.begin();
   std::vector<int>::iterator beginningkscales = kscales.begin();
 
   for (size_t k = 0; k < ksize; k++)
   {
-    unsigned int scale;
-      scale = std::max((int) (scales_ * inv_lb_scalerange * (std::log(keypoints[k].size * inv_basicSize06) * (1/ln_2)) + 0.5f), 0);
-      // saturate
-      if (scale >= scales_)
-        scale = scales_ - 1;
-      kscales[k] = scale;
+    const float log_arg = keypoints[k].size * inv_basicSize06;
+    int scale = 0;
+    if (log_arg >= 1.0f) // log(1)=0
+    {
+      scale = std::min((int)((scale_fac * std::log(log_arg)) + 0.5f), scales_1);
+      // saturate, if (scale >= scales_) scale = scales_-1;
+    }
+    kscales[k] = scale;
     const int border = sizeList_[scale];
     const int border_x = image.cols - border;
     const int border_y = image.rows - border;

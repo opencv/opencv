@@ -1264,7 +1264,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
         CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
 
-    nimages = npoints->rows*npoints->cols;
+    nimages = npoints->rows * npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
 
     if( rvecs )
@@ -1440,8 +1440,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         CvMat _Mi, _mi, _ri, _ti;
         ni = npoints->data.i[i*npstep];
 
-        cvGetRows( solver.param, &_ri, NINTRINSIC + i*6, NINTRINSIC + i*6 + 3 );
-        cvGetRows( solver.param, &_ti, NINTRINSIC + i*6 + 3, NINTRINSIC + i*6 + 6 );
+        cvGetRows( solver.param, &_ri, NINTRINSIC + (i*6), NINTRINSIC + (i*6) + 3 );
+        cvGetRows( solver.param, &_ti, NINTRINSIC + (i*6) + 3, NINTRINSIC + (i*6) + 6 );
 
         cvGetCols( matM, &_Mi, pos, pos + ni );
         cvGetCols( _m, &_mi, pos, pos + ni );
@@ -1539,7 +1539,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         CvMat src, dst;
         if( rvecs )
         {
-            src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 );
+            src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + (i*6) );
             if( rvecs->rows == nimages && rvecs->cols*CV_MAT_CN(rvecs->type) == 9 )
             {
                 dst = cvMat( 3, 3, CV_MAT_DEPTH(rvecs->type),
@@ -1592,12 +1592,12 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     assert(imgWidth != 0 && imgHeight != 0 && alphax != 0.0 && alphay != 0.0);
 
     /* Calculate pixel aspect ratio. */
-    if(pasp)
+    if( pasp )
         *pasp = alphay / alphax;
 
     /* Calculate number of pixel per realworld unit. */
 
-    if(apertureWidth != 0.0 && apertureHeight != 0.0) {
+    if( (apertureWidth != 0.0) && (apertureHeight != 0.0)) {
         mx = imgWidth  / apertureWidth;
         my = imgHeight / apertureHeight;
     } else {
@@ -1607,20 +1607,20 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
 
     /* Calculate fovx and fovy. */
 
-    if(fovx)
+    if( fovx )
         *fovx = atan(imgWidth  / (2 * alphax)) * (2* 180.0 / CV_PI);
 
-    if(fovy)
+    if( fovy )
         *fovy = atan(imgHeight / (2 * alphay)) * (2* 180.0 / CV_PI);
 
     /* Calculate focal length. */
 
-    if(focalLength)
+    if( focalLength )
         *focalLength = alphax / mx;
 
     /* Calculate principle point. */
 
-    if(principalPoint)
+    if( principalPoint )
         *principalPoint = cvPoint2D64f(cvmGet(calibMatr, 0, 2) / mx, cvmGet(calibMatr, 1, 2) / my);
 }
 
@@ -1629,8 +1629,8 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
 
 static int dbCmp( const void* _a, const void* _b )
 {
-    double a = *(const double*)_a;
-    double b = *(const double*)_b;
+    const double a = *(const double*)_a;
+    const double b = *(const double*)_b;
 
     return (a > b) - (a < b);
 }
@@ -1797,10 +1797,10 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         double _om[2][3], r[2][9], t[2][3];
         CvMat om[2], R[2], T[2], imgpt_i[2];
 
-        objpt_i = cvMat(1, ni, CV_64FC3, objectPoints->data.db + ofs*3);
+        objpt_i = cvMat(1, ni, CV_64FC3, objectPoints->data.db + (ofs*3));
         for( k = 0; k < 2; k++ )
         {
-            imgpt_i[k] = cvMat(1, ni, CV_64FC2, imagePoints[k]->data.db + ofs*2);
+            imgpt_i[k] = cvMat(1, ni, CV_64FC2, imagePoints[k]->data.db + (ofs*2));
             om[k] = cvMat(3, 1, CV_64F, _om[k]);
             R[k] = cvMat(3, 3, CV_64F, r[k]);
             T[k] = cvMat(3, 1, CV_64F, t[k]);
@@ -1834,15 +1834,15 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     // find the medians and save the first 6 parameters
     for( i = 0; i < 6; i++ )
     {
-        qsort( RT0->data.db + i*nimages, nimages, CV_ELEM_SIZE(RT0->type), dbCmp );
-        solver.param->data.db[i] = nimages % 2 != 0 ? RT0->data.db[i*nimages + (nimages/2)] :
-            (RT0->data.db[i*nimages + (nimages/2) - 1] + RT0->data.db[i*nimages + (nimages/2)])*0.5;
+        qsort( RT0->data.db + (i*nimages), nimages, CV_ELEM_SIZE(RT0->type), dbCmp );
+        solver.param->data.db[i] = (nimages % 2) != 0 ? RT0->data.db[(i*nimages) + (nimages/2)] :
+            (RT0->data.db[(i*nimages) + (nimages/2) - 1] + RT0->data.db[(i*nimages) + (nimages/2)])*0.5;
     }
 
     if( recomputeIntrinsics )
         for( k = 0; k < 2; k++ )
         {
-            double* iparam = solver.param->data.db + (nimages+1)*6 + k*NINTRINSIC;
+            double* iparam = solver.param->data.db + (nimages+1)*6 + (k*NINTRINSIC);
             if( flags & CV_CALIB_ZERO_TANGENT_DIST )
                 dk[k][2] = dk[k][3] = 0;
             iparam[0] = A[k][0]; iparam[1] = A[k][4]; iparam[2] = A[k][2]; iparam[3] = A[k][5];
@@ -3036,13 +3036,14 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype)
 void cv::Rodrigues(InputArray _src, OutputArray _dst, OutputArray _jacobian)
 {
     Mat src = _src.getMat();
-    const bool v2m = src.cols == 1 || src.rows == 1;
-    _dst.create(3, v2m ? 3 : 1, src.depth());
+    const bool v2m = (src.cols == 1) || (src.rows == 1);
+    const int src_depth = src.depth();
+    _dst.create(3, v2m ? 3 : 1, src_depth);
     Mat dst = _dst.getMat();
     CvMat _csrc = src, _cdst = dst, _cjacobian;
     if( _jacobian.needed() )
     {
-        _jacobian.create(v2m ? Size(9, 3) : Size(3, 9), src.depth());
+        _jacobian.create(v2m ? Size(9, 3) : Size(3, 9), src_depth);
         _cjacobian = _jacobian.getMat();
     }
     bool ok = cvRodrigues2(&_csrc, &_cdst, _jacobian.needed() ? &_cjacobian : 0) > 0;
@@ -3208,13 +3209,13 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     cameraMatrix = prepareCameraMatrix(cameraMatrix, rtype);
     Mat distCoeffs = _distCoeffs.getMat();
     distCoeffs = prepareDistCoeffs(distCoeffs, rtype);
-    if( !(flags & CALIB_RATIONAL_MODEL) &&(!(flags & CALIB_THIN_PRISM_MODEL)))
+    if( !(flags & CALIB_RATIONAL_MODEL) && (!(flags & CALIB_THIN_PRISM_MODEL)))
         distCoeffs = (distCoeffs.rows == 1) ? distCoeffs.colRange(0, 5) : distCoeffs.rowRange(0, 5);
 
     int    i;
-    size_t nimages = _objectPoints.total();
+    const int nimages = (int)_objectPoints.total();
     CV_Assert( nimages > 0 );
-    Mat objPt, imgPt, npoints, rvecM((int)nimages, 3, CV_64FC1), tvecM((int)nimages, 3, CV_64FC1);
+    Mat objPt, imgPt, npoints, rvecM(nimages, 3, CV_64FC1), tvecM(nimages, 3, CV_64FC1);
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
@@ -3228,11 +3229,11 @@ double cv::calibrateCamera( InputArrayOfArrays _objectPoints,
     const bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
 
     if( rvecs_needed )
-        _rvecs.create((int)nimages, 1, CV_64FC3);
+        _rvecs.create(nimages, 1, CV_64FC3);
     if( tvecs_needed )
-        _tvecs.create((int)nimages, 1, CV_64FC3);
+        _tvecs.create(nimages, 1, CV_64FC3);
 
-    for( i = 0; i < (int)nimages; i++ )
+    for( i = 0; i < nimages; i++ )
     {
         if( rvecs_needed )
         {
@@ -3484,7 +3485,7 @@ static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
                             const Mat& cameraMatrix3, const Mat& distCoeffs3,
                             const Mat& R1, const Mat& R3, const Mat& P1, Mat& P3 )
 {
-    size_t n1 = _imgpt1_0.total(), n3 = _imgpt3_0.total();
+    const size_t n1 = _imgpt1_0.total(), n3 = _imgpt3_0.total();
     std::vector<Point2f> imgpt1, imgpt3;
 
     for( int i = 0; i < (int)std::min(n1, n3); i++ )
@@ -3502,10 +3503,10 @@ static void adjust3rdMatrix(InputArrayOfArrays _imgpt1_0,
     undistortPoints(imgpt3, imgpt3, cameraMatrix3, distCoeffs3, R3, P3);
 
     double y1_ = 0, y2_ = 0, y1y1_ = 0, y1y2_ = 0;
-    size_t n = imgpt1.size();
-    double inv_n = 1.0 / (int)n;
+    const int n = (int)imgpt1.size();
+    double inv_n = 1.0 / n;
 
-    for( size_t i = 0; i < n; i++ )
+    for( int i = 0; i < n; i++ )
     {
         double y1 = imgpt3[i].y, y2 = imgpt1[i].y;
 

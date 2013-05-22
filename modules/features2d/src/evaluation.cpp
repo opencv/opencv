@@ -327,23 +327,23 @@ static void computeOneToOneMatchedOverlaps( const std::vector<EllipticKeyPoint>&
         return;
 
     overlaps.clear();
-    overlaps.reserve(cvRound(keypoints1.size() * keypoints2t.size() * 0.01f));
+    overlaps.reserve(cvRound(keypoints1_size * keypoints2t_size * 0.01f));
 
     for( size_t i1 = 0; i1 < keypoints1_size; i1++ )
     {
-        EllipticKeyPoint kp1 = keypoints1[i1];
-        float maxDist = sqrt(kp1.axes.width * kp1.axes.height),
-              fac = maxDist * (1.0f/30);
-        fac = ( !commonPart ) ? 1.0f / (3*3) : (fac*fac);
-        maxDist = maxDist * 4;
-        const float maxDist_sqr = maxDist * maxDist;
+        const EllipticKeyPoint kp1 = keypoints1[i1];
+        float maxDist = (kp1.axes.width * kp1.axes.height);
+        //fac = sqrt(maxDist) * (1.0f/30);
+        const float fac = ( !commonPart ) ? 1.0f / (3*3) : maxDist * (1.0f/(30*30));
+        const float maxDist_sqr = maxDist * (4*4);
+        //maxDist = sqrt(maxDist) * 4; // unused
 
         EllipticKeyPoint keypoint1a = EllipticKeyPoint( kp1.center, Scalar(fac*kp1.ellipse[0], fac*kp1.ellipse[1], fac*kp1.ellipse[2]) );
 
         for( size_t i2 = 0; i2 < keypoints2t_size; i2++ )
         {
             const EllipticKeyPoint kp2 = keypoints2t[i2];
-            Point2f diff = kp2.center - kp1.center;
+            const Point2f diff = kp2.center - kp1.center;
             const float norm_sqr = (diff.x*diff.x) + (diff.y*diff.y);
 
             if( norm_sqr < maxDist_sqr ) // norm(diff) < maxDist, avoid sqrt
