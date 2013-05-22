@@ -49,7 +49,7 @@
 #include "opencv2/ocl/ocl.hpp"
 
 #if defined __APPLE__
-#include <OpenCL/OpenCL.h>
+#include <OpenCL/opencl.h>
 #else
 #include <CL/opencl.h>
 #endif
