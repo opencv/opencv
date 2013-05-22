@@ -130,7 +130,7 @@ void FREAK::buildPattern()
                             };
     // fill the lookup table
     for( int scaleIdx=0; scaleIdx < FREAK_NB_SCALES; ++scaleIdx ) {
-        const float scalingFactor_patternScale = (float)std::pow(scaleStep,scaleIdx) * patternScale; //scale of the pattern, scaleStep ^ scaleIdx
+        const float scalingFactor_patternScale = (float)std::pow(scaleStep,scaleIdx) * (float)patternScale; //scale of the pattern, scaleStep ^ scaleIdx
         patternSizes[scaleIdx] = 0; // proper initialization
 
         for( int orientationIdx = 0; orientationIdx < FREAK_NB_ORIENTATION; ++orientationIdx ) {
