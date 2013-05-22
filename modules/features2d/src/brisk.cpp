@@ -264,7 +264,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
     // generate the pattern points look-up
     for (size_t rot = 0; rot < n_rot_; ++rot)
     {
-      float theta = float(rot) * P2_n_rot_); // this is the rotation of the feature
+      float theta = float(rot) * P2_n_rot_; // this is the rotation of the feature
       for (int ring = 0; ring < rings; ++ring)
       {
         const float scaleList_scale__radiusList_ring = (float)(scaleList_[scale] * radiusList[ring]);
@@ -282,7 +282,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
           }
           else
           {
-            sigma = (sigma_scale * scaleList_scale__radiusList_ring) * (float)sin(PI_numberList_ring));
+            sigma = (sigma_scale * scaleList_scale__radiusList_ring) * (float)sin(PI_numberList_ring);
           }
           // adapt the sizeList if necessary
           const unsigned int size = cvCeil((scaleList_scale__radiusList_ring + sigma)) + 1;
