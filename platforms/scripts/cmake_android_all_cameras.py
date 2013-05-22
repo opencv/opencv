@@ -49,7 +49,7 @@ for s in ConfFile.readlines():
 
     os.chdir(BuildDir)
     BuildLog = os.path.join(BuildDir, "build.log")
-    CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
+    CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../.. > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
     #print(CmakeCmdLine)
     os.system(CmakeCmdLine)
@@ -59,7 +59,7 @@ for s in ConfFile.readlines():
     CameraLib = os.path.join(BuildDir, "lib", Arch, "lib" + MakeTarget + ".so")
     if (os.path.exists(CameraLib)):
         try:
-            shutil.copyfile(CameraLib, os.path.join("..", "..", "3rdparty", "lib", Arch, "lib" + MakeTarget + ".so"))
+            shutil.copyfile(CameraLib, os.path.join("..", "3rdparty", "lib", Arch, "lib" + MakeTarget + ".so"))
             print("Building %s for %s\t[\033[92mOK\033[0m]" % (MakeTarget, Arch));
         except:
             print("Building %s for %s\t[\033[91mFAILED\033[0m]" % (MakeTarget, Arch));

@@ -34,4 +34,3 @@ if (__name__ ==  "__main__"):
     os.system("adb %s shell mkdir -p \"%s\"" % (DEVICE_STR, DEVICE_LOG_PATH))
 
     RunTestApp("OpenCVEngineTestApp")
-

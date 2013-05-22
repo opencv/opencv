@@ -72,4 +72,3 @@ file(GLOB engine_test_files "jni/Tests/*.cpp")
 
 add_executable(opencv_test_engine ${engine_test_files} jni/Tests/gtest/gtest-all.cpp)
 target_link_libraries(opencv_test_engine z binder log utils android_runtime ${engine} ${engine}_jni)
-
