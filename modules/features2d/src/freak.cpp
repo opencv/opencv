@@ -540,7 +540,7 @@ std::vector<int> FREAK::selectPairs(const std::vector<Mat>& images
         --ptr;
     }
 
-    std::vector<PairStat> pairStat();
+    std::vector<PairStat> pairStat;
     pairStat.reserve(904);
     for( int n = 903; n--; ) {
         // the higher the variance, the better --> mean = 0.5
