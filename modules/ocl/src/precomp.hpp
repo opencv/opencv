@@ -78,6 +78,8 @@
 
 #if defined (HAVE_OPENCL)
 
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
+
 #include "opencv2/ocl/private/util.hpp"
 #include "safe_call.hpp"
 
