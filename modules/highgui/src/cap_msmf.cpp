@@ -119,8 +119,8 @@ struct MediaType
     wchar_t *pMF_MT_AM_FORMAT_TYPEName;
     unsigned int MF_MT_FIXED_SIZE_SAMPLES;
     unsigned int MF_MT_VIDEO_NOMINAL_RANGE;
-    unsigned int MF_MT_FRAME_RATE;
-    unsigned int MF_MT_FRAME_RATE_low;
+    unsigned int MF_MT_FRAME_RATE_NUMERATOR;
+    unsigned int MF_MT_FRAME_RATE_DENOMINATOR;
     unsigned int MF_MT_PIXEL_ASPECT_RATIO;
     unsigned int MF_MT_PIXEL_ASPECT_RATIO_low;
     unsigned int MF_MT_ALL_SAMPLES_INDEPENDENT;
@@ -625,14 +625,17 @@ done:
     }
     return hr;
 }
+
 void LogUINT32AsUINT64New(const PROPVARIANT& var, UINT32 &uHigh, UINT32 &uLow)
 {
     Unpack2UINT32AsUINT64(var.uhVal.QuadPart, &uHigh, &uLow);
 }
+
 float OffsetToFloatNew(const MFOffset& offset)
 {
     return offset.value + (static_cast<float>(offset.fract) / 65536.0f);
 }
+
 HRESULT LogVideoAreaNew(const PROPVARIANT& var)
 {
     if (var.caub.cElems < sizeof(MFVideoArea))
@@ -641,6 +644,7 @@ HRESULT LogVideoAreaNew(const PROPVARIANT& var)
     }
     return S_OK;
 }
+
 HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaType &out)
 {
     if (guid == MF_MT_DEFAULT_STRIDE)
@@ -660,8 +664,8 @@ HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaTyp
     {
         UINT32 uHigh = 0, uLow = 0;
         LogUINT32AsUINT64New(var, uHigh, uLow);
-        out.MF_MT_FRAME_RATE = uHigh;
-        out.MF_MT_FRAME_RATE_low = uLow;
+        out.MF_MT_FRAME_RATE_NUMERATOR = uHigh;
+        out.MF_MT_FRAME_RATE_DENOMINATOR = uLow;
     }
     else
     if (guid == MF_MT_FRAME_RATE_RANGE_MAX)
@@ -693,9 +697,11 @@ HRESULT SpecialCaseAttributeValueNew(GUID guid, const PROPVARIANT& var, MediaTyp
     }
     return S_OK;
 }
+
 #ifndef IF_EQUAL_RETURN
 #define IF_EQUAL_RETURN(param, val) if(val == param) return L#val
 #endif
+
 LPCWSTR GetGUIDNameConstNew(const GUID& guid)
 {
     IF_EQUAL_RETURN(guid, MF_MT_MAJOR_TYPE);
@@ -875,6 +881,7 @@ MediaType FormatReader::Read(IMFMediaType *pType)
     }
     return out;
 }
+
 FormatReader::~FormatReader(void)
 {
 }
@@ -1880,6 +1887,7 @@ int videoDevice::findType(unsigned int size, unsigned int frameRate)
         return 0;
     return VN[0];
 }
+
 void videoDevice::buildLibraryofTypes()
 {
     unsigned int size;
@@ -1889,7 +1897,7 @@ void videoDevice::buildLibraryofTypes()
     for(; i != vd_CurrentFormats.end(); i++)
     {
         size = (*i).MF_MT_FRAME_SIZE;
-        framerate = (*i).MF_MT_FRAME_RATE;
+        framerate = (*i).MF_MT_FRAME_RATE_NUMERATOR;
         FrameRateMap FRM = vd_CaptureFormats[size];
         SUBTYPEMap STM = FRM[framerate];
         String subType((*i).pMF_MT_SUBTYPEName);
@@ -2187,8 +2195,8 @@ void MediaType::Clear()
     MF_MT_VIDEO_CHROMA_SITING = 0;
     MF_MT_FIXED_SIZE_SAMPLES = 0;
     MF_MT_VIDEO_NOMINAL_RANGE = 0;
-    MF_MT_FRAME_RATE = 0;
-    MF_MT_FRAME_RATE_low = 0;
+    MF_MT_FRAME_RATE_NUMERATOR = 0;
+    MF_MT_FRAME_RATE_DENOMINATOR = 0;
     MF_MT_PIXEL_ASPECT_RATIO = 0;
     MF_MT_PIXEL_ASPECT_RATIO_low = 0;
     MF_MT_ALL_SAMPLES_INDEPENDENT = 0;
@@ -3033,6 +3041,7 @@ protected:
     bool isOpened;
 
     HRESULT enumerateCaptureFormats(IMFMediaSource *pSource);
+    HRESULT getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration);
 };
 
 CvCaptureFile_MSMF::CvCaptureFile_MSMF():
@@ -3094,7 +3103,7 @@ bool CvCaptureFile_MSMF::open(const char* filename)
 
     if (SUCCEEDED(hr))
     {
-        hr = ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource, -2, true);
+        hr = ImageGrabberThread::CreateInstance(&grabberThread, videoFileSource, (unsigned int)-2, true);
     }
 
     if (SUCCEEDED(hr))
@@ -3131,7 +3140,8 @@ bool CvCaptureFile_MSMF::setProperty(int property_id, double value)
 {
     // image capture properties
     bool handled = false;
-    int width, height, fourcc;
+    unsigned int width, height;
+    int fourcc;
     switch( property_id )
     {
     case CV_CAP_PROP_FRAME_WIDTH:
@@ -3239,57 +3249,26 @@ double CvCaptureFile_MSMF::getProperty(int property_id)
     case CV_CAP_PROP_FRAME_HEIGHT:
         return captureFormats[captureFormatIndex].height;
     case CV_CAP_PROP_FRAME_COUNT:
-        return 30;
+        {
+            MFTIME duration;
+            getSourceDuration(this->videoFileSource, &duration);
+            double fps = ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_NUMERATOR) /
+            ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_DENOMINATOR);
+            return (double)floor(((double)duration/1e7)*fps+0.5);
+        }
     case CV_CAP_PROP_FOURCC:
-        // FIXME: implement method in VideoInput back end
-        //return VI.getFourcc(index);
-        ;
+        return captureFormats[captureFormatIndex].MF_MT_SUBTYPE.Data1;
     case CV_CAP_PROP_FPS:
-        // FIXME: implement method in VideoInput back end
-        //return VI.getFPS(index);
-        ;
+        return ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_NUMERATOR) /
+            ((double)captureFormats[captureFormatIndex].MF_MT_FRAME_RATE_DENOMINATOR);
     }
-    // video filter properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_SHARPNESS:
-    case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-    case CV_CAP_PROP_BACKLIGHT:
-    case CV_CAP_PROP_GAIN:
-        // FIXME: implement method in VideoInput back end
-        // if ( VI.getVideoSettingFilter(index, VI.getVideoPropertyFromCV(property_id), min_value,
-        //                               max_value, stepping_delta, current_value, flags,defaultValue) )
-        //     return (double)current_value;
-        return 0.;
-    }
-    // camera properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_PAN:
-    case CV_CAP_PROP_TILT:
-    case CV_CAP_PROP_ROLL:
-    case CV_CAP_PROP_ZOOM:
-    case CV_CAP_PROP_EXPOSURE:
-    case CV_CAP_PROP_IRIS:
-    case CV_CAP_PROP_FOCUS:
-    // FIXME: implement method in VideoInput back end
-    //     if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),min_value,
-    //          max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-        return 0.;
-    }
-    // unknown parameter or value not available
+ 
     return -1;
 }
 
 bool CvCaptureFile_MSMF::grabFrame()
 {
-    DWORD waitResult;
+    DWORD waitResult = -1;
     if (isOpened)
     {
         SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
@@ -3305,7 +3284,7 @@ IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
     unsigned int width = captureFormats[captureFormatIndex].width;
     unsigned int height = captureFormats[captureFormatIndex].height;
     unsigned int bytes = 3;
-    if( !frame || width != frame->width || height != frame->height )
+    if( !frame || (int)width != frame->width || (int)height != frame->height )
     {
         if (frame)
             cvReleaseImage( &frame );
@@ -3370,6 +3349,20 @@ done:
     return hr;
 }
 
+HRESULT CvCaptureFile_MSMF::getSourceDuration(IMFMediaSource *pSource, MFTIME *pDuration)
+{
+    *pDuration = 0;
+
+    IMFPresentationDescriptor *pPD = NULL;
+
+    HRESULT hr = pSource->CreatePresentationDescriptor(&pPD);
+    if (SUCCEEDED(hr))
+    {
+        hr = pPD->GetUINT64(MF_PD_DURATION, (UINT64*)pDuration);
+        pPD->Release();
+    }
+    return hr;
+}
 
 CvCapture* cvCreateCameraCapture_MSMF( int index )
 {
@@ -3508,12 +3501,12 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 }
 
 bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
-                       double _fps, CvSize frameSize, bool isColor )
+                       double _fps, CvSize frameSize, bool /*isColor*/ )
 {
     videoWidth = frameSize.width;
     videoHeight = frameSize.height;
     fps = _fps;
-    bitRate = fps*videoWidth*videoHeight; // 1-bit per pixel
+    bitRate = (UINT32)fps*videoWidth*videoHeight; // 1-bit per pixel
     encodingFormat = FourCC2GUID(fourcc);
     inputFormat = MFVideoFormat_RGB32;
 
