@@ -1912,7 +1912,19 @@ using ::std::tuple_size;
 
 #endif  // GTEST_HAS_SEH
 
-#define GTEST_API_ CV_EXPORTS
+#ifdef _MSC_VER
+
+# if GTEST_LINKED_AS_SHARED_LIBRARY
+#  define GTEST_API_ __declspec(dllimport)
+# elif GTEST_CREATE_SHARED_LIBRARY
+#  define GTEST_API_ __declspec(dllexport)
+# endif
+
+#endif  // _MSC_VER
+
+#ifndef GTEST_API_
+# define GTEST_API_ CV_EXPORTS
+#endif
 
 #ifdef __GNUC__
 // Ask the compiler to never inline a given function.
