@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// ConvertTo////////////////////////
-TEST(ConvertTo)
+PERFTEST(ConvertTo)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -76,9 +77,11 @@ TEST(ConvertTo)
             d_src.convertTo(d_dst, CV_32FC1);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));            
+
+
             GPU_ON;
             d_src.convertTo(d_dst, CV_32FC1);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -91,7 +94,7 @@ TEST(ConvertTo)
     }
 }
 ///////////// copyTo////////////////////////
-TEST(copyTo)
+PERFTEST(copyTo)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -122,9 +125,11 @@ TEST(copyTo)
             d_src.copyTo(d_dst);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));            
+
+
             GPU_ON;
             d_src.copyTo(d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -137,7 +142,7 @@ TEST(copyTo)
     }
 }
 ///////////// setTo////////////////////////
-TEST(setTo)
+PERFTEST(setTo)
 {
     Mat src, dst;
     Scalar val(1, 2, 3, 4);
@@ -166,9 +171,11 @@ TEST(setTo)
             d_src.setTo(val);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(src, cv::Mat(d_src), 1.0));            
+
+
             GPU_ON;
             d_src.setTo(val);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// Merge////////////////////////
-TEST(Merge)
+PERFTEST(Merge)
 {
     Mat dst;
     ocl::oclMat d_dst;
@@ -84,9 +85,10 @@ TEST(Merge)
             ocl::merge(d_src, d_dst);
             WARMUP_OFF;
 
+            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(dst), cv::Mat(d_dst), 0.0));                     
+
             GPU_ON;
             ocl::merge(d_src, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -105,7 +107,7 @@ TEST(Merge)
 }
 
 ///////////// Split////////////////////////
-TEST(Split)
+PERFTEST(Split)
 {
     //int channels = 4;
     int all_type[] = {CV_8UC1, CV_32FC1};
@@ -135,9 +137,23 @@ TEST(Split)
             ocl::split(d_src, d_dst);
             WARMUP_OFF;
 
+            if(d_dst.size() == dst.size())
+            {
+                TestSystem::instance().setAccurate(1);
+                for(size_t i = 0; i < dst.size(); i++)
+                {
+                    if(ExpectedMatNear(dst[i], cv::Mat(d_dst[i]), 0.0) == 0)
+                    {
+                        TestSystem::instance().setAccurate(0);
+                        break;
+                    }
+                }
+            }else
+                TestSystem::instance().setAccurate(0);
+                                
+
             GPU_ON;
             ocl::split(d_src, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
