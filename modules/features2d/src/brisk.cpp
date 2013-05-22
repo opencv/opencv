@@ -255,7 +255,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   const float sigma_scale = 1.3f;
   const float P2_n_rot_ = (2 * CV_PI) / n_rot_; // n_rot_=1024
-  
+
   for (unsigned int scale = 0; scale < scales_; ++scale)
   {
     scaleList_[scale] = (float)std::pow(2.0f, (scale * lb_scale_step));
@@ -777,7 +777,7 @@ BriskScaleSpace::constructPyramid(const cv::Mat& image)
   if (layers_ > 1)
   {
     pyramid_.push_back(BriskLayer(pyramid_.back(), BriskLayer::CommonParams::TWOTHIRDSAMPLE));
-  
+
     const int octaves2 = layers_;
 
     for (uchar i = 2; i < octaves2; i += 2)
@@ -2021,7 +2021,7 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
     scale_  = layer.scale() * 1.5f;
   }
   offset_ = (0.5f * scale_) - 0.5f;
-  
+
   scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8U);
   fast_9_16_ = new FastFeatureDetector(1, false, FastFeatureDetector::TYPE_9_16);
   makeOffsets(pixel_5_8_,  (int)img_.step, 8);
