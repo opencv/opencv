@@ -840,9 +840,11 @@ LPCWSTR GetGUIDNameConstNew(const GUID& guid)
     IF_EQUAL_RETURN(guid, MFAudioFormat_ADTS); //             WAVE_FORMAT_MPEG_ADTS_AAC
     return NULL;
 }
+
 FormatReader::FormatReader(void)
 {
 }
+
 MediaType FormatReader::Read(IMFMediaType *pType)
 {
     UINT32 count = 0;
@@ -888,9 +890,9 @@ ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
     ig_RIE(true),
     ig_Close(false),
     ig_Synchronous(synchronous),
-    ig_hFrameReady(synchronous ? CreateEvent(NULL, FALSE, FALSE, "ig_hFrameReady"): 0),
-    ig_hFrameGrabbed(synchronous ?  CreateEvent(NULL, FALSE, TRUE, "ig_hFrameGrabbed"): 0),
-    ig_hFinish(synchronous ?  CreateEvent(NULL, FALSE, FALSE, "ig_hFinish") : 0)
+    ig_hFrameReady(synchronous ? CreateEvent(NULL, FALSE, FALSE, NULL): 0),
+    ig_hFrameGrabbed(synchronous ? CreateEvent(NULL, FALSE, TRUE, NULL): 0),
+    ig_hFinish(CreateEvent(NULL, TRUE, FALSE, NULL))
 {}
 
 ImageGrabber::~ImageGrabber(void)
@@ -898,15 +900,16 @@ ImageGrabber::~ImageGrabber(void)
     printf("ImageGrabber::~ImageGrabber()\n");
     if (ig_pSession)
     {
-        printf("ig_pSession->Shutdown()");
+        printf("ig_pSession->Shutdown()\n");
         ig_pSession->Shutdown();
     }
+
+    CloseHandle(ig_hFinish);
 
     if (ig_Synchronous)
     {
         CloseHandle(ig_hFrameReady);
         CloseHandle(ig_hFrameGrabbed);
-        CloseHandle(ig_hFinish);
     }
 
     SafeRelease(&ig_pSession);
@@ -1061,7 +1064,6 @@ HRESULT ImageGrabber::startGrabbing(void)
             hr = S_OK;
             goto done;
         }
-        printf("media foundation event: %d\n", met);
         if (met == MESessionEnded)
         {
             DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: MESessionEnded \n", ig_DeviceID);
@@ -1088,13 +1090,7 @@ HRESULT ImageGrabber::startGrabbing(void)
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Finish startGrabbing \n", ig_DeviceID);
 
 done:
-    if (ig_Synchronous)
-    {
-        SetEvent(ig_hFinish);
-    }
-
-    SafeRelease(&ig_pSession);
-    SafeRelease(&ig_pTopology);
+    SetEvent(ig_hFinish);
 
     return hr;
 }
@@ -1109,7 +1105,7 @@ void ImageGrabber::resumeGrabbing()
 
 HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo)
 {
-    ComPtr<IMFTopology> pTopology = NULL;
+    IMFTopology* pTopology = NULL;
     ComPtr<IMFPresentationDescriptor> pPD = NULL;
     ComPtr<IMFStreamDescriptor> pSD = NULL;
     ComPtr<IMFMediaTypeHandler> pHandler = NULL;
@@ -1117,7 +1113,7 @@ HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSink
     ComPtr<IMFTopologyNode> pNode2 = NULL;
     HRESULT hr = S_OK;
     DWORD cStreams = 0;
-    CHECK_HR(hr = MFCreateTopology(pTopology.GetAddressOf()));
+    CHECK_HR(hr = MFCreateTopology(&pTopology));
     CHECK_HR(hr = pSource->CreatePresentationDescriptor(pPD.GetAddressOf()));
     CHECK_HR(hr = pPD->GetStreamDescriptorCount(&cStreams));
     for (DWORD i = 0; i < cStreams; i++)
@@ -1130,8 +1126,8 @@ HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSink
         CHECK_HR(hr = pHandler->GetMajorType(&majorType));
         if (majorType == MFMediaType_Video && fSelected)
         {
-            CHECK_HR(hr = AddSourceNode(pTopology.Get(), pSource, pPD.Get(), pSD.Get(), pNode1.GetAddressOf()));
-            CHECK_HR(hr = AddOutputNode(pTopology.Get(), pSinkActivate, 0, pNode2.GetAddressOf()));
+            CHECK_HR(hr = AddSourceNode(pTopology, pSource, pPD.Get(), pSD.Get(), pNode1.GetAddressOf()));
+            CHECK_HR(hr = AddOutputNode(pTopology, pSinkActivate, 0, pNode2.GetAddressOf()));
             CHECK_HR(hr = pNode1->ConnectOutput(0, pNode2.Get(), 0));
             break;
         }
@@ -1140,7 +1136,7 @@ HRESULT ImageGrabber::CreateTopology(IMFMediaSource *pSource, IMFActivate *pSink
             CHECK_HR(hr = pPD->DeselectStream(i));
         }
     }
-    *ppTopo = pTopology.Get();
+    *ppTopo = pTopology;
     (*ppTopo)->AddRef();
 
 done:
@@ -1286,9 +1282,15 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     (void)llSampleDuration;
     (void)dwSampleSize;
 
-    WaitForSingleObject(ig_hFrameGrabbed, INFINITE);
+    //printf("ImageGrabber::OnProcessSample() -- begin\n");
+    HANDLE tmp[] = {ig_hFinish, ig_hFrameGrabbed, NULL};
 
-    printf("ImageGrabber::OnProcessSample() -- begin\n");
+    DWORD status = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
+    if (status == WAIT_OBJECT_0)
+    {
+        printf("OnProcessFrame called after ig_hFinish event\n");
+        return S_OK;
+    }
 
     if(ig_RIE)
     {
@@ -1300,13 +1302,16 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
         ig_RISecond->fastCopy(pSampleBuffer);
         ig_RIOut = ig_RISecond;
     }
-    ig_RIE = !ig_RIE;
 
-    printf("ImageGrabber::OnProcessSample() -- end\n");
+    //printf("ImageGrabber::OnProcessSample() -- end\n");
 
     if (ig_Synchronous)
     {
         SetEvent(ig_hFrameReady);
+    }
+    else
+    {
+        ig_RIE = !ig_RIE;
     }
 
     return S_OK;
@@ -1314,11 +1319,7 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
 
 STDMETHODIMP ImageGrabber::OnShutdown()
 {
-    if (ig_Synchronous)
-    {
-        SetEvent(ig_hFrameGrabbed);
-    }
-
+    SetEvent(ig_hFinish);
     return S_OK;
 }
 
@@ -1387,6 +1388,8 @@ ImageGrabberThread::~ImageGrabberThread(void)
 {
     DebugPrintOut *DPO = &DebugPrintOut::getInstance();
     DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Destroing ImageGrabberThread\n", igt_DeviceID);
+    if (igt_Handle)
+        WaitForSingleObject(igt_Handle, INFINITE);
     delete igt_pImageGrabber;
 }
 
@@ -1431,7 +1434,6 @@ void ImageGrabberThread::run()
         DPO->printOut(L"IMAGEGRABBERTHREAD VIDEODEVICE %i: Emergency Stop thread\n", igt_DeviceID);
         if(igt_func)
         {
-            printf("Calling Emergency stop even handler\n");
             igt_func(igt_DeviceID, igt_userData);
         }
     }
@@ -3045,6 +3047,7 @@ CvCaptureFile_MSMF::CvCaptureFile_MSMF():
 
 CvCaptureFile_MSMF::~CvCaptureFile_MSMF()
 {
+    close();
     MFShutdown();
 }
 
@@ -3109,7 +3112,7 @@ void CvCaptureFile_MSMF::close()
     if (grabberThread)
     {
         isOpened = false;
-        SetEvent(grabberThread->getImageGrabber()->ig_hFrameReady);
+        SetEvent(grabberThread->getImageGrabber()->ig_hFinish);
         grabberThread->stop();
         delete grabberThread;
     }
@@ -3289,12 +3292,12 @@ bool CvCaptureFile_MSMF::grabFrame()
     DWORD waitResult;
     if (isOpened)
     {
+        SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
         HANDLE tmp[] = {grabberThread->getImageGrabber()->ig_hFrameReady, grabberThread->getImageGrabber()->ig_hFinish, 0};
         waitResult = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
-        SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
     }
 
-    return isOpened && (waitResult == WAIT_OBJECT_0);
+    return isOpened && grabberThread->getImageGrabber()->getRawImage()->isNew() && (waitResult == WAIT_OBJECT_0);
 }
 
 IplImage* CvCaptureFile_MSMF::retrieveFrame(int)
@@ -3443,7 +3446,8 @@ private:
     HRESULT WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& rtStart, const LONGLONG& rtDuration);
 };
 
-CvVideoWriter_MSMF::CvVideoWriter_MSMF()
+CvVideoWriter_MSMF::CvVideoWriter_MSMF():
+    initiated(false)
 {
 }
 
@@ -3456,47 +3460,47 @@ const GUID CvVideoWriter_MSMF::FourCC2GUID(int fourcc)
 {
     switch(fourcc)
     {
-        case 'dv25':
+        case CV_FOURCC_MACRO('d', 'v', '2', '5'):
             return MFVideoFormat_DV25; break;
-        case 'dv50':
+        case CV_FOURCC_MACRO('d', 'v', '5', '0'):
             return MFVideoFormat_DV50; break;
-        case 'dvc ':
+        case CV_FOURCC_MACRO('d', 'v', 'c', ' '):
             return MFVideoFormat_DVC; break;
-        case 'dvh1':
+        case CV_FOURCC_MACRO('d', 'v', 'h', '1'):
             return MFVideoFormat_DVH1; break;
-        case 'dvhd':
+        case CV_FOURCC_MACRO('d', 'v', 'h', 'd'):
             return MFVideoFormat_DVHD; break;
-        case 'dvsd':
+        case CV_FOURCC_MACRO('d', 'v', 's', 'd'):
             return MFVideoFormat_DVSD; break;
-        case 'dvsl':
+        case CV_FOURCC_MACRO('d', 'v', 's', 'l'):
                 return MFVideoFormat_DVSL; break;
-        case 'H263':
+        case CV_FOURCC_MACRO('H', '2', '6', '3'):
                 return MFVideoFormat_H263; break;
-        case 'H264':
+        case CV_FOURCC_MACRO('H', '2', '6', '4'):
                 return MFVideoFormat_H264; break;
-        case 'M4S2':
+        case CV_FOURCC_MACRO('M', '4', 'S', '2'):
                 return MFVideoFormat_M4S2; break;
-        case 'MJPG':
+        case CV_FOURCC_MACRO('M', 'J', 'P', 'G'):
                 return MFVideoFormat_MJPG; break;
-        case 'MP43':
+        case CV_FOURCC_MACRO('M', 'P', '4', '3'):
                 return MFVideoFormat_MP43; break;
-        case 'MP4S':
+        case CV_FOURCC_MACRO('M', 'P', '4', 'S'):
                 return MFVideoFormat_MP4S; break;
-        case 'MP4V':
+        case CV_FOURCC_MACRO('M', 'P', '4', 'V'):
                 return MFVideoFormat_MP4V; break;
-        case 'MPG1':
+        case CV_FOURCC_MACRO('M', 'P', 'G', '1'):
                 return MFVideoFormat_MPG1; break;
-        case 'MSS1':
+        case CV_FOURCC_MACRO('M', 'S', 'S', '1'):
                 return MFVideoFormat_MSS1; break;
-        case 'MSS2':
+        case CV_FOURCC_MACRO('M', 'S', 'S', '2'):
                 return MFVideoFormat_MSS2; break;
-        case 'WMV1':
+        case CV_FOURCC_MACRO('W', 'M', 'V', '1'):
                 return MFVideoFormat_WMV1; break;
-        case 'WMV2':
+        case CV_FOURCC_MACRO('W', 'M', 'V', '2'):
                 return MFVideoFormat_WMV2; break;
-        case 'WMV3':
+        case CV_FOURCC_MACRO('W', 'M', 'V', '3'):
                 return MFVideoFormat_WMV3; break;
-        case 'WVC1':
+        case CV_FOURCC_MACRO('W', 'V', 'C', '1'):
                 return MFVideoFormat_WVC1; break;
         default:
             return MFVideoFormat_H264;
@@ -3516,19 +3520,15 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     if (SUCCEEDED(hr))
     {
-        printf("CoInitializeEx is successfull\n");
         hr = MFStartup(MF_VERSION);
         if (SUCCEEDED(hr))
         {
-            printf("MFStartup is successfull\n");
             hr = InitializeSinkWriter(filename);
             if (SUCCEEDED(hr))
             {
-                printf("InitializeSinkWriter is successfull\n");
                 initiated = true;
                 rtStart = 0;
                 MFFrameRateToAverageTimePerFrame((UINT32)fps, 1, &rtDuration);
-                printf("duration: %d\n", rtDuration);
             }
         }
     }
@@ -3556,13 +3556,9 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
     if (!img)
         return false;
 
-    printf("Writing not empty IplImage\n");
-
     int length = img->width * img->height * 4;
-    printf("Image: %dx%d, %d\n", img->width, img->height, length);
     DWORD* target = new DWORD[length];
 
-    printf("Before for loop\n");
     for (int rowIdx = 0; rowIdx < img->height; rowIdx++)
     {
         char* rowStart = img->imageData + rowIdx*img->widthStep;
@@ -3577,9 +3573,7 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
     }
 
     // Send frame to the sink writer.
-    printf("Before private WriteFrame call\n");
     HRESULT hr = WriteFrame(target, rtStart, rtDuration);
-    printf("After private WriteFrame call\n");
     if (FAILED(hr))
     {
         printf("Private WriteFrame failed\n");
@@ -3587,8 +3581,6 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
         return false;
     }
     rtStart += rtDuration;
-
-    printf("End of writing IplImage\n");
 
     delete[] target;
 
@@ -3681,7 +3673,8 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     {
         hr = MFSetAttributeRatio(mediaTypeIn.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     }
-        if (SUCCEEDED(hr))
+
+    if (SUCCEEDED(hr))
     {
         hr = sinkWriter->SetInputMediaType(streamIndex, mediaTypeIn.Get(), NULL);
     }
@@ -3697,7 +3690,6 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
 
 HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& Start, const LONGLONG& Duration)
 {
-    printf("Private WriteFrame(%p, %llu, %llu)\n", videoFrameBuffer, Start, Duration);
     ComPtr<IMFSample> sample;
     ComPtr<IMFMediaBuffer> buffer;
 
@@ -3712,13 +3704,11 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
     // Lock the buffer and copy the video frame to the buffer.
     if (SUCCEEDED(hr))
     {
-        printf("MFCreateMemoryBuffer successfull\n");
         hr = buffer->Lock(&pData, NULL, NULL);
     }
 
     if (SUCCEEDED(hr))
     {
-        printf("Before MFCopyImage(%p, %d, %p, %d, %d %d)\n", pData, cbWidth, videoFrameBuffer, cbWidth, cbWidth, videoHeight);
         hr = MFCopyImage(
             pData,                      // Destination buffer.
             cbWidth,                    // Destination stride.
@@ -3727,21 +3717,16 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
             cbWidth,                    // Image width in bytes.
             videoHeight                 // Image height in pixels.
             );
-        printf("After MFCopyImage()\n");
     }
 
-    printf("Before buffer.Get()\n");
     if (buffer)
     {
-        printf("Before buffer->Unlock\n");
         buffer->Unlock();
-        printf("After buffer->Unlock\n");
     }
 
     // Set the data length of the buffer.
     if (SUCCEEDED(hr))
     {
-        printf("MFCopyImage successfull\n");
         hr = buffer->SetCurrentLength(cbBuffer);
     }
 
@@ -3758,23 +3743,18 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
     // Set the time stamp and the duration.
     if (SUCCEEDED(hr))
     {
-        printf("Sample time: %d\n", Start);
         hr = sample->SetSampleTime(Start);
     }
     if (SUCCEEDED(hr))
     {
-        printf("Duration: %d\n", Duration);
         hr = sample->SetSampleDuration(Duration);
     }
 
     // Send the sample to the Sink Writer.
     if (SUCCEEDED(hr))
     {
-        printf("Setting writer params successfull\n");
         hr = sinkWriter->WriteSample(streamIndex, sample.Get());
     }
-
-    printf("Private WriteFrame(%d, %p) end with status %u\n", streamIndex, sample.Get(), hr);
 
     return hr;
 }
