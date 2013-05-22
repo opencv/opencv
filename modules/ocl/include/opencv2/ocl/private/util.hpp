@@ -120,6 +120,33 @@ namespace cv
         cl_mem CV_EXPORTS bindTexture(const oclMat &mat);
         void CV_EXPORTS releaseTexture(cl_mem& texture);
 
+        //Represents an image texture object
+        class CV_EXPORTS TextureCL
+        {
+        public:
+            TextureCL(cl_mem tex, int r, int c, int t)
+                : tex_(tex), rows(r), cols(c), type(t) {}
+            ~TextureCL()
+            {
+                openCLFree(tex_);
+            }
+            operator cl_mem() 
+            {
+                return tex_;
+            }
+            cl_mem const tex_;
+            const int rows;
+            const int cols;
+            const int type;
+        private:
+            //disable assignment
+            void operator=(const TextureCL&);
+        };
+        // bind oclMat to OpenCL image textures and retunrs an TextureCL object
+        // note:
+        //   for faster clamping, there is no buffer padding for the constructed texture
+        Ptr<TextureCL> CV_EXPORTS bindTexturePtr(const oclMat &mat);
+
         // returns whether the current context supports image2d_t format or not
         bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
 
@@ -132,7 +159,7 @@ namespace cv
         };
         template<DEVICE_INFO _it, typename _ty>
         _ty queryDeviceInfo(cl_kernel kernel = NULL);
-        //info should have been pre-allocated
+
         template<>
         int CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel);
         template<>

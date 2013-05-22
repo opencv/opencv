@@ -122,8 +122,9 @@ namespace cv
         CV_EXPORTS  void setBinpath(const char *path);
 
         //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
+        //returns cl_context * 
         CV_EXPORTS void* getoclContext();
-
+        //returns cl_command_queue *
         CV_EXPORTS void* getoclCommandQueue();
 
         //explicit call clFinish. The global command queue will be used.
@@ -461,6 +462,7 @@ namespace cv
         // support all C1 types
 
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
+        CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         // support all C1 types
@@ -789,7 +791,11 @@ namespace cv
         CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum);
         CV_EXPORTS void integral(const oclMat &src, oclMat &sum);
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
+        CV_EXPORTS void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
+            int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
+        CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
+            int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
@@ -1253,6 +1259,52 @@ namespace cv
         public:
             explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
         };
+
+        class CV_EXPORTS GoodFeaturesToTrackDetector_OCL
+        {
+        public:
+            explicit GoodFeaturesToTrackDetector_OCL(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+                int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
+
+            //! return 1 rows matrix with CV_32FC2 type
+            void operator ()(const oclMat& image, oclMat& corners, const oclMat& mask = oclMat());
+            //! download points of type Point2f to a vector. the vector's content will be erased
+            void downloadPoints(const oclMat &points, vector<Point2f> &points_v);
+
+            int maxCorners;
+            double qualityLevel;
+            double minDistance;
+
+            int blockSize;
+            bool useHarrisDetector;
+            double harrisK;
+            void releaseMemory()
+            {
+                Dx_.release();
+                Dy_.release();
+                eig_.release();
+                minMaxbuf_.release();
+                tmpCorners_.release();
+            }
+        private:
+            oclMat Dx_;
+            oclMat Dy_;
+            oclMat eig_;
+            oclMat minMaxbuf_;
+            oclMat tmpCorners_;
+        };
+
+        inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,
+            int blockSize_, bool useHarrisDetector_, double harrisK_)
+        {
+            maxCorners = maxCorners_;
+            qualityLevel = qualityLevel_;
+            minDistance = minDistance_;
+            blockSize = blockSize_;
+            useHarrisDetector = useHarrisDetector_;
+            harrisK = harrisK_;
+        }
+
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
         class CV_EXPORTS PyrLKOpticalFlow
         {
