@@ -15,8 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Dachuan Zhao, dachuan@multicorewareinc.com
-//		Yao Wang, bitwangyaoyao@gmail.com
+//      Dachuan Zhao, dachuan@multicorewareinc.com
+//      Yao Wang, bitwangyaoyao@gmail.com
 //      Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -65,7 +65,7 @@ struct dim3
     unsigned int x, y, z;
 };
 
-void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bool isDeviceArch11)
+static void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bool isDeviceArch11)
 {
     winSize.width *= cn;
 
@@ -140,7 +140,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
             idxStr << kernelName << "_C" << I.oclchannels() << "_D" << I.depth();
             cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str());
 
-            size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
+            int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
             static char opt[16] = {0};
             sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
 
