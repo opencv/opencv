@@ -1581,7 +1581,7 @@ namespace
         (void)src;
         (void)dst;
         (void)st;
-        CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
+        CV_Error( Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     #else
         CV_Assert(src.type() == CV_8UC4 || src.type() == CV_16UC4);
 
