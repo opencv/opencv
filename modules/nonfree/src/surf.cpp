@@ -138,25 +138,26 @@ inline float calcHaarPattern( const int* origin, const SurfHF* f, int n )
 {
     double d = 0;
     for( int k = 0; k < n; k++ )
-        d += (origin[f[k].p0] + origin[f[k].p3] - origin[f[k].p1] - origin[f[k].p2])*f[k].w;
+        d += (origin[f[k].p0] + origin[f[k].p3] - origin[f[k].p1] - origin[f[k].p2]) * f[k].w;
     return (float)d;
 }
 
 static void
 resizeHaarPattern( const int src[][5], SurfHF* dst, int n, int oldSize, int newSize, int widthStep )
 {
-    float ratio = (float)newSize/oldSize;
+    const float ratio = (float) newSize / oldSize;
     for( int k = 0; k < n; k++ )
     {
-        int dx1 = cvRound( ratio*src[k][0] );
-        int dy1 = cvRound( ratio*src[k][1] );
-        int dx2 = cvRound( ratio*src[k][2] );
-        int dy2 = cvRound( ratio*src[k][3] );
-        dst[k].p0 = dy1*widthStep + dx1;
-        dst[k].p1 = dy2*widthStep + dx1;
-        dst[k].p2 = dy1*widthStep + dx2;
-        dst[k].p3 = dy2*widthStep + dx2;
-        dst[k].w = src[k][4]/((float)(dx2-dx1)*(dy2-dy1));
+        int dx1 = cvRound( ratio * src[k][0] );
+        int dy1 = cvRound( ratio * src[k][1] );
+        int dx2 = cvRound( ratio * src[k][2] );
+        int dy2 = cvRound( ratio * src[k][3] );
+        float w = src[k][4] / ((float)(dx2-dx1)*(dy2-dy1));
+        dst[k].p0 = (dy1 * widthStep) + dx1;
+        dst[k].p1 = (dy2 * widthStep) + dx1;
+        dst[k].p2 = (dy1 * widthStep) + dx2;
+        dst[k].p3 = (dy2 * widthStep) + dx2;
+        dst[k].w = w;
     }
 }
 
@@ -167,14 +168,14 @@ resizeHaarPattern( const int src[][5], SurfHF* dst, int n, int oldSize, int newS
 static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
                                   Mat& det, Mat& trace )
 {
-    const int NX=3, NY=3, NXY=4;
+    const int NX = 3, NY = 3, NXY = 4;
     const int dx_s[NX][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
     const int dy_s[NY][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
     const int dxy_s[NXY][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
 
     SurfHF Dx[NX], Dy[NY], Dxy[NXY];
 
-    if( size > sum.rows-1 || size > sum.cols-1 )
+    if( size > (sum.rows-1) || size > (sum.cols-1) )
        return;
 
     resizeHaarPattern( dx_s , Dx , NX , 9, size, sum.cols );
@@ -182,11 +183,11 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
     resizeHaarPattern( dxy_s, Dxy, NXY, 9, size, sum.cols );
 
     /* The integral image 'sum' is one pixel bigger than the source image */
-    int samples_i = 1+(sum.rows-1-size)/sampleStep;
-    int samples_j = 1+(sum.cols-1-size)/sampleStep;
+    const int samples_i = 1 + (sum.rows-(1+size)) / sampleStep;
+    const int samples_j = 1 + (sum.cols-(1+size)) / sampleStep;
 
     /* Ignore pixels where some of the kernel is outside the image */
-    int margin = (size/2)/sampleStep;
+    const int margin = (size/2) / sampleStep; // >0?
 
     for( int i = 0; i < samples_i; i++ )
     {
@@ -199,7 +200,7 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
             float dy  = calcHaarPattern( sum_ptr, Dy , 3 );
             float dxy = calcHaarPattern( sum_ptr, Dxy, 4 );
             sum_ptr += sampleStep;
-            det_ptr[j] = dx*dy - 0.81f*dxy*dxy;
+            det_ptr[j] = (dx*dy) - (0.81f*dxy*dxy);
             trace_ptr[j] = dx + dy;
         }
     }
@@ -228,19 +229,19 @@ static void calcLayerDetAndTrace( const Mat& sum, int size, int sampleStep,
 static int
 interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
 {
-    Vec3f b(-(N9[1][5]-N9[1][3])/2,  // Negative 1st deriv with respect to x
-            -(N9[1][7]-N9[1][1])/2,  // Negative 1st deriv with respect to y
-            -(N9[2][4]-N9[0][4])/2); // Negative 1st deriv with respect to s
+    Vec3f b((N9[1][5]-N9[1][3])*(-0.5f),  // Negative 1st deriv with respect to x
+            (N9[1][7]-N9[1][1])*(-0.5f),  // Negative 1st deriv with respect to y
+            (N9[2][4]-N9[0][4])*(-0.5f)); // Negative 1st deriv with respect to s
 
     Matx33f A(
         N9[1][3]-2*N9[1][4]+N9[1][5],            // 2nd deriv x, x
-        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])/4, // 2nd deriv x, y
-        (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])/4, // 2nd deriv x, s
-        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])/4, // 2nd deriv x, y
+        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])*0.25f, // 2nd deriv x, y
+        (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])*0.25f, // 2nd deriv x, s
+        (N9[1][8]-N9[1][6]-N9[1][2]+N9[1][0])*0.25f, // 2nd deriv x, y
         N9[1][1]-2*N9[1][4]+N9[1][7],            // 2nd deriv y, y
-        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s
-        (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])/4, // 2nd deriv x, s
-        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])/4, // 2nd deriv y, s
+        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])*0.25f, // 2nd deriv y, s
+        (N9[2][5]-N9[2][3]-N9[0][5]+N9[0][3])*0.25f, // 2nd deriv x, s
+        (N9[2][7]-N9[2][1]-N9[0][7]+N9[0][1])*0.25f, // 2nd deriv y, s
         N9[0][4]-2*N9[1][4]+N9[2][4]);           // 2nd deriv s, s
 
     Vec3f x = A.solve(b, DECOMP_LU);
@@ -250,8 +251,8 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
 
     if( ok )
     {
-        kpt.pt.x += x[0]*dx;
-        kpt.pt.y += x[1]*dy;
+        kpt.pt.x += x[0] * dx;
+        kpt.pt.y += x[1] * dy;
         kpt.size = (float)cvRound( kpt.size + x[2]*ds );
     }
     return ok;
@@ -314,8 +315,8 @@ struct SURFFindInvoker
     {
         for( int i=range.begin(); i<range.end(); i++ )
         {
-            int layer = (*middleIndices)[i];
-            int octave = i / nOctaveLayers;
+            const int layer = (*middleIndices)[i];
+            const int octave = i / nOctaveLayers;
             findMaximaInLayer( *sum, *mask_sum, *dets, *traces, *sizes,
                                *keypoints, octave, layer, hessianThreshold,
                                (*sampleSteps)[layer] );
@@ -353,38 +354,38 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                    int octave, int layer, float hessianThreshold, int sampleStep )
 {
     // Wavelet Data
-    const int NM=1;
+    const int NM = 1;
     const int dm[NM][5] = { {0, 0, 9, 9, 1} };
     SurfHF Dm;
 
-    int size = sizes[layer];
+    const int size = sizes[layer];
 
     // The integral image 'sum' is one pixel bigger than the source image
-    int layer_rows = (sum.rows-1)/sampleStep;
-    int layer_cols = (sum.cols-1)/sampleStep;
+    const int layer_rows = (sum.rows-1) / sampleStep;
+    const int layer_cols = (sum.cols-1) / sampleStep;
 
     // Ignore pixels without a 3x3x3 neighbourhood in the layer above
-    int margin = (sizes[layer+1]/2)/sampleStep+1;
+    const int margin = (sizes[layer+1]/2) / sampleStep + 1;
 
     if( !mask_sum.empty() )
        resizeHaarPattern( dm, &Dm, NM, 9, size, mask_sum.cols );
 
-    int step = (int)(dets[layer].step/dets[layer].elemSize());
+    const int step = (int) (dets[layer].step / dets[layer].elemSize());
 
-    for( int i = margin; i < layer_rows - margin; i++ )
+    for( int i = margin; i < (layer_rows - margin); i++ )
     {
         const float* det_ptr = dets[layer].ptr<float>(i);
         const float* trace_ptr = traces[layer].ptr<float>(i);
-        for( int j = margin; j < layer_cols-margin; j++ )
+        for( int j = margin; j < (layer_cols - margin); j++ )
         {
-            float val0 = det_ptr[j];
+            const float val0 = det_ptr[j];
             if( val0 > hessianThreshold )
             {
                 /* Coordinates for the start of the wavelet in the sum image. There
                    is some integer division involved, so don't try to simplify this
                    (cancel out sampleStep) without checking the result is the same */
-                int sum_i = sampleStep*(i-(size/2)/sampleStep);
-                int sum_j = sampleStep*(j-(size/2)/sampleStep);
+                const int sum_i = sampleStep*(i-(size/2)/sampleStep);
+                const int sum_j = sampleStep*(j-(size/2)/sampleStep);
 
                 /* The 3x3x3 neighbouring samples around the maxima.
                    The maxima is included at N9[1][4] */
@@ -407,7 +408,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                 {
                     const int* mask_ptr = &mask_sum.at<int>(sum_i, sum_j);
                     float mval = calcHaarPattern( mask_ptr, &Dm, 1 );
-                    if( mval < 0.5 )
+                    if( mval < 0.5f )
                         continue;
                 }
 
@@ -473,8 +474,8 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, std::vecto
        however keypoint extraction becomes unreliable. */
     const int SAMPLE_STEP0 = 1;
 
-    int nTotalLayers = (nOctaveLayers+2)*nOctaves;
-    int nMiddleLayers = nOctaveLayers*nOctaves;
+    const int nTotalLayers = (nOctaveLayers+2) * nOctaves;
+    const int nMiddleLayers = nOctaveLayers * nOctaves;
 
     std::vector<Mat> dets(nTotalLayers);
     std::vector<Mat> traces(nTotalLayers);
@@ -486,22 +487,33 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, std::vecto
 
     // Allocate space and calculate properties of each layer
     int index = 0, middleIndex = 0, step = SAMPLE_STEP0;
+    int sum_rows_step = (sum.rows-1) / step;
+    int sum_cols_step = (sum.cols-1) / step;
 
     for( int octave = 0; octave < nOctaves; octave++ )
     {
-        for( int layer = 0; layer < nOctaveLayers+2; layer++ )
+        int layer;
+        dets[index].create( sum_rows_step, sum_cols_step, CV_32F );
+        traces[index].create( sum_rows_step, sum_cols_step, CV_32F );
+        sizes[index] = (SURF_HAAR_SIZE0 + 0) << octave;
+        sampleSteps[index] = step;
+        index ++;
+
+        for( layer = 1; layer < (nOctaveLayers+2); layer++ )
         {
             /* The integral image sum is one pixel bigger than the source image*/
-            dets[index].create( (sum.rows-1)/step, (sum.cols-1)/step, CV_32F );
-            traces[index].create( (sum.rows-1)/step, (sum.cols-1)/step, CV_32F );
+            dets[index].create( sum_rows_step, sum_cols_step, CV_32F );
+            traces[index].create( sum_rows_step, sum_cols_step, CV_32F );
             sizes[index] = (SURF_HAAR_SIZE0 + SURF_HAAR_SIZE_INC*layer) << octave;
             sampleSteps[index] = step;
 
-            if( 0 < layer && layer <= nOctaveLayers )
+            if( layer <= nOctaveLayers )
                 middleIndices[middleIndex++] = index;
-            index++;
+            index ++;
         }
         step *= 2;
+        sum_rows_step /= 2;
+        sum_cols_step /= 2;
     }
 
     // Calculate hessian determinant and trace samples in each layer
@@ -534,7 +546,7 @@ struct SURFInvoker
         upright = _upright;
 
         // Simple bound for number of grid points in circle of radius ORI_RADIUS
-        const int nOriSampleBound = (2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+        const int nOriSampleBound = (2*ORI_RADIUS+1) * (2*ORI_RADIUS+1);
 
         // Allocate arrays
         apt.resize(nOriSampleBound);
@@ -542,16 +554,22 @@ struct SURFInvoker
         DW.resize(PATCH_SZ*PATCH_SZ);
 
         /* Coordinates and weights of samples used to calculate orientation */
-        Mat G_ori = getGaussianKernel( 2*ORI_RADIUS+1, SURF_ORI_SIGMA, CV_32F );
+        Mat G_ori = getGaussianKernel( (2*ORI_RADIUS) + 1, SURF_ORI_SIGMA, CV_32F );
         nOriSamples = 0;
         for( int i = -ORI_RADIUS; i <= ORI_RADIUS; i++ )
         {
-            for( int j = -ORI_RADIUS; j <= ORI_RADIUS; j++ )
+            const float G_i = G_ori.at<float>(i+ORI_RADIUS, 0);
+            const int max_jj = (ORI_RADIUS*ORI_RADIUS) - (i*i);
+            int max_j = ORI_RADIUS;
+            while ((max_j*max_j) > max_jj) {
+                max_j --;
+            }
+            for( int j = -max_j; j <= max_j; j++ ) // -ORI_RADIUS .. ORI_RADIUS (-6..6)
             {
-                if( i*i + j*j <= ORI_RADIUS*ORI_RADIUS )
+                // if( j*j <= max_jj )
                 {
-                    apt[nOriSamples] = Point(i,j);
-                    aptw[nOriSamples++] = G_ori.at<float>(i+ORI_RADIUS,0) * G_ori.at<float>(j+ORI_RADIUS,0);
+                    apt[nOriSamples] = cvPoint(i, j);
+                    aptw[nOriSamples++] = G_i * G_ori.at<float>(j+ORI_RADIUS, 0);
                 }
             }
         }
@@ -561,28 +579,32 @@ struct SURFInvoker
         Mat G_desc = getGaussianKernel( PATCH_SZ, SURF_DESC_SIGMA, CV_32F );
         for( int i = 0; i < PATCH_SZ; i++ )
         {
+            const float G_i = G_desc.at<float>(i,0);
             for( int j = 0; j < PATCH_SZ; j++ )
-                DW[i*PATCH_SZ+j] = G_desc.at<float>(i,0) * G_desc.at<float>(j,0);
+                DW[(i*PATCH_SZ) + j] = G_i * G_desc.at<float>(j,0);
         }
     }
 
     void operator()(const BlockedRange& range) const
     {
         /* X and Y gradient wavelet data */
-        const int NX=2, NY=2;
+        const int NX = 2, NY = 2;
         const int dx_s[NX][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
         const int dy_s[NY][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
 
         // Optimisation is better using nOriSampleBound than nOriSamples for
         // array lengths.  Maybe because it is a constant known at compile time
-        const int nOriSampleBound =(2*ORI_RADIUS+1)*(2*ORI_RADIUS+1);
+        const int nOriSampleBound = (2*ORI_RADIUS+1) * (2*ORI_RADIUS+1);
 
         float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
+        CvMat matX = cvMat(1, nOriSampleBound, CV_32F, X);
+        CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
+        CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
-        int dsize = extended ? 128 : 64;
+        const int dsize = extended ? 128 : 64;
 
         int k, k1 = range.begin(), k2 = range.end();
         float maxSize = 0;
@@ -590,8 +612,9 @@ struct SURFInvoker
         {
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
-        int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*1.2f/9.0f), 1);
-        cv::AutoBuffer<uchar> winbuf(imaxSize*imaxSize);
+        const int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*(1.2f/9.0f)), 1);
+        Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
+        const int sum_rows = sum->rows, sum_cols = sum->cols;
 
         for( k = k1; k < k2; k++ )
         {
@@ -599,17 +622,17 @@ struct SURFInvoker
             float* vec;
             SurfHF dx_t[NX], dy_t[NY];
             KeyPoint& kp = (*keypoints)[k];
-            float size = kp.size;
-            Point2f center = kp.pt;
+            const float size = kp.size;
+            const Point2f center = kp.pt;
             /* The sampling intervals and wavelet sized for selecting an orientation
              and building the keypoint descriptor are defined relative to 's' */
-            float s = size*1.2f/9.0f;
+            const float s = size * (1.2f/9.0f);
             /* To find the dominant orientation, the gradients in x and y are
              sampled in a circle of radius 6s using wavelets of size 4s.
              We ensure the gradient wavelet size is even to ensure the
              wavelet pattern is balanced and symmetric around its center */
-            int grad_wav_size = 2*cvRound( 2*s );
-            if( sum->rows < grad_wav_size || sum->cols < grad_wav_size )
+            const int grad_wav_size = 2 * cvRound( 2*s );
+            if( (sum_rows < grad_wav_size) || (sum_cols < grad_wav_size) )
             {
                 /* when grad_wav_size is too big,
                  * the sampling of gradient will be meaningless
@@ -621,21 +644,23 @@ struct SURFInvoker
             float descriptor_dir = 360.f - 90.f;
             if (upright == 0)
             {
-                resizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum->cols );
-                resizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum->cols );
+                const float grad_wav_size_2 = (float)(grad_wav_size-1) * 0.5f;
+                const unsigned int rows_gws = (unsigned int) (sum_rows - grad_wav_size):
+                const unsigned int cols_gws = (unsigned int) (sum_cols - grad_wav_size);
+                resizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum_cols );
+                resizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum_cols );
                 for( kk = 0, nangle = 0; kk < nOriSamples; kk++ )
                 {
-                    int x = cvRound( center.x + apt[kk].x*s - (float)(grad_wav_size-1)/2 );
-                    int y = cvRound( center.y + apt[kk].y*s - (float)(grad_wav_size-1)/2 );
-                    if( y < 0 || y >= sum->rows - grad_wav_size ||
-                        x < 0 || x >= sum->cols - grad_wav_size )
+                    int x = cvRound( (center.x - grad_wav_size_2) + (apt[kk].x*s) );
+                    int y = cvRound( (center.y - grad_wav_size_2) + (apt[kk].y*s) );
+                    if( (unsigned int)y >= rows_gws || (unsigned int)x >= cols_gws )
                         continue;
                     const int* ptr = &sum->at<int>(y, x);
                     float vx = calcHaarPattern( ptr, dx_t, 2 );
                     float vy = calcHaarPattern( ptr, dy_t, 2 );
-                    X[nangle] = vx*aptw[kk];
-                    Y[nangle] = vy*aptw[kk];
-                    nangle++;
+                    X[nangle] = vx * aptw[kk];
+                    Y[nangle] = vy * aptw[kk];
+                    nangle ++;
                 }
                 if( nangle == 0 )
                 {
@@ -656,13 +681,13 @@ struct SURFInvoker
                     for( j = 0; j < nangle; j++ )
                     {
                         int d = std::abs(cvRound(angle[j]) - i);
-                        if( d < ORI_WIN/2 || d > 360-ORI_WIN/2 )
+                        if( d < (ORI_WIN/2) || d > (360-ORI_WIN/2) )
                         {
                             sumx += X[j];
                             sumy += Y[j];
                         }
                     }
-                    temp_mod = sumx*sumx + sumy*sumy;
+                    temp_mod = (sumx * sumx) + (sumy * sumy);
                     if( temp_mod > descriptor_mod )
                     {
                         descriptor_mod = temp_mod;
@@ -677,15 +702,17 @@ struct SURFInvoker
                 continue;
 
             /* Extract a window of pixels around the keypoint of size 20s */
-            int win_size = (int)((PATCH_SZ+1)*s);
+            const int win_size = (int) ((PATCH_SZ+1) * s);
             CV_Assert( imaxSize >= win_size );
             Mat win(win_size, win_size, CV_8U, winbuf);
+            const float win_offset = (float)(win_size-1) * (-0.5f);
+            const int ncols1 = img->cols - 1, nrows1 = img->rows - 1;
 
             if( !upright )
             {
                 descriptor_dir *= (float)(CV_PI/180);
-                float sin_dir = -std::sin(descriptor_dir);
-                float cos_dir =  std::cos(descriptor_dir);
+                const float sin_dir = -std::sinf(descriptor_dir);
+                const float cos_dir =  std::cosf(descriptor_dir);
 
                 /* Subpixel interpolation version (slower). Subpixel not required since
                 the pixels will all get averaged when we scale down to 20 pixels */
@@ -696,9 +723,8 @@ struct SURFInvoker
                 cvGetQuadrangleSubPix( img, &win, &W );
                 */
 
-                float win_offset = -(float)(win_size-1)/2;
-                float start_x = center.x + win_offset*cos_dir + win_offset*sin_dir;
-                float start_y = center.y - win_offset*sin_dir + win_offset*cos_dir;
+                float start_x = center.x + (win_offset*cos_dir) + (win_offset*sin_dir);
+                float start_y = center.y - (win_offset*sin_dir) + (win_offset*cos_dir);
                 uchar* WIN = win.data;
 #if 0
                 // Nearest neighbour version (faster)
@@ -708,14 +734,13 @@ struct SURFInvoker
                     float pixel_y = start_y;
                     for( j = 0; j < win_size; j++, pixel_x += cos_dir, pixel_y -= sin_dir )
                     {
-                        int x = std::min(std::max(cvRound(pixel_x), 0), img->cols-1);
-                        int y = std::min(std::max(cvRound(pixel_y), 0), img->rows-1);
-                        WIN[i*win_size + j] = img->at<uchar>(y, x);
+                        int x = std::min(std::max(cvRound(pixel_x), 0), ncols1);
+                        int y = std::min(std::max(cvRound(pixel_y), 0), nrows1);
+                        WIN[(i*win_size) + j] = img->at<uchar>(y, x);
                     }
                 }
 #else
-                int ncols1 = img->cols-1, nrows1 = img->rows-1;
-                size_t imgstep = img->step;
+                const size_t imgstep = img->step;
                 for( i = 0; i < win_size; i++, start_x += sin_dir, start_y += cos_dir )
                 {
                     double pixel_x = start_x;
@@ -723,12 +748,13 @@ struct SURFInvoker
                     for( j = 0; j < win_size; j++, pixel_x += cos_dir, pixel_y -= sin_dir )
                     {
                         int ix = cvFloor(pixel_x), iy = cvFloor(pixel_y);
+                        uchar val;
                         if( (unsigned)ix < (unsigned)ncols1 &&
                             (unsigned)iy < (unsigned)nrows1 )
                         {
                             float a = (float)(pixel_x - ix), b = (float)(pixel_y - iy);
                             const uchar* imgptr = &img->at<uchar>(iy, ix);
-                            WIN[i*win_size + j] = (uchar)
+                            val = (uchar)
                                 cvRound(imgptr[0]*(1.f - a)*(1.f - b) +
                                         imgptr[1]*a*(1.f - b) +
                                         imgptr[imgstep]*(1.f - a)*b +
@@ -738,8 +764,9 @@ struct SURFInvoker
                         {
                             int x = std::min(std::max(cvRound(pixel_x), 0), ncols1);
                             int y = std::min(std::max(cvRound(pixel_y), 0), nrows1);
-                            WIN[i*win_size + j] = img->at<uchar>(y, x);
+                            val = img->at<uchar>(y, x);
                         }
+                        WIN[(i*win_size) + j] = val;
                     }
                 }
 #endif
@@ -753,7 +780,6 @@ struct SURFInvoker
                 // sin_dir == 1
                 // cos_dir == 0
 
-                float win_offset = -(float)(win_size-1)/2;
                 int start_x = cvRound(center.x + win_offset);
                 int start_y = cvRound(center.y - win_offset);
                 uchar* WIN = win.data;
@@ -765,9 +791,9 @@ struct SURFInvoker
                     {
                         int x = MAX( pixel_x, 0 );
                         int y = MAX( pixel_y, 0 );
-                        x = MIN( x, img->cols-1 );
-                        y = MIN( y, img->rows-1 );
-                        WIN[i*win_size + j] = img->at<uchar>(y, x);
+                        x = MIN( x, ncols1 );
+                        y = MIN( y, nrows1 );
+                        WIN[(i*win_size) + j] = img->at<uchar>(y, x);
                     }
                 }
             }
@@ -779,9 +805,13 @@ struct SURFInvoker
             for( i = 0; i < PATCH_SZ; i++ )
                 for( j = 0; j < PATCH_SZ; j++ )
                 {
-                    float dw = DW[i*PATCH_SZ + j];
-                    float vx = (PATCH[i][j+1] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i+1][j])*dw;
-                    float vy = (PATCH[i+1][j] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i][j+1])*dw;
+                    const float dw = DW[(i*PATCH_SZ) + j];
+                    const float patch_mid = (PATCH[i][j]   - PATCH[i+1][j+1]);
+                    const float patch_brd = (PATCH[i][j+1] - PATCH[i+1][j]);
+                    float vx = ( patch_brd - patch_mid) * dw;
+                    float vy = (-patch_brd - patch_mid) * dw;
+                    //    vx = (PATCH[i][j+1] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i+1][j])*dw;
+                    //    vy = (PATCH[i+1][j] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i][j+1])*dw;
                     DX[i][j] = vx;
                     DY[i][j] = vy;
                 }
@@ -797,11 +827,11 @@ struct SURFInvoker
                 for( i = 0; i < 4; i++ )
                     for( j = 0; j < 4; j++ )
                     {
-                        for(int y = i*5; y < i*5+5; y++ )
+                        for(int y = i*5; y < (i*5)+5; y++ )
                         {
-                            for(int x = j*5; x < j*5+5; x++ )
+                            for(int x = j*5; x < (j*5)+5; x++ )
                             {
-                                float tx = DX[y][x], ty = DY[y][x];
+                                const float tx = DX[y][x], ty = DY[y][x];
                                 if( ty >= 0 )
                                 {
                                     vec[0] += tx;
@@ -821,7 +851,7 @@ struct SURFInvoker
                             }
                         }
                         for( kk = 0; kk < 8; kk++ )
-                            square_mag += vec[kk]*vec[kk];
+                            square_mag += vec[kk] * vec[kk];
                         vec += 8;
                     }
             }
@@ -831,24 +861,24 @@ struct SURFInvoker
                 for( i = 0; i < 4; i++ )
                     for( j = 0; j < 4; j++ )
                     {
-                        for(int y = i*5; y < i*5+5; y++ )
+                        for(int y = i*5; y < (i*5)+5; y++ )
                         {
-                            for(int x = j*5; x < j*5+5; x++ )
+                            for(int x = j*5; x < (j*5)+5; x++ )
                             {
-                                float tx = DX[y][x], ty = DY[y][x];
+                                const float tx = DX[y][x], ty = DY[y][x];
                                 vec[0] += tx; vec[1] += ty;
                                 vec[2] += (float)fabs(tx); vec[3] += (float)fabs(ty);
                             }
                         }
                         for( kk = 0; kk < 4; kk++ )
-                            square_mag += vec[kk]*vec[kk];
-                        vec+=4;
+                            square_mag += vec[kk] * vec[kk];
+                        vec += 4;
                     }
             }
 
             // unit vector is essential for contrast invariance
             vec = descriptors->ptr<float>(k);
-            float scale = (float)(1./(std::sqrt(square_mag) + DBL_EPSILON));
+            const float scale = 1.f / (float)(std::sqrt(square_mag) + DBL_EPSILON);
             for( kk = 0; kk < dsize; kk++ )
                 vec[kk] *= scale;
         }
@@ -874,7 +904,7 @@ SURF::SURF()
 {
     hessianThreshold = 100;
     extended = false;
-    upright = false;
+    upright  = false;
     nOctaves = 4;
     nOctaveLayers = 3;
 }
@@ -883,7 +913,7 @@ SURF::SURF(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended,
 {
     hessianThreshold = _threshold;
     extended = _extended;
-    upright = _upright;
+    upright  = _upright;
     nOctaves = _nOctaves;
     nOctaveLayers = _nOctaveLayers;
 }
@@ -932,8 +962,8 @@ void SURF::operator()(InputArray _img, InputArray _mask,
     {
         Mat descriptors;
         bool _1d = false;
-        int dcols = extended ? 128 : 64;
-        size_t dsize = dcols*sizeof(float);
+        const int dcols = extended ? 128 : 64;
+        const size_t dsize = dcols * sizeof(float);
 
         if( doDescriptors )
         {
