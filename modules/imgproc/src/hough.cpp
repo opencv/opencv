@@ -78,17 +78,17 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
                     int threshold, std::vector<Vec2f>& lines, int linesMax )
 {
     int i, j;
-    float irho = 1 / rho;
+    const float irho = 1 / rho;
 
     CV_Assert( img.type() == CV_8UC1 );
 
     const uchar* image = img.data;
-    int step = (int)img.step;
-    int width = img.cols;
-    int height = img.rows;
+    const int step = (int)img.step;
+    const int width = img.cols;
+    const int height = img.rows;
 
-    int numangle = cvRound(CV_PI / theta);
-    int numrho = cvRound(((width + height) * 2 + 1) / rho);
+    const int numangle = cvRound(CV_PI / theta);
+    const int numrho = cvRound(((width + height) * 2 + 1) * irho);
 
     AutoBuffer<int> _accum((numangle+2) * (numrho+2));
     std::vector<int> _sort_buf;
@@ -102,7 +102,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     float ang = 0;
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
-        tabSin[n] = (float)(sin((double)ang) * irho);
+        tabSin[n] = (float)(sin((double)ang) * irho); // (float)sin((double)float) ??
         tabCos[n] = (float)(cos((double)ang) * irho);
     }
 
@@ -110,12 +110,12 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     for( i = 0; i < height; i++ )
         for( j = 0; j < width; j++ )
         {
-            if( image[i * step + j] != 0 )
+            if( image[(i * step) + j] != 0 )
                 for(int n = 0; n < numangle; n++ )
                 {
-                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                    int r = cvRound( (j * tabCos[n]) + (i * tabSin[n]) );
                     r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++;
+                    accum[(n+1) * (numrho+2) + r+1] ++;
                 }
         }
 
@@ -123,7 +123,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
     for(int r = 0; r < numrho; r++ )
         for(int n = 0; n < numangle; n++ )
         {
-            int base = (n+1) * (numrho+2) + r+1;
+            const int base = (n+1) * (numrho+2) + r+1;
             if( accum[base] > threshold &&
                 accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
                 accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2] )
@@ -135,7 +135,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
     linesMax = std::min(linesMax, (int)_sort_buf.size());
-    double scale = 1./(numrho+2);
+    const double scale = 1. / (numrho + 2);
     for( i = 0; i < linesMax; i++ )
     {
         LinePolar line;
@@ -194,19 +194,19 @@ HoughLinesSDiv( const Mat& img,
     threshold = MIN( threshold, 255 );
 
     const uchar* image_src = img.data;
-    int step = (int)img.step;
-    int w = img.cols;
-    int h = img.rows;
+    //const int step = (int)img.step;
+    const int w = img.cols;
+    const int h = img.rows;
 
-    float irho = 1 / rho;
-    float itheta = 1 / theta;
-    float srho = rho / srn;
-    float stheta = theta / stn;
-    float isrho = 1 / srho;
-    float istheta = 1 / stheta;
+    const float irho = 1 / rho;
+    const float itheta = 1 / theta;
+    const float srho = rho / srn;
+    const float stheta = theta / stn;
+    const float isrho = 1 / srho;
+    const float istheta = 1 / stheta;
 
-    int rn = cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho );
-    int tn = cvFloor( 2 * CV_PI * itheta );
+    const int rn = cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho );
+    const int tn = cvFloor( 2 * CV_PI * itheta );
 
     lst.push_back(hough_index(threshold, -1.f, 0.f));
 
@@ -214,8 +214,8 @@ HoughLinesSDiv( const Mat& img,
     std::vector<float> _sinTable( 5 * tn * stn );
     float* sinTable = &_sinTable[0];
 
-    for( index = 0; index < 5 * tn * stn; index++ )
-        sinTable[index] = (float)cos( stheta * index * 0.2f );
+    for( index = 0; index < (5 * tn * stn); index++ )
+        sinTable[index] = (float)cosf( stheta * index * 0.2f );
 
     std::vector<uchar> _caccum(rn * tn, (uchar)0);
     uchar* caccum = &_caccum[0];
@@ -246,31 +246,31 @@ HoughLinesSDiv( const Mat& img,
                 // Remember the feature point
                 x[fi] = col;
                 y[fi] = row;
-                fi++;
+                fi ++;
 
                 yc = (float) row + 0.5f;
                 xc = (float) col + 0.5f;
 
                 /* Update the accumulator */
                 t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                r = (float) std::sqrt( (double)xc * xc + (double)yc * yc );
+                r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ); // double needed ?
                 r0 = r * irho;
-                ti0 = cvFloor( (t + CV_PI*0.5) * itheta );
+                ti0 = cvFloor( (t + CV_PI*0.5f) * itheta );
 
-                caccum[ti0]++;
+                caccum[ti0] ++;
 
                 theta_it = rho / r;
-                theta_it = theta_it < theta ? theta_it : theta;
+                theta_it = (theta_it < theta) ? theta_it : theta;
                 scale_factor = theta_it * itheta;
                 halftn = cvFloor( CV_PI / theta_it );
-                for( ti1 = 1, phi = theta_it - (float)(CV_PI*0.5), phi1 = (theta_it + t) * itheta;
+                for( ti1 = 1, phi = theta_it - (float)(CV_PI*0.5f), phi1 = (theta_it + t) * itheta;
                      ti1 < halftn; ti1++, phi += theta_it, phi1 += scale_factor )
                 {
                     rv = r0 * std::cos( phi );
                     i = cvFloor( rv ) * tn;
                     i += cvFloor( phi1 );
                     assert( i >= 0 );
-                    assert( i < rn * tn );
+                    assert( i < (rn * tn) );
                     caccum[i] = (uchar) (caccum[i] + ((i ^ iprev) != 0));
                     iprev = i;
                     if( cmax < caccum[i] )
@@ -286,12 +286,12 @@ HoughLinesSDiv( const Mat& img,
     {
         for( ti = 0; ti < tn; ti++ )
         {
-            if( caccum[ri * tn + ti] > threshold )
-                count++;
+            if( caccum[(ri * tn) + ti] > threshold )
+                count ++;
         }
     }
 
-    if( count * 100 > rn * tn )
+    if( (count * 100) > (rn * tn) )
     {
         HoughLinesStandard( img, rho, theta, threshold, lines, linesMax );
         return;
@@ -306,9 +306,9 @@ HoughLinesSDiv( const Mat& img,
     {
         for( ti = 0; ti < tn; ti++ )
         {
-            if( caccum[ri * tn + ti] > threshold )
+            if( caccum[(ri * tn) + ti] > threshold )
             {
-                count++;
+                count ++;
                 memset( mcaccum, 0, sfn * sizeof( uchar ));
 
                 for( index = 0; index < fn; index++ )
@@ -321,10 +321,10 @@ HoughLinesSDiv( const Mat& img,
 
                     // Update the accumulator
                     t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                    r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
+                    r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ) * isrho; // double needed ?
                     ti0 = cvFloor( (t + CV_PI * 0.5) * istheta );
                     ti2 = (ti * stn - ti0) * 5;
-                    r0 = (float) ri *srn;
+                    r0 = (float) ri * srn;
 
                     for( ti1 = 0; ti1 < stn; ti1++, ti2 += 5 )
                     {
@@ -333,7 +333,7 @@ HoughLinesSDiv( const Mat& img,
 
                         i = CV_IMAX( i, -1 );
                         i = CV_IMIN( i, sfn );
-                        mcaccum[i]++;
+                        mcaccum[i] ++;
                         assert( i >= -1 );
                         assert( i <= sfn );
                     }
@@ -342,7 +342,7 @@ HoughLinesSDiv( const Mat& img,
                 // Find peaks in maccum...
                 for( index = 0; index < sfn; index++ )
                 {
-                    i = 0;
+                    //i = 0;
                     int pos = (int)(lst.size() - 1);
                     if( pos < 0 || lst[pos].value < mcaccum[index] )
                     {
@@ -385,16 +385,16 @@ HoughLinesProbabilistic( Mat& image,
                          std::vector<Vec4i>& lines, int linesMax )
 {
     Point pt;
-    float irho = 1 / rho;
+    const float irho = 1 / rho;
     RNG rng((uint64)-1);
 
     CV_Assert( image.type() == CV_8UC1 );
 
-    int width = image.cols;
-    int height = image.rows;
+    const int width = image.cols;
+    const int height = image.rows;
 
-    int numangle = cvRound(CV_PI / theta);
-    int numrho = cvRound(((width + height) * 2 + 1) / rho);
+    const int numangle = cvRound(CV_PI / theta);
+    const int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
     Mat accum = Mat::zeros( numangle, numrho, CV_32SC1 );
     Mat mask( height, width, CV_8UC1 );
@@ -402,7 +402,7 @@ HoughLinesProbabilistic( Mat& image,
 
     for( int n = 0; n < numangle; n++ )
     {
-        trigtab[n*2] = (float)(cos((double)n*theta) * irho);
+        trigtab[n*2]   = (float)(cos((double)n*theta) * irho);
         trigtab[n*2+1] = (float)(sin((double)n*theta) * irho);
     }
     const float* ttab = &trigtab[0];
@@ -454,7 +454,7 @@ HoughLinesProbabilistic( Mat& image,
         {
             int r = cvRound( j * ttab[n*2] + i * ttab[n*2+1] );
             r += (numrho - 1) / 2;
-            int val = ++adata[r];
+            const int val = ++adata[r];
             if( max_val < val )
             {
                 max_val = val;
@@ -468,21 +468,21 @@ HoughLinesProbabilistic( Mat& image,
 
         // from the current point walk in each direction
         // along the found line and extract the line segment
-        a = -ttab[max_n*2+1];
-        b = ttab[max_n*2];
+        a = -ttab[(max_n*2) + 1];
+        b =  ttab[(max_n*2)];
         x0 = j;
         y0 = i;
         if( fabs(a) > fabs(b) )
         {
             xflag = 1;
-            dx0 = a > 0 ? 1 : -1;
+            dx0 = (a > 0) ? 1 : -1;
             dy0 = cvRound( b*(1 << shift)/fabs(a) );
             y0 = (y0 << shift) + (1 << (shift-1));
         }
         else
         {
             xflag = 0;
-            dy0 = b > 0 ? 1 : -1;
+            dy0 = (b > 0) ? 1 : -1;
             dx0 = cvRound( a*(1 << shift)/fabs(b) );
             x0 = (x0 << shift) + (1 << (shift-1));
         }
@@ -515,7 +515,7 @@ HoughLinesProbabilistic( Mat& image,
                 if( j1 < 0 || j1 >= width || i1 < 0 || i1 >= height )
                     break;
 
-                mdata = mdata0 + i1*width + j1;
+                mdata = mdata0 + (i1 * width) + j1;
 
                 // for each non-zero point:
                 //    update line end,
@@ -560,7 +560,7 @@ HoughLinesProbabilistic( Mat& image,
                     i1 = y;
                 }
 
-                mdata = mdata0 + i1*width + j1;
+                mdata = mdata0 + (i1 * width) + j1;
 
                 // for each non-zero point:
                 //    update line end,
@@ -570,12 +570,12 @@ HoughLinesProbabilistic( Mat& image,
                 {
                     if( good_line )
                     {
-                        adata = (int*)accum.data;
+                        adata = (int*) accum.data;
                         for( int n = 0; n < numangle; n++, adata += numrho )
                         {
                             int r = cvRound( j1 * ttab[n*2] + i1 * ttab[n*2+1] );
                             r += (numrho - 1) / 2;
-                            adata[r]--;
+                            adata[r] --;
                         }
                     }
                     *mdata = 0;
@@ -606,7 +606,7 @@ void cv::HoughLines( InputArray _image, OutputArray _lines,
     Mat image = _image.getMat();
     std::vector<Vec2f> lines;
 
-    if( srn == 0 && stn == 0 )
+    if( (srn == 0) && (stn == 0) )
         HoughLinesStandard(image, (float)rho, (float)theta, threshold, lines, INT_MAX);
     else
         HoughLinesSDiv(image, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), lines, INT_MAX);
@@ -655,12 +655,12 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
     if( method != CV_HOUGH_PROBABILISTIC )
     {
         lineType = CV_32FC2;
-        elemSize = sizeof(float)*2;
+        elemSize = sizeof(float) * 2;
     }
     else
     {
         lineType = CV_32SC4;
-        elemSize = sizeof(int)*4;
+        elemSize = sizeof(int) * 4;
     }
 
     if( CV_IS_STORAGE( lineStorage ))
@@ -763,7 +763,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     int astep, *adata;
     float* ddata;
     CvSeq *nz, *centers;
-    float idp, dr;
+    float idp = 1.0f, dr;
     CvSeqReader reader;
 
     edges = cvCreateMat( img->rows, img->cols, CV_8UC1 );
@@ -775,8 +775,10 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     cvSobel( img, dy, 0, 1, 3 );
 
     if( dp < 1.f )
-        dp = 1.f;
-    idp = 1.f/dp;
+    {
+        dp  = 1.f;
+        idp = 1.f / dp;
+    }
     accum = cvCreateMat( cvCeil(img->rows*idp)+2, cvCeil(img->cols*idp)+2, CV_32SC1 );
     cvZero(accum);
 
@@ -789,7 +791,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     arows = accum->rows - 2;
     acols = accum->cols - 2;
     adata = accum->data.i;
-    astep = accum->step/sizeof(adata[0]);
+    astep = accum->step / sizeof(adata[0]);
     // Accumulate circle evidence for each edge pixel
     for( y = 0; y < rows; y++ )
     {
@@ -809,26 +811,27 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             if( !edges_row[x] || (vx == 0 && vy == 0) )
                 continue;
 
-            float mag = std::sqrt(vx*vx+vy*vy);
+            float mag = (vx*vx) + (vy*vy);
             assert( mag >= 1 );
-            sx = cvRound((vx*idp)*ONE/mag);
-            sy = cvRound((vy*idp)*ONE/mag);
+            mag = 1 / std::sqrtf(mag);
+            sx = cvRound((vx*idp)*ONE * mag);
+            sy = cvRound((vy*idp)*ONE * mag);
 
-            x0 = cvRound((x*idp)*ONE);
-            y0 = cvRound((y*idp)*ONE);
+            x0 = cvRound((x*idp) * ONE);
+            y0 = cvRound((y*idp) * ONE);
             // Step from min_radius to max_radius in both directions of the gradient
-            for(int k1 = 0; k1 < 2; k1++ )
+            for(int k1 = 0; k1 < 2; k1 ++ )
             {
-                x1 = x0 + min_radius * sx;
-                y1 = y0 + min_radius * sy;
+                x1 = x0 + (min_radius * sx);
+                y1 = y0 + (min_radius * sy);
 
                 for( r = min_radius; r <= max_radius; x1 += sx, y1 += sy, r++ )
                 {
-                    int x2 = x1 >> SHIFT, y2 = y1 >> SHIFT;
+                    const int x2 = x1 >> SHIFT, y2 = y1 >> SHIFT;
                     if( (unsigned)x2 >= (unsigned)acols ||
                         (unsigned)y2 >= (unsigned)arows )
                         break;
-                    adata[y2*astep + x2]++;
+                    adata[(y2*astep) + x2] ++;
                 }
 
                 sx = -sx; sy = -sy;
@@ -847,7 +850,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     {
         for( x = 1; x < acols - 1; x++ )
         {
-            int base = y*(acols+2) + x;
+            const int base = y*(acols+2) + x;
             if( adata[base] > acc_threshold &&
                 adata[base] > adata[base-1] && adata[base] > adata[base+1] &&
                 adata[base] > adata[base-acols-2] && adata[base] > adata[base+acols+2] )
@@ -877,7 +880,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     for( i = 0; i < centers->total; i++ )
     {
         int ofs = *(int*)cvGetSeqElem( centers, i );
-        y = ofs/(acols+2);
+        y = ofs / (acols+2);
         x = ofs - (y)*(acols+2);
         //Calculate circle's center in pixels
         float cx = (float)((x + 0.5f)*dp), cy = (float)(( y + 0.5f )*dp);
@@ -902,8 +905,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             float _dx, _dy, _r2;
             CV_READ_SEQ_ELEM( pt, reader );
             _dx = cx - pt.x; _dy = cy - pt.y;
-            _r2 = _dx*_dx + _dy*_dy;
-            if(min_radius2 <= _r2 && _r2 <= max_radius2 )
+            _r2 = (_dx * _dx) + (_dy * _dy);
+            if( min_radius2 <= _r2 && _r2 <= max_radius2 )
             {
                 ddata[k] = _r2;
                 sort_buf[k] = k;
@@ -921,7 +924,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
         dist_sum = start_dist = ddata[sort_buf[nz_count1-1]];
         for( j = nz_count1 - 2; j >= 0; j-- )
         {
-            float d = ddata[sort_buf[j]];
+            const float d = ddata[sort_buf[j]];
 
             if( d > max_radius )
                 break;
