@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// cvtColor////////////////////////
-TEST(cvtColor)
+PERFTEST(cvtColor)
 {
     Mat src, dst;
     ocl::oclMat d_src, d_dst;
@@ -72,9 +73,12 @@ TEST(cvtColor)
             ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
             WARMUP_OFF;
 
+            cv::Mat ocl_mat;
+            d_dst.download(ocl_mat);
+            TestSystem::instance().setAccurate(ExceptedMatSimilar(dst, ocl_mat, 1e-5));
+
             GPU_ON;
             ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;

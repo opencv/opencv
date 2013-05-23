@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// Canny ////////////////////////
-TEST(Canny)
+PERFTEST(Canny)
 {
     Mat img = imread(abspath("aloeL.jpg"), IMREAD_GRAYSCALE);
 
@@ -70,9 +71,10 @@ TEST(Canny)
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
     WARMUP_OFF;
 
+    TestSystem::instance().setAccurate(ExceptedMatSimilar(edges, d_edges, 2e-2));
+
     GPU_ON;
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-     ;
     GPU_OFF;
 
     GPU_FULL_ON;
