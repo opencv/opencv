@@ -2646,7 +2646,7 @@ void HOGDescriptor::groupRectangles(vector<cv::Rect>& rectList, vector<double>& 
     vector<int> labels;
     int nclasses = partition(rectList, labels, SimilarRects(eps));
 
-    vector<cv::Rect_<double>> rrects(nclasses);
+    vector<cv::Rect_<double> > rrects(nclasses);
     vector<int> numInClass(nclasses, 0);
     vector<double> foundWeights(nclasses, DBL_MIN);
     vector<double> totalFactorsPerClass(nclasses, 1);
@@ -2667,7 +2667,7 @@ void HOGDescriptor::groupRectangles(vector<cv::Rect>& rectList, vector<double>& 
     {
         // find the average of all ROI in the cluster
         cv::Rect_<double> r = rrects[i];
-        float s = 1.f/numInClass[i];
+        double s = 1.0/numInClass[i];
         rrects[i] = cv::Rect_<double>(cv::saturate_cast<double>(r.x*s),
             cv::saturate_cast<double>(r.y*s),
             cv::saturate_cast<double>(r.width*s),
