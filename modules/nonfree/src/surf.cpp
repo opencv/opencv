@@ -568,7 +568,7 @@ struct SURFInvoker
             {
                 // if( j*j <= max_jj )
                 {
-                    apt[nOriSamples] = cvPoint(i, j);
+                    apt[nOriSamples] = Point(i, j);
                     aptw[nOriSamples++] = G_i * G_ori.at<float>(j+ORI_RADIUS, 0);
                 }
             }
@@ -599,9 +599,9 @@ struct SURFInvoker
         float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
-        CvMat matX = cvMat(1, nOriSampleBound, CV_32F, X);
-        CvMat matY = cvMat(1, nOriSampleBound, CV_32F, Y);
-        CvMat _angle = cvMat(1, nOriSampleBound, CV_32F, angle);
+        CvMat matX = Mat(1, nOriSampleBound, CV_32F, X);
+        CvMat matY = Mat(1, nOriSampleBound, CV_32F, Y);
+        CvMat _angle = Mat(1, nOriSampleBound, CV_32F, angle);
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
         const int dsize = extended ? 128 : 64;
@@ -613,7 +613,7 @@ struct SURFInvoker
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
         const int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*(1.2f/9.0f)), 1);
-        Ptr<CvMat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
+        Ptr<Mat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
         const int sum_rows = sum->rows, sum_cols = sum->cols;
 
         for( k = k1; k < k2; k++ )
@@ -645,7 +645,7 @@ struct SURFInvoker
             if (upright == 0)
             {
                 const float grad_wav_size_2 = (float)(grad_wav_size-1) * 0.5f;
-                const unsigned int rows_gws = (unsigned int) (sum_rows - grad_wav_size):
+                const unsigned int rows_gws = (unsigned int) (sum_rows - grad_wav_size);
                 const unsigned int cols_gws = (unsigned int) (sum_cols - grad_wav_size);
                 resizeHaarPattern( dx_s, dx_t, NX, 4, grad_wav_size, sum_cols );
                 resizeHaarPattern( dy_s, dy_t, NY, 4, grad_wav_size, sum_cols );
@@ -806,8 +806,8 @@ struct SURFInvoker
                 for( j = 0; j < PATCH_SZ; j++ )
                 {
                     const float dw = DW[(i*PATCH_SZ) + j];
-                    const float patch_mid = (PATCH[i][j]   - PATCH[i+1][j+1]);
-                    const float patch_brd = (PATCH[i][j+1] - PATCH[i+1][j]);
+                    const int patch_mid = ((int)PATCH[i][j]   - (int)PATCH[i+1][j+1]);
+                    const int patch_brd = ((int)PATCH[i][j+1] - (int)PATCH[i+1][j]);
                     float vx = ( patch_brd - patch_mid) * dw;
                     float vy = (-patch_brd - patch_mid) * dw;
                     //    vx = (PATCH[i][j+1] - PATCH[i][j] + PATCH[i+1][j+1] - PATCH[i+1][j])*dw;

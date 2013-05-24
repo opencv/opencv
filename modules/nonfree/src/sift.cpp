@@ -769,7 +769,7 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
 
     Mat base = createInitialImage(image, firstOctave < 0, (float)sigma);
     std::vector<Mat> gpyr, dogpyr;
-    const int nOctaves = (actualNOctaves > 0) ? actualNOctaves : 
+    const int nOctaves = (actualNOctaves > 0) ? actualNOctaves :
         cvRound(log( (double)std::min( base.cols, base.rows ) ) * (1/log(2.)) - 2) - firstOctave;
 
     //double t, tf = getTickFrequency();

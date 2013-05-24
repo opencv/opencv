@@ -194,7 +194,7 @@ HoughLinesSDiv( const Mat& img,
     threshold = MIN( threshold, 255 );
 
     const uchar* image_src = img.data;
-    //const int step = (int)img.step;
+    const int step = (int)img.step;
     const int w = img.cols;
     const int h = img.rows;
 
