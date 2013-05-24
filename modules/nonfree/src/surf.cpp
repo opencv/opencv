@@ -711,8 +711,8 @@ struct SURFInvoker
             if( !upright )
             {
                 descriptor_dir *= (float)(CV_PI/180);
-                const float sin_dir = -std::sinf(descriptor_dir);
-                const float cos_dir =  std::cosf(descriptor_dir);
+                const float sin_dir = -std::sin(descriptor_dir);
+                const float cos_dir =  std::cos(descriptor_dir);
 
                 /* Subpixel interpolation version (slower). Subpixel not required since
                 the pixels will all get averaged when we scale down to 20 pixels */
