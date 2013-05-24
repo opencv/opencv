@@ -765,7 +765,7 @@ Runs the GrabCut algorithm.
 
         * **GC_PR_BGD** defines a possible background pixel.
 
-        * **GC_PR_BGD** defines a possible foreground pixel.
+        * **GC_PR_FGD** defines a possible foreground pixel.
 
     :param rect: ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background". The parameter is only used when  ``mode==GC_INIT_WITH_RECT`` .
 
