@@ -228,7 +228,7 @@ HoughLinesSDiv( const Mat& img,
     int fi = 0;
     for( row = 0; row < h; row++ )
     {
-        const int yc = (float) row + 0.5f;
+        const float  yc = (float) row + 0.5f;
         const double yc_yc = (double)yc * yc;
         for( col = 0; col < w; col++ )
         {
@@ -239,7 +239,7 @@ HoughLinesSDiv( const Mat& img,
                 int iprev = -1;
                 float phi, phi1;
                 float theta_it;     // Value of theta for iterating
-                const int xc = (float) col + 0.5f;
+                const float xc = (float) col + 0.5f;
 
                 // Remember the feature point
                 x[fi] = col;
@@ -320,8 +320,8 @@ HoughLinesSDiv( const Mat& img,
 
                 for( index = 0; index < fn; index++ )
                 {
-                    const int yc = (float) y[index] + 0.5f;
-                    const int xc = (float) x[index] + 0.5f;
+                    const float yc = (float) y[index] + 0.5f;
+                    const float xc = (float) x[index] + 0.5f;
 
                     // Update the accumulator
                     float t, r; // Current rho and theta
@@ -918,7 +918,8 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             }
         }
 
-        const int nz_count1 = k, start_idx = nz_count1 - 1;
+        const int nz_count1 = k;
+        int start_idx = nz_count1 - 1;
         if( nz_count1 == 0 )
             continue;
         dist_buf->cols = nz_count1;
