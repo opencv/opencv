@@ -599,9 +599,9 @@ struct SURFInvoker
         float X[nOriSampleBound], Y[nOriSampleBound], angle[nOriSampleBound];
         uchar PATCH[PATCH_SZ+1][PATCH_SZ+1];
         float DX[PATCH_SZ][PATCH_SZ], DY[PATCH_SZ][PATCH_SZ];
-        CvMat matX = Mat(1, nOriSampleBound, CV_32F, X);
-        CvMat matY = Mat(1, nOriSampleBound, CV_32F, Y);
-        CvMat _angle = Mat(1, nOriSampleBound, CV_32F, angle);
+        //CvMat matX = Mat(1, nOriSampleBound, CV_32F, X);
+        //CvMat matY = Mat(1, nOriSampleBound, CV_32F, Y);
+        //CvMat _angle = Mat(1, nOriSampleBound, CV_32F, angle);
         Mat _patch(PATCH_SZ+1, PATCH_SZ+1, CV_8U, PATCH);
 
         const int dsize = extended ? 128 : 64;
@@ -613,7 +613,7 @@ struct SURFInvoker
             maxSize = std::max(maxSize, (*keypoints)[k].size);
         }
         const int imaxSize = std::max(cvCeil((PATCH_SZ+1)*maxSize*(1.2f/9.0f)), 1);
-        Ptr<Mat> winbuf = cvCreateMat( 1, imaxSize*imaxSize, CV_8U );
+        cv::AutoBuffer<uchar> winbuf(imaxSize * imaxSize);
         const int sum_rows = sum->rows, sum_cols = sum->cols;
 
         for( k = k1; k < k2; k++ )
