@@ -1578,7 +1578,8 @@ static void openCLExecuteKernel_hog(Context *clCxt , const char **source, string
                                     size_t globalThreads[3], size_t localThreads[3], 
                                     vector< pair<size_t, const void *> > &args)
 {
-    size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>();
+    cl_kernel kernel = openCLGetKernelFromSource(clCxt, source, kernelName);
+    size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
     if (wave_size <= 16)
     {
         char build_options[64];
