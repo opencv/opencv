@@ -452,4 +452,3 @@ void cv::correctMatches( InputArray _F, InputArray _points1, InputArray _points2
 
     cvCorrectMatches(&cvF, &cvPoints1, &cvPoints2, &cvNewPoints1, &cvNewPoints2);
 }
-
