@@ -792,7 +792,10 @@ namespace
 
     bool angleEq(double a, double b, double eps = 1.0)
     {
-        return (fabs(clampAngle(a - b)) <= eps);
+        double d = fabs(a - b);
+        while (d > 360.0)
+            d -= 360.0;
+        return (d <= eps);
     }
 
     class GHT_Guil_Full : public GHT_Pos
