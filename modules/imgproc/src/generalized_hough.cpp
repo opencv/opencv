@@ -793,9 +793,9 @@ namespace
     bool angleEq(double a, double b, double eps = 1.0)
     {
         double d = fabs(a - b);
-        while (d > 360.0)
+        while (d > 180.0)
             d -= 360.0;
-        return (d <= eps);
+        return (fabs(d) <= eps);
     }
 
     class GHT_Guil_Full : public GHT_Pos
