@@ -370,8 +370,8 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         CvMat matU = cvMat( 3, 3, CV_64F, U );
         CvMat matV = cvMat( 3, 3, CV_64F, V );
         CvMat matW = cvMat( 3, 1, CV_64F, W );
-        double theta, s, c;
-        int step = dst->rows > 1 ? dst->step / elem_size : 1;
+        double s, c;
+        int step = (dst->rows > 1) ? dst->step / elem_size : 1;
 
         if( (dst->rows != 1 || dst->cols*CV_MAT_CN(dst->type) != 3) &&
             (dst->rows != 3 || dst->cols != 1 || CV_MAT_CN(dst->type) != 1))
@@ -393,30 +393,50 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         ry = R[2] - R[6];
         rz = R[3] - R[1];
 
-        s = std::sqrt((rx*rx + ry*ry + rz*rz)*0.25f);
+        s = ((rx*rx + ry*ry + rz*rz) * 0.25f); //sqrt
         c = (R[0] + R[4] + R[8] - 1) * 0.5f;
         c = (c > 1.) ? 1. : (c < -1. ? -1. : c);
-        theta = acos(c);
+        double theta = acos(c);
 
-        if( s < 1e-5 )
+        if( s < (1e-5*1e-5) )
         {
             if( c > 0 )
                 rx = ry = rz = 0;
             else
             {
-                double t;
-                t = (R[0] + 1);
-                rx = (t > 0.) ? std::sqrt(t * 0.5f) : 0;
-                t = (R[4] + 1);
-                ry = (t > 0.) ? std::sqrt(t * 0.5f) * (R[1] < 0 ? -1. : 1.) : 0;
-                t = (R[8] + 1);
-                rz = (t > 0.) ? std::sqrt(t * 0.5f) * (R[2] < 0 ? -1. : 1.) : 0;
-                theta /= std::sqrt(rx*rx + ry*ry + rz*rz);
-                if( fabs(rx) < fabs(ry) && fabs(rx) < fabs(rz) && (R[5] > 0) != (ry*rz > 0) )
+                double t1 = R[0] + 1, t2 = R[4] + 1, t3 = R[8] + 1, t123;
+#if 0 // SISD friendly (avoid slow sqrt)
+                rx = (t1 > 0.) ? std::sqrt(t1) : 0;
+		//ry = (t2 > 0.) ? copysign(std::sqrt(t2), R[1]) : 0; // C99
+                //rz = (t3 > 0.) ? copysign(std::sqrt(t3), R[2]) : 0; // C99
+                ry = (t2 > 0.) ? std::sqrt(t2) * (R[1] < 0 ? -1. : 1.) : 0; // C89
+                rz = (t3 > 0.) ? std::sqrt(t3) * (R[2] < 0 ? -1. : 1.) : 0; // C89
+                t123 = rx*rx + ry*ry + rz*rz;
+                theta /= std::sqrt(t123);
+                if( (t3 > 0.) && (rx) < fabs(ry) && (rx) < fabs(rz) && (R[5] > 0) != (ry*rz > 0) )
                     rz = -rz;
-                rx *= theta;
-                ry *= theta;
-                rz *= theta;
+                rx *= theta; ry *= theta; rz *= theta;
+#else // SIMD friendly
+                float t3_0 = (float) t3;
+                t1 = MAX(t1, 0.); t2 = MAX(t2, 0.); t3 = MAX(t3, 0.);
+                t123 = t1 + t2 + t3; // more precise
+                if (t123 > 0.) {
+                    float t23 = (float)(t2 * t3) * (float)copysign(1.0, R[1]) * (float)copysign(1.0, R[2]);
+                    theta /= std::sqrt(t123);
+                    rx = std::sqrt(t1); // sqrtps (4 x float)
+                    ry = copysign(std::sqrt(t2), R[1]);
+                    if (t3_0 > 0.0f) {
+                        rz = copysign(std::sqrt(t3), R[2]);
+                        if( (t1) < (t2) && (t1) < (t3) && (R[5] > 0) != (t23 > 0) )
+                            rz *= -theta; else rz *= theta;
+                    } else {
+                        rz = 0;
+                    }
+                    rx *= theta; ry *= theta;
+                } else {
+                    rx = ry = rz = 0;
+                }
+#endif
             }
 
             if( jacobian )
@@ -431,7 +451,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         }
         else
         {
-            double vth = 0.5f / s;// = 1/(2*s);
+            double vth = 0.5f / std::sqrt(s);// = 1/(2*s);
 
             if( jacobian )
             {
@@ -552,8 +572,8 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         /*!CV_IS_MAT(distCoeffs) ||*/ !CV_IS_MAT(imagePoints) )
         CV_Error( CV_StsBadArg, "One of required arguments is not a valid matrix" );
 
-    int total = objectPoints->rows * objectPoints->cols * CV_MAT_CN(objectPoints->type);
-    if(total % 3 != 0)
+    const int total = objectPoints->rows * objectPoints->cols * CV_MAT_CN(objectPoints->type);
+    if( (total % 3) != 0)
     {
         //we have stopped support of homogeneous coordinates because it cause ambiguity in interpretation of the input data
         CV_Error( CV_StsBadArg, "Homogeneous coordinates are not supported" );
