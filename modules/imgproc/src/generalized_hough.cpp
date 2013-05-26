@@ -741,7 +741,7 @@ namespace
 
         for (int a = 0; a < angleRange; ++a)
         {
-            const float angle = static_cast<float>(minAngle + a * angleStep);
+            const float angle = static_cast<float>(minAngle + (a * angleStep));
 
             const Mat prevHist(histRows + 2, histCols + 2, CV_32SC1, hist.ptr(a), hist.step[1]);
             const Mat curHist(histRows + 2, histCols + 2, CV_32SC1, hist.ptr(a + 1), hist.step[1]);
@@ -751,7 +751,7 @@ namespace
             {
                 const int* prevHistRow = prevHist.ptr<int>(y + 1);
                 const int* prevRow = curHist.ptr<int>(y);
-                const int* curRow = curHist.ptr<int>(y + 1);
+                const int* curRow  = curHist.ptr<int>(y + 1);
                 const int* nextRow = curHist.ptr<int>(y + 2);
                 const int* nextHistRow = nextHist.ptr<int>(y + 1);
 
