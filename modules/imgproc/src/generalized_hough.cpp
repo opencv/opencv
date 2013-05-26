@@ -531,7 +531,7 @@ namespace
                             c.x *= idp;
                             c.y *= idp;
 
-                            if (c.x >= 0 && c.x < base->hist.size[2] - 2 && c.y >= 0 && c.y < base->hist.size[1] - 2)
+                            if (c.x >= 0 && c.y >= 0 && c.x < base->hist.size[2] - 2 && c.y < base->hist.size[1] - 2)
                                 ++curHist.at<int>(cvRound(c.y + 1), cvRound(c.x + 1));
                         }
                     }

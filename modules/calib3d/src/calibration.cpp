@@ -407,7 +407,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 double t1 = R[0] + 1, t2 = R[4] + 1, t3 = R[8] + 1, t123;
 #if 0 // SISD friendly (avoid slow sqrt)
                 rx = (t1 > 0.) ? std::sqrt(t1) : 0;
-		//ry = (t2 > 0.) ? copysign(std::sqrt(t2), R[1]) : 0; // C99
+                //ry = (t2 > 0.) ? copysign(std::sqrt(t2), R[1]) : 0; // C99
                 //rz = (t3 > 0.) ? copysign(std::sqrt(t3), R[2]) : 0; // C99
                 ry = (t2 > 0.) ? std::sqrt(t2) * (R[1] < 0 ? -1. : 1.) : 0; // C89
                 rz = (t3 > 0.) ? std::sqrt(t3) * (R[2] < 0 ? -1. : 1.) : 0; // C89
