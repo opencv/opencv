@@ -434,7 +434,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                     }
                     rx *= theta; ry *= theta;
                 } else {
-                    rx = ry = rz = 0;
+                    rx = ry = rz = FLT_MAX;
                 }
 #endif
             }
