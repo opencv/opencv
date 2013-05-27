@@ -116,6 +116,7 @@ If you use ``cvtColor`` with 8-bit images, the conversion will have some informa
 The function can do the following transformations:
 
 *
+    RGB :math:`\leftrightarrow` GRAY ( ``CV_BGR2GRAY, CV_RGB2GRAY, CV_GRAY2BGR, CV_GRAY2RGB``     )
     Transformations within RGB space like adding/removing the alpha channel, reversing the channel order, conversion to/from 16-bit RGB color (R5:G6:B5 or R5:G5:B5), as well as conversion to/from grayscale using:
 
     .. math::
@@ -765,7 +766,7 @@ Runs the GrabCut algorithm.
 
         * **GC_PR_BGD** defines a possible background pixel.
 
-        * **GC_PR_BGD** defines a possible foreground pixel.
+        * **GC_PR_FGD** defines a possible foreground pixel.
 
     :param rect: ROI containing a segmented object. The pixels outside of the ROI are marked as "obvious background". The parameter is only used when  ``mode==GC_INIT_WITH_RECT`` .
 
