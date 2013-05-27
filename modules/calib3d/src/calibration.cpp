@@ -1009,7 +1009,8 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         cvSVD( &_MM, &matW, 0, &matV, CV_SVD_MODIFY_A + CV_SVD_V_T );
 
         // initialize extrinsic parameters
-        if( count < 4 || (W[2]/W[1]) < 1e-3 )
+        if( fabs(W[2]) < (1e-3*fabs(W[1])) || (W[2]*W[1] < 0) || (count < 4) )
+        //if( count < 4 || (W[2]/W[1]) < 1e-3 )
         {
             // a planar structure case (all M's lie in the same plane)
             double tt[3], h[9];
