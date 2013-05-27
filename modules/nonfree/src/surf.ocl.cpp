@@ -156,22 +156,12 @@ public:
         counters.setTo(Scalar::all(0));
 
         integral(img, surf_.sum);
-        if(support_image2d())
+        use_image2d = support_image2d();
+        if(use_image2d)
         {
-            try
-            {
-                bindImgTex(img, imgTex);
-                bindImgTex(surf_.sum, sumTex);
-                use_image2d = true;
-            }
-            catch (const cv::Exception& e)
-            {
-                use_image2d = false;
-                if(e.code != CL_IMAGE_FORMAT_NOT_SUPPORTED && e.code != -217)
-                {
-                    throw e;
-                }
-            }
+            bindImgTex(img, imgTex);
+            bindImgTex(surf_.sum, sumTex);
+            finish();
         }
 
         maskSumTex = 0;
