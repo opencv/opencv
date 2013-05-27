@@ -124,7 +124,7 @@ while(1):
 
     cv2.imshow('output',output)
     cv2.imshow('input',img)
-    k = cv2.waitKey(1)
+    k = 0xFF & cv2.waitKey(1)
     
     # key bindings
     if k == 27:         # esc to exit
