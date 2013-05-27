@@ -404,6 +404,9 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
                 rx = ry = rz = 0;
             else
             {
+#ifdef _WIN32 // windows is not C99 ready
+#  define copysign(V,S) ((S>=0)?fabs(V):-fabs(V))
+#endif
                 double t1 = R[0] + 1, t2 = R[4] + 1, t3 = R[8] + 1, t123;
 #if 0 // SISD friendly (avoid slow sqrt)
                 rx = (t1 > 0.) ? std::sqrt(t1) : 0;
