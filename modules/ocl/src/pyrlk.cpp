@@ -139,8 +139,9 @@ static void lkSparse_run(oclMat &I, oclMat &J,
             stringstream idxStr;
             idxStr << kernelName << "_C" << I.oclchannels() << "_D" << I.depth();
             cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str());
-
             int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+            openCLSafeCall(clReleaseKernel(kernel));
+
             static char opt[16] = {0};
             sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
 

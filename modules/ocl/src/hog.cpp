@@ -1580,6 +1580,7 @@ static void openCLExecuteKernel_hog(Context *clCxt , const char **source, string
 {
     cl_kernel kernel = openCLGetKernelFromSource(clCxt, source, kernelName);
     size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
+    openCLSafeCall(clReleaseKernel(kernel));
     if (wave_size <= 16)
     {
         char build_options[64];
