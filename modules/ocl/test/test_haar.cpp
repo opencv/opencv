@@ -55,6 +55,12 @@ using namespace testing;
 using namespace std;
 using namespace cv;
 extern string workdir;
+
+namespace
+{
+IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
+CascadeName cascades[] = {"haarcascade_frontalface_alt.xml", "haarcascade_frontalface_alt2.xml"};
+
 struct getRect
 {
     Rect operator ()(const CvAvgComp &e) const
@@ -62,8 +68,9 @@ struct getRect
         return e.rect;
     }
 };
+}
 
-PARAM_TEST_CASE(Haar, double, int)
+PARAM_TEST_CASE(Haar, double, int, CascadeName)
 {
     cv::ocl::OclCascadeClassifier cascade, nestedCascade;
     cv::ocl::OclCascadeClassifierBuf cascadebuf;
@@ -71,12 +78,13 @@ PARAM_TEST_CASE(Haar, double, int)
 
     double scale;
     int flags;
+    std::string cascadeName;
 
     virtual void SetUp()
     {
         scale = GET_PARAM(0);
         flags = GET_PARAM(1);
-        string cascadeName = workdir + "../../data/haarcascades/haarcascade_frontalface_alt.xml";
+        cascadeName = (workdir + "../../data/haarcascades/").append(GET_PARAM(2));
 
         if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)) || (!cascadebuf.load( cascadeName )))
         {
@@ -115,7 +123,7 @@ TEST_P(Haar, FaceDetect)
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     oclfaces.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), oclfaces.begin(), getRect());
-
+    
     cpucascade.detectMultiScale( smallImg, faces,  1.1, 3,
                                  flags,
                                  Size(30, 30), Size(0, 0) );
@@ -136,7 +144,6 @@ TEST_P(Haar, FaceDetectUseBuf)
     vector<Rect> faces, oclfaces;
 
     Mat gray, smallImg(cvRound (img.rows / scale), cvRound(img.cols / scale), CV_8UC1 );
-    MemStorage storage(cvCreateMemStorage(0));
     cvtColor( img, gray, CV_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
@@ -147,16 +154,22 @@ TEST_P(Haar, FaceDetectUseBuf)
     cascadebuf.detectMultiScale( image, oclfaces,  1.1, 3,
                                  flags,
                                  Size(30, 30), Size(0, 0) );
-    cascadebuf.release();
 
     cpucascade.detectMultiScale( smallImg, faces,  1.1, 3,
                                  flags,
                                  Size(30, 30), Size(0, 0) );
     EXPECT_EQ(faces.size(), oclfaces.size());
+
+    // intentionally run ocl facedetect again and check if it still works after the first run
+    cascadebuf.detectMultiScale( image, oclfaces,  1.1, 3,
+        flags,
+        Size(30, 30));
+    cascadebuf.release();
+    EXPECT_EQ(faces.size(), oclfaces.size());
 }
 
 INSTANTIATE_TEST_CASE_P(FaceDetect, Haar,
     Combine(Values(1.0),
-            Values(CV_HAAR_SCALE_IMAGE, 0)));
+            Values(CV_HAAR_SCALE_IMAGE, 0), Values(cascades[0], cascades[1])));
 
 #endif // HAVE_OPENCL
