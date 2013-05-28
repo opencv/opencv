@@ -413,11 +413,11 @@ static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelN
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
+    float f_scalar = (float)scalar;
     if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
         args.push_back( make_pair( sizeof(cl_double), (void *)&scalar ));
     else
     {
-        float f_scalar = (float)scalar;
         args.push_back( make_pair( sizeof(cl_float), (void *)&f_scalar));
     }
 
@@ -1687,10 +1687,11 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
+    T scalar;
     if(_scalar != NULL)
     {
         double scalar1 = *((double *)_scalar);
-        T scalar = (T)scalar1;
+        scalar = (T)scalar1;
         args.push_back( make_pair( sizeof(T), (void *)&scalar ));
     }
 
@@ -2307,9 +2308,9 @@ static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    float pf = p;
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE))
     {
-        float pf = p;
         args.push_back( make_pair( sizeof(cl_float), (void *)&pf ));
     }
     else
