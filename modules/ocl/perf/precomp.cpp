@@ -114,7 +114,6 @@ void TestSystem::finishCurrentSubtest()
         return;
     }
 
-    int is_accurate = is_accurate_;
     double cpu_time = cpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_time = gpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_full_time = gpu_full_elapsed_ / getTickFrequency() * 1000.0;
@@ -171,8 +170,8 @@ void TestSystem::finishCurrentSubtest()
         deviation = std::sqrt(sum / gpu_times_.size());
     }
 
-    printMetrics(is_accurate, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
-    writeMetrics(is_accurate, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, gpu_min, gpu_max, deviation);
+    printMetrics(is_accurate_, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
+    writeMetrics(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, gpu_min, gpu_max, deviation);
 
     num_subtests_called_++;
     resetCurrentSubtest();
@@ -219,7 +218,7 @@ void TestSystem::writeHeading()
         }
     }
 
-    fprintf(record_, "NAME,DESCRIPTION,ACCURACY,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
+    fprintf(record_, "NAME,DESCRIPTION,ACCURACY,DIFFERENCE,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
 
     fflush(record_);
 }
@@ -392,7 +391,7 @@ void TestSystem::printMetrics(int is_accurate, double cpu_time, double gpu_time,
 #endif
 }
 
-void TestSystem::writeMetrics(int is_accurate, double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, double gpu_min, double gpu_max, double std_dev)
+void TestSystem::writeMetrics(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, double gpu_min, double gpu_max, double std_dev)
 {
     if (!record_)
     {
@@ -402,21 +401,24 @@ void TestSystem::writeMetrics(int is_accurate, double cpu_time, double gpu_time,
 
     string _is_accurate_;
 
-    if(is_accurate == 1)
+    if(is_accurate_ == 1)
         _is_accurate_ = "Pass";
-    else if(is_accurate == 0)
+    else if(is_accurate_ == 0)
         _is_accurate_ = "Fail";
-    else if(is_accurate == -1)
+    else if(is_accurate_ == -1)
         _is_accurate_ = " ";
     else
     {
-        std::cout<<"is_accurate errer: "<<is_accurate<<"\n";
+        std::cout<<"is_accurate errer: "<<is_accurate_<<"\n";
         exit(-1);
     }
 
-    fprintf(record_, "%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", itname_changed_ ? itname_.c_str() : "",
+    fprintf(record_, "%s,%s,%s,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", 
+        itname_changed_ ? itname_.c_str() : "",
         cur_subtest_description_.str().c_str(),
-        _is_accurate_.c_str(), cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
+        _is_accurate_.c_str(), 
+        accurate_diff_,
+        cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
         gpu_min, gpu_max, std_dev);
 
     if (itname_changed_)
@@ -629,7 +631,7 @@ double checkSimilarity(const Mat &m1, const Mat &m2)
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
 
-
+/*
 int ExpectedMatNear(cv::Mat dst, cv::Mat cpu_dst, double eps)
 {
     assert(dst.type() == cpu_dst.type());
@@ -647,15 +649,16 @@ int ExceptDoubleNear(double val1, double val2, double abs_error)
 
     return 0;
 }
-
+/*
 int ExceptedMatSimilar(cv::Mat dst, cv::Mat cpu_dst, double eps)
 {
     assert(dst.type() == cpu_dst.type());
-    assert(dst.size() == cpu_dst.size()); 
+    assert(dst.size() == cpu_dst.size());
     if(checkSimilarity(cv::Mat(cpu_dst), cv::Mat(dst)) <= eps)
         return 1;
     return 0;
 }
+*/
 
 
 

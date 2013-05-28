@@ -57,7 +57,7 @@ PERFTEST(Canny)
 
     SUBTEST << img.cols << 'x' << img.rows << "; aloeL.jpg" << "; edges" << "; CV_8UC1";
 
-    Mat edges(img.size(), CV_8UC1);
+    Mat edges(img.size(), CV_8UC1), ocl_edges;
 
     CPU_ON;
     Canny(img, edges, 50.0, 100.0);
@@ -71,8 +71,6 @@ PERFTEST(Canny)
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
     WARMUP_OFF;
 
-    TestSystem::instance().setAccurate(ExceptedMatSimilar(edges, d_edges, 2e-2));
-
     GPU_ON;
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
     GPU_OFF;
@@ -80,6 +78,8 @@ PERFTEST(Canny)
     GPU_FULL_ON;
     d_img.upload(img);
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-    d_edges.download(edges);
+    d_edges.download(ocl_edges);
     GPU_FULL_OFF;
+
+    TestSystem::instance().ExceptedMatSimilar(edges, ocl_edges, 2e-2);
 }

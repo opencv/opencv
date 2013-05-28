@@ -146,10 +146,8 @@ PERFTEST(HOG)
         }
     }
 
-    cv::Mat ocl_mat;
-    ocl_mat = cv::Mat(d_comp);
-    ocl_mat.convertTo(ocl_mat, cv::Mat(comp).type());
-    TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat, cv::Mat(comp), 3));
+    cv::Mat gpu_rst(d_comp), cpu_rst(comp);
+    TestSystem::instance().ExpectedMatNear(gpu_rst, cpu_rst, 3);
 
     GPU_ON;
     ocl_hog.detectMultiScale(d_src, found_locations);

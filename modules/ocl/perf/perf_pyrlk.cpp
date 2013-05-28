@@ -82,8 +82,8 @@ PERFTEST(PyrLKOpticalFlow)
                 SUBTEST << frame0.cols << "x" << frame0.rows << "; color; " << points << " points";
             else
                 SUBTEST << frame0.cols << "x" << frame0.rows << "; gray; " << points << " points";
-            Mat nextPts_cpu;
-            Mat status_cpu;
+            Mat ocl_nextPts;
+            Mat ocl_status;
 
             vector<Point2f> pts;
             goodFeaturesToTrack(i == 0 ? gray_frame : frame0, pts, points, 0.01, 0.0);
@@ -116,12 +116,6 @@ PERFTEST(PyrLKOpticalFlow)
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
             WARMUP_OFF;
 
-            std::vector<cv::Point2f> ocl_nextPts(d_nextPts.cols);
-            std::vector<unsigned char> ocl_status(d_status.cols);
-            TestSystem::instance().setAccurate(AssertEQ<size_t>(nextPts.size(), ocl_nextPts.size()));
-            TestSystem::instance().setAccurate(AssertEQ<size_t>(status.size(), ocl_status.size()));                        
-
-
             GPU_ON;
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
             GPU_OFF;
@@ -133,16 +127,31 @@ PERFTEST(PyrLKOpticalFlow)
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
 
             if (!d_nextPts.empty())
-            {
-                d_nextPts.download(nextPts_cpu);
-            }
+                d_nextPts.download(ocl_nextPts);
 
             if (!d_status.empty())
-            {
-                d_status.download(status_cpu);
-            }
-
+                d_status.download(ocl_status);
             GPU_FULL_OFF;
+
+            size_t mismatch = 0;
+            for (int i = 0; i < (int)nextPts.size(); ++i)
+            {
+                if(status[i] != ocl_status.at<unsigned char>(0, i)){
+                    mismatch++;
+                    continue;
+                }
+                if(status[i]){
+                    Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
+                    Point2f cpu_rst = nextPts[i];
+                    if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
+                        mismatch++;
+                }
+            }
+            double ratio = (double)mismatch / (double)nextPts.size();
+            if(ratio < .02)
+                TestSystem::instance().setAccurate(1, ratio);
+            else
+                TestSystem::instance().setAccurate(0, ratio);
         }
 
     }

@@ -123,8 +123,10 @@ PERFTEST(Haar)
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     WARMUP_OFF;
 
-    //Testing whether the expected is equal to the actual.
-    TestSystem::instance().setAccurate(ExpectedEQ<vector<Rect>::size_type, vector<Rect>::size_type>(faces.size(), oclfaces.size()));
+    if(faces.size() == oclfaces.size())
+        TestSystem::instance().setAccurate(1, 0);
+    else
+        TestSystem::instance().setAccurate(0, abs((int)faces.size() - (int)oclfaces.size()));
 
     faces.clear();
 

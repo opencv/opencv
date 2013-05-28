@@ -48,7 +48,7 @@
 ///////////// pyrDown //////////////////////
 PERFTEST(pyrDown)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
 
@@ -73,9 +73,6 @@ PERFTEST(pyrDown)
             ocl::pyrDown(d_src, d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), dst.depth() == CV_32F ? 1e-4f : 1.0f));                        
-
-
             GPU_ON;
             ocl::pyrDown(d_src, d_dst);
             GPU_OFF;
@@ -83,8 +80,10 @@ PERFTEST(pyrDown)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::pyrDown(d_src, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, dst.depth() == CV_32F ? 1e-4f : 1.0f);
         }
     }
 }
