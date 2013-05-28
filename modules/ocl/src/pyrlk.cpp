@@ -15,8 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Dachuan Zhao, dachuan@multicorewareinc.com
-//		Yao Wang, bitwangyaoyao@gmail.com
+//      Dachuan Zhao, dachuan@multicorewareinc.com
+//      Yao Wang, bitwangyaoyao@gmail.com
 //      Nathan, liujun@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -56,31 +56,16 @@ namespace cv
 {
 namespace ocl
 {
-///////////////////////////OpenCL kernel strings///////////////////////////
 extern const char *pyrlk;
 extern const char *pyrlk_no_image;
-extern const char *arithm_mul;
 }
 }
-
 struct dim3
 {
     unsigned int x, y, z;
 };
 
-struct float2
-{
-    float x, y;
-};
-
-struct int2
-{
-    int x, y;
-};
-
-namespace
-{
-void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bool isDeviceArch11)
+static void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bool isDeviceArch11)
 {
     winSize.width *= cn;
 
@@ -100,45 +85,6 @@ void calcPatchSize(cv::Size winSize, int cn, dim3 &block, dim3 &patch, bool isDe
 
     block.z = patch.z = 1;
 }
-}
-
-static void multiply_cus(const oclMat &src1, oclMat &dst, float scalar)
-{
-    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
-    {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-        return;
-    }
-
-    CV_Assert(src1.cols == dst.cols &&
-              src1.rows == dst.rows);
-
-    CV_Assert(src1.type() == dst.type());
-    CV_Assert(src1.depth() != CV_8S);
-
-    Context  *clCxt = src1.clCxt;
-
-    size_t localThreads[3]  = { 16, 16, 1 };
-    size_t globalThreads[3] = { src1.cols,
-                                src1.rows,
-                                1
-                              };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-    args.push_back( make_pair( sizeof(float), (float *)&scalar ));
-
-    openCLExecuteKernel(clCxt, &arithm_mul, "arithm_muls", globalThreads, localThreads, args, -1, src1.depth());
-}
 
 static void lkSparse_run(oclMat &I, oclMat &J,
                          const oclMat &prevPts, oclMat &nextPts, oclMat &status, oclMat& err, bool /*GET_MIN_EIGENVALS*/, int ptcount,
@@ -151,15 +97,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     size_t localThreads[3]  = { 8, isImageSupported ? 8 : 32, 1 };
     size_t globalThreads[3] = { 8 * ptcount, isImageSupported ? 8 : 32, 1};
     int cn = I.oclchannels();
-    char calcErr;
-    if (level == 0)
-    {
-        calcErr = 1;
-    }
-    else
-    {
-        calcErr = 0;
-    }
+    char calcErr = level==0?1:0;
 
     vector<pair<size_t , const void *> > args;
 
@@ -198,7 +136,17 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     {
         if(isImageSupported)
         {
-            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth());
+            stringstream idxStr;
+            idxStr << kernelName << "_C" << I.oclchannels() << "_D" << I.depth();
+            cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str());
+            int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+            openCLSafeCall(clReleaseKernel(kernel));
+
+            static char opt[16] = {0};
+            sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
+
+            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, 
+                                args, I.oclchannels(), I.depth(), opt);
             releaseTexture(ITex);
             releaseTexture(JTex);
         }
@@ -241,8 +189,7 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
 
     oclMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
     oclMat temp2 = nextPts.reshape(1);
-    multiply_cus(temp1, temp2, 1.0f / (1 << maxLevel) / 2.0f);
-    //::multiply(temp1, 1.0f / (1 << maxLevel) / 2.0f, temp2);
+    multiply(1.0f/(1<<maxLevel)/2.0f, temp1, temp2);
 
     ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
     status.setTo(Scalar::all(1));
@@ -257,7 +204,6 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
         ensureSizeIsEnough(1, prevPts.cols, CV_32FC1, *err);
 
     // build the image pyramids.
-
     prevPyr_.resize(maxLevel + 1);
     nextPyr_.resize(maxLevel + 1);
 
@@ -274,7 +220,6 @@ void cv::ocl::PyrLKOpticalFlow::sparse(const oclMat &prevImg, const oclMat &next
     }
 
     // dI/dx ~ Ix, dI/dy ~ Iy
-
     for (int level = maxLevel; level >= 0; level--)
     {
         lkSparse_run(prevPyr_[level], nextPyr_[level],
