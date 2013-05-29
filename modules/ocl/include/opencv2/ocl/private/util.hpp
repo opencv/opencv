@@ -127,11 +127,18 @@ namespace cv
         // the enums are used to query device information
         enum DEVICE_INFO
         {
-            WAVEFRONT_SIZE,
-            IS_CPU_DEVICE
+            WAVEFRONT_SIZE,             //in AMD speak
+            IS_CPU_DEVICE               //check if the device is CPU
         };
         template<DEVICE_INFO _it, typename _ty>
         _ty queryDeviceInfo(cl_kernel kernel = NULL);
+        //info should have been pre-allocated
+        template<>
+        int CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel);
+        template<>
+        size_t CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel);
+        template<>
+        bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
 
         //only these three specializations are implemented at the moment
         template<>
