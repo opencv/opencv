@@ -178,7 +178,7 @@ namespace cv
                 format.image_channel_order     = CL_RGBA;
                 break;
             default:
-                CV_Error(-1, "Image forma is not supported");
+                CV_Error(-1, "Image format is not supported");
                 break;
             }
 #ifdef CL_VERSION_1_2
@@ -243,6 +243,11 @@ namespace cv
 #ifdef __GNUC__
         GCC_DIAG_ON(deprecated-declarations)
 #endif
+
+        Ptr<TextureCL> bindTexturePtr(const oclMat &mat)
+        {
+            return Ptr<TextureCL>(new TextureCL(bindTexture(mat), mat.rows, mat.cols, mat.type()));
+        }
         void releaseTexture(cl_mem& texture)
         {
             openCLFree(texture);

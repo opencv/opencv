@@ -1207,30 +1207,41 @@ namespace cv
         void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize,
                           double k, int borderType)
         {
-            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
-            {
-                CV_Error(CV_GpuNotSupported, "select device don't support double");
-            }
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            oclMat Dx, Dy;
-            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-            extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
-            dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), Dx, Dy, dst, borderType);
+            oclMat dx, dy;
+            cornerHarris_dxdy(src, dst, dx, dy, blockSize, ksize, k, borderType);
         }
 
-        void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
+        void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize,
+                          double k, int borderType)
         {
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-            extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
+            extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, Dx, Dy, dst, borderType);
+            corner_ocl(imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
+        }
+
+        void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
+        {
+            oclMat dx, dy;
+            cornerMinEigenVal_dxdy(src, dst, dx, dy, blockSize, ksize, borderType);
+        }
+        
+        void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize, int borderType)
+        {
+            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+            {
+                CV_Error(CV_GpuNotSupported, "select device don't support double");
+            }
+            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
+            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+            extractCovData(src, dx, dy, blockSize, ksize, borderType);
+            dst.create(src.size(), CV_32F);
+            corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, dx, dy, dst, borderType);
         }
         /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
         static void meanShiftFiltering_gpu(const oclMat &src, oclMat dst, int sp, int sr, int maxIter, float eps)
