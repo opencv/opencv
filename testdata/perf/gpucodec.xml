@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<FileName_VideoReader--VideoReader---gpu-video-768x576-avi->
+  <gpu_frame>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>767</x>
+      <y>575</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>94</x>
+      <y>216</y>
+      <cn>1</cn>
+      <val>211.</val></rng1>
+    <rng2>
+      <x>84</x>
+      <y>44</y>
+      <val>255.</val></rng2></gpu_frame></FileName_VideoReader--VideoReader---gpu-video-768x576-avi->
+<FileName_VideoReader--VideoReader---gpu-video-1920x1080-avi->
+  <gpu_frame>
+    <kind>65536</kind>
+    <type>24</type>
+    <min>0.</min>
+    <max>255.</max>
+    <last>
+      <x>1919</x>
+      <y>1087</y>
+      <val>255.</val></last>
+    <rng1>
+      <x>1595</x>
+      <y>488</y>
+      <val>55.</val></rng1>
+    <rng2>
+      <x>736</x>
+      <y>599</y>
+      <cn>1</cn>
+      <val>221.</val></rng2></gpu_frame></FileName_VideoReader--VideoReader---gpu-video-1920x1080-avi->
+</opencv_storage>
