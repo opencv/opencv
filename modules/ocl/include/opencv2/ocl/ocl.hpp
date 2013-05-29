@@ -811,7 +811,7 @@ namespace cv
             OclCascadeClassifierBuf() :
                 m_flags(0), initialized(false), m_scaleFactor(0), buffers(NULL) {}
 
-            ~OclCascadeClassifierBuf() {}
+            ~OclCascadeClassifierBuf() { release(); }
 
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
                                   double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
