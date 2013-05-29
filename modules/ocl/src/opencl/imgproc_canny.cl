@@ -297,6 +297,9 @@ calcMap
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
+    mag += mag_offset;
+    map += map_offset;
+
     __local float smem[18][18];
 
     int gidx = get_global_id(0);
@@ -389,7 +392,7 @@ edgesHysteresisLocal
 (
     __global int * map,
     __global ushort2 * st,
-    volatile __global unsigned int * counter,
+    __global unsigned int * counter,
     int rows,
     int cols,
     int map_step,
@@ -398,6 +401,8 @@ edgesHysteresisLocal
 {
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
+
+    map += map_offset;
 
     __local int smem[18][18];
 
@@ -416,12 +421,12 @@ edgesHysteresisLocal
     if(ly < 14)
     {
         smem[ly][lx] =
-            map[grp_idx + lx + min(grp_idy + ly, rows - 1) * map_step + map_offset];
+            map[grp_idx + lx + min(grp_idy + ly, rows - 1) * map_step];
     }
     if(ly < 4 && grp_idy + ly + 14 <= rows && grp_idx + lx <= cols)
     {
         smem[ly + 14][lx] =
-            map[grp_idx + lx + min(grp_idy + ly + 14, rows - 1) * map_step + map_offset];
+            map[grp_idx + lx + min(grp_idy + ly + 14, rows - 1) * map_step];
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -482,14 +487,17 @@ edgesHysteresisLocal
 __constant int c_dx[8] = {-1,  0,  1, -1, 1, -1, 0, 1};
 __constant int c_dy[8] = {-1, -1, -1,  0, 0,  1, 1, 1};
 
+
 #define stack_size 512
 __kernel
-void edgesHysteresisGlobal
+void
+__attribute__((reqd_work_group_size(128,1,1)))
+edgesHysteresisGlobal
 (
     __global int * map,
     __global ushort2 * st1,
     __global ushort2 * st2,
-    volatile __global int * counter,
+    __global int * counter,
     int rows,
     int cols,
     int count,
@@ -501,6 +509,8 @@ void edgesHysteresisGlobal
     map_step   /= sizeof(*map);
     map_offset /= sizeof(*map);
 
+    map += map_offset;
+
     int gidx = get_global_id(0);
     int gidy = get_global_id(1);
 
@@ -510,7 +520,7 @@ void edgesHysteresisGlobal
     int grp_idx = get_group_id(0);
     int grp_idy = get_group_id(1);
 
-    volatile __local unsigned int s_counter;
+    __local unsigned int s_counter;
     __local unsigned int s_ind;
 
     __local ushort2 s_st[stack_size];
@@ -564,9 +574,9 @@ void edgesHysteresisGlobal
                     pos.x += c_dx[lidx & 7];
                     pos.y += c_dy[lidx & 7];
 
-                    if (map[pos.x + map_offset + pos.y * map_step] == 1)
+                    if (map[pos.x + pos.y * map_step] == 1)
                     {
-                        map[pos.x + map_offset + pos.y * map_step] = 2;
+                        map[pos.x + pos.y * map_step] = 2;
 
                         ind = atomic_inc(&s_counter);
 
@@ -621,6 +631,6 @@ void getEdges
 
     if(gidy < rows && gidx < cols)
     {
-        dst[gidx + gidy * dst_step] = (uchar)(-(map[gidx + 1 + (gidy + 1) * map_step] >> 1));
+        dst[gidx + gidy * dst_step] = (uchar)(-(map[gidx + 1 + (gidy + 1) * map_step + map_offset] >> 1));
     }
 }
