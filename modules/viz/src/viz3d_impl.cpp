@@ -409,7 +409,7 @@ bool temp_viz::Viz3d::VizImpl::addLine (const cv::Point3f &pt1, const cv::Point3
 
 
 
-inline bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
@@ -596,7 +596,7 @@ inline bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const 
 }
 
 
-inline bool temp_viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
@@ -776,7 +776,7 @@ bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3
 
 #include <vtkSphereSource.h>
 ////////////////////////////////////////////////////////////////////////////////////////////
-inline bool temp_viz::Viz3d::VizImpl::addSphere (const cv::Point3f& center, float radius, const Color& color, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::addSphere (const cv::Point3f& center, float radius, const Color& color, const std::string &id)
 {
     // Check to see if this ID entry already exists (has it been already added to the visualizer?)
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -817,7 +817,7 @@ inline bool temp_viz::Viz3d::VizImpl::addSphere (const cv::Point3f& center, floa
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-inline bool temp_viz::Viz3d::VizImpl::updateSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::updateSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id)
 {
     // Check to see if this ID entry already exists (has it been already added to the visualizer?)
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -841,7 +841,7 @@ inline bool temp_viz::Viz3d::VizImpl::updateSphere (const cv::Point3f &center, f
 }
 
 //////////////////////////////////////////////////
-inline bool temp_viz::Viz3d::VizImpl::addText3D (const std::string &text, const cv::Point3f& position, const Color& color, double textScale, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::addText3D (const std::string &text, const cv::Point3f& position, const Color& color, double textScale, const std::string &id)
 {
     std::string tid;
     if (id.empty ())
@@ -884,7 +884,7 @@ inline bool temp_viz::Viz3d::VizImpl::addText3D (const std::string &text, const 
     return (true);
 }
 
-inline bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& color, const std::string &id)
+bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& color, const std::string &id)
 {
     CV_Assert(cloud.type() == CV_32FC3 && cloud.rows == 1);
 
