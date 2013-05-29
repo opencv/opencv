@@ -55,6 +55,83 @@ using namespace testing;
 using namespace std;
 
 extern string workdir;
+
+
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(MinDistance, double)
+}
+PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
+{
+    double minDistance;
+
+    virtual void SetUp()
+    {
+        minDistance = GET_PARAM(0);
+    }
+};
+
+TEST_P(GoodFeaturesToTrack, Accuracy)
+{
+    cv::Mat frame = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty());
+
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+
+    cv::ocl::oclMat d_pts;
+    detector(oclMat(frame), d_pts);
+
+    ASSERT_FALSE(d_pts.empty());
+
+    std::vector<cv::Point2f> pts(d_pts.cols);
+    
+    detector.downloadPoints(d_pts, pts);
+
+    std::vector<cv::Point2f> pts_gold;
+    cv::goodFeaturesToTrack(frame, pts_gold, maxCorners, qualityLevel, minDistance);
+
+    ASSERT_EQ(pts_gold.size(), pts.size());
+
+    size_t mistmatch = 0;
+    for (size_t i = 0; i < pts.size(); ++i)
+    {
+        cv::Point2i a = pts_gold[i];
+        cv::Point2i b = pts[i];
+
+        bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+
+        if (!eq)
+            ++mistmatch;
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+TEST_P(GoodFeaturesToTrack, EmptyCorners)
+{
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+
+    cv::ocl::oclMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    cv::ocl::oclMat corners(1, maxCorners, CV_32FC2);
+
+    detector(src, corners);
+
+    ASSERT_TRUE(corners.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack, 
+    testing::Values(MinDistance(0.0), MinDistance(3.0)));
+
 //////////////////////////////////////////////////////////////////////////
 PARAM_TEST_CASE(TVL1, bool)
 {
