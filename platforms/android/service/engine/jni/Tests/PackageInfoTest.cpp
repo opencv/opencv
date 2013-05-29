@@ -222,4 +222,3 @@ TEST(PackageInfo, Comparator3)
     EXPECT_EQ(info1, info2);
 }
 #endif
-
