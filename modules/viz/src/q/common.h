@@ -108,7 +108,7 @@ namespace temp_viz
           * the projection matrix * the view matrix.  However, additional
           * matrices like a camera disortion matrix can also be added.
           */
-        void cvtWindowCoordinates (const Point3f& pt, Matx44d& composite_mat, Vec4d& window_cord) const
+        void cvtWindowCoordinates (const Point3f& pt, const Matx44d& composite_mat, Vec4d& window_cord) const
         {
             Vec4d pte (pt.x, pt.y, pt.z, 1);
             window_cord = composite_mat * pte;
