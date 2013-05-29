@@ -73,7 +73,6 @@ struct getRect
 PARAM_TEST_CASE(Haar, double, int, CascadeName)
 {
     cv::ocl::OclCascadeClassifier cascade, nestedCascade;
-    cv::ocl::OclCascadeClassifierBuf cascadebuf;
     cv::CascadeClassifier cpucascade, cpunestedCascade;
 
     double scale;
@@ -86,7 +85,7 @@ PARAM_TEST_CASE(Haar, double, int, CascadeName)
         flags = GET_PARAM(1);
         cascadeName = (workdir + "../../data/haarcascades/").append(GET_PARAM(2));
 
-        if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)) || (!cascadebuf.load( cascadeName )))
+        if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)) )
         {
             cout << "ERROR: Could not load classifier cascade" << endl;
             return;
@@ -151,6 +150,12 @@ TEST_P(Haar, FaceDetectUseBuf)
     cv::ocl::oclMat image;
     image.upload(smallImg);
 
+    cv::ocl::OclCascadeClassifierBuf cascadebuf;
+    if( !cascadebuf.load( cascadeName ) )
+    {
+        cout << "ERROR: Could not load classifier cascade for FaceDetectUseBuf!" << endl;
+        return;
+    }
     cascadebuf.detectMultiScale( image, oclfaces,  1.1, 3,
                                  flags,
                                  Size(30, 30), Size(0, 0) );
