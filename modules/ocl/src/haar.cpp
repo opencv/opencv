@@ -1136,8 +1136,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
     CvHaarClassifierCascade      *cascade = oldCascade;
     GpuHidHaarClassifierCascade  *gcascade;
     GpuHidHaarStageClassifier    *stage;
-    GpuHidHaarClassifier         *classifier;
-    GpuHidHaarTreeNode           *node;
 
     if( CV_MAT_DEPTH(gimg.type()) != CV_8U )
         CV_Error( CV_StsUnsupportedFormat, "Only 8-bit images are supported" );
@@ -1176,8 +1174,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
 
         gcascade   = (GpuHidHaarClassifierCascade *)(cascade->hid_cascade);
         stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
-        classifier = (GpuHidHaarClassifier *)(stage + gcascade->count);
-        node       = (GpuHidHaarTreeNode *)(classifier->node);
 
         int startstage = 0;
         int endstage = gcascade->count;
@@ -1239,9 +1235,6 @@ void cv::ocl::OclCascadeClassifierBuf::detectMultiScale(oclMat &gimg, CV_OUT std
         cv::ocl::integral(gimg, gsum, gsqsum);
 
         gcascade   = (GpuHidHaarClassifierCascade *)cascade->hid_cascade;
-        stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
-        classifier = (GpuHidHaarClassifier *)(stage + gcascade->count);
-        node       = (GpuHidHaarTreeNode *)(classifier->node);
 
         int step = gsum.step / 4;
         int startnode = 0;
