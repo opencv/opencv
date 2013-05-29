@@ -59,8 +59,8 @@ extern string workdir;
 namespace
 {
 IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
-CascadeName cascades[] = {"haarcascade_frontalface_alt.xml", "haarcascade_frontalface_alt2.xml"};
-
+CascadeName cascade_frontalface_alt(std::string("haarcascade_frontalface_alt.xml"));
+CascadeName cascade_frontalface_alt2(std::string("haarcascade_frontalface_alt2.xml"));
 struct getRect
 {
     Rect operator ()(const CvAvgComp &e) const
@@ -175,6 +175,6 @@ TEST_P(Haar, FaceDetectUseBuf)
 
 INSTANTIATE_TEST_CASE_P(FaceDetect, Haar,
     Combine(Values(1.0),
-            Values(CV_HAAR_SCALE_IMAGE, 0), Values(cascades[0], cascades[1])));
+            Values(CV_HAAR_SCALE_IMAGE, 0), Values(cascade_frontalface_alt, cascade_frontalface_alt2)));
 
 #endif // HAVE_OPENCL
