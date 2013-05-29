@@ -35,6 +35,10 @@ void temp_viz::InteractorStyle::Initialize ()
 
     init_ = true;
     stereo_anaglyph_mask_default_ = true;
+    
+    // Initialize the keyboard callback as none
+    keyboardCallback_ = NULL;
+    keyboard_callback_cookie_ = NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,9 +148,17 @@ boost::signals2::connection temp_viz::InteractorStyle::registerMouseCallback (bo
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-boost::signals2::connection temp_viz::InteractorStyle::registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> callback)
+// boost::signals2::connection temp_viz::InteractorStyle::registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> callback)
+// {
+//     return (keyboard_signal_.connect (callback));
+// }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+void temp_viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void *cookie)
 {
-    return (keyboard_signal_.connect (callback));
+    /* Register the new callback function by assigning it to the internal callback function pointer */
+    keyboardCallback_ = callback;
+    keyboard_callback_cookie_ = NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -508,7 +520,10 @@ temp_viz::InteractorStyle::OnKeyDown ()
     }
 
     KeyboardEvent event (true, Interactor->GetKeySym (), Interactor->GetKeyCode (), Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
-    keyboard_signal_ (event);
+    // Check if there is a keyboard callback registered
+    if (keyboardCallback_ != NULL)
+      keyboardCallback_(event, keyboard_callback_cookie_);
+    //keyboard_signal_ (event);
 
     renderer_->Render ();
     Interactor->Render ();
@@ -518,7 +533,10 @@ temp_viz::InteractorStyle::OnKeyDown ()
 void temp_viz::InteractorStyle::OnKeyUp ()
 {
     KeyboardEvent event (false, Interactor->GetKeySym (), Interactor->GetKeyCode (), Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
-    keyboard_signal_ (event);
+    // Check if there is a keyboard callback registered
+    if (keyboardCallback_ != NULL)
+      keyboardCallback_(event, keyboard_callback_cookie_);
+//     keyboard_signal_ (event);
     Superclass::OnKeyUp ();
 }
 

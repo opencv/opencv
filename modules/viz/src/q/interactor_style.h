@@ -68,13 +68,27 @@ namespace temp_viz
                   */
             boost::signals2::connection registerMouseCallback (boost::function<void (const cv::MouseEvent&)> cb);
 
-            /** \brief Register a callback boost::function for keyboard events
-                  * \param[in] cb a boost function that will be registered as a callback for a keyboard event
-                  * \return a connection object that allows to disconnect the callback function.
+            /** \brief Register a callback function for keyboard events
+                  * \param[in] callback a function that will be registered as a callback for a keyboard event
+                  * \param[in] cookie user data passed to the callback function
                   */
-            boost::signals2::connection registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> cb);
-
-
+	    void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void * cookie = NULL);
+	    
+	    
+	    // TODO Implement callback function as a method of an instance
+	    /** \brief  Register a callback function for keyboard input
+		  * \param[in] callback function that will be registered as a callback for a keyboard event
+		  * \param[in] instance the instance that the callback function belongs to
+		  * \param[in] cookie for passing user data to callback
+		  */
+// 	    template<typename T> inline void registerKeyboardCallback(void (T::*callback)(const cv::KeyboardEvent&, void*), T& instance, void* cookie = NULL)
+// 	    { 
+// 		registerKeyboardCallback(callback, cookie);
+// 		// Set the instance for calling the callback
+// 		keyboard_callback_instance_ = (void *) &instance; 
+// 		
+// 	    }
+	    
             /** \brief Save the current rendered image to disk, as a PNG screenshot.
                   * \param[in] file the name of the PNG file
                   */
@@ -146,5 +160,10 @@ namespace temp_viz
 
             /** \brief The keyboard modifier to use. Default: Alt. */
             KeyboardModifier modifier_;
+	    
+	    /** \brief Keyboard-Callback function */
+	    void (*keyboardCallback_)(const cv::KeyboardEvent&, void*);
+	    void *keyboard_callback_cookie_;
+	    void *keyboard_callback_instance_;
         };
 }

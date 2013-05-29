@@ -95,15 +95,16 @@ temp_viz::Viz3d::VizImpl::~VizImpl ()
 void temp_viz::Viz3d::VizImpl::saveScreenshot (const std::string &file) { style_->saveScreenshot (file); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-boost::signals2::connection temp_viz::Viz3d::VizImpl::registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> callback)
-{
-    return (style_->registerKeyboardCallback (callback));
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 boost::signals2::connection temp_viz::Viz3d::VizImpl::registerMouseCallback (boost::function<void (const cv::MouseEvent&)> callback)
 {
     return (style_->registerMouseCallback (callback));
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void temp_viz::Viz3d::VizImpl::registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie)
+{
+    // Register the callback function in the interactor style
+    style_->registerKeyboardCallback(callback, cookie);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

@@ -22,23 +22,41 @@ public:
     virtual ~VizImpl ();
     void setFullScreen (bool mode);
     void setWindowName (const std::string &name);
+    
+    /** \brief  Register a callback function for keyboard input
+	  * \param[in] callback function that will be registered as a callback for a keyboard event
+	  * \param[in] cookie for passing user data to callback
+	  */	
+    void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = NULL);
+    
+    // TODO Implement callback function as a method of an instance
+    /** \brief  Register a callback function for keyboard input
+	  * \param[in] callback function that will be registered as a callback for a keyboard event
+	  * \param[in] instance the instance that the callback function belongs to
+	  * \param[in] cookie for passing user data to callback
+	  */
+    
+//     template<typename T> inline void registerKeyboardCallback(void (T::*callback)(const cv::KeyboardEvent&, void*), T& instance, void* cookie = NULL)
+//     {  }
 
-    /** \brief Register a callback boost::function for keyboard events
-          * \param[in] cb a boost function that will be registered as a callback for a keyboard event
-          * \return a connection object that allows to disconnect the callback function.
-          */
-    boost::signals2::connection registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> cb);
-    inline boost::signals2::connection registerKeyboardCallback (void (*callback) (const cv::KeyboardEvent&, void*), void* cookie = NULL)
-    { return (registerKeyboardCallback (boost::bind (callback, _1, cookie))); }
 
-    /** \brief Register a callback function for keyboard events
-          * \param[in] callback  the member function that will be registered as a callback for a keyboard event
-          * \param[in] instance  instance to the class that implements the callback function
-          * \param[in] cookie    user data that is passed to the callback
-          * \return a connection object that allows to disconnect the callback function.
-          */
-    template<typename T> inline boost::signals2::connection registerKeyboardCallback (void (T::*callback) (const cv::KeyboardEvent&, void*), T& instance, void* cookie = NULL)
-    { return (registerKeyboardCallback (boost::bind (callback,  boost::ref (instance), _1, cookie))); }
+
+//     /** \brief Register a callback boost::function for keyboard events
+//           * \param[in] cb a boost function that will be registered as a callback for a keyboard event
+//           * \return a connection object that allows to disconnect the callback function.
+//           */
+//     void registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> cb);
+//     inline boost::signals2::connection registerKeyboardCallback (void (*callback) (const cv::KeyboardEvent&, void*), void* cookie = NULL)
+//     { return (registerKeyboardCallback (boost::bind (callback, _1, cookie))); }
+// 
+//     /** \brief Register a callback function for keyboard events
+//           * \param[in] callback  the member function that will be registered as a callback for a keyboard event
+//           * \param[in] instance  instance to the class that implements the callback function
+//           * \param[in] cookie    user data that is passed to the callback
+//           * \return a connection object that allows to disconnect the callback function.
+//           */
+//     template<typename T> inline boost::signals2::connection registerKeyboardCallback (void (T::*callback) (const cv::KeyboardEvent&, void*), T& instance, void* cookie = NULL)
+//     { return (registerKeyboardCallback (boost::bind (callback,  boost::ref (instance), _1, cookie))); }
 
     /** \brief Register a callback function for mouse events
           * \param[in] cb a boost function that will be registered as a callback for a mouse event
@@ -446,7 +464,6 @@ private:
     void allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata);
     void allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata);
     void allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata);
-
 };
 
 //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
