@@ -156,3 +156,73 @@ PERFTEST(PyrLKOpticalFlow)
 
     }
 }
+
+
+PERFTEST(tvl1flow)
+{
+    cv::Mat frame0 = imread("rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    assert(!frame0.empty());
+
+    cv::Mat frame1 = imread("rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    assert(!frame1.empty());
+
+    cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
+    cv::ocl::oclMat d_flowx(frame0.size(), CV_32FC1);
+    cv::ocl::oclMat d_flowy(frame1.size(), CV_32FC1);
+
+    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    cv::Mat flow;
+
+
+    SUBTEST << frame0.cols << 'x' << frame0.rows << "; rubberwhale1.png; "<<frame1.cols<<'x'<<frame1.rows<<"; rubberwhale2.png";
+
+    alg->calc(frame0, frame1, flow);
+
+    CPU_ON;
+    alg->calc(frame0, frame1, flow);
+    CPU_OFF;
+
+    cv::Mat gold[2];
+    cv::split(flow, gold);
+
+    cv::ocl::oclMat d0(frame0.size(), CV_32FC1);
+    d0.upload(frame0);
+    cv::ocl::oclMat d1(frame1.size(), CV_32FC1);
+    d1.upload(frame1);
+
+    WARMUP_ON;
+    d_alg(d0, d1, d_flowx, d_flowy);
+    WARMUP_OFF;
+/*
+    double diff1 = 0.0, diff2 = 0.0;
+    if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
+        &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
+        TestSystem::instance().setAccurate(1);
+    else
+        TestSystem::instance().setAccurate(0);
+
+    TestSystem::instance().setDiff(diff1);
+    TestSystem::instance().setDiff(diff2);
+*/
+
+
+    GPU_ON;
+    d_alg(d0, d1, d_flowx, d_flowy);
+    d_alg.collectGarbage();
+    GPU_OFF;
+    
+
+    cv::Mat flowx, flowy;
+
+    GPU_FULL_ON;
+    d0.upload(frame0);
+    d1.upload(frame1);
+    d_alg(d0, d1, d_flowx, d_flowy);
+    d_alg.collectGarbage();
+    d_flowx.download(flowx);
+    d_flowy.download(flowy);
+    GPU_FULL_OFF;
+
+    TestSystem::instance().ExceptedMatSimilar(gold[0], flowx, 3e-3);
+    TestSystem::instance().ExceptedMatSimilar(gold[1], flowy, 3e-3);
+}

@@ -87,3 +87,46 @@ PERFTEST(pyrDown)
         }
     }
 }
+
+///////////// pyrUp ////////////////////////
+PERFTEST(pyrUp)
+{
+    Mat src, dst, ocl_dst;
+    int all_type[] = {CV_8UC1, CV_8UC4};
+    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+
+    for (int size = 500; size <= 2000; size *= 2)
+    {
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+
+            gen(src, size, size, all_type[j], 0, 256);
+
+            pyrUp(src, dst);
+
+            CPU_ON;
+            pyrUp(src, dst);
+            CPU_OFF;
+
+            ocl::oclMat d_src(src);
+            ocl::oclMat d_dst;
+
+            WARMUP_ON;
+            ocl::pyrUp(d_src, d_dst);
+            WARMUP_OFF;
+
+            GPU_ON;
+            ocl::pyrUp(d_src, d_dst);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src.upload(src);
+            ocl::pyrUp(d_src, d_dst);
+            d_dst.download(ocl_dst);
+            GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, (src.depth() == CV_32F ? 1e-4f : 1.0));
+        }
+    }
+}

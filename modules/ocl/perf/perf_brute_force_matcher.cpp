@@ -95,7 +95,7 @@ PERFTEST(BruteForceMatcher)
         GPU_FULL_ON;
         d_query.upload(query);
         d_train.upload(train);
-        d_matcher.match(d_query, d_train, matches[0]);
+        d_matcher.match(d_query, d_train, d_matches[0]);
         GPU_FULL_OFF;
 
         int diff = abs((int)d_matches[0].size() - (int)matches[0].size());
