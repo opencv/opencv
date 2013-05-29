@@ -239,7 +239,7 @@ latex_documents = [
    u'', 'manual'),
   ('doc/tutorials/tutorials', 'opencv_tutorials.tex', u'The OpenCV Tutorials',
    u'', 'manual'),
-  ('android/refman', 'opencv2manager.tex', u'The OpenCV Manager Manual',
+  ('platforms/android/refman', 'opencv2manager.tex', u'The OpenCV Manager Manual',
    u'', 'manual'),
 ]
 

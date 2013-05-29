@@ -456,15 +456,15 @@ if(BUILD_EXAMPLES OR BUILD_ANDROID_EXAMPLES OR INSTALL_PYTHON_EXAMPLES)
 endif()
 
 if(ANDROID)
-  add_subdirectory(android/service)
+  add_subdirectory(platforms/android/service)
 endif()
 
 if(BUILD_ANDROID_PACKAGE)
-  add_subdirectory(android/package)
+  add_subdirectory(platforms/android/package)
 endif()
 
 if (ANDROID)
-  add_subdirectory(android/libinfo)
+  add_subdirectory(platforms/android/libinfo)
 endif()
 
 # ----------------------------------------------------------------------------

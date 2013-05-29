@@ -24,7 +24,7 @@ else()
   message(WARNING "Can not automatically determine the value for ANDROID_PLATFORM_VERSION_CODE")
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/android/service/engine/.build/${ANDROID_MANIFEST_FILE}"  @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/platforms/android/service/engine/.build/${ANDROID_MANIFEST_FILE}"  @ONLY)
 
 link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin/${ANDROID_ARCH_NAME}")
 
@@ -72,4 +72,3 @@ file(GLOB engine_test_files "jni/Tests/*.cpp")
 
 add_executable(opencv_test_engine ${engine_test_files} jni/Tests/gtest/gtest-all.cpp)
 target_link_libraries(opencv_test_engine z binder log utils android_runtime ${engine} ${engine}_jni)
-
