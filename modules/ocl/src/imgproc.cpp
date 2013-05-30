@@ -269,7 +269,7 @@ namespace cv
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-
+            float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
             vector< pair<size_t, const void *> > args;
             if(map1.channels() == 2)
             {
@@ -289,9 +289,8 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
-
-               if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -325,7 +324,6 @@ namespace cv
                 }
                 else
                 {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
                     args.push_back( make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
