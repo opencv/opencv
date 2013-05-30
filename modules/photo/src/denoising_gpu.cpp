@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 
 #include "opencv2/photo/gpu.hpp"
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 

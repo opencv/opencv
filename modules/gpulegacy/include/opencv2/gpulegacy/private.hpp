@@ -48,7 +48,7 @@
 #  error this is a private header which should not be used from outside of the OpenCV library
 #endif
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #ifndef HAVE_CUDA
 #  error gpulegacy module requires CUDA

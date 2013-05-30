@@ -49,7 +49,7 @@
 #include "opencv2/core/opengl.hpp"
 
 #include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #include <assert.h>
 #include <ctype.h>
