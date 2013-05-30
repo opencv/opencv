@@ -97,3 +97,8 @@ void temp_viz::Viz3d::registerKeyboardCallback(void (*callback)(const cv::Keyboa
 {
     impl_->registerKeyboardCallback(callback, cookie);
 }
+
+void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie)
+{
+    impl_->registerMouseCallback(callback, cookie);
+}
