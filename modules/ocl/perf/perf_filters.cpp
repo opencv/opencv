@@ -291,9 +291,7 @@ PERFTEST(GaussianBlur)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
-            gen(src, size, size, all_type[j], 0, 256);
-            dst = src;
-            dst.setTo(0);
+            gen(src, size, size, all_type[j], 5, 16);
 
             GaussianBlur(src, dst, Size(9, 9), 0);
 
@@ -346,8 +344,8 @@ PERFTEST(filter2D)
                 Mat kernel;
                 gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
 
-				Mat dst, ocl_dst;
-				dst.setTo(0);
+                Mat dst, ocl_dst;
+
                 cv::filter2D(src, dst, -1, kernel);
 
                 CPU_ON;
