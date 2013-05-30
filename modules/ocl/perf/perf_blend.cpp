@@ -71,7 +71,7 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
 }
 PERFTEST(blend)
 {
-    Mat src1, src2, weights1, weights2, dst;
+    Mat src1, src2, weights1, weights2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -103,10 +103,6 @@ PERFTEST(blend)
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat;
-            d_dst.download(ocl_mat);
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, ocl_mat, 1.f));
-
             GPU_ON;
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
             GPU_OFF;
@@ -117,8 +113,10 @@ PERFTEST(blend)
             d_weights1.upload(weights1);
             d_weights2.upload(weights2);
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.f);
         }
     }
 }
