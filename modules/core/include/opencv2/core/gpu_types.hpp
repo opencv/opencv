@@ -40,10 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_DEVPTRS_HPP__
-#define __OPENCV_CORE_DEVPTRS_HPP__
+#ifndef __OPENCV_CORE_GPU_TYPES_HPP__
+#define __OPENCV_CORE_GPU_TYPES_HPP__
 
-#ifdef __cplusplus
+#ifndef __cplusplus
+#  error gpu_types.hpp header must be compiled as C++
+#endif
 
 #ifdef __CUDACC__
     #define __CV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__
@@ -88,7 +90,7 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ PtrStep() : step(0) {}
             __CV_GPU_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}
 
-            /** \brief stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!! */
+            //! stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!!
             size_t step;
 
             __CV_GPU_HOST_DEVICE__       T* ptr(int y = 0)       { return (      T*)( (      char*)DevPtr<T>::data + y * step); }
@@ -148,6 +150,4 @@ namespace cv
     }
 }
 
-#endif // __cplusplus
-
-#endif /* __OPENCV_CORE_DEVPTRS_HPP__ */
+#endif /* __OPENCV_CORE_GPU_TYPES_HPP__ */

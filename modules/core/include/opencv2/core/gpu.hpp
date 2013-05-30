@@ -42,11 +42,15 @@
 //M*/
 
 
-#ifndef __OPENCV_GPUMAT_HPP__
-#define __OPENCV_GPUMAT_HPP__
+#ifndef __OPENCV_CORE_GPU_HPP__
+#define __OPENCV_CORE_GPU_HPP__
+
+#ifndef __cplusplus
+#  error gpu.hpp header must be compiled as C++
+#endif
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
 
 namespace cv { namespace gpu
 {
@@ -719,4 +723,4 @@ void ensureSizeIsEnough(Size size, int type, GpuMat& m)
 
 }} // cv::gpu
 
-#endif // __OPENCV_GPUMAT_HPP__
+#endif /* __OPENCV_CORE_GPU_HPP__ */

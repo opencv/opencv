@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_CUDA
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #endif
 
 #ifdef ANDROID
@@ -70,10 +70,6 @@ static void setCurrentThreadAffinityMask(int mask)
         LOGE("Error in the syscall setaffinity: mask=%d=0x%x err=%d=0x%x", mask, mask, err, err);
     }
 }
-#endif
-
-#ifdef HAVE_CUDA
-# include <opencv2/core/gpumat.hpp>
 #endif
 
 namespace {

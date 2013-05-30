@@ -45,7 +45,7 @@
 
 #include <vector>
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/videostab/global_motion.hpp"
 #include "opencv2/videostab/log.hpp"
 

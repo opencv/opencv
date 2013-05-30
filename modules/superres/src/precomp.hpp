@@ -48,7 +48,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"

@@ -40,16 +40,20 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
-#define __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
+#ifndef __OPENCV_CORE_GPU_STREAM_ACCESSOR_HPP__
+#define __OPENCV_CORE_GPU_STREAM_ACCESSOR_HPP__
 
-#include <cuda_runtime.h>
-#include "opencv2/core/cvdef.h"
+#ifndef __cplusplus
+#  error gpu_stream_accessor.hpp header must be compiled as C++
+#endif
 
 // This is only header file that depends on Cuda. All other headers are independent.
 // So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
 // But of you wanna use GPU by yourself, may get cuda stream instance using the class below.
 // In this case you have to install Cuda Toolkit.
+
+#include <cuda_runtime.h>
+#include "opencv2/core/cvdef.h"
 
 namespace cv
 {
@@ -64,4 +68,4 @@ namespace cv
     }
 }
 
-#endif /* __OPENCV_CUDA_STREAM_ACCESSOR_HPP__ */
+#endif /* __OPENCV_CORE_GPU_STREAM_ACCESSOR_HPP__ */

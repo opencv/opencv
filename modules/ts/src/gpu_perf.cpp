@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 #ifdef HAVE_CUDA
     #include <cuda_runtime.h>

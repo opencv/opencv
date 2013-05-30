@@ -49,7 +49,7 @@
 
 #include <memory>
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/gpufilters.hpp"
 
 namespace cv { namespace gpu {

@@ -43,7 +43,7 @@
 #ifndef __FGD_BGFG_COMMON_HPP__
 #define __FGD_BGFG_COMMON_HPP__
 
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
 
 namespace bgfg
 {

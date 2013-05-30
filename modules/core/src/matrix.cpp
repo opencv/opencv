@@ -41,7 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/opengl.hpp"
 
 /****************************************************************************************\

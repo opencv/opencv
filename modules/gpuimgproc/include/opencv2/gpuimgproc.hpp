@@ -47,7 +47,7 @@
 #  error gpuimgproc.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/base.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/gpufilters.hpp"
