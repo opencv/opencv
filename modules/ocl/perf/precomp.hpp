@@ -313,9 +313,46 @@ public:
         itname_changed_ = true;
     }
 
-    void setAccurate(int is_accurate = -1)
+    void setAccurate(int accurate, double diff)
     {
-        is_accurate_ = is_accurate;
+        is_accurate_ = accurate;
+        accurate_diff_ = diff;
+    }
+
+    void ExpectMatsNear(vector<Mat>& dst, vector<Mat>& cpu_dst, vector<double>& eps)
+    {
+        assert(dst.size() == cpu_dst.size());
+        assert(cpu_dst.size() == eps.size());
+        is_accurate_ = 1;
+        for(size_t i=0; i<dst.size(); i++)
+        {
+            double cur_diff = checkNorm(dst[i], cpu_dst[i]);
+            accurate_diff_ = max(accurate_diff_, cur_diff);
+            if(cur_diff > eps[i])
+                is_accurate_ = 0;
+        }
+    }
+
+    void ExpectedMatNear(cv::Mat& dst, cv::Mat& cpu_dst, double eps)
+    {
+        assert(dst.type() == cpu_dst.type());
+        assert(dst.size() == cpu_dst.size());
+        accurate_diff_ = checkNorm(dst, cpu_dst);
+        if(accurate_diff_ <= eps)
+            is_accurate_ = 1;
+        else
+            is_accurate_ = 0;
+    }
+
+    void ExceptedMatSimilar(cv::Mat& dst, cv::Mat& cpu_dst, double eps)
+    {
+        assert(dst.type() == cpu_dst.type());
+        assert(dst.size() == cpu_dst.size());
+        accurate_diff_ = checkSimilarity(cpu_dst, dst);
+        if(accurate_diff_ <= eps)
+            is_accurate_ = 1;
+        else
+            is_accurate_ = 0;    
     }
 
     std::stringstream &getCurSubtestDescription()
@@ -333,7 +370,7 @@ private:
         num_iters_(10), cpu_num_iters_(2),
         gpu_warmup_iters_(1), cur_iter_idx_(0), cur_warmup_idx_(0),
         record_(0), recordname_("performance"), itname_changed_(true), 
-        is_accurate_(-1)
+        is_accurate_(-1), accurate_diff_(0.)
     {
         cpu_times_.reserve(num_iters_);
         gpu_times_.reserve(num_iters_);
@@ -354,6 +391,7 @@ private:
         gpu_times_.clear();
         gpu_full_times_.clear();
         is_accurate_ = -1;
+        accurate_diff_ = 0.;
     }
 
     double meanTime(const std::vector<int64> &samples);
@@ -364,7 +402,7 @@ private:
 
     void writeHeading();
     void writeSummary();
-    void writeMetrics(int is_accurate, double cpu_time, double gpu_time = 0.0f, double gpu_full_time = 0.0f,
+    void writeMetrics(double cpu_time, double gpu_time = 0.0f, double gpu_full_time = 0.0f,
                       double speedup = 0.0f, double fullspeedup = 0.0f,
                       double gpu_min = 0.0f, double gpu_max = 0.0f, double std_dev = 0.0f);
 
@@ -416,6 +454,7 @@ private:
     bool itname_changed_;
 
     int is_accurate_;
+    double accurate_diff_;
 };
 
 

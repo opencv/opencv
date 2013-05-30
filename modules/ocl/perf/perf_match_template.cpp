@@ -56,10 +56,8 @@
 PERFTEST(matchTemplate)
 {
     //InitMatchTemplate();
-
-    Mat src, templ, dst;
+    Mat src, templ, dst, ocl_dst;
     int templ_size = 5;
-
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
@@ -82,15 +80,11 @@ PERFTEST(matchTemplate)
                 matchTemplate(src, templ, dst, CV_TM_CCORR);
                 CPU_OFF;
 
-                ocl::oclMat d_src(src), d_templ, d_dst;
-
-                d_templ.upload(templ);
+                ocl::oclMat d_src(src), d_templ(templ), d_dst;
 
                 WARMUP_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
                 WARMUP_OFF;
-
-                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), templ.rows * templ.cols * 1e-1));            
 
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
@@ -100,8 +94,10 @@ PERFTEST(matchTemplate)
                 d_src.upload(src);
                 d_templ.upload(templ);
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-                d_dst.download(dst);
+                d_dst.download(ocl_dst);
                 GPU_FULL_OFF;
+
+                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
             }
         }
 
@@ -131,8 +127,6 @@ PERFTEST(matchTemplate)
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
                 WARMUP_OFF;
 
-                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), templ.rows * templ.cols * 1e-1));            
-
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
                 GPU_OFF;
@@ -141,8 +135,10 @@ PERFTEST(matchTemplate)
                 d_src.upload(src);
                 d_templ.upload(templ);
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
-                d_dst.download(dst);
+                d_dst.download(ocl_dst);
                 GPU_FULL_OFF;
+
+                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
             }
         }
     }

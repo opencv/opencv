@@ -48,7 +48,7 @@
 ///////////// Merge////////////////////////
 PERFTEST(Merge)
 {
-    Mat dst;
+    Mat dst, ocl_dst;
     ocl::oclMat d_dst;
 
     int channels = 4;
@@ -85,22 +85,20 @@ PERFTEST(Merge)
             ocl::merge(d_src, d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(dst), cv::Mat(d_dst), 0.0));                     
-
             GPU_ON;
             ocl::merge(d_src, d_dst);
             GPU_OFF;
 
             GPU_FULL_ON;
-
             for (int i = 0; i < channels; ++i)
             {
-                d_src[i] = ocl::oclMat(size1, CV_8U, cv::Scalar::all(i));
+                d_src[i] = ocl::oclMat(size1, all_type[j], cv::Scalar::all(i));
             }
-
             ocl::merge(d_src, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
         }
 
     }
@@ -122,7 +120,7 @@ PERFTEST(Split)
 
             Mat src(size1, CV_MAKE_TYPE(all_type[j], 4), cv::Scalar(1, 2, 3, 4));
 
-            std::vector<cv::Mat> dst;
+            std::vector<cv::Mat> dst, ocl_dst(4);
 
             split(src, dst);
 
@@ -135,22 +133,7 @@ PERFTEST(Split)
 
             WARMUP_ON;
             ocl::split(d_src, d_dst);
-            WARMUP_OFF;
-
-            if(d_dst.size() == dst.size())
-            {
-                TestSystem::instance().setAccurate(1);
-                for(size_t i = 0; i < dst.size(); i++)
-                {
-                    if(ExpectedMatNear(dst[i], cv::Mat(d_dst[i]), 0.0) == 0)
-                    {
-                        TestSystem::instance().setAccurate(0);
-                        break;
-                    }
-                }
-            }else
-                TestSystem::instance().setAccurate(0);
-                                
+            WARMUP_OFF;         
 
             GPU_ON;
             ocl::split(d_src, d_dst);
@@ -159,7 +142,12 @@ PERFTEST(Split)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::split(d_src, d_dst);
+            for(size_t i = 0; i < dst.size(); i++)
+                d_dst[i].download(ocl_dst[i]);
             GPU_FULL_OFF;
+
+            vector<double> eps(4, 0.);
+            TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);
         }
 
     }

@@ -48,7 +48,7 @@
 ///////////// columnSum////////////////////////
 PERFTEST(columnSum)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
@@ -63,22 +63,15 @@ PERFTEST(columnSum)
             dst.at<float>(0, j) = src.at<float>(0, j);
 
         for (int i = 1; i < src.rows; ++i)
-        {for (int j = 0; j < src.cols; ++j)
-            {
+            for (int j = 0; j < src.cols; ++j)
                 dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
-            }
-        }
-
         CPU_OFF;
 
         d_src.upload(src);
+
         WARMUP_ON;
         ocl::columnSum(d_src, d_dst);
         WARMUP_OFF;
-
-        cv::Mat ocl_mat;
-        d_dst.download(ocl_mat);
-        TestSystem::instance().setAccurate(ExpectedMatNear(dst, ocl_mat, 5e-1));
 
         GPU_ON;
         ocl::columnSum(d_src, d_dst);
@@ -87,7 +80,9 @@ PERFTEST(columnSum)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::columnSum(d_src, d_dst);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 5e-1);
     }
 }

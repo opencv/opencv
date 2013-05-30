@@ -48,7 +48,7 @@
 ///////////// gemm ////////////////////////
 PERFTEST(gemm)
 {
-    Mat src1, src2, src3, dst;
+    Mat src1, src2, src3, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_src3, d_dst;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
@@ -72,7 +72,6 @@ PERFTEST(gemm)
         WARMUP_ON;
         ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
         WARMUP_OFF;
-        TestSystem::instance().setAccurate(ExpectedMatNear(cv::Mat(d_dst), dst, src1.cols * src1.rows * 1e-4));
 
         GPU_ON;
         ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
@@ -83,7 +82,9 @@ PERFTEST(gemm)
         d_src2.upload(src2);
         d_src3.upload(src3);
         ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(ocl_dst, dst, src1.cols * src1.rows * 1e-4);
     }
 }
