@@ -2986,29 +2986,23 @@ cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
     }
 }
 
-class EqualizeHistCalcHist_Invoker
+class EqualizeHistCalcHist_Invoker : public cv::ParallelLoopBody
 {
 public:
     enum {HIST_SZ = 256};
 
-#ifdef HAVE_TBB
-    typedef tbb::mutex* MutextPtr;
-#else
-    typedef void* MutextPtr;
-#endif
-
-    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, MutextPtr histogramLock)
+    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, cv::Mutex* histogramLock)
         : src_(src), globalHistogram_(histogram), histogramLock_(histogramLock)
     { }
 
-    void operator()( const cv::BlockedRange& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const
     {
         int localHistogram[HIST_SZ] = {0, };
 
         const size_t sstep = src_.step;
 
         int width = src_.cols;
-        int height = rowRange.end() - rowRange.begin();
+        int height = rowRange.end - rowRange.start;
 
         if (src_.isContinuous())
         {
@@ -3016,7 +3010,7 @@ public:
             height = 1;
         }
 
-        for (const uchar* ptr = src_.ptr<uchar>(rowRange.begin()); height--; ptr += sstep)
+        for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
         {
             int x = 0;
             for (; x <= width - 4; x += 4)
@@ -3031,9 +3025,7 @@ public:
                 localHistogram[ptr[x]]++;
         }
 
-#ifdef HAVE_TBB
-        tbb::mutex::scoped_lock lock(*histogramLock_);
-#endif
+        cv::AutoLock lock(*histogramLock_);
 
         for( int i = 0; i < HIST_SZ; i++ )
             globalHistogram_[i] += localHistogram[i];
@@ -3041,12 +3033,7 @@ public:
 
     static bool isWorthParallel( const cv::Mat& src )
     {
-#ifdef HAVE_TBB
         return ( src.total() >= 640*480 );
-#else
-        (void)src;
-        return false;
-#endif
     }
 
 private:
@@ -3054,10 +3041,10 @@ private:
 
     cv::Mat& src_;
     int* globalHistogram_;
-    MutextPtr histogramLock_;
+    cv::Mutex* histogramLock_;
 };
 
-class EqualizeHistLut_Invoker
+class EqualizeHistLut_Invoker : public cv::ParallelLoopBody
 {
 public:
     EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, int* lut )
@@ -3066,13 +3053,13 @@ public:
           lut_(lut)
     { }
 
-    void operator()( const cv::BlockedRange& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const
     {
         const size_t sstep = src_.step;
         const size_t dstep = dst_.step;
 
         int width = src_.cols;
-        int height = rowRange.end() - rowRange.begin();
+        int height = rowRange.end - rowRange.start;
         int* lut = lut_;
 
         if (src_.isContinuous() && dst_.isContinuous())
@@ -3081,8 +3068,8 @@ public:
             height = 1;
         }
 
-        const uchar* sptr = src_.ptr<uchar>(rowRange.begin());
-        uchar* dptr = dst_.ptr<uchar>(rowRange.begin());
+        const uchar* sptr = src_.ptr<uchar>(rowRange.start);
+        uchar* dptr = dst_.ptr<uchar>(rowRange.start);
 
         for (; height--; sptr += sstep, dptr += dstep)
         {
@@ -3111,12 +3098,7 @@ public:
 
     static bool isWorthParallel( const cv::Mat& src )
     {
-#ifdef HAVE_TBB
         return ( src.total() >= 640*480 );
-#else
-        (void)src;
-        return false;
-#endif
     }
 
 private:
@@ -3143,23 +3125,18 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     if(src.empty())
         return;
 
-#ifdef HAVE_TBB
-    tbb::mutex histogramLockInstance;
-    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = &histogramLockInstance;
-#else
-    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = 0;
-#endif
+    Mutex histogramLockInstance;
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
     int lut[hist_sz];
 
-    EqualizeHistCalcHist_Invoker calcBody(src, hist, histogramLock);
+    EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     EqualizeHistLut_Invoker      lutBody(src, dst, lut);
-    cv::BlockedRange heightRange(0, src.rows);
+    cv::Range heightRange(0, src.rows);
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
-        parallel_for(heightRange, calcBody);
+        parallel_for_(heightRange, calcBody);
     else
         calcBody(heightRange);
 
@@ -3183,7 +3160,7 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     }
 
     if(EqualizeHistLut_Invoker::isWorthParallel(src))
-        parallel_for(heightRange, lutBody);
+        parallel_for_(heightRange, lutBody);
     else
         lutBody(heightRange);
 }

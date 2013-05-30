@@ -306,7 +306,7 @@ float CvKNearest::write_results( int k, int k1, int start, int end,
     return result;
 }
 
-struct P1 {
+struct P1 : cv::ParallelLoopBody {
   P1(const CvKNearest* _pointer, int _buf_sz, int _k, const CvMat* __samples, const float** __neighbors,
      int _k1, CvMat* __results, CvMat* __neighbor_responses, CvMat* __dist, float* _result)
   {
@@ -333,10 +333,10 @@ struct P1 {
   float* result;
   int buf_sz;
 
-  void operator()( const cv::BlockedRange& range ) const
+  void operator()( const cv::Range& range ) const
   {
     cv::AutoBuffer<float> buf(buf_sz);
-    for(int i = range.begin(); i < range.end(); i += 1 )
+    for(int i = range.start; i < range.end; i += 1 )
     {
         float* neighbor_responses = &buf[0];
         float* dist = neighbor_responses + 1*k;
@@ -410,8 +410,8 @@ float CvKNearest::find_nearest( const CvMat* _samples, int k, CvMat* _results,
     int k1 = get_sample_count();
     k1 = MIN( k1, k );
 
-    cv::parallel_for(cv::BlockedRange(0, count), P1(this, buf_sz, k, _samples, _neighbors, k1,
-                                                    _results, _neighbor_responses, _dist, &result)
+    cv::parallel_for_(cv::Range(0, count), P1(this, buf_sz, k, _samples, _neighbors, k1,
+                                             _results, _neighbor_responses, _dist, &result)
     );
 
     return result;
