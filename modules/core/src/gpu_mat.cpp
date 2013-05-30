@@ -678,11 +678,17 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
         size_t esz = elemSize();
 
         void* devPtr;
-        cudaSafeCall( cudaMallocPitch(&devPtr, &step, esz * cols, rows) );
 
-        // Single row must be continuous
-        if (rows == 1)
+        if (rows > 1 && cols > 1)
+        {
+            cudaSafeCall( cudaMallocPitch(&devPtr, &step, esz * cols, rows) );
+        }
+        else
+        {
+            // Single row or single column must be continuous
+            cudaSafeCall( cudaMalloc(&devPtr, esz * cols * rows) );
             step = esz * cols;
+        }
 
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;
