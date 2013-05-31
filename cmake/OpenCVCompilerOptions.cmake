@@ -47,7 +47,7 @@ macro(add_extra_compiler_option option)
   endif()
 endmacro()
 
-# some OpenCV tests fail when 'char' is 'unsigned' by default
+# OpenCV fails some tests when 'char' is 'unsigned' by default
 add_extra_compiler_option(-fsigned-char)
 
 if(MINGW)
