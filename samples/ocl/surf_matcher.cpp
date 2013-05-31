@@ -350,7 +350,7 @@ int main(int argc, char* argv[])
         else
         {
             bool result = false;
-            for(int i = 0; i < cpu_corner.size(); i++)
+            for(size_t i = 0; i < cpu_corner.size(); i++)
             {
                 if((std::abs(cpu_corner[i].x - gpu_corner[i].x) > 10)
                     ||(std::abs(cpu_corner[i].y - gpu_corner[i].y) > 10))
