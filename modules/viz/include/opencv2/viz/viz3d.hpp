@@ -10,6 +10,7 @@
 
 #include <string>
 #include <opencv2/viz/types.hpp>
+#include <opencv2/viz/events.hpp>
 
 namespace temp_viz
 {
@@ -57,6 +58,9 @@ namespace temp_viz
 
         void spin ();
         void spinOnce (int time = 1, bool force_redraw = false);
+	
+	void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
+	void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
 
     private:
         Viz3d(const Viz3d&);

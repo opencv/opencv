@@ -56,25 +56,23 @@ namespace temp_viz
                   */
             inline void setCloudActorMap (const cv::Ptr<CloudActorMap>& actors) { actors_ = actors; }
 
-
             /** \brief Pass a set of renderers to the interactor style.
                   * \param[in] rens the vtkRendererCollection to use
                   */
             void setRenderer (vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
 
             /** \brief Register a callback function for mouse events
-                  * \param[in] cb a boost function that will be registered as a callback for a mouse event
-                  * \return a connection object that allows to disconnect the callback function.
+		  * \param[in] ccallback function that will be registered as a callback for a mouse event
+		  * \param[in] cookie for passing user data to callback
+		  */
+	    void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
+
+            /** \brief Register a callback function for keyboard events
+                  * \param[in] callback a function that will be registered as a callback for a keyboard event
+                  * \param[in] cookie user data passed to the callback function
                   */
-            boost::signals2::connection registerMouseCallback (boost::function<void (const cv::MouseEvent&)> cb);
-
-            /** \brief Register a callback boost::function for keyboard events
-                  * \param[in] cb a boost function that will be registered as a callback for a keyboard event
-                  * \return a connection object that allows to disconnect the callback function.
-                  */
-            boost::signals2::connection registerKeyboardCallback (boost::function<void (const cv::KeyboardEvent&)> cb);
-
-
+	    void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void * cookie = 0);
+	    
             /** \brief Save the current rendered image to disk, as a PNG screenshot.
                   * \param[in] file the name of the PNG file
                   */
@@ -113,9 +111,6 @@ namespace temp_viz
             /** \brief Internal window to image filter. Needed by \a snapshot_writer_. */
             vtkSmartPointer<vtkWindowToImageFilter> wif_;
 
-            boost::signals2::signal<void (const cv::MouseEvent&)> mouse_signal_;
-            boost::signals2::signal<void (const cv::KeyboardEvent&)> keyboard_signal_;
-
             /** \brief Interactor style internal method. Gets called whenever a key is pressed. */
             virtual void OnChar ();
 
@@ -146,5 +141,15 @@ namespace temp_viz
 
             /** \brief The keyboard modifier to use. Default: Alt. */
             KeyboardModifier modifier_;
+	    
+	    /** \brief KeyboardEvent callback function pointer*/
+	    void (*keyboardCallback_)(const cv::KeyboardEvent&, void*);
+	    /** \brief KeyboardEvent callback user data*/
+	    void *keyboard_callback_cookie_;
+	    
+	    /** \brief MouseEvent callback function pointer */
+	    void (*mouseCallback_)(const cv::MouseEvent&, void*);
+	    /** \brief MouseEvent callback user data */
+	    void *mouse_callback_cookie_;
         };
 }

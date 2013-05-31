@@ -36,26 +36,7 @@ macro(find_vtk)
   endif()
 endmacro()
 
-macro(find_boost)
-  # Disable the config mode of find_package(Boost)
-  set(Boost_NO_BOOST_CMAKE ON)
-  set(Boost_USE_STATIC_LIBS ON)
-
-  find_package(Boost 1.49.0 REQUIRED COMPONENTS system thread)
-
-  if(Boost_FOUND)
-    set(HAVE_BOOST ON)
-
-    # Obtain diagnostic information about Boost's automatic linking outputted during compilation time.
-    add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
-    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
-    link_directories(${Boost_LIBRARY_DIRS})
-    message(STATUS "Boost found (include: ${Boost_INCLUDE_DIRS})")
-  endif()
-endmacro()
-
 find_vtk()
-find_boost()
 
 
 find_package(OpenGL)

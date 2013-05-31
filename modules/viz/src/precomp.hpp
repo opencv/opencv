@@ -4,11 +4,11 @@
 #include <map>
 #include <vector>
 
-
+/*
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/signals2.hpp>
-#include <boost/thread.hpp>
+#include <boost/thread.hpp>*/
 
 #include <Eigen/Geometry>
 
