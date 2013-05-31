@@ -333,6 +333,10 @@ namespace cv
                     oclinfo.push_back(ocltmpinfo);
                 }
             }
+            if(devcienums > 0)
+            {
+                setDevice(oclinfo[0]);
+            }
             return devcienums;
         }
 
