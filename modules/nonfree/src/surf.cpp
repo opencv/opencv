@@ -258,7 +258,7 @@ interpolateKeypoint( float N9[3][9], int dx, int dy, int ds, KeyPoint& kpt )
 }
 
 // Multi-threaded construction of the scale-space pyramid
-struct SURFBuildInvoker
+struct SURFBuildInvoker : ParallelLoopBody
 {
     SURFBuildInvoker( const Mat& _sum, const vector<int>& _sizes,
                       const vector<int>& _sampleSteps,
@@ -271,9 +271,9 @@ struct SURFBuildInvoker
         traces = &_traces;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
-        for( int i=range.begin(); i<range.end(); i++ )
+        for( int i=range.start; i<range.end; i++ )
             calcLayerDetAndTrace( *sum, (*sizes)[i], (*sampleSteps)[i], (*dets)[i], (*traces)[i] );
     }
 
@@ -285,7 +285,7 @@ struct SURFBuildInvoker
 };
 
 // Multi-threaded search of the scale-space pyramid for keypoints
-struct SURFFindInvoker
+struct SURFFindInvoker : ParallelLoopBody
 {
     SURFFindInvoker( const Mat& _sum, const Mat& _mask_sum,
                      const vector<Mat>& _dets, const vector<Mat>& _traces,
@@ -310,9 +310,9 @@ struct SURFFindInvoker
                    const vector<int>& sizes, vector<KeyPoint>& keypoints,
                    int octave, int layer, float hessianThreshold, int sampleStep );
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
-        for( int i=range.begin(); i<range.end(); i++ )
+        for( int i=range.start; i<range.end; i++ )
         {
             int layer = (*middleIndices)[i];
             int octave = i / nOctaveLayers;
@@ -333,14 +333,10 @@ struct SURFFindInvoker
     int nOctaveLayers;
     float hessianThreshold;
 
-#ifdef HAVE_TBB
-    static tbb::mutex findMaximaInLayer_m;
-#endif
+    static Mutex findMaximaInLayer_m;
 };
 
-#ifdef HAVE_TBB
-tbb::mutex SURFFindInvoker::findMaximaInLayer_m;
-#endif
+Mutex SURFFindInvoker::findMaximaInLayer_m;
 
 
 /*
@@ -437,9 +433,7 @@ void SURFFindInvoker::findMaximaInLayer( const Mat& sum, const Mat& mask_sum,
                     if( interp_ok  )
                     {
                         /*printf( "KeyPoint %f %f %d\n", point.pt.x, point.pt.y, point.size );*/
-#ifdef HAVE_TBB
-                        tbb::mutex::scoped_lock lock(findMaximaInLayer_m);
-#endif
+                        cv::AutoLock lock(findMaximaInLayer_m);
                         keypoints.push_back(kpt);
                     }
                 }
@@ -505,20 +499,20 @@ static void fastHessianDetector( const Mat& sum, const Mat& mask_sum, vector<Key
     }
 
     // Calculate hessian determinant and trace samples in each layer
-    parallel_for( BlockedRange(0, nTotalLayers),
-                      SURFBuildInvoker(sum, sizes, sampleSteps, dets, traces) );
+    parallel_for_( Range(0, nTotalLayers),
+                   SURFBuildInvoker(sum, sizes, sampleSteps, dets, traces) );
 
     // Find maxima in the determinant of the hessian
-    parallel_for( BlockedRange(0, nMiddleLayers),
-                      SURFFindInvoker(sum, mask_sum, dets, traces, sizes,
-                                      sampleSteps, middleIndices, keypoints,
-                                      nOctaveLayers, hessianThreshold) );
+    parallel_for_( Range(0, nMiddleLayers),
+                   SURFFindInvoker(sum, mask_sum, dets, traces, sizes,
+                                   sampleSteps, middleIndices, keypoints,
+                                   nOctaveLayers, hessianThreshold) );
 
     std::sort(keypoints.begin(), keypoints.end(), KeypointGreater());
 }
 
 
-struct SURFInvoker
+struct SURFInvoker : ParallelLoopBody
 {
     enum { ORI_RADIUS = 6, ORI_WIN = 60, PATCH_SZ = 20 };
 
@@ -566,7 +560,7 @@ struct SURFInvoker
         }
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
         /* X and Y gradient wavelet data */
         const int NX=2, NY=2;
@@ -587,7 +581,7 @@ struct SURFInvoker
 
         int dsize = extended ? 128 : 64;
 
-        int k, k1 = range.begin(), k2 = range.end();
+        int k, k1 = range.start, k2 = range.end;
         float maxSize = 0;
         for( k = k1; k < k2; k++ )
         {
@@ -954,7 +948,7 @@ void SURF::operator()(InputArray _img, InputArray _mask,
 
         // we call SURFInvoker in any case, even if we do not need descriptors,
         // since it computes orientation of each feature.
-        parallel_for(BlockedRange(0, N), SURFInvoker(img, sum, keypoints, descriptors, extended, upright) );
+        parallel_for_(Range(0, N), SURFInvoker(img, sum, keypoints, descriptors, extended, upright) );
 
         // remove keypoints that were marked for deletion
         for( i = j = 0; i < N; i++ )

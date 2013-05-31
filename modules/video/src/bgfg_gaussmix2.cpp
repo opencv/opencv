@@ -248,7 +248,7 @@ detectShadowGMM(const float* data, int nchannels, int nmodes,
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
-struct MOG2Invoker
+struct MOG2Invoker : ParallelLoopBody
 {
     MOG2Invoker(const Mat& _src, Mat& _dst,
                 GMM* _gmm, float* _mean,
@@ -280,9 +280,9 @@ struct MOG2Invoker
         cvtfunc = src->depth() != CV_32F ? getConvertFunc(src->depth(), CV_32F) : 0;
     }
 
-    void operator()(const BlockedRange& range) const
+    void operator()(const Range& range) const
     {
-        int y0 = range.begin(), y1 = range.end();
+        int y0 = range.start, y1 = range.end;
         int ncols = src->cols, nchannels = src->channels();
         AutoBuffer<float> buf(src->cols*nchannels);
         float alpha1 = 1.f - alphaT;
@@ -562,15 +562,15 @@ void BackgroundSubtractorMOG2::operator()(InputArray _image, OutputArray _fgmask
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
 
-    parallel_for(BlockedRange(0, image.rows),
-                 MOG2Invoker(image, fgmask,
-                             (GMM*)bgmodel.data,
-                             (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
-                             bgmodelUsedModes.data, nmixtures, (float)learningRate,
-                             (float)varThreshold,
-                             backgroundRatio, varThresholdGen,
-                             fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                             bShadowDetection, nShadowDetection));
+    parallel_for_(Range(0, image.rows),
+                  MOG2Invoker(image, fgmask,
+                              (GMM*)bgmodel.data,
+                              (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
+                              bgmodelUsedModes.data, nmixtures, (float)learningRate,
+                              (float)varThreshold,
+                              backgroundRatio, varThresholdGen,
+                              fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
+                              bShadowDetection, nShadowDetection));
 }
 
 void BackgroundSubtractorMOG2::getBackgroundImage(OutputArray backgroundImage) const
