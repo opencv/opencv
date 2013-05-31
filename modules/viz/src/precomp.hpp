@@ -2,6 +2,8 @@
 
 #include <opencv2/core.hpp>
 #include <map>
+#include <ctime>
+#include <list>
 #include <vector>
 
 /*
@@ -145,7 +147,7 @@
 
 #include <vtkAbstractPicker.h>
 #include <vtkAbstractPropPicker.h>
-#include <vtkPointPicker.h>
+
 #include <vtkMatrix4x4.h>
 #include <vtkInteractorObserver.h>
 

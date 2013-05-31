@@ -1,19 +1,6 @@
-#include <list>
+#include "precomp.hpp"
+
 #include <q/interactor_style.h>
-#include <vtkPolyData.h>
-#include <vtkMapper.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkPointData.h>
-#include <vtkCellArray.h>
-#include <vtkAppendPolyData.h>
-#include <vtkTextProperty.h>
-#include <vtkAbstractPicker.h>
-#include <vtkAbstractPropPicker.h>
-#include <vtkPlanes.h>
-#include <vtkPointPicker.h>
-#include <vtkMatrix4x4.h>
-#include <vtkInteractorObserver.h>
-#include <vtkCamera.h>
 
 //#include <q/visualization/vtk/vtkVertexBufferObjectMapper.h>
 
