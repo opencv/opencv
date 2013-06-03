@@ -187,10 +187,20 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
     CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
 
-    typedef NppStatus (*npp_norm_diff_func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2,
-        NppiSize oSizeROI, Npp64f* pRetVal);
+#if CUDA_VERSION < 5050
+    typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2, NppiSize oSizeROI, Npp64f* pRetVal);
 
-    static const npp_norm_diff_func_t npp_norm_diff_func[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
+    static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
+#else
+    typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2,
+        NppiSize oSizeROI, Npp64f* pRetVal, Npp8u * pDeviceBuffer);
+
+    typedef NppStatus (*buf_size_func_t)(NppiSize oSizeROI, int* hpBufferSize);
+
+    static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
+
+    static const buf_size_func_t buf_size_funcs[] = {nppiNormDiffInfGetBufferHostSize_8u_C1R, nppiNormDiffL1GetBufferHostSize_8u_C1R, nppiNormDiffL2GetBufferHostSize_8u_C1R};
+#endif
 
     NppiSize sz;
     sz.width  = src1.cols;
@@ -202,7 +212,16 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
 
     DeviceBuffer dbuf;
 
-    nppSafeCall( npp_norm_diff_func[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
+#if CUDA_VERSION < 5050
+    nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
+#else
+    int bufSize;
+    buf_size_funcs[funcIdx](sz, &bufSize);
+
+    GpuMat buf(1, bufSize, CV_8UC1);
+
+    nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf, buf.data) );
+#endif
 
     cudaSafeCall( cudaDeviceSynchronize() );
 

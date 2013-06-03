@@ -26,6 +26,15 @@ if(CUDA_FOUND)
     set(HAVE_CUBLAS 1)
   endif()
 
+  if(${CUDA_VERSION} VERSION_LESS "5.5")
+    find_cuda_helper_libs(npp)
+  else()
+    find_cuda_helper_libs(nppc)
+    find_cuda_helper_libs(nppi)
+    find_cuda_helper_libs(npps)
+    set(CUDA_npp_LIBRARY ${CUDA_nppc_LIBRARY} ${CUDA_nppi_LIBRARY} ${CUDA_npps_LIBRARY})
+  endif()
+
   if(WITH_NVCUVID)
     find_cuda_helper_libs(nvcuvid)
     set(HAVE_NVCUVID 1)
@@ -135,8 +144,6 @@ if(CUDA_FOUND)
   endif()
 
   mark_as_advanced(CUDA_BUILD_CUBIN CUDA_BUILD_EMULATION CUDA_VERBOSE_BUILD CUDA_SDK_ROOT_DIR)
-
-  find_cuda_helper_libs(npp)
 
   macro(ocv_cuda_compile VAR)
     foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
