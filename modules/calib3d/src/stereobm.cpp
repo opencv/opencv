@@ -699,7 +699,7 @@ struct PrefilterInvoker
 };
 
 
-struct FindStereoCorrespInvoker
+struct FindStereoCorrespInvoker : ParallelLoopBody
 {
     FindStereoCorrespInvoker( const Mat& _left, const Mat& _right,
                               Mat& _disp, CvStereoBMState* _state,
@@ -713,12 +713,12 @@ struct FindStereoCorrespInvoker
         validDisparityRect = _validDisparityRect;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
         int cols = left->cols, rows = left->rows;
-        int _row0 = min(cvRound(range.begin() * rows / nstripes), rows);
-        int _row1 = min(cvRound(range.end() * rows / nstripes), rows);
-        uchar *ptr = state->slidingSumBuf->data.ptr + range.begin() * stripeBufSize;
+        int _row0 = min(cvRound(range.start * rows / nstripes), rows);
+        int _row1 = min(cvRound(range.end * rows / nstripes), rows);
+        uchar *ptr = state->slidingSumBuf->data.ptr + range.start * stripeBufSize;
         int FILTERED = (state->minDisparity - 1)*16;
 
         Rect roi = validDisparityRect & Rect(0, _row0, cols, _row1 - _row0);
@@ -871,14 +871,10 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
     const bool useShorts = false;
 #endif
 
-#ifdef HAVE_TBB
     const double SAD_overhead_coeff = 10.0;
     double N0 = 8000000 / (useShorts ? 1 : 4);  // approx tbb's min number instructions reasonable for one thread
     double maxStripeSize = min(max(N0 / (width * ndisp), (wsz-1) * SAD_overhead_coeff), (double)height);
     int nstripes = cvCeil(height / maxStripeSize);
-#else
-    const int nstripes = 1;
-#endif
 
     int bufSize = max(bufSize0 * nstripes, max(bufSize1 * 2, bufSize2));
 
@@ -898,9 +894,9 @@ static void findStereoCorrespondenceBM( const Mat& left0, const Mat& right0, Mat
                                               state->minDisparity, state->numberOfDisparities,
                                               state->SADWindowSize);
 
-    parallel_for(BlockedRange(0, nstripes),
-                 FindStereoCorrespInvoker(left, right, disp, state, nstripes,
-                                          bufSize0, useShorts, validDisparityRect));
+    parallel_for_(Range(0, nstripes),
+                  FindStereoCorrespInvoker(left, right, disp, state, nstripes,
+                                           bufSize0, useShorts, validDisparityRect));
 
     if( state->speckleRange >= 0 && state->speckleWindowSize > 0 )
     {

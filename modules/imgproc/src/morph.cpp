@@ -1081,7 +1081,7 @@ cv::Mat cv::getStructuringElement(int shape, Size ksize, Point anchor)
 namespace cv
 {
 
-class MorphologyRunner
+class MorphologyRunner : public ParallelLoopBody
 {
 public:
     MorphologyRunner(Mat _src, Mat _dst, int _nStripes, int _iterations,
@@ -1102,14 +1102,14 @@ public:
         columnBorderType = _columnBorderType;
     }
 
-    void operator () ( const BlockedRange& range ) const
+    void operator () ( const Range& range ) const
     {
-        int row0 = min(cvRound(range.begin() * src.rows / nStripes), src.rows);
-        int row1 = min(cvRound(range.end() * src.rows / nStripes), src.rows);
+        int row0 = min(cvRound(range.start * src.rows / nStripes), src.rows);
+        int row1 = min(cvRound(range.end * src.rows / nStripes), src.rows);
 
         /*if(0)
             printf("Size = (%d, %d), range[%d,%d), row0 = %d, row1 = %d\n",
-                   src.rows, src.cols, range.begin(), range.end(), row0, row1);*/
+                   src.rows, src.cols, range.start, range.end, row0, row1);*/
 
         Mat srcStripe = src.rowRange(row0, row1);
         Mat dstStripe = dst.rowRange(row0, row1);
@@ -1173,15 +1173,15 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
     }
 
     int nStripes = 1;
-#if defined HAVE_TBB && defined HAVE_TEGRA_OPTIMIZATION
+#if defined HAVE_TEGRA_OPTIMIZATION
     if (src.data != dst.data && iterations == 1 &&  //NOTE: threads are not used for inplace processing
         (borderType & BORDER_ISOLATED) == 0 && //TODO: check border types
         src.rows >= 64 ) //NOTE: just heuristics
         nStripes = 4;
 #endif
 
-    parallel_for(BlockedRange(0, nStripes),
-                 MorphologyRunner(src, dst, nStripes, iterations, op, kernel, anchor, borderType, borderType, borderValue));
+    parallel_for_(Range(0, nStripes),
+                  MorphologyRunner(src, dst, nStripes, iterations, op, kernel, anchor, borderType, borderType, borderValue));
 
     //Ptr<FilterEngine> f = createMorphologyFilter(op, src.type(),
     //                                             kernel, anchor, borderType, borderType, borderValue );
