@@ -62,8 +62,8 @@ namespace canny
             return ::abs(x) + ::abs(y);
         }
 
-        __device__ __forceinline__ L1() {}
-        __device__ __forceinline__ L1(const L1&) {}
+        __host__ __device__ __forceinline__ L1() {}
+        __host__ __device__ __forceinline__ L1(const L1&) {}
     };
     struct L2 : binary_function<int, int, float>
     {
@@ -72,8 +72,8 @@ namespace canny
             return ::sqrtf(x * x + y * y);
         }
 
-        __device__ __forceinline__ L2() {}
-        __device__ __forceinline__ L2(const L2&) {}
+        __host__ __device__ __forceinline__ L2() {}
+        __host__ __device__ __forceinline__ L2(const L2&) {}
     };
 }
 
@@ -470,8 +470,8 @@ namespace canny
             return (uchar)(-(e >> 1));
         }
 
-        __device__ __forceinline__ GetEdges() {}
-        __device__ __forceinline__ GetEdges(const GetEdges&) {}
+        __host__ __device__ __forceinline__ GetEdges() {}
+        __host__ __device__ __forceinline__ GetEdges(const GetEdges&) {}
     };
 }
 
