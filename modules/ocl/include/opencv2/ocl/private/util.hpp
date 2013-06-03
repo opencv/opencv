@@ -47,7 +47,7 @@
 #define __OPENCV_OCL_PRIVATE_UTIL__
 
 #if defined __APPLE__
-#include <OpenCL/OpenCL.h>
+#include <OpenCL/opencl.h>
 #else
 #include <CL/opencl.h>
 #endif
