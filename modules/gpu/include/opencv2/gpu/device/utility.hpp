@@ -124,8 +124,8 @@ namespace cv { namespace gpu { namespace device
 
     struct WithOutMask
     {
-        __device__ __forceinline__ WithOutMask(){}
-        __device__ __forceinline__ WithOutMask(const WithOutMask& mask){}
+        __host__ __device__ __forceinline__ WithOutMask(){}
+        __host__ __device__ __forceinline__ WithOutMask(const WithOutMask&){}
 
         __device__ __forceinline__ void next() const
         {

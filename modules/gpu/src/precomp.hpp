@@ -116,11 +116,13 @@
     #define CUDART_MINIMUM_REQUIRED_VERSION 4010
     #define NPP_MINIMUM_REQUIRED_VERSION 4100
 
+    #define NPP_VERSION (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD)
+
     #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
         #error "Insufficient Cuda Runtime library version, please update it."
     #endif
 
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
+    #if (NPP_VERSION < NPP_MINIMUM_REQUIRED_VERSION)
         #error "Insufficient NPP version, please update it."
     #endif
 
