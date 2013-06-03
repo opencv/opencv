@@ -13,7 +13,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
+#if !defined(HAVE_CUDA) || !defined(HAVE_TBB) || defined(__arm__)
 
 int main()
 {
@@ -23,6 +23,10 @@ int main()
 
 #if !defined(HAVE_TBB)
     std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
+#endif
+
+#if defined(__arm__)
+    std::cout << "Unsupported for ARM CUDA library." << std::endl;
 #endif
 
     return 0;
