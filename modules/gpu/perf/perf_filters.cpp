@@ -72,7 +72,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filters_Blur,
 
         TEST_CYCLE() cv::gpu::blur(d_src, dst, cv::Size(ksize, ksize));
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1);
     }
     else
     {
