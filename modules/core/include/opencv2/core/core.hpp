@@ -4813,6 +4813,9 @@ public:
     ~AutoLock() { mutex->unlock(); }
 protected:
     Mutex* mutex;
+private:
+    AutoLock(const AutoLock&);
+    AutoLock& operator = (const AutoLock&);
 };
 
 }
