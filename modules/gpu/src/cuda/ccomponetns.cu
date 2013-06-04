@@ -153,7 +153,7 @@ namespace cv { namespace gpu { namespace device
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
-                I d = a - b;
+                I d = saturate_cast<I>(a - b);
                 return lo.x <= d.x && d.x <= hi.x &&
                        lo.y <= d.y && d.y <= hi.y &&
                        lo.z <= d.z && d.z <= hi.z;
@@ -169,7 +169,7 @@ namespace cv { namespace gpu { namespace device
 
             template<typename I> __device__ __forceinline__ bool operator() (const I& a, const I& b) const
             {
-                I d = a - b;
+                I d = saturate_cast<I>(a - b);
                 return lo.x <= d.x && d.x <= hi.x &&
                        lo.y <= d.y && d.y <= hi.y &&
                        lo.z <= d.z && d.z <= hi.z &&
