@@ -43,6 +43,7 @@
 #ifndef OPENCV_GPU_EMULATION_HPP_
 #define OPENCV_GPU_EMULATION_HPP_
 
+#include "common.hpp"
 #include "warp_reduce.hpp"
 
 namespace cv { namespace gpu { namespace cudev
@@ -131,8 +132,130 @@ namespace cv { namespace gpu { namespace cudev
                 return ::atomicMin(address, val);
 #endif
             }
+        }; // struct cmem
+
+        struct glob
+        {
+            static __device__ __forceinline__ int atomicAdd(int* address, int val)
+            {
+                return ::atomicAdd(address, val);
+            }
+            static __device__ __forceinline__ unsigned int atomicAdd(unsigned int* address, unsigned int val)
+            {
+                return ::atomicAdd(address, val);
+            }
+            static __device__ __forceinline__ float atomicAdd(float* address, float val)
+            {
+            #if __CUDA_ARCH__ >= 200
+                return ::atomicAdd(address, val);
+            #else
+                int* address_as_i = (int*) address;
+                int old = *address_as_i, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_i, assumed,
+                        __float_as_int(val + __int_as_float(assumed)));
+                } while (assumed != old);
+                return __int_as_float(old);
+            #endif
+            }
+            static __device__ __forceinline__ double atomicAdd(double* address, double val)
+            {
+            #if __CUDA_ARCH__ >= 130
+                unsigned long long int* address_as_ull = (unsigned long long int*) address;
+                unsigned long long int old = *address_as_ull, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(val + __longlong_as_double(assumed)));
+                } while (assumed != old);
+                return __longlong_as_double(old);
+            #else
+                (void) address;
+                (void) val;
+                return 0.0;
+            #endif
+            }
+
+            static __device__ __forceinline__ int atomicMin(int* address, int val)
+            {
+                return ::atomicMin(address, val);
+            }
+            static __device__ __forceinline__ float atomicMin(float* address, float val)
+            {
+            #if __CUDA_ARCH__ >= 120
+                int* address_as_i = (int*) address;
+                int old = *address_as_i, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_i, assumed,
+                        __float_as_int(::fminf(val, __int_as_float(assumed))));
+                } while (assumed != old);
+                return __int_as_float(old);
+            #else
+                (void) address;
+                (void) val;
+                return 0.0f;
+            #endif
+            }
+            static __device__ __forceinline__ double atomicMin(double* address, double val)
+            {
+            #if __CUDA_ARCH__ >= 130
+                unsigned long long int* address_as_ull = (unsigned long long int*) address;
+                unsigned long long int old = *address_as_ull, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(::fmin(val, __longlong_as_double(assumed))));
+                } while (assumed != old);
+                return __longlong_as_double(old);
+            #else
+                (void) address;
+                (void) val;
+                return 0.0;
+            #endif
+            }
+
+            static __device__ __forceinline__ int atomicMax(int* address, int val)
+            {
+                return ::atomicMax(address, val);
+            }
+            static __device__ __forceinline__ float atomicMax(float* address, float val)
+            {
+            #if __CUDA_ARCH__ >= 120
+                int* address_as_i = (int*) address;
+                int old = *address_as_i, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_i, assumed,
+                        __float_as_int(::fmaxf(val, __int_as_float(assumed))));
+                } while (assumed != old);
+                return __int_as_float(old);
+            #else
+                (void) address;
+                (void) val;
+                return 0.0f;
+            #endif
+            }
+            static __device__ __forceinline__ double atomicMax(double* address, double val)
+            {
+            #if __CUDA_ARCH__ >= 130
+                unsigned long long int* address_as_ull = (unsigned long long int*) address;
+                unsigned long long int old = *address_as_ull, assumed;
+                do {
+                    assumed = old;
+                    old = ::atomicCAS(address_as_ull, assumed,
+                        __double_as_longlong(::fmax(val, __longlong_as_double(assumed))));
+                } while (assumed != old);
+                return __longlong_as_double(old);
+            #else
+                (void) address;
+                (void) val;
+                return 0.0;
+            #endif
+            }
         };
-    };
+    }; //struct Emulation
 }}} // namespace cv { namespace gpu { namespace cudev
 
 #endif /* OPENCV_GPU_EMULATION_HPP_ */
