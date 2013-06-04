@@ -82,9 +82,9 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////Macro for define elements number per thread/////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-#define ANCHOR                  3
-#define ANX                     1
-#define ANY                     1
+//#define ANCHOR                  3
+//#define ANX                     1
+//#define ANY                     1
 
 #define ROWS_PER_GROUP          4
 #define ROWS_PER_GROUP_BITS     2
@@ -185,7 +185,7 @@ __kernel void filter2D_C1_D0(__global uchar *src, int src_step, int src_offset_x
 
         for(int i = 0; i < ANCHOR; i++)
         {
-#pragma unroll 3
+#pragma unroll
             for(int j = 0; j < ANCHOR; j++)
             {
                 if(dst_rows_index < dst_rows_end)
@@ -295,7 +295,7 @@ __kernel void filter2D_C1_D5(__global float *src, int src_step, int src_offset_x
 
         for(int i = 0; i < ANCHOR; i++)
         {
-#pragma unroll 3
+#pragma unroll
             for(int j = 0; j < ANCHOR; j++)
             {
                 if(dst_rows_index < dst_rows_end)
@@ -410,7 +410,7 @@ __kernel void filter2D_C4_D0(__global uchar4 *src, int src_step, int src_offset_
 
         for(int i = 0; i < ANCHOR; i++)
         {
-#pragma unroll 3
+#pragma unroll
             for(int j = 0; j < ANCHOR; j++)
             {
                 if(dst_rows_index < dst_rows_end)
