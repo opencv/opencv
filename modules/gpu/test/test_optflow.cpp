@@ -102,8 +102,8 @@ GPU_TEST_P(BroxOpticalFlow, Regression)
     for (int i = 0; i < v_gold.rows; ++i)
         f.read(v_gold.ptr<char>(i), v_gold.cols * sizeof(float));
 
-    EXPECT_MAT_NEAR(u_gold, u, 0);
-    EXPECT_MAT_NEAR(v_gold, v, 0);
+    EXPECT_MAT_SIMILAR(u_gold, u, 1e-3);
+    EXPECT_MAT_SIMILAR(v_gold, v, 1e-3);
 #else
     std::ofstream f(fname.c_str(), std::ios_base::binary);
 
