@@ -1164,15 +1164,10 @@ void CascadeClassifier::detectMultiScale( const Mat& image, std::vector<Rect>& o
 
         int stripCount, stripSize;
 
-    #ifdef HAVE_TBB
         const int PTS_PER_THREAD = 1000;
         stripCount = ((processingRectSize.width/yStep)*(processingRectSize.height + yStep-1)/yStep + PTS_PER_THREAD/2)/PTS_PER_THREAD;
         stripCount = std::min(std::max(stripCount, 1), 100);
         stripSize = (((processingRectSize.height + stripCount - 1)/stripCount + yStep-1)/yStep)*yStep;
-    #else
-        stripCount = 1;
-        stripSize = processingRectSize.height;
-    #endif
 
         if( !detectSingleScale( scaledImage, stripCount, processingRectSize, stripSize, yStep, factor, candidates,
             rejectLevels, levelWeights, outputRejectLevels ) )

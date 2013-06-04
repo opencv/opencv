@@ -117,31 +117,6 @@ namespace cv
             transform(points, modif_points, transformation);
         }
 
-        class Mutex
-        {
-        public:
-            Mutex() {
-            }
-            void lock()
-            {
-#ifdef HAVE_TBB
-                resultsMutex.lock();
-#endif
-            }
-
-            void unlock()
-            {
-#ifdef HAVE_TBB
-                resultsMutex.unlock();
-#endif
-            }
-
-        private:
-#ifdef HAVE_TBB
-            tbb::mutex resultsMutex;
-#endif
-        };
-
         struct CameraParameters
         {
             void init(Mat _intrinsics, Mat _distCoeffs)

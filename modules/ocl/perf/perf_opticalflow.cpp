@@ -82,8 +82,8 @@ PERFTEST(PyrLKOpticalFlow)
                 SUBTEST << frame0.cols << "x" << frame0.rows << "; color; " << points << " points";
             else
                 SUBTEST << frame0.cols << "x" << frame0.rows << "; gray; " << points << " points";
-            Mat nextPts_cpu;
-            Mat status_cpu;
+            Mat ocl_nextPts;
+            Mat ocl_status;
 
             vector<Point2f> pts;
             goodFeaturesToTrack(i == 0 ? gray_frame : frame0, pts, points, 0.01, 0.0);
@@ -116,12 +116,6 @@ PERFTEST(PyrLKOpticalFlow)
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
             WARMUP_OFF;
 
-            std::vector<cv::Point2f> ocl_nextPts(d_nextPts.cols);
-            std::vector<unsigned char> ocl_status(d_status.cols);
-            TestSystem::instance().setAccurate(AssertEQ<size_t>(nextPts.size(), ocl_nextPts.size()));
-            TestSystem::instance().setAccurate(AssertEQ<size_t>(status.size(), ocl_status.size()));                        
-
-
             GPU_ON;
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
             GPU_OFF;
@@ -133,17 +127,102 @@ PERFTEST(PyrLKOpticalFlow)
             d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
 
             if (!d_nextPts.empty())
-            {
-                d_nextPts.download(nextPts_cpu);
-            }
+                d_nextPts.download(ocl_nextPts);
 
             if (!d_status.empty())
-            {
-                d_status.download(status_cpu);
-            }
-
+                d_status.download(ocl_status);
             GPU_FULL_OFF;
+
+            size_t mismatch = 0;
+            for (int i = 0; i < (int)nextPts.size(); ++i)
+            {
+                if(status[i] != ocl_status.at<unsigned char>(0, i)){
+                    mismatch++;
+                    continue;
+                }
+                if(status[i]){
+                    Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
+                    Point2f cpu_rst = nextPts[i];
+                    if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
+                        mismatch++;
+                }
+            }
+            double ratio = (double)mismatch / (double)nextPts.size();
+            if(ratio < .02)
+                TestSystem::instance().setAccurate(1, ratio);
+            else
+                TestSystem::instance().setAccurate(0, ratio);
         }
 
     }
+}
+
+
+PERFTEST(tvl1flow)
+{
+    cv::Mat frame0 = imread("rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    assert(!frame0.empty());
+
+    cv::Mat frame1 = imread("rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    assert(!frame1.empty());
+
+    cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
+    cv::ocl::oclMat d_flowx(frame0.size(), CV_32FC1);
+    cv::ocl::oclMat d_flowy(frame1.size(), CV_32FC1);
+
+    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
+    cv::Mat flow;
+
+
+    SUBTEST << frame0.cols << 'x' << frame0.rows << "; rubberwhale1.png; "<<frame1.cols<<'x'<<frame1.rows<<"; rubberwhale2.png";
+
+    alg->calc(frame0, frame1, flow);
+
+    CPU_ON;
+    alg->calc(frame0, frame1, flow);
+    CPU_OFF;
+
+    cv::Mat gold[2];
+    cv::split(flow, gold);
+
+    cv::ocl::oclMat d0(frame0.size(), CV_32FC1);
+    d0.upload(frame0);
+    cv::ocl::oclMat d1(frame1.size(), CV_32FC1);
+    d1.upload(frame1);
+
+    WARMUP_ON;
+    d_alg(d0, d1, d_flowx, d_flowy);
+    WARMUP_OFF;
+/*
+    double diff1 = 0.0, diff2 = 0.0;
+    if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
+        &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
+        TestSystem::instance().setAccurate(1);
+    else
+        TestSystem::instance().setAccurate(0);
+
+    TestSystem::instance().setDiff(diff1);
+    TestSystem::instance().setDiff(diff2);
+*/
+
+
+    GPU_ON;
+    d_alg(d0, d1, d_flowx, d_flowy);
+    d_alg.collectGarbage();
+    GPU_OFF;
+    
+
+    cv::Mat flowx, flowy;
+
+    GPU_FULL_ON;
+    d0.upload(frame0);
+    d1.upload(frame1);
+    d_alg(d0, d1, d_flowx, d_flowy);
+    d_alg.collectGarbage();
+    d_flowx.download(flowx);
+    d_flowy.download(flowy);
+    GPU_FULL_OFF;
+
+    TestSystem::instance().ExceptedMatSimilar(gold[0], flowx, 3e-3);
+    TestSystem::instance().ExceptedMatSimilar(gold[1], flowy, 3e-3);
 }

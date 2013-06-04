@@ -162,8 +162,8 @@ namespace arithm
             return vadd4(a, b);
         }
 
-        __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4& other) {}
+        __host__ __device__ __forceinline__ VAdd4() {}
+        __host__ __device__ __forceinline__ VAdd4(const VAdd4&) {}
     };
 
     ////////////////////////////////////
@@ -175,8 +175,8 @@ namespace arithm
             return vadd2(a, b);
         }
 
-        __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2& other) {}
+        __host__ __device__ __forceinline__ VAdd2() {}
+        __host__ __device__ __forceinline__ VAdd2(const VAdd2&) {}
     };
 
     ////////////////////////////////////
@@ -188,8 +188,8 @@ namespace arithm
             return saturate_cast<D>(a + b);
         }
 
-        __device__ __forceinline__ AddMat() {}
-        __device__ __forceinline__ AddMat(const AddMat& other) {}
+        __host__ __device__ __forceinline__ AddMat() {}
+        __host__ __device__ __forceinline__ AddMat(const AddMat&) {}
     };
 }
 
@@ -397,8 +397,8 @@ namespace arithm
             return vsub4(a, b);
         }
 
-        __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4& other) {}
+        __host__ __device__ __forceinline__ VSub4() {}
+        __host__ __device__ __forceinline__ VSub4(const VSub4&) {}
     };
 
     ////////////////////////////////////
@@ -410,8 +410,8 @@ namespace arithm
             return vsub2(a, b);
         }
 
-        __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2& other) {}
+        __host__ __device__ __forceinline__ VSub2() {}
+        __host__ __device__ __forceinline__ VSub2(const VSub2&) {}
     };
 
     ////////////////////////////////////
@@ -423,8 +423,8 @@ namespace arithm
             return saturate_cast<D>(a - b);
         }
 
-        __device__ __forceinline__ SubMat() {}
-        __device__ __forceinline__ SubMat(const SubMat& other) {}
+        __host__ __device__ __forceinline__ SubMat() {}
+        __host__ __device__ __forceinline__ SubMat(const SubMat&) {}
     };
 }
 
@@ -617,8 +617,8 @@ namespace arithm
             return res;
         }
 
-        __device__ __forceinline__ Mul_8uc4_32f() {}
-        __device__ __forceinline__ Mul_8uc4_32f(const Mul_8uc4_32f& other) {}
+        __host__ __device__ __forceinline__ Mul_8uc4_32f() {}
+        __host__ __device__ __forceinline__ Mul_8uc4_32f(const Mul_8uc4_32f&) {}
     };
 
     struct Mul_16sc4_32f : binary_function<short4, float, short4>
@@ -629,8 +629,8 @@ namespace arithm
                                saturate_cast<short>(a.z * b), saturate_cast<short>(a.w * b));
         }
 
-        __device__ __forceinline__ Mul_16sc4_32f() {}
-        __device__ __forceinline__ Mul_16sc4_32f(const Mul_16sc4_32f& other) {}
+        __host__ __device__ __forceinline__ Mul_16sc4_32f() {}
+        __host__ __device__ __forceinline__ Mul_16sc4_32f(const Mul_16sc4_32f&) {}
     };
 
     template <typename T, typename D> struct Mul : binary_function<T, T, D>
@@ -640,8 +640,8 @@ namespace arithm
             return saturate_cast<D>(a * b);
         }
 
-        __device__ __forceinline__ Mul() {}
-        __device__ __forceinline__ Mul(const Mul& other) {}
+        __host__ __device__ __forceinline__ Mul() {}
+        __host__ __device__ __forceinline__ Mul(const Mul&) {}
     };
 
     template <typename T, typename S, typename D> struct MulScale : binary_function<T, T, D>
@@ -888,8 +888,8 @@ namespace arithm
             return b != 0 ? saturate_cast<D>(a / b) : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
     template <typename T> struct Div<T, float> : binary_function<T, T, float>
     {
@@ -898,8 +898,8 @@ namespace arithm
             return b != 0 ? static_cast<float>(a) / b : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
     template <typename T> struct Div<T, double> : binary_function<T, T, double>
     {
@@ -908,8 +908,8 @@ namespace arithm
             return b != 0 ? static_cast<double>(a) / b : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
 
     template <typename T, typename S, typename D> struct DivScale : binary_function<T, T, D>
@@ -1196,8 +1196,8 @@ namespace arithm
             return vabsdiff4(a, b);
         }
 
-        __device__ __forceinline__ VAbsDiff4() {}
-        __device__ __forceinline__ VAbsDiff4(const VAbsDiff4& other) {}
+        __host__ __device__ __forceinline__ VAbsDiff4() {}
+        __host__ __device__ __forceinline__ VAbsDiff4(const VAbsDiff4&) {}
     };
 
     ////////////////////////////////////
@@ -1209,8 +1209,8 @@ namespace arithm
             return vabsdiff2(a, b);
         }
 
-        __device__ __forceinline__ VAbsDiff2() {}
-        __device__ __forceinline__ VAbsDiff2(const VAbsDiff2& other) {}
+        __host__ __device__ __forceinline__ VAbsDiff2() {}
+        __host__ __device__ __forceinline__ VAbsDiff2(const VAbsDiff2&) {}
     };
 
     ////////////////////////////////////
@@ -1235,8 +1235,8 @@ namespace arithm
             return saturate_cast<T>(_abs(a - b));
         }
 
-        __device__ __forceinline__ AbsDiffMat() {}
-        __device__ __forceinline__ AbsDiffMat(const AbsDiffMat& other) {}
+        __host__ __device__ __forceinline__ AbsDiffMat() {}
+        __host__ __device__ __forceinline__ AbsDiffMat(const AbsDiffMat&) {}
     };
 }
 
@@ -1370,8 +1370,8 @@ namespace arithm
             return saturate_cast<T>(x * x);
         }
 
-        __device__ __forceinline__ Sqr() {}
-        __device__ __forceinline__ Sqr(const Sqr& other) {}
+        __host__ __device__ __forceinline__ Sqr() {}
+        __host__ __device__ __forceinline__ Sqr(const Sqr&) {}
     };
 }
 
@@ -1466,8 +1466,8 @@ namespace arithm
             return saturate_cast<T>(f(x));
         }
 
-        __device__ __forceinline__ Exp() {}
-        __device__ __forceinline__ Exp(const Exp& other) {}
+        __host__ __device__ __forceinline__ Exp() {}
+        __host__ __device__ __forceinline__ Exp(const Exp&) {}
     };
 }
 
@@ -1507,8 +1507,8 @@ namespace arithm
             return vcmpeq4(a, b);
         }
 
-        __device__ __forceinline__ VCmpEq4() {}
-        __device__ __forceinline__ VCmpEq4(const VCmpEq4& other) {}
+        __host__ __device__ __forceinline__ VCmpEq4() {}
+        __host__ __device__ __forceinline__ VCmpEq4(const VCmpEq4&) {}
     };
     struct VCmpNe4 : binary_function<uint, uint, uint>
     {
@@ -1517,8 +1517,8 @@ namespace arithm
             return vcmpne4(a, b);
         }
 
-        __device__ __forceinline__ VCmpNe4() {}
-        __device__ __forceinline__ VCmpNe4(const VCmpNe4& other) {}
+        __host__ __device__ __forceinline__ VCmpNe4() {}
+        __host__ __device__ __forceinline__ VCmpNe4(const VCmpNe4&) {}
     };
     struct VCmpLt4 : binary_function<uint, uint, uint>
     {
@@ -1527,8 +1527,8 @@ namespace arithm
             return vcmplt4(a, b);
         }
 
-        __device__ __forceinline__ VCmpLt4() {}
-        __device__ __forceinline__ VCmpLt4(const VCmpLt4& other) {}
+        __host__ __device__ __forceinline__ VCmpLt4() {}
+        __host__ __device__ __forceinline__ VCmpLt4(const VCmpLt4&) {}
     };
     struct VCmpLe4 : binary_function<uint, uint, uint>
     {
@@ -1537,8 +1537,8 @@ namespace arithm
             return vcmple4(a, b);
         }
 
-        __device__ __forceinline__ VCmpLe4() {}
-        __device__ __forceinline__ VCmpLe4(const VCmpLe4& other) {}
+        __host__ __device__ __forceinline__ VCmpLe4() {}
+        __host__ __device__ __forceinline__ VCmpLe4(const VCmpLe4&) {}
     };
 
     ////////////////////////////////////
@@ -2008,8 +2008,8 @@ namespace arithm
             return vmin4(a, b);
         }
 
-        __device__ __forceinline__ VMin4() {}
-        __device__ __forceinline__ VMin4(const VMin4& other) {}
+        __host__ __device__ __forceinline__ VMin4() {}
+        __host__ __device__ __forceinline__ VMin4(const VMin4&) {}
     };
 
     ////////////////////////////////////
@@ -2021,8 +2021,8 @@ namespace arithm
             return vmin2(a, b);
         }
 
-        __device__ __forceinline__ VMin2() {}
-        __device__ __forceinline__ VMin2(const VMin2& other) {}
+        __host__ __device__ __forceinline__ VMin2() {}
+        __host__ __device__ __forceinline__ VMin2(const VMin2&) {}
     };
 }
 
@@ -2100,8 +2100,8 @@ namespace arithm
             return vmax4(a, b);
         }
 
-        __device__ __forceinline__ VMax4() {}
-        __device__ __forceinline__ VMax4(const VMax4& other) {}
+        __host__ __device__ __forceinline__ VMax4() {}
+        __host__ __device__ __forceinline__ VMax4(const VMax4&) {}
     };
 
     ////////////////////////////////////
@@ -2113,8 +2113,8 @@ namespace arithm
             return vmax2(a, b);
         }
 
-        __device__ __forceinline__ VMax2() {}
-        __device__ __forceinline__ VMax2(const VMax2& other) {}
+        __host__ __device__ __forceinline__ VMax2() {}
+        __host__ __device__ __forceinline__ VMax2(const VMax2&) {}
     };
 }
 

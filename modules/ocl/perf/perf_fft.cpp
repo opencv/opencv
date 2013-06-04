@@ -48,7 +48,7 @@
 ///////////// dft ////////////////////////
 PERFTEST(dft)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_32FC2};
@@ -74,8 +74,6 @@ PERFTEST(dft)
             ocl::dft(d_src, d_dst, Size(size, size));
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), src.size().area() * 1e-4));
-
             GPU_ON;
             ocl::dft(d_src, d_dst, Size(size, size));
             GPU_OFF;
@@ -83,8 +81,10 @@ PERFTEST(dft)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::dft(d_src, d_dst, Size(size, size));
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, src.size().area() * 1e-4);
         }
 
     }

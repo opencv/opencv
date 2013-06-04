@@ -352,7 +352,7 @@ GPU_TEST_P(Add_Scalar, WithOutMask)
         cv::Mat dst_gold(size, depth.second, cv::Scalar::all(0));
         cv::add(mat, val, dst_gold, cv::noArray(), depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
@@ -383,7 +383,7 @@ GPU_TEST_P(Add_Scalar, WithMask)
         cv::Mat dst_gold(size, depth.second, cv::Scalar::all(0));
         cv::add(mat, val, dst_gold, mask, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
@@ -567,7 +567,7 @@ GPU_TEST_P(Subtract_Scalar, WithOutMask)
         cv::Mat dst_gold(size, depth.second, cv::Scalar::all(0));
         cv::subtract(mat, val, dst_gold, cv::noArray(), depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
@@ -598,7 +598,7 @@ GPU_TEST_P(Subtract_Scalar, WithMask)
         cv::Mat dst_gold(size, depth.second, cv::Scalar::all(0));
         cv::subtract(mat, val, dst_gold, mask, depth.second);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth.first >= CV_32F || depth.second >= CV_32F ? 1e-4 : 1.0);
     }
 }
 
@@ -2148,7 +2148,7 @@ GPU_TEST_P(Min, Scalar)
 
         cv::Mat dst_gold = cv::min(src, val);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-5);
     }
 }
 
@@ -2231,7 +2231,7 @@ GPU_TEST_P(Max, Scalar)
 
         cv::Mat dst_gold = cv::max(src, val);
 
-        EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+        EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-5);
     }
 }
 

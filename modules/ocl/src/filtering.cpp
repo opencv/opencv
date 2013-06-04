@@ -356,8 +356,7 @@ static void GPUDilate(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     char compile_option[128];
     sprintf(compile_option, "-D RADIUSX=%d -D RADIUSY=%d -D LSIZE0=%d -D LSIZE1=%d -D DILATE %s %s",
         anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1],
-        rectKernel?"-D RECTKERNEL":"",
-        s);
+        s, rectKernel?"-D RECTKERNEL":"");
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&src.data));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&dst.data));

@@ -114,7 +114,6 @@ void TestSystem::finishCurrentSubtest()
         return;
     }
 
-    int is_accurate = is_accurate_;
     double cpu_time = cpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_time = gpu_elapsed_ / getTickFrequency() * 1000.0;
     double gpu_full_time = gpu_full_elapsed_ / getTickFrequency() * 1000.0;
@@ -171,8 +170,8 @@ void TestSystem::finishCurrentSubtest()
         deviation = std::sqrt(sum / gpu_times_.size());
     }
 
-    printMetrics(is_accurate, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
-    writeMetrics(is_accurate, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, gpu_min, gpu_max, deviation);
+    printMetrics(is_accurate_, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
+    writeMetrics(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, gpu_min, gpu_max, deviation);
 
     num_subtests_called_++;
     resetCurrentSubtest();
@@ -219,7 +218,7 @@ void TestSystem::writeHeading()
         }
     }
 
-    fprintf(record_, "NAME,DESCRIPTION,ACCURACY,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
+    fprintf(record_, "NAME,DESCRIPTION,ACCURACY,DIFFERENCE,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
 
     fflush(record_);
 }
@@ -392,7 +391,7 @@ void TestSystem::printMetrics(int is_accurate, double cpu_time, double gpu_time,
 #endif
 }
 
-void TestSystem::writeMetrics(int is_accurate, double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, double gpu_min, double gpu_max, double std_dev)
+void TestSystem::writeMetrics(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, double gpu_min, double gpu_max, double std_dev)
 {
     if (!record_)
     {
@@ -402,21 +401,24 @@ void TestSystem::writeMetrics(int is_accurate, double cpu_time, double gpu_time,
 
     string _is_accurate_;
 
-    if(is_accurate == 1)
+    if(is_accurate_ == 1)
         _is_accurate_ = "Pass";
-    else if(is_accurate == 0)
+    else if(is_accurate_ == 0)
         _is_accurate_ = "Fail";
-    else if(is_accurate == -1)
+    else if(is_accurate_ == -1)
         _is_accurate_ = " ";
     else
     {
-        std::cout<<"is_accurate errer: "<<is_accurate<<"\n";
+        std::cout<<"is_accurate errer: "<<is_accurate_<<"\n";
         exit(-1);
     }
 
-    fprintf(record_, "%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", itname_changed_ ? itname_.c_str() : "",
+    fprintf(record_, "%s,%s,%s,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
+        itname_changed_ ? itname_.c_str() : "",
         cur_subtest_description_.str().c_str(),
-        _is_accurate_.c_str(), cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
+        _is_accurate_.c_str(),
+        accurate_diff_,
+        cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
         gpu_min, gpu_max, std_dev);
 
     if (itname_changed_)
@@ -469,134 +471,6 @@ void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high)
     RNG rng(0);
     rng.fill(mat, RNG::UNIFORM, low, high);
 }
-#if 0
-void gen(Mat &mat, int rows, int cols, int type, int low, int high, int n)
-{
-    assert(n > 0&&n <= cols * rows);
-    assert(type == CV_8UC1||type == CV_8UC3||type == CV_8UC4
-        ||type == CV_32FC1||type == CV_32FC3||type == CV_32FC4);
-
-    RNG rng;
-    //generate random position without duplication
-    std::vector<int> pos;
-    for(int i = 0; i < cols * rows; i++)
-    {
-        pos.push_back(i);
-    }
-
-    for(int i = 0; i < cols * rows; i++)
-    {
-        int temp = i + rng.uniform(0, cols * rows - 1 - i);
-        int temp1 = pos[temp];
-        pos[temp]= pos[i];
-        pos[i] = temp1;
-    }
-
-    std::vector<int> selected_pos;
-    for(int i = 0; i < n; i++)
-    {
-        selected_pos.push_back(pos[i]);
-    }
-
-    pos.clear();
-    //end of generating random y without duplication
-
-    if(type == CV_8UC1)
-    {
-        typedef struct coorStruct_
-        {
-            int x;
-            int y;
-            uchar xy;
-        }coorStruct;
-
-        coorStruct coor_struct;
-
-        std::vector<coorStruct> coor;
-
-        for(int i = 0; i < n; i++)
-        {
-            coor_struct.x = -1;
-            coor_struct.y = -1;
-            coor_struct.xy = (uchar)rng.uniform(low, high);
-            coor.push_back(coor_struct);
-        }
-
-        for(int i = 0; i < n; i++)
-        {
-            coor[i].y = selected_pos[i]/cols;
-            coor[i].x = selected_pos[i]%cols;
-        }
-        selected_pos.clear();
-
-        mat.create(rows, cols, type);
-        mat.setTo(0);
-
-        for(int i = 0; i < n; i++)
-        {
-            mat.at<unsigned char>(coor[i].y, coor[i].x) = coor[i].xy;
-        }
-    }
-
-    if(type == CV_8UC4 || type == CV_8UC3)
-    {
-        mat.create(rows, cols, type);
-        mat.setTo(0);
-
-        typedef struct Coor
-        {
-            int x;
-            int y;
-
-            uchar r;
-            uchar g;
-            uchar b;
-            uchar alpha;
-        }coor;
-
-        std::vector<coor> coor_vect;
-
-        coor xy_coor;
-
-        for(int i = 0; i < n; i++)
-        {
-            xy_coor.r = (uchar)rng.uniform(low, high);
-            xy_coor.g = (uchar)rng.uniform(low, high);
-            xy_coor.b = (uchar)rng.uniform(low, high);
-            if(type == CV_8UC4)
-                xy_coor.alpha = (uchar)rng.uniform(low, high);
-
-            coor_vect.push_back(xy_coor);
-        }
-
-        for(int i = 0; i < n; i++)
-        {
-            coor_vect[i].y = selected_pos[i]/((int)mat.step1()/mat.elemSize());
-            coor_vect[i].x = selected_pos[i]%((int)mat.step1()/mat.elemSize());
-            //printf("coor_vect[%d] = (%d, %d)\n", i, coor_vect[i].y, coor_vect[i].x);
-        }
-
-        if(type == CV_8UC4)
-        {
-            for(int i = 0; i < n; i++)
-            {
-                mat.at<unsigned char>(coor_vect[i].y, 4 * coor_vect[i].x) = coor_vect[i].r;
-                mat.at<unsigned char>(coor_vect[i].y, 4 * coor_vect[i].x + 1) = coor_vect[i].g;
-                mat.at<unsigned char>(coor_vect[i].y, 4 * coor_vect[i].x + 2) = coor_vect[i].b;
-                mat.at<unsigned char>(coor_vect[i].y, 4 * coor_vect[i].x + 3) = coor_vect[i].alpha;
-            }
-        }else if(type == CV_8UC3)
-        {
-            for(int i = 0; i < n; i++)
-            {
-                mat.at<unsigned char>(coor_vect[i].y, 3 * coor_vect[i].x) = coor_vect[i].r;
-                mat.at<unsigned char>(coor_vect[i].y, 3 * coor_vect[i].x + 1) = coor_vect[i].g;
-                mat.at<unsigned char>(coor_vect[i].y, 3 * coor_vect[i].x + 2) = coor_vect[i].b;
-            }
-        }
-    }
-}
-#endif
 
 string abspath(const string &relpath)
 {
@@ -618,32 +492,4 @@ double checkSimilarity(const Mat &m1, const Mat &m2)
     Mat diff;
     matchTemplate(m1, m2, diff, TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
-}
-
-
-int ExpectedMatNear(cv::Mat dst, cv::Mat cpu_dst, double eps)
-{
-    assert(dst.type() == cpu_dst.type());
-    assert(dst.size() == cpu_dst.size());
-    if(checkNorm(cv::Mat(dst), cv::Mat(cpu_dst)) < eps ||checkNorm(cv::Mat(dst), cv::Mat(cpu_dst)) == eps)
-        return 1;
-    return 0;
-}
-
-int ExceptDoubleNear(double val1, double val2, double abs_error)
-{
-    const double diff = fabs(val1 - val2);
-    if (diff <= abs_error)
-        return 1;
-
-    return 0;
-}
-
-int ExceptedMatSimilar(cv::Mat dst, cv::Mat cpu_dst, double eps)
-{
-    assert(dst.type() == cpu_dst.type());
-    assert(dst.size() == cpu_dst.size());
-    if(checkSimilarity(cv::Mat(cpu_dst), cv::Mat(dst)) <= eps)
-        return 1;
-    return 0;
 }

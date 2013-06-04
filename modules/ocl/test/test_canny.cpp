@@ -73,7 +73,6 @@ TEST_P(Canny, Accuracy)
     double low_thresh = 50.0;
     double high_thresh = 100.0;
 
-    cv::resize(img, img, cv::Size(512, 384));
     cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
 
     cv::ocl::oclMat edges;
