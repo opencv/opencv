@@ -303,7 +303,7 @@ macro(ocv_glob_modules)
   # collect modules
   set(OPENCV_INITIAL_PASS ON)
   foreach(__path ${ARGN})
-    ocv_get_real_path(__path "${__path}")
+    get_filename_component(__path "${__path}" ABSOLUTE)
 
     list(FIND __directories_observed "${__path}" __pathIdx)
     if(__pathIdx GREATER -1)
@@ -315,7 +315,7 @@ macro(ocv_glob_modules)
     if(__ocvmodules)
       list(SORT __ocvmodules)
       foreach(mod ${__ocvmodules})
-        ocv_get_real_path(__modpath "${__path}/${mod}")
+        get_filename_component(__modpath "${__path}/${mod}" ABSOLUTE)
         if(EXISTS "${__modpath}/CMakeLists.txt")
 
           list(FIND __directories_observed "${__modpath}" __pathIdx)
