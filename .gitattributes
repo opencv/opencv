@@ -33,7 +33,7 @@
 CMakeLists.txt  text whitespace=tabwidth=2
 
 *.png       binary
-*.jepg      binary
+*.jpeg      binary
 *.jpg       binary
 *.exr       binary
 *.ico       binary
