@@ -47,6 +47,9 @@ macro(add_extra_compiler_option option)
   endif()
 endmacro()
 
+# OpenCV fails some tests when 'char' is 'unsigned' by default
+add_extra_compiler_option(-fsigned-char)
+
 if(MINGW)
   # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=40838
   # here we are trying to workaround the problem
