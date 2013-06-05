@@ -406,7 +406,7 @@ public:
         GpuMat dclassified(1, 1, CV_32S);
         cudaSafeCall( cudaMemcpy(dclassified.ptr(), &classified, sizeof(int), cudaMemcpyHostToDevice) );
 
-        PyrLavel level(0, 1.0f, image.size(), NxM, minObjectSize);
+        PyrLavel level(0, scaleFactor, image.size(), NxM, minObjectSize);
 
         while (level.isFeasible(maxObjectSize))
         {
