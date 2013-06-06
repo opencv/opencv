@@ -1,0 +1,418 @@
+﻿/* ***************************************************
+Galleries.css   - Common Structure
+
+This is where we define common layout for structures that are truly close to common across the different
+Galleries sites.  To make sure this works we need to follow certain conventions.
+
+1. Define each logical structure in its own section with its own comment block that gives the section
+a Name, Description and defines the root element if one exists (i.e #someElement). Also, mark the closing block.
+
+2. Indent styles in a section to represent if it is a child of a previous element.
+i.e.      #someDiv{
+            }
+                #someDiv ul {
+                }
+ 
+3. Do not include brand specific information here like colors and fonts unless they are *really* common.
+
+4. If there is an element that you know will be overridden in each brand stylesheet still include it here with an empty definition. 
+This will aid in knowing what section to override and what selectors to use.
+
+i.e.    #someSction a {
+        }
+
+5.  When you add a new section also update the Table of Contents below so that we have a quick overview of the sections
+
+ *****************************************************/
+ 
+/****************************************************
+Table of Contents
+
+    Global - global classes
+
+    FileAttachmentDisplay - The list of attached files under the editor
+    Eyebrow - The breadcrumb control at the top of the master page
+    Pager - The common paging control, used for browsing pages of search results
+    Profile User Card - Elements in the profile usercard control
+    SideNav - The navigation side bar that contains the search filters
+
+
+*****************************************************/
+
+/********************************
+Name: Global
+Root: none
+Description: truly global classes
+********************************/
+body {
+    text-align: left;
+    direction: ltr;
+}
+
+img.rss {
+    background: url(../../../GlobalResources/Images/Rss.png) no-repeat;
+    background-position: 0px 0px;
+    height: 17px;
+    width: 17px;
+}
+/* End Global Section */
+
+/********************************
+Name: FileAttachmentDisplay
+Root: #fileAttachmentDisplay
+Description: The list of attached files under the editor
+********************************/
+#fileAttachmentDisplay {
+}
+    #fileAttachmentDisplay .attachment {
+        margin-right: 10px;
+        float: left;
+    }
+
+        #fileAttachmentDisplay .attachment .displayAttachment {
+            padding: 0px 0 13px 0;
+            float: left;
+        }
+
+        #fileAttachmentDisplay .attachment .removeAttachment {
+            background-image: url('/Content/Common/delete.png');
+            display: block;
+            width: 16px;
+            height: 16px;
+            float: left;
+        }
+/* End FileAttachmentDisplay Section */
+
+
+/********************************
+Name: Eyebrow
+Root: .EyebrowContainer
+Description: The breadcrumb control at the top of the master page
+********************************/
+.EyebrowContainer {
+}
+    .EyebrowContainer div.EyebrowElement{
+        display:inline;
+    }
+
+    .EyebrowContainer .EyebrowElement{
+        font-weight:normal
+    }
+    .EyebrowContainer .EyebrowLeafLink{
+        color:#000;
+    }
+/* End Eyebrow Section */
+
+/********************************
+Name: Pager
+Root: #Pager
+Description: The common paging control, used for browsing pages of search results
+********************************/
+#Pager {
+}
+    #Pager div{
+        display:inline;
+    }
+/* End Pager Section */
+
+/********************************
+
+Name: Profile User Card
+Root: #dashboardPage #userCard
+Description: Elements in the profile usercard control
+
+********************************/
+    #dashboardPage #userCard .profile-usercard-inline {
+        margin: 5px 0 10px 0;
+    }
+
+   /* #dashboardPage #userCard .profile-usercard {
+        width: 288px;
+    }
+/* End Profile User Card Section */
+
+/********************************
+
+Name: Discussion 
+Root: #DiscussionsTabPane
+Description: Defines the layout of the dicussion 
+
+
+********************************/
+#DiscussionsTabPane {
+}
+
+    #DiscussionsTabPane .itemHidden
+    {
+        background: lightgrey;
+    }
+
+    #discussionListItem {
+    }
+
+        .discussion .postActions
+        {
+            float: right;
+        }
+
+        #discussionListItem .postItem
+        {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size:1em;
+        }
+
+/* End Discussion Section */
+
+
+/********************************
+
+Name: SearchDefaultLocale
+Root: .searchDefaultLocale
+Description: Defines the layout of the include english result checkbox on the Browse Page
+
+
+********************************/
+.searchDefaultLocale
+{
+    float: right;
+    margin: 20px 0 0 5px;
+}
+    .searchDefaultLocale input
+    {
+        vertical-align:top;
+    }
+    .searchDefaultLocale span
+    {
+        margin-left: -3px;
+    }
+/*-------- End SearchDefaultLocale --------*/
+
+
+/********************************
+
+Name: SideNav
+Root: #sideNav
+Description: Defines the layout of the naviation elements on the side of the Browse Page
+             These represent the different filters like Code Language, Category and Tag
+
+
+********************************/
+
+#sideNav {
+    width: 250px;
+    vertical-align:top;
+    background-color:#eee;
+}
+    #sideNav h3 {
+    }
+
+    #sideNav .section {
+        padding: 0 0 10px 0;
+        position: relative;
+    }
+
+        #sideNav .section a {
+        }
+
+        #sideNav .section a:hover {
+        }
+
+        #sideNav .section > div {
+            padding:5px 5px 5px 0;
+            line-height:150%;
+        }
+
+        #sideNav .section ul {
+            list-style-type:none;
+            padding:0px;
+            margin:0px;
+        }
+
+            #sideNav .section ul  li {
+                position: relative;
+                padding: 5px 5px 5px 0;
+            }
+    
+                #sideNav .section ul li .selectedFilter {
+                    float: left;
+                    padding-right: 5px;
+                }
+
+        #sideNav .section div.itemCount {
+            float: right;
+        }
+
+        #sideNav .section form input[ type = "checkbox"] {
+            margin: 0px 4px 0px 0px;
+            vertical-align: middle; 
+        }
+/* End SideNav Section */
+
+/*----------- Contribution Logos *******/
+.contributionLogo {
+    float: left;
+    position: relative;
+    margin-right: 6px;
+}
+
+.logo_visualstudio {
+    background: transparent url('../common/logos/visualstudio.png') no-repeat;
+    width: 23px;
+    height: 12px;
+    margin-top: 3px;
+}
+.logo_allinonecode {
+    background: transparent url('../common/logos/1code.png') no-repeat;
+    width: 14px;
+    height: 16px;
+}
+.logo_exchange {
+    background: transparent url('../common/logos/exchange.png') no-repeat;
+    width: 14px;
+    height: 16px;
+}
+.logo_ie {
+    background: transparent url('../common/logos/ie.png') no-repeat;
+    width: 16px;
+    height: 16px;
+}
+.logo_office {
+    background: transparent url('../common/logos/office.png') no-repeat;
+    width: 17px;
+    height: 16px;
+}
+.logo_windows {
+    background: transparent url('../common/logos/windows.png') no-repeat;
+    width: 17px;
+    height: 16px;
+    }
+.logo_azure {
+    background: transparent url('../common/logos/windowsazuredark.png') no-repeat;
+    width: 16px;
+    height: 16px;
+}
+
+.logo_windowsphone {
+    background: transparent url('../common/logos/windowsphone.png') no-repeat;
+    width: 16px;
+    height: 16px;
+    }
+
+    .contributionLogoTip {
+        position: absolute;
+        display: none;
+        border: solid 1px #CCC;
+        color: #333;
+        background-color: #F0F0F0;
+        font-size: 11px;
+        font-family: "Segoe UI",Sans-Serif;
+        box-shadow: 3px 3px 5px #888;
+        -moz-box-shadow: 3px 3px 5px #888;
+        z-index: 1003;
+        padding: 5px;
+        min-width: 250px;
+    }
+
+/*----------- End Contribution Logos *******/
+
+.clear
+{
+    clear: both;
+}
+
+.customcontributionLogoTip {
+        position: absolute;
+        display: none;
+        border: solid 1px #CCC;
+        background-color: white;
+        color: #333;
+        font-size: 11px;
+        font-family: "Segoe UI",Sans-Serif;
+        box-shadow: 3px 3px 5px #888;
+        -moz-box-shadow: 3px 3px 5px #888;
+        z-index: 1004;
+        padding: 5px;
+        min-width: 250px;
+}
+
+.customcontributionTittle {
+    font-size: 14px;
+    margin-left: 90px;
+}
+
+.customcontributionDiscription {
+    font-size: 13px;
+    margin: 10px 5px;
+    text-align: justify;
+}
+
+.customcontribution {
+    float: left;
+    position: relative;
+    margin-right: 6px;
+}
+
+.customcontributionLink {
+    margin-left: 5px;
+}
+
+.customcontributionlogo {
+    float: left;
+    padding: 0 10px;
+    margin: 0;
+    width: 70px;
+    height: 70px;
+    background-repeat: no-repeat; 
+}
+
+
+.logo_azure_large {
+    background-image:  url('../common/logos/windowsazure_large.png');
+}
+.logo_visualstudio_large {
+    background-image:  url('../common/logos/visualstudio_large.png');
+}
+.logo_exchange_large {
+    background-image:  url('../common/logos/exchange_large.png');
+}
+.logo_ie_large {
+    background-image:  url('../common/logos/ie_large.png');
+}
+.logo_office_large {
+    background-image:  url('../common/logos/office_large.png');
+}
+.logo_windows_large {
+    background-image:  url('../common/logos/windows_large.png');
+}
+.logo_windowsphone_large {
+    background-image:  url('../common/logos/windowsphone_large.png');
+}
+
+/* Custome Header */
+.dirSubHeading .windowssdk .container
+{
+    background: #FF3300 url('wpappsbackground.png') no-repeat;    
+    color: white;
+    padding: 8px 10px 18px 170px;   
+}
+
+.dirSubHeading .windowssdk .container h1, .dirSubHeading .windowssdk .container h2 {
+    color: white !important;
+}
+
+.dirSubHeading .windowssdk .container p {
+    margin: 20px 0 0 0 !important;
+}
+
+.dirSubHeading .windowssdk .container a {
+    background-color:#ffd800;
+    color: #2a2a2a !important; 
+    cursor:pointer; 
+    font-size:13px; 
+    font-family:'Segoe UI Semibold','Segoe UI','Lucida Grande',Verdana,Arial,Helvetica,sans-serif; 
+    padding:4px 12px 6px;
+}
+
+
+

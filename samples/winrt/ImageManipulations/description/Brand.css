@@ -1,0 +1,3629 @@
+﻿#BodyBackground
+{
+    min-width:0px;
+}
+
+#JelloExpander, .IE7 #JelloExpander, .IE8 #JelloExpander, .IE9 #JelloExpander
+{
+    padding-left:0px;
+    padding-right:0px;
+}
+
+#JelloSizer
+{
+    margin: 0 auto;
+    max-width: 0px;
+    padding: 0;
+    width: 100%;
+}
+
+/* Global Styles */
+body 
+{
+    font-size:0.75em;
+}
+
+h1 
+{
+    font-size: 3em;
+    font-family: 'Segoe UI Light','Segoe UI', 'Lucida Grande', Verdana, Arial, Helvetica, sans-serif;
+    color: #707070;
+    font-weight: normal;
+    padding-top:4px;
+    margin-bottom: 17px;
+    line-height: 1.3;
+    font-weight:100;
+}
+
+h2, h3, h4, h5, h6 
+{
+    font-family: 'Segoe UI', 'Lucida Grande', Verdana, Arial, Helvetica, sans-serif;
+    color:#2a2a2a;
+    font-weight:normal;
+}
+
+a, a:link, a:visited {
+    color: #00749E;
+}
+a:hover {
+    color: #0095c4;
+    text-decoration:none;
+}
+
+/*---------- Masthead -----------*/
+
+.NetworkLogo a {
+    display: none;
+}
+
+/*-------- Start Advertisment --------*/
+
+.advertisment {
+    padding-top:5px;
+}
+
+/*-------- End Advertisment --------*/
+
+
+/*-------- Start LocalTabs Page --------*/
+#GalleriesNavigation {
+    float: right;
+}
+
+.LocalNavigation
+{
+    display:block;
+    overflow: auto;
+    width: auto;
+}
+    .LocalNavigation .HeaderTabs {
+        width: auto;
+    }
+        .LocalNavigation .TabOff a {
+            color:#333;
+        }
+
+        .LocalNavigation .TabOff a:hover {
+            background-color:#E0E7EC;
+            margin-top: 1px;
+            padding: 4px 6px;
+        }
+
+        .LocalNavigation #notificationLink span {
+            color:Red;
+            font-weight:bold;   
+        }
+    
+
+/*-------- End LocalTabs Page --------*/
+
+/*-------- Start SubMenu Page --------*/
+
+.subMenu
+{
+    margin: 0 0 10px 0;
+    color: #FFFFFF;
+    overflow: hidden;
+}
+
+.subMenu a, .subMenu span
+{
+    margin: 5px 5px 0 5px;
+}
+
+.subMenu > h2
+{
+    float: left;
+    margin: 7px 15px 0 0;
+    vertical-align: middle;
+    color: #666;
+    padding-bottom: 5px;
+}
+
+.subMenu .advancedSearchLink
+{
+    float: left;
+    margin: 9px 0 0 15px;
+}
+
+
+
+.subMenu .uploadLink
+{
+    float: right;
+    margin: 5px 5px 0 0;
+    padding: 0 0 0 30px;
+    height: 24px;
+    background: url('../Common/smalluploadicon.png') no-repeat 10px 0;
+    color: #0066E1;
+    cursor: pointer;
+}
+
+.subMenu #searchBoxContainer
+{
+    float: left;
+    width: 400px;
+    padding: 3px 50px;
+}
+
+/*-------- End SubMenu Page --------*/
+
+/*-------- Start SearchBox --------*/
+
+div.searchbox
+{
+    overflow:auto;
+    width:450px;
+    margin:26px 0 14px 0;
+}
+
+.srchbox
+{
+    width: 100%;
+    background: #FFFFFF;
+    padding: 0px 2px;
+    height: 25px;
+    border: 1px solid #ccc;
+    table-layout: auto;
+    margin-bottom:5px;
+}
+
+
+
+.srchbox #searchImageCell input
+{
+    background: transparent url('searchButton.png') no-repeat 0 0;
+    width: 20px;
+    height: 20px;
+    padding-left: 1px;
+    margin-top: 3px;
+}
+
+
+.srchbox #searchImageCell
+{
+    text-align: right;
+    padding: 0px;
+    vertical-align: middle;
+}
+
+.IE7 .srchbox #searchImageCell
+{
+    padding:2px 2px 0 0;
+}
+
+.srchbox #searchImageCell input
+{
+}
+
+
+table.srchbox
+{
+    table-layout: fixed;
+}
+
+.srchbox .stxtcell
+{
+    padding-right: 4px;
+    width:90%;
+}
+
+.srchbox .stxtcell > input
+{
+    margin-right: 4px;
+    height: 26px;
+    line-height:26px;
+    width: 100%;
+    padding: 0px;
+    padding-left: 4px;
+    padding-top: 2px;
+    border: none;
+    font-style: normal !important;
+    outline: none;
+}
+
+.IE7 .srchbox .stxtcell > input
+{
+    height: 20px;
+}
+
+.srchbox .stxtcell > input.stxtinptpassive
+{
+    color: #AAA;
+    font-style: normal !important;
+}
+
+/*-------- End SearchBox --------*/
+
+
+/*-------- Start Search Page --------*/
+
+
+#searchPage #mainContentContainer
+{
+    margin: 0 0 0 243px;
+}
+
+#searchPage .browseFilterBar, #dashboardPage .browseFilterBar
+{    
+    padding: 5px 0 6px 0;
+    
+}
+
+    #searchPage .browseFilterBar a, #dashboardPage .browseFilterBar a
+    {
+        font-weight:normal;
+    }
+
+    #searchPage .browseFilterBar .browseSort, #dashboardPage .browseFilterBar .browseSort
+    {
+        float:right;
+    }
+    
+    #searchPage .browseBreadcrumb
+    {
+        padding-top:3px;
+    }
+
+        #searchPage .browseFilterBar .browseSort select, #dashboardPage .browseFilterBar .browseSort select
+        {
+            height:20px;
+        }        
+        
+        #searchPage .browseFilterBar .browseSort img, #dashboardPage .browseFilterBar .browseSort img
+        {
+            vertical-align:text-top;
+        }
+
+#searchPage h2, #searchPage h3
+{
+    font-size: 1.25em;
+    padding: 2px 0 3px 3px;
+}
+
+#searchPage h2
+{
+    display:inline;
+    clear:none;
+}
+
+ #dashboardsearchbox
+ {
+     width:420px;
+     margin:0;
+     float:left;
+ }
+
+/*-------- End Search Page --------*/
+
+/*-------- Begin Requests Page --------*/
+
+#requestsPage {
+    color:#666;
+}
+
+    #requestsPage h1 {
+        clear:none;
+    }
+    #requestsPage h2, #requestsPage h3
+    {
+        font-size: 1.25em;
+    }
+
+    #requestsPage h2
+    {
+        display:inline;
+        clear:none;
+    }
+
+    #requestsPage h3 
+    {
+        padding: 2px 0 3px 3px;
+    }
+
+    #requestsPage #mainContentContainer
+    {
+        margin: 0 0 0 243px;
+    }
+
+    #requestsPage #mainContentWrapper {
+        float:left;
+        width:100%;
+    }
+    #requestsPage #mainContent {
+        position:relative;
+    }
+
+    #requestsPage #mainContent .subtitle{
+        margin-bottom:5px;
+    }
+
+    #requestsPage #requestsFilterBar {
+        margin-top: 10px;
+        overflow: auto;
+    }
+
+        #requestsPage #requestsFilterBar .requestsCrumb {
+             float: left;
+            margin:10px 0 10px 10px;
+        }
+        #requestsPage #requestsFilterBar .requestsSort {
+            float: right;   
+            margin:10px 0 10px 0;
+        }
+    
+    #requestsPage #Pager {
+        text-align: center; 
+        padding-top: .75em; 
+        padding-bottom: .75em;
+    }
+
+    #requestsPage #requestsRss {
+        float: right;
+        margin: 2px 0 0 3px;
+        cursor: pointer;
+    }  
+    
+    .IE7 #requestsPage #requestsList {
+        padding-top: 10px;
+        margin-top:5px;
+    }
+
+    #requestsPage #requestsList .noResults {
+        padding: 10px 0;
+    }   
+   
+
+/*-------- End Requests Page --------*/
+
+/*--------  Begin Request List Item --------*/
+.requestlistitem td
+{
+    padding: .9em 0 .9em .5em;
+}
+    .requestlistitem .votebox
+    {
+        
+        text-align:center;
+    }
+    
+    .requestlistitem .voteboxcontainer
+    {
+        vertical-align:top;
+        width: 75px;
+    }
+
+    .requestlistitem #votelabel
+    {
+        border-width:1px;
+        border-bottom-style:solid;
+    }
+
+    #myRequestsTab #votenumber,
+    #requestsPage #votenumber
+    {
+        background-color: #777;
+        padding: 6px 10px;
+        color: #fff;
+        margin-bottom: 5px;
+        font-size: 1.6em;
+    }
+    
+    #myRequestsTab .votelink,
+    #requestsPage .votelink 
+    {
+        font-weight:bold;
+        background-color: #eee;
+        padding: 5px 0;
+        width: 75px;
+        float: left;
+    }
+
+    #myRequestsTab .needvote,
+    #requestsPage .needvote
+    {
+        font-weight:bold;
+    }
+
+    #myRequestsTab .alreadyvoted, #myRequestsTab .resolved
+    #requestsPage .alreadyvoted, #requestsPage .resolved
+    {
+        font-weight:bold;
+        color: #666;
+    }
+
+    .requestlistitem .linkform 
+    {
+        width:100%;
+        float:right;
+        margin-top:15px;
+    }
+
+    .requestlistitem .requesttitle 
+    {
+        font-weight:600;
+        margin-bottom:3px;
+    }
+
+    .requestlistitem .requester 
+    {
+        margin-bottom:3px;
+    }
+
+    .requestlistitem .hidden 
+    {
+        display:none;
+    }
+    
+    .requestlistitem .requestSummary div
+    {
+        margin-bottom:0.25em;
+    }
+    
+    .requestlistitem .requestSummary 
+    {
+        line-height: 1.45em;
+        width: 80%;
+    }
+    .requestlistitem .requestInfo
+    {
+        padding:1.2em 0 0 2.5em;
+        vertical-align:top;
+        width:15%;
+        line-height: 1.45em;
+    }
+    
+    .requestlinks > td
+    {
+        padding-bottom: 16px;
+    }
+    
+    .requestlinks div 
+    {
+        float:right;
+    }
+
+    .requestlistitem .textbox 
+    {
+        width:95%;
+    }
+    
+
+
+/*--------  End Request List Item --------*/
+
+
+/*--------  Begin New Request Form --------*/
+#newrequest {
+    margin-top:5px;
+    background:#F8F8F8;
+    border-width:1px;
+    border-style:solid;
+    border-color:#E8E8E8;
+    padding:5px;
+}
+
+#newrequest > div:first-child {
+    font-weight:bold;
+}
+
+#newrequest .itemheading {
+    margin-top:5px;
+}
+
+#newrequest textarea {
+    width:95%;
+}
+
+#newrequest .field-validation-error {
+    display:block;
+    color:Red;
+    font-weight:bold;
+}
+#newrequest #submit {
+    margin-top:5px;
+}
+
+/*--------  End New Request Form --------*/
+
+/*-------- Request Description Page ------*/
+
+.reqDescPage #mainContent {
+    overflow: auto;
+}
+.reqDescPage #header {
+    float: left;
+    width: 100%;
+}
+
+.reqDescPage {
+    color: #000 !important;
+}
+
+.reqDescPage #sideNav {
+    background-color: #fff;
+}
+
+.reqDescPage #header td {
+    vertical-align: bottom;
+}
+
+.reqDescPage #header #votenumber {
+    width: 50px;
+    padding: 6px 12px;
+    text-align: center;
+    float: left;
+}
+
+.reqDescPage #header .requestTitle {
+    margin: 0 0 5px 10px;
+    width: 85%;
+}
+
+.reqDescPage #header .requestTitle h1 {
+    margin-bottom: 0px;
+    font-size: 2em;
+}
+
+.reqDescPage #headerLinks {
+
+}
+
+.reqDescPage .votelink 
+{
+    text-align: center;
+    float: left;
+}
+
+#requestsPage #headerLinks .assignlink
+{
+    font-weight:bold;
+    background-color: #eee;
+    padding: 5px 10px;
+    float: left;
+    margin-left: 10px;
+}
+
+.reqDescPage #projectInfo {
+    clear: both;
+}
+
+.reqDescPage #solutions {
+    clear: both;
+    padding-top: 30px;
+}
+
+.reqDescPage .solutionItems {
+    clear: both;
+}
+
+.reqDescPage .solutionHeader {
+    border-bottom: 1px solid #ccc;
+}
+
+.reqDescPage .solutionAddContainer {
+    padding-top: 15px;
+    float: left;
+}
+
+.reqDescPage #SubmittedProjectLinkUrl {
+    width: 400px;
+}
+
+.reqDescPage .solutionItem {
+    margin-top: 25px;
+    padding: 0 5px 5px 0;
+    float: left;
+}
+.reqDescPage .solutionItemDetails {
+    float: left;
+    width: 535px;
+}
+
+.reqDescPage .solutionItemLinks {
+    margin-top: 10px;
+    clear: both;
+    float: left;
+    width: 100%;
+}
+
+.reqDescPage .solutionItemLinks a {
+    float: left;
+    margin-right: 10px;
+    font-weight:bold;
+    background-color: #eee;
+    padding: 5px 10px;
+}
+
+.reqDescPage .solutionItem .itemTitle {
+    font-size: 1.2em;
+    padding-bottom: 5px;
+}
+
+.reqDescPage .tagsContainer label {
+    display: none;
+}
+
+.reqDescPage .solutionItem  .summaryBox {
+    padding: .25em 0 .25em 0;
+    clear: both;
+    line-height: 1.45;
+}
+
+.reqDescPage .solutionsection {
+    float: left;
+    margin-left: 20px;
+}
+.reqDescPage .completedSolution {
+    font-size: 1.25em;
+    padding-top: 4px;
+}
+
+.reqDescPage .requestDescriptionCont, .reqDescPage .requestDicussions {
+    padding-top: 30px;
+    clear: both;
+    overflow: auto;
+}
+
+.reqDescPage .requestDescription {
+    padding-top: 10px;
+    line-height: 1.45;
+}
+
+.reqDescPage .requestDicussionsAsk {
+    padding: 10px 0;
+}
+
+.reqDescPage .watermark {
+        color:Gray;
+    }
+
+
+/*--------  Begin Extra Actions Section --------*/
+#extraActions
+{
+    float: right;
+    width: 300px;
+    vertical-align: top;
+}
+
+    #extraActions .section
+    {
+        padding: 0 0 10px 0;
+        overflow:auto;
+    }
+ 
+        #extraActions .section a
+        {
+            font-weight:bold;
+        }
+/*--------  End Extra Actions Section --------*/
+
+/*--------  Begin Contribute --------*/
+
+
+#contributeSection a
+{
+    font-size:1.1em;
+}
+
+#contributeSection, #sideNav #contributeSection h3, .sidebar #contributeSection h3, #contributeSection h3
+{
+    background-color:#fff;
+    margin: 0 0 9px 0;
+    padding-left: 0px;
+}
+
+#sideNav #contributeSection h3, .sidebar #contributeSection h3, #contributeSection h3
+{
+    font-size:1.65em;
+    margin-top:42px;
+}
+
+#sideNav #contributeSection, #contributeSection
+{
+    padding:0 0 41px 0;
+}
+
+#projectPage .sidebar #contributeSection
+{
+    margin: 10px 0 10px 0;
+    padding:0 0 5px 0;
+    
+}
+
+#sideNav #contributeSection > div, .sidebar #contributeSection > div, #contributeSection > div
+{
+    padding: 0 0 2px 0;
+    overflow:auto;
+}
+
+#sideNav #contributeSection img, #contributeSection img
+{
+    float: left;
+    width: 25px;
+}
+
+#sideNav #contributeSection .contributeAction, .sidebar #contributeSection .contributeAction, #contributeSection .contributeAction
+{
+    padding:17px 0 0 0;
+}
+
+    #contributeSection .contributeAction img
+    {        
+        background-color:#00749e;
+        margin-right:9px;
+    }
+    
+    #contributeSection .contributeAction img:hover
+    {
+        background-color:#0095C4;
+    }
+    
+    #contributeSection .contributeAction a
+    {
+        display:block;
+        line-height: 1.8;
+    }
+
+#uploadLink, #exclamationLink, #myContributionsLink
+{
+    display:block;
+    line-height: 1.8;
+}
+
+#myContributionsLink span 
+{
+    color: red;    
+}
+
+#feedbackLink
+{
+    background: url("FeedbackIcon.png") no-repeat;
+    width: 40px;
+    height: 40px;
+}
+
+.itemRow .affiliationLink, #editorPicksSection .affiliationLink
+{
+    background: url("../common/MicrosoftLogo.png") no-repeat;
+    width: 82px;
+    height: 18px;
+}
+
+
+#contributeSection a+div
+{
+         
+}
+
+.IE7 #contributeSection a+div
+{
+    float:left;
+}
+/*--------  End Contribute --------*/
+
+
+/*--------  Begin Directory List Footer --------*/
+
+#directoryListFooter {
+    padding:5px;
+    margin-top:10px;
+    margin-bottom:10px;
+    border:1px solid #E6E6E6;
+    background-color:#F8F8F8;
+    width:438px;
+}
+
+#directoryListFooter h4 
+{
+    font-size:1em;
+}
+
+/*--------  End Directory List Footer --------*/
+
+/*--------  Begin Editors Picks --------*/
+#editorPicksSection ul
+{
+    padding-left:0px;
+    line-height:135%;
+}
+
+    #editorPicksSection ul li
+    {
+        clear: left;
+        padding-top: 10px;
+        list-style:none;
+    }
+    #editorPicksSection ul li:first-child {
+        padding-top: 0;
+    }
+        
+        #editorPicksSection a {
+            font-weight: normal !important;
+        }
+        
+        #editorPicksSection ul li .thumbnail
+        {
+            float: left;
+            padding: 3px;
+            max-width: 60px;
+        }
+        
+            #editorPicksSection ul li .thumbnail img {
+                max-width: 60px;
+            }
+/*--------  End Editors Picks --------*/
+
+/*--------  Begin Side Nav Section --------*/
+
+#sideNav
+{
+    width: 215px;
+    margin-left: 0;
+    vertical-align: top;
+    float: left;
+}
+
+    #sideNav #sideNavHeader
+    {
+        margin-bottom: 10px;
+        padding-left: 12px;
+    }
+
+    #sideNav #sideNavHeader a
+    {
+        margin-right:3px;
+    }
+
+    #sideNav .section
+    {
+        padding: 0 10px 18px 10px;
+    }
+        #sideNav .section h3
+        {
+            
+            padding: 2px 0 3px 3px;
+        }
+
+        #sideNav .section ul
+        {
+        }
+
+        #sideNav .section ul li
+        {
+            padding: 4px 0 2px;
+            margin-left: 3px;
+            margin-right: 3px;
+        }        
+
+
+        #sideNav .section form > div
+        {
+            padding: 4px 0 0 0;
+            border-bottom: none;
+            margin: 0 3px 0 3px;
+            color: #3A3E43;
+        }
+            .IE8 #sideNav .section ul li > div.itemText
+            {
+                word-wrap: break-word;
+                width: 225px;
+            }
+            #sideNav .section ul li > div.itemCount
+            {
+                color: #3A3E43;
+            }
+        #sideNav .section a
+        {
+            font-weight: normal;    
+        }
+
+        #sideNav .section a:hover
+        {
+            text-decoration: underline;
+        }
+
+/*--------  End Side Nav Section --------*/
+
+
+
+/*-------- Start Dashboard Page --------*/
+
+#dashboardPage {
+    padding-top:5px;
+    clear:both;
+}
+#dashboardPage .contributions .tabContents {
+    padding: 5px 5px 10px 0;
+    clear:both;
+}
+    #dashboardPage .contributions .noContributions {
+        clear:both;
+    }
+#dashboardPage #mainContentWrapper {
+    float:left;
+    width:100%;
+}
+
+#dashboardPage #detailsSection {
+    float:left;
+    margin-left:-100%;
+    width:240px;
+    padding: 0 0 18px 10px;
+}
+
+.IE7 #dashboardPage #detailsSection {
+    width:auto;
+    min-width: 300px;
+    max-width: 300px;
+}
+.IE7 #dashboardPage #detailsSection .itemBar {
+    width: 270px;
+}
+
+#dashboardPage #detailsSection h3 {
+    word-wrap:break-word;
+}
+
+#dashboardPage #mainContent {
+    margin:0 0 0 250px;
+    position:relative;
+}
+
+#dashboardPage .dashboardEvenRow
+{
+    background-color: #ececec;
+}
+#dashboardPage .dashboardPadding
+{
+    padding-bottom: 4px;
+}
+#dashboardPage .dashboardCell
+{
+    width: 100%;
+    vertical-align: top;
+    padding: 1em 0.5em 0.5em 0.5em;
+    word-wrap: break-word;
+}
+#dashboardPage .projectManagement
+{
+    width: 24em;
+    padding: 0em 1em 0em 1em;
+    vertical-align: top;
+    text-align: right;
+    float: right;
+}
+
+#dashboardPage #subscriptionsLink 
+{
+    position:absolute;
+    right:5px;
+}
+
+#dashboardPage .itemDelete
+{
+    vertical-align:top;
+    padding-top:.8em;
+    width:30px;
+}
+
+#dashboardPage .itemDeleteText
+{
+    border-style:solid;
+    border-width:thin;
+    border-collapse:collapse;
+    padding-bottom:2px;
+    padding-left:4px;
+    padding-right:4px;
+    color:Gray
+}
+
+#dashboardPage #myRequestsTab .requestTabHeaders
+{
+    font-weight:normal;
+    border-bottom: solid 1px #CCC;
+    padding-bottom: 10px;
+    padding-top: 10px;
+    float: left;
+    width: 100%;
+}
+
+#dashboardPage #myRequestsTab .requestTabHeaders div:first-child
+{
+    border: 0;
+}
+
+#dashboardPage #myRequestsTab .requestTabHeaders div
+{
+    padding: 2px 9px 3px 9px;
+    font-size: 0.9em;
+    line-height: 125%;
+    color:#00749E;
+    border-left: solid 1px #555;
+    cursor: pointer;
+    float: left;
+    text-align: center;
+}
+
+#dashboardPage #myRequestsTab .requestTabHeaders div.currentRequest
+{
+    background-color:#fff;
+    cursor: default;
+    border-bottom:none;
+    margin-bottom:-2px;
+    color:#000;    
+}
+
+#dashboardPage #myRequestsTab .requestTabHeaders div.currentRequest a {
+    color: #000;
+}
+
+
+#dashboardPage #myRequestsTab .requestTabHeaders div a
+{
+    text-decoration:none;
+}
+
+#dashboardPage #myRequestsTab .requestTabContents
+{
+    clear: both;
+}
+
+#dashboardPage #myRequestsTab .requestTabContents .noResults {
+    padding-top: 20px;
+}
+
+/*-------- End Dashboard Page --------*/
+
+/*-------- Start Upload Page --------*/
+
+#UploadPage
+{
+    margin-left:10px;
+    max-width:925px;
+}
+
+    #UploadPage .watermark {
+        color:Gray;
+    }
+
+    #UploadPage .projectTypeChoice   {
+    }
+
+        #UploadPage .projectTypeChoice > div {
+            padding: 20px 10px 20px 10px;
+            border: 1px solid darkgrey;
+            cursor: pointer;
+            height: 200px;
+            float: left;
+        }
+
+        #UploadPage .projectTypeChoice > div + div
+        {
+            margin: 0 0 0 5px;
+        }
+
+        #UploadPage .projectTypeChoice div.current
+        {
+            background-color: #E9E9E9;
+            cursor: default;
+        }
+
+            #UploadPage .projectTypeChoice div.choice {
+                font-size: large;
+                font-weight: bold;
+                padding: 0 0 10px 0;
+            }
+
+            #UploadPage .projectTypeChoice div.description {
+                padding: 0 0 0 17px;
+            }
+
+            #UploadPage .projectTypeChoice #genericSampleUploadDescription {
+                padding-top: 5px;
+            }
+
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription .logos {
+                    overflow: auto;    
+                }
+
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription .vslogo {
+                    background: url(../samples/vslogo.png) no-repeat;
+                    width: 125px;
+                    height: 18px;
+                }
+
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription .javalogo {
+                    background: url(../samples/javalogo.png) no-repeat;
+                    width: 33px;
+                    height: 60px;
+                    float: left;
+                }                
+                
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription .phplogo {
+                    background: url(../samples/phplogo.png) no-repeat;
+                    width: 65px;
+                    height: 35px;
+                    float: left;
+                    margin: 15px 0 0 10px;
+                }                
+                
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription .nodejslogo {
+                    background: url(../samples/nodejslogo.png) no-repeat;
+                    width: 90px;
+                    height: 25px;
+                    float: left;
+                    margin: 18px 0 0 10px;
+                }
+
+                #UploadPage .projectTypeChoice #genericSampleUploadDescription > div+div {
+                    margin-top: 10px;
+                }
+
+    #UploadPage .projectTypeContents {
+        clear: left;
+        padding: 10px 0 0 0;
+    }
+
+        #UploadPage .projectTypeContents .instruction > div+div {
+            padding-top: 5px;
+        }
+   #UploadPage #libraryContainer {
+       margin: 5px 0 0 0;
+       display: none;
+   }
+    #UploadPage fieldset
+    {
+        margin: 10px 0 30px 5px;
+    }
+
+        #UploadPage fieldset > *
+        {
+            margin-left:10px;
+        }
+
+        #UploadPage .fieldsetStyleContainer {
+            margin: 10px 0 0 5px;
+        }
+
+        #UploadPage fieldset h2,
+        #UploadPage .fieldsetStyleContainer h2
+        {   
+            font-family: 'Segoe UI Semibold','Segoe UI','Lucida Grande',Verdana,Arial,Helvetica,sans-serif;
+            font-size: 17px;
+            font-weight: bold;
+            color: #3A3E43;
+            border-bottom: 2px solid #EFEFEF;
+            width: 100%;
+            padding-bottom: 3px;
+            margin-left:0px;
+            margin-bottom:8px;
+        }
+
+        .IE7 #UploadPage fieldset h2,
+        .IE7 #UploadPage .fieldsetStyleContainer h2
+        {
+            margin-left:-10px;
+        }
+
+        #UploadPage fieldset .field-validation-error
+        {
+            clear:left;
+            display:block;
+            margin-top:4px;
+        }
+
+        #UploadPage fieldset .required
+        {
+            margin-left: 3px;
+        }
+
+        #UploadPage fieldset .instruction,
+        #UploadPage .fieldsetStyleContainer .description,
+        #UploadPage .fieldsetStyleContainer .instruction
+        {
+            color: #3A3E43;
+            margin:0 0 10px 0;
+        }
+
+        #UploadPage fieldset .faqLink
+        {
+            margin: 0 0 10px 0;
+        }
+
+        #UploadPage fieldset label 
+        {
+            display:block;
+        }
+
+        #UploadPage fieldset input[type=text]
+        {
+            width:60%;
+        }
+
+        #UploadPage fieldset input[type=checkbox]
+        {
+            float:left;
+            clear:left;
+            margin-right:5px;
+        }
+
+        #UploadPage fieldset input[type=radio]
+        {
+            float:left;
+            clear:left;
+            margin-right:5px;
+        }
+
+        #UploadPage fieldset#richDescription textarea 
+        {
+            width:70%;
+            height:600px;
+        }
+          
+        #UploadPage fieldset#summary textarea 
+        {
+            width:60%;
+            height:100px;
+            margin-top: 10px;
+            margin-left: -30px;
+        }
+
+        .IE #UploadPage fieldset#summary textarea, .IE9 #UploadPage fieldset#summary textarea
+        {
+            margin-left: -30px;
+            overflow: auto;
+        }
+
+        .FF #UploadPage fieldset#summary textarea
+        {
+            margin-left: -30px;
+        }
+
+        #UploadPage fieldset#summary #SummaryReadOnly 
+        {
+            width:60%;
+            margin-top: 10px;
+            padding-top: 5px;
+            color: #909082;
+        }
+
+        #UploadPage fieldset#summary #SummaryCharCount 
+        {
+            width:60%;
+            text-align: right;
+        }
+                
+        #UploadPage fieldset#options label 
+        {
+            margin-bottom:10px;
+        }
+        
+	    #UploadPage fieldset#license label
+	    {
+            margin-bottom:10px;
+        }        
+        
+        #UploadPage input[type="text"].tagInput, #UploadPage input[type="text"].listInput
+        {
+            width:40%;
+            float:left;
+        }
+
+        #UploadPage .addedTags, #UploadPage .addedProjects
+        {
+            margin-bottom:15px;
+            width: 500px;
+
+        }
+            #UploadPage .addedTags .tag, #UploadPage .addedProjects .projectTitle
+            {
+                position:relative;
+                overflow:hidden;
+            }
+
+                #UploadPage .addedTags .tag  label, #UploadPage .addedProjects .projectTitle  label 
+                {
+                    float:left;
+                    width: 450px;
+                }
+            
+                #UploadPage .addedTags .tag  a, #UploadPage .addedProjects .projectTitle  a 
+                {
+                    position:absolute;
+                    text-align:right;
+                    right:0px;
+                }
+         
+        .fileManager .fileUploadProgressIndicator
+        {
+            width: 500px;
+        }
+
+        .fileManager .uploadProcessingWarning {
+            margin-top: 5px;
+        }
+
+        .fileManager .fileUploadProgressIndicator .throbber
+        {
+            font-weight: bold;
+            background: url('./progressIndicatorWhite.gif') no-repeat 10px 0;
+            padding: 7px 10px 5px 60px;
+            height: 25px;
+            margin-left: -10px;
+        }
+
+        .fileManager #uploadFrame, .fileManager .uploadFrame
+        {
+            width:100%;
+        }
+
+            .fileManager .addLabel + a 
+            {
+                margin-left:25px;
+            }
+
+        .fileManager fieldset label {
+            display: block;
+        }
+
+        .fileManager .unlocalizedFiles {
+            color:#808080;
+        }
+
+        .fileManager .filesContainer 
+        {
+            margin-bottom:15px;
+            width: 500px;
+
+        }
+
+            .fileManager .filesContainer .file
+            {
+                position:relative;
+                overflow:hidden;
+            }
+
+                .fileManager .filesContainer .file .title {
+                    border-bottom: 1px solid #000000;
+                    padding-bottom: 3px;
+                    margin-top: 10px;
+                    margin-bottom: 10px;
+                }
+
+                    .fileManager .filesContainer .file .title .manageLinks
+                    {
+                        float: right;
+                    }
+                    
+                .fileManager .filesContainer .file .version {
+                        padding: 0 0 20px 10px;
+                }
+
+                    .fileManager .filesContainer .file .version label {
+                        float: left;
+                        font-weight: bold;
+                    }
+
+                    .fileManager .filesContainer .file .version span {
+                        float: left;
+                        margin-left: 5px;
+                    }
+
+                .fileManager .filesContainer .file .language {
+                    clear: left;
+                    padding: 0 0 5px 10px;
+                }
+
+                    .fileManager .filesContainer .file .language label {
+                        font-weight: bold;
+                    }
+
+                    .fileManager .filesContainer .file .language label + label {
+                        font-weight: normal;
+                        padding-left: 10px;
+                    }
+
+                    .fileManager .filesContainer .file .language div {
+                        padding-left: 20px;
+                    }
+                    
+                    .file .requirements {
+                        clear: left;
+                        padding: 0 0 0 10px;
+                    }
+
+                    .file .requirements label {
+                        font-weight: bold;
+                    }
+                    
+                    .file .requirements > div {
+                        padding-left: 20px;
+                    }
+                    
+                    .file .requirements .requirementsContent {
+                        padding-top: 5px;
+                        padding-bottom: 10px;
+                    }
+                    
+                    .file .requirements .requirementsContent label {
+                        font-style: italic;
+                        font-weight: normal;
+                    }
+                    
+                    .file .requirements .requirementsContent > div 
+                    {
+                       margin-bottom:4px;
+                       position:relative;
+                    }
+                    
+                    .requirementsContent .requirementsRemove {
+                        float:right;
+                        position:absolute;
+                        right:0px;
+                    }
+                    
+                    .requirements .requirementsAddError {
+                        color:#ff0000;
+                    }
+                    
+                    .requirements .reqBrowseButton {
+                        margin-left : 10px;
+                    }
+                    
+                    #UploadPage fieldset .requirements input[type="text"] {
+                        margin-right: 10px;
+                        width: 70%;
+                    }
+                    
+                    .reqBrowsefade
+                    {
+                        position: absolute;
+                        background-color: #aaaaaa;
+                    }
+                    .reqBrowse
+                    {
+                        background-color: #f4f4f4;
+                        border:1px solid #000000;
+                        -border-radius: 5px;
+                        -moz-border-radius: 5px;
+                        -webkit-border-radius: 5px;
+                        padding:15px;
+                        position: absolute;
+                        display: block;
+                    }
+
+                   .reqBrowsebuttons
+                    {
+                       text-align:right;
+                       position:absolute;
+                       right:10px;
+                       bottom:5px;
+                    }
+                    .reqBrowsebuttons > button
+                    {
+                        color: Blue;
+                        border: none;
+                        background: none;
+                        font-weight: bold;
+                        cursor:pointer;
+                    }
+
+                    .reqBrowseclose
+                    {
+                        display:none;
+                    }
+
+                    .reqBrowseDialog
+                    {
+                        width: 700px;
+                        clear:both;
+                        overflow:hidden;
+                        padding-bottom: 20px;
+                    }
+                    
+                    .reqBrowseDialog > h2 
+                    {
+                        border-bottom: 1px solid #000000;
+                        padding-bottom: 5px;
+                    }
+                    .reqBrowseDialog > p 
+                    {
+                        margin: 15px 0 15px 0;
+                    }
+                    
+                    .reqBrowseSearchCont
+                    {
+                        width: 100%;
+                        background: white;
+                        padding: 0px 2px;
+                        -moz-border-radius: 2px;
+                        border-radius: 2px;
+                        border: 1px solid #888;
+                        margin-bottom: 5px;
+                        height: 29px;
+                    }
+                    .reqBrowseSearchCont .rbboxcont
+                    {
+                        width:90%;
+                        float:left;
+                        margin-top: 2px;
+                    }
+                    
+                    .reqBrowseSearchCont input
+                    {
+                        border:none;
+                        outline:none;
+                        border-color: transparent;
+                    }
+                    .reqBrowseSearchBox
+                    {
+                        margin-right: 4px;
+                        height: 20px;
+                        line-height: 20px;
+                        width: 100%;
+                        padding-left: 4px;
+                        padding-top: 2px;
+                    }
+                    
+                    .reqBrowseSearchBoxDefault
+                    {
+                        color: #AAA;
+                    }
+                    .reqBrowseSearchCont .rbbtncont
+                    {
+                        float: right;
+                        margin-top: 4px;
+                    }
+                    .reqBrowseSearchBtn
+                    {
+                        background: transparent url('searchButton.png') no-repeat 0 0;
+                        width: 22px;
+                        height: 22px;
+                        float:left;
+                        cursor:pointer;
+                    }
+                    
+                    .reqBrowseTabs
+                    {
+                        border-bottom: 5px solid #E8E8E8;
+                        margin:3px 0;
+                        overflow:auto;
+                    }
+                    
+                    .reqBrowseTabs .reqBrowseTabsR
+                    {
+                        color:#fff !important;
+                    }
+                    
+                    .reqBrowseTabs .reqBrowseTabsHighlight
+                    {
+                        color:#000 !important;
+                        background-color:#E8E8E8;
+                    }
+                    
+                    .reqBrowseTabs a
+                    {
+                        padding:5px 12px;
+                        color:#fff;
+                        background-color:#888;
+                        font-weight:bold;
+                        float:left;
+                        margin: 0 4px 0px 0;
+                    }
+                    
+                    .reqBrowsePager td
+                    {
+                        text-align:center;
+                    }
+                    .reqBrowseDialog #Pager
+                    {
+                        margin: 5px 0 15px 0;
+                    }
+                    
+                    .reqBrowseContent
+                    {
+                        height:310px;
+                        overflow:auto;
+                        clear:both;
+                        position:relative;
+                    }
+                    
+                    .reqBrowsePager
+                    {
+                        width:700px;
+                        margin:0 auto;
+                    }
+                    
+                    .reqBrowseContentError
+                    {
+                        color:#ff0000;
+                        margin:5px;
+                    }
+                    .reqBrowseContent .requirementItem
+                    {
+                        border-bottom: 2px solid #E8E8E8;
+                        padding: 4px 0 6px 0;
+                        overflow:auto;
+                    }
+                    .reqBrowseContent .section1
+                    {
+                       float:left;
+                       width:75%;
+                       padding-left:25px;
+                       position:relative;
+                    }
+                    
+                    .reqBrowseContent .section1 input
+                    {
+                        position:absolute;
+                        left:0px;
+                    }
+                    
+                    .reqBrowseContent .title
+                    {
+                        font-weight:bold;
+                    }
+                    .reqBrowseContent .section2
+                    {
+                        float:right;
+                    }
+
+
+    .progressIndicatorfade
+    {
+        position: absolute;
+        background-color: #FFFFFF;
+    }
+    .progressIndicator
+    {
+        background-color: #f4f4f4;
+        border: 1px solid #000000;
+        -border-radius: 5px;
+        -moz-border-radius: 5px;
+        -webkit-border-radius: 5px;
+        padding: 15px;
+        position: absolute;
+        display: block;
+        max-width: 70%;
+        max-height: 70%;
+    }
+    #progressIndicator .progressIndicatorclose
+    {
+        display: none;
+    }
+
+    #progressIndicatorContent
+    {
+        font-weight: bold;
+        padding: 7px 10px 0 10px;
+        height: 25px;
+    }
+   
+
+/*-------- End Upload Page --------*/
+
+/* --- 
+   --- Homepage ---
+   --- */
+p
+{
+    margin: 0 0 1px 0;
+}
+#homePageHeader
+{
+    float: left;
+    margin-bottom: 1em;
+    width: 100%;
+}
+
+.tagline {
+    font-size: x-small;
+    position: relative;
+    top: -11px;
+}
+
+.logo
+{
+    float: left;
+    width: 455px;
+    height: 70px;
+    font-weight: bold;
+    font-size: 22px;
+    margin: 0 10px 0 0;
+    color: #3A3E43;
+}
+.logo > img
+{
+    float: right;
+}
+.logo > div
+{
+    color: #3A3E43;
+    font-weight: bold;
+    font-size: 22px;
+}
+
+.welcomeInfo
+{
+    float: left;
+    width: 700px;
+}
+.welcomeInfo h2
+{
+    font-size: 16px;
+}
+.welcomeInfo p
+{
+    margin: 5px 0 0 0;
+}
+
+#siteActions > div
+{
+    border: 1px solid #BBBBBB;
+    padding: 15px 5px 0 65px;
+    height: 55px;
+    background-repeat: no-repeat;
+    background-position: 10px 10px;
+}
+#siteActions a, #siteActions p
+{
+    margin-top: 5px;
+}
+
+#siteActions .label a
+{
+    font-size: 1.25em;
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+#myGalleryBox
+{
+    background-image: url("MyGalleryIcon.png");
+}
+
+#findActions
+{
+    float: right;
+    padding: 10px;
+    width: 225px;
+    height: 50px;
+    border: 1px solid #BBBBBB;
+    margin: 0 10px 0 0;
+}
+
+#findBox div:first-child
+{
+    margin: 0 0 5px 0;
+    font-weight: bold;
+}
+
+#legalDisclaimer
+{
+    margin: 0 0 10px;
+    color: #798072;
+    font-size: 0.8em;
+}
+
+#siteActions
+{
+    float: right;
+    width: 200px;
+}
+#siteActions > div
+{
+    margin-bottom: 10px;
+}
+.homePageProjects
+{
+    width: 100%;
+    float: left;
+}
+.homePageProjects > div
+{
+    padding-left: 1.5em;
+}
+.homePageProjects > div:first-child
+{
+    padding-left: 0;
+}
+
+.homePageProjects .projectList ul
+{
+    padding: 0;
+    margin: 0;
+}
+.homePageProjects li
+{
+    margin-top: .5em;
+    padding-bottom: 0.5em;
+    list-style-type: none;
+}
+.homePageProjects .itemRow a, .homePageProjects .itemRow a:hover
+{
+    color: #0054A6;
+}
+
+.projectList > a:first-child
+{
+    margin-left: 1px;
+    float: right;
+}
+.projectList > a, .projectList > a:hover
+{
+    color: #5BAEDB;
+}
+.projectListTitle
+{
+    height: 27px;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 125%;
+    background: #E8E8E8;
+    padding: 5px 5px 5px 25px;
+}
+.homePageListPager
+{
+    text-align: right;
+    margin-bottom: -.5em;
+}
+
+.recentlyAddedProjects
+{
+    float: left;
+    width: 32%;
+}
+.mostPopularProjects
+{
+    float: right;
+    width: 32%;
+}
+.highestRankedProjects
+{
+    overflow: hidden;
+}
+* html .highestRankedProjects
+{
+    float: left;
+}
+* html .highestRankedProjects > div
+{
+    width: 100%;
+}
+
+#Pager
+{
+    text-align:left;
+}
+
+/* Impromptu warning style */
+.ipWarningfade
+{
+    position: absolute;
+    background-color: #aaaaaa;
+}
+div.ipWarning
+{
+    width: 400px;
+    position: absolute;
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    padding: 20px 0 20px 20px;
+    background-color: #FCE5E6;
+    border: solid 2px #EE1F25;
+}
+.ipWarningcontainer
+{
+    font-weight: bold;
+}
+.ipWarningclose
+{
+    display: none;
+}
+.ipWarningmessage div
+{
+    position: relative;
+}
+.ipWarningmessage div div + div
+{
+    text-align: center;
+    padding-right: 20px;
+}
+.ipWarningmessage div div:first-child div
+{
+    margin-left: 50px;
+}
+.ipWarningmessage div div:first-child img
+{
+    position: absolute;
+    margin: -20px 0 0 0;
+    top: 35%;
+}
+.ipWarningbuttons
+{
+    text-align: center;
+    margin: 20px 0 0 0;
+}
+.ipWarning button
+{
+    padding: 4px 8px 4px 8px;
+    margin: 2px;
+    font-weight: bold;
+    border: solid 1px #A6A3A6;
+    color: #FFFFFF;
+    background: #B8BABC;
+    filter: progid:DXImageTransform.Microsoft.Gradient(GradientType=0,StartColorStr='#B8BABC',EndColorStr='#949699');
+}
+
+#eyebrow
+{
+    width: 100%;
+}
+#siteMessage .unsupportedLocale {
+    margin: 10px 0 0 243px;
+    border: solid 1px #CCC;
+    background: #FCFEC5;
+    padding: 5px;
+}
+
+#Footer
+{
+    width: 100%;
+    height: auto;
+}
+
+.clear
+{
+    clear: both;
+}
+
+#buildVersion
+{
+    clear: both;
+    margin-left: auto;
+    margin-right: auto;
+    padding-right: 26px;
+    padding-top: 8px;
+    text-align: right;
+}
+
+#page
+{
+    clear: both;
+    padding-top: 10px;
+}
+
+#page h1
+{
+    padding: 10px 0px;
+}
+
+#ownerBar
+{
+    background: #EFEFEF;
+    border: 2px solid #7FCBF5;
+    text-align: left;
+    color: Black;
+    margin: 10px 0 20px 0;
+    padding: 5px;
+    word-spacing: 0px;
+    font-size: medium;
+}
+
+#ownerBar a
+{
+    color: Blue;
+    padding: 0 5px 0 5px;
+}
+
+
+
+
+/*-------- Start Tab Control --------*/
+
+.tabHeaders
+{
+    font-weight:normal;
+    text-transform: uppercase;
+    border-bottom: solid 1px #CCC;
+    float: left;
+    width: 100%;
+}
+
+.tabHeaders div
+{
+    padding: 7px 19px 8px 19px;
+    font-size: 0.9em;
+    line-height: 125%;
+    color:#00749E;
+    cursor: pointer;
+    float: left;
+    text-align: center;
+}
+
+.tabHeaders div.current
+{
+    background-color:#fff;
+    cursor: default;
+    border: 1px solid #CCC;
+    border-bottom:none;
+    margin-bottom:-2px;
+    color:#000;    
+}
+
+.tabHeaders div a
+{
+    text-decoration:none;
+}
+
+.tabContents
+{
+    clear: both;
+}
+
+#MainContent .tabHeaders div.current a
+{
+    color:#000;
+}
+
+.tabContents div.current
+{
+    display: block;
+}
+/*-------- End Tab Control --------*/
+
+.itemContainer
+{
+    width: 100%;
+}
+.itemRow .itemTitle
+{
+    padding-bottom: 5px;
+    font-size:1.1em;
+}
+
+.itemRow .itemBody, .itemRow .itemInfo
+{
+    padding:15px 17px 16px 0;
+}
+.itemRow .itemDescription
+{
+    overflow: hidden;
+    max-height: 80px;
+}
+.itemRow .itemBody
+{
+    vertical-align: top;
+    line-height: 1.4;
+}
+.itemRow .itemBody a.officialMicrosoftLabel
+{
+    color: #ACACAC;
+}
+.itemRow .itemInfo
+{
+    vertical-align: top;
+    padding-left: .5em;
+    line-height: 1.4;
+    width: 10em;
+    text-align:right;
+}
+
+.IE7 .itemRow .itemInfo
+{
+    width:11em;
+}
+
+.itemRow .itemInfo .ratingStars
+{
+    float: left;
+}
+.itemRow .itemInfo .ratingCount
+{
+    padding: 0 0 0 5px;
+    float: left;
+}
+.itemRow .ratingInfo
+{
+    text-align: center;
+}
+
+.itemRow .affiliationLink, #editorPicksSection .affiliationLink
+{
+    position: relative;
+    top: 3px;
+}
+
+#editorPicksSection a.officialMicrosoftLabel
+{
+    color: #ACACAC;
+}
+
+.itemRow .tagsContainer label {
+    display:none;
+}
+
+.editorPickedItem
+{
+    background-color:#F8F8F8;
+}
+
+.editorPickedText
+{
+    font-size:1.25em;
+    padding-bottom:2px;
+}
+.editorPickedItem > td 
+{
+    border-top:6px solid #fff;    
+}
+
+.dirSubHeading
+{
+    margin-bottom:15px;
+}
+
+#searchPage .dirSubHeading h2 
+{
+    line-height:1.4;
+    font-size:1.1em;
+}
+
+#searchPage .dirSubHeading h2 span
+{
+    padding-top:5px;
+    display:block;
+}
+
+#searchPage .dirSubHeading h1, #searchPage .dirSubHeading h2
+{
+    clear:none;
+    padding-left:0px;    
+}
+
+.dirSubHeading .dirSubLinks
+{
+    font-size:1.2em;
+    padding-top:5px;
+}
+
+
+.summaryBox
+{
+    padding: .25em 0 .25em 0;
+    clear: both;
+    line-height:1.45;
+}
+
+/*-------- Start Rating Stars --------*/
+
+.RatingStar
+{
+    width: 11px;
+    height: 11px;
+    padding: 0 8px 0 0;
+    background-position: center;
+    float: left;
+}
+
+.FilledRatingStar, .HalfRatingStar, .EmptyRatingStar, .FilledRatingStarHover
+{
+    width: 11px;
+    height: 11px;
+    padding: 0px 1px 0px 0px;
+    margin-top: 2px;
+}
+
+.FilledRatingStar
+{
+    background: url(../samples/fullStar.png) no-repeat;    
+}
+
+.ownerRating .FilledRatingStar
+{
+    background: url(../samples/fullStar.png) no-repeat;
+}
+
+.FilledRatingStarHover
+{
+    background: url(../samples/fullStarHover.png) no-repeat;
+    
+}
+
+.HalfRatingStar
+{
+    background: url(../samples/halfStar.png) no-repeat;
+   
+}
+
+.EmptyRatingStar
+{
+    background: url(../samples/emptyStar.png) no-repeat;
+    
+}
+
+.EditStarMode .RatingStar
+{
+    cursor: pointer;
+}
+
+
+
+/*-------- End Rating Stars --------*/
+
+.discussionFormTable
+{
+    width: 100%;
+    table-layout: fixed;
+}
+
+
+#ReviewsTabPane .seeAllLink, #DiscussionsTabPane .seeAllLink
+{
+    margin-top: 10px;
+    text-align: center;
+}
+
+/*-------- Start DiscussionsTab --------*/
+
+.threadActions
+{
+    text-align: right;
+    margin-top: 10px;
+    float: right;
+}
+
+#DiscussionsTabPane .reply, #DiscussionsTabPane .toggleDiscussion
+{
+    cursor: pointer;
+}
+
+
+#defaultDicussionText, #newDiscussion
+{
+    padding-top: 10px;
+}
+#DiscussionsTabPane .posts
+{
+    display: block;
+}
+#DiscussionsTabPane .threadHeader .left
+{
+    float: left;
+}
+#DiscussionsTabPane .threadHeader .right
+{
+    float: right;
+}
+#DiscussionsTabPane .normal
+{
+    font-weight: normal;
+}
+
+#DiscussionsTabPane .threadHeader
+{
+    position: relative;
+    background-color: #ECECEC;
+    padding: 4px 10px 4px 10px;
+}
+
+#DiscussionsTabPane .threadHeader .title
+{
+    color: #000000;
+    font-weight: bold;
+    margin-bottom: .7em;
+}
+#DiscussionsTabPane .threadHeader .label
+{
+    color: #000000;
+}
+#DiscussionsTabPane .postMeta
+{
+    color: #666666;
+}
+#DiscussionsTabPane .threadHeader .value
+{
+    font-weight: bold;
+    color: #000000;
+}
+
+#DiscussionsTabPane .reply
+{
+    font-weight: normal;
+    cursor: hand;
+}
+
+#DiscussionsTabPane ul li
+{
+    list-style-type: none;
+    list-style-image: none;
+    padding-bottom: 10px;
+}
+
+#DiscussionsTabPane ul
+{
+    padding-left: 0px;
+    margin-left: 0px;
+    padding-right: 2px;
+}
+
+.IE #reviewList .right
+{
+    margin-right: -1em;
+}
+
+#newDiscussion
+{
+    margin: 0 0 15px 0;
+}
+#newDiscussion #Title
+{
+    width: 50%;
+}
+#newDiscussion textarea
+{
+    width: 99%;
+    height: 10em;
+}
+
+#DiscussionsTabPane
+{
+    margin-left: 0px;
+    padding: 0 1em 1em 1em;
+}
+
+
+.postMeta
+{
+    float: right;
+}
+
+.postReply
+{
+    cursor: hand;
+    float: right;
+    font-weight: bold;
+}
+
+.postSaveReply
+{
+    display: none;
+}
+
+.postSaveReply textarea
+{
+    width: 99%;
+    margin-bottom: 4px;
+    height: 8em;
+}
+
+.toggleDiscussion
+{
+    cursor: hand;
+}
+
+.saveReplyErrorMessage
+{
+    display: none;
+    margin: 0 0 4px 0;
+    color: Red;
+    font-weight: bold;
+}
+
+#discussionListItem .avatar
+{
+    float: left;
+    padding: 5px;
+    vertical-align: middle;
+}
+
+#discussionListItem .discussion
+{
+    margin-left: 55px;
+    padding: 0 5px 5px 5px;
+    vertical-align: top;
+}
+
+.IE7 #discussionListItem .avatar
+{
+    margin-top: 15px;
+}
+
+
+/*-------- End DiscussionsTab --------*/
+
+
+.flotChart
+{
+    height: 300px;
+}
+
+#projectMenuBarTop
+{
+    padding: 10px 0 20px 0;
+    font-weight: bold;
+    font-size: 25px;
+}
+.dayHeader
+{
+    font-weight: bold;
+}
+
+/*-------- Start StatsPage --------*/
+#statsPage
+{
+    border: none;
+    background-color: Transparent;
+    margin-top: 1em;
+}
+
+#statsPage .rangeBox
+{
+    padding: 5px;
+    background-color: #ECECEC;
+    border: solid 1px #C2C2C2;
+    float: left;
+}
+#statsPage .statBox
+{
+    margin-top: 1em;
+    margin-bottom: 10px;
+    overflow: hidden;
+    display: none;
+}
+#statsPage .statBox h3
+{
+    font-size: 1.1em;
+    display: inline;
+}
+
+#statsPage #statMessage
+{
+    margin-top: 1em;
+    display: none;
+}
+
+#statsPage #statDownloadBox img {
+    float: left;
+}
+
+#statsPage .statDownloadLink {
+    padding-left: 5px;
+    vertical-align: middle;
+}
+
+#pointTooltip
+{
+    border: solid #000000 1px;
+    height: 35px;
+    background-color: #EEEEEE;
+    position: absolute;
+    display: none;
+    text-align: center;
+    padding: 9px;
+    border-radius: 4px;
+    -moz-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    z-index: 1000;
+    white-space: nowrap;
+}
+
+.flotChart
+{
+    height: 300px;
+}
+
+/*-------- End StatsPage --------*/
+
+
+/***************************************************************/
+/* TagAutoComplete Styles */
+/***************************************************************/
+.AutoCompletePanel
+{
+    font-size: 95%;
+    border: solid .1em #999;
+    background-color: #f0f0f0;
+    padding: .15em;
+}
+
+.AutoCompletePanel div.Row
+{
+    color: #000;
+    cursor: pointer;
+    background-color: transparent;
+    padding: .15em .25em;
+    text-align: left;
+}
+
+.AutoCompletePanel div.Selected
+{
+    color: #fff;
+    background-color: #6D6D6D;
+}
+
+
+/*-------- Start Subscription Form --------*/
+
+#subscribeForm
+{
+    background-color: #D3D3D1;
+    border: 1px solid #000000;
+    -border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    padding: 15px;
+    position: absolute;
+    display: block;
+}
+
+#subscribeForm .subscribeFormbuttons
+{
+    text-align: right;
+    margin-top: 10px;
+}
+#subscribeForm .subscribeFormbuttons > button
+{
+    color: Blue;
+    border: none;
+    background: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#subscribeForm .subscribeFormclose
+{
+    display: none;
+}
+
+#subscribeForm table
+{
+    margin-bottom: 15px;
+}
+
+#subscribeForm table th
+{
+    text-align: left;
+    font-weight: bold;
+    border-bottom: 1px solid #000000;
+}
+
+#subscribeForm table td
+{
+    padding: 5px 10px 5px 20px;
+}
+
+#subscribeForm .rowHeading td
+{
+    font-weight: bold;
+    border-bottom: 1px solid #FFFFFF;
+}
+
+#subscribeForm table tr td:first-child
+{
+    padding: 5px 40px 5px 0;
+}
+
+
+/*-------- End Subscription Form --------*/
+
+/*-------- Start Tag Browser --------*/
+
+.tagBrowserfade
+{
+    position: absolute;
+    background-color: #aaaaaa;
+}
+#tagBrowser
+{
+    background-color: #f4f4f4;
+    border:1px solid #000000;
+    -border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    padding:15px;
+    position: absolute;
+    display: block;
+}
+
+#tagBrowser .tagBrowserbuttons
+{
+   text-align:right;
+   margin-top: 10px;
+}
+#tagBrowser .tagBrowserbuttons > button
+{
+    color: Blue;
+    border: none;
+    background: none;
+    font-weight: bold;
+    cursor:pointer;
+}
+
+#tagBrowser .tagBrowserclose
+{
+    display:none;
+}
+
+.tagBrowserContainer {
+    width: 450px;
+}
+
+.tagBrowserContainer h2 {
+    border-bottom: 1px solid #000000;
+    padding-bottom: 5px;
+}
+.tagBrowserContainer > p {
+    margin: 15px 0 15px 0;
+}
+
+.tagBrowserContainer .tags {
+    margin: 5px;
+    height: 225px;
+    overflow-y: scroll;
+}
+
+
+/*-------- End Tag Browser --------*/
+
+/*-------- Start List Filter Box --------*/
+
+div#filterInputBox
+{
+    overflow:auto;
+    min-width:225px;
+}
+
+.filterBox
+{
+    width: 100%;
+    background: #FFFFFF;
+    padding: 0px 2px;
+    height: 25px;
+    -moz-border-radius: 2px;
+    border-radius: 2px;
+    border: 1px solid #888888;
+    table-layout: auto;
+    margin-bottom:5px;
+}
+
+    .filterBox #filterImageCell
+    {
+        text-align: right;
+        padding: 0px;
+        vertical-align: middle;
+    }
+
+    .IE7 .filterBox #filterImageCell
+    {
+        padding:2px 2px 0 0;
+    }
+
+        .filterBox #filterImg
+        {
+            background: transparent url('searchButton.png') no-repeat 0 0;
+            width: 22px;
+            height: 22px;
+        }
+
+table.filterBox
+{
+    table-layout: fixed;
+}
+
+    .filterBox .stxtcell
+    {
+        padding-right: 4px;
+        width:90%;
+    }
+
+        .filterBox .stxtcell > input
+        {
+            margin-right: 4px;
+            height: 26px;
+            line-height:26px;
+            width: 100%;
+            padding: 0px;
+            padding-left: 4px;
+            padding-top: 2px;
+            border: none;
+        }
+
+        .IE7 .filterBox .stxtcell > input
+        {
+            height: 20px;
+        }
+
+            .filterBox .stxtcell > input.stxtinptpassive
+            {
+                color: #ACACAC;
+            }
+
+/*-------- End List Filter Box --------*/
+
+/*-------- Start Notifications --------*/
+
+#notificationsSummaryBox
+{
+    font-weight: bold;
+    padding: .5em;
+}
+
+
+.notificationsByDay, .notifications
+{
+    /*list-style: none;*/
+}
+
+.dayHeader
+{
+    border-bottom: 1px solid silver;
+    margin-top: 1em;
+    padding-bottom: .5em;
+}
+
+.notifications
+{
+    margin-top: .5em;
+}
+
+ul.notifications li
+{
+    line-height: 1.5em;
+}
+
+ul.notifications li.unread
+{
+    font-weight: bold;
+}
+
+ul.notifications li ol, ul.notifications li ul
+{
+    margin-left: 1.5em;
+}
+
+/*-------- End Notifications --------*/
+
+/*-------- Start ProjectDetailsPage --------*/
+
+#projectPage #projectInfo
+{
+    position: relative;
+    margin-top: 5px;
+    height: 100%;
+}
+#projectInfo .section
+{
+    float: left;
+    margin-bottom: 0px;
+    height: 100%;
+}
+
+    #projectInfo .section .itemBar, #projectInfo .section .itemBarLong
+    {
+        clear: both;
+        padding: 7px 0 7px 0;
+        overflow:auto;
+    }
+    
+     #projectInfo .section .itemBarLong:first-child
+     {
+         padding-top:3px;
+     }
+    
+    .IE7 #projectInfo .section .itemBar, .IE7 #projectInfo .section .itemBarLong
+    {
+        padding-top: 5px;
+    }
+
+    #projectInfo .section .itemBar > label, #projectInfo .section .itemBarLong > label
+    {
+        width: 130px;
+        float: left;
+        text-transform: capitalize;
+    }
+
+    #projectInfo .section .itemBar div#yourRating {
+        float:left;
+    }    
+    
+    #projectInfo .section .itemBar div.RatingStar {
+        margin:2px 1px 0 0;
+    }
+
+    #projectInfo .section .itemBar div#RatingCount {
+        padding: 0 0 0 3px;
+    }    
+    
+    #projectInfo .section .itemBar .ratingsWithCountContainer img {
+       vertical-align:top;
+       float:left;
+       padding-right: 4px;
+    }
+
+    #projectInfo .section .itemBar > span, #projectInfo .section .itemBarLong > span, #projectPage .section .itemBar > div
+    {
+        float: left;
+    }
+
+    #projectInfo .section .itemBar, #projectInfo .section .itemBarLong {
+        width: 100%;
+    }
+
+    #projectInfo .section .itemBar > span {
+        float: none;
+    }
+
+    #projectInfo .section .itemBar > span .shareThisItem {
+        white-space: nowrap;
+    }
+    
+    #projectInfo .section .itemBarLong div
+    {
+        margin-left: 130px;
+        padding: 0;
+    }
+    
+     #projectInfo .section .viewonlinecont
+     {
+         background-color:#d3d3d3;
+         padding:5px 10px;
+         margin-top:10px;
+         float:left;
+         font-weight:bold;
+     }
+
+#projectInfo #sectionLeft
+{
+    width: 50%;
+}
+#projectInfo #sectionRight
+{
+    width: 50%;
+}
+.IE7 #projectInfo #sectionRight
+{
+    width: auto;
+}
+
+#projectPage h2.projectSummary
+{    
+    font-weight:normal;
+    font-size: 1.1em;
+    margin-bottom: 11px;
+    line-height:1.4;
+    word-wrap: break-word;
+}
+
+.IE7 #projectPage h2.projectSummary
+{
+    font-family: 'Segoe UI' , 'Lucida Grande' ,Verdana,Arial,Helvetica,sans-serif;
+}
+
+.IE #projectPage .projectTitle, .IE9 #projectPage .projectTitle
+{
+    width: 100%; 
+}
+
+#projectPage #reportAbuse
+{
+    float: left;
+    font-size: x-small;
+}
+
+#projectPage .hiddenSidebar {
+    display: none;
+}
+
+#projectPage .fullProjectBody {
+    margin-left:-275px;
+}
+
+.IE8 #projectPage #userCard {
+    float: left;
+    height: auto;
+}
+
+#projectPage #userCard .avatar img {
+    max-width: 100px;
+    max-height: 100px;
+}
+
+#projectDetails
+{
+    overflow:hidden;
+}
+
+#projectBody
+{
+    width: 100%;
+    overflow:hidden;
+}
+
+    #projectDetails > div:first-child
+    {
+        margin: 5px 0 0 260px;
+    }
+ 
+    #projectBody > div:first-child
+    {
+        margin: 20px 0 0 260px;
+    }
+
+    .IE7 #projectContent .tabHeaders
+    {
+        overflow:hidden;
+        margin-bottom:-20px;
+    }
+
+#projectPage .sidebar
+{
+    float: left;
+    width: 215px;
+    margin-right: -250px;
+}
+
+    #projectPage .sidebar .section
+    {
+        margin: 20px 0 10px 0;
+    }
+
+        #projectPage .sidebar .section .titleBar h3
+        {
+            padding: 0 0 2px 0;
+        }
+
+        #projectPage .sidebar .section .itemBarRight
+        {
+            min-height: 21px;
+            position: relative;
+            padding-top: 5px;
+        }
+
+        #projectPage .sidebar .section .titleBar
+        {
+            margin-bottom: 5px;
+        }
+
+        #projectPage .sidebar .section .authorItem
+        {
+            padding: 0 0 5px 10px;
+        }
+
+            #projectPage .sidebar .section .authorItem a
+            {
+                display:block;
+                float:left;
+                max-width:170px;
+            }
+
+            #projectPage .sidebar .section .authorItem > div
+            {
+                float:right;
+            }
+
+    #projectPage .sidebar #advertisement
+    {
+        margin-top: 20px;
+    }
+
+    #projectPage .sidebar #advertisement .label
+    {
+        text-align: center;    
+    }
+
+    #projectPage .sidebar #moreFromAuthor 
+    {
+        width:225px;
+        margin: 20px 0 10px 0;
+        float:left;
+    }
+    
+    #projectPage .sidebar  #moreFromAuthor .bottomBar {
+        padding: 5px 0px 5px 25px;
+        text-align: right;
+    }
+
+#projectPage #Collections {
+    min-height:22px;
+    min-width:169px;
+}
+
+#projectPage #Collections .bevelButton {
+    background-color: #8CC63F;
+}
+
+#projectPage .bevelButton
+{
+    font-weight: bold;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    color: white;
+    padding: 2px 10px 3px;
+    text-align: center;
+}
+
+#projectPage #DiscussionsTabPane .bevelButton
+{
+    font-weight: normal;
+    color: black;
+    padding: 1px 10px 1px;
+}
+
+#projectPage #Downloads {
+    padding: 0 0 8px 0;
+    float: left;
+}
+    #projectPage #Downloads > div:first-child {
+        float: left;
+        margin: 15px 0 0 0;
+        height:35px;
+        line-height:1.6;
+        width: 130px;
+    }
+    #projectPage #Downloads label 
+    {
+        font-size:1.25em;
+    }
+    #projectPage #Downloads input
+    {
+        min-width: 100px;
+        padding: 3px 10px 3px 10px;
+        margin: 3px 10px 0 10px;
+        font-weight: bold;
+        float: left;
+    }
+    
+    #projectPage #Downloads .button
+    {
+        background-color:#007494;
+        color:#fff;
+        padding:5px 15px;
+        margin: 15px 15px 0 0;
+        float:left;
+    }
+    
+    #projectPage #Downloads .button:hover 
+    {
+        background-color:#0095c4;
+        text-decoration:none;
+    }
+
+#projectPage #projectBody .attachments {
+    margin: 0 0 15px 0;
+}
+
+    #projectPage #projectBody .attachments label {
+        float: left;
+    }
+
+        #projectPage #projectBody .attachments .files a, #projectPage #projectBody .attachments .files span {
+            float: left;
+            padding: 0 5px 0 5px;
+        }
+
+#publishBar
+{
+    border: 1px solid #707070;
+    background-color: #F8F8F8;
+    margin-top: 10px;
+}
+
+#sourceItem {
+    height: 610px;
+}
+    #sourceItem > div:first-child {
+        padding: 20px 5px 0 15px;
+        font-weight: bold;
+    }
+    #sourceItem > div+div {
+        height: 560px;
+        padding: 10px;
+        overflow: auto;
+    }
+    #sourceItem .copyCode {
+        font-weight: normal;
+        margin: 0 15px 0 0;
+        float: right;
+    }
+
+.sourceList {
+    height: 600px;
+    padding: 5px;
+    border-top: 1px solid #CCC;
+    margin-top: -1px;
+}
+
+        .sourceList .sourceListTabHeader
+        {
+            margin:20px 10px;
+        }
+        .sourceList .sourceListTabs
+        {
+            margin-bottom:20px;
+            border-bottom: 1px solid #CCC;
+            float:left;
+            width:100%;
+        }
+        .sourceList .sourceListTabs .languageTab {
+            padding:5px 10px 5px 10px;
+            font-weight: bold;
+            float: left;
+            margin: 0 3px 0px 0;
+            color:#00749E;
+        }
+        .sourceList .sourceListTabs .languageTab:hover 
+        {
+            color: #0095C4;
+        }
+
+        .sourceList .sourceListTabs .selectedLanguage {
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #ccc;
+            border-bottom:none;
+            margin-bottom:-2px;
+        }
+
+        .sourceList .sourceListTabs .unselectedLanguage {
+            cursor: pointer;
+        }
+
+        .sourceList .endTabs {
+            clear: both;
+        }
+
+    .sourceList .sourceListContent {
+        padding-top: 5px;
+    }
+
+
+.sbfc,
+.sbfe
+{
+    white-space: nowrap;
+	text-indent: 20px;
+	cursor: pointer;
+	padding: .2em 0em .2em 0em;
+	background-repeat: no-repeat;
+	background-position: left center;
+	font-weight: bold;
+	text-decoration: none !important;
+}
+
+.sbfc 
+{
+	background-image: url(../samples/node_closed.gif);
+}
+
+.sbfe
+{
+    white-space: nowrap;
+	background-image: url(../samples/node_opened.gif);
+}
+
+.ndbf
+{
+    white-space: nowrap;
+	text-indent:20px;
+}
+
+.sbf
+{
+    white-space: nowrap;
+	background: url(../samples/bullet.gif) no-repeat 4px -1px;
+	cursor: pointer;
+	text-indent: 20px;
+    white-space: nowrap;
+	padding: .1em 0em .1em 0em;
+}
+
+.sbsf,
+.sbf:hover
+{
+	color: #000;
+	text-decoration: none !important;
+	
+}
+
+.sbsf
+{
+	color: #000 !important;
+	background-color: rgb(232, 232, 232);
+}
+
+.sbf:hover
+{
+	color: #ce8b10;
+}
+
+/*-------- Translate --------*/
+.translatePage {
+    width: 900px;
+}
+.translatePage .fileManager {
+    margin-bottom:20px;
+}
+.translatePage .fileManager h4 {
+    margin-top:10px;
+}
+.translatePage #formContainer {
+    width: 100%;
+}
+.translatePage .formLabel {
+    width: 300px;
+    padding: 5px;
+}
+ .translatePage .textInput {
+    width: 425px;
+}
+.translatePage TEXTAREA.richText {
+    height: 600px;
+    width: 620px;
+}
+.translatePage TEXTAREA.unadornedEditor {
+    height: 600px;
+}
+.translatePage .formWideLabel, .translatePage .richText {
+    padding: 5px;
+}
+.translatePage .formWideLabel, .translatePage .unadornedEditor {
+    width: 750px;
+    padding: 5px;
+}
+.translatePage #languageSelection {
+    margin: 15px;
+    display: inline-block;
+}
+
+.translateTab, .translateTabSelected {
+    font-weight: bold;
+    float: left;
+    text-align: center;
+    margin: 10px;
+    padding: 7px;
+    background: #E8E8E8;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.translateTabSelected
+{
+    color: White;
+    background: Gray;
+}
+
+.translateTabSelected .translateLabel, .translateTab .translateLabel
+{
+    white-space: nowrap;  
+    float: left;  
+    padding: 0 5px 0 5px;
+}
+
+.translateTab #deleteLanguage, .translateTab #moreLanguages
+{
+    padding-left: 10px;
+}
+
+.translateLabel #deleteLanguage {
+    color: #FFFFFF;
+}
+/*-------- End Translate --------*/
+/*-------- Begin Eula --------*/
+
+
+#eulaPagefade
+{
+    position: absolute;
+    background-color: #FFFFFF;
+}
+
+#eulaPage
+{
+    background-color: #f4f4f4;
+    border: 1px solid #000000;
+    -border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    padding: 15px;
+    display: block;
+    max-width: 70%;
+}
+
+#eulaPage .eulaPageclose
+{
+    text-align: right;
+}
+
+#eulaPage .eulaPagemessage
+{
+    overflow: auto;
+    max-height: 350px;
+}
+
+    #eulaPage .eulaPagemessage h1
+    {
+        margin: 0 0 5px 0;
+    }
+
+#eulaPage .eulaPagebuttons
+{
+    text-align: right;
+    margin-top: 10px;
+}
+#eulaPage .eulaPagebuttons > button
+{
+    color: Blue;
+    border: none;
+    background: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+
+        #eulaPage #eula #documentText
+        {
+            line-height: normal;
+        }
+
+/*-------- End DocumentView --------*/
+/*-------- Begin FAQ --------*/
+
+#FAQPage #TableOfContents h2
+{
+    padding: 5px;
+    border-bottom: 2px solid #EFEFEF;
+    margin: 0 0 10px 0;
+    max-width: 70%;
+}
+
+#FAQPage .FAQSection
+{
+    padding: 10px 0px;
+    width: 70%;
+}
+
+    #FAQPage .FAQSection h2
+    {
+        padding: 5px;
+        border-bottom: 2px solid #EFEFEF;
+    }
+
+    #FAQPage .FAQSection h3
+    {
+        padding: 5px;
+    }
+
+    #FAQPage .FAQSection ul, #FAQPage .FAQSection ol
+    {
+        margin: 0;
+    }
+
+    #FAQPage .FAQSection #description > div
+    {
+        overflow: auto;
+        padding-left: 10px;
+    }
+
+        #FAQPage .FAQSection #description img
+        {
+            float: left;
+        }
+
+        #FAQPage .FAQSection #description div > div
+        {
+            padding-top: 10px;
+            float: left;
+        }
+
+    #FAQPage .FAQSection > div > div
+    {
+        padding: 0 15px;
+    }
+
+    #FAQPage #Reputation th, #FAQPage #Reputation td
+    {
+        padding-left: 20px;
+    }
+    
+/*-------- End FAQ --------*/
+/*-------- Begin DocumentView --------*/
+
+#documentView #documentText
+{
+    line-height: normal;
+}
+
+/*-------- End DocumentView --------*/
+
+.Opera wbr:after
+{
+    content: "\00200B"; 
+}
+
+
+.IE9 wbr:after
+{
+    content: "\00200B"; 
+}
+
+.IE8 wbr {
+  width: 0px;
+  display: inline-block;
+  overflow: hidden;
+}
+
+/*-------- Begin FileManager --------*/
+
+.uploadControlNoError 
+        {
+            height:30px
+        }
+.uploadControlWithError 
+        {
+            height:80px;
+        }
+/*-------- End FileManager --------*/
+
+/*-------- Begin User Card --------*/
+#userCard .titleBar {
+    border-bottom: solid 5px #E8E8E8;
+    margin: 10px 0 5px 0;
+}
+    #userCard .titleBar h3
+    {
+        font-size: 1.0em;
+        font-weight: bold;
+        line-height: 125%;
+        padding: 0 0 2px 0;
+    }
+
+#userCard .userFeed {
+    float: right;
+}
+   
+#userCard .bio {
+    max-width:300px;
+    white-space: normal;
+}
+        
+#userCard .avatar
+{
+    padding: 5px 5px 10px 5px;
+    margin: 0 0 3px 0;
+    text-align: center;
+}
+
+#userCard .itemBar {
+    padding: 5px;
+}
+
+    #userCard .itemBar label
+    {
+        float: left;
+        text-transform: capitalize;
+    }
+
+    #userCard .itemBar label+span {
+        display: block;
+        margin-left: 100px;
+    }
+
+#userCard .collapsableSidebar {
+    clear:both;
+    width:100%;
+    margin-top: 5px;
+}
+
+/* Profile Overrides */
+#userCard
+{
+    padding: 0 0 10px 0
+}
+
+#userCard .profile-usercard
+{
+    width:225px;
+}
+
+#userCard .profile-usercard, #userCard .profile-inline, #userCard .profile-inline-header
+{
+    border:0px;
+    background-color:#fff;
+}
+
+#userCard .profile-userimage-large
+{
+    margin-bottom:10px;
+    border:none;
+    width:auto;
+    height:auto;
+}
+
+#userCard .profile-inline .profile-inline-header-details 
+{
+    width:100%;
+    display:block;
+    clear:both;
+    margin-left:0px;
+}
+
+
+    
+/*-------- End User Card --------*/
+/*-------- Begin Description Progress Meter --------*/
+
+#descriptionProgressMeter {
+    float: right; 
+    border-top: 1px solid #DADADA; 
+    border-left: 1px solid #DADADA; 
+    width: 210px;
+    padding-left: 7px;
+}
+
+    #descriptionProgressMeter h4 {
+        font-weight: bold;
+    }
+
+    #descriptionProgressMeter #progressGraphic {
+        border: 1px solid #888888;
+        width: 205px;        
+        margin: 10px 0;
+        background-color: #E9E9E9;
+        padding: 1px 0 0 1px;
+    }
+
+        #descriptionProgressMeter #progressGraphic div {
+            background-image: url("../common/progress_meter.png");
+            padding-left: 5px;
+        }
+
+    #descriptionProgressMeter #progressText {
+        font-weight: bold;
+        margin: 5px 0;
+        
+    }
+            
+    #descriptionProgressMeter #goodDescriptionText  p+p {    
+        padding: 5px 0;
+    }
+
+        #descriptionProgressMeter #goodDescriptionText > div {
+            margin-top: 5px;
+            width: 150px;
+            border-radius: 5px;
+            -moz-border-radius: 5px;
+            -webkit-border-radius: 5px;
+            overflow: auto;
+        }
+
+            #descriptionProgressMeter #goodDescriptionText div img {
+                float: left;
+            }
+
+            #descriptionProgressMeter #goodDescriptionText div div {    
+                margin: 7px 0 5px 10px;
+            }
+
+/*-------- End Description Progress Indicator --------*/
+
+/*-------- Start Sample Pack Tab View --------*/
+.SamplePackTab #headerBar
+{    
+    padding: 15px 5px 20px 5px;
+    font-weight: bold
+}
+    .SamplePackTab #headerBar .reportCount
+    {
+        padding-top: 2px;
+    }
+    .SamplePackTab #headerBar .samplePackSort
+    {
+        float: right;
+        color: #666;
+    }
+/*-------- End Sample Pack Tab View --------*/

@@ -1,0 +1,179 @@
+﻿body {
+    color: #000000;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 0.813em;
+    font-style: normal;
+    word-wrap: break-word;
+}
+
+/*BEGIN HEADERS*/
+.h1, h1 {
+    color: #3A3E43;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 1.4em;
+    font-weight: bold;
+    margin: 0;
+}
+
+.h2, h2 {
+    color: #3A3E43;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 1.2em;
+    font-weight: bold;
+}
+.h3, h3 {
+    color: #3A3E43;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 1.077em;
+    font-weight: bold;
+}
+.h4, h4 {
+    color: #3A3E43;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 1em;
+    font-weight: bold;
+}
+h4.subHeading {
+    margin-bottom: 7px;
+    margin-top: 13px;
+}
+/*END HEADERS*/
+
+/*BEGIN LINKS*/
+a:link {
+    color: #00749E;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+a:visited {
+    color: #960BB4;
+    text-decoration: none;
+}
+a:focus {
+    outline: 1px dotted #000000;
+}
+
+a.libraryLink:link {
+    text-decoration:none;
+    border-bottom:1px dotted;
+}
+
+/*END LINKS*/
+
+/*BEGIN IMAGES*/
+img {
+    border: 0 none;
+}
+/*END IMAGES*/
+
+/*BEGIN TABLE*/
+.title table {
+    color: #000000;
+    font-family: 'Segoe UI',Verdana,Arial;
+    font-size: 1.077em;
+    font-style: normal;
+}
+table {
+    border-collapse: collapse;
+}
+
+table, table th, table td {
+    border:1px solid #BBBBBB;
+}
+/*END TABLE*/
+
+/*BEGIN LIST*/
+ul {
+    list-style-type: disc;
+    margin-left:40px;
+    padding-left: 0;
+}
+ul li {
+    padding-bottom: 10px;
+}
+ol {
+    margin-left:40px;
+    padding-left: 0;
+}
+ol li {
+    padding-bottom: 10px;
+}
+/*END LIST*/
+
+.scriptcode {
+    position: relative;
+    padding: 8px 8px 8px 8px;
+    background: #FFFFFF;
+    font-size: 12px;
+    line-height: 125%;
+    font-weight:normal;
+}
+.scriptcode pre 
+{ 
+    white-space: pre-wrap !important;       /* css-3 */
+    word-wrap: break-word !important;       /* Internet Explorer 5.5+ */
+    margin:0 0 10px 0 !important;
+    padding: 10px;
+    border-top: solid 2px #D0D2D2;
+    border-bottom: solid 2px #D0D2D2;
+    border-left: solid 1px #D0D2D2;
+    border-right: solid 1px #D0D2D2;
+}
+            
+.scriptcode .title { 
+    color:#E66A38;
+    font-size: 12px;
+    font-weight:bold;
+    margin: 0;
+    min-height: 23px;
+}
+.scriptcode .title > span:first-child {
+    border-left: solid 1px #D0D2D2;
+}
+.scriptcode .title > span {
+    padding: 4px 8px 4px 8px;
+    display: inline-block;
+    border-top: 1px solid #D0D2D2;
+    border-right: 1px solid #D0D2D2;
+    border-collapse: collapse;
+    text-align: center;
+    background: white;
+}
+.scriptcode .title > span.otherTab {
+    color: #1364C4;
+    background: #EFF5FF;
+    cursor: pointer;
+}
+
+.scriptcode .hidden {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+.scriptcode  .copyCode {
+    padding: 8px 2px 0 2px !important;
+    margin-right: 15px;
+    position: absolute !important;
+    right: 0 !important;
+    top: 17px;
+    display:block !important;
+    background: #FFFFFF;
+}
+.scriptcode .pluginLinkHolder {
+    display: none;
+}
+.scriptcode .pluginEditHolderLink {
+    display: none;
+}
+
+.Opera wbr
+{
+    display: inline-block;
+}
+
+.IE9 wbr:after
+{
+content: "\00200B"; 
+}

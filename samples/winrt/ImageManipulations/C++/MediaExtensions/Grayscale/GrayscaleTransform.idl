@@ -1,0 +1,11 @@
+import "Windows.Media.idl";
+
+#include <sdkddkver.h>
+
+namespace GrayscaleTransform
+{
+	[version(NTDDI_WIN8)]
+	runtimeclass GrayscaleEffect 
+    {
+	}
+}

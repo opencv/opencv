@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Image Include="Assets\microsoft-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\placeholder-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\smallTile-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\splash-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\squareTile-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\storeLogo-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\tile-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="Assets\windows-sdk.png">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="MainPage.xaml" />
+    <Page Include="Common\StandardStyles.xaml">
+      <Filter>Common</Filter>
+    </Page>
+    <Page Include="Sample-Utils\SampleTemplateStyles.xaml">
+      <Filter>Sample-Utils</Filter>
+    </Page>
+    <Page Include="BasicCapture.xaml" />
+    <Page Include="AdvancedCapture.xaml" />
+    <Page Include="AudioCapture.xaml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="MainPage.xaml.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="App.xaml.h" />
+    <ClInclude Include="Common\SuspensionManager.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\LayoutAwarePage.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Constants.h" />
+    <ClInclude Include="AdvancedCapture.xaml.h" />
+    <ClInclude Include="AudioCapture.xaml.h" />
+    <ClInclude Include="BasicCapture.xaml.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.xaml.cpp" />
+    <ClCompile Include="MainPage.xaml.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Common\LayoutAwarePage.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\SuspensionManager.cpp">
+      <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Constants.cpp" />
+    <ClCompile Include="AdvancedCapture.xaml.cpp" />
+    <ClCompile Include="AudioCapture.xaml.cpp" />
+    <ClCompile Include="BasicCapture.xaml.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Assets">
+      <UniqueIdentifier>{132eec18-b164-4b15-a746-643880e9c5d9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{476b4177-f316-4458-8e13-cab3dc2381c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sample-Utils">
+      <UniqueIdentifier>{54f287f8-e4cb-4f47-97d0-4c469de6992e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
