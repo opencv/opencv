@@ -1475,7 +1475,7 @@ Such a scheme makes the memory management robust and efficient at the same time 
     Mat color;
     ...
     Mat gray(color.rows, color.cols, color.depth());
-    cvtColor(color, gray, CV_BGR2GRAY);
+    cvtColor(color, gray, COLOR_BGR2GRAY);
 
 
 you can simply write: ::
@@ -1483,7 +1483,7 @@ you can simply write: ::
     Mat color;
     ...
     Mat gray;
-    cvtColor(color, gray, CV_BGR2GRAY);
+    cvtColor(color, gray, COLOR_BGR2GRAY);
 
 
 because ``cvtColor`` , as well as the most of OpenCV functions, calls ``Mat::create()`` for the output array internally.
