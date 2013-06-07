@@ -48,6 +48,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 #include "opencv2/core/cuda/dynamic_smem.hpp"
 
@@ -811,7 +812,7 @@ namespace cv { namespace gpu { namespace cudev
 
             const int ind = ::atomicAdd(r_sizes + n, 1);
             if (ind < maxSize)
-                r_table(n, ind) = p - templCenter;
+                r_table(n, ind) = saturate_cast<short2>(p - templCenter);
         }
 
         void buildRTable_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
@@ -855,7 +856,7 @@ namespace cv { namespace gpu { namespace cudev
 
             for (int j = 0; j < r_row_size; ++j)
             {
-                short2 c = p - r_row[j];
+                int2 c = p - r_row[j];
 
                 c.x = __float2int_rn(c.x * idp);
                 c.y = __float2int_rn(c.y * idp);

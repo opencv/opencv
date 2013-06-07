@@ -46,6 +46,7 @@
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
