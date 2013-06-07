@@ -26,21 +26,14 @@ namespace temp_viz
         void setBackgroundColor(const Color& color = Color::black());
 
         void addCoordinateSystem(double scale, const Affine3f& t, const String &id = "coordinate");
-
-        void addPointCloud(const Mat& cloud, const Mat& colors, const String& id = "cloud", const Mat& mask = Mat());
+	
+	void showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose = cv::Affine3f::Identity());
 
         bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String &id = "cloud");
-
-
-
 
         bool addPlane (const ModelCoefficients &coefficients, const String &id = "plane");
         bool addPlane (const ModelCoefficients &coefficients, double x, double y, double z, const String &id = "plane");
         bool removeCoordinateSystem (const String &id = "coordinate");
-
-
-        bool updatePointCloud (const Mat& cloud, const Mat& colors, const String& id = "cloud", const Mat& mask = Mat());
-
 
         bool addPolygonMesh (const Mesh3d& mesh, const String &id = "polygon");
         bool updatePolygonMesh (const Mesh3d& mesh, const String &id = "polygon");

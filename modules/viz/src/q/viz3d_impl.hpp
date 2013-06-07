@@ -96,8 +96,14 @@ public:
     bool addText3D (const std::string &text, const cv::Point3f &position, const Color& color, double textScale = 1.0, const std::string &id = "");
 
     bool addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level = 100, float scale = 0.02f, const std::string &id = "cloud");
-    void addPointCloud(const cv::Mat& cloud, const cv::Mat& colors, const std::string& id = "cloud", const cv::Mat& mask = cv::Mat());
-    bool updatePointCloud (const cv::Mat& cloud, const cv::Mat& colors, const std::string& id = "cloud", const cv::Mat& mask = cv::Mat());
+        
+    /** \brief If the id exists, updates the point cloud; otherwise, adds a new point cloud to the scene
+	  * \param[in] id a variable to identify the point cloud
+	  * \param[in] cloud cloud input in x,y,z coordinates
+	  * \param[in] colors color input in the same order of the points or single uniform color
+	  * \param[in] pose transform to be applied on the point cloud
+	  */
+    void showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose = cv::Affine3f::Identity());
 
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");

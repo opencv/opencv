@@ -78,56 +78,80 @@ TEST(Viz_viz3d, accuracy)
 
     cv::Mat cloud = cvcloud_load();
 
-
     cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
-    v.addPointCloud(cloud, colors);
-    cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));
-
-    v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
-
-
-    temp_viz::ModelCoefficients mc;
-    mc.values.resize(4);
-    mc.values[0] = mc.values[1] = mc.values[2] = mc.values[3] = 1;
-    v.addPlane(mc);
-
-
+    
+    float angle_x = 0.0f;
+    float angle_y = 0.0f;
+    float angle_z = 0.0f;
+    float pos_x = 0.0f;
+    float pos_y = 0.0f;
+    float pos_z = 0.0f;
     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
     v.addPolygonMesh(*mesh, "pq");
-
-    v.spinOnce(1000, true);
-
-    v.removeCoordinateSystem();
-
-    for(int i = 0; i < mesh->cloud.cols; ++i)
-        mesh->cloud.ptr<cv::Point3f>()[i] += cv::Point3f(1, 1, 1);
-
-    v.updatePolygonMesh(*mesh, "pq");
-
-
-    for(int i = 0; i < mesh->cloud.cols; ++i)
-        mesh->cloud.ptr<cv::Point3f>()[i] -= cv::Point3f(2, 2, 2);
-    v.addPolylineFromPolygonMesh(*mesh);
-
-
-    v.addText("===Abd sadfljsadlk", 100, 100, cv::Scalar(255, 0, 0), 15);
-        for(int i = 0; i < cloud.cols; ++i)
-        cloud.ptr<cv::Point3f>()[i].x *=2;
-
-    colors.setTo(cv::Scalar(255, 0, 0));
-
-    v.addSphere(cv::Point3f(0, 0, 0), 0.3, temp_viz::Color::blue());
-
-    cv::Mat cvpoly(1, 5, CV_32FC3);
-    cv::Point3f* pdata = cvpoly.ptr<cv::Point3f>();
-    pdata[0] = cv::Point3f(0, 0, 0);
-    pdata[1] = cv::Point3f(0, 1, 1);
-    pdata[2] = cv::Point3f(3, 1, 2);
-    pdata[3] = cv::Point3f(0, 2, 4);
-    pdata[4] = cv::Point3f(7, 2, 3);
-    v.addPolygon(cvpoly, temp_viz::Color::white());
-
-    v.updatePointCloud(cloud, colors);
-    v.spin();
+    while(1)
+    {
+	// Creating new point cloud with id cloud1
+	cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
+	v.showPointCloud("cloud1", cloud, colors, cloudPosition);
+	
+	angle_x += 0.1;
+	angle_y -= 0.1;
+	angle_z += 0.1;
+	pos_x = std::sin(angle_x);
+	pos_y = std::sin(angle_x);
+	pos_z = std::sin(angle_x);
+	
+	v.spinOnce(1,true);
+    }
+   
+//     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));
+// 
+//     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
+// 
+// 
+//     temp_viz::ModelCoefficients mc;
+//     mc.values.resize(4);
+//     mc.values[0] = mc.values[1] = mc.values[2] = mc.values[3] = 1;
+//     v.addPlane(mc);
+// 
+// 
+//     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("horse.ply");
+//     v.addPolygonMesh(*mesh, "pq");
+// 
+//     v.spinOnce(1000, true);
+// 
+//     v.removeCoordinateSystem();
+// 
+//     for(int i = 0; i < mesh->cloud.cols; ++i)
+//         mesh->cloud.ptr<cv::Point3f>()[i] += cv::Point3f(1, 1, 1);
+// 
+//     v.updatePolygonMesh(*mesh, "pq");
+// 
+// 
+//     for(int i = 0; i < mesh->cloud.cols; ++i)
+//         mesh->cloud.ptr<cv::Point3f>()[i] -= cv::Point3f(2, 2, 2);
+//     v.addPolylineFromPolygonMesh(*mesh);
+// 
+// 
+//     v.addText("===Abd sadfljsadlk", 100, 100, cv::Scalar(255, 0, 0), 15);
+//     for(int i = 0; i < cloud.cols; ++i)
+// 	cloud.ptr<cv::Point3f>()[i].x *=2;
+// 
+//     colors.setTo(cv::Scalar(255, 0, 0));
+// 
+//     v.addSphere(cv::Point3f(0, 0, 0), 0.3, temp_viz::Color::blue());
+// 
+//     cv::Mat cvpoly(1, 5, CV_32FC3);
+//     cv::Point3f* pdata = cvpoly.ptr<cv::Point3f>();
+//     pdata[0] = cv::Point3f(0, 0, 0);
+//     pdata[1] = cv::Point3f(0, 1, 1);
+//     pdata[2] = cv::Point3f(3, 1, 2);
+//     pdata[3] = cv::Point3f(0, 2, 4);
+//     pdata[4] = cv::Point3f(7, 2, 3);
+//     v.addPolygon(cvpoly, temp_viz::Color::white());
+// 
+//     // Updating cloud1
+//     v.showPointCloud("cloud1", cloud, colors);
+//     v.spin();
 }
 
