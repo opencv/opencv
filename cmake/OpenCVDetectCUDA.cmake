@@ -160,6 +160,10 @@ if(CUDA_FOUND)
 
       # we remove -Wsign-promo as it generates warnings under linux
       string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
+
+      # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
+      # but NVCC uses C compiler by default
+      string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
     endforeach()
 
     if(BUILD_SHARED_LIBS)
