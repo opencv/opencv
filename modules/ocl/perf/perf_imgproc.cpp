@@ -922,3 +922,48 @@ PERFTEST(remap)
 
     }
 }
+///////////// CLAHE ////////////////////////
+PERFTEST(CLAHE)
+{
+    Mat src, dst;
+    cv::ocl::oclMat d_src, d_dst;
+    int all_type[] = {CV_8UC1};
+    std::string type_name[] = {"CV_8UC1"};
+
+    double clipLimit = 40.0;
+
+    cv::Ptr<cv::CLAHE>      clahe   = cv::createCLAHE(clipLimit);
+    cv::Ptr<cv::ocl::CLAHE> d_clahe = cv::ocl::createCLAHE(clipLimit);
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    {
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+
+            gen(src, size, size, all_type[j], 0, 256);
+
+            CPU_ON;
+            clahe->apply(src, dst);
+            CPU_OFF;
+
+            d_src.upload(src);
+
+            WARMUP_ON;
+            d_clahe->apply(d_src, d_dst);
+            WARMUP_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, cv::Mat(d_dst), 1.0);
+
+            GPU_ON;
+            d_clahe->apply(d_src, d_dst);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src.upload(src);
+            d_clahe->apply(d_src, d_dst);
+            d_dst.download(dst);
+            GPU_FULL_OFF;
+        }
+    }
+}
