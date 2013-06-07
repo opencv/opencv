@@ -183,11 +183,21 @@ void cv::ocl::oclMat::upload(const Mat &m)
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
-                                     (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
-        openCLVerifyCall(err);
+        cl_mem temp;
+        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP){
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+            openCLVerifyCall(err);
+            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, 
+                           wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        }
+        else{
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, m.datastart, &err);
+            openCLVerifyCall(err);
+        }
 
-        openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        
         convert_C3C4(temp, *this);
         openCLSafeCall(clReleaseMemObject(temp));
     }
@@ -915,7 +925,7 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
+        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
                             rows, rw_type, mem_type, hptr);
 
         if (esz * cols == step)
