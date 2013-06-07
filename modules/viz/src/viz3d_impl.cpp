@@ -28,10 +28,10 @@ void temp_viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition
 void temp_viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
 
-void temp_viz::Viz3d::VizImpl::showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose)
+void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose)
 {
-    cv::Mat cloudMat = cloud.getMat();
-    cv::Mat colorsMat = colors.getMat();
+    Mat cloudMat = cloud.getMat();
+    Mat colorsMat = colors.getMat();
     CV_Assert(cloudMat.type() == CV_32FC3 && colorsMat.type() == CV_8UC3 && cloudMat.size() == colorsMat.size());
     
     vtkSmartPointer<vtkPolyData> polydata;
@@ -84,13 +84,13 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const std::string& id, cv::InputAr
     // If a point is NaN, ignore it
     for(int y = 0; y < cloudMat.rows; ++y)
     {
-	const cv::Point3f* crow = cloudMat.ptr<cv::Point3f>(y);
+	const Point3f* crow = cloudMat.ptr<Point3f>(y);
 	for(int x = 0; x < cloudMat.cols; ++x)
 	    if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
 	    {
 		// Points are transformed based on pose parameter
-		cv::Point3f transformed_point = pose * crow[x];
-		memcpy (&data[j++ * 3], &transformed_point, sizeof(cv::Point3f));
+		Point3f transformed_point = pose * crow[x];
+		memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3f));
 	    }
     }
     nr_points = j;
@@ -118,11 +118,11 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const std::string& id, cv::InputAr
     j = 0;
     for(int y = 0; y < colorsMat.rows; ++y)
     {
-	const cv::Vec3b* crow = colorsMat.ptr<cv::Vec3b>(y);
-	const cv::Point3f* cloud_row = cloudMat.ptr<cv::Point3f>(y);
+	const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
+	const Point3f* cloud_row = cloudMat.ptr<Point3f>(y);
 	for(int x = 0; x < colorsMat.cols; ++x)
 	    if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-		memcpy (&colors_data[j++ * 3], &crow[x], sizeof(cv::Vec3b));
+		memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
     }
     
     reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (colors_data, 3 * nr_points, 0);
@@ -152,9 +152,6 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const std::string& id, cv::InputAr
 	// Save the viewpoint transformation matrix to the global actor map
 	vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
 	convertToVtkMatrix (sensor_origin, sensor_orientation, transformation);
-// 	convertToVtkMatrix (pose.matrix, transformation);
-	
-	std::cout << transformation->GetElement(0,3) << endl;
 	
 	(*cloud_actor_map_)[id].viewpoint_transformation_ = transformation;
     }

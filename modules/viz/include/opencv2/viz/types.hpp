@@ -16,14 +16,17 @@ namespace temp_viz
     typedef cv::Vec4d Vec4d;
     typedef cv::Vec2d Vec2d;
     typedef cv::Vec2i Vec2i;
+    typedef cv::Vec3b Vec3b;
     typedef cv::Matx33d Matx33d;
     typedef cv::Affine3f Affine3f;
     typedef cv::Affine3d Affine3d;
     typedef cv::Point3f Point3f;
+    typedef cv::Point3d Point3d;
     typedef cv::Matx44d Matx44d;
     typedef cv::Matx44f Matx44f;
     typedef cv::Size Size;
     typedef cv::Point Point;
+    typedef cv::InputArray InputArray;
 
 
 
