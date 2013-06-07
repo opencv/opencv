@@ -32,7 +32,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud
 {
     Mat cloudMat = cloud.getMat();
     Mat colorsMat = colors.getMat();
-    CV_Assert(cloudMat.type() == CV_32FC3 && colorsMat.type() == CV_8UC3 && cloudMat.size() == colorsMat.size());
+    CV_Assert((cloudMat.type() == CV_32FC3 || cloudMat.type() == CV_64FC3) && colorsMat.type() == CV_8UC3 && cloudMat.size() == colorsMat.size());
     
     vtkSmartPointer<vtkPolyData> polydata;
     vtkSmartPointer<vtkCellArray> vertices;
@@ -57,7 +57,10 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud
 	if (!points)
 	{
 	    points = vtkSmartPointer<vtkPoints>::New ();
-	    points->SetDataTypeToFloat ();
+	    if (cloudMat.type() == CV_32FC3)
+		points->SetDataTypeToFloat ();
+	    else if (cloudMat.type() == CV_64FC3)
+		points->SetDataTypeToDouble ();
 	    polydata->SetPoints (points);
 	}
 	points->SetNumberOfPoints (nr_points);
@@ -69,30 +72,54 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud
 	polydata = reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->GetInput ();
 	vertices = polydata->GetVerts ();
 	points = polydata->GetPoints ();
+	// Update the point data type based on the cloud
+	if (cloudMat.type() == CV_32FC3)
+	    points->SetDataTypeToFloat ();
+	else if (cloudMat.type() == CV_64FC3)
+	    points->SetDataTypeToDouble ();	
 	// Copy the new point array in
 	nr_points = cloudMat.size().area();
 	points->SetNumberOfPoints (nr_points);
     }
     
-    
-    // Get a pointer to the beginning of the data array
-    float *data = (static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0);
-    
-    // Scan through the data and apply mask where point is NAN
     int j = 0;
-     
-    // If a point is NaN, ignore it
-    for(int y = 0; y < cloudMat.rows; ++y)
+    if (cloudMat.type() == CV_32FC3)
     {
-	const Point3f* crow = cloudMat.ptr<Point3f>(y);
-	for(int x = 0; x < cloudMat.cols; ++x)
-	    if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
-	    {
-		// Points are transformed based on pose parameter
-		Point3f transformed_point = pose * crow[x];
-		memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3f));
-	    }
+	// Get a pointer to the beginning of the data array
+	float *data = (static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0);
+	
+	// Scan through the data and apply mask where point is NAN
+	for(int y = 0; y < cloudMat.rows; ++y)
+	{
+	    const Point3f* crow = cloudMat.ptr<Point3f>(y);
+	    for(int x = 0; x < cloudMat.cols; ++x)
+		if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
+		{
+		    // Points are transformed based on pose parameter
+		    Point3f transformed_point = pose * crow[x];
+		    memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3f));
+		}
+	}
     }
+    else if (cloudMat.type() == CV_64FC3)
+    {
+	// Get a pointer to the beginning of the data array
+	double *data = (static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0);
+	
+	// If a point is NaN, ignore it
+	for(int y = 0; y < cloudMat.rows; ++y)
+	{
+	    const Point3d* crow = cloudMat.ptr<Point3d>(y);
+	    for(int x = 0; x < cloudMat.cols; ++x)
+		if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
+		{
+		    // Points are transformed based on pose parameter
+		    Point3d transformed_point = pose * crow[x];
+		    memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3d));
+		}
+	}
+    }
+    
     nr_points = j;
     points->SetNumberOfPoints (nr_points);
     
@@ -116,13 +143,27 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud
     unsigned char* colors_data = new unsigned char[nr_points * 3];
     
     j = 0;
-    for(int y = 0; y < colorsMat.rows; ++y)
+    if (cloudMat.type() == CV_32FC3)
     {
-	const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
-	const Point3f* cloud_row = cloudMat.ptr<Point3f>(y);
-	for(int x = 0; x < colorsMat.cols; ++x)
-	    if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-		memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
+	for(int y = 0; y < colorsMat.rows; ++y)
+	{
+	    const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
+	    const Point3f* cloud_row = cloudMat.ptr<Point3f>(y);
+	    for(int x = 0; x < colorsMat.cols; ++x)
+		if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
+		    memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
+	}
+    }
+    else if (cloudMat.type() == CV_64FC3)
+    {
+	for(int y = 0; y < colorsMat.rows; ++y)
+	{
+	    const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
+	    const Point3d* cloud_row = cloudMat.ptr<Point3d>(y);
+	    for(int x = 0; x < colorsMat.cols; ++x)
+		if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
+		    memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
+	}
     }
     
     reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (colors_data, 3 * nr_points, 0);
