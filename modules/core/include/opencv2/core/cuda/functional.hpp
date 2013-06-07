@@ -554,8 +554,8 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ thresh_binary_func(const thresh_binary_func& other)
             : thresh(other.thresh), maxVal(other.maxVal) {}
 
-        const T thresh;
-        const T maxVal;
+        T thresh;
+        T maxVal;
     };
 
     template <typename T> struct thresh_binary_inv_func : unary_function<T, T>
@@ -571,8 +571,8 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ thresh_binary_inv_func(const thresh_binary_inv_func& other)
             : thresh(other.thresh), maxVal(other.maxVal) {}
 
-        const T thresh;
-        const T maxVal;
+        T thresh;
+        T maxVal;
     };
 
     template <typename T> struct thresh_trunc_func : unary_function<T, T>
@@ -588,7 +588,7 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ thresh_trunc_func(const thresh_trunc_func& other)
             : thresh(other.thresh) {}
 
-        const T thresh;
+        T thresh;
     };
 
     template <typename T> struct thresh_to_zero_func : unary_function<T, T>
@@ -604,7 +604,7 @@ namespace cv { namespace gpu { namespace cudev
        __host__  __device__ __forceinline__ thresh_to_zero_func(const thresh_to_zero_func& other)
             : thresh(other.thresh) {}
 
-        const T thresh;
+        T thresh;
     };
 
     template <typename T> struct thresh_to_zero_inv_func : unary_function<T, T>
@@ -620,7 +620,7 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ thresh_to_zero_inv_func(const thresh_to_zero_inv_func& other)
             : thresh(other.thresh) {}
 
-        const T thresh;
+        T thresh;
     };
 
     // Function Object Adaptors
@@ -636,7 +636,7 @@ namespace cv { namespace gpu { namespace cudev
       __host__ __device__ __forceinline__ unary_negate() {}
       __host__ __device__ __forceinline__ unary_negate(const unary_negate& other) : pred(other.pred) {}
 
-      const Predicate pred;
+      Predicate pred;
     };
 
     template <typename Predicate> __host__ __device__ __forceinline__ unary_negate<Predicate> not1(const Predicate& pred)
@@ -657,7 +657,7 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ binary_negate() {}
         __host__ __device__ __forceinline__ binary_negate(const binary_negate& other) : pred(other.pred) {}
 
-        const Predicate pred;
+        Predicate pred;
     };
 
     template <typename BinaryPredicate> __host__ __device__ __forceinline__ binary_negate<BinaryPredicate> not2(const BinaryPredicate& pred)
@@ -677,8 +677,8 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ binder1st() {}
         __host__ __device__ __forceinline__ binder1st(const binder1st& other) : op(other.op), arg1(other.arg1) {}
 
-        const Op op;
-        const typename Op::first_argument_type arg1;
+        Op op;
+        typename Op::first_argument_type arg1;
     };
 
     template <typename Op, typename T> __host__ __device__ __forceinline__ binder1st<Op> bind1st(const Op& op, const T& x)
@@ -698,8 +698,8 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ binder2nd() {}
         __host__ __device__ __forceinline__ binder2nd(const binder2nd& other) : op(other.op), arg2(other.arg2) {}
 
-        const Op op;
-        const typename Op::second_argument_type arg2;
+        Op op;
+        typename Op::second_argument_type arg2;
     };
 
     template <typename Op, typename T> __host__ __device__ __forceinline__ binder2nd<Op> bind2nd(const Op& op, const T& x)

@@ -44,7 +44,8 @@
 
 #include "cvconfig.h"
 #include "opencv2/core.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpuoptflow.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/legacy.hpp"
