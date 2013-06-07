@@ -91,8 +91,8 @@ namespace arithm
             return b != 0 ? saturate_cast<D>(a / b) : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
     template <typename T> struct Div<T, float> : binary_function<T, T, float>
     {
@@ -101,8 +101,8 @@ namespace arithm
             return b != 0 ? static_cast<float>(a) / b : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
     template <typename T> struct Div<T, double> : binary_function<T, T, double>
     {
@@ -111,15 +111,15 @@ namespace arithm
             return b != 0 ? static_cast<double>(a) / b : 0;
         }
 
-        __device__ __forceinline__ Div() {}
-        __device__ __forceinline__ Div(const Div& other) {}
+        __host__ __device__ __forceinline__ Div() {}
+        __host__ __device__ __forceinline__ Div(const Div&) {}
     };
 
     template <typename T, typename S, typename D> struct DivScale : binary_function<T, T, D>
     {
         S scale;
 
-        explicit DivScale(S scale_) : scale(scale_) {}
+        __host__ explicit DivScale(S scale_) : scale(scale_) {}
 
         __device__ __forceinline__ D operator ()(T a, T b) const
         {

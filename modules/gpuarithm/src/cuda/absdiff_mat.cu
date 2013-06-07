@@ -62,8 +62,8 @@ namespace arithm
             return vabsdiff4(a, b);
         }
 
-        __device__ __forceinline__ VAbsDiff4() {}
-        __device__ __forceinline__ VAbsDiff4(const VAbsDiff4& other) {}
+        __host__ __device__ __forceinline__ VAbsDiff4() {}
+        __host__ __device__ __forceinline__ VAbsDiff4(const VAbsDiff4&) {}
     };
 
     struct VAbsDiff2 : binary_function<uint, uint, uint>
@@ -73,8 +73,8 @@ namespace arithm
             return vabsdiff2(a, b);
         }
 
-        __device__ __forceinline__ VAbsDiff2() {}
-        __device__ __forceinline__ VAbsDiff2(const VAbsDiff2& other) {}
+        __host__ __device__ __forceinline__ VAbsDiff2() {}
+        __host__ __device__ __forceinline__ VAbsDiff2(const VAbsDiff2&) {}
     };
 
     __device__ __forceinline__ int _abs(int a)
@@ -97,8 +97,8 @@ namespace arithm
             return saturate_cast<T>(_abs(a - b));
         }
 
-        __device__ __forceinline__ AbsDiffMat() {}
-        __device__ __forceinline__ AbsDiffMat(const AbsDiffMat& other) {}
+        __host__ __device__ __forceinline__ AbsDiffMat() {}
+        __host__ __device__ __forceinline__ AbsDiffMat(const AbsDiffMat&) {}
     };
 }
 

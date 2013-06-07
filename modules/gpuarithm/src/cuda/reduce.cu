@@ -46,6 +46,7 @@
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
@@ -76,8 +77,8 @@ namespace reduce
             return r;
         }
 
-        __device__ __forceinline__ Sum() {}
-        __device__ __forceinline__ Sum(const Sum&) {}
+        __host__ __device__ __forceinline__ Sum() {}
+        __host__ __device__ __forceinline__ Sum(const Sum&) {}
     };
 
     struct Avg
@@ -100,8 +101,8 @@ namespace reduce
             return r / sz;
         }
 
-        __device__ __forceinline__ Avg() {}
-        __device__ __forceinline__ Avg(const Avg&) {}
+        __host__ __device__ __forceinline__ Avg() {}
+        __host__ __device__ __forceinline__ Avg(const Avg&) {}
     };
 
     struct Min
@@ -125,8 +126,8 @@ namespace reduce
             return r;
         }
 
-        __device__ __forceinline__ Min() {}
-        __device__ __forceinline__ Min(const Min&) {}
+        __host__ __device__ __forceinline__ Min() {}
+        __host__ __device__ __forceinline__ Min(const Min&) {}
     };
 
     struct Max
@@ -150,8 +151,8 @@ namespace reduce
             return r;
         }
 
-        __device__ __forceinline__ Max() {}
-        __device__ __forceinline__ Max(const Max&) {}
+        __host__ __device__ __forceinline__ Max() {}
+        __host__ __device__ __forceinline__ Max(const Max&) {}
     };
 
     ///////////////////////////////////////////////////////////

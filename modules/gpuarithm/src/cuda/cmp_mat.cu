@@ -62,8 +62,8 @@ namespace arithm
             return vcmpeq4(a, b);
         }
 
-        __device__ __forceinline__ VCmpEq4() {}
-        __device__ __forceinline__ VCmpEq4(const VCmpEq4& other) {}
+        __host__ __device__ __forceinline__ VCmpEq4() {}
+        __host__ __device__ __forceinline__ VCmpEq4(const VCmpEq4&) {}
     };
     struct VCmpNe4 : binary_function<uint, uint, uint>
     {
@@ -72,8 +72,8 @@ namespace arithm
             return vcmpne4(a, b);
         }
 
-        __device__ __forceinline__ VCmpNe4() {}
-        __device__ __forceinline__ VCmpNe4(const VCmpNe4& other) {}
+        __host__ __device__ __forceinline__ VCmpNe4() {}
+        __host__ __device__ __forceinline__ VCmpNe4(const VCmpNe4&) {}
     };
     struct VCmpLt4 : binary_function<uint, uint, uint>
     {
@@ -82,8 +82,8 @@ namespace arithm
             return vcmplt4(a, b);
         }
 
-        __device__ __forceinline__ VCmpLt4() {}
-        __device__ __forceinline__ VCmpLt4(const VCmpLt4& other) {}
+        __host__ __device__ __forceinline__ VCmpLt4() {}
+        __host__ __device__ __forceinline__ VCmpLt4(const VCmpLt4&) {}
     };
     struct VCmpLe4 : binary_function<uint, uint, uint>
     {
@@ -92,8 +92,8 @@ namespace arithm
             return vcmple4(a, b);
         }
 
-        __device__ __forceinline__ VCmpLe4() {}
-        __device__ __forceinline__ VCmpLe4(const VCmpLe4& other) {}
+        __host__ __device__ __forceinline__ VCmpLe4() {}
+        __host__ __device__ __forceinline__ VCmpLe4(const VCmpLe4&) {}
     };
 
     template <class Op, typename T>

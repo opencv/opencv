@@ -45,6 +45,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/vec_math.hpp"
+#include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/utility.hpp"

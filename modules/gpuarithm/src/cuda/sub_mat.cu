@@ -62,8 +62,8 @@ namespace arithm
             return vsub4(a, b);
         }
 
-        __device__ __forceinline__ VSub4() {}
-        __device__ __forceinline__ VSub4(const VSub4& other) {}
+        __host__ __device__ __forceinline__ VSub4() {}
+        __host__ __device__ __forceinline__ VSub4(const VSub4&) {}
     };
 
     struct VSub2 : binary_function<uint, uint, uint>
@@ -73,8 +73,8 @@ namespace arithm
             return vsub2(a, b);
         }
 
-        __device__ __forceinline__ VSub2() {}
-        __device__ __forceinline__ VSub2(const VSub2& other) {}
+        __host__ __device__ __forceinline__ VSub2() {}
+        __host__ __device__ __forceinline__ VSub2(const VSub2&) {}
     };
 
     template <typename T, typename D> struct SubMat : binary_function<T, T, D>
@@ -84,8 +84,8 @@ namespace arithm
             return saturate_cast<D>(a - b);
         }
 
-        __device__ __forceinline__ SubMat() {}
-        __device__ __forceinline__ SubMat(const SubMat& other) {}
+        __host__ __device__ __forceinline__ SubMat() {}
+        __host__ __device__ __forceinline__ SubMat(const SubMat&) {}
     };
 }
 
