@@ -23,19 +23,14 @@ void temp_viz::Viz3d::addCoordinateSystem(double scale, const Affine3f& t, const
     impl_->addCoordinateSystem(scale, t, id);
 }
 
-void temp_viz::Viz3d::addPointCloud(const Mat& cloud, const Mat& colors, const String& id, const Mat& mask)
+void temp_viz::Viz3d::showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose)
 {
-    impl_->addPointCloud(cloud, colors, id, mask);
+    impl_->showPointCloud(id, cloud, colors, pose);
 }
 
 bool temp_viz::Viz3d::addPointCloudNormals (const Mat &cloud, const Mat& normals, int level, float scale, const String& id)
 {
     return impl_->addPointCloudNormals(cloud, normals, level, scale, id);
-}
-
-bool temp_viz::Viz3d::updatePointCloud(const Mat& cloud, const Mat& colors, const String& id, const Mat& mask)
-{
-    return impl_->updatePointCloud(cloud, colors, id, mask);
 }
 
 bool temp_viz::Viz3d::addPolygonMesh (const Mesh3d& mesh, const String &id)
