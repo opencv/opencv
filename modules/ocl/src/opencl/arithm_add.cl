@@ -127,7 +127,7 @@ __kernel void arithm_add_D2 (__global ushort *src1, int src1_step, int src1_offs
 #ifdef dst_align
 #undef dst_align
 #endif
-#define dst_align ((dst_offset >> 1) & 3)
+#define dst_align ((dst_offset / 2) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -165,7 +165,7 @@ __kernel void arithm_add_D3 (__global short *src1, int src1_step, int src1_offse
 #ifdef dst_align
 #undef dst_align
 #endif
-#define dst_align ((dst_offset >> 1) & 3)
+#define dst_align ((dst_offset / 2) & 3)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
 
@@ -335,7 +335,7 @@ __kernel void arithm_add_with_mask_C1_D2 (__global ushort *src1, int src1_step, 
 #ifdef dst_align
 #undef dst_align
 #endif
-#define dst_align ((dst_offset >> 1) & 1)
+#define dst_align ((dst_offset / 2) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
@@ -375,7 +375,7 @@ __kernel void arithm_add_with_mask_C1_D3 (__global short *src1, int src1_step, i
 #ifdef dst_align
 #undef dst_align
 #endif
-#define dst_align ((dst_offset >> 1) & 1)
+#define dst_align ((dst_offset / 2) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);
@@ -507,7 +507,7 @@ __kernel void arithm_add_with_mask_C2_D0 (__global uchar *src1, int src1_step, i
 #ifdef dst_align
 #undef dst_align
 #endif
-#define dst_align ((dst_offset >> 1) & 1)
+#define dst_align ((dst_offset / 2) & 1)
         int src1_index = mad24(y, src1_step, (x << 1) + src1_offset - (dst_align << 1));
         int src2_index = mad24(y, src2_step, (x << 1) + src2_offset - (dst_align << 1));
         int mask_index = mad24(y, mask_step, x + mask_offset - dst_align);

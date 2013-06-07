@@ -48,7 +48,7 @@
 ///////////// cvtColor////////////////////////
 PERFTEST(cvtColor)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC4};
@@ -73,10 +73,6 @@ PERFTEST(cvtColor)
             ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat;
-            d_dst.download(ocl_mat);
-            TestSystem::instance().setAccurate(ExceptedMatSimilar(dst, ocl_mat, 1e-5));
-
             GPU_ON;
             ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
             GPU_OFF;
@@ -84,8 +80,10 @@ PERFTEST(cvtColor)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::cvtColor(d_src, d_dst, COLOR_RGBA2GRAY, 4);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExceptedMatSimilar(dst, ocl_dst, 1e-5);
         }
 
 

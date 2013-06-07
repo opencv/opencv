@@ -48,7 +48,7 @@
 ///////////// Lut ////////////////////////
 PERFTEST(lut)
 {
-    Mat src, lut, dst;
+    Mat src, lut, dst, ocl_dst;
     ocl::oclMat d_src, d_lut, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC3};
@@ -77,11 +77,6 @@ PERFTEST(lut)
             ocl::LUT(d_src, d_lut, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0));
-
             GPU_ON;
             ocl::LUT(d_src, d_lut, d_dst);
             GPU_OFF;
@@ -90,9 +85,10 @@ PERFTEST(lut)
             d_src.upload(src);
             d_lut.upload(lut);
             ocl::LUT(d_src, d_lut, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
 
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0);
         }
 
     }
@@ -101,7 +97,7 @@ PERFTEST(lut)
 ///////////// Exp ////////////////////////
 PERFTEST(Exp)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
@@ -121,11 +117,6 @@ PERFTEST(Exp)
         ocl::exp(d_src, d_dst);
         WARMUP_OFF;
 
-        cv::Mat ocl_mat_dst;
-        d_dst.download(ocl_mat_dst);
-
-        TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 2));
-
         GPU_ON;
         ocl::exp(d_src, d_dst);
         GPU_OFF;
@@ -133,15 +124,17 @@ PERFTEST(Exp)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::exp(d_src, d_dst);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 2);
     }
 }
 
 ///////////// LOG ////////////////////////
 PERFTEST(Log)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
@@ -161,11 +154,6 @@ PERFTEST(Log)
         ocl::log(d_src, d_dst);
         WARMUP_OFF;
 
-        cv::Mat ocl_mat_dst;
-        d_dst.download(ocl_mat_dst);
-
-        TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1));
-
         GPU_ON;
         ocl::log(d_src, d_dst);
         GPU_OFF;
@@ -173,15 +161,17 @@ PERFTEST(Log)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::log(d_src, d_dst);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1);
     }
 }
 
 ///////////// Add ////////////////////////
 PERFTEST(Add)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_32FC1};
@@ -201,17 +191,13 @@ PERFTEST(Add)
             CPU_ON;
             add(src1, src2, dst);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::add(d_src1, d_src2, d_dst);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
 
             GPU_ON;
             ocl::add(d_src1, d_src2, d_dst);
@@ -221,8 +207,10 @@ PERFTEST(Add)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::add(d_src1, d_src2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -231,7 +219,7 @@ PERFTEST(Add)
 ///////////// Mul ////////////////////////
 PERFTEST(Mul)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -260,11 +248,6 @@ PERFTEST(Mul)
             ocl::multiply(d_src1, d_src2, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
-
             GPU_ON;
             ocl::multiply(d_src1, d_src2, d_dst);
             GPU_OFF;
@@ -273,8 +256,10 @@ PERFTEST(Mul)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::multiply(d_src1, d_src2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -283,7 +268,7 @@ PERFTEST(Mul)
 ///////////// Div ////////////////////////
 PERFTEST(Div)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
@@ -304,17 +289,13 @@ PERFTEST(Div)
             CPU_ON;
             divide(src1, src2, dst);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::divide(d_src1, d_src2, d_dst);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1));
 
             GPU_ON;
             ocl::divide(d_src1, d_src2, d_dst);
@@ -324,8 +305,10 @@ PERFTEST(Div)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::divide(d_src1, d_src2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1);
         }
 
     }
@@ -334,7 +317,7 @@ PERFTEST(Div)
 ///////////// Absdiff ////////////////////////
 PERFTEST(Absdiff)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -355,17 +338,13 @@ PERFTEST(Absdiff)
             CPU_ON;
             absdiff(src1, src2, dst);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::absdiff(d_src1, d_src2, d_dst);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
 
             GPU_ON;
             ocl::absdiff(d_src1, d_src2, d_dst);
@@ -375,8 +354,10 @@ PERFTEST(Absdiff)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::absdiff(d_src1, d_src2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -385,7 +366,7 @@ PERFTEST(Absdiff)
 ///////////// CartToPolar ////////////////////////
 PERFTEST(CartToPolar)
 {
-    Mat src1, src2, dst, dst1;
+    Mat src1, src2, dst, dst1, ocl_dst, ocl_dst1;
     ocl::oclMat d_src1, d_src2, d_dst, d_dst1;
 
     int all_type[] = {CV_32FC1};
@@ -408,20 +389,13 @@ PERFTEST(CartToPolar)
             CPU_ON;
             cartToPolar(src1, src2, dst, dst1, 1);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::cartToPolar(d_src1, d_src2, d_dst, d_dst1, 1);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            cv::Mat ocl_mat_dst1;
-            d_dst1.download(ocl_mat_dst1);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst1, dst1, 0.5)&&ExpectedMatNear(ocl_mat_dst, dst, 0.5));
 
             GPU_ON;
             ocl::cartToPolar(d_src1, d_src2, d_dst, d_dst1, 1);
@@ -431,9 +405,15 @@ PERFTEST(CartToPolar)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::cartToPolar(d_src1, d_src2, d_dst, d_dst1, 1);
-            d_dst.download(dst);
-            d_dst1.download(dst1);
+            d_dst.download(ocl_dst);
+            d_dst1.download(ocl_dst1);
             GPU_FULL_OFF;
+
+            double diff1 = checkNorm(ocl_dst1, dst1);
+            double diff2 = checkNorm(ocl_dst, dst);
+            double max_diff = max(diff1, diff2);
+            TestSystem::instance().setAccurate(max_diff<=.5?1:0, max_diff);
+
         }
 
     }
@@ -442,7 +422,7 @@ PERFTEST(CartToPolar)
 ///////////// PolarToCart ////////////////////////
 PERFTEST(PolarToCart)
 {
-    Mat src1, src2, dst, dst1;
+    Mat src1, src2, dst, dst1, ocl_dst, ocl_dst1;
     ocl::oclMat d_src1, d_src2, d_dst, d_dst1;
 
     int all_type[] = {CV_32FC1};
@@ -472,14 +452,6 @@ PERFTEST(PolarToCart)
             ocl::polarToCart(d_src1, d_src2, d_dst, d_dst1, 1);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            cv::Mat ocl_mat_dst1;
-            d_dst1.download(ocl_mat_dst1);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst1, dst1, 0.5)&&ExpectedMatNear(ocl_mat_dst, dst, 0.5));
-
             GPU_ON;
             ocl::polarToCart(d_src1, d_src2, d_dst, d_dst1, 1);
             GPU_OFF;
@@ -488,9 +460,15 @@ PERFTEST(PolarToCart)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::polarToCart(d_src1, d_src2, d_dst, d_dst1, 1);
-            d_dst.download(dst);
-            d_dst1.download(dst1);
+            d_dst.download(ocl_dst);
+            d_dst1.download(ocl_dst1);
             GPU_FULL_OFF;
+
+            double diff1 = checkNorm(ocl_dst1, dst1);
+            double diff2 = checkNorm(ocl_dst, dst);
+            double max_diff = max(diff1, diff2);
+            TestSystem::instance().setAccurate(max_diff<=.5?1:0, max_diff);
+
         }
 
     }
@@ -499,7 +477,7 @@ PERFTEST(PolarToCart)
 ///////////// Magnitude ////////////////////////
 PERFTEST(magnitude)
 {
-    Mat x, y, mag;
+    Mat x, y, mag, ocl_mag;
     ocl::oclMat d_x, d_y, d_mag;
 
     int all_type[] = {CV_32FC1};
@@ -526,11 +504,6 @@ PERFTEST(magnitude)
             ocl::magnitude(d_x, d_y, d_mag);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_mag.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, mag, 1e-5));
-
             GPU_ON;
             ocl::magnitude(d_x, d_y, d_mag);
             GPU_OFF;
@@ -539,8 +512,10 @@ PERFTEST(magnitude)
             d_x.upload(x);
             d_y.upload(y);
             ocl::magnitude(d_x, d_y, d_mag);
-            d_mag.download(mag);
+            d_mag.download(ocl_mag);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_mag, mag, 1e-5);
         }
 
     }
@@ -549,7 +524,7 @@ PERFTEST(magnitude)
 ///////////// Transpose ////////////////////////
 PERFTEST(Transpose)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -575,11 +550,6 @@ PERFTEST(Transpose)
             ocl::transpose(d_src, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1e-5));
-
             GPU_ON;
             ocl::transpose(d_src, d_dst);
             GPU_OFF;
@@ -587,8 +557,10 @@ PERFTEST(Transpose)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::transpose(d_src, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
         }
 
     }
@@ -597,7 +569,7 @@ PERFTEST(Transpose)
 ///////////// Flip ////////////////////////
 PERFTEST(Flip)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -623,11 +595,6 @@ PERFTEST(Flip)
             ocl::flip(d_src, d_dst, 0);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1e-5));
-
             GPU_ON;
             ocl::flip(d_src, d_dst, 0);
             GPU_OFF;
@@ -635,8 +602,10 @@ PERFTEST(Flip)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::flip(d_src, d_dst, 0);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
         }
 
     }
@@ -671,7 +640,10 @@ PERFTEST(minMax)
             ocl::minMax(d_src, &min_val_, &max_val_);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(EeceptDoubleEQ<double>(max_val_, max_val)&&EeceptDoubleEQ<double>(min_val_, min_val));
+            if(EeceptDoubleEQ<double>(max_val_, max_val) && EeceptDoubleEQ<double>(min_val_, min_val))
+                TestSystem::instance().setAccurate(1, max(fabs(max_val_-max_val), fabs(min_val_-min_val)));
+            else
+                TestSystem::instance().setAccurate(0, max(fabs(max_val_-max_val), fabs(min_val_-min_val)));
 
             GPU_ON;
             ocl::minMax(d_src, &min_val, &max_val);
@@ -724,8 +696,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<unsigned char>(min_loc_);
                 maxlocVal = src.at<unsigned char>(max_loc);
                 maxlocVal_ = src.at<unsigned char>(max_loc_);
-                error0 = ::abs(src.at<unsigned char>(min_loc_) - src.at<unsigned char>(min_loc));
-                error1 = ::abs(src.at<unsigned char>(max_loc_) - src.at<unsigned char>(max_loc));
             }
             if(src.depth() == 1)
             {
@@ -733,8 +703,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<signed char>(min_loc_);
                 maxlocVal = src.at<signed char>(max_loc);
                 maxlocVal_ = src.at<signed char>(max_loc_);
-                error0 = ::abs(src.at<signed char>(min_loc_) - src.at<signed char>(min_loc));
-                error1 = ::abs(src.at<signed char>(max_loc_) - src.at<signed char>(max_loc));
             }
             if(src.depth() == 2)
             {
@@ -742,8 +710,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<unsigned short>(min_loc_);
                 maxlocVal = src.at<unsigned short>(max_loc);
                 maxlocVal_ = src.at<unsigned short>(max_loc_);
-                error0 = ::abs(src.at<unsigned short>(min_loc_) - src.at<unsigned short>(min_loc));
-                error1 = ::abs(src.at<unsigned short>(max_loc_) - src.at<unsigned short>(max_loc));
             }
             if(src.depth() == 3)
             {
@@ -751,8 +717,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<signed short>(min_loc_);
                 maxlocVal = src.at<signed short>(max_loc);
                 maxlocVal_ = src.at<signed short>(max_loc_);
-                error0 = ::abs(src.at<signed short>(min_loc_) - src.at<signed short>(min_loc));
-                error1 = ::abs(src.at<signed short>(max_loc_) - src.at<signed short>(max_loc));
             }
             if(src.depth() == 4)
             {
@@ -760,8 +724,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<int>(min_loc_);
                 maxlocVal = src.at<int>(max_loc);
                 maxlocVal_ = src.at<int>(max_loc_);
-                error0 = ::abs(src.at<int>(min_loc_) - src.at<int>(min_loc));
-                error1 = ::abs(src.at<int>(max_loc_) - src.at<int>(max_loc));
             }
             if(src.depth() == 5)
             {
@@ -769,8 +731,6 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<float>(min_loc_);
                 maxlocVal = src.at<float>(max_loc);
                 maxlocVal_ = src.at<float>(max_loc_);
-                error0 = ::abs(src.at<float>(min_loc_) - src.at<float>(min_loc));
-                error1 = ::abs(src.at<float>(max_loc_) - src.at<float>(max_loc));
             }
             if(src.depth() == 6)
             {
@@ -778,16 +738,16 @@ PERFTEST(minMaxLoc)
                 minlocVal_ = src.at<double>(min_loc_);
                 maxlocVal = src.at<double>(max_loc);
                 maxlocVal_ = src.at<double>(max_loc_);
-                error0 = ::abs(src.at<double>(min_loc_) - src.at<double>(min_loc));
-                error1 = ::abs(src.at<double>(max_loc_) - src.at<double>(max_loc));
             }
-
-            TestSystem::instance().setAccurate(EeceptDoubleEQ<double>(error1, 0.0)
-                &&EeceptDoubleEQ<double>(error0, 0.0)
-                &&EeceptDoubleEQ<double>(maxlocVal_, maxlocVal)
+            error0 = ::abs(minlocVal_ - minlocVal);
+            error1 = ::abs(maxlocVal_ - maxlocVal);
+            if( EeceptDoubleEQ<double>(maxlocVal_, maxlocVal)
                 &&EeceptDoubleEQ<double>(minlocVal_, minlocVal)
                 &&EeceptDoubleEQ<double>(max_val_, max_val)
-                &&EeceptDoubleEQ<double>(min_val_, min_val));
+                &&EeceptDoubleEQ<double>(min_val_, min_val))
+                TestSystem::instance().setAccurate(1, 0.);
+            else
+                TestSystem::instance().setAccurate(0, max(error0, error1));
 
             GPU_ON;
             ocl::minMaxLoc(d_src, &min_val, &max_val, &min_loc, &max_loc);
@@ -831,11 +791,13 @@ PERFTEST(Sum)
             gpures = ocl::sum(d_src);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExceptDoubleNear(cpures[3], gpures[3], 0.1)
-                &&ExceptDoubleNear(cpures[2], gpures[2], 0.1)
-                &&ExceptDoubleNear(cpures[1], gpures[1], 0.1)
-                &&ExceptDoubleNear(cpures[0], gpures[0], 0.1));
-
+            vector<double> diffs(4);
+            diffs[3] = fabs(cpures[3] - gpures[3]);
+            diffs[2] = fabs(cpures[2] - gpures[2]);
+            diffs[1] = fabs(cpures[1] - gpures[1]);
+            diffs[0] = fabs(cpures[0] - gpures[0]);
+            double max_diff = *max_element(diffs.begin(), diffs.end());
+            TestSystem::instance().setAccurate(max_diff<0.1?1:0, max_diff);
 
             GPU_ON;
             gpures = ocl::sum(d_src);
@@ -879,7 +841,11 @@ PERFTEST(countNonZero)
             gpures = ocl::countNonZero(d_src);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate((EeceptDoubleEQ<double>((double)cpures, (double)gpures)));
+            int diff = abs(cpures - gpures);
+            if(diff == 0)
+                TestSystem::instance().setAccurate(1, 0);
+            else
+                TestSystem::instance().setAccurate(0, diff);
 
             GPU_ON;
             ocl::countNonZero(d_src);
@@ -897,7 +863,7 @@ PERFTEST(countNonZero)
 ///////////// Phase ////////////////////////
 PERFTEST(Phase)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_32FC1};
@@ -913,23 +879,18 @@ PERFTEST(Phase)
             gen(src2, size, size, all_type[j], 0, 256);
             gen(dst, size, size, all_type[j], 0, 256);
 
-
             phase(src1, src2, dst, 1);
 
             CPU_ON;
             phase(src1, src2, dst, 1);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::phase(d_src1, d_src2, d_dst, 1);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1e-2));
 
             GPU_ON;
             ocl::phase(d_src1, d_src2, d_dst, 1);
@@ -939,8 +900,10 @@ PERFTEST(Phase)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::phase(d_src1, d_src2, d_dst, 1);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-2);
         }
 
     }
@@ -949,7 +912,7 @@ PERFTEST(Phase)
 ///////////// bitwise_and////////////////////////
 PERFTEST(bitwise_and)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_32SC1};
@@ -965,7 +928,6 @@ PERFTEST(bitwise_and)
             gen(src2, size, size, all_type[j], 0, 256);
             gen(dst, size, size, all_type[j], 0, 256);
 
-
             bitwise_and(src1, src2, dst);
 
             CPU_ON;
@@ -978,11 +940,6 @@ PERFTEST(bitwise_and)
             ocl::bitwise_and(d_src1, d_src2, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
-
             GPU_ON;
             ocl::bitwise_and(d_src1, d_src2, d_dst);
             GPU_OFF;
@@ -991,8 +948,10 @@ PERFTEST(bitwise_and)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::bitwise_and(d_src1, d_src2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -1001,7 +960,7 @@ PERFTEST(bitwise_and)
 ///////////// bitwise_not////////////////////////
 PERFTEST(bitwise_not)
 {
-    Mat src1, dst;
+    Mat src1, dst, ocl_dst;
     ocl::oclMat d_src1, d_dst;
 
     int all_type[] = {CV_8UC1, CV_32SC1};
@@ -1016,7 +975,6 @@ PERFTEST(bitwise_not)
             gen(src1, size, size, all_type[j], 0, 256);
             gen(dst, size, size, all_type[j], 0, 256);
 
-
             bitwise_not(src1, dst);
 
             CPU_ON;
@@ -1028,11 +986,6 @@ PERFTEST(bitwise_not)
             ocl::bitwise_not(d_src1, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
-
             GPU_ON;
             ocl::bitwise_not(d_src1, d_dst);
             GPU_OFF;
@@ -1040,8 +993,10 @@ PERFTEST(bitwise_not)
             GPU_FULL_ON;
             d_src1.upload(src1);
             ocl::bitwise_not(d_src1, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -1050,7 +1005,7 @@ PERFTEST(bitwise_not)
 ///////////// compare////////////////////////
 PERFTEST(compare)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int CMP_EQ = 0;
@@ -1067,23 +1022,18 @@ PERFTEST(compare)
             gen(src2, size, size, all_type[j], 0, 256);
             gen(dst, size, size, all_type[j], 0, 256);
 
-
             compare(src1, src2, dst, CMP_EQ);
 
             CPU_ON;
             compare(src1, src2, dst, CMP_EQ);
             CPU_OFF;
+
             d_src1.upload(src1);
             d_src2.upload(src2);
 
             WARMUP_ON;
             ocl::compare(d_src1, d_src2, d_dst, CMP_EQ);
             WARMUP_OFF;
-
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 0.0));
 
             GPU_ON;
             ocl::compare(d_src1, d_src2, d_dst, CMP_EQ);
@@ -1093,8 +1043,10 @@ PERFTEST(compare)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::compare(d_src1, d_src2, d_dst, CMP_EQ);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 0.0);
         }
 
     }
@@ -1103,7 +1055,7 @@ PERFTEST(compare)
 ///////////// pow ////////////////////////
 PERFTEST(pow)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_32FC1};
@@ -1129,11 +1081,6 @@ PERFTEST(pow)
             ocl::pow(d_src, -2.0, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1.0));
-
             GPU_ON;
             ocl::pow(d_src, -2.0, d_dst);
             GPU_OFF;
@@ -1141,8 +1088,10 @@ PERFTEST(pow)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::pow(d_src, -2.0, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.0);
         }
 
     }
@@ -1151,7 +1100,7 @@ PERFTEST(pow)
 ///////////// MagnitudeSqr////////////////////////
 PERFTEST(MagnitudeSqr)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     int all_type[] = {CV_32FC1};
@@ -1167,53 +1116,36 @@ PERFTEST(MagnitudeSqr)
             gen(src2, size, size, all_type[t], 0, 256);
             gen(dst, size, size, all_type[t], 0, 256);
 
-
+            CPU_ON;
             for (int i = 0; i < src1.rows; ++i)
-
                 for (int j = 0; j < src1.cols; ++j)
                 {
                     float val1 = src1.at<float>(i, j);
                     float val2 = src2.at<float>(i, j);
-
                     ((float *)(dst.data))[i * dst.step / 4 + j] = val1 * val1 + val2 * val2;
 
                 }
+            CPU_OFF;
 
-                CPU_ON;
+            d_src1.upload(src1);
+            d_src2.upload(src2);
 
-                for (int i = 0; i < src1.rows; ++i)
-                    for (int j = 0; j < src1.cols; ++j)
-                    {
-                        float val1 = src1.at<float>(i, j);
-                        float val2 = src2.at<float>(i, j);
+            WARMUP_ON;
+            ocl::magnitudeSqr(d_src1, d_src2, d_dst);
+            WARMUP_OFF;
 
-                        ((float *)(dst.data))[i * dst.step / 4 + j] = val1 * val1 + val2 * val2;
+            GPU_ON;
+            ocl::magnitudeSqr(d_src1, d_src2, d_dst);
+            GPU_OFF;
 
-                    }
+            GPU_FULL_ON;
+            d_src1.upload(src1);
+            d_src2.upload(src2);
+            ocl::magnitudeSqr(d_src1, d_src2, d_dst);
+            d_dst.download(ocl_dst);
+            GPU_FULL_OFF;
 
-                    CPU_OFF;
-                    d_src1.upload(src1);
-                    d_src2.upload(src2);
-
-                    WARMUP_ON;
-                    ocl::magnitudeSqr(d_src1, d_src2, d_dst);
-                    WARMUP_OFF;
-
-                    cv::Mat ocl_mat_dst;
-                    d_dst.download(ocl_mat_dst);
-
-                    TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1.0));
-
-                    GPU_ON;
-                    ocl::magnitudeSqr(d_src1, d_src2, d_dst);
-                    GPU_OFF;
-
-                    GPU_FULL_ON;
-                    d_src1.upload(src1);
-                    d_src2.upload(src2);
-                    ocl::magnitudeSqr(d_src1, d_src2, d_dst);
-                    d_dst.download(dst);
-                    GPU_FULL_OFF;
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.0);
         }
 
     }
@@ -1222,7 +1154,7 @@ PERFTEST(MagnitudeSqr)
 ///////////// AddWeighted////////////////////////
 PERFTEST(AddWeighted)
 {
-    Mat src1, src2, dst;
+    Mat src1, src2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_dst;
 
     double alpha = 2.0, beta = 1.0, gama = 3.0;
@@ -1252,11 +1184,6 @@ PERFTEST(AddWeighted)
             ocl::addWeighted(d_src1, alpha, d_src2, beta, gama, d_dst);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat_dst;
-            d_dst.download(ocl_mat_dst);
-
-            TestSystem::instance().setAccurate(ExpectedMatNear(ocl_mat_dst, dst, 1e-5));
-
             GPU_ON;
             ocl::addWeighted(d_src1, alpha, d_src2, beta, gama, d_dst);
             GPU_OFF;
@@ -1265,8 +1192,10 @@ PERFTEST(AddWeighted)
             d_src1.upload(src1);
             d_src2.upload(src2);
             ocl::addWeighted(d_src1, alpha, d_src2, beta, gama, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
         }
 
     }

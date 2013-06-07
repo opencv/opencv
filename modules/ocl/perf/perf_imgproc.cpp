@@ -48,7 +48,7 @@
 ///////////// equalizeHist ////////////////////////
 PERFTEST(equalizeHist)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     int all_type[] = {CV_8UC1};
     std::string type_name[] = {"CV_8UC1"};
 
@@ -75,9 +75,6 @@ PERFTEST(equalizeHist)
             ocl::equalizeHist(d_src, d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.1));
-
-
             GPU_ON;
             ocl::equalizeHist(d_src, d_dst);
             GPU_OFF;
@@ -85,8 +82,10 @@ PERFTEST(equalizeHist)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::equalizeHist(d_src, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.1);
         }
 
     }
@@ -94,7 +93,7 @@ PERFTEST(equalizeHist)
 /////////// CopyMakeBorder //////////////////////
 PERFTEST(CopyMakeBorder)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_dst;
 
     int bordertype = BORDER_CONSTANT;
@@ -122,9 +121,6 @@ PERFTEST(CopyMakeBorder)
             ocl::copyMakeBorder(d_src, d_dst, 7, 5, 5, 7, bordertype, cv::Scalar(1.0));
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));
-
-
             GPU_ON;
             ocl::copyMakeBorder(d_src, d_dst, 7, 5, 5, 7, bordertype, cv::Scalar(1.0));
             GPU_OFF;
@@ -132,8 +128,10 @@ PERFTEST(CopyMakeBorder)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::copyMakeBorder(d_src, d_dst, 7, 5, 5, 7, bordertype, cv::Scalar(1.0));
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
         }
 
     }
@@ -141,7 +139,7 @@ PERFTEST(CopyMakeBorder)
 ///////////// cornerMinEigenVal ////////////////////////
 PERFTEST(cornerMinEigenVal)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_dst;
 
     int blockSize = 7, apertureSize = 1 + 2 * (rand() % 4);
@@ -154,7 +152,6 @@ PERFTEST(cornerMinEigenVal)
         for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
-
 
             gen(src, size, size, all_type[j], 0, 256);
 
@@ -170,9 +167,6 @@ PERFTEST(cornerMinEigenVal)
             ocl::cornerMinEigenVal(d_src, d_dst, blockSize, apertureSize, borderType);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
-
             GPU_ON;
             ocl::cornerMinEigenVal(d_src, d_dst, blockSize, apertureSize, borderType);
             GPU_OFF;
@@ -180,8 +174,10 @@ PERFTEST(cornerMinEigenVal)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::cornerMinEigenVal(d_src, d_dst, blockSize, apertureSize, borderType);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
     }
@@ -189,7 +185,7 @@ PERFTEST(cornerMinEigenVal)
 ///////////// cornerHarris ////////////////////////
 PERFTEST(cornerHarris)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC1, CV_32FC1};
@@ -215,8 +211,6 @@ PERFTEST(cornerHarris)
             ocl::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
             GPU_ON;
             ocl::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT);
             GPU_OFF;
@@ -224,8 +218,10 @@ PERFTEST(cornerHarris)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
 
@@ -234,7 +230,7 @@ PERFTEST(cornerHarris)
 ///////////// integral ////////////////////////
 PERFTEST(integral)
 {
-    Mat src, sum;
+    Mat src, sum, ocl_sum;
     ocl::oclMat d_src, d_sum, d_buf;
 
     int all_type[] = {CV_8UC1};
@@ -260,12 +256,6 @@ PERFTEST(integral)
             ocl::integral(d_src, d_sum);
             WARMUP_OFF;
 
-            cv::Mat ocl_mat;
-            d_sum.download(ocl_mat);
-            if(sum.type() == ocl_mat.type()) //we won't test accuracy when cpu function overlow
-                TestSystem::instance().setAccurate(ExpectedMatNear(sum, ocl_mat, 0.0));
-
-
             GPU_ON;
             ocl::integral(d_src, d_sum);
             GPU_OFF;
@@ -273,8 +263,12 @@ PERFTEST(integral)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::integral(d_src, d_sum);
-            d_sum.download(sum);
+            d_sum.download(ocl_sum);
             GPU_FULL_OFF;
+
+            if(sum.type() == ocl_sum.type()) //we won't test accuracy when cpu function overlow
+                TestSystem::instance().ExpectedMatNear(sum, ocl_sum, 0.0);
+
         }
 
     }
@@ -282,7 +276,7 @@ PERFTEST(integral)
 ///////////// WarpAffine ////////////////////////
 PERFTEST(WarpAffine)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     static const double coeffs[2][3] =
@@ -319,8 +313,6 @@ PERFTEST(WarpAffine)
             ocl::warpAffine(d_src, d_dst, M, size1, interpolation);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
             GPU_ON;
             ocl::warpAffine(d_src, d_dst, M, size1, interpolation);
             GPU_OFF;
@@ -328,8 +320,10 @@ PERFTEST(WarpAffine)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::warpAffine(d_src, d_dst, M, size1, interpolation);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
     }
@@ -337,7 +331,7 @@ PERFTEST(WarpAffine)
 ///////////// WarpPerspective ////////////////////////
 PERFTEST(WarpPerspective)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     static const double coeffs[3][3] =
@@ -374,8 +368,6 @@ PERFTEST(WarpPerspective)
             ocl::warpPerspective(d_src, d_dst, M, size1, interpolation);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
             GPU_ON;
             ocl::warpPerspective(d_src, d_dst, M, size1, interpolation);
             GPU_OFF;
@@ -383,8 +375,10 @@ PERFTEST(WarpPerspective)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::warpPerspective(d_src, d_dst, M, size1, interpolation);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
     }
@@ -393,7 +387,7 @@ PERFTEST(WarpPerspective)
 ///////////// resize ////////////////////////
 PERFTEST(resize)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
 
@@ -420,9 +414,6 @@ PERFTEST(resize)
             ocl::resize(d_src, d_dst, Size(), 2.0, 2.0);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
-
             GPU_ON;
             ocl::resize(d_src, d_dst, Size(), 2.0, 2.0);
             GPU_OFF;
@@ -430,8 +421,10 @@ PERFTEST(resize)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::resize(d_src, d_dst, Size(), 2.0, 2.0);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
     }
@@ -456,8 +449,6 @@ PERFTEST(resize)
             ocl::resize(d_src, d_dst, Size(), 0.5, 0.5);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
             GPU_ON;
             ocl::resize(d_src, d_dst, Size(), 0.5, 0.5);
             GPU_OFF;
@@ -465,8 +456,10 @@ PERFTEST(resize)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::resize(d_src, d_dst, Size(), 0.5, 0.5);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
         }
 
     }
@@ -474,9 +467,8 @@ PERFTEST(resize)
 ///////////// threshold////////////////////////
 PERFTEST(threshold)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
-
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
@@ -496,9 +488,6 @@ PERFTEST(threshold)
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
         WARMUP_OFF;
 
-        TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
-
         GPU_ON;
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
         GPU_OFF;
@@ -506,9 +495,10 @@ PERFTEST(threshold)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
 
+        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
     }
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
@@ -529,8 +519,6 @@ PERFTEST(threshold)
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
         WARMUP_OFF;
 
-        TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-
         GPU_ON;
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
         GPU_OFF;
@@ -538,8 +526,10 @@ PERFTEST(threshold)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
     }
 }
 ///////////// meanShiftFiltering////////////////////////
@@ -726,7 +716,7 @@ void meanShiftFiltering_(const Mat &src_roi, Mat &dst_roi, int sp, int sr, cv::T
 PERFTEST(meanShiftFiltering)
 {
     int sp = 5, sr = 6;
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
 
     ocl::oclMat d_src, d_dst;
 
@@ -753,11 +743,6 @@ PERFTEST(meanShiftFiltering)
         ocl::meanShiftFiltering(d_src, d_dst, sp, sr, crit);
         WARMUP_OFF;
 
-        cv::Mat ocl_mat;
-        d_dst.download(ocl_mat);
-
-        TestSystem::instance().setAccurate(ExpectedMatNear(dst, ocl_mat, 0.0));
-
         GPU_ON;
         ocl::meanShiftFiltering(d_src, d_dst, sp, sr);
         GPU_OFF;
@@ -765,8 +750,10 @@ PERFTEST(meanShiftFiltering)
         GPU_FULL_ON;
         d_src.upload(src);
         ocl::meanShiftFiltering(d_src, d_dst, sp, sr);
-        d_dst.download(dst);
+        d_dst.download(ocl_dst);
         GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
     }
 }
 ///////////// meanShiftProc////////////////////////
@@ -1010,8 +997,9 @@ void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, 
 }
 PERFTEST(meanShiftProc)
 {
-    Mat src, dst, dstCoor_roi;
-    ocl::oclMat d_src, d_dst, d_dstCoor_roi;
+    Mat src;
+    vector<Mat> dst(2), ocl_dst(2);
+    ocl::oclMat d_src, d_dst, d_dstCoor;
 
     TermCriteria crit(TermCriteria::COUNT + TermCriteria::EPS, 5, 1);
 
@@ -1020,42 +1008,41 @@ PERFTEST(meanShiftProc)
         SUBTEST << size << 'x' << size << "; 8UC4 and CV_16SC2 ";
 
         gen(src, size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
-        gen(dst, size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
-        gen(dstCoor_roi, size, size, CV_16SC2, Scalar::all(0), Scalar::all(256));
+        gen(dst[0], size, size, CV_8UC4, Scalar::all(0), Scalar::all(256));
+        gen(dst[1], size, size, CV_16SC2, Scalar::all(0), Scalar::all(256));
 
-        meanShiftProc_(src, dst, dstCoor_roi, 5, 6, crit);
+        meanShiftProc_(src, dst[0], dst[1], 5, 6, crit);
 
         CPU_ON;
-        meanShiftProc_(src, dst, dstCoor_roi, 5, 6, crit);
+        meanShiftProc_(src, dst[0], dst[1], 5, 6, crit);
         CPU_OFF;
 
         d_src.upload(src);
 
         WARMUP_ON;
-        ocl::meanShiftProc(d_src, d_dst, d_dstCoor_roi, 5, 6, crit);
+        ocl::meanShiftProc(d_src, d_dst, d_dstCoor, 5, 6, crit);
         WARMUP_OFF;
 
-        TestSystem::instance().setAccurate(ExpectedMatNear(dstCoor_roi, cv::Mat(d_dstCoor_roi), 0.0)
-            &&ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));
-
         GPU_ON;
-        ocl::meanShiftProc(d_src, d_dst, d_dstCoor_roi, 5, 6, crit);
+        ocl::meanShiftProc(d_src, d_dst, d_dstCoor, 5, 6, crit);
         GPU_OFF;
 
         GPU_FULL_ON;
         d_src.upload(src);
-        ocl::meanShiftProc(d_src, d_dst, d_dstCoor_roi, 5, 6, crit);
-        d_dst.download(dst);
-        d_dstCoor_roi.download(dstCoor_roi);
+        ocl::meanShiftProc(d_src, d_dst, d_dstCoor, 5, 6, crit);
+        d_dst.download(ocl_dst[0]);
+        d_dstCoor.download(ocl_dst[1]);
         GPU_FULL_OFF;
 
+        vector<double> eps(2, 0.);
+        TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);
     }
 }
 
 ///////////// remap////////////////////////
 PERFTEST(remap)
 {
-    Mat src, dst, xmap, ymap;
+    Mat src, dst, xmap, ymap, ocl_dst;
     ocl::oclMat d_src, d_dst, d_xmap, d_ymap;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -1088,7 +1075,6 @@ PERFTEST(remap)
                 }
             }
 
-
             remap(src, dst, xmap, ymap, interpolation, borderMode);
 
             CPU_ON;
@@ -1104,12 +1090,6 @@ PERFTEST(remap)
             ocl::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
             WARMUP_OFF;
 
-            if(interpolation == 0)
-                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 1.0));
-            else
-                TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 2.0));
-
-
             GPU_ON;
             ocl::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
             GPU_OFF;
@@ -1117,8 +1097,10 @@ PERFTEST(remap)
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 2.0);
         }
 
     }

@@ -442,7 +442,7 @@ static void getDistanceTransformMask( int maskType, float *metrics )
     }
 }
 
-struct DTColumnInvoker
+struct DTColumnInvoker : ParallelLoopBody
 {
     DTColumnInvoker( const Mat* _src, Mat* _dst, const int* _sat_tab, const float* _sqr_tab)
     {
@@ -452,9 +452,9 @@ struct DTColumnInvoker
         sqr_tab = _sqr_tab;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        int i, i1 = range.begin(), i2 = range.end();
+        int i, i1 = range.start, i2 = range.end;
         int m = src->rows;
         size_t sstep = src->step, dstep = dst->step/sizeof(float);
         AutoBuffer<int> _d(m);
@@ -489,7 +489,7 @@ struct DTColumnInvoker
 };
 
 
-struct DTRowInvoker
+struct DTRowInvoker : ParallelLoopBody
 {
     DTRowInvoker( Mat* _dst, const float* _sqr_tab, const float* _inv_tab )
     {
@@ -498,10 +498,10 @@ struct DTRowInvoker
         inv_tab = _inv_tab;
     }
 
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
         const float inf = 1e15f;
-        int i, i1 = range.begin(), i2 = range.end();
+        int i, i1 = range.start, i2 = range.end;
         int n = dst->cols;
         AutoBuffer<uchar> _buf((n+2)*2*sizeof(float) + (n+2)*sizeof(int));
         float* f = (float*)(uchar*)_buf;
@@ -578,7 +578,7 @@ trueDistTrans( const Mat& src, Mat& dst )
     for( ; i <= m*3; i++ )
         sat_tab[i] = i - shift;
 
-    cv::parallel_for(cv::BlockedRange(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
+    cv::parallel_for_(cv::Range(0, n), cv::DTColumnInvoker(&src, &dst, sat_tab, sqr_tab));
 
     // stage 2: compute modified distance transform for each row
     float* inv_tab = sqr_tab + n;
@@ -590,7 +590,7 @@ trueDistTrans( const Mat& src, Mat& dst )
         sqr_tab[i] = (float)(i*i);
     }
 
-    cv::parallel_for(cv::BlockedRange(0, m), cv::DTRowInvoker(&dst, sqr_tab, inv_tab));
+    cv::parallel_for_(cv::Range(0, m), cv::DTRowInvoker(&dst, sqr_tab, inv_tab));
 }
 
 
@@ -664,7 +664,7 @@ distanceATS_L1_8u( const Mat& src, Mat& dst )
         // do right edge
         a = lut[dbase[width-1+dststep]];
         dbase[width-1] = (uchar)(MIN(a, dbase[width-1]));
-        
+
         for( x = width - 2; x >= 0; x-- )
         {
             int b = dbase[x+dststep];

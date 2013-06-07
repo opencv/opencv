@@ -61,6 +61,8 @@
 #include <exception>
 #include <stdio.h>
 
+#undef OPENCV_NOSTL
+
 #include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/ocl.hpp"
@@ -74,6 +76,7 @@
 
 #if defined (HAVE_OPENCL)
 
+#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "opencv2/ocl/private/util.hpp"
 #include "safe_call.hpp"
 

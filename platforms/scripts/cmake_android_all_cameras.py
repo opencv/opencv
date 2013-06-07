@@ -60,7 +60,7 @@ for s in ConfFile.readlines():
 
     os.chdir(BuildDir)
     BuildLog = os.path.join(BuildDir, "build.log")
-    CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../../ > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
+    CmakeCmdLine = "cmake -DCMAKE_TOOLCHAIN_FILE=../android/android.toolchain.cmake -DANDROID_SOURCE_TREE=\"%s\" -DANDROID_NATIVE_API_LEVEL=\"%s\" -DANDROID_ABI=\"%s\" -DANDROID_STL=stlport_static ../.. > \"%s\" 2>&1" % (AndroidTreeRoot, NativeApiLevel, Arch, BuildLog)
     MakeCmdLine = "make %s >> \"%s\" 2>&1" % (MakeTarget, BuildLog);
     #print(CmakeCmdLine)
     os.system(CmakeCmdLine)

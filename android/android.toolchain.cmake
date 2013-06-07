@@ -1,4 +1,6 @@
-# Copyright (c) 2010-2011, Ethan Rublee
+message(STATUS "Android toolchain was moved to platfroms/android!")
+message(STATUS "This file is depricated and will be removed!")
+
 # Copyright (c) 2011-2013, Andrey Kamaev
 # All rights reserved.
 #
