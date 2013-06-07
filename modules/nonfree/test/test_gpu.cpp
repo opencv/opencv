@@ -42,12 +42,14 @@
 
 #include "test_precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+#ifdef HAVE_CUDA
 
 using namespace cvtest;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // SURF
+
+#ifdef HAVE_OPENCV_GPUARITHM
 
 namespace
 {
@@ -191,4 +193,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
     testing::Values(SURF_Extended(false), SURF_Extended(true)),
     testing::Values(SURF_Upright(false), SURF_Upright(true))));
 
-#endif
+#endif // HAVE_OPENCV_GPUARITHM
+
+#endif // HAVE_CUDA

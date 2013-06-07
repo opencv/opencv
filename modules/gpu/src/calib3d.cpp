@@ -252,7 +252,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     // Find the best hypothesis index
     Point best_idx;
     double best_score;
-    minMaxLoc(d_hypothesis_scores, NULL, &best_score, NULL, &best_idx);
+    gpu::minMaxLoc(d_hypothesis_scores, NULL, &best_score, NULL, &best_idx);
     int num_inliers = static_cast<int>(best_score);
 
     // Extract the best hypothesis data

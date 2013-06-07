@@ -1,2 +1,7 @@
 set(the_description "Computational Photography")
-ocv_define_module(photo opencv_imgproc)
+
+if(HAVE_CUDA)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
+endif()
+
+ocv_define_module(photo opencv_imgproc OPTIONAL opencv_gpuarithm opencv_gpuimgproc)

@@ -40,6 +40,10 @@
 //
 //M*/
 
+#include "opencv2/opencv_modules.hpp"
+
+#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING) && defined(HAVE_OPENCV_GPUFILTERS)
+
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/transform.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
@@ -232,3 +236,5 @@ namespace btv_l1_cudev
     template void calcBtvRegularization<3>(PtrStepSzb src, PtrStepSzb dst, int ksize);
     template void calcBtvRegularization<4>(PtrStepSzb src, PtrStepSzb dst, int ksize);
 }
+
+#endif
