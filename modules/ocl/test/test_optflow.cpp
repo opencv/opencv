@@ -121,7 +121,7 @@ TEST_P(GoodFeaturesToTrack, EmptyCorners)
 
     cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
 
-    cv::ocl::oclMat src(100, 128, CV_8UC1, cv::Scalar::all(0));
+    cv::ocl::oclMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
     cv::ocl::oclMat corners(1, maxCorners, CV_32FC2);
 
     detector(src, corners);
