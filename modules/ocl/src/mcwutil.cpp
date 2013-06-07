@@ -43,8 +43,27 @@
 //
 //M*/
 
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
 #include "precomp.hpp"
+
+#ifdef __GNUC__
+#if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#define GCC_DIAG_STR(s) #s
+#define GCC_DIAG_JOINSTR(x,y) GCC_DIAG_STR(x ## y)
+# define GCC_DIAG_DO_PRAGMA(x) _Pragma (#x)
+# define GCC_DIAG_PRAGMA(x) GCC_DIAG_DO_PRAGMA(GCC diagnostic x)
+# if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
+#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(push) \
+GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
+#  define GCC_DIAG_ON(x) GCC_DIAG_PRAGMA(pop)
+# else
+#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
+#  define GCC_DIAG_ON(x)  GCC_DIAG_PRAGMA(warning GCC_DIAG_JOINSTR(-W,x))
+# endif
+#else
+# define GCC_DIAG_OFF(x)
+# define GCC_DIAG_ON(x)
+#endif
+#endif /* __GNUC__ */
 
 using namespace std;
 
@@ -121,6 +140,9 @@ namespace cv
                                   build_options, finish_mode);
         }
 
+#ifdef __GNUC__
+        GCC_DIAG_OFF(deprecated-declarations)
+#endif
         cl_mem bindTexture(const oclMat &mat)
         {
             cl_mem texture;
@@ -156,7 +178,7 @@ namespace cv
                 format.image_channel_order     = CL_RGBA;
                 break;
             default:
-                CV_Error(-1, "Image forma is not supported");
+                CV_Error(-1, "Image format is not supported");
                 break;
             }
 #ifdef CL_VERSION_1_2
@@ -180,10 +202,6 @@ namespace cv
             else
 #endif
             {
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
                 texture = clCreateImage2D(
                     (cl_context)mat.clCxt->oclContext(),
                     CL_MEM_READ_WRITE,
@@ -193,9 +211,6 @@ namespace cv
                     0,
                     NULL,
                     &err);
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
             }
             size_t origin[] = { 0, 0, 0 };
             size_t region[] = { mat.cols, mat.rows, 1 };
@@ -224,6 +239,14 @@ namespace cv
 
             openCLSafeCall(err);
             return texture;
+        }
+#ifdef __GNUC__
+        GCC_DIAG_ON(deprecated-declarations)
+#endif
+
+        Ptr<TextureCL> bindTexturePtr(const oclMat &mat)
+        {
+            return Ptr<TextureCL>(new TextureCL(bindTexture(mat), mat.rows, mat.cols, mat.type()));
         }
         void releaseTexture(cl_mem& texture)
         {

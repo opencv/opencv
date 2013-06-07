@@ -162,7 +162,7 @@ if(UNIX)
 endif()
 
 if(ANDROID)
-  install(FILES "${OpenCV_SOURCE_DIR}/android/android.toolchain.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
+  install(FILES "${OpenCV_SOURCE_DIR}/platforms/android/android.toolchain.cmake" DESTINATION ${OPENCV_CONFIG_INSTALL_PATH}/)
 endif()
 
 # --------------------------------------------------------------------------------------------

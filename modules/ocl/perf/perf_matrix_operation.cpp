@@ -48,7 +48,7 @@
 ///////////// ConvertTo////////////////////////
 PERFTEST(ConvertTo)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -77,9 +77,6 @@ PERFTEST(ConvertTo)
             d_src.convertTo(d_dst, CV_32FC1);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));            
-
-
             GPU_ON;
             d_src.convertTo(d_dst, CV_32FC1);
             GPU_OFF;
@@ -87,8 +84,10 @@ PERFTEST(ConvertTo)
             GPU_FULL_ON;
             d_src.upload(src);
             d_src.convertTo(d_dst, CV_32FC1);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
         }
 
     }
@@ -96,7 +95,7 @@ PERFTEST(ConvertTo)
 ///////////// copyTo////////////////////////
 PERFTEST(copyTo)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -125,9 +124,6 @@ PERFTEST(copyTo)
             d_src.copyTo(d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(dst, cv::Mat(d_dst), 0.0));            
-
-
             GPU_ON;
             d_src.copyTo(d_dst);
             GPU_OFF;
@@ -135,8 +131,10 @@ PERFTEST(copyTo)
             GPU_FULL_ON;
             d_src.upload(src);
             d_src.copyTo(d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
         }
 
     }
@@ -144,9 +142,9 @@ PERFTEST(copyTo)
 ///////////// setTo////////////////////////
 PERFTEST(setTo)
 {
-    Mat src, dst;
+    Mat src, ocl_src;
     Scalar val(1, 2, 3, 4);
-    ocl::oclMat d_src, d_dst;
+    ocl::oclMat d_src;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
@@ -171,10 +169,10 @@ PERFTEST(setTo)
             d_src.setTo(val);
             WARMUP_OFF;
 
-            TestSystem::instance().setAccurate(ExpectedMatNear(src, cv::Mat(d_src), 1.0));            
+            d_src.download(ocl_src);
+            TestSystem::instance().ExpectedMatNear(src, ocl_src, 1.0);
 
-
-            GPU_ON;
+            GPU_ON;;
             d_src.setTo(val);
             GPU_OFF;
 

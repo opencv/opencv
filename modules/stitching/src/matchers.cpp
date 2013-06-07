@@ -65,7 +65,7 @@ struct DistIdxPair
 };
 
 
-struct MatchPairsBody
+struct MatchPairsBody : ParallelLoopBody
 {
     MatchPairsBody(const MatchPairsBody& other)
             : matcher(other.matcher), features(other.features),
@@ -76,10 +76,10 @@ struct MatchPairsBody
             : matcher(_matcher), features(_features),
               pairwise_matches(_pairwise_matches), near_pairs(_near_pairs) {}
 
-    void operator ()(const BlockedRange &r) const
+    void operator ()(const Range &r) const
     {
         const int num_images = static_cast<int>(features.size());
-        for (int i = r.begin(); i < r.end(); ++i)
+        for (int i = r.start; i < r.end; ++i)
         {
             int from = near_pairs[i].first;
             int to = near_pairs[i].second;
@@ -525,9 +525,9 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
 
     if (is_thread_safe_)
-        parallel_for(BlockedRange(0, static_cast<int>(near_pairs.size())), body);
+        parallel_for_(Range(0, static_cast<int>(near_pairs.size())), body);
     else
-        body(BlockedRange(0, static_cast<int>(near_pairs.size())));
+        body(Range(0, static_cast<int>(near_pairs.size())));
     LOGLN_CHAT("");
 }
 

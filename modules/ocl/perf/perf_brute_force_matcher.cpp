@@ -88,9 +88,6 @@ PERFTEST(BruteForceMatcher)
         d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
         WARMUP_OFF;
 
-        d_matcher.match(d_query, d_train, d_matches[0]);
-        TestSystem::instance().setAccurate(AssertEQ<size_t>(d_matches[0].size(), matches[0].size()));
-
         GPU_ON;
         d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
         GPU_OFF;
@@ -98,8 +95,14 @@ PERFTEST(BruteForceMatcher)
         GPU_FULL_ON;
         d_query.upload(query);
         d_train.upload(train);
-        d_matcher.match(d_query, d_train, matches[0]);
+        d_matcher.match(d_query, d_train, d_matches[0]);
         GPU_FULL_OFF;
+
+        int diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
 
         SUBTEST << size << "; knnMatch";
 
@@ -123,7 +126,11 @@ PERFTEST(BruteForceMatcher)
         d_matcher.knnMatch(d_query, d_train, d_matches, 2);
         GPU_FULL_OFF;
 
-        TestSystem::instance().setAccurate(AssertEQ<size_t>(d_matches[0].size(), matches[0].size()));
+        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
 
         SUBTEST << size << "; radiusMatch";
 
@@ -151,6 +158,10 @@ PERFTEST(BruteForceMatcher)
         d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
         GPU_FULL_OFF;
 
-        TestSystem::instance().setAccurate(AssertEQ<size_t>(d_matches[0].size(), matches[0].size()));
+        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
     }
 }
