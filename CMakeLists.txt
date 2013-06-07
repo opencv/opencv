@@ -286,6 +286,10 @@ set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to c
 add_definitions(-DHAVE_CVCONFIG_H)
 ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
+# ----------------------------------------------------------------------------
+#  Path for additional modules
+# ----------------------------------------------------------------------------
+set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV modules")
 
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
