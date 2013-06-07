@@ -94,8 +94,8 @@ namespace arithm
             return saturate_cast<T>(x * x);
         }
 
-        __device__ __forceinline__ Sqr() {}
-        __device__ __forceinline__ Sqr(const Sqr& other) {}
+        __host__ __device__ __forceinline__ Sqr() {}
+        __host__ __device__ __forceinline__ Sqr(const Sqr&) {}
     };
 }
 
@@ -190,8 +190,8 @@ namespace arithm
             return saturate_cast<T>(f(x));
         }
 
-        __device__ __forceinline__ Exp() {}
-        __device__ __forceinline__ Exp(const Exp& other) {}
+        __host__ __device__ __forceinline__ Exp() {}
+        __host__ __device__ __forceinline__ Exp(const Exp&) {}
     };
 }
 
@@ -228,7 +228,7 @@ namespace arithm
     {
         float power;
 
-        PowOp(double power_) : power(static_cast<float>(power_)) {}
+        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
 
         __device__ __forceinline__ T operator()(T e) const
         {
@@ -239,7 +239,7 @@ namespace arithm
     {
         float power;
 
-        PowOp(double power_) : power(static_cast<float>(power_)) {}
+        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
 
         __device__ __forceinline__ T operator()(T e) const
         {
@@ -255,7 +255,7 @@ namespace arithm
     {
         float power;
 
-        PowOp(double power_) : power(static_cast<float>(power_)) {}
+        __host__ explicit PowOp(double power_) : power(static_cast<float>(power_)) {}
 
         __device__ __forceinline__ float operator()(float e) const
         {
@@ -266,7 +266,7 @@ namespace arithm
     {
         double power;
 
-        PowOp(double power_) : power(power_) {}
+        __host__ explicit PowOp(double power_) : power(power_) {}
 
         __device__ __forceinline__ double operator()(double e) const
         {

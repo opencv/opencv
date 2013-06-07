@@ -74,7 +74,7 @@ namespace arithm
         float beta;
         float gamma;
 
-        AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(static_cast<float>(alpha_)), beta(static_cast<float>(beta_)), gamma(static_cast<float>(gamma_)) {}
+        __host__ AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(static_cast<float>(alpha_)), beta(static_cast<float>(beta_)), gamma(static_cast<float>(gamma_)) {}
 
         __device__ __forceinline__ D operator ()(T1 a, T2 b) const
         {
@@ -87,7 +87,7 @@ namespace arithm
         double beta;
         double gamma;
 
-        AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
+        __host__ AddWeighted_(double alpha_, double beta_, double gamma_) : alpha(alpha_), beta(beta_), gamma(gamma_) {}
 
         __device__ __forceinline__ D operator ()(T1 a, T2 b) const
         {

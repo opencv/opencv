@@ -65,8 +65,8 @@ namespace arithm
             return vmin4(a, b);
         }
 
-        __device__ __forceinline__ VMin4() {}
-        __device__ __forceinline__ VMin4(const VMin4& other) {}
+        __host__ __device__ __forceinline__ VMin4() {}
+        __host__ __device__ __forceinline__ VMin4(const VMin4&) {}
     };
 
     struct VMin2 : binary_function<uint, uint, uint>
@@ -76,8 +76,8 @@ namespace arithm
             return vmin2(a, b);
         }
 
-        __device__ __forceinline__ VMin2() {}
-        __device__ __forceinline__ VMin2(const VMin2& other) {}
+        __host__ __device__ __forceinline__ VMin2() {}
+        __host__ __device__ __forceinline__ VMin2(const VMin2&) {}
     };
 }
 
@@ -151,8 +151,8 @@ namespace arithm
             return vmax4(a, b);
         }
 
-        __device__ __forceinline__ VMax4() {}
-        __device__ __forceinline__ VMax4(const VMax4& other) {}
+        __host__ __device__ __forceinline__ VMax4() {}
+        __host__ __device__ __forceinline__ VMax4(const VMax4&) {}
     };
 
     struct VMax2 : binary_function<uint, uint, uint>
@@ -162,8 +162,8 @@ namespace arithm
             return vmax2(a, b);
         }
 
-        __device__ __forceinline__ VMax2() {}
-        __device__ __forceinline__ VMax2(const VMax2& other) {}
+        __host__ __device__ __forceinline__ VMax2() {}
+        __host__ __device__ __forceinline__ VMax2(const VMax2&) {}
     };
 }
 
