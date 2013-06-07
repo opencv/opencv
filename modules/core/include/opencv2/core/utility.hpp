@@ -48,8 +48,8 @@
 #  error utility.hpp header must be compiled as C++
 #endif
 
-#include<limits>
 #include "opencv2/core.hpp"
+
 namespace cv
 {
 
