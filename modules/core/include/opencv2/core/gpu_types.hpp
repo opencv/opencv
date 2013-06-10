@@ -60,7 +60,7 @@ namespace cv
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template<typename T> struct DevPtr
+        template <typename T> struct DevPtr
         {
             typedef T elem_type;
             typedef int index_type;
@@ -77,7 +77,7 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ operator const T*() const { return data; }
         };
 
-        template<typename T> struct PtrSz : public DevPtr<T>
+        template <typename T> struct PtrSz : public DevPtr<T>
         {
             __CV_GPU_HOST_DEVICE__ PtrSz() : size(0) {}
             __CV_GPU_HOST_DEVICE__ PtrSz(T* data_, size_t size_) : DevPtr<T>(data_), size(size_) {}
@@ -85,7 +85,7 @@ namespace cv
             size_t size;
         };
 
-        template<typename T> struct PtrStep : public DevPtr<T>
+        template <typename T> struct PtrStep : public DevPtr<T>
         {
             __CV_GPU_HOST_DEVICE__ PtrStep() : step(0) {}
             __CV_GPU_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}

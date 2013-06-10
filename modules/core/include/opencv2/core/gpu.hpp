@@ -251,7 +251,7 @@ public:
     uchar* dataend;
 };
 
-//! creates continuous GPU matrix
+//! creates continuous matrix
 CV_EXPORTS void createContinuous(int rows, int cols, int type, OutputArray arr);
 
 //! ensures that size of the given matrix is not less than (rows, cols) size
