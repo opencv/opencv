@@ -184,10 +184,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
 
     if (outRoi.width == layer0_.cols && outRoi.height == layer0_.rows)
     {
-        if (stream)
-            stream.enqueueCopy(layer0_, outImg);
-        else
-            layer0_.copyTo(outImg);
+        layer0_.copyTo(outImg, stream);
     }
 
     float lastScale = 1.0f;
@@ -202,10 +199,7 @@ void cv::gpu::ImagePyramid::getLayer(GpuMat& outImg, Size outRoi, Stream& stream
 
         if (outRoi.width == curLayer.cols && outRoi.height == curLayer.rows)
         {
-            if (stream)
-                stream.enqueueCopy(curLayer, outImg);
-            else
-                curLayer.copyTo(outImg);
+            curLayer.copyTo(outImg, stream);
         }
 
         if (outRoi.width >= curLayer.cols && outRoi.height >= curLayer.rows)

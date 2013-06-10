@@ -47,7 +47,7 @@
 #  error gpuwarping.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/imgproc.hpp"
 
 namespace cv { namespace gpu {

@@ -77,7 +77,7 @@ public:
         STD_VECTOR_MAT    = 5 << KIND_SHIFT,
         EXPR              = 6 << KIND_SHIFT,
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
-        OPENGL_TEXTURE    = 8 << KIND_SHIFT,
+        CUDA_MEM          = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT
     };
 
@@ -94,13 +94,12 @@ public:
     _InputArray(const double& val);
     _InputArray(const gpu::GpuMat& d_mat);
     _InputArray(const ogl::Buffer& buf);
-    _InputArray(const ogl::Texture2D& tex);
+    _InputArray(const gpu::CudaMem& cuda_mem);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
     virtual gpu::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
-    virtual ogl::Texture2D getOGlTexture2D() const;
 
     virtual int kind() const;
     virtual Size size(int i=-1) const;
@@ -143,7 +142,7 @@ public:
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(gpu::GpuMat& d_mat);
     _OutputArray(ogl::Buffer& buf);
-    _OutputArray(ogl::Texture2D& tex);
+    _OutputArray(gpu::CudaMem& cuda_mem);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -155,7 +154,7 @@ public:
     _OutputArray(const std::vector<Mat>& vec);
     _OutputArray(const gpu::GpuMat& d_mat);
     _OutputArray(const ogl::Buffer& buf);
-    _OutputArray(const ogl::Texture2D& tex);
+    _OutputArray(const gpu::CudaMem& cuda_mem);
     template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);
@@ -169,7 +168,7 @@ public:
     virtual Mat& getMatRef(int i=-1) const;
     virtual gpu::GpuMat& getGpuMatRef() const;
     virtual ogl::Buffer& getOGlBufferRef() const;
-    virtual ogl::Texture2D& getOGlTexture2DRef() const;
+    virtual gpu::CudaMem& getCudaMemRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;

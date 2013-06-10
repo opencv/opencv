@@ -213,36 +213,18 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
 
     load_constants(rthis.ndisp, rthis.max_data_term, rthis.data_weight, rthis.max_disc_term, rthis.disc_single_jump, rthis.min_disp_th, left, right, temp);
 
-    if (stream)
-    {
-        stream.enqueueMemSet(l[0], zero);
-        stream.enqueueMemSet(d[0], zero);
-        stream.enqueueMemSet(r[0], zero);
-        stream.enqueueMemSet(u[0], zero);
+    l[0].setTo(zero, stream);
+    d[0].setTo(zero, stream);
+    r[0].setTo(zero, stream);
+    u[0].setTo(zero, stream);
 
-        stream.enqueueMemSet(l[1], zero);
-        stream.enqueueMemSet(d[1], zero);
-        stream.enqueueMemSet(r[1], zero);
-        stream.enqueueMemSet(u[1], zero);
+    l[1].setTo(zero, stream);
+    d[1].setTo(zero, stream);
+    r[1].setTo(zero, stream);
+    u[1].setTo(zero, stream);
 
-        stream.enqueueMemSet(data_cost, zero);
-        stream.enqueueMemSet(data_cost_selected, zero);
-    }
-    else
-    {
-        l[0].setTo(zero);
-        d[0].setTo(zero);
-        r[0].setTo(zero);
-        u[0].setTo(zero);
-
-        l[1].setTo(zero);
-        d[1].setTo(zero);
-        r[1].setTo(zero);
-        u[1].setTo(zero);
-
-        data_cost.setTo(zero);
-        data_cost_selected.setTo(zero);
-    }
+    data_cost.setTo(zero, stream);
+    data_cost_selected.setTo(zero, stream);
 
     int cur_idx = 0;
 
@@ -279,20 +261,14 @@ static void csbp_operator(StereoConstantSpaceBP& rthis, GpuMat& mbuf, GpuMat& te
 
     out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
 
-    if (stream)
-        stream.enqueueMemSet(out, zero);
-    else
-        out.setTo(zero);
+    out.setTo(zero, stream);
 
     compute_disp(u[cur_idx].ptr<T>(), d[cur_idx].ptr<T>(), l[cur_idx].ptr<T>(), r[cur_idx].ptr<T>(),
                  data_cost_selected.ptr<T>(), disp_selected_pyr[cur_idx].ptr<T>(), elem_step, out, nr_plane_pyr[0], cudaStream);
 
     if (disp.type() != CV_16S)
     {
-        if (stream)
-            stream.enqueueConvert(out, disp, disp.type());
-        else
-            out.convertTo(disp, disp.type());
+        out.convertTo(disp, disp.type(), stream);
     }
 }
 

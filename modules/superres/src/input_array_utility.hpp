@@ -44,7 +44,7 @@
 #define __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 namespace cv
 {

@@ -47,7 +47,7 @@
 #  error gpu.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 #if !defined(__OPENCV_BUILD) && !defined(OPENCV_GPU_SKIP_INCLUDE)
     #include "opencv2/opencv_modules.hpp"

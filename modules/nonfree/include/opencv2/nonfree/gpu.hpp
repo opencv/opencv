@@ -43,7 +43,7 @@
 #ifndef __OPENCV_NONFREE_GPU_HPP__
 #define __OPENCV_NONFREE_GPU_HPP__
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 namespace cv { namespace gpu {
 

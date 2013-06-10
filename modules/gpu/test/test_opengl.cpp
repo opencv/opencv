@@ -126,25 +126,6 @@ GPU_TEST_P(Buffer, ConstructorFromBuffer)
     EXPECT_EQ(buf_gold.type(), buf.type());
 }
 
-GPU_TEST_P(Buffer, ConstructorFromTexture2D)
-{
-    const int depth = CV_MAT_DEPTH(type);
-    const int cn = CV_MAT_CN(type);
-
-    if (depth != CV_32F || cn == 2)
-        return;
-
-    cv::Mat gold = randomMat(size, type, 0, 1.0);
-    cv::ogl::Texture2D tex_gold(gold, true);
-
-    cv::ogl::Buffer buf(tex_gold, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
-
-    cv::Mat bufData;
-    buf.copyTo(bufData);
-
-    EXPECT_MAT_NEAR(gold, bufData, 1e-2);
-}
-
 GPU_TEST_P(Buffer, Create)
 {
     cv::ogl::Buffer buf;
@@ -198,26 +179,6 @@ GPU_TEST_P(Buffer, CopyFromBuffer)
     EXPECT_MAT_NEAR(gold, bufData, 0);
 }
 
-GPU_TEST_P(Buffer, CopyFromTexture2D)
-{
-    const int depth = CV_MAT_DEPTH(type);
-    const int cn = CV_MAT_CN(type);
-
-    if (depth != CV_32F || cn == 2)
-        return;
-
-    cv::Mat gold = randomMat(size, type, 0, 1.0);
-    cv::ogl::Texture2D tex_gold(gold, true);
-
-    cv::ogl::Buffer buf;
-    buf.copyFrom(tex_gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
-
-    cv::Mat bufData;
-    buf.copyTo(bufData);
-
-    EXPECT_MAT_NEAR(gold, bufData, 1e-2);
-}
-
 GPU_TEST_P(Buffer, CopyToGpuMat)
 {
     cv::Mat gold = randomMat(size, type);
@@ -237,7 +198,8 @@ GPU_TEST_P(Buffer, CopyToBuffer)
     cv::ogl::Buffer buf(gold, cv::ogl::Buffer::ARRAY_BUFFER, true);
 
     cv::ogl::Buffer dst;
-    buf.copyTo(dst, cv::ogl::Buffer::ARRAY_BUFFER, true);
+    buf.copyTo(dst);
+    dst.setAutoRelease(true);
 
     EXPECT_NE(buf.bufId(), dst.bufId());
 
@@ -245,27 +207,6 @@ GPU_TEST_P(Buffer, CopyToBuffer)
     dst.copyTo(bufData);
 
     EXPECT_MAT_NEAR(gold, bufData, 0);
-}
-
-GPU_TEST_P(Buffer, CopyToTexture2D)
-{
-    const int depth = CV_MAT_DEPTH(type);
-    const int cn = CV_MAT_CN(type);
-
-    if (depth != CV_32F || cn == 2)
-        return;
-
-    cv::Mat gold = randomMat(size, type, 0, 1.0);
-
-    cv::ogl::Buffer buf(gold, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
-
-    cv::ogl::Texture2D tex;
-    buf.copyTo(tex, cv::ogl::Buffer::PIXEL_PACK_BUFFER, true);
-
-    cv::Mat texData;
-    tex.copyTo(texData);
-
-    EXPECT_MAT_NEAR(gold, texData, 1e-2);
 }
 
 GPU_TEST_P(Buffer, Clone)

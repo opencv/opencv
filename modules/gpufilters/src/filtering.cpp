@@ -157,10 +157,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
@@ -221,10 +218,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             ensureSizeIsEnough(src_size, bufType, *pbuf);
@@ -487,10 +481,7 @@ namespace
 
             if (roi.size() != src_size)
             {
-                if (stream)
-                    stream.enqueueMemSet(dst, Scalar::all(0));
-                else
-                    dst.setTo(Scalar::all(0));
+                dst.setTo(Scalar::all(0), stream);
             }
 
             normalizeROI(roi, filter2D->ksize, filter2D->anchor, src_size);
@@ -557,10 +548,7 @@ namespace
 
         if (iterations == 0 || _kernel.rows * _kernel.cols == 1)
         {
-            if (stream)
-                stream.enqueueCopy(src, dst);
-            else
-                src.copyTo(dst);
+            src.copyTo(dst, stream);
             return;
         }
 
@@ -890,7 +878,7 @@ namespace
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
         {
             DeviceInfo devInfo;
-            int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
+            int cc = devInfo.major() * 10 + devInfo.minor();
             func(src, dst, kernel.ptr<float>(), ksize, anchor, brd_type, cc, StreamAccessor::getStream(s));
         }
 
@@ -989,7 +977,7 @@ namespace
         virtual void operator()(const GpuMat& src, GpuMat& dst, Stream& s = Stream::Null())
         {
             DeviceInfo devInfo;
-            int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
+            int cc = devInfo.major() * 10 + devInfo.minor();
             if (ksize > 16 && cc < 20)
                 CV_Error(cv::Error::StsNotImplemented, "column linear filter doesn't implemented for kernel size > 16 for device with compute capabilities less than 2.0");
 

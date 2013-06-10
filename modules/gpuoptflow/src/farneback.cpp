@@ -235,8 +235,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             break;
     }
 
-    streams[0].enqueueConvert(frame0, frames_[0], CV_32F);
-    streams[1].enqueueConvert(frame1, frames_[1], CV_32F);
+    frame0.convertTo(frames_[0], CV_32F, streams[0]);
+    frame1.convertTo(frames_[1], CV_32F, streams[1]);
 
     if (fastPyramids)
     {
@@ -293,21 +293,21 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             {
                 gpu::resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
                 gpu::resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
-                streams[0].enqueueConvert(curFlowX, curFlowX, curFlowX.depth(), scale);
-                streams[1].enqueueConvert(curFlowY, curFlowY, curFlowY.depth(), scale);
+                curFlowX.convertTo(curFlowX, curFlowX.depth(), scale, streams[0]);
+                curFlowY.convertTo(curFlowY, curFlowY.depth(), scale, streams[1]);
             }
             else
             {
-                streams[0].enqueueMemSet(curFlowX, 0);
-                streams[1].enqueueMemSet(curFlowY, 0);
+                curFlowX.setTo(0, streams[0]);
+                curFlowY.setTo(0, streams[1]);
             }
         }
         else
         {
             gpu::resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
             gpu::resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
-            streams[0].enqueueConvert(curFlowX, curFlowX, curFlowX.depth(), 1./pyrScale);
-            streams[1].enqueueConvert(curFlowY, curFlowY, curFlowY.depth(), 1./pyrScale);
+            curFlowX.convertTo(curFlowX, curFlowX.depth(), 1./pyrScale, streams[0]);
+            curFlowY.convertTo(curFlowY, curFlowY.depth(), 1./pyrScale, streams[1]);
         }
 
         GpuMat M = allocMatFromBuf(5*height, width, CV_32F, M_);
@@ -343,7 +343,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             {
                 cudev::optflow_farneback::gaussianBlurGpu(
                         frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101, S(streams[i]));
-                gpu::resize(blurredFrame[i], pyrLevel[i], Size(width, height), INTER_LINEAR, streams[i]);
+                gpu::resize(blurredFrame[i], pyrLevel[i], Size(width, height), 0.0, 0.0, INTER_LINEAR, streams[i]);
                 cudev::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }

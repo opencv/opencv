@@ -52,7 +52,7 @@
 
 #include "opencv2/gpucodec.hpp"
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #ifdef HAVE_NVCUVID
     #include <nvcuvid.h>

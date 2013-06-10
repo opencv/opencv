@@ -217,10 +217,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
     {
         if (src3.empty())
         {
-            if (stream)
-                stream.enqueueMemSet(dst, Scalar::all(0));
-            else
-                dst.setTo(Scalar::all(0));
+            dst.setTo(Scalar::all(0), stream);
         }
         else
         {
@@ -230,10 +227,7 @@ void cv::gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const G
             }
             else
             {
-                if (stream)
-                    stream.enqueueCopy(src3, dst);
-                else
-                    src3.copyTo(dst);
+                src3.copyTo(dst, stream);
             }
         }
     }
@@ -336,18 +330,13 @@ void cv::gpu::integralBuffered(const GpuMat& src, GpuMat& sum, GpuMat& buffer, S
         cv::gpu::cudev::imgproc::shfl_integral_gpu(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
-        if (s)
-            s.enqueueMemSet(sum, Scalar::all(0));
-        else
-            sum.setTo(Scalar::all(0));
+
+        sum.setTo(Scalar::all(0), s);
 
         GpuMat inner = sum(Rect(1, 1, src.cols, src.rows));
         GpuMat res = buffer(Rect(0, 0, src.cols, src.rows));
 
-        if (s)
-            s.enqueueCopy(res, inner);
-        else
-            res.copyTo(inner);
+        res.copyTo(inner, s);
     }
     else
     {
@@ -720,10 +709,7 @@ void cv::gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result,
             GpuMat result_block(result_roi_size, result_data.type(),
                                 result_data.ptr(), result_data.step);
 
-            if (stream)
-                stream.enqueueCopy(result_block, result_roi);
-            else
-                result_block.copyTo(result_roi);
+            result_block.copyTo(result_roi, stream);
         }
     }
 

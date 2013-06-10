@@ -68,11 +68,11 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/gpulegacy.hpp"
 #include "opencv2/highgui.hpp"
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #include "NCVTest.hpp"
 #include "NCVAutoTestLister.hpp"

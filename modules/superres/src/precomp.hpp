@@ -48,14 +48,14 @@
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/core/private.hpp"
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
 #ifdef HAVE_OPENCV_GPUARITHM
 #  include "opencv2/gpuarithm.hpp"

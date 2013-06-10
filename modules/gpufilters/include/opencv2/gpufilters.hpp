@@ -47,7 +47,7 @@
 #  error gpufilters.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/base.hpp"
 
 namespace cv { namespace gpu {

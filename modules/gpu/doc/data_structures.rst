@@ -6,32 +6,22 @@ Data Structures
 
 
 gpu::PtrStepSz
----------------
+--------------
 .. ocv:class:: gpu::PtrStepSz
 
 Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compiled code (CUDA kernels). Typically, it is used internally by OpenCV and by users who write device code. You can call its members from both host and device code. ::
 
-    template <typename T> struct PtrStepSz
+    template <typename T> struct PtrStepSz : public PtrStep<T>
     {
-        int cols;
-        int rows;
-        T* data;
-        size_t step;
-
-        PtrStepSz() : cols(0), rows(0), data(0), step(0){};
-        PtrStepSz(int rows, int cols, T *data, size_t step);
+        __CV_GPU_HOST_DEVICE__ PtrStepSz() : cols(0), rows(0) {}
+        __CV_GPU_HOST_DEVICE__ PtrStepSz(int rows_, int cols_, T* data_, size_t step_)
+            : PtrStep<T>(data_, step_), cols(cols_), rows(rows_) {}
 
         template <typename U>
-        explicit PtrStepSz(const PtrStepSz<U>& d);
+        explicit PtrStepSz(const PtrStepSz<U>& d) : PtrStep<T>((T*)d.data, d.step), cols(d.cols), rows(d.rows){}
 
-        typedef T elem_type;
-        enum { elem_size = sizeof(elem_type) };
-
-        __CV_GPU_HOST_DEVICE__ size_t elemSize() const;
-
-        /* returns pointer to the beginning of the given image row */
-        __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
-        __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
+        int cols;
+        int rows;
     };
 
     typedef PtrStepSz<unsigned char> PtrStepSzb;
@@ -41,30 +31,30 @@ Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compi
 
 
 gpu::PtrStep
---------------
+------------
 .. ocv:class:: gpu::PtrStep
 
 Structure similar to :ocv:class:`gpu::PtrStepSz` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
 
-    template<typename T> struct PtrStep
+    template <typename T> struct PtrStep : public DevPtr<T>
     {
-            T* data;
-            size_t step;
+        __CV_GPU_HOST_DEVICE__ PtrStep() : step(0) {}
+        __CV_GPU_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}
 
-            PtrStep();
-            PtrStep(const PtrStepSz<T>& mem);
+        //! stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!!
+        size_t step;
 
-            typedef T elem_type;
-            enum { elem_size = sizeof(elem_type) };
+        __CV_GPU_HOST_DEVICE__       T* ptr(int y = 0)       { return (      T*)( (      char*)DevPtr<T>::data + y * step); }
+        __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const { return (const T*)( (const char*)DevPtr<T>::data + y * step); }
 
-            __CV_GPU_HOST_DEVICE__ size_t elemSize() const;
-            __CV_GPU_HOST_DEVICE__ T* ptr(int y = 0);
-            __CV_GPU_HOST_DEVICE__ const T* ptr(int y = 0) const;
+        __CV_GPU_HOST_DEVICE__       T& operator ()(int y, int x)       { return ptr(y)[x]; }
+        __CV_GPU_HOST_DEVICE__ const T& operator ()(int y, int x) const { return ptr(y)[x]; }
     };
 
-    typedef PtrStep<unsigned char> PtrStep;
+    typedef PtrStep<unsigned char> PtrStepb;
     typedef PtrStep<float> PtrStepf;
     typedef PtrStep<int> PtrStepi;
+
 
 
 gpu::GpuMat
@@ -89,28 +79,31 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
             //! default constructor
             GpuMat();
 
+            //! constructs GpuMat of the specified size and type
             GpuMat(int rows, int cols, int type);
             GpuMat(Size size, int type);
 
             .....
 
-            //! builds GpuMat from Mat. Blocks uploading to device.
-            explicit GpuMat (const Mat& m);
+            //! builds GpuMat from host memory (Blocking call)
+            explicit GpuMat(InputArray arr);
 
             //! returns lightweight PtrStepSz structure for passing
             //to nvcc-compiled code. Contains size, data ptr and step.
             template <class T> operator PtrStepSz<T>() const;
             template <class T> operator PtrStep<T>() const;
 
-            //! blocks uploading data to GpuMat.
-            void upload(const cv::Mat& m);
-            void upload(const CudaMem& m, Stream& stream);
+            //! pefroms upload data to GpuMat (Blocking call)
+            void upload(InputArray arr);
 
-            //! downloads data from device to host memory. Blocking calls.
-            void download(cv::Mat& m) const;
+            //! pefroms upload data to GpuMat (Non-Blocking call)
+            void upload(InputArray arr, Stream& stream);
 
-            //! download async
-            void download(CudaMem& m, Stream& stream) const;
+            //! pefroms download data from device to host memory (Blocking call)
+            void download(OutputArray dst) const;
+
+            //! pefroms download data from device to host memory (Non-Blocking call)
+            void download(OutputArray dst, Stream& stream) const;
     };
 
 
@@ -121,16 +114,10 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
 
 
 gpu::createContinuous
--------------------------
-Creates a continuous matrix in the GPU memory.
+---------------------
+Creates a continuous matrix.
 
-.. ocv:function:: void gpu::createContinuous(int rows, int cols, int type, GpuMat& m)
-
-.. ocv:function:: GpuMat gpu::createContinuous(int rows, int cols, int type)
-
-.. ocv:function:: void gpu::createContinuous(Size size, int type, GpuMat& m)
-
-.. ocv:function:: GpuMat gpu::createContinuous(Size size, int type)
+.. ocv:function:: void gpu::createContinuous(int rows, int cols, int type, OutputArray arr)
 
     :param rows: Row count.
 
@@ -138,36 +125,92 @@ Creates a continuous matrix in the GPU memory.
 
     :param type: Type of the matrix.
 
-    :param m: Destination matrix. This parameter changes only if it has a proper type and area ( :math:`\texttt{rows} \times \texttt{cols}` ).
+    :param arr: Destination matrix. This parameter changes only if it has a proper type and area ( :math:`\texttt{rows} \times \texttt{cols}` ).
 
 Matrix is called continuous if its elements are stored continuously, that is, without gaps at the end of each row.
 
 
 
 gpu::ensureSizeIsEnough
----------------------------
+-----------------------
 Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
-.. ocv:function:: void gpu::ensureSizeIsEnough(int rows, int cols, int type, GpuMat& m)
-
-.. ocv:function:: void gpu::ensureSizeIsEnough(Size size, int type, GpuMat& m)
+.. ocv:function:: void gpu::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
 
     :param rows: Minimum desired number of rows.
 
     :param cols: Minimum desired number of columns.
 
-    :param size: Rows and columns passed as a structure.
-
     :param type: Desired matrix type.
 
-    :param m: Destination matrix.
+    :param arr: Destination matrix.
 
 The function does not reallocate memory if the matrix has proper attributes already.
 
 
 
+gpu::CudaMem
+------------
+.. ocv:class:: gpu::CudaMem
+
+Class with reference counting wrapping special memory type allocation functions from CUDA. Its interface is also :ocv:func:`Mat`-like but with additional memory type parameters.
+
+* **PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous uploading/downloading data from/to GPU.
+* **SHARED** specifies a zero copy memory allocation that enables mapping the host memory to GPU address space, if supported.
+* **WRITE_COMBINED**  sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
+
+.. note:: Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
+
+::
+
+    class CV_EXPORTS CudaMem
+    {
+    public:
+        enum AllocType { PAGE_LOCKED = 1, SHARED = 2, WRITE_COMBINED = 4 };
+
+        explicit CudaMem(AllocType alloc_type = PAGE_LOCKED);
+
+        CudaMem(int rows, int cols, int type, AllocType alloc_type = PAGE_LOCKED);
+        CudaMem(Size size, int type, AllocType alloc_type = PAGE_LOCKED);
+
+        //! creates from host memory with coping data
+        explicit CudaMem(InputArray arr, AllocType alloc_type = PAGE_LOCKED);
+
+        ......
+
+        //! returns matrix header with disabled reference counting for CudaMem data.
+        Mat createMatHeader() const;
+
+        //! maps host memory into device address space and returns GpuMat header for it. Throws exception if not supported by hardware.
+        GpuMat createGpuMatHeader() const;
+
+        ......
+
+        AllocType alloc_type;
+    };
+
+
+
+gpu::CudaMem::createMatHeader
+-----------------------------
+Creates a header without reference counting to :ocv:class:`gpu::CudaMem` data.
+
+.. ocv:function:: Mat gpu::CudaMem::createMatHeader() const
+
+
+
+gpu::CudaMem::createGpuMatHeader
+--------------------------------
+Maps CPU memory to GPU address space and creates the :ocv:class:`gpu::GpuMat` header without reference counting for it.
+
+.. ocv:function:: GpuMat gpu::CudaMem::createGpuMatHeader() const
+
+This can be done only if memory was allocated with the ``SHARED`` flag and if it is supported by the hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy.
+
+
+
 gpu::registerPageLocked
--------------------------------
+-----------------------
 Page-locks the memory of matrix and maps it for the device(s).
 
 .. ocv:function:: void gpu::registerPageLocked(Mat& m)
@@ -177,7 +220,7 @@ Page-locks the memory of matrix and maps it for the device(s).
 
 
 gpu::unregisterPageLocked
--------------------------------
+-------------------------
 Unmaps the memory of matrix and makes it pageable again.
 
 .. ocv:function:: void gpu::unregisterPageLocked(Mat& m)
@@ -186,83 +229,11 @@ Unmaps the memory of matrix and makes it pageable again.
 
 
 
-gpu::CudaMem
-------------
-.. ocv:class:: gpu::CudaMem
-
-Class with reference counting wrapping special memory type allocation functions from CUDA. Its interface is also
-:ocv:func:`Mat`-like but with additional memory type parameters.
-
-* **ALLOC_PAGE_LOCKED** sets a page locked memory type used commonly for fast and asynchronous uploading/downloading data from/to GPU.
-* **ALLOC_ZEROCOPY** specifies a zero copy memory allocation that enables mapping the host memory to GPU address space, if supported.
-* **ALLOC_WRITE_COMBINED**  sets the write combined buffer that is not cached by CPU. Such buffers are used to supply GPU with data when GPU only reads it. The advantage is a better CPU cache utilization.
-
-.. note:: Allocation size of such memory types is usually limited. For more details, see *CUDA 2.2 Pinned Memory APIs* document or *CUDA C Programming Guide*.
-
-::
-
-    class CV_EXPORTS CudaMem
-    {
-    public:
-            enum  { ALLOC_PAGE_LOCKED = 1, ALLOC_ZEROCOPY = 2,
-                     ALLOC_WRITE_COMBINED = 4 };
-
-            CudaMem(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-
-            //! creates from cv::Mat with coping data
-            explicit CudaMem(const Mat& m, int alloc_type = ALLOC_PAGE_LOCKED);
-
-             ......
-
-            void create(Size size, int type, int alloc_type = ALLOC_PAGE_LOCKED);
-
-            //! returns matrix header with disabled ref. counting for CudaMem data.
-            Mat createMatHeader() const;
-            operator Mat() const;
-
-            //! maps host memory into device address space
-            GpuMat createGpuMatHeader() const;
-            operator GpuMat() const;
-
-            //if host memory can be mapped to gpu address space;
-            static bool canMapHostMemory();
-
-            int alloc_type;
-    };
-
-
-
-gpu::CudaMem::createMatHeader
----------------------------------
-Creates a header without reference counting to :ocv:class:`gpu::CudaMem` data.
-
-.. ocv:function:: Mat gpu::CudaMem::createMatHeader() const
-
-
-
-gpu::CudaMem::createGpuMatHeader
-------------------------------------
-Maps CPU memory to GPU address space and creates the :ocv:class:`gpu::GpuMat` header without reference counting for it.
-
-.. ocv:function:: GpuMat gpu::CudaMem::createGpuMatHeader() const
-
-This can be done only if memory was allocated with the ``ALLOC_ZEROCOPY`` flag and if it is supported by the hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy.
-
-
-
-gpu::CudaMem::canMapHostMemory
-----------------------------------
-Returns ``true`` if the current hardware supports address space mapping and ``ALLOC_ZEROCOPY`` memory allocation.
-
-.. ocv:function:: static bool gpu::CudaMem::canMapHostMemory()
-
-
-
 gpu::Stream
 -----------
 .. ocv:class:: gpu::Stream
 
-This class encapsulates a queue of asynchronous calls. Some functions have overloads with the additional ``gpu::Stream`` parameter. The overloads do initialization work (allocate output buffers, upload constants, and so on), start the GPU kernel, and return before results are ready. You can check whether all operations are complete via :ocv:func:`gpu::Stream::queryIfComplete`. You can asynchronously upload/download data from/to page-locked buffers, using the :ocv:class:`gpu::CudaMem` or :ocv:class:`Mat` header that points to a region of :ocv:class:`gpu::CudaMem`.
+This class encapsulates a queue of asynchronous calls.
 
 .. note:: Currently, you may face problems if an operation is enqueued twice with different data. Some functions use the constant GPU memory, and next call may update the memory before the previous one has been finished. But calling different operations asynchronously is safe because each operation has its own constant buffer. Memory copy/upload/download/set operations to the buffers you hold are also safe.
 
@@ -272,30 +243,24 @@ This class encapsulates a queue of asynchronous calls. Some functions have overl
     {
     public:
         Stream();
-        ~Stream();
 
-        Stream(const Stream&);
-        Stream& operator=(const Stream&);
+        //! queries an asynchronous stream for completion status
+        bool queryIfComplete() const;
 
-        bool queryIfComplete();
+        //! waits for stream tasks to complete
         void waitForCompletion();
 
-        void enqueueDownload(const GpuMat& src, CudaMem& dst);
-        void enqueueDownload(const GpuMat& src, Mat& dst);
+        //! makes a compute stream wait on an event
+        void waitEvent(const Event& event);
 
-        void enqueueUpload(const CudaMem& src, GpuMat& dst);
-        void enqueueUpload(const Mat& src, GpuMat& dst);
-
-        void enqueueCopy(const GpuMat& src, GpuMat& dst);
-
-        void enqueueMemSet(const GpuMat& src, Scalar val);
-        void enqueueMemSet(const GpuMat& src, Scalar val, const GpuMat& mask);
-
-        void enqueueConvert(const GpuMat& src, GpuMat& dst, int type,
-                            double a = 1, double b = 0);
-
-        typedef void (*StreamCallback)(Stream& stream, int status, void* userData);
+        //! adds a callback to be called on the host after all currently enqueued items in the stream have completed
         void enqueueHostCallback(StreamCallback callback, void* userData);
+
+        //! return Stream object for default CUDA stream
+        static Stream& Null();
+
+        //! returns true if stream object is not default (!= 0)
+        operator bool_type() const;
     };
 
 
@@ -316,53 +281,11 @@ Blocks the current CPU thread until all operations in the stream are complete.
 
 
 
-gpu::Stream::enqueueDownload
-----------------------------
-Copies data from device to host.
+gpu::Stream::waitEvent
+----------------------
+Makes a compute stream wait on an event.
 
-.. ocv:function:: void gpu::Stream::enqueueDownload(const GpuMat& src, CudaMem& dst)
-
-.. ocv:function:: void gpu::Stream::enqueueDownload(const GpuMat& src, Mat& dst)
-
-.. note:: ``cv::Mat`` must point to page locked memory (i.e. to ``CudaMem`` data or to its subMat) or must be registered with :ocv:func:`gpu::registerPageLocked` .
-
-
-
-gpu::Stream::enqueueUpload
---------------------------
-Copies data from host to device.
-
-.. ocv:function:: void gpu::Stream::enqueueUpload(const CudaMem& src, GpuMat& dst)
-
-.. ocv:function:: void gpu::Stream::enqueueUpload(const Mat& src, GpuMat& dst)
-
-.. note:: ``cv::Mat`` must point to page locked memory (i.e. to ``CudaMem`` data or to its subMat) or must be registered with :ocv:func:`gpu::registerPageLocked` .
-
-
-
-gpu::Stream::enqueueCopy
-------------------------
-Copies data from device to device.
-
-.. ocv:function:: void gpu::Stream::enqueueCopy(const GpuMat& src, GpuMat& dst)
-
-
-
-gpu::Stream::enqueueMemSet
---------------------------
-Initializes or sets device memory to a value.
-
-.. ocv:function:: void gpu::Stream::enqueueMemSet( GpuMat& src, Scalar val )
-
-.. ocv:function:: void gpu::Stream::enqueueMemSet( GpuMat& src, Scalar val, const GpuMat& mask )
-
-
-
-gpu::Stream::enqueueConvert
----------------------------
-Converts matrix type, ex from float to uchar depending on type.
-
-.. ocv:function:: void gpu::Stream::enqueueConvert( const GpuMat& src, GpuMat& dst, int dtype, double a=1, double b=0 )
+.. ocv:function:: void gpu::Stream::waitEvent(const Event& event)
 
 
 

@@ -368,8 +368,8 @@ Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 
     gpu::Stream stream;
 
-    stream.enqueueConvert(b.gI1, b.t1, CV_32F);
-    stream.enqueueConvert(b.gI2, b.t2, CV_32F);
+    b.gI1.convertTo(b.t1, CV_32F, stream);
+    b.gI2.convertTo(b.t2, CV_32F, stream);
 
     gpu::split(b.t1, b.vI1, stream);
     gpu::split(b.t2, b.vI2, stream);
@@ -379,16 +379,16 @@ Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 
     for( int i = 0; i < b.gI1.channels(); ++i )
     {
-        gpu::multiply(b.vI2[i], b.vI2[i], b.I2_2, stream);        // I2^2
-        gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, stream);        // I1^2
-        gpu::multiply(b.vI1[i], b.vI2[i], b.I1_I2, stream);       // I1 * I2
+        gpu::multiply(b.vI2[i], b.vI2[i], b.I2_2, 1, -1, stream);        // I2^2
+        gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, 1, -1, stream);        // I1^2
+        gpu::multiply(b.vI1[i], b.vI2[i], b.I1_I2, 1, -1, stream);       // I1 * I2
 
         gpu::GaussianBlur(b.vI1[i], b.mu1, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
         gpu::GaussianBlur(b.vI2[i], b.mu2, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
 
-        gpu::multiply(b.mu1, b.mu1, b.mu1_2, stream);
-        gpu::multiply(b.mu2, b.mu2, b.mu2_2, stream);
-        gpu::multiply(b.mu1, b.mu2, b.mu1_mu2, stream);
+        gpu::multiply(b.mu1, b.mu1, b.mu1_2, 1, -1, stream);
+        gpu::multiply(b.mu2, b.mu2, b.mu2_2, 1, -1, stream);
+        gpu::multiply(b.mu1, b.mu2, b.mu1_mu2, 1, -1, stream);
 
         gpu::GaussianBlur(b.I1_2, b.sigma1_2, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
         gpu::subtract(b.sigma1_2, b.mu1_2, b.sigma1_2, gpu::GpuMat(), -1, stream);

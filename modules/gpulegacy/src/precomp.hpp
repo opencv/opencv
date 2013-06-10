@@ -56,7 +56,7 @@
 #  include "opencv2/objdetect.hpp"
 #endif
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpulegacy/private.hpp"
 
 #endif /* __OPENCV_PRECOMP_H__ */

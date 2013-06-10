@@ -43,7 +43,7 @@
 #ifndef __CUVUD_VIDEO_SOURCE_H__
 #define __CUVUD_VIDEO_SOURCE_H__
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
 #include "thread.h"
 

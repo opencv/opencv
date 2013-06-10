@@ -335,10 +335,7 @@ struct cv::softcascade::SCascade::Fields
 
     void detect(cv::gpu::GpuMat& objects, cv::gpu::Stream& s) const
     {
-        if (s)
-            s.enqueueMemSet(objects, 0);
-        else
-            cudaMemset(objects.data, 0, sizeof(Detection));
+        objects.setTo(Scalar::all(0), s);
 
         cudaSafeCall( cudaGetLastError());
 
@@ -354,16 +351,8 @@ struct cv::softcascade::SCascade::Fields
         cv::gpu::GpuMat ndetections = cv::gpu::GpuMat(objects, cv::Rect(0, 0, sizeof(Detection), 1));
         ensureSizeIsEnough(objects.rows, objects.cols, CV_8UC1, overlaps);
 
-        if (s)
-        {
-            s.enqueueMemSet(overlaps, 0);
-            s.enqueueMemSet(suppressed, 0);
-        }
-        else
-        {
-            overlaps.setTo(0);
-            suppressed.setTo(0);
-        }
+        overlaps.setTo(0, s);
+        suppressed.setTo(0, s);
 
         cudaStream_t stream = cv::gpu::StreamAccessor::getStream(s);
         cudev::suppress(objects, overlaps, ndetections, suppressed, stream);
@@ -488,18 +477,12 @@ void integral(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& sum, cv::gpu::GpuMat&
         cv::softcascade::cudev::shfl_integral(src, buffer, stream);
 
         sum.create(src.rows + 1, src.cols + 1, CV_32SC1);
-        if (s)
-            s.enqueueMemSet(sum, cv::Scalar::all(0));
-        else
-            sum.setTo(cv::Scalar::all(0));
+        sum.setTo(cv::Scalar::all(0), s);
 
         cv::gpu::GpuMat inner = sum(cv::Rect(1, 1, src.cols, src.rows));
         cv::gpu::GpuMat res = buffer(cv::Rect(0, 0, src.cols, src.rows));
 
-        if (s)
-            s.enqueueCopy(res, inner);
-        else
-            res.copyTo(inner);
+        res.copyTo(inner, s);
     }
     else {CV_Error(cv::Error::GpuNotSupported, ": CC 3.x required.");}
 }
@@ -541,10 +524,7 @@ void cv::softcascade::SCascade::detect(InputArray _image, InputArray _rois, Outp
     }
     else
     {
-        if (s)
-            s.enqueueCopy(image, flds.hogluv);
-        else
-            image.copyTo(flds.hogluv);
+        image.copyTo(flds.hogluv, s);
     }
 
     flds.detect(objects, s);
@@ -571,10 +551,7 @@ using cv::gpu::GpuMat;
 
 inline void setZero(cv::gpu::GpuMat& m, cv::gpu::Stream& s)
 {
-    if (s)
-        s.enqueueMemSet(m, 0);
-    else
-        m.setTo(0);
+    m.setTo(0, s);
 }
 
 struct SeparablePreprocessor : public cv::softcascade::ChannelsProcessor
