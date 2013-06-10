@@ -1023,7 +1023,6 @@ public:
 };
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
-struct getNeighbors { int operator ()(const CvAvgComp& e) const { return e.neighbors; } };
 
 
 bool CascadeClassifier::detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
@@ -1093,12 +1092,11 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
                                           vector<double>& levelWeights,
                                           double scaleFactor, int minNeighbors,
                                           int flags, Size minObjectSize, Size maxObjectSize,
-                                          bool outputRejectLevels, bool outputWeights )
+                                          bool outputRejectLevels )
 {
     const double GROUP_EPS = 0.2;
 
     CV_Assert( scaleFactor > 1 && image.depth() == CV_8U );
-    CV_Assert( !( outputRejectLevels && outputWeights ) );
 
     if( empty() )
         return;
@@ -1113,12 +1111,6 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
         Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
         objects.resize(vecAvgComp.size());
         std::transform(vecAvgComp.begin(), vecAvgComp.end(), objects.begin(), getRect());
-        if( outputWeights )
-        {
-            rejectLevels.resize(vecAvgComp.size());
-            std::transform(vecAvgComp.begin(), vecAvgComp.end(), rejectLevels.begin(),
-                    getNeighbors());
-        }
         return;
     }
 
@@ -1191,10 +1183,6 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
     {
         groupRectangles( objects, rejectLevels, levelWeights, minNeighbors, GROUP_EPS );
     }
-    else if( outputWeights )
-    {
-        groupRectangles( objects, rejectLevels, minNeighbors, GROUP_EPS );
-    }
     else
     {
         groupRectangles( objects, minNeighbors, GROUP_EPS );
@@ -1209,16 +1197,6 @@ void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& object
     vector<double> fakeWeights;
     detectMultiScale( image, objects, fakeLevels, fakeWeights, scaleFactor,
         minNeighbors, flags, minObjectSize, maxObjectSize, false );
-}
-
-void CascadeClassifier::detectMultiScale( const Mat& image, CV_OUT vector<Rect>& objects,
-                                          vector<int>& weights, double scaleFactor,
-                                          int minNeighbors, int flags, Size minObjectSize,
-                                          Size maxObjectSize )
-{
-    vector<double> fakeLevelWeights;
-    detectMultiScale( image, objects, weights, fakeLevelWeights, scaleFactor,
-            minNeighbors, flags, minObjectSize, maxObjectSize, false, true );
 }
 
 bool CascadeClassifier::Data::read(const FileNode &root)

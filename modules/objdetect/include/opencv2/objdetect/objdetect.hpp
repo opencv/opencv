@@ -384,22 +384,13 @@ public:
 
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT vector<Rect>& objects,
-                                   vector<int>& weights,
-                                   double scaleFactor=1.1,
-                                   int minNeighbors=3, int flags=0,
-                                   Size minSize=Size(),
-                                   Size maxSize=Size() );
-
-    CV_WRAP virtual void detectMultiScale( const Mat& image,
-                                   CV_OUT vector<Rect>& objects,
                                    vector<int>& rejectLevels,
                                    vector<double>& levelWeights,
                                    double scaleFactor=1.1,
                                    int minNeighbors=3, int flags=0,
                                    Size minSize=Size(),
                                    Size maxSize=Size(),
-                                   bool outputRejectLevels=false,
-                                   bool outputWeights=false );
+                                   bool outputRejectLevels=false );
 
 
     bool isOldFormatCascade() const;
