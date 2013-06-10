@@ -1196,7 +1196,7 @@ static PyMethodDef methods[] = {
 
 #include "pyopencv_generated_func_tab.h"
   {"createTrackbar", pycvCreateTrackbar, METH_VARARGS, "createTrackbar(trackbarName, windowName, value, count, onChange) -> None"},
-  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
+  {"setMouseCallback", (PyCFunction)pycvSetMouseCallback, METH_VARARGS | METH_KEYWORDS, "setMouseCallback(windowName, onMouse [, param]) -> None"},
   {NULL, NULL},
 };
 

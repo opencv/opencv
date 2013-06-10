@@ -543,7 +543,7 @@ class FuncInfo(object):
             p2 = s.rfind(")")
             docstring_list = [s[:p1+1] + "[" + s[p1+1:p2] + "]" + s[p2:]]
 
-        return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_KEYWORDS, "$py_docstring"},\n'
+        return Template('    {"$py_funcname", (PyCFunction)$wrap_funcname, METH_VARARGS | METH_KEYWORDS, "$py_docstring"},\n'
                         ).substitute(py_funcname = self.variants[0].wname, wrap_funcname=self.get_wrapper_name(),
                                      py_docstring = "  or  ".join(docstring_list))
 
