@@ -1432,7 +1432,7 @@ TEST_P(CLAHE, Accuracy)
     cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
     clahe_gold->apply(src, dst_gold);
 
-    EXPECT_MAT_NEAR(dst_gold, dst, 1.0, "");
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
 ///////////////////////////Convolve//////////////////////////////////

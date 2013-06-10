@@ -140,13 +140,13 @@ void reduce(__local volatile int* smem, int val, int tid)
     {
         smem[tid] += smem[tid + 32];
 #if WAVE_SIZE < 32
-	} barrier(CLK_LOCAL_MEM_FENCE);
-	if (tid < 16) {
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
 #endif
         smem[tid] += smem[tid + 16];
 #if WAVE_SIZE < 16
-	} barrier(CLK_LOCAL_MEM_FENCE);
-	if (tid < 8) {
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 8) {
 #endif
         smem[tid] += smem[tid + 8];
         smem[tid] += smem[tid + 4];

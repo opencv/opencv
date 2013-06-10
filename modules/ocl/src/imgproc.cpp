@@ -1523,7 +1523,7 @@ namespace cv
                 return (total + grain - 1) / grain * grain;
             }
 
-            void calcLut(const oclMat &src, oclMat &dst,
+            static void calcLut(const oclMat &src, oclMat &dst,
                 const int tilesX, const int tilesY, const cv::Size tileSize,
                 const int clipLimit, const float lutScale)
             {
@@ -1561,7 +1561,7 @@ namespace cv
                 }
             }
 
-            void transform(const oclMat &src, oclMat &dst, const oclMat &lut,
+            static void transform(const oclMat &src, oclMat &dst, const oclMat &lut,
                 const int tilesX, const int tilesY, const cv::Size tileSize)
             {
                 cl_int2 tile_size;
@@ -1691,7 +1691,7 @@ namespace cv
             }
         }
 
-        cv::Ptr<cv::ocl::CLAHE> cv::ocl::createCLAHE(double clipLimit, cv::Size tileGridSize)
+        cv::Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit, cv::Size tileGridSize)
         {
             return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
         }
