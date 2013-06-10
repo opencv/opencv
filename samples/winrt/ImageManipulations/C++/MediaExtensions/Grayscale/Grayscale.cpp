@@ -30,9 +30,9 @@ MFT_GRAYSCALE_DESTINATION_RECT (type = blob, UINT32[4] array)
 
 MFT_GRAYSCALE_SATURATION (type = double)
 
-    Sets the saturation level. The nominal range is [0...1]. Values beyond 1.0f 
+    Sets the saturation level. The nominal range is [0...1]. Values beyond 1.0f
     result in supersaturated colors. Values below 0.0f create inverted colors.
-    
+
 MFT_GRAYSCALE_CHROMA_ROTATION (type = double)
 
     Rotates the chroma values of each pixel. The attribue value is the angle of
@@ -45,7 +45,7 @@ as a scaling transform.
 
 NOTES ON THE MFT IMPLEMENTATION
 
-1. The MFT has fixed streams: One input stream and one output stream. 
+1. The MFT has fixed streams: One input stream and one output stream.
 
 2. The MFT supports the following formats: UYVY, YUY2, NV12.
 
@@ -56,34 +56,34 @@ NOTES ON THE MFT IMPLEMENTATION
 5. If both types are set, no type can be set until the current type is cleared.
 
 6. Preferred input types:
- 
+
      (a) If the output type is set, that's the preferred type.
-     (b) Otherwise, the preferred types are partial types, constructed from the 
+     (b) Otherwise, the preferred types are partial types, constructed from the
          list of supported subtypes.
- 
+
 7. Preferred output types: As above.
 
-8. Streaming: 
- 
-    The private BeingStreaming() method is called in response to the 
-    MFT_MESSAGE_NOTIFY_BEGIN_STREAMING message. 
+8. Streaming:
+
+    The private BeingStreaming() method is called in response to the
+    MFT_MESSAGE_NOTIFY_BEGIN_STREAMING message.
 
     If the client does not send MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, the MFT calls
-    BeginStreaming inside the first call to ProcessInput or ProcessOutput. 
+    BeginStreaming inside the first call to ProcessInput or ProcessOutput.
 
     This is a good approach for allocating resources that your MFT requires for
-    streaming. 
-    
-9. The configuration attributes are applied in the BeginStreaming method. If the 
-   client changes the attributes during streaming, the change is ignored until 
-   streaming is stopped (either by changing the media types or by sending the 
+    streaming.
+
+9. The configuration attributes are applied in the BeginStreaming method. If the
+   client changes the attributes during streaming, the change is ignored until
+   streaming is stopped (either by changing the media types or by sending the
    MFT_MESSAGE_NOTIFY_END_STREAMING message) and then restarted.
-   
+
 */
 
 
 // Video FOURCC codes.
-const DWORD FOURCC_NV12 = '21VN'; 
+const DWORD FOURCC_NV12 = '21VN';
 
 // Static array of media types (preferred and accepted).
 const GUID g_MediaSubtypes[] =
@@ -124,11 +124,11 @@ inline T clamp(const T& val, const T& minVal, const T& maxVal)
 void TransformImage_NV12(
     const D2D1::Matrix3x2F& mat,
     const D2D_RECT_U& rcDest,
-    _Inout_updates_(_Inexpressible_(2 * lDestStride * dwHeightInPixels)) BYTE *pDest, 
-    _In_ LONG lDestStride, 
+    _Inout_updates_(_Inexpressible_(2 * lDestStride * dwHeightInPixels)) BYTE *pDest,
+    _In_ LONG lDestStride,
     _In_reads_(_Inexpressible_(2 * lSrcStride * dwHeightInPixels)) const BYTE* pSrc,
-    _In_ LONG lSrcStride, 
-    _In_ DWORD dwWidthInPixels, 
+    _In_ LONG lSrcStride,
+    _In_ DWORD dwWidthInPixels,
     _In_ DWORD dwHeightInPixels)
 {
     // NV12 is planar: Y plane, followed by packed U-V plane.
@@ -189,7 +189,7 @@ void TransformImage_NV12(
 CGrayscale::CGrayscale() :
     m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL),
     m_imageWidthInPixels(0), m_imageHeightInPixels(0), m_cbImageSize(0),
-	m_TransformType(Preview), m_rcDest(D2D1::RectU()), m_bStreamingInitialized(false),
+    m_TransformType(Preview), m_rcDest(D2D1::RectU()), m_bStreamingInitialized(false),
     m_pAttributes(NULL)
 {
     InitializeCriticalSectionEx(&m_critSec, 3000, 0);
@@ -786,12 +786,12 @@ HRESULT CGrayscale::GetInputStatus(
         return MF_E_INVALIDSTREAMNUMBER;
     }
 
-    // If an input sample is already queued, do not accept another sample until the 
+    // If an input sample is already queued, do not accept another sample until the
     // client calls ProcessOutput or Flush.
 
-    // NOTE: It is possible for an MFT to accept more than one input sample. For 
-    // example, this might be required in a video decoder if the frames do not 
-    // arrive in temporal order. In the case, the decoder must hold a queue of 
+    // NOTE: It is possible for an MFT to accept more than one input sample. For
+    // example, this might be required in a video decoder if the frames do not
+    // arrive in temporal order. In the case, the decoder must hold a queue of
     // samples. For the video effect, each sample is transformed independently, so
     // there is no reason to queue multiple input samples.
 
@@ -902,12 +902,12 @@ HRESULT CGrayscale::ProcessMessage(
     case MFT_MESSAGE_SET_D3D_MANAGER:
         // Sets a pointer to the IDirect3DDeviceManager9 interface.
 
-        // The pipeline should never send this message unless the MFT sets the MF_SA_D3D_AWARE 
+        // The pipeline should never send this message unless the MFT sets the MF_SA_D3D_AWARE
         // attribute set to TRUE. Because this MFT does not set MF_SA_D3D_AWARE, it is an error
         // to send the MFT_MESSAGE_SET_D3D_MANAGER message to the MFT. Return an error code in
         // this case.
 
-        // NOTE: If this MFT were D3D-enabled, it would cache the IDirect3DDeviceManager9 
+        // NOTE: If this MFT were D3D-enabled, it would cache the IDirect3DDeviceManager9
         // pointer for use during streaming.
 
         hr = E_NOTIMPL;
@@ -972,7 +972,7 @@ HRESULT CGrayscale::ProcessInput(
     // The client must set input and output types before calling ProcessInput.
     if (!m_pInputType || !m_pOutputType)
     {
-        hr = MF_E_NOTACCEPTING;   
+        hr = MF_E_NOTACCEPTING;
         goto done;
     }
 
@@ -1016,7 +1016,7 @@ HRESULT CGrayscale::ProcessOutput(
 
     // This MFT does not accept any flags for the dwFlags parameter.
 
-    // The only defined flag is MFT_PROCESS_OUTPUT_DISCARD_WHEN_NO_BUFFER. This flag 
+    // The only defined flag is MFT_PROCESS_OUTPUT_DISCARD_WHEN_NO_BUFFER. This flag
     // applies only when the MFT marks an output stream as lazy or optional. But this
     // MFT has no lazy or optional streams, so the flag is not valid.
 
@@ -1266,7 +1266,7 @@ HRESULT CGrayscale::OnCheckMediaType(IMFMediaType *pmt)
         goto done;
     }
 
-    // Reject single-field media types. 
+    // Reject single-field media types.
     UINT32 interlace = MFGetAttributeUINT32(pmt, MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
     if (interlace == MFVideoInterlace_FieldSingleUpper  || interlace == MFVideoInterlace_FieldSingleLower)
     {
@@ -1350,10 +1350,13 @@ HRESULT CGrayscale::BeginStreaming()
             goto done;
         }
 
-        // Get the chroma transformations.
+        // Get the effect type
+        UINT32 effect = MFGetAttributeUINT32(m_pAttributes, MFT_IMAGE_EFFECT, 1);
 
-        // float scale = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_SATURATION, 0.0f);
-        // float angle = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_CHROMA_ROTATION, 0.0f);
+        if ((effect >= 0) && (effect < InvalidEffect))
+        {
+            m_TransformType = (ProcessingType)effect;
+        }
 
         m_bStreamingInitialized = true;
     }
@@ -1363,7 +1366,7 @@ done:
 }
 
 
-// End streaming. 
+// End streaming.
 
 // This method is called if the client sends an MFT_MESSAGE_NOTIFY_END_STREAMING
 // message, or when the media type changes. In general, it should be called whenever
@@ -1414,16 +1417,72 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
         return hr;
     }
 
-     //(*m_pTransformFn)(m_transform, m_rcDest, pDest, lDestStride, pSrc, lSrcStride,
-     //       m_imageWidthInPixels, m_imageHeightInPixels);
+    cv::Mat InputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pSrc, lSrcStride);
+    cv::Mat InputGreyScale(InputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+    cv::Mat OutputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
 
-	cv::Mat InputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pSrc, lSrcStride);
-	cv::Mat InputGreyScale(InputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
-	cv::Mat OutputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
-	OutputFrame.setTo(cv::Scalar(128));
-	cv::Mat OutputGreyScale(OutputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
-	cv::Canny(InputGreyScale, OutputGreyScale, 80, 90);
-	
+    switch (m_TransformType)
+    {
+    case Preview:
+        {
+            InputFrame.copyTo(OutputFrame);
+        } break;
+    case GrayScale:
+        {
+            OutputFrame.setTo(cv::Scalar(128));
+            cv::Mat OutputGreyScale(OutputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+            InputGreyScale.copyTo(OutputGreyScale);
+        } break;
+    case Canny:
+        {
+            OutputFrame.setTo(cv::Scalar(128));
+            cv::Mat OutputGreyScale(OutputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+            cv::Canny(InputGreyScale, OutputGreyScale, 80, 90);
+
+        } break;
+    case Sobel:
+        {
+            OutputFrame.setTo(cv::Scalar(128));
+            cv::Mat OutputGreyScale(OutputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+            cv::Sobel(InputGreyScale, OutputGreyScale, CV_8U, 1, 1);
+        } break;
+    case Histogram:
+        {
+            const int mHistSizeNum = 25;
+            const int channels[3][1] = {{0}, {1}, {2}};
+            const int mHistSize[] = {25};
+            const float baseRabge[] = {0.f,256.f};
+            const float* ranges[] = {baseRabge};
+            const cv::Scalar mColorsRGB[] = { cv::Scalar(200, 0, 0, 255), cv::Scalar(0, 200, 0, 255),
+                                        cv::Scalar(0, 0, 200, 255) };
+
+            cv::Mat BgrFrame;
+            cv::cvtColor(InputFrame, BgrFrame, cv::COLOR_YUV420sp2BGR);
+            int thikness = (int) (BgrFrame.cols / (mHistSizeNum + 10) / 5);
+            if(thikness > 5) thikness = 5;
+            int offset = (int) ((BgrFrame.cols - (5*mHistSizeNum + 4*10)*thikness)/2);
+
+            // RGB
+            for (int c=0; c<3; c++)
+            {
+                std::vector<int> hist;
+                cv::calcHist(&BgrFrame, 1, channels[c], cv::Mat(), hist, 1, mHistSize, ranges);
+                cv::normalize(hist, hist, BgrFrame.rows/2, 0, cv::NORM_INF);
+                for(int h=0; h<mHistSizeNum; h++) {
+                    cv::Point mP1, mP2;
+                    mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
+                    mP1.y = BgrFrame.rows-1;
+                    mP2.y = mP1.y - 2 - (int)hist[h];
+                    cv::line(BgrFrame, mP1, mP2, mColorsRGB[c], thikness);
+                }
+            }
+
+            cv::cvtColor(BgrFrame, OutputFrame, cv::COLOR_BGR2YUV_I420);
+        } break;
+    default:
+        break;
+    }
+
     // Set the data size on the output buffer.
     hr = pOut->SetCurrentLength(m_cbImageSize);
 
@@ -1461,7 +1520,7 @@ HRESULT CGrayscale::UpdateFormatInfo()
         {
             goto done;
         }
-		if (subtype != MFVideoFormat_NV12)
+        if (subtype != MFVideoFormat_NV12)
         {
             hr = E_UNEXPECTED;
             goto done;
@@ -1511,7 +1570,7 @@ HRESULT GetImageSize(DWORD fcc, UINT32 width, UINT32 height, DWORD* pcbImage)
     return hr;
 }
 
-// Get the default stride for a video format. 
+// Get the default stride for a video format.
 HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride)
 {
     LONG lStride = 0;

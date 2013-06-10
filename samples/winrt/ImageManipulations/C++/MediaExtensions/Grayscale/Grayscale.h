@@ -37,18 +37,18 @@ DEFINE_GUID(CLSID_GrayscaleMFT,
 
 
 // Configuration attributes
+// {698649BE-8EAE-4551-A4CB-3EC98FBD3D86}
+DEFINE_GUID(MFT_IMAGE_EFFECT,
+0x698649be, 0x8eae, 0x4551, 0xa4, 0xcb, 0x3e, 0xc9, 0x8f, 0xbd, 0x3d, 0x86);
 
-// {7BBBB051-133B-41F5-B6AA-5AFF9B33A2CB}
-DEFINE_GUID(MFT_GRAYSCALE_DESTINATION_RECT, 
-0x7bbbb051, 0x133b, 0x41f5, 0xb6, 0xaa, 0x5a, 0xff, 0x9b, 0x33, 0xa2, 0xcb);
 
 enum ProcessingType
 {
-	Preview,
-	GrayScale,
-	Canny,
-	Zoom,
-	Sepia
+    GrayScale,
+    Canny,
+    Sobel,
+    Histogram,
+    InvalidEffect
 };
 
 template <class T> void SafeRelease(T **ppT)
@@ -63,9 +63,9 @@ template <class T> void SafeRelease(T **ppT)
 // CGrayscale class:
 // Implements a grayscale video effect.
 
-class CGrayscale 
+class CGrayscale
     : public Microsoft::WRL::RuntimeClass<
-           Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >, 
+           Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >,
            ABI::Windows::Media::IMediaExtension,
            IMFTransform >
 {
@@ -231,7 +231,7 @@ private:
     CRITICAL_SECTION            m_critSec;
 
     // Transformation parameters
-	ProcessingType              m_TransformType;
+    ProcessingType              m_TransformType;
     D2D_RECT_U                  m_rcDest;                   // Destination rectangle for the effect.
 
     // Streaming

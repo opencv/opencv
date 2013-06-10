@@ -116,17 +116,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Image Grid.Row="0"  Source="Assets/microsoft-sdk.png" AutomationProperties.Name="Microsoft Logo" Stretch="None" HorizontalAlignment="Left"/>
-                <TextBlock Style="{StaticResource FooterStyle}" Text="Â© Microsoft Corporation. All rights reserved." TextWrapping="Wrap" Grid.Row="1" HorizontalAlignment="Left"/>
-                <StackPanel x:Name="FooterPanel" Orientation="Horizontal" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right">
-                    <HyperlinkButton Content="Terms of use" Tag="http://www.microsoft.com/About/Legal/EN/US/IntellectualProperty/Copyright/default.aspx"
-                        Click="Footer_Click" FontSize="12" Style="{StaticResource HyperlinkStyle}"/>
-                    <TextBlock Text="|" Style="{StaticResource SeparatorStyle}" VerticalAlignment="Center"/>
-                    <HyperlinkButton Content="Trademarks" Tag="http://www.microsoft.com/About/Legal/EN/US/IntellectualProperty/Trademarks/EN-US.aspx"
-                        Click="Footer_Click" FontSize="12" Style="{StaticResource HyperlinkStyle}"/>
-                    <TextBlock Text="|"  Style="{StaticResource SeparatorStyle}" VerticalAlignment="Center"/>
-                    <HyperlinkButton Content="Privacy Statement" Tag="http://privacy.microsoft.com" Click="Footer_Click" FontSize="12" Style="{StaticResource HyperlinkStyle}"/>
-                </StackPanel>
+                <StackPanel x:Name="FooterPanel" Orientation="Horizontal" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right"/>
             </Grid>
 
 

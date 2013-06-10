@@ -98,6 +98,7 @@ namespace SDKSample
             bool m_bRotateVideoOnOrientationChange;
             bool m_bReversePreviewRotation;
             Windows::Foundation::EventRegistrationToken m_orientationChangedEventToken;
+            void EffectType_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
         };
     }
 }

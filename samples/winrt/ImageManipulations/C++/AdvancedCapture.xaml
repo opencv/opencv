@@ -40,7 +40,8 @@
                 <Button x:Name="btnTakePhoto2" Click="btnTakePhoto_Click" IsEnabled="false"  Margin="0,0,10,0">TakePhoto</Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10,0,0">
-                <CheckBox x:Name="chkAddRemoveEffect" Margin="0,0,10,0" Content="Grayscale Effect"  IsEnabled="False" Checked="chkAddRemoveEffect_Checked" Unchecked="chkAddRemoveEffect_Unchecked"/>
+                <CheckBox x:Name="chkAddRemoveEffect" Margin="0,0,10,0" Content="Add Effect"  IsEnabled="False" Checked="chkAddRemoveEffect_Checked" Unchecked="chkAddRemoveEffect_Unchecked"/>
+                <ComboBox Width="120"/>
             </StackPanel>
         </Grid>
 

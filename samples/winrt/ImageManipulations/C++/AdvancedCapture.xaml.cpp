@@ -122,7 +122,7 @@ void AdvancedCapture::ScenarioReset()
 void AdvancedCapture::SoundLevelChanged(Object^ sender, Object^ e)
 {
     create_task(Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::High, ref new Windows::UI::Core::DispatchedHandler([this]()
-    {    
+    {
         if(Windows::Media::MediaControl::SoundLevel != Windows::Media::SoundLevel::Muted)
         {
             ScenarioReset();
@@ -220,7 +220,7 @@ void AdvancedCapture::RecordLimitationExceeded(Windows::Media::Capture::MediaCap
 void AdvancedCapture::Failed(Windows::Media::Capture::MediaCapture ^currentCaptureObject, Windows::Media::Capture::MediaCaptureFailedEventArgs^ currentFailure)
 {
     String ^message = "Fatal error" + currentFailure->Message;
-    create_task(Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::High, 
+    create_task(Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::High,
         ref new Windows::UI::Core::DispatchedHandler([this, message]()
     {
         ShowStatusMessage(message);
@@ -325,7 +325,7 @@ void AdvancedCapture::btnTakePhoto_Click(Platform::Object^ sender, Windows::UI::
         EnableButton(false, "TakePhoto");
         auto currentRotation = GetCurrentPhotoRotation();
 
-        task<StorageFile^>(KnownFolders::PicturesLibrary->CreateFileAsync(TEMP_PHOTO_FILE_NAME, Windows::Storage::CreationCollisionOption::GenerateUniqueName)).then([this, currentRotation](task<StorageFile^> getFileTask) 
+        task<StorageFile^>(KnownFolders::PicturesLibrary->CreateFileAsync(TEMP_PHOTO_FILE_NAME, Windows::Storage::CreationCollisionOption::GenerateUniqueName)).then([this, currentRotation](task<StorageFile^> getFileTask)
         {
             try
             {
@@ -520,7 +520,7 @@ void AdvancedCapture::lstEnumedDevices_SelectionChanged(Platform::Object^ sender
              }
          });
     }
- 
+
     btnStartDevice2->IsEnabled = true;
     btnStartPreview2->IsEnabled = false;
     btnStartStopRecord2->IsEnabled = false;
@@ -581,12 +581,12 @@ void AdvancedCapture::EnumerateWebcamsAsync()
 }
 
 void AdvancedCapture::AddEffectToImageStream()
-{    
+{
     auto mediaCapture = m_mediaCaptureMgr.Get();
     Windows::Media::Capture::VideoDeviceCharacteristic charecteristic = mediaCapture->MediaCaptureSettings->VideoDeviceCharacteristic;
 
     if((charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::AllStreamsIdentical) &&
-        (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::PreviewPhotoStreamsIdentical) && 
+        (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::PreviewPhotoStreamsIdentical) &&
         (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::RecordPhotoStreamsIdentical))
     {
         Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::Photo);
@@ -596,13 +596,13 @@ void AdvancedCapture::AddEffectToImageStream()
             Windows::Foundation::Collections::IVectorView<Windows::Media::MediaProperties::IMediaEncodingProperties^>^ supportedPropsList = mediaCapture->VideoDeviceController->GetAvailableMediaStreamProperties(Windows::Media::Capture::MediaStreamType::Photo);
             {
                 unsigned int i = 0;
-                while (i<  supportedPropsList->Size)
+                while (i < supportedPropsList->Size)
                 {
                     Windows::Media::MediaProperties::IMediaEncodingProperties^ props = supportedPropsList->GetAt(i);
 
                     String^ s = props->Type;
                     if(props->Type->Equals("Video"))
-                    {                                                    
+                    {
                         task<void>(mediaCapture->VideoDeviceController->SetMediaStreamPropertiesAsync(Windows::Media::Capture::MediaStreamType::Photo,props)).then([this](task<void> changeTypeTask)
                         {
                             try
@@ -616,7 +616,7 @@ void AdvancedCapture::AddEffectToImageStream()
                                     {
                                         effectTask3.get();
                                         m_bEffectAddedToPhoto = true;
-                                        ShowStatusMessage("Adding effect to photo stream successful");                                                                    
+                                        ShowStatusMessage("Adding effect to photo stream successful");
                                         chkAddRemoveEffect->IsEnabled = true;
 
                                     }
@@ -633,8 +633,7 @@ void AdvancedCapture::AddEffectToImageStream()
                             {
                                 ShowExceptionMessage(e);
                                 chkAddRemoveEffect->IsEnabled = true;
-                                chkAddRemoveEffect->IsChecked = false;																	
-
+                                chkAddRemoveEffect->IsChecked = false;
                             }
 
                         });
@@ -686,8 +685,8 @@ void AdvancedCapture::chkAddRemoveEffect_Checked(Platform::Object^ sender, Windo
                 auto mediaCapture = m_mediaCaptureMgr.Get();
                 Windows::Media::Capture::VideoDeviceCharacteristic charecteristic = mediaCapture->MediaCaptureSettings->VideoDeviceCharacteristic;
 
-                ShowStatusMessage("Add effect successful to preview stream successful");                
-                if((charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::AllStreamsIdentical) && 
+                ShowStatusMessage("Add effect successful to preview stream successful");
+                if((charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::AllStreamsIdentical) &&
                     (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::PreviewRecordStreamsIdentical))
                 {
                     Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::VideoRecord);
@@ -703,14 +702,14 @@ void AdvancedCapture::chkAddRemoveEffect_Checked(Platform::Object^ sender, Windo
                                 m_bEffectAddedToRecord = true;
                                 AddEffectToImageStream();
                                 chkAddRemoveEffect->IsEnabled = true;
-                            } 
+                            }
                             catch(Exception ^e)
                             {
                                 ShowExceptionMessage(e);
                                 chkAddRemoveEffect->IsEnabled = true;
                                 chkAddRemoveEffect->IsChecked = false;
                             }
-                        }); 						
+                        });
                     }
                     else
                     {
@@ -718,7 +717,7 @@ void AdvancedCapture::chkAddRemoveEffect_Checked(Platform::Object^ sender, Windo
                         chkAddRemoveEffect->IsEnabled = true;
                     }
 
-                }                
+                }
                 else
                 {
                     AddEffectToImageStream();
@@ -777,7 +776,7 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                                     {
                                         ShowExceptionMessage(e);
                                         chkAddRemoveEffect->IsEnabled = true;
-                                        chkAddRemoveEffect->IsChecked = true;				
+                                        chkAddRemoveEffect->IsChecked = true;
                                     }
 
                                 });
@@ -791,7 +790,7 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                         {
                             ShowExceptionMessage(e);
                             chkAddRemoveEffect->IsEnabled = true;
-                            chkAddRemoveEffect->IsChecked = true;				
+                            chkAddRemoveEffect->IsChecked = true;
 
                         }
 
@@ -813,7 +812,7 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                         {
                             ShowExceptionMessage(e);
                             chkAddRemoveEffect->IsEnabled = true;
-                            chkAddRemoveEffect->IsChecked = true;				
+                            chkAddRemoveEffect->IsChecked = true;
                         }
 
                     });
@@ -821,7 +820,7 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                 else
                 {
                     chkAddRemoveEffect->IsEnabled = true;
-                    chkAddRemoveEffect->IsChecked = true;	
+                    chkAddRemoveEffect->IsChecked = true;
                 }
             }
             catch (Exception ^e)
@@ -1032,3 +1031,9 @@ Windows::Media::Capture::VideoRotation AdvancedCapture::VideoRotationLookup(
     }
 }
 
+
+
+void SDKSample::MediaCapture::AdvancedCapture::EffectType_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
+{
+
+}
