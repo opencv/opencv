@@ -33,8 +33,8 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 
     // If the cloud already exists, update otherwise create new one
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool exits = (am_it == cloud_actor_map_->end());
-    if (exits)
+    bool exist = (am_it == cloud_actor_map_->end());
+    if (exist)
     {
         // Add as new cloud
         allocVtkPolyData(polydata);
@@ -110,7 +110,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 
     vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
 
-    if (exits)
+    if (exist)
         updateCells(cells, initcells, nr_points);
     else
         updateCells (cells, am_it->second.cells, nr_points);
@@ -160,7 +160,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
     scalars->GetRange (minmax.val);
 
     // If this is the new point cloud, a new actor is created
-    if (exits)
+    if (exist)
     {
         vtkSmartPointer<vtkLODActor> actor;
         createActorFromVTKDataSet (polydata, actor);
