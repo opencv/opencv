@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <boost/concept_check.hpp>
 #include <opencv2/core/cvdef.h>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
@@ -84,4 +85,19 @@ namespace temp_viz
     inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
 
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
+    
+    Point3d operator*(const Affine3f& affine, const Point3d& point);
+    
+    inline bool isNaN( float x )
+    {
+	union { float f; unsigned int u; } v = { x };
+	return ((v.u & 0x7f800000) == 0x7f800000) && (v.u & 0x007fffff);
+    }
+    
+    inline bool isNaN( double x )
+    {
+	union { double d; unsigned int u[2]; } v = { x };
+	return (v.u[1] & 0x7ff00000) == 0x7ff00000 && 
+	(v.u[0] != 0 || (v.u[1] & 0x000fffff) != 0);
+    }
 }
