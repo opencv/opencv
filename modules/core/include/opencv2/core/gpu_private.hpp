@@ -60,6 +60,8 @@
 #  include "opencv2/core/stream_accessor.hpp"
 #  include "opencv2/core/cuda/common.hpp"
 
+#  define NPP_VERSION (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD)
+
 #  define CUDART_MINIMUM_REQUIRED_VERSION 4020
 
 #  if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)

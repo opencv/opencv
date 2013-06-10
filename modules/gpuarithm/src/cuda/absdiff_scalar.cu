@@ -59,7 +59,7 @@ namespace arithm
     {
         S val;
 
-        explicit AbsDiffScalar(S val_) : val(val_) {}
+        __host__ explicit AbsDiffScalar(S val_) : val(val_) {}
 
         __device__ __forceinline__ T operator ()(T a) const
         {

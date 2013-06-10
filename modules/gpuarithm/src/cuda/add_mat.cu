@@ -62,8 +62,8 @@ namespace arithm
             return vadd4(a, b);
         }
 
-        __device__ __forceinline__ VAdd4() {}
-        __device__ __forceinline__ VAdd4(const VAdd4& other) {}
+        __host__ __device__ __forceinline__ VAdd4() {}
+        __host__ __device__ __forceinline__ VAdd4(const VAdd4&) {}
     };
 
     struct VAdd2 : binary_function<uint, uint, uint>
@@ -73,8 +73,8 @@ namespace arithm
             return vadd2(a, b);
         }
 
-        __device__ __forceinline__ VAdd2() {}
-        __device__ __forceinline__ VAdd2(const VAdd2& other) {}
+        __host__ __device__ __forceinline__ VAdd2() {}
+        __host__ __device__ __forceinline__ VAdd2(const VAdd2&) {}
     };
 
     template <typename T, typename D> struct AddMat : binary_function<T, T, D>
@@ -84,8 +84,8 @@ namespace arithm
             return saturate_cast<D>(a + b);
         }
 
-        __device__ __forceinline__ AddMat() {}
-        __device__ __forceinline__ AddMat(const AddMat& other) {}
+        __host__ __device__ __forceinline__ AddMat() {}
+        __host__ __device__ __forceinline__ AddMat(const AddMat&) {}
     };
 }
 

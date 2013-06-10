@@ -69,8 +69,8 @@ namespace arithm
             return res;
         }
 
-        __device__ __forceinline__ Mul_8uc4_32f() {}
-        __device__ __forceinline__ Mul_8uc4_32f(const Mul_8uc4_32f& other) {}
+        __host__ __device__ __forceinline__ Mul_8uc4_32f() {}
+        __host__ __device__ __forceinline__ Mul_8uc4_32f(const Mul_8uc4_32f&) {}
     };
 
     struct Mul_16sc4_32f : binary_function<short4, float, short4>
@@ -81,8 +81,8 @@ namespace arithm
                                saturate_cast<short>(a.z * b), saturate_cast<short>(a.w * b));
         }
 
-        __device__ __forceinline__ Mul_16sc4_32f() {}
-        __device__ __forceinline__ Mul_16sc4_32f(const Mul_16sc4_32f& other) {}
+        __host__ __device__ __forceinline__ Mul_16sc4_32f() {}
+        __host__ __device__ __forceinline__ Mul_16sc4_32f(const Mul_16sc4_32f&) {}
     };
 
     template <typename T, typename D> struct Mul : binary_function<T, T, D>
@@ -92,15 +92,15 @@ namespace arithm
             return saturate_cast<D>(a * b);
         }
 
-        __device__ __forceinline__ Mul() {}
-        __device__ __forceinline__ Mul(const Mul& other) {}
+        __host__ __device__ __forceinline__ Mul() {}
+        __host__ __device__ __forceinline__ Mul(const Mul&) {}
     };
 
     template <typename T, typename S, typename D> struct MulScale : binary_function<T, T, D>
     {
         S scale;
 
-        explicit MulScale(S scale_) : scale(scale_) {}
+        __host__ explicit MulScale(S scale_) : scale(scale_) {}
 
         __device__ __forceinline__ D operator ()(T a, T b) const
         {
