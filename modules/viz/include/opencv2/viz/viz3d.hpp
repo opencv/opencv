@@ -26,8 +26,8 @@ namespace temp_viz
         void setBackgroundColor(const Color& color = Color::black());
 
         void addCoordinateSystem(double scale, const Affine3f& t, const String &id = "coordinate");
-	
-	void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
+
+        void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
 
         bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String &id = "cloud");
 
@@ -51,10 +51,11 @@ namespace temp_viz
 
         void spin ();
         void spinOnce (int time = 1, bool force_redraw = false);
-	
-	void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
-	void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
 
+        void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
+        void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
+
+        bool wasStopped() const;
     private:
         Viz3d(const Viz3d&);
         Viz3d& operator=(const Viz3d&);

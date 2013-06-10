@@ -90,7 +90,7 @@ TEST(Viz_viz3d, accuracy)
     v.addPolygonMesh(*mesh, "pq");
 
 
-    while(1) //TODO implement and replace with !viz.wasStopped()
+    while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
@@ -103,7 +103,7 @@ TEST(Viz_viz3d, accuracy)
         pos_y = std::sin(angle_x);
         pos_z = std::sin(angle_x);
 
-        v.spinOnce(10);
+        v.spinOnce(1, true);
     }
    
 //     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));
