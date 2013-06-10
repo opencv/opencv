@@ -2136,7 +2136,7 @@ template<typename _Tp> inline void Seq<_Tp>::remove(int idx)
 { seqRemove(seq, idx); }
 
 template<typename _Tp> inline void Seq<_Tp>::remove(const Range& r)
-{ seqRemoveSlice(seq, r); }
+{ seqRemoveSlice(seq, cvSlice(r.start, r.end)); }
 
 template<typename _Tp> inline void Seq<_Tp>::copyTo(std::vector<_Tp>& vec, const Range& range) const
 {

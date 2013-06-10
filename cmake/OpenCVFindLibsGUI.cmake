@@ -33,7 +33,7 @@ if(WITH_QT)
   endif()
 
   if(NOT HAVE_QT)
-    find_package(Qt4)
+    find_package(Qt4 REQUIRED QtCore QtGui QtTest)
     if(QT4_FOUND)
       set(HAVE_QT TRUE)
       add_definitions(-DHAVE_QT) # We need to define the macro this way, using cvconfig.h does not work

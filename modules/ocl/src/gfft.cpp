@@ -257,7 +257,8 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
 
     if (minDistance < 1)
     {
-        corners = tmpCorners_(Rect(0, 0, maxCorners > 0 ? std::min(maxCorners, total) : total, 1));
+        Rect roi_range(0, 0, maxCorners > 0 ? std::min(maxCorners, total) : total, 1);
+        tmpCorners_(roi_range).copyTo(corners);
     }
     else
     {
