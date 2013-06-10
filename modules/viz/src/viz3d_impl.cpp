@@ -1,15 +1,5 @@
-#include <opencv2/core.hpp>
+#include "precomp.hpp"
 #include <q/shapes.h>
-
-#include <vtkCellData.h>
-#include <vtkSmartPointer.h>
-#include <vtkCellArray.h>
-#include <vtkProperty2D.h>
-#include <vtkMapper2D.h>
-#include <vtkLeaderActor2D.h>
-#include <q/shapes.h>
-#include <vtkAlgorithmOutput.h>
-
 #include <q/viz3d_impl.hpp>
 
 void temp_viz::Viz3d::VizImpl::setFullScreen (bool mode)
@@ -28,178 +18,175 @@ void temp_viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition
 void temp_viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
 
-void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose)
+void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _cloud, InputArray _colors, const Affine3f& pose)
 {
-    Mat cloudMat = cloud.getMat();
-    Mat colorsMat = colors.getMat();
-    CV_Assert((cloudMat.type() == CV_32FC3 || cloudMat.type() == CV_64FC3) && colorsMat.type() == CV_8UC3 && cloudMat.size() == colorsMat.size());
-    
+    Mat cloud = _cloud.getMat();
+    Mat colors = _colors.getMat();
+    CV_Assert((cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3));
+    CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
+
     vtkSmartPointer<vtkPolyData> polydata;
     vtkSmartPointer<vtkCellArray> vertices;
     vtkSmartPointer<vtkPoints> points;
     vtkSmartPointer<vtkIdTypeArray> initcells;
     vtkIdType nr_points;
-    
+
     // If the cloud already exists, update otherwise create new one
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool isAdd = (am_it == cloud_actor_map_->end());
-    if (isAdd)
+    bool exits = (am_it == cloud_actor_map_->end());
+    if (exits)
     {
-	// Add as new cloud
-	allocVtkPolyData(polydata);
-	//polydata = vtkSmartPointer<vtkPolyData>::New ();
-	vertices = vtkSmartPointer<vtkCellArray>::New ();
-	polydata->SetVerts (vertices);
+        // Add as new cloud
+        allocVtkPolyData(polydata);
+        //polydata = vtkSmartPointer<vtkPolyData>::New ();
+        vertices = vtkSmartPointer<vtkCellArray>::New ();
+        polydata->SetVerts (vertices);
 
-	nr_points = cloudMat.size().area();
-	points = polydata->GetPoints ();
+        nr_points = cloud.total();
+        points = polydata->GetPoints ();
 
-	if (!points)
-	{
-	    points = vtkSmartPointer<vtkPoints>::New ();
-	    if (cloudMat.type() == CV_32FC3)
-		points->SetDataTypeToFloat ();
-	    else if (cloudMat.type() == CV_64FC3)
-		points->SetDataTypeToDouble ();
-	    polydata->SetPoints (points);
-	}
-	points->SetNumberOfPoints (nr_points);
+        if (!points)
+        {
+            points = vtkSmartPointer<vtkPoints>::New ();
+            if (cloud.depth() == CV_32F)
+                points->SetDataTypeToFloat();
+            else if (cloud.depth() == CV_64F)
+                points->SetDataTypeToDouble();
+            polydata->SetPoints (points);
+        }
+        points->SetNumberOfPoints (nr_points);
     }
     else
     {
-	// Update the cloud
-	// Get the current poly data
-	polydata = reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->GetInput ();
-	vertices = polydata->GetVerts ();
-	points = polydata->GetPoints ();
-	// Update the point data type based on the cloud
-	if (cloudMat.type() == CV_32FC3)
-	    points->SetDataTypeToFloat ();
-	else if (cloudMat.type() == CV_64FC3)
-	    points->SetDataTypeToDouble ();	
-	// Copy the new point array in
-	nr_points = cloudMat.size().area();
-	points->SetNumberOfPoints (nr_points);
+        // Update the cloud
+        // Get the current poly data
+        polydata = reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->GetInput ();
+        vertices = polydata->GetVerts ();
+        points = polydata->GetPoints ();
+        // Update the point data type based on the cloud
+        if (cloud.depth() == CV_32F)
+            points->SetDataTypeToFloat ();
+        else if (cloud.depth() == CV_64F)
+            points->SetDataTypeToDouble ();
+        // Copy the new point array in
+        nr_points = cloud.total();
+        points->SetNumberOfPoints (nr_points);
     }
-    
+
     int j = 0;
-    if (cloudMat.type() == CV_32FC3)
+    if (cloud.type() == CV_32FC3)
     {
-	// Get a pointer to the beginning of the data array
-	float *data = (static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0);
-	
-	// Scan through the data and apply mask where point is NAN
-	for(int y = 0; y < cloudMat.rows; ++y)
-	{
-	    const Point3f* crow = cloudMat.ptr<Point3f>(y);
-	    for(int x = 0; x < cloudMat.cols; ++x)
-		if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
-		{
-		    // Points are transformed based on pose parameter
-		    Point3f transformed_point = pose * crow[x];
-		    memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3f));
-		}
-	}
+        // Get a pointer to the beginning of the data array
+        Point3f *data = reinterpret_cast<Point3f*>((static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0));
+
+        // Scan through the data and apply mask where point is NAN
+        for(int y = 0; y < cloud.rows; ++y)
+        {
+            const Point3f* crow = cloud.ptr<Point3f>(y);
+            for(int x = 0; x < cloud.cols; ++x)
+
+            //TODO implementa templated copy_if() or copy_non_nans() and use everywhere.
+            if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
+                data[j++] =  pose * crow[x];
+         }
     }
-    else if (cloudMat.type() == CV_64FC3)
+    else if (cloud.type() == CV_64FC3)
     {
-	// Get a pointer to the beginning of the data array
-	double *data = (static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0);
-	
-	// If a point is NaN, ignore it
-	for(int y = 0; y < cloudMat.rows; ++y)
-	{
-	    const Point3d* crow = cloudMat.ptr<Point3d>(y);
-	    for(int x = 0; x < cloudMat.cols; ++x)
-		if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
-		{
-		    // Points are transformed based on pose parameter
-		    Point3d transformed_point = pose * crow[x];
-		    memcpy (&data[j++ * 3], &transformed_point, sizeof(Point3d));
-		}
-	}
+        // Get a pointer to the beginning of the data array
+        Point3d *data = reinterpret_cast<Point3d*>((static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0));
+
+        // If a point is NaN, ignore it
+        for(int y = 0; y < cloud.rows; ++y)
+        {
+            const Point3d* crow = cloud.ptr<Point3d>(y);
+            for(int x = 0; x < cloud.cols; ++x)
+            if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
+                data[j++] = pose * crow[x];
+        }
     }
-    
+
     nr_points = j;
     points->SetNumberOfPoints (nr_points);
-    
+
     vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
-    
-    if (isAdd)
-	updateCells(cells, initcells, nr_points);
+
+    if (exits)
+        updateCells(cells, initcells, nr_points);
     else
-	updateCells (cells, am_it->second.cells, nr_points);
-    
+        updateCells (cells, am_it->second.cells, nr_points);
+
     // Set the cells and the vertices
     vertices->SetCells (nr_points, cells);
-    
+
     // Get the colors from the handler
-    double minmax[2];
+    Vec2d minmax;
     vtkSmartPointer<vtkDataArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
     scalars->SetNumberOfComponents (3);
     reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetNumberOfTuples (nr_points);
 
     // Get a random color
-    unsigned char* colors_data = new unsigned char[nr_points * 3];
-    
+    Vec3b* colors_data = new Vec3b[nr_points];
+
     j = 0;
-    if (cloudMat.type() == CV_32FC3)
+    if (cloud.type() == CV_32FC3)
     {
-	for(int y = 0; y < colorsMat.rows; ++y)
-	{
-	    const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
-	    const Point3f* cloud_row = cloudMat.ptr<Point3f>(y);
-	    for(int x = 0; x < colorsMat.cols; ++x)
-		if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-		    memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
-	}
+        for(int y = 0; y < colors.rows; ++y)
+        {
+            const Vec3b* crow = colors.ptr<Vec3b>(y);
+            const Point3f* cloud_row = cloud.ptr<Point3f>(y);
+
+            for(int x = 0; x < colors.cols; ++x)
+            if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
+                colors_data[j++] = crow[x];
+        }
     }
-    else if (cloudMat.type() == CV_64FC3)
+    else if (cloud.type() == CV_64FC3)
     {
-	for(int y = 0; y < colorsMat.rows; ++y)
-	{
-	    const Vec3b* crow = colorsMat.ptr<Vec3b>(y);
-	    const Point3d* cloud_row = cloudMat.ptr<Point3d>(y);
-	    for(int x = 0; x < colorsMat.cols; ++x)
-		if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-		    memcpy (&colors_data[j++ * 3], &crow[x], sizeof(Vec3b));
-	}
+        for(int y = 0; y < colors.rows; ++y)
+        {
+            const Vec3b* crow = colors.ptr<Vec3b>(y);
+            const Point3d* cloud_row = cloud.ptr<Point3d>(y);
+
+            for(int x = 0; x < colors.cols; ++x)
+            if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
+                colors_data[j++] = crow[x];
+        }
     }
-    
-    reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (colors_data, 3 * nr_points, 0);
-    
+
+    reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (reinterpret_cast<unsigned char*>(colors_data), 3 * nr_points, 0);
+
     // Assign the colors
     polydata->GetPointData ()->SetScalars (scalars);
-    scalars->GetRange (minmax);
+    scalars->GetRange (minmax.val);
 
     // If this is the new point cloud, a new actor is created
-    if (isAdd)
+    if (exits)
     {
-	vtkSmartPointer<vtkLODActor> actor;
-	createActorFromVTKDataSet (polydata, actor);
-	
-	actor->GetMapper ()->SetScalarRange (minmax);
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (polydata, actor);
 
-	// Add it to all renderers
-	renderer_->AddActor (actor);
+        actor->GetMapper ()->SetScalarRange (minmax.val);
 
-	// Save the pointer/ID pair to the global actor map
-	(*cloud_actor_map_)[id].actor = actor;
-	(*cloud_actor_map_)[id].cells = initcells;
+        // Add it to all renderers
+        renderer_->AddActor (actor);
 
-	const Eigen::Vector4f& sensor_origin = Eigen::Vector4f::Zero ();
-	const Eigen::Quaternion<float>& sensor_orientation = Eigen::Quaternionf::Identity ();
+        // Save the pointer/ID pair to the global actor map
+        (*cloud_actor_map_)[id].actor = actor;
+        (*cloud_actor_map_)[id].cells = initcells;
 
-	// Save the viewpoint transformation matrix to the global actor map
-	vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
-	convertToVtkMatrix (sensor_origin, sensor_orientation, transformation);
-	
-	(*cloud_actor_map_)[id].viewpoint_transformation_ = transformation;
+        const Eigen::Vector4f& sensor_origin = Eigen::Vector4f::Zero ();
+        const Eigen::Quaternion<float>& sensor_orientation = Eigen::Quaternionf::Identity ();
+
+        // Save the viewpoint transformation matrix to the global actor map
+        vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
+        convertToVtkMatrix (sensor_origin, sensor_orientation, transformation);
+
+        (*cloud_actor_map_)[id].viewpoint_transformation_ = transformation;
     }
     else
     {
-	// Update the mapper
-	reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->SetInput (polydata);
+        // Update the mapper
+        reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->SetInput (polydata);
     }
 }
 

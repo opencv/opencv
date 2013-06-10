@@ -56,6 +56,7 @@
 #include <vtkCubeSource.h>
 #include <vtkAxes.h>
 #include <vtkFloatArray.h>
+#include <vtkDoubleArray.h>
 #include <vtkPointData.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataReader.h>
@@ -150,6 +151,15 @@
 
 #include <vtkMatrix4x4.h>
 #include <vtkInteractorObserver.h>
+
+
+
+
+
+
+#include <vtkMapper2D.h>
+#include <vtkLeaderActor2D.h>
+#include <vtkAlgorithmOutput.h>
 
 
 
