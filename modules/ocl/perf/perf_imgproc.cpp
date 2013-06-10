@@ -925,7 +925,7 @@ PERFTEST(remap)
 ///////////// CLAHE ////////////////////////
 PERFTEST(CLAHE)
 {
-    Mat src, dst;
+    Mat src, dst, ocl_dst;
     cv::ocl::oclMat d_src, d_dst;
     int all_type[] = {CV_8UC1};
     std::string type_name[] = {"CV_8UC1"};
@@ -953,7 +953,9 @@ PERFTEST(CLAHE)
             d_clahe->apply(d_src, d_dst);
             WARMUP_OFF;
 
-            TestSystem::instance().ExpectedMatNear(dst, cv::Mat(d_dst), 1.0);
+            ocl_dst = d_dst;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
 
             GPU_ON;
             d_clahe->apply(d_src, d_dst);
