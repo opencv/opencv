@@ -23,7 +23,7 @@ void temp_viz::Viz3d::addCoordinateSystem(double scale, const Affine3f& t, const
     impl_->addCoordinateSystem(scale, t, id);
 }
 
-void temp_viz::Viz3d::showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose)
+void temp_viz::Viz3d::showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose)
 {
     impl_->showPointCloud(id, cloud, colors, pose);
 }

@@ -103,7 +103,7 @@ public:
 	  * \param[in] colors color input in the same order of the points or single uniform color
 	  * \param[in] pose transform to be applied on the point cloud
 	  */
-    void showPointCloud(const std::string& id, cv::InputArray cloud, cv::InputArray colors, const cv::Affine3f& pose = cv::Affine3f::Identity());
+    void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
 
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
