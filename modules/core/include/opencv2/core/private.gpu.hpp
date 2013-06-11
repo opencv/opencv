@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_GPU_PRIVATE_HPP__
-#define __OPENCV_CORE_GPU_PRIVATE_HPP__
+#ifndef __OPENCV_CORE_PRIVATE_GPU_HPP__
+#define __OPENCV_CORE_PRIVATE_GPU_HPP__
 
 #ifndef __OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
@@ -53,11 +53,13 @@
 #include "opencv2/core/cvdef.h"
 #include "opencv2/core/base.hpp"
 
+#include "opencv2/core/gpu.hpp"
+
 #ifdef HAVE_CUDA
 #  include <cuda.h>
 #  include <cuda_runtime.h>
 #  include <npp.h>
-#  include "opencv2/core/stream_accessor.hpp"
+#  include "opencv2/core/gpu_stream_accessor.hpp"
 #  include "opencv2/core/cuda/common.hpp"
 
 #  define NPP_VERSION (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD)

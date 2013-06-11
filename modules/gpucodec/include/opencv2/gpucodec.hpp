@@ -49,7 +49,7 @@
 
 #include <iosfwd>
 
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 namespace cv { namespace gpu {
 

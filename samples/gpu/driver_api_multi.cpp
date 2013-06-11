@@ -82,8 +82,8 @@ int main()
         if (!dev_info.isCompatible())
         {
             std::cout << "GPU module isn't built for GPU #" << i << " ("
-                 << dev_info.name() << ", CC " << dev_info.majorVersion()
-                 << dev_info.minorVersion() << "\n";
+                 << dev_info.name() << ", CC " << dev_info.major()
+                 << dev_info.minor() << "\n";
             return -1;
         }
     }

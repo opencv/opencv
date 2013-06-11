@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
 #include "opencv2/core/cuda/common.hpp"
 
 namespace cv { namespace softcascade { namespace cudev

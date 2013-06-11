@@ -134,10 +134,7 @@ void cv::gpu::GMG_GPU::operator ()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat
         initialize(frame.size(), 0.0f, frame.depth() == CV_8U ? 255.0f : frame.depth() == CV_16U ? std::numeric_limits<ushort>::max() : 1.0f);
 
     fgmask.create(frameSize_, CV_8UC1);
-    if (stream)
-        stream.enqueueMemSet(fgmask, cv::Scalar::all(0));
-    else
-        fgmask.setTo(cv::Scalar::all(0));
+    fgmask.setTo(cv::Scalar::all(0), stream);
 
     funcs[frame.depth()][frame.channels() - 1](frame, fgmask, colors_, weights_, nfeatures_, frameNum_, learningRate, updateBackgroundModel, cv::gpu::StreamAccessor::getStream(stream));
 

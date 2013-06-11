@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,28 +41,17 @@
 //
 //M*/
 
-#ifndef __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
-#define __OPENCV_CUDA_STREAM_ACCESSOR_HPP__
+#include "opencv2/core/cuda/common.hpp"
 
-#include <cuda_runtime.h>
-#include "opencv2/core/cvdef.h"
-
-// This is only header file that depends on Cuda. All other headers are independent.
-// So if you use OpenCV binaries you do noot need to install Cuda Toolkit.
-// But of you wanna use GPU by yourself, may get cuda stream instance using the class below.
-// In this case you have to install Cuda Toolkit.
-
-namespace cv
+namespace cv { namespace gpu { namespace cudev
 {
-    namespace gpu
-    {
-        class Stream;
+    void copyWithMask(PtrStepSzb src, PtrStepSzb dst, size_t elemSize1, int cn, PtrStepSzb mask, bool multiChannelMask, cudaStream_t stream);
 
-        struct StreamAccessor
-        {
-            CV_EXPORTS static cudaStream_t getStream(const Stream& stream);
-        };
-    }
-}
+    template <typename T>
+    void set(PtrStepSz<T> mat, const T* scalar, int channels, cudaStream_t stream);
 
-#endif /* __OPENCV_CUDA_STREAM_ACCESSOR_HPP__ */
+    template <typename T>
+    void set(PtrStepSz<T> mat, const T* scalar, PtrStepSzb mask, int channels, cudaStream_t stream);
+
+    void convert(PtrStepSzb src, int sdepth, PtrStepSzb dst, int ddepth, double alpha, double beta, cudaStream_t stream);
+}}}

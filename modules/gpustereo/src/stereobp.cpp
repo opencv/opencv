@@ -194,20 +194,10 @@ namespace
             if (rthis.levels & 1)
             {
                 //can clear less area
-                if (stream)
-                {
-                    stream.enqueueMemSet(u, zero);
-                    stream.enqueueMemSet(d, zero);
-                    stream.enqueueMemSet(l, zero);
-                    stream.enqueueMemSet(r, zero);
-                }
-                else
-                {
-                    u.setTo(zero);
-                    d.setTo(zero);
-                    l.setTo(zero);
-                    r.setTo(zero);
-                }
+                u.setTo(zero, stream);
+                d.setTo(zero, stream);
+                l.setTo(zero, stream);
+                r.setTo(zero, stream);
             }
 
             if (rthis.levels > 1)
@@ -222,20 +212,10 @@ namespace
 
                 if ((rthis.levels & 1) == 0)
                 {
-                    if (stream)
-                    {
-                        stream.enqueueMemSet(u2, zero);
-                        stream.enqueueMemSet(d2, zero);
-                        stream.enqueueMemSet(l2, zero);
-                        stream.enqueueMemSet(r2, zero);
-                    }
-                    else
-                    {
-                        u2.setTo(zero);
-                        d2.setTo(zero);
-                        l2.setTo(zero);
-                        r2.setTo(zero);
-                    }
+                    u2.setTo(zero, stream);
+                    d2.setTo(zero, stream);
+                    l2.setTo(zero, stream);
+                    r2.setTo(zero, stream);
                 }
             }
 
@@ -313,20 +293,12 @@ namespace
 
             out = ((disp.type() == CV_16S) ? disp : (out.create(rows, cols, CV_16S), out));
 
-            if (stream)
-                stream.enqueueMemSet(out, zero);
-            else
-                out.setTo(zero);
+            out.setTo(zero, stream);
 
             output_callers[funcIdx](u, d, l, r, datas.front(), out, cudaStream);
 
             if (disp.type() != CV_16S)
-            {
-                if (stream)
-                    stream.enqueueConvert(out, disp, disp.type());
-                else
-                    out.convertTo(disp, disp.type());
-            }
+                out.convertTo(disp, disp.type(), stream);
         }
 
         StereoBeliefPropagation& rthis;

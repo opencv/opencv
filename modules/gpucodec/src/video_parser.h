@@ -43,7 +43,7 @@
 #ifndef __VIDEO_PARSER_H__
 #define __VIDEO_PARSER_H__
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
 #include "frame_queue.h"
 #include "video_decoder.h"

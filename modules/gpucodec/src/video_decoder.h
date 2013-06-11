@@ -43,7 +43,7 @@
 #ifndef __VIDEO_DECODER_H__
 #define __VIDEO_DECODER_H__
 
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
 
 #include <nvcuvid.h>

@@ -43,7 +43,7 @@
 #define __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/ts.hpp"
 
 //////////////////////////////////////////////////////////////////////

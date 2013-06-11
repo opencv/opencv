@@ -196,16 +196,9 @@ namespace
             return;
         }
 
-        if (stream)
-        {
-            stream.enqueueConvert(image, buf.imagef, CV_32F);
-            stream.enqueueConvert(templ, buf.templf, CV_32F);
-        }
-        else
-        {
-            image.convertTo(buf.imagef, CV_32F);
-            templ.convertTo(buf.templf, CV_32F);
-        }
+        image.convertTo(buf.imagef, CV_32F, stream);
+        templ.convertTo(buf.templf, CV_32F, stream);
+
         matchTemplate_CCORR_32F(buf.imagef, buf.templf, result, buf, stream);
     }
 
@@ -317,16 +310,8 @@ namespace
     void matchTemplate_CCOFF_NORMED_8U(
             const GpuMat& image, const GpuMat& templ, GpuMat& result, MatchTemplateBuf &buf, Stream& stream)
     {
-        if (stream)
-        {
-            stream.enqueueConvert(image, buf.imagef, CV_32F);
-            stream.enqueueConvert(templ, buf.templf, CV_32F);
-        }
-        else
-        {
-            image.convertTo(buf.imagef, CV_32F);
-            templ.convertTo(buf.templf, CV_32F);
-        }
+        image.convertTo(buf.imagef, CV_32F, stream);
+        templ.convertTo(buf.templf, CV_32F, stream);
 
         matchTemplate_CCORR_32F(buf.imagef, buf.templf, result, buf, stream);
 

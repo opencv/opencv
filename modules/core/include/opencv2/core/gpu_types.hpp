@@ -40,10 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_DEVPTRS_HPP__
-#define __OPENCV_CORE_DEVPTRS_HPP__
+#ifndef __OPENCV_CORE_GPU_TYPES_HPP__
+#define __OPENCV_CORE_GPU_TYPES_HPP__
 
-#ifdef __cplusplus
+#ifndef __cplusplus
+#  error gpu_types.hpp header must be compiled as C++
+#endif
 
 #ifdef __CUDACC__
     #define __CV_GPU_HOST_DEVICE__ __host__ __device__ __forceinline__
@@ -58,7 +60,7 @@ namespace cv
         // Simple lightweight structures that encapsulates information about an image on device.
         // It is intended to pass to nvcc-compiled code. GpuMat depends on headers that nvcc can't compile
 
-        template<typename T> struct DevPtr
+        template <typename T> struct DevPtr
         {
             typedef T elem_type;
             typedef int index_type;
@@ -75,7 +77,7 @@ namespace cv
             __CV_GPU_HOST_DEVICE__ operator const T*() const { return data; }
         };
 
-        template<typename T> struct PtrSz : public DevPtr<T>
+        template <typename T> struct PtrSz : public DevPtr<T>
         {
             __CV_GPU_HOST_DEVICE__ PtrSz() : size(0) {}
             __CV_GPU_HOST_DEVICE__ PtrSz(T* data_, size_t size_) : DevPtr<T>(data_), size(size_) {}
@@ -83,12 +85,12 @@ namespace cv
             size_t size;
         };
 
-        template<typename T> struct PtrStep : public DevPtr<T>
+        template <typename T> struct PtrStep : public DevPtr<T>
         {
             __CV_GPU_HOST_DEVICE__ PtrStep() : step(0) {}
             __CV_GPU_HOST_DEVICE__ PtrStep(T* data_, size_t step_) : DevPtr<T>(data_), step(step_) {}
 
-            /** \brief stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!! */
+            //! stride between two consecutive rows in bytes. Step is stored always and everywhere in bytes!!!
             size_t step;
 
             __CV_GPU_HOST_DEVICE__       T* ptr(int y = 0)       { return (      T*)( (      char*)DevPtr<T>::data + y * step); }
@@ -118,36 +120,7 @@ namespace cv
         typedef PtrStep<unsigned char> PtrStepb;
         typedef PtrStep<float> PtrStepf;
         typedef PtrStep<int> PtrStepi;
-
-
-#if defined __GNUC__
-    #define __CV_GPU_DEPR_BEFORE__
-    #define __CV_GPU_DEPR_AFTER__ __attribute__ ((deprecated))
-#elif defined(__MSVC__) //|| defined(__CUDACC__)
-    #pragma deprecated(DevMem2D_)
-    #define __CV_GPU_DEPR_BEFORE__ __declspec(deprecated)
-    #define __CV_GPU_DEPR_AFTER__
-#else
-    #define __CV_GPU_DEPR_BEFORE__
-    #define __CV_GPU_DEPR_AFTER__
-#endif
-
-        template <typename T> struct __CV_GPU_DEPR_BEFORE__ DevMem2D_ : public PtrStepSz<T>
-        {
-            DevMem2D_() {}
-            DevMem2D_(int rows_, int cols_, T* data_, size_t step_) : PtrStepSz<T>(rows_, cols_, data_, step_) {}
-
-            template <typename U>
-            explicit __CV_GPU_DEPR_BEFORE__ DevMem2D_(const DevMem2D_<U>& d) : PtrStepSz<T>(d.rows, d.cols, (T*)d.data, d.step) {}
-        } __CV_GPU_DEPR_AFTER__ ;
-
-        typedef DevMem2D_<unsigned char> DevMem2Db;
-        typedef DevMem2Db DevMem2D;
-        typedef DevMem2D_<float> DevMem2Df;
-        typedef DevMem2D_<int> DevMem2Di;
     }
 }
 
-#endif // __cplusplus
-
-#endif /* __OPENCV_CORE_DEVPTRS_HPP__ */
+#endif /* __OPENCV_CORE_GPU_TYPES_HPP__ */
