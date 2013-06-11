@@ -48,12 +48,12 @@ static void completeMomentState( Moments* moments )
 {
     double cx = 0, cy = 0;
     double mu20, mu11, mu02;
-
+    double inv_m00 = 0.0;
     assert( moments != 0 );
 
     if( fabs(moments->m00) > DBL_EPSILON )
     {
-        double inv_m00 = 1. / moments->m00;
+        inv_m00 = 1. / moments->m00;
         cx = moments->m10 * inv_m00;
         cy = moments->m01 * inv_m00;
     }
@@ -78,6 +78,14 @@ static void completeMomentState( Moments* moments )
     moments->mu12 = moments->m12 - cy * (mu11 + cy * moments->m10) - cx * mu02;
     // mu03 = m03 - cy*(3*mu02 + cy*m01)
     moments->mu03 = moments->m03 - cy * (3 * mu02 + cy * moments->m01);
+
+
+    double inv_sqrt_m00 = std::sqrt(std::abs(inv_m00));
+    double s2 = inv_m00*inv_m00, s3 = s2*inv_sqrt_m00;
+
+    moments->nu20 = moments->mu20*s2; moments->nu11 = moments->mu11*s2; moments->nu02 = moments->mu02*s2;
+    moments->nu30 = moments->mu30*s3; moments->nu21 = moments->mu21*s3; moments->nu12 = moments->mu12*s3; moments->nu03 = moments->mu03*s3;
+
 }
 
 
