@@ -130,28 +130,29 @@ __kernel void calcHarris(__global const float *Dx,__global const float *Dy, __gl
         data[2][i] = dy_data[i] * dy_data[i];
     }
 #else
-   for(int i=0; i < ksY+1; i++)
-   {
+    int clamped_col = min(dst_cols, col);
+    for(int i=0; i < ksY+1; i++)
+    {
         int dx_selected_row;
         int dx_selected_col;
         dx_selected_row = ADDR_H(dx_startY+i, 0, dx_whole_rows);
         dx_selected_row = ADDR_B(dx_startY+i, dx_whole_rows, dx_selected_row);
-        dx_selected_col = ADDR_L(dx_startX+col, 0, dx_whole_cols);
-        dx_selected_col = ADDR_R(dx_startX+col, dx_whole_cols, dx_selected_col);
+        dx_selected_col = ADDR_L(dx_startX+clamped_col, 0, dx_whole_cols);
+        dx_selected_col = ADDR_R(dx_startX+clamped_col, dx_whole_cols, dx_selected_col);
         dx_data[i] = Dx[dx_selected_row * (dx_step>>2) + dx_selected_col];
 
         int dy_selected_row;
         int dy_selected_col;
         dy_selected_row = ADDR_H(dy_startY+i, 0, dy_whole_rows);
         dy_selected_row = ADDR_B(dy_startY+i, dy_whole_rows, dy_selected_row);
-        dy_selected_col = ADDR_L(dy_startX+col, 0, dy_whole_cols);
-        dy_selected_col = ADDR_R(dy_startX+col, dy_whole_cols, dy_selected_col);
+        dy_selected_col = ADDR_L(dy_startX+clamped_col, 0, dy_whole_cols);
+        dy_selected_col = ADDR_R(dy_startX+clamped_col, dy_whole_cols, dy_selected_col);
         dy_data[i] = Dy[dy_selected_row * (dy_step>>2) + dy_selected_col];
 
         data[0][i] = dx_data[i] * dx_data[i];
         data[1][i] = dx_data[i] * dy_data[i];
         data[2][i] = dy_data[i] * dy_data[i];
-   }
+    }
 #endif
     float sum0 = 0.0, sum1 = 0.0, sum2 = 0.0;
     for(int i=1; i < ksY; i++)

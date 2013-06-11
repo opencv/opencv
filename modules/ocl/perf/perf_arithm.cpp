@@ -62,7 +62,6 @@ PERFTEST(lut)
 
             gen(src, size, size, all_type[j], 0, 256);
             gen(lut, 1, 256, CV_8UC1, 0, 1);
-            dst = src;
 
             LUT(src, lut, dst);
 
@@ -233,8 +232,6 @@ PERFTEST(Mul)
 
             gen(src1, size, size, all_type[j], 0, 256);
             gen(src2, size, size, all_type[j], 0, 256);
-            dst = src1;
-            dst.setTo(0);
 
             multiply(src1, src2, dst);
 
@@ -281,8 +278,6 @@ PERFTEST(Div)
 
             gen(src1, size, size, all_type[j], 0, 256);
             gen(src2, size, size, all_type[j], 0, 256);
-            dst = src1;
-            dst.setTo(0);
 
             divide(src1, src2, dst);
 

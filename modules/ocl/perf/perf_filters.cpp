@@ -291,9 +291,7 @@ PERFTEST(GaussianBlur)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
-            gen(src, size, size, all_type[j], 0, 256);
-            dst = src;
-            dst.setTo(0);
+            gen(src, size, size, all_type[j], 5, 16);
 
             GaussianBlur(src, dst, Size(9, 9), 0);
 
@@ -339,39 +337,38 @@ PERFTEST(filter2D)
         {
             gen(src, size, size, all_type[j], 0, 256);
 
-            for (int ksize = 3; ksize <= 15; ksize = 2*ksize+1)
-            {
-                SUBTEST << "ksize = " << ksize << "; " << size << 'x' << size << "; " << type_name[j] ;
+            const int ksize = 3;
 
-                Mat kernel;
-                gen(kernel, ksize, ksize, CV_32FC1, 0.0, 1.0);
+            SUBTEST << "ksize = " << ksize << "; " << size << 'x' << size << "; " << type_name[j] ;
 
-				Mat dst, ocl_dst;
-				dst.setTo(0);
-                cv::filter2D(src, dst, -1, kernel);
+            Mat kernel;
+            gen(kernel, ksize, ksize, CV_32SC1, -3.0, 3.0);
 
-                CPU_ON;
-                cv::filter2D(src, dst, -1, kernel);
-                CPU_OFF;
+            Mat dst, ocl_dst;
 
-                ocl::oclMat d_src(src), d_dst;
+            cv::filter2D(src, dst, -1, kernel);
 
-                WARMUP_ON;
-                ocl::filter2D(d_src, d_dst, -1, kernel);
-                WARMUP_OFF;
+            CPU_ON;
+            cv::filter2D(src, dst, -1, kernel);
+            CPU_OFF;
 
-                GPU_ON;
-                ocl::filter2D(d_src, d_dst, -1, kernel);
-                GPU_OFF;
+            ocl::oclMat d_src(src), d_dst;
 
-                GPU_FULL_ON;
-                d_src.upload(src);
-                ocl::filter2D(d_src, d_dst, -1, kernel);
-                d_dst.download(ocl_dst);
-                GPU_FULL_OFF;
+            WARMUP_ON;
+            ocl::filter2D(d_src, d_dst, -1, kernel);
+            WARMUP_OFF;
 
-                TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
-            }
+            GPU_ON;
+            ocl::filter2D(d_src, d_dst, -1, kernel);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src.upload(src);
+            ocl::filter2D(d_src, d_dst, -1, kernel);
+            d_dst.download(ocl_dst);
+            GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
 
         }
 

@@ -30,6 +30,7 @@ static double getTime(){
 
 static void download(const oclMat& d_mat, vector<Point2f>& vec)
 {
+    vec.clear();
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_32FC2, (void*)&vec[0]);
     d_mat.download(mat);
@@ -37,6 +38,7 @@ static void download(const oclMat& d_mat, vector<Point2f>& vec)
 
 static void download(const oclMat& d_mat, vector<uchar>& vec)
 {
+    vec.clear();
     vec.resize(d_mat.cols);
     Mat mat(1, d_mat.cols, CV_8UC1, (void*)&vec[0]);
     d_mat.download(mat);
@@ -118,14 +120,15 @@ int main(int argc, const char* argv[])
     bool useCPU = cmd.has("s");
     bool useCamera = cmd.has("c");
     int inputName = cmd.get<int>("c");
-    oclMat d_nextPts, d_status;
 
+    oclMat d_nextPts, d_status;
+    GoodFeaturesToTrackDetector_OCL d_features(points);
     Mat frame0 = imread(fname0, cv::IMREAD_GRAYSCALE);
     Mat frame1 = imread(fname1, cv::IMREAD_GRAYSCALE);
     PyrLKOpticalFlow d_pyrLK;
-    vector<cv::Point2f> pts;
-    vector<cv::Point2f> nextPts;
-    vector<unsigned char> status;
+    vector<cv::Point2f> pts(points);
+    vector<cv::Point2f> nextPts(points);
+    vector<unsigned char> status(points);
     vector<float> err;
 
     if (frame0.empty() || frame1.empty())
@@ -196,29 +199,24 @@ int main(int argc, const char* argv[])
                     ptr1 = frame0Gray;
                 }
 
-                pts.clear();
-
-                cv::goodFeaturesToTrack(ptr0, pts, points, 0.01, 0.0);
-
-                if (pts.size() == 0)
-                {
-                    continue;
-                }
-
                 if (useCPU)
                 {
-                    cv::calcOpticalFlowPyrLK(ptr0, ptr1, pts, nextPts, status, err);
+                    pts.clear();
+                    goodFeaturesToTrack(ptr0, pts, points, 0.01, 0.0);
+                    if(pts.size() == 0)
+                        continue;
+                    calcOpticalFlowPyrLK(ptr0, ptr1, pts, nextPts, status, err);
                 }
                 else
                 {
-                    oclMat d_prevPts(1, points, CV_32FC2, (void*)&pts[0]);
-
-                    d_pyrLK.sparse(oclMat(ptr0), oclMat(ptr1), d_prevPts, d_nextPts, d_status);
-
-                    download(d_prevPts, pts);
+                    oclMat d_img(ptr0), d_prevPts;
+                    d_features(d_img, d_prevPts);
+                    if(!d_prevPts.rows || !d_prevPts.cols)
+                        continue;
+                    d_pyrLK.sparse(d_img, oclMat(ptr1), d_prevPts, d_nextPts, d_status);
+                    d_features.downloadPoints(d_prevPts,pts);
                     download(d_nextPts, nextPts);
                     download(d_status, status);
-
                 }
                 if (i%2 == 1)
                     frame1.copyTo(frameCopy);
@@ -243,21 +241,19 @@ nocamera:
         for(int i = 0; i <= LOOP_NUM;i ++) 
         {
             cout << "loop" << i << endl;
-            if (i > 0) workBegin();
-
-            cv::goodFeaturesToTrack(frame0, pts, points, 0.01, minDist);
+            if (i > 0) workBegin();     
 
             if (useCPU)
             {
-                cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
+                goodFeaturesToTrack(frame0, pts, points, 0.01, minDist);
+                calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
             }
             else
             {
-                oclMat d_prevPts(1, points, CV_32FC2, (void*)&pts[0]);
-
-                d_pyrLK.sparse(oclMat(frame0), oclMat(frame1), d_prevPts, d_nextPts, d_status);
-
-                download(d_prevPts, pts);
+                oclMat d_img(frame0), d_prevPts;
+                d_features(d_img, d_prevPts);
+                d_pyrLK.sparse(d_img, oclMat(frame1), d_prevPts, d_nextPts, d_status);
+                d_features.downloadPoints(d_prevPts, pts);
                 download(d_nextPts, nextPts);
                 download(d_status, status);
             }

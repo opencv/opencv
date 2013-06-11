@@ -294,6 +294,9 @@ public:
     ~AutoLock() { mutex->unlock(); }
 protected:
     Mutex* mutex;
+private:
+    AutoLock(const AutoLock&);
+    AutoLock& operator = (const AutoLock&);
 };
 
 // The CommandLineParser class is designed for command line arguments parsing
