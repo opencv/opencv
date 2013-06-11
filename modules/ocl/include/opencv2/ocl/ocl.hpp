@@ -183,13 +183,14 @@ namespace cv
         // cached onto local disk automatically, which may accelerate subsequent runs.
         // Caching mode is controlled by the following enum
         // Note, the feature is by default enabled when OpenCV is built in release mode.
-        // enum BinaryDiskCacheMode
-        const int CACHE_NONE    = 0;
-        const int CACHE_DEBUG   = 0x1 << 0;
-        const int CACHE_RELEASE = 0x1 << 1;
-        const int CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE;
-        const int CACHE_UPDATE  = 0x1 << 2;  // if the binary cache file with the same name is already on the disk, it will be updated.
-
+        enum
+        {
+            CACHE_NONE    = 0,
+            CACHE_DEBUG   = 0x1 << 0,
+            CACHE_RELEASE = 0x1 << 1,
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE,
+            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
+        };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
         //! set where binary cache to be saved to 
