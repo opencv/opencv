@@ -44,4 +44,4 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN(superres, printCudaInfo())
+CV_PERF_TEST_MAIN_WITH_IMPLS(superres, ("cuda", "plain"), printCudaInfo())

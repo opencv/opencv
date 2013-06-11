@@ -210,18 +210,13 @@ private:
 #define SANITY_CHECK_KEYPOINTS(array, ...) ::perf::Regression::addKeypoints(this, #array, array , ## __VA_ARGS__)
 #define SANITY_CHECK_MATCHES(array, ...) ::perf::Regression::addMatches(this, #array, array , ## __VA_ARGS__)
 
-#ifdef HAVE_CUDA
 class CV_EXPORTS GpuPerf
 {
 public:
   static bool targetDevice();
 };
 
-# define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
-#else
-# define PERF_RUN_GPU()  false
-#endif
-
+#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -263,7 +258,10 @@ public:
     TestBase();
 
     static void Init(int argc, const char* const argv[]);
+    static void Init(const std::vector<std::string> & availableImpls,
+                     int argc, const char* const argv[]);
     static std::string getDataPath(const std::string& relativePath);
+    static std::string getSelectedImpl();
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -476,17 +474,23 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
+#define CV_PERF_UNWRAP_IMPLS(...) __VA_ARGS__
 
-#define CV_PERF_TEST_MAIN(testsuitname, ...) \
+// "plain" should always be one of the implementations
+#define CV_PERF_TEST_MAIN_WITH_IMPLS(testsuitname, impls, ...) \
 int main(int argc, char **argv)\
 {\
     while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
+    std::string impls_[] = { CV_PERF_UNWRAP_IMPLS impls };\
     ::perf::Regression::Init(#testsuitname);\
-    ::perf::TestBase::Init(argc, argv);\
+    ::perf::TestBase::Init(std::vector<std::string>(impls_, impls_ + sizeof impls_ / sizeof *impls_),\
+                           argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
     cvtest::printVersionInfo();\
     return RUN_ALL_TESTS();\
 }
+
+#define CV_PERF_TEST_MAIN(testsuitname, ...) CV_PERF_TEST_MAIN_WITH_IMPLS(testsuitname, ("plain"), __VA_ARGS__)
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
 #define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
