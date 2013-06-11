@@ -447,84 +447,65 @@ void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<
 void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
 
 
-
-
-template<typename _Tp, typename _Ts, typename _Tc> inline int copy_non_nan_loop(_Tp *d, const Mat& s, const Mat& c)
+struct NanFilter
 {
-    CV_Assert(s.size() == c.size());
-    int j = 0;
-    for(int y = 0; y < s.rows; ++y)
+    template<typename _Tp, typename _Msk>
+    struct Impl
     {
-        const _Ts* srow = s.ptr<_Ts>(y);
-        const _Tc* crow = c.ptr<_Tc>(y);
-        for(int x = 0; x < s.cols; ++x)
-            if (!isNan(crow[x]))
-                d[j++] = _Tp((srow[x])[0], (srow[x])[1], (srow[x])[2]);
-    }
-    return j;
-}
+        typedef Vec<_Tp, 3> _Out;
 
-/** \brief Assign a value to a variable if another variable is not NaN
-    * \param[in] d the destination variable
-    * \param[in] s the source variable
-    * \param[in] c the values to be controlled if NaN (can be different from s)
-    * \param[out] j number of points that are copied
-    */
-template<typename _Tp> inline int copy_non_nans(_Tp *d, const Mat& s, const Mat& c)
-{
-    CV_Assert(s.size() == c.size());
-    
-    int j = 0;
-    if (s.channels() > 3)
-    {
-        if (s.type() == CV_32FC4)
+        static _Out* copy(const Mat& source, _Out* output, const Mat& nan_mask)
         {
-            switch(c.type())
+            CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+            CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
+            CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
+
+            int s_chs = source.channels();
+            int m_chs = nan_mask.channels();
+
+            for(int y = 0; y < source.rows; ++y)
             {
-            case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3f>(d, s, c); break;
-            case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4f>(d, s, c); break;
-            case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3d>(d, s, c); break;
-            case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4d>(d, s, c); break;
-            }
-        }
-        else if (s.type() == CV_64FC4)
-        {
-            switch(c.type())
-            {
-            case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3f>(d, s, c); break;
-            case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4f>(d, s, c); break;
-            case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3d>(d, s, c); break;
-            case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4d>(d, s, c); break;
-            }
-        }
-    }
-    else
-    {
-        switch(c.type())
-        {
-        case CV_32FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3f>(d, s, c); break;
-        case CV_32FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4f>(d, s, c); break;
-        case CV_64FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3d>(d, s, c); break;
-        case CV_64FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4d>(d, s, c); break;
-        }
-    }
-    return j;
-}
+                const _Tp* srow = source.ptr<_Tp>(y);
+                const _Msk* mrow = nan_mask.ptr<_Msk>(y);
 
-/** \brief Transform points in an array
-    * \param[in] d the destination variable
-    * \param[in] lenth the length of the d array
-    * \param[in] pose affine transform to be applied on each point in d
-    */
-template<typename _Tp> inline void transform_non_nans(_Tp* d, int length, const Affine3f& pose = Affine3f::Identity())
+                for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+                    if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+                        *output++ = _Out(srow);
+            }
+            return output;
+        }
+    };
+
+    template<typename _Tp>
+    static inline Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
+    {
+        CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
+
+        typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
+        const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copy, &NanFilter::Impl<_Tp, double>::copy };
+
+        return table[nan_mask.depth() - 5](source, output, nan_mask);
+    }
+};
+
+struct ApplyAffine
 {
-    for (int i = 0; i < length; ++i)
+    const Affine3f& affine_;
+    ApplyAffine(const Affine3f& affine) : affine_(affine) {}
+
+    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine * p; }
+
+    template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v)
     {
-        d[i] = pose * d[i];
+        const float* m = affine_.matrix.val;
+
+        Vec<_Tp, 3> result;
+        result[0] = m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3];
+        result[1] = m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7];
+        result[2] = m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11];
+        return result;
     }
-}
+};
 
 }
-
-
 

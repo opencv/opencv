@@ -31,6 +31,10 @@ namespace temp_viz
     typedef cv::InputArray InputArray;
     using cv::Point3_;
     using cv::Vec;
+    using cv::Mat_;
+    using cv::DataDepth;
+    using cv::DataType;
+
 
 
 
@@ -87,9 +91,10 @@ namespace temp_viz
 
     inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
 
+
+
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
-    
-    Vec3d operator*(const Affine3f& affine, const Vec3d& vec);
+
     
     inline bool isNan(float x)
     {

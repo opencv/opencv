@@ -99,3 +99,4 @@ void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const cv::MouseEven
 }
 
 bool temp_viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }
+

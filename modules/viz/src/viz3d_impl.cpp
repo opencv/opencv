@@ -2,6 +2,27 @@
 #include <q/shapes.h>
 #include <q/viz3d_impl.hpp>
 
+namespace temp_viz
+{
+    template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+
+    template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
+    {
+        CV_Assert(points->GetDataType() == VTK_FLOAT);
+        vtkDataArray *data = points->GetData();
+        float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
+        return reinterpret_cast<Vec3f*>(pointer);
+    }
+
+    template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
+    {
+        CV_Assert(points->GetDataType() == VTK_DOUBLE);
+        vtkDataArray *data = points->GetData();
+        double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
+        return reinterpret_cast<Vec3d*>(pointer);
+    }
+}
+
 void temp_viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {
     if (window_)
@@ -21,14 +42,14 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 {
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
-    CV_Assert((cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4));
+    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
         
     vtkSmartPointer<vtkPolyData> polydata;
     vtkSmartPointer<vtkCellArray> vertices;
     vtkSmartPointer<vtkPoints> points;
     vtkSmartPointer<vtkIdTypeArray> initcells;
-    vtkIdType nr_points;
+    vtkIdType nr_points = cloud.total();
 
     // If the cloud already exists, update otherwise create new one
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
@@ -41,7 +62,6 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
         vertices = vtkSmartPointer<vtkCellArray>::New ();
         polydata->SetVerts (vertices);
 
-        nr_points = cloud.total();
         points = polydata->GetPoints ();
 
         if (!points)
@@ -67,29 +87,28 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
             points->SetDataTypeToFloat ();
         else if (cloud.depth() == CV_64F)
             points->SetDataTypeToDouble ();
-        // Copy the new point array in
-        nr_points = cloud.total();
+
         points->SetNumberOfPoints (nr_points);
     }
 
-    int j = 0;
-    
     if (cloud.depth() == CV_32F)
     {
         // Get a pointer to the beginning of the data array
-        Vec3f *data = reinterpret_cast<Vec3f*>((static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0));
-        j = copy_non_nans(data, cloud, cloud);
-        transform_non_nans(data,j,pose);
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+        Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
+        nr_points = data_end - data_beg;
+
     }
     else if (cloud.depth() == CV_64F)
     {
         // Get a pointer to the beginning of the data array
-        Vec3d *data = reinterpret_cast<Vec3d*>((static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0));
-        j = copy_non_nans(data, cloud, cloud);
-        transform_non_nans(data,j,pose);
+        Vec3d *data_beg = vtkpoints_data<double>(points);
+        Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
+        nr_points = data_end - data_beg;
     }
 
-    nr_points = j;
     points->SetNumberOfPoints (nr_points);
 
     vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
@@ -102,19 +121,17 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
     // Set the cells and the vertices
     vertices->SetCells (nr_points, cells);
 
-    // Get the colors from the handler
-    Vec2d minmax;
-    vtkSmartPointer<vtkDataArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
-    scalars->SetNumberOfComponents (3);
-    reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetNumberOfTuples (nr_points);
-
     // Get a random color
     Vec3b* colors_data = new Vec3b[nr_points];
-    j = copy_non_nans(colors_data, colors, cloud);
+    NanFilter::copy(colors, colors_data, cloud);
 
-    reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (reinterpret_cast<unsigned char*>(colors_data), 3 * nr_points, 0);
+    vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+    scalars->SetNumberOfComponents (3);
+    scalars->SetNumberOfTuples (nr_points);
+    scalars->SetArray (colors_data->val, 3 * nr_points, 0);
 
     // Assign the colors
+    Vec2d minmax;
     polydata->GetPointData ()->SetScalars (scalars);
     scalars->GetRange (minmax.val);
 
@@ -133,8 +150,8 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
         (*cloud_actor_map_)[id].actor = actor;
         (*cloud_actor_map_)[id].cells = initcells;
 
-        const Eigen::Vector4f& sensor_origin = Eigen::Vector4f::Zero ();
-        const Eigen::Quaternion<float>& sensor_orientation = Eigen::Quaternionf::Identity ();
+        const Eigen::Vector4f sensor_origin = Eigen::Vector4f::Zero ();
+        const Eigen::Quaternionf sensor_orientation = Eigen::Quaternionf::Identity ();
 
         // Save the viewpoint transformation matrix to the global actor map
         vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
