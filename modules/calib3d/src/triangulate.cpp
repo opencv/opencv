@@ -84,7 +84,7 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
 
     CvMat matrA;
     double matrA_dat[24];
-    matrA = cvMat(6,4,CV_64F,matrA_dat);
+    matrA = cvMat(6, 4, CV_64F, matrA_dat);
 
     //CvMat matrU;
     CvMat matrW;
@@ -94,8 +94,8 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
     double matrV_dat[4*4];
 
     //matrU = cvMat(6,6,CV_64F,matrU_dat);
-    matrW = cvMat(6,4,CV_64F,matrW_dat);
-    matrV = cvMat(4,4,CV_64F,matrV_dat);
+    matrW = cvMat(6, 4, CV_64F, matrW_dat);
+    matrV = cvMat(4, 4, CV_64F, matrV_dat);
 
     CvMat* projPoints[2];
     CvMat* projMatrs[2];
@@ -107,25 +107,25 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
     projMatrs[1] = projMatr2;
 
     /* Solve system for each point */
-    int i,j;
+    int i, j;
     for( i = 0; i < numPoints; i++ )/* For each point */
     {
         /* Fill matrix for current point */
         for( j = 0; j < 2; j++ )/* For each view */
         {
-            double x,y;
+            double x, y;
             x = cvmGet(projPoints[j],0,i);
             y = cvmGet(projPoints[j],1,i);
             for( int k = 0; k < 4; k++ )
             {
-                cvmSet(&matrA, j*3+0, k, x * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],0,k) );
-                cvmSet(&matrA, j*3+1, k, y * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],1,k) );
-                cvmSet(&matrA, j*3+2, k, x * cvmGet(projMatrs[j],1,k) - y * cvmGet(projMatrs[j],0,k) );
+                cvmSet(&matrA, (j*3)+0, k, x * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],0,k) );
+                cvmSet(&matrA, (j*3)+1, k, y * cvmGet(projMatrs[j],2,k) -     cvmGet(projMatrs[j],1,k) );
+                cvmSet(&matrA, (j*3)+2, k, x * cvmGet(projMatrs[j],1,k) - y * cvmGet(projMatrs[j],0,k) );
             }
         }
         /* Solve system for current point */
         {
-            cvSVD(&matrA,&matrW,0,&matrV,CV_SVD_V_T);
+            cvSVD(&matrA, &matrW, 0, &matrV, CV_SVD_V_T);
 
             /* Copy computed point */
             cvmSet(points4D,0,i,cvmGet(&matrV,3,0));/* X */
@@ -151,11 +151,11 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
 
         for( i = 0; i < numPoints; i++ )
         {
-            double W = cvmGet(points4D,3,i);
+            double W = 1.0 / cvmGet(points4D,3,i);
 
-            point3D_dat[0] = cvmGet(points4D,0,i)/W;
-            point3D_dat[1] = cvmGet(points4D,1,i)/W;
-            point3D_dat[2] = cvmGet(points4D,2,i)/W;
+            point3D_dat[0] = cvmGet(points4D,0,i) * W;
+            point3D_dat[1] = cvmGet(points4D,1,i) * W;
+            point3D_dat[2] = cvmGet(points4D,2,i) * W;
             point3D_dat[3] = 1;
 
             /* !!! Project this point for each camera */
@@ -163,16 +163,16 @@ cvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvMa
             {
                 cvMatMul(projMatrs[currCamera], &point3D, &point2D);
 
-                float x,y;
-                float xr,yr,wr;
+                float x, y;
+                float xr, yr, wr;
                 x = (float)cvmGet(projPoints[currCamera],0,i);
                 y = (float)cvmGet(projPoints[currCamera],1,i);
 
-                wr = (float)point2D_dat[2];
-                xr = (float)(point2D_dat[0]/wr);
-                yr = (float)(point2D_dat[1]/wr);
+                wr = 1.0f / (float)point2D_dat[2];
+                xr = (float)(point2D_dat[0]*wr);
+                yr = (float)(point2D_dat[1]*wr);
 
-                float deltaX,deltaY;
+                float deltaX, deltaY;
                 deltaX = (float)fabs(x-xr);
                 deltaY = (float)fabs(y-yr);
                 err += deltaX*deltaX + deltaY*deltaY;
@@ -262,17 +262,17 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
     e1 = cvCreateMat(3,1,CV_64FC1), e2 = cvCreateMat(3,1,CV_64FC1);
 
     double x1, y1, x2, y2;
-    double scale;
     double f1, f2, a, b, c, d;
     polynomial = cvCreateMat(1,7,CV_64FC1);
     result = cvCreateMat(1,6,CV_64FC2);
     double t_min, s_val, t, s;
     for (int p = 0; p < points1->cols; ++p) {
+        double scale;
         // Replace F by T2-t * F * T1-t
-        x1 = points1->data.db[p*2];
-        y1 = points1->data.db[p*2+1];
-        x2 = points2->data.db[p*2];
-        y2 = points2->data.db[p*2+1];
+        x1 = points1->data.db[(p*2)];
+        y1 = points1->data.db[(p*2)+1];
+        x2 = points2->data.db[(p*2)];
+        y2 = points2->data.db[(p*2)+1];
 
         cvSetZero(T1i);
         cvSetReal2D(T1i,0,0,1);
@@ -295,10 +295,10 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         cvSetZero(S);
         cvSetZero(V);
         cvSVD(TFT,S,U,V);
-        scale = sqrt(cvGetReal2D(V,0,2)*cvGetReal2D(V,0,2) + cvGetReal2D(V,1,2)*cvGetReal2D(V,1,2));
-        cvSetReal2D(e1,0,0,cvGetReal2D(V,0,2)/scale);
-        cvSetReal2D(e1,1,0,cvGetReal2D(V,1,2)/scale);
-        cvSetReal2D(e1,2,0,cvGetReal2D(V,2,2)/scale);
+        scale = 1/sqrt(cvGetReal2D(V,0,2)*cvGetReal2D(V,0,2) + cvGetReal2D(V,1,2)*cvGetReal2D(V,1,2));
+        cvSetReal2D(e1,0,0,cvGetReal2D(V,0,2)*scale);
+        cvSetReal2D(e1,1,0,cvGetReal2D(V,1,2)*scale);
+        cvSetReal2D(e1,2,0,cvGetReal2D(V,2,2)*scale);
         if (cvGetReal2D(e1,2,0) < 0) {
             cvSetReal2D(e1,0,0,-cvGetReal2D(e1,0,0));
             cvSetReal2D(e1,1,0,-cvGetReal2D(e1,1,0));
@@ -313,10 +313,10 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         cvSetZero(V);
         cvSVD(TFTt,S,U,V);
         cvSetZero(e2);
-        scale = sqrt(cvGetReal2D(V,0,2)*cvGetReal2D(V,0,2) + cvGetReal2D(V,1,2)*cvGetReal2D(V,1,2));
-        cvSetReal2D(e2,0,0,cvGetReal2D(V,0,2)/scale);
-        cvSetReal2D(e2,1,0,cvGetReal2D(V,1,2)/scale);
-        cvSetReal2D(e2,2,0,cvGetReal2D(V,2,2)/scale);
+        scale = 1/sqrt(cvGetReal2D(V,0,2)*cvGetReal2D(V,0,2) + cvGetReal2D(V,1,2)*cvGetReal2D(V,1,2));
+        cvSetReal2D(e2,0,0,cvGetReal2D(V,0,2)*scale);
+        cvSetReal2D(e2,1,0,cvGetReal2D(V,1,2)*scale);
+        cvSetReal2D(e2,2,0,cvGetReal2D(V,2,2)*scale);
         if (cvGetReal2D(e2,2,0) < 0) {
             cvSetReal2D(e2,0,0,-cvGetReal2D(e2,0,0));
             cvSetReal2D(e2,1,0,-cvGetReal2D(e2,1,0));
@@ -349,13 +349,15 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
 
         // Form the polynomial g(t) = k6*t⁶ + k5*t⁵ + k4*t⁴ + k3*t³ + k2*t² + k1*t + k0
         // from f1, f2, a, b, c and d
-        cvSetReal2D(polynomial,0,6,( +b*c*c*f1*f1*f1*f1*a-a*a*d*f1*f1*f1*f1*c ));
-        cvSetReal2D(polynomial,0,5,( +f2*f2*f2*f2*c*c*c*c+2*a*a*f2*f2*c*c-a*a*d*d*f1*f1*f1*f1+b*b*c*c*f1*f1*f1*f1+a*a*a*a ));
-        cvSetReal2D(polynomial,0,4,( +4*a*a*a*b+2*b*c*c*f1*f1*a+4*f2*f2*f2*f2*c*c*c*d+4*a*b*f2*f2*c*c+4*a*a*f2*f2*c*d-2*a*a*d*f1*f1*c-a*d*d*f1*f1*f1*f1*b+b*b*c*f1*f1*f1*f1*d ));
-        cvSetReal2D(polynomial,0,3,( +6*a*a*b*b+6*f2*f2*f2*f2*c*c*d*d+2*b*b*f2*f2*c*c+2*a*a*f2*f2*d*d-2*a*a*d*d*f1*f1+2*b*b*c*c*f1*f1+8*a*b*f2*f2*c*d ));
-        cvSetReal2D(polynomial,0,2,( +4*a*b*b*b+4*b*b*f2*f2*c*d+4*f2*f2*f2*f2*c*d*d*d-a*a*d*c+b*c*c*a+4*a*b*f2*f2*d*d-2*a*d*d*f1*f1*b+2*b*b*c*f1*f1*d ));
-        cvSetReal2D(polynomial,0,1,( +f2*f2*f2*f2*d*d*d*d+b*b*b*b+2*b*b*f2*f2*d*d-a*a*d*d+b*b*c*c ));
-        cvSetReal2D(polynomial,0,0,( -a*d*d*b+b*b*c*d ));
+        const double aa = a*a, bb = b*b, cc = c*c, dd = d*d, f1_2 = f1*f1, f2_2 = f2*f2;
+        const double f1_4 = f1_2 * f1_2, f2_4 = f2_2 * f2_2;
+        cvSetReal2D(polynomial,0,6,( +b*cc*f1_4*a - aa*d*f1_4*c ));
+        cvSetReal2D(polynomial,0,5,( +f2_4*cc*cc + 2*aa*f2_2*cc - aa*dd*f1_4 + bb*cc*f1_4 + aa*aa ));
+        cvSetReal2D(polynomial,0,4,( +4*aa*a*b+2*b*cc*f1_2*a+4*f2_4*cc*c*d+4*a*b*f2_2*cc+4*aa*f2_2*c*d-2*aa*d*f1_2*c-a*dd*f1_4*b+bb*c*f1_4*d ));
+        cvSetReal2D(polynomial,0,3,( +6*aa*bb+6*f2_4*cc*dd+2*bb*f2_2*cc+2*aa*f2_2*dd-2*aa*dd*f1_2+2*bb*cc*f1_2+8*a*b*f2_2*c*d ));
+        cvSetReal2D(polynomial,0,2,( +4*a*bb*b+4*bb*f2_2*c*d+4*f2_4*c*dd*d-aa*d*c+b*cc*a+4*a*b*f2_2*dd-2*a*dd*f1_2*b+2*bb*c*f1_2*d ));
+        cvSetReal2D(polynomial,0,1,( +f2_4*dd*dd+bb*bb + 2*bb*f2_2*dd-aa*dd + bb*cc ));
+        cvSetReal2D(polynomial,0,0,( -a*dd*b + bb*c*d ));
 
         // Solve g(t) for t to get 6 roots
         cvSetZero(result);
@@ -363,10 +365,10 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
 
         // Evaluate the cost function s(t) at the real part of the 6 roots
         t_min = DBL_MAX;
-        s_val = 1./(f1*f1) + (c*c)/(a*a+f2*f2*c*c);
+        s_val = 1./(f1_2) + (cc)/(aa+f2_2*cc);
         for (int ti = 0; ti < 6; ++ti) {
             t = result->data.db[2*ti];
-            s = (t*t)/(1 + f1*f1*t*t) + ((c*t + d)*(c*t + d))/((a*t + b)*(a*t + b) + f2*f2*(c*t + d)*(c*t + d));
+            s = (t*t)/(1 + f1_2*t*t) + ((c*t + d)*(c*t + d))/((a*t + b)*(a*t + b) + f2_2*(c*t + d)*(c*t + d));
             if (s < s_val) {
                 s_val = s;
                 t_min = t;
@@ -374,33 +376,37 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
         }
 
         // find the optimal x1 and y1 as the points on l1 and l2 closest to the origin
-        tmp31->data.db[0] = t_min*t_min*f1;
-        tmp31->data.db[1] = t_min;
-        tmp31->data.db[2] = t_min*t_min*f1*f1+1;
-        tmp31->data.db[0] /= tmp31->data.db[2];
-        tmp31->data.db[1] /= tmp31->data.db[2];
-        tmp31->data.db[2] /= tmp31->data.db[2];
-        cvGEMM(T1i,R1,1,0,0,tmp33,CV_GEMM_B_T);
-        cvGEMM(tmp33,tmp31,1,0,0,tmp31_2);
+        double inv_2;
+        tmp31->data.db[0] = (t_min*t_min) * f1;
+        tmp31->data.db[1] =  t_min;
+        tmp31->data.db[2] = (t_min*t_min) * f1_2 + 1;
+        inv_2 = 1 / tmp31->data.db[2];
+        tmp31->data.db[0] *= inv_2;
+        tmp31->data.db[1] *= inv_2;
+        tmp31->data.db[2]  = 1; // 1==x/x
+        cvGEMM(T1i, R1, 1, 0, 0, tmp33, CV_GEMM_B_T);
+        cvGEMM(tmp33, tmp31, 1, 0, 0, tmp31_2);
         x1 = tmp31_2->data.db[0];
         y1 = tmp31_2->data.db[1];
 
-        tmp31->data.db[0] = f2*pow(c*t_min+d,2);
-        tmp31->data.db[1] = -(a*t_min+b)*(c*t_min+d);
-        tmp31->data.db[2] = f2*f2*pow(c*t_min+d,2) + pow(a*t_min+b,2);
-        tmp31->data.db[0] /= tmp31->data.db[2];
-        tmp31->data.db[1] /= tmp31->data.db[2];
-        tmp31->data.db[2] /= tmp31->data.db[2];
-        cvGEMM(T2i,R2,1,0,0,tmp33,CV_GEMM_B_T);
-        cvGEMM(tmp33,tmp31,1,0,0,tmp31_2);
+        const double ctd = c * t_min + d, atb = a * t_min + b;
+        tmp31->data.db[0] = f2 * (ctd*ctd);
+        tmp31->data.db[1] = -(atb) * (ctd);
+        tmp31->data.db[2] = f2_2 * (ctd*ctd) + (atb*atb);
+        inv_2 = 1 / tmp31->data.db[2];
+        tmp31->data.db[0] *= inv_2;
+        tmp31->data.db[1] *= inv_2;
+        tmp31->data.db[2]  = 1.0;
+        cvGEMM(T2i, R2, 1, 0, 0, tmp33, CV_GEMM_B_T);
+        cvGEMM(tmp33, tmp31, 1, 0, 0, tmp31_2);
         x2 = tmp31_2->data.db[0];
         y2 = tmp31_2->data.db[1];
 
         // Return the points in the matrix format that the user wants
-        points1->data.db[p*2] = x1;
-        points1->data.db[p*2+1] = y1;
-        points2->data.db[p*2] = x2;
-        points2->data.db[p*2+1] = y2;
+        points1->data.db[(p*2)] = x1;
+        points1->data.db[(p*2)+1] = y1;
+        points2->data.db[(p*2)] = x2;
+        points2->data.db[(p*2)+1] = y2;
     }
 
     if( new_points1 )

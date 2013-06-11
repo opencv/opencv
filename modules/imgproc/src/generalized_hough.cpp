@@ -58,7 +58,7 @@ namespace
 
     double toRad(double a)
     {
-        return a * CV_PI / 180.0;
+        return a * (CV_PI / 180.0);
     }
 
     bool notNull(float v)
@@ -168,7 +168,7 @@ namespace
 
     void GHT_Pos::filterMinDist()
     {
-        size_t oldSize = posOutBuf.size();
+        const size_t oldSize = posOutBuf.size();
         const bool hasVotes = !voteOutBuf.empty();
 
         CV_Assert(!hasVotes || voteOutBuf.size() == oldSize);
@@ -183,8 +183,10 @@ namespace
 
         posOutBuf.clear();
         voteOutBuf.clear();
+        if ((int)oldSize <= 0) return;
 
         const int cellSize = cvRound(minDist);
+        const float inv_cellSize = 1.0f / cellSize;
         const int gridWidth = (imageSize.width + cellSize - 1) / cellSize;
         const int gridHeight = (imageSize.height + cellSize - 1) / cellSize;
 
@@ -200,8 +202,8 @@ namespace
 
             bool good = true;
 
-            const int xCell = static_cast<int>(p.x / cellSize);
-            const int yCell = static_cast<int>(p.y / cellSize);
+            const int xCell = static_cast<int>(p.x * inv_cellSize);
+            const int yCell = static_cast<int>(p.y * inv_cellSize);
 
             int x1 = xCell - 1;
             int y1 = yCell - 1;
@@ -218,9 +220,10 @@ namespace
             {
                 for (int xx = x1; xx <= x2; ++xx)
                 {
-                    const std::vector<Point2f>& m = grid[yy * gridWidth + xx];
+                    const std::vector<Point2f>& m = grid[(yy * gridWidth) + xx];
+                    const int m_size = (int) m.size();
 
-                    for(size_t j = 0; j < m.size(); ++j)
+                    for(int j = 0; j < m_size; ++j)
                     {
                         const Point2f d = p - m[j];
 
@@ -235,9 +238,9 @@ namespace
 
             break_out:
 
-            if(good)
+            if (good)
             {
-                grid[yCell * gridWidth + xCell].push_back(p);
+                grid[(yCell * gridWidth) + xCell].push_back(p);
 
                 posOutBuf.push_back(oldPosBuf[ind]);
                 if (hasVotes)
@@ -329,7 +332,7 @@ namespace
         CV_Assert(templDy.type() == templDx.type() && templDy.size() == templSize);
         CV_Assert(levels > 0);
 
-        const double thetaScale = levels / 360.0;
+        const double thetaScale = levels * (1 / 360.0);
 
         r_table.resize(levels + 1);
         for_each(r_table.begin(), r_table.end(), mem_fun_ref(&std::vector<Point>::clear));
@@ -368,7 +371,7 @@ namespace
         CV_Assert(levels > 0 && r_table.size() == static_cast<size_t>(levels + 1));
         CV_Assert(dp > 0.0);
 
-        const double thetaScale = levels / 360.0;
+        const double thetaScale = levels * (1 / 360.0);
         const double idp = 1.0 / dp;
 
         hist.create(cvCeil(imageSize.height * idp) + 2, cvCeil(imageSize.width * idp) + 2, CV_32SC1);
@@ -377,6 +380,7 @@ namespace
         const int rows = hist.rows - 2;
         const int cols = hist.cols - 2;
 
+        if ((rows > 0) && (cols > 0))
         for (int y = 0; y < imageSize.height; ++y)
         {
             const uchar* edgesRow = imageEdges.ptr(y);
@@ -401,7 +405,7 @@ namespace
                         c.x = cvRound(c.x * idp);
                         c.y = cvRound(c.y * idp);
 
-                        if (c.x >= 0 && c.x < cols && c.y >= 0 && c.y < rows)
+                        if ((unsigned int)c.x < (unsigned int)cols && (unsigned int)c.y < (unsigned int)rows)
                             ++hist.at<int>(c.y + 1, c.x + 1);
                     }
                 }
@@ -419,7 +423,7 @@ namespace
         for(int y = 0; y < histRows; ++y)
         {
             const int* prevRow = hist.ptr<int>(y);
-            const int* curRow = hist.ptr<int>(y + 1);
+            const int* curRow  = hist.ptr<int>(y + 1);
             const int* nextRow = hist.ptr<int>(y + 2);
 
             for(int x = 0; x < histCols; ++x)
@@ -493,7 +497,7 @@ namespace
 
     void GHT_Ballard_PosScale::Worker::operator ()(const Range& range) const
     {
-        const double thetaScale = base->levels / 360.0;
+        const double thetaScale = base->levels * (1 / 360.0);
         const double idp = 1.0 / base->dp;
 
         for (int s = range.start; s < range.end; ++s)
@@ -522,12 +526,12 @@ namespace
                         for (size_t j = 0; j < r_row.size(); ++j)
                         {
                             Point2d d = r_row[j];
-                            Point2d c = p - d * scale;
+                            Point2d c = p - (d * scale);
 
                             c.x *= idp;
                             c.y *= idp;
 
-                            if (c.x >= 0 && c.x < base->hist.size[2] - 2 && c.y >= 0 && c.y < base->hist.size[1] - 2)
+                            if (c.x >= 0 && c.y >= 0 && c.x < base->hist.size[2] - 2 && c.y < base->hist.size[1] - 2)
                                 ++curHist.at<int>(cvRound(c.y + 1), cvRound(c.x + 1));
                         }
                     }
@@ -658,12 +662,12 @@ namespace
 
     void GHT_Ballard_PosRotation::Worker::operator ()(const Range& range) const
     {
-        const double thetaScale = base->levels / 360.0;
+        const double thetaScale = base->levels * (1 / 360.0);
         const double idp = 1.0 / base->dp;
 
         for (int a = range.start; a < range.end; ++a)
         {
-            const double angle = base->minAngle + a * base->angleStep;
+            const double angle = base->minAngle + (a * base->angleStep);
 
             const double sinA = ::sin(toRad(angle));
             const double cosA = ::cos(toRad(angle));
@@ -688,8 +692,9 @@ namespace
                         const int n = cvRound(theta * thetaScale);
 
                         const std::vector<Point>& r_row = base->r_table[n];
+                        const int r_row_size = (int) r_row.size();
 
-                        for (size_t j = 0; j < r_row.size(); ++j)
+                        for (int j = 0; j < r_row_size; ++j)
                         {
                             Point2d d = r_row[j];
                             Point2d c = p - Point2d(d.x * cosA - d.y * sinA, d.x * sinA + d.y * cosA);
@@ -697,7 +702,7 @@ namespace
                             c.x *= idp;
                             c.y *= idp;
 
-                            if (c.x >= 0 && c.x < base->hist.size[2] - 2 && c.y >= 0 && c.y < base->hist.size[1] - 2)
+                            if (c.x >= 0 && c.y >= 0 && c.x < base->hist.size[2] - 2 && c.y < base->hist.size[1] - 2)
                                 ++curHist.at<int>(cvRound(c.y + 1), cvRound(c.x + 1));
                         }
                     }
@@ -736,7 +741,7 @@ namespace
 
         for (int a = 0; a < angleRange; ++a)
         {
-            const float angle = static_cast<float>(minAngle + a * angleStep);
+            const float angle = static_cast<float>(minAngle + (a * angleStep));
 
             const Mat prevHist(histRows + 2, histCols + 2, CV_32SC1, hist.ptr(a), hist.step[1]);
             const Mat curHist(histRows + 2, histCols + 2, CV_32SC1, hist.ptr(a + 1), hist.step[1]);
@@ -746,7 +751,7 @@ namespace
             {
                 const int* prevHistRow = prevHist.ptr<int>(y + 1);
                 const int* prevRow = curHist.ptr<int>(y);
-                const int* curRow = curHist.ptr<int>(y + 1);
+                const int* curRow  = curHist.ptr<int>(y + 1);
                 const int* nextRow = curHist.ptr<int>(y + 2);
                 const int* nextHistRow = nextHist.ptr<int>(y + 1);
 
@@ -787,7 +792,10 @@ namespace
 
     bool angleEq(double a, double b, double eps = 1.0)
     {
-        return (fabs(clampAngle(a - b)) <= eps);
+        double d = fabs(a - b);
+        while (d > 180.0)
+            d -= 360.0;
+        return (fabs(d) <= eps);
     }
 
     class GHT_Guil_Full : public GHT_Pos
@@ -949,9 +957,9 @@ namespace
     {
         CV_Assert(levels > 0);
 
-        const double maxDist = sqrt((double) templSize.width * templSize.width + templSize.height * templSize.height) * maxScale;
+        const double maxDist2 = ((double) templSize.width * templSize.width + templSize.height * templSize.height) * (maxScale*maxScale);
 
-        const double alphaScale = levels / 360.0;
+        const double alphaScale = levels * (1 / 360.0);
 
         std::vector<ContourPoint> points;
         getContourPoints(edges, dx, dy, points);
@@ -960,13 +968,14 @@ namespace
         for_each(features.begin(), features.end(), mem_fun_ref(&std::vector<Feature>::clear));
         for_each(features.begin(), features.end(), bind2nd(mem_fun_ref(&std::vector<Feature>::reserve), maxSize));
 
-        for (size_t i = 0; i < points.size(); ++i)
+        const int points_size = (int) points.size();
+        for (int i = 0; i < points_size; ++i)
         {
-            ContourPoint p1 = points[i];
+            const ContourPoint p1 = points[i];
 
-            for (size_t j = 0; j < points.size(); ++j)
+            for (int j = 0; j < points_size; ++j)
             {
-                ContourPoint p2 = points[j];
+                ContourPoint p2 = points[j]; // possible shortcut for (i==j)
 
                 if (angleEq(p1.theta - p2.theta, xi, angleEpsilon))
                 {
@@ -978,11 +987,12 @@ namespace
                     f.p2 = p2;
 
                     f.alpha12 = clampAngle(fastAtan2((float)d.y, (float)d.x) - p1.theta);
-                    f.d12 = norm(d);
+                    f.d12 = (d.x*d.x) + (d.y*d.y); // norm(d)*norm(d)
 
-                    if (f.d12 > maxDist)
+                    if (f.d12 > maxDist2)
                         continue;
 
+                    f.d12 = sqrt(f.d12);
                     f.r1 = p1.pos - center;
                     f.r2 = p2.pos - center;
 
@@ -1067,7 +1077,7 @@ namespace
         {
             if (OHist[n] >= angleThresh)
             {
-                const double angle = minAngle + n * angleStep;
+                const double angle = minAngle + (n * angleStep);
                 angles.push_back(std::make_pair(angle, OHist[n]));
             }
         }
@@ -1091,22 +1101,24 @@ namespace
         {
             const std::vector<Feature>& templRow = templFeatures[i];
             const std::vector<Feature>& imageRow = imageFeatures[i];
-
+            const int imageRow_size = imageRow.size();
+            if (imageRow_size > 0)
             for (size_t j = 0; j < templRow.size(); ++j)
             {
                 Feature templF = templRow[j];
-
+                //const double inv_d12 = 1 / templF.d12;
                 templF.p1.theta += angle;
 
-                for (size_t k = 0; k < imageRow.size(); ++k)
+                for (int k = 0; k < imageRow_size; ++k)
                 {
-                    Feature imF = imageRow[k];
+                    const Feature imF = imageRow[k];
 
                     if (angleEq(imF.p1.theta, templF.p1.theta, angleEpsilon))
                     {
-                        const double scale = imF.d12 / templF.d12;
-                        if (scale >= minScale && scale <= maxScale)
+                        double scale = imF.d12; // (d12>=0) !!
+                        if (scale >= (minScale*templF.d12) && scale <= (maxScale*templF.d12))
                         {
+                            scale /= templF.d12; // use inv_d12 if usually many candidates here
                             const int s = cvRound((scale - minScale) * iScaleStep);
                             ++SHist[s];
                         }
@@ -1121,7 +1133,7 @@ namespace
         {
             if (SHist[s] >= scaleThresh)
             {
-                const double scale = minScale + s * scaleStep;
+                const double scale = minScale + (s * scaleStep);
                 scales.push_back(std::make_pair(scale, SHist[s]));
             }
         }
@@ -1178,7 +1190,7 @@ namespace
                         if (fabs(c1.x - c2.x) > 1 || fabs(c1.y - c2.y) > 1)
                             continue;
 
-                        if (c1.y >= 0 && c1.y < histRows && c1.x >= 0 && c1.x < histCols)
+                        if (c1.y >= 0 && c1.x >= 0 && c1.y < histRows && c1.x < histCols)
                             ++DHist.at<int>(cvRound(c1.y) + 1, cvRound(c1.x) + 1);
                     }
                 }

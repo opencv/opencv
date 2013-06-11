@@ -697,9 +697,9 @@ bool CirclesGridFinder::isDetectionCorrect()
       }
 
       size_t largeWidth = patternSize.width;
-      size_t largeHeight = (size_t)ceil(patternSize.height / 2.);
+      size_t largeHeight = (size_t)ceil(patternSize.height * 0.5f);
       size_t smallWidth = patternSize.width;
-      size_t smallHeight = (size_t)floor(patternSize.height / 2.);
+      size_t smallHeight = (size_t)floor(patternSize.height * 0.5f);
 
       size_t sw = smallWidth, sh = smallHeight, lw = largeWidth, lh = largeHeight;
       if (largeHoles->size() != largeHeight)
@@ -742,7 +742,7 @@ bool CirclesGridFinder::isDetectionCorrect()
           }
         }
       }
-      return (vertices.size() == largeHeight * largeWidth + smallHeight * smallWidth);
+      return (vertices.size() == (largeHeight * largeWidth) + (smallHeight * smallWidth));
     }
 
     default:
@@ -1063,7 +1063,7 @@ void CirclesGridFinder::filterOutliersByDensity(const std::vector<Point2f> &samp
 
   for (size_t i = 0; i < samples.size(); i++)
   {
-    Rect_<float> rect(samples[i] - Point2f(parameters.densityNeighborhoodSize) * 0.5,
+    Rect_<float> rect(samples[i] - Point2f(parameters.densityNeighborhoodSize) * 0.5f,
                       parameters.densityNeighborhoodSize);
     int neighborsCount = 0;
     for (size_t j = 0; j < samples.size(); j++)

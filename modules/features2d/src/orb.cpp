@@ -52,33 +52,38 @@ const int DESCRIPTOR_SIZE = 32;
 static void
 HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float harris_k)
 {
-    CV_Assert( img.type() == CV_8UC1 && blockSize*blockSize <= 2048 );
+    CV_Assert( img.type() == CV_8UC1 && (blockSize*blockSize) <= 2048 );
 
-    size_t ptidx, ptsize = pts.size();
-
+    int ptidx, ptsize = (int)pts.size();
+    if (0 == ptsize) return;
     const uchar* ptr00 = img.ptr<uchar>();
-    int step = (int)(img.step/img.elemSize1());
-    int r = blockSize/2;
+    const int step = (int)(img.step/img.elemSize1());
+    const int r = blockSize / 2;
 
-    float scale = (1 << 2) * blockSize * 255.0f;
+#if 1 // original (test ok), but 1 FMUL more and less precise !
+    float scale = (1 << 2) * blockSize * 255.0f; // org
     scale = 1.0f / scale;
-    float scale_sq_sq = scale * scale * scale * scale;
-
+    const float scale_sq_sq = scale * scale * scale * scale;
+#else  // faster and more precise, but features2d_test fails (min is 1E-11 better than expected)
+    float scale = ((1 << 2) * 255.0f) * blockSize;
+    scale = 1.0f / scale;
+    const float scale_sq_sq = (scale * scale) * (scale * scale);
+#endif
     AutoBuffer<int> ofsbuf(blockSize*blockSize);
     int* ofs = ofsbuf;
     for( int i = 0; i < blockSize; i++ )
         for( int j = 0; j < blockSize; j++ )
-            ofs[i*blockSize + j] = (int)(i*step + j);
+            ofs[(i*blockSize) + j] = (int)((i*step) + j);
 
     for( ptidx = 0; ptidx < ptsize; ptidx++ )
     {
-        int x0 = cvRound(pts[ptidx].pt.x - r);
-        int y0 = cvRound(pts[ptidx].pt.y - r);
+        const int x0 = cvRound(pts[ptidx].pt.x - r);
+        const int y0 = cvRound(pts[ptidx].pt.y - r);
 
-        const uchar* ptr0 = ptr00 + y0*step + x0;
+        const uchar* ptr0 = ptr00 + (y0*step) + x0;
         int a = 0, b = 0, c = 0;
 
-        for( int k = 0; k < blockSize*blockSize; k++ )
+        for( int k = 0; k < (blockSize*blockSize); k++ )
         {
             const uchar* ptr = ptr0 + ofs[k];
             int Ix = (ptr[1] - ptr[-1])*2 + (ptr[-step+1] - ptr[-step-1]) + (ptr[step+1] - ptr[step-1]);
@@ -87,8 +92,9 @@ HarrisResponses(const Mat& img, std::vector<KeyPoint>& pts, int blockSize, float
             b += Iy*Iy;
             c += Ix*Iy;
         }
+        const float a_b = (float)a + b;
         pts[ptidx].response = ((float)a * b - (float)c * c -
-                               harris_k * ((float)a + b) * ((float)a + b))*scale_sq_sq;
+                               harris_k * (a_b) * (a_b)) * scale_sq_sq;
     }
 }
 
@@ -133,10 +139,10 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
     float angle = kpt.angle;
     //angle = cvFloor(angle/12)*12.f;
     angle *= (float)(CV_PI/180.f);
-    float a = (float)cos(angle), b = (float)sin(angle);
+    const float a = (float)cos(angle), b = (float)sin(angle);
 
     const uchar* center = &img.at<uchar>(cvRound(kpt.pt.y), cvRound(kpt.pt.x));
-    int step = (int)img.step;
+    const int step = (int)img.step;
 
 #if 1
     #define GET_VALUE(idx) \
@@ -250,7 +256,7 @@ static void initializeOrbPattern( const Point* pattern0, std::vector<Point>& pat
 {
     RNG rng(0x12345678);
     int i, k, k1;
-    pattern.resize(ntuples*tupleSize);
+    pattern.resize(ntuples * tupleSize);
 
     for( i = 0; i < ntuples; i++ )
     {
@@ -261,11 +267,11 @@ static void initializeOrbPattern( const Point* pattern0, std::vector<Point>& pat
                 int idx = rng.uniform(0, poolSize);
                 Point pt = pattern0[idx];
                 for( k1 = 0; k1 < k; k1++ )
-                    if( pattern[tupleSize*i + k1] == pt )
+                    if( pattern[(tupleSize*i) + k1] == pt )
                         break;
                 if( k1 == k )
                 {
-                    pattern[tupleSize*i + k] = pt;
+                    pattern[(tupleSize*i) + k] = pt;
                     break;
                 }
             }
@@ -536,12 +542,13 @@ static int bit_pattern_31_[256*4] =
 
 static void makeRandomPattern(int patchSize, Point* pattern, int npoints)
 {
+    const int patchSize_2 = patchSize / 2;
     RNG rng(0x34985739); // we always start with a fixed seed,
                          // to make patterns the same on each run
     for( int i = 0; i < npoints; i++ )
     {
-        pattern[i].x = rng.uniform(-patchSize/2, patchSize/2+1);
-        pattern[i].y = rng.uniform(-patchSize/2, patchSize/2+1);
+        pattern[i].x = rng.uniform(-patchSize_2, patchSize_2+1);
+        pattern[i].y = rng.uniform(-patchSize_2, patchSize_2+1);
     }
 }
 

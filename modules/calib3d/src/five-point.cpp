@@ -70,8 +70,8 @@ public:
         Mat B(3, 13, CV_64F, b);
         for (int i = 0; i < 3; i++)
         {
-            Mat arow1 = A.row(i * 2 + 4) * 1.0;
-            Mat arow2 = A.row(i * 2 + 5) * 1.0;
+            Mat arow1 = A.row((i * 2) + 4) * 1.0;
+            Mat arow2 = A.row((i * 2) + 5) * 1.0;
             Mat row1(1, 13, CV_64F, Scalar(0.0));
             Mat row2(1, 13, CV_64F, Scalar(0.0));
 
@@ -119,9 +119,9 @@ public:
             double bz[3][3];
             for (int j = 0; j < 3; j++)
             {
-                const double * br = b + j * 13;
-                bz[j][0] = br[0] * z3 + br[1] * z2 + br[2] * z1 + br[3];
-                bz[j][1] = br[4] * z3 + br[5] * z2 + br[6] * z1 + br[7];
+                const double * br = b + (j * 13);
+                bz[j][0] = br[0] * z3 + br[1] * z2 + br[2]  * z1 + br[3];
+                bz[j][1] = br[4] * z3 + br[5] * z2 + br[6]  * z1 + br[7];
                 bz[j][2] = br[8] * z4 + br[9] * z3 + br[10] * z2 + br[11] * z1 + br[12];
             }
 
@@ -129,15 +129,17 @@ public:
             cv::Mat xy1;
             SVD::solveZ(Bz, xy1);
 
-            if (fabs(xy1.at<double>(2)) < 1e-10) continue;
-            xs.push_back(xy1.at<double>(0) / xy1.at<double>(2));
-            ys.push_back(xy1.at<double>(1) / xy1.at<double>(2));
+            double xy1_2 = xy1.at<double>(2);
+            if (fabs(xy1_2) < 1e-10) continue;
+            xy1_2 = 1.0 / xy1_2; // TODO
+            xs.push_back(xy1.at<double>(0) * xy1_2);
+            ys.push_back(xy1.at<double>(1) * xy1_2);
             zs.push_back(z1);
 
             cv::Mat Evec = EE.col(0) * xs.back() + EE.col(1) * ys.back() + EE.col(2) * zs.back() + EE.col(3);
             Evec /= norm(Evec);
 
-            memcpy(e + count * 9, Evec.data, 9 * sizeof(double));
+            memcpy(e + (count*9), Evec.data, 9 * sizeof(double));
             count++;
         }
 
@@ -360,7 +362,7 @@ protected:
         double AA[200];
         for (int i = 0; i < 20; i++)
         {
-            for (int j = 0; j < 10; j++) AA[i + j * 20] = A[perm[i] + j * 20];
+            for (int j = 0; j < 10; j++) AA[i + (j * 20)] = A[perm[i] + (j * 20)];
         }
 
         for (int i = 0; i < 200; i++)
@@ -389,8 +391,8 @@ protected:
             Vec3d Etx2 = E.t() * x2;
             double x2tEx1 = x2.dot(Ex1);
 
-            double a = Ex1[0] * Ex1[0];
-            double b = Ex1[1] * Ex1[1];
+            double a = Ex1[0]  * Ex1[0];
+            double b = Ex1[1]  * Ex1[1];
             double c = Etx2[0] * Etx2[0];
             double d = Etx2[1] * Etx2[1];
 
@@ -409,7 +411,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     _points1.getMat().convertTo(points1, CV_64F);
     _points2.getMat().convertTo(points2, CV_64F);
 
-    int npoints = points1.checkVector(2);
+    const int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 5 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
 
@@ -419,7 +421,7 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
         points2 = points2.reshape(1, npoints);
     }
 
-    double ifocal = focal != 0 ? 1./focal : 1.;
+    const double ifocal = (focal != 0) ? 1./focal : 1.;
     for( int i = 0; i < npoints; i++ )
     {
         points1.at<double>(i, 0) = (points1.at<double>(i, 0) - pp.x)*ifocal;
@@ -432,9 +434,10 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
     points1 = points1.reshape(2, npoints);
     points2 = points2.reshape(2, npoints);
 
-    threshold /= focal;
+    threshold *= ifocal;
 
     Mat E;
+
     if( method == RANSAC )
         createRANSACPointSetRegistrator(new EMEstimatorCallback, 5, threshold, prob)->run(points1, points2, E, _mask);
     else
@@ -450,9 +453,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     _points1.getMat().copyTo(points1);
     _points2.getMat().copyTo(points2);
 
-    int npoints = points1.checkVector(2);
+    const int npoints = points1.checkVector(2);
     CV_Assert( npoints >= 0 && points2.checkVector(2) == npoints &&
                               points1.type() == points2.type());
+    const double ifocal = 1 / focal;
 
     if (points1.channels() > 1)
     {
@@ -462,10 +466,10 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     points1.convertTo(points1, CV_64F);
     points2.convertTo(points2, CV_64F);
 
-    points1.col(0) = (points1.col(0) - pp.x) / focal;
-    points2.col(0) = (points2.col(0) - pp.x) / focal;
-    points1.col(1) = (points1.col(1) - pp.y) / focal;
-    points2.col(1) = (points2.col(1) - pp.y) / focal;
+    points1.col(0) = (points1.col(0) - pp.x) * ifocal;
+    points2.col(0) = (points2.col(0) - pp.x) * ifocal;
+    points1.col(1) = (points1.col(1) - pp.y) * ifocal;
+    points2.col(1) = (points2.col(1) - pp.y) * ifocal;
 
     points1 = points1.t();
     points2 = points2.t();
@@ -474,8 +478,8 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     decomposeEssentialMat(E, R1, R2, t);
     Mat P0 = Mat::eye(3, 4, R1.type());
     Mat P1(3, 4, R1.type()), P2(3, 4, R1.type()), P3(3, 4, R1.type()), P4(3, 4, R1.type());
-    P1(Range::all(), Range(0, 3)) = R1 * 1.0; P1.col(3) = t * 1.0;
-    P2(Range::all(), Range(0, 3)) = R2 * 1.0; P2.col(3) = t * 1.0;
+    P1(Range::all(), Range(0, 3)) = R1 * 1.0; P1.col(3) =  t * 1.0;
+    P2(Range::all(), Range(0, 3)) = R2 * 1.0; P2.col(3) =  t * 1.0;
     P3(Range::all(), Range(0, 3)) = R1 * 1.0; P3.col(3) = -t * 1.0;
     P4(Range::all(), Range(0, 3)) = R2 * 1.0; P4.col(3) = -t * 1.0;
 
@@ -483,14 +487,17 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     // Notice here a threshold dist is used to filter
     // out far away points (i.e. infinite points) since
     // there depth may vary between postive and negtive.
-    double dist = 50.0;
+    const float dist = 50.0f;
     Mat Q;
+
     triangulatePoints(P0, P1, points1, points2, Q);
     Mat mask1 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3); // inverse row_3 (slow FDIV)
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
+    Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
+
     mask1 = (Q.row(2) < dist) & mask1;
     Q = P1 * Q;
     mask1 = (Q.row(2) > 0) & mask1;
@@ -498,10 +505,11 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P2, points1, points2, Q);
     Mat mask2 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
+    Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask2 = (Q.row(2) < dist) & mask2;
     Q = P2 * Q;
     mask2 = (Q.row(2) > 0) & mask2;
@@ -509,10 +517,11 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P3, points1, points2, Q);
     Mat mask3 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
+    Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask3 = (Q.row(2) < dist) & mask3;
     Q = P3 * Q;
     mask3 = (Q.row(2) > 0) & mask3;
@@ -520,10 +529,11 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
 
     triangulatePoints(P0, P4, points1, points2, Q);
     Mat mask4 = Q.row(2).mul(Q.row(3)) > 0;
-    Q.row(0) /= Q.row(3);
-    Q.row(1) /= Q.row(3);
-    Q.row(2) /= Q.row(3);
-    Q.row(3) /= Q.row(3);
+    Q.row(3) = 1.0 / Q.row(3);
+    Q.row(0) = Q.row(0).mul( Q.row(3) );
+    Q.row(1) = Q.row(1).mul( Q.row(3) );
+    Q.row(2) = Q.row(2).mul( Q.row(3) );
+    Q.row(3) = 1.0; // Q.row(3) /= Q.row(3);
     mask4 = (Q.row(2) < dist) & mask4;
     Q = P4 * Q;
     mask4 = (Q.row(2) > 0) & mask4;

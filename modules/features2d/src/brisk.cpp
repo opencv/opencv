@@ -203,13 +203,13 @@ BRISK::BRISK(int thresh, int octaves_in, float patternScale)
   // this is the standard pattern found to be suitable also
   rList.resize(5);
   nList.resize(5);
-  const double f = 0.85 * patternScale;
+  const float f = 0.85f * patternScale;
 
-  rList[0] = (float)(f * 0.);
-  rList[1] = (float)(f * 2.9);
-  rList[2] = (float)(f * 4.9);
-  rList[3] = (float)(f * 7.4);
-  rList[4] = (float)(f * 10.8);
+  rList[0] = (float)(f * 0.f);
+  rList[1] = (float)(f * 2.9f);
+  rList[2] = (float)(f * 4.9f);
+  rList[3] = (float)(f * 7.4f);
+  rList[4] = (float)(f * 10.8f);
 
   nList[0] = 1;
   nList[1] = 10;
@@ -217,7 +217,7 @@ BRISK::BRISK(int thresh, int octaves_in, float patternScale)
   nList[3] = 15;
   nList[4] = 20;
 
-  generateKernel(rList, nList, (float)(5.85 * patternScale), (float)(8.2 * patternScale));
+  generateKernel(rList, nList, (float)(5.85f * patternScale), (float)(8.2f * patternScale));
 
 }
 BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float dMax, float dMin,
@@ -236,7 +236,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
 
   // get the total number of points
   const int rings = (int)radiusList.size();
-  CV_Assert(radiusList.size() != 0 && radiusList.size() == numberList.size());
+  CV_Assert(rings > 0 && rings == (int)numberList.size());
   points_ = 0; // remember the total number of points
   for (int ring = 0; ring < rings; ring++)
   {
@@ -247,44 +247,46 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   BriskPatternPoint* patternIterator = patternPoints_;
 
   // define the scale discretization:
-  static const float lb_scale = (float)(std::log(scalerange_) / std::log(2.0));
+  static const float lb_scale = (float)(std::log(scalerange_) * (1 / std::log(2.0f)));
   static const float lb_scale_step = lb_scale / (scales_);
 
   scaleList_ = new float[scales_];
-  sizeList_ = new unsigned int[scales_];
+  sizeList_  = new unsigned int[scales_];
 
   const float sigma_scale = 1.3f;
+  const float P2_n_rot_ = (2 * CV_PI) / n_rot_; // n_rot_=1024
 
   for (unsigned int scale = 0; scale < scales_; ++scale)
   {
-    scaleList_[scale] = (float)std::pow((double) 2.0, (double) (scale * lb_scale_step));
-    sizeList_[scale] = 0;
+    scaleList_[scale] = (float)std::pow(2.0f, (scale * lb_scale_step));
+    sizeList_[scale]  = 0;
 
     // generate the pattern points look-up
-    double alpha, theta;
     for (size_t rot = 0; rot < n_rot_; ++rot)
     {
-      theta = double(rot) * 2 * CV_PI / double(n_rot_); // this is the rotation of the feature
+      float theta = float(rot) * P2_n_rot_; // this is the rotation of the feature
       for (int ring = 0; ring < rings; ++ring)
       {
+        const float scaleList_scale__radiusList_ring = (float)(scaleList_[scale] * radiusList[ring]);
+        const float PI_numberList_ring = (numberList[ring]>1) ? (float)CV_PI / numberList[ring] : (float)CV_PI;
         for (int num = 0; num < numberList[ring]; ++num)
         {
           // the actual coordinates on the circle
-          alpha = (double(num)) * 2 * CV_PI / double(numberList[ring]);
-          patternIterator->x = (float)(scaleList_[scale] * radiusList[ring] * cos(alpha + theta)); // feature rotation plus angle of the point
-          patternIterator->y = (float)(scaleList_[scale] * radiusList[ring] * sin(alpha + theta));
+          float sigma, alpha_theta = theta + ((num*2) * PI_numberList_ring);
+          patternIterator->x = (float)(scaleList_scale__radiusList_ring * cos(alpha_theta)); // feature rotation plus angle of the point
+          patternIterator->y = (float)(scaleList_scale__radiusList_ring * sin(alpha_theta));
           // and the gaussian kernel sigma
-          if (ring == 0)
+          if (0 == ring)
           {
-            patternIterator->sigma = sigma_scale * scaleList_[scale] * 0.5f;
+            sigma = (0.5f*sigma_scale) * scaleList_[scale];
           }
           else
           {
-            patternIterator->sigma = (float)(sigma_scale * scaleList_[scale] * (double(radiusList[ring]))
-                                     * sin(CV_PI / numberList[ring]));
+            sigma = (sigma_scale * scaleList_scale__radiusList_ring) * (float)sin(PI_numberList_ring);
           }
           // adapt the sizeList if necessary
-          const unsigned int size = cvCeil(((scaleList_[scale] * radiusList[ring]) + patternIterator->sigma)) + 1;
+          const unsigned int size = cvCeil((scaleList_scale__radiusList_ring + sigma)) + 1;
+          patternIterator->sigma  = sigma;
           if (sizeList_[scale] < size)
           {
             sizeList_[scale] = size;
@@ -298,16 +300,17 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   }
 
   // now also generate pairings
-  shortPairs_ = new BriskShortPair[points_ * (points_ - 1) / 2];
-  longPairs_ = new BriskLongPair[points_ * (points_ - 1) / 2];
+  const unsigned int points_points_1_2 = points_ * (points_ - 1) / 2;
+  shortPairs_ = new BriskShortPair[points_points_1_2];
+  longPairs_  = new BriskLongPair [points_points_1_2];
   noShortPairs_ = 0;
-  noLongPairs_ = 0;
+  noLongPairs_  = 0;
 
   // fill indexChange with 0..n if empty
   unsigned int indSize = (unsigned int)indexChange.size();
-  if (indSize == 0)
+  if (0 == indSize)
   {
-    indexChange.resize(points_ * (points_ - 1) / 2);
+    indexChange.resize(points_points_1_2);
     indSize = (unsigned int)indexChange.size();
 
     for (unsigned int i = 0; i < indSize; i++)
@@ -322,13 +325,14 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
       // point pair distance:
       const float dx = patternPoints_[j].x - patternPoints_[i].x;
       const float dy = patternPoints_[j].y - patternPoints_[i].y;
-      const float norm_sq = (dx * dx + dy * dy);
+      const float norm_sq = (dx * dx) + (dy * dy);
       if (norm_sq > dMin_sq)
       {
+        const float inv_norm_sq = 2048.0f / norm_sq;
         // save to long pairs
         BriskLongPair& longPair = longPairs_[noLongPairs_];
-        longPair.weighted_dx = int((dx / (norm_sq)) * 2048.0 + 0.5);
-        longPair.weighted_dy = int((dy / (norm_sq)) * 2048.0 + 0.5);
+        longPair.weighted_dx = int((dx * inv_norm_sq) + 0.5f);
+        longPair.weighted_dy = int((dy * inv_norm_sq) + 0.5f);
         longPair.i = i;
         longPair.j = j;
         ++noLongPairs_;
@@ -347,7 +351,7 @@ BRISK::generateKernel(std::vector<float> &radiusList, std::vector<int> &numberLi
   }
 
   // no bits:
-  strings_ = (int) ceil((float(noShortPairs_)) / 128.0) * 4 * 4;
+  strings_ = (int) ceil((float(noShortPairs_)) * (1/128.0f)) * (4 * 4);
 }
 
 // simple alternative:
@@ -371,7 +375,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
 
   // calculate output:
   int ret_val;
-  if (sigma_half < 0.5)
+  if (sigma_half < 0.5f)
   {
     //interpolation multipliers:
     const int r_x = (int)((xf - x) * 1024);
@@ -379,7 +383,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
     const int r_x_1 = (1024 - r_x);
     const int r_y_1 = (1024 - r_y);
     const uchar* ptr = &image.at<uchar>(y, x);
-    size_t step = image.step;
+    const size_t step = image.step;
     // just interpolate:
     ret_val = r_x_1 * r_y_1 * ptr[0] + r_x * r_y_1 * ptr[1] +
               r_x * r_y * ptr[step] + r_x_1 * r_y * ptr[step+1];
@@ -389,22 +393,22 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   // this is the standard case (simple, not speed optimized yet):
 
   // scaling:
-  const int scaling = (int)(4194304.0 / area);
-  const int scaling2 = int(float(scaling) * area / 1024.0);
+  const int scaling = (int)(4194304.0f / area);
+  const int scaling2 = int(float(scaling) * area * (1/1024.0f));
 
   // the integral image is larger:
   const int integralcols = imagecols + 1;
 
   // calculate borders
   const float x_1 = xf - sigma_half;
-  const float x1 = xf + sigma_half;
+  const float x1  = xf + sigma_half;
   const float y_1 = yf - sigma_half;
-  const float y1 = yf + sigma_half;
+  const float y1  = yf + sigma_half;
 
-  const int x_left = int(x_1 + 0.5);
-  const int y_top = int(y_1 + 0.5);
-  const int x_right = int(x1 + 0.5);
-  const int y_bottom = int(y1 + 0.5);
+  const int x_left = int(x_1 + 0.5f);
+  const int y_top  = int(y_1 + 0.5f);
+  const int x_right  = int(x1 + 0.5f);
+  const int y_bottom = int(y1 + 0.5f);
 
   // overlap area - multiplication factors:
   const float r_x_1 = float(x_left) - x_1 + 0.5f;
@@ -422,21 +426,21 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   const int r_x1_i = (int)(r_x1 * scaling);
   const int r_y1_i = (int)(r_y1 * scaling);
 
-  if (dx + dy > 2)
+  if ((dx + dy) > 2)
   {
     // now the calculation:
-    uchar* ptr = image.data + x_left + imagecols * y_top;
+    const uchar* ptr = image.data + x_left + (imagecols * y_top);
     // first the corners:
     ret_val = A * int(*ptr);
-    ptr += dx + 1;
+    ptr += (dx + 1);
     ret_val += B * int(*ptr);
-    ptr += dy * imagecols + 1;
+    ptr += (dy * imagecols) + 1;
     ret_val += C * int(*ptr);
-    ptr -= dx + 1;
+    ptr -= (dx + 1);
     ret_val += D * int(*ptr);
 
     // next the edges:
-    int* ptr_integral = (int*) integral.data + x_left + integralcols * y_top + 1;
+    const int* ptr_integral = (int*) integral.data + x_left + (integralcols * y_top) + 1;
     // find a simple path through the different surface corners
     const int tmp1 = (*ptr_integral);
     ptr_integral += dx;
@@ -463,17 +467,18 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
     const int tmp12 = (*ptr_integral);
 
     // assign the weighted surface integrals:
-    const int upper = (tmp3 - tmp2 + tmp1 - tmp12) * r_y_1_i;
+    const int upper  = (tmp3 - tmp2 + tmp1 - tmp12) * r_y_1_i;
     const int middle = (tmp6 - tmp3 + tmp12 - tmp9) * scaling;
-    const int left = (tmp9 - tmp12 + tmp11 - tmp10) * r_x_1_i;
-    const int right = (tmp5 - tmp4 + tmp3 - tmp6) * r_x1_i;
+    const int left   = (tmp9 - tmp12 + tmp11 - tmp10) * r_x_1_i;
+    const int right  = (tmp5 - tmp4 + tmp3 - tmp6) * r_x1_i;
     const int bottom = (tmp7 - tmp6 + tmp9 - tmp8) * r_y1_i;
 
-    return (ret_val + upper + middle + left + right + bottom + scaling2 / 2) / scaling2;
+    return (ret_val + upper + middle + left + right + bottom + (scaling2 / 2)) / scaling2;
   }
 
   // now the calculation:
-  uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.data + x_left + (imagecols * y_top);
+  const int imagecols_dx_1 = imagecols - dx - 1;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -484,9 +489,9 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   }
   ret_val += B * int(*ptr);
   // middle ones:
-  ptr += imagecols - dx - 1;
-  uchar* end_j = ptr + dy * imagecols;
-  for (; ptr < end_j; ptr += imagecols - dx - 1)
+  ptr += imagecols_dx_1;
+  const uchar* end_j = ptr + (dy * imagecols);
+  for (; ptr < end_j; ptr += imagecols_dx_1)
   {
     ret_val += r_x_1_i * int(*ptr);
     ptr++;
@@ -507,7 +512,7 @@ BRISK::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, const fl
   }
   ret_val += C * int(*ptr);
 
-  return (ret_val + scaling2 / 2) / scaling2;
+  return (ret_val + (scaling2 / 2)) / scaling2;
 }
 
 inline bool
@@ -522,7 +527,7 @@ void
 BRISK::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                    OutputArray _descriptors, bool useProvidedKeypoints) const
 {
-  bool doOrientation=true;
+  bool doOrientation = true;
   if (useProvidedKeypoints)
     doOrientation = false;
   computeDescriptorsAndOrOrientation(_image, _mask, keypoints, _descriptors, true, doOrientation,
@@ -548,19 +553,22 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   size_t ksize = keypoints.size();
   std::vector<int> kscales; // remember the scale per keypoint
   kscales.resize(ksize);
-  static const float log2 = 0.693147180559945f;
-  static const float lb_scalerange = (float)(std::log(scalerange_) / (log2));
+  const float scale_fac = scales_ / (float)std::log(scalerange_); // 64/log()*(ln_2/ln_2)
+  const float inv_basicSize06 = 1 / (basicSize_ * 0.6f);
+  const int scales_1 = (int) scales_ - 1;
   std::vector<cv::KeyPoint>::iterator beginning = keypoints.begin();
   std::vector<int>::iterator beginningkscales = kscales.begin();
-  static const float basicSize06 = basicSize_ * 0.6f;
+
   for (size_t k = 0; k < ksize; k++)
   {
-    unsigned int scale;
-      scale = std::max((int) (scales_ / lb_scalerange * (std::log(keypoints[k].size / (basicSize06)) / log2) + 0.5), 0);
-      // saturate
-      if (scale >= scales_)
-        scale = scales_ - 1;
-      kscales[k] = scale;
+    const float log_arg = keypoints[k].size * inv_basicSize06;
+    int scale = 0;
+    if (log_arg >= 1.0f) // log(1)=0
+    {
+      scale = std::min((int)((scale_fac * std::log(log_arg)) + 0.5f), scales_1);
+      // saturate, if (scale >= scales_) scale = scales_-1;
+    }
+    kscales[k] = scale;
     const int border = sizeList_[scale];
     const int border_x = image.cols - border;
     const int border_y = image.rows - border;
@@ -568,7 +576,7 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
     {
       keypoints.erase(beginning + k);
       kscales.erase(beginningkscales + k);
-      if (k == 0)
+      if (0 == k)
       {
         beginning = keypoints.begin();
         beginningkscales = kscales.begin();
@@ -597,8 +605,6 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
   // now do the extraction for all keypoints:
 
   // temporary variables containing gray values at sample points:
-  int t1;
-  int t2;
 
   // the feature orientation
   uchar* ptr = descriptors.data;
@@ -624,16 +630,16 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
         const BriskLongPair* max = longPairs_ + noLongPairs_;
         for (BriskLongPair* iter = longPairs_; iter < max; ++iter)
         {
-          t1 = *(_values + iter->i);
-          t2 = *(_values + iter->j);
+          int t1 = *(_values + iter->i);
+          int t2 = *(_values + iter->j);
           const int delta_t = (t1 - t2);
           // update the direction:
-          const int tmp0 = delta_t * (iter->weighted_dx) / 1024;
-          const int tmp1 = delta_t * (iter->weighted_dy) / 1024;
+          const int tmp0 = (delta_t * iter->weighted_dx) / 1024;
+          const int tmp1 = (delta_t * iter->weighted_dy) / 1024;
           direction0 += tmp0;
           direction1 += tmp1;
         }
-        kp.angle = (float)(atan2((float) direction1, (float) direction0) / CV_PI * 180.0);
+        kp.angle = (float)(atan2((float) direction1, (float) direction0) * (180.0f/(float)CV_PI));
         if (kp.angle < 0)
           kp.angle += 360.f;
     }
@@ -642,14 +648,14 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
       continue;
 
     int theta;
-    if (kp.angle==-1)
+    if (-1 == kp.angle)
     {
         // don't compute the gradient direction, just assign a rotation of 0°
         theta = 0;
     }
     else
     {
-        theta = (int) (n_rot_ * (kp.angle / (360.0)) + 0.5);
+        theta = (int) (n_rot_ * (kp.angle * (1/360.0f)) + 0.5f);
         if (theta < 0)
           theta += n_rot_;
         if (theta >= int(n_rot_))
@@ -673,16 +679,15 @@ BRISK::computeDescriptorsAndOrOrientation(InputArray _image, InputArray _mask, s
     const BriskShortPair* max = shortPairs_ + noShortPairs_;
     for (BriskShortPair* iter = shortPairs_; iter < max; ++iter)
     {
-      t1 = *(_values + iter->i);
-      t2 = *(_values + iter->j);
+      int t1 = *(_values + iter->i);
+      int t2 = *(_values + iter->j);
       if (t1 > t2)
       {
         *ptr2 |= ((1) << shifter);
-
       } // else already initialized with zero
       // take care of the iterators:
       ++shifter;
-      if (shifter == 32)
+      if (32 == shifter)
       {
         shifter = 0;
         ++ptr2;
@@ -755,10 +760,7 @@ BRISK::computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& des
 // construct telling the octaves number:
 BriskScaleSpace::BriskScaleSpace(int _octaves)
 {
-  if (_octaves == 0)
-    layers_ = 1;
-  else
-    layers_ = 2 * _octaves;
+    layers_ = (0 == _octaves) ? 1 : (2 * _octaves);
 }
 BriskScaleSpace::~BriskScaleSpace()
 {
@@ -777,13 +779,14 @@ BriskScaleSpace::constructPyramid(const cv::Mat& image)
   if (layers_ > 1)
   {
     pyramid_.push_back(BriskLayer(pyramid_.back(), BriskLayer::CommonParams::TWOTHIRDSAMPLE));
-  }
-  const int octaves2 = layers_;
 
-  for (uchar i = 2; i < octaves2; i += 2)
-  {
-    pyramid_.push_back(BriskLayer(pyramid_[i - 2], BriskLayer::CommonParams::HALFSAMPLE));
-    pyramid_.push_back(BriskLayer(pyramid_[i - 1], BriskLayer::CommonParams::HALFSAMPLE));
+    const int octaves2 = layers_;
+
+    for (uchar i = 2; i < octaves2; i += 2)
+    {
+      pyramid_.push_back(BriskLayer(pyramid_[i - 2], BriskLayer::CommonParams::HALFSAMPLE));
+      pyramid_.push_back(BriskLayer(pyramid_[i - 1], BriskLayer::CommonParams::HALFSAMPLE));
+    }
   }
 }
 
@@ -795,7 +798,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
   keypoints.reserve(2000);
 
   // assign thresholds
-  int safeThreshold_ = (int)(threshold_ * safetyFactor_);
+  const int safeThreshold_ = (int)(threshold_ * safetyFactor_);
   std::vector<std::vector<cv::KeyPoint> > agastPoints;
   agastPoints.resize(layers_);
 
@@ -807,7 +810,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
     l.getAgastPoints(safeThreshold_, agastPoints[i]);
   }
 
-  if (layers_ == 1)
+  if (1 == layers_)
   {
     // just do a simple 2d subpixel refinement...
     const size_t num = agastPoints[0].size();
@@ -819,7 +822,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
         continue;
 
       // let's do the subpixel and float scale refinement:
-      BriskLayer& l = pyramid_[0];
+      const BriskLayer& l = pyramid_[0];
       int s_0_0 = l.getAgastScore(point.x - 1, point.y - 1, 1);
       int s_1_0 = l.getAgastScore(point.x, point.y - 1, 1);
       int s_2_0 = l.getAgastScore(point.x + 1, point.y - 1, 1);
@@ -830,10 +833,10 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
       int s_1_2 = l.getAgastScore(point.x, point.y + 1, 1);
       int s_2_2 = l.getAgastScore(point.x + 1, point.y + 1, 1);
       float delta_x, delta_y;
-      float max = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x, delta_y);
+      float maxs = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x, delta_y);
 
       // store:
-      keypoints.push_back(cv::KeyPoint(float(point.x) + delta_x, float(point.y) + delta_y, basicSize_, -1, max, 0));
+      keypoints.push_back(cv::KeyPoint(float(point.x) + delta_x, float(point.y) + delta_y, basicSize_, -1, maxs, 0));
 
     }
 
@@ -843,9 +846,9 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
   float x, y, scale, score;
   for (int i = 0; i < layers_; i++)
   {
-    BriskLayer& l = pyramid_[i];
+    const BriskLayer& l = pyramid_[i];
     const size_t num = agastPoints[i].size();
-    if (i == layers_ - 1)
+    if (i == (layers_ - 1))
     {
       for (size_t n = 0; n < num; n++)
       {
@@ -871,12 +874,12 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
         int s_1_2 = l.getAgastScore(point.x, point.y + 1, 1);
         int s_2_2 = l.getAgastScore(point.x + 1, point.y + 1, 1);
         float delta_x, delta_y;
-        float max = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x, delta_y);
+        float maxs = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, delta_x, delta_y);
 
         // store:
         keypoints.push_back(
             cv::KeyPoint((float(point.x) + delta_x) * l.scale() + l.offset(),
-                         (float(point.y) + delta_y) * l.scale() + l.offset(), basicSize_ * l.scale(), -1, max, i));
+                         (float(point.y) + delta_y) * l.scale() + l.offset(), basicSize_ * l.scale(), -1, maxs, i));
       }
     }
     else
@@ -891,7 +894,7 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
           continue;
 
         // let's do the subpixel and float scale refinement:
-        bool ismax=false;
+        bool ismax = false;
         score = refine3D(i, (int)point.x, (int)point.y, x, y, scale, ismax);
         if (!ismax)
         {
@@ -912,9 +915,10 @@ BriskScaleSpace::getKeypoints(const int threshold_, std::vector<cv::KeyPoint>& k
 inline int
 BriskScaleSpace::getScoreAbove(const int layer, const int x_layer, const int y_layer) const
 {
-  CV_Assert(layer < layers_-1);
+  CV_Assert(layer < (layers_-1));
   const BriskLayer& l = pyramid_[layer + 1];
-  if (layer % 2 == 0)
+  uchar score = 0xFFu;
+  if (0 == (layer % 2))
   { // octave
     const int sixths_x = 4 * x_layer - 1;
     const int x_above = sixths_x / 6;
@@ -924,14 +928,12 @@ BriskScaleSpace::getScoreAbove(const int layer, const int x_layer, const int y_l
     const int r_x_1 = 6 - r_x;
     const int r_y = (sixths_y % 6);
     const int r_y_1 = 6 - r_y;
-    uchar score = 0xFF
-        & ((r_x_1 * r_y_1 * l.getAgastScore(x_above, y_above, 1) + r_x * r_y_1
+    score &=
+          ((r_x_1 * r_y_1 * l.getAgastScore(x_above, y_above, 1) + r_x * r_y_1
                                                                    * l.getAgastScore(x_above + 1, y_above, 1)
             + r_x_1 * r_y * l.getAgastScore(x_above, y_above + 1, 1)
             + r_x * r_y * l.getAgastScore(x_above + 1, y_above + 1, 1) + 18)
            / 36);
-
-    return score;
   }
   else
   { // intra
@@ -943,25 +945,21 @@ BriskScaleSpace::getScoreAbove(const int layer, const int x_layer, const int y_l
     const int r_x_1 = 8 - r_x;
     const int r_y = (eighths_y % 8);
     const int r_y_1 = 8 - r_y;
-    uchar score = 0xFF
-        & ((r_x_1 * r_y_1 * l.getAgastScore(x_above, y_above, 1) + r_x * r_y_1
+    score &=
+          ((r_x_1 * r_y_1 * l.getAgastScore(x_above, y_above, 1) + r_x * r_y_1
                                                                    * l.getAgastScore(x_above + 1, y_above, 1)
             + r_x_1 * r_y * l.getAgastScore(x_above, y_above + 1, 1)
             + r_x * r_y * l.getAgastScore(x_above + 1, y_above + 1, 1) + 32)
            / 64);
-    return score;
   }
+  return score;
 }
 inline int
 BriskScaleSpace::getScoreBelow(const int layer, const int x_layer, const int y_layer) const
 {
   CV_Assert(layer);
   const BriskLayer& l = pyramid_[layer - 1];
-  int sixth_x;
-  int quarter_x;
   float xf;
-  int sixth_y;
-  int quarter_y;
   float yf;
 
   // scaling:
@@ -970,48 +968,48 @@ BriskScaleSpace::getScoreBelow(const int layer, const int x_layer, const int y_l
   int scaling;
   int scaling2;
 
-  if (layer % 2 == 0)
+  if (0 == (layer % 2))
   { // octave
-    sixth_x = 8 * x_layer + 1;
-    xf = float(sixth_x) / 6.0f;
-    sixth_y = 8 * y_layer + 1;
-    yf = float(sixth_y) / 6.0f;
+    int sixth_x, sixth_y;
+    sixth_x = (8 * x_layer) + 1;
+    xf = sixth_x * (1/6.0f);
+    sixth_y = (8 * y_layer) + 1;
+    yf = sixth_y * (1/6.0f);
 
     // scaling:
     offs = 2.0f / 3.0f;
-    area = 4.0f * offs * offs;
-    scaling = (int)(4194304.0 / area);
-    scaling2 = (int)(float(scaling) * area);
   }
   else
   {
-    quarter_x = 6 * x_layer + 1;
-    xf = float(quarter_x) / 4.0f;
-    quarter_y = 6 * y_layer + 1;
-    yf = float(quarter_y) / 4.0f;
+    int quarter_x, quarter_y;
+    quarter_x = (6 * x_layer) + 1;
+    xf = quarter_x * (1/4.0f);
+    quarter_y = (6 * y_layer) + 1;
+    yf = quarter_y * (1/4.0f);
 
     // scaling:
     offs = 3.0f / 4.0f;
-    area = 4.0f * offs * offs;
-    scaling = (int)(4194304.0 / area);
-    scaling2 = (int)(float(scaling) * area);
   }
+  // both ways
+  area = 4.0f * offs * offs;
+  scaling  = (int)(4194304.0f / area);
+  scaling2 = (int)(float(scaling) * area);
 
   // calculate borders
   const float x_1 = xf - offs;
-  const float x1 = xf + offs;
+  const float x1  = xf + offs;
   const float y_1 = yf - offs;
-  const float y1 = yf + offs;
+  const float y1  = yf + offs;
 
-  const int x_left = int(x_1 + 0.5);
-  const int y_top = int(y_1 + 0.5);
-  const int x_right = int(x1 + 0.5);
-  const int y_bottom = int(y1 + 0.5);
+  const int x_left = int(x_1 + 0.5f);
+  const int y_top  = int(y_1 + 0.5f);
+  const int x_right  = int(x1 + 0.5f);
+  const int y_bottom = int(y1 + 0.5f);
 
   // overlap area - multiplication factors:
   const float r_x_1 = float(x_left) - x_1 + 0.5f;
-  const float r_y_1 = float(y_top) - y_1 + 0.5f;
-  const float r_x1 = x1 - float(x_right) + 0.5f;
+  const float r_y_1 = float(y_top) - y_1  + 0.5f;
+  const float r_x1 = x1 - float(x_right)  + 0.5f;
   const float r_y1 = y1 - float(y_bottom) + 0.5f;
   const int dx = x_right - x_left - 1;
   const int dy = y_bottom - y_top - 1;
@@ -1050,7 +1048,7 @@ BriskScaleSpace::getScoreBelow(const int layer, const int x_layer, const int y_l
   }
   ret_val += C * int(l.getAgastScore(x_left + dx + 1, y_top + dy + 1, 1));
 
-  return ((ret_val + scaling2 / 2) / scaling2);
+  return ((ret_val + (scaling2 / 2)) / scaling2);
 }
 
 inline bool
@@ -1058,7 +1056,7 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
 {
   const cv::Mat& scores = pyramid_[layer].scores();
   const int scorescols = scores.cols;
-  uchar* data = scores.data + y_layer * scorescols + x_layer;
+  const uchar* data = scores.data + (y_layer * scorescols) + x_layer;
   // decision tree:
   const uchar center = (*data);
   data--;
@@ -1142,28 +1140,28 @@ BriskScaleSpace::isMax2D(const int layer, const int x_layer, const int y_layer)
   {
     // in this case, we have to analyze the situation more carefully:
     // the values are gaussian blurred and then we really decide
-    data = scores.data + y_layer * scorescols + x_layer;
-    int smoothedcenter = 4 * center + 2 * (s_10 + s10 + s0_1 + s01) + s_1_1 + s1_1 + s_11 + s11;
+    //data = scores.data + (y_layer * scorescols) + x_layer; // unused
+    int smoothedcenter = (4 * center) + 2 * (s_10 + s10 + s0_1 + s01) + (s_1_1 + s1_1 + s_11 + s11);
     for (unsigned int i = 0; i < deltasize; i += 2)
     {
-      data = scores.data + (y_layer - 1 + delta[i + 1]) * scorescols + x_layer + delta[i] - 1;
-      int othercenter = *data;
-      data++;
+      data = scores.data + ((y_layer-1) + delta[i + 1]) * scorescols + delta[i] + (x_layer-1);
+      int othercenter = (*data);
+      data ++;
       othercenter += 2 * (*data);
-      data++;
-      othercenter += *data;
+      data ++;
+      othercenter += (*data);
       data += scorescols;
       othercenter += 2 * (*data);
-      data--;
+      data --;
       othercenter += 4 * (*data);
-      data--;
+      data --;
       othercenter += 2 * (*data);
       data += scorescols;
-      othercenter += *data;
-      data++;
+      othercenter += (*data);
+      data ++;
       othercenter += 2 * (*data);
-      data++;
-      othercenter += *data;
+      data ++;
+      othercenter += (*data);
       if (othercenter > smoothedcenter)
         return false;
     }
@@ -1176,9 +1174,11 @@ inline float
 BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer, float& x, float& y, float& scale,
                           bool& ismax) const
 {
-  ismax = true;
   const BriskLayer& thisLayer = pyramid_[layer];
   const int center = thisLayer.getAgastScore(x_layer, y_layer, 1);
+  const float thisLayer_scale  = thisLayer.scale();
+  const float thisLayer_offset = thisLayer.offset();
+  ismax = true;
 
   // check and get above maximum:
   float delta_x_above = 0, delta_y_above = 0;
@@ -1187,17 +1187,17 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
   if (!ismax)
     return 0.0f;
 
-  float max; // to be returned
+  float maxi; // to be returned (name covered function)
 
-  if (layer % 2 == 0)
+  if (0 == (layer % 2))
   { // on octave
     // treat the patch below:
     float delta_x_below, delta_y_below;
     float max_below_float;
-    int max_below = 0;
-    if (layer == 0)
+    if (0 == layer)
     {
       // guess the lower intra octave...
+      int max_below = 0;
       const BriskLayer& l = pyramid_[0];
       int s_0_0 = l.getAgastScore_5_8(x_layer - 1, y_layer - 1, 1);
       max_below = s_0_0;
@@ -1244,27 +1244,27 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
                                  delta_y_layer);
 
     // calculate the relative scale (1D maximum):
-    if (layer == 0)
+    if (0 == layer)
     {
-      scale = refine1D_2(max_below_float, std::max(float(center), max_layer), max_above, max);
+      scale = refine1D_2(max_below_float, std::max(float(center), max_layer), max_above, maxi);
     }
     else
-      scale = refine1D(max_below_float, std::max(float(center), max_layer), max_above, max);
+      scale = refine1D(max_below_float, std::max(float(center), max_layer), max_above, maxi);
 
-    if (scale > 1.0)
+    if (scale > 1.0f)
     {
       // interpolate the position:
-      const float r0 = (1.5f - scale) / .5f;
+      const float r0 = (1.5f - scale) * (1/0.5f);
       const float r1 = 1.0f - r0;
-      x = (r0 * delta_x_layer + r1 * delta_x_above + float(x_layer)) * thisLayer.scale() + thisLayer.offset();
-      y = (r0 * delta_y_layer + r1 * delta_y_above + float(y_layer)) * thisLayer.scale() + thisLayer.offset();
+      x = (r0 * delta_x_layer + r1 * delta_x_above + float(x_layer)) * thisLayer_scale + thisLayer_offset;
+      y = (r0 * delta_y_layer + r1 * delta_y_above + float(y_layer)) * thisLayer_scale + thisLayer_offset;
     }
     else
     {
-      if (layer == 0)
+      if (0 == layer)
       {
         // interpolate the position:
-        const float r0 = (scale - 0.5f) / 0.5f;
+        const float r0 = (scale - 0.5f) * (1/0.5f);
         const float r_1 = 1.0f - r0;
         x = r0 * delta_x_layer + r_1 * delta_x_below + float(x_layer);
         y = r0 * delta_y_layer + r_1 * delta_y_below + float(y_layer);
@@ -1272,10 +1272,10 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
       else
       {
         // interpolate the position:
-        const float r0 = (scale - 0.75f) / 0.25f;
+        const float r0 = (scale - 0.75f) * (1/0.25f);
         const float r_1 = 1.0f - r0;
-        x = (r0 * delta_x_layer + r_1 * delta_x_below + float(x_layer)) * thisLayer.scale() + thisLayer.offset();
-        y = (r0 * delta_y_layer + r_1 * delta_y_below + float(y_layer)) * thisLayer.scale() + thisLayer.offset();
+        x = (r0 * delta_x_layer + r_1 * delta_x_below + float(x_layer)) * thisLayer_scale + thisLayer_offset;
+        y = (r0 * delta_y_layer + r_1 * delta_y_below + float(y_layer)) * thisLayer_scale + thisLayer_offset;
       }
     }
   }
@@ -1303,30 +1303,32 @@ BriskScaleSpace::refine3D(const int layer, const int x_layer, const int y_layer,
                                  delta_y_layer);
 
     // calculate the relative scale (1D maximum):
-    scale = refine1D_1(max_below, std::max(float(center), max_layer), max_above, max);
-    if (scale > 1.0)
+    scale = refine1D_1(max_below, std::max(float(center), max_layer), max_above, maxi);
+    if (scale > 1.0f)
     {
       // interpolate the position:
-      const float r0 = 4.0f - scale * 3.0f;
+      const float r0 = 4.0f - (scale * 3.0f);
       const float r1 = 1.0f - r0;
-      x = (r0 * delta_x_layer + r1 * delta_x_above + float(x_layer)) * thisLayer.scale() + thisLayer.offset();
-      y = (r0 * delta_y_layer + r1 * delta_y_above + float(y_layer)) * thisLayer.scale() + thisLayer.offset();
+      x = (r0 * delta_x_layer + r1 * delta_x_above + float(x_layer));
+      y = (r0 * delta_y_layer + r1 * delta_y_above + float(y_layer));
     }
     else
     {
       // interpolate the position:
-      const float r0 = scale * 3.0f - 2.0f;
+      const float r0 = (scale * 3.0f) - 2.0f;
       const float r_1 = 1.0f - r0;
-      x = (r0 * delta_x_layer + r_1 * delta_x_below + float(x_layer)) * thisLayer.scale() + thisLayer.offset();
-      y = (r0 * delta_y_layer + r_1 * delta_y_below + float(y_layer)) * thisLayer.scale() + thisLayer.offset();
+      x = (r0 * delta_x_layer + r_1 * delta_x_below + float(x_layer));
+      y = (r0 * delta_y_layer + r_1 * delta_y_below + float(y_layer));
     }
+    x = (x * thisLayer_scale) + thisLayer_offset;
+    y = (y * thisLayer_scale) + thisLayer_offset;
   }
 
   // calculate the absolute scale:
-  scale *= thisLayer.scale();
+  scale *= thisLayer_scale;
 
   // that's it, return the refined maximum:
-  return max;
+  return maxi;
 }
 
 // return the maximum of score patches above or below
@@ -1343,24 +1345,24 @@ BriskScaleSpace::getScoreMaxAbove(const int layer, const int x_layer, const int 
   float y1;
 
   // the layer above
-  CV_Assert(layer + 1 < layers_);
+  CV_Assert((layer + 1) < layers_);
   const BriskLayer& layerAbove = pyramid_[layer + 1];
 
-  if (layer % 2 == 0)
+  if (0 == (layer % 2))
   {
     // octave
-    x_1 = float(4 * (x_layer) - 1 - 2) / 6.0f;
-    x1 = float(4 * (x_layer) - 1 + 2) / 6.0f;
-    y_1 = float(4 * (y_layer) - 1 - 2) / 6.0f;
-    y1 = float(4 * (y_layer) - 1 + 2) / 6.0f;
+    x_1 = float(4 * (x_layer) - 1 - 2) * (1/6.0f);
+    x1  = float(4 * (x_layer) - 1 + 2) * (1/6.0f);
+    y_1 = float(4 * (y_layer) - 1 - 2) * (1/6.0f);
+    y1  = float(4 * (y_layer) - 1 + 2) * (1/6.0f);
   }
   else
   {
     // intra
-    x_1 = float(6 * (x_layer) - 1 - 3) / 8.0f;
-    x1 = float(6 * (x_layer) - 1 + 3) / 8.0f;
-    y_1 = float(6 * (y_layer) - 1 - 3) / 8.0f;
-    y1 = float(6 * (y_layer) - 1 + 3) / 8.0f;
+    x_1 = float(6 * (x_layer) - 1 - 3) * (1/8.0f);
+    x1  = float(6 * (x_layer) - 1 + 3) * (1/8.0f);
+    y_1 = float(6 * (y_layer) - 1 - 3) * (1/8.0f);
+    y1  = float(6 * (y_layer) - 1 + 3) * (1/8.0f);
   }
 
   // check the first row
@@ -1465,19 +1467,21 @@ BriskScaleSpace::getScoreMaxAbove(const int layer, const int x_layer, const int 
   float refined_max = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, dx_1, dy_1);
 
   // calculate dx/dy in above coordinates
-  float real_x = float(max_x) + dx_1;
-  float real_y = float(max_y) + dy_1;
+  const float real_x = float(max_x) + dx_1;
+  const float real_y = float(max_y) + dy_1;
   bool returnrefined = true;
-  if (layer % 2 == 0)
+  if (0 == (layer % 2))
   {
-    dx = (real_x * 6.0f + 1.0f) / 4.0f - float(x_layer);
-    dy = (real_y * 6.0f + 1.0f) / 4.0f - float(y_layer);
+    dx = (real_x * 6.0f + 1.0f) * (1/4.0f);
+    dy = (real_y * 6.0f + 1.0f) * (1/4.0f);
   }
   else
   {
-    dx = (real_x * 8.0f + 1.0f) / 6.0f - float(x_layer);
-    dy = (real_y * 8.0f + 1.0f) / 6.0f - float(y_layer);
+    dx = (real_x * 8.0f + 1.0f) * (1/6.0f);
+    dy = (real_y * 8.0f + 1.0f) * (1/6.0f);
   }
+  dx -= float(x_layer);
+  dy -= float(y_layer);
 
   // saturate
   if (dx > 1.0f)
@@ -1522,20 +1526,20 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
   float y_1;
   float y1;
 
-  if (layer % 2 == 0)
+  if (0 == layer % 2)
   {
     // octave
-    x_1 = float(8 * (x_layer) + 1 - 4) / 6.0f;
-    x1 = float(8 * (x_layer) + 1 + 4) / 6.0f;
-    y_1 = float(8 * (y_layer) + 1 - 4) / 6.0f;
-    y1 = float(8 * (y_layer) + 1 + 4) / 6.0f;
+    x_1 = float(8 * (x_layer) + (1 - 4)) * (1/6.0f);
+    x1  = float(8 * (x_layer) + (1 + 4)) * (1/6.0f);
+    y_1 = float(8 * (y_layer) + (1 - 4)) * (1/6.0f);
+    y1  = float(8 * (y_layer) + (1 + 4)) * (1/6.0f);
   }
   else
   {
-    x_1 = float(6 * (x_layer) + 1 - 3) / 4.0f;
-    x1 = float(6 * (x_layer) + 1 + 3) / 4.0f;
-    y_1 = float(6 * (y_layer) + 1 - 3) / 4.0f;
-    y1 = float(6 * (y_layer) + 1 + 3) / 4.0f;
+    x_1 = float(6 * (x_layer) + (1 - 3)) * (1/4.0f);
+    x1  = float(6 * (x_layer) + (1 + 3)) * (1/4.0f);
+    y_1 = float(6 * (y_layer) + (1 - 3)) * (1/4.0f);
+    y1  = float(6 * (y_layer) + (1 + 3)) * (1/4.0f);
   }
 
   // the layer below
@@ -1546,26 +1550,26 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
   int max_x = (int)x_1 + 1;
   int max_y = (int)y_1 + 1;
   float tmp_max;
-  float max = (float)layerBelow.getAgastScore(x_1, y_1, 1);
-  if (max > threshold)
+  float maxi = (float)layerBelow.getAgastScore(x_1, y_1, 1);
+  if (maxi > threshold)
     return 0;
   for (int x = (int)x_1 + 1; x <= int(x1); x++)
   {
     tmp_max = (float)layerBelow.getAgastScore(float(x), y_1, 1);
     if (tmp_max > threshold)
       return 0;
-    if (tmp_max > max)
+    if (tmp_max > maxi)
     {
-      max = tmp_max;
+      maxi = tmp_max;
       max_x = x;
     }
   }
   tmp_max = (float)layerBelow.getAgastScore(x1, y_1, 1);
   if (tmp_max > threshold)
     return 0;
-  if (tmp_max > max)
+  if (tmp_max > maxi)
   {
-    max = tmp_max;
+    maxi = tmp_max;
     max_x = int(x1);
   }
 
@@ -1575,9 +1579,9 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
     tmp_max = (float)layerBelow.getAgastScore(x_1, float(y), 1);
     if (tmp_max > threshold)
       return 0;
-    if (tmp_max > max)
+    if (tmp_max > maxi)
     {
-      max = tmp_max;
+      maxi = tmp_max;
       max_x = int(x_1 + 1);
       max_y = y;
     }
@@ -1586,7 +1590,7 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
       tmp_max = (float)layerBelow.getAgastScore(x, y, 1);
       if (tmp_max > threshold)
         return 0;
-      if (tmp_max == max)
+      if (tmp_max == maxi)
       {
         const int t1 = 2
             * (layerBelow.getAgastScore(x - 1, y, 1) + layerBelow.getAgastScore(x + 1, y, 1)
@@ -1606,9 +1610,9 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
           max_y = y;
         }
       }
-      if (tmp_max > max)
+      if (tmp_max > maxi)
       {
-        max = tmp_max;
+        maxi = tmp_max;
         max_x = x;
         max_y = y;
       }
@@ -1616,9 +1620,9 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
     tmp_max = (float)layerBelow.getAgastScore(x1, float(y), 1);
     if (tmp_max > threshold)
       return 0;
-    if (tmp_max > max)
+    if (tmp_max > maxi)
     {
-      max = tmp_max;
+      maxi = tmp_max;
       max_x = int(x1);
       max_y = y;
     }
@@ -1626,26 +1630,26 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
 
   // bottom row
   tmp_max = (float)layerBelow.getAgastScore(x_1, y1, 1);
-  if (tmp_max > max)
+  if (tmp_max > maxi)
   {
-    max = tmp_max;
+    maxi = tmp_max;
     max_x = int(x_1 + 1);
     max_y = int(y1);
   }
   for (int x = (int)x_1 + 1; x <= int(x1); x++)
   {
     tmp_max = (float)layerBelow.getAgastScore(float(x), y1, 1);
-    if (tmp_max > max)
+    if (tmp_max > maxi)
     {
-      max = tmp_max;
+      maxi = tmp_max;
       max_x = x;
       max_y = int(y1);
     }
   }
   tmp_max = (float)layerBelow.getAgastScore(x1, y1, 1);
-  if (tmp_max > max)
+  if (tmp_max > maxi)
   {
-    max = tmp_max;
+    maxi = tmp_max;
     max_x = int(x1);
     max_y = int(y1);
   }
@@ -1664,22 +1668,24 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
   float refined_max = subpixel2D(s_0_0, s_0_1, s_0_2, s_1_0, s_1_1, s_1_2, s_2_0, s_2_1, s_2_2, dx_1, dy_1);
 
   // calculate dx/dy in above coordinates
-  float real_x = float(max_x) + dx_1;
-  float real_y = float(max_y) + dy_1;
+  const float real_x = float(max_x) + dx_1;
+  const float real_y = float(max_y) + dy_1;
   bool returnrefined = true;
-  if (layer % 2 == 0)
+  if (0 == (layer % 2))
   {
-    dx = (float)((real_x * 6.0 + 1.0) / 8.0) - float(x_layer);
-    dy = (float)((real_y * 6.0 + 1.0) / 8.0) - float(y_layer);
+    dx = (float)((real_x * 6.0f + 1.0f) * (1/8.0f));
+    dy = (float)((real_y * 6.0f + 1.0f) * (1/8.0f));
   }
   else
   {
-    dx = (float)((real_x * 4.0 - 1.0) / 6.0) - float(x_layer);
-    dy = (float)((real_y * 4.0 - 1.0) / 6.0) - float(y_layer);
+    dx = (float)((real_x * 4.0f - 1.0f) * (1/6.0f));
+    dy = (float)((real_y * 4.0f - 1.0f) * (1/6.0f));
   }
+  dx -= float(x_layer);
+  dy -= float(y_layer);
 
   // saturate
-  if (dx > 1.0)
+  if (dx > 1.0f)
   {
     dx = 1.0f;
     returnrefined = false;
@@ -1704,146 +1710,146 @@ BriskScaleSpace::getScoreMaxBelow(const int layer, const int x_layer, const int 
   ismax = true;
   if (returnrefined)
   {
-    return std::max(refined_max, max);
+    return std::max(refined_max, maxi);
   }
-  return max;
+  return maxi;
 }
 
 inline float
-BriskScaleSpace::refine1D(const float s_05, const float s0, const float s05, float& max) const
+BriskScaleSpace::refine1D(const float s_05, const float s0, const float s05, float& maxi) const
 {
-  int i_05 = int(1024.0 * s_05 + 0.5);
-  int i0 = int(1024.0 * s0 + 0.5);
-  int i05 = int(1024.0 * s05 + 0.5);
+  int i_05 = int(1024.0f * s_05 + 0.5f);
+  int i0   = int(1024.0f * s0   + 0.5f);
+  int i05  = int(1024.0f * s05  + 0.5f);
 
   //   16.0000  -24.0000    8.0000
   //  -40.0000   54.0000  -14.0000
   //   24.0000  -27.0000    6.0000
 
-  int three_a = 16 * i_05 - 24 * i0 + 8 * i05;
+  int three_a = (16 * i_05) - (24 * i0) + (8 * i05);
   // second derivative must be negative:
   if (three_a >= 0)
   {
     if (s0 >= s_05 && s0 >= s05)
     {
-      max = s0;
+      maxi = s0;
       return 1.0f;
     }
     if (s_05 >= s0 && s_05 >= s05)
     {
-      max = s_05;
+      maxi = s_05;
       return 0.75f;
     }
     if (s05 >= s0 && s05 >= s_05)
     {
-      max = s05;
+      maxi = s05;
       return 1.5f;
     }
   }
 
-  int three_b = -40 * i_05 + 54 * i0 - 14 * i05;
+  int three_b = (-40 * i_05) + (54 * i0) - (14 * i05);
   // calculate max location:
   float ret_val = -float(three_b) / float(2 * three_a);
   // saturate and return
-  if (ret_val < 0.75)
-    ret_val = 0.75;
-  else if (ret_val > 1.5)
-    ret_val = 1.5; // allow to be slightly off bounds ...?
-  int three_c = +24 * i_05 - 27 * i0 + 6 * i05;
-  max = float(three_c) + float(three_a) * ret_val * ret_val + float(three_b) * ret_val;
-  max /= 3072.0f;
+  if (ret_val < 0.75f)
+      ret_val = 0.75f;
+  else if (ret_val > 1.5f)
+           ret_val = 1.5f; // allow to be slightly off bounds ...?
+  int three_c = (24 * i_05) - (27 * i0) + (6 * i05);
+  maxi = float(three_c) + float(three_a) * ret_val * ret_val + float(three_b) * ret_val;
+  maxi *= 1/3072.0f;
   return ret_val;
 }
 
 inline float
-BriskScaleSpace::refine1D_1(const float s_05, const float s0, const float s05, float& max) const
+BriskScaleSpace::refine1D_1(const float s_05, const float s0, const float s05, float& maxi) const
 {
-  int i_05 = int(1024.0 * s_05 + 0.5);
-  int i0 = int(1024.0 * s0 + 0.5);
-  int i05 = int(1024.0 * s05 + 0.5);
+  int i_05 = int(1024.0f * s_05 + 0.5f);
+  int i0   = int(1024.0f * s0   + 0.5f);
+  int i05  = int(1024.0f * s05  + 0.5f);
 
   //  4.5000   -9.0000    4.5000
   //-10.5000   18.0000   -7.5000
   //  6.0000   -8.0000    3.0000
 
-  int two_a = 9 * i_05 - 18 * i0 + 9 * i05;
+  int two_a = (9 * i_05) - (18 * i0) + (9 * i05);
   // second derivative must be negative:
   if (two_a >= 0)
   {
     if (s0 >= s_05 && s0 >= s05)
     {
-      max = s0;
+      maxi = s0;
       return 1.0f;
     }
     if (s_05 >= s0 && s_05 >= s05)
     {
-      max = s_05;
-      return 0.6666666666666666666666666667f;
+      maxi = s_05;
+      return 2.0f/3; //0.6666666666666666666666666667f;
     }
     if (s05 >= s0 && s05 >= s_05)
     {
-      max = s05;
-      return 1.3333333333333333333333333333f;
+      maxi = s05;
+      return 4.0f/3; //1.33333333333333333333333333f;
     }
   }
 
-  int two_b = -21 * i_05 + 36 * i0 - 15 * i05;
+  int two_b = (-21 * i_05) + (36 * i0) - (15 * i05);
   // calculate max location:
-  float ret_val = -float(two_b) / float(2 * two_a);
+  float ret_val = float(two_b) / float(-2 * two_a);
   // saturate and return
-  if (ret_val < 0.6666666666666666666666666667f)
-    ret_val = 0.666666666666666666666666667f;
-  else if (ret_val > 1.33333333333333333333333333f)
-    ret_val = 1.333333333333333333333333333f;
-  int two_c = +12 * i_05 - 16 * i0 + 6 * i05;
-  max = float(two_c) + float(two_a) * ret_val * ret_val + float(two_b) * ret_val;
-  max /= 2048.0f;
+  if (ret_val < 2.0f/3) //0.6666666666666666666666666667f
+      ret_val = 2.0f/3;
+  else if (ret_val > 4.0f/3) //1.33333333333333333333333333f
+           ret_val = 4.0f/3;
+  int two_c = (12 * i_05) - (16 * i0) + (6 * i05);
+  maxi = float(two_c) + float(two_a) * ret_val * ret_val + float(two_b) * ret_val;
+  maxi *= 1/2048.0f;
   return ret_val;
 }
 
 inline float
-BriskScaleSpace::refine1D_2(const float s_05, const float s0, const float s05, float& max) const
+BriskScaleSpace::refine1D_2(const float s_05, const float s0, const float s05, float& maxi) const
 {
-  int i_05 = int(1024.0 * s_05 + 0.5);
-  int i0 = int(1024.0 * s0 + 0.5);
-  int i05 = int(1024.0 * s05 + 0.5);
+  int i_05 = int(1024.0f * s_05 + 0.5f);
+  int i0   = int(1024.0f * s0   + 0.5f);
+  int i05  = int(1024.0f * s05  + 0.5f);
 
   //   18.0000  -30.0000   12.0000
   //  -45.0000   65.0000  -20.0000
   //   27.0000  -30.0000    8.0000
 
-  int a = 2 * i_05 - 4 * i0 + 2 * i05;
+  int a = (2 * i_05) - (4 * i0) + (2 * i05);
   // second derivative must be negative:
   if (a >= 0)
   {
     if (s0 >= s_05 && s0 >= s05)
     {
-      max = s0;
+      maxi = s0;
       return 1.0f;
     }
     if (s_05 >= s0 && s_05 >= s05)
     {
-      max = s_05;
+      maxi = s_05;
       return 0.7f;
     }
     if (s05 >= s0 && s05 >= s_05)
     {
-      max = s05;
+      maxi = s05;
       return 1.5f;
     }
   }
 
-  int b = -5 * i_05 + 8 * i0 - 3 * i05;
+  int b = (-5 * i_05) + (8 * i0) - (3 * i05);
   // calculate max location:
-  float ret_val = -float(b) / float(2 * a);
+  float ret_val = float(b) / float(-2 * a);
   // saturate and return
   if (ret_val < 0.7f)
     ret_val = 0.7f;
   else if (ret_val > 1.5f)
     ret_val = 1.5f; // allow to be slightly off bounds ...?
-  int c = +3 * i_05 - 3 * i0 + 1 * i05;
-  max = float(c) + float(a) * ret_val * ret_val + float(b) * ret_val;
-  max /= 1024;
+  int c = (+3 * i_05) - (3 * i0) + (1 * i05);
+  maxi = float(c) + float(a) * ret_val * ret_val + float(b) * ret_val;
+  maxi *= 1/1024.0f;
   return ret_val;
 }
 
@@ -1854,25 +1860,25 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
 {
 
   // the coefficients of the 2d quadratic function least-squares fit:
-  int tmp1 = s_0_0 + s_0_2 - 2 * s_1_1 + s_2_0 + s_2_2;
+  int tmp1 = s_0_0 + s_0_2 - (2 * s_1_1) + s_2_0 + s_2_2;
   int coeff1 = 3 * (tmp1 + s_0_1 - ((s_1_0 + s_1_2) << 1) + s_2_1);
   int coeff2 = 3 * (tmp1 - ((s_0_1 + s_2_1) << 1) + s_1_0 + s_1_2);
   int tmp2 = s_0_2 - s_2_0;
   int tmp3 = (s_0_0 + tmp2 - s_2_2);
-  int tmp4 = tmp3 - 2 * tmp2;
+  int tmp4 = tmp3 - (2 * tmp2);
   int coeff3 = -3 * (tmp3 + s_0_1 - s_2_1);
   int coeff4 = -3 * (tmp4 + s_1_0 - s_1_2);
   int coeff5 = (s_0_0 - s_0_2 - s_2_0 + s_2_2) << 2;
-  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) << 1) - 5 * s_1_1 + s_2_0 + s_2_2) << 1;
+  int coeff6 = -(s_0_0 + s_0_2 - ((s_1_0 + s_0_1 + s_1_2 + s_2_1) << 1) - (5 * s_1_1) + s_2_0 + s_2_2) << 1;
 
   // 2nd derivative test:
-  int H_det = 4 * coeff1 * coeff2 - coeff5 * coeff5;
+  const int H_det = (4 * coeff1 * coeff2) - (coeff5 * coeff5);
 
-  if (H_det == 0)
+  if (0 == H_det)
   {
     delta_x = 0.0f;
     delta_y = 0.0f;
-    return float(coeff6) / 18.0f;
+    return float(coeff6) * (1/18.0f);
   }
 
   if (!(H_det > 0 && coeff1 < 0))
@@ -1887,13 +1893,13 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     {
       tmp_max = tmp;
       delta_x = -1.0f;
-      delta_y = 1.0f;
+      delta_y =  1.0f;
     }
     tmp = coeff3 - coeff4 - coeff5;
     if (tmp > tmp_max)
     {
       tmp_max = tmp;
-      delta_x = 1.0f;
+      delta_x =  1.0f;
       delta_y = -1.0f;
     }
     tmp = -coeff3 - coeff4 + coeff5;
@@ -1903,34 +1909,35 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
       delta_x = -1.0f;
       delta_y = -1.0f;
     }
-    return float(tmp_max + coeff1 + coeff2 + coeff6) / 18.0f;
+    return float(tmp_max + coeff1 + coeff2 + coeff6) * (1/18.0f);
   }
 
   // this is hopefully the normal outcome of the Hessian test
-  delta_x = float(2 * coeff2 * coeff3 - coeff4 * coeff5) / float(-H_det);
-  delta_y = float(2 * coeff1 * coeff4 - coeff3 * coeff5) / float(-H_det);
+  const float inv_neg_H_det = -1.0f / H_det;
+  delta_x = float(2 * coeff2 * coeff3 - coeff4 * coeff5) * inv_neg_H_det;
+  delta_y = float(2 * coeff1 * coeff4 - coeff3 * coeff5) * inv_neg_H_det;
   // TODO: this is not correct, but easy, so perform a real boundary maximum search:
-  bool tx = false;
+  bool tx  = false;
   bool tx_ = false;
-  bool ty = false;
+  bool ty  = false;
   bool ty_ = false;
-  if (delta_x > 1.0)
+  if (delta_x > 1.0f)
     tx = true;
-  else if (delta_x < -1.0)
+  else if (delta_x < -1.0f)
     tx_ = true;
-  if (delta_y > 1.0)
+  if (delta_y > 1.0f)
     ty = true;
-  if (delta_y < -1.0)
+  if (delta_y < -1.0f)
     ty_ = true;
 
-  if (tx || tx_ || ty || ty_)
+  if ((tx | tx_) || (ty | ty_))
   {
     // get two candidates:
     float delta_x1 = 0.0f, delta_x2 = 0.0f, delta_y1 = 0.0f, delta_y2 = 0.0f;
     if (tx)
     {
       delta_x1 = 1.0f;
-      delta_y1 = -float(coeff4 + coeff5) / float(2 * coeff2);
+      delta_y1 = float(coeff4 + coeff5) / float(-2 * coeff2);
       if (delta_y1 > 1.0f)
         delta_y1 = 1.0f;
       else if (delta_y1 < -1.0f)
@@ -1939,7 +1946,7 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     else if (tx_)
     {
       delta_x1 = -1.0f;
-      delta_y1 = -float(coeff4 - coeff5) / float(2 * coeff2);
+      delta_y1 = float(coeff4 - coeff5) / float(-2 * coeff2);
       if (delta_y1 > 1.0f)
         delta_y1 = 1.0f;
       else if (delta_y1 < -1.0)
@@ -1948,7 +1955,7 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     if (ty)
     {
       delta_y2 = 1.0f;
-      delta_x2 = -float(coeff3 + coeff5) / float(2 * coeff1);
+      delta_x2 = float(coeff3 + coeff5) / float(-2 * coeff1);
       if (delta_x2 > 1.0f)
         delta_x2 = 1.0f;
       else if (delta_x2 < -1.0f)
@@ -1957,7 +1964,7 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     else if (ty_)
     {
       delta_y2 = -1.0f;
-      delta_x2 = -float(coeff3 - coeff5) / float(2 * coeff1);
+      delta_x2 = float(coeff3 - coeff5) / float(-2 * coeff1);
       if (delta_x2 > 1.0f)
         delta_x2 = 1.0f;
       else if (delta_x2 < -1.0f)
@@ -1965,29 +1972,26 @@ BriskScaleSpace::subpixel2D(const int s_0_0, const int s_0_1, const int s_0_2, c
     }
     // insert both options for evaluation which to pick
     float max1 = (coeff1 * delta_x1 * delta_x1 + coeff2 * delta_y1 * delta_y1 + coeff3 * delta_x1 + coeff4 * delta_y1
-                  + coeff5 * delta_x1 * delta_y1 + coeff6)
-                 / 18.0f;
+                  + coeff5 * delta_x1 * delta_y1);
     float max2 = (coeff1 * delta_x2 * delta_x2 + coeff2 * delta_y2 * delta_y2 + coeff3 * delta_x2 + coeff4 * delta_y2
-                  + coeff5 * delta_x2 * delta_y2 + coeff6)
-                 / 18.0f;
+                  + coeff5 * delta_x2 * delta_y2);
     if (max1 > max2)
     {
       delta_x = delta_x1;
       delta_y = delta_x1;
-      return max1;
+      return (max1 + coeff6) * (1/18.0f);
     }
     else
     {
       delta_x = delta_x2;
       delta_y = delta_x2;
-      return max2;
+      return (max2 + coeff6) * (1/18.0f);
     }
   }
 
   // this is the case of the maximum inside the boundaries:
   return (coeff1 * delta_x * delta_x + coeff2 * delta_y * delta_y + coeff3 * delta_x + coeff4 * delta_y
-          + coeff5 * delta_x * delta_y + coeff6)
-         / 18.0f;
+          + coeff5 * delta_x * delta_y + coeff6) * (1/18.0f);
 }
 
 // construct a layer
@@ -2000,7 +2004,7 @@ BriskLayer::BriskLayer(const cv::Mat& img_in, float scale_in, float offset_in)
   offset_ = offset_in;
   // create an agast detector
   fast_9_16_ = new FastFeatureDetector(1, true, FastFeatureDetector::TYPE_9_16);
-  makeOffsets(pixel_5_8_, (int)img_.step, 8);
+  makeOffsets(pixel_5_8_,  (int)img_.step, 8);
   makeOffsets(pixel_9_16_, (int)img_.step, 16);
 }
 // derive a layer
@@ -2011,18 +2015,18 @@ BriskLayer::BriskLayer(const BriskLayer& layer, int mode)
     img_.create(layer.img().rows / 2, layer.img().cols / 2, CV_8U);
     halfsample(layer.img(), img_);
     scale_ = layer.scale() * 2;
-    offset_ = 0.5f * scale_ - 0.5f;
   }
   else
   {
     img_.create(2 * (layer.img().rows / 3), 2 * (layer.img().cols / 3), CV_8U);
     twothirdsample(layer.img(), img_);
-    scale_ = layer.scale() * 1.5f;
-    offset_ = 0.5f * scale_ - 0.5f;
+    scale_  = layer.scale() * 1.5f;
   }
+  offset_ = (0.5f * scale_) - 0.5f;
+
   scores_ = cv::Mat::zeros(img_.rows, img_.cols, CV_8U);
   fast_9_16_ = new FastFeatureDetector(1, false, FastFeatureDetector::TYPE_9_16);
-  makeOffsets(pixel_5_8_, (int)img_.step, 8);
+  makeOffsets(pixel_5_8_,  (int)img_.step, 8);
   makeOffsets(pixel_9_16_, (int)img_.step, 16);
 }
 
@@ -2044,9 +2048,9 @@ BriskLayer::getAgastPoints(int threshold, std::vector<KeyPoint>& keypoints)
 inline int
 BriskLayer::getAgastScore(int x, int y, int threshold) const
 {
-  if (x < 3 || y < 3)
+  if ((x < 3) || (y < 3))
     return 0;
-  if (x >= img_.cols - 3 || y >= img_.rows - 3)
+  if (x >= (img_.cols - 3) || y >= (img_.rows - 3))
     return 0;
   uchar& score = (uchar&)scores_(y, x);
   if (score > 2)
@@ -2062,9 +2066,9 @@ BriskLayer::getAgastScore(int x, int y, int threshold) const
 inline int
 BriskLayer::getAgastScore_5_8(int x, int y, int threshold) const
 {
-  if (x < 2 || y < 2)
+  if ((x < 2) || (y < 2))
     return 0;
-  if (x >= img_.cols - 2 || y >= img_.rows - 2)
+  if (x >= (img_.cols - 2) || y >= (img_.rows - 2))
     return 0;
   int score = cornerScore<8>(&img_.at<uchar>(y, x), pixel_5_8_, threshold - 1);
   if (score < threshold)
@@ -2091,11 +2095,13 @@ BriskLayer::getAgastScore(float xf, float yf, int threshold_in, float scale_in) 
   else
   {
     // this means we overlap area smoothing
-    const float halfscale = scale_in / 2.0f;
+    const float halfscale = scale_in * 0.5f;
+    const float halfscale_1 = halfscale + 1.0f;
+    const int y_end = int(yf + halfscale_1), x_end = int(xf + halfscale_1);
     // get the scores first:
-    for (int x = int(xf - halfscale); x <= int(xf + halfscale + 1.0f); x++)
+    for (int x = int(xf - halfscale); x <= x_end; x++)
     {
-      for (int y = int(yf - halfscale); y <= int(yf + halfscale + 1.0f); y++)
+      for (int y = int(yf - halfscale); y <= y_end; y++)
       {
         getAgastScore(x, y, threshold_in);
       }
@@ -2117,18 +2123,18 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   const int& imagecols = image.cols;
 
   // get the sigma_half:
-  const float sigma_half = scale_in / 2;
+  const float sigma_half = scale_in * 0.5f;
   const float area = 4.0f * sigma_half * sigma_half;
   // calculate output:
   int ret_val;
-  if (sigma_half < 0.5)
+  if (sigma_half < 0.5f)
   {
     //interpolation multipliers:
     const int r_x = (int)((xf - x) * 1024);
     const int r_y = (int)((yf - y) * 1024);
     const int r_x_1 = (1024 - r_x);
     const int r_y_1 = (1024 - r_y);
-    uchar* ptr = image.data + x + y * imagecols;
+    const uchar* ptr = image.data + x + (y * imagecols);
     // just interpolate:
     ret_val = (r_x_1 * r_y_1 * int(*ptr));
     ptr++;
@@ -2137,30 +2143,30 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
     ret_val += (r_x * r_y * int(*ptr));
     ptr--;
     ret_val += (r_x_1 * r_y * int(*ptr));
-    return 0xFF & ((ret_val + 512) / 1024 / 1024);
+    return 0xFF & ((ret_val + 512) / (1024 * 1024));
   }
 
   // this is the standard case (simple, not speed optimized yet):
 
   // scaling:
-  const int scaling = (int)(4194304.0f / area);
-  const int scaling2 = (int)(float(scaling) * area / 1024.0f);
+  const int scaling  = (int)(4194304.0f / area);
+  const int scaling2 = (int)(float(scaling) * area * (1/1024.0f));
 
   // calculate borders
   const float x_1 = xf - sigma_half;
-  const float x1 = xf + sigma_half;
+  const float x1  = xf + sigma_half;
   const float y_1 = yf - sigma_half;
-  const float y1 = yf + sigma_half;
+  const float y1  = yf + sigma_half;
 
-  const int x_left = int(x_1 + 0.5);
-  const int y_top = int(y_1 + 0.5);
-  const int x_right = int(x1 + 0.5);
-  const int y_bottom = int(y1 + 0.5);
+  const int x_left = int(x_1 + 0.5f);
+  const int y_top  = int(y_1 + 0.5f);
+  const int x_right  = int(x1 + 0.5f);
+  const int y_bottom = int(y1 + 0.5f);
 
   // overlap area - multiplication factors:
   const float r_x_1 = float(x_left) - x_1 + 0.5f;
-  const float r_y_1 = float(y_top) - y_1 + 0.5f;
-  const float r_x1 = x1 - float(x_right) + 0.5f;
+  const float r_y_1 = float(y_top) - y_1  + 0.5f;
+  const float r_x1 = x1 - float(x_right)  + 0.5f;
   const float r_y1 = y1 - float(y_bottom) + 0.5f;
   const int dx = x_right - x_left - 1;
   const int dy = y_bottom - y_top - 1;
@@ -2174,7 +2180,8 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   const int r_y1_i = (int)(r_y1 * scaling);
 
   // now the calculation:
-  uchar* ptr = image.data + x_left + imagecols * y_top;
+  const uchar* ptr = image.data + x_left + (imagecols * y_top);
+  const int imagecols_dx_1 = imagecols - dx - 1;
   // first row:
   ret_val = A * int(*ptr);
   ptr++;
@@ -2185,9 +2192,9 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   }
   ret_val += B * int(*ptr);
   // middle ones:
-  ptr += imagecols - dx - 1;
-  uchar* end_j = ptr + dy * imagecols;
-  for (; ptr < end_j; ptr += imagecols - dx - 1)
+  ptr += imagecols_dx_1;
+  const uchar* end_j = ptr + (dy * imagecols);
+  for (; ptr < end_j; ptr += imagecols_dx_1)
   {
     ret_val += r_x_1_i * int(*ptr);
     ptr++;
@@ -2208,7 +2215,7 @@ BriskLayer::value(const cv::Mat& mat, float xf, float yf, float scale_in) const
   }
   ret_val += C * int(*ptr);
 
-  return 0xFF & ((ret_val + scaling2 / 2) / scaling2 / 1024);
+  return 0xFF & ((ret_val + (scaling2 / 2)) / scaling2 / 1024);
 }
 
 // half sampling
