@@ -645,7 +645,11 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
 
-    openCLExecuteKernel(clCxt, &filtering_laplacian, kernelName, globalThreads, localThreads, args, cn, depth);
+    const int buffer_size = 100;
+    char opt_buffer [buffer_size] = "";
+    sprintf(opt_buffer, "-DANCHOR=%d -DANX=%d -DANY=%d", ksize.width, anchor.x, anchor.y);
+
+    openCLExecuteKernel(clCxt, &filtering_laplacian, kernelName, globalThreads, localThreads, args, cn, depth, opt_buffer);
 }
 Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
         Point anchor, int borderType)
@@ -656,7 +660,7 @@ Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int srcType, int dstType, const
 
     oclMat gpu_krnl;
     int nDivisor;
-    normalizeKernel(kernel, gpu_krnl, CV_32S, &nDivisor, true);
+    normalizeKernel(kernel, gpu_krnl, CV_32S, &nDivisor, false);
     normalizeAnchor(anchor, ksize);
 
     return Ptr<BaseFilter_GPU>(new LinearFilter_GPU(ksize, anchor, gpu_krnl, GPUFilter2D_callers[CV_MAT_CN(srcType)],
@@ -1172,7 +1176,7 @@ void linearRowFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_kernel
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&ridusy));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
 
-    openCLExecuteKernel2(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option, CLFLUSH);
+    openCLExecuteKernel(clCxt, &filter_sep_row, kernelName, globalThreads, localThreads, args, channels, src.depth(), compile_option);
 }
 
 Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufType*/, const Mat &rowKernel, int anchor, int bordertype)

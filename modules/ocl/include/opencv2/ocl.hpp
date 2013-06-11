@@ -708,6 +708,8 @@ namespace cv
         }
 
         //! applies non-separable 2D linear filter to the image
+        //  Note, at the moment this function only works when anchor point is in the kernel center
+        //  and kernel size supported is either 3x3 or 5x5; otherwise the function will fail to output valid result
         CV_EXPORTS void filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel,
                                  Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
