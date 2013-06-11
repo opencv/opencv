@@ -14,7 +14,9 @@ namespace temp_viz
     typedef std::string String;
 
     typedef cv::Vec3d Vec3d;
+    typedef cv::Vec3f Vec3f;
     typedef cv::Vec4d Vec4d;
+    typedef cv::Vec4f Vec4f;
     typedef cv::Vec2d Vec2d;
     typedef cv::Vec2i Vec2i;
     typedef cv::Vec3b Vec3b;
@@ -86,18 +88,19 @@ namespace temp_viz
 
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
     
-    Point3d operator*(const Affine3f& affine, const Point3d& point);
+    Vec3d operator*(const Affine3f& affine, const Vec3d& vec);
     
     inline bool isNaN( float x )
     {
-	union { float f; unsigned int u; } v = { x };
-	return ((v.u & 0x7f800000) == 0x7f800000) && (v.u & 0x007fffff);
+	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
+	return ((u[0] & 0x7f800000) == 0x7f800000) && (u[0] & 0x007fffff);
     }
     
     inline bool isNaN( double x )
     {
-	union { double d; unsigned int u[2]; } v = { x };
-	return (v.u[1] & 0x7ff00000) == 0x7ff00000 && 
-	(v.u[0] != 0 || (v.u[1] & 0x000fffff) != 0);
+	// Here u has two elements
+	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
+	return (u[1] & 0x7ff00000) == 0x7ff00000 && 
+	(u[0] != 0 || (u[1] & 0x000fffff) != 0);
     }
 }

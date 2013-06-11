@@ -22,12 +22,12 @@ temp_viz::Color temp_viz::Color::white()   { return Color(255, 255, 255); }
 
 temp_viz::Color temp_viz::Color::gray()    { return Color(128, 128, 128); }
 
-temp_viz::Point3d temp_viz::operator*(const temp_viz::Affine3f& affine, const temp_viz::Point3d& point)
+temp_viz::Vec3d temp_viz::operator*(const temp_viz::Affine3f& affine, const temp_viz::Vec3d& vec)
 {
     const temp_viz::Matx44f& m = affine.matrix;
-    temp_viz::Point3d result;
-    result.x = m.val[0] * point.x + m.val[1] * point.y + m.val[ 2] * point.z + m.val[ 3];
-    result.y = m.val[4] * point.x + m.val[5] * point.y + m.val[ 6] * point.z + m.val[ 7];
-    result.z = m.val[8] * point.x + m.val[9] * point.y + m.val[10] * point.z + m.val[11];
+    temp_viz::Vec3d result;
+    result[0] = m.val[0] * vec[0] + m.val[1] * vec[1] + m.val[ 2] * vec[2] + m.val[ 3];
+    result[1] = m.val[4] * vec[0] + m.val[5] * vec[1] + m.val[ 6] * vec[2] + m.val[ 7];
+    result[2] = m.val[8] * vec[0] + m.val[9] * vec[1] + m.val[10] * vec[2] + m.val[11];
     return result;
 }
