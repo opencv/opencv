@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,86 +41,81 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
+#include "precomp.hpp"
 
 #ifdef HAVE_NVCUVID
 
-PARAM_TEST_CASE(Video, cv::gpu::DeviceInfo, std::string)
+using namespace cv;
+using namespace cv::gpucodec;
+using namespace cv::gpucodec::detail;
+
+bool cv::gpucodec::detail::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
 {
-};
-
-//////////////////////////////////////////////////////
-// VideoReader
-
-GPU_TEST_P(Video, Reader)
-{
-    cv::gpu::setDevice(GET_PARAM(0).deviceID());
-
-    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
-    cv::Ptr<cv::gpucodec::VideoReader> reader = cv::gpucodec::createVideoReader(inputFile);
-
-    cv::gpu::GpuMat frame;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        ASSERT_TRUE(reader->nextFrame(frame));
-        ASSERT_FALSE(frame.empty());
-    }
+    return videoParser_->parseVideoData(data, size, endOfStream);
 }
 
-//////////////////////////////////////////////////////
-// VideoWriter
-
-#ifdef WIN32
-
-GPU_TEST_P(Video, Writer)
+cv::gpucodec::detail::RawVideoSourceWrapper::RawVideoSourceWrapper(const Ptr<RawVideoSource>& source) :
+    source_(source)
 {
-    cv::gpu::setDevice(GET_PARAM(0).deviceID());
-
-    const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
-    std::string outputFile = cv::tempfile(".avi");
-    const double FPS = 25.0;
-
-    cv::VideoCapture reader(inputFile);
-    ASSERT_TRUE(reader.isOpened());
-
-    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
-
-    cv::Mat frame;
-    cv::gpu::GpuMat d_frame;
-
-    for (int i = 0; i < 10; ++i)
-    {
-        reader >> frame;
-        ASSERT_FALSE(frame.empty());
-
-        d_frame.upload(frame);
-
-        if (d_writer.empty())
-            d_writer = cv::gpucodec::createVideoWriter(outputFile, frame.size(), FPS);
-
-        d_writer->write(d_frame);
-    }
-
-    reader.release();
-    d_writer.release();
-
-    reader.open(outputFile);
-    ASSERT_TRUE(reader.isOpened());
-
-    for (int i = 0; i < 5; ++i)
-    {
-        reader >> frame;
-        ASSERT_FALSE(frame.empty());
-    }
+    CV_Assert( !source_.empty() );
 }
 
-#endif // WIN32
+cv::gpucodec::FormatInfo cv::gpucodec::detail::RawVideoSourceWrapper::format() const
+{
+    return source_->format();
+}
 
-INSTANTIATE_TEST_CASE_P(GPU_Codec, Video, testing::Combine(
-    ALL_DEVICES,
-    testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
+void cv::gpucodec::detail::RawVideoSourceWrapper::start()
+{
+    stop_ = false;
+    hasError_ = false;
+    thread_ = new Thread(readLoop, this);
+}
+
+void cv::gpucodec::detail::RawVideoSourceWrapper::stop()
+{
+    stop_ = true;
+    thread_->wait();
+    thread_.release();
+}
+
+bool cv::gpucodec::detail::RawVideoSourceWrapper::isStarted() const
+{
+    return !stop_;
+}
+
+bool cv::gpucodec::detail::RawVideoSourceWrapper::hasError() const
+{
+    return hasError_;
+}
+
+void cv::gpucodec::detail::RawVideoSourceWrapper::readLoop(void* userData)
+{
+    RawVideoSourceWrapper* thiz = static_cast<RawVideoSourceWrapper*>(userData);
+
+    for (;;)
+    {
+        unsigned char* data;
+        int size;
+        bool endOfFile;
+
+        if (!thiz->source_->getNextPacket(&data, &size, &endOfFile))
+        {
+            thiz->hasError_ = !endOfFile;
+            break;
+        }
+
+        if (!thiz->parseVideoData(data, size))
+        {
+            thiz->hasError_ = true;
+            break;
+        }
+
+        if (thiz->stop_)
+            break;
+    }
+
+    thiz->parseVideoData(0, 0, true);
+}
 
 #endif // HAVE_NVCUVID

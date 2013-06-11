@@ -67,12 +67,13 @@
         #include <unistd.h>
     #endif
 
-    #include "thread.h"
-    #include "ffmpeg_video_source.h"
-    #include "cuvid_video_source.h"
-    #include "frame_queue.h"
-    #include "video_decoder.h"
-    #include "video_parser.h"
+    #include "thread.hpp"
+    #include "video_source.hpp"
+    #include "ffmpeg_video_source.hpp"
+    #include "cuvid_video_source.hpp"
+    #include "frame_queue.hpp"
+    #include "video_decoder.hpp"
+    #include "video_parser.hpp"
 
     #include "../src/cap_ffmpeg_api.hpp"
 #endif

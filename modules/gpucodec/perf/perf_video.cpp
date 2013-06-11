@@ -74,12 +74,11 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::VideoReader_GPU d_reader(inputFile);
-        ASSERT_TRUE( d_reader.isOpened() );
+        cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(inputFile);
 
         cv::gpu::GpuMat frame;
 
-        TEST_CYCLE_N(10) d_reader.read(frame);
+        TEST_CYCLE_N(10) d_reader->nextFrame(frame);
 
         GPU_SANITY_CHECK(frame);
     }
