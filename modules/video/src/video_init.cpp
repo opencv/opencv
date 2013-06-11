@@ -60,7 +60,15 @@ CV_INIT_ALGORITHM(BackgroundSubtractorMOG2, "BackgroundSubtractor.MOG2",
     obj.info()->addParam(obj, "history", obj.history);
     obj.info()->addParam(obj, "nmixtures", obj.nmixtures);
     obj.info()->addParam(obj, "varThreshold", obj.varThreshold);
-    obj.info()->addParam(obj, "detectShadows", obj.bShadowDetection));
+    obj.info()->addParam(obj, "detectShadows", obj.bShadowDetection);
+    obj.info()->addParam(obj, "backgroundRatio", obj.backgroundRatio);
+    obj.info()->addParam(obj, "varThresholdGen", obj.varThresholdGen);
+    obj.info()->addParam(obj, "fVarInit", obj.fVarInit);
+    obj.info()->addParam(obj, "fVarMin", obj.fVarMin);
+    obj.info()->addParam(obj, "fVarMax", obj.fVarMax);
+    obj.info()->addParam(obj, "fCT", obj.fCT);
+    obj.info()->addParam(obj, "nShadowDetection", obj.nShadowDetection);
+    obj.info()->addParam(obj, "fTau", obj.fTau));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
