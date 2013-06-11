@@ -446,6 +446,88 @@ void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vt
 void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
 
+
+template<typename _Tp, typename _Ts, typename _Tc> inline int copy_non_nan_loop(_Tp *d, InputArray _s, InputArray _c)
+{
+    Mat s = _s.getMat();
+    Mat c = _c.getMat();
+    CV_Assert(s.size() == c.size());
+    int j = 0;
+    for(int y = 0; y < s.rows; ++y)
+    {
+	const _Ts* srow = s.ptr<_Ts>(y);
+	const _Tc* crow = c.ptr<_Tc>(y);
+	for(int x = 0; x < s.cols; ++x)
+	    if (!isNaN(crow[x][0]) && !isNaN(crow[x][1]) && !isNaN(crow[x][2]))
+	    {
+		d[j++] = _Tp((srow[x])[0], (srow[x])[1], (srow[x])[2]);
+	    }
+    }
+    return j;
+}
+
+/** \brief Assign a value to a variable if another variable is not NaN
+    * \param[in] d the destination variable
+    * \param[in] _s the source variable
+    * \param[in] _c the values to be controlled if NaN (can be different from _s)
+    * \param[out] j number of points that are copied
+    */ 
+template<typename _Tp> inline int copy_non_nans(_Tp *d, InputArray _s, InputArray _c)
+{
+    Mat s = _s.getMat();
+    Mat c = _c.getMat();
+    CV_Assert(s.size() == c.size());
+    
+    int j = 0;
+    if (s.channels() > 3)
+    {
+	if (s.type() == CV_32FC4)
+	{
+	    switch(c.type())
+	    {
+		case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3f>(d,_s,_c); break;
+		case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4f>(d,_s,_c); break;
+		case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3d>(d,_s,_c); break;
+		case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4d>(d,_s,_c); break;
+	    }
+	}
+	else if (s.type() == CV_64FC4)
+	{
+	    switch(c.type())
+	    {
+		case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3f>(d,_s,_c); break;
+		case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4f>(d,_s,_c); break;
+		case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3d>(d,_s,_c); break;
+		case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4d>(d,_s,_c); break;
+	    }
+	}
+    }
+    else
+    {
+	switch(c.type())
+	{
+	    case CV_32FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3f>(d,_s,_c); break;
+	    case CV_32FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4f>(d,_s,_c); break;
+	    case CV_64FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3d>(d,_s,_c); break;
+	    case CV_64FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4d>(d,_s,_c); break;
+	}
+    }
+    return j;
+}
+
+/** \brief Transform points in an array
+    * \param[in] d the destination variable
+    * \param[in] lenth the length of the d array
+    * \param[in] pose affine transform to be applied on each point in d
+    */ 
+template<typename _Tp> inline void transform_non_nans(_Tp* d, int length, const Affine3f& pose = Affine3f::Identity())
+{
+    for (int i = 0; i < length; ++i)
+    {
+	d[i] = pose * d[i];
+    }
+}
+
 }
 
 

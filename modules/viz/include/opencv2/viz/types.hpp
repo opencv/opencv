@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <boost/concept_check.hpp>
 #include <opencv2/core/cvdef.h>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
@@ -13,7 +14,9 @@ namespace temp_viz
     typedef std::string String;
 
     typedef cv::Vec3d Vec3d;
+    typedef cv::Vec3f Vec3f;
     typedef cv::Vec4d Vec4d;
+    typedef cv::Vec4f Vec4f;
     typedef cv::Vec2d Vec2d;
     typedef cv::Vec2i Vec2i;
     typedef cv::Vec3b Vec3b;
@@ -84,4 +87,20 @@ namespace temp_viz
     inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
 
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
+    
+    Vec3d operator*(const Affine3f& affine, const Vec3d& vec);
+    
+    inline bool isNaN( float x )
+    {
+	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
+	return ((u[0] & 0x7f800000) == 0x7f800000) && (u[0] & 0x007fffff);
+    }
+    
+    inline bool isNaN( double x )
+    {
+	// Here u has two elements
+	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
+	return (u[1] & 0x7ff00000) == 0x7ff00000 && 
+	(u[0] != 0 || (u[1] & 0x000fffff) != 0);
+    }
 }

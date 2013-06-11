@@ -17,14 +17,13 @@ void temp_viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 void temp_viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition (x, y); }
 void temp_viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
-
 void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _cloud, InputArray _colors, const Affine3f& pose)
 {
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
-    CV_Assert((cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3));
+    CV_Assert((cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4));
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
-
+        
     vtkSmartPointer<vtkPolyData> polydata;
     vtkSmartPointer<vtkCellArray> vertices;
     vtkSmartPointer<vtkPoints> points;
@@ -74,35 +73,20 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
     }
 
     int j = 0;
-    if (cloud.type() == CV_32FC3)
+    
+    if (cloud.depth() == CV_32F)
     {
         // Get a pointer to the beginning of the data array
-        Point3f *data = reinterpret_cast<Point3f*>((static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0));
-
-        // Scan through the data and apply mask where point is NAN
-        for(int y = 0; y < cloud.rows; ++y)
-        {
-            const Point3f* crow = cloud.ptr<Point3f>(y);
-            for(int x = 0; x < cloud.cols; ++x)
-
-            //TODO implementa templated copy_if() or copy_non_nans() and use everywhere.
-            if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
-                data[j++] =  pose * crow[x];
-         }
+        Vec3f *data = reinterpret_cast<Vec3f*>((static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0));
+	j = copy_non_nans(data, cloud, cloud);
+	transform_non_nans(data,j,pose);
     }
-    else if (cloud.type() == CV_64FC3)
+    else if (cloud.depth() == CV_64F)
     {
         // Get a pointer to the beginning of the data array
-        Point3d *data = reinterpret_cast<Point3d*>((static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0));
-
-        // If a point is NaN, ignore it
-        for(int y = 0; y < cloud.rows; ++y)
-        {
-            const Point3d* crow = cloud.ptr<Point3d>(y);
-            for(int x = 0; x < cloud.cols; ++x)
-            if (cvIsNaN(crow[x].x) != 1 && cvIsNaN(crow[x].y) != 1 && cvIsNaN(crow[x].z) != 1)
-                data[j++] = pose * crow[x];
-        }
+        Vec3d *data = reinterpret_cast<Vec3d*>((static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0));
+	j = copy_non_nans(data, cloud, cloud);
+	transform_non_nans(data,j,pose);
     }
 
     nr_points = j;
@@ -126,32 +110,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 
     // Get a random color
     Vec3b* colors_data = new Vec3b[nr_points];
-
-    j = 0;
-    if (cloud.type() == CV_32FC3)
-    {
-        for(int y = 0; y < colors.rows; ++y)
-        {
-            const Vec3b* crow = colors.ptr<Vec3b>(y);
-            const Point3f* cloud_row = cloud.ptr<Point3f>(y);
-
-            for(int x = 0; x < colors.cols; ++x)
-            if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-                colors_data[j++] = crow[x];
-        }
-    }
-    else if (cloud.type() == CV_64FC3)
-    {
-        for(int y = 0; y < colors.rows; ++y)
-        {
-            const Vec3b* crow = colors.ptr<Vec3b>(y);
-            const Point3d* cloud_row = cloud.ptr<Point3d>(y);
-
-            for(int x = 0; x < colors.cols; ++x)
-            if (cvIsNaN(cloud_row[x].x) != 1 && cvIsNaN(cloud_row[x].y) != 1 && cvIsNaN(cloud_row[x].z) != 1)
-                colors_data[j++] = crow[x];
-        }
-    }
+    j = copy_non_nans(colors_data, colors, cloud);
 
     reinterpret_cast<vtkUnsignedCharArray*>(&(*scalars))->SetArray (reinterpret_cast<unsigned char*>(colors_data), 3 * nr_points, 0);
 
