@@ -78,15 +78,15 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
     {
         // Get a pointer to the beginning of the data array
         Vec3f *data = reinterpret_cast<Vec3f*>((static_cast<vtkFloatArray*> (points->GetData ()))->GetPointer (0));
-	j = copy_non_nans(data, cloud, cloud);
-	transform_non_nans(data,j,pose);
+        j = copy_non_nans(data, cloud, cloud);
+        transform_non_nans(data,j,pose);
     }
     else if (cloud.depth() == CV_64F)
     {
         // Get a pointer to the beginning of the data array
         Vec3d *data = reinterpret_cast<Vec3d*>((static_cast<vtkDoubleArray*> (points->GetData ()))->GetPointer (0));
-	j = copy_non_nans(data, cloud, cloud);
-	transform_non_nans(data,j,pose);
+        j = copy_non_nans(data, cloud, cloud);
+        transform_non_nans(data,j,pose);
     }
 
     nr_points = j;

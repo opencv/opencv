@@ -24,9 +24,9 @@ public:
     void setWindowName (const std::string &name);
     
     /** \brief  Register a callback function for keyboard input
-	  * \param[in] callback function that will be registered as a callback for a keyboard event
-	  * \param[in] cookie for passing user data to callback
-	  */	
+      * \param[in] callback function that will be registered as a callback for a keyboard event
+      * \param[in] cookie for passing user data to callback
+      */
     void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
     
     /** \brief Register a callback function for mouse events
@@ -96,13 +96,13 @@ public:
     bool addText3D (const std::string &text, const cv::Point3f &position, const Color& color, double textScale = 1.0, const std::string &id = "");
 
     bool addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level = 100, float scale = 0.02f, const std::string &id = "cloud");
-        
+
     /** \brief If the id exists, updates the point cloud; otherwise, adds a new point cloud to the scene
-	  * \param[in] id a variable to identify the point cloud
-	  * \param[in] cloud cloud input in x,y,z coordinates
-	  * \param[in] colors color input in the same order of the points or single uniform color
-	  * \param[in] pose transform to be applied on the point cloud
-	  */
+      * \param[in] id a variable to identify the point cloud
+      * \param[in] cloud cloud input in x,y,z coordinates
+      * \param[in] colors color input in the same order of the points or single uniform color
+      * \param[in] pose transform to be applied on the point cloud
+      */
     void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
 
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
@@ -447,70 +447,66 @@ void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<
 void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
 
 
-template<typename _Tp, typename _Ts, typename _Tc> inline int copy_non_nan_loop(_Tp *d, InputArray _s, InputArray _c)
+
+
+template<typename _Tp, typename _Ts, typename _Tc> inline int copy_non_nan_loop(_Tp *d, const Mat& s, const Mat& c)
 {
-    Mat s = _s.getMat();
-    Mat c = _c.getMat();
     CV_Assert(s.size() == c.size());
     int j = 0;
     for(int y = 0; y < s.rows; ++y)
     {
-	const _Ts* srow = s.ptr<_Ts>(y);
-	const _Tc* crow = c.ptr<_Tc>(y);
-	for(int x = 0; x < s.cols; ++x)
-	    if (!isNaN(crow[x][0]) && !isNaN(crow[x][1]) && !isNaN(crow[x][2]))
-	    {
-		d[j++] = _Tp((srow[x])[0], (srow[x])[1], (srow[x])[2]);
-	    }
+        const _Ts* srow = s.ptr<_Ts>(y);
+        const _Tc* crow = c.ptr<_Tc>(y);
+        for(int x = 0; x < s.cols; ++x)
+            if (!isNan(crow[x]))
+                d[j++] = _Tp((srow[x])[0], (srow[x])[1], (srow[x])[2]);
     }
     return j;
 }
 
 /** \brief Assign a value to a variable if another variable is not NaN
     * \param[in] d the destination variable
-    * \param[in] _s the source variable
-    * \param[in] _c the values to be controlled if NaN (can be different from _s)
+    * \param[in] s the source variable
+    * \param[in] c the values to be controlled if NaN (can be different from s)
     * \param[out] j number of points that are copied
-    */ 
-template<typename _Tp> inline int copy_non_nans(_Tp *d, InputArray _s, InputArray _c)
+    */
+template<typename _Tp> inline int copy_non_nans(_Tp *d, const Mat& s, const Mat& c)
 {
-    Mat s = _s.getMat();
-    Mat c = _c.getMat();
     CV_Assert(s.size() == c.size());
     
     int j = 0;
     if (s.channels() > 3)
     {
-	if (s.type() == CV_32FC4)
-	{
-	    switch(c.type())
-	    {
-		case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3f>(d,_s,_c); break;
-		case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4f>(d,_s,_c); break;
-		case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3d>(d,_s,_c); break;
-		case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4d>(d,_s,_c); break;
-	    }
-	}
-	else if (s.type() == CV_64FC4)
-	{
-	    switch(c.type())
-	    {
-		case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3f>(d,_s,_c); break;
-		case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4f>(d,_s,_c); break;
-		case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3d>(d,_s,_c); break;
-		case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4d>(d,_s,_c); break;
-	    }
-	}
+        if (s.type() == CV_32FC4)
+        {
+            switch(c.type())
+            {
+            case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3f>(d, s, c); break;
+            case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4f>(d, s, c); break;
+            case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4f, Vec3d>(d, s, c); break;
+            case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4f, Vec4d>(d, s, c); break;
+            }
+        }
+        else if (s.type() == CV_64FC4)
+        {
+            switch(c.type())
+            {
+            case CV_32FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3f>(d, s, c); break;
+            case CV_32FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4f>(d, s, c); break;
+            case CV_64FC3: j = copy_non_nan_loop<_Tp, Vec4d, Vec3d>(d, s, c); break;
+            case CV_64FC4: j = copy_non_nan_loop<_Tp, Vec4d, Vec4d>(d, s, c); break;
+            }
+        }
     }
     else
     {
-	switch(c.type())
-	{
-	    case CV_32FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3f>(d,_s,_c); break;
-	    case CV_32FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4f>(d,_s,_c); break;
-	    case CV_64FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3d>(d,_s,_c); break;
-	    case CV_64FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4d>(d,_s,_c); break;
-	}
+        switch(c.type())
+        {
+        case CV_32FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3f>(d, s, c); break;
+        case CV_32FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4f>(d, s, c); break;
+        case CV_64FC3: j = copy_non_nan_loop<_Tp, _Tp, Vec3d>(d, s, c); break;
+        case CV_64FC4: j = copy_non_nan_loop<_Tp, _Tp, Vec4d>(d, s, c); break;
+        }
     }
     return j;
 }
@@ -519,12 +515,12 @@ template<typename _Tp> inline int copy_non_nans(_Tp *d, InputArray _s, InputArra
     * \param[in] d the destination variable
     * \param[in] lenth the length of the d array
     * \param[in] pose affine transform to be applied on each point in d
-    */ 
+    */
 template<typename _Tp> inline void transform_non_nans(_Tp* d, int length, const Affine3f& pose = Affine3f::Identity())
 {
     for (int i = 0; i < length; ++i)
     {
-	d[i] = pose * d[i];
+        d[i] = pose * d[i];
     }
 }
 

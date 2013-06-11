@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <boost/concept_check.hpp>
 #include <opencv2/core/cvdef.h>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
@@ -30,6 +29,8 @@ namespace temp_viz
     typedef cv::Size Size;
     typedef cv::Point Point;
     typedef cv::InputArray InputArray;
+    using cv::Point3_;
+    using cv::Vec;
 
 
 
@@ -90,17 +91,21 @@ namespace temp_viz
     
     Vec3d operator*(const Affine3f& affine, const Vec3d& vec);
     
-    inline bool isNaN( float x )
+    inline bool isNan(float x)
     {
-	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
-	return ((u[0] & 0x7f800000) == 0x7f800000) && (u[0] & 0x007fffff);
+        unsigned int *u = reinterpret_cast<unsigned int *>(&x);
+        return ((u[0] & 0x7f800000) == 0x7f800000) && (u[0] & 0x007fffff);
     }
     
-    inline bool isNaN( double x )
+    inline bool isNan(double x)
     {
-	// Here u has two elements
-	unsigned int *u = (reinterpret_cast<unsigned int *>(&x));
-	return (u[1] & 0x7ff00000) == 0x7ff00000 && 
-	(u[0] != 0 || (u[1] & 0x000fffff) != 0);
-    }
+        unsigned int *u = reinterpret_cast<unsigned int *>(&x);
+        return (u[1] & 0x7ff00000) == 0x7ff00000 && (u[0] != 0 || (u[1] & 0x000fffff) != 0);
+    }    
+
+    template<typename _Tp, int cn> inline bool isNan(const Vec<_Tp, cn>& v)
+    { return isNan(v.val[0]) || isNan(v.val[1]) || isNan(v.val[2]); }
+
+    template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
+    { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
 }
