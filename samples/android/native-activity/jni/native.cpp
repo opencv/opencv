@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <float.h>
 #include <queue>
 
 #include <opencv2/core/core.hpp>
@@ -60,7 +59,7 @@ static cv::Size calc_optimal_camera_resolution(const char* supported, int width,
             }
         }
 
-        idx++; // to skip coma symbol
+        idx++; // to skip comma symbol
 
     } while(supported[idx-1] != '\0');
 
@@ -86,9 +85,9 @@ static void engine_draw_frame(Engine* engine, const cv::Mat& frame)
 
     for (int yy = top_indent; yy < std::min(frame.rows+top_indent, buffer.height); yy++)
     {
-        unsigned char* line = (unsigned char*)pixels;
-        memcpy(line+left_indent*4*sizeof(unsigned char), frame.ptr<unsigned char>(yy),
-               std::min(frame.cols, buffer.width)*4*sizeof(unsigned char));
+        unsigned char* line = (unsigned char*)pixels + left_indent*4*sizeof(unsigned char);
+        size_t line_size = std::min(frame.cols, buffer.width)*4*sizeof(unsigned char);
+        memcpy(line, frame.ptr<unsigned char>(yy), line_size);
         // go to next line
         pixels = (int32_t*)pixels + buffer.stride;
     }
@@ -139,7 +138,7 @@ static void engine_handle_cmd(android_app* app, int32_t cmd)
                     return;
                 }
 
-                LOGI("Camera initialized at resoution %dx%d", camera_resolution.width, camera_resolution.height);
+                LOGI("Camera initialized at resolution %dx%d", camera_resolution.width, camera_resolution.height);
             }
             break;
         case APP_CMD_TERM_WINDOW:
@@ -157,7 +156,8 @@ void android_main(android_app* app)
     // Make sure glue isn't stripped.
     app_dummy();
 
-    memset(&engine, 0, sizeof(engine));
+    size_t engine_size = sizeof(engine); // for Eclipse CDT parser
+    memset((void*)&engine, 0, engine_size);
     app->userData = &engine;
     app->onAppCmd = engine_handle_cmd;
     engine.app = app;
