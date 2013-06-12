@@ -61,8 +61,11 @@ Here is an overview of the abstract Retina interface, allocate one instance with
     // parameters setup instance
     struct RetinaParameters; // this class is detailled later
 
-    // main method for input frame processing
+    // main method for input frame processing (all use method, can also perform High Dynamic Range tone mapping)
     void run (InputArray inputImage);
+
+    // specific method aiming at correcting luminance only (faster High Dynamic Range tone mapping)
+    void applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)
 
     // output buffers retreival methods
     // -> foveal color vision details channel with luminance and noise correction
@@ -138,6 +141,10 @@ This retina filter code includes the research contributions of phd/research coll
 
 * take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
 
+* Meylan&al work on HDR tone mapping that is implemented as a specific method within the model :
+
+.. [Meylan2007] L. Meylan , D. Alleysson, S. Susstrunk, "A Model of Retinal Local Adaptation for the Tone Mapping of Color Filter Array Images", Journal of Optical Society of America, A, Vol. 24, N 9, September, 1st, 2007, pp. 2807-2816
+
 Demos and experiments !
 =======================
 
@@ -161,11 +168,13 @@ Take a look at the provided C++ examples provided with OpenCV :
 
    Then, take a HDR image using bracketing with your camera and generate an OpenEXR image and then process it using the demo.
 
-   Typical use, supposing that you have the OpenEXR image *memorial.exr* (present in the samples/cpp/ folder)
+   Typical use, supposing that you have the OpenEXR image such as *memorial.exr* (present in the samples/cpp/ folder)
 
-   **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr**
+   **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr [optionnal: 'fast']**
 
       Note that some sliders are made available to allow you to play with luminance compression.
+      
+      If not using the 'fast' option, then, tone mapping is performed using the full retina model [Benoit2010]_. It includes spectral whitening that allows luminance energy to be reduced. When using the 'fast' option, then, a simpler method is used, it is an adaptation of the algorithm presented in [Meylan2007]_. This method gives also good results and is faster to process but it sometimes requires some more parameters adjustement.
 
 
 Methods description
@@ -275,7 +284,7 @@ Retina::printSetup
 
     Outputs a string showing the used parameters setup
 
-    :return: a string which contains formatted parameters information
+    :return: a string which contains formated parameters information
 
 Retina::run
 +++++++++++
@@ -285,6 +294,17 @@ Retina::run
     Method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
 
     :param inputImage: the input Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
+
+Retina::applyFastToneMapping
+++++++++++++++++++++++++++++
+
+.. ocv:function:: void Retina::applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)
+
+    Method which processes an image in the aim to correct its luminance : correct backlight problems, enhance details in shadows. This method is designed to perform High Dynamic Range image tone mapping (compress >8bit/pixel images to 8bit/pixel). This is a simplified version of the Retina Parvocellular model (simplified version of the run/getParvo methods call) since it does not include the spatio-temporal filter modelling the Outer Plexiform Layer of the retina that performs spectral whitening and many other stuff. However, it works great for tone mapping and in a faster way.
+Check the demos and experiments section to see examples and the way to perform tone mapping using the original retina model and the method.
+
+    :param inputImage: the input image to process (should be coded in float format : CV_32F, CV_32FC1, CV832F_C3, CV832F_C4, the 4th channel won't be considered).
+    :param outputToneMappedImage: the output 8bit/channel tone mapped image (CV_8U or CV_8UC3 format).
 
 Retina::setColorSaturation
 ++++++++++++++++++++++++++
