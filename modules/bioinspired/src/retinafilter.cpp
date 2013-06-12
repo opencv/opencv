@@ -73,6 +73,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
     // standard constructor without any log sampling of the input frame
     RetinaFilter::RetinaFilter(const unsigned int sizeRows, const unsigned int sizeColumns, const bool colorMode, const RETINA_COLORSAMPLINGMETHOD samplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
         :
@@ -375,21 +377,15 @@ namespace cv
         // apply tone mapping on the multiplexed image
         // -> photoreceptors local adaptation (large area adaptation)
         _photoreceptorsPrefilter.runFilter_LPfilter(grayImageInput, grayImageOutput, 2); // compute low pass filtering modeling the horizontal cells filtering to acess local luminance
-        _photoreceptorsPrefilter.setV0CompressionParameterToneMapping(PhotoreceptorsCompression, grayImageOutput.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
+        _photoreceptorsPrefilter.setV0CompressionParameterToneMapping(1.f-PhotoreceptorsCompression, grayImageOutput.max(), 1.f*grayImageOutput.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
         _photoreceptorsPrefilter.runFilter_LocalAdapdation(grayImageInput, grayImageOutput, temp2); // adapt contrast to local luminance
-
-        // high pass filter
-        //_spatiotemporalLPfilter(_localBuffer, _filterOutput, 2); // compute low pass filtering (high cut frequency (remove spatio-temporal noise)
-
-        //for (unsigned int i=0;i<_NBpixels;++i)
-        //  _localBuffer[i]-= _filterOutput[i]/2.0;
 
         // -> ganglion cells local adaptation (short area adaptation)
         _photoreceptorsPrefilter.runFilter_LPfilter(temp2, grayImageOutput, 1); // compute low pass filtering (high cut frequency (remove spatio-temporal noise)
-        _photoreceptorsPrefilter.setV0CompressionParameterToneMapping(ganglionCellsCompression, temp2.max(), temp2.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
+        _photoreceptorsPrefilter.setV0CompressionParameterToneMapping(1.f-ganglionCellsCompression, temp2.max(), 1.f*temp2.sum()/(float)_photoreceptorsPrefilter.getNBpixels());
         _photoreceptorsPrefilter.runFilter_LocalAdapdation(temp2, grayImageOutput, grayImageOutput); // adapt contrast to local luminance
-
     }
+
     // run the initilized retina filter in order to perform color tone mapping, after this call all retina outputs are updated
     void RetinaFilter::runRGBToneMapping(const std::valarray<float> &RGBimageInput, std::valarray<float> &RGBimageOutput, const bool useAdaptiveFiltering, const float PhotoreceptorsCompression, const float ganglionCellsCompression)
     {
@@ -526,4 +522,5 @@ namespace cv
 
         return true;
     }
-}
+}// end of namespace hvstools
+}// end of namespace cv

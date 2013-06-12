@@ -73,7 +73,8 @@
 
 namespace cv
 {
-
+namespace hvstools
+{
 // init static values
 static float _LMStoACr1Cr2[]={1.0,  1.0, 0.0,  1.0, -1.0, 0.0,  -0.5, -0.5, 1.0};
 //static double _ACr1Cr2toLMS[]={0.5,  0.5, 0.0,   0.5, -0.5, 0.0,  0.5,  0.0, 1.0};
@@ -720,4 +721,5 @@ void RetinaColor::_applyImageColorSpaceConversion(const std::valarray<float> &in
     }
 }
 
-}
+}// end of namespace hvstools
+}// end of namespace cv

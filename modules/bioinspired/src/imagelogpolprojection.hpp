@@ -103,6 +103,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
 
 class ImageLogPolProjection:public BasicRetinaFilter
 {
@@ -236,5 +238,6 @@ private:
 
 };
 
-}
+}// end of namespace hvstools
+}// end of namespace cv
 #endif /*IMAGELOGPOLPROJECTION_H_*/

@@ -71,6 +71,12 @@
 #include <cmath>
 
 
+//#define __TEMPLATEBUFFERDEBUG //define TEMPLATEBUFFERDEBUG in order to display debug information
+
+namespace cv
+{
+namespace hvstools
+{
 //// If a parallelization method is available then, you should define MAKE_PARALLEL, in the other case, the classical serial code will be used
 #define MAKE_PARALLEL
 // ==> then include required includes
@@ -101,10 +107,6 @@ public:
 };
 #endif
 
-//#define __TEMPLATEBUFFERDEBUG //define TEMPLATEBUFFERDEBUG in order to display debug information
-
-namespace cv
-{
     /**
     * @class TemplateBuffer
     * @brief this class is a simple template memory buffer which contains basic functions to get information on or normalize the buffer content
@@ -548,7 +550,8 @@ namespace cv
         return std::fabs(x);
     }
 
-}
+}// end of namespace hvstools
+}// end of namespace cv
 #endif
 
 

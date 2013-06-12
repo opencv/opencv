@@ -75,6 +75,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
 
 class RetinaImpl : public Retina
 {
@@ -197,6 +199,14 @@ public:
     void run(InputArray inputImage);
 
     /**
+     * method that applies a luminance correction (initially High Dynamic Range (HDR) tone mapping) using only the 2 local adaptation stages of the retina parvo channel : photoreceptors level and ganlion cells level. Spatio temporal filtering is applied but limited to temporal smoothing and eventually high frequencies attenuation. This is a lighter method than the one available using the regular run method. It is then faster but it does not include complete temporal filtering nor retina spectral whitening. This is an adptation of the original still image HDR tone mapping algorithm of David Alleyson, Sabine Susstruck and Laurence Meylan's work, please cite:
+    * -> Meylan L., Alleysson D., and Susstrunk S., A Model of Retinal Local Adaptation for the Tone Mapping of Color Filter Array Images, Journal of Optical Society of America, A, Vol. 24, N 9, September, 1st, 2007, pp. 2807-2816
+     @param inputImage the input image to process RGB or gray levels
+     @param outputToneMappedImage the output tone mapped image
+     */
+    void applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage);
+
+    /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
@@ -253,29 +263,11 @@ private:
     // Parameteres setup members
     RetinaParameters _retinaParameters; // structure of parameters
 
-        // Retina model related modules
+    // Retina model related modules
     std::valarray<float> _inputBuffer; //!< buffer used to convert input cv::Mat to internal retina buffers format (valarrays)
 
     // pointer to retina model
     RetinaFilter* _retinaFilter; //!< the pointer to the retina module, allocated with instance construction
-
-    /**
-     * exports a valarray buffer outing from HVStools objects to a cv::Mat in CV_8UC1 (gray level picture) or CV_8UC3 (color) format
-     * @param grayMatrixToConvert the valarray to export to OpenCV
-     * @param nbRows : the number of rows of the valarray flatten matrix
-     * @param nbColumns : the number of rows of the valarray flatten matrix
-     * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
-     * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
-     */
-    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer);
-
-    /**
-     *
-     * @param inputMatToConvert : the OpenCV cv::Mat that has to be converted to gray or RGB valarray buffer that will be processed by the retina model
-     * @param outputValarrayMatrix : the output valarray
-     * @return the input image color mode (color=true, gray levels=false)
-     */
-        bool _convertCvMat2ValarrayBuffer(InputArray inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
     //! private method called by constructors, gathers their parameters and use them in a unified way
     void _init(const Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
@@ -286,6 +278,7 @@ private:
 // smart pointers allocation :
 Ptr<Retina> createRetina(Size inputSize){ return new RetinaImpl(inputSize); }
 Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){return new RetinaImpl(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);}
+
 
 // RetinaImpl code
 RetinaImpl::RetinaImpl(const cv::Size inputSz)
@@ -401,10 +394,10 @@ void RetinaImpl::setup(cv::FileStorage &fs, const bool applyDefaultSetupOnFailur
     printf("%s\n", printSetup().c_str());
 }
 
-void RetinaImpl::setup(cv::Retina::RetinaParameters newConfiguration)
+void RetinaImpl::setup(Retina::RetinaParameters newConfiguration)
 {
     // simply copy structures
-    memcpy(&_retinaParameters, &newConfiguration, sizeof(cv::Retina::RetinaParameters));
+    memcpy(&_retinaParameters, &newConfiguration, sizeof(Retina::RetinaParameters));
     // apply setup
     setupOPLandIPLParvoChannel(_retinaParameters.OPLandIplParvo.colorMode, _retinaParameters.OPLandIplParvo.normaliseOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.photoreceptorsTemporalConstant, _retinaParameters.OPLandIplParvo.photoreceptorsSpatialConstant, _retinaParameters.OPLandIplParvo.horizontalCellsGain, _retinaParameters.OPLandIplParvo.hcellsTemporalConstant, _retinaParameters.OPLandIplParvo.hcellsSpatialConstant, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
     setupIPLMagnoChannel(_retinaParameters.IplMagno.normaliseOutput, _retinaParameters.IplMagno.parasolCells_beta, _retinaParameters.IplMagno.parasolCells_tau, _retinaParameters.IplMagno.parasolCells_k, _retinaParameters.IplMagno.amacrinCellsTemporalCutFrequency,_retinaParameters.IplMagno.V0CompressionParameter, _retinaParameters.IplMagno.localAdaptintegration_tau, _retinaParameters.IplMagno.localAdaptintegration_k);
@@ -526,6 +519,27 @@ void RetinaImpl::run(InputArray inputMatToConvert)
         throw cv::Exception(-1, "RetinaImpl cannot be applied, wrong input buffer size", "RetinaImpl::run", "RetinaImpl.h", 0);
 }
 
+void RetinaImpl::applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)
+{
+    // first convert input image to the compatible format :
+    const bool colorMode = _convertCvMat2ValarrayBuffer(inputImage.getMat(), _inputBuffer);
+    const unsigned int nbPixels=_retinaFilter->getOutputNBrows()*_retinaFilter->getOutputNBcolumns();
+
+    // process tone mapping
+    if (colorMode)
+    {
+	std::valarray<float> imageOutput(nbPixels*3);
+        _retinaFilter->runRGBToneMapping(_inputBuffer, imageOutput, true, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
+        _convertValarrayBuffer2cvMat(imageOutput, _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), true, outputToneMappedImage);
+    }else
+    {
+	std::valarray<float> imageOutput(nbPixels);
+        _retinaFilter->runGrayToneMapping(_inputBuffer, imageOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);    
+        _convertValarrayBuffer2cvMat(imageOutput, _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, outputToneMappedImage);
+    }
+
+}
+
 void RetinaImpl::getParvo(OutputArray retinaOutput_parvo)
 {
     if (_retinaFilter->getColorMode())
@@ -584,7 +598,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
 {
     // basic error check
     if (inputSz.height*inputSz.width <= 0)
-        throw cv::Exception(-1, "Bad retina size setup : size height and with must be superior to zero", "RetinaImpl::setup", "RetinaImpl.h", 0);
+        throw cv::Exception(-1, "Bad retina size setup : size height and with must be superior to zero", "RetinaImpl::setup", "Retina.cpp", 0);
 
     unsigned int nbPixels=inputSz.height*inputSz.width;
     // resize buffers if size does not match
@@ -596,7 +610,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
     _retinaFilter = new RetinaFilter(inputSz.height, inputSz.width, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 
     // prepare the default parameter XML file with default setup
-        setup(_retinaParameters);
+    setup(_retinaParameters);
 
     // init retina
     _retinaFilter->clearAllBuffers();
@@ -605,7 +619,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
     printf("%s\n", printSetup().c_str());
 }
 
-void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
+void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
 {
     // fill output buffer with the valarray buffer
     const float *valarrayPTR=get_data(grayMatrixToConvert);
@@ -623,7 +637,8 @@ void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMa
         }
     }else
     {
-        const unsigned int doubleNBpixels=_retinaFilter->getOutputNBpixels()*2;
+        const unsigned int nbPixels=nbColumns*nbRows;
+        const unsigned int doubleNBpixels=nbColumns*nbRows*2;
         outBuffer.create(cv::Size(nbColumns, nbRows), CV_8UC3);
         Mat outMat = outBuffer.getMat();
         for (unsigned int i=0;i<nbRows;++i)
@@ -633,7 +648,7 @@ void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMa
                 cv::Point2d pixel(j,i);
                 cv::Vec3b pixelValues;
                 pixelValues[2]=(unsigned char)*(valarrayPTR);
-                pixelValues[1]=(unsigned char)*(valarrayPTR+_retinaFilter->getOutputNBpixels());
+                pixelValues[1]=(unsigned char)*(valarrayPTR+nbPixels);
                 pixelValues[0]=(unsigned char)*(valarrayPTR+doubleNBpixels);
 
                 outMat.at<cv::Vec3b>(pixel)=pixelValues;
@@ -642,7 +657,7 @@ void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMa
     }
 }
 
-bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
+bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
 {
     const Mat inputMatToConvert=inputMat.getMat();
     // first check input consistency
@@ -657,14 +672,16 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray
     const int dsttype = DataType<T>::depth; // output buffer is float format
 
     
+    const unsigned int nbPixels=inputMat.getMat().rows*inputMat.getMat().cols;
+    const unsigned int doubleNBpixels=inputMat.getMat().rows*inputMat.getMat().cols*2;
 
     if(imageNumberOfChannels==4)
     {
     // create a cv::Mat table (for RGBA planes)
         cv::Mat planes[4] =
         {
-            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
-            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
+            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[doubleNBpixels]),
+            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[nbPixels]),
             cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
         };
         planes[3] = cv::Mat(inputMatToConvert.size(), dsttype);     // last channel (alpha) does not point on the valarray (not usefull in our case)
@@ -676,8 +693,8 @@ bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray
         // create a cv::Mat table (for RGB planes)
         cv::Mat planes[] =
         {
-        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()*2]),
-        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[_retinaFilter->getInputNBpixels()]),
+        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[doubleNBpixels]),
+        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[nbPixels]),
         cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
         };
         // split color cv::Mat in 3 planes... it fills valarray directely
@@ -701,5 +718,6 @@ void RetinaImpl::activateMovingContoursProcessing(const bool activate){_retinaFi
 
 void RetinaImpl::activateContoursProcessing(const bool activate){_retinaFilter->activateContoursProcessing(activate);}
 
-} // end of namespace cv
+}// end of namespace hvstools
+}// end of namespace cv
 

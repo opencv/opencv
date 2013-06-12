@@ -72,7 +72,8 @@
 
 namespace cv
 {
-
+namespace hvstools
+{
 // @author Alexandre BENOIT, benoit.alexandre.vision@gmail.com, LISTIC : www.listic.univ-savoie.fr Gipsa-Lab, France: www.gipsa-lab.inpg.fr/
 
 //////////////////////////////////////////////////////////
@@ -883,4 +884,5 @@ void BasicRetinaFilter::_verticalAnticausalFilter_Irregular_multGain(float *outp
     }
 
 }
-}
+}// end of namespace hvstools
+}// end of namespace cv

@@ -72,7 +72,8 @@
 
 namespace cv
 {
-
+namespace hvstools
+{
 // constructor
 ImageLogPolProjection::ImageLogPolProjection(const unsigned int nbRows, const unsigned int nbColumns, const PROJECTIONTYPE projection, const bool colorModeCapable)
 :BasicRetinaFilter(nbRows, nbColumns),
@@ -446,4 +447,5 @@ std::valarray<float> &ImageLogPolProjection::runProjection(const std::valarray<f
     return _sampledFrame;
 }
 
-}
+}// end of namespace hvstools
+}// end of namespace cv

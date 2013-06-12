@@ -11,7 +11,7 @@
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
  **
- **  Creation - enhancement process 2007-2011
+ **  Creation - enhancement process 2007-2013
  **      Author: Alexandre Benoit (benoit.alexandre.vision@gmail.com), LISTIC lab, Annecy le vieux, France
  **
  ** Theses algorithm have been developped by Alexandre BENOIT since his thesis with Alice Caplier at Gipsa-Lab (www.gipsa-lab.inpg.fr) and the research he pursues at LISTIC Lab (www.listic.univ-savoie.fr).
@@ -62,8 +62,8 @@
  ** the use of this software, even if advised of the possibility of such damage.
  *******************************************************************************/
 
-#ifndef __OPENCV_CONTRIB_RETINA_HPP__
-#define __OPENCV_CONTRIB_RETINA_HPP__
+#ifndef __OPENCV_BIOINSPIRED_RETINA_HPP__
+#define __OPENCV_BIOINSPIRED_RETINA_HPP__
 
 /*
  * Retina.hpp
@@ -75,8 +75,8 @@
 #include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
 #include <valarray>
 
-namespace cv
-{
+namespace cv{
+namespace hvstools{
 
 enum RETINA_COLORSAMPLINGMETHOD
 {
@@ -242,6 +242,14 @@ public:
     virtual void run(InputArray inputImage)=0;
 
     /**
+     * method that applies a luminance correction (initially High Dynamic Range (HDR) tone mapping) using only the 2 local adaptation stages of the retina parvo channel : photoreceptors level and ganlion cells level. Spatio temporal filtering is applied but limited to temporal smoothing and eventually high frequencies attenuation. This is a lighter method than the one available using the regular run method. It is then faster but it does not include complete temporal filtering nor retina spectral whitening. Then, it can have a more limited effect on images with a very high dynamic range. This is an adptation of the original still image HDR tone mapping algorithm of David Alleyson, Sabine Susstruck and Laurence Meylan's work, please cite:
+    * -> Meylan L., Alleysson D., and Susstrunk S., A Model of Retinal Local Adaptation for the Tone Mapping of Color Filter Array Images, Journal of Optical Society of America, A, Vol. 24, N 9, September, 1st, 2007, pp. 2807-2816
+     @param inputImage the input image to process RGB or gray levels
+     @param outputToneMappedImage the output tone mapped image
+     */
+    virtual void applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)=0;
+
+    /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
@@ -297,6 +305,26 @@ public:
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize);
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
+
+    /**
+     * exports a valarray buffer outing from HVStools objects to a cv::Mat in CV_8UC1 (gray level picture) or CV_8UC3 (color) format
+     * @param grayMatrixToConvert the valarray to export to OpenCV
+     * @param nbRows : the number of rows of the valarray flatten matrix
+     * @param nbColumns : the number of rows of the valarray flatten matrix
+     * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
+     * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
+     */
+    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer);
+
+    /**
+     * convert a cv::Mat to a valarray buffer in float format
+     * @param inputMatToConvert : the OpenCV cv::Mat that has to be converted to gray or RGB valarray buffer that will be processed by the retina model
+     * @param outputValarrayMatrix : the output valarray
+     * @return the input image color mode (color=true, gray levels=false)
+     */
+     bool _convertCvMat2ValarrayBuffer(InputArray inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
+
 }
-#endif /* __OPENCV_CONTRIB_RETINA_HPP__ */
+}
+#endif /* __OPENCV_BIOINSPIRED_RETINA_HPP__ */
 

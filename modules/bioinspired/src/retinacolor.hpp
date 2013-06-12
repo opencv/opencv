@@ -85,7 +85,8 @@
 
 namespace cv
 {
-
+namespace hvstools
+{
     class RetinaColor: public BasicRetinaFilter
     {
     public:
@@ -99,7 +100,7 @@ namespace cv
         * @param NBcolumns: number of columns of the input image
         * @param samplingMethod: the chosen color sampling method
         */
-        RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_DIAGONAL);
+        RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_BAYER);
 
         /**
         * standard destructor
@@ -382,7 +383,8 @@ namespace cv
 
 #endif
     };
-}
+}// end of namespace hvstools
+}// end of namespace cv
 
 #endif /*RETINACOLOR_HPP_*/
 

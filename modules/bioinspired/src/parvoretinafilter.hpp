@@ -103,6 +103,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
 //retina classes that derivate from the Basic Retrina class
 class ParvoRetinaFilter: public BasicRetinaFilter
 {
@@ -256,6 +258,7 @@ private:
 #endif
 
 };
-}
+}// end of namespace hvstools
+}// end of namespace cv
 #endif
 

@@ -110,7 +110,8 @@
 //#define __RETINADEBUG // define RETINADEBUG to display debug data
 namespace cv
 {
-
+namespace hvstools
+{
 // retina class that process the 3 outputs of the retina filtering stages
 class RetinaFilter//: public BasicRetinaFilter
 {
@@ -541,7 +542,9 @@ private:
 
 };
 
-}
+}// end of namespace hvstools
+}// end of namespace cv
+
 #endif /*RETINACLASSES_H_*/
 
 

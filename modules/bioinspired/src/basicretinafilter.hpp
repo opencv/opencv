@@ -114,6 +114,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
     class BasicRetinaFilter
     {
     public:
@@ -287,7 +289,7 @@ namespace cv
         * @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
         * @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
         */
-        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f){ _v0=v0*maxInputValue; _localLuminanceFactor=1.0f; _localLuminanceAddon=meanLuminance*_v0; _maxInputValue=maxInputValue;};
+        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f){ _v0=v0*maxInputValue; _localLuminanceFactor=1.0f; _localLuminanceAddon=meanLuminance*v0; _maxInputValue=maxInputValue;};
 
         /**
         * update compression parameters while keeping v0 parameter value
@@ -650,7 +652,8 @@ namespace cv
 
     };
 
-}
+}// end of namespace hvstools
+}// end of namespace cv
 #endif
 
 

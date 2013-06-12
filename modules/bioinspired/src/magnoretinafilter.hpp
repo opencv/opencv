@@ -99,7 +99,8 @@
 
 namespace cv
 {
-
+namespace hvstools
+{
     class MagnoRetinaFilter: public BasicRetinaFilter
     {
     public:
@@ -238,7 +239,8 @@ namespace cv
 #endif
     };
 
-}
+}// end of namespace hvstools
+}// end of namespace cv
 
 #endif /*MagnoRetinaFilter_H_*/
 

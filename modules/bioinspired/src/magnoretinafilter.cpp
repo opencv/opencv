@@ -72,6 +72,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
 // Constructor and Desctructor of the OPL retina filter
 MagnoRetinaFilter::MagnoRetinaFilter(const unsigned int NBrows, const unsigned int NBcolumns)
 :BasicRetinaFilter(NBrows, NBcolumns, 2),
@@ -206,6 +208,7 @@ const std::valarray<float> &MagnoRetinaFilter::runFilter(const std::valarray<flo
 
     return (*_magnoYOutput);
 }
-}
+}// end of namespace hvstools
+}// end of namespace cv
 
 

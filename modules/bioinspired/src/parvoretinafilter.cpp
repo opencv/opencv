@@ -73,6 +73,8 @@
 
 namespace cv
 {
+namespace hvstools
+{
 //////////////////////////////////////////////////////////
 //                 OPL RETINA FILTER
 //////////////////////////////////////////////////////////
@@ -227,5 +229,6 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing() // WARNING : this method requi
     }
 #endif
 }
-}
+}// end of namespace hvstools
+}// end of namespace cv
 
