@@ -493,7 +493,7 @@ struct ApplyAffine
     const Affine3f& affine_;
     ApplyAffine(const Affine3f& affine) : affine_(affine) {}
 
-    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine * p; }
+    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine_ * p; }
 
     template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v)
     {
