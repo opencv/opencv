@@ -1030,6 +1030,19 @@ void CvVideoWriter_GStreamer::close()
         handleMessage(pipeline);
 
         gst_object_unref (GST_OBJECT (pipeline));
+
+        if (source)
+          gst_object_unref (GST_OBJECT (source));
+
+        if (encodebin)
+          gst_object_unref (GST_OBJECT (encodebin));
+
+        if (file)
+          gst_object_unref (GST_OBJECT (file));
+
+        if (buffer)
+          gst_object_unref (GST_OBJECT (buffer));
+
     }
 }
 
@@ -1154,6 +1167,35 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
         if (!source){
             source = gst_bin_get_by_name(GST_BIN(encodebin), "appsrc0");
         }
+
+//        GstIterator *it = gst_bin_iterate_sources (GST_BIN(encodebin));
+
+
+//        gboolean done = FALSE;
+//        GstElement *item = NULL;
+
+//        while (!done) {
+//          switch (gst_iterator_next (it, &item)) {
+//            case GST_ITERATOR_OK:
+//              source = item;
+//              gst_object_unref (item);
+//              done = TRUE;
+//              break;
+//            case GST_ITERATOR_RESYNC:
+//              gst_iterator_resync (it);
+//              break;
+//            case GST_ITERATOR_ERROR:
+//              done = TRUE;
+//              break;
+//            case GST_ITERATOR_DONE:
+//              done = TRUE;
+//              break;
+//          }
+//        }
+//        gst_iterator_free (it);
+
+
+
 
         if (!source){
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsrc in manual pipeline\n");
