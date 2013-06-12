@@ -28,6 +28,7 @@ namespace temp_viz
         void addCoordinateSystem(double scale, const Affine3f& t, const String &id = "coordinate");
 
         void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
+        void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
 
         bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String &id = "cloud");
 

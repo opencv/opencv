@@ -104,6 +104,7 @@ public:
       * \param[in] pose transform to be applied on the point cloud
       */
     void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
+    void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
 
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");

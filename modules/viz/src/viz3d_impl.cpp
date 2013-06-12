@@ -114,7 +114,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
     vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
 
     if (exist)
-        updateCells(cells, initcells, nr_points);
+        updateCells (cells, initcells, nr_points);
     else
         updateCells (cells, am_it->second.cells, nr_points);
 
@@ -164,6 +164,13 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
         // Update the mapper
         reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->SetInput (polydata);
     }
+}
+
+void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _cloud, const Color& color, const Affine3f& pose)
+{
+    // Generate an array of colors from single color
+    Mat colors(_cloud.size(), CV_8UC3, color);
+    showPointCloud(id, _cloud, colors, pose);
 }
 
 bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level, float scale, const std::string &id)
