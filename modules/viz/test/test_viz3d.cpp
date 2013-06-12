@@ -89,12 +89,21 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
     v.addPolygonMesh(*mesh, "pq");
 
+    int col_blue = 0;
+    int col_green = 0;
+    int col_red = 0;
+    
+    bool alternate = true;
 
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
-        v.showPointCloud("cloud1", cloud, colors, cloudPosition);
+        if (!alternate)
+            v.showPointCloud("cloud1", cloud, temp_viz::Color(255, 0, 0), cloudPosition);
+        else
+            v.showPointCloud("cloud1", cloud, colors, cloudPosition);
+        alternate = !alternate;
 
         angle_x += 0.1f;
         angle_y -= 0.1f;
@@ -102,8 +111,11 @@ TEST(Viz_viz3d, accuracy)
         pos_x = std::sin(angle_x);
         pos_y = std::sin(angle_x);
         pos_z = std::sin(angle_x);
+        col_blue = int(angle_x * 10) % 256;
+        col_green = int(angle_x * 20) % 256;
+        col_red = int(angle_x * 30) % 256;
 
-        v.spinOnce(1, true);
+        v.spinOnce(10, true);
     }
    
 //     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));

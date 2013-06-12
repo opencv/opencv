@@ -104,6 +104,7 @@ public:
       * \param[in] pose transform to be applied on the point cloud
       */
     void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
+    void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
 
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
@@ -493,7 +494,7 @@ struct ApplyAffine
     const Affine3f& affine_;
     ApplyAffine(const Affine3f& affine) : affine_(affine) {}
 
-    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine * p; }
+    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine_ * p; }
 
     template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v)
     {

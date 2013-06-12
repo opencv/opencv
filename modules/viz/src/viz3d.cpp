@@ -28,6 +28,11 @@ void temp_viz::Viz3d::showPointCloud(const String& id, InputArray cloud, InputAr
     impl_->showPointCloud(id, cloud, colors, pose);
 }
 
+void temp_viz::Viz3d::showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose)
+{
+    impl_->showPointCloud(id, cloud, color, pose);
+}
+
 bool temp_viz::Viz3d::addPointCloudNormals (const Mat &cloud, const Mat& normals, int level, float scale, const String& id)
 {
     return impl_->addPointCloudNormals(cloud, normals, level, scale, id);
