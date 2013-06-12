@@ -930,8 +930,6 @@ namespace cv
                         clCxt.reset(new Context);
                     std::vector<Info> oclinfo;
                     CV_Assert(getDevice(oclinfo, CVCL_DEVICE_TYPE_ALL) > 0);
-                    oclinfo[0].impl->setDevice(0, 0, 0);
-                    clCxt.get()->impl = oclinfo[0].impl->copy();
 
                     *((volatile int*)&val) = 1;
                 }
@@ -1056,7 +1054,7 @@ BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
         Context* cv_ctx = Context::getContext();
         if(cv_ctx)
         {
-            cl_context ctx = (cl_context)&(cv_ctx->impl->oclcontext);
+            cl_context ctx = cv_ctx->impl->oclcontext;
             if(ctx)
                 openCLSafeCall(clReleaseContext(ctx));
         }
