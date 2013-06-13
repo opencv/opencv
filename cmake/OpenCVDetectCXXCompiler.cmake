@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 # Detect Microsoft compiler:
 # ----------------------------------------------------------------------------
-if(CMAKE_CL_64)
+if(CMAKE_CL_64 OR MSVC_C_ARCHITECTURE_ID MATCHES 64 OR MSVC_CXX_ARCHITECTURE_ID MATCHES 64)
     set(MSVC64 1)
 endif()
 
