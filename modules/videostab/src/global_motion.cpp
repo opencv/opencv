@@ -205,6 +205,9 @@ Mat estimateGlobalMotionRobust(
                             estimateGlobMotionLeastSquaresAffine };
 
     const int npoints = static_cast<int>(points0.size());
+    if (npoints < params.size)
+        return Mat::eye(3, 3, CV_32F);
+
     const int niters = static_cast<int>(ceil(log(1 - params.prob) /
                                              log(1 - pow(1 - params.eps, params.size))));
 
@@ -300,6 +303,8 @@ PyrLkRobustMotionEstimator::PyrLkRobustMotionEstimator()
 Mat PyrLkRobustMotionEstimator::estimate(const Mat &frame0, const Mat &frame1)
 {
     detector_->detect(frame0, keypointsPrev_);
+    if (keypointsPrev_.empty())
+        return Mat::eye(3, 3, CV_32F);
 
     pointsPrev_.resize(keypointsPrev_.size());
     for (size_t i = 0; i < keypointsPrev_.size(); ++i)
