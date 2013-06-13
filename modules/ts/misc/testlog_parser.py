@@ -100,33 +100,38 @@ class TestInfo(object):
     def dump(self, units="ms"):
         print "%s ->\t\033[1;31m%s\033[0m = \t%.2f%s" % (str(self), self.status, self.get("gmean", units), units)
 
-    def shortName(self):
+
+    def getName(self):
         pos = self.name.find("/")
         if pos > 0:
-            name = self.name[:pos]
-        else:
-            name = self.name
-        if self.fixture.endswith(name):
-            fixture = self.fixture[:-len(name)]
+            return self.name[:pos]
+        return self.name
+
+
+    def getFixture(self):
+        if self.fixture.endswith(self.getName()):
+            fixture = self.fixture[:-len(self.getName())]
         else:
             fixture = self.fixture
         if fixture.endswith("_"):
             fixture = fixture[:-1]
+        return fixture
+
+
+    def param(self):
+        return '::'.join(filter(None, [self.type_param, self.value_param]))
+
+    def shortName(self):
+        name = self.getName()
+        fixture = self.getFixture()
         return '::'.join(filter(None, [name, fixture]))
 
+
     def __str__(self):
-        pos = self.name.find("/")
-        if pos > 0:
-            name = self.name[:pos]
-        else:
-            name = self.name
-        if self.fixture.endswith(name):
-            fixture = self.fixture[:-len(name)]
-        else:
-            fixture = self.fixture
-        if fixture.endswith("_"):
-            fixture = fixture[:-1]
+        name = self.getName()
+        fixture = self.getFixture()
         return '::'.join(filter(None, [name, fixture, self.type_param, self.value_param]))
+
 
     def __cmp__(self, other):
         r = cmp(self.fixture, other.fixture);
