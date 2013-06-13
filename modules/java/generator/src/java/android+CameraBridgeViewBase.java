@@ -80,10 +80,10 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         mMaxHeight = MAX_UNSPECIFIED;
         styledAttrs.recycle();
     }
-    
+
     /**
      * Sets the camera index
-     * @param camera index
+     * @param cameraIndex new camera index
      */
     public void setCameraIndex(int cameraIndex) {
         this.mCameraIndex = cameraIndex;
