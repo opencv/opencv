@@ -165,7 +165,8 @@ PERF_TEST_P(Path_Idx_Cn_NPoints_WSize_Deriv, OpticalFlowPyrLK_self, testing::Com
     declare.in(pyramid1, pyramid2, inPoints).out(outPoints);
     declare.time(400);
 
-    TEST_CYCLE()
+    int runs = 3;
+    TEST_CYCLE_MULTIRUN(runs)
     {
         calcOpticalFlowPyrLK(pyramid1, pyramid2, inPoints, outPoints, status, err,
                              Size(winSize, winSize), maxLevel, criteria,

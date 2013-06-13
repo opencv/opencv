@@ -34,7 +34,8 @@ PERF_TEST_P(Size_MatType_ROp, reduceR,
     declare.in(src, WARMUP_RNG).out(vec);
     declare.time(100);
 
-    TEST_CYCLE() reduce(src, vec, 0, reduceOp, ddepth);
+    int runs = 15;
+    TEST_CYCLE_MULTIRUN(runs) reduce(src, vec, 0, reduceOp, ddepth);
 
     SANITY_CHECK(vec, 1);
 }
@@ -65,4 +66,3 @@ PERF_TEST_P(Size_MatType_ROp, reduceC,
 
     SANITY_CHECK(vec, 1);
 }
-
