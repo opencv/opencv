@@ -1,9 +1,22 @@
 .. _howToWriteTutorial:
 
-How to write a tutorial for OpenCV?
-***********************************
+How to write a tutorial for OpenCV
+**********************************
 
-Okay, so assume you have just finished a project of yours implementing something based on OpenCV and you want to present/share it with the community. Luckily, OpenCV is an *open source project*. This means that in theory anyone has access to the full source code and may extend it. While making a robust and practical library (like OpenCV) is great, the success of a library also depends on how user friendly it is. To improve on this aspect, the OpenCV team has already been listening to user feedback from its :opencv_qa:`OpenCV Q&A forum <>` and by making samples you can find in the source directories sample folder. The addition of the tutorials (in both online and PDF format) is an extension of these efforts.
+Okay, so assume you have just finished a project of yours implementing something
+based on OpenCV and you want to present/share it with the community. Luckily, OpenCV
+is an *open source project*. This means that anyone has access to the full source
+code and may propose extensions. And a good tutorial is a valuable addition to the
+library! Please read instructions on contribution process here:
+http://opencv.org/contribute.html. You may also find this page helpful:
+http://code.opencv.org/projects/opencv/wiki/How_to_contribute.
+
+While making a robust and practical library (like OpenCV) is great, the success of a
+library also depends on how user friendly it is. To improve on this aspect, the
+OpenCV team has already been listening to user feedback at :opencv_qa:`OpenCV Q&A
+forum <>` and by making samples you can find in the source directories
+:file:`samples` folder. The addition of the tutorials (in both online and PDF format)
+is an extension of these efforts.
 
 Goal
 ====
@@ -15,7 +28,17 @@ Goal
 
 .. _Sphinx: http://sphinx.pocoo.org/
 
-The tutorials are just as an important part of the library as  the implementation of those crafty data structures and algorithms you can find in OpenCV. Therefore, the source codes for the tutorials are part of the library. And yes, I meant source codes. The reason for this formulation is that the tutorials are written by using the |Sphinx|_ documentation generation system. This is based on the popular python documentation system called |reST|_ (reST). ReStructuredText is a really neat language that by using a few simple conventions (indentation, directives) and emulating old school e-mail writing techniques (text only) tries to offer a simple way to create and edit documents. Sphinx extends this with some new features and creates the resulting document in both HTML (for web) and PDF (for offline usage) format.
+The tutorials are just as an important part of the library as the implementation of
+those crafty data structures and algorithms you can find in OpenCV. Therefore, the
+source codes for the tutorials are part of the library. And yes, I meant source
+codes. The reason for this formulation is that the tutorials are written by using the
+|Sphinx|_ documentation generation system. This is based on the popular Python
+documentation system called |reST|_ (reST). ReStructuredText is a really neat
+language that by using a few simple conventions (indentation, directives) and
+emulating old school email writing techniques (text only) tries to offer a simple
+way to create and edit documents. Sphinx extends this with some new features and
+creates the resulting document in both HTML (for web) and PDF (for offline usage)
+format.
 
 Usually, an OpenCV tutorial has the following parts:
 
@@ -36,14 +59,17 @@ Usually, an OpenCV tutorial has the following parts:
     #. For more complex demonstrations you may create a video.
 
 As you can see you will need at least some basic knowledge of the *reST* system in order to complete the task at hand with success. However, don't worry *reST* (and *Sphinx*) was made with simplicity in mind. It is easy to grasp its basics. I found that the `OpenAlea documentations introduction on this subject <http://openalea.gforge.inria.fr/doc/openalea/doc/_build/html/source/tutorial/rest_syntax.html>`_ (or the `Thomas Cokelaer one <http://thomas-cokelaer.info/tutorials/sphinx/rest_syntax.html>`_ ) should enough for this. If for some directive or feature you need a more in-depth description look it up in the official |reST|_ help files or at the |Sphinx|_ documentation.
+
 In our world achieving some tasks is possible in multiple ways. However, some of the roads to take may have obvious or hidden advantages over others. Then again, in some other cases it may come down to just simple user preference. Here, I'll present how I decided to write the tutorials, based on my personal experience. If for some of them you know a better solution and you can back it up feel free to use that. I've nothing against it, as long as it gets the job done in an elegant fashion.
+
 Now the best would be if you could make the integration yourself. For this you need first to have the source code. I recommend following the guides for your operating system on acquiring OpenCV sources. For Linux users look :ref:`here <Linux-Installation>` and for :ref:`Windows here <Windows_Installation>`. You must also install python and sphinx with its dependencies in order to be able to build the documentation.
-Once you have downloaded the repository to your hard drive you can take a look in the OpenCV directory to make sure you have both the samples and doc folder present. Anyone may download the trunk source files from  :file:`git://github.com/Itseez/opencv.git` . Nevertheless, not everyone has upload (commit/submit) rights. This is to protect the integrity of the library. If you plan doing more than one tutorial, and would like to have an account with commit user rights you should first register an account at http://code.opencv.org/ and then contact OpenCV administrator -delete-admin@-delete-opencv.org. Otherwise, you can just send the resulting files to us at -delete-admin@-delete-opencv.org and we'll add it. 
+
+Once you have downloaded the repository to your hard drive you can take a look in the OpenCV directory to make sure you have both the samples and doc folder present. Anyone may download the trunk source files from :file:`git://github.com/Itseez/opencv.git` . Nevertheless, not everyone has upload (commit/submit) rights. This is to protect the integrity of the library. If you plan doing more than one tutorial, and would like to have an account with commit user rights you should first register an account at http://code.opencv.org/ and then contact OpenCV administrator -delete-admin@-delete-opencv.org. Otherwise, you can just send the resulting files to us at -delete-admin@-delete-opencv.org and we'll add it.
 
 Format the Source Code
 ======================
 
-Before I start this let it be clear: the main goal is to have a working sample code. However, for your tutorial to be of a top notch quality you should follow a few guide lines I am going to present here. In case you have an application by using the older interface (with *IplImage*, *CVMat*, *cvLoadImage* and such) consider migrating it to the new C++ interface. The tutorials are intended to be an up to date help for our users. And as of OpenCV 2 the OpenCV emphasis on using the less error prone and clearer C++ interface. Therefore, if possible please convert your code to the C++ interface. For this it may help to read the :ref:`InteroperabilityWithOpenCV1` tutorial. However, once you have an OpenCV 2 working code, then you should make your source code snippet as easy to read as possible. Here're a couple of advices for this:
+Before I start this let it be clear: the main goal is to have a working sample code. However, for your tutorial to be of a top notch quality you should follow a few guide lines I am going to present here. In case you have an application by using the older interface (with *IplImage*, *cvMat*, *cvLoadImage* and such) consider migrating it to the new C++ interface. The tutorials are intended to be an up to date help for our users. And as of OpenCV 2 the OpenCV emphasis on using the less error prone and clearer C++ interface. Therefore, if possible please convert your code to the C++ interface. For this it may help to read the :ref:`InteroperabilityWithOpenCV1` tutorial. However, once you have an OpenCV 2 working code, then you should make your source code snippet as easy to read as possible. Here're a couple of advices for this:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -102,6 +128,7 @@ Navigate to the :file:`opencv/doc/tutorials/section/table_of_content_section` fo
       \pagebreak
 
 The first line is a reference to the section title in the reST system. The section title will be a link and you may refer to it via the ``:ref:`` directive. The *include* directive imports the template text from the definitions directories *noContent.rst* file. *Sphinx* does not creates the PDF from scratch. It does this by first creating a latex file. Then creates the PDF from the latex file. With the *raw* directive you can directly add to this output commands. Its unique argument is for what kind of output to add the content of the directive. For the PDFs it may happen that multiple sections will overlap on a single page. To avoid this at the end of the TOC we add a *pagebreak* latex command, that hints to the LATEX system that the next line should be on a new page.
+
 If you have one of this, try to transform it to the following form:
 
 .. include:: ../../definitions/tocDefinitions.rst
@@ -157,6 +184,7 @@ Until the *raw* directive what you can see is a TOC tree entry. Here's how a TOC
                    :width:  90pt
 
 As you can see we have an image to the left and a description box to the right. To create two boxes we use a table with two columns and a single row. In the left column is the image and in the right one the description. However, the image directive is way too long to fit in a column. Therefore, we need to use the substitution definition system. We add this definition after the TOC tree. All images for the TOC tree are to be put in the images folder near its |reST|_ file. We use the point measurement system because we are also creating PDFs. PDFs are printable documents, where there is no such thing that pixels (px), just points (pt). And while generally space is no problem for web pages (we have monitors with **huge** resolutions) the size of the paper (A4 or letter) is constant and will be for a long time in the future. Therefore, size constrains come in play more like for the PDF, than the generated HTML code.
+
 Now your images should be as small as possible, while still offering the intended information for the user. Remember that the tutorial will become part of the OpenCV source code. If you add large images (that manifest in form of large image size) it will just increase the size of the repository pointlessly. If someone wants to download it later, its download time will be that much longer. Not to mention the larger PDF size for the tutorials and the longer load time for the web pages. In terms of pixels a TOC image should not be larger than 120 X 120 pixels. Resize your images if they are larger!
 
 .. note:: If you add a larger image and specify a smaller image size, *Sphinx* will not resize that. At build time will add the full size image and the resize will be done by your browser after the image is loaded. A 120 X 120 image is somewhere below 10KB. If you add a 110KB image, you have just pointlessly added a 100KB extra data to transfer over the internet for every user!
@@ -189,7 +217,9 @@ Now before each TOC entry you need to add the three lines of:
      .. cssclass:: toctableopencv
 
 The plus sign (+) is to enumerate tutorials by using bullet points. So for every TOC entry we have a corresponding bullet point represented by the +. Sphinx is highly indenting sensitive. Indentation is used to express from which point until to which point does a construction last. Un-indentation means end of that construction. So to keep all the bullet points to the same group the following TOC entries (until the next +) should be indented by two spaces.
+
 Here, I should also mention that **always** prefer using spaces instead of tabs. Working with only spaces makes possible that if we both use monotype fonts we will see the same thing. Tab size is text editor dependent and as should be avoided. *Sphinx* translates all tabs into 8 spaces before interpreting it.
+
 It turns out that the automatic formatting of both the HTML and PDF(LATEX) system messes up our tables. Therefore, we need to help them out a little. For the PDF generation we add the ``.. tabularcolumns:: m{100pt} m{300pt}`` directive. This means that the first column should be 100 points wide and middle aligned. For the HTML look we simply name the following table of a *toctableopencv* class type. Then, we can modify the look of the table by modifying the CSS of our web page. The CSS definitions go into the :file:`opencv/doc/_themes/blue/static/default.css_t` file.
 
 .. code-block:: css
@@ -221,12 +251,14 @@ However, you should not need to modify this. Just add these three lines (plus ke
       ../mat - the basic image container/mat - the basic image container
 
 The page break entry comes for separating sections and should be only one in a TOC tree |reST|_ file. Finally, at the end of the TOC tree we need to add our tutorial to the *Sphinx* TOC tree system. *Sphinx* will generate from this the previous-next-up information for the HTML file and add items to the PDF according to the order here. By default this TOC tree directive generates a simple table of contents. However, we already created a fancy looking one so we no longer need this basic one. Therefore, we add the *hidden* option to do not show it.
+
 The path is of a relative type. We step back in the file system and then go into the :file:`mat - the basic image container` directory for the :file:`mat - the basic image container.rst` file. Putting out the *rst* extension for the file is optional.
 
 Write the tutorial
 ==================
 
 Create a folder with the name of your tutorial. Preferably, use small letters only. Then create a text file in this folder with *rst* extension and the same name. If you have images for the tutorial create an :file:`images` folder and add your images there. When creating your images follow the guidelines described in the previous part!
+
 Now here's our recommendation for the structure of the tutorial (although, remember that this is not carved in the stone; if you have a better idea, use it!):
 
 .. container:: enumeratevisibleitemswithsquare
@@ -339,6 +371,17 @@ Now here's our recommendation for the structure of the tutorial (although, remem
 Take home the pride and joy of a job well done!
 ===============================================
 
-Once you are done contact us with the tutorial. We may submit the tutorial ourselves to the trunk branch of our repository or ask you to do a pullrequest to our repository.
-Now, to see your work **live** you may need to wait some time. The PDFs are updated usually at the launch of a new OpenCV version. The web pages are a little more diverse. They are automatically rebuilt in each evening. However, the **docs.opencv.org** website contains only the most recent **stable branch** of OpenCV. Currently this is 2.4. When we add something new (like a tutorial) that first goes to the **trunk branch** of our repository. A build of this you may find on the **docs.opencv.org/trunk** website. Although, we try to make a build every night occasionally we might freeze any of the branches to fix upcoming issues. During this it may take a little longer to see your work *live*, however if you submited it, be sure that eventually it will show up.
-If you have any questions or advices relating to this tutorial you can contact us at -delete-admin@-delete-opencv.org. Of course, delete the -delete- parts of that e-mail address.
+Once you are done please make a pull request with the tutorial. Now, to see your work
+**live** you may need to wait some time. The PDFs are updated usually at the launch
+of a new OpenCV version. The web pages are a little more diverse. They are
+automatically rebuilt nightly. However, the **docs.opencv.org** website contains only
+the most recent **stable branch** of OpenCV. Currently this is 2.4. If, for example,
+you have submitted your tutorial to the Git's ``master`` branch, then it should appear at
+the **docs.opencv.org/master** website soon. Although, we try to make a build every
+night, occasionally we might freeze any of the branches to fix upcoming issues.
+During this it may take a little longer to see your work online, however if you
+submited it, be sure that eventually it will show up.
+
+If you have any questions or advices relating to this tutorial you can contact us at
+-delete-admin@-delete-opencv.org. Of course, delete the -delete- parts of that email
+address.
