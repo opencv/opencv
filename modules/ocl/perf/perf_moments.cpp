@@ -15,8 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Zhang Chunpeng chunpeng@multicorewareinc.com
-//    Yao Wang yao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -43,49 +43,50 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
-
-#ifdef HAVE_OPENCL
-
-using namespace cv;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-
-PARAM_TEST_CASE(PyrUp, MatType, int)
+///////////// Moments ////////////////////////
+PERFTEST(Moments)
 {
-    int type;
-    int channels;
+    Mat src;
+    bool binaryImage = 0;
 
-    virtual void SetUp()
+    int all_type[] = {CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1};
+    std::string type_name[] = {"CV_8UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j];
+
+            gen(src, size, size, all_type[j], 0, 256);
+
+            cv::Moments CvMom = moments(src, binaryImage);
+
+            CPU_ON;
+            moments(src, binaryImage);
+            CPU_OFF;
+
+            cv::Moments oclMom;
+            WARMUP_ON;
+            oclMom = ocl::ocl_moments(src, binaryImage);
+            WARMUP_OFF;
+
+            Mat gpu_dst, cpu_dst;
+            HuMoments(CvMom, cpu_dst);
+            HuMoments(oclMom, gpu_dst);
+
+            GPU_ON;
+            ocl::ocl_moments(src, binaryImage);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            ocl::ocl_moments(src, binaryImage);
+            GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(gpu_dst, cpu_dst, .5);
+
+        }
+
     }
-};
-
-TEST_P(PyrUp, Accuracy)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
-        Mat dst_gold;
-        pyrUp(src, dst_gold);
-        ocl::oclMat dst;
-        ocl::oclMat srcMat(src);
-        ocl::pyrUp(srcMat, dst);
-
-        EXPECT_MAT_NEAR(dst_gold, Mat(dst), (type == CV_32F ? 1e-4f : 1.0));
-    }
-
 }
-
-
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
-
-
-#endif // HAVE_OPENCL
