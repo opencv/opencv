@@ -922,45 +922,50 @@ PERFTEST(remap)
 
     }
 }
-
-///////////// columnSum////////////////////////
-PERFTEST(columnSum)
+///////////// CLAHE ////////////////////////
+PERFTEST(CLAHE)
 {
     Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    cv::ocl::oclMat d_src, d_dst;
+    int all_type[] = {CV_8UC1};
+    std::string type_name[] = {"CV_8UC1"};
+
+    double clipLimit = 40.0;
+
+    cv::Ptr<cv::CLAHE>      clahe   = cv::createCLAHE(clipLimit);
+    cv::Ptr<cv::ocl::CLAHE> d_clahe = cv::ocl::createCLAHE(clipLimit);
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        SUBTEST << size << 'x' << size << "; CV_32FC1";
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
-        gen(src, size, size, CV_32FC1, 0, 256);
+            gen(src, size, size, all_type[j], 0, 256);
 
-        CPU_ON;
-        dst.create(src.size(), src.type());
-        for (int j = 0; j < src.cols; j++)
-            dst.at<float>(0, j) = src.at<float>(0, j);
+            CPU_ON;
+            clahe->apply(src, dst);
+            CPU_OFF;
 
-        for (int i = 1; i < src.rows; ++i)
-            for (int j = 0; j < src.cols; ++j)
-                dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
-        CPU_OFF;
+            d_src.upload(src);
 
-        d_src.upload(src);
+            WARMUP_ON;
+            d_clahe->apply(d_src, d_dst);
+            WARMUP_OFF;
 
-        WARMUP_ON;
-        ocl::columnSum(d_src, d_dst);
-        WARMUP_OFF;
+            ocl_dst = d_dst;
 
-        GPU_ON;
-        ocl::columnSum(d_src, d_dst);
-        GPU_OFF;
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.0);
 
-        GPU_FULL_ON;
-        d_src.upload(src);
-        ocl::columnSum(d_src, d_dst);
-        d_dst.download(ocl_dst);
-        GPU_FULL_OFF;
+            GPU_ON;
+            d_clahe->apply(d_src, d_dst);
+            GPU_OFF;
 
-        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 5e-1);
+            GPU_FULL_ON;
+            d_src.upload(src);
+            d_clahe->apply(d_src, d_dst);
+            d_dst.download(dst);
+            GPU_FULL_OFF;
+        }
     }
 }
