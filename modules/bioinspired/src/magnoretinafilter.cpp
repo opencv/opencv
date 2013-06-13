@@ -210,5 +210,3 @@ const std::valarray<float> &MagnoRetinaFilter::runFilter(const std::valarray<flo
 }
 }// end of namespace hvstools
 }// end of namespace cv
-
-

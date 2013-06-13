@@ -231,4 +231,3 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing() // WARNING : this method requi
 }
 }// end of namespace hvstools
 }// end of namespace cv
-

@@ -528,13 +528,13 @@ void RetinaImpl::applyFastToneMapping(InputArray inputImage, OutputArray outputT
     // process tone mapping
     if (colorMode)
     {
-	std::valarray<float> imageOutput(nbPixels*3);
+        std::valarray<float> imageOutput(nbPixels*3);
         _retinaFilter->runRGBToneMapping(_inputBuffer, imageOutput, true, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
         _convertValarrayBuffer2cvMat(imageOutput, _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), true, outputToneMappedImage);
     }else
     {
-	std::valarray<float> imageOutput(nbPixels);
-        _retinaFilter->runGrayToneMapping(_inputBuffer, imageOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);    
+        std::valarray<float> imageOutput(nbPixels);
+        _retinaFilter->runGrayToneMapping(_inputBuffer, imageOutput, _retinaParameters.OPLandIplParvo.photoreceptorsLocalAdaptationSensitivity, _retinaParameters.OPLandIplParvo.ganglionCellsSensitivity);
         _convertValarrayBuffer2cvMat(imageOutput, _retinaFilter->getOutputNBrows(), _retinaFilter->getOutputNBcolumns(), false, outputToneMappedImage);
     }
 
@@ -671,7 +671,6 @@ bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &out
     typedef float T; // define here the target pixel format, here, float
     const int dsttype = DataType<T>::depth; // output buffer is float format
 
-    
     const unsigned int nbPixels=inputMat.getMat().rows*inputMat.getMat().cols;
     const unsigned int doubleNBpixels=inputMat.getMat().rows*inputMat.getMat().cols*2;
 
@@ -720,4 +719,3 @@ void RetinaImpl::activateContoursProcessing(const bool activate){_retinaFilter->
 
 }// end of namespace hvstools
 }// end of namespace cv
-

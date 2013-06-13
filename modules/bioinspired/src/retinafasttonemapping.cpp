@@ -111,7 +111,7 @@ public:
 
         // resize buffers
         _inputBuffer.resize(nbPixels*3); // buffer supports gray images but also 3 channels color buffers... (larger is better...)
-	_imageOutput.resize(nbPixels*3);
+        _imageOutput.resize(nbPixels*3);
         _temp2.resize(nbPixels);
         // allocate the main filter with 2 setup sets properties (one for each low pass filter
         _multiuseFilter = new BasicRetinaFilter(imageInput.height, imageInput.width, 2);
@@ -144,7 +144,7 @@ public:
             _convertValarrayBuffer2cvMat(_imageOutput, _multiuseFilter->getNBrows(), _multiuseFilter->getNBcolumns(), true, outputToneMappedImage);
         }else
         {
-            _runGrayToneMapping(_inputBuffer, _imageOutput);    
+            _runGrayToneMapping(_inputBuffer, _imageOutput);
             _convertValarrayBuffer2cvMat(_imageOutput, _multiuseFilter->getNBrows(), _multiuseFilter->getNBcolumns(), false, outputToneMappedImage);
         }
 
@@ -152,17 +152,17 @@ public:
 
     /**
      * setup method that updates tone mapping behaviors by adjusing the local luminance computation area
-     * @param photoreceptorsNeighborhoodRadius the first stage local adaptation area 
+     * @param photoreceptorsNeighborhoodRadius the first stage local adaptation area
      * @param ganglioncellsNeighborhoodRadius the second stage local adaptation area
      * @param meanLuminanceModulatorK the factor applied to modulate the meanLuminance information (default is 1, see reference paper)
      */
     virtual void setup(const float photoreceptorsNeighborhoodRadius=3.f, const float ganglioncellsNeighborhoodRadius=1.f, const float meanLuminanceModulatorK=1.f)
     {
         // setup the spatio-temporal properties of each filter
-	_meanLuminanceModulatorK = meanLuminanceModulatorK;
+        _meanLuminanceModulatorK = meanLuminanceModulatorK;
         _multiuseFilter->setV0CompressionParameter(1.f, 255.f, 128.f);
-	_multiuseFilter->setLPfilterParameters(0.f, 0.f, photoreceptorsNeighborhoodRadius, 1);
-	_multiuseFilter->setLPfilterParameters(0.f, 0.f, ganglioncellsNeighborhoodRadius, 2);   
+        _multiuseFilter->setLPfilterParameters(0.f, 0.f, photoreceptorsNeighborhoodRadius, 1);
+        _multiuseFilter->setLPfilterParameters(0.f, 0.f, ganglioncellsNeighborhoodRadius, 2);
     }
 
 private:
@@ -171,7 +171,7 @@ private:
     cv::Ptr <RetinaColor> _colorEngine;
 
     //!< buffer used to convert input cv::Mat to internal retina buffers format (valarrays)
-    std::valarray<float> _inputBuffer; 
+    std::valarray<float> _inputBuffer;
     std::valarray<float> _imageOutput;
     std::valarray<float> _temp2;
     float _meanLuminanceModulatorK;

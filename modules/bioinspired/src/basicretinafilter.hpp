@@ -655,5 +655,3 @@ namespace hvstools
 }// end of namespace hvstools
 }// end of namespace cv
 #endif
-
-

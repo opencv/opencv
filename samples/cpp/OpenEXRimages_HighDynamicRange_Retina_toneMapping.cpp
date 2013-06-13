@@ -227,7 +227,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
          std::cout<<"Allocating fast tone mapper..."<<std::endl;
          //cv::Ptr<cv::RetinaFastToneMapping> fastToneMapper=createRetinaFastToneMapping(inputImage.size());
          std::cout<<"Fast tone mapper allocated"<<std::endl;
-         
+
          // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
          retina->write("RetinaDefaultParameters.xml");
 

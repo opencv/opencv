@@ -327,4 +327,3 @@ CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA
 }
 }
 #endif /* __OPENCV_BIOINSPIRED_RETINA_HPP__ */
-

@@ -64,8 +64,8 @@
  ** the use of this software, even if advised of the possibility of such damage.
  *******************************************************************************/
 
-#ifndef __OPENCV_CONTRIB_RETINAFASTTONEMAPPING_HPP__
-#define __OPENCV_CONTRIB_RETINAFASTTONEMAPPING_HPP__
+#ifndef __OPENCV_BIOINSPIRED_RETINAFASTTONEMAPPING_HPP__
+#define __OPENCV_BIOINSPIRED_RETINAFASTTONEMAPPING_HPP__
 
 /*
  * retinafasttonemapping.hpp
@@ -108,7 +108,7 @@ public:
 
     /**
      * setup method that updates tone mapping behaviors by adjusing the local luminance computation area
-     * @param photoreceptorsNeighborhoodRadius the first stage local adaptation area 
+     * @param photoreceptorsNeighborhoodRadius the first stage local adaptation area
      * @param ganglioncellsNeighborhoodRadius the second stage local adaptation area
      * @param meanLuminanceModulatorK the factor applied to modulate the meanLuminance information (default is 1, see reference paper)
      */
@@ -119,5 +119,4 @@ CV_EXPORTS Ptr<RetinaFastToneMapping> createRetinaFastToneMapping(Size inputSize
 
 }
 }
-#endif /* __OPENCV_CONTRIB_RETINAFASTTONEMAPPING_HPP__ */
-
+#endif /* __OPENCV_BIOINSPIRED_RETINAFASTTONEMAPPING_HPP__ */

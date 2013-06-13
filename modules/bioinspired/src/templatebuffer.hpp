@@ -553,6 +553,3 @@ public:
 }// end of namespace hvstools
 }// end of namespace cv
 #endif
-
-
-

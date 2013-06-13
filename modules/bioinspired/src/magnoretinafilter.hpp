@@ -243,5 +243,3 @@ namespace hvstools
 }// end of namespace cv
 
 #endif /*MagnoRetinaFilter_H_*/
-
-

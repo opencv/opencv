@@ -181,7 +181,7 @@ Take a look at the provided C++ examples provided with OpenCV :
    **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr [optionnal: 'fast']**
 
       Note that some sliders are made available to allow you to play with luminance compression.
-      
+
       If not using the 'fast' option, then, tone mapping is performed using the full retina model [Benoit2010]_. It includes spectral whitening that allows luminance energy to be reduced. When using the 'fast' option, then, a simpler method is used, it is an adaptation of the algorithm presented in [Meylan2007]_. This method gives also good results and is faster to process but it sometimes requires some more parameters adjustement.
 
 
