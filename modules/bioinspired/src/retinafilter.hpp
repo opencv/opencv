@@ -546,7 +546,3 @@ private:
 }// end of namespace cv
 
 #endif /*RETINACLASSES_H_*/
-
-
-
-
