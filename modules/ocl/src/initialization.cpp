@@ -917,6 +917,14 @@ namespace cv
         int Context::val = 0;
         static Mutex cs;
         static volatile int context_tear_down = 0;
+
+        bool initialized()
+        {
+            return *((volatile int*)&Context::val) != 0 && 
+                Context::clCxt->impl->clCmdQueue != NULL&& 
+                Context::clCxt->impl->oclcontext != NULL;
+        }
+
         Context* Context::getContext()
         {
             if(*((volatile int*)&val) != 1)
