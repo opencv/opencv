@@ -43,46 +43,59 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
-
-///////////// columnSum////////////////////////
-PERFTEST(columnSum)
+///////////// StereoMatchBM ////////////////////////
+PERFTEST(StereoMatchBM)
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+	Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat disp,dst;
+	ocl::oclMat d_left, d_right,d_disp;
+	int n_disp= 128;
+	int winSize =19;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
-    {
-        SUBTEST << size << 'x' << size << "; CV_32FC1";
+	SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
 
-        gen(src, size, size, CV_32FC1, 0, 256);
+	StereoBM bm(0, n_disp, winSize);
+	bm(left_image, right_image, dst);
 
-        CPU_ON;
-        dst.create(src.size(), src.type());
-        for (int j = 0; j < src.cols; j++)
-            dst.at<float>(0, j) = src.at<float>(0, j);
+	CPU_ON;
+	bm(left_image, right_image, dst);
+	CPU_OFF;
 
-        for (int i = 1; i < src.rows; ++i)
-            for (int j = 0; j < src.cols; ++j)
-                dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
-        CPU_OFF;
+	d_left.upload(left_image);
+	d_right.upload(right_image);
 
-        d_src.upload(src);
+	ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
 
-        WARMUP_ON;
-        ocl::columnSum(d_src, d_dst);
-        WARMUP_OFF;
+	WARMUP_ON;
+	d_bm(d_left, d_right, d_disp);
+	WARMUP_OFF;
 
-        GPU_ON;
-        ocl::columnSum(d_src, d_dst);
-        GPU_OFF;
+    cv::Mat ocl_mat;
+    d_disp.download(ocl_mat);
+    ocl_mat.convertTo(ocl_mat, dst.type());
 
-        GPU_FULL_ON;
-        d_src.upload(src);
-        ocl::columnSum(d_src, d_dst);
-        d_dst.download(ocl_dst);
-        GPU_FULL_OFF;
+	GPU_ON;
+	d_bm(d_left, d_right, d_disp);
+	GPU_OFF;
 
-        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 5e-1);
-    }
+	GPU_FULL_ON;
+	d_left.upload(left_image);
+	d_right.upload(right_image);
+	d_bm(d_left, d_right, d_disp);
+	d_disp.download(disp);
+	GPU_FULL_OFF;
+    
+    TestSystem::instance().setAccurate(-1, 0.);
 }
+
+
+
+
+
+
+
+
+	
