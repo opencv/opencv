@@ -244,8 +244,10 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
         cv::Mat result_;
         multiply(cpu_result, gpu_result, result_);
         int result = cv::countNonZero(result_ > 0);
-
-        final_test_result = 1.0 - (double)result/(double)cpu_area;
+        if(cpu_area!=0 && result!=0)
+            final_test_result = 1.0 - (double)result/(double)cpu_area;
+        else if(cpu_area==0 && result!=0)
+            final_test_result = -1;
     }
     return final_test_result;
 }
