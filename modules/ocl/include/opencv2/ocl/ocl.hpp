@@ -134,6 +134,9 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
+        //returns true when global OpenCL context is initialized
+        CV_EXPORTS bool initialized();
+
         //////////////////////////////// Error handling ////////////////////////
         CV_EXPORTS void error(const char *error_string, const char *file, const int line, const char *func);
 
@@ -144,7 +147,7 @@ namespace cv
         protected:
             Context();
             friend class auto_ptr<Context>;
-
+            friend bool initialized();
         private:
             static auto_ptr<Context> clCxt;
             static int val;
