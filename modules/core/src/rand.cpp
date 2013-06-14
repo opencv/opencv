@@ -60,6 +60,8 @@
     #include "emmintrin.h"
 #endif
 
+#include "tlsslot.hpp"
+
 namespace cv
 {
 
@@ -726,10 +728,10 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 }
 
 #ifdef WIN32
-#ifdef WINCE
-#	define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-#endif
-static DWORD tlsRNGKey = TLS_OUT_OF_INDEXES;
+
+#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && !defined WINCE
+
+static DWORD tlsRNGKey = TlsAlloc();
 
 void deleteThreadRNGData()
 {
@@ -739,11 +741,7 @@ void deleteThreadRNGData()
 
 RNG& theRNG()
 {
-    if( tlsRNGKey == TLS_OUT_OF_INDEXES )
-    {
-        tlsRNGKey = TlsAlloc();
-        CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
-    }
+    CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
     RNG* rng = (RNG*)TlsGetValue( tlsRNGKey );
     if( !rng )
     {
@@ -752,6 +750,17 @@ RNG& theRNG()
     }
     return *rng;
 }
+
+#else
+
+static TlsSlot<RNG> tlsRNGSlot;
+
+RNG& theRNG()
+{
+    return tlsRNGSlot.data();
+}
+
+#endif
 
 #else
 
