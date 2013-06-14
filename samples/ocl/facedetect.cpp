@@ -240,9 +240,13 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     size_t sz2 = ob2.size();
 
     if(sz1 != sz2)
+    {
         return sz1 > sz2 ? (double)(sz1 - sz2) : (double)(sz2 - sz1);
+    }
     else
     {
+        if(sz1==0 && sz2==0)
+            return 0;
         cv::Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
@@ -266,8 +270,10 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
         cv::Mat result_;
         multiply(cpu_result, gpu_result, result_);
         int result = cv::countNonZero(result_ > 0);
-
-        final_test_result = 1.0 - (double)result/(double)cpu_area;
+        if(cpu_area!=0 && result!=0)
+            final_test_result = 1.0 - (double)result/(double)cpu_area;
+        else if(cpu_area==0 && result!=0)
+            final_test_result = -1;
     }
     return final_test_result;
 }
