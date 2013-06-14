@@ -189,6 +189,7 @@ CascadeClassifier::detectMultiScale
 Detects objects of different sizes in the input image. The detected objects are returned as a list of rectangles.
 
 .. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
+.. ocv:function:: void CascadeClassifier::detectMultiScale( const Mat& image, vector<Rect>& objects, vector<int>& numDetections, double scaleFactor=1.1, int minNeighbors=3, int flags=0, Size minSize=Size(), Size maxSize=Size())
 
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize]]]]]) -> objects
 .. ocv:pyfunction:: cv2.CascadeClassifier.detectMultiScale(image[, scaleFactor[, minNeighbors[, flags[, minSize[, maxSize[, outputRejectLevels]]]]]]) -> objects, rejectLevels, levelWeights
@@ -200,6 +201,8 @@ Detects objects of different sizes in the input image. The detected objects are 
     :param image: Matrix of the type   ``CV_8U``  containing an image where objects are detected.
 
     :param objects: Vector of rectangles where each rectangle contains the detected object, the rectangles may be partially outside the original image.
+
+    :param numDetections: Vector of detection numbers for the corresponding objects. An object's number of detections is the number of neighboring positively classified rectangles that were joined together to form the object.
 
     :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 
