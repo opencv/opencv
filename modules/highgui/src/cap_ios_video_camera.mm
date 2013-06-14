@@ -30,7 +30,6 @@
 
 #import "opencv2/highgui/cap_ios.h"
 #include "precomp.hpp"
-
 #import <AssetsLibrary/AssetsLibrary.h>
 
 
@@ -70,6 +69,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 @synthesize videoDataOutput;
 
 @synthesize recordVideo;
+@synthesize rotateVideo;
 //@synthesize videoFileOutput;
 @synthesize recordAssetWriterInput;
 @synthesize recordPixelBufferAdaptor;
@@ -85,6 +85,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     if (self) {
         self.useAVCaptureVideoPreviewLayer = NO;
         self.recordVideo = NO;
+        self.rotateVideo = NO;
     }
     return self;
 }
@@ -269,12 +270,7 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 }
 
-
-
-
 #pragma mark - Private Interface
-
-
 
 - (void)createVideoDataOutput;
 {
@@ -389,6 +385,38 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
     [self.parentView.layer addSublayer:self.customPreviewLayer];
 }
 
+- (CVPixelBufferRef) pixelBufferFromCGImage: (CGImageRef) image
+{
+    
+    CGSize frameSize = CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image));
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+                             [NSNumber numberWithBool:NO], kCVPixelBufferCGImageCompatibilityKey,
+                             [NSNumber numberWithBool:NO], kCVPixelBufferCGBitmapContextCompatibilityKey,
+                             nil];
+    CVPixelBufferRef pxbuffer = NULL;
+    CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault, frameSize.width,
+                                          frameSize.height,  kCVPixelFormatType_32ARGB, (CFDictionaryRef) CFBridgingRetain(options),
+                                          &pxbuffer);
+    NSParameterAssert(status == kCVReturnSuccess && pxbuffer != NULL);
+    
+    CVPixelBufferLockBaseAddress(pxbuffer, 0);
+    void *pxdata = CVPixelBufferGetBaseAddress(pxbuffer);
+    
+    
+    CGColorSpaceRef rgbColorSpace = CGColorSpaceCreateDeviceRGB();
+    CGContextRef context = CGBitmapContextCreate(pxdata, frameSize.width,
+                                                 frameSize.height, 8, 4*frameSize.width, rgbColorSpace,
+                                                 kCGImageAlphaPremultipliedFirst);
+    
+    CGContextDrawImage(context, CGRectMake(0, 0, CGImageGetWidth(image),
+                                           CGImageGetHeight(image)), image);
+    CGColorSpaceRelease(rgbColorSpace);
+    CGContextRelease(context);
+    
+    CVPixelBufferUnlockBaseAddress(pxbuffer, 0);
+    
+    return pxbuffer;
+}
 
 #pragma mark - Protocol AVCaptureVideoDataOutputSampleBufferDelegate
 
@@ -522,7 +550,8 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
             }
 
             if (self.recordAssetWriterInput.readyForMoreMediaData) {
-                if (! [self.recordPixelBufferAdaptor appendPixelBuffer:imageBuffer
+                CVImageBufferRef pixelBuffer = [self pixelBufferFromCGImage:dstImage];
+                if (! [self.recordPixelBufferAdaptor appendPixelBuffer:pixelBuffer
                                                   withPresentationTime:lastSampleTime] ) {
                     NSLog(@"Video Writing Error");
                 }
@@ -543,9 +572,12 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 
 - (void)updateOrientation;
 {
-    NSLog(@"rotate..");
-    self.customPreviewLayer.bounds = CGRectMake(0, 0, self.parentView.frame.size.width, self.parentView.frame.size.height);
-    [self layoutPreviewLayer];
+    if (self.rotateVideo == YES)
+    {
+        NSLog(@"rotate..");
+        self.customPreviewLayer.bounds = CGRectMake(0, 0, self.parentView.frame.size.width, self.parentView.frame.size.height);
+        [self layoutPreviewLayer];
+    }
 }
 
 
@@ -583,3 +615,4 @@ static CGFloat DegreesToRadians(CGFloat degrees) {return degrees * M_PI / 180;};
 }
 
 @end
+
