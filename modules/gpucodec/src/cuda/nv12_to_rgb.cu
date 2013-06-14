@@ -51,12 +51,7 @@
 
 namespace cv { namespace gpu { namespace cudev
 {
-    __constant__ float constHueColorSpaceMat[9];
-
-    void loadHueCSC(float hueCSC[9])
-    {
-        cudaSafeCall( cudaMemcpyToSymbol(constHueColorSpaceMat, hueCSC, 9 * sizeof(float)) );
-    }
+    __constant__ float constHueColorSpaceMat[9] = {1.1644f, 0.0f, 1.596f, 1.1644f, -0.3918f, -0.813f, 1.1644f, 2.0172f, 0.0f};
 
     __device__ void YUV2RGB(const uint* yuvi, float* red, float* green, float* blue)
     {

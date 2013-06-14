@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,16 +45,16 @@
 
 #ifdef HAVE_NVCUVID
 
-cv::gpu::detail::FrameQueue::FrameQueue() :
+cv::gpucodec::detail::FrameQueue::FrameQueue() :
     endOfDecode_(0),
     framesInQueue_(0),
     readPosition_(0)
 {
     std::memset(displayQueue_, 0, sizeof(displayQueue_));
-    std::memset((void*)isFrameInUse_, 0, sizeof(isFrameInUse_));
+    std::memset((void*) isFrameInUse_, 0, sizeof(isFrameInUse_));
 }
 
-bool cv::gpu::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
+bool cv::gpucodec::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
 {
     while (isInUse(pictureIndex))
     {
@@ -67,7 +68,7 @@ bool cv::gpu::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
     return true;
 }
 
-void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
+void cv::gpucodec::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
 {
     // Mark the frame as 'in-use' so we don't re-use it for decoding until it is no longer needed
     // for display
@@ -98,7 +99,7 @@ void cv::gpu::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
     } while (!isEndOfDecode());
 }
 
-bool cv::gpu::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
+bool cv::gpucodec::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
 {
     AutoLock autoLock(mtx_);
 

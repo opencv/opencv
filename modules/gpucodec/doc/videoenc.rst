@@ -5,80 +5,25 @@ Video Encoding
 
 
 
-gpu::VideoWriter_GPU
+gpucodec::VideoWriter
 ---------------------
-Video writer class.
+Video writer interface.
 
-.. ocv:class:: gpu::VideoWriter_GPU
+.. ocv:class:: gpucodec::VideoWriter
 
-The class uses H264 video codec.
+The implementation uses H264 video codec.
 
 .. note:: Currently only Windows platform is supported.
 
 
 
-gpu::VideoWriter_GPU::VideoWriter_GPU
--------------------------------------
-Constructors.
-
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU()
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: gpu::VideoWriter_GPU::VideoWriter_GPU(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
-
-    :param fileName: Name of the output video file. Only AVI file format is supported.
-
-    :param frameSize: Size of the input video frames.
-
-    :param fps: Framerate of the created video stream.
-
-    :param params: Encoder parameters. See :ocv:struct:`gpu::VideoWriter_GPU::EncoderParams` .
-
-    :param format: Surface format of input frames ( ``SF_UYVY`` , ``SF_YUY2`` , ``SF_YV12`` , ``SF_NV12`` , ``SF_IYUV`` , ``SF_BGR`` or ``SF_GRAY``). BGR or gray frames will be converted to YV12 format before encoding, frames with other formats will be used as is.
-
-    :param encoderCallback: Callbacks for video encoder. See :ocv:class:`gpu::VideoWriter_GPU::EncoderCallBack` . Use it if you want to work with raw video stream.
-
-The constructors initialize video writer. FFMPEG is used to write videos. User can implement own multiplexing with :ocv:class:`gpu::VideoWriter_GPU::EncoderCallBack` .
-
-
-
-gpu::VideoWriter_GPU::open
---------------------------
-Initializes or reinitializes video writer.
-
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const String& fileName, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, SurfaceFormat format = SF_BGR)
-.. ocv:function:: void gpu::VideoWriter_GPU::open(const cv::Ptr<EncoderCallBack>& encoderCallback, cv::Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
-
-The method opens video writer. Parameters are the same as in the constructor :ocv:func:`gpu::VideoWriter_GPU::VideoWriter_GPU` . The method throws :ocv:class:`Exception` if error occurs.
-
-
-
-gpu::VideoWriter_GPU::isOpened
-------------------------------
-Returns true if video writer has been successfully initialized.
-
-.. ocv:function:: bool gpu::VideoWriter_GPU::isOpened() const
-
-
-
-gpu::VideoWriter_GPU::close
----------------------------
-Releases the video writer.
-
-.. ocv:function:: void gpu::VideoWriter_GPU::close()
-
-
-
-gpu::VideoWriter_GPU::write
----------------------------
+gpucodec::VideoWriter::write
+----------------------------
 Writes the next video frame.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::write(const cv::gpu::GpuMat& image, bool lastFrame = false)
+.. ocv:function:: void gpucodec::VideoWriter::write(InputArray frame, bool lastFrame = false) = 0
 
-    :param image: The written frame.
+    :param frame: The written frame.
 
     :param lastFrame: Indicates that it is end of stream. The parameter can be ignored.
 
@@ -86,9 +31,34 @@ The method write the specified image to video file. The image must have the same
 
 
 
-gpu::VideoWriter_GPU::EncoderParams
------------------------------------
-.. ocv:struct:: gpu::VideoWriter_GPU::EncoderParams
+gpucodec::createVideoWriter
+---------------------------
+Creates video writer.
+
+.. ocv:function:: Ptr<gpucodec::VideoWriter> gpucodec::createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: Ptr<gpucodec::VideoWriter> gpucodec::createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+.. ocv:function:: Ptr<gpucodec::VideoWriter> gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format = SF_BGR)
+.. ocv:function:: Ptr<gpucodec::VideoWriter> gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format = SF_BGR)
+
+    :param fileName: Name of the output video file. Only AVI file format is supported.
+
+    :param frameSize: Size of the input video frames.
+
+    :param fps: Framerate of the created video stream.
+
+    :param params: Encoder parameters. See :ocv:struct:`gpucodec::EncoderParams` .
+
+    :param format: Surface format of input frames ( ``SF_UYVY`` , ``SF_YUY2`` , ``SF_YV12`` , ``SF_NV12`` , ``SF_IYUV`` , ``SF_BGR`` or ``SF_GRAY``). BGR or gray frames will be converted to YV12 format before encoding, frames with other formats will be used as is.
+
+    :param encoderCallback: Callbacks for video encoder. See :ocv:class:`gpucodec::EncoderCallBack` . Use it if you want to work with raw video stream.
+
+The constructors initialize video writer. FFMPEG is used to write videos. User can implement own multiplexing with :ocv:class:`gpucodec::EncoderCallBack` .
+
+
+
+gpucodec::EncoderParams
+-----------------------
+.. ocv:struct:: gpucodec::EncoderParams
 
 Different parameters for CUDA video encoder. ::
 
@@ -123,12 +93,12 @@ Different parameters for CUDA video encoder. ::
 
 
 
-gpu::VideoWriter_GPU::EncoderParams::EncoderParams
---------------------------------------------------
+gpucodec::EncoderParams::EncoderParams
+--------------------------------------
 Constructors.
 
-.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams()
-.. ocv:function:: gpu::VideoWriter_GPU::EncoderParams::EncoderParams(const String& configFile)
+.. ocv:function:: gpucodec::EncoderParams::EncoderParams()
+.. ocv:function:: gpucodec::EncoderParams::EncoderParams(const String& configFile)
 
     :param configFile: Config file name.
 
@@ -136,29 +106,29 @@ Creates default parameters or reads parameters from config file.
 
 
 
-gpu::VideoWriter_GPU::EncoderParams::load
------------------------------------------
+gpucodec::EncoderParams::load
+-----------------------------
 Reads parameters from config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::load(const String& configFile)
+.. ocv:function:: void gpucodec::EncoderParams::load(const String& configFile)
 
     :param configFile: Config file name.
 
 
 
-gpu::VideoWriter_GPU::EncoderParams::save
------------------------------------------
+gpucodec::EncoderParams::save
+-----------------------------
 Saves parameters to config file.
 
-.. ocv:function:: void gpu::VideoWriter_GPU::EncoderParams::save(const String& configFile) const
+.. ocv:function:: void gpucodec::EncoderParams::save(const String& configFile) const
 
     :param configFile: Config file name.
 
 
 
-gpu::VideoWriter_GPU::EncoderCallBack
--------------------------------------
-.. ocv:class:: gpu::VideoWriter_GPU::EncoderCallBack
+gpucodec::EncoderCallBack
+-------------------------
+.. ocv:class:: gpucodec::EncoderCallBack
 
 Callbacks for CUDA video encoder. ::
 
@@ -182,38 +152,38 @@ Callbacks for CUDA video encoder. ::
 
 
 
-gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream
--------------------------------------------------------
+gpucodec::EncoderCallBack::acquireBitStream
+-------------------------------------------
 Callback function to signal the start of bitstream that is to be encoded.
 
-.. ocv:function:: virtual uchar* gpu::VideoWriter_GPU::EncoderCallBack::acquireBitStream(int* bufferSize) = 0
+.. ocv:function:: virtual uchar* gpucodec::EncoderCallBack::acquireBitStream(int* bufferSize) = 0
 
 Callback must allocate buffer for CUDA encoder and return pointer to it and it's size.
 
 
 
-gpu::VideoWriter_GPU::EncoderCallBack::releaseBitStream
--------------------------------------------------------
+gpucodec::EncoderCallBack::releaseBitStream
+-------------------------------------------
 Callback function to signal that the encoded bitstream is ready to be written to file.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::releaseBitStream(unsigned char* data, int size) = 0
+.. ocv:function:: virtual void gpucodec::EncoderCallBack::releaseBitStream(unsigned char* data, int size) = 0
 
 
 
-gpu::VideoWriter_GPU::EncoderCallBack::onBeginFrame
----------------------------------------------------
+gpucodec::EncoderCallBack::onBeginFrame
+---------------------------------------
 Callback function to signal that the encoding operation on the frame has started.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onBeginFrame(int frameNumber, PicType picType) = 0
+.. ocv:function:: virtual void gpucodec::EncoderCallBack::onBeginFrame(int frameNumber, PicType picType) = 0
 
     :param picType: Specify frame type (I-Frame, P-Frame or B-Frame).
 
 
 
-gpu::VideoWriter_GPU::EncoderCallBack::onEndFrame
--------------------------------------------------
+gpucodec::EncoderCallBack::onEndFrame
+-------------------------------------
 Callback function signals that the encoding operation on the frame has finished.
 
-.. ocv:function:: virtual void gpu::VideoWriter_GPU::EncoderCallBack::onEndFrame(int frameNumber, PicType picType) = 0
+.. ocv:function:: virtual void gpucodec::EncoderCallBack::onEndFrame(int frameNumber, PicType picType) = 0
 
     :param picType: Specify frame type (I-Frame, P-Frame or B-Frame).

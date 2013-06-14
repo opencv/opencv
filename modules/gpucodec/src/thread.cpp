@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-using namespace cv::gpu::detail;
+using namespace cv::gpucodec::detail;
 
 #ifdef WIN32
 
@@ -66,7 +67,7 @@ namespace
     }
 }
 
-class cv::gpu::detail::Thread::Impl
+class cv::gpucodec::detail::Thread::Impl
 {
 public:
     Impl(Thread::Func func, void* userData)
@@ -119,7 +120,7 @@ namespace
     }
 }
 
-class cv::gpu::detail::Thread::Impl
+class cv::gpucodec::detail::Thread::Impl
 {
 public:
     Impl(Thread::Func func, void* userData)
@@ -147,17 +148,17 @@ private:
 
 #endif
 
-cv::gpu::detail::Thread::Thread(Func func, void* userData) :
+cv::gpucodec::detail::Thread::Thread(Func func, void* userData) :
     impl_(new Impl(func, userData))
 {
 }
 
-void cv::gpu::detail::Thread::wait()
+void cv::gpucodec::detail::Thread::wait()
 {
     impl_->wait();
 }
 
-void cv::gpu::detail::Thread::sleep(int ms)
+void cv::gpucodec::detail::Thread::sleep(int ms)
 {
 #ifdef WIN32
     ::Sleep(ms);
@@ -166,7 +167,7 @@ void cv::gpu::detail::Thread::sleep(int ms)
 #endif
 }
 
-template <> void cv::Ptr<cv::gpu::detail::Thread::Impl>::delete_obj()
+template <> void cv::Ptr<cv::gpucodec::detail::Thread::Impl>::delete_obj()
 {
     if (obj) delete obj;
 }

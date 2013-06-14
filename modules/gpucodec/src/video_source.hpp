@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,47 +41,59 @@
 //
 //M*/
 
-#ifndef __CUVUD_VIDEO_SOURCE_H__
-#define __CUVUD_VIDEO_SOURCE_H__
+#ifndef __GPUCODEC_VIDEO_SOURCE_H__
+#define __GPUCODEC_VIDEO_SOURCE_H__
 
 #include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
-#include "thread.h"
+#include "thread.hpp"
 
-#include <nvcuvid.h>
-
-namespace cv { namespace gpu { namespace detail
+namespace cv { namespace gpucodec { namespace detail
 {
 
-class CuvidVideoSource : public VideoReader_GPU::VideoSource
+class VideoParser;
+
+class VideoSource
 {
 public:
-    explicit CuvidVideoSource(const String& fname);
-    ~CuvidVideoSource();
+    virtual ~VideoSource() {}
 
-    VideoReader_GPU::FormatInfo format() const;
+    virtual FormatInfo format() const = 0;
+    virtual void start() = 0;
+    virtual void stop() = 0;
+    virtual bool isStarted() const = 0;
+    virtual bool hasError() const = 0;
+
+    void setVideoParser(detail::VideoParser* videoParser) { videoParser_ = videoParser; }
+
+protected:
+    bool parseVideoData(const uchar* data, size_t size, bool endOfStream = false);
+
+private:
+    detail::VideoParser* videoParser_;
+};
+
+class RawVideoSourceWrapper : public VideoSource
+{
+public:
+    RawVideoSourceWrapper(const Ptr<RawVideoSource>& source);
+
+    FormatInfo format() const;
     void start();
     void stop();
     bool isStarted() const;
     bool hasError() const;
 
 private:
-    // Callback for handling packages of demuxed video data.
-    //
-    // Parameters:
-    //      pUserData - Pointer to user data. We must pass a pointer to a
-    //          VideoSourceData struct here, that contains a valid CUvideoparser
-    //          and FrameQueue.
-    //      pPacket - video-source data packet.
-    //
-    // NOTE: called from a different thread that doesn't not have a cuda context
-    //
-    static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
+    Ptr<RawVideoSource> source_;
 
-    CUvideosource videoSource_;
-    VideoReader_GPU::FormatInfo format_;
+    Ptr<Thread> thread_;
+    volatile bool stop_;
+    volatile bool hasError_;
+
+    static void readLoop(void* userData);
 };
 
 }}}
 
-#endif // __CUVUD_VIDEO_SOURCE_H__
+#endif // __GPUCODEC_VIDEO_SOURCE_H__

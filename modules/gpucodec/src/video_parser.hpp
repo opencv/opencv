@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,43 +41,55 @@
 //
 //M*/
 
-#ifndef __FFMPEG_VIDEO_SOURCE_H__
-#define __FFMPEG_VIDEO_SOURCE_H__
+#ifndef __VIDEO_PARSER_HPP__
+#define __VIDEO_PARSER_HPP__
 
+#include <nvcuvid.h>
+
+#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
-#include "thread.h"
+#include "frame_queue.hpp"
+#include "video_decoder.hpp"
 
-struct InputMediaStream_FFMPEG;
+namespace cv { namespace gpucodec { namespace detail
+{
 
-namespace cv { namespace gpu { namespace detail {
-
-class FFmpegVideoSource : public VideoReader_GPU::VideoSource
+class VideoParser
 {
 public:
-    FFmpegVideoSource(const String& fname);
+    VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue);
 
-    VideoReader_GPU::FormatInfo format() const;
-    void start();
-    void stop();
-    bool isStarted() const;
-    bool hasError() const;
+    ~VideoParser()
+    {
+        cuvidDestroyVideoParser(parser_);
+    }
+
+    bool parseVideoData(const unsigned char* data, size_t size, bool endOfStream);
+
+    bool hasError() const { return hasError_; }
 
 private:
-    VideoReader_GPU::FormatInfo format_;
-
-    cv::Ptr<InputMediaStream_FFMPEG> stream_;
-
-    cv::Ptr<Thread> thread_;
-    volatile bool stop_;
+    VideoDecoder* videoDecoder_;
+    FrameQueue* frameQueue_;
+    CUvideoparser parser_;
+    int unparsedPackets_;
     volatile bool hasError_;
 
-    static void readLoop(void* userData);
+    // Called when the decoder encounters a video format change (or initial sequence header)
+    // This particular implementation of the callback returns 0 in case the video format changes
+    // to something different than the original format. Returning 0 causes a stop of the app.
+    static int CUDAAPI HandleVideoSequence(void* pUserData, CUVIDEOFORMAT* pFormat);
+
+    // Called by the video parser to decode a single picture
+    // Since the parser will deliver data as fast as it can, we need to make sure that the picture
+    // index we're attempting to use for decode is no longer used for display
+    static int CUDAAPI HandlePictureDecode(void* pUserData, CUVIDPICPARAMS* pPicParams);
+
+    // Called by the video parser to display a video frame (in the case of field pictures, there may be
+    // 2 decode calls per 1 display call, since two fields make up one frame)
+    static int CUDAAPI HandlePictureDisplay(void* pUserData, CUVIDPARSERDISPINFO* pPicParams);
 };
 
 }}}
 
-namespace cv {
-    template <> void Ptr<InputMediaStream_FFMPEG>::delete_obj();
-}
-
-#endif // __FFMPEG_VIDEO_SOURCE_H__
+#endif // __VIDEO_PARSER_HPP__

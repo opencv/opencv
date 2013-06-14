@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,11 +45,11 @@
 
 #ifdef HAVE_NVCUVID
 
-cv::gpu::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
+cv::gpucodec::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
     videoDecoder_(videoDecoder), frameQueue_(frameQueue), unparsedPackets_(0), hasError_(false)
 {
     CUVIDPARSERPARAMS params;
-    memset(&params, 0, sizeof(CUVIDPARSERPARAMS));
+    std::memset(&params, 0, sizeof(CUVIDPARSERPARAMS));
 
     params.CodecType              = videoDecoder->codec();
     params.ulMaxNumDecodeSurfaces = videoDecoder->maxDecodeSurfaces();
@@ -61,7 +62,7 @@ cv::gpu::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue
     cuSafeCall( cuvidCreateVideoParser(&parser_, &params) );
 }
 
-bool cv::gpu::detail::VideoParser::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
+bool cv::gpucodec::detail::VideoParser::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
 {
     CUVIDSOURCEDATAPACKET packet;
     std::memset(&packet, 0, sizeof(CUVIDSOURCEDATAPACKET));
@@ -95,7 +96,7 @@ bool cv::gpu::detail::VideoParser::parseVideoData(const unsigned char* data, siz
     return !frameQueue_->isEndOfDecode();
 }
 
-int CUDAAPI cv::gpu::detail::VideoParser::HandleVideoSequence(void* userData, CUVIDEOFORMAT* format)
+int CUDAAPI cv::gpucodec::detail::VideoParser::HandleVideoSequence(void* userData, CUVIDEOFORMAT* format)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 
@@ -106,10 +107,10 @@ int CUDAAPI cv::gpu::detail::VideoParser::HandleVideoSequence(void* userData, CU
         format->coded_height  != thiz->videoDecoder_->frameHeight() ||
         format->chroma_format != thiz->videoDecoder_->chromaFormat())
     {
-        VideoReader_GPU::FormatInfo newFormat;
+        FormatInfo newFormat;
 
-        newFormat.codec = static_cast<VideoReader_GPU::Codec>(format->codec);
-        newFormat.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(format->chroma_format);
+        newFormat.codec = static_cast<Codec>(format->codec);
+        newFormat.chromaFormat = static_cast<ChromaFormat>(format->chroma_format);
         newFormat.width = format->coded_width;
         newFormat.height = format->coded_height;
 
@@ -127,7 +128,7 @@ int CUDAAPI cv::gpu::detail::VideoParser::HandleVideoSequence(void* userData, CU
     return true;
 }
 
-int CUDAAPI cv::gpu::detail::VideoParser::HandlePictureDecode(void* userData, CUVIDPICPARAMS* picParams)
+int CUDAAPI cv::gpucodec::detail::VideoParser::HandlePictureDecode(void* userData, CUVIDPICPARAMS* picParams)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 
@@ -147,7 +148,7 @@ int CUDAAPI cv::gpu::detail::VideoParser::HandlePictureDecode(void* userData, CU
     return true;
 }
 
-int CUDAAPI cv::gpu::detail::VideoParser::HandlePictureDisplay(void* userData, CUVIDPARSERDISPINFO* picParams)
+int CUDAAPI cv::gpucodec::detail::VideoParser::HandlePictureDisplay(void* userData, CUVIDPARSERDISPINFO* picParams)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 
