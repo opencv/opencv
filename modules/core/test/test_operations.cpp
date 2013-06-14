@@ -75,6 +75,7 @@ protected:
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
+    bool TestMatxElementwiseDivison();
     bool TestSubMatAccess();
     bool TestExp();
     bool TestSVD();
@@ -882,6 +883,28 @@ bool CV_OperationsTest::TestMatxMultiplication()
         if(sd[1] != 6.0) throw test_excep();
         if(sd[2] != 3.0) throw test_excep();
         if(sd[3] != 1.0) throw test_excep();
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
+
+bool CV_OperationsTest::TestMatxElementwiseDivison()
+{
+    try
+    {
+        Matx22f mat(2, 4, 6, 8); // Identity matrix
+        Matx22f mat2(2, 2, 2, 2);
+
+        Matx22f res = mat / mat2;
+
+        if(res(0, 0) != 1.0) throw test_excep();
+        if(res(0, 1) != 2.0) throw test_excep();
+        if(res(1, 0) != 3.0) throw test_excep();
+        if(res(1, 1) != 4.0) throw test_excep();
     }
     catch(const test_excep&)
     {
