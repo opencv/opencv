@@ -258,7 +258,8 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
+    int runs = sz.width <= 320 ? 70 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
     SANITY_CHECK(dst, 1);
 }
@@ -334,7 +335,8 @@ PERF_TEST_P(Size_CvtMode3, cvtColorRGB2YUV420p,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() cvtColor(src, dst, mode, ch.dcn);
+    int runs = (sz.width <= 640) ? 10 : 1;
+    TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
     SANITY_CHECK(dst, 1);
 }
