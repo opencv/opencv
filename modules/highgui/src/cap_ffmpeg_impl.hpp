@@ -41,6 +41,9 @@
 //M*/
 
 #include "cap_ffmpeg_api.hpp"
+#if !(defined(WIN32) || defined(_WIN32) || defined(WINCE))
+# include <pthread.h>
+#endif
 #include <assert.h>
 #include <algorithm>
 #include <limits>
