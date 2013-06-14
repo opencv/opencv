@@ -189,7 +189,7 @@ void TransformImage_NV12(
 CGrayscale::CGrayscale() :
     m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL),
     m_imageWidthInPixels(0), m_imageHeightInPixels(0), m_cbImageSize(0),
-    m_TransformType(Preview), m_rcDest(D2D1::RectU()), m_bStreamingInitialized(false),
+    m_TransformType(Preview), m_bStreamingInitialized(false),
     m_pAttributes(NULL)
 {
     InitializeCriticalSectionEx(&m_critSec, 3000, 0);
@@ -219,7 +219,32 @@ STDMETHODIMP CGrayscale::RuntimeClassInitialize()
 //-------------------------------------------------------------------
 HRESULT CGrayscale::SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
 {
-    return S_OK;
+    HRESULT hr = S_OK;
+
+    if (!pConfiguration)
+        return hr;
+
+    HSTRING key;
+    WindowsCreateString(L"{698649BE-8EAE-4551-A4CB-3EC98FBD3D86}", 38, &key);
+    Microsoft::WRL::ComPtr<ABI::Windows::Foundation::Collections::IMap<HSTRING, IInspectable *>> spSetting;
+    pConfiguration->QueryInterface(IID_PPV_ARGS(&spSetting));
+    boolean found;
+    spSetting->HasKey(key, &found);
+
+    if (found)
+    {
+        IInspectable* value;
+        spSetting->Lookup(key, &value);
+
+        Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IReference<int>> ref;
+        value->QueryInterface(IID_PPV_ARGS(&ref));
+        int effect = InvalidEffect;
+        ref->get_Value(&effect);
+        if ((effect >= 0) && (effect < InvalidEffect))
+        {
+            m_TransformType = (ProcessingType)effect;
+        }
+    }
 }
 
 // IMFTransform methods. Refer to the Media Foundation SDK documentation for details.
@@ -1327,41 +1352,10 @@ HRESULT CGrayscale::BeginStreaming()
 
     if (!m_bStreamingInitialized)
     {
-        // Get the configuration attributes.
-
-        // Get the destination rectangle.
-
-        RECT rcDest;
-        hr = m_pAttributes->GetBlob(MFT_GRAYSCALE_DESTINATION_RECT, (UINT8*)&rcDest, sizeof(rcDest), NULL);
-        if (hr == MF_E_ATTRIBUTENOTFOUND || !ValidateRect(rcDest))
-        {
-            // The client did not set this attribute, or the client provided an invalid rectangle.
-            // Default to the entire image.
-
-            m_rcDest = D2D1::RectU(0, 0, m_imageWidthInPixels, m_imageHeightInPixels);
-            hr = S_OK;
-        }
-        else if (SUCCEEDED(hr))
-        {
-            m_rcDest = D2D1::RectU(rcDest.left, rcDest.top, rcDest.right, rcDest.bottom);
-        }
-        else
-        {
-            goto done;
-        }
-
-        // Get the effect type
-        UINT32 effect = MFGetAttributeUINT32(m_pAttributes, MFT_IMAGE_EFFECT, 1);
-
-        if ((effect >= 0) && (effect < InvalidEffect))
-        {
-            m_TransformType = (ProcessingType)effect;
-        }
-
         m_bStreamingInitialized = true;
+        hr = S_OK;
     }
 
-done:
     return hr;
 }
 
@@ -1465,14 +1459,14 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
             // RGB
             for (int c=0; c<3; c++)
             {
-                std::vector<int> hist;
+                cv::Mat hist;
                 cv::calcHist(&BgrFrame, 1, channels[c], cv::Mat(), hist, 1, mHistSize, ranges);
                 cv::normalize(hist, hist, BgrFrame.rows/2, 0, cv::NORM_INF);
                 for(int h=0; h<mHistSizeNum; h++) {
                     cv::Point mP1, mP2;
                     mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
                     mP1.y = BgrFrame.rows-1;
-                    mP2.y = mP1.y - 2 - (int)hist[h];
+                    mP2.y = mP1.y - 2 - hist.at<float>(h);
                     cv::line(BgrFrame, mP1, mP2, mColorsRGB[c], thikness);
                 }
             }

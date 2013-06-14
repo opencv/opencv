@@ -23,6 +23,7 @@ using namespace Windows::UI::Xaml::Navigation;
 using namespace Windows::UI::Xaml::Data;
 using namespace Windows::System;
 using namespace Windows::Foundation;
+using namespace Windows::Foundation::Collections;
 using namespace Platform;
 using namespace Windows::UI;
 using namespace Windows::UI::Core;
@@ -80,7 +81,6 @@ void AdvancedCapture::OnNavigatedTo(NavigationEventArgs^ e)
     // A pointer back to the main page.  This is needed if you want to call methods in MainPage such
     // as NotifyUser()
     rootPage = MainPage::Current;
-    m_eventRegistrationToken = Windows::Media::MediaControl::SoundLevelChanged += ref new EventHandler<Object^>(this, &AdvancedCapture::SoundLevelChanged);
 
     m_orientationChangedEventToken = Windows::Graphics::Display::DisplayProperties::OrientationChanged += ref new Windows::Graphics::Display::DisplayPropertiesEventHandler(this, &AdvancedCapture::DisplayProperties_OrientationChanged);
 }
@@ -96,18 +96,12 @@ void  AdvancedCapture::ScenarioInit()
     rootPage = MainPage::Current;
     btnStartDevice2->IsEnabled = true;
     btnStartPreview2->IsEnabled = false;
-    btnStartStopRecord2->IsEnabled = false;
     m_bRecording = false;
     m_bPreviewing = false;
     m_bEffectAdded = false;
-    btnStartStopRecord2->Content = "StartRecord";
-    btnTakePhoto2->IsEnabled = false;
     previewElement2->Source = nullptr;
-    playbackElement2->Source = nullptr;
-    imageElement2->Source= nullptr;
     ShowStatusMessage("");
-    chkAddRemoveEffect->IsChecked = false;
-    chkAddRemoveEffect->IsEnabled = false;
+    EffectTypeCombo->IsEnabled = false;
     previewCanvas2->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
     EnumerateWebcamsAsync();
     m_bSuspended = false;
@@ -117,104 +111,6 @@ void AdvancedCapture::ScenarioReset()
 {
     previewCanvas2->Visibility = Windows::UI::Xaml::Visibility::Collapsed;
     ScenarioInit();
-}
-
-void AdvancedCapture::SoundLevelChanged(Object^ sender, Object^ e)
-{
-    create_task(Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::High, ref new Windows::UI::Core::DispatchedHandler([this]()
-    {
-        if(Windows::Media::MediaControl::SoundLevel != Windows::Media::SoundLevel::Muted)
-        {
-            ScenarioReset();
-        }
-        else
-        {
-            if (m_bRecording)
-            {
-                ShowStatusMessage("Stopping Record on invisibility");
-
-                create_task(m_mediaCaptureMgr->StopRecordAsync()).then([this](task<void> recordTask)
-                {
-                    try
-                    {
-                        recordTask.get();
-                        m_bRecording = false;
-                    }
-                    catch (Exception ^e)
-                    {
-                        ShowExceptionMessage(e);
-                    }
-                });
-            }
-            if (m_bPreviewing)
-            {
-                ShowStatusMessage("Stopping Preview on invisibility");
-
-                create_task(m_mediaCaptureMgr->StopPreviewAsync()).then([this](task<void> previewTask)
-                {
-                    try
-                    {
-                        previewTask.get();
-                        m_bPreviewing = false;
-
-                    }catch (Exception ^e)
-                    {
-                        ShowExceptionMessage(e);
-                    }
-                });
-            }
-        }
-    })));
-}
-
-void AdvancedCapture::RecordLimitationExceeded(Windows::Media::Capture::MediaCapture ^currentCaptureObject)
-{
-    try
-    {
-        if (m_bRecording)
-        {
-            create_task(Dispatcher->RunAsync(Windows::UI::Core::CoreDispatcherPriority::High, ref new Windows::UI::Core::DispatchedHandler([this]()
-            {
-                try
-                {
-                    ShowStatusMessage("Stopping Record on exceeding max record duration");
-                    EnableButton(false, "StartStopRecord");
-                    create_task(m_mediaCaptureMgr->StopRecordAsync()).then([this](task<void> recordTask)
-                    {
-                        try
-                        {
-                            recordTask.get();
-                            m_bRecording = false;
-                            SwitchRecordButtonContent();
-                            EnableButton(true, "StartStopRecord");
-                            ShowStatusMessage("Stopped record on exceeding max record duration:" + m_recordStorageFile->Path);
-                        }
-                        catch (Exception ^e)
-                        {
-                            ShowExceptionMessage(e);
-                            m_bRecording = false;
-                            SwitchRecordButtonContent();
-                            EnableButton(true, "StartStopRecord");
-                        }
-                    });
-                }
-                catch (Exception ^e)
-                {
-                    m_bRecording = false;
-                    SwitchRecordButtonContent();
-                    EnableButton(true, "StartStopRecord");
-                    ShowExceptionMessage(e);
-                }
-            })));
-        }
-    }
-    catch (Exception ^e)
-    {
-        m_bRecording = false;
-        SwitchRecordButtonContent();
-        EnableButton(true, "StartStopRecord");
-        ShowExceptionMessage(e);
-    }
 }
 
 void AdvancedCapture::Failed(Windows::Media::Capture::MediaCapture ^currentCaptureObject, Windows::Media::Capture::MediaCaptureFailedEventArgs^ currentFailure)
@@ -267,8 +163,7 @@ void AdvancedCapture::btnStartDevice_Click(Platform::Object^ sender, Windows::UI
                 EnableButton(true, "StartStopRecord");
                 EnableButton(true, "TakePhoto");
                 ShowStatusMessage("Device initialized successful");
-                chkAddRemoveEffect->IsEnabled = true;
-                mediaCapture->RecordLimitationExceeded += ref new Windows::Media::Capture::RecordLimitationExceededEventHandler(this, &AdvancedCapture::RecordLimitationExceeded);
+                EffectTypeCombo->IsEnabled = true;
                 mediaCapture->Failed += ref new Windows::Media::Capture::MediaCaptureFailedEventHandler(this, &AdvancedCapture::Failed);
             }
             catch (Exception ^ e)
@@ -317,192 +212,6 @@ void AdvancedCapture::btnStartPreview_Click(Platform::Object^ sender, Windows::U
     }
 }
 
-void AdvancedCapture::btnTakePhoto_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-    try
-    {
-        ShowStatusMessage("Taking photo");
-        EnableButton(false, "TakePhoto");
-        auto currentRotation = GetCurrentPhotoRotation();
-
-        task<StorageFile^>(KnownFolders::PicturesLibrary->CreateFileAsync(TEMP_PHOTO_FILE_NAME, Windows::Storage::CreationCollisionOption::GenerateUniqueName)).then([this, currentRotation](task<StorageFile^> getFileTask)
-        {
-            try
-            {
-                auto tempPhotoStorageFile = getFileTask.get();
-                ShowStatusMessage("Create photo file successful");
-                ImageEncodingProperties^ imageProperties = ImageEncodingProperties::CreateJpeg();
-
-                create_task(m_mediaCaptureMgr->CapturePhotoToStorageFileAsync(imageProperties, tempPhotoStorageFile)).then([this,tempPhotoStorageFile,currentRotation](task<void> photoTask)
-                {
-                    try
-                    {
-                        photoTask.get();
-
-                        ReencodePhotoAsync(tempPhotoStorageFile, currentRotation).then([this] (task<StorageFile^> reencodeImageTask)
-                        {
-                            try
-                            {
-                                auto photoStorageFile = reencodeImageTask.get();
-
-                                EnableButton(true, "TakePhoto");
-                                ShowStatusMessage("Photo taken");
-
-                                task<IRandomAccessStream^>(photoStorageFile->OpenAsync(FileAccessMode::Read)).then([this](task<IRandomAccessStream^> getStreamTask)
-                                {
-                                    try
-                                    {
-                                        auto photoStream = getStreamTask.get();
-                                        ShowStatusMessage("File open successful");
-                                        auto bmpimg = ref new BitmapImage();
-
-                                        bmpimg->SetSource(photoStream);
-                                        imageElement2->Source = bmpimg;
-                                    }
-                                    catch (Exception^ e)
-                                    {
-                                        ShowExceptionMessage(e);
-                                        EnableButton(true, "TakePhoto");
-                                    }
-                                });
-                            }
-                            catch (Platform::Exception ^ e)
-                            {
-                                ShowExceptionMessage(e);
-                                EnableButton(true, "TakePhoto");
-                            }
-                        });
-                    }
-                    catch (Platform::Exception ^ e)
-                    {
-                        ShowExceptionMessage(e);
-                        EnableButton(true, "TakePhoto");
-                    }
-                });
-            }
-            catch (Exception^ e)
-            {
-                ShowExceptionMessage(e);
-                EnableButton(true, "TakePhoto");
-
-            }
-        });
-    }
-    catch (Platform::Exception^ e)
-    {
-        ShowExceptionMessage(e);
-        EnableButton(true, "TakePhoto");
-    }
-}
-
-void AdvancedCapture::btnStartStopRecord_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-    try
-    {
-        String ^fileName;
-        EnableButton(false, "StartStopRecord");
-
-        if (!m_bRecording)
-        {
-            ShowStatusMessage("Starting Record");
-
-            fileName = VIDEO_FILE_NAME;
-
-            PrepareForVideoRecording();
-
-            task<StorageFile^>(KnownFolders::VideosLibrary->CreateFileAsync(fileName, Windows::Storage::CreationCollisionOption::GenerateUniqueName)).then([this](task<StorageFile^> fileTask)
-            {
-                try
-                {
-                    this->m_recordStorageFile = fileTask.get();
-                    ShowStatusMessage("Create record file successful");
-
-                    MediaEncodingProfile^ recordProfile= nullptr;
-                    recordProfile = MediaEncodingProfile::CreateMp4(Windows::Media::MediaProperties::VideoEncodingQuality::Auto);
-
-                    create_task(m_mediaCaptureMgr->StartRecordToStorageFileAsync(recordProfile, this->m_recordStorageFile)).then([this](task<void> recordTask)
-                    {
-                        try
-                        {
-                            recordTask.get();
-                            m_bRecording = true;
-                            SwitchRecordButtonContent();
-                            EnableButton(true, "StartStopRecord");
-
-                            ShowStatusMessage("Start Record successful");
-                        }
-                        catch (Exception ^e)
-                        {
-                            m_bRecording = true;
-                            SwitchRecordButtonContent();
-                            EnableButton(true, "StartStopRecord");
-                            ShowExceptionMessage(e);
-                        }
-                    });
-                }
-                catch (Exception ^e)
-                {
-                    m_bRecording = false;
-                    EnableButton(true, "StartStopRecord");
-                    ShowExceptionMessage(e);
-                }
-            });
-        }
-        else
-        {
-            ShowStatusMessage("Stopping Record");
-
-            create_task(m_mediaCaptureMgr->StopRecordAsync()).then([this](task<void> recordTask)
-            {
-                try
-                {
-                    recordTask.get();
-                    m_bRecording = false;
-                    EnableButton(true, "StartStopRecord");
-                    SwitchRecordButtonContent();
-
-                    ShowStatusMessage("Stop record successful");
-                    if (!m_bSuspended)
-                    {
-                        task<IRandomAccessStream^>(this->m_recordStorageFile->OpenAsync(FileAccessMode::Read)).then([this](task<IRandomAccessStream^> streamTask)
-                        {
-                            try
-                            {
-                                auto stream = streamTask.get();
-                                ShowStatusMessage("Record file opened");
-                                ShowStatusMessage(this->m_recordStorageFile->Path);
-                                playbackElement2->AutoPlay = true;
-                                playbackElement2->SetSource(stream, this->m_recordStorageFile->FileType);
-                                playbackElement2->Play();
-                            }
-                            catch (Exception ^e)
-                            {
-                                ShowExceptionMessage(e);
-                                m_bRecording = false;
-                                EnableButton(true, "StartStopRecord");
-                                SwitchRecordButtonContent();
-                            }
-                        });
-                    }
-                }
-                catch (Exception ^e)
-                {
-                    m_bRecording = false;
-                    EnableButton(true, "StartStopRecord");
-                    SwitchRecordButtonContent();
-                    ShowExceptionMessage(e);
-                }
-            });
-        }
-    }
-    catch (Platform::Exception^ e)
-    {
-        EnableButton(true, "StartStopRecord");
-        ShowExceptionMessage(e);
-        m_bRecording = false;
-        SwitchRecordButtonContent();
-    }
-}
 void AdvancedCapture::lstEnumedDevices_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
 {
      if ( m_bPreviewing )
@@ -523,15 +232,9 @@ void AdvancedCapture::lstEnumedDevices_SelectionChanged(Platform::Object^ sender
 
     btnStartDevice2->IsEnabled = true;
     btnStartPreview2->IsEnabled = false;
-    btnStartStopRecord2->IsEnabled = false;
     m_bRecording = false;
-    btnStartStopRecord2->Content = "StartRecord";
-    btnTakePhoto2->IsEnabled = false;
     previewElement2->Source = nullptr;
-    playbackElement2->Source = nullptr;
-    imageElement2->Source= nullptr;
-    chkAddRemoveEffect->IsEnabled = false;
-    chkAddRemoveEffect->IsChecked = false;
+    EffectTypeCombo->IsEnabled = false;
     m_bEffectAdded = false;
     m_bEffectAddedToRecord = false;
     m_bEffectAddedToPhoto = false;
@@ -617,14 +320,13 @@ void AdvancedCapture::AddEffectToImageStream()
                                         effectTask3.get();
                                         m_bEffectAddedToPhoto = true;
                                         ShowStatusMessage("Adding effect to photo stream successful");
-                                        chkAddRemoveEffect->IsEnabled = true;
+                                        EffectTypeCombo->IsEnabled = true;
 
                                     }
                                     catch(Exception ^e)
                                     {
                                         ShowExceptionMessage(e);
-                                        chkAddRemoveEffect->IsEnabled = true;
-                                        chkAddRemoveEffect->IsChecked = false;
+                                        EffectTypeCombo->IsEnabled = true;
                                     }
                                 });
 
@@ -632,8 +334,7 @@ void AdvancedCapture::AddEffectToImageStream()
                             catch(Exception ^e)
                             {
                                 ShowExceptionMessage(e);
-                                chkAddRemoveEffect->IsEnabled = true;
-                                chkAddRemoveEffect->IsChecked = false;
+                                EffectTypeCombo->IsEnabled = true;
                             }
 
                         });
@@ -654,14 +355,13 @@ void AdvancedCapture::AddEffectToImageStream()
                     effectTask3.get();
                     m_bEffectAddedToPhoto = true;
                     ShowStatusMessage("Adding effect to photo stream successful");
-                    chkAddRemoveEffect->IsEnabled = true;
+                    EffectTypeCombo->IsEnabled = true;
 
                 }
                 catch(Exception ^e)
                 {
                     ShowExceptionMessage(e);
-                    chkAddRemoveEffect->IsEnabled = true;
-                    chkAddRemoveEffect->IsChecked = false;
+                    EffectTypeCombo->IsEnabled = true;
                 }
             });
         }
@@ -669,82 +369,15 @@ void AdvancedCapture::AddEffectToImageStream()
 }
 
 
-
 void AdvancedCapture::chkAddRemoveEffect_Checked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-    try
-    {
-        chkAddRemoveEffect->IsEnabled = false;
-        m_bEffectAdded = true;
-        create_task(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoPreview,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask)
-        {
-            try
-            {
-                effectTask.get();
-
-                auto mediaCapture = m_mediaCaptureMgr.Get();
-                Windows::Media::Capture::VideoDeviceCharacteristic charecteristic = mediaCapture->MediaCaptureSettings->VideoDeviceCharacteristic;
-
-                ShowStatusMessage("Add effect successful to preview stream successful");
-                if((charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::AllStreamsIdentical) &&
-                    (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::PreviewRecordStreamsIdentical))
-                {
-                    Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::VideoRecord);
-                    Windows::Media::MediaProperties::VideoEncodingProperties ^videoEncodingProperties  = static_cast<Windows::Media::MediaProperties::VideoEncodingProperties ^>(props);
-                    if(!videoEncodingProperties->Subtype->Equals("H264")) //Cant add an effect to an H264 stream
-                    {
-                        task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoRecord,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask2)
-                        {
-                            try
-                            {
-                                effectTask2.get();
-                                ShowStatusMessage("Add effect successful to record stream successful");
-                                m_bEffectAddedToRecord = true;
-                                AddEffectToImageStream();
-                                chkAddRemoveEffect->IsEnabled = true;
-                            }
-                            catch(Exception ^e)
-                            {
-                                ShowExceptionMessage(e);
-                                chkAddRemoveEffect->IsEnabled = true;
-                                chkAddRemoveEffect->IsChecked = false;
-                            }
-                        });
-                    }
-                    else
-                    {
-                        AddEffectToImageStream();
-                        chkAddRemoveEffect->IsEnabled = true;
-                    }
-
-                }
-                else
-                {
-                    AddEffectToImageStream();
-                    chkAddRemoveEffect->IsEnabled = true;
-                }
-            }
-            catch (Exception ^e)
-            {
-                ShowExceptionMessage(e);
-                chkAddRemoveEffect->IsEnabled = true;
-                chkAddRemoveEffect->IsChecked = false;
-            }
-        });
-    }
-    catch (Platform::Exception ^e)
-    {
-        ShowExceptionMessage(e);
-        chkAddRemoveEffect->IsEnabled = true;
-        chkAddRemoveEffect->IsChecked = false;
-    }
 }
 
 void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
     try
     {
-        chkAddRemoveEffect->IsEnabled = false;
+        EffectTypeCombo->IsEnabled = false;
         m_bEffectAdded = false;
         create_task(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::VideoPreview)).then([this](task<void> effectTask)
         {
@@ -775,8 +408,7 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                                     catch(Exception ^e)
                                     {
                                         ShowExceptionMessage(e);
-                                        chkAddRemoveEffect->IsEnabled = true;
-                                        chkAddRemoveEffect->IsChecked = true;
+                                        EffectTypeCombo->IsEnabled = true;
                                     }
 
                                 });
@@ -784,14 +416,12 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                             else
                             {
                             }
-                            chkAddRemoveEffect->IsEnabled = true;
+                            EffectTypeCombo->IsEnabled = true;
                         }
                         catch(Exception ^e)
                         {
                             ShowExceptionMessage(e);
-                            chkAddRemoveEffect->IsEnabled = true;
-                            chkAddRemoveEffect->IsChecked = true;
-
+                            EffectTypeCombo->IsEnabled = true;
                         }
 
                     });
@@ -811,31 +441,27 @@ void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Win
                         catch(Exception ^e)
                         {
                             ShowExceptionMessage(e);
-                            chkAddRemoveEffect->IsEnabled = true;
-                            chkAddRemoveEffect->IsChecked = true;
+                            EffectTypeCombo->IsEnabled = true;
                         }
 
                     });
                 }
                 else
                 {
-                    chkAddRemoveEffect->IsEnabled = true;
-                    chkAddRemoveEffect->IsChecked = true;
+                    EffectTypeCombo->IsEnabled = true;
                 }
             }
             catch (Exception ^e)
             {
                 ShowExceptionMessage(e);
-                chkAddRemoveEffect->IsEnabled = true;
-                chkAddRemoveEffect->IsChecked = true;
+                EffectTypeCombo->IsEnabled = true;
             }
         });
     }
     catch (Platform::Exception ^e)
     {
         ShowExceptionMessage(e);
-        chkAddRemoveEffect->IsEnabled = true;
-        chkAddRemoveEffect->IsChecked = true;
+        EffectTypeCombo->IsEnabled = true;
     }
 }
 
@@ -849,18 +475,6 @@ void AdvancedCapture::ShowExceptionMessage(Platform::Exception^ ex)
     rootPage->NotifyUser(ex->Message, NotifyType::ErrorMessage);
 }
 
-void AdvancedCapture::SwitchRecordButtonContent()
-{
-    if (m_bRecording)
-    {
-        btnStartStopRecord2->Content="StopRecord";
-    }
-    else
-    {
-        btnStartStopRecord2->Content="StartRecord";
-    }
-}
-
 void AdvancedCapture::EnableButton(bool enabled, String^ name)
 {
     if (name->Equals("StartDevice"))
@@ -870,14 +484,6 @@ void AdvancedCapture::EnableButton(bool enabled, String^ name)
     else if (name->Equals("StartPreview"))
     {
         btnStartPreview2->IsEnabled = enabled;
-    }
-    else if (name->Equals("StartStopRecord"))
-    {
-        btnStartStopRecord2->IsEnabled = enabled;
-    }
-    else if (name->Equals("TakePhoto"))
-    {
-        btnTakePhoto2->IsEnabled = enabled;
     }
 }
 
@@ -1032,8 +638,79 @@ Windows::Media::Capture::VideoRotation AdvancedCapture::VideoRotationLookup(
 }
 
 
-
-void SDKSample::MediaCapture::AdvancedCapture::EffectType_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
+void SDKSample::MediaCapture::AdvancedCapture::EffectTypeCombo_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
 {
+}
 
+
+void SDKSample::MediaCapture::AdvancedCapture::Button_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
+{
+    try
+    {
+        create_task(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::VideoPreview)).then([this](task<void> cleanTask)
+        {
+            m_bEffectAdded = true;
+            int index = EffectTypeCombo->SelectedIndex;
+            PropertySet^ props = ref new PropertySet();
+            props->Insert(L"{698649BE-8EAE-4551-A4CB-3EC98FBD3D86}", index);
+            create_task(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoPreview,"GrayscaleTransform.GrayscaleEffect", props)).then([this](task<void> effectTask)
+            {
+                try
+                {
+                    effectTask.get();
+
+                    auto mediaCapture = m_mediaCaptureMgr.Get();
+                    Windows::Media::Capture::VideoDeviceCharacteristic charecteristic = mediaCapture->MediaCaptureSettings->VideoDeviceCharacteristic;
+
+                    ShowStatusMessage("Add effect successful to preview stream successful");
+                    if((charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::AllStreamsIdentical) &&
+                        (charecteristic != Windows::Media::Capture::VideoDeviceCharacteristic::PreviewRecordStreamsIdentical))
+                    {
+                        Windows::Media::MediaProperties::IMediaEncodingProperties ^props = mediaCapture->VideoDeviceController->GetMediaStreamProperties(Windows::Media::Capture::MediaStreamType::VideoRecord);
+                        Windows::Media::MediaProperties::VideoEncodingProperties ^videoEncodingProperties  = static_cast<Windows::Media::MediaProperties::VideoEncodingProperties ^>(props);
+                        if(!videoEncodingProperties->Subtype->Equals("H264")) //Cant add an effect to an H264 stream
+                        {
+                            task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoRecord,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask2)
+                            {
+                                try
+                                {
+                                    effectTask2.get();
+                                    ShowStatusMessage("Add effect successful to record stream successful");
+                                    m_bEffectAddedToRecord = true;
+                                    AddEffectToImageStream();
+                                    EffectTypeCombo->IsEnabled = true;
+                                }
+                                catch(Exception ^e)
+                                {
+                                    ShowExceptionMessage(e);
+                                    EffectTypeCombo->IsEnabled = true;
+                                }
+                            });
+                        }
+                        else
+                        {
+                            AddEffectToImageStream();
+                            EffectTypeCombo->IsEnabled = true;
+                        }
+
+                    }
+                    else
+                    {
+                        AddEffectToImageStream();
+                        EffectTypeCombo->IsEnabled = true;
+                    }
+                }
+                catch (Exception ^e)
+                {
+                    ShowExceptionMessage(e);
+                    EffectTypeCombo->IsEnabled = true;
+                }
+            });
+        });
+    }
+    catch (Platform::Exception ^e)
+    {
+        ShowExceptionMessage(e);
+        EffectTypeCombo->IsEnabled = true;
+    }
 }

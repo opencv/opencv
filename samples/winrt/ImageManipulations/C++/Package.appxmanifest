@@ -22,9 +22,6 @@
     </Application>
   </Applications>
   <Capabilities>
-    <Capability Name="picturesLibrary" />
-    <Capability Name="musicLibrary" />
-    <Capability Name="videosLibrary" />
     <DeviceCapability Name="webcam" />
     <DeviceCapability Name="microphone" />
   </Capabilities>

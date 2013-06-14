@@ -15,10 +15,12 @@
 
 #include "pch.h"
 #include "MainPage.xaml.h"
+#include "AdvancedCapture.xaml.h"
 #include "Common\SuspensionManager.h"
 
 using namespace SDKSample;
 using namespace SDKSample::Common;
+using namespace SDKSample::MediaCapture;
 
 using namespace Concurrency;
 using namespace Platform;

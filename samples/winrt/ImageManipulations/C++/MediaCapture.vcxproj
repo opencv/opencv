@@ -122,9 +122,7 @@
     <Page Include="Common\StandardStyles.xaml">
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="MainPage.xaml">
-      <SubType>Designer</SubType>
-    </Page>
+    <Page Include="MainPage.xaml" />
     <Page Include="Sample-Utils\SampleTemplateStyles.xaml">
       <SubType>Designer</SubType>
     </Page>

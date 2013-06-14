@@ -44,6 +44,7 @@ DEFINE_GUID(MFT_IMAGE_EFFECT,
 
 enum ProcessingType
 {
+    Preview,
     GrayScale,
     Canny,
     Sobel,
@@ -232,7 +233,6 @@ private:
 
     // Transformation parameters
     ProcessingType              m_TransformType;
-    D2D_RECT_U                  m_rcDest;                   // Destination rectangle for the effect.
 
     // Streaming
     bool                        m_bStreamingInitialized;

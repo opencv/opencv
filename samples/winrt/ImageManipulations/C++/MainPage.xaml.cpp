@@ -93,7 +93,7 @@ void MainPage::InvalidateSize()
         {
             // Make us as big as the the left over space, factoring in the ListBox width, the ListBox margins.
             // and the LayoutRoot's margins
-            InputSection->Width = ((availableWidth) - 
+            InputSection->Width = ((availableWidth) -
                 (layoutRootMarginLeft + layoutRootMarginRight + listBoxMarginLeft + listBoxMarginRight));
         }
         else
@@ -161,7 +161,7 @@ void MainPage::PopulateScenarios()
 }
 
 /// <summary>
-/// This method is responsible for loading the individual input and output sections for each scenario.  This 
+/// This method is responsible for loading the individual input and output sections for each scenario.  This
 /// is based on navigating a hidden Frame to the ScenarioX.xaml page and then extracting out the input
 /// and output sections into the respective UserControl on the main page.
 /// </summary>
@@ -185,7 +185,7 @@ void MainPage::LoadScenario(String^ scenarioName)
     if (input == nullptr)
     {
         // Malformed input section.
-        NotifyUser("Cannot load scenario input section for " + scenarioName + 
+        NotifyUser("Cannot load scenario input section for " + scenarioName +
             "  Make sure root of input section markup has x:Name of 'Input'", NotifyType::ErrorMessage);
         return;
     }
@@ -193,7 +193,7 @@ void MainPage::LoadScenario(String^ scenarioName)
     if (output == nullptr)
     {
         // Malformed output section.
-        NotifyUser("Cannot load scenario output section for " + scenarioName + 
+        NotifyUser("Cannot load scenario output section for " + scenarioName +
             "  Make sure root of output section markup has x:Name of 'Output'", NotifyType::ErrorMessage);
         return;
     }
@@ -222,7 +222,7 @@ void MainPage::LoadScenario(String^ scenarioName)
     else
     {
         // Malformed Scenario file.
-        NotifyUser("Cannot load scenario: " + scenarioName + ".  Make sure root tag in the '" + 
+        NotifyUser("Cannot load scenario: " + scenarioName + ".  Make sure root tag in the '" +
             scenarioName + "' file has an x:Name of 'LayoutRoot'", NotifyType::ErrorMessage);
     }
 }
@@ -284,7 +284,7 @@ void MainPage::Footer_Click(Object^ sender, RoutedEventArgs^ e)
 /// session.  This will be null the first time a page is visited.</param>
 void MainPage::LoadState(Object^ navigationParameter, IMap<String^, Object^>^ pageState)
 {
-    (void) navigationParameter;	// Unused parameter
+    (void) navigationParameter;    // Unused parameter
 
     PopulateScenarios();
 

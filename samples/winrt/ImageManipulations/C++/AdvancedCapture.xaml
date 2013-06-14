@@ -33,38 +33,31 @@
             </Grid.RowDefinitions>
             <TextBlock TextWrapping="Wrap" Grid.Row="0"  Text="This scenario shows how to enumerate cameras in the system. Choose a camera from the list to preview, record or take a photo from the chosen camera.  You can add the gray scale effect using the checkbox provided." Style="{StaticResource BasicTextStyle}" HorizontalAlignment="Left"/>
             <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,10,0,0">
-                <ListBox x:Name="EnumedDeviceList2" SelectionChanged="lstEnumedDevices_SelectionChanged" ></ListBox>
-                <Button x:Name="btnStartDevice2" Click="btnStartDevice_Click" IsEnabled="true"  Margin="0,0,10,0">StartDevice</Button>
-                <Button x:Name="btnStartPreview2" Click="btnStartPreview_Click" IsEnabled="true"  Margin="0,0,10,0">StartPreview</Button>
-                <Button x:Name="btnStartStopRecord2" Click="btnStartStopRecord_Click" IsEnabled="false"  Margin="0,0,10,0">StartRecord</Button>
-                <Button x:Name="btnTakePhoto2" Click="btnTakePhoto_Click" IsEnabled="false"  Margin="0,0,10,0">TakePhoto</Button>
+                <ListBox x:Name="EnumedDeviceList2" SelectionChanged="lstEnumedDevices_SelectionChanged" />
+                <Button x:Name="btnStartDevice2" Click="btnStartDevice_Click" IsEnabled="true"  Margin="0,0,10,0" Content="StartDevice"/>
+                <Button x:Name="btnStartPreview2" Click="btnStartPreview_Click" IsEnabled="true"  Margin="0,0,10,0" Content="StartPreview"/>
+                <ComboBox x:Name="EffectTypeCombo" Width="120" SelectedIndex="0">
+                    <ComboBoxItem Content="Preview"/>
+                    <ComboBoxItem Content="Grayscale"/>
+                    <ComboBoxItem Content="Canny"/>
+                    <ComboBoxItem Content="Sobel"/>
+                    <ComboBoxItem Content="Histogram"/>
+                </ComboBox>
+                <Button Content="Apply" HorizontalAlignment="Stretch" VerticalAlignment="Top" Click="Button_Click"/>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10,0,0">
-                <CheckBox x:Name="chkAddRemoveEffect" Margin="0,0,10,0" Content="Add Effect"  IsEnabled="False" Checked="chkAddRemoveEffect_Checked" Unchecked="chkAddRemoveEffect_Unchecked"/>
-                <ComboBox Width="120"/>
-            </StackPanel>
+            <StackPanel x:Name="EffectTypeCombo1" Orientation="Horizontal" Grid.Row="1" Margin="324,5,-324,7"/>
         </Grid>
 
         <Grid x:Name="Output" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1">
             <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                 <StackPanel>
                     <TextBlock Style="{StaticResource BasicTextStyle}"  HorizontalAlignment='Center'  VerticalAlignment='Center'  TextAlignment='Center'	Text='Preview' />
-                    <Canvas x:Name="previewCanvas2" Width="320"  Height="240" Background="Gray">
-                        <CaptureElement x:Name="previewElement2" Width="320" Height="240" />
+                    <Canvas x:Name="previewCanvas2" Background="Gray">
+                        <CaptureElement x:Name="previewElement2" />
                     </Canvas>
                 </StackPanel>
-                <StackPanel>
-                    <TextBlock Style="{StaticResource BasicTextStyle}"  HorizontalAlignment='Center'  VerticalAlignment='Center'  TextAlignment='Center'	Text='Captured Video' />
-                    <Canvas x:Name='playbackCanvas2' Width='320' Height ='240' >
-                        <MediaElement  x:Name='playbackElement2'	  Width="320"  Height="240" />
-                    </Canvas>
-                </StackPanel>
-                <StackPanel>
-                    <TextBlock Style="{StaticResource BasicTextStyle}"  HorizontalAlignment='Center'  VerticalAlignment='Center'  TextAlignment='Center'	Text='Captured Images' />
-                    <Canvas x:Name="imageCanvas2" Width='320' Height ='240' >
-                        <Image x:Name="imageElement2"  Width="320"   Height="240"/>
-                    </Canvas>
-                </StackPanel>
+                <StackPanel/>
+                <StackPanel/>
             </StackPanel>
         </Grid>
 

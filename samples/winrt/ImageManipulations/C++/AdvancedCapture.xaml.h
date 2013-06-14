@@ -49,17 +49,11 @@ namespace SDKSample
             void ScenarioInit();
             void ScenarioReset();
 
-            void SoundLevelChanged(Object^ sender, Object^ e);
-            void RecordLimitationExceeded(Windows::Media::Capture::MediaCapture ^ mediaCapture);
             void Failed(Windows::Media::Capture::MediaCapture ^ mediaCapture, Windows::Media::Capture::MediaCaptureFailedEventArgs ^ args);
 
             void btnStartDevice_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 
             void btnStartPreview_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-
-            void btnStartStopRecord_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-
-            void btnTakePhoto_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
 
             void lstEnumedDevices_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
             void EnumerateWebcamsAsync();
@@ -72,7 +66,6 @@ namespace SDKSample
             void ShowExceptionMessage(Platform::Exception^ ex);
 
             void EnableButton(bool enabled, Platform::String ^name);
-            void SwitchRecordButtonContent();
 
             task<Windows::Storage::StorageFile^> ReencodePhotoAsync(
                 Windows::Storage::StorageFile ^tempStorageFile,
@@ -98,7 +91,8 @@ namespace SDKSample
             bool m_bRotateVideoOnOrientationChange;
             bool m_bReversePreviewRotation;
             Windows::Foundation::EventRegistrationToken m_orientationChangedEventToken;
-            void EffectType_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
+            void EffectTypeCombo_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
+            void Button_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
         };
     }
 }
