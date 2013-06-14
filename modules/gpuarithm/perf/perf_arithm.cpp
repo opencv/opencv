@@ -228,10 +228,11 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
         cv::gpu::GpuMat d_templ = cv::gpu::createContinuous(templ_size, templ_size, CV_32FC1);
         d_templ.upload(templ);
 
-        cv::gpu::GpuMat dst;
-        cv::gpu::ConvolveBuf d_buf;
+        cv::Ptr<cv::gpu::Convolution> convolution = cv::gpu::createConvolution();
 
-        TEST_CYCLE() cv::gpu::convolve(d_image, d_templ, dst, ccorr, d_buf);
+        cv::gpu::GpuMat dst;
+
+        TEST_CYCLE() convolution->convolve(d_image, d_templ, dst, ccorr);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -265,7 +266,7 @@ PERF_TEST_P(Sz, Integral,
         cv::gpu::GpuMat dst;
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::integralBuffered(d_src, dst, d_buf);
+        TEST_CYCLE() cv::gpu::integral(d_src, dst, d_buf);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -293,9 +294,9 @@ PERF_TEST_P(Sz, IntegralSqr,
     if (PERF_RUN_GPU())
     {
         const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        cv::gpu::GpuMat dst, buf;
 
-        TEST_CYCLE() cv::gpu::sqrIntegral(d_src, dst);
+        TEST_CYCLE() cv::gpu::sqrIntegral(d_src, dst, buf);
 
         GPU_SANITY_CHECK(dst);
     }
