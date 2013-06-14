@@ -124,7 +124,8 @@ namespace cv
             cacheSize = 0;
         }
 
-
+        // not to be exported to dynamic lib
+        void setBinaryDiskCacheImpl(int mode, String path, Info::Impl * impl);
         struct Info::Impl
         {
             cl_platform_id oclplatform;
@@ -142,22 +143,12 @@ namespace cv
             char extra_options[512];
             int  double_support;
             int unified_memory; //1 means integrated GPU, otherwise this value is 0
+            bool enable_disk_cache; 
+            bool update_disk_cache;
             string binpath;
             int refcounter;
 
-            Impl()
-            {
-                refcounter = 1;
-                oclplatform = 0;
-                oclcontext = 0;
-                clCmdQueue = 0;
-                devnum = -1;
-                maxComputeUnits = 0;
-                maxWorkGroupSize = 0;
-                memset(extra_options, 0, 512);
-                double_support = 0;
-                unified_memory = 0;
-            }
+            Impl();
 
             void setDevice(void *ctx, void *q, int devnum);
 
@@ -181,6 +172,25 @@ namespace cv
             Impl& operator=(const Impl&);
             void releaseResources();
         };
+
+        Info::Impl::Impl()
+            :oclplatform(0),
+            oclcontext(0),
+            clCmdQueue(0),
+            devnum(-1),
+            maxWorkGroupSize(0),
+            maxDimensions(0),
+            maxComputeUnits(0),
+            double_support(0),
+            unified_memory(0),
+            enable_disk_cache(false),
+            update_disk_cache(false),
+            binpath("./"),
+            refcounter(1)
+        {
+            memset(extra_options, 0, 512);
+            setBinaryDiskCacheImpl(CACHE_RELEASE, String("./"), this);
+        }
 
         void Info::Impl::releaseResources()
         {
@@ -494,6 +504,24 @@ namespace cv
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
 
+        void setBinaryDiskCacheImpl(int mode, String path, Info::Impl * impl)
+        {
+            impl->update_disk_cache = (mode & CACHE_UPDATE) == CACHE_UPDATE;
+            impl->enable_disk_cache = 
+#ifdef _DEBUG 
+                (mode & CACHE_DEBUG)   == CACHE_DEBUG;
+#else
+                (mode & CACHE_RELEASE) == CACHE_RELEASE;
+#endif
+            if(impl->enable_disk_cache && !path.empty())
+            {
+                impl->binpath = path;
+            }
+        }
+        void setBinaryDiskCache(int mode, cv::String path)
+        {
+            setBinaryDiskCacheImpl(mode, path, Context::getContext()->impl);
+        }
 
         void setBinpath(const char *path)
         {
@@ -573,8 +601,8 @@ namespace cv
                     filename = clCxt->impl->binpath  + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + ".clb";
                 }
 
-                FILE *fp = fopen(filename.c_str(), "rb");
-                if(fp == NULL || clCxt->impl->binpath.size() == 0)    //we should generate a binary file for the first time.
+                FILE *fp = clCxt->impl->enable_disk_cache ? fopen(filename.c_str(), "rb") : NULL;
+                if(fp == NULL || clCxt->impl->update_disk_cache)
                 {
                     if(fp != NULL)
                         fclose(fp);
@@ -583,7 +611,7 @@ namespace cv
                                   clCxt->impl->oclcontext, 1, source, NULL, &status);
                     openCLVerifyCall(status);
                     status = clBuildProgram(program, 1, &(clCxt->impl->devices[clCxt->impl->devnum]), all_build_options, NULL, NULL);
-                    if(status == CL_SUCCESS && clCxt->impl->binpath.size())
+                    if(status == CL_SUCCESS && clCxt->impl->enable_disk_cache)
                         savetofile(clCxt, program, filename.c_str());
                 }
                 else
