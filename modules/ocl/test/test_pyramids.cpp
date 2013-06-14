@@ -15,7 +15,6 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Dachuan Zhao, dachuan@multicorewareinc.com
 //    Yao Wang yao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -56,11 +55,12 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(PyrDown, MatType, int)
+PARAM_TEST_CASE(PyrBase, MatType, int)
 {
     int type;
     int channels;
-
+    Mat dst_cpu;
+    oclMat gdst;
     virtual void SetUp()
     {
         type = GET_PARAM(0);
@@ -69,19 +69,19 @@ PARAM_TEST_CASE(PyrDown, MatType, int)
 
 };
 
+/////////////////////// PyrDown //////////////////////////
+struct PyrDown : PyrBase {};
 
 TEST_P(PyrDown, Mat)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
-        cv::Size size(MWIDTH, MHEIGHT);
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Mat src = randomMat(rng, size, CV_MAKETYPE(type, channels), 0, 100, false);
-
-        cv::ocl::oclMat gsrc(src), gdst;
-        cv::Mat dst_cpu;
-        cv::pyrDown(src, dst_cpu);
-        cv::ocl::pyrDown(gsrc, gdst);
+        Size size(MWIDTH, MHEIGHT);
+        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        oclMat gsrc(src);
+        
+        pyrDown(src, dst_cpu);
+        pyrDown(gsrc, gdst);
 
         EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
     }
@@ -90,5 +90,27 @@ TEST_P(PyrDown, Mat)
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
                             Values(CV_8U, CV_32F), Values(1, 3, 4)));
 
+/////////////////////// PyrUp //////////////////////////
 
+struct PyrUp : PyrBase {};
+
+TEST_P(PyrUp, Accuracy)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        Size size(MWIDTH, MHEIGHT);
+        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        oclMat gsrc(src);
+
+        pyrUp(src, dst_cpu);
+        pyrUp(gsrc, gdst);
+
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (type == CV_32F ? 1e-4f : 1.0));
+    }
+
+}
+
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
+                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
 #endif // HAVE_OPENCL
