@@ -1422,6 +1422,9 @@ Checks if array elements lie between the elements of two other arrays.
 
     :param dst: output array of the same size as ``src`` and ``CV_8U`` type.
 
+.. :param lower: the same as lowerb (documentation isn't required)
+.. :param upper: the same as upperb (documentation isn't required)
+
 The function checks the range as follows:
 
  * For every element of a single-channel input array:
@@ -1763,6 +1766,11 @@ Creates one multichannel array out of several single-channel ones.
 
     :param dst: output array of the same size and the same depth as ``mv[0]``; The number of channels will be the total number of channels in the matrix array.
 
+.. :param src0: (documentation isn't required)
+.. :param src1: (documentation isn't required)
+.. :param src2: (documentation isn't required)
+.. :param src3: (documentation isn't required)
+
 The functions ``merge`` merge several arrays to make a single multi-channel array. That is, each element of the output array will be a concatenation of the elements of the input arrays, where elements of i-th input array are treated as ``mv[i].channels()``-element vectors.
 
 The function
@@ -1854,6 +1862,8 @@ Finds the global minimum and maximum in an array
 
     :param maxIdx: pointer to the returned maximum location (in nD case). ``NULL`` is used if not required.
 
+    :param mask: optional mask used to select a sub-array.
+
     The function ``minMaxIdx`` finds the minimum and maximum element values and their positions. The extremums are searched across the whole array or, if ``mask`` is not an empty array, in the specified array region.
 
     The function does not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
@@ -1891,6 +1901,11 @@ Finds the global minimum and maximum in an array.
     :param maxLoc: pointer to the returned maximum location (in 2D case);  ``NULL`` is used if not required.
 
     :param mask: optional mask used to select a sub-array.
+
+.. :param min_val: (documentation isn't required)
+.. :param max_val: (documentation isn't required)
+.. :param min_loc: (documentation isn't required)
+.. :param max_loc: (documentation isn't required)
 
 The functions ``minMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
 if ``mask`` is not an empty array, in the specified array region.
@@ -1940,6 +1955,11 @@ Copies specified channels from input arrays to the specified channels of output 
 
     :param npairs: number of index pairs in ``fromTo``.
 
+.. :param src_count: (documentation isn't required)
+.. :param dst_count: (documentation isn't required)
+.. :param pair_count: (documentation isn't required)
+.. :param from_to: (documentation isn't required)
+
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
 
 :ocv:func:`split` and
@@ -1982,15 +2002,19 @@ Performs the per-element multiplication of two Fourier spectrums.
 .. ocv:cfunction:: void cvMulSpectrums( const CvArr* src1, const CvArr* src2, CvArr* dst, int flags)
 .. ocv:pyoldfunction:: cv.MulSpectrums(src1, src2, dst, flags)-> None
 
-    :param src1: first input array.
+    :param a: first input array.
 
-    :param src2: second input array of the same size and type as ``src1`` .
+    :param b: second input array of the same size and type as ``src1`` .
 
-    :param dst: output array of the same size and type as ``src1`` .
+    :param c: output array of the same size and type as ``src1`` .
 
     :param flags: operation flags; currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
 
     :param conjB: optional flag that conjugates the second input array before the multiplication (true) or not (false).
+
+.. :param src1: (documentation isn't required)
+.. :param src2: (documentation isn't required)
+.. :param dst: (documentation isn't required)
 
 The function ``mulSpectrums`` performs the per-element multiplication of the two CCS-packed or complex matrices that are results of a real or complex Fourier transform.
 
@@ -2121,6 +2145,10 @@ Calculates an absolute array norm, an absolute difference norm, or a relative di
     :param normType: type of the norm (see the details below).
 
     :param mask: optional operation mask; it must have the same size as ``src1`` and ``CV_8UC1`` type.
+
+.. :param arr1: (documentation isn't required)
+.. :param arr2: (documentation isn't required)
+.. :param norm_type: (documentation isn't required)
 
 The functions ``norm`` calculate an absolute norm of ``src1`` (when there is no ``src2`` ):
 
@@ -2377,6 +2405,8 @@ Performs the perspective matrix transformation of vectors.
 
     :param m: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
+.. :param mat: (documentation isn't required)
+
 The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
 .. math::
@@ -2454,6 +2484,8 @@ Calculates x and y coordinates of 2D vectors from their magnitude and angle.
     :param y: output array of y-coordinates of 2D vectors; it has the same size and type as ``angle``.
 
     :param angleInDegrees: when true, the input angles are measured in degrees, otherwise, they are measured in radians.
+
+.. :param angle_in_degrees: (documentation isn't required)
 
 The function ``polarToCart`` calculates the Cartesian coordinates of each 2D vector represented by the corresponding elements of ``magnitude`` and ``angle`` :
 
@@ -2771,6 +2803,8 @@ Reduces a matrix to a vector.
             * **CV_REDUCE_MIN**: the output is the minimum (column/row-wise) of all rows/columns of the matrix.
 
     :param dtype: when negative, the output vector will have the same type as the input matrix, otherwise, its type will be ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels())``.
+
+.. :param op: (documentation isn't required)
 
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
@@ -3289,11 +3323,15 @@ Performs SVD of a matrix
 
     :param u: calculated left singular vectors
 
-    :param V: calculated right singular vectors
+    :param V: calculated right singular vectors (in OpenCV 1.x API only)
 
     :param vt: transposed matrix of right singular values
 
     :param flags: operation flags - see :ocv:func:`SVD::SVD`.
+
+.. :param A: (documentation isn't required)
+.. :param W: (documentation isn't required)
+.. :param U: (documentation isn't required)
 
 The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 
@@ -3337,13 +3375,18 @@ Performs a singular value back substitution.
 
     :param u: left singular vectors
 
-    :param V: right singular vectors
+    :param V: right singular vectors (in OpenCV 1.x API only)
 
     :param vt: transposed matrix of right singular vectors.
 
     :param rhs: right-hand side of a linear system ``(u*w*v')*dst = rhs`` to be solved, where ``A`` has been previously decomposed.
 
     :param dst: found solution of the system.
+
+.. :param B: (documentation isn't required)
+.. :param W: (documentation isn't required)
+.. :param U: (documentation isn't required)
+.. :param X: (documentation isn't required)
 
 The method calculates a back substitution for the specified right-hand side:
 
@@ -3370,6 +3413,8 @@ Calculates the sum of array elements.
 .. ocv:pyoldfunction:: cv.Sum(arr) -> scalar
 
     :param arr: input array that must have from 1 to 4 channels.
+
+.. :param arr: (documentation isn't required)
 
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 
