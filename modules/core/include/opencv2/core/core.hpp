@@ -3409,8 +3409,6 @@ public:
     //! converts dense 2d matrix to the sparse form
     /*!
      \param m the input matrix
-     \param try1d if true and m is a single-column matrix (Nx1),
-            then the sparse matrix will be 1-dimensional.
     */
     explicit SparseMat(const Mat& m);
     //! converts old-style sparse matrix to the new-style. All the data is copied
