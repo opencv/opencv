@@ -33,7 +33,7 @@ int main(int argc, const char* argv[])
     cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
 
     cv::VideoWriter writer;
-    cv::gpu::VideoWriter_GPU d_writer;
+    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
 
     cv::Mat frame;
     cv::gpu::GpuMat d_frame;
@@ -64,11 +64,11 @@ int main(int argc, const char* argv[])
                 return -1;
         }
 
-        if (!d_writer.isOpened())
+        if (d_writer.empty())
         {
             std::cout << "Open GPU Writer" << std::endl;
 
-            d_writer.open("output_gpu.avi", frame.size(), FPS);
+            d_writer = cv::gpucodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
         }
 
         d_frame.upload(frame);
@@ -81,7 +81,7 @@ int main(int argc, const char* argv[])
         cpu_times.push_back(tm.getTimeMilli());
 
         tm.reset(); tm.start();
-        d_writer.write(d_frame);
+        d_writer->write(d_frame);
         tm.stop();
         gpu_times.push_back(tm.getTimeMilli());
     }

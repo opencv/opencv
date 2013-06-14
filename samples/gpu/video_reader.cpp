@@ -30,8 +30,7 @@ int main(int argc, const char* argv[])
     cv::VideoCapture reader(fname);
 
     cv::gpu::GpuMat d_frame;
-    cv::gpu::VideoReader_GPU d_reader(fname);
-    d_reader.dumpFormat(std::cout);
+    cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(fname);
 
     cv::TickMeter tm;
     std::vector<double> cpu_times;
@@ -46,7 +45,7 @@ int main(int argc, const char* argv[])
         cpu_times.push_back(tm.getTimeMilli());
 
         tm.reset(); tm.start();
-        if (!d_reader.read(d_frame))
+        if (!d_reader->nextFrame(d_frame))
             break;
         tm.stop();
         gpu_times.push_back(tm.getTimeMilli());

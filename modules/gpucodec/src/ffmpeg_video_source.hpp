@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,72 +41,31 @@
 //
 //M*/
 
-#ifndef __VIDEO_DECODER_H__
-#define __VIDEO_DECODER_H__
+#ifndef __FFMPEG_VIDEO_SOURCE_HPP__
+#define __FFMPEG_VIDEO_SOURCE_HPP__
 
-#include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
 
-#include <nvcuvid.h>
+struct InputMediaStream_FFMPEG;
 
-namespace cv { namespace gpu { namespace detail
-{
+namespace cv { namespace gpucodec { namespace detail {
 
-class VideoDecoder
+class FFmpegVideoSource : public RawVideoSource
 {
 public:
-    VideoDecoder(const VideoReader_GPU::FormatInfo& videoFormat, CUvideoctxlock lock) : lock_(lock), decoder_(0)
-    {
-        create(videoFormat);
-    }
+    FFmpegVideoSource(const String& fname);
+    ~FFmpegVideoSource();
 
-    ~VideoDecoder()
-    {
-        release();
-    }
+    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile);
 
-    void create(const VideoReader_GPU::FormatInfo& videoFormat);
-    void release();
-
-    // Get the code-type currently used.
-    cudaVideoCodec codec() const { return createInfo_.CodecType; }
-    unsigned long maxDecodeSurfaces() const { return createInfo_.ulNumDecodeSurfaces; }
-
-    unsigned long frameWidth() const { return createInfo_.ulWidth; }
-    unsigned long frameHeight() const { return createInfo_.ulHeight; }
-
-    unsigned long targetWidth() const { return createInfo_.ulTargetWidth; }
-    unsigned long targetHeight() const { return createInfo_.ulTargetHeight; }
-
-    cudaVideoChromaFormat chromaFormat() const { return createInfo_.ChromaFormat; }
-
-    bool decodePicture(CUVIDPICPARAMS* picParams)
-    {
-        return cuvidDecodePicture(decoder_, picParams) == CUDA_SUCCESS;
-    }
-
-    cv::gpu::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
-    {
-        CUdeviceptr ptr;
-        unsigned int pitch;
-
-        cuSafeCall( cuvidMapVideoFrame(decoder_, picIdx, &ptr, &pitch, &videoProcParams) );
-
-        return GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
-    }
-
-    void unmapFrame(cv::gpu::GpuMat& frame)
-    {
-        cuSafeCall( cuvidUnmapVideoFrame(decoder_, (CUdeviceptr) frame.data) );
-        frame.release();
-    }
+    FormatInfo format() const;
 
 private:
-    CUvideoctxlock lock_;
-    CUVIDDECODECREATEINFO createInfo_;
-    CUvideodecoder        decoder_;
+    FormatInfo format_;
+
+    InputMediaStream_FFMPEG* stream_;
 };
 
 }}}
 
-#endif // __VIDEO_DECODER_H__
+#endif // __FFMPEG_VIDEO_SOURCE_HPP__
