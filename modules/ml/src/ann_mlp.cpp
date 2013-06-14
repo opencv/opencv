@@ -251,7 +251,7 @@ void CvANN_MLP::create( const CvMat* _layer_sizes, int _activ_func,
     buf_sz += (l_dst[0] + l_dst[l_count-1]*2)*2;
 
     CV_CALL( wbuf = cvCreateMat( 1, buf_sz, CV_64F ));
-    CV_CALL( weights = (double**)cvAlloc( (l_count+1)*sizeof(weights[0]) ));
+    CV_CALL( weights = (double**)cvAlloc( (l_count+2)*sizeof(weights[0]) ));
 
     weights[0] = wbuf->data.db;
     weights[1] = weights[0] + l_dst[0]*2;
