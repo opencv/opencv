@@ -27,13 +27,13 @@ public:
       * \param[in] callback function that will be registered as a callback for a keyboard event
       * \param[in] cookie for passing user data to callback
       */
-    void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
+    void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie = 0);
     
     /** \brief Register a callback function for mouse events
           * \param[in] ccallback function that will be registered as a callback for a mouse event
           * \param[in] cookie for passing user data to callback
           */
-    void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
+    void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
 
     void spin ();
     void spinOnce (int time = 1, bool force_redraw = false);
@@ -494,16 +494,16 @@ struct ApplyAffine
     const Affine3f& affine_;
     ApplyAffine(const Affine3f& affine) : affine_(affine) {}
 
-    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) { return affine_ * p; }
+    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) const { return affine_ * p; }
 
-    template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v)
+    template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v) const
     {
         const float* m = affine_.matrix.val;
 
         Vec<_Tp, 3> result;
-        result[0] = m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3];
-        result[1] = m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7];
-        result[2] = m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11];
+        result[0] = (_Tp)(m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3]);
+        result[1] = (_Tp)(m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7]);
+        result[2] = (_Tp)(m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11]);
         return result;
     }
 };

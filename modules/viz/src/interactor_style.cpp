@@ -133,7 +133,7 @@ void temp_viz::InteractorStyle::OnChar ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie)
+void temp_viz::InteractorStyle::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
 {
     // Register the callback function and store the user data
     mouseCallback_ = callback;
@@ -141,7 +141,7 @@ void temp_viz::InteractorStyle::registerMouseCallback(void (*callback)(const cv:
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void *cookie)
+void temp_viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void *cookie)
 {
     // Register the callback function and store the user data
     keyboardCallback_ = callback;
@@ -290,17 +290,19 @@ temp_viz::InteractorStyle::OnKeyDown ()
     case 'c': case 'C':
     {
         vtkSmartPointer<vtkCamera> cam = Interactor->GetRenderWindow ()->GetRenderers ()->GetFirstRenderer ()->GetActiveCamera ();
-        double clip[2], focal[3], pos[3], view[3];
-        cam->GetClippingRange (clip);
-        cam->GetFocalPoint (focal);
-        cam->GetPosition (pos);
-        cam->GetViewUp (view);
-        int *win_pos = Interactor->GetRenderWindow ()->GetPosition ();
-        int *win_size = Interactor->GetRenderWindow ()->GetSize ();
-        std::cerr << clip[0]  << "," << clip[1]  << "/" << focal[0] << "," << focal[1] << "," << focal[2] << "/" <<
-                                 pos[0]   << "," << pos[1]   << "," << pos[2]   << "/" << view[0]  << "," << view[1]  << "," << view[2] << "/" <<
-                                 cam->GetViewAngle () / 180.0 * M_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
-                              << endl;
+
+        Vec2d clip;
+        Vec3d focal, pose, view;
+        cam->GetClippingRange (clip.val);
+        cam->GetFocalPoint (focal.val);
+        cam->GetPosition (pose.val);
+        cam->GetViewUp (view.val);
+        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition ());
+        Vec2i win_size(Interactor->GetRenderWindow()->GetSize ());
+        std::cerr << Mat(clip, false).reshape(1, 1) << "/" << Mat(focal, false).reshape(1, 1) << "/" <<
+                   Mat(pose, false).reshape(1, 1) << "/" << Mat(view, false).reshape(1, 1) << "/" <<
+                   cam->GetViewAngle () / 180.0 * M_PI  << "/" <<
+                   Mat(win_size, false).reshape(1,1) << "/" << Mat(win_pos, false).reshape(1,1) << endl;
         break;
     }
     case '=':

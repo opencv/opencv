@@ -93,12 +93,12 @@ bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)
     return impl_->removeCoordinateSystem(id);
 }
 
-void temp_viz::Viz3d::registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie)
+void temp_viz::Viz3d::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie)
 {
     impl_->registerKeyboardCallback(callback, cookie);
 }
 
-void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie)
+void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
 {
     impl_->registerMouseCallback(callback, cookie);
 }

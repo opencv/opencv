@@ -53,8 +53,8 @@ namespace temp_viz
         void spin ();
         void spinOnce (int time = 1, bool force_redraw = false);
 
-        void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void* cookie = 0);
-        void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
+        void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie = 0);
+        void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
 
         bool wasStopped() const;
     private:

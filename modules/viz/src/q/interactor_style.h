@@ -16,7 +16,7 @@ namespace temp_viz
           * -        j, J   : take a .PNG snapshot of the current window view
           * -        c, C   : display current camera/window parameters
           * -        f, F   : fly to point mode
-          * -        e, E   : exit the interactor\
+          * -        e, E   : exit the interactor
           * -        q, Q   : stop and call VTK's TerminateApp
           * -       + / -   : increment/decrement overall point size
           * -  r, R [+ ALT] : reset camera [to viewpoint = {0, 0, 0} -> center_{x, y, z}]
@@ -52,8 +52,8 @@ namespace temp_viz
             virtual void Initialize ();
 
             /** \brief Pass a pointer to the actor map
-                  * \param[in] actors the actor map that will be used with this style
-                  */
+              * \param[in] actors the actor map that will be used with this style
+              */
             inline void setCloudActorMap (const cv::Ptr<CloudActorMap>& actors) { actors_ = actors; }
 
             /** \brief Pass a set of renderers to the interactor style.
@@ -62,17 +62,17 @@ namespace temp_viz
             void setRenderer (vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
 
             /** \brief Register a callback function for mouse events
-		  * \param[in] ccallback function that will be registered as a callback for a mouse event
-		  * \param[in] cookie for passing user data to callback
-		  */
-	    void registerMouseCallback(void (*callback)(const cv::MouseEvent&, void*), void* cookie = 0);
+              * \param[in] ccallback function that will be registered as a callback for a mouse event
+              * \param[in] cookie for passing user data to callback
+              */
+            void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
 
             /** \brief Register a callback function for keyboard events
                   * \param[in] callback a function that will be registered as a callback for a keyboard event
                   * \param[in] cookie user data passed to the callback function
                   */
-	    void registerKeyboardCallback(void (*callback)(const cv::KeyboardEvent&, void*), void * cookie = 0);
-	    
+            void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
+
             /** \brief Save the current rendered image to disk, as a PNG screenshot.
                   * \param[in] file the name of the PNG file
                   */
@@ -141,15 +141,15 @@ namespace temp_viz
 
             /** \brief The keyboard modifier to use. Default: Alt. */
             KeyboardModifier modifier_;
-	    
-	    /** \brief KeyboardEvent callback function pointer*/
-	    void (*keyboardCallback_)(const cv::KeyboardEvent&, void*);
-	    /** \brief KeyboardEvent callback user data*/
-	    void *keyboard_callback_cookie_;
-	    
-	    /** \brief MouseEvent callback function pointer */
-	    void (*mouseCallback_)(const cv::MouseEvent&, void*);
-	    /** \brief MouseEvent callback user data */
-	    void *mouse_callback_cookie_;
+
+            /** \brief KeyboardEvent callback function pointer*/
+            void (*keyboardCallback_)(const KeyboardEvent&, void*);
+            /** \brief KeyboardEvent callback user data*/
+            void *keyboard_callback_cookie_;
+
+            /** \brief MouseEvent callback function pointer */
+            void (*mouseCallback_)(const MouseEvent&, void*);
+            /** \brief MouseEvent callback user data */
+            void *mouse_callback_cookie_;
         };
 }
