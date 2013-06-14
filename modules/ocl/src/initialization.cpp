@@ -508,7 +508,7 @@ namespace cv
         {
             impl->update_disk_cache = (mode & CACHE_UPDATE) == CACHE_UPDATE;
             impl->enable_disk_cache = 
-#if !defined(NDEBUG) || defined(_DEBUG) 
+#ifdef _DEBUG 
                 (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
                 (mode & CACHE_RELEASE) == CACHE_RELEASE;

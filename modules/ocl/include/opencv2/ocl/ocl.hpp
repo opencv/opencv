@@ -179,16 +179,21 @@ namespace cv
                                                         bool cleanUp = true);
 
         //! Enable or disable OpenCL program binary caching onto local disk
-        // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the compiled program to be 
-        // cached onto local disk automatically, which may accelerate subsequent runs.
-        // Caching mode is controlled by the following enum
-        // Note, the feature is by default enabled when OpenCV is built in release mode.
+        // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb" 
+        // binary file, which will be reused when the OpenCV executable is started again. 
+        //
+        // Caching mode is controlled by the following enums
+        // Notes
+        //   1. the feature is by default enabled when OpenCV is built in release mode.
+        //   2. the CACHE_DEBUG / CACHE_RELEASE flags only effectively work with MSVC compiler;
+        //      for GNU compilers, the function always treats the build as release mode (enabled by default).
         enum
         {
-            CACHE_NONE    = 0,
-            CACHE_DEBUG   = 0x1 << 0,
-            CACHE_RELEASE = 0x1 << 1,
-            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE,
+            CACHE_NONE    = 0,        // do not cache OpenCL binary
+            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
+            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
             CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
