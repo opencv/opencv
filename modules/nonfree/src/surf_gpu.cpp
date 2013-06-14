@@ -142,13 +142,13 @@ namespace
 
             bindImgTex(img);
 
-            gpu::integralBuffered(img, surf_.sum, surf_.intBuffer);
+            gpu::integral(img, surf_.sum, surf_.intBuffer);
             sumOffset = bindSumTex(surf_.sum);
 
             if (use_mask)
             {
-                min(mask, 1.0, surf_.mask1);
-                gpu::integralBuffered(surf_.mask1, surf_.maskSum, surf_.intBuffer);
+                gpu::min(mask, 1.0, surf_.mask1);
+                gpu::integral(surf_.mask1, surf_.maskSum, surf_.intBuffer);
                 maskOffset = bindMaskSumTex(surf_.maskSum);
             }
         }

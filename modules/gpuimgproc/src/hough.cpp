@@ -761,7 +761,7 @@ namespace
         {
             buildRTable_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
                             r_table, r_sizes.ptr<int>(), make_short2(templCenter.x, templCenter.y), levels);
-            min(r_sizes, maxSize, r_sizes);
+            gpu::min(r_sizes, maxSize, r_sizes);
         }
     }
 

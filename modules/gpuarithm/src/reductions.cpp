@@ -47,41 +47,28 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-double cv::gpu::norm(const GpuMat&, int) { throw_no_cuda(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, GpuMat&) { throw_no_cuda(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, int, const GpuMat&, GpuMat&) { throw_no_cuda(); return 0.0; }
-double cv::gpu::norm(const GpuMat&, const GpuMat&, int) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(InputArray, int, InputArray, GpuMat&) { throw_no_cuda(); return 0.0; }
+double cv::gpu::norm(InputArray, InputArray, GpuMat&, int) { throw_no_cuda(); return 0.0; }
 
-Scalar cv::gpu::sum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::sum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::absSum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
+Scalar cv::gpu::sqrSum(InputArray, InputArray, GpuMat&) { throw_no_cuda(); return Scalar(); }
 
-Scalar cv::gpu::absSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::absSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+void cv::gpu::minMax(InputArray, double*, double*, InputArray, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::minMaxLoc(InputArray, double*, double*, Point*, Point*, InputArray, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
-Scalar cv::gpu::sqrSum(const GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
-Scalar cv::gpu::sqrSum(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); return Scalar(); }
+int cv::gpu::countNonZero(InputArray, GpuMat&) { throw_no_cuda(); return 0; }
 
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::minMax(const GpuMat&, double*, double*, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::reduce(InputArray, OutputArray, int, int, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::minMaxLoc(const GpuMat&, double*, double*, Point*, Point*, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::meanStdDev(InputArray, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
 
-int cv::gpu::countNonZero(const GpuMat&) { throw_no_cuda(); return 0; }
-int cv::gpu::countNonZero(const GpuMat&, GpuMat&) { throw_no_cuda(); return 0; }
+void cv::gpu::rectStdDev(InputArray, InputArray, OutputArray, Rect, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::reduce(const GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::normalize(InputArray, OutputArray, double, double, int, int, InputArray, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&) { throw_no_cuda(); }
-void cv::gpu::meanStdDev(const GpuMat&, Scalar&, Scalar&, GpuMat&) { throw_no_cuda(); }
-
-void cv::gpu::rectStdDev(const GpuMat&, const GpuMat&, GpuMat&, const Rect&, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::normalize(const GpuMat&, GpuMat&, double, double, int, int, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::gpu::integral(InputArray, OutputArray, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::sqrIntegral(InputArray, OutputArray, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -124,21 +111,13 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // norm
 
-double cv::gpu::norm(const GpuMat& src, int normType)
+double cv::gpu::norm(InputArray _src, int normType, InputArray _mask, GpuMat& buf)
 {
-    GpuMat buf;
-    return gpu::norm(src, normType, GpuMat(), buf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-double cv::gpu::norm(const GpuMat& src, int normType, GpuMat& buf)
-{
-    return gpu::norm(src, normType, GpuMat(), buf);
-}
-
-double cv::gpu::norm(const GpuMat& src, int normType, const GpuMat& mask, GpuMat& buf)
-{
-    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-    CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size() && src.channels() == 1));
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size() && src.channels() == 1) );
 
     GpuMat src_single_channel = src.reshape(1);
 
@@ -154,13 +133,11 @@ double cv::gpu::norm(const GpuMat& src, int normType, const GpuMat& mask, GpuMat
     return std::max(std::abs(min_val), std::abs(max_val));
 }
 
-double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
+double cv::gpu::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normType)
 {
-    CV_Assert(src1.type() == CV_8UC1);
-    CV_Assert(src1.size() == src2.size() && src1.type() == src2.type());
-    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
-
 #if CUDA_VERSION < 5050
+    (void) buf;
+
     typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2, NppiSize oSizeROI, Npp64f* pRetVal);
 
     static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
@@ -175,13 +152,18 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     static const buf_size_func_t buf_size_funcs[] = {nppiNormDiffInfGetBufferHostSize_8u_C1R, nppiNormDiffL1GetBufferHostSize_8u_C1R, nppiNormDiffL2GetBufferHostSize_8u_C1R};
 #endif
 
+    GpuMat src1 = _src1.getGpuMat();
+    GpuMat src2 = _src2.getGpuMat();
+
+    CV_Assert( src1.type() == CV_8UC1 );
+    CV_Assert( src1.size() == src2.size() && src1.type() == src2.type() );
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+
     NppiSize sz;
     sz.width  = src1.cols;
     sz.height = src1.rows;
 
-    int funcIdx = normType >> 1;
-
-    double retVal;
+    const int funcIdx = normType >> 1;
 
     DeviceBuffer dbuf;
 
@@ -191,13 +173,14 @@ double cv::gpu::norm(const GpuMat& src1, const GpuMat& src2, int normType)
     int bufSize;
     buf_size_funcs[funcIdx](sz, &bufSize);
 
-    GpuMat buf(1, bufSize, CV_8UC1);
+    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
 
     nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf, buf.data) );
 #endif
 
     cudaSafeCall( cudaDeviceSynchronize() );
 
+    double retVal;
     dbuf.download(&retVal);
 
     return retVal;
@@ -220,19 +203,11 @@ namespace sum
     void runSqr(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
 }
 
-Scalar cv::gpu::sum(const GpuMat& src)
+Scalar cv::gpu::sum(InputArray _src, InputArray _mask, GpuMat& buf)
 {
-    GpuMat buf;
-    return gpu::sum(src, GpuMat(), buf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-Scalar cv::gpu::sum(const GpuMat& src, GpuMat& buf)
-{
-    return gpu::sum(src, GpuMat(), buf);
-}
-
-Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
-{
     typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
@@ -266,19 +241,11 @@ Scalar cv::gpu::sum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
     return Scalar(result[0], result[1], result[2], result[3]);
 }
 
-Scalar cv::gpu::absSum(const GpuMat& src)
+Scalar cv::gpu::absSum(InputArray _src, InputArray _mask, GpuMat& buf)
 {
-    GpuMat buf;
-    return gpu::absSum(src, GpuMat(), buf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-Scalar cv::gpu::absSum(const GpuMat& src, GpuMat& buf)
-{
-    return gpu::absSum(src, GpuMat(), buf);
-}
-
-Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
-{
     typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
@@ -312,19 +279,11 @@ Scalar cv::gpu::absSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
     return Scalar(result[0], result[1], result[2], result[3]);
 }
 
-Scalar cv::gpu::sqrSum(const GpuMat& src)
+Scalar cv::gpu::sqrSum(InputArray _src, InputArray _mask, GpuMat& buf)
 {
-    GpuMat buf;
-    return gpu::sqrSum(src, GpuMat(), buf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-Scalar cv::gpu::sqrSum(const GpuMat& src, GpuMat& buf)
-{
-    return gpu::sqrSum(src, GpuMat(), buf);
-}
-
-Scalar cv::gpu::sqrSum(const GpuMat& src, const GpuMat& mask, GpuMat& buf)
-{
     typedef void (*func_t)(PtrStepSzb src, void* buf, double* sum, PtrStepSzb mask);
     static const func_t funcs[7][5] =
     {
@@ -369,14 +328,11 @@ namespace minMax
     void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
 }
 
-void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask)
+void cv::gpu::minMax(InputArray _src, double* minVal, double* maxVal, InputArray _mask, GpuMat& buf)
 {
-    GpuMat buf;
-    gpu::minMax(src, minVal, maxVal, mask, buf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-void cv::gpu::minMax(const GpuMat& src, double* minVal, double* maxVal, const GpuMat& mask, GpuMat& buf)
-{
     typedef void (*func_t)(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
     static const func_t funcs[] =
     {
@@ -419,15 +375,12 @@ namespace minMaxLoc
     void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
 }
 
-void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc, const GpuMat& mask)
+void cv::gpu::minMaxLoc(InputArray _src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
+                        InputArray _mask, GpuMat& valBuf, GpuMat& locBuf)
 {
-    GpuMat valBuf, locBuf;
-    gpu::minMaxLoc(src, minVal, maxVal, minLoc, maxLoc, mask, valBuf, locBuf);
-}
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
 
-void cv::gpu::minMaxLoc(const GpuMat& src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                        const GpuMat& mask, GpuMat& valBuf, GpuMat& locBuf)
-{
     typedef void (*func_t)(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
     static const func_t funcs[] =
     {
@@ -472,14 +425,10 @@ namespace countNonZero
     int run(const PtrStepSzb src, PtrStep<unsigned int> buf);
 }
 
-int cv::gpu::countNonZero(const GpuMat& src)
+int cv::gpu::countNonZero(InputArray _src, GpuMat& buf)
 {
-    GpuMat buf;
-    return countNonZero(src, buf);
-}
+    GpuMat src = _src.getGpuMat();
 
-int cv::gpu::countNonZero(const GpuMat& src, GpuMat& buf)
-{
     typedef int (*func_t)(const PtrStepSzb src, PtrStep<unsigned int> buf);
     static const func_t funcs[] =
     {
@@ -521,8 +470,10 @@ namespace reduce
     void cols(PtrStepSzb src, void* dst, int cn, int op, cudaStream_t stream);
 }
 
-void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int dtype, Stream& stream)
+void cv::gpu::reduce(InputArray _src, OutputArray _dst, int dim, int reduceOp, int dtype, Stream& stream)
 {
+    GpuMat src = _src.getGpuMat();
+
     CV_Assert( src.channels() <= 4 );
     CV_Assert( dim == 0 || dim == 1 );
     CV_Assert( reduceOp == REDUCE_SUM || reduceOp == REDUCE_AVG || reduceOp == REDUCE_MAX || reduceOp == REDUCE_MIN );
@@ -530,7 +481,8 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
     if (dtype < 0)
         dtype = src.depth();
 
-    dst.create(1, dim == 0 ? src.cols : src.rows, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()));
+    _dst.create(1, dim == 0 ? src.cols : src.rows, CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels()));
+    GpuMat dst = _dst.getGpuMat();
 
     if (dim == 0)
     {
@@ -691,15 +643,11 @@ void cv::gpu::reduce(const GpuMat& src, GpuMat& dst, int dim, int reduceOp, int 
 ////////////////////////////////////////////////////////////////////////
 // meanStdDev
 
-void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev)
+void cv::gpu::meanStdDev(InputArray _src, Scalar& mean, Scalar& stddev, GpuMat& buf)
 {
-    GpuMat buf;
-    meanStdDev(src, mean, stddev, buf);
-}
+    GpuMat src = _src.getGpuMat();
 
-void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat& buf)
-{
-    CV_Assert(src.type() == CV_8UC1);
+    CV_Assert( src.type() == CV_8UC1 );
 
     if (!deviceSupports(FEATURE_SET_COMPUTE_13))
         CV_Error(cv::Error::StsNotImplemented, "Not sufficient compute capebility");
@@ -730,11 +678,15 @@ void cv::gpu::meanStdDev(const GpuMat& src, Scalar& mean, Scalar& stddev, GpuMat
 //////////////////////////////////////////////////////////////////////////////
 // rectStdDev
 
-void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, const Rect& rect, Stream& s)
+void cv::gpu::rectStdDev(InputArray _src, InputArray _sqr, OutputArray _dst, Rect rect, Stream& _stream)
 {
-    CV_Assert(src.type() == CV_32SC1 && sqr.type() == CV_64FC1);
+    GpuMat src = _src.getGpuMat();
+    GpuMat sqr = _sqr.getGpuMat();
 
-    dst.create(src.size(), CV_32FC1);
+    CV_Assert( src.type() == CV_32SC1 && sqr.type() == CV_64FC1 );
+
+    _dst.create(src.size(), CV_32FC1);
+    GpuMat dst = _dst.getGpuMat();
 
     NppiSize sz;
     sz.width = src.cols;
@@ -746,7 +698,7 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
     nppRect.x = rect.x;
     nppRect.y = rect.y;
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     NppStreamHandler h(stream);
 
@@ -760,16 +712,12 @@ void cv::gpu::rectStdDev(const GpuMat& src, const GpuMat& sqr, GpuMat& dst, cons
 ////////////////////////////////////////////////////////////////////////
 // normalize
 
-void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask)
+void cv::gpu::normalize(InputArray _src, OutputArray dst, double a, double b, int norm_type, int dtype, InputArray mask, GpuMat& norm_buf, GpuMat& cvt_buf)
 {
-    GpuMat norm_buf;
-    GpuMat cvt_buf;
-    normalize(src, dst, a, b, norm_type, dtype, mask, norm_buf, cvt_buf);
-}
+    GpuMat src = _src.getGpuMat();
 
-void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int norm_type, int dtype, const GpuMat& mask, GpuMat& norm_buf, GpuMat& cvt_buf)
-{
     double scale = 1, shift = 0;
+
     if (norm_type == NORM_MINMAX)
     {
         double smin = 0, smax = 0;
@@ -798,6 +746,118 @@ void cv::gpu::normalize(const GpuMat& src, GpuMat& dst, double a, double b, int 
         src.convertTo(cvt_buf, dtype, scale, shift);
         cvt_buf.copyTo(dst, mask);
     }
+}
+
+////////////////////////////////////////////////////////////////////////
+// integral
+
+namespace cv { namespace gpu { namespace cudev
+{
+    namespace imgproc
+    {
+        void shfl_integral_gpu(const PtrStepSzb& img, PtrStepSz<unsigned int> integral, cudaStream_t stream);
+    }
+}}}
+
+void cv::gpu::integral(InputArray _src, OutputArray _dst, GpuMat& buffer, Stream& _stream)
+{
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.type() == CV_8UC1 );
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+
+    cv::Size whole;
+    cv::Point offset;
+    src.locateROI(whole, offset);
+
+    if (deviceSupports(WARP_SHUFFLE_FUNCTIONS) && src.cols <= 2048
+        && offset.x % 16 == 0 && ((src.cols + 63) / 64) * 64 <= (static_cast<int>(src.step) - offset.x))
+    {
+        ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
+
+        cv::gpu::cudev::imgproc::shfl_integral_gpu(src, buffer, stream);
+
+        _dst.create(src.rows + 1, src.cols + 1, CV_32SC1);
+        GpuMat dst = _dst.getGpuMat();
+
+        dst.setTo(Scalar::all(0), _stream);
+
+        GpuMat inner = dst(Rect(1, 1, src.cols, src.rows));
+        GpuMat res = buffer(Rect(0, 0, src.cols, src.rows));
+
+        res.copyTo(inner, _stream);
+    }
+    else
+    {
+    #ifndef HAVE_OPENCV_GPULEGACY
+        throw_no_cuda();
+    #else
+        _dst.create(src.rows + 1, src.cols + 1, CV_32SC1);
+        GpuMat dst = _dst.getGpuMat();
+
+        NcvSize32u roiSize;
+        roiSize.width = src.cols;
+        roiSize.height = src.rows;
+
+        cudaDeviceProp prop;
+        cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+        Ncv32u bufSize;
+        ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
+        ensureSizeIsEnough(1, bufSize, CV_8UC1, buffer);
+
+        NppStStreamHandler h(stream);
+
+        ncvSafeCall( nppiStIntegral_8u32u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>()), static_cast<int>(src.step),
+            dst.ptr<Ncv32u>(), static_cast<int>(dst.step), roiSize, buffer.ptr<Ncv8u>(), bufSize, prop) );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    #endif
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// sqrIntegral
+
+void cv::gpu::sqrIntegral(InputArray _src, OutputArray _dst, GpuMat& buf, Stream& _stream)
+{
+#ifndef HAVE_OPENCV_GPULEGACY
+    (void) _src;
+    (void) _dst;
+    (void) _stream;
+    throw_no_cuda();
+#else
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.type() == CV_8U );
+
+    NcvSize32u roiSize;
+    roiSize.width = src.cols;
+    roiSize.height = src.rows;
+
+    cudaDeviceProp prop;
+    cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+
+    Ncv32u bufSize;
+    ncvSafeCall(nppiStSqrIntegralGetSize_8u64u(roiSize, &bufSize, prop));
+
+    ensureSizeIsEnough(1, bufSize, CV_8U, buf);
+
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
+
+    NppStStreamHandler h(stream);
+
+    _dst.create(src.rows + 1, src.cols + 1, CV_64F);
+    GpuMat dst = _dst.getGpuMat();
+
+    ncvSafeCall(nppiStSqrIntegral_8u64u_C1R(const_cast<Ncv8u*>(src.ptr<Ncv8u>(0)), static_cast<int>(src.step),
+            dst.ptr<Ncv64u>(0), static_cast<int>(dst.step), roiSize, buf.ptr<Ncv8u>(0), bufSize, prop));
+
+    if (stream == 0)
+        cudaSafeCall( cudaDeviceSynchronize() );
+#endif
 }
 
 #endif

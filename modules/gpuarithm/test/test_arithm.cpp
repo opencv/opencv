@@ -419,8 +419,10 @@ GPU_TEST_P(Convolve, Accuracy)
     cv::Mat src = randomMat(size, CV_32FC1, 0.0, 100.0);
     cv::Mat kernel = randomMat(cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0);
 
+    cv::Ptr<cv::gpu::Convolution> conv = cv::gpu::createConvolution();
+
     cv::gpu::GpuMat dst;
-    cv::gpu::convolve(loadMat(src), loadMat(kernel), dst, ccorr);
+    conv->convolve(loadMat(src), loadMat(kernel), dst, ccorr);
 
     cv::Mat dst_gold;
     convolveDFT(src, kernel, dst_gold, ccorr);

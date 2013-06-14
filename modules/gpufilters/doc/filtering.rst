@@ -381,7 +381,7 @@ Creates a non-separable linear filter.
 
     :param dstType: Output image type. The same type as ``src`` is supported.
 
-    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing. Supports size up to 16. For larger kernels use :ocv:func:`gpu::convolve`.
+    :param kernel: 2D array of filter coefficients. Floating-point coefficients will be converted to fixed-point representation before the actual processing. Supports size up to 16. For larger kernels use :ocv:class:`gpu::Convolution`.
 
     :param anchor: Anchor point. The default value Point(-1, -1) means that the anchor is at the kernel center.
 
@@ -411,7 +411,7 @@ Applies the non-separable 2D linear filter to an image.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`filter2D`, :ocv:func:`gpu::convolve`
+.. seealso:: :ocv:func:`filter2D`, :ocv:class:`gpu::Convolution`
 
 
 

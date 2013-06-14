@@ -108,9 +108,10 @@ PERF_TEST_P(Sz_Norm, NormDiff,
     {
         const cv::gpu::GpuMat d_src1(src1);
         const cv::gpu::GpuMat d_src2(src2);
+        cv::gpu::GpuMat d_buf;
         double gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::norm(d_src1, d_src2, normType);
+        TEST_CYCLE() gpu_dst = cv::gpu::norm(d_src1, d_src2, d_buf, normType);
 
         SANITY_CHECK(gpu_dst);
 

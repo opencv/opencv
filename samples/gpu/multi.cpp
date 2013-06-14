@@ -87,15 +87,15 @@ void Worker::operator()(int device_id) const
     rng.fill(src, RNG::UNIFORM, 0, 1);
 
     // CPU works
-    transpose(src, dst);
+    cv::transpose(src, dst);
 
     // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-    transpose(d_src, d_dst);
+    gpu::transpose(d_src, d_dst);
 
     // Check results
-    bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
+    bool passed = cv::norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
     std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
         << (passed ? "passed" : "FAILED") << endl;
 
