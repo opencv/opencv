@@ -99,12 +99,14 @@ class ParamParser(object):
         offset = line.find(":param")
         assert offset > 0
         self.prefix = line[:offset]
-        assert self.prefix == " "*len(self.prefix), ":param definition should be prefixed with spaces"
+        assert ((self.prefix == " "*len(self.prefix)) or (self.prefix == ".. ")), ":param definition should be prefixed with spaces or it should be a comment, finished by words (documentation isn't required)"
         line = line[offset + 6:].lstrip()
         name_end = line.find(":")
         assert name_end > 0
         self.name = line[:name_end]
         self.comment = line[name_end+1:].lstrip()
+	if (self.prefix == ".. :param"):
+            assert (self.comment.rstrip().endswith("(documentation isn't required)")), ":param definition should be prefixed with spaces or it should be a comment, finished by words (documentation isn't required)"
         self.active = True
 
     def append(self, line):
@@ -118,7 +120,7 @@ class ParamParser(object):
 
     @classmethod
     def hasDeclaration(cls, line):
-        return line.lstrip().startswith(":param")
+	    return ( line.lstrip().startswith(":param") or (line.lstrip().startswith(".. :param") and line.rstrip().endswith("(documentation isn't required)") ) )
 
 class RstParser(object):
     def __init__(self, cpp_parser):
