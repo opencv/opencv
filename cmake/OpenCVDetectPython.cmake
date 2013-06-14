@@ -49,7 +49,7 @@ if(PYTHON_EXECUTABLE)
 
   if(NOT ANDROID AND NOT IOS)
     if(CMAKE_HOST_UNIX)
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import *; print get_python_lib()"
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import *; print(get_python_lib())"
                       RESULT_VARIABLE PYTHON_CVPY_PROCESS
                       OUTPUT_VARIABLE PYTHON_STD_PACKAGES_PATH
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -80,7 +80,7 @@ if(PYTHON_EXECUTABLE)
 
     if(NOT PYTHON_NUMPY_INCLUDE_DIR)
       # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print numpy.distutils.misc_util.get_numpy_include_dirs()[0]"
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(numpy.distutils.misc_util.get_numpy_include_dirs()[0])"
                       RESULT_VARIABLE PYTHON_NUMPY_PROCESS
                       OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -92,7 +92,7 @@ if(PYTHON_EXECUTABLE)
     endif()
 
     if(PYTHON_NUMPY_INCLUDE_DIR)
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print numpy.version.version"
+      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.version.version)"
                         RESULT_VARIABLE PYTHON_NUMPY_PROCESS
                         OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
