@@ -297,12 +297,13 @@ temp_viz::InteractorStyle::OnKeyDown ()
         cam->GetFocalPoint (focal.val);
         cam->GetPosition (pose.val);
         cam->GetViewUp (view.val);
-        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition ());
-        Vec2i win_size(Interactor->GetRenderWindow()->GetSize ());
+        Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
+        Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
+
         std::cerr << Mat(clip, false).reshape(1, 1) << "/" << Mat(focal, false).reshape(1, 1) << "/" <<
-                   Mat(pose, false).reshape(1, 1) << "/" << Mat(view, false).reshape(1, 1) << "/" <<
-                   cam->GetViewAngle () / 180.0 * M_PI  << "/" <<
-                   Mat(win_size, false).reshape(1,1) << "/" << Mat(win_pos, false).reshape(1,1) << endl;
+                     Mat(pose, false).reshape(1, 1) << "/" << Mat(view, false).reshape(1, 1) << "/" <<
+                     cam->GetViewAngle () / 180.0 * M_PI  << "/" <<
+                     Mat(win_size, false).reshape(1,1) << "/" << Mat(win_pos, false).reshape(1,1) << endl;
         break;
     }
     case '=':
