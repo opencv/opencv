@@ -41,7 +41,7 @@ good_speedup_style = xlwt.easyxf('font: color green', num_format_str='#0.00')
 bad_speedup_style = xlwt.easyxf('font: color red', num_format_str='#0.00')
 no_speedup_style = no_time_style
 error_speedup_style = xlwt.easyxf('pattern: pattern solid, fore_color orange')
-header_style = xlwt.easyxf('font: bold true; alignment: horizontal centre, vertical top')
+header_style = xlwt.easyxf('font: bold true; alignment: horizontal centre, vertical top, wrap True')
 
 def collect_xml(collection, configuration, xml_fullname):
     xml_fname = os.path.split(xml_fullname)[1]
