@@ -2958,6 +2958,14 @@ void printVersionInfo(bool useStdOut)
         ::testing::Test::RecordProperty("inner_version", ver);
         if(useStdOut) std::cout << ver << std::endl;
     }
+
+#ifdef CV_PARALLEL_FRAMEWORK
+    ::testing::Test::RecordProperty("cv_parallel_framework", CV_PARALLEL_FRAMEWORK);
+    if (useStdOut)
+    {
+        std::cout << "Parallel framework: " << CV_PARALLEL_FRAMEWORK << std::endl;
+    }
+#endif
 }
 
 } //namespace cvtest
