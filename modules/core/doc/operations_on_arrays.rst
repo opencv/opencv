@@ -436,6 +436,8 @@ Calculates the covariance matrix of a set of vectors.
 
             * **CV_COVAR_COLS** [Only useful in the second variant of the function] If the flag is specified, all the input vectors are stored as columns of the  ``samples``  matrix.  ``mean``  should be a single-column vector in this case.
 
+.. :param count: (documentation isn't required)
+
 The functions ``calcCovarMatrix`` calculate the covariance matrix and, optionally, the mean vector of the set of input vectors.
 
 .. seealso::
@@ -542,6 +544,8 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LT** ``src1`` is less than ``src2``.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
+
+.. :param cmp_op: (documentation isn't required)
 
 The function compares:
 
@@ -873,6 +877,8 @@ Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-
             * **DFT_REAL_OUTPUT** performs an inverse transformation of a 1D or 2D complex array; the result is normally a complex array of the same size, however, if the input array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array; while the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array (note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array, and the output will also be a real array).
 
     :param nonzeroRows: when the parameter is not zero, the function assumes that only the first ``nonzeroRows`` rows of the input array (``DFT_INVERSE`` is not set) or only the first ``nonzeroRows`` of the output array (``DFT_INVERSE`` is set) contain non-zeros, thus, the function can handle the rest of the rows more efficiently and save some time; this technique is very useful for calculating array cross-correlation or convolution using DFT.
+
+.. :param nonzero_rows: (documentation isn't required)
 
 
 The function performs one of the following:
@@ -1727,6 +1733,8 @@ Calculates a mean and standard deviation of array elements.
 
     :param mask: optional operation mask.
 
+.. :param std_dev: (documentation isn't required)
+
 The function ``meanStdDev`` calculates the mean and the standard deviation ``M`` of array elements independently for each channel and returns it via the output parameters:
 
 .. math::
@@ -2206,6 +2214,7 @@ Normalizes the norm or value range of an array.
 
     :param mask: optional operation mask.
 
+.. :param norm_type: (documentation isn't required)
 
 The functions ``normalize`` scale and shift the input array elements so that
 

@@ -1376,6 +1376,7 @@ Performs initial step of meanshift segmentation of an image.
 
     :param termcrit: Termination criteria: when to stop meanshift iterations.
 
+.. :param max_level: (documentation isn't required)
 
 The function implements the filtering stage of meanshift segmentation, that is, the output of the function is the filtered "posterized" image with color gradients and fine-grain texture flattened. At every pixel
 ``(X,Y)`` of the input image (or down-sized input image, see below) the function executes meanshift
