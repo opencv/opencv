@@ -288,7 +288,7 @@ public:
 
 CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
-CV_EXPORTS_W void decolor(InputArray src, OutputArray grayscale, OutputArray color_boost);
+CV_EXPORTS_W void decolor(InputArray src, OutputArray grayscale);
 
 } // cv
 
