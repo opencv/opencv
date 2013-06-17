@@ -64,10 +64,6 @@ struct DistIdxPair
 
 struct MatchPairsBody : ParallelLoopBody
 {
-    MatchPairsBody(const MatchPairsBody& other)
-            : matcher(other.matcher), features(other.features),
-              pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
-
     MatchPairsBody(FeaturesMatcher &_matcher, const std::vector<ImageFeatures> &_features,
                    std::vector<MatchesInfo> &_pairwise_matches, std::vector<std::pair<int,int> > &_near_pairs)
             : matcher(_matcher), features(_features),

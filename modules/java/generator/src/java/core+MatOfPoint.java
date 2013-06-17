@@ -14,7 +14,7 @@ public class MatOfPoint extends Mat {
 
     protected MatOfPoint(long addr) {
         super(addr);
-        if(checkVector(_channels, _depth) < 0 )
+        if( !empty() && checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
@@ -25,7 +25,7 @@ public class MatOfPoint extends Mat {
 
     public MatOfPoint(Mat m) {
         super(m, Range.all());
-        if(checkVector(_channels, _depth) < 0 )
+        if( !empty() && checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }

@@ -69,13 +69,13 @@ struct CalcRotation
         K_from(0,0) = cameras[edge.from].focal;
         K_from(1,1) = cameras[edge.from].focal * cameras[edge.from].aspect;
         K_from(0,2) = cameras[edge.from].ppx;
-        K_from(0,2) = cameras[edge.from].ppy;
+        K_from(1,2) = cameras[edge.from].ppy;
 
         Mat_<double> K_to = Mat::eye(3, 3, CV_64F);
         K_to(0,0) = cameras[edge.to].focal;
         K_to(1,1) = cameras[edge.to].focal * cameras[edge.to].aspect;
         K_to(0,2) = cameras[edge.to].ppx;
-        K_to(0,2) = cameras[edge.to].ppy;
+        K_to(1,2) = cameras[edge.to].ppy;
 
         Mat R = K_from.inv() * pairwise_matches[pair_idx].H.inv() * K_to;
         cameras[edge.to].R = cameras[edge.from].R * R;
