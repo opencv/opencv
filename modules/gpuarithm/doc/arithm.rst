@@ -157,8 +157,6 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`gpu::filter2D`
-
 
 
 gpu::createConvolution

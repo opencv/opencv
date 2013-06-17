@@ -72,10 +72,12 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Box Filter
 
-//! smooths the image using the normalized box filter
+//! creates a normalized 2D box filter
 //! supports CV_8UC1, CV_8UC4 types
 CV_EXPORTS Ptr<Filter> createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1,-1),
                                        int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void boxFilter(InputArray src, OutputArray dst, int dstType,
                                                  Size ksize, Point anchor = Point(-1,-1),
@@ -100,9 +102,12 @@ inline void blur(InputArray src, OutputArray dst, Size ksize, Point anchor, Stre
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
 
-//! non-separable linear 2D filter
+//! Creates a non-separable linear 2D filter
+//! supports 1 and 4 channel CV_8U, CV_16U and CV_32F input
 CV_EXPORTS Ptr<Filter> createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1,-1),
-                                            int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                          int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void filter2D(InputArray src, OutputArray dst, int ddepth, InputArray kernel,
                                                 Point anchor = Point(-1,-1), int borderType = BORDER_DEFAULT,
@@ -117,10 +122,12 @@ inline void filter2D(InputArray src, OutputArray dst, int ddepth, InputArray ker
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian Filter
 
-//! applies Laplacian operator to the image
+//! creates a Laplacian operator
 //! supports only ksize = 1 and ksize = 3
 CV_EXPORTS Ptr<Filter> createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1,
-                                            int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+                                             int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void Laplacian(InputArray src, OutputArray dst, int ddepth,
                                                  int ksize = 1, double scale = 1, int borderType = BORDER_DEFAULT,
@@ -135,9 +142,11 @@ inline void Laplacian(InputArray src, OutputArray dst, int ddepth, int ksize, do
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Separable Linear Filter
 
-//! separable linear 2D filter
+//! creates a separable linear filter
 CV_EXPORTS Ptr<Filter> createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel,
                                                    Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void sepFilter2D(InputArray src, OutputArray dst, int ddepth, InputArray kernelX, InputArray kernelY,
                             Point anchor = Point(-1,-1), int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1,
@@ -152,18 +161,20 @@ inline void sepFilter2D(InputArray src, OutputArray dst, int ddepth, InputArray 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deriv Filter
 
-//! the generalized Deriv operator
+//! creates a generalized Deriv operator
 CV_EXPORTS Ptr<Filter> createDerivFilter(int srcType, int dstType, int dx, int dy,
                                          int ksize, bool normalize = false, double scale = 1,
                                          int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
-//! the Sobel operator
+//! creates a Sobel operator
 CV_EXPORTS Ptr<Filter> createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3,
                                          double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
 
-//! the vertical or horizontal Scharr operator
+//! creates a vertical or horizontal Scharr operator
 CV_EXPORTS Ptr<Filter> createScharrFilter(int srcType, int dstType, int dx, int dy,
                                           double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void Sobel(InputArray src, OutputArray dst, int ddepth, int dx, int dy, int ksize = 3, double scale = 1,
                                              int rowBorderType = BORDER_DEFAULT, int columnBorderType = -1,
@@ -188,10 +199,12 @@ inline void Scharr(InputArray src, OutputArray dst, int ddepth, int dx, int dy, 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gaussian Filter
 
-//! smooths the image using Gaussian filter
+//! creates a Gaussian filter
 CV_EXPORTS Ptr<Filter> createGaussianFilter(int srcType, int dstType, Size ksize,
                                             double sigma1, double sigma2 = 0,
                                             int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1);
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void GaussianBlur(InputArray src, OutputArray dst, Size ksize,
                                                     double sigma1, double sigma2 = 0,
@@ -207,9 +220,11 @@ inline void GaussianBlur(InputArray src, OutputArray dst, Size ksize, double sig
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Morphology Filter
 
-//! returns 2D morphological filter
+//! creates a 2D morphological filter
 //! supports CV_8UC1 and CV_8UC4 types
 CV_EXPORTS Ptr<Filter> createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1);
+
+// obsolete
 
 __OPENCV_GPUFILTERS_DEPR_BEFORE__ void erode(InputArray src, OutputArray dst, InputArray kernel,
                                              Point anchor = Point(-1, -1), int iterations = 1,
@@ -244,12 +259,12 @@ inline void morphologyEx(InputArray src, OutputArray dst, int op, InputArray ker
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Image Rank Filter
 
-//! Result pixel value is the maximum of pixel values under the rectangular mask region
+//! result pixel value is the maximum of pixel values under the rectangular mask region
 CV_EXPORTS Ptr<Filter> createBoxMaxFilter(int srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
-//! Result pixel value is the maximum of pixel values under the rectangular mask region
+//! result pixel value is the maximum of pixel values under the rectangular mask region
 CV_EXPORTS Ptr<Filter> createBoxMinFilter(int srcType, Size ksize,
                                           Point anchor = Point(-1, -1),
                                           int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
