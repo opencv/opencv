@@ -1,2 +1,2 @@
-set(the_description "Computational Photography")
-ocv_define_module(photo opencv_imgproc)
+set(the_description "Generic optimization")
+ocv_define_module(optim)
