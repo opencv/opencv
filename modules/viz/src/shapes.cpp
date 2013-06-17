@@ -5,6 +5,71 @@ inline float rad2deg (float alpha)
 
 inline double rad2deg (double alpha){return (alpha * 57.29578);}
 
+vtkSmartPointer<vtkDataSet> temp_viz::createCylinder (const cv::Point3f& pt_on_axis, const cv::Point3f& axis_direction, double radius, int numsides)
+{
+    const cv::Point3f pt2 = pt_on_axis + axis_direction;
+    vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
+    line->SetPoint1 (pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
+    line->SetPoint2 (pt2.x, pt2.y, pt2.z);
+    
+    vtkSmartPointer<vtkTubeFilter> tuber = vtkSmartPointer<vtkTubeFilter>::New ();
+    tuber->SetInputConnection (line->GetOutputPort ());
+    tuber->SetRadius (radius);
+    tuber->SetNumberOfSides (numsides);
+    return (tuber->GetOutput ());
+}
+
+vtkSmartPointer<vtkDataSet> temp_viz::createPlane (const cv::Vec4f& coefs)
+{
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
+    plane->SetNormal (coefs[0], coefs[1], coefs[2]);
+    double norm = cv::norm (cv::Vec3f (coefs[0], coefs[1], coefs[2]));
+    plane->Push (-coefs[3] / norm);
+    return (plane->GetOutput ());
+}
+
+vtkSmartPointer<vtkDataSet> temp_viz::createPlane(const cv::Vec4f& coefs, const cv::Point3f& pt)
+{
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
+    cv::Point3f coefs3 (coefs[0], coefs[1], coefs[2]);    
+    double norm_sqr = 1.0 / coefs3.dot (coefs3);
+    plane->SetNormal (coefs[0], coefs[1], coefs[2]);
+
+    double t = coefs3.dot (pt) + coefs[3];
+    cv::Vec3f p_center;
+    p_center = pt - coefs3 * t * norm_sqr;
+    plane->SetCenter (p_center[0], p_center[1], p_center[2]);
+
+    return (plane->GetOutput ());
+}
+
+vtkSmartPointer<vtkDataSet> temp_viz::create2DCircle (const cv::Point3f& pt, double radius)
+{
+    vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New ();
+    // Maybe the resolution should be lower e.g. 50 or 25
+    disk->SetCircumferentialResolution (100);
+    disk->SetInnerRadius (radius - 0.001);
+    disk->SetOuterRadius (radius + 0.001);
+    disk->SetCircumferentialResolution (20);
+
+    // Set the circle origin
+    vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New ();
+    t->Identity ();
+    t->Translate (pt.x, pt.y, pt.z);
+
+    vtkSmartPointer<vtkTransformPolyDataFilter> tf = vtkSmartPointer<vtkTransformPolyDataFilter>::New ();
+    tf->SetTransform (t);
+    tf->SetInputConnection (disk->GetOutputPort ());
+    
+    return (tf->GetOutput ());
+}
+
+vtkSmartPointer<vtkDataSet> temp_viz::createCube(const cv::Point3f& pt_min, const cv::Point3f& pt_max)
+{
+    vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
+    cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+    return (cube->GetOutput ());
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkDataSet> temp_viz::createCylinder (const temp_viz::ModelCoefficients &coefficients, int numsides)
