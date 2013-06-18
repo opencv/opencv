@@ -585,4 +585,18 @@ public class Calib3dTest extends OpenCVTestCase {
     public void testValidateDisparityMatMatIntIntInt() {
         fail("Not yet implemented");
     }
+
+    public void testComputeCorrespondEpilines()
+    {
+        Mat fundamental = new Mat(3, 3, CvType.CV_64F);
+        fundamental.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
+        MatOfPoint2f left = new MatOfPoint2f();
+        left.alloc(1);
+        left.put(0, 0, 2, 3); //add(new Point(x, y));
+        Mat lines = new Mat();
+        Mat truth = new Mat(1, 1, CvType.CV_32FC3);
+        truth.put(0, 0, -0.70735186, 0.70686162, -0.70588124);
+        Calib3d.computeCorrespondEpilines(left, 1, fundamental, lines);
+        assertMatEqual(truth, lines, EPS);
+    }
 }
