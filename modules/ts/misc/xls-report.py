@@ -52,7 +52,8 @@ def collect_xml(collection, configuration, xml_fullname):
 
     for test in sorted(parseLogFile(xml_fullname)):
         test_results = module_tests.setdefault((test.shortName(), test.param()), {})
-        test_results[configuration] = test.get("gmean")
+        if test.status == 'run':
+            test_results[configuration] = test.get("gmean")
 
 def main():
     arg_parser = ArgumentParser(description='Build an XLS performance report.')
