@@ -2,6 +2,10 @@
 #include <float.h>
 #include <limits.h>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "tegra.hpp"
+#endif
+
 using namespace cv;
 
 namespace cvtest
@@ -2965,6 +2969,44 @@ void printVersionInfo(bool useStdOut)
     {
         std::cout << "Parallel framework: " << CV_PARALLEL_FRAMEWORK << std::endl;
     }
+#endif
+
+    std::string cpu_features;
+
+#if CV_SSE
+    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
+#endif
+#if CV_SSE2
+    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
+#endif
+#if CV_SSE3
+    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
+#endif
+#if CV_SSSE3
+    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
+#endif
+#if CV_SSE4_1
+    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
+#endif
+#if CV_SSE4_2
+    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
+#endif
+#if CV_AVX
+    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
+#endif
+#if CV_NEON
+    cpu_features += " neon"; // NEON is currently not checked at runtime
+#endif
+
+    cpu_features.erase(0, 1); // erase initial space
+
+    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
+    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    const char * tegra_optimization = tegra::isDeviceSupported() ? "enabled" : "disabled";
+    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
+    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
 #endif
 }
 
