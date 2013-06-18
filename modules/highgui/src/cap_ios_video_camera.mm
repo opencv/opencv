@@ -2,6 +2,7 @@
  *  cap_ios_video_camera.mm
  *  For iOS video I/O
  *  by Eduard Feicho on 29/07/12
+ *  by Alexander Shishkov on 17/07/13
  *  Copyright 2012. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
