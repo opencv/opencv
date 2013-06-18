@@ -734,6 +734,11 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     _timeadjustment = _calibrate();
 }
 
+void TestBase::RecordRunParameters()
+{
+    ::testing::Test::RecordProperty("cv_implementation", param_impl);
+    ::testing::Test::RecordProperty("cv_num_threads", param_threads);
+}
 
 std::string TestBase::getSelectedImpl()
 {
