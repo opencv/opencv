@@ -24,7 +24,7 @@ class MatlabWrapperGenerator(object):
         parse_tree.build(ns)
        
         # setup the template engine
-        jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True)
+        jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)
 
         # add the custom filters
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
