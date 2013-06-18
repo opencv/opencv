@@ -5,7 +5,7 @@
     <key>CFBundleName</key>
     <string>OpenCV</string>
     <key>CFBundleIdentifier</key>
-    <string>com.itseez.opencv</string>
+    <string>opencv.org</string>
     <key>CFBundleVersion</key>
     <string>${VERSION}</string>
     <key>CFBundleShortVersionString</key>
