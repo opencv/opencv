@@ -64,15 +64,9 @@ namespace cv {
 class CV_EXPORTS_W Barcode1Ddecoder : public virtual Algorithm
 {
  public:
-  Mat barcode;//ROI barcode
-  int symbology_type;//i.e. UPC_A, CODE_128, etc.
-  int lenght;//optional: number of digit in barcode given in input
-  std::vector<int> decoded_digit;//indexes of decoded digit
-  Symbology* symbology;//we can set a specific symbology or try all.
+  //create the specific barcode decoder
+  CV_WRAP static Ptr<Barcode1Ddecoder> create( const std::string& decoder_type);
 
-  //create the specific barcode, we can set symbology and lenght of barcode
-  CV_WRAP static Ptr<Barcode1Ddecoder> create( const std::string& decoder_type, const Mat& barcode, 
-                                const int symbology_type = -1, const int lenght = -1);
   /* This method returns the string of decoded barcode, here is implemented the decoding algorithm
    * it matches the pixels of barcode with the symbols of symbology and takes a vector that represents 
    * the indexes of found symbols. 
@@ -80,6 +74,12 @@ class CV_EXPORTS_W Barcode1Ddecoder : public virtual Algorithm
    */
   virtual std::string decodeBarcode() = 0;
   virtual ~Barcode1Ddecoder();
+ protected:
+  Mat barcode;//ROI barcode
+  int symbology_type;//we can set symbology of barcode (i.e. UPC_A, CODE_128, etc.)
+  int lenght;//we can set number of digit in barcode
+  std::vector<int> decoded_digit;//indexes of decoded digit
+  Symbology* symbology;
 };
 }
 

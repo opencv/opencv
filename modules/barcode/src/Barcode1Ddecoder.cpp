@@ -56,12 +56,9 @@ Barcode1Ddecoder::~Barcode1Ddecoder() {
   // TODO Auto-generated destructor stub
 }
 
-Ptr<Barcode1Ddecoder> Barcode1Ddecoder::create( const std::string& decoder_type, const Mat& barcode, const int symbology_type, const int lenght)
+Ptr<Barcode1Ddecoder> Barcode1Ddecoder::create( const std::string& decoder_type)
 {
 	(void) decoder_type;
-	(void) barcode;
-	(void) symbology_type;
-	(void) lenght;
 	return NULL;
 }
 

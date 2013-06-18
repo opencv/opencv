@@ -105,7 +105,8 @@ class Symbology {
   int getBarcodeLenght(){return barcode_lenght;};
   //return the std::vector of digit, see (*)
   Digits getDigits(){return digits;};
-
+//  Digit getDigit(const int i, const vector<int>& previous);
+  
  protected:
   static int symbology;//type of symbology
   bool fixed_lenght;//true if the symbology has a fixed number of digit in the barcode
@@ -134,8 +135,8 @@ class SymbologyUPCA : public virtual Symbology {
   static const int BORDER_BAR_LENGHT = 3;
   static const int DIGIT_LENGHT = 7;
 
-  static const int BORDER_BAR_INDEX_ALPHABET = 20;
-  static const int CENTER_BAR_INDEX_ALPHABET = 21;
+  static const int BORDER_BAR_INDEX_ALPHABET = 10;
+  static const int CENTER_BAR_INDEX_ALPHABET = 11;
 
   static const int ALPHABET_LENGHT = 12;
 

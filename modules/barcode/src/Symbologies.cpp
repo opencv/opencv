@@ -129,7 +129,7 @@ SymbologyUPCA::SymbologyUPCA() {
   
   //for each position of a digit in the barcode there are only some possibile candidate symbols that can match
   std::vector<std::string>::iterator it_symbol;
-  for (unsigned int i = 0; i < barcode_lenght; ++i)
+  for (int i = 0; i < barcode_lenght; ++i)
   {
     Digit digit;
     digit.position = i;
