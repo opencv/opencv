@@ -847,13 +847,13 @@ if(NOT ANDROID)
 endif()
 status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
 
-# ========================== java ==========================
+# ========================= matlab =========================
 status("")
 status("  Matlab:")
-if(NOT MATLAB_FOUND)
-  status("    NOT FOUND")
-else()
-  status("    MEX:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"                                    ELSE NO)
+status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+if (MATLAB_FOUND)
+  get_property(MEX_WORKS GLOBAL PROPERTY MEX_WORKS)
+  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
 endif()
 
 # ========================== documentation ==========================

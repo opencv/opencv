@@ -31,14 +31,13 @@ void mexFunction(int nlhs, mxArray* plhs[],
   {% endblock %}
 
   // parse the inputs and outputs
-  std::vector<Bridge> blhs(plhs, plhs+nlhs);
-  std::vector<Bridge> brhs(prhs, prhs+nrhs);
 
   {% block postbridge %}
   {% endblock %}
 
   // call the opencv function
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
+  {{fun.name}}();
   {% block fcall %}
   {% endblock %}
 
