@@ -8,6 +8,7 @@ import os, os.path
 import re
 
 from argparse import ArgumentParser
+from collections import OrderedDict
 from glob import glob
 from itertools import ifilter
 
@@ -47,16 +48,11 @@ def collect_xml(collection, configuration, xml_fullname):
     xml_fname = os.path.split(xml_fullname)[1]
     module = xml_fname[:xml_fname.index('_')]
 
-    if module not in collection:
-        collection[module] = {}
+    module_tests = collection.setdefault(module, OrderedDict())
 
     for test in sorted(parseLogFile(xml_fullname)):
-        if test.shortName() not in collection[module]:
-            collection[module][test.shortName()] = {}
-        if test.param() not in collection[module][test.shortName()]:
-            collection[module][test.shortName()][test.param()] = {}
-        collection[module][test.shortName()][test.param()][configuration] = \
-            test.get("gmean")
+        test_results = module_tests.setdefault((test.shortName(), test.param()), {})
+        test_results[configuration] = test.get("gmean")
 
 def main():
     arg_parser = ArgumentParser(description='Build an XLS performance report.')
@@ -129,41 +125,40 @@ def main():
         module_styles = {module: xlwt.easyxf('pattern: pattern solid, fore_color {}'.format(color))
                          for module, color in module_colors.iteritems()}
 
-        for module, tests in collection.iteritems():
-            for test, params in tests.iteritems():
-                for param, configs in params.iteritems():
-                    sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
-                    sheet.write(row, 1, test)
+        for module, tests in sorted(collection.iteritems()):
+            for ((test, param), configs) in tests.iteritems():
+                sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
+                sheet.write(row, 1, test)
 
-                    param_list = param[1:-1].split(", ")
-                    sheet.write(row, 2, next(ifilter(re_image_size.match, param_list), None))
-                    sheet.write(row, 3, next(ifilter(re_data_type.match, param_list), None))
+                param_list = param[1:-1].split(", ")
+                sheet.write(row, 2, next(ifilter(re_image_size.match, param_list), None))
+                sheet.write(row, 3, next(ifilter(re_data_type.match, param_list), None))
 
-                    sheet.row(row).write(4, param)
-                    for i, c in enumerate(config_names):
-                        if c in configs:
-                            sheet.write(row, 5 + i, configs[c], time_style)
-                        else:
-                            sheet.write(row, 5 + i, None, no_time_style)
+                sheet.row(row).write(4, param)
+                for i, c in enumerate(config_names):
+                    if c in configs:
+                        sheet.write(row, 5 + i, configs[c], time_style)
+                    else:
+                        sheet.write(row, 5 + i, None, no_time_style)
 
-                    for i, comp in enumerate(sheet_comparisons):
-                        left = configs.get(comp["from"])
-                        right = configs.get(comp["to"])
-                        col = 5 + len(config_names) + 1 + i
+                for i, comp in enumerate(sheet_comparisons):
+                    left = configs.get(comp["from"])
+                    right = configs.get(comp["to"])
+                    col = 5 + len(config_names) + 1 + i
 
-                        if left is not None and right is not None:
-                            try:
-                                speedup = left / right
-                                sheet.write(row, col, speedup, good_speedup_style if speedup > 1.1 else
-                                                               bad_speedup_style  if speedup < 0.9 else
-                                                               speedup_style)
-                            except ArithmeticError as e:
-                                sheet.write(row, col, None, error_speedup_style)
-                        else:
-                            sheet.write(row, col, None, no_speedup_style)
+                    if left is not None and right is not None:
+                        try:
+                            speedup = left / right
+                            sheet.write(row, col, speedup, good_speedup_style if speedup > 1.1 else
+                                                           bad_speedup_style  if speedup < 0.9 else
+                                                           speedup_style)
+                        except ArithmeticError as e:
+                            sheet.write(row, col, None, error_speedup_style)
+                    else:
+                        sheet.write(row, col, None, no_speedup_style)
 
-                    row += 1
-                    if row % 1000 == 0: sheet.flush_row_data()
+                row += 1
+                if row % 1000 == 0: sheet.flush_row_data()
 
     wb.save(args.output)
 
