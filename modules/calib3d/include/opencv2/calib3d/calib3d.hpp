@@ -639,9 +639,9 @@ CV_EXPORTS Mat findFundamentalMat( InputArray points1, InputArray points2,
                                    double param1=3., double param2=0.99);
 
 //! finds coordinates of epipolar lines corresponding the specified points
-CV_EXPORTS void computeCorrespondEpilines( InputArray points,
-                                           int whichImage, InputArray F,
-                                           OutputArray lines );
+CV_EXPORTS_W void computeCorrespondEpilines( InputArray points,
+                                             int whichImage, InputArray F,
+                                             OutputArray lines );
 
 CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
                                      InputArray projPoints1, InputArray projPoints2,
