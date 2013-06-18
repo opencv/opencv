@@ -27,7 +27,7 @@
     :license: BSD, see LICENSE for more details.
 """
 __docformat__ = 'restructuredtext en'
-__version__ = '2.7-dev'
+__version__ = '2.8-dev'
 
 # high level interface
 from jinja2.environment import Environment, Template

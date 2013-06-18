@@ -9,7 +9,8 @@
     :license: BSD, see LICENSE for more details.
 """
 import re
-from itertools import imap
+from _compat import text_type, string_types, int_types, \
+     unichr, PY2
 
 
 __all__ = ['Markup', 'soft_unicode', 'escape', 'escape_silent']
@@ -19,7 +20,7 @@ _striptags_re = re.compile(r'(<!--.*?-->|<[^>]*>)')
 _entity_re = re.compile(r'&([^;]+);')
 
 
-class Markup(unicode):
+class Markup(text_type):
     r"""Marks a string as being safe for inclusion in HTML/XML output without
     needing to be escaped.  This implements the `__html__` interface a couple
     of frameworks and web applications use.  :class:`Markup` is a direct
@@ -68,65 +69,65 @@ class Markup(unicode):
         if hasattr(base, '__html__'):
             base = base.__html__()
         if encoding is None:
-            return unicode.__new__(cls, base)
-        return unicode.__new__(cls, base, encoding, errors)
+            return text_type.__new__(cls, base)
+        return text_type.__new__(cls, base, encoding, errors)
 
     def __html__(self):
         return self
 
     def __add__(self, other):
-        if hasattr(other, '__html__') or isinstance(other, basestring):
-            return self.__class__(unicode(self) + unicode(escape(other)))
+        if isinstance(other, string_types) or hasattr(other, '__html__'):
+            return self.__class__(super(Markup, self).__add__(self.escape(other)))
         return NotImplemented
 
     def __radd__(self, other):
-        if hasattr(other, '__html__') or isinstance(other, basestring):
-            return self.__class__(unicode(escape(other)) + unicode(self))
+        if hasattr(other, '__html__') or isinstance(other, string_types):
+            return self.escape(other).__add__(self)
         return NotImplemented
 
     def __mul__(self, num):
-        if isinstance(num, (int, long)):
-            return self.__class__(unicode.__mul__(self, num))
+        if isinstance(num, int_types):
+            return self.__class__(text_type.__mul__(self, num))
         return NotImplemented
     __rmul__ = __mul__
 
     def __mod__(self, arg):
         if isinstance(arg, tuple):
-            arg = tuple(imap(_MarkupEscapeHelper, arg))
+            arg = tuple(_MarkupEscapeHelper(x, self.escape) for x in arg)
         else:
-            arg = _MarkupEscapeHelper(arg)
-        return self.__class__(unicode.__mod__(self, arg))
+            arg = _MarkupEscapeHelper(arg, self.escape)
+        return self.__class__(text_type.__mod__(self, arg))
 
     def __repr__(self):
         return '%s(%s)' % (
             self.__class__.__name__,
-            unicode.__repr__(self)
+            text_type.__repr__(self)
         )
 
     def join(self, seq):
-        return self.__class__(unicode.join(self, imap(escape, seq)))
-    join.__doc__ = unicode.join.__doc__
+        return self.__class__(text_type.join(self, map(self.escape, seq)))
+    join.__doc__ = text_type.join.__doc__
 
     def split(self, *args, **kwargs):
-        return map(self.__class__, unicode.split(self, *args, **kwargs))
-    split.__doc__ = unicode.split.__doc__
+        return list(map(self.__class__, text_type.split(self, *args, **kwargs)))
+    split.__doc__ = text_type.split.__doc__
 
     def rsplit(self, *args, **kwargs):
-        return map(self.__class__, unicode.rsplit(self, *args, **kwargs))
-    rsplit.__doc__ = unicode.rsplit.__doc__
+        return list(map(self.__class__, text_type.rsplit(self, *args, **kwargs)))
+    rsplit.__doc__ = text_type.rsplit.__doc__
 
     def splitlines(self, *args, **kwargs):
-        return map(self.__class__, unicode.splitlines(self, *args, **kwargs))
-    splitlines.__doc__ = unicode.splitlines.__doc__
+        return list(map(self.__class__, text_type.splitlines(self, *args, **kwargs)))
+    splitlines.__doc__ = text_type.splitlines.__doc__
 
     def unescape(self):
-        r"""Unescape markup again into an unicode string.  This also resolves
+        r"""Unescape markup again into an text_type string.  This also resolves
         known HTML4 and XHTML entities:
 
         >>> Markup("Main &raquo; <em>About</em>").unescape()
         u'Main \xbb <em>About</em>'
         """
-        from jinja2._markupsafe._constants import HTML_ENTITIES
+        from _constants import HTML_ENTITIES
         def handle_match(m):
             name = m.group(1)
             if name in HTML_ENTITIES:
@@ -139,10 +140,10 @@ class Markup(unicode):
             except ValueError:
                 pass
             return u''
-        return _entity_re.sub(handle_match, unicode(self))
+        return _entity_re.sub(handle_match, text_type(self))
 
     def striptags(self):
-        r"""Unescape markup into an unicode string and strip all tags.  This
+        r"""Unescape markup into an text_type string and strip all tags.  This
         also resolves known HTML4 and XHTML entities.  Whitespace is
         normalized to one:
 
@@ -164,10 +165,10 @@ class Markup(unicode):
         return rv
 
     def make_wrapper(name):
-        orig = getattr(unicode, name)
+        orig = getattr(text_type, name)
         def func(self, *args, **kwargs):
-            args = _escape_argspec(list(args), enumerate(args))
-            _escape_argspec(kwargs, kwargs.iteritems())
+            args = _escape_argspec(list(args), enumerate(args), self.escape)
+            #_escape_argspec(kwargs, kwargs.iteritems(), None)
             return self.__class__(orig(self, *args, **kwargs))
         func.__name__ = orig.__name__
         func.__doc__ = orig.__doc__
@@ -180,25 +181,29 @@ class Markup(unicode):
         locals()[method] = make_wrapper(method)
 
     # new in python 2.5
-    if hasattr(unicode, 'partition'):
-        partition = make_wrapper('partition'),
-        rpartition = make_wrapper('rpartition')
+    if hasattr(text_type, 'partition'):
+        def partition(self, sep):
+            return tuple(map(self.__class__,
+                             text_type.partition(self, self.escape(sep))))
+        def rpartition(self, sep):
+            return tuple(map(self.__class__,
+                             text_type.rpartition(self, self.escape(sep))))
 
     # new in python 2.6
-    if hasattr(unicode, 'format'):
+    if hasattr(text_type, 'format'):
         format = make_wrapper('format')
 
     # not in python 3
-    if hasattr(unicode, '__getslice__'):
+    if hasattr(text_type, '__getslice__'):
         __getslice__ = make_wrapper('__getslice__')
 
     del method, make_wrapper
 
 
-def _escape_argspec(obj, iterable):
+def _escape_argspec(obj, iterable, escape):
     """Helper for various string-wrapped functions."""
     for key, value in iterable:
-        if hasattr(value, '__html__') or isinstance(value, basestring):
+        if hasattr(value, '__html__') or isinstance(value, string_types):
             obj[key] = escape(value)
     return obj
 
@@ -206,13 +211,13 @@ def _escape_argspec(obj, iterable):
 class _MarkupEscapeHelper(object):
     """Helper for Markup.__mod__"""
 
-    def __init__(self, obj):
+    def __init__(self, obj, escape):
         self.obj = obj
+        self.escape = escape
 
-    __getitem__ = lambda s, x: _MarkupEscapeHelper(s.obj[x])
-    __str__ = lambda s: str(escape(s.obj))
-    __unicode__ = lambda s: unicode(escape(s.obj))
-    __repr__ = lambda s: str(escape(repr(s.obj)))
+    __getitem__ = lambda s, x: _MarkupEscapeHelper(s.obj[x], s.escape)
+    __unicode__ = __str__ = lambda s: text_type(s.escape(s.obj))
+    __repr__ = lambda s: str(s.escape(repr(s.obj)))
     __int__ = lambda s: int(s.obj)
     __float__ = lambda s: float(s.obj)
 
@@ -220,6 +225,10 @@ class _MarkupEscapeHelper(object):
 # we have to import it down here as the speedups and native
 # modules imports the markup type which is define above.
 try:
-    from jinja2._markupsafe._speedups import escape, escape_silent, soft_unicode
+    from _speedups import escape, escape_silent, soft_unicode
 except ImportError:
-    from jinja2._markupsafe._native import escape, escape_silent, soft_unicode
+    from _native import escape, escape_silent, soft_unicode
+
+if not PY2:
+    soft_str = soft_unicode
+    __all__.append('soft_str')

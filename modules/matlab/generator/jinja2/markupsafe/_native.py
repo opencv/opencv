@@ -8,7 +8,7 @@
     :copyright: (c) 2010 by Armin Ronacher.
     :license: BSD, see LICENSE for more details.
 """
-from jinja2._markupsafe import Markup
+from _compat import text_type
 
 
 def escape(s):
@@ -18,7 +18,7 @@ def escape(s):
     """
     if hasattr(s, '__html__'):
         return s.__html__()
-    return Markup(unicode(s)
+    return Markup(text_type(s)
         .replace('&', '&amp;')
         .replace('>', '&gt;')
         .replace('<', '&lt;')
@@ -40,6 +40,6 @@ def soft_unicode(s):
     """Make a string unicode if it isn't already.  That way a markup
     string is not converted back to unicode.
     """
-    if not isinstance(s, unicode):
-        s = unicode(s)
+    if not isinstance(s, text_type):
+        s = text_type(s)
     return s

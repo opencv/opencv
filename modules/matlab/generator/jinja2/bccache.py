@@ -18,22 +18,17 @@ from os import path, listdir
 import sys
 import marshal
 import tempfile
-import cPickle as pickle
 import fnmatch
-try:
-    from hashlib import sha1
-except ImportError:
-    from sha import new as sha1
+from hashlib import sha1
 from jinja2.utils import open_if_exists
+from jinja2._compat import BytesIO, pickle, PY2
 
 
 # marshal works better on 3.x, one hack less required
-if sys.version_info > (3, 0):
-    from io import BytesIO
+if not PY2:
     marshal_dump = marshal.dump
     marshal_load = marshal.load
 else:
-    from cStringIO import StringIO as BytesIO
 
     def marshal_dump(code, f):
         if isinstance(f, file):
@@ -282,15 +277,26 @@ class MemcachedBytecodeCache(BytecodeCache):
 
     This bytecode cache does not support clearing of used items in the cache.
     The clear method is a no-operation function.
+
+    .. versionadded:: 2.7
+       Added support for ignoring memcache errors through the
+       `ignore_memcache_errors` parameter.
     """
 
-    def __init__(self, client, prefix='jinja2/bytecode/', timeout=None):
+    def __init__(self, client, prefix='jinja2/bytecode/', timeout=None,
+                 ignore_memcache_errors=True):
         self.client = client
         self.prefix = prefix
         self.timeout = timeout
+        self.ignore_memcache_errors = ignore_memcache_errors
 
     def load_bytecode(self, bucket):
-        code = self.client.get(self.prefix + bucket.key)
+        try:
+            code = self.client.get(self.prefix + bucket.key)
+        except Exception:
+            if not self.ignore_memcache_errors:
+                raise
+            code = None
         if code is not None:
             bucket.bytecode_from_string(code)
 
@@ -298,4 +304,8 @@ class MemcachedBytecodeCache(BytecodeCache):
         args = (self.prefix + bucket.key, bucket.bytecode_to_string())
         if self.timeout is not None:
             args += (self.timeout,)
-        self.client.set(*args)
+        try:
+            self.client.set(*args)
+        except Exception:
+            if not self.ignore_memcache_errors:
+                raise

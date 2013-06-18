@@ -8,6 +8,7 @@
     :copyright: (c) 2010 by the Jinja Team.
     :license: BSD, see LICENSE for more details.
 """
+from jinja2._compat import range_type
 from jinja2.utils import generate_lorem_ipsum, Cycler, Joiner
 
 
@@ -21,13 +22,15 @@ COMMENT_END_STRING = '#}'
 LINE_STATEMENT_PREFIX = None
 LINE_COMMENT_PREFIX = None
 TRIM_BLOCKS = False
+LSTRIP_BLOCKS = False
 NEWLINE_SEQUENCE = '\n'
+KEEP_TRAILING_NEWLINE = False
 
 
 # default filters, tests and namespace
 from jinja2.filters import FILTERS as DEFAULT_FILTERS
 DEFAULT_NAMESPACE = {
-    'range':        xrange,
+    'range':        range_type,
     'dict':         lambda **kw: kw,
     'lipsum':       generate_lorem_ipsum,
     'cycler':       Cycler,

@@ -10,8 +10,8 @@
 """
 from jinja2 import nodes
 from jinja2.exceptions import TemplateSyntaxError, TemplateAssertionError
-from jinja2.utils import next
 from jinja2.lexer import describe_token, describe_token_expr
+from jinja2._compat import imap
 
 
 #: statements that callinto 
@@ -53,7 +53,7 @@ class Parser(object):
     def _fail_ut_eof(self, name, end_token_stack, lineno):
         expected = []
         for exprs in end_token_stack:
-            expected.extend(map(describe_token_expr, exprs))
+            expected.extend(imap(describe_token_expr, exprs))
         if end_token_stack:
             currently_looking = ' or '.join(
                 "'%s'" % describe_token_expr(expr)

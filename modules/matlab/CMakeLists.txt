@@ -18,7 +18,7 @@ string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}
                                                    ${OPENCV_MODULE_${the_module}_OPT_DEPS}")
 foreach(module ${OPENCV_MATLAB_MODULES})
     if (HAVE_opencv_${module})
-        list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}/${module}.hpp")
+        list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
     endif()
 endforeach()
 

@@ -9,25 +9,18 @@
     :license: BSD, see LICENSE for more details.
 """
 import re
-import sys
 import errno
-try:
-    from urllib.parse import quote_from_bytes as url_quote
-except ImportError:
-    from urllib import quote as url_quote
-try:
-    from thread import allocate_lock
-except ImportError:
-    from dummy_thread import allocate_lock
 from collections import deque
-from itertools import imap
+from threading import Lock
+from jinja2._compat import text_type, string_types, implements_iterator, \
+     url_quote
 
 
 _word_split_re = re.compile(r'(\s+)')
 _punctuation_re = re.compile(
     '^(?P<lead>(?:%s)*)(?P<middle>.*?)(?P<trail>(?:%s)*)$' % (
-        '|'.join(imap(re.escape, ('(', '<', '&lt;'))),
-        '|'.join(imap(re.escape, ('.', ',', ')', '>', '\n', '&gt;')))
+        '|'.join(map(re.escape, ('(', '<', '&lt;'))),
+        '|'.join(map(re.escape, ('.', ',', ')', '>', '\n', '&gt;')))
     )
 )
 _simple_email_re = re.compile(r'^\S+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+$')
@@ -42,77 +35,7 @@ missing = type('MissingType', (), {'__repr__': lambda x: 'missing'})()
 # internal code
 internal_code = set()
 
-
-# concatenate a list of strings and convert them to unicode.
-# unfortunately there is a bug in python 2.4 and lower that causes
-# unicode.join trash the traceback.
-_concat = u''.join
-try:
-    def _test_gen_bug():
-        raise TypeError(_test_gen_bug)
-        yield None
-    _concat(_test_gen_bug())
-except TypeError, _error:
-    if not _error.args or _error.args[0] is not _test_gen_bug:
-        def concat(gen):
-            try:
-                return _concat(list(gen))
-            except Exception:
-                # this hack is needed so that the current frame
-                # does not show up in the traceback.
-                exc_type, exc_value, tb = sys.exc_info()
-                raise exc_type, exc_value, tb.tb_next
-    else:
-        concat = _concat
-    del _test_gen_bug, _error
-
-
-# for python 2.x we create ourselves a next() function that does the
-# basics without exception catching.
-try:
-    next = next
-except NameError:
-    def next(x):
-        return x.next()
-
-
-# if this python version is unable to deal with unicode filenames
-# when passed to encode we let this function encode it properly.
-# This is used in a couple of places.  As far as Jinja is concerned
-# filenames are unicode *or* bytestrings in 2.x and unicode only in
-# 3.x because compile cannot handle bytes
-if sys.version_info < (3, 0):
-    def _encode_filename(filename):
-        if isinstance(filename, unicode):
-            return filename.encode('utf-8')
-        return filename
-else:
-    def _encode_filename(filename):
-        assert filename is None or isinstance(filename, str), \
-            'filenames must be strings'
-        return filename
-
-from keyword import iskeyword as is_python_keyword
-
-
-# common types.  These do exist in the special types module too which however
-# does not exist in IronPython out of the box.  Also that way we don't have
-# to deal with implementation specific stuff here
-class _C(object):
-    def method(self): pass
-def _func():
-    yield None
-FunctionType = type(_func)
-GeneratorType = type(_func())
-MethodType = type(_C.method)
-CodeType = type(_C.method.func_code)
-try:
-    raise TypeError()
-except TypeError:
-    _tb = sys.exc_info()[2]
-    TracebackType = type(_tb)
-    FrameType = type(_tb.tb_frame)
-del _C, _tb, _func
+concat = u''.join
 
 
 def contextfunction(f):
@@ -156,7 +79,7 @@ def environmentfunction(f):
 
 def internalcode(f):
     """Marks the function as internally used"""
-    internal_code.add(f.func_code)
+    internal_code.add(f.__code__)
     return f
 
 
@@ -226,7 +149,7 @@ def open_if_exists(filename, mode='rb'):
     """
     try:
         return open(filename, mode)
-    except IOError, e:
+    except IOError as e:
         if e.errno not in (errno.ENOENT, errno.EISDIR):
             raise
 
@@ -275,7 +198,7 @@ def urlize(text, trim_url_limit=None, nofollow=False):
     trim_url = lambda x, limit=trim_url_limit: limit is not None \
                          and (x[:limit] + (len(x) >=limit and '...'
                          or '')) or x
-    words = _word_split_re.split(unicode(escape(text)))
+    words = _word_split_re.split(text_type(escape(text)))
     nofollow_attr = nofollow and ' rel="nofollow"' or ''
     for i, word in enumerate(words):
         match = _punctuation_re.match(word)
@@ -284,6 +207,7 @@ def urlize(text, trim_url_limit=None, nofollow=False):
             if middle.startswith('www.') or (
                 '@' not in middle and
                 not middle.startswith('http://') and
+                not middle.startswith('https://') and
                 len(middle) > 0 and
                 middle[0] in _letters + _digits and (
                     middle.endswith('.org') or
@@ -311,7 +235,7 @@ def generate_lorem_ipsum(n=5, html=True, min=20, max=100):
     words = LOREM_IPSUM_WORDS.split()
     result = []
 
-    for _ in xrange(n):
+    for _ in range(n):
         next_capitalized = True
         last_comma = last_fullstop = 0
         word = None
@@ -319,7 +243,7 @@ def generate_lorem_ipsum(n=5, html=True, min=20, max=100):
         p = []
 
         # each paragraph contains out of 20 to 100 words.
-        for idx, _ in enumerate(xrange(randrange(min, max))):
+        for idx, _ in enumerate(range(randrange(min, max))):
             while True:
                 word = choice(words)
                 if word != last:
@@ -361,11 +285,11 @@ def unicode_urlencode(obj, charset='utf-8'):
     If non strings are provided they are converted to their unicode
     representation first.
     """
-    if not isinstance(obj, basestring):
-        obj = unicode(obj)
-    if isinstance(obj, unicode):
+    if not isinstance(obj, string_types):
+        obj = text_type(obj)
+    if isinstance(obj, text_type):
         obj = obj.encode(charset)
-    return unicode(url_quote(obj))
+    return text_type(url_quote(obj))
 
 
 class LRUCache(object):
@@ -385,17 +309,9 @@ class LRUCache(object):
         # alias all queue methods for faster lookup
         self._popleft = self._queue.popleft
         self._pop = self._queue.pop
-        if hasattr(self._queue, 'remove'):
-            self._remove = self._queue.remove
-        self._wlock = allocate_lock()
+        self._remove = self._queue.remove
+        self._wlock = Lock()
         self._append = self._queue.append
-
-    def _remove(self, obj):
-        """Python 2.4 compatibility."""
-        for idx, item in enumerate(self._queue):
-            if item == obj:
-                del self._queue[idx]
-                break
 
     def __getstate__(self):
         return {
@@ -429,11 +345,15 @@ class LRUCache(object):
         """Set `default` if the key is not in the cache otherwise
         leave unchanged. Return the value of this key.
         """
+        self._wlock.acquire()
         try:
-            return self[key]
-        except KeyError:
-            self[key] = default
-            return default
+            try:
+                return self[key]
+            except KeyError:
+                self[key] = default
+                return default
+        finally:
+            self._wlock.release()
 
     def clear(self):
         """Clear the cache."""
@@ -464,17 +384,21 @@ class LRUCache(object):
 
         Raise a `KeyError` if it does not exist.
         """
-        rv = self._mapping[key]
-        if self._queue[-1] != key:
-            try:
-                self._remove(key)
-            except ValueError:
-                # if something removed the key from the container
-                # when we read, ignore the ValueError that we would
-                # get otherwise.
-                pass
-            self._append(key)
-        return rv
+        self._wlock.acquire()
+        try:
+            rv = self._mapping[key]
+            if self._queue[-1] != key:
+                try:
+                    self._remove(key)
+                except ValueError:
+                    # if something removed the key from the container
+                    # when we read, ignore the ValueError that we would
+                    # get otherwise.
+                    pass
+                self._append(key)
+            return rv
+        finally:
+            self._wlock.release()
 
     def __setitem__(self, key, value):
         """Sets the value for an item. Moves the item up so that it
@@ -483,11 +407,7 @@ class LRUCache(object):
         self._wlock.acquire()
         try:
             if key in self._mapping:
-                try:
-                    self._remove(key)
-                except ValueError:
-                    # __getitem__ is not locked, it might happen
-                    pass
+                self._remove(key)
             elif len(self._mapping) == self.capacity:
                 del self._mapping[self._popleft()]
             self._append(key)
@@ -557,6 +477,7 @@ except ImportError:
     pass
 
 
+@implements_iterator
 class Cycler(object):
     """A cycle helper for templates."""
 
@@ -575,7 +496,7 @@ class Cycler(object):
         """Returns the current item."""
         return self.items[self.pos]
 
-    def next(self):
+    def __next__(self):
         """Goes one item ahead and returns it."""
         rv = self.current
         self.pos = (self.pos + 1) % len(self.items)
@@ -596,25 +517,5 @@ class Joiner(object):
         return self.sep
 
 
-# try markupsafe first, if that fails go with Jinja2's bundled version
-# of markupsafe.  Markupsafe was previously Jinja2's implementation of
-# the Markup object but was moved into a separate package in a patchlevel
-# release
-try:
-    from markupsafe import Markup, escape, soft_unicode
-except ImportError:
-    from jinja2._markupsafe import Markup, escape, soft_unicode
-
-
-# partials
-try:
-    from functools import partial
-except ImportError:
-    class partial(object):
-        def __init__(self, _func, *args, **kwargs):
-            self._func = _func
-            self._args = args
-            self._kwargs = kwargs
-        def __call__(self, *args, **kwargs):
-            kwargs.update(self._kwargs)
-            return self._func(*(self._args + args), **kwargs)
+# Imported here because that's where it was in the past
+from markupsafe import Markup, escape, soft_unicode
