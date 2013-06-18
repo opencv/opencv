@@ -37,7 +37,11 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
   // call the opencv function
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
-  {{fun.name}}();
+  try {
+    {{fun.name}}();
+  } catch(...) {
+    mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
+  }
   {% block fcall %}
   {% endblock %}
 
