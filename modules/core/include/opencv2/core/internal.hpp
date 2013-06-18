@@ -50,6 +50,8 @@
 
 #include <vector>
 
+#include "cvconfig.h"
+
 #if defined WIN32 || defined _WIN32
 #  ifndef WIN32
 #    define WIN32
@@ -182,6 +184,30 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #  endif
 #  include <Eigen/Core>
 #  include "opencv2/core/eigen.hpp"
+#endif
+
+#ifdef _OPENMP
+#  define HAVE_OPENMP
+#endif
+
+#ifdef __APPLE__
+#  define HAVE_GCD
+#endif
+
+#if defined _MSC_VER && _MSC_VER >= 1600
+#  define HAVE_CONCURRENCY
+#endif
+
+#if defined HAVE_TBB && TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#  define CV_PARALLEL_FRAMEWORK "tbb"
+#elif defined HAVE_CSTRIPES
+#  define CV_PARALLEL_FRAMEWORK "cstripes"
+#elif defined HAVE_OPENMP
+#  define CV_PARALLEL_FRAMEWORK "openmp"
+#elif defined HAVE_GCD
+#  define CV_PARALLEL_FRAMEWORK "gcd"
+#elif defined HAVE_CONCURRENCY
+#  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
 #endif
 
 #ifdef __cplusplus
