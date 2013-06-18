@@ -2,6 +2,7 @@
  *  cap_ios_abstract_camera.mm
  *  For iOS video I/O
  *  by Eduard Feicho on 29/07/12
+ *  by Alexander Shishkov on 17/07/13
  *  Copyright 2012. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -405,4 +406,89 @@
     }
 }
 
+- (void)lockFocus;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isFocusModeSupported:AVCaptureFocusModeLocked]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.focusMode = AVCaptureFocusModeLocked;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for locked focus configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
+- (void) unlockFocus;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isFocusModeSupported:AVCaptureFocusModeContinuousAutoFocus]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.focusMode = AVCaptureFocusModeContinuousAutoFocus;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for autofocus configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
+- (void)lockExposure;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isExposureModeSupported:AVCaptureExposureModeLocked]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.exposureMode = AVCaptureExposureModeLocked;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for locked exposure configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
+- (void) unlockExposure;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isExposureModeSupported:AVCaptureExposureModeContinuousAutoExposure]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.exposureMode = AVCaptureExposureModeContinuousAutoExposure;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for autoexposure configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
+- (void)lockBalance;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isWhiteBalanceModeSupported:AVCaptureWhiteBalanceModeLocked]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.whiteBalanceMode = AVCaptureWhiteBalanceModeLocked;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for locked white balance configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
+- (void) unlockBalance;
+{
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    if ([device isWhiteBalanceModeSupported:AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance]) {
+        NSError *error = nil;
+        if ([device lockForConfiguration:&error]) {
+            device.whiteBalanceMode = AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance;
+            [device unlockForConfiguration];
+        } else {
+            NSLog(@"unable to lock device for auto white balance configuration %@", [error localizedDescription]);
+        }
+    }
+}
+
 @end
+
