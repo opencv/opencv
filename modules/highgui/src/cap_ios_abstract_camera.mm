@@ -470,7 +470,7 @@
             device.whiteBalanceMode = AVCaptureWhiteBalanceModeLocked;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for locked exposure configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for locked white balance configuration %@", [error localizedDescription]);
         }
     }
 }
@@ -484,7 +484,7 @@
             device.whiteBalanceMode = AVCaptureWhiteBalanceModeContinuousAutoWhiteBalance;
             [device unlockForConfiguration];
         } else {
-            NSLog(@"unable to lock device for autoexposure configuration %@", [error localizedDescription]);
+            NSLog(@"unable to lock device for auto white balance configuration %@", [error localizedDescription]);
         }
     }
 }

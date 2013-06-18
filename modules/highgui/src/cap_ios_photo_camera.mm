@@ -32,7 +32,7 @@
 #import "opencv2/highgui/cap_ios.h"
 #include "precomp.hpp"
 
-#pragma mark - Private Interface mark - Private Interface
+#pragma mark - Private Interface
 
 
 @interface CvPhotoCamera ()
