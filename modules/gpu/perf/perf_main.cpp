@@ -44,4 +44,8 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN_WITH_IMPLS(gpu, ("cuda", "plain"), printCudaInfo())
+CV_PERF_TEST_MAIN_WITH_IMPLS(gpu, (
+#ifdef HAVE_CUDA
+                                   "cuda",
+#endif
+                                   "plain"), printCudaInfo())
