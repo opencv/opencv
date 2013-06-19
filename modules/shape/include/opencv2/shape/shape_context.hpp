@@ -85,8 +85,8 @@ private:
     CV_PROP_RW double innerRadius;
     CV_PROP_RW double outerRadius;
 protected:
-    CV_WRAP void logarithmicSpaces(double minVal, double maxVal, 
-                              int nbins,std::vector<double>& vecSpaces) const;
+    CV_WRAP void logarithmicSpaces(std::vector<double>& vecSpaces) const;
+    CV_WRAP void angularSpaces(std::vector<double>& vecSpaces) const;                              
     CV_WRAP void buildNormalizedDistanceMatrix(std::vector<Point> contour, 
                               Mat& disMatrix) const;
     CV_WRAP void buildAngleMatrix(std::vector<Point> contour, 
