@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <opencv2/core.hpp>
 {% block includes %}
 {% endblock %}
 

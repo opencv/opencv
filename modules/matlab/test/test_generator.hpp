@@ -3,8 +3,8 @@
  * part of <cstdlib>, so we can be reasonably sure its
  * definition will be found
  */
-#ifndef __OPENCV_MATLAB_TEST_COMPILER_HPP_
-#define __OPENCV_MATLAB_TEST_COMPILER_HPP_
+#ifndef __OPENCV_MATLAB_TEST_GENERATOR_HPP_
+#define __OPENCV_MATLAB_TEST_GENERATOR_HPP_
 
 namespace cv {
 

@@ -9,7 +9,9 @@
  */
 #include "mex.h"
 #include "bridge.hpp"
+#include <string>
 #include <vector>
+#include <opencv2/core.hpp>
 {% block includes %}
 {% endblock %}
 
@@ -39,6 +41,8 @@ void mexFunction(int nlhs, mxArray* plhs[],
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
   try {
     {{fun.name}}();
+  } catch(cv::Exception& e) {
+    mexErrMsgTxt(std::string("OpenCV exception caught: ").append(e.what()).c_str());
   } catch(...) {
     mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
   }

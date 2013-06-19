@@ -6,14 +6,14 @@
 #
 #   MATLAB_FOUND:       true/false
 #   MATLAB_ROOT_DIR:    Root of Matlab installation
-#   MATLAB_MEX_SCRIPT   The mex script used to compile mex files
-#   MATLAB_INCLUDE_DIR  Path to "mex.h"
-#   MATLAB_LIBRARY_DIR  Path to mex and matrix libraries
-#   MATLAB_LIBS         The Matlab libs, usually mx, mex, mat
-#   MATLAB_MEXEXT       The mex library extension. It will be one of:
+#   MATLAB_MEX_SCRIPT:  The mex script used to compile mex files
+#   MATLAB_INCLUDE_DIR: Path to "mex.h"
+#   MATLAB_LIBRARY_DIR: Path to mex and matrix libraries
+#   MATLAB_LIBS:        The Matlab libs, usually mx, mex, mat
+#   MATLAB_MEXEXT:      The mex library extension. It will be one of:
 #                         mexwin32, mexwin64,  mexglx, mexa64, mexmac, 
 #                         mexmaci,  mexmaci64, mexsol, mexs64
-#   MATLAB_ARCH         The installation architecture. It is simply
+#   MATLAB_ARCH:        The installation architecture. It is simply
 #                       the MEXEXT with the preceding "mex" removed
 #
 # There doesn't appear to be an elegant way to detect all versions of Matlab
