@@ -43,6 +43,8 @@
 #ifndef __OPENCV_SHAPE_SHAPE_CONTEXT_HPP__
 #define __OPENCV_SHAPE_SHAPE_CONTEXT_HPP__
 
+#include <vector>
+
 namespace cv
 {
 
@@ -56,22 +58,40 @@ public:
     //! the default constructor
     CV_WRAP SCD();
     //! the full constructor taking all the necessary parameters
-    explicit CV_WRAP SCD(int nAngularBins=5,
-                  int nRadialBins = 4, bool logscale = true);
+    explicit CV_WRAP SCD(int nAngularBins=12, int nRadialBins = 5, 
+                           double innerRadius=0.1, double outerRadius=1);
 
     //! returns the descriptor size in float's 
     CV_WRAP int descriptorSize() const;
 
     //! Compute keypoints descriptors. 
-    void operator()(InputArray img, CV_OUT std::vector<KeyPoint>& keypoints,
-                    OutputArray descriptors) const;
+    CV_WRAP void extractSCD(std::vector<Point> contour, Mat& descriptors) const;
+    
+    //! Setters
+    void setAngularBins(int);
+    void setRadialBins(int);
+    void setInnerRadius(double);
+    void setOuterRadius(double);
 
+    //! Getters
+    int getAngularBins(void);
+    int getRadialBins(void);
+    double getInnerRadius(void);
+    double getOuterRadius(void);
+
+private:
     CV_PROP_RW int nAngularBins;
     CV_PROP_RW int nRadialBins;
-    CV_PROP_RW bool logscale;
-
+    CV_PROP_RW double innerRadius;
+    CV_PROP_RW double outerRadius;
 protected:
-
+    CV_WRAP void logarithmicSpaces(double minVal, double maxVal, 
+                              int nbins,std::vector<double>& vecSpaces) const;
+    CV_WRAP void buildNormalizedDistanceMatrix(std::vector<Point> contour, 
+                              Mat& disMatrix) const;
+    CV_WRAP void buildAngleMatrix(std::vector<Point> contour, 
+                              Mat& angleMatrix) const;
+    CV_WRAP double distance(Point p, Point q) const;
 };
 
 typedef SCD ShapeContextDescriptorExtractor;

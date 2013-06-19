@@ -43,6 +43,8 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
+#include <vector>
+
 #include "opencv2/imgproc.hpp"
 #include "opencv2/shape.hpp"
 
