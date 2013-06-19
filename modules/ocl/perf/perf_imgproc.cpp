@@ -743,12 +743,12 @@ PERFTEST(meanShiftFiltering)
         WARMUP_OFF;
 
         GPU_ON;
-        ocl::meanShiftFiltering(d_src, d_dst, sp, sr);
+        ocl::meanShiftFiltering(d_src, d_dst, sp, sr, crit);
         GPU_OFF;
 
         GPU_FULL_ON;
         d_src.upload(src);
-        ocl::meanShiftFiltering(d_src, d_dst, sp, sr);
+        ocl::meanShiftFiltering(d_src, d_dst, sp, sr, crit);
         d_dst.download(ocl_dst);
         GPU_FULL_OFF;
 
@@ -967,5 +967,47 @@ PERFTEST(CLAHE)
             d_dst.download(dst);
             GPU_FULL_OFF;
         }
+    }
+}
+
+///////////// columnSum////////////////////////
+PERFTEST(columnSum)
+{
+    Mat src, dst, ocl_dst;
+    ocl::oclMat d_src, d_dst;
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    {
+        SUBTEST << size << 'x' << size << "; CV_32FC1";
+
+        gen(src, size, size, CV_32FC1, 0, 256);
+
+        CPU_ON;
+        dst.create(src.size(), src.type());
+        for (int j = 0; j < src.cols; j++)
+            dst.at<float>(0, j) = src.at<float>(0, j);
+
+        for (int i = 1; i < src.rows; ++i)
+            for (int j = 0; j < src.cols; ++j)
+                dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
+        CPU_OFF;
+
+        d_src.upload(src);
+
+        WARMUP_ON;
+        ocl::columnSum(d_src, d_dst);
+        WARMUP_OFF;
+
+        GPU_ON;
+        ocl::columnSum(d_src, d_dst);
+        GPU_OFF;
+
+        GPU_FULL_ON;
+        d_src.upload(src);
+        ocl::columnSum(d_src, d_dst);
+        d_dst.download(ocl_dst);
+        GPU_FULL_OFF;
+
+        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 5e-1);
     }
 }
