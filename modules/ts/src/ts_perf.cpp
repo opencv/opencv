@@ -646,6 +646,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   |perf_verify_sanity          |false    |fail tests having no regression data for sanity checks}"
         "{   |perf_impl                   |" + available_impls[0] +
                                                    "|the implementation variant of functions under test}"
+        "{   |perf_list_impls             |false    |list available implementation variants and exit}"
         "{   |perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
 #ifdef ANDROID
         "{   |perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
@@ -686,6 +687,19 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
     param_affinity_mask   = args.get<int>("perf_affinity_mask");
     log_power_checkpoints = args.get<bool>("perf_log_power_checkpoints");
 #endif
+
+    bool param_list_impls = args.get<bool>("perf_list_impls");
+
+    if (param_list_impls)
+    {
+        fputs("Available implementation variants:", stdout);
+        for (size_t i = 0; i < available_impls.size(); ++i) {
+            putchar(' ');
+            fputs(available_impls[i].c_str(), stdout);
+        }
+        putchar('\n');
+        exit(0);
+    }
 
     if (std::find(available_impls.begin(), available_impls.end(), param_impl) == available_impls.end())
     {
