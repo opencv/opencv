@@ -18,12 +18,10 @@ class MatlabWrapperGenerator(object):
             # get the file name
             name = os.path.splitext(os.path.basename(file))[0]
             ns[name] = parser.parse(file)
-            print ns[name]
 
         # cleanify the parser output
         parse_tree = ParseTree()
         parse_tree.build(ns)
-        print parse_tree
        
         # setup the template engine
         jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)

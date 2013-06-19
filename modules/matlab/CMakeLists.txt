@@ -3,7 +3,7 @@
 #
 #  Matlab code generation and compilation is broken down into two distinct
 #  stages: configure time and build time. The idea is that we want to give
-#  the user reasonable guarantees that once they type 'make' wrapper
+#  the user reasonable guarantees that once they type 'make', wrapper
 #  generation is unlikely to fail. Therefore we run a series of tests at
 #  configure time to check the working status of the core components.
 #
@@ -37,6 +37,7 @@ endmacro()
 # make sure we're on a supported architecture with Matlab and python installed
 if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
     ocv_module_disable(matlab)
+    return()
 endif()
 
 set(the_description "The Matlab/Octave bindings")
@@ -45,9 +46,7 @@ ocv_add_module(matlab   BINDINGS opencv_core opencv_imgproc
                                  opencv_highgui opencv_ml opencv_calib3d opencv_photo
                                  opencv_nonfree opencv_calib)
 
-# add the python generator to the python path
-set(PYPATH_CACHE $ENV{PYTHONPATH})
-set(ENV{PYTHONPATH} ${OPENCV_MODULE_opencv_python_LOCATION}/src2:$ENV{PYTHONPATH})
+set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
 
 # get the include path of the Bridge
 prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -57,7 +56,8 @@ prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
 # ----------------------------------------------------------------------------
 message("-- Trying to generate Matlab code")
 execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py 
+    COMMAND ${PYTHON_EXECUTABLE} 
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
             ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_CURRENT_BINARY_DIR}
     ERROR_VARIABLE GEN_ERROR
     OUTPUT_QUIET 
@@ -66,8 +66,6 @@ execute_process(
 if (GEN_ERROR)
     message(${GEN_ERROR})
     message("-- Error generating Matlab code. Disabling Matlab bindings...")
-    # restore the pythonpath
-    set(ENV{PYTHONPATH} ${PYPATH_CACHE})
     return()
 else()
     message("-- Trying to generate Matlab code - OK")
@@ -86,8 +84,6 @@ execute_process(
 if (MEX_ERROR)
     message(${MEX_ERROR})
     message("-- Error compiling mex file. Disabling Matlab bindings...")
-    # restore the pythonpath
-    set(ENV{PYTHONPATH} ${PYPATH_CACHE})
     return()
 else()
     message("-- Trying to compile mex file - OK")
@@ -95,7 +91,6 @@ endif()
 
 # if we make it here, mex works!
 set_property(GLOBAL PROPERTY MEX_WORKS TRUE)
-return()
 
 # ----------------------------------------------------------------------------
 #  Build time components
@@ -108,19 +103,24 @@ foreach(module ${OPENCV_MATLAB_MODULES})
         prepend("-I" MEX_INCLUDES "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
     endif()
 endforeach()
-message(${MEX_INCLUDES})
 
 # synthesise the matlab sources
-# TODO:These should be build-time (ie add_custom_command)
-execute_process(
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py 
-            ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(opencv_matlab_sources ALL
+    COMMAND ${PYTHON_EXECUTABLE} 
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
+            ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
+)
 
-# compile the matlab sources
-file(GLOB SOURCE_FILES ${CMAKE_CURRENT_BINARY_DIR}/src)
+# get the matlab sources
+file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
+  get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
   # compile the source file using mex
+  add_custom_target("opencv_matlab_${FILENAME}" ALL
+      COMMAND "/usr/bin/true"
+      #COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
+      #        ${SOURCE_FILE}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
+      DEPENDS opencv_matlab_sources
+  )
 endforeach()
-
-# restore the pythonpath
-set(ENV{PYTHONPATH} ${PYPATH_CACHE})
