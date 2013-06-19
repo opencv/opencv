@@ -1,48 +1,3 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors as is and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
-
 #include <iostream>
 #include <stdio.h>
 #include "opencv2/core/core.hpp"
@@ -61,27 +16,20 @@ const float GOOD_PORTION = 0.15f;
 
 namespace
 {
-void help();
-
-void help()
-{
-    std::cout << "\nThis program demonstrates using SURF_OCL features detector and descriptor extractor" << std::endl;
-    std::cout << "\nUsage:\n\tsurf_matcher --left <image1> --right <image2> [-c]" << std::endl;
-    std::cout << "\nExample:\n\tsurf_matcher --left box.png --right box_in_scene.png" << std::endl;
-}
 
 int64 work_begin = 0;
 int64 work_end = 0;
 
-void workBegin() 
-{ 
+void workBegin()
+{
     work_begin = getTickCount();
 }
 void workEnd()
 {
     work_end = getTickCount() - work_begin;
 }
-double getTime(){
+double getTime()
+{
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
@@ -114,17 +62,17 @@ struct SURFMatcher
 Mat drawGoodMatches(
     const Mat& cpu_img1,
     const Mat& cpu_img2,
-    const vector<KeyPoint>& keypoints1, 
-    const vector<KeyPoint>& keypoints2, 
+    const vector<KeyPoint>& keypoints1,
+    const vector<KeyPoint>& keypoints2,
     vector<DMatch>& matches,
     vector<Point2f>& scene_corners_
-    )
+)
 {
-    //-- Sort matches and preserve top 10% matches 
+    //-- Sort matches and preserve top 10% matches
     std::sort(matches.begin(), matches.end());
     std::vector< DMatch > good_matches;
     double minDist = matches.front().distance,
-        maxDist = matches.back().distance;
+           maxDist = matches.back().distance;
 
     const int ptsPairs = std::min(GOOD_PTS_MAX, (int)(matches.size() * GOOD_PORTION));
     for( int i = 0; i < ptsPairs; i++ )
@@ -139,8 +87,8 @@ Mat drawGoodMatches(
     // drawing the results
     Mat img_matches;
     drawMatches( cpu_img1, keypoints1, cpu_img2, keypoints2,
-        good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-        vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
+                 good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
+                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
 
     //-- Localize the object
     std::vector<Point2f> obj;
@@ -154,28 +102,30 @@ Mat drawGoodMatches(
     }
     //-- Get the corners from the image_1 ( the object to be "detected" )
     std::vector<Point2f> obj_corners(4);
-    obj_corners[0] = cvPoint(0,0); obj_corners[1] = cvPoint( cpu_img1.cols, 0 );
-    obj_corners[2] = cvPoint( cpu_img1.cols, cpu_img1.rows ); obj_corners[3] = cvPoint( 0, cpu_img1.rows );
+    obj_corners[0] = cvPoint(0,0);
+    obj_corners[1] = cvPoint( cpu_img1.cols, 0 );
+    obj_corners[2] = cvPoint( cpu_img1.cols, cpu_img1.rows );
+    obj_corners[3] = cvPoint( 0, cpu_img1.rows );
     std::vector<Point2f> scene_corners(4);
-    
+
     Mat H = findHomography( obj, scene, CV_RANSAC );
     perspectiveTransform( obj_corners, scene_corners, H);
 
     scene_corners_ = scene_corners;
-    
+
     //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-    line( img_matches, 
-        scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), 
-        Scalar( 0, 255, 0), 2, CV_AA );
-    line( img_matches, 
-        scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), 
-        Scalar( 0, 255, 0), 2, CV_AA );
-    line( img_matches, 
-        scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), 
-        Scalar( 0, 255, 0), 2, CV_AA );
-    line( img_matches, 
-        scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), 
-        Scalar( 0, 255, 0), 2, CV_AA );
+    line( img_matches,
+          scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), scene_corners[1] + Point2f( (float)cpu_img1.cols, 0),
+          Scalar( 0, 255, 0), 2, CV_AA );
+    line( img_matches,
+          scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), scene_corners[2] + Point2f( (float)cpu_img1.cols, 0),
+          Scalar( 0, 255, 0), 2, CV_AA );
+    line( img_matches,
+          scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), scene_corners[3] + Point2f( (float)cpu_img1.cols, 0),
+          Scalar( 0, 255, 0), 2, CV_AA );
+    line( img_matches,
+          scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), scene_corners[0] + Point2f( (float)cpu_img1.cols, 0),
+          Scalar( 0, 255, 0), 2, CV_AA );
     return img_matches;
 }
 
@@ -185,6 +135,21 @@ Mat drawGoodMatches(
 // use cpu findHomography interface to calculate the transformation matrix
 int main(int argc, char* argv[])
 {
+    const char* keys =
+        "{ h | help     | false           | print help message  }"
+        "{ l | left     |                 | specify left image  }"
+        "{ r | right    |                 | specify right image }"
+        "{ o | output   | SURF_output.jpg | specify output save path (only works in CPU or GPU only mode) }"
+        "{ c | use_cpu  | false           | use CPU algorithms  }"
+        "{ a | use_all  | false           | use both CPU and GPU algorithms}";
+    CommandLineParser cmd(argc, argv, keys);
+    if (cmd.get<bool>("help"))
+    {
+        std::cout << "Avaible options:" << std::endl;
+        cmd.printParams();
+        return 0;
+    }
+
     vector<cv::ocl::Info> info;
     if(cv::ocl::getDevice(info) == 0)
     {
@@ -195,54 +160,38 @@ int main(int argc, char* argv[])
 
     Mat cpu_img1, cpu_img2, cpu_img1_grey, cpu_img2_grey;
     oclMat img1, img2;
-    bool useCPU = false;
+    bool useCPU = cmd.get<bool>("c");
     bool useGPU = false;
-    bool useALL = false;
+    bool useALL = cmd.get<bool>("a");
 
-    for (int i = 1; i < argc; ++i)
+    string outpath = cmd.get<std::string>("o");
+
+    cpu_img1 = imread(cmd.get<std::string>("l"));
+    CV_Assert(!cpu_img1.empty());
+    cvtColor(cpu_img1, cpu_img1_grey, CV_BGR2GRAY);
+    img1 = cpu_img1_grey;
+
+    cpu_img2 = imread(cmd.get<std::string>("r"));
+    CV_Assert(!cpu_img2.empty());
+    cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
+    img2 = cpu_img2_grey;
+
+    if(useALL)
     {
-        if (string(argv[i]) == "--left")
-        {
-            cpu_img1 = imread(argv[++i]);
-            CV_Assert(!cpu_img1.empty());
-            cvtColor(cpu_img1, cpu_img1_grey, CV_BGR2GRAY);
-            img1 = cpu_img1_grey;
-        }
-        else if (string(argv[i]) == "--right")
-        {
-            cpu_img2 = imread(argv[++i]);
-            CV_Assert(!cpu_img2.empty());
-            cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
-            img2 = cpu_img2_grey;
-        }
-        else if (string(argv[i]) == "-c")
-        {
-            useCPU = true;
-            useGPU = false;
-            useALL = false;
-        }else if(string(argv[i]) == "-g")
-        {
-            useGPU = true;
-            useCPU = false;
-            useALL = false;
-        }else if(string(argv[i]) == "-a")
-        {
-            useALL = true;
-            useCPU = false;
-            useGPU = false;
-        }
-        else if (string(argv[i]) == "--help")
-        {
-            help();
-            return -1;
-        }
+        useCPU = false;
+        useGPU = false;
     }
+    else if(useCPU==false && useALL==false)
+    {
+        useGPU = true;
+    }
+
     if(!useCPU)
     {
         std::cout
-            << "Device name:"
-            << info[0].DeviceName[0]
-        << std::endl;
+                << "Device name:"
+                << info[0].DeviceName[0]
+                << std::endl;
     }
     double surf_time = 0.;
 
@@ -262,12 +211,12 @@ int main(int argc, char* argv[])
     //instantiate detectors/matchers
     SURFDetector<SURF>     cpp_surf;
     SURFDetector<SURF_OCL> ocl_surf;
-    
+
     SURFMatcher<BFMatcher>      cpp_matcher;
     SURFMatcher<BFMatcher_OCL>  ocl_matcher;
 
     //-- start of timing section
-    if (useCPU) 
+    if (useCPU)
     {
         for (int i = 0; i <= LOOP_NUM; i++)
         {
@@ -298,7 +247,8 @@ int main(int argc, char* argv[])
 
         surf_time = getTime();
         std::cout << "SURF run time: " << surf_time / LOOP_NUM << " ms" << std::endl<<"\n";
-    }else
+    }
+    else
     {
         //cpu runs
         for (int i = 0; i <= LOOP_NUM; i++)
@@ -353,14 +303,14 @@ int main(int argc, char* argv[])
             for(size_t i = 0; i < cpu_corner.size(); i++)
             {
                 if((std::abs(cpu_corner[i].x - gpu_corner[i].x) > 10)
-                    ||(std::abs(cpu_corner[i].y - gpu_corner[i].y) > 10))
+                        ||(std::abs(cpu_corner[i].y - gpu_corner[i].y) > 10))
                 {
                     std::cout<<"Failed\n";
                     result = false;
                     break;
                 }
                 result = true;
-            } 
+            }
             if(result)
                 std::cout<<"Passed\n";
         }
@@ -371,12 +321,15 @@ int main(int argc, char* argv[])
     {
         namedWindow("cpu surf matches", 0);
         imshow("cpu surf matches", img_matches);
+        imwrite(outpath, img_matches);
     }
     else if(useGPU)
     {
         namedWindow("ocl surf matches", 0);
         imshow("ocl surf matches", img_matches);
-    }else
+        imwrite(outpath, img_matches);
+    }
+    else
     {
         namedWindow("cpu surf matches", 0);
         imshow("cpu surf matches", img_matches);
