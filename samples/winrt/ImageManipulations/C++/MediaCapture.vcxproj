@@ -156,17 +156,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="Assets\microsoft-sdk.png" />
-    <Image Include="Assets\placeholder-sdk.png" />
-    <Image Include="Assets\smallTile-sdk.png" />
+    <Image Include="assets\opencv-logo-150.png" />
+    <Image Include="assets\opencv-logo-30.png" />
     <Image Include="Assets\splash-sdk.png" />
-    <Image Include="Assets\squareTile-sdk.png" />
-    <Image Include="Assets\storeLogo-sdk.png" />
-    <Image Include="Assets\tile-sdk.png" />
     <Image Include="Assets\windows-sdk.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="MediaExtensions\Grayscale\Grayscale.vcxproj">
+    <ProjectReference Include="MediaExtensions\OcvTransform\OcvTransform.vcxproj">
       <Project>{ba69218f-da5c-4d14-a78d-21a9e4dec669}</Project>
     </ProjectReference>
   </ItemGroup>

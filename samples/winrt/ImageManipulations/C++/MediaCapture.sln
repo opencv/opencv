@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 11 Express for Windows 8
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MediaCapture", "MediaCapture.vcxproj", "{C5B886A7-8300-46FF-B533-9613DE2AF637}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GrayscaleTransform", "MediaExtensions\Grayscale\Grayscale.vcxproj", "{BA69218F-DA5C-4D14-A78D-21A9E4DEC669}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GrayscaleTransform", "MediaExtensions\OcvTransform\OcvTransform.vcxproj", "{BA69218F-DA5C-4D14-A78D-21A9E4DEC669}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

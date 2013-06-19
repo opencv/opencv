@@ -18,14 +18,11 @@
 #include <strsafe.h>
 #include <assert.h>
 
-// Note: The Direct2D helper library is included for its 2D matrix operations.
-#include <D2d1helper.h>
-
 #include <wrl\implements.h>
 #include <wrl\module.h>
 #include <windows.media.h>
 
-#include "GrayscaleTransform.h"
+#include "OcvImageManipulations.h"
 
 // CLSID of the MFT.
 DEFINE_GUID(CLSID_GrayscaleMFT,
@@ -38,7 +35,7 @@ DEFINE_GUID(CLSID_GrayscaleMFT,
 
 // Configuration attributes
 // {698649BE-8EAE-4551-A4CB-3EC98FBD3D86}
-DEFINE_GUID(MFT_IMAGE_EFFECT,
+DEFINE_GUID(OCV_IMAGE_EFFECT,
 0x698649be, 0x8eae, 0x4551, 0xa4, 0xcb, 0x3e, 0xc9, 0x8f, 0xbd, 0x3d, 0x86);
 
 
@@ -61,21 +58,21 @@ template <class T> void SafeRelease(T **ppT)
     }
 }
 
-// CGrayscale class:
+// OcvImageManipulations class:
 // Implements a grayscale video effect.
 
-class CGrayscale
+class OcvImageManipulations
     : public Microsoft::WRL::RuntimeClass<
            Microsoft::WRL::RuntimeClassFlags< Microsoft::WRL::RuntimeClassType::WinRtClassicComMix >,
            ABI::Windows::Media::IMediaExtension,
            IMFTransform >
 {
-    InspectableClass(RuntimeClass_GrayscaleTransform_GrayscaleEffect, BaseTrust)
+    InspectableClass(RuntimeClass_OcvTransform_OcvImageManipulations, BaseTrust)
 
 public:
-    CGrayscale();
+    OcvImageManipulations();
 
-    ~CGrayscale();
+    ~OcvImageManipulations();
 
     STDMETHOD(RuntimeClassInitialize)();
 

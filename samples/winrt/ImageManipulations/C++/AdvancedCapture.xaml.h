@@ -58,8 +58,6 @@ namespace SDKSample
             void lstEnumedDevices_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
             void EnumerateWebcamsAsync();
 
-            void chkAddRemoveEffect_Checked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
-            void chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
             void AddEffectToImageStream();
 
             void ShowStatusMessage(Platform::String^ text);
@@ -91,7 +89,6 @@ namespace SDKSample
             bool m_bRotateVideoOnOrientationChange;
             bool m_bReversePreviewRotation;
             Windows::Foundation::EventRegistrationToken m_orientationChangedEventToken;
-            void EffectTypeCombo_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e);
             void Button_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e);
         };
     }

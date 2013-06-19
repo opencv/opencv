@@ -2,10 +2,10 @@ import "Windows.Media.idl";
 
 #include <sdkddkver.h>
 
-namespace GrayscaleTransform
+namespace OcvTransform
 {
 	[version(NTDDI_WIN8)]
-	runtimeclass GrayscaleEffect 
+	runtimeclass OcvImageManipulations 
     {
 	}
 }

@@ -313,7 +313,7 @@ void AdvancedCapture::AddEffectToImageStream()
                                 changeTypeTask.get();
                                 ShowStatusMessage("Change type on photo stream successful");
                                 //Now add the effect on the image pin
-                                task<void>(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::Photo,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask3)
+                                task<void>(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::Photo,"OcvTransform.OcvImageManipulations", nullptr)).then([this](task<void> effectTask3)
                                 {
                                     try
                                     {
@@ -348,7 +348,7 @@ void AdvancedCapture::AddEffectToImageStream()
         else
         {
             //Add the effect to the image pin if the type is already "Video"
-            task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::Photo,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask3)
+            task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::Photo,"OcvTransform.OcvImageManipulations", nullptr)).then([this](task<void> effectTask3)
             {
                 try
                 {
@@ -365,103 +365,6 @@ void AdvancedCapture::AddEffectToImageStream()
                 }
             });
         }
-    }
-}
-
-
-void AdvancedCapture::chkAddRemoveEffect_Checked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-}
-
-void AdvancedCapture::chkAddRemoveEffect_Unchecked(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
-{
-    try
-    {
-        EffectTypeCombo->IsEnabled = false;
-        m_bEffectAdded = false;
-        create_task(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::VideoPreview)).then([this](task<void> effectTask)
-        {
-            try
-            {
-                effectTask.get();
-                ShowStatusMessage("Remove effect from video preview stream successful");
-                if(m_bEffectAddedToRecord)
-                {
-                    task<void>(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::VideoRecord)).then([this](task<void> effectTask)
-                    {
-                        try
-                        {
-                            effectTask.get();
-                            ShowStatusMessage("Remove effect from video record stream successful");
-                            m_bEffectAddedToRecord = false;
-                            if(m_bEffectAddedToPhoto)
-                            {
-                                task<void>(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::Photo)).then([this](task<void> effectTask)
-                                {
-                                    try
-                                    {
-                                        effectTask.get();
-                                        ShowStatusMessage("Remove effect from Photo stream successful");
-                                        m_bEffectAddedToPhoto = false;
-
-                                    }
-                                    catch(Exception ^e)
-                                    {
-                                        ShowExceptionMessage(e);
-                                        EffectTypeCombo->IsEnabled = true;
-                                    }
-
-                                });
-                            }
-                            else
-                            {
-                            }
-                            EffectTypeCombo->IsEnabled = true;
-                        }
-                        catch(Exception ^e)
-                        {
-                            ShowExceptionMessage(e);
-                            EffectTypeCombo->IsEnabled = true;
-                        }
-
-                    });
-
-                }
-                else if(m_bEffectAddedToPhoto)
-                {
-                    task<void>(m_mediaCaptureMgr->ClearEffectsAsync(Windows::Media::Capture::MediaStreamType::Photo)).then([this](task<void> effectTask)
-                    {
-                        try
-                        {
-                            effectTask.get();
-                            ShowStatusMessage("Remove effect from Photo stream successful");
-                            m_bEffectAddedToPhoto = false;
-
-                        }
-                        catch(Exception ^e)
-                        {
-                            ShowExceptionMessage(e);
-                            EffectTypeCombo->IsEnabled = true;
-                        }
-
-                    });
-                }
-                else
-                {
-                    EffectTypeCombo->IsEnabled = true;
-                }
-            }
-            catch (Exception ^e)
-            {
-                ShowExceptionMessage(e);
-                EffectTypeCombo->IsEnabled = true;
-            }
-        });
-    }
-    catch (Platform::Exception ^e)
-    {
-        ShowExceptionMessage(e);
-        EffectTypeCombo->IsEnabled = true;
     }
 }
 
@@ -637,12 +540,6 @@ Windows::Media::Capture::VideoRotation AdvancedCapture::VideoRotationLookup(
     }
 }
 
-
-void SDKSample::MediaCapture::AdvancedCapture::EffectTypeCombo_SelectionChanged(Platform::Object^ sender, Windows::UI::Xaml::Controls::SelectionChangedEventArgs^ e)
-{
-}
-
-
 void SDKSample::MediaCapture::AdvancedCapture::Button_Click(Platform::Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
     try
@@ -653,7 +550,7 @@ void SDKSample::MediaCapture::AdvancedCapture::Button_Click(Platform::Object^ se
             int index = EffectTypeCombo->SelectedIndex;
             PropertySet^ props = ref new PropertySet();
             props->Insert(L"{698649BE-8EAE-4551-A4CB-3EC98FBD3D86}", index);
-            create_task(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoPreview,"GrayscaleTransform.GrayscaleEffect", props)).then([this](task<void> effectTask)
+            create_task(m_mediaCaptureMgr->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoPreview,"OcvTransform.OcvImageManipulations", props)).then([this](task<void> effectTask)
             {
                 try
                 {
@@ -670,7 +567,7 @@ void SDKSample::MediaCapture::AdvancedCapture::Button_Click(Platform::Object^ se
                         Windows::Media::MediaProperties::VideoEncodingProperties ^videoEncodingProperties  = static_cast<Windows::Media::MediaProperties::VideoEncodingProperties ^>(props);
                         if(!videoEncodingProperties->Subtype->Equals("H264")) //Cant add an effect to an H264 stream
                         {
-                            task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoRecord,"GrayscaleTransform.GrayscaleEffect", nullptr)).then([this](task<void> effectTask2)
+                            task<void>(mediaCapture->AddEffectAsync(Windows::Media::Capture::MediaStreamType::VideoRecord,"OcvTransform.OcvImageManipulations", nullptr)).then([this](task<void> effectTask2)
                             {
                                 try
                                 {

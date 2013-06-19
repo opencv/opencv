@@ -30,8 +30,8 @@
     <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and '$(VisualStudioVersion)' == ''">$(VCTargetsPath11)</VCTargetsPath>
     <ProjectGuid>{BA69218F-DA5C-4D14-A78D-21A9E4DEC669}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>GrayscaleTransform</RootNamespace>
-    <ProjectName>GrayscaleTransform</ProjectName>
+    <RootNamespace>OcvTransform</RootNamespace>
+    <ProjectName>OcvTransform</ProjectName>
     <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
     <AppContainerApplication>true</AppContainerApplication>
   </PropertyGroup>
@@ -129,7 +129,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib;opencv_core245.lib;opencv_imgproc245.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -153,7 +153,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -177,7 +177,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -201,7 +201,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -225,7 +225,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -249,7 +249,7 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>runtimeobject.lib;%(AdditionalDependencies);mf.lib;mfuuid.lib;mfplat.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
-      <ModuleDefinitionFile>Grayscale.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>OcvTransform.def</ModuleDefinitionFile>
       <AdditionalLibraryDirectories>$(OPENCV_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
@@ -258,17 +258,17 @@
     </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Grayscale.h" />
+    <ClInclude Include="OcvTransform.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Grayscale.cpp" />
+    <ClCompile Include="OcvTransform.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Grayscale.def" />
+    <None Include="OcvTransform.def" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="GrayscaleTransform.idl">
+    <Midl Include="OcvImageManipulations.idl">
       <MetadataFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
       </MetadataFileName>
       <MetadataFileName Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

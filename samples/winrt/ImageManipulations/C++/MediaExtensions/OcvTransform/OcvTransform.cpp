@@ -5,13 +5,11 @@
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
-#include "Grayscale.h"
+#include "OcvTransform.h"
 #include "bufferlock.h"
 
 #include "opencv2\core\core.hpp"
 #include "opencv2\imgproc\imgproc.hpp"
-
-#pragma comment(lib, "d2d1")
 
 using namespace Microsoft::WRL;
 
@@ -19,35 +17,11 @@ using namespace Microsoft::WRL;
 
 This sample implements a video effect as a Media Foundation transform (MFT).
 
-The video effect manipulates chroma values in a YUV image. In the default setting,
-the entire image is converted to grayscale. Optionally, the application may set any
-of the following attributes:
-
-MFT_GRAYSCALE_DESTINATION_RECT (type = blob, UINT32[4] array)
-
-    Sets the destination rectangle for the effect. Pixels outside the destination
-    rectangle are not altered.
-
-MFT_GRAYSCALE_SATURATION (type = double)
-
-    Sets the saturation level. The nominal range is [0...1]. Values beyond 1.0f
-    result in supersaturated colors. Values below 0.0f create inverted colors.
-
-MFT_GRAYSCALE_CHROMA_ROTATION (type = double)
-
-    Rotates the chroma values of each pixel. The attribue value is the angle of
-    rotation in degrees. The result is a shift in hue.
-
-The effect is implemented by treating the chroma value of each pixel as a vector [u,v],
-and applying a transformation matrix to the vector. The saturation parameter is applied
-as a scaling transform.
-
-
 NOTES ON THE MFT IMPLEMENTATION
 
 1. The MFT has fixed streams: One input stream and one output stream.
 
-2. The MFT supports the following formats: UYVY, YUY2, NV12.
+2. The MFT supports NV12 format only.
 
 3. If the MFT is holding an input sample, SetInputType and SetOutputType both fail.
 
@@ -82,18 +56,13 @@ NOTES ON THE MFT IMPLEMENTATION
 */
 
 
-// Video FOURCC codes.
-const DWORD FOURCC_NV12 = '21VN';
-
 // Static array of media types (preferred and accepted).
 const GUID g_MediaSubtypes[] =
 {
     MFVideoFormat_NV12
 };
 
-HRESULT GetImageSize(DWORD fcc, UINT32 width, UINT32 height, DWORD* pcbImage);
 HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride);
-bool ValidateRect(const RECT& rc);
 
 template <typename T>
 inline T clamp(const T& val, const T& minVal, const T& maxVal)
@@ -101,92 +70,7 @@ inline T clamp(const T& val, const T& minVal, const T& maxVal)
     return (val < minVal ? minVal : (val > maxVal ? maxVal : val));
 }
 
-//-------------------------------------------------------------------
-// Functions to convert a YUV images to grayscale.
-//
-// In all cases, the same transformation is applied to the 8-bit
-// chroma values, but the pixel layout in memory differs.
-//
-// The image conversion functions take the following parameters:
-//
-// mat               Transfomation matrix for chroma values.
-// rcDest            Destination rectangle.
-// pDest             Pointer to the destination buffer.
-// lDestStride       Stride of the destination buffer, in bytes.
-// pSrc              Pointer to the source buffer.
-// lSrcStride        Stride of the source buffer, in bytes.
-// dwWidthInPixels   Frame width in pixels.
-// dwHeightInPixels  Frame height, in pixels.
-//-------------------------------------------------------------------
-
-// Convert NV12 image
-
-void TransformImage_NV12(
-    const D2D1::Matrix3x2F& mat,
-    const D2D_RECT_U& rcDest,
-    _Inout_updates_(_Inexpressible_(2 * lDestStride * dwHeightInPixels)) BYTE *pDest,
-    _In_ LONG lDestStride,
-    _In_reads_(_Inexpressible_(2 * lSrcStride * dwHeightInPixels)) const BYTE* pSrc,
-    _In_ LONG lSrcStride,
-    _In_ DWORD dwWidthInPixels,
-    _In_ DWORD dwHeightInPixels)
-{
-    // NV12 is planar: Y plane, followed by packed U-V plane.
-
-    // Y plane
-    for (DWORD y = 0; y < dwHeightInPixels; y++)
-    {
-        CopyMemory(pDest, pSrc, dwWidthInPixels);
-        pDest += lDestStride;
-        pSrc += lSrcStride;
-    }
-
-    // U-V plane
-
-    // NOTE: The U-V plane has 1/2 the number of lines as the Y plane.
-
-    // Lines above the destination rectangle.
-    DWORD y = 0;
-
-    const DWORD y0 = rcDest.bottom < dwHeightInPixels ? rcDest.bottom : dwHeightInPixels;
-
-    for ( ; y < rcDest.top/2; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-
-    // Lines within the destination rectangle.
-    for ( ; y < y0/2; y++)
-    {
-        for (DWORD x = 0; (x + 1) < dwWidthInPixels; x += 2)
-        {
-            if (x >= rcDest.left && x < rcDest.right)
-            {
-                pDest[x] = 0;
-                pDest[x+1] = 0;
-            }
-            else
-            {
-                pDest[x] = pSrc[x];
-                pDest[x+1] = pSrc[x+1];
-            }
-        }
-        pDest += lDestStride;
-        pSrc += lSrcStride;
-    }
-
-    // Lines below the destination rectangle.
-    for ( ; y < dwHeightInPixels/2; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-}
-
-CGrayscale::CGrayscale() :
+OcvImageManipulations::OcvImageManipulations() :
     m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL),
     m_imageWidthInPixels(0), m_imageHeightInPixels(0), m_cbImageSize(0),
     m_TransformType(Preview), m_bStreamingInitialized(false),
@@ -195,7 +79,7 @@ CGrayscale::CGrayscale() :
     InitializeCriticalSectionEx(&m_critSec, 3000, 0);
 }
 
-CGrayscale::~CGrayscale()
+OcvImageManipulations::~OcvImageManipulations()
 {
     SafeRelease(&m_pInputType);
     SafeRelease(&m_pOutputType);
@@ -205,7 +89,7 @@ CGrayscale::~CGrayscale()
 }
 
 // Initialize the instance.
-STDMETHODIMP CGrayscale::RuntimeClassInitialize()
+STDMETHODIMP OcvImageManipulations::RuntimeClassInitialize()
 {
     // Create the attribute store.
     return MFCreateAttributes(&m_pAttributes, 3);
@@ -217,7 +101,7 @@ STDMETHODIMP CGrayscale::RuntimeClassInitialize()
 // SetProperties
 // Sets the configuration of the effect
 //-------------------------------------------------------------------
-HRESULT CGrayscale::SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
+HRESULT OcvImageManipulations::SetProperties(ABI::Windows::Foundation::Collections::IPropertySet *pConfiguration)
 {
     HRESULT hr = S_OK;
 
@@ -237,14 +121,16 @@ HRESULT CGrayscale::SetProperties(ABI::Windows::Foundation::Collections::IProper
         spSetting->Lookup(key, &value);
 
         Microsoft::WRL::ComPtr<ABI::Windows::Foundation::IReference<int>> ref;
-        value->QueryInterface(IID_PPV_ARGS(&ref));
+        hr = value->QueryInterface(IID_PPV_ARGS(&ref));
         int effect = InvalidEffect;
-        ref->get_Value(&effect);
+        hr = ref->get_Value(&effect);
         if ((effect >= 0) && (effect < InvalidEffect))
         {
             m_TransformType = (ProcessingType)effect;
         }
     }
+
+	return hr;
 }
 
 // IMFTransform methods. Refer to the Media Foundation SDK documentation for details.
@@ -254,7 +140,7 @@ HRESULT CGrayscale::SetProperties(ABI::Windows::Foundation::Collections::IProper
 // Returns the minimum and maximum number of streams.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetStreamLimits(
+HRESULT OcvImageManipulations::GetStreamLimits(
     DWORD   *pdwInputMinimum,
     DWORD   *pdwInputMaximum,
     DWORD   *pdwOutputMinimum,
@@ -283,7 +169,7 @@ HRESULT CGrayscale::GetStreamLimits(
 // Returns the actual number of streams.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetStreamCount(
+HRESULT OcvImageManipulations::GetStreamCount(
     DWORD   *pcInputStreams,
     DWORD   *pcOutputStreams
 )
@@ -307,7 +193,7 @@ HRESULT CGrayscale::GetStreamCount(
 // Returns stream IDs for the input and output streams.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetStreamIDs(
+HRESULT OcvImageManipulations::GetStreamIDs(
     DWORD   dwInputIDArraySize,
     DWORD   *pdwInputIDs,
     DWORD   dwOutputIDArraySize,
@@ -328,7 +214,7 @@ HRESULT CGrayscale::GetStreamIDs(
 // Returns information about an input stream.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetInputStreamInfo(
+HRESULT OcvImageManipulations::GetInputStreamInfo(
     DWORD                     dwInputStreamID,
     MFT_INPUT_STREAM_INFO *   pStreamInfo
 )
@@ -375,7 +261,7 @@ HRESULT CGrayscale::GetInputStreamInfo(
 // Returns information about an output stream.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetOutputStreamInfo(
+HRESULT OcvImageManipulations::GetOutputStreamInfo(
     DWORD                     dwOutputStreamID,
     MFT_OUTPUT_STREAM_INFO *  pStreamInfo
 )
@@ -424,7 +310,7 @@ HRESULT CGrayscale::GetOutputStreamInfo(
 // Returns the attributes for the MFT.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetAttributes(IMFAttributes** ppAttributes)
+HRESULT OcvImageManipulations::GetAttributes(IMFAttributes** ppAttributes)
 {
     if (ppAttributes == NULL)
     {
@@ -446,7 +332,7 @@ HRESULT CGrayscale::GetAttributes(IMFAttributes** ppAttributes)
 // Returns stream-level attributes for an input stream.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetInputStreamAttributes(
+HRESULT OcvImageManipulations::GetInputStreamAttributes(
     DWORD           dwInputStreamID,
     IMFAttributes   **ppAttributes
 )
@@ -461,7 +347,7 @@ HRESULT CGrayscale::GetInputStreamAttributes(
 // Returns stream-level attributes for an output stream.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetOutputStreamAttributes(
+HRESULT OcvImageManipulations::GetOutputStreamAttributes(
     DWORD           dwOutputStreamID,
     IMFAttributes   **ppAttributes
 )
@@ -475,7 +361,7 @@ HRESULT CGrayscale::GetOutputStreamAttributes(
 // DeleteInputStream
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::DeleteInputStream(DWORD dwStreamID)
+HRESULT OcvImageManipulations::DeleteInputStream(DWORD dwStreamID)
 {
     // This MFT has a fixed number of input streams, so the method is not supported.
     return E_NOTIMPL;
@@ -486,7 +372,7 @@ HRESULT CGrayscale::DeleteInputStream(DWORD dwStreamID)
 // AddInputStreams
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::AddInputStreams(
+HRESULT OcvImageManipulations::AddInputStreams(
     DWORD   cStreams,
     DWORD   *adwStreamIDs
 )
@@ -501,7 +387,7 @@ HRESULT CGrayscale::AddInputStreams(
 // Returns a preferred input type.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetInputAvailableType(
+HRESULT OcvImageManipulations::GetInputAvailableType(
     DWORD           dwInputStreamID,
     DWORD           dwTypeIndex, // 0-based
     IMFMediaType    **ppType
@@ -549,7 +435,7 @@ HRESULT CGrayscale::GetInputAvailableType(
 // Returns a preferred output type.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetOutputAvailableType(
+HRESULT OcvImageManipulations::GetOutputAvailableType(
     DWORD           dwOutputStreamID,
     DWORD           dwTypeIndex, // 0-based
     IMFMediaType    **ppType
@@ -594,7 +480,7 @@ HRESULT CGrayscale::GetOutputAvailableType(
 // SetInputType
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::SetInputType(
+HRESULT OcvImageManipulations::SetInputType(
     DWORD           dwInputStreamID,
     IMFMediaType    *pType, // Can be NULL to clear the input type.
     DWORD           dwFlags
@@ -656,7 +542,7 @@ done:
 // SetOutputType
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::SetOutputType(
+HRESULT OcvImageManipulations::SetOutputType(
     DWORD           dwOutputStreamID,
     IMFMediaType    *pType, // Can be NULL to clear the output type.
     DWORD           dwFlags
@@ -718,7 +604,7 @@ done:
 // Returns the current input type.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetInputCurrentType(
+HRESULT OcvImageManipulations::GetInputCurrentType(
     DWORD           dwInputStreamID,
     IMFMediaType    **ppType
 )
@@ -755,7 +641,7 @@ HRESULT CGrayscale::GetInputCurrentType(
 // Returns the current output type.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetOutputCurrentType(
+HRESULT OcvImageManipulations::GetOutputCurrentType(
     DWORD           dwOutputStreamID,
     IMFMediaType    **ppType
 )
@@ -793,7 +679,7 @@ HRESULT CGrayscale::GetOutputCurrentType(
 // Query if the MFT is accepting more input.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetInputStatus(
+HRESULT OcvImageManipulations::GetInputStatus(
     DWORD           dwInputStreamID,
     DWORD           *pdwFlags
 )
@@ -840,7 +726,7 @@ HRESULT CGrayscale::GetInputStatus(
 // Query if the MFT can produce output.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::GetOutputStatus(DWORD *pdwFlags)
+HRESULT OcvImageManipulations::GetOutputStatus(DWORD *pdwFlags)
 {
     if (pdwFlags == NULL)
     {
@@ -869,7 +755,7 @@ HRESULT CGrayscale::GetOutputStatus(DWORD *pdwFlags)
 // Sets the range of time stamps that the MFT will output.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::SetOutputBounds(
+HRESULT OcvImageManipulations::SetOutputBounds(
     LONGLONG        hnsLowerBound,
     LONGLONG        hnsUpperBound
 )
@@ -884,7 +770,7 @@ HRESULT CGrayscale::SetOutputBounds(
 // Sends an event to an input stream.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::ProcessEvent(
+HRESULT OcvImageManipulations::ProcessEvent(
     DWORD              dwInputStreamID,
     IMFMediaEvent      *pEvent
 )
@@ -900,7 +786,7 @@ HRESULT CGrayscale::ProcessEvent(
 // ProcessMessage
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::ProcessMessage(
+HRESULT OcvImageManipulations::ProcessMessage(
     MFT_MESSAGE_TYPE    eMessage,
     ULONG_PTR           ulParam
 )
@@ -965,7 +851,7 @@ HRESULT CGrayscale::ProcessMessage(
 // Process an input sample.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::ProcessInput(
+HRESULT OcvImageManipulations::ProcessInput(
     DWORD               dwInputStreamID,
     IMFSample           *pSample,
     DWORD               dwFlags
@@ -1030,7 +916,7 @@ done:
 // Process an output sample.
 //-------------------------------------------------------------------
 
-HRESULT CGrayscale::ProcessOutput(
+HRESULT OcvImageManipulations::ProcessOutput(
     DWORD                   dwFlags,
     DWORD                   cOutputBufferCount,
     MFT_OUTPUT_DATA_BUFFER  *pOutputSamples, // one per stream
@@ -1150,7 +1036,7 @@ done:
 // dwTypeIndex: Index into the list of peferred media types.
 // ppmt:        Receives a pointer to the media type.
 
-HRESULT CGrayscale::OnGetPartialType(DWORD dwTypeIndex, IMFMediaType **ppmt)
+HRESULT OcvImageManipulations::OnGetPartialType(DWORD dwTypeIndex, IMFMediaType **ppmt)
 {
     if (dwTypeIndex >= ARRAYSIZE(g_MediaSubtypes))
     {
@@ -1188,7 +1074,7 @@ done:
 
 // Validate an input media type.
 
-HRESULT CGrayscale::OnCheckInputType(IMFMediaType *pmt)
+HRESULT OcvImageManipulations::OnCheckInputType(IMFMediaType *pmt)
 {
     assert(pmt != NULL);
 
@@ -1217,7 +1103,7 @@ HRESULT CGrayscale::OnCheckInputType(IMFMediaType *pmt)
 
 // Validate an output media type.
 
-HRESULT CGrayscale::OnCheckOutputType(IMFMediaType *pmt)
+HRESULT OcvImageManipulations::OnCheckOutputType(IMFMediaType *pmt)
 {
     assert(pmt != NULL);
 
@@ -1247,7 +1133,7 @@ HRESULT CGrayscale::OnCheckOutputType(IMFMediaType *pmt)
 
 // Validate a media type (input or output)
 
-HRESULT CGrayscale::OnCheckMediaType(IMFMediaType *pmt)
+HRESULT OcvImageManipulations::OnCheckMediaType(IMFMediaType *pmt)
 {
     BOOL bFoundMatchingSubtype = FALSE;
 
@@ -1307,7 +1193,7 @@ done:
 //
 // Prerequisite: The input type was already validated.
 
-void CGrayscale::OnSetInputType(IMFMediaType *pmt)
+void OcvImageManipulations::OnSetInputType(IMFMediaType *pmt)
 {
     // if pmt is NULL, clear the type.
     // if pmt is non-NULL, set the type.
@@ -1328,7 +1214,7 @@ void CGrayscale::OnSetInputType(IMFMediaType *pmt)
 //
 // Prerequisite: The output type was already validated.
 
-void CGrayscale::OnSetOutputType(IMFMediaType *pmt)
+void OcvImageManipulations::OnSetOutputType(IMFMediaType *pmt)
 {
     // If pmt is NULL, clear the type. Otherwise, set the type.
 
@@ -1346,7 +1232,7 @@ void CGrayscale::OnSetOutputType(IMFMediaType *pmt)
 // This method is called if the client sends the MFT_MESSAGE_NOTIFY_BEGIN_STREAMING
 // message, or when the client processes a sample, whichever happens first.
 
-HRESULT CGrayscale::BeginStreaming()
+HRESULT OcvImageManipulations::BeginStreaming()
 {
     HRESULT hr = S_OK;
 
@@ -1366,7 +1252,7 @@ HRESULT CGrayscale::BeginStreaming()
 // message, or when the media type changes. In general, it should be called whenever
 // the streaming parameters need to be reset.
 
-HRESULT CGrayscale::EndStreaming()
+HRESULT OcvImageManipulations::EndStreaming()
 {
     m_bStreamingInitialized = false;
     return S_OK;
@@ -1376,7 +1262,7 @@ HRESULT CGrayscale::EndStreaming()
 
 // Generate output data.
 
-HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
+HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
 {
     BYTE *pDest = NULL;         // Destination buffer.
     LONG lDestStride = 0;       // Destination stride.
@@ -1447,10 +1333,17 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
             const int mHistSize[] = {25};
             const float baseRabge[] = {0.f,256.f};
             const float* ranges[] = {baseRabge};
-            const cv::Scalar mColorsRGB[] = { cv::Scalar(200, 0, 0, 255), cv::Scalar(0, 200, 0, 255),
-                                        cv::Scalar(0, 0, 200, 255) };
+            
+			const cv::Scalar mColorsY[] = { cv::Scalar(76), cv::Scalar(149), cv::Scalar(29) };
+			const cv::Scalar mColorsUV[] = { cv::Scalar(84, 255), cv::Scalar(43, 21), cv::Scalar(255, 107) };
 
+			cv::Mat OutputY(m_imageHeightInPixels, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
+			cv::Mat OutputUV(m_imageHeightInPixels/2, m_imageWidthInPixels/2,
+							 CV_8UC2, pDest+m_imageHeightInPixels*lDestStride, lDestStride);
             cv::Mat BgrFrame;
+
+			InputFrame.copyTo(OutputFrame);
+
             cv::cvtColor(InputFrame, BgrFrame, cv::COLOR_YUV420sp2BGR);
             int thikness = (int) (BgrFrame.cols / (mHistSizeNum + 10) / 5);
             if(thikness > 5) thikness = 5;
@@ -1464,14 +1357,20 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
                 cv::normalize(hist, hist, BgrFrame.rows/2, 0, cv::NORM_INF);
                 for(int h=0; h<mHistSizeNum; h++) {
                     cv::Point mP1, mP2;
-                    mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
+					// Draw on Y plane
+					mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
                     mP1.y = BgrFrame.rows-1;
-                    mP2.y = mP1.y - 2 - hist.at<float>(h);
-                    cv::line(BgrFrame, mP1, mP2, mColorsRGB[c], thikness);
-                }
-            }
+                    mP2.y = mP1.y - 2 - (int)hist.at<float>(h);
+					cv::line(OutputY, mP1, mP2, mColorsY[c], thikness);
 
-            cv::cvtColor(BgrFrame, OutputFrame, cv::COLOR_BGR2YUV_I420);
+					// Draw on UV planes
+                    mP1.x /= 2;
+                    mP1.y /= 2;
+					mP2.x /= 2;
+                    mP2.y /= 2;
+					cv::line(OutputUV, mP1, mP2, mColorsUV[c], thikness/2);
+                }
+            }            
         } break;
     default:
         break;
@@ -1486,7 +1385,7 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
 
 // Flush the MFT.
 
-HRESULT CGrayscale::OnFlush()
+HRESULT OcvImageManipulations::OnFlush()
 {
     // For this MFT, flushing just means releasing the input sample.
     SafeRelease(&m_pSample);
@@ -1497,7 +1396,7 @@ HRESULT CGrayscale::OnFlush()
 // Update the format information. This method is called whenever the
 // input type is set.
 
-HRESULT CGrayscale::UpdateFormatInfo()
+HRESULT OcvImageManipulations::UpdateFormatInfo()
 {
     HRESULT hr = S_OK;
 
@@ -1526,43 +1425,14 @@ HRESULT CGrayscale::UpdateFormatInfo()
             goto done;
         }
 
-        // Calculate the image size (not including padding)
-        hr = GetImageSize(subtype.Data1, m_imageWidthInPixels, m_imageHeightInPixels, &m_cbImageSize);
+        // Calculate the image size for YUV NV12 image(not including padding)
+		m_cbImageSize = (m_imageHeightInPixels + m_imageHeightInPixels/2)*m_imageWidthInPixels;
     }
 
 done:
     return hr;
 }
 
-
-// Calculate the size of the buffer needed to store the image.
-
-// fcc: The FOURCC code of the video format.
-
-HRESULT GetImageSize(DWORD fcc, UINT32 width, UINT32 height, DWORD* pcbImage)
-{
-    HRESULT hr = S_OK;
-
-    switch (fcc)
-    {
-    case FOURCC_NV12:
-        // check overflow
-        if ((height/2 > MAXDWORD - height) || ((height + height/2) > MAXDWORD / width))
-        {
-            hr = E_INVALIDARG;
-        }
-        else
-        {
-            // 12 bpp
-            *pcbImage = width * (height + (height/2));
-        }
-        break;
-
-    default:
-        hr = E_FAIL;    // Unsupported type.
-    }
-    return hr;
-}
 
 // Get the default stride for a video format.
 HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride)
@@ -1614,23 +1484,3 @@ HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride)
     return hr;
 }
 
-
-// Validate that a rectangle meets the following criteria:
-//
-//  - All coordinates are non-negative.
-//  - The rectangle is not flipped (top > bottom, left > right)
-//
-// These are the requirements for the destination rectangle.
-
-bool ValidateRect(const RECT& rc)
-{
-    if (rc.left < 0 || rc.top < 0)
-    {
-        return false;
-    }
-    if (rc.left > rc.right || rc.top > rc.bottom)
-    {
-        return false;
-    }
-    return true;
-}
