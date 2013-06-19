@@ -7,6 +7,7 @@
 #   MATLAB_FOUND:       true/false
 #   MATLAB_ROOT_DIR:    Root of Matlab installation
 #   MATLAB_MEX_SCRIPT:  The mex script used to compile mex files
+#   MATLAB_BIN:         The actual Matlab executable
 #   MATLAB_INCLUDE_DIR: Path to "mex.h"
 #   MATLAB_LIBRARY_DIR: Path to mex and matrix libraries
 #   MATLAB_LIBS:        The Matlab libs, usually mx, mex, mat
@@ -119,8 +120,12 @@ function(locate_matlab_components MATLAB_ROOT_DIR)
   # get the mex shell script
   find_file(MATLAB_MEX_SCRIPT_ NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
 
+  # get the Matlab executable
+  find_file(MATLAB_BIN_ NAMES matlab matlab.exe PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
+
   # export into parent scope
   if (MATLAB_MEX_SCRIPT_ AND MATLAB_LIBS_ AND MATLAB_INCLUDE_DIR_)
+    set(MATLAB_BIN         ${MATLAB_BIN_}         PARENT_SCOPE)
     set(MATLAB_MEX_SCRIPT  ${MATLAB_MEX_SCRIPT_}  PARENT_SCOPE)
     set(MATLAB_INCLUDE_DIR ${MATLAB_INCLUDE_DIR_} PARENT_SCOPE)
     set(MATLAB_LIBS        ${MATLAB_LIBS_}        PARENT_SCOPE)
@@ -151,7 +156,7 @@ if (NOT MATLAB_FOUND)
   endif()
   find_package_handle_standard_args(Matlab DEFAULT_MSG MATLAB_MEX_SCRIPT MATLAB_INCLUDE_DIR 
                                            MATLAB_ROOT_DIR MATLAB_LIBS   MATLAB_LIBRARY_DIR 
-                                           MATLAB_MEXEXT MATLAB_ARCH)
+                                           MATLAB_MEXEXT MATLAB_ARCH MATLAB_BIN)
 
   # if Matlab was not found, unset the local variables
   if (NOT MATLAB_FOUND)

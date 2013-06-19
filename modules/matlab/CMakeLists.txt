@@ -46,14 +46,16 @@ ocv_add_module(matlab   BINDINGS opencv_core opencv_imgproc
                                  opencv_highgui opencv_ml opencv_calib3d opencv_photo
                                  opencv_nonfree opencv_calib)
 
-set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
-
-# get the include path of the Bridge
-prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+if (BUILD_TESTS)
+    add_subdirectory(test)
+endif()
 
 # ----------------------------------------------------------------------------
 #  Configure time components
 # ----------------------------------------------------------------------------
+set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
+prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 message("-- Trying to generate Matlab code")
 execute_process(
     COMMAND ${PYTHON_EXECUTABLE} 
@@ -124,3 +126,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
       DEPENDS opencv_matlab_sources
   )
 endforeach()
+
+# ----------------------------------------------------------------------------
+#  Install time components
+# ----------------------------------------------------------------------------
