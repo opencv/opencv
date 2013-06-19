@@ -495,8 +495,10 @@ VideoWriter constructors
 
     :param isColor: If it is not zero, the encoder will expect and encode color frames, otherwise it will work with grayscale frames (the flag is currently supported on Windows only).
 
-.. :param is_color: (documentation isn't required)
-.. :param frame_size: (documentation isn't required)
+    .. ocv:ignoreparams:: is_color
+
+    .. ocv:ignoreparams:: frame_size
+
 
 The constructors/functions initialize video writers. On Linux FFMPEG is used to write videos; on Windows FFMPEG or VFW is used; on MacOSX QTKit is used.
 
@@ -519,13 +521,18 @@ Initializes or reinitializes video writer.
 
 .. ocv:pyfunction:: cv2.VideoWriter.open(filename, fourcc, fps, frameSize[, isColor]) -> retval
 
+    .. ocv:ignoreparams:: filename
+
+    .. ocv:ignoreparams:: fourcc
+
+    .. ocv:ignoreparams:: fps
+
+    .. ocv:ignoreparams:: frameSize
+
+    .. ocv:ignoreparams:: isColor
+
 The method opens video writer. Parameters are the same as in the constructor :ocv:func:`VideoWriter::VideoWriter`.
 
-.. :param filename:  (documentation isn't required)
-.. :param fourcc:    (documentation isn't required)
-.. :param fps:       (documentation isn't required)
-.. :param frameSize: (documentation isn't required)
-.. :param isColor:   (documentation isn't required)
 
 VideoWriter::isOpened
 ---------------------

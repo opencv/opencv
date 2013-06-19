@@ -38,7 +38,8 @@ Calculates a histogram of a set of arrays.
 
     :param accumulate: Accumulation flag. If it is set, the histogram is not cleared in the beginning when it is allocated. This feature enables you to compute a single histogram from several sets of arrays, or to update the histogram in time.
 
-.. :param image: (documentation isn't required)
+    .. ocv:ignoreparams:: image
+
 
 The functions ``calcHist`` calculate the histogram of one or more
 arrays. The elements of a tuple used to increment
@@ -133,7 +134,8 @@ Calculates the back projection of a histogram.
 
     :param uniform: Flag indicating whether the histogram is uniform or not (see above).
 
-.. :param image: (documentation isn't required)
+    .. ocv:ignoreparams:: image
+
 
 The functions ``calcBackProject`` calculate the back project of the histogram. That is, similarly to ``calcHist`` , at each location ``(x, y)`` the function collects the values from the selected channels in the input images and finds the corresponding histogram bin. But instead of incrementing it, the function reads the bin value, scales it by ``scale`` , and stores in ``backProject(x,y)`` . In terms of statistics, the function computes probability of each element value in respect with the empirical probability distribution represented by the histogram. See how, for example, you can find and track a bright-colored object in a scene:
 
@@ -181,8 +183,10 @@ Compares two histograms.
             
             * **CV_COMP_HELLINGER**     Synonym for ``CV_COMP_BHATTACHARYYA``
 
-.. :param hist1: (documentation isn't required)
-.. :param hist2: (documentation isn't required)
+    .. ocv:ignoreparams:: hist1
+
+    .. ocv:ignoreparams:: hist2
+
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:
 
@@ -259,9 +263,12 @@ Computes the "minimal work" distance between two weighted point configurations.
 
     :param userdata: Optional pointer directly passed to the custom distance function.
 
-.. :param distance_type: (documentation isn't required)
-.. :param lower_bound: (documentation isn't required)
-.. :param cost_matrix: (documentation isn't required)
+    .. ocv:ignoreparams:: distance_type
+
+    .. ocv:ignoreparams:: lower_bound
+
+    .. ocv:ignoreparams:: cost_matrix
+
 
 The function computes the earth mover distance and/or a lower boundary of the distance between the two weighted point configurations. One of the applications described in [RubnerSept98]_ is multi-dimensional histogram comparison for image retrieval. EMD is a transportation problem that is solved using some modification of a simplex algorithm, thus the complexity is exponential in the worst case, though, on average it is much faster. In the case of a real metric the lower boundary can be calculated even faster (using linear-time algorithm) and it can be used to determine roughly whether the two signatures are far enough so that they cannot relate to the same object.
 

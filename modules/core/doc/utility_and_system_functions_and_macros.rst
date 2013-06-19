@@ -99,7 +99,8 @@ Computes the cube root of an argument.
 
     :param val: A function argument.
 
-.. :param value: (documentation isn't required)
+    .. ocv:ignoreparams:: value
+
 
 The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
 
@@ -175,7 +176,7 @@ Checks a condition at runtime and throws exception if it fails
 
 .. ocv:function:: CV_Assert(expr)
 
-.. :param: (documentation isn't required)
+    :ocv-param-ignore: (documentation isn't required)
 
 The macros ``CV_Assert`` (and ``CV_DbgAssert``) evaluate the specified expression. If it is 0, the macros raise an error (see :ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations while ``CV_DbgAssert`` is only retained in the Debug configuration.
 
@@ -200,7 +201,8 @@ Signals an error and raises an exception.
 
     :param line: The line of the file, where the error has happened.
 
-.. :param args: ``printf`` -like formatted error message in parentheses.
+    .. ocv:ignoreparams:: args
+
 
 The function and the helper macros ``CV_Error`` and ``CV_Error_``: ::
 
@@ -260,7 +262,8 @@ Allocates an aligned memory buffer.
 
     :param bufSize: Allocated buffer size.
 
-.. :param size: (documentation isn't required)
+    .. ocv:ignoreparams:: size
+
 
 The function allocates the buffer of the specified size and returns it. When the buffer size is 16 bytes or more, the returned buffer is aligned to 16 bytes.
 

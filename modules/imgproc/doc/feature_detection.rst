@@ -29,7 +29,8 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
     :param L2gradient: a flag, indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to calculate the image gradient magnitude ( ``L2gradient=true`` ), or whether the default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
 
-.. :param aperture_size: (documentation isn't required)
+    .. ocv:ignoreparams:: aperture_size
+
 
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
@@ -58,8 +59,10 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-.. :param block_size: (documentation isn't required)
-.. :param aperture_size: (documentation isn't required)
+    .. ocv:ignoreparams:: block_size
+
+    .. ocv:ignoreparams:: aperture_size
+
 
 For every pixel
 :math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neighborhood
@@ -116,7 +119,8 @@ Harris edge detector.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-.. :param aperture_size: (documentation isn't required)
+    .. ocv:ignoreparams:: aperture_size
+
 
 The function runs the Harris edge detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
@@ -156,8 +160,10 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-.. :param block_size: (documentation isn't required)
-.. :param aperture_size: (documentation isn't required)
+    .. ocv:ignoreparams:: block_size
+
+    .. ocv:ignoreparams:: aperture_size
+
 
 The function is similar to
 :ocv:func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariance matrix of derivatives, that is,
@@ -188,7 +194,8 @@ Refines the corner locations.
 
     :param criteria: Criteria for termination of the iterative process of corner refinement. That is, the process of corner position refinement stops either after ``criteria.maxCount`` iterations or when the corner position moves by less than ``criteria.epsilon`` on some iteration.
 
-.. :param zero_zone: (documentation isn't required)
+    .. ocv:ignoreparams:: zero_zone
+
 
 The function iterates to find the sub-pixel accurate location of corners or radial saddle points, as shown on the figure below.
 
@@ -264,9 +271,12 @@ Determines strong corners on an image.
 
     :param k: Free parameter of the Harris detector.
 
-.. :param quality_level: (documentation isn't required)
-.. :param min_distance: (documentation isn't required)
-.. :param block_size: (documentation isn't required)
+    .. ocv:ignoreparams:: quality_level
+
+    .. ocv:ignoreparams:: min_distance
+
+    .. ocv:ignoreparams:: block_size
+
 
 The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]_:
 

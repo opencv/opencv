@@ -39,11 +39,16 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param compactness: The returned value that is described below.
 
-.. :param termcrit: (documentation isn't required)
-.. :param _centers: (documentation isn't required)
-.. :param samples: (documentation isn't required)
-.. :param cluster_count: (documentation isn't required)
-.. :param labels: (documentation isn't required)
+    .. ocv:ignoreparams:: termcrit
+
+    .. ocv:ignoreparams:: _centers
+
+    .. ocv:ignoreparams:: samples
+
+    .. ocv:ignoreparams:: cluster_count
+
+    .. ocv:ignoreparams:: labels
+
 
 
 The function ``kmeans`` implements a k-means algorithm that finds the

@@ -436,7 +436,8 @@ Calculates the covariance matrix of a set of vectors.
 
             * **CV_COVAR_COLS** [Only useful in the second variant of the function] If the flag is specified, all the input vectors are stored as columns of the  ``samples``  matrix.  ``mean``  should be a single-column vector in this case.
 
-.. :param count: (documentation isn't required)
+    .. ocv:ignoreparams:: count
+
 
 The functions ``calcCovarMatrix`` calculate the covariance matrix and, optionally, the mean vector of the set of input vectors.
 
@@ -545,7 +546,8 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
 
-.. :param cmp_op: (documentation isn't required)
+    .. ocv:ignoreparams:: cmp_op
+
 
 The function compares:
 
@@ -878,7 +880,8 @@ Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-
 
     :param nonzeroRows: when the parameter is not zero, the function assumes that only the first ``nonzeroRows`` rows of the input array (``DFT_INVERSE`` is not set) or only the first ``nonzeroRows`` of the output array (``DFT_INVERSE`` is set) contain non-zeros, thus, the function can handle the rest of the rows more efficiently and save some time; this technique is very useful for calculating array cross-correlation or convolution using DFT.
 
-.. :param nonzero_rows: (documentation isn't required)
+    .. ocv:ignoreparams:: nonzero_rows
+
 
 
 The function performs one of the following:
@@ -1428,8 +1431,10 @@ Checks if array elements lie between the elements of two other arrays.
 
     :param dst: output array of the same size as ``src`` and ``CV_8U`` type.
 
-.. :param lower: the same as lowerb (documentation isn't required)
-.. :param upper: the same as upperb (documentation isn't required)
+    .. ocv:ignoreparams:: lower
+
+    .. ocv:ignoreparams:: upper
+
 
 The function checks the range as follows:
 
@@ -1733,7 +1738,8 @@ Calculates a mean and standard deviation of array elements.
 
     :param mask: optional operation mask.
 
-.. :param std_dev: (documentation isn't required)
+    .. ocv:ignoreparams:: std_dev
+
 
 The function ``meanStdDev`` calculates the mean and the standard deviation ``M`` of array elements independently for each channel and returns it via the output parameters:
 
@@ -1774,10 +1780,14 @@ Creates one multichannel array out of several single-channel ones.
 
     :param dst: output array of the same size and the same depth as ``mv[0]``; The number of channels will be the total number of channels in the matrix array.
 
-.. :param src0: (documentation isn't required)
-.. :param src1: (documentation isn't required)
-.. :param src2: (documentation isn't required)
-.. :param src3: (documentation isn't required)
+    .. ocv:ignoreparams:: src0
+
+    .. ocv:ignoreparams:: src1
+
+    .. ocv:ignoreparams:: src2
+
+    .. ocv:ignoreparams:: src3
+
 
 The functions ``merge`` merge several arrays to make a single multi-channel array. That is, each element of the output array will be a concatenation of the elements of the input arrays, where elements of i-th input array are treated as ``mv[i].channels()``-element vectors.
 
@@ -1910,10 +1920,14 @@ Finds the global minimum and maximum in an array.
 
     :param mask: optional mask used to select a sub-array.
 
-.. :param min_val: (documentation isn't required)
-.. :param max_val: (documentation isn't required)
-.. :param min_loc: (documentation isn't required)
-.. :param max_loc: (documentation isn't required)
+    .. ocv:ignoreparams:: min_val
+
+    .. ocv:ignoreparams:: max_val
+
+    .. ocv:ignoreparams:: min_loc
+
+    .. ocv:ignoreparams:: max_loc
+
 
 The functions ``minMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
 if ``mask`` is not an empty array, in the specified array region.
@@ -1963,10 +1977,14 @@ Copies specified channels from input arrays to the specified channels of output 
 
     :param npairs: number of index pairs in ``fromTo``.
 
-.. :param src_count: (documentation isn't required)
-.. :param dst_count: (documentation isn't required)
-.. :param pair_count: (documentation isn't required)
-.. :param from_to: (documentation isn't required)
+    .. ocv:ignoreparams:: src_count
+
+    .. ocv:ignoreparams:: dst_count
+
+    .. ocv:ignoreparams:: pair_count
+
+    .. ocv:ignoreparams:: from_to
+
 
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
 
@@ -2020,9 +2038,12 @@ Performs the per-element multiplication of two Fourier spectrums.
 
     :param conjB: optional flag that conjugates the second input array before the multiplication (true) or not (false).
 
-.. :param src1: (documentation isn't required)
-.. :param src2: (documentation isn't required)
-.. :param dst: (documentation isn't required)
+    .. ocv:ignoreparams:: src1
+
+    .. ocv:ignoreparams:: src2
+
+    .. ocv:ignoreparams:: dst
+
 
 The function ``mulSpectrums`` performs the per-element multiplication of the two CCS-packed or complex matrices that are results of a real or complex Fourier transform.
 
@@ -2154,9 +2175,12 @@ Calculates an absolute array norm, an absolute difference norm, or a relative di
 
     :param mask: optional operation mask; it must have the same size as ``src1`` and ``CV_8UC1`` type.
 
-.. :param arr1: (documentation isn't required)
-.. :param arr2: (documentation isn't required)
-.. :param norm_type: (documentation isn't required)
+    .. ocv:ignoreparams:: arr1
+
+    .. ocv:ignoreparams:: arr2
+
+    .. ocv:ignoreparams:: norm_type
+
 
 The functions ``norm`` calculate an absolute norm of ``src1`` (when there is no ``src2`` ):
 
@@ -2214,7 +2238,8 @@ Normalizes the norm or value range of an array.
 
     :param mask: optional operation mask.
 
-.. :param norm_type: (documentation isn't required)
+    .. ocv:ignoreparams:: norm_type
+
 
 The functions ``normalize`` scale and shift the input array elements so that
 
@@ -2414,7 +2439,8 @@ Performs the perspective matrix transformation of vectors.
 
     :param m: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
-.. :param mat: (documentation isn't required)
+    .. ocv:ignoreparams:: mat
+
 
 The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
@@ -2494,7 +2520,8 @@ Calculates x and y coordinates of 2D vectors from their magnitude and angle.
 
     :param angleInDegrees: when true, the input angles are measured in degrees, otherwise, they are measured in radians.
 
-.. :param angle_in_degrees: (documentation isn't required)
+    .. ocv:ignoreparams:: angle_in_degrees
+
 
 The function ``polarToCart`` calculates the Cartesian coordinates of each 2D vector represented by the corresponding elements of ``magnitude`` and ``angle`` :
 
@@ -2813,7 +2840,8 @@ Reduces a matrix to a vector.
 
     :param dtype: when negative, the output vector will have the same type as the input matrix, otherwise, its type will be ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels())``.
 
-.. :param op: (documentation isn't required)
+    .. ocv:ignoreparams:: op
+
 
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
@@ -3338,9 +3366,12 @@ Performs SVD of a matrix
 
     :param flags: operation flags - see :ocv:func:`SVD::SVD`.
 
-.. :param A: (documentation isn't required)
-.. :param W: (documentation isn't required)
-.. :param U: (documentation isn't required)
+    .. ocv:ignoreparams:: A
+
+    .. ocv:ignoreparams:: W
+
+    .. ocv:ignoreparams:: U
+
 
 The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 
@@ -3392,10 +3423,14 @@ Performs a singular value back substitution.
 
     :param dst: found solution of the system.
 
-.. :param B: (documentation isn't required)
-.. :param W: (documentation isn't required)
-.. :param U: (documentation isn't required)
-.. :param X: (documentation isn't required)
+    .. ocv:ignoreparams:: B
+
+    .. ocv:ignoreparams:: W
+
+    .. ocv:ignoreparams:: U
+
+    .. ocv:ignoreparams:: X
+
 
 The method calculates a back substitution for the specified right-hand side:
 
@@ -3423,7 +3458,6 @@ Calculates the sum of array elements.
 
     :param arr: input array that must have from 1 to 4 channels.
 
-.. :param arr: (documentation isn't required)
 
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 

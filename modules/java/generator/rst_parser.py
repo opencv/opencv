@@ -96,17 +96,30 @@ class ParamParser(object):
             self.comment = ""
             self.active = False
             return
+        should_ignore_params = False
         offset = line.find(":param")
-        assert offset > 0
+        if (offset > 0):
+            suffix_length=len(":param")
+        else:
+            offset = line.find(".. ocv:ignoreparams::")
+            suffix_length=len(".. ocv:ignoreparams::")
+            should_ignore_params = True
+
+        assert (offset > 0), "cannot find param key string"
         self.prefix = line[:offset]
-        assert ((self.prefix == " "*len(self.prefix)) or (self.prefix == ".. ")), ":param definition should be prefixed with spaces or it should be a comment, finished by words (documentation isn't required)"
-        line = line[offset + 6:].lstrip()
+        assert (self.prefix == " "*len(self.prefix)), "':param' and '.. ocv:ignoreparams::' definitions should be prefixed with spaces"
+        line = line[offset + suffix_length:].lstrip()
         name_end = line.find(":")
-        assert name_end > 0
-        self.name = line[:name_end]
-        self.comment = line[name_end+1:].lstrip()
-	if (self.prefix == ".. :param"):
-            assert (self.comment.rstrip().endswith("(documentation isn't required)")), ":param definition should be prefixed with spaces or it should be a comment, finished by words (documentation isn't required)"
+        if (name_end > 0):
+            self.name = line[:name_end].rstrip().lstrip()
+            self.comment = line[name_end+1:].lstrip().rstrip()
+        else:
+            self.name = line.lstrip().rstrip()
+            self.comment = "" 
+
+        if (should_ignore_params):
+            self.comment = self.comment + "(documentation isn't required)" #this addition is required, since parameters with empty comments are removed
+        
         self.active = True
 
     def append(self, line):
@@ -120,7 +133,7 @@ class ParamParser(object):
 
     @classmethod
     def hasDeclaration(cls, line):
-	    return ( line.lstrip().startswith(":param") or (line.lstrip().startswith(".. :param") and line.rstrip().endswith("(documentation isn't required)") ) )
+            return ( line.lstrip().startswith(":param") or line.lstrip().startswith(".. ocv:ignoreparams::") )
 
 class RstParser(object):
     def __init__(self, cpp_parser):

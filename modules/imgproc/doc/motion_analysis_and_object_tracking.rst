@@ -21,8 +21,10 @@ Adds an image to the accumulator.
 
     :param mask: Optional operation mask.
 
-.. :param image: (documentation isn't required)
-.. :param sum: (documentation isn't required)
+    .. ocv:ignoreparams:: image
+
+    .. ocv:ignoreparams:: sum
+
 
 The function adds ``src``  or some of its elements to ``dst`` :
 
@@ -60,8 +62,10 @@ Adds the square of a source image to the accumulator.
 
     :param mask: Optional operation mask.
 
-.. :param image: (documentation isn't required)
-.. :param sqsum: (documentation isn't required)
+    .. ocv:ignoreparams:: image
+
+    .. ocv:ignoreparams:: sqsum
+
 
 The function adds the input image ``src`` or its selected region, raised to a power of 2, to the accumulator ``dst`` :
 
@@ -99,9 +103,12 @@ Adds the per-element product of two input images to the accumulator.
 
     :param mask: Optional operation mask.
 
-.. :param image1: (documentation isn't required)
-.. :param image2: (documentation isn't required)
-.. :param acc: (documentation isn't required)
+    .. ocv:ignoreparams:: image1
+
+    .. ocv:ignoreparams:: image2
+
+    .. ocv:ignoreparams:: acc
+
 
 The function adds the product of two images or their selected regions to the accumulator ``dst`` :
 
@@ -138,8 +145,10 @@ Updates a running average.
 
     :param mask: Optional operation mask.
 
-.. :param image: (documentation isn't required)
-.. :param acc: (documentation isn't required)
+    .. ocv:ignoreparams:: image
+
+    .. ocv:ignoreparams:: acc
+
 
 The function calculates the weighted sum of the input image ``src`` and the accumulator ``dst`` so that ``dst`` becomes a running average of a frame sequence:
 
