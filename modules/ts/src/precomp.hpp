@@ -1,4 +1,6 @@
+#include "opencv2/core/core.hpp"
 #include "opencv2/core/core_c.h"
+#include "opencv2/core/internal.hpp"
 #include "opencv2/ts/ts.hpp"
 
 #ifdef GTEST_LINKED_AS_SHARED_LIBRARY
