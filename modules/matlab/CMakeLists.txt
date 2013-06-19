@@ -46,6 +46,9 @@ ocv_add_module(matlab   BINDINGS opencv_core opencv_imgproc
                                  opencv_highgui opencv_ml opencv_calib3d opencv_photo
                                  opencv_nonfree opencv_calib)
 
+set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
+prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif()
@@ -53,9 +56,6 @@ endif()
 # ----------------------------------------------------------------------------
 #  Configure time components
 # ----------------------------------------------------------------------------
-set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
-prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 message("-- Trying to generate Matlab code")
 execute_process(
     COMMAND ${PYTHON_EXECUTABLE} 
@@ -102,7 +102,6 @@ string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}
 foreach(module ${OPENCV_MATLAB_MODULES})
     if (HAVE_opencv_${module})
         list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
-        prepend("-I" MEX_INCLUDES "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
     endif()
 endforeach()
 
@@ -113,15 +112,15 @@ add_custom_target(opencv_matlab_sources ALL
             ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-# get the matlab sources
+# compile the matlab sources to mex
+add_custom_target(opencv_matlab ALL)
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
   get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
   # compile the source file using mex
-  add_custom_target("opencv_matlab_${FILENAME}" ALL
-      COMMAND "/usr/bin/true"
-      #COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
-      #        ${SOURCE_FILE}
+  add_custom_command(TARGET opencv_matlab PRE_BUILD
+      COMMAND echo ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
+              ${SOURCE_FILE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
       DEPENDS opencv_matlab_sources
   )

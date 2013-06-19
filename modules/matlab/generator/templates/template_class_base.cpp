@@ -34,7 +34,7 @@ std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bri
   } catch(std::exception& e) {
     mexErrMsgTxt(std::string("std::exception caught: ").append(e.what()).c_str());
   } catch(...) {
-    mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
+    mexErrMsgTxt("Uncaught exception occurred in {{function.name}}");
   }
 
 
