@@ -11,6 +11,7 @@
 #include "bridge.hpp"
 #include <string>
 #include <vector>
+#include <exception>
 #include <opencv2/core.hpp>
 {% block includes %}
 {% endblock %}
@@ -42,7 +43,9 @@ void mexFunction(int nlhs, mxArray* plhs[],
   try {
     {{fun.name}}();
   } catch(cv::Exception& e) {
-    mexErrMsgTxt(std::string("OpenCV exception caught: ").append(e.what()).c_str());
+    mexErrMsgTxt(std::string("cv::exception caught: ").append(e.what()).c_str());
+  } catch(std::exception& e) {
+    mexErrMsgTxt(std::string("std::exception caught: ").append(e.what()).c_str());
   } catch(...) {
     mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
   }
