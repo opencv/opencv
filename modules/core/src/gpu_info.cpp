@@ -569,7 +569,12 @@ int cv::gpu::DeviceInfo::maxTexture1DMipmap() const
     throw_no_cuda();
     return 0;
 #else
-    return deviceProps().get(device_id_)->maxTexture1DMipmap;
+    #if CUDA_VERSION >= 5000
+        return deviceProps().get(device_id_)->maxTexture1DMipmap;
+    #else
+        CV_Error(Error::StsNotImplemented, "This function requires CUDA 5.0");
+        return 0;
+    #endif
 #endif
 }
 
@@ -599,7 +604,12 @@ Vec2i cv::gpu::DeviceInfo::maxTexture2DMipmap() const
     throw_no_cuda();
     return Vec2i();
 #else
-    return Vec2i(deviceProps().get(device_id_)->maxTexture2DMipmap);
+    #if CUDA_VERSION >= 5000
+        return Vec2i(deviceProps().get(device_id_)->maxTexture2DMipmap);
+    #else
+        CV_Error(Error::StsNotImplemented, "This function requires CUDA 5.0");
+        return Vec2i();
+    #endif
 #endif
 }
 
