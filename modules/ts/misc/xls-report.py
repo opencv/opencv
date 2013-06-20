@@ -79,7 +79,7 @@ def main():
                 sheet_conf = ast.literal_eval(sheet_conf_file.read())
         except Exception:
             sheet_conf = {}
-            logging.debug('no sheet.conf for {}'.format(sheet_path))
+            logging.debug('no sheet.conf for %s', sheet_path)
 
         sheet_conf = dict(global_conf.items() + sheet_conf.items())
 
@@ -90,14 +90,14 @@ def main():
                 config_names = [p for p in os.listdir(sheet_path)
                     if os.path.isdir(os.path.join(sheet_path, p))]
             except Exception as e:
-                logging.warning(e)
+                logging.warning('error while determining configuration names for %s: %s', sheet_path, e)
                 continue
 
         collection = {}
 
         for configuration, configuration_path in \
                 [(c, os.path.join(sheet_path, c))  for c in config_names]:
-            logging.info('processing {}'.format(configuration_path))
+            logging.info('processing %s', configuration_path)
             for xml_fullname in glob(os.path.join(configuration_path, '*.xml')):
                 collect_xml(collection, configuration, xml_fullname)
 
