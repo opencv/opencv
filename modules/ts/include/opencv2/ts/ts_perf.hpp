@@ -475,25 +475,31 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
-#define CV_PERF_UNWRAP_IMPLS(...) __VA_ARGS__
 
-// "plain" should always be one of the implementations
-#define CV_PERF_TEST_MAIN_WITH_IMPLS(modulename, impls, ...) \
-int main(int argc, char **argv)\
-{\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...) \
     while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
-    std::string impls_[] = { CV_PERF_UNWRAP_IMPLS impls };\
     ::perf::Regression::Init(#modulename);\
-    ::perf::TestBase::Init(std::vector<std::string>(impls_, impls_ + sizeof impls_ / sizeof *impls_),\
+    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls),\
                            argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
     cvtest::printVersionInfo();\
     ::testing::Test::RecordProperty("cv_module_name", #modulename);\
     ::perf::TestBase::RecordRunParameters();\
-    return RUN_ALL_TESTS();\
+    return RUN_ALL_TESTS();
+
+// impls must be an array, not a pointer; "plain" should always be one of the implementations
+#define CV_PERF_TEST_MAIN_WITH_IMPLS(modulename, impls, ...) \
+int main(int argc, char **argv)\
+{\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, __VA_ARGS__)\
 }
 
-#define CV_PERF_TEST_MAIN(modulename, ...) CV_PERF_TEST_MAIN_WITH_IMPLS(modulename, ("plain"), __VA_ARGS__)
+#define CV_PERF_TEST_MAIN(modulename, ...) \
+int main(int argc, char **argv)\
+{\
+    const char * plain_only[] = { "plain" };\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
+}
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())
 #define TEST_CYCLE() for(; startTimer(), next(); stopTimer())
