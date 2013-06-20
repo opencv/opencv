@@ -15,11 +15,11 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, termcrit, attempts=1, flags=0, centers=None) -> float
 
-    :param samples: Floating-point matrix of input samples, one row per sample.
+    :param data: Floating-point matrix of input samples, one row per sample.
 
-    :param cluster_count: Number of clusters to split the set by.
+    :param K: Number of clusters to split the set by.
 
-    :param labels: Input/output integer array that stores the cluster indices for every sample.
+    :param bestLabels: Input/output integer array that stores the cluster indices for every sample.
 
     :param criteria: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``criteria.epsilon``. As soon as each of the cluster centers moves by less than ``criteria.epsilon`` on some iteration, the algorithm stops.
 
@@ -38,6 +38,18 @@ Finds centers of clusters and groups input samples around the clusters.
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
 
     :param compactness: The returned value that is described below.
+
+    .. ocv:ignoreparams:: termcrit
+
+    .. ocv:ignoreparams:: _centers
+
+    .. ocv:ignoreparams:: samples
+
+    .. ocv:ignoreparams:: cluster_count
+
+    .. ocv:ignoreparams:: labels
+
+
 
 The function ``kmeans`` implements a k-means algorithm that finds the
 centers of ``cluster_count`` clusters and groups the input samples

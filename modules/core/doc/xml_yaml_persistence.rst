@@ -183,6 +183,13 @@ Opens a file.
 
 See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
 
+    .. ocv:ignoreparams:: filename
+
+    .. ocv:ignoreparams:: flags
+
+    .. ocv:ignoreparams:: encoding
+
+
 
 FileStorage::isOpened
 ---------------------
@@ -661,6 +668,9 @@ Moves iterator to the next node.
 .. ocv:function:: FileNodeIterator FileNodeIterator::operator ++ (int)
 
 
+    :ocv-param-ignore: (documentation isn't required)
+
+
 FileNodeIterator::operator --
 -----------------------------
 Moves iterator to the previous node.
@@ -669,6 +679,7 @@ Moves iterator to the previous node.
 
 .. ocv:function:: FileNodeIterator FileNodeIterator::operator -- (int)
 
+    :ocv-param-ignore: (documentation isn't required)
 
 FileNodeIterator::operator +=
 -----------------------------

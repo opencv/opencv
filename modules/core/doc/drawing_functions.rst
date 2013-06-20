@@ -52,6 +52,8 @@ Draws a circle.
 
     :param shift: Number of fractional bits in the coordinates of the center and in the radius value.
 
+    .. ocv:ignoreparams:: line_type
+
 The function ``circle`` draws a simple or filled circle with a given center and radius.
 
 clipLine
@@ -75,6 +77,9 @@ Clips the line against the image rectangle.
     :param pt1: First line point.
 
     :param pt2: Second line point.
+
+    .. ocv:ignoreparams:: img_size
+
 
 The functions ``clipLine`` calculate a part of the line segment that is entirely within the specified rectangle.
 They return ``false`` if the line segment is completely outside the rectangle. Otherwise, they return ``true`` .
@@ -119,6 +124,13 @@ Draws a simple or thick elliptic arc or fills an ellipse sector.
     :param lineType: Type of the ellipse boundary. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the coordinates of the center and values of axes.
+
+    .. ocv:ignoreparams:: start_angle
+
+    .. ocv:ignoreparams:: end_angle
+
+    .. ocv:ignoreparams:: line_type
+
 
 The functions ``ellipse`` with less parameters draw an ellipse outline, a filled ellipse, an elliptic arc, or a filled ellipse sector.
 A piecewise-linear curve is used to approximate the elliptic arc boundary. If you need more control of the ellipse rendering, you can retrieve the curve using
@@ -181,6 +193,9 @@ Fills a convex polygon.
 
     :param shift: Number of fractional bits in the vertex coordinates.
 
+    .. ocv:ignoreparams:: line_type
+
+
 The function ``fillConvexPoly`` draws a filled convex polygon.
 This function is much faster than the function ``fillPoly`` . It can fill not only convex polygons but any monotonic polygon without self-intersections,
 that is, a polygon whose contour intersects every horizontal line (scan line) twice at the most (though, its top-most and/or the bottom edge could be horizontal).
@@ -215,6 +230,11 @@ Fills the area bounded by one or more polygons.
 
     :param offset: Optional offset of all points of the contours.
 
+    .. ocv:ignoreparams:: line_type
+
+    .. ocv:ignoreparams:: contours
+
+
 The function ``fillPoly`` fills an area bounded by several polygonal contours. The function can fill complex areas, for example,
 areas with holes, contours with self-intersections (some of their parts), and so forth.
 
@@ -241,6 +261,13 @@ Calculates the width and height of a text string.
     :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.
 
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+
+    .. ocv:ignoreparams:: baseline
+
+    .. ocv:ignoreparams:: text_string
+
+    .. ocv:ignoreparams:: text_size
+
 
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::
@@ -357,6 +384,9 @@ Draws a line segment connecting two points.
 
     :param shift: Number of fractional bits in the point coordinates.
 
+    .. ocv:ignoreparams:: line_type
+
+
 The function ``line`` draws the line segment between ``pt1`` and ``pt2`` points in the image. The line is clipped by the image boundaries. For non-antialiased lines with integer coordinates, the 8-connected or 4-connected Bresenham algorithm is used. Thick lines are drawn with rounding endings.
 Antialiased lines are drawn using Gaussian filtering. To specify the line color, you may use the macro ``CV_RGB(r, g, b)`` .
 
@@ -443,6 +473,9 @@ Draws a simple, thick, or filled up-right rectangle.
 
     :param shift: Number of fractional bits in the point coordinates.
 
+    .. ocv:ignoreparams:: line_type
+
+
 The function ``rectangle`` draws a rectangle outline or a filled rectangle whose two opposite corners are ``pt1`` and ``pt2``, or ``r.tl()`` and ``r.br()-Point(1,1)``.
 
 
@@ -478,6 +511,13 @@ Draws several polygonal curves.
     :param lineType: Type of the line segments. See the  :ocv:func:`line`  description.
 
     :param shift: Number of fractional bits in the vertex coordinates.
+
+    .. ocv:ignoreparams:: line_type
+
+    .. ocv:ignoreparams:: contours
+
+    .. ocv:ignoreparams:: is_closed
+
 
 The function ``polylines`` draws one or more polygonal curves.
 

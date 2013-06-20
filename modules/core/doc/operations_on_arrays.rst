@@ -436,6 +436,9 @@ Calculates the covariance matrix of a set of vectors.
 
             * **CV_COVAR_COLS** [Only useful in the second variant of the function] If the flag is specified, all the input vectors are stored as columns of the  ``samples``  matrix.  ``mean``  should be a single-column vector in this case.
 
+    .. ocv:ignoreparams:: count
+
+
 The functions ``calcCovarMatrix`` calculate the covariance matrix and, optionally, the mean vector of the set of input vectors.
 
 .. seealso::
@@ -542,6 +545,9 @@ Performs the per-element comparison of two arrays or an array and scalar value.
             * **CMP_LT** ``src1`` is less than ``src2``.
             * **CMP_LE** ``src1`` is less than or equal to ``src2``.
             * **CMP_NE** ``src1`` is unequal to ``src2``.
+
+    .. ocv:ignoreparams:: cmp_op
+
 
 The function compares:
 
@@ -873,6 +879,9 @@ Performs a forward or inverse Discrete Fourier transform of a 1D or 2D floating-
             * **DFT_REAL_OUTPUT** performs an inverse transformation of a 1D or 2D complex array; the result is normally a complex array of the same size, however, if the input array has conjugate-complex symmetry (for example, it is a result of forward transformation with  ``DFT_COMPLEX_OUTPUT``  flag), the output is a real array; while the function itself does not check whether the input is symmetrical or not, you can pass the flag and then the function will assume the symmetry and produce the real output array (note that when the input is packed into a real array and inverse transformation is executed, the function treats the input as a packed complex-conjugate symmetrical array, and the output will also be a real array).
 
     :param nonzeroRows: when the parameter is not zero, the function assumes that only the first ``nonzeroRows`` rows of the input array (``DFT_INVERSE`` is not set) or only the first ``nonzeroRows`` of the output array (``DFT_INVERSE`` is set) contain non-zeros, thus, the function can handle the rest of the rows more efficiently and save some time; this technique is very useful for calculating array cross-correlation or convolution using DFT.
+
+    .. ocv:ignoreparams:: nonzero_rows
+
 
 
 The function performs one of the following:
@@ -1422,6 +1431,11 @@ Checks if array elements lie between the elements of two other arrays.
 
     :param dst: output array of the same size as ``src`` and ``CV_8U`` type.
 
+    .. ocv:ignoreparams:: lower
+
+    .. ocv:ignoreparams:: upper
+
+
 The function checks the range as follows:
 
  * For every element of a single-channel input array:
@@ -1724,6 +1738,9 @@ Calculates a mean and standard deviation of array elements.
 
     :param mask: optional operation mask.
 
+    .. ocv:ignoreparams:: std_dev
+
+
 The function ``meanStdDev`` calculates the mean and the standard deviation ``M`` of array elements independently for each channel and returns it via the output parameters:
 
 .. math::
@@ -1762,6 +1779,15 @@ Creates one multichannel array out of several single-channel ones.
     :param count: number of input matrices when ``mv`` is a plain C array; it must be greater than zero.
 
     :param dst: output array of the same size and the same depth as ``mv[0]``; The number of channels will be the total number of channels in the matrix array.
+
+    .. ocv:ignoreparams:: src0
+
+    .. ocv:ignoreparams:: src1
+
+    .. ocv:ignoreparams:: src2
+
+    .. ocv:ignoreparams:: src3
+
 
 The functions ``merge`` merge several arrays to make a single multi-channel array. That is, each element of the output array will be a concatenation of the elements of the input arrays, where elements of i-th input array are treated as ``mv[i].channels()``-element vectors.
 
@@ -1854,6 +1880,8 @@ Finds the global minimum and maximum in an array
 
     :param maxIdx: pointer to the returned maximum location (in nD case). ``NULL`` is used if not required.
 
+    :param mask: optional mask used to select a sub-array.
+
     The function ``minMaxIdx`` finds the minimum and maximum element values and their positions. The extremums are searched across the whole array or, if ``mask`` is not an empty array, in the specified array region.
 
     The function does not work with multi-channel arrays. If you need to find minimum or maximum elements across all the channels, use
@@ -1891,6 +1919,15 @@ Finds the global minimum and maximum in an array.
     :param maxLoc: pointer to the returned maximum location (in 2D case);  ``NULL`` is used if not required.
 
     :param mask: optional mask used to select a sub-array.
+
+    .. ocv:ignoreparams:: min_val
+
+    .. ocv:ignoreparams:: max_val
+
+    .. ocv:ignoreparams:: min_loc
+
+    .. ocv:ignoreparams:: max_loc
+
 
 The functions ``minMaxLoc`` find the minimum and maximum element values and their positions. The extremums are searched across the whole array or,
 if ``mask`` is not an empty array, in the specified array region.
@@ -1940,6 +1977,15 @@ Copies specified channels from input arrays to the specified channels of output 
 
     :param npairs: number of index pairs in ``fromTo``.
 
+    .. ocv:ignoreparams:: src_count
+
+    .. ocv:ignoreparams:: dst_count
+
+    .. ocv:ignoreparams:: pair_count
+
+    .. ocv:ignoreparams:: from_to
+
+
 The functions ``mixChannels`` provide an advanced mechanism for shuffling image channels.
 
 :ocv:func:`split` and
@@ -1982,15 +2028,22 @@ Performs the per-element multiplication of two Fourier spectrums.
 .. ocv:cfunction:: void cvMulSpectrums( const CvArr* src1, const CvArr* src2, CvArr* dst, int flags)
 .. ocv:pyoldfunction:: cv.MulSpectrums(src1, src2, dst, flags)-> None
 
-    :param src1: first input array.
+    :param a: first input array.
 
-    :param src2: second input array of the same size and type as ``src1`` .
+    :param b: second input array of the same size and type as ``src1`` .
 
-    :param dst: output array of the same size and type as ``src1`` .
+    :param c: output array of the same size and type as ``src1`` .
 
     :param flags: operation flags; currently, the only supported flag is ``DFT_ROWS``, which indicates that each row of ``src1`` and ``src2`` is an independent 1D Fourier spectrum.
 
     :param conjB: optional flag that conjugates the second input array before the multiplication (true) or not (false).
+
+    .. ocv:ignoreparams:: src1
+
+    .. ocv:ignoreparams:: src2
+
+    .. ocv:ignoreparams:: dst
+
 
 The function ``mulSpectrums`` performs the per-element multiplication of the two CCS-packed or complex matrices that are results of a real or complex Fourier transform.
 
@@ -2122,6 +2175,13 @@ Calculates an absolute array norm, an absolute difference norm, or a relative di
 
     :param mask: optional operation mask; it must have the same size as ``src1`` and ``CV_8UC1`` type.
 
+    .. ocv:ignoreparams:: arr1
+
+    .. ocv:ignoreparams:: arr2
+
+    .. ocv:ignoreparams:: norm_type
+
+
 The functions ``norm`` calculate an absolute norm of ``src1`` (when there is no ``src2`` ):
 
 .. math::
@@ -2177,6 +2237,8 @@ Normalizes the norm or value range of an array.
     :param dtype: when negative, the output array has the same type as ``src``; otherwise, it has the same number of channels as  ``src`` and the depth ``=CV_MAT_DEPTH(dtype)``.
 
     :param mask: optional operation mask.
+
+    .. ocv:ignoreparams:: norm_type
 
 
 The functions ``normalize`` scale and shift the input array elements so that
@@ -2377,6 +2439,9 @@ Performs the perspective matrix transformation of vectors.
 
     :param m: ``3x3`` or ``4x4`` floating-point transformation matrix.
 
+    .. ocv:ignoreparams:: mat
+
+
 The function ``perspectiveTransform`` transforms every element of ``src`` by treating it as a 2D or 3D vector, in the following way:
 
 .. math::
@@ -2454,6 +2519,9 @@ Calculates x and y coordinates of 2D vectors from their magnitude and angle.
     :param y: output array of y-coordinates of 2D vectors; it has the same size and type as ``angle``.
 
     :param angleInDegrees: when true, the input angles are measured in degrees, otherwise, they are measured in radians.
+
+    .. ocv:ignoreparams:: angle_in_degrees
+
 
 The function ``polarToCart`` calculates the Cartesian coordinates of each 2D vector represented by the corresponding elements of ``magnitude`` and ``angle`` :
 
@@ -2771,6 +2839,9 @@ Reduces a matrix to a vector.
             * **CV_REDUCE_MIN**: the output is the minimum (column/row-wise) of all rows/columns of the matrix.
 
     :param dtype: when negative, the output vector will have the same type as the input matrix, otherwise, its type will be ``CV_MAKE_TYPE(CV_MAT_DEPTH(dtype), src.channels())``.
+
+    .. ocv:ignoreparams:: op
+
 
 The function ``reduce`` reduces the matrix to a vector by treating the matrix rows/columns as a set of 1D vectors and performing the specified operation on the vectors until a single row/column is obtained. For example, the function can be used to compute horizontal and vertical projections of a raster image. In case of ``CV_REDUCE_SUM`` and ``CV_REDUCE_AVG`` , the output may have a larger element bit-depth to preserve accuracy. And multi-channel arrays are also supported in these two reduction modes.
 
@@ -3289,11 +3360,18 @@ Performs SVD of a matrix
 
     :param u: calculated left singular vectors
 
-    :param V: calculated right singular vectors
+    :param V: calculated right singular vectors (in OpenCV 1.x API only)
 
     :param vt: transposed matrix of right singular values
 
     :param flags: operation flags - see :ocv:func:`SVD::SVD`.
+
+    .. ocv:ignoreparams:: A
+
+    .. ocv:ignoreparams:: W
+
+    .. ocv:ignoreparams:: U
+
 
 The methods/functions perform SVD of matrix. Unlike ``SVD::SVD`` constructor and ``SVD::operator()``, they store the results to the user-provided matrices. ::
 
@@ -3337,13 +3415,22 @@ Performs a singular value back substitution.
 
     :param u: left singular vectors
 
-    :param V: right singular vectors
+    :param V: right singular vectors (in OpenCV 1.x API only)
 
     :param vt: transposed matrix of right singular vectors.
 
     :param rhs: right-hand side of a linear system ``(u*w*v')*dst = rhs`` to be solved, where ``A`` has been previously decomposed.
 
     :param dst: found solution of the system.
+
+    .. ocv:ignoreparams:: B
+
+    .. ocv:ignoreparams:: W
+
+    .. ocv:ignoreparams:: U
+
+    .. ocv:ignoreparams:: X
+
 
 The method calculates a back substitution for the specified right-hand side:
 
@@ -3370,6 +3457,7 @@ Calculates the sum of array elements.
 .. ocv:pyoldfunction:: cv.Sum(arr) -> scalar
 
     :param arr: input array that must have from 1 to 4 channels.
+
 
 The functions ``sum`` calculate and return the sum of array elements, independently for each channel.
 

@@ -29,6 +29,9 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
     :param L2gradient: a flag, indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to calculate the image gradient magnitude ( ``L2gradient=true`` ), or whether the default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
 
+    .. ocv:ignoreparams:: aperture_size
+
+
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
@@ -55,6 +58,11 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
     :param ksize: Aperture parameter for the  :ocv:func:`Sobel`  operator.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
+
+    .. ocv:ignoreparams:: block_size
+
+    .. ocv:ignoreparams:: aperture_size
+
 
 For every pixel
 :math:`p` , the function ``cornerEigenValsAndVecs`` considers a ``blockSize`` :math:`\times` ``blockSize`` neighborhood
@@ -111,6 +119,9 @@ Harris edge detector.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
+    .. ocv:ignoreparams:: aperture_size
+
+
 The function runs the Harris edge detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
 :ocv:func:`cornerEigenValsAndVecs` , for each pixel
@@ -149,6 +160,11 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
+    .. ocv:ignoreparams:: block_size
+
+    .. ocv:ignoreparams:: aperture_size
+
+
 The function is similar to
 :ocv:func:`cornerEigenValsAndVecs` but it calculates and stores only the minimal eigenvalue of the covariance matrix of derivatives, that is,
 :math:`\min(\lambda_1, \lambda_2)` in terms of the formulae in the
@@ -177,6 +193,9 @@ Refines the corner locations.
     :param zeroZone: Half of the size of the dead region in the middle of the search zone over which the summation in the formula below is not done. It is used sometimes to avoid possible singularities of the autocorrelation matrix. The value of (-1,-1) indicates that there is no such a size.
 
     :param criteria: Criteria for termination of the iterative process of corner refinement. That is, the process of corner position refinement stops either after ``criteria.maxCount`` iterations or when the corner position moves by less than ``criteria.epsilon`` on some iteration.
+
+    .. ocv:ignoreparams:: zero_zone
+
 
 The function iterates to find the sub-pixel accurate location of corners or radial saddle points, as shown on the figure below.
 
@@ -251,6 +270,13 @@ Determines strong corners on an image.
     :param useHarrisDetector: Parameter indicating whether to use a Harris detector (see :ocv:func:`cornerHarris`) or :ocv:func:`cornerMinEigenVal`.
 
     :param k: Free parameter of the Harris detector.
+
+    .. ocv:ignoreparams:: quality_level
+
+    .. ocv:ignoreparams:: min_distance
+
+    .. ocv:ignoreparams:: block_size
+
 
 The function finds the most prominent corners in the image or in the specified image region, as described in [Shi94]_:
 

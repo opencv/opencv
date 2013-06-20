@@ -1456,6 +1456,17 @@ class OCVCurrentNamespace(Directive):
                 env.temp_data['ocv:prefix'] = prefix
         return []
 
+class OCVIgnoreParams(Directive):
+    """This directive does nothing. It's a marker that tells our doc tester
+    that the listed arguments don't need to be documented.
+    """
+
+    has_content = False
+    required_arguments = 1
+    final_argument_whitespace = True
+
+    def run(self):
+        return []
 
 class OCVXRefRole(XRefRole):
 
@@ -1510,7 +1521,8 @@ class OCVDomain(Domain):
         'emember':      OCVEnumMemberObject,
         'type':         OCVTypeObject,
         'enum':         OCVEnumObject,
-        'namespace':    OCVCurrentNamespace
+        'namespace':    OCVCurrentNamespace,
+        'ignoreparams': OCVIgnoreParams,
     }
     roles = {
         'class':  OCVXRefRole(),

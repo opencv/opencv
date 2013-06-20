@@ -30,6 +30,15 @@ Applies an adaptive threshold to an array.
 
     :param C: Constant subtracted from the mean or weighted mean (see the details below). Normally, it is positive but may be zero or negative as well.
 
+    .. ocv:ignoreparams:: max_value
+
+    .. ocv:ignoreparams:: adaptive_method
+
+    .. ocv:ignoreparams:: threshold_type
+
+    .. ocv:ignoreparams:: block_size
+
+
 The function transforms a grayscale image to a binary image according to the formulae:
 
     * **THRESH_BINARY**
@@ -434,6 +443,11 @@ Calculates the distance to the closest zero pixel for each pixel of the source i
 
     :param labelType: Type of the label array to build. If ``labelType==DIST_LABEL_CCOMP`` then each connected component of zeros in ``src`` (as well as all the non-zero pixels closest to the connected component) will be assigned the same label. If ``labelType==DIST_LABEL_PIXEL`` then each zero pixel (and all the non-zero pixels closest to it) gets its own label.
 
+    .. ocv:ignoreparams:: distance_type
+
+    .. ocv:ignoreparams:: mask_size
+
+
 The functions ``distanceTransform`` calculate the approximate or precise
 distance from every binary image pixel to the nearest zero pixel.
 For zero image pixels, the distance will obviously be zero.
@@ -515,6 +529,15 @@ Fills a connected component with the given color.
             * **FLOODFILL_FIXED_RANGE** If set, the difference between the current pixel and seed pixel is considered. Otherwise, the difference between neighbor pixels is considered (that is, the range is floating).
 
             * **FLOODFILL_MASK_ONLY**  If set, the function does not change the image ( ``newVal``  is ignored), but fills the mask.  The flag can be used for the second variant only.
+
+    .. ocv:ignoreparams:: seed_point
+
+    .. ocv:ignoreparams:: new_val
+
+    .. ocv:ignoreparams:: lo_diff
+
+    .. ocv:ignoreparams:: up_diff
+
 
 The functions ``floodFill`` fill a connected component starting from the seed point with the specified color. The connectivity is determined by the color/brightness closeness of the neighbor pixels. The pixel at
 :math:`(x,y)` is considered to belong to the repainted domain if:
@@ -667,6 +690,11 @@ Applies a fixed-level threshold to each array element.
     :param maxval: maximum value to use with the ``THRESH_BINARY`` and ``THRESH_BINARY_INV`` thresholding types.
 
     :param type: thresholding type (see the details below).
+
+    .. ocv:ignoreparams:: max_value
+
+    .. ocv:ignoreparams:: threshold_type
+
 
 The function applies fixed-level thresholding
 to a single-channel array. The function is typically used to get a
