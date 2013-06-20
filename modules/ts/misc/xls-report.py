@@ -3,6 +3,7 @@
 from __future__ import division
 
 import ast
+import fnmatch
 import logging
 import numbers
 import os, os.path
@@ -45,15 +46,55 @@ no_speedup_style = no_time_style
 error_speedup_style = xlwt.easyxf('pattern: pattern solid, fore_color orange')
 header_style = xlwt.easyxf('font: bold true; alignment: horizontal centre, vertical top, wrap True')
 
-def collect_xml(collection, configuration, xml_fullname):
-    xml_fname = os.path.split(xml_fullname)[1]
-    module = xml_fname[:xml_fname.index('_')]
+class Collector(object):
+    def __init__(self, config_match_func):
+        self.__config_cache = {}
+        self.config_match_func = config_match_func
+        self.tests = {}
 
-    module_tests = collection.setdefault(module, OrderedDict())
+    def collect_from(self, xml_path):
+        run = parseLogFile(xml_path)
 
-    for test in sorted(parseLogFile(xml_fullname)):
-        test_results = module_tests.setdefault((test.shortName(), test.param()), {})
-        test_results[configuration] = test.get("gmean") if test.status == 'run' else test.status
+        module = run.properties['module_name']
+
+        properties = run.properties.copy()
+        del properties['module_name']
+
+        props_key = tuple(sorted(properties.iteritems())) # dicts can't be keys
+
+        if props_key in self.__config_cache:
+            configuration = self.__config_cache[props_key]
+        else:
+            configuration = self.config_match_func(properties)
+
+            if configuration is None:
+                logging.warning('failed to match properties to a configuration: %r', props_key)
+            else:
+                same_config_props = [it[0] for it in self.__config_cache.iteritems() if it[1] == configuration]
+                if len(same_config_props) > 0:
+                    logging.warning('property set %r matches the same configuration %r as property set %r',
+                        props_key, configuration, same_config_props[0])
+
+            self.__config_cache[props_key] = configuration
+
+        if configuration is None: return
+
+        module_tests = self.tests.setdefault(module, OrderedDict())
+
+        for test in run.tests:
+            test_results = module_tests.setdefault((test.shortName(), test.param()), {})
+            test_results[configuration] = test.get("gmean") if test.status == 'run' else test.status
+
+def make_match_func(matchers):
+    def match_func(properties):
+        for matcher in matchers:
+            if all(properties.get(name) == value
+                   for (name, value) in matcher['properties'].iteritems()):
+                return matcher['name']
+
+        return None
+
+    return match_func
 
 def main():
     arg_parser = ArgumentParser(description='Build an XLS performance report.')
@@ -83,23 +124,15 @@ def main():
 
         sheet_conf = dict(global_conf.items() + sheet_conf.items())
 
-        if 'configurations' in sheet_conf:
-            config_names = sheet_conf['configurations']
-        else:
-            try:
-                config_names = [p for p in os.listdir(sheet_path)
-                    if os.path.isdir(os.path.join(sheet_path, p))]
-            except Exception as e:
-                logging.warning('error while determining configuration names for %s: %s', sheet_path, e)
-                continue
+        config_names = sheet_conf.get('configurations', [])
+        config_matchers = sheet_conf.get('configuration_matchers', [])
 
-        collection = {}
+        collector = Collector(make_match_func(config_matchers))
 
-        for configuration, configuration_path in \
-                [(c, os.path.join(sheet_path, c))  for c in config_names]:
-            logging.info('processing %s', configuration_path)
-            for xml_fullname in glob(os.path.join(configuration_path, '*.xml')):
-                collect_xml(collection, configuration, xml_fullname)
+        for root, _, filenames in os.walk(sheet_path):
+            logging.info('looking in %s', root)
+            for filename in fnmatch.filter(filenames, '*.xml'):
+                collector.collect_from(os.path.join(root, filename))
 
         sheet = wb.add_sheet(sheet_conf.get('sheet_name', os.path.basename(os.path.abspath(sheet_path))))
 
@@ -126,7 +159,7 @@ def main():
         module_styles = {module: xlwt.easyxf('pattern: pattern solid, fore_color {}'.format(color))
                          for module, color in module_colors.iteritems()}
 
-        for module, tests in sorted(collection.iteritems()):
+        for module, tests in sorted(collector.tests.iteritems()):
             for ((test, param), configs) in tests.iteritems():
                 sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
                 sheet.write(row, 1, test)
