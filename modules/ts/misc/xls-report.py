@@ -4,6 +4,7 @@ from __future__ import division
 
 import ast
 import logging
+import numbers
 import os, os.path
 import re
 
@@ -52,8 +53,7 @@ def collect_xml(collection, configuration, xml_fullname):
 
     for test in sorted(parseLogFile(xml_fullname)):
         test_results = module_tests.setdefault((test.shortName(), test.param()), {})
-        if test.status == 'run':
-            test_results[configuration] = test.get("gmean")
+        test_results[configuration] = test.get("gmean") if test.status == 'run' else test.status
 
 def main():
     arg_parser = ArgumentParser(description='Build an XLS performance report.')
@@ -117,7 +117,7 @@ def main():
 
         for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Parameters']
                 + config_names + [None]
-                + [comp['from'] + '\nvs\n' + comp['to'] for comp in sheet_comparisons]):
+                + [comp['to'] + '\nvs\n' + comp['from'] for comp in sheet_comparisons]):
             sheet.row(0).write(i, caption, header_style)
 
         row = 1
@@ -143,13 +143,13 @@ def main():
                         sheet.write(row, 5 + i, None, no_time_style)
 
                 for i, comp in enumerate(sheet_comparisons):
-                    left = configs.get(comp["from"])
-                    right = configs.get(comp["to"])
+                    cmp_from = configs.get(comp["from"])
+                    cmp_to = configs.get(comp["to"])
                     col = 5 + len(config_names) + 1 + i
 
-                    if left is not None and right is not None:
+                    if isinstance(cmp_from, numbers.Number) and isinstance(cmp_to, numbers.Number):
                         try:
-                            speedup = left / right
+                            speedup = cmp_from / cmp_to
                             sheet.write(row, col, speedup, good_speedup_style if speedup > 1.1 else
                                                            bad_speedup_style  if speedup < 0.9 else
                                                            speedup_style)
