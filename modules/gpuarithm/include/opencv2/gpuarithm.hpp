@@ -49,17 +49,6 @@
 
 #include "opencv2/core/gpu.hpp"
 
-#if defined __GNUC__
-    #define __OPENCV_GPUARITHM_DEPR_BEFORE__
-    #define __OPENCV_GPUARITHM_DEPR_AFTER__ __attribute__ ((deprecated))
-#elif (defined WIN32 || defined _WIN32)
-    #define __OPENCV_GPUARITHM_DEPR_BEFORE__ __declspec(deprecated)
-    #define __OPENCV_GPUARITHM_DEPR_AFTER__
-#else
-    #define __OPENCV_GPUARITHM_DEPR_BEFORE__
-    #define __OPENCV_GPUARITHM_DEPR_AFTER__
-#endif
-
 namespace cv { namespace gpu {
 
 //! adds one matrix to another (dst = src1 + src2)
@@ -197,13 +186,8 @@ class CV_EXPORTS LookUpTable : public Algorithm
 public:
     virtual void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 };
-CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
 
-__OPENCV_GPUARITHM_DEPR_BEFORE__ void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
-inline void LUT(InputArray src, InputArray lut, OutputArray dst, Stream& stream)
-{
-    createLookUpTable(lut)->transform(src, dst, stream);
-}
+CV_EXPORTS Ptr<LookUpTable> createLookUpTable(InputArray lut);
 
 //! copies 2D array to a larger destination array and pads borders with user-specifiable constant
 CV_EXPORTS void copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType,
@@ -382,38 +366,9 @@ class CV_EXPORTS Convolution : public Algorithm
 public:
     virtual void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null()) = 0;
 };
+
 CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
 
-__OPENCV_GPUARITHM_DEPR_BEFORE__ void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
-inline void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr , Stream& stream)
-{
-    createConvolution()->convolve(image, templ, result, ccorr, stream);
-}
-
-struct ConvolveBuf
-{
-    Size result_size;
-    Size block_size;
-    Size user_block_size;
-    Size dft_size;
-    int spect_len;
-
-    GpuMat image_spect, templ_spect, result_spect;
-    GpuMat image_block, templ_block, result_data;
-
-    void create(Size, Size){}
-    static Size estimateBlockSize(Size, Size){ return Size(); }
-};
-
-__OPENCV_GPUARITHM_DEPR_BEFORE__ void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr, ConvolveBuf& buf, Stream& stream = Stream::Null()) __OPENCV_GPUARITHM_DEPR_AFTER__;
-inline void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr, ConvolveBuf& buf, Stream& stream)
-{
-    createConvolution(buf.user_block_size)->convolve(image, templ, result, ccorr, stream);
-}
-
 }} // namespace cv { namespace gpu {
-
-#undef __OPENCV_GPUARITHM_DEPR_BEFORE__
-#undef __OPENCV_GPUARITHM_DEPR_AFTER__
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */
