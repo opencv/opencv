@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_HPP__
-#define __OPENCV_PHOTO_HPP__
+#ifndef __OPENCV_OPTIM_HPP__
+#define __OPENCV_OPTIM_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/core/mat.hpp"
 
 /*! \namespace cv
  Namespace where all the C++ OpenCV functionality resides
@@ -52,34 +52,35 @@
 namespace cv
 {
 
-//! the inpainting algorithm
-enum
+/* //! restores the damaged image areas using one of the available intpainting algorithms */
+class Solver : public Algorithm /* Algorithm is the base OpenCV class */
 {
-    INPAINT_NS    = 0, // Navier-Stokes algorithm
-    INPAINT_TELEA = 1 // A. Telea algorithm
+  class Function
+  {
+  public:
+        virtual ~Function();
+        virtual double calc(InputArray args) const = 0;
+        //virtual double calc(InputArray args, OutputArray grad) const = 0;
+  };
+
+  // could be reused for all the generic algorithms like downhill simplex.
+  virtual void solve(InputArray x0, OutputArray result) const = 0;
+
+  virtual void setTermCriteria(const TermCriteria& criteria) = 0;
+  virtual TermCriteria getTermCriteria() = 0;
+
+  // more detailed API to be defined later ...
+
 };
 
-//! restores the damaged image areas using one of the available intpainting algorithms
-CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
-                           OutputArray dst, double inpaintRadius, int flags );
+class LPSolver : public Solver
+{
+public:
+     virtual void solve(InputArray coeffs, InputArray constraints, OutputArray result) const = 0;
+     // ...
+};
 
-
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float h = 3,
-                                        int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
-                                               float h = 3, float hColor = 3,
-                                               int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                             int imgToDenoiseIndex, int temporalWindowSize,
-                                             float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                                    int imgToDenoiseIndex, int temporalWindowSize,
-                                                    float h = 3, float hColor = 3,
-                                                    int templateWindowSize = 7, int searchWindowSize = 21);
-
-} // cv
+Ptr<LPSolver> createLPSimplexSolver();
+}// cv
 
 #endif

@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,30 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_C_H__
-#define __OPENCV_PHOTO_C_H__
-
-#include "opencv2/core/core_c.h"
-
-#ifdef __cplusplus
-extern "C" {
+#ifdef __OPENCV_BUILD
+#error this is a compatibility header which should not be used inside the OpenCV library
 #endif
 
-/* Inpainting algorithms */
-enum
-{
-    CV_INPAINT_NS      =0,
-    CV_INPAINT_TELEA   =1
-};
-
-
-/* Inpaints the selected region in the image */
-CVAPI(void) cvInpaint( const CvArr* src, const CvArr* inpaint_mask,
-                       CvArr* dst, double inpaintRange, int flags );
-
-
-#ifdef __cplusplus
-} //extern "C"
-#endif
-
-#endif //__OPENCV_PHOTO_C_H__
+#include "opencv2/optim.hpp"
