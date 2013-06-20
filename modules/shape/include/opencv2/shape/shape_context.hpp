@@ -52,6 +52,8 @@ namespace cv
  SCD implementation.
  The class implements SCD algorithm by Belongie et al.
  */
+
+ 
 class CV_EXPORTS_W SCD 
 {
 public:
@@ -96,6 +98,23 @@ protected:
 
 typedef SCD ShapeContextDescriptorExtractor;
 
+/****************************************************************************************\
+*                                   Drawing functions                                    *
+\****************************************************************************************/
+struct CV_EXPORTS DrawSCDFlags
+{
+    enum
+    { 
+        DEFAULT = 0, // Descriptor image is not normalized
+        DRAW_NORM = 1, // Dscriptor is normalized
+        DRAW_NORM_NEG = 2 //Descriptor normalized and color negative
+    };
+};
+
+//! Draw a single point descriptor.
+CV_EXPORTS_W void drawSCD( const Mat& descriptors, int angularBins, int radialBins, CV_OUT Mat& outImage, 
+                            int index=0, float pixelsPerBin=5, int flags=DrawSCDFlags::DEFAULT);
+    
 } /* namespace cv */
 
 #endif

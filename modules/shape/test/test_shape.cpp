@@ -46,17 +46,25 @@ void CV_ShapeTest::run( int /*start_from*/ )
     namedWindow( "contours", 1 );
 	drawContours(img, contours, -1/*Draw all contours*/, Scalar(128,128,128),5);
     
-    cv::Mat scdesc;
-    SCD shapeDescriptor(6,3,0.1,0.2);
+    Mat scdesc;
+    int a=8;
+    int r=5;
+    SCD shapeDescriptor(a,r,0.1,1);
     shapeDescriptor.extractSCD(contours[0], scdesc);
 
-    std::cout<<"Shape Descriptors: "<<std::endl;
+    /*cout<<"Shape Descriptors: "<<endl;
     
-    for (int i=0; i<contours[0].size(); i++){
+    for (uint i=0; i<contours[0].size(); i++){
         for (int j=0; j<shapeDescriptor.descriptorSize(); j++){
-            std::cout<<scdesc.at<float>(i,j)<<"\t";
-        }std::cout<<std::endl;
-    }
+            cout<<scdesc.at<float>(i,j)<<"\t";
+        }cout<<endl;
+    }*/
+    
+    Mat descim;
+    
+    drawSCD(scdesc, a, r, descim, 50, 25, DrawSCDFlags::DRAW_NORM_NEG);
+    namedWindow("feature SCD 50", 1 );
+    imshow("feature SCD 50", descim);
     	
 	while(1)
 	{

@@ -45,8 +45,6 @@
  * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013. 
  */
 #include "precomp.hpp"
-#include <cmath>
-#include <iostream>
 
 namespace cv
 {
