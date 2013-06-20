@@ -468,7 +468,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     pattern_.upload(h_pattern);
 
-    blurFilter = createGaussianFilter_GPU(CV_8UC1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+    blurFilter = gpu::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
     blurForDescriptor = false;
 }
@@ -632,7 +632,7 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
         {
             // preprocess the resized image
             ensureSizeIsEnough(imagePyr_[level].size(), imagePyr_[level].type(), buf_);
-            blurFilter->apply(imagePyr_[level], buf_, Rect(0, 0, imagePyr_[level].cols, imagePyr_[level].rows));
+            blurFilter->apply(imagePyr_[level], buf_);
         }
 
         computeOrbDescriptor_gpu(blurForDescriptor ? buf_ : imagePyr_[level], keyPointsPyr_[level].ptr<short2>(0), keyPointsPyr_[level].ptr<float>(2),
