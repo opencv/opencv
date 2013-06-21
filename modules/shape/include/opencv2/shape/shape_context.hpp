@@ -112,8 +112,8 @@ struct CV_EXPORTS DrawSCDFlags
 };
 
 //! Draw a single point descriptor.
-CV_EXPORTS_W void drawSCD( const Mat& descriptors, int angularBins, int radialBins, CV_OUT Mat& outImage, 
-                            int index=0, float pixelsPerBin=5, int flags=DrawSCDFlags::DEFAULT);
+CV_EXPORTS_W void drawSCD(const Mat& descriptor, int angularBins, int radialBins, CV_OUT Mat& outImage, 
+                           int index=0, float pixelsPerBin=5, int flags=DrawSCDFlags::DEFAULT);
     
 } /* namespace cv */
 

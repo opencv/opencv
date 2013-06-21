@@ -76,7 +76,6 @@ void SCD::extractSCD(std::vector<Point> contour /* Vector of points */,
 {
     CV_Assert(contour.size()>0);
     
-    
     Mat disMatrix = Mat::zeros(contour.size(), contour.size(), CV_32F);
     Mat angleMatrix = Mat::zeros(contour.size(), contour.size(), CV_32F);
     
@@ -90,16 +89,16 @@ void SCD::extractSCD(std::vector<Point> contour /* Vector of points */,
     /* Now, build the descriptor matrix (each row is a point descriptor) 
      * ask if the correspondent points belong to a given bin.*/
     descriptors = Mat::zeros(contour.size(), descriptorSize(), CV_32F);
-    for (uint ptidx=0; ptidx<contour.size(); ++ptidx)
+    for (uint ptidx=0; ptidx<contour.size(); ptidx++)
     {
-        for (uint cmp=0; cmp<contour.size(); ++cmp)
+        for (uint cmp=0; cmp<contour.size(); cmp++)
         {
             if (ptidx==cmp) continue;
             
             int angidx=0, radidx=0;
             for (int i=0; i<nRadialBins; i++)
             {
-                if (disMatrix.at<float>(ptidx,cmp)<=logspaces[i])
+                if (disMatrix.at<float>(ptidx, cmp)<=logspaces[i])
                 {
                     radidx=i;
                     break;
@@ -107,14 +106,14 @@ void SCD::extractSCD(std::vector<Point> contour /* Vector of points */,
             }
             for (int i=0; i<nAngularBins; i++)
             {
-                if (angleMatrix.at<float>(ptidx,cmp)<=angspaces[i])
+                if (angleMatrix.at<float>(ptidx, cmp)<=angspaces[i])
                 {
                     angidx=i;
                     break;
                 }
             }
-            int idx=angidx+radidx*nAngularBins;
-            descriptors.at<float>(ptidx,idx)+=1; 
+            int idx = angidx+radidx*nAngularBins;
+            descriptors.at<float>(ptidx, idx)+=1; 
         }        
     }
 }
@@ -123,9 +122,9 @@ void SCD::extractSCD(std::vector<Point> contour /* Vector of points */,
 void SCD::buildAngleMatrix(std::vector<Point> contour, 
                       Mat& angleMatrix) const
 {
-    for (uint i=0;i<contour.size();++i)
+    for (size_t i=0; i<contour.size(); i++)
     {
-        for (uint j=0;j<contour.size();++j)
+        for (size_t j=0; j<contour.size(); j++)
         {
             if (i==j) continue;
             Point dif = contour[i] - contour[j];
@@ -137,9 +136,9 @@ void SCD::buildAngleMatrix(std::vector<Point> contour,
 void SCD::buildNormalizedDistanceMatrix(std::vector<Point> contour, 
                       Mat& disMatrix) const
 {
-    for (uint i=0;i<contour.size();++i)
+    for (size_t i=0; i<contour.size(); i++)
     {
-        for (uint j=0;j<contour.size();++j)
+        for (size_t j=0; j<contour.size(); j++)
         {
             disMatrix.at<float>(i,j) = distance(contour[i],contour[j]);
         }
@@ -151,7 +150,7 @@ void SCD::buildNormalizedDistanceMatrix(std::vector<Point> contour,
     
     normalize(disMatrix, disMatrix,0,1, NORM_MINMAX);
     sqrt(disMatrix, disMatrix);
-    Scalar m = mean(disMatrix);
+    Scalar m=mean(disMatrix);
     if (m[0]!=0)
     {
         disMatrix=disMatrix/m[0];
@@ -160,12 +159,12 @@ void SCD::buildNormalizedDistanceMatrix(std::vector<Point> contour,
 
 void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
 {
-   double logmin = log10(innerRadius);
-   double logmax = log10(outerRadius);
-   double delta = (logmax-logmin)/(nRadialBins-1);
-   double accdelta = 0;
+   double logmin=log10(innerRadius);
+   double logmax=log10(outerRadius);
+   double delta=(logmax-logmin)/(nRadialBins-1);
+   double accdelta=0;
    
-   for (int i=0; i<nRadialBins; ++i)
+   for (int i=0; i<nRadialBins; i++)
    {
        double val = std::pow(10,logmin+accdelta);
        vecSpaces.push_back(val);
@@ -175,10 +174,10 @@ void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
 
 void SCD::angularSpaces(std::vector<double>& vecSpaces) const
 {
-   double delta = 2*CV_PI/nAngularBins;
-   double val = -CV_PI;
+   double delta=2*CV_PI/nAngularBins;
+   double val=-CV_PI;
    
-   for (int i=0; i<nAngularBins; ++i)
+   for (int i=0; i<nAngularBins; i++)
    {
        val += delta;
        vecSpaces.push_back(val);
@@ -194,22 +193,26 @@ double SCD::distance(Point p, Point q) const
 /* Setters and Getters*/
 void SCD::setAngularBins(int n)
 {
-    nAngularBins = n;
+    CV_Assert(n>0);
+    nAngularBins=n;
 }
 
 void SCD::setRadialBins(int n)
 {
-    nRadialBins = n;
+    CV_Assert(n>0);
+    nRadialBins=n;
 }
 
 void SCD::setInnerRadius(double r)
 {
-    innerRadius = r;
+    CV_Assert(r>0);
+    innerRadius=r;
 }
 
 void SCD::setOuterRadius(double r)
 {
-    outerRadius = r;
+    CV_Assert(r>0);
+    outerRadius=r;
 }
 
 int SCD::getAngularBins(void)
