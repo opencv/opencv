@@ -1,5 +1,69 @@
 #!/usr/bin/env python
 
+"""
+    This script can generate XLS reports from OpenCV tests' XML output files.
+
+    To use it, first, create a directory for each machine you ran tests on.
+    Each such directory will become a sheet in the report. Put each XML file
+    into the corresponding directory.
+
+    Then, create your configuration file(s). You can have a global configuration
+    file (specified with the -c option), and per-sheet configuration files, which
+    must be called sheet.conf and placed in the directory corresponding to the sheet.
+    The settings in the per-sheet configuration file will override those in the
+    global configuration file, if both are present.
+
+    A configuration file must consist of a Python dictionary. The following keys
+    will be recognized:
+
+    * 'comparisons': [{'from': string, 'to': string}]
+        List of configurations to compare performance between. For each item,
+        the sheet will have a column showing speedup from configuration named
+        'from' to configuration named "to".
+
+    * 'configuration_matchers': [{'properties': {string: object}, 'name': string}]
+        Instructions for matching test run property sets to configuration names.
+
+        For each found XML file:
+
+        1) All attributes of the root element starting with the prefix 'cv_' are
+           placed in a dictionary, with the cv_ prefix stripped and the cv_module_name
+           element deleted.
+
+        2) The first matcher for which the XML's file property set contains the same
+           keys with equal values as its 'properties' dictionary is searched for.
+           A missing property can be matched by using None as the value.
+
+           Corollary 1: you should place more specific matchers before less specific
+           ones.
+
+           Corollary 2: an empty 'properties' dictionary matches every property set.
+
+        3) If a matching matcher is found, its 'name' string is presumed to be the name
+           of the configuration the XML file corresponds to. Otherwise, a warning is
+           printed. A warning is also printed if two different property sets match to the
+           same configuration name.
+
+    * 'configurations': [string]
+        List of names for compile-time and runtime configurations of OpenCV.
+        Each item will correspond to a column of the sheet.
+
+    * 'module_colors': {string: string}
+        Mapping from module name to color name. In the sheet, cells containing module
+        names from this mapping will be colored with the corresponding color. You can
+        find the list of available colors here:
+        <http://www.simplistix.co.uk/presentations/python-excel.pdf>.
+
+    * 'sheet_name': string
+        Name for the sheet. If this parameter is missing, the name of sheet's directory
+        will be used.
+
+    Note that all keys are optional, although to get useful results, you'll want to
+    specify at least 'configurations' and 'configuration_matchers'.
+
+    Finally, run the script. Use the --help option for usage information.
+"""
+
 from __future__ import division
 
 import ast
@@ -17,21 +81,6 @@ from itertools import ifilter
 import xlwt
 
 from testlog_parser import parseLogFile
-
-# To build XLS report you neet to put your xmls (OpenCV tests output) in the
-# following way:
-#
-# "root" --- folder, representing the whole XLS document. It contains several
-# subfolders --- sheet-paths of the XLS document. Each sheet-path contains it's
-# subfolders --- config-paths. Config-paths are columns of the sheet and
-# they contains xmls files --- output of OpenCV modules testing.
-# Config-path means OpenCV build configuration, including different
-# options such as NEON, TBB, GPU enabling/disabling.
-#
-# root
-# root\sheet_path
-# root\sheet_path\configuration1 (column 1)
-# root\sheet_path\configuration2 (column 2)
 
 re_image_size = re.compile(r'^ \d+ x \d+$', re.VERBOSE)
 re_data_type = re.compile(r'^ (?: 8 | 16 | 32 | 64 ) [USF] C [1234] $', re.VERBOSE)
