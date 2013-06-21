@@ -2940,27 +2940,29 @@ MatComparator::operator()(const char* expr1, const char* expr2,
 
 void printVersionInfo(bool useStdOut)
 {
-    ::testing::Test::RecordProperty("CV_VERSION", CV_VERSION);
+    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
     if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
     std::string buildInfo( cv::getBuildInformation() );
 
     size_t pos1 = buildInfo.find("Version control");
-    size_t pos2 = buildInfo.find("\n", pos1);\
+    size_t pos2 = buildInfo.find('\n', pos1);
     if(pos1 != std::string::npos && pos2 != std::string::npos)
     {
-        std::string ver( buildInfo.substr(pos1, pos2-pos1) );
-        ::testing::Test::RecordProperty("Version_control", ver);
-        if(useStdOut) std::cout << ver << std::endl;
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_vcs_version", ver);
+        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
     }
 
     pos1 = buildInfo.find("inner version");
-    pos2 = buildInfo.find("\n", pos1);\
+    pos2 = buildInfo.find('\n', pos1);
     if(pos1 != std::string::npos && pos2 != std::string::npos)
     {
-        std::string ver( buildInfo.substr(pos1, pos2-pos1) );
-        ::testing::Test::RecordProperty("inner_version", ver);
-        if(useStdOut) std::cout << ver << std::endl;
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
+        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
     }
 
 #ifdef CV_PARALLEL_FRAMEWORK
