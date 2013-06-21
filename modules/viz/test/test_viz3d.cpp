@@ -86,18 +86,19 @@ TEST(Viz_viz3d, accuracy)
     float pos_x = 0.0f;
     float pos_y = 0.0f;
     float pos_z = 0.0f;
-    temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
-    v.addPolygonMesh(*mesh, "pq");
+//     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
+//     v.addPolygonMesh(*mesh, "pq");
 
     int col_blue = 0;
     int col_green = 0;
     int col_red = 0;
-
+    
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
         v.showPointCloud("cloud1", cloud, temp_viz::Color(col_blue, col_green, col_red), cloudPosition);
+        v.showLine("line1", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
 
         angle_x += 0.1f;
         angle_y -= 0.1f;

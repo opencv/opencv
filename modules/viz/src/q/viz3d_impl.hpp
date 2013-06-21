@@ -137,9 +137,10 @@ public:
         // This tends to close the window...
         interactor_->TerminateApp ();
     }
+    
+    void showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
-    bool addLine (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, const std::string &id = "line");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color_line, const Color& color_text, const std::string &id = "arrow");
     bool addSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id = "sphere");

@@ -266,32 +266,41 @@ bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addLine (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, const std::string &id)
+void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color)
 {
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
+    // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-        return std::cout << "[addLine] A shape with id <" << id <<  "> already exists! Please choose a different id and retry." << std::endl, false;
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createLine(pt1,pt2));
+        Color c = vtkcolor(color);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create new line
+        vtkSmartPointer<vtkDataSet> data = createLine (pt1, pt2);
 
-    vtkSmartPointer<vtkDataSet> data = createLine (pt1, pt2);
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        actor->GetProperty ()->SetRepresentationToWireframe ();
 
-    // Create an Actor
-    vtkSmartPointer<vtkLODActor> actor;
-    createActorFromVTKDataSet (data, actor);
-    actor->GetProperty ()->SetRepresentationToWireframe ();
+        Color c = vtkcolor(color);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor (actor);
 
-    Color c = vtkcolor(color);
-    actor->GetProperty ()->SetColor (c.val);
-    actor->GetMapper ()->ScalarVisibilityOff ();
-    renderer_->AddActor (actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[id] = actor;
-    return (true);
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
 }
-
-
 
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
