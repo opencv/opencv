@@ -192,10 +192,9 @@ void App::run()
             csbp(d_left, d_right, d_disp);
             break;
         }
-        workEnd();
-
         // Show results
         d_disp.download(disp);
+        workEnd();
         if (method != BM)
         {
             disp.convertTo(disp, 0);
