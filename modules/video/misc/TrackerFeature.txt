@@ -1,0 +1,59 @@
+@startuml
+package "TrackerFeature package" #DDDDDD {
+
+enum TrackerFeatureType{
+	TRACKER_FEATURE_FEATURE2D
+	TRACKER_FEATURE_HOG
+	TRACKER_FEATURE_HAAR
+	TRACKER_FEATURE_LBP
+	TRACKER_FEATURE_HISTOGRAM
+	TRACKER_FEATURE_TEMPLATE
+	TRACKER_FEATURE_PIXEL
+	TRACKER_FEATURE_CORNER
+}
+
+class TrackerFeatureSet{
+	-list<TrackerFeature>
+	-list<Mat response>
+	...
+	TrackerFeatureSet();
+	~TrackerFeatureSet();
+	--
+	+extraction();
+	+selection();
+	+remove_outliers();
+	+list<Mat response> getResponse();
+	+list<TrackerFeature> getTrackerFeatures();
+	-clearResponse();
+}
+
+class TrackerFeature <<virtual>>{
+	Ptr<TrackerFeature> = create(string TrackerFeatureType);
+	compute(const Mat& image, Mat& response);
+}
+note bottom: Can be specialized as in table II\nA tracker can use more types of features
+
+class TrackerFeatureFeature2D{
+	TrackerFeatureFeature2D(string detectorType, string descriptorType);
+	~TrackerFeatureFeature2D();
+	---
+	compute(const Mat& image, Mat& response);
+}
+class TrackerFeatureHOG{
+	TrackerFeatureHOG();
+	~TrackerFeatureHOG();
+	---
+	compute(const Mat& image, Mat& response);
+}
+
+TrackerFeatureSet *-- TrackerFeature
+TrackerFeature <|-- TrackerFeatureHOG
+TrackerFeature <|-- TrackerFeatureFeature2D
+
+
+note "Per readability and simplicity in this diagram\n there are only two TrackerFeature but you\n can considering the implementation of the other TrackerFeature" as N1
+TrackerFeatureHOG .. N1
+TrackerFeatureFeature2D .. N1
+}
+
+@enduml

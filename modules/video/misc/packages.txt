@@ -1,0 +1,19 @@
+@startuml
+package "Tracker" #DDDDDD {
+
+}
+package "TrackerFeature" #DDDDDD {
+
+}
+package "TrackerSampler" #DDDDDD {
+
+}
+package "TrackerModel" #DDDDDD {
+
+}
+Tracker -> TrackerModel: create
+Tracker -> TrackerSampler: create
+Tracker -> TrackerFeature: create
+
+
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+package "TrackerSampler package" #DDDDDD {
+
+enum TrackerSamplerType{
+	TRACKER_SAMPLER_CSC
+	TRACKER_SAMPLER_CS
+	...
+	TRACKER_SAMPLER_CT
+}
+
+class TrackerSampler{
+	-list<TrackerSamplerAlgorithm>
+	...
+	TrackerSampler(string trackerSamplerType);
+	~TrackerSampler();
+	+list<Mat> sampling(Point position, const Mat& frame);
+}
+
+class TrackerSamplerAlgorithm{
+	TrackerSamplerAlgorithm();
+	~TrackerSamplerAlgorithm();
+	+list<Mat> run(Point position, const Mat& frame);
+}
+note bottom: A tracker could sample the target\nor it could sample the target and the background
+
+
+class TrackerSamplerCS{
+	TrackerSamplerCS();
+	~TrackerSamplerCS();
+	+list<Mat> run(Point position, const Mat& frame);
+}
+class TrackerSamplerCSC{
+	TrackerSamplerCSC();
+	~TrackerSamplerCSC();
+	+list<Mat> run(Point position, const Mat& frame);
+}
+
+
+
+TrackerSampler *-- TrackerSamplerAlgorithm
+TrackerSamplerAlgorithm <|-- TrackerSamplerCS
+TrackerSamplerAlgorithm <|-- TrackerSamplerCSC
+}
+@enduml

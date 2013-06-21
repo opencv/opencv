@@ -1,0 +1,49 @@
+@startuml
+package "Tracker package" #DDDDDD {
+
+enum TrackerType {
+  	MIL_TRACKER
+  	BOOSTING_TRACKER
+  	. . .
+}
+enum TrackerType
+note right: Algorithms
+
+
+class TrackerParams{
+	int trackerFeatureType;
+	int trackerSamplerType;
+	int trackerStateEstimatorType;
+}
+class Algorithm {
+}
+class Tracker{
+	TrackerParams p;
+	...
+	+Ptr<Tracker> create(string trackerType, TrackerParams p);
+	+init(const Mat& frame, const Rect& boundingBox);
+	+bool update(const Mat& frame, Rect& boundingBox);
+}
+class Tracker 
+note left: Tracker is the general interface for each specialized trackers
+class TrackerMIL{
+	TrackerMIL(TrackerParams param);
+	+init(const Mat& frame, const Rect& boundingBox);
+	+bool update(const Mat& frame, Rect& boundingBox);
+}
+class TrackerBoosting{
+	TrackerBoosting(TrackerParams param);
+	+init(const Mat& frame, const Rect& boundingBox);
+	+bool update(const Mat& frame, Rect& boundingBox);
+}
+Algorithm <|-- Tracker : virtual inheritance 
+Tracker <|-- TrackerMIL
+Tracker <|-- TrackerBoosting
+Tracker -> TrackerParams : create
+
+note "Single instance of the Tracker" as N1
+TrackerBoosting .. N1
+TrackerMIL .. N1
+}
+
+@enduml

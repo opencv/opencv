@@ -1,0 +1,49 @@
+@startuml
+package "TrackerModel package" #DDDDDD {
+
+enum TrackerSamplerType{
+	TRACKER_STATE_ESTIMATOR_BOOSTING
+	TRACKER_STATE_ESTIMATOR_SVM
+}
+
+class TrackerModel{
+	ConfidenceMap <TrackerObjectState_i, Score_i>
+	trajectory<TrackerObjectState_i>
+	...
+	TrackerModel(string TrackerStateEstimatorType);
+	~TrackerModel();
+	+model_estimation();
+	+model_update();
+}
+class TrackerObjectState <<virtual>>{
+	Point position;
+}
+class TrackerObjectState 
+note bottom: Each tracker can create own state
+
+class TrackerStateEstimator <<virtual>>{
+	TrackerStateEstimator()
+	~TrackerStateEstimator()
+	---
+	estimate();
+}
+
+class TrackerStateEstimatorSVM{
+	TrackerStateEstimatorSVM()
+	~TrackerStateEstimatorSVM()
+	---
+	estimate();
+}
+class TrackerStateEstimatorBoosting{
+	TrackerStateEstimatorBoosting()
+	~TrackerStateEstimatorBoosting()
+	---
+	estimate();
+}
+
+TrackerModel -> TrackerStateEstimator: create
+TrackerModel *-- TrackerObjectState
+TrackerStateEstimator <|-- TrackerStateEstimatorBoosting
+TrackerStateEstimator <|-- TrackerStateEstimatorSVM
+}
+@enduml
