@@ -2850,9 +2850,9 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
 
     if( _mean.data )
     {
-        CV_Assert( _mean.size() == mean_sz );        
+        CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
-        covar_flags |= CV_COVAR_USE_AVG; 
+        covar_flags |= CV_COVAR_USE_AVG;
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
@@ -2894,6 +2894,36 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         eigenvectors = eigenvectors.rowRange(0,out_count).clone();
     }
     return *this;
+}
+
+template <typename T>
+int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
+{
+    CV_DbgAssert( eigenvalues.type() == DataType<T>::type );
+
+    Mat g(eigenvalues.size(), DataType<T>::type);
+
+    for(int ig = 0; ig < g.rows; ig++)
+    {
+        g.at<T>(ig, 0) = 0;
+        for(int im = 0; im <= ig; im++)
+        {
+            g.at<T>(ig,0) += eigenvalues.at<T>(im,0);
+        }
+    }
+
+    int L;
+
+    for(L = 0; L < eigenvalues.rows; L++)
+    {
+        double energy = g.at<T>(L, 0) / g.at<T>(g.rows - 1, 0);
+        if(energy > retainedVariance)
+            break;
+    }
+
+    L = std::max(2, L);
+
+    return L;
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double retainedVariance)
@@ -2972,26 +3002,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     }
 
     // compute the cumulative energy content for each eigenvector
-    Mat g(eigenvalues.size(), ctype);
-
-    for(int ig = 0; ig < g.rows; ig++)
-    {
-        g.at<float>(ig,0) = 0;
-        for(int im = 0; im <= ig; im++)
-        {
-            g.at<float>(ig,0) += eigenvalues.at<float>(im,0);
-        }
-    }
-
     int L;
-    for(L = 0; L < eigenvalues.rows; L++)
-    {
-        double energy = g.at<float>(L, 0) / g.at<float>(g.rows - 1, 0);
-        if(energy > retainedVariance)
-            break;
-    }
-
-    L = std::max(2, L);
+    if (ctype == CV_32F)
+        L = computeCumulativeEnergy<float>(eigenvalues, retainedVariance);
+    else
+        L = computeCumulativeEnergy<double>(eigenvalues, retainedVariance);
 
     // use clone() to physically copy the data and thus deallocate the original matrices
     eigenvalues = eigenvalues.rowRange(0,L).clone();

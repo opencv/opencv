@@ -15,7 +15,7 @@ public class MatOfInt extends Mat {
 
     protected MatOfInt(long addr) {
         super(addr);
-        if(checkVector(_channels, _depth) < 0 )
+        if( !empty() && checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
@@ -26,7 +26,7 @@ public class MatOfInt extends Mat {
 
     public MatOfInt(Mat m) {
         super(m, Range.all());
-        if(checkVector(_channels, _depth) < 0 )
+        if( !empty() && checkVector(_channels, _depth) < 0 )
             throw new IllegalArgumentException("Incomatible Mat");
         //FIXME: do we need release() here?
     }
