@@ -119,7 +119,7 @@ bool cv::gpu::deviceSupports(FeatureSet feature_set)
     else
     {
         DeviceInfo dev(devId);
-        version = dev.major() * 10 + dev.minor();
+        version = dev.majorVersion() * 10 + dev.minorVersion();
         if (devId < cache_size)
             versions[devId] = version;
     }
@@ -455,7 +455,7 @@ size_t cv::gpu::DeviceInfo::totalConstMem() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::major() const
+int cv::gpu::DeviceInfo::majorVersion() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -465,7 +465,7 @@ int cv::gpu::DeviceInfo::major() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::minor() const
+int cv::gpu::DeviceInfo::minorVersion() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -908,12 +908,12 @@ bool cv::gpu::DeviceInfo::isCompatible() const
     return false;
 #else
     // Check PTX compatibility
-    if (TargetArchs::hasEqualOrLessPtx(major(), minor()))
+    if (TargetArchs::hasEqualOrLessPtx(majorVersion(), minorVersion()))
         return true;
 
     // Check BIN compatibility
-    for (int i = minor(); i >= 0; --i)
-        if (TargetArchs::hasBin(major(), i))
+    for (int i = minorVersion(); i >= 0; --i)
+        if (TargetArchs::hasBin(majorVersion(), i))
             return true;
 
     return false;

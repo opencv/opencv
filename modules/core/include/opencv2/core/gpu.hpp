@@ -529,10 +529,10 @@ public:
     size_t totalConstMem() const;
 
     //! major compute capability
-    int major() const;
+    int majorVersion() const;
 
     //! minor compute capability
-    int minor() const;
+    int minorVersion() const;
 
     //! alignment requirement for textures
     size_t textureAlignment() const;
