@@ -48,199 +48,145 @@
 #endif
 
 #include "opencv2/core/gpu.hpp"
+#include "opencv2/calib3d.hpp"
 
 namespace cv { namespace gpu {
 
-class CV_EXPORTS StereoBM_GPU
+/////////////////////////////////////////
+// StereoBM
+
+class CV_EXPORTS StereoBM : public cv::StereoBM
 {
 public:
-    enum { BASIC_PRESET = 0, PREFILTER_XSOBEL = 1 };
+    using cv::StereoBM::compute;
 
-    enum { DEFAULT_NDISP = 64, DEFAULT_WINSZ = 19 };
-
-    //! the default constructor
-    StereoBM_GPU();
-    //! the full constructor taking the camera-specific preset, number of disparities and the SAD window size. ndisparities must be multiple of 8.
-    StereoBM_GPU(int preset, int ndisparities = DEFAULT_NDISP, int winSize = DEFAULT_WINSZ);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair
-    //! Output disparity has CV_8U type.
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
-    //! Some heuristics that tries to estmate
-    // if current GPU will be faster than CPU in this algorithm.
-    // It queries current active device.
-    static bool checkIfGpuCallReasonable();
-
-    int preset;
-    int ndisp;
-    int winSize;
-
-    // If avergeTexThreshold  == 0 => post procesing is disabled
-    // If avergeTexThreshold != 0 then disparity is set 0 in each point (x,y) where for left image
-    // SumOfHorizontalGradiensInWindow(x, y, winSize) < (winSize * winSize) * avergeTexThreshold
-    // i.e. input left image is low textured.
-    float avergeTexThreshold;
-
-private:
-    GpuMat minSSD, leBuf, riBuf;
+    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 };
 
-// "Efficient Belief Propagation for Early Vision"
-// P.Felzenszwalb
-class CV_EXPORTS StereoBeliefPropagation
+CV_EXPORTS Ptr<gpu::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
+
+/////////////////////////////////////////
+// StereoBeliefPropagation
+
+//! "Efficient Belief Propagation for Early Vision" P.Felzenszwalb
+class CV_EXPORTS StereoBeliefPropagation : public cv::StereoMatcher
 {
 public:
-    enum { DEFAULT_NDISP  = 64 };
-    enum { DEFAULT_ITERS  = 5  };
-    enum { DEFAULT_LEVELS = 5  };
+    using cv::StereoMatcher::compute;
 
-    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
-
-    //! the default constructor
-    explicit StereoBeliefPropagation(int ndisp  = DEFAULT_NDISP,
-                                     int iters  = DEFAULT_ITERS,
-                                     int levels = DEFAULT_LEVELS,
-                                     int msg_type = CV_32F);
-
-    //! the full constructor taking the number of disparities, number of BP iterations on each level,
-    //! number of levels, truncation of data cost, data weight,
-    //! truncation of discontinuity cost and discontinuity single jump
-    //! DataTerm = data_weight * min(fabs(I2-I1), max_data_term)
-    //! DiscTerm = min(disc_single_jump * fabs(f1-f2), max_disc_term)
-    //! please see paper for more details
-    StereoBeliefPropagation(int ndisp, int iters, int levels,
-        float max_data_term, float data_weight,
-        float max_disc_term, float disc_single_jump,
-        int msg_type = CV_32F);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-    //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
+    virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 
     //! version for user specified data term
-    void operator()(const GpuMat& data, GpuMat& disparity, Stream& stream = Stream::Null());
+    virtual void compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null()) = 0;
 
-    int ndisp;
+    //! number of BP iterations on each level
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
 
-    int iters;
-    int levels;
+    //! number of levels
+    virtual int getNumLevels() const = 0;
+    virtual void setNumLevels(int levels) = 0;
 
-    float max_data_term;
-    float data_weight;
-    float max_disc_term;
-    float disc_single_jump;
+    //! truncation of data cost
+    virtual double getMaxDataTerm() const = 0;
+    virtual void setMaxDataTerm(double max_data_term) = 0;
 
-    int msg_type;
-private:
-    GpuMat u, d, l, r, u2, d2, l2, r2;
-    std::vector<GpuMat> datas;
-    GpuMat out;
+    //! data weight
+    virtual double getDataWeight() const = 0;
+    virtual void setDataWeight(double data_weight) = 0;
+
+    //! truncation of discontinuity cost
+    virtual double getMaxDiscTerm() const = 0;
+    virtual void setMaxDiscTerm(double max_disc_term) = 0;
+
+    //! discontinuity single jump
+    virtual double getDiscSingleJump() const = 0;
+    virtual void setDiscSingleJump(double disc_single_jump) = 0;
+
+    //! type for messages (CV_16SC1 or CV_32FC1)
+    virtual int getMsgType() const = 0;
+    virtual void setMsgType(int msg_type) = 0;
+
+    static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
 };
 
-// "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
-// Qingxiong Yang, Liang Wang, Narendra Ahuja
-// http://vision.ai.uiuc.edu/~qyang6/
-class CV_EXPORTS StereoConstantSpaceBP
+CV_EXPORTS Ptr<gpu::StereoBeliefPropagation>
+    createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
+
+/////////////////////////////////////////
+// StereoConstantSpaceBP
+
+//! "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
+//! Qingxiong Yang, Liang Wang, Narendra Ahuja
+//! http://vision.ai.uiuc.edu/~qyang6/
+class CV_EXPORTS StereoConstantSpaceBP : public gpu::StereoBeliefPropagation
 {
 public:
-    enum { DEFAULT_NDISP    = 128 };
-    enum { DEFAULT_ITERS    = 8   };
-    enum { DEFAULT_LEVELS   = 4   };
-    enum { DEFAULT_NR_PLANE = 4   };
+    //! number of active disparity on the first level
+    virtual int getNrPlane() const = 0;
+    virtual void setNrPlane(int nr_plane) = 0;
+
+    virtual bool getUseLocalInitDataCost() const = 0;
+    virtual void setUseLocalInitDataCost(bool use_local_init_data_cost) = 0;
 
     static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
-
-    //! the default constructor
-    explicit StereoConstantSpaceBP(int ndisp    = DEFAULT_NDISP,
-                                   int iters    = DEFAULT_ITERS,
-                                   int levels   = DEFAULT_LEVELS,
-                                   int nr_plane = DEFAULT_NR_PLANE,
-                                   int msg_type = CV_32F);
-
-    //! the full constructor taking the number of disparities, number of BP iterations on each level,
-    //! number of levels, number of active disparity on the first level, truncation of data cost, data weight,
-    //! truncation of discontinuity cost, discontinuity single jump and minimum disparity threshold
-    StereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane,
-        float max_data_term, float data_weight, float max_disc_term, float disc_single_jump,
-        int min_disp_th = 0,
-        int msg_type = CV_32F);
-
-    //! the stereo correspondence operator. Finds the disparity for the specified rectified stereo pair,
-    //! if disparity is empty output type will be CV_16S else output type will be disparity.type().
-    void operator()(const GpuMat& left, const GpuMat& right, GpuMat& disparity, Stream& stream = Stream::Null());
-
-    int ndisp;
-
-    int iters;
-    int levels;
-
-    int nr_plane;
-
-    float max_data_term;
-    float data_weight;
-    float max_disc_term;
-    float disc_single_jump;
-
-    int min_disp_th;
-
-    int msg_type;
-
-    bool use_local_init_data_cost;
-private:
-    GpuMat messages_buffers;
-
-    GpuMat temp;
-    GpuMat out;
 };
 
-// Disparity map refinement using joint bilateral filtering given a single color image.
-// Qingxiong Yang, Liang Wang, Narendra Ahuja
-// http://vision.ai.uiuc.edu/~qyang6/
-class CV_EXPORTS DisparityBilateralFilter
+CV_EXPORTS Ptr<gpu::StereoConstantSpaceBP>
+    createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
+
+/////////////////////////////////////////
+// DisparityBilateralFilter
+
+//! Disparity map refinement using joint bilateral filtering given a single color image.
+//! Qingxiong Yang, Liang Wang, Narendra Ahuja
+//! http://vision.ai.uiuc.edu/~qyang6/
+class CV_EXPORTS DisparityBilateralFilter : public cv::Algorithm
 {
 public:
-    enum { DEFAULT_NDISP  = 64 };
-    enum { DEFAULT_RADIUS = 3 };
-    enum { DEFAULT_ITERS  = 1 };
-
-    //! the default constructor
-    explicit DisparityBilateralFilter(int ndisp = DEFAULT_NDISP, int radius = DEFAULT_RADIUS, int iters = DEFAULT_ITERS);
-
-    //! the full constructor taking the number of disparities, filter radius,
-    //! number of iterations, truncation of data continuity, truncation of disparity continuity
-    //! and filter range sigma
-    DisparityBilateralFilter(int ndisp, int radius, int iters, float edge_threshold, float max_disc_threshold, float sigma_range);
-
     //! the disparity map refinement operator. Refine disparity map using joint bilateral filtering given a single color image.
     //! disparity must have CV_8U or CV_16S type, image must have CV_8UC1 or CV_8UC3 type.
-    void operator()(const GpuMat& disparity, const GpuMat& image, GpuMat& dst, Stream& stream = Stream::Null());
+    virtual void apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null()) = 0;
 
-private:
-    int ndisp;
-    int radius;
-    int iters;
+    virtual int getNumDisparities() const = 0;
+    virtual void setNumDisparities(int numDisparities) = 0;
 
-    float edge_threshold;
-    float max_disc_threshold;
-    float sigma_range;
+    virtual int getRadius() const = 0;
+    virtual void setRadius(int radius) = 0;
 
-    GpuMat table_color;
-    GpuMat table_space;
+    virtual int getNumIters() const = 0;
+    virtual void setNumIters(int iters) = 0;
+
+    //! truncation of data continuity
+    virtual double getEdgeThreshold() const = 0;
+    virtual void setEdgeThreshold(double edge_threshold) = 0;
+
+    //! truncation of disparity continuity
+    virtual double getMaxDiscThreshold() const = 0;
+    virtual void setMaxDiscThreshold(double max_disc_threshold) = 0;
+
+    //! filter range sigma
+    virtual double getSigmaRange() const = 0;
+    virtual void setSigmaRange(double sigma_range) = 0;
 };
+
+CV_EXPORTS Ptr<gpu::DisparityBilateralFilter>
+    createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
+
+/////////////////////////////////////////
+// Utility
 
 //! Reprojects disparity image to 3D space.
 //! Supports CV_8U and CV_16S types of input disparity.
 //! The output is a 3- or 4-channel floating-point matrix.
 //! Each element of this matrix will contain the 3D coordinates of the point (x,y,z,1), computed from the disparity map.
 //! Q is the 4x4 perspective transformation matrix that can be obtained with cvStereoRectify.
-CV_EXPORTS void reprojectImageTo3D(const GpuMat& disp, GpuMat& xyzw, const Mat& Q, int dst_cn = 4, Stream& stream = Stream::Null());
+CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null());
 
 //! Does coloring of disparity image: [0..ndisp) -> [0..240, 1, 1] in HSV.
 //! Supported types of input disparity: CV_8U, CV_16S.
 //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
-CV_EXPORTS void drawColorDisp(const GpuMat& src_disp, GpuMat& dst_disp, int ndisp, Stream& stream = Stream::Null());
+CV_EXPORTS void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 
