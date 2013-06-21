@@ -1088,62 +1088,6 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename,
     return (true);
 }
 
-
-////////////////////////////////////////////////////////////////////////////////////////////
-/** \brief Add a plane from a set of given model coefficients
-  * \param coefficients the model coefficients (a, b, c, d with ax+by+cz+d=0)
-  * \param id the plane id/name (default: "plane")
-  * \param viewport (optional) the id of the new viewport (default: 0)
-  */
-bool temp_viz::Viz3d::VizImpl::addPlane (const temp_viz::ModelCoefficients &coefficients, const std::string &id)
-{
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-    {
-        std::cout << "[addPlane] A shape with id <"<<id<<"> already exists! Please choose a different id and retry." << std::endl;
-        return (false);
-    }
-
-    vtkSmartPointer<vtkDataSet> data = createPlane (coefficients);
-
-    // Create an Actor
-    vtkSmartPointer<vtkLODActor> actor;
-    createActorFromVTKDataSet (data, actor);
-    //  actor->GetProperty ()->SetRepresentationToWireframe ();
-    actor->GetProperty ()->SetRepresentationToSurface ();
-    actor->GetProperty ()->SetLighting (false);
-    renderer_->AddActor(actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[id] = actor;
-    return (true);
-}
-
-bool temp_viz::Viz3d::VizImpl::addPlane (const temp_viz::ModelCoefficients &coefficients, double x, double y, double z, const std::string &id)
-{
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-    {
-        std::cout << "[addPlane] A shape with id <" << id << "> already exists! Please choose a different id and retry.\n" << std::endl;
-        return (false);
-    }
-
-    vtkSmartPointer<vtkDataSet> data = createPlane (coefficients, x, y, z);
-
-    // Create an Actor
-    vtkSmartPointer<vtkLODActor> actor;
-    createActorFromVTKDataSet (data, actor);
-    actor->GetProperty ()->SetRepresentationToWireframe ();
-    actor->GetProperty ()->SetLighting (false);
-    renderer_->AddActor(actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[id] = actor;
-    return (true);
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 bool temp_viz::Viz3d::VizImpl::addCircle (const temp_viz::ModelCoefficients &coefficients, const std::string &id)
 {

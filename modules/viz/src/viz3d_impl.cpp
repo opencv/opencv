@@ -302,6 +302,69 @@ void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt
     }
 }
 
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coefs)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs));
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createPlane (coefs);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs, pt));
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createPlane (coefs, pt);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());

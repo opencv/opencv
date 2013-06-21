@@ -83,14 +83,14 @@ void temp_viz::Viz3d::showLine(const String &id, const Point3f &pt1, const Point
     impl_->showLine(id, pt1, pt2, color);
 }
 
-bool temp_viz::Viz3d::addPlane (const ModelCoefficients &coefficients, const String &id)
+void temp_viz::Viz3d::showPlane(const String &id, const Vec4f &coefs)
 {
-    return impl_->addPlane(coefficients, id);
+    impl_->showPlane(id, coefs);
 }
 
-bool temp_viz::Viz3d::addPlane (const ModelCoefficients &coefficients, double x, double y, double z, const String& id)
+void temp_viz::Viz3d::showPlane(const String &id, const Vec4f &coefs, const Point3f &pt)
 {
-    return impl_->addPlane(coefficients, x, y, z, id);
+    impl_->showPlane(id, coefs, pt);
 }
 
 bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)

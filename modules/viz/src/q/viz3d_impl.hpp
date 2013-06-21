@@ -139,6 +139,8 @@ public:
     }
     
     void showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color);
+    void showPlane (const String &id, const cv::Vec4f &coefs);
+    void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");
@@ -177,28 +179,6 @@ public:
           * \endcode
           */
     bool addCylinder (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "cylinder");
-
-    /** \brief Add a plane from a set of given model coefficients
-          * \param[in] coefficients the model coefficients (a, b, c, d with ax+by+cz+d=0)
-          * \param[in] id the plane id/name (default: "plane")
-          *
-          * \code
-          * // The following are given (or computed using sample consensus techniques)
-          * // See SampleConsensusModelPlane for more information
-
-          *
-          * temp_viz::ModelCoefficients plane_coeff;
-          * plane_coeff.values.resize (4);    // We need 4 values
-          * plane_coeff.values[0] = plane_parameters.x ();
-          * plane_coeff.values[1] = plane_parameters.y ();
-          * plane_coeff.values[2] = plane_parameters.z ();
-          * plane_coeff.values[3] = plane_parameters.w ();
-          *
-          * addPlane (plane_coeff);
-          * \endcode
-          */
-    bool addPlane (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "plane");
-    bool addPlane (const temp_viz::ModelCoefficients &coefficients, double x, double y, double z, const std::string &id = "plane");
 
     /** \brief Add a circle from a set of given model coefficients
           * \param[in] coefficients the model coefficients (x, y, radius)
