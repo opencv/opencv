@@ -321,7 +321,7 @@ private:
     GpuMat colors_;
     GpuMat weights_;
 
-    Ptr<FilterEngine_GPU> boxFilter_;
+    Ptr<gpu::Filter> boxFilter_;
     GpuMat buf_;
 };
 

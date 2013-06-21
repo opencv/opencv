@@ -228,11 +228,10 @@ private:
     cv::gpu::GpuMat countBuf_;
 
     cv::gpu::GpuMat buf_;
-    cv::gpu::GpuMat filterBuf_;
     cv::gpu::GpuMat filterBrd_;
 
-    cv::Ptr<cv::gpu::FilterEngine_GPU> dilateFilter_;
-    cv::Ptr<cv::gpu::FilterEngine_GPU> erodeFilter_;
+    cv::Ptr<cv::gpu::Filter> dilateFilter_;
+    cv::Ptr<cv::gpu::Filter> erodeFilter_;
 
     CvMemStorage* storage_;
 };
@@ -305,8 +304,8 @@ void cv::gpu::FGDStatModel::Impl::create(const cv::gpu::GpuMat& firstFrame, cons
         cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1 + params_.perform_morphing * 2, 1 + params_.perform_morphing * 2));
         cv::Point anchor(params_.perform_morphing, params_.perform_morphing);
 
-        dilateFilter_ = cv::gpu::createMorphologyFilter_GPU(cv::MORPH_DILATE, CV_8UC1, kernel, filterBuf_, anchor);
-        erodeFilter_ = cv::gpu::createMorphologyFilter_GPU(cv::MORPH_ERODE, CV_8UC1, kernel, filterBuf_, anchor);
+        dilateFilter_ = cv::gpu::createMorphologyFilter(cv::MORPH_DILATE, CV_8UC1, kernel, anchor);
+        erodeFilter_ = cv::gpu::createMorphologyFilter(cv::MORPH_ERODE, CV_8UC1, kernel, anchor);
     }
 }
 
@@ -326,7 +325,6 @@ void cv::gpu::FGDStatModel::Impl::release()
     countBuf_.release();
 
     buf_.release();
-    filterBuf_.release();
     filterBrd_.release();
 }
 
@@ -488,14 +486,14 @@ namespace
 
 namespace
 {
-    void morphology(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, cv::gpu::GpuMat& filterBrd, int brd, cv::Ptr<cv::gpu::FilterEngine_GPU>& filter, cv::Scalar brdVal)
+    void morphology(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, cv::gpu::GpuMat& filterBrd, int brd, cv::Ptr<cv::gpu::Filter>& filter, cv::Scalar brdVal)
     {
         cv::gpu::copyMakeBorder(src, filterBrd, brd, brd, brd, brd, cv::BORDER_CONSTANT, brdVal);
-        filter->apply(filterBrd(cv::Rect(brd, brd, src.cols, src.rows)), dst, cv::Rect(0, 0, src.cols, src.rows));
+        filter->apply(filterBrd(cv::Rect(brd, brd, src.cols, src.rows)), dst);
     }
 
     void smoothForeground(cv::gpu::GpuMat& foreground, cv::gpu::GpuMat& filterBrd, cv::gpu::GpuMat& buf,
-                          cv::Ptr<cv::gpu::FilterEngine_GPU>& erodeFilter, cv::Ptr<cv::gpu::FilterEngine_GPU>& dilateFilter,
+                          cv::Ptr<cv::gpu::Filter>& erodeFilter, cv::Ptr<cv::gpu::Filter>& dilateFilter,
                           const cv::gpu::FGDStatModel::Params& params)
     {
         const int brd = params.perform_morphing;
