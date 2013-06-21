@@ -392,9 +392,9 @@ namespace cv
             int wholecols;
         };
 
-        // convert InputArray/OutputArray to oclMat
-        CV_EXPORTS oclMat& getOclMat(InputArray src);
-        CV_EXPORTS oclMat& getOclMat(OutputArray src);
+        // convert InputArray/OutputArray to oclMat references
+        CV_EXPORTS oclMat& getOclMatRef(InputArray src);
+        CV_EXPORTS oclMat& getOclMatRef(OutputArray src);
 
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays

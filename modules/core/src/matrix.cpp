@@ -982,7 +982,7 @@ Mat _InputArray::getMat(int i) const
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );
@@ -1069,7 +1069,7 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );
@@ -1201,7 +1201,7 @@ Size _InputArray::size(int i) const
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == GPU_MAT );
@@ -1320,7 +1320,7 @@ bool _InputArray::empty() const
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == GPU_MAT );
@@ -1545,7 +1545,7 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     if( k == NONE )
@@ -1661,7 +1661,7 @@ void _OutputArray::release() const
 
     if( k == OCL_MAT )
     {
-        CV_Error(-1, "Not implemented");
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );

@@ -244,13 +244,13 @@ cv::ocl::oclMat::operator cv::_OutputArray()
     return newOutputArray;
 }
 
-cv::ocl::oclMat& cv::ocl::getOclMat(InputArray src)
+cv::ocl::oclMat& cv::ocl::getOclMatRef(InputArray src)
 {
     CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
     return *reinterpret_cast<oclMat*>(src.obj);
 }
 
-cv::ocl::oclMat& cv::ocl::getOclMat(OutputArray src)
+cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
 {
     CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
     return *reinterpret_cast<oclMat*>(src.obj);
