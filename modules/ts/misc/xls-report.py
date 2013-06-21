@@ -52,6 +52,12 @@ class Collector(object):
         self.config_match_func = config_match_func
         self.tests = {}
 
+    # Format a sorted sequence of pairs as if it was a dictionary.
+    # We can't just use a dictionary instead, since we want to preserve the sorted order of the keys.
+    @staticmethod
+    def __format_config_cache_key(pairs):
+        return '{' + ', '.join(repr(k) + ': ' + repr(v) for (k, v) in pairs) + '}'
+
     def collect_from(self, xml_path):
         run = parseLogFile(xml_path)
 
@@ -68,12 +74,15 @@ class Collector(object):
             configuration = self.config_match_func(properties)
 
             if configuration is None:
-                logging.warning('failed to match properties to a configuration: %r', props_key)
+                logging.warning('failed to match properties to a configuration: %s',
+                    Collector.__format_config_cache_key(props_key))
             else:
                 same_config_props = [it[0] for it in self.__config_cache.iteritems() if it[1] == configuration]
                 if len(same_config_props) > 0:
-                    logging.warning('property set %r matches the same configuration %r as property set %r',
-                        props_key, configuration, same_config_props[0])
+                    logging.warning('property set %s matches the same configuration %r as property set %s',
+                        Collector.__format_config_cache_key(props_key),
+                        configuration,
+                        Collector.__format_config_cache_key(same_config_props[0]))
 
             self.__config_cache[props_key] = configuration
 
