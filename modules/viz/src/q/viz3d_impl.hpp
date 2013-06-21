@@ -139,8 +139,8 @@ public:
     }
     
     void showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color);
-    void showPlane (const String &id, const cv::Vec4f &coefs);
-    void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt);
+    void showPlane (const String &id, const cv::Vec4f &coefs, const Color &color);
+    void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");

@@ -302,17 +302,19 @@ void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coefs)
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coefs, const Color &color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     bool exists = (am_it != shape_actor_map_->end());
-    
+    Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
     {
         vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
         reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
         actor->Modified ();
     }
     else
@@ -326,6 +328,8 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coe
         //  actor->GetProperty ()->SetRepresentationToWireframe ();
         actor->GetProperty ()->SetRepresentationToSurface ();
         actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
         renderer_->AddActor(actor);
 
         // Save the pointer/ID pair to the global actor map
@@ -333,17 +337,19 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coe
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt)
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     bool exists = (am_it != shape_actor_map_->end());
-    
+    Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
     {
         vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
         reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs, pt));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
         actor->Modified ();
     }
     else
@@ -357,6 +363,8 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coe
         //  actor->GetProperty ()->SetRepresentationToWireframe ();
         actor->GetProperty ()->SetRepresentationToSurface ();
         actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
         renderer_->AddActor(actor);
 
         // Save the pointer/ID pair to the global actor map

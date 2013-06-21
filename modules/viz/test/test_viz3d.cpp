@@ -93,8 +93,6 @@ TEST(Viz_viz3d, accuracy)
     int col_green = 0;
     int col_red = 0;
     
-    v.showPlane("plane1", cv::Vec4f(1.0f,1.0f,1.0f,1.0f));
-    
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
@@ -104,7 +102,7 @@ TEST(Viz_viz3d, accuracy)
         v.showLine("line2", cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0f-pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
         v.showLine("line3", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, 1.0f-pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
         v.showLine("line4", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, 1.0f-pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-        v.showPlane("plane1", cv::Vec4f(pos_x*pos_y,pos_y,pos_z,pos_x+pos_y*pos_z));
+        v.showPlane("plane1", cv::Vec4f(pos_x*pos_y,pos_y,pos_z,pos_x+pos_y*pos_z), temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
