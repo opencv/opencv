@@ -117,9 +117,6 @@ namespace cv
         //the devnum is the index of the selected device in DeviceName vector of INfo
         CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
 
-        //optional function, if you want save opencl binary kernel to the file, set its path
-        CV_EXPORTS  void setBinpath(const char *path);
-
         //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
         //returns cl_context *
         CV_EXPORTS void* getoclContext();
@@ -133,6 +130,9 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
+        //returns true when global OpenCL context is initialized
+        CV_EXPORTS bool initialized();
+
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
         class CV_EXPORTS Context
@@ -140,7 +140,7 @@ namespace cv
         protected:
             Context();
             friend class std::auto_ptr<Context>;
-
+            friend bool initialized();
         private:
             static std::auto_ptr<Context> clCxt;
             static int val;
@@ -177,6 +177,29 @@ namespace cv
                                                         int channels, int depth, const char *build_options,
                                                         bool finish = true, bool measureKernelTime = false,
                                                         bool cleanUp = true);
+
+        //! Enable or disable OpenCL program binary caching onto local disk
+        // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb" 
+        // binary file, which will be reused when the OpenCV executable is started again. 
+        //
+        // Caching mode is controlled by the following enums
+        // Notes
+        //   1. the feature is by default enabled when OpenCV is built in release mode.
+        //   2. the CACHE_DEBUG / CACHE_RELEASE flags only effectively work with MSVC compiler;
+        //      for GNU compilers, the function always treats the build as release mode (enabled by default).
+        enum
+        {
+            CACHE_NONE    = 0,        // do not cache OpenCL binary
+            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
+            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
+            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
+        };
+        CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
+
+        //! set where binary cache to be saved to 
+        CV_EXPORTS void setBinpath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
@@ -482,6 +505,25 @@ namespace cv
         CV_EXPORTS void calcHist(const oclMat &mat_src, oclMat &mat_hist);
         //! only 8UC1 and 256 bins is supported now
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
+        
+        //! only 8UC1 is supported now
+        class CV_EXPORTS CLAHE
+        {
+        public:
+            virtual void apply(const oclMat &src, oclMat &dst) = 0;
+
+            virtual void setClipLimit(double clipLimit) = 0;
+            virtual double getClipLimit() const = 0;
+
+            virtual void setTilesGridSize(Size tileGridSize) = 0;
+            virtual Size getTilesGridSize() const = 0;
+
+            virtual void collectGarbage() = 0;
+
+            virtual ~CLAHE() {}
+        };
+        CV_EXPORTS Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+        
         //! bilateralFilter
         // supports 8UC1 8UC4
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
