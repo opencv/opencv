@@ -71,10 +71,10 @@ GPU_TEST_P(StereoBM, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoBM_GPU bm(0, 128, 19);
+    cv::Ptr<cv::StereoBM> bm = cv::gpu::createStereoBM(128, 19);
     cv::gpu::GpuMat disp;
 
-    bm(loadMat(left_image), loadMat(right_image), disp);
+    bm->compute(loadMat(left_image), loadMat(right_image), disp);
 
     EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
@@ -106,10 +106,15 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoBeliefPropagation bp(64, 8, 2, 25, 0.1f, 15, 1, CV_16S);
+    cv::Ptr<cv::gpu::StereoBeliefPropagation> bp = cv::gpu::createStereoBeliefPropagation(64, 8, 2, CV_16S);
+    bp->setMaxDataTerm(25.0);
+    bp->setDataWeight(0.1);
+    bp->setMaxDiscTerm(15.0);
+    bp->setDiscSingleJump(1.0);
+
     cv::gpu::GpuMat disp;
 
-    bp(loadMat(left_image), loadMat(right_image), disp);
+    bp->compute(loadMat(left_image), loadMat(right_image), disp);
 
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());
@@ -150,10 +155,10 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::gpu::StereoConstantSpaceBP csbp(128, 16, 4, 4);
+    cv::Ptr<cv::gpu::StereoConstantSpaceBP> csbp = cv::gpu::createStereoConstantSpaceBP(128, 16, 4, 4);
     cv::gpu::GpuMat disp;
 
-    csbp(loadMat(left_image), loadMat(right_image), disp);
+    csbp->compute(loadMat(left_image), loadMat(right_image), disp);
 
     cv::Mat h_disp(disp);
     h_disp.convertTo(h_disp, disp_gold.depth());

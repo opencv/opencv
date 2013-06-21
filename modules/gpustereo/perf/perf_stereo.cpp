@@ -63,18 +63,17 @@ PERF_TEST_P(ImagePair, StereoBM,
     const cv::Mat imgRight = readImage(GET_PARAM(1), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(imgRight.empty());
 
-    const int preset = 0;
     const int ndisp = 256;
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoBM_GPU d_bm(preset, ndisp);
+        cv::Ptr<cv::StereoBM> d_bm = cv::gpu::createStereoBM(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_bm(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_bm->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -108,13 +107,13 @@ PERF_TEST_P(ImagePair, StereoBeliefPropagation,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoBeliefPropagation d_bp(ndisp);
+        cv::Ptr<cv::gpu::StereoBeliefPropagation> d_bp = cv::gpu::createStereoBeliefPropagation(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_bp(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_bp->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -142,13 +141,13 @@ PERF_TEST_P(ImagePair, StereoConstantSpaceBP,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::StereoConstantSpaceBP d_csbp(ndisp);
+        cv::Ptr<cv::gpu::StereoConstantSpaceBP> d_csbp = cv::gpu::createStereoConstantSpaceBP(ndisp);
 
         const cv::gpu::GpuMat d_imgLeft(imgLeft);
         const cv::gpu::GpuMat d_imgRight(imgRight);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_csbp(d_imgLeft, d_imgRight, dst);
+        TEST_CYCLE() d_csbp->compute(d_imgLeft, d_imgRight, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -174,13 +173,13 @@ PERF_TEST_P(ImagePair, DisparityBilateralFilter,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::DisparityBilateralFilter d_filter(ndisp);
+        cv::Ptr<cv::gpu::DisparityBilateralFilter> d_filter = cv::gpu::createDisparityBilateralFilter(ndisp);
 
         const cv::gpu::GpuMat d_img(img);
         const cv::gpu::GpuMat d_disp(disp);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() d_filter(d_disp, d_img, dst);
+        TEST_CYCLE() d_filter->apply(d_disp, d_img, dst);
 
         GPU_SANITY_CHECK(dst);
     }

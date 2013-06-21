@@ -47,8 +47,8 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::reprojectImageTo3D(const GpuMat&, GpuMat&, const Mat&, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::drawColorDisp(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::reprojectImageTo3D(InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -61,7 +61,7 @@ namespace cv { namespace gpu { namespace cudev
     void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
 }}}
 
-void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, int dst_cn, Stream& stream)
+void cv::gpu::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, Stream& stream)
 {
     using namespace cv::gpu::cudev;
 
@@ -72,11 +72,15 @@ void cv::gpu::reprojectImageTo3D(const GpuMat& disp, GpuMat& xyz, const Mat& Q, 
         {reprojectImageTo3D_gpu<uchar, float4>, 0, 0, reprojectImageTo3D_gpu<short, float4>}
     };
 
-    CV_Assert(disp.type() == CV_8U || disp.type() == CV_16S);
-    CV_Assert(Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous());
-    CV_Assert(dst_cn == 3 || dst_cn == 4);
+    GpuMat disp = _disp.getGpuMat();
+    Mat Q = _Q.getMat();
 
-    xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
+    CV_Assert( disp.type() == CV_8U || disp.type() == CV_16S );
+    CV_Assert( Q.type() == CV_32F && Q.rows == 4 && Q.cols == 4 && Q.isContinuous() );
+    CV_Assert( dst_cn == 3 || dst_cn == 4 );
+
+    _xyz.create(disp.size(), CV_MAKE_TYPE(CV_32F, dst_cn));
+    GpuMat xyz = _xyz.getGpuMat();
 
     funcs[dst_cn == 4][disp.type()](disp, xyz, Q.ptr<float>(), StreamAccessor::getStream(stream));
 }
@@ -93,23 +97,25 @@ namespace cv { namespace gpu { namespace cudev
 namespace
 {
     template <typename T>
-    void drawColorDisp_caller(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream)
+    void drawColorDisp_caller(const GpuMat& src, OutputArray _dst, int ndisp, const cudaStream_t& stream)
     {
         using namespace ::cv::gpu::cudev;
 
-        dst.create(src.size(), CV_8UC4);
+        _dst.create(src.size(), CV_8UC4);
+        GpuMat dst = _dst.getGpuMat();
 
         drawColorDisp_gpu((PtrStepSz<T>)src, dst, ndisp, stream);
     }
-
-    typedef void (*drawColorDisp_caller_t)(const GpuMat& src, GpuMat& dst, int ndisp, const cudaStream_t& stream);
-
-    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
 }
 
-void cv::gpu::drawColorDisp(const GpuMat& src, GpuMat& dst, int ndisp, Stream& stream)
+void cv::gpu::drawColorDisp(InputArray _src, OutputArray dst, int ndisp, Stream& stream)
 {
-    CV_Assert(src.type() == CV_8U || src.type() == CV_16S);
+    typedef void (*drawColorDisp_caller_t)(const GpuMat& src, OutputArray dst, int ndisp, const cudaStream_t& stream);
+    const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};
+
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.type() == CV_8U || src.type() == CV_16S );
 
     drawColorDisp_callers[src.type()](src, dst, ndisp, StreamAccessor::getStream(stream));
 }
