@@ -67,7 +67,7 @@ public:
     CV_WRAP int descriptorSize() const;
 
     //! Compute keypoints descriptors. 
-    CV_WRAP void extractSCD(std::vector<Point> contour, Mat& descriptors) const;
+    CV_WRAP void extractSCD(InputArray contour, Mat& descriptors) const;
     
     //! Setters
     void setAngularBins(int);
@@ -89,9 +89,9 @@ private:
 protected:
     CV_WRAP void logarithmicSpaces(std::vector<double>& vecSpaces) const;
     CV_WRAP void angularSpaces(std::vector<double>& vecSpaces) const;                              
-    CV_WRAP void buildNormalizedDistanceMatrix(std::vector<Point> contour, 
+    CV_WRAP void buildNormalizedDistanceMatrix(InputArray contour, 
                               Mat& disMatrix) const;
-    CV_WRAP void buildAngleMatrix(std::vector<Point> contour, 
+    CV_WRAP void buildAngleMatrix(InputArray contour, 
                               Mat& angleMatrix) const;
     CV_WRAP double distance(Point p, Point q) const;
 };

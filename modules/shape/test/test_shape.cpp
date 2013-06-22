@@ -42,11 +42,10 @@ void CV_ShapeTest::run( int /*start_from*/ )
 
     approxPolyDP(Mat(contours[0]), contours[0], 0.5, true);
     cout<<"Number of points in the contour after simplification: "<<contours[0].size()<<std::endl;
-	drawContours(img, contours, -1/*Draw all contours*/, Scalar(128,128,128),5);
+	drawContours(img, contours, -1/*Draw all contours*/, Scalar(128,128,128), 5);
     
     Mat scdesc;
-    int a=8;
-    int r=5;
+    int a=8, r=5;
     SCD shapeDescriptor(a,r,0.1,1);
     shapeDescriptor.extractSCD(contours[0], scdesc);
     

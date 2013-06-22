@@ -71,27 +71,28 @@ int SCD::descriptorSize() const
     return nAngularBins*nRadialBins; 
 }
 
-void SCD::extractSCD(std::vector<Point> contour /* Vector of points */, 
+void SCD::extractSCD(InputArray contour /* Vector of points */, 
                       Mat& descriptors /* Mat containing the descriptor */) const
 {
-    CV_Assert(contour.size()>0);
+    Mat contourMat = contour.getMat();
+    CV_Assert((contourMat.channels()==2) & (contourMat.cols>0));
     
-    Mat disMatrix = Mat::zeros(contour.size(), contour.size(), CV_32F);
-    Mat angleMatrix = Mat::zeros(contour.size(), contour.size(), CV_32F);
+    Mat disMatrix = Mat::zeros(contourMat.cols, contourMat.cols, CV_32F);
+    Mat angleMatrix = Mat::zeros(contourMat.cols, contourMat.cols, CV_32F);
     
     std::vector<double> logspaces, angspaces;
     logarithmicSpaces(logspaces);
     angularSpaces(angspaces);
     
-    buildNormalizedDistanceMatrix(contour, disMatrix);
-    buildAngleMatrix(contour, angleMatrix);
+    buildNormalizedDistanceMatrix(contourMat, disMatrix);
+    buildAngleMatrix(contourMat, angleMatrix);
     
     /* Now, build the descriptor matrix (each row is a point descriptor) 
      * ask if the correspondent points belong to a given bin.*/
-    descriptors = Mat::zeros(contour.size(), descriptorSize(), CV_32F);
-    for (uint ptidx=0; ptidx<contour.size(); ptidx++)
+    descriptors = Mat::zeros(contourMat.cols, descriptorSize(), CV_32F);
+    for (int ptidx=0; ptidx<contourMat.cols; ptidx++)
     {
-        for (uint cmp=0; cmp<contour.size(); cmp++)
+        for (int cmp=0; cmp<contourMat.cols; cmp++)
         {
             if (ptidx==cmp) continue;
             
@@ -119,28 +120,33 @@ void SCD::extractSCD(std::vector<Point> contour /* Vector of points */,
 }
 
 /* Protected methods */
-void SCD::buildAngleMatrix(std::vector<Point> contour, 
+void SCD::buildAngleMatrix(InputArray contour, 
                       Mat& angleMatrix) const
 {
-    for (size_t i=0; i<contour.size(); i++)
+    Mat contourMat = contour.getMat();
+    
+    for (int i=0; i<contourMat.cols; i++)
     {
-        for (size_t j=0; j<contour.size(); j++)
+        for (int j=0; j<contourMat.cols; j++)
         {
             if (i==j) continue;
-            Point dif = contour[i] - contour[j];
+            Point dif = contourMat.at<Point>(0,i) - contourMat.at<Point>(0,j);
             angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
         }
     }
 }
 
-void SCD::buildNormalizedDistanceMatrix(std::vector<Point> contour, 
+void SCD::buildNormalizedDistanceMatrix(InputArray contour, 
                       Mat& disMatrix) const
 {
-    for (size_t i=0; i<contour.size(); i++)
+    Mat contourMat = contour.getMat();
+    
+    for (int i=0; i<contourMat.cols; i++)
     {
-        for (size_t j=0; j<contour.size(); j++)
+        for (int j=0; j<contourMat.cols; j++)
         {
-            disMatrix.at<float>(i,j) = distance(contour[i],contour[j]);
+            disMatrix.at<float>(i,j) = distance(contourMat.at<Point>(0,i),
+                                                 contourMat.at<Point>(0,j));
         }
     }
     
