@@ -90,6 +90,7 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
     /* Now, build the descriptor matrix (each row is a point descriptor) 
      * ask if the correspondent points belong to a given bin.*/
     descriptors = Mat::zeros(contourMat.cols, descriptorSize(), CV_32F);
+       
     for (int ptidx=0; ptidx<contourMat.cols; ptidx++)
     {
         for (int cmp=0; cmp<contourMat.cols; cmp++)
