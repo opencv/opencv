@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 
 /*
- * Visualization functions for Shape Contexts. 2013.
+ * Visualization functions for Shape Contexts
  */
 namespace cv
 {
