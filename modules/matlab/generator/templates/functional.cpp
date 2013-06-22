@@ -66,5 +66,5 @@
   {% for opt in fun.opt|outputs %}
   outputs[{{loop.index0 + fun.rtp|void|not + fun.req|outputs|length}}] = {{opt.name}};
   {% endfor %}
-
-{%- endmacro -%}
+  
+{% endmacro %}

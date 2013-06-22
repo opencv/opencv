@@ -36,9 +36,15 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
   // setup
   std::vector<Bridge> inputs(plhs, plhs+nrhs);
-  std::vector<Bridge> outputs(nlhs);
+  {% set noutputs = fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length %}
+  {%- if noutputs %}
+  std::vector<Bridge> outputs({{noutputs}});
+  {% endif %}
 
   {{ functional.generate(fun) }}
 
-  // setdown
+  // push the outputs back to matlab
+  for (size_t n = 0; n < nlhs; ++n) {
+    plhs[n] = outputs[n].mxArray();
+  }
 }
