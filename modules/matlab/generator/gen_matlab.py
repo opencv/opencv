@@ -32,10 +32,13 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['toUnderCase'] = toUnderCase
         jtemplate.filters['comment']  = comment
         jtemplate.filters['inputs']   = inputs
-        jtemplate.filters['outputs']  = outputs
-        jtemplate.filters['output']   = output
-        jtemplate.filters['noutputs'] = noutputs
         jtemplate.filters['ninputs'] = ninputs
+        jtemplate.filters['outputs']  = outputs
+        jtemplate.filters['noutputs'] = noutputs
+        jtemplate.filters['only'] = only
+        jtemplate.filters['void'] = void 
+        jtemplate.filters['not'] = flip
+
 
         # load the templates
         tfunction  = jtemplate.get_template('template_function_base.cpp')

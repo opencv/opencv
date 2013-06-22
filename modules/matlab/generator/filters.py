@@ -7,11 +7,10 @@ def inputs(args):
     In OpenCV input arguments are all arguments with names
     not beginning with 'dst'
     '''
-    out = []
-    for arg in args:
-        if not arg.name.startswith('dst'):
-            out.append(arg)
-    return out
+    try:
+      return [arg for arg in args['only'] if arg.I and not arg.O]
+    except:
+      return [arg for arg in args if arg.I]
 
 def ninputs(args):
     '''Counts the number of input arguments in the input list'''
@@ -22,15 +21,24 @@ def outputs(args):
     reference, and returns a list of only those elements.
     In OpenCV, output references are preceeded by 'dst'
     '''
-    out = []
-    for arg in args:
-        if arg.name.startswith('dst'):
-            out.append(arg)
-    return out
+    try:
+      return [arg for arg in args['only'] if arg.O and not arg.I]
+    except:
+      return [arg for arg in args if arg.O]
 
-def output(arg):
-    return True if arg.name.startswith('dst') else False
-        
+def only(args):
+    '''Returns exclusively the arguments which are only inputs
+    or only outputs'''
+    d = {};
+    d['only'] = args
+    return d
+
+def void(arg):
+    return arg == 'void'
+
+def flip(arg):
+    return not arg
+
 def noutputs(args):
     '''Counts the number of output arguments in the input list'''
     return len(outputs(args))

@@ -13,14 +13,13 @@
 #include <string>
 #include <vector>
 #include <exception>
-#include <opencv2/{{ns}}.hpp>
+#include <opencv2/{{includes}}.hpp>
 {% block includes %}
 {% endblock %}
-using namespace std;
-using namespace cv;
 
 /* 
  * {{ fun.name }}
+ * {{ fun }}
  * Gateway routine
  *   nlhs - number of return arguments
  *   plhs - pointers to return arguments
@@ -31,15 +30,13 @@ void mexFunction(int nlhs, mxArray* plhs[],
                  int nrhs, const mxArray* prhs[]) {
 
   // assertions
-  mxAssert(nrhs >= {{fun.req|length - fun.req|noutputs}}, "Too few required input arguments specified");
-  mxAssert(nrhs <= {{fun.req|length + fun.opt|length - fun.req|noutputs - fun.opt|noutputs}}, "Too many input arguments specified");
-  mxAssert(nlhs <= {{fun.ret|length + fun.req|noutputs + fun.opt|noutputs}}, "Too many output arguments specified");
+  mxAssert(nrhs >= {{fun.req|length - fun.req|outputs|length}}, "Too few required input arguments specified");
+  mxAssert(nrhs <= {{fun.req|length + fun.opt|length - fun.req|outputs|length - fun.opt|outputs|length}}, "Too many input arguments specified");
+  mxAssert(nlhs <= {{ fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length}}, "Too many output arguments specified");
 
   // setup
-  vector<Bridge> inputs(plhs, plhs+nrhs);
-  vector<Bridge> outputs(nlhs);
-
-  {{ fun }}
+  std::vector<Bridge> inputs(plhs, plhs+nrhs);
+  std::vector<Bridge> outputs(nlhs);
 
   {{ functional.generate(fun) }}
 

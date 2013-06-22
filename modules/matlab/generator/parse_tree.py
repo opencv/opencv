@@ -65,6 +65,7 @@ class Translator(object):
         name = self.translateName(defn[0])
         clss = self.translateClassName(defn[0])
         rtp  = defn[1]
+        static = True if 'S' in ''.join(defn[2]) else False 
         args = defn[3]
         req  = [] 
         opt = []
@@ -72,7 +73,7 @@ class Translator(object):
             if arg:
                 a = self.translateArgument(arg)
                 opt.append(a) if a.default else req.append(a)
-        return Function(name, clss, '', rtp, False, req, opt)
+        return Function(name, clss, static, '', rtp, False, req, opt)
             
     def translateConstant(self, defn):
         const = True if 'const' in defn[0] else False
@@ -83,10 +84,16 @@ class Translator(object):
         return Constant(name, clss, tp, const, '', val)
 
     def translateArgument(self, defn):
-        tp   = defn[0]
+        ref   = '*' if '*' in defn[0] else ''
+        ref   = '&' if '&' in defn[0] else ref
+        const = ' const ' in ' '+defn[0]+' '
+        tp    = " ".join([word for word in defn[0].replace(ref, '').split() if not ' const ' in ' '+word+' '])
         name = defn[1]
         default = defn[2] if defn[2] else ''
-        return Argument(name, tp, False, '', default)
+        modifiers = ''.join(defn[3])
+        I = True if not modifiers or 'I' in modifiers else False
+        O = True if 'O' in modifiers else False
+        return Argument(name, tp, const, I, O, ref, default)
 
     def translateName(self, name):
         return name.split(' ')[-1].split('.')[-1]
@@ -123,9 +130,10 @@ class Class(object):
           (join((f.__str__() for f in self.functions), '\n\t')          if self.functions else '')+'\n};'
 
 class Function(object):
-    def __init__(self, name='', clss='', namespace='', rtp='', const=False, req=None, opt=None):
+    def __init__(self, name='', clss='', static=False, namespace='', rtp='', const=False, req=None, opt=None):
         self.name  = name
         self.clss  = clss
+        self.static = static
         self.const = const
         self.namespace = namespace
         self.rtp = rtp 
@@ -138,10 +146,12 @@ class Function(object):
           ')'+(' const' if self.const else '')+';'
 
 class Argument(object):
-    def __init__(self, name='', tp='', const=False, ref='', default=''):
+    def __init__(self, name='', tp='', const=False, I=True, O=False, ref='', default=''):
         self.name = name
         self.tp   = tp
         self.ref  = ref
+        self.I    = I
+        self.O    = O
         self.const = const
         self.default = default
 

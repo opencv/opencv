@@ -1,13 +1,24 @@
-// compose a function
-{% macro compose(fun, retname="ret") %}
-  {%- if not fun.rtp == "void" -%} {{fun.rtp}} retname = {% endif -%}
-  {{fun.name}}(
+/* 
+ * compose
+ * compose a function call
+ * This macro takes as input a Function object and composes
+ * a function call by inspecting the types and argument names
+ */
+/
+{% macro compose(fun) %}
+  {# ----------- Return type ------------- #}
+  {%- if not fun.rtp|void -%} {{fun.rtp}} retval = {% endif -%}
+  cv::{{fun.name}}(
+  {#- ----------- Required ------------- -#}
   {%- for arg in fun.req -%} 
+    {%- if arg.ref == '*' -%}&{%- endif -%}
     {{arg.name}} 
     {%- if not loop.last %}, {% endif %}
   {% endfor %}
+  {#- ----------- Optional ------------- -#}
   {% if fun.req and fun.opt %}, {% endif %}
   {%- for opt in fun.opt -%} 
+    {%- if opt.ref == '*' -%}&{%- endif -%}
     {{opt.name}} 
     {%- if not loop.last -%}, {% endif %}
   {%- endfor -%}
@@ -18,19 +29,18 @@
 {%- macro generate(fun) -%}
 
   // unpack the arguments
-  // inputs
+  {# ----------- Inputs ------------- #}
   {% for arg in fun.req|inputs %}
   {{arg.tp}} {{arg.name}} = inputs[{{ loop.index0 }}];
   {% endfor %}
   {% for opt in fun.opt|inputs %}
-  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|ninputs}}) ? inputs[{{loop.index0 + fun.req|ninputs}}] : {{opt.default}};
+  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|inputs|length}}) ? inputs[{{loop.index0 + fun.req|inputs|length}}] : {{opt.default}};
   {% endfor %}
-
-  // outputs
-  {% for arg in fun.req|outputs %}
+  {# ----------- Outputs ------------ #}
+  {% for arg in fun.req|only|outputs %}
   {{arg.tp}} {{arg.name}};
   {% endfor %}
-  {% for opt in fun.opt|outputs %}
+  {% for opt in fun.opt|only|outputs %}
   {{opt.tp}} {{opt.name}};
   {% endfor %}
 
@@ -47,11 +57,14 @@
   }
 
   // assign the outputs into the bridge
+  {% if not fun.rtp|void %}
+  outputs[0] = retval;
+  {% endif %}
   {% for arg in fun.req|outputs %}
-  outputs[{{loop.index0}}] = {{arg.name}};
+  outputs[{{loop.index0 + fun.rtp|void|not}}] = {{arg.name}};
   {% endfor %}
   {% for opt in fun.opt|outputs %}
-  outputs[{{loop.index0 + fun.req|noutputs}}] = {{opt.name}};
+  outputs[{{loop.index0 + fun.rtp|void|not + fun.req|outputs|length}}] = {{opt.name}};
   {% endfor %}
 
 {%- endmacro -%}
