@@ -11,11 +11,11 @@
 #include "mex.h"
 #include "bridge.hpp"
 #include <vector>
+//TODO: Standard C++ does not have an unordered_map (only C++11 and Boost)
 #include <unordered_map>
 #include <string>
 #include <opencv2/core.hpp>
-{% block includes %}
-{% endblock %}
+using namespace cv;
 
 namespace {
 
@@ -25,12 +25,7 @@ typedef std::vector<Bridge> (*)({{clss.name}}&, const std::vector<Bridge>&) Meth
 {% for function in clss.functions %}
 // wrapper for {{function.name}}() method
 std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bridge>& args) {
-  // setup
-
-  // invoke
   {{ functional.generate(function) }}
-
-  // setdown
 }
 
 {% endfor %}

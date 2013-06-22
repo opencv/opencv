@@ -50,7 +50,11 @@ ocv_add_module(matlab   BINDINGS opencv_core #TODO: does it actually NEED to dep
 # TODO: Undo this when building all modules to find python properly
 #set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
 set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
-prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# set mex compiler options
+prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
+prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
+set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)
     add_subdirectory(test)
@@ -79,7 +83,7 @@ endif()
 # attempt to compile the file using mex
 message("-- Trying to compile mex file")
 execute_process(
-    COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES} 
+    COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
             ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
     ERROR_VARIABLE MEX_ERROR
@@ -105,6 +109,8 @@ string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}
 foreach(module ${OPENCV_MATLAB_MODULES})
     if (HAVE_opencv_${module})
         list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
+        prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
+        prepend("-l" MEX_LIBS "opencv_${module}")
     endif()
 endforeach()
 
@@ -122,8 +128,8 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
   get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
   # compile the source file using mex
   add_custom_command(TARGET opencv_matlab PRE_BUILD
-      COMMAND echo ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
-              ${SOURCE_FILE}
+      COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
+              ${MEX_LIB_DIR} ${MEX_LIBS} ${SOURCE_FILE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
   )
 endforeach()

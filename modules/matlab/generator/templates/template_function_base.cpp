@@ -14,8 +14,7 @@
 #include <vector>
 #include <exception>
 #include <opencv2/{{includes}}.hpp>
-{% block includes %}
-{% endblock %}
+using namespace cv;
 
 /* 
  * {{ fun.name }}

@@ -7,8 +7,9 @@
 /
 {% macro compose(fun) %}
   {# ----------- Return type ------------- #}
-  {%- if not fun.rtp|void -%} {{fun.rtp}} retval = {% endif -%}
-  cv::{{fun.name}}(
+  {%- if not fun.rtp|void -%} retval = {% endif -%}
+  {%- if fun.clss -%}inst.{%- else -%} cv:: {% endif -%}
+  {{fun.name}}(
   {#- ----------- Required ------------- -#}
   {%- for arg in fun.req -%} 
     {%- if arg.ref == '*' -%}&{%- endif -%}
@@ -34,7 +35,7 @@
   {{arg.tp}} {{arg.name}} = inputs[{{ loop.index0 }}];
   {% endfor %}
   {% for opt in fun.opt|inputs %}
-  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|inputs|length}}) ? inputs[{{loop.index0 + fun.req|inputs|length}}] : {{opt.default}};
+  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|inputs|length}}) ? ({{opt.tp}})inputs[{{loop.index0 + fun.req|inputs|length}}] : {{opt.default}};
   {% endfor %}
   {# ----------- Outputs ------------ #}
   {% for arg in fun.req|only|outputs %}
@@ -43,6 +44,9 @@
   {% for opt in fun.opt|only|outputs %}
   {{opt.tp}} {{opt.name}};
   {% endfor %}
+  {% if not fun.rtp|void %}
+  {{fun.rtp}} retval;
+  {% endif %}
 
   // call the opencv function
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
