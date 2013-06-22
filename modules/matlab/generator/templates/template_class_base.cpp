@@ -1,3 +1,4 @@
+{% import 'functional.cpp' as functional %}
 /*
  * file:   {{clss.name}}Bridge.cpp
  * author: A trusty code generator
@@ -27,16 +28,7 @@ std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bri
   // setup
 
   // invoke
-  try {
-    // invoke
-  } catch(cv::Exception& e) {
-    mexErrMsgTxt(std::string("cv::exception caught: ").append(e.what()).c_str());
-  } catch(std::exception& e) {
-    mexErrMsgTxt(std::string("std::exception caught: ").append(e.what()).c_str());
-  } catch(...) {
-    mexErrMsgTxt("Uncaught exception occurred in {{function.name}}");
-  }
-
+  {{ functional.generate(function) }}
 
   // setdown
 }

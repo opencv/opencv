@@ -85,7 +85,7 @@ class Translator(object):
     def translateArgument(self, defn):
         tp   = defn[0]
         name = defn[1]
-        default = tp+'()' if defn[2] else ''
+        default = defn[2] if defn[2] else ''
         return Argument(name, tp, False, '', default)
 
     def translateName(self, name):

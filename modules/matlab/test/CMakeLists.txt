@@ -1,6 +1,6 @@
 # compile the test sources
 file(GLOB SOURCE_FILES "*.cpp")
-add_custom_target(opencv_test_matlab_sources ALL)
+add_custom_target(opencv_test_matlab_sources)
 foreach(SOURCE_FILE ${SOURCE_FILES})
   get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
   # compile the source file using mex

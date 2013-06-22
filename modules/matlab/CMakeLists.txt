@@ -40,13 +40,16 @@ if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
     return()
 endif()
 
+# TODO: matlab bindings should depend on python (maybe)
 set(the_description "The Matlab/Octave bindings")
-ocv_add_module(matlab   BINDINGS opencv_core opencv_imgproc 
+ocv_add_module(matlab   BINDINGS opencv_core #TODO: does it actually NEED to depend on core?
                         OPTIONAL opencv_objdetect opencv_features2d opencv_video
                                  opencv_highgui opencv_ml opencv_calib3d opencv_photo
-                                 opencv_nonfree opencv_calib)
+                                 opencv_nonfree opencv_calib opencv_imgproc)
 
-set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
+# TODO: Undo this when building all modules to find python properly
+#set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
+set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 prepend("-I" MEX_INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 if (BUILD_TESTS)
@@ -106,14 +109,14 @@ foreach(module ${OPENCV_MATLAB_MODULES})
 endforeach()
 
 # synthesise the matlab sources
-add_custom_target(opencv_matlab_sources ALL
+add_custom_target(opencv_matlab_sources
     COMMAND ${PYTHON_EXECUTABLE} 
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
             ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
 )
 
 # compile the matlab sources to mex
-add_custom_target(opencv_matlab ALL)
+add_custom_target(opencv_matlab ALL DEPENDS opencv_matlab_sources)
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
   get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
@@ -122,7 +125,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
       COMMAND echo ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
               ${SOURCE_FILE}
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
-      DEPENDS opencv_matlab_sources
   )
 endforeach()
 

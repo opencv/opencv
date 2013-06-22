@@ -311,7 +311,9 @@ macro(ocv_glob_modules)
     endif()
     list(APPEND __directories_observed "${__path}")
 
-    file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/*")
+    # TODO: Undo this change to build all modules
+    #file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/*")
+    file(GLOB __ocvmodules RELATIVE "${__path}" "${__path}/core" "${__path}/matlab")
     if(__ocvmodules)
       list(SORT __ocvmodules)
       foreach(mod ${__ocvmodules})

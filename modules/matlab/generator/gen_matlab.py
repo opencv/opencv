@@ -30,7 +30,12 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
         jtemplate.filters['toUnderCase'] = toUnderCase
-        jtemplate.filters['comment'] = comment
+        jtemplate.filters['comment']  = comment
+        jtemplate.filters['inputs']   = inputs
+        jtemplate.filters['outputs']  = outputs
+        jtemplate.filters['output']   = output
+        jtemplate.filters['noutputs'] = noutputs
+        jtemplate.filters['ninputs'] = ninputs
 
         # load the templates
         tfunction  = jtemplate.get_template('template_function_base.cpp')
@@ -53,7 +58,7 @@ class MatlabWrapperGenerator(object):
         for namespace in parse_tree.namespaces:
             # functions
             for function in namespace.functions:
-                populated = tfunction.render(fun=function, time=time)
+                populated = tfunction.render(fun=function, time=time, includes=namespace.name)
                 with open(output_source_dir+'/'+function.name+'.cpp', 'wb') as f:
                     f.write(populated)
             # classes

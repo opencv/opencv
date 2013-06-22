@@ -1,3 +1,4 @@
+{% import 'functional.cpp' as functional %}
 /*
  * file:   {{fun.name}}.cpp
  * author: A trusty code generator
@@ -12,9 +13,11 @@
 #include <string>
 #include <vector>
 #include <exception>
-#include <opencv2/core.hpp>
+#include <opencv2/{{ns}}.hpp>
 {% block includes %}
 {% endblock %}
+using namespace std;
+using namespace cv;
 
 /* 
  * {{ fun.name }}
@@ -27,34 +30,18 @@
 void mexFunction(int nlhs, mxArray* plhs[],
                  int nrhs, const mxArray* prhs[]) {
 
-  {% block argcheck %}
-  {% endblock %}
+  // assertions
+  mxAssert(nrhs >= {{fun.req|length - fun.req|noutputs}}, "Too few required input arguments specified");
+  mxAssert(nrhs <= {{fun.req|length + fun.opt|length - fun.req|noutputs - fun.opt|noutputs}}, "Too many input arguments specified");
+  mxAssert(nlhs <= {{fun.ret|length + fun.req|noutputs + fun.opt|noutputs}}, "Too many output arguments specified");
 
-  {% block prebridge %}
-  {% endblock %}
+  // setup
+  vector<Bridge> inputs(plhs, plhs+nrhs);
+  vector<Bridge> outputs(nlhs);
 
-  // parse the inputs and outputs
+  {{ fun }}
 
-  {% block postbridge %}
-  {% endblock %}
+  {{ functional.generate(fun) }}
 
-  // call the opencv function
-  // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
-  try {
-    {{fun.name}}();
-  } catch(cv::Exception& e) {
-    mexErrMsgTxt(std::string("cv::exception caught: ").append(e.what()).c_str());
-  } catch(std::exception& e) {
-    mexErrMsgTxt(std::string("std::exception caught: ").append(e.what()).c_str());
-  } catch(...) {
-    mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
-  }
-  {% block fcall %}
-  {% endblock %}
-
-  {% block postfun %}
-  {% endblock %}
-
-  {% block cleanup %}
-  {% endblock %}
+  // setdown
 }

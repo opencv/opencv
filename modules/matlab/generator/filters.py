@@ -2,6 +2,40 @@ from textwrap import TextWrapper
 from string import split, join
 import re
 
+def inputs(args):
+    '''Keeps only the input arguments in a list of elements.
+    In OpenCV input arguments are all arguments with names
+    not beginning with 'dst'
+    '''
+    out = []
+    for arg in args:
+        if not arg.name.startswith('dst'):
+            out.append(arg)
+    return out
+
+def ninputs(args):
+    '''Counts the number of input arguments in the input list'''
+    return len(inputs(args))
+
+def outputs(args):
+    '''Determines whether any of the given arguments is an output
+    reference, and returns a list of only those elements.
+    In OpenCV, output references are preceeded by 'dst'
+    '''
+    out = []
+    for arg in args:
+        if arg.name.startswith('dst'):
+            out.append(arg)
+    return out
+
+def output(arg):
+    return True if arg.name.startswith('dst') else False
+        
+def noutputs(args):
+    '''Counts the number of output arguments in the input list'''
+    return len(outputs(args))
+
+
 def toUpperCamelCase(text):
     return text[0].upper() + text[1:]
 
