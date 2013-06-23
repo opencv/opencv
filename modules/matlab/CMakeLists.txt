@@ -67,13 +67,14 @@ endif()
 # ----------------------------------------------------------------------------
 #  Configure time components
 # ----------------------------------------------------------------------------
-string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};
-                                                   ${OPENCV_MODULE_${the_module}_OPT_DEPS}")
-foreach(module ${OPENCV_MATLAB_MODULES})
-    if (HAVE_opencv_${module})
-        list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
-        prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
-        prepend("-l" MEX_LIBS "opencv_${module}")
+set(MATLAB_DEPS ${OPENCV_MODULE_${the_module}_REQ_DEPS} ${OPENCV_MODULE_${the_module}_OPT_DEPS})
+foreach(opencv_module ${MATLAB_DEPS})
+    if (HAVE_${opencv_module})
+        string(REPLACE "opencv_" "" module ${opencv_module})
+        list(APPEND opencv_hdrs "${OPENCV_MODULE_${opencv_module}_LOCATION}/include/opencv2/${module}.hpp")
+        list(APPEND ${the_module}_ACTUAL_DEPS ${opencv_module})
+        prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_${opencv_module}_LOCATION}/include")
+        prepend("-l" MEX_LIBS ${opencv_module})
     endif()
 endforeach()
 
@@ -86,7 +87,7 @@ endforeach()
 #   - whether the mex compiler can compile a trivial definition
 if (NOT MEX_WORKS)
     # attempt to generate a gateway for a function
-    message("-- Trying to generate Matlab code")
+    message(STATUS "Trying to generate Matlab code")
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
         COMMAND ${PYTHON_EXECUTABLE} 
@@ -98,14 +99,14 @@ if (NOT MEX_WORKS)
 
     if (GEN_ERROR)
         message(${GEN_ERROR})
-        message("-- Error generating Matlab code. Disabling Matlab bindings...")
+        message(STATUS "Error generating Matlab code. Disabling Matlab bindings...")
         return()
     else()
-        message("-- Trying to generate Matlab code - OK")
+        message(STATUS "Trying to generate Matlab code - OK")
     endif()
 
     # attempt to compile a gateway using mex
-    message("-- Trying to compile mex file")
+    message(STATUS "Trying to compile mex file")
     execute_process(
         COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
                 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
@@ -116,10 +117,10 @@ if (NOT MEX_WORKS)
 
     if (MEX_ERROR)
         message(${MEX_ERROR})
-        message("-- Error compiling mex file. Disabling Matlab bindings...")
+        message(STATUS "Error compiling mex file. Disabling Matlab bindings...")
         return()
     else()
-        message("-- Trying to compile mex file - OK")
+        message(STATUS "Trying to compile mex file - OK")
     endif()
 endif()
 
@@ -168,7 +169,7 @@ add_custom_command(
 # opencv_matlab_sources --> opencv_matlab_compile
 add_custom_target(${the_module}_sources ALL DEPENDS ${GENERATE_PROXY})
 add_custom_target(${the_module} ALL DEPENDS ${COMPILE_PROXY})
-add_dependencies(${the_module} ${the_module}_sources)
+add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS})
 
 # ----------------------------------------------------------------------------
 #  Install time components
