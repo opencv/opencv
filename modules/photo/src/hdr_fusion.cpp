@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,48 +40,76 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_HPP__
-#define __OPENCV_PHOTO_HPP__
-
-#include "opencv2/core.hpp"
+#include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 
-/*! \namespace cv
- Namespace where all the C++ OpenCV functionality resides
- */
 namespace cv
 {
 
-//! the inpainting algorithm
-enum
+static void triangleWeights(float weights[])
 {
-    INPAINT_NS    = 0, // Navier-Stokes algorithm
-    INPAINT_TELEA = 1 // A. Telea algorithm
+	for(int i = 0; i < 128; i++) {
+		weights[i] = i + 1.0f;
+	}
+	for(int i = 128; i < 256; i++) {
+		weights[i] = 256.0f - i;
+	}
+}
+
+static void generateResponce(float responce[])
+{
+    for(int i = 0; i < 256; i++) {
+        responce[i] = log((float)i);
+    }
+    responce[0] = responce[1];
+}
+
+void makeHDR(InputArrayOfArrays _images, std::vector<float> exp_times, OutputArray _dst)
+{
+	std::vector<Mat> images;
+    _images.getMatVector(images);
+	if(images.empty()) {
+		printf("Need at least one vector image.");
+	}
+	if(images.size() != exp_times.size()) {
+		printf("Number of images and number of exposure times must be equal.");
+	}
+	int width = images[0].cols;
+	int height = images[0].rows;
+	for(size_t i = 0; i < images.size(); i++) {
+
+		if(images[i].cols != width || images[i].rows != height) {
+			printf("Image dimensions must be equal.");
+		}
+		if(images[i].type() != CV_8UC3) {
+			printf("Images must have CV_8UC3 type.");
+		}
+	}
+	_dst.create(images[0].size(), CV_32FC3);
+	Mat result = _dst.getMat();
+	float weights[256], responce[256];
+	triangleWeights(weights);
+	generateResponce(responce);
+
+	float *res_ptr = result.ptr<float>();
+	for(size_t pos = 0; pos < result.total(); pos++, res_ptr += 3) {
+
+		float sum[3] = {0, 0, 0};
+		float weight_sum = 0;
+		for(size_t im = 0; im < images.size(); im++) {
+
+			uchar *img_ptr = images[im].ptr() + 3 * pos;
+			float w = (weights[img_ptr[0]] + weights[img_ptr[1]] +
+				       weights[img_ptr[2]]) / 3;
+			weight_sum += w;
+			for(int channel = 0; channel < 3; channel++) {
+				sum[channel] += w * (responce[img_ptr[channel]] - log(exp_times[im]));
+			}
+		}
+		for(int channel = 0; channel < 3; channel++) {
+			res_ptr[channel] = exp(sum[channel] / weight_sum);
+		}
+	}
+}
+
 };
-
-//! restores the damaged image areas using one of the available intpainting algorithms
-CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
-                           OutputArray dst, double inpaintRadius, int flags );
-
-
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float h = 3,
-                                        int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
-                                               float h = 3, float hColor = 3,
-                                               int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                             int imgToDenoiseIndex, int temporalWindowSize,
-                                             float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                                    int imgToDenoiseIndex, int temporalWindowSize,
-                                                    float h = 3, float hColor = 3,
-                                                    int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, std::vector<float> expTimes, OutputArray dst);
-
-} // cv
-
-#endif

@@ -71,6 +71,7 @@ TiffDecoder::TiffDecoder()
         TIFFSetErrorHandler( GrFmtSilentTIFFErrorHandler );
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
+	m_hdr = false;
 }
 
 
@@ -133,6 +134,14 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+			if((bpp == 32 && ncn == 3) || photometric == PHOTOMETRIC_LOGLUV) 
+			{
+				m_type = CV_32FC3; 
+				m_hdr = true;
+				return true;
+			}
+			m_hdr = false;
+
             if( bpp > 8 &&
                ((photometric != 2 && photometric != 1) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
@@ -171,6 +180,10 @@ bool TiffDecoder::readHeader()
 
 bool  TiffDecoder::readData( Mat& img )
 {
+	if(m_hdr && img.type() == CV_32FC3) 
+	{
+		return readHdrData(img);
+	}
     bool result = false;
     bool color = img.channels() > 1;
     uchar* data = img.data;
@@ -380,6 +393,46 @@ bool  TiffDecoder::readData( Mat& img )
     return result;
 }
 
+bool TiffDecoder::readHdrData(Mat& img) 
+{
+	int rows_per_strip = 0, photometric = 0;
+	if(!m_tif) 
+	{
+		return false;
+	}
+	TIFF *tif = static_cast<TIFF*>(m_tif);
+	TIFFGetField(tif, TIFFTAG_ROWSPERSTRIP, &rows_per_strip);
+    TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
+	TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
+	int size = 3 * m_width * m_height * sizeof (float);
+	int strip_size = 3 * m_width * rows_per_strip;
+	float *ptr = img.ptr<float>();
+	for (size_t i = 0; i < TIFFNumberOfStrips(tif); i++, ptr += strip_size) 
+	{	
+		TIFFReadEncodedStrip(tif, i, ptr, size);
+		size -= strip_size * sizeof(float);
+	}
+	close();
+	ptr = img.ptr<float>();
+	for(size_t i = 0; i < img.total(); i++, ptr += 3) 
+	{
+		if(photometric == PHOTOMETRIC_LOGLUV) 
+		{
+			float r =  3.240479f * ptr[0] + -1.537150f * ptr[1] + -0.498535f * ptr[2];
+			float g = -0.969256f * ptr[0] +  1.875991f * ptr[1] +  0.041556f * ptr[2];
+			float b =  0.055648f * ptr[0] + -0.204043f * ptr[1] +  1.057311f * ptr[2];
+			ptr[0] = b; ptr[1] = g; ptr[2] = r;
+		} 
+		else 
+		{
+			float tmp = ptr[0];
+			ptr[0] = ptr[2];
+			ptr[2] = tmp;
+		}
+	}
+	return true;
+}
+
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -405,7 +458,11 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
-    return depth == CV_8U || depth == CV_16U;
+#ifdef HAVE_TIFF
+    return depth == CV_8U || depth == CV_16U || depth == CV_32F;
+#else 
+	return depth == CV_8U || depth == CV_16U;
+#endif
 }
 
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
@@ -557,6 +614,39 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
     return true;
 }
 
+bool TiffEncoder::writeHdr(const Mat& img)
+{
+	float *ptr = const_cast<float*>(img.ptr<float>());
+	for(size_t i = 0; i < img.total(); i++, ptr += 3) 
+	{
+		float x = 0.412453f * ptr[2] + 0.357580f * ptr[1] + 0.180423f * ptr[0];
+		float y = 0.212671f * ptr[2] + 0.715160f * ptr[1] + 0.072169f * ptr[0];
+		float z = 0.019334f * ptr[2] + 0.119193f * ptr[1] + 0.950227f * ptr[0];
+		ptr[0] = x; ptr[1] = y; ptr[2] = z;
+	}
+	TIFF* tif = TIFFOpen(m_filename.c_str(), "w");
+    if (!tif) 
+	{
+        return false;
+    }
+	TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, img.cols);
+	TIFFSetField(tif, TIFFTAG_IMAGELENGTH, img.rows);
+	TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3);
+	TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_SGILOG);
+	TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_LOGLUV);
+	TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+	TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
+	TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1);	
+	int strip_size = 3 * img.cols;
+	ptr = const_cast<float*>(img.ptr<float>());
+	for (int i = 0; i < img.rows; i++, ptr += strip_size) 
+	{
+		TIFFWriteEncodedStrip(tif, i, ptr, strip_size * sizeof(float));
+	}
+	TIFFClose(tif);
+	return true;
+}
+
 #endif
 
 #ifdef HAVE_TIFF
@@ -568,6 +658,12 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     int channels = img.channels();
     int width = img.cols, height = img.rows;
     int depth = img.depth();
+#ifdef HAVE_TIFF
+    if(img.type() == CV_32FC3) 
+	{
+		return writeHdr(img);
+	}
+#endif
 
     if (depth != CV_8U && depth != CV_16U)
         return false;

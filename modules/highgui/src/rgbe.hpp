@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,48 +40,53 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_HPP__
-#define __OPENCV_PHOTO_HPP__
+#ifndef _RGBE_HDR_H_
+#define _RGBE_HDR_H_
 
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
+// posted to http://www.graphics.cornell.edu/~bjw/
+// written by Bruce Walter  (bjw@graphics.cornell.edu)  5/26/95
+// based on code written by Greg Ward
 
-/*! \namespace cv
- Namespace where all the C++ OpenCV functionality resides
- */
-namespace cv
-{
+#include <stdio.h>
 
-//! the inpainting algorithm
-enum
-{
-    INPAINT_NS    = 0, // Navier-Stokes algorithm
-    INPAINT_TELEA = 1 // A. Telea algorithm
-};
+typedef struct {
+  int valid;            /* indicate which fields are valid */
+  char programtype[16]; /* listed at beginning of file to identify it 
+                         * after "#?".  defaults to "RGBE" */ 
+  float gamma;          /* image has already been gamma corrected with 
+                         * given gamma.  defaults to 1.0 (no correction) */
+  float exposure;       /* a value of 1.0 in an image corresponds to
+			 * <exposure> watts/steradian/m^2. 
+			 * defaults to 1.0 */
+} rgbe_header_info;
 
-//! restores the damaged image areas using one of the available intpainting algorithms
-CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
-                           OutputArray dst, double inpaintRadius, int flags );
+/* flags indicating which fields in an rgbe_header_info are valid */
+#define RGBE_VALID_PROGRAMTYPE 0x01
+#define RGBE_VALID_GAMMA       0x02
+#define RGBE_VALID_EXPOSURE    0x04
+
+/* return codes for rgbe routines */
+#define RGBE_RETURN_SUCCESS 0
+#define RGBE_RETURN_FAILURE -1
+
+/* read or write headers */
+/* you may set rgbe_header_info to null if you want to */
+int RGBE_WriteHeader(FILE *fp, int width, int height, rgbe_header_info *info);
+int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info);
+
+/* read or write pixels */
+/* can read or write pixels in chunks of any size including single pixels*/
+int RGBE_WritePixels(FILE *fp, float *data, int numpixels);
+int RGBE_ReadPixels(FILE *fp, float *data, int numpixels);
+
+/* read or write run length encoded files */
+/* must be called to read or write whole scanlines */
+int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
+			 int num_scanlines);
+int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
+			int num_scanlines);
+
+#endif/*_RGBE_HDR_H_*/
 
 
-CV_EXPORTS_W void fastNlMeansDenoising( InputArray src, OutputArray dst, float h = 3,
-                                        int templateWindowSize = 7, int searchWindowSize = 21);
 
-CV_EXPORTS_W void fastNlMeansDenoisingColored( InputArray src, OutputArray dst,
-                                               float h = 3, float hColor = 3,
-                                               int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                             int imgToDenoiseIndex, int temporalWindowSize,
-                                             float h = 3, int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst,
-                                                    int imgToDenoiseIndex, int temporalWindowSize,
-                                                    float h = 3, float hColor = 3,
-                                                    int templateWindowSize = 7, int searchWindowSize = 21);
-
-CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, std::vector<float> expTimes, OutputArray dst);
-
-} // cv
-
-#endif
