@@ -181,7 +181,7 @@ add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS
 file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.${MATLAB_MEXEXT}")
 file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
 file(GLOB MATLAB_PRIVATE   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.${MATLAB_MEXEXT}")
-install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/src/
+install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/
         DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
         FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
 )
@@ -189,7 +189,7 @@ install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/
         DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
         FILES_MATCHING PATTERN "*.m"
 )
-install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/src/private/
+install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/private/
         DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv/private
         FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
 )

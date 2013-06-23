@@ -11,7 +11,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     execute_process(
         COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS_LIST} 
                 ${MEX_LIB_DIR} ${MEX_LIBS} ${SOURCE_FILE}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/+cv
         ERROR_VARIABLE FAILED
     )
     # TODO: If a mex file fails to cmpile, should we error out?
