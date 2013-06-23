@@ -77,52 +77,68 @@ foreach(module ${OPENCV_MATLAB_MODULES})
     endif()
 endforeach()
 
-# attempt to generate a gateway for a function
-message("-- Trying to generate Matlab code")
-execute_process(
-    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
-    COMMAND ${PYTHON_EXECUTABLE} 
-            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
-            ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
-    ERROR_VARIABLE GEN_ERROR
-    OUTPUT_QUIET 
-)
+# Configure checks
+# Check to see whether the generator and the mex compiler are working.
+# The checks currently test:
+#   - whether the python generator can be found
+#   - whether the python generator correctly outputs a file for a definition
+#   - whether the mex compiler can find the required headers
+#   - whether the mex compiler can compile a trivial definition
+if (NOT MEX_WORKS)
+    # attempt to generate a gateway for a function
+    message("-- Trying to generate Matlab code")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
+        COMMAND ${PYTHON_EXECUTABLE} 
+                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
+                ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
+        ERROR_VARIABLE GEN_ERROR
+        OUTPUT_QUIET 
+    )
 
-if (GEN_ERROR)
-    message(${GEN_ERROR})
-    message("-- Error generating Matlab code. Disabling Matlab bindings...")
-    return()
-else()
-    message("-- Trying to generate Matlab code - OK")
-endif()
+    if (GEN_ERROR)
+        message(${GEN_ERROR})
+        message("-- Error generating Matlab code. Disabling Matlab bindings...")
+        return()
+    else()
+        message("-- Trying to generate Matlab code - OK")
+    endif()
 
-# attempt to compile a gateway using mex
-message("-- Trying to compile mex file")
-execute_process(
-    COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
-            ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
-    ERROR_VARIABLE MEX_ERROR
-    OUTPUT_QUIET
-)
+    # attempt to compile a gateway using mex
+    message("-- Trying to compile mex file")
+    execute_process(
+        COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
+                ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
+        ERROR_VARIABLE MEX_ERROR
+        OUTPUT_QUIET
+    )
 
-if (MEX_ERROR)
-    message(${MEX_ERROR})
-    message("-- Error compiling mex file. Disabling Matlab bindings...")
-    return()
-else()
-    message("-- Trying to compile mex file - OK")
+    if (MEX_ERROR)
+        message(${MEX_ERROR})
+        message("-- Error compiling mex file. Disabling Matlab bindings...")
+        return()
+    else()
+        message("-- Trying to compile mex file - OK")
+    endif()
 endif()
 
 # if we make it here, mex works!
 set_property(GLOBAL PROPERTY MEX_WORKS TRUE)
+set(MEX_WORKS True CACHE BOOL ADVANCED)
 
 # ----------------------------------------------------------------------------
 #  Build time components
 # ----------------------------------------------------------------------------
+
+# proxies
+# these proxies are used to trigger the add_custom_commands
+# (which do the real work) only when they're outdated
 set(GENERATE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/generate.proxy)
 set(COMPILE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/compile.proxy)
 
+# generate
+# call the python executable to generate the Matlab gateways
 add_custom_command(
     OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE} 
@@ -132,6 +148,10 @@ add_custom_command(
     COMMENT "Generating matlab source files"
 )
 
+# compile
+# call the mex compiler to compile the gateways
+# because we don't know the source files at configure-time, this
+# has to be executed in a separate script in cmake's script processing mode
 add_custom_command(
     OUTPUT ${COMPILE_PROXY}
     COMMAND ${CMAKE_COMMAND} -DMATLAB_MEX_SCRIPT=${MATLAB_MEX_SCRIPT}
@@ -144,6 +164,8 @@ add_custom_command(
     COMMENT "Compiling Matlab source files. This could take a while..."
 )
 
+# targets
+# opencv_matlab_sources --> opencv_matlab_compile
 add_custom_target(${the_module}_sources ALL DEPENDS ${GENERATE_PROXY})
 add_custom_target(${the_module} ALL DEPENDS ${COMPILE_PROXY})
 add_dependencies(${the_module} ${the_module}_sources)
