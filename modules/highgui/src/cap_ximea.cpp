@@ -58,58 +58,71 @@ void CvCaptureCAM_XIMEA::init()
 
 /**********************************************************************************/
 // Initialize camera input
-bool CvCaptureCAM_XIMEA::open( int wIndex )
+bool CvCaptureCAM_XIMEA::open(int wIndex)
 {
+    bool res = true;
     int mvret = XI_OK;
 
-    if(numDevices == 0)
-        return false;
-
-    if((mvret = xiOpenDevice( wIndex, &hmv)) != XI_OK)
+    if(0 == numDevices)
     {
+      res = false;
+    }
+    else if(XI_OK != (mvret = xiOpenDevice(wIndex, &hmv)))
+    {
+      errMsg("Open XI_DEVICE failed", mvret);
+      res = false;
+    }
+    else
+    {
+      int width = 0;
+      int height = 0;
+      
+      // always use auto exposure/gain
+      if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AEAG, 1)))
+      {
+        res = false;
+      }
+      // always use auto white ballance
+      else if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_AUTO_WB, 1)))
+      {
+        res = false;
+      }
+      // default image format RGB24
+      else if(XI_OK != (mvret = xiSetParamInt(hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24)))
+      {
+        res = false;
+      }
+      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_WIDTH, &width)))
+      {
+        res = false;
+      }
+      else if(XI_OK != (mvret = xiGetParamInt(hmv, XI_PRM_HEIGHT, &height)))
+      {
+        res = false;
+      }
+      else
+      {
+        // allocate frame buffer for RGB24 image
+        frame = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+
+        //default capture timeout 10s
+        timeout = 10000;
+
+        if(XI_OK != (mvret = xiStartAcquisition(hmv)))
+        {
+          errMsg("StartAcquisition XI_DEVICE failed", mvret);
+          res = false;
+        }
+      }
+      
+      if(false == res)
+      {
         errMsg("Open XI_DEVICE failed", mvret);
-        return false;
+        xiCloseDevice(hmv);
+        hmv = NULL;
+      }
     }
-
-    // always use auto exposure/gain
-    mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
-    if(mvret != XI_OK) goto error;
-
-    // always use auto white ballance
-    mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
-    if(mvret != XI_OK) goto error;
-    
-    // default image format RGB24
-    mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
-    if(mvret != XI_OK) goto error;
-
-    int width = 0;
-    mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
-    if(mvret != XI_OK) goto error;
-
-    int height = 0;
-    mvret = xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
-    if(mvret != XI_OK) goto error;
-
-    // allocate frame buffer for RGB24 image
-    frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
-
-    //default capture timeout 10s
-    timeout = 10000;
-
-    mvret = xiStartAcquisition(hmv);
-    if(mvret != XI_OK)
-    {
-        errMsg("StartAcquisition XI_DEVICE failed", mvret);
-        goto error;
-    }
-    return true;
-
-error:
-    errMsg("Open XI_DEVICE failed", mvret);
-    xiCloseDevice(hmv);
-    hmv = NULL;
-    return false;
+    return res;
 }
 
 /**********************************************************************************/
