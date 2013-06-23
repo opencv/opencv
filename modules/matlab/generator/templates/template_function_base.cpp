@@ -42,8 +42,10 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
   {{ functional.generate(fun) }}
 
+  {%- if noutputs %}
   // push the outputs back to matlab
   for (size_t n = 0; n < nlhs; ++n) {
-    plhs[n] = outputs[n].mxArray();
+    plhs[n] = outputs[n].toMxArray();
   }
+  {% endif %}
 }

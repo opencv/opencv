@@ -56,6 +56,10 @@ prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
 set(MEX_OPTS "-largeArrayDims")
 
+if (ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(${the_module} PROPERTIES FOLDER "Matlab bindings")
+endif()
+
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif()
@@ -63,11 +67,23 @@ endif()
 # ----------------------------------------------------------------------------
 #  Configure time components
 # ----------------------------------------------------------------------------
+string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};
+                                                   ${OPENCV_MODULE_${the_module}_OPT_DEPS}")
+foreach(module ${OPENCV_MATLAB_MODULES})
+    if (HAVE_opencv_${module})
+        list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
+        prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
+        prepend("-l" MEX_LIBS "opencv_${module}")
+    endif()
+endforeach()
+
+# attempt to generate a gateway for a function
 message("-- Trying to generate Matlab code")
 execute_process(
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
     COMMAND ${PYTHON_EXECUTABLE} 
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
-            ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_CURRENT_BINARY_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
     ERROR_VARIABLE GEN_ERROR
     OUTPUT_QUIET 
 )
@@ -80,12 +96,12 @@ else()
     message("-- Trying to generate Matlab code - OK")
 endif()
 
-# attempt to compile the file using mex
+# attempt to compile a gateway using mex
 message("-- Trying to compile mex file")
 execute_process(
     COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
             ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
     ERROR_VARIABLE MEX_ERROR
     OUTPUT_QUIET
 )
@@ -104,36 +120,39 @@ set_property(GLOBAL PROPERTY MEX_WORKS TRUE)
 # ----------------------------------------------------------------------------
 #  Build time components
 # ----------------------------------------------------------------------------
-string(REPLACE "opencv_" "" OPENCV_MATLAB_MODULES "${OPENCV_MODULE_${the_module}_REQ_DEPS};
-                                                   ${OPENCV_MODULE_${the_module}_OPT_DEPS}")
-foreach(module ${OPENCV_MATLAB_MODULES})
-    if (HAVE_opencv_${module})
-        list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_${module}_LOCATION}/include/opencv2/${module}.hpp")
-        prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_opencv_${module}_LOCATION}/include")
-        prepend("-l" MEX_LIBS "opencv_${module}")
-    endif()
-endforeach()
+set(GENERATE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/generate.proxy)
+set(COMPILE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/compile.proxy)
 
-# synthesise the matlab sources
-add_custom_target(opencv_matlab_sources
+add_custom_command(
+    OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE} 
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
             ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
+    COMMENT "Generating matlab source files"
 )
 
-# compile the matlab sources to mex
-add_custom_target(opencv_matlab ALL DEPENDS opencv_matlab_sources)
-file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
-foreach(SOURCE_FILE ${SOURCE_FILES})
-  get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
-  # compile the source file using mex
-  add_custom_command(TARGET opencv_matlab PRE_BUILD
-      COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
-              ${MEX_LIB_DIR} ${MEX_LIBS} ${SOURCE_FILE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/src
-  )
-endforeach()
+add_custom_command(
+    OUTPUT ${COMPILE_PROXY}
+    COMMAND ${CMAKE_COMMAND} -DMATLAB_MEX_SCRIPT=${MATLAB_MEX_SCRIPT}
+                             -DMEX_OPTS=${MEX_OPTS}
+                             -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
+                             -DMEX_LIB_DIR=${MEX_LIB_DIR}
+                             -DMEX_LIBS="${MEX_LIBS}"
+                             -P ${CMAKE_CURRENT_SOURCE_DIR}/compile.cmake
+    COMMAND ${CMAKE_COMMAND} -E touch ${COMPILE_PROXY}
+    COMMENT "Compiling Matlab source files. This could take a while..."
+)
+
+add_custom_target(${the_module}_sources ALL DEPENDS ${GENERATE_PROXY})
+add_custom_target(${the_module} ALL DEPENDS ${COMPILE_PROXY})
+add_dependencies(${the_module} ${the_module}_sources)
 
 # ----------------------------------------------------------------------------
 #  Install time components
 # ----------------------------------------------------------------------------
+file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.mex*")
+file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.mex*" "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
+install(FILES ${MATLAB_FUNCTIONS} ${MATLAB_CLASSES}
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv 
+)

@@ -8,7 +8,7 @@
 {% macro compose(fun) %}
   {# ----------- Return type ------------- #}
   {%- if not fun.rtp|void -%} retval = {% endif -%}
-  {%- if fun.clss -%}inst.{%- else -%} cv:: {% endif -%}
+  {%- if fun.clss -%}inst.{%- else -%} cv:: {%- endif -%}
   {{fun.name}}(
   {#- ----------- Required ------------- -#}
   {%- for arg in fun.req -%} 
@@ -32,10 +32,10 @@
   // unpack the arguments
   {# ----------- Inputs ------------- #}
   {% for arg in fun.req|inputs %}
-  {{arg.tp}} {{arg.name}} = inputs[{{ loop.index0 }}];
+  {{arg.tp}} {{arg.name}} = inputs[{{ loop.index0 }}].to{{arg.tp|toUpperCamelCase}}();
   {% endfor %}
   {% for opt in fun.opt|inputs %}
-  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|inputs|length}}) ? ({{opt.tp}})inputs[{{loop.index0 + fun.req|inputs|length}}] : {{opt.default}};
+  {{opt.tp}} {{opt.name}} = (nrhs > {{loop.index0 + fun.req|inputs|length}}) ? inputs[{{loop.index0 + fun.req|inputs|length}}].to{{opt.tp|toUpperCamelCase}}() : {% if opt.ref == '*' -%} {{opt.tp}}() {%- else -%} {{opt.default}} {%- endif %};
   {% endfor %}
   {# ----------- Outputs ------------ #}
   {% for arg in fun.req|only|outputs %}

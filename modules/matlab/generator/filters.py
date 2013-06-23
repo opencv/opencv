@@ -43,12 +43,15 @@ def noutputs(args):
     '''Counts the number of output arguments in the input list'''
     return len(outputs(args))
 
-
-def toUpperCamelCase(text):
+def capitalizeFirst(text):
     return text[0].upper() + text[1:]
 
+def toUpperCamelCase(text):
+    return ''.join([capitalizeFirst(word) for word in text.split('_')])
+
 def toLowerCamelCase(text):
-    return text[0].lower() + text[1:]
+    upper_camel = toUpperCamelCase(test)
+    return upper_camel[0].lower() + upper_camel[1:]
 
 def toUnderCase(text):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
