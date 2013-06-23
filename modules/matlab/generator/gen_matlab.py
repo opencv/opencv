@@ -1,12 +1,5 @@
 #/usr/bin/env python
 
-import sys, re, os, time
-from string import Template
-from hdr_parser import CppHeaderParser
-from parse_tree import ParseTree, todict
-from filters import *
-from jinja2 import Environment, PackageLoader
-
 class MatlabWrapperGenerator(object):
 
     def gen(self, input_files, output_dir):
@@ -74,3 +67,24 @@ class MatlabWrapperGenerator(object):
                 populated = tclassm.render(clss=clss, time=time)
                 with open(output_class_dir+'/'+clss.name+'.m', 'wb') as f:
                     f.write(populated)
+
+
+
+if __name__ == "__main__":
+    
+    # add the hdr_parser to the path
+    import sys, re, os, time
+    sys.path.append(sys.argv[1])
+    from string import Template
+    from hdr_parser import CppHeaderParser
+    from parse_tree import ParseTree, todict
+    from filters import *
+    from jinja2 import Environment, PackageLoader
+
+    # get the IO from the command line arguments
+    input_files = sys.argv[2:-1]
+    output_dir  = sys.argv[-1]
+
+    # create the generator
+    mwg = MatlabWrapperGenerator()
+    mwg.gen(input_files, output_dir)

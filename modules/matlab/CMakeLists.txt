@@ -40,10 +40,10 @@ if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
     return()
 endif()
 
-# TODO: matlab bindings should depend on python (maybe)
 set(the_description "The Matlab/Octave bindings")
-ocv_add_module(matlab   BINDINGS opencv_core #TODO: does it actually NEED to depend on core?
-                        OPTIONAL opencv_objdetect opencv_features2d opencv_video
+ocv_add_module(matlab   BINDINGS #TODO: does it actually NEED to depend on core?
+                        OPTIONAL opencv_core
+                                 opencv_objdetect opencv_features2d opencv_video
                                  opencv_highgui opencv_ml opencv_calib3d opencv_photo
                                  opencv_nonfree opencv_calib opencv_imgproc)
 
@@ -54,6 +54,7 @@ set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
+prepend("-l" MEX_LIBS opencv_core)
 set(MEX_OPTS "-largeArrayDims")
 
 if (ENABLE_SOLUTION_FOLDERS)
@@ -74,7 +75,9 @@ foreach(opencv_module ${MATLAB_DEPS})
         list(APPEND opencv_hdrs "${OPENCV_MODULE_${opencv_module}_LOCATION}/include/opencv2/${module}.hpp")
         list(APPEND ${the_module}_ACTUAL_DEPS ${opencv_module})
         prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_${opencv_module}_LOCATION}/include")
-        prepend("-l" MEX_LIBS ${opencv_module})
+        if (NOT ${module} STREQUAL "core")
+            prepend("-l" MEX_LIBS ${opencv_module})
+        endif()
     endif()
 endforeach()
 
@@ -91,7 +94,7 @@ if (NOT MEX_WORKS)
     execute_process(
         COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
         COMMAND ${PYTHON_EXECUTABLE} 
-                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
+                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
                 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE GEN_ERROR
         OUTPUT_QUIET 
@@ -143,7 +146,7 @@ set(COMPILE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/compile.proxy)
 add_custom_command(
     OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE} 
-            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab_caller.py ${HDR_PARSER_PATH}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
             ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
     COMMENT "Generating matlab source files"
@@ -166,7 +169,7 @@ add_custom_command(
 )
 
 # targets
-# opencv_matlab_sources --> opencv_matlab_compile
+# opencv_matlab_sources --> opencv_matlab
 add_custom_target(${the_module}_sources ALL DEPENDS ${GENERATE_PROXY})
 add_custom_target(${the_module} ALL DEPENDS ${COMPILE_PROXY})
 add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS})
@@ -174,8 +177,19 @@ add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS
 # ----------------------------------------------------------------------------
 #  Install time components
 # ----------------------------------------------------------------------------
-file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.mex*")
-file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.mex*" "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
-install(FILES ${MATLAB_FUNCTIONS} ${MATLAB_CLASSES}
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv 
+# NOTE: Trailing slashes on the DIRECTORY paths are important!
+file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.${MATLAB_MEXEXT}")
+file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
+file(GLOB MATLAB_PRIVATE   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.${MATLAB_MEXEXT}")
+install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/src/
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
+        FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
+)
+install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
+        FILES_MATCHING PATTERN "*.m"
+)
+install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/src/private/
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv/private
+        FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
 )
