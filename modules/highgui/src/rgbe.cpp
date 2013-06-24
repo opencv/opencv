@@ -56,8 +56,8 @@
 // feel free to modify it to suit your needs.
 
 // Some opencv specific changes have been added:
-// inline define specified, channel order changed (to ger bgr by default),
-// error handler uses CV_Error.
+// inline define specified, error handler uses CV_Error,
+// defines changed to work in bgr color space.
 //
 // posted to http://www.graphics.cornell.edu/~bjw/
 // written by Bruce Walter  (bjw@graphics.cornell.edu)  5/26/95
@@ -380,7 +380,7 @@ int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
     }
     if ((rgbe[0] != 2)||(rgbe[1] != 2)||(rgbe[2] & 0x80)) {
       /* this file is not run length encoded */
-      rgbe2float(&data[0],&data[1],&data[2],rgbe);
+      rgbe2float(&data[RGBE_DATA_RED],&data[RGBE_DATA_GREEN],&data[RGBE_DATA_BLUE],rgbe);
       data += RGBE_DATA_SIZE;
       free(scanline_buffer);
       return RGBE_ReadPixels(fp,data,scanline_width*num_scanlines-1);

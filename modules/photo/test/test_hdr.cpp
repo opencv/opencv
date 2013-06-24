@@ -40,81 +40,39 @@
 //
 //M*/
 
-#include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
+#include "test_precomp.hpp"
+#include <string>
+#include <algorithm>
 
-namespace cv
-{
+using namespace cv;
+using namespace std;
 
-static void triangleWeights(float weights[])
+TEST(Photo_MakeHdr, regression)
 {
-	for(int i = 0; i < 128; i++) {
-		weights[i] = i + 1.0f;
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	
+	vector<string>file_names(3);
+	file_names[0] = folder + "grand_canal_1_45.jpg";
+	file_names[1] = folder + "grand_canal_1_180.jpg";
+	file_names[2] = folder + "grand_canal_1_750.jpg";
+	vector<Mat>images(3);
+	for(int i = 0; i < 3; i++) {
+		images[i] = imread(file_names[i]);
+		ASSERT_FALSE(images[i].empty()) << "Could not load input image " << file_names[i];
 	}
-	for(int i = 128; i < 256; i++) {
-		weights[i] = 256.0f - i;
-	}
+	
+	string expected_path = folder + "grand_canal_rle.hdr";
+	Mat expected = imread(expected_path, -1);
+	ASSERT_FALSE(expected.empty()) << "Could not load input image " << expected_path;
+
+	vector<float>times(3);
+	times[0] = 1.0f/45.0f;
+	times[1] = 1.0f/180.0f;
+	times[2] = 1.0f/750.0f;
+	
+	Mat result;
+	makeHDR(images, times, result);
+	double min = 0.0, max = 1.0;
+	minMaxLoc(abs(result - expected), &min, &max);
+	ASSERT_TRUE(max < 0.01);
 }
-
-static void generateResponce(float responce[])
-{
-    for(int i = 0; i < 256; i++) {
-        responce[i] = log((float)i);
-    }
-    responce[0] = responce[1];
-}
-
-void makeHDR(InputArrayOfArrays _images, std::vector<float> exp_times, OutputArray _dst)
-{
-	std::vector<Mat> images;
-    _images.getMatVector(images);
-	if(images.empty()) {
-		printf("Need at least one vector image.");
-	}
-	if(images.size() != exp_times.size()) {
-		printf("Number of images and number of exposure times must be equal.");
-	}
-	int width = images[0].cols;
-	int height = images[0].rows;
-	for(size_t i = 0; i < images.size(); i++) {
-
-		if(images[i].cols != width || images[i].rows != height) {
-			printf("Image dimensions must be equal.");
-		}
-		if(images[i].type() != CV_8UC3) {
-			printf("Images must have CV_8UC3 type.");
-		}
-	}
-	_dst.create(images[0].size(), CV_32FC3);
-	Mat result = _dst.getMat();
-	float weights[256], responce[256];
-	triangleWeights(weights);
-	generateResponce(responce);
-
-	float max = 0;
-	float *res_ptr = result.ptr<float>();
-	for(size_t pos = 0; pos < result.total(); pos++, res_ptr += 3) {
-
-		float sum[3] = {0, 0, 0};
-		float weight_sum = 0;
-		for(size_t im = 0; im < images.size(); im++) {
-
-			uchar *img_ptr = images[im].ptr() + 3 * pos;
-			float w = (weights[img_ptr[0]] + weights[img_ptr[1]] +
-				       weights[img_ptr[2]]) / 3;
-			weight_sum += w;
-			for(int channel = 0; channel < 3; channel++) {
-				sum[channel] += w * (responce[img_ptr[channel]] - log(exp_times[im]));
-			}
-		}
-		for(int channel = 0; channel < 3; channel++) {
-			res_ptr[channel] = exp(sum[channel] / weight_sum);
-			if(res_ptr[channel] > max) {
-				max = res_ptr[channel];
-			}
-		}
-	}
-	result = result / max;
-}
-
-};

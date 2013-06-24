@@ -406,3 +406,28 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
 }
 
 #endif
+
+TEST(Highgui_hdr, regression)
+{
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "../cv/hdr/";
+	string name_rle = folder + "grand_canal_rle.hdr";
+	string name_no_rle = folder + "grand_canal_no_rle.hdr";
+	Mat img_rle = imread(name_rle, -1);
+	ASSERT_FALSE(img_rle.empty()) << "Could not open " << name_rle;
+	Mat img_no_rle = imread(name_no_rle, -1);
+	ASSERT_FALSE(img_no_rle.empty()) << "Could not open " << name_no_rle;
+
+	double min = 0.0, max = 1.0;
+	minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
+	ASSERT_FALSE(max > 0);
+	string tmp_file_name = tempfile(".hdr");
+	vector<int>param(1); 
+	for(int i = 0; i < 2; i++) {
+		param[0] = i;
+		imwrite(tmp_file_name, img_rle, param);
+		Mat written_img = imread(tmp_file_name, -1);
+		ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
+		minMaxLoc(abs(img_rle - written_img), &min, &max);
+		ASSERT_FALSE(max > 0);
+	}
+}
