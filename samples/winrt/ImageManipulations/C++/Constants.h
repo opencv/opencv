@@ -26,7 +26,7 @@ namespace SDKSample
         {
             Platform::String^ get()
             {
-                return ref new Platform::String(L"MediaCapture CPP sample");
+                return ref new Platform::String(L"OpenCV Image Manipulations sample");
             }
         }
 

@@ -40,9 +40,7 @@
     <Page Include="Sample-Utils\SampleTemplateStyles.xaml">
       <Filter>Sample-Utils</Filter>
     </Page>
-    <Page Include="BasicCapture.xaml" />
     <Page Include="AdvancedCapture.xaml" />
-    <Page Include="AudioCapture.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MainPage.xaml.h" />
@@ -56,8 +54,6 @@
     </ClInclude>
     <ClInclude Include="Constants.h" />
     <ClInclude Include="AdvancedCapture.xaml.h" />
-    <ClInclude Include="AudioCapture.xaml.h" />
-    <ClInclude Include="BasicCapture.xaml.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.xaml.cpp" />
@@ -71,8 +67,6 @@
     </ClCompile>
     <ClCompile Include="Constants.cpp" />
     <ClCompile Include="AdvancedCapture.xaml.cpp" />
-    <ClCompile Include="AudioCapture.xaml.cpp" />
-    <ClCompile Include="BasicCapture.xaml.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
@@ -84,5 +78,24 @@
     <Filter Include="Sample-Utils">
       <UniqueIdentifier>{54f287f8-e4cb-4f47-97d0-4c469de6992e}</UniqueIdentifier>
     </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\build\install\bin\opencv_calib3d245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_contrib245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_core245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_features2d245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_flann245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_highgui245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_imgproc245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_legacy245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_ml245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_nonfree245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_objdetect245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_photo245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_stitching245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_superres245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_ts245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_video245.dll" />
+    <None Include="..\..\..\..\build\install\bin\opencv_videostab245.dll" />
   </ItemGroup>
 </Project>

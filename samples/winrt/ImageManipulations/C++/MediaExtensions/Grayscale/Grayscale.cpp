@@ -8,6 +8,9 @@
 #include "Grayscale.h"
 #include "bufferlock.h"
 
+#include "opencv2\core\core.hpp"
+#include "opencv2\imgproc\imgproc.hpp"
+
 #pragma comment(lib, "d2d1")
 
 using namespace Microsoft::WRL;
@@ -80,16 +83,12 @@ NOTES ON THE MFT IMPLEMENTATION
 
 
 // Video FOURCC codes.
-const DWORD FOURCC_YUY2 = '2YUY'; 
-const DWORD FOURCC_UYVY = 'YVYU'; 
 const DWORD FOURCC_NV12 = '21VN'; 
 
 // Static array of media types (preferred and accepted).
 const GUID g_MediaSubtypes[] =
 {
-    MFVideoFormat_NV12,
-    MFVideoFormat_YUY2,
-    MFVideoFormat_UYVY
+    MFVideoFormat_NV12
 };
 
 HRESULT GetImageSize(DWORD fcc, UINT32 width, UINT32 height, DWORD* pcbImage);
@@ -100,27 +99,6 @@ template <typename T>
 inline T clamp(const T& val, const T& minVal, const T& maxVal)
 {
     return (val < minVal ? minVal : (val > maxVal ? maxVal : val));
-}
-
-
-// TransformChroma:
-// Apply the transforms to calculate the output chroma values.
-
-void TransformChroma(const D2D1::Matrix3x2F& mat, BYTE *pu, BYTE *pv)
-{
-    // Normalize the chroma values to [-112, 112] range
-
-    D2D1_POINT_2F pt = { static_cast<float>(*pu) - 128, static_cast<float>(*pv) - 128 };
-
-    pt = mat.TransformPoint(pt);
-
-    // Clamp to valid range.
-    clamp(pt.x, -112.0f, 112.0f);
-    clamp(pt.y, -112.0f, 112.0f);
-
-    // Map back to [16...240] range.
-    *pu = static_cast<BYTE>(pt.x + 128.0f);
-    *pv = static_cast<BYTE>(pt.y + 128.0f);
 }
 
 //-------------------------------------------------------------------
@@ -140,144 +118,6 @@ void TransformChroma(const D2D1::Matrix3x2F& mat, BYTE *pu, BYTE *pv)
 // dwWidthInPixels   Frame width in pixels.
 // dwHeightInPixels  Frame height, in pixels.
 //-------------------------------------------------------------------
-
-// Convert UYVY image.
-
-void TransformImage_UYVY(
-    const D2D1::Matrix3x2F& mat,
-    const D2D_RECT_U& rcDest,
-    _Inout_updates_(_Inexpressible_(lDestStride * dwHeightInPixels)) BYTE *pDest, 
-    _In_ LONG lDestStride, 
-    _In_reads_(_Inexpressible_(lSrcStride * dwHeightInPixels)) const BYTE* pSrc,
-    _In_ LONG lSrcStride, 
-    _In_ DWORD dwWidthInPixels, 
-    _In_ DWORD dwHeightInPixels)
-{
-    DWORD y = 0;
-    const DWORD y0 = min(rcDest.bottom, dwHeightInPixels);
-
-    // Lines above the destination rectangle.
-    for ( ; y < rcDest.top; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels * 2);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-
-    // Lines within the destination rectangle.
-    for ( ; y < y0; y++)
-    {
-        WORD *pSrc_Pixel = (WORD*)pSrc;
-        WORD *pDest_Pixel = (WORD*)pDest;
-
-        for (DWORD x = 0; (x + 1) < dwWidthInPixels; x += 2)
-        {
-            // Byte order is U0 Y0 V0 Y1
-            // Each WORD is a byte pair (U/V, Y)
-            // Windows is little-endian so the order appears reversed.
-
-            if (x >= rcDest.left && x < rcDest.right)
-            {
-                BYTE u = pSrc_Pixel[x] & 0x00FF;
-                BYTE v = pSrc_Pixel[x+1] & 0x00FF;
-
-                TransformChroma(mat, &u, &v);
-
-                pDest_Pixel[x] = (pSrc_Pixel[x] & 0xFF00) | u;
-                pDest_Pixel[x+1] = (pSrc_Pixel[x+1] & 0xFF00) | v;
-            }
-            else
-            {
-#pragma warning(push)
-#pragma warning(disable: 6385) 
-#pragma warning(disable: 6386) 
-                pDest_Pixel[x] = pSrc_Pixel[x];
-                pDest_Pixel[x+1] = pSrc_Pixel[x+1];
-#pragma warning(pop)
-            }
-        }
-
-        pDest += lDestStride;
-        pSrc += lSrcStride;
-    }
-
-    // Lines below the destination rectangle.
-    for ( ; y < dwHeightInPixels; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels * 2);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-}
-
-
-// Convert YUY2 image.
-
-void TransformImage_YUY2(
-    const D2D1::Matrix3x2F& mat,
-    const D2D_RECT_U& rcDest,
-    _Inout_updates_(_Inexpressible_(lDestStride * dwHeightInPixels)) BYTE *pDest, 
-    _In_ LONG lDestStride, 
-    _In_reads_(_Inexpressible_(lSrcStride * dwHeightInPixels)) const BYTE* pSrc,
-    _In_ LONG lSrcStride, 
-    _In_ DWORD dwWidthInPixels, 
-    _In_ DWORD dwHeightInPixels)
-{
-    DWORD y = 0;
-    const DWORD y0 = min(rcDest.bottom, dwHeightInPixels);
-
-    // Lines above the destination rectangle.
-    for ( ; y < rcDest.top; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels * 2);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-
-    // Lines within the destination rectangle.
-    for ( ; y < y0; y++)
-    {
-        WORD *pSrc_Pixel = (WORD*)pSrc;
-        WORD *pDest_Pixel = (WORD*)pDest;
-
-        for (DWORD x = 0; (x + 1) < dwWidthInPixels; x += 2)
-        {
-            // Byte order is Y0 U0 Y1 V0
-            // Each WORD is a byte pair (Y, U/V)
-            // Windows is little-endian so the order appears reversed.
-
-            if (x >= rcDest.left && x < rcDest.right)
-            {
-                BYTE u = pSrc_Pixel[x] >> 8;
-                BYTE v = pSrc_Pixel[x+1] >> 8;
-
-                TransformChroma(mat, &u, &v);
-
-                pDest_Pixel[x] = (pSrc_Pixel[x] & 0x00FF) | (u<<8);
-                pDest_Pixel[x+1] = (pSrc_Pixel[x+1] & 0x00FF) | (v<<8);
-            }
-            else
-            {
-#pragma warning(push)
-#pragma warning(disable: 6385) 
-#pragma warning(disable: 6386) 
-                pDest_Pixel[x] = pSrc_Pixel[x];
-                pDest_Pixel[x+1] = pSrc_Pixel[x+1];
-#pragma warning(pop)
-            }
-        }
-        pDest += lDestStride;
-        pSrc += lSrcStride;
-    }
-
-    // Lines below the destination rectangle.
-    for ( ; y < dwHeightInPixels; y++)
-    {
-        memcpy(pDest, pSrc, dwWidthInPixels * 2);
-        pSrc += lSrcStride;
-        pDest += lDestStride;
-    }
-}
 
 // Convert NV12 image
 
@@ -307,7 +147,8 @@ void TransformImage_NV12(
 
     // Lines above the destination rectangle.
     DWORD y = 0;
-    const DWORD y0 = min(rcDest.bottom, dwHeightInPixels);
+
+    const DWORD y0 = rcDest.bottom < dwHeightInPixels ? rcDest.bottom : dwHeightInPixels;
 
     for ( ; y < rcDest.top/2; y++)
     {
@@ -323,13 +164,8 @@ void TransformImage_NV12(
         {
             if (x >= rcDest.left && x < rcDest.right)
             {
-                BYTE u = pSrc[x];
-                BYTE v = pSrc[x+1];
-
-                TransformChroma(mat, &u, &v);
-
-                pDest[x] = u;
-                pDest[x+1] = v;
+                pDest[x] = 0;
+                pDest[x+1] = 0;
             }
             else
             {
@@ -351,9 +187,9 @@ void TransformImage_NV12(
 }
 
 CGrayscale::CGrayscale() :
-    m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL), m_pTransformFn(NULL),
+    m_pSample(NULL), m_pInputType(NULL), m_pOutputType(NULL),
     m_imageWidthInPixels(0), m_imageHeightInPixels(0), m_cbImageSize(0),
-    m_transform(D2D1::Matrix3x2F::Identity()), m_rcDest(D2D1::RectU()), m_bStreamingInitialized(false),
+	m_TransformType(Preview), m_rcDest(D2D1::RectU()), m_bStreamingInitialized(false),
     m_pAttributes(NULL)
 {
     InitializeCriticalSectionEx(&m_critSec, 3000, 0);
@@ -1516,10 +1352,8 @@ HRESULT CGrayscale::BeginStreaming()
 
         // Get the chroma transformations.
 
-        float scale = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_SATURATION, 0.0f);
-        float angle = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_CHROMA_ROTATION, 0.0f);
-
-        m_transform = D2D1::Matrix3x2F::Scale(scale, scale) * D2D1::Matrix3x2F::Rotation(angle);
+        // float scale = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_SATURATION, 0.0f);
+        // float angle = (float)MFGetAttributeDouble(m_pAttributes, MFT_GRAYSCALE_CHROMA_ROTATION, 0.0f);
 
         m_bStreamingInitialized = true;
     }
@@ -1563,42 +1397,36 @@ HRESULT CGrayscale::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuffer *pOut)
     HRESULT hr = GetDefaultStride(m_pInputType, &lDefaultStride);
     if (FAILED(hr))
     {
-        goto done;
+        return hr;
     }
 
     // Lock the input buffer.
     hr = inputLock.LockBuffer(lDefaultStride, m_imageHeightInPixels, &pSrc, &lSrcStride);
     if (FAILED(hr))
     {
-        goto done;
+        return hr;
     }
 
     // Lock the output buffer.
     hr = outputLock.LockBuffer(lDefaultStride, m_imageHeightInPixels, &pDest, &lDestStride);
     if (FAILED(hr))
     {
-        goto done;
+        return hr;
     }
 
-    // Invoke the image transform function.
-    assert (m_pTransformFn != NULL);
-    if (m_pTransformFn)
-    {
-        (*m_pTransformFn)(m_transform, m_rcDest, pDest, lDestStride, pSrc, lSrcStride,
-            m_imageWidthInPixels, m_imageHeightInPixels);
-    }
-    else
-    {
-        hr = E_UNEXPECTED;
-        goto done;
-    }
+     //(*m_pTransformFn)(m_transform, m_rcDest, pDest, lDestStride, pSrc, lSrcStride,
+     //       m_imageWidthInPixels, m_imageHeightInPixels);
 
-
+	cv::Mat InputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pSrc, lSrcStride);
+	cv::Mat InputGreyScale(InputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+	cv::Mat OutputFrame(m_imageHeightInPixels + m_imageHeightInPixels/2, m_imageWidthInPixels, CV_8UC1, pDest, lDestStride);
+	OutputFrame.setTo(cv::Scalar(128));
+	cv::Mat OutputGreyScale(OutputFrame, cv::Range(0, m_imageHeightInPixels), cv::Range(0, m_imageWidthInPixels));
+	cv::Canny(InputGreyScale, OutputGreyScale, 80, 90);
+	
     // Set the data size on the output buffer.
     hr = pOut->SetCurrentLength(m_cbImageSize);
 
-    // The VideoBufferLock class automatically unlocks the buffers.
-done:
     return hr;
 }
 
@@ -1626,8 +1454,6 @@ HRESULT CGrayscale::UpdateFormatInfo()
     m_imageHeightInPixels = 0;
     m_cbImageSize = 0;
 
-    m_pTransformFn = NULL;
-
     if (m_pInputType != NULL)
     {
         hr = m_pInputType->GetGUID(MF_MT_SUBTYPE, &subtype);
@@ -1635,19 +1461,7 @@ HRESULT CGrayscale::UpdateFormatInfo()
         {
             goto done;
         }
-        if (subtype == MFVideoFormat_YUY2)
-        {
-            m_pTransformFn = TransformImage_YUY2;
-        }
-        else if (subtype == MFVideoFormat_UYVY)
-        {
-            m_pTransformFn = TransformImage_UYVY;
-        }
-        else if (subtype == MFVideoFormat_NV12)
-        {
-            m_pTransformFn = TransformImage_NV12;
-        }
-        else
+		if (subtype != MFVideoFormat_NV12)
         {
             hr = E_UNEXPECTED;
             goto done;
@@ -1678,20 +1492,6 @@ HRESULT GetImageSize(DWORD fcc, UINT32 width, UINT32 height, DWORD* pcbImage)
 
     switch (fcc)
     {
-    case FOURCC_YUY2:
-    case FOURCC_UYVY:
-        // check overflow
-        if ((width > MAXDWORD / 2) || (width * 2 > MAXDWORD / height))
-        {
-            hr = E_INVALIDARG;
-        }
-        else
-        {   
-            // 16 bpp
-            *pcbImage = width * height * 2;
-        }
-        break;
-
     case FOURCC_NV12:
         // check overflow
         if ((height/2 > MAXDWORD - height) || ((height + height/2) > MAXDWORD / width))

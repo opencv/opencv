@@ -18,7 +18,5 @@ Platform::Array<Scenario>^ MainPage::scenariosInner = ref new Platform::Array<Sc
 {
     // The format here is the following:
     //     { "Description for the sample", "Fully quaified name for the class that implements the scenario" }
-    { "Video preview, record and take pictures", "SDKSample.MediaCapture.BasicCapture" },
     { "Enumerate cameras and add a video effect", "SDKSample.MediaCapture.AdvancedCapture" },
-    { "Audio Capture", "SDKSample.MediaCapture.AudioCapture" }
 };

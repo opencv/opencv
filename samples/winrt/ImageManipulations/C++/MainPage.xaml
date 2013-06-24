@@ -36,7 +36,7 @@
 
 
     <Grid x:Name="LayoutRoot" Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
-        
+
         <Grid x:Name="ContentRoot" Background="{StaticResource ApplicationPageBackgroundThemeBrush}" Margin="100,20,100,20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
@@ -47,7 +47,7 @@
             <!-- Header -->
             <StackPanel Orientation="Horizontal" Grid.Row="0">
                 <Image x:Name="WindowsLogo" Stretch="None" Source="Assets/windows-sdk.png" AutomationProperties.Name="Windows Logo" HorizontalAlignment="Left" Grid.Column="0"/>
-                <TextBlock  Text="Windows 8 SDK Samples" VerticalAlignment="Bottom" Style="{StaticResource TitleTextStyle}" TextWrapping="Wrap" Grid.Column="1"/>
+                <TextBlock VerticalAlignment="Bottom" Style="{StaticResource TitleTextStyle}" TextWrapping="Wrap" Grid.Column="1" Text="OpenCV for Windows RT"/>
             </StackPanel>
             <ScrollViewer x:Name="MainScrollViewer" Grid.Row="1" ZoomMode="Disabled" IsTabStop="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="0,0,0,20" >
                 <Grid>
@@ -92,7 +92,7 @@
                             <TextBlock x:Name="DescriptionText" Margin="0,5,0,0" Text="Description:" Style="{StaticResource SubheaderTextStyle}" Grid.Row="1" Grid.Column="1"/>
                             <!-- Input Scenarios -->
                             <UserControl x:Name="InputSection" Margin="0,5,0,0" IsTabStop="False" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                                
+
                             <!-- Output section -->
                             <TextBlock Text="Output" Grid.Row="5"  Margin="0,25,0,20" Style="{StaticResource H2Style}" Grid.ColumnSpan="2"/>
                             <TextBlock x:Name="StatusBlock" Grid.Row="6" Margin="0,0,0,5" Grid.ColumnSpan="2"/>

@@ -42,15 +42,14 @@ DEFINE_GUID(CLSID_GrayscaleMFT,
 DEFINE_GUID(MFT_GRAYSCALE_DESTINATION_RECT, 
 0x7bbbb051, 0x133b, 0x41f5, 0xb6, 0xaa, 0x5a, 0xff, 0x9b, 0x33, 0xa2, 0xcb);
 
-
-// {14782342-93E8-4565-872C-D9A2973D5CBF}
-DEFINE_GUID(MFT_GRAYSCALE_SATURATION, 
-0x14782342, 0x93e8, 0x4565, 0x87, 0x2c, 0xd9, 0xa2, 0x97, 0x3d, 0x5c, 0xbf);
-
-// {E0BADE5D-E4B9-4689-9DBA-E2F00D9CED0E}
-DEFINE_GUID(MFT_GRAYSCALE_CHROMA_ROTATION, 
-0xe0bade5d, 0xe4b9, 0x4689, 0x9d, 0xba, 0xe2, 0xf0, 0xd, 0x9c, 0xed, 0xe);
-
+enum ProcessingType
+{
+	Preview,
+	GrayScale,
+	Canny,
+	Zoom,
+	Sepia
+};
 
 template <class T> void SafeRelease(T **ppT)
 {
@@ -60,18 +59,6 @@ template <class T> void SafeRelease(T **ppT)
         *ppT = NULL;
     }
 }
-
-// Function pointer for the function that transforms the image.
-typedef void (*IMAGE_TRANSFORM_FN)(
-    const D2D1::Matrix3x2F& mat,             // Chroma transform matrix.
-    const D2D_RECT_U&       rcDest,          // Destination rectangle for the transformation.
-    BYTE*                   pDest,           // Destination buffer.
-    LONG                    lDestStride,     // Destination stride.
-    const BYTE*             pSrc,            // Source buffer.
-    LONG                    lSrcStride,      // Source stride.
-    DWORD                   dwWidthInPixels, // Image width in pixels.
-    DWORD                   dwHeightInPixels // Image height in pixels.
-    );
 
 // CGrayscale class:
 // Implements a grayscale video effect.
@@ -244,7 +231,7 @@ private:
     CRITICAL_SECTION            m_critSec;
 
     // Transformation parameters
-    D2D1::Matrix3x2F            m_transform;                // Chroma transform matrix.
+	ProcessingType              m_TransformType;
     D2D_RECT_U                  m_rcDest;                   // Destination rectangle for the effect.
 
     // Streaming
@@ -259,8 +246,5 @@ private:
     DWORD                       m_cbImageSize;              // Image size, in bytes.
 
     IMFAttributes               *m_pAttributes;
-
-    // Image transform function. (Changes based on the media type.)
-    IMAGE_TRANSFORM_FN          m_pTransformFn;
 };
 #endif
