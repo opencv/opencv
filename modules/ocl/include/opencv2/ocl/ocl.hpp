@@ -528,6 +528,8 @@ namespace cv
             virtual Size getTilesGridSize() const = 0;
 
             virtual void collectGarbage() = 0;
+
+            virtual ~CLAHE() {}
         };
         CV_EXPORTS Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
         
