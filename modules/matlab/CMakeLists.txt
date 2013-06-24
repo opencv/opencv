@@ -178,6 +178,7 @@ add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS
 #  Install time components
 # ----------------------------------------------------------------------------
 # NOTE: Trailing slashes on the DIRECTORY paths are important!
+# TODO: What needs to be done with rpath????
 file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.${MATLAB_MEXEXT}")
 file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
 file(GLOB MATLAB_PRIVATE   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.${MATLAB_MEXEXT}")
