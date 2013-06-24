@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -10,13 +10,12 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//	   Chunpeng Zhang chunpeng@multicorewareinc.com
-//
+//    Yao Wang yao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -44,51 +43,74 @@
 //
 //M*/
 
+
 #include "precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
 
-PARAM_TEST_CASE(ColumnSum, cv::Size)
-{
-    cv::Size size;
-    cv::Mat src;
+using namespace cv;
+using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
+using namespace std;
 
+PARAM_TEST_CASE(PyrBase, MatType, int)
+{
+    int type;
+    int channels;
+    Mat dst_cpu;
+    oclMat gdst;
     virtual void SetUp()
     {
-        size = GET_PARAM(0);
+        type = GET_PARAM(0);
+        channels = GET_PARAM(1);
     }
+
 };
 
-TEST_P(ColumnSum, Accuracy)
+/////////////////////// PyrDown //////////////////////////
+struct PyrDown : PyrBase {};
+
+TEST_P(PyrDown, Mat)
 {
-    cv::Mat src = randomMat(size, CV_32FC1);
-    cv::ocl::oclMat d_dst;
-    cv::ocl::oclMat d_src(src);
-
-    cv::ocl::columnSum(d_src, d_dst);
-
-    cv::Mat dst(d_dst);
-
-    for (int j = 0; j < src.cols; ++j)
+    for(int j = 0; j < LOOP_TIMES; j++)
     {
-        float gold = src.at<float>(0, j);
-        float res = dst.at<float>(0, j);
-        ASSERT_NEAR(res, gold, 1e-5);
-    }
+        Size size(MWIDTH, MHEIGHT);
+        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        oclMat gsrc(src);
+        
+        pyrDown(src, dst_cpu);
+        pyrDown(gsrc, gdst);
 
-    for (int i = 1; i < src.rows; ++i)
-    {
-        for (int j = 0; j < src.cols; ++j)
-        {
-            float gold = src.at<float>(i, j) += src.at<float>(i - 1, j);
-            float res = dst.at<float>(i, j);
-            ASSERT_NEAR(res, gold, 1e-5);
-        }
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
+                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+
+/////////////////////// PyrUp //////////////////////////
+
+struct PyrUp : PyrBase {};
+
+TEST_P(PyrUp, Accuracy)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        Size size(MWIDTH, MHEIGHT);
+        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        oclMat gsrc(src);
+
+        pyrUp(src, dst_cpu);
+        pyrUp(gsrc, gdst);
+
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (type == CV_32F ? 1e-4f : 1.0));
+    }
+
+}
 
 
-#endif
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
+                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+#endif // HAVE_OPENCL

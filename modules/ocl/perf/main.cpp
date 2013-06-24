@@ -52,6 +52,8 @@ int main(int argc, const char *argv[])
         cerr << "no device found\n";
         return -1;
     }
+    // set this to overwrite binary cache every time the test starts
+    ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
 
     int devidx = 0;
 
