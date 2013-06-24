@@ -30,9 +30,8 @@ void mexFunction(int nlhs, mxArray* plhs[],
                  int nrhs, const mxArray* prhs[]) {
 
   // assertions
-  mexPrintf("nrhs: %d, nlhs: %d\n", nrhs, nlhs);
-  conditionalError(nrhs >= {{fun.req|length - fun.req|outputs|length}}, "Too few required input arguments specified");
-  conditionalError(nrhs <= {{fun.req|length + fun.opt|length - fun.req|outputs|length - fun.opt|outputs|length}}, "Too many input arguments specified");
+  conditionalError(nrhs >= {{fun.req|length - fun.req|only|outputs|length}}, "Too few required input arguments specified");
+  conditionalError(nrhs <= {{fun.req|length + fun.opt|length - fun.req|only|outputs|length - fun.opt|only|outputs|length}}, "Too many input arguments specified");
   conditionalError(nlhs <= {{ fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length}}, "Too many output arguments specified");
 
   // setup
