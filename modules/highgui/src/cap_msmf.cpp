@@ -203,12 +203,8 @@ private:
     RawImage *ig_RIOut;
     ImageGrabber(unsigned int deviceID, bool synchronous);
     HRESULT CreateTopology(IMFMediaSource *pSource, IMFActivate *pSinkActivate, IMFTopology **ppTopo);
-    HRESULT AddSourceNode(
-    IMFTopology *pTopology,
-    IMFMediaSource *pSource,
-    IMFPresentationDescriptor *pPD,
-    IMFStreamDescriptor *pSD,
-    IMFTopologyNode **ppNode);
+    HRESULT AddSourceNode(IMFTopology *pTopology, IMFMediaSource *pSource,
+        IMFPresentationDescriptor *pPD, IMFStreamDescriptor *pSD, IMFTopologyNode **ppNode);
     HRESULT AddOutputNode(IMFTopology *pTopology, IMFActivate *pActivate, DWORD dwId, IMFTopologyNode **ppNode);
     // IUnknown methods
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv);
@@ -886,7 +882,7 @@ FormatReader::~FormatReader(void)
 {
 }
 
-#define CHECK_HR(x) if (FAILED(x)) { printf("Checking failed !!!\n"); goto done; }
+#define CHECK_HR(x) if (FAILED(x)) { goto done; }
 
 ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
     m_cRef(1),
@@ -904,10 +900,8 @@ ImageGrabber::ImageGrabber(unsigned int deviceID, bool synchronous):
 
 ImageGrabber::~ImageGrabber(void)
 {
-    printf("ImageGrabber::~ImageGrabber()\n");
     if (ig_pSession)
     {
-        printf("ig_pSession->Shutdown()\n");
         ig_pSession->Shutdown();
     }
 
@@ -947,31 +941,26 @@ HRESULT ImageGrabber::initImageGrabber(IMFMediaSource *pSource, GUID VideoFormat
     hr = pSource->CreatePresentationDescriptor(&pPD);
     if (FAILED(hr))
     {
-        printf("Error creating CreatePresentationDescriptor()\n");
         goto err;
     }
     BOOL fSelected;
     hr = pPD->GetStreamDescriptorByIndex(0, &fSelected, &pSD);
     if (FAILED(hr)) {
-        printf("Error GetStreamDescriptorByIndex()\n");
         goto err;
     }
     hr = pSD->GetMediaTypeHandler(&pHandler);
     if (FAILED(hr)) {
-        printf("Error GetMediaTypeHandler()\n");
         goto err;
     }
     DWORD cTypes = 0;
     hr = pHandler->GetMediaTypeCount(&cTypes);
     if (FAILED(hr)) {
-        printf("Error GetMediaTypeCount()\n");
         goto err;
     }
     if(cTypes > 0)
     {
         hr = pHandler->GetCurrentMediaType(&pCurrentType);
         if (FAILED(hr)) {
-            printf("Error GetCurrentMediaType()\n");
             goto err;
         }
         MT = FormatReader::Read(pCurrentType.Get());
@@ -985,10 +974,6 @@ err:
     else if(VideoFormat == MFVideoFormat_RGB32)
     {
         sizeRawImage = MT.MF_MT_FRAME_SIZE * 4;
-    }
-    else
-    {
-        printf("Video format is not RBG 24/32!\n");
     }
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RIFirst, sizeRawImage));
     CHECK_HR(hr = RawImage::CreateInstance(&ig_RISecond, sizeRawImage));
@@ -1038,16 +1023,8 @@ HRESULT ImageGrabber::startGrabbing(void)
     PropVariantInit(&var);
     HRESULT hr = S_OK;
     hr = ig_pSession->SetTopology(0, ig_pTopology);
-    if (FAILED(hr))
-    {
-        printf("Error: cannot set topology (status %u)\n", hr);
-    }
     DPO->printOut(L"IMAGEGRABBER VIDEODEVICE %i: Start Grabbing of the images\n", ig_DeviceID);
     hr = ig_pSession->Start(&GUID_NULL, &var);
-    if (FAILED(hr))
-    {
-        printf("Error: cannot start session (status %u)\n", hr);
-    }
     for(;;)
     {
         HRESULT hrStatus = S_OK;
@@ -1289,7 +1266,6 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
     (void)llSampleDuration;
     (void)dwSampleSize;
 
-    //printf("ImageGrabber::OnProcessSample() -- begin\n");
     HANDLE tmp[] = {ig_hFinish, ig_hFrameGrabbed, NULL};
 
     DWORD status = WaitForMultipleObjects(2, tmp, FALSE, INFINITE);
@@ -1309,8 +1285,6 @@ STDMETHODIMP ImageGrabber::OnProcessSample(REFGUID guidMajorMediaType, DWORD dwS
         ig_RISecond->fastCopy(pSampleBuffer);
         ig_RIOut = ig_RISecond;
     }
-
-    //printf("ImageGrabber::OnProcessSample() -- end\n");
 
     if (ig_Synchronous)
     {
@@ -3128,11 +3102,7 @@ void CvCaptureFile_MSMF::close()
 
     if (videoFileSource)
     {
-        HRESULT hr = videoFileSource->Shutdown();
-        if (FAILED(hr))
-        {
-            printf("VideoCapture Closing failed!\n");
-        }
+        videoFileSource->Shutdown();
     }
 }
 
@@ -3531,16 +3501,13 @@ bool CvVideoWriter_MSMF::open( const char* filename, int fourcc,
 
 void CvVideoWriter_MSMF::close()
 {
-    printf("VideoWriter::close()\n");
     if (!initiated)
     {
-        printf("VideoWriter was not Initialized\n");
         return;
     }
 
     initiated = false;
     HRESULT hr = sinkWriter->Finalize();
-    printf("sinkWriter Finalize status %u\n", hr);
     MFShutdown();
 }
 
@@ -3569,7 +3536,6 @@ bool CvVideoWriter_MSMF::writeFrame(const IplImage* img)
     HRESULT hr = WriteFrame(target, rtStart, rtDuration);
     if (FAILED(hr))
     {
-        printf("Private WriteFrame failed\n");
         delete[] target;
         return false;
     }
@@ -3600,7 +3566,6 @@ HRESULT CvVideoWriter_MSMF::InitializeSinkWriter(const char* filename)
     // Set the output media type.
     if (SUCCEEDED(hr))
     {
-        printf("MFCreateSinkWriterFromURL is successfull\n");
         hr = MFCreateMediaType(&mediaTypeOut);
     }
     if (SUCCEEDED(hr))
@@ -3755,7 +3720,6 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
 CvVideoWriter* cvCreateVideoWriter_MSMF( const char* filename, int fourcc,
                                         double fps, CvSize frameSize, int isColor )
 {
-    printf("Creating Media Foundation VideoWriter\n");
     CvVideoWriter_MSMF* writer = new CvVideoWriter_MSMF;
     if( writer->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return writer;
