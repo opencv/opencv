@@ -50,17 +50,6 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/imgproc.hpp"
 
-#if defined __GNUC__
-    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__
-    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__ __attribute__ ((deprecated))
-#elif (defined WIN32 || defined _WIN32)
-    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__ __declspec(deprecated)
-    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__
-#else
-    #define __OPENCV_GPUIMGPROC_DEPR_BEFORE__
-    #define __OPENCV_GPUIMGPROC_DEPR_AFTER__
-#endif
-
 namespace cv { namespace gpu {
 
 /////////////////////////// Color Processing ///////////////////////////
@@ -202,22 +191,6 @@ public:
 
 CV_EXPORTS Ptr<CannyEdgeDetector> createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false);
 
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void Canny(InputArray image, OutputArray edges,
-                                             double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-inline void Canny(InputArray image, OutputArray edges, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
-{
-    gpu::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, L2gradient)->detect(image, edges);
-}
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void Canny(InputArray dx, InputArray dy, OutputArray edges,
-                                             double low_thresh, double high_thresh, bool L2gradient = false) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-inline void Canny(InputArray dx, InputArray dy, OutputArray edges, double low_thresh, double high_thresh, bool L2gradient)
-{
-    gpu::createCannyEdgeDetector(low_thresh, high_thresh, 3, L2gradient)->detect(dx, dy, edges);
-}
-
 /////////////////////////// Hough Transform ////////////////////////////
 
 //////////////////////////////////////
@@ -247,15 +220,6 @@ public:
 
 CV_EXPORTS Ptr<HoughLinesDetector> createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096);
 
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughLines(InputArray src, OutputArray lines, float rho, float theta, int threshold,
-                                                  bool doSort = false, int maxLines = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void HoughLines(InputArray src, OutputArray lines, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    gpu::createHoughLinesDetector(rho, theta, threshold, doSort, maxLines)->detect(src, lines);
-}
 
 //////////////////////////////////////
 // HoughLinesP
@@ -283,16 +247,6 @@ public:
 };
 
 CV_EXPORTS Ptr<HoughSegmentDetector> createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096);
-
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughLinesP(InputArray src, OutputArray lines,
-                                                   float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void HoughLinesP(InputArray src, OutputArray lines, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
-{
-    gpu::createHoughSegmentDetector(rho, theta, minLineLength, maxLineGap, maxLines)->detect(src, lines);
-}
 
 //////////////////////////////////////
 // HoughCircles
@@ -325,18 +279,6 @@ public:
 };
 
 CV_EXPORTS Ptr<HoughCirclesDetector> createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096);
-
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void HoughCircles(InputArray src, OutputArray circles,
-                                                    int method, float dp, float minDist, int cannyThreshold, int votesThreshold,
-                                                    int minRadius, int maxRadius, int maxCircles = 4096) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void HoughCircles(InputArray src, OutputArray circles, int /*method*/, float dp, float minDist,
-                         int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
-{
-    gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles)->detect(src, circles);
-}
 
 //////////////////////////////////////
 // GeneralizedHough
@@ -373,26 +315,6 @@ CV_EXPORTS Ptr<CornernessCriteria> createHarrisCorner(int srcType, int blockSize
 
 //! computes minimum eigen value of 2x2 derivative covariation matrix at each pixel - the cornerness criteria
 CV_EXPORTS Ptr<CornernessCriteria> createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101);
-
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void cornerHarris(InputArray src, OutputArray dst,
-                                                    int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101,
-                                                    Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void cornerHarris(InputArray src, OutputArray dst, int blockSize, int ksize, double k, int borderType, Stream& stream)
-{
-    gpu::createHarrisCorner(src.type(), blockSize, ksize, k, borderType)->compute(src, dst, stream);
-}
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void cornerMinEigenVal(InputArray src, OutputArray dst,
-                                                         int blockSize, int ksize, int borderType = BORDER_REFLECT101,
-                                                         Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void cornerMinEigenVal(InputArray src, OutputArray dst, int blockSize, int ksize, int borderType, Stream& stream)
-{
-    gpu::createMinEigenValCorner(src.type(), blockSize, ksize, borderType)->compute(src, dst, stream);
-}
 
 ////////////////////////// Corners Detection ///////////////////////////
 
@@ -433,16 +355,6 @@ public:
 
 CV_EXPORTS Ptr<TemplateMatching> createTemplateMatching(int srcType, int method, Size user_block_size = Size());
 
-// obsolete
-
-__OPENCV_GPUIMGPROC_DEPR_BEFORE__ void matchTemplate(InputArray image, InputArray templ, OutputArray result,
-                                                     int method, Stream& stream = Stream::Null()) __OPENCV_GPUIMGPROC_DEPR_AFTER__;
-
-inline void matchTemplate(InputArray image, InputArray templ, OutputArray result, int method, Stream& stream)
-{
-    gpu::createTemplateMatching(image.type(), method)->match(image, templ, result, stream);
-}
-
 ////////////////////////// Bilateral Filter ///////////////////////////
 
 //! Performa bilateral filtering of passsed image
@@ -457,8 +369,5 @@ CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights
                             OutputArray result, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
-
-#undef __OPENCV_GPUIMGPROC_DEPR_BEFORE__
-#undef __OPENCV_GPUIMGPROC_DEPR_AFTER__
 
 #endif /* __OPENCV_GPUIMGPROC_HPP__ */
