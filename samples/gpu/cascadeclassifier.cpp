@@ -51,7 +51,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 {
     if (src.channels() == 3)
     {
-        gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
+        cv::gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -62,7 +62,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 
     if (scale != 1)
     {
-        gpu::resize(gray, resized, sz);
+        cv::gpu::resize(gray, resized, sz);
     }
     else
     {
