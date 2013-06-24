@@ -980,6 +980,11 @@ Mat _InputArray::getMat(int i) const
         return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
     }
 
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
@@ -1060,6 +1065,11 @@ void _InputArray::getMatVector(vector<Mat>& mv) const
             mv[i] = Mat(size(i), t, (void*)&v[0]);
         }
         return;
+    }
+
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );
@@ -1189,6 +1199,11 @@ Size _InputArray::size(int i) const
         return tex->size();
     }
 
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
     CV_Assert( k == GPU_MAT );
     //if( k == GPU_MAT )
     {
@@ -1302,6 +1317,11 @@ bool _InputArray::empty() const
 
     if( k == OPENGL_TEXTURE )
         return ((const ogl::Texture2D*)obj)->empty();
+
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
 
     CV_Assert( k == GPU_MAT );
     //if( k == GPU_MAT )
@@ -1523,6 +1543,11 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         return;
     }
 
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
     if( k == NONE )
     {
         CV_Error(CV_StsNullPtr, "create() called for the missing output array" );
@@ -1632,6 +1657,11 @@ void _OutputArray::release() const
     {
         ((vector<vector<uchar> >*)obj)->clear();
         return;
+    }
+
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );

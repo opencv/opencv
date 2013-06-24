@@ -1322,7 +1322,8 @@ public:
         EXPR              = 6 << KIND_SHIFT,
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
         OPENGL_TEXTURE    = 8 << KIND_SHIFT,
-        GPU_MAT           = 9 << KIND_SHIFT
+        GPU_MAT           = 9 << KIND_SHIFT,
+        OCL_MAT           =10 << KIND_SHIFT
     };
     _InputArray();
 
