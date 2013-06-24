@@ -6,6 +6,7 @@
 #
 #   MATLAB_FOUND:       true/false
 #   MATLAB_ROOT_DIR:    Root of Matlab installation
+#   MATLAB_BIN:         The main Matlab "executable" (shell script)
 #   MATLAB_MEX_SCRIPT:  The mex script used to compile mex files
 #   MATLAB_BIN:         The actual Matlab executable
 #   MATLAB_INCLUDE_DIR: Path to "mex.h"
@@ -37,6 +38,7 @@ function(locate_matlab_root)
     foreach (DIR_ ${SEARCH_DIRS_})
       file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/*matlab*)
       if (MATLAB_ROOT_DIR_)
+        # sort in order from highest to lowest
         list(SORT MATLAB_ROOT_DIR_)
         list(REVERSE MATLAB_ROOT_DIR_)
         list(GET MATLAB_ROOT_DIR_ 0 MATLAB_ROOT_DIR_)
@@ -51,6 +53,8 @@ function(locate_matlab_root)
     foreach (DIR_ ${SEARCH_DIRS_})
       file(GLOB MATLAB_ROOT_DIR_ ${DIR_}/*matlab*)
       if (MATLAB_ROOT_DIR_)
+        # sort in order from highest to lowest
+        # normally it's in the format MATLAB_R[20XX][A/B]
         list(SORT MATLAB_ROOT_DIR_)
         list(REVERSE MATLAB_ROOT_DIR_)
         list(GET MATLAB_ROOT_DIR_ 0 MATLAB_ROOT_DIR_)
