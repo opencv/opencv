@@ -4,6 +4,7 @@
 #include "mex.h"
 #include <vector>
 #include <opencv2/core.hpp>
+#include <ext/hash_map>
 
 /* 
  * Custom typedefs
@@ -12,6 +13,11 @@
 typedef std::vector<cv::Mat> vector_Mat;
 typedef std::vector<cv::Point> vector_Point;
 typedef std::vector<int> vector_int;
+
+
+void conditionalError(bool expr, const std::string& str) {
+  if (!expr) mexErrMsgTxt(std::string("condition failed: ").append(str).c_str());
+}
 
 /*! 
  * @class Bridge
@@ -50,10 +56,51 @@ typedef std::vector<int> vector_int;
  *
  */
 class Bridge {
+private:
+  mxArray* ptr_;
 public:
   // bridges are default constructible
   Bridge() {}
   virtual ~Bridge() {}
+
+  /*! @brief unpack an object from Matlab into C++
+   *
+   * this function checks whether the given bridge is derived from an
+   * object in Matlab. If so, it converts it to a (platform dependent)
+   * pointer to the underlying C++ object.
+   *
+   * NOTE! This function assumes that the C++ pointer is stored in inst_
+   */
+  template <typename Object>
+  Object* getObjectByName(const char* name) {
+    // check that the object is actually of correct type before unpacking
+    // TODO: Traverse class hierarchy?
+    if (!mxIsClass(ptr_, name)) {
+      const char* actual = mxGetClassName(ptr_);
+      mexErrMsgTxt(std::string("Expected class ").append(std::string(name))
+                       .append(" but was given ").append(std::string(actual)).c_str());
+    }
+    // get the instance field
+    mxArray* inst = mxGetField(ptr_, 0, "inst_");
+    Object* obj = NULL;
+    // make sure the pointer is the correct size for the system
+    if (sizeof(void *) == 8 && mxIsClass(inst, "uint64")) {
+      // 64-bit pointers
+      // TODO: Do we REALLY REALLY need to reinterpret_cast?
+      obj = reinterpret_cast<Object *>(
+            reinterpret_cast<uint64_t *>(mxGetData(inst))[0]);
+    } else if (sizeof(void *) == 4 && mxIsClass(inst, "uint32")) {
+      // 32-bit pointers
+      obj = reinterpret_cast<Object *>(
+            reinterpret_cast<uint32_t *>(mxGetData(inst))[0]);
+    } else {
+      mexErrMsgTxt("Incorrect pointer type stored for architecture");
+    }
+
+    // finally check if the object is NULL
+    if (!obj) mexErrMsgTxt(std::string("Object ").append(std::string(name)).append(std::string(" is NULL")).c_str());
+    return obj;
+  }
 
   // --------------------------- mxArray --------------------------------------
   Bridge& operator=(const mxArray* obj) { return *this; }
@@ -62,78 +109,86 @@ public:
 
   // --------------------------- cv::Mat --------------------------------------
   Bridge& operator=(const cv::Mat& obj) { return *this; }
-  operator cv::Mat() { return cv::Mat(); }
   cv::Mat toMat() { return cv::Mat(); }
+  operator cv::Mat() { return toMat(); }
 
   // -------------------- vector_Mat --------------------------------
   Bridge& operator=(const vector_Mat& obj) { return *this; }
-  operator vector_Mat() { return vector_Mat(); }
   vector_Mat toVectorMat() { return vector_Mat(); }
+  operator vector_Mat() { return toVectorMat(); }
 
   // ---------------------------   int   --------------------------------------
   Bridge& operator=(const int& obj) { return *this; }
-  operator int() { return 0; }
   int toInt() { return 0; }
+  operator int() { return toInt(); }
 
   // --------------------------- vector_int  ----------------------------------
   Bridge& operator=(const vector_int& obj) { return *this; }
-  operator vector_int() { return vector_int(); }
   vector_int toVectorInt() { return vector_int(); }
+  operator vector_int() { return toVectorInt(); }
 
   // --------------------------- string  --------------------------------------
   Bridge& operator=(const std::string& obj) { return *this; }
-  operator std::string() { return ""; }
   std::string toString() { return ""; }
+  operator std::string() { return toString(); }
 
   // ---------------------------  bool   --------------------------------------
   Bridge& operator=(const bool& obj) { return *this; }
-  operator bool() { return 0; }
   bool toBool() { return 0; }
+  operator bool() { return toBool(); }
 
   // --------------------------- double  --------------------------------------
   Bridge& operator=(const double& obj) { return *this; }
-  operator double() { return 0; }
   double toDouble() { return 0; }
+  operator double() { return toDouble(); }
 
   // --------------------------   Point  --------------------------------------
   Bridge& operator=(const cv::Point& obj) { return *this; }
-  operator cv::Point() { return cv::Point(); }
   cv::Point toPoint() { return cv::Point(); }
+  operator cv::Point() { return toPoint(); }
 
   // --------------------------   Size  ---------------------------------------
   Bridge& operator=(const cv::Size& obj) { return *this; }
-  operator cv::Size() { return cv::Size(); }
   cv::Size toSize() { return cv::Size(); }
+  operator cv::Size() { return toSize(); }
 
   // ------------------------ vector_Point ------------------------------------
   Bridge& operator=(const vector_Point& obj) { return *this; }
-  operator vector_Point() { return vector_Point(); }
   vector_Point toVectorPoint() { return vector_Point(); }
+  operator vector_Point() { return toVectorPoint(); }
 
   // --------------------------  Scalar  --------------------------------------
   Bridge& operator=(const cv::Scalar& obj) { return *this; }
-  operator cv::Scalar() { return cv::Scalar(); }
   cv::Scalar toScalar() { return cv::Scalar(); }
+  operator cv::Scalar() { return toScalar(); }
 
   // -------------------------- Rect  --------------------------------------
   Bridge& operator=(const cv::Rect& obj) { return *this; }
-  operator cv::Rect() { return cv::Rect(); }
   cv::Rect toRect() { return cv::Rect(); }
+  operator cv::Rect() { return toRect(); }
 
   // ---------------------- RotatedRect ------------------------------------
   Bridge& operator=(const cv::RotatedRect& obj) { return *this; }
-  operator cv::RotatedRect() { return cv::RotatedRect(); }
   cv::RotatedRect toRotatedRect() { return cv::RotatedRect(); }
+  operator cv::RotatedRect() { return toRotatedRect(); }
 
   // ---------------------- TermCriteria -----------------------------------
   Bridge& operator=(const cv::TermCriteria& obj) { return *this; }
-  operator cv::TermCriteria() { return cv::TermCriteria(); }
   cv::TermCriteria toTermCriteria() { return cv::TermCriteria(); }
+  operator cv::TermCriteria() { return toTermCriteria(); }
 
   // ----------------------      RNG     -----------------------------------
   Bridge& operator=(const cv::RNG& obj) { return *this; }
-  operator cv::RNG() { return cv::RNG(); }
-  cv::RNG toRNG() { return cv::RNG(); }
+  /*! @brief explicit conversion to cv::RNG()
+   *
+   * Converts a bridge object to a cv::RNG(). We explicitly assert that
+   * the object is an RNG in matlab space before attempting to deference
+   * its pointer
+   */
+  cv::RNG toRNG() { 
+    return (*getObjectByName<cv::RNG>("RNG"));
+  }
+  operator cv::RNG() { return toRNG(); }
 
 };
 
