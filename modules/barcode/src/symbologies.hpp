@@ -98,17 +98,16 @@ class Symbology {
   //create Symbology
   static Ptr<Symbology> create(const int sym);
   //set the number of digit in the barcode to decode
-  void setBarcodeLenght(const int lenght){barcode_lenght = lenght;};
-  int getBarcodeLenght(){return barcode_lenght;};
+  virtual void setBarcodeLength(const int length){(void) length;};
+  virtual int getBarcodeLength() const {return -1;};
   //return the std::vector of digit, see (*)
   Digits getDigits(){return digits;};
 //  Digit getDigit(const int i, const vector<int>& previous);
   
  protected:
   static int symbology;//type of symbology
-  bool fixed_lenght;//true if the symbology has a fixed number of digit in the barcode
-  static int barcode_lenght;
-  int ALPHABET_LENGHT;//number of symbols the syntax alphabet
+  bool fixed_length;//true if the symbology has a fixed number of digit in the barcode
+  int ALPHABET_LENGTH;//number of symbols the syntax alphabet
   static const int STARTCODE_POSITION_BARCODE = 1;
   int CHECKCODE_POSITION_BARCODE;
   int ENDCODE_POSITION_BARCODE;
@@ -131,9 +130,9 @@ class SymbologyUPCA : public virtual Symbology {
   };
   
   enum{
-    CENTER_BAR_LENGHT = 5,
-    BORDER_BAR_LENGHT = 3,
-    DIGIT_LENGHT = 7
+    CENTER_BAR_LENGTH = 5,
+    BORDER_BAR_LENGTH = 3,
+    DIGIT_LENGTH = 7
   };
 
   enum{
@@ -142,8 +141,8 @@ class SymbologyUPCA : public virtual Symbology {
   };
 
   static const int symbology;
-  static const int barcode_lenght;
-  static const bool fixed_lenght;
+  static const int barcode_length;
+  static const bool fixed_length;
   
   /*****TODO We want to use a map?*****/
   std::vector<std::string> bars_pattern_left; //vector of bars (i.e. of a bars "1101001") 
@@ -159,6 +158,8 @@ class SymbologyUPCA : public virtual Symbology {
   std::string getDecoding(int index_of_digit);
   int getCheckCodeIndex(const std::vector<int>& index_of_digit) const;
   std::string getCheckCodeValue(const std::vector<int>& index_of_digit);
+  int getBarcodeLength() const;
+  void setBarcodeLength(const int length);
 
  private:
 };

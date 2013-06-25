@@ -54,7 +54,6 @@ namespace cv
 namespace barcode {
 
 int Symbology::symbology = -1;
-int Symbology::barcode_lenght = -1;
 
 Ptr<Symbology> Symbology::create(const int sym)
 {
@@ -84,14 +83,14 @@ Symbology::~Symbology() {
 }
 
 const int SymbologyUPCA::symbology = UPC_A;
-const int SymbologyUPCA::barcode_lenght = 15;
-const bool SymbologyUPCA::fixed_lenght = true;
+const int SymbologyUPCA::barcode_length = 15;
+const bool SymbologyUPCA::fixed_length = true;
 
 
 //this is an example of a Symbology
 SymbologyUPCA::SymbologyUPCA() {
 
-  encoding.resize(ALPHABET_LENGHT);
+  encoding.resize(ALPHABET_LENGTH);
   encoding.at(0) = "0";
   encoding.at(1) = "1";
   encoding.at(2) = "2";
@@ -105,7 +104,7 @@ SymbologyUPCA::SymbologyUPCA() {
   encoding.at(10) = ""; //BORDER BAR
   encoding.at(11) = ""; //CENTRAL BAR
 
-  bars_pattern_left.resize(ALPHABET_LENGHT);
+  bars_pattern_left.resize(ALPHABET_LENGTH);
   //left side
   bars_pattern_left.at(0) = "0001101"; //00
   bars_pattern_left.at(1) = "0011001"; //01
@@ -120,7 +119,7 @@ SymbologyUPCA::SymbologyUPCA() {
   bars_pattern_left.at(10) = "101"; //border bar
   bars_pattern_left.at(11) = "01010"; //central bar
 
-  bars_pattern_right.resize(ALPHABET_LENGHT);
+  bars_pattern_right.resize(ALPHABET_LENGTH);
   //right side
   bars_pattern_right.at(0) = "1110010"; //00
   bars_pattern_right.at(1) = "1100110"; //01
@@ -137,7 +136,7 @@ SymbologyUPCA::SymbologyUPCA() {
   
   //for each position of a digit in the barcode there are only some possibile candidate symbols that can match
   std::vector<std::string>::iterator it_symbol;
-  for (int i = 0; i < barcode_lenght; ++i)
+  for (int i = 0; i < barcode_length; ++i)
   {
     Digit digit;
     digit.position = i;
@@ -193,6 +192,11 @@ std::string SymbologyUPCA::getCheckCodeValue(const std::vector<int>& index_of_di
   unsigned int digit = getCheckCodeIndex(index_of_digit);
   CV_Assert(digit < encoding.size());
   return encoding.at(digit);
+}
+
+int SymbologyUPCA::getBarcodeLength() const
+{
+  return barcode_length;	
 }
 
 }

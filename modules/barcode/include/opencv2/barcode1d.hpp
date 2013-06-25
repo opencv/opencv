@@ -80,7 +80,7 @@ class CV_EXPORTS_W Decoder1d : public virtual Algorithm
   virtual ~Decoder1d();
  protected:
   Mat barcode;//ROI barcode
-  int lenght;//we can set number of digit in barcode
+  int length;//we can set number of digit in barcode
   std::vector<int> decoded_digit;//indexes of decoded digit
 };
 
