@@ -2965,13 +2965,12 @@ void printVersionInfo(bool useStdOut)
         if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
     }
 
-#ifdef CV_PARALLEL_FRAMEWORK
-    ::testing::Test::RecordProperty("cv_parallel_framework", CV_PARALLEL_FRAMEWORK);
-    if (useStdOut)
-    {
-        std::cout << "Parallel framework: " << CV_PARALLEL_FRAMEWORK << std::endl;
+    const char* parallel_framework = currentParallelFramework();
+
+    if (parallel_framework) {
+        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
+        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
     }
-#endif
 
     std::string cpu_features;
 
