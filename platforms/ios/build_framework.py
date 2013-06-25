@@ -38,7 +38,7 @@ def build_opencv(srcroot, buildroot, target, arch):
     # for some reason, if you do not specify CMAKE_BUILD_TYPE, it puts libs to "RELEASE" rather than "Release"
     cmakeargs = ("-GXcode " +
                 "-DCMAKE_BUILD_TYPE=Release " +
-                "-DCMAKE_TOOLCHAIN_FILE=%s/ios/cmake/Toolchains/Toolchain-%s_Xcode.cmake " +
+                "-DCMAKE_TOOLCHAIN_FILE=%s/platforms/ios/cmake/Toolchains/Toolchain-%s_Xcode.cmake " +
                 "-DBUILD_opencv_world=ON " +
                 "-DCMAKE_INSTALL_PREFIX=install") % (srcroot, target)
     # if cmake cache exists, just rerun cmake to update OpenCV.xproj if necessary
@@ -92,15 +92,12 @@ def put_framework_together(srcroot, dstroot):
     os.system("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
 
     # form Info.plist
-    srcfile = open(srcroot + "/ios/Info.plist.in", "rt")
+    srcfile = open(srcroot + "/platforms/ios/Info.plist.in", "rt")
     dstfile = open(dstdir + "/Resources/Info.plist", "wt")
     for l in srcfile.readlines():
         dstfile.write(l.replace("${VERSION}", opencv_version))
     srcfile.close()
     dstfile.close()
-
-    # copy cascades
-    # TODO ...
 
     # make symbolic links
     os.symlink("A", "Versions/Current")
@@ -125,4 +122,4 @@ if __name__ == "__main__":
         print "Usage:\n\t./build_framework.py <outputdir>\n\n"
         sys.exit(0)
 
-    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..")), os.path.abspath(sys.argv[1]))
+    build_framework(os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "../..")), os.path.abspath(sys.argv[1]))
