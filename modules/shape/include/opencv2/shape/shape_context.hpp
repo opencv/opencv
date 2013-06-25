@@ -49,11 +49,16 @@ namespace cv
 {
 
 /*!
- SCD implementation.
- The class implements SCD algorithm by Belongie et al.
+ * SCD implementation.
+ * The SCD class implements SCD algorithm by Belongie et al.
+ * The SCMatcher implements the matching pipeline presented in the same 
+ * paper.
  */
 
- 
+/****************************************************************************************\
+*                                   Descriptor Class                                    *
+\****************************************************************************************/
+
 class CV_EXPORTS_W SCD 
 {
 public:
@@ -68,7 +73,7 @@ public:
 
     //! Compute keypoints descriptors. 
     CV_WRAP void extractSCD(InputArray contour, Mat& descriptors) const;
-    
+
     //! Setters
     void setAngularBins(int);
     void setRadialBins(int);
@@ -80,7 +85,7 @@ public:
     int getRadialBins(void);
     double getInnerRadius(void);
     double getOuterRadius(void);
-
+    
 private:
     CV_PROP_RW int nAngularBins;
     CV_PROP_RW int nRadialBins;
@@ -97,6 +102,36 @@ protected:
 };
 
 typedef SCD ShapeContextDescriptorExtractor;
+
+/****************************************************************************************\
+*                                     Matching Class                                     *
+\****************************************************************************************/
+struct CV_EXPORTS DistanceSCDFlags
+{
+    enum
+    { 
+        DEFAULT = 0, // CHI Squared Distance
+        DIST_CHI = 0,
+        DIST_EMD = 1, // Earth Mover's Distance
+        DIST_EUCLIDEAN = 2 // Euclidean Distance
+    };
+};
+
+class CV_EXPORTS_W SCDMatcher 
+{
+public:
+    //! the default constructor
+    CV_WRAP SCDMatcher();
+    //! the full constructor taking all the necessary parameters
+    // Define it here
+private:
+protected:
+    CV_WRAP void buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix,
+                                 int flags=DistanceSCDFlags::DEFAULT) const;
+    CV_WRAP void buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
+};
+
+typedef SCDMatcher ShapeContextDescriptorMatcher;
 
 /****************************************************************************************\
 *                                   Drawing functions                                    *

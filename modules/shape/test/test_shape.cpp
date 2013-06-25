@@ -28,8 +28,9 @@ void CV_ShapeTest::run( int /*start_from*/ )
 {
     Mat img = Mat::zeros(250, 250, CV_8UC1);
     //Draw an Ellipse
-    ellipse(img, Point(125, 125), Size(100,70), 0, 0, 360, 
-             Scalar(255,255,255), -1, 8, 0);
+    /*ellipse(img, Point(125, 125), Size(100,70), 0, 0, 360, 
+             Scalar(255,255,255), -1, 8, 0);*/
+    circle(img, Point(125, 125), 100, Scalar(255,255,255), -1, 8, 0);      
     imshow("image", img);
         
     //Extract the Contours
@@ -37,13 +38,15 @@ void CV_ShapeTest::run( int /*start_from*/ )
     findContours(img, contours, RETR_EXTERNAL, CHAIN_APPROX_NONE);
     cout<<"Number of points in the contour before simplification: "<<contours[0].size()<<std::endl;
 
-    approxPolyDP(Mat(contours[0]), contours[0], 0.2, true);
+    approxPolyDP(Mat(contours[0]), contours[0], 0.5, true);
     cout<<"Number of points in the contour after simplification: "<<contours[0].size()<<std::endl;
     Mat img2=img.clone();
     cvtColor(img2,img2,8);
     
     int refPointIdx=0;   
-    	
+
+    SCDMatcher sMatcher;
+    //Mat costMatrix;
 	while(1)
 	{
         Mat scdesc;
@@ -66,6 +69,7 @@ void CV_ShapeTest::run( int /*start_from*/ )
         imshow("contours", img2);
         drawSCD(scdesc, abins, rbins, descim, refPointIdx, 25, DrawSCDFlags::DRAW_NORM_NEG);
 		imshow("feature SCD", descim);
+        
         char key = (char)waitKey();
         if(key == 27 || key == 'q' || key == 'Q') // 'ESC'
             break;
@@ -73,6 +77,7 @@ void CV_ShapeTest::run( int /*start_from*/ )
             refPointIdx++;
         if ((size_t)refPointIdx>=contours[0].size())
             refPointIdx=0;
+        //sMatcher.buildCostMatrix(scdesc,  scdesc, costMatrix, DistanceSCDFlags::DEFAULT);
     } 
 
     ts->set_failed_test_info(cvtest::TS::OK);
