@@ -522,6 +522,24 @@ The function calculates and returns the minimum-area bounding rectangle (possibl
 
 
 
+boxPoints
+-----------
+Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
+
+.. ocv:function:: void boxPoints(RotatedRect box, OutputArray points)
+
+.. ocv:pyfunction:: cv2.boxPoints(box[, points]) -> points
+
+.. ocv:cfunction:: void cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
+
+    :param box: The input rotated rectangle. It may be the output of .. ocv:function:: minAreaRect.
+    
+    :param points: The output array of four vertices of rectangles.
+    
+The function finds the four vertices of a rotated rectangle. This function is useful to draw the rectangle. In C++, instead of using this function, you can directly use box.points() method. Please visit the `tutorial on bounding rectangle <http://docs.opencv.org/doc/tutorials/imgproc/shapedescriptors/bounding_rects_circles/bounding_rects_circles.html#bounding-rects-circles>`_ for more information.
+
+
+
 minEnclosingCircle
 ----------------------
 Finds a circle of the minimum area enclosing a 2D point set.

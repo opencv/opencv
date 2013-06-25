@@ -398,3 +398,10 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* /*storage*/ )
     return (CvBox2D)rr;
 }
 
+void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
+{
+    _pts.create(4, 2, CV_32F);
+    Mat pts = _pts.getMat();
+    box.points((Point2f*)pts.data);
+}
+
