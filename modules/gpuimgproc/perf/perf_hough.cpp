@@ -227,23 +227,59 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-enum { GHT_POSITION = cv::GeneralizedHough::GHT_POSITION,
-       GHT_SCALE    = cv::GeneralizedHough::GHT_SCALE,
-       GHT_ROTATION = cv::GeneralizedHough::GHT_ROTATION
-     };
-
-CV_FLAGS(GHMethod, GHT_POSITION, GHT_SCALE, GHT_ROTATION);
-
-DEF_PARAM_TEST(Method_Sz, GHMethod, cv::Size);
-
-PERF_TEST_P(Method_Sz, GeneralizedHough,
-            Combine(Values(GHMethod(GHT_POSITION), GHMethod(GHT_POSITION | GHT_SCALE), GHMethod(GHT_POSITION | GHT_ROTATION), GHMethod(GHT_POSITION | GHT_SCALE | GHT_ROTATION)),
-                    GPU_TYPICAL_MAT_SIZES))
+PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
 {
     declare.time(10);
 
-    const int method = GET_PARAM(0);
-    const cv::Size imageSize = GET_PARAM(1);
+    const cv::Size imageSize = GetParam();
+
+    const cv::Mat templ = readImage("cv/shared/templ.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(templ.empty());
+
+    cv::Mat image(imageSize, CV_8UC1, cv::Scalar::all(0));
+    templ.copyTo(image(cv::Rect(50, 50, templ.cols, templ.rows)));
+
+    cv::Mat edges;
+    cv::Canny(image, edges, 50, 100);
+
+    cv::Mat dx, dy;
+    cv::Sobel(image, dx, CV_32F, 1, 0);
+    cv::Sobel(image, dy, CV_32F, 0, 1);
+
+    if (PERF_RUN_GPU())
+    {
+        cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::gpu::createGeneralizedHoughBallard();
+
+        const cv::gpu::GpuMat d_edges(edges);
+        const cv::gpu::GpuMat d_dx(dx);
+        const cv::gpu::GpuMat d_dy(dy);
+        cv::gpu::GpuMat positions;
+
+        alg->setTemplate(cv::gpu::GpuMat(templ));
+
+        TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
+
+        GPU_SANITY_CHECK(positions);
+    }
+    else
+    {
+        cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::createGeneralizedHoughBallard();
+
+        cv::Mat positions;
+
+        alg->setTemplate(templ);
+
+        TEST_CYCLE() alg->detect(edges, dx, dy, positions);
+
+        CPU_SANITY_CHECK(positions);
+    }
+}
+
+PERF_TEST_P(Sz, GeneralizedHoughGuil, GPU_TYPICAL_MAT_SIZES)
+{
+    declare.time(10);
+
+    const cv::Size imageSize = GetParam();
 
     const cv::Mat templ = readImage("cv/shared/templ.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(templ.empty());
@@ -281,39 +317,32 @@ PERF_TEST_P(Method_Sz, GeneralizedHough,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::GeneralizedHoughGuil> alg = cv::gpu::createGeneralizedHoughGuil();
+        alg->setMaxAngle(90.0);
+        alg->setAngleStep(2.0);
+
         const cv::gpu::GpuMat d_edges(edges);
         const cv::gpu::GpuMat d_dx(dx);
         const cv::gpu::GpuMat d_dy(dy);
-        cv::gpu::GpuMat posAndVotes;
+        cv::gpu::GpuMat positions;
 
-        cv::Ptr<cv::gpu::GeneralizedHough> d_hough = cv::gpu::GeneralizedHough::create(method);
-        if (method & GHT_ROTATION)
-        {
-            d_hough->set("maxAngle", 90.0);
-            d_hough->set("angleStep", 2.0);
-        }
+        alg->setTemplate(cv::gpu::GpuMat(templ));
 
-        d_hough->setTemplate(cv::gpu::GpuMat(templ));
+        TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
 
-        TEST_CYCLE() d_hough->detect(d_edges, d_dx, d_dy, posAndVotes);
-
-        const cv::gpu::GpuMat positions(1, posAndVotes.cols, CV_32FC4, posAndVotes.data);
         GPU_SANITY_CHECK(positions);
     }
     else
     {
+        cv::Ptr<cv::GeneralizedHoughGuil> alg = cv::createGeneralizedHoughGuil();
+        alg->setMaxAngle(90.0);
+        alg->setAngleStep(2.0);
+
         cv::Mat positions;
 
-        cv::Ptr<cv::GeneralizedHough> hough = cv::GeneralizedHough::create(method);
-        if (method & GHT_ROTATION)
-        {
-            hough->set("maxAngle", 90.0);
-            hough->set("angleStep", 2.0);
-        }
+        alg->setTemplate(templ);
 
-        hough->setTemplate(templ);
-
-        TEST_CYCLE() hough->detect(edges, dx, dy, positions);
+        TEST_CYCLE() alg->detect(edges, dx, dy, positions);
 
         CPU_SANITY_CHECK(positions);
     }
