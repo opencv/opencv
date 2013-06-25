@@ -526,42 +526,6 @@ void swap(CudaMem& a, CudaMem& b)
 //////////////////////////////// Stream ///////////////////////////////
 
 inline
-void Stream::enqueueDownload(const GpuMat& src, OutputArray dst)
-{
-    src.download(dst, *this);
-}
-
-inline
-void Stream::enqueueUpload(InputArray src, GpuMat& dst)
-{
-    dst.upload(src, *this);
-}
-
-inline
-void Stream::enqueueCopy(const GpuMat& src, OutputArray dst)
-{
-    src.copyTo(dst, *this);
-}
-
-inline
-void Stream::enqueueMemSet(GpuMat& src, Scalar val)
-{
-    src.setTo(val, *this);
-}
-
-inline
-void Stream::enqueueMemSet(GpuMat& src, Scalar val, InputArray mask)
-{
-    src.setTo(val, mask, *this);
-}
-
-inline
-void Stream::enqueueConvert(const GpuMat& src, OutputArray dst, int dtype, double alpha, double beta)
-{
-    src.convertTo(dst, dtype, alpha, beta, *this);
-}
-
-inline
 Stream::Stream(const Ptr<Impl>& impl)
     : impl_(impl)
 {

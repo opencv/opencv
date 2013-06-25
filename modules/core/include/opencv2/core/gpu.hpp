@@ -375,19 +375,6 @@ public:
     //! returns true if stream object is not default (!= 0)
     operator bool_type() const;
 
-    // obsolete methods
-
-    void enqueueDownload(const GpuMat& src, OutputArray dst);
-
-    void enqueueUpload(InputArray src, GpuMat& dst);
-
-    void enqueueCopy(const GpuMat& src, OutputArray dst);
-
-    void enqueueMemSet(GpuMat& src, Scalar val);
-    void enqueueMemSet(GpuMat& src, Scalar val, InputArray mask);
-
-    void enqueueConvert(const GpuMat& src, OutputArray dst, int dtype, double alpha = 1.0, double beta = 0.0);
-
     class Impl;
 
 private:
