@@ -284,6 +284,7 @@ PERFTEST(GaussianBlur)
     Mat src, dst, ocl_dst;
     int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
+    const int ksize = 7;	
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
@@ -291,29 +292,28 @@ PERFTEST(GaussianBlur)
         {
             SUBTEST << size << 'x' << size << "; " << type_name[j] ;
 
-            gen(src, size, size, all_type[j], 5, 16);
+            gen(src, size, size, all_type[j], 0, 256);
 
-            GaussianBlur(src, dst, Size(9, 9), 0);
+            GaussianBlur(src, dst, Size(ksize, ksize), 0);
 
             CPU_ON;
-            GaussianBlur(src, dst, Size(9, 9), 0);
+            GaussianBlur(src, dst, Size(ksize, ksize), 0);
             CPU_OFF;
 
             ocl::oclMat d_src(src);
-            ocl::oclMat d_dst(src.size(), src.type());
-            ocl::oclMat d_buf;
+            ocl::oclMat d_dst;
 
             WARMUP_ON;
-            ocl::GaussianBlur(d_src, d_dst, Size(9, 9), 0);
+            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
             WARMUP_OFF;
 
             GPU_ON;
-            ocl::GaussianBlur(d_src, d_dst, Size(9, 9), 0);
+            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
             GPU_OFF;
 
             GPU_FULL_ON;
             d_src.upload(src);
-            ocl::GaussianBlur(d_src, d_dst, Size(9, 9), 0);
+            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
             d_dst.download(ocl_dst);
             GPU_FULL_OFF;
 

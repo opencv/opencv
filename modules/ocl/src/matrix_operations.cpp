@@ -73,6 +73,7 @@ namespace cv
     }
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
 static void convert_C3C4(const cl_mem &src, oclMat &dst)
@@ -213,6 +214,34 @@ void cv::ocl::oclMat::upload(const Mat &m)
     rows = m.rows;
     cols = m.cols;
     offset = ofs.y * step + ofs.x * elemSize();
+}
+
+cv::ocl::oclMat::operator cv::_InputArray()
+{
+    _InputArray newInputArray;
+    newInputArray.flags = cv::_InputArray::OCL_MAT;
+    newInputArray.obj   = reinterpret_cast<void *>(this);
+    return newInputArray;
+}
+
+cv::ocl::oclMat::operator cv::_OutputArray()
+{
+    _OutputArray newOutputArray;
+    newOutputArray.flags = cv::_InputArray::OCL_MAT;
+    newOutputArray.obj   = reinterpret_cast<void *>(this);
+    return newOutputArray;
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(InputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
@@ -382,7 +411,7 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     if( rtype < 0 )
         rtype = type();
     else
-        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), oclchannels());
+        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
 
     //int scn = channels();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);

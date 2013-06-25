@@ -15,8 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Zhang Chunpeng chunpeng@multicorewareinc.com
-//    Yao Wang yao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -45,46 +45,57 @@
 //M*/
 
 #include "precomp.hpp"
-
-#ifdef HAVE_OPENCL
-
-using namespace cv;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-
-PARAM_TEST_CASE(PyrUp, MatType, int)
+///////////// StereoMatchBM ////////////////////////
+PERFTEST(StereoMatchBM)
 {
-    int type;
-    int channels;
+	Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
+	Mat disp,dst;
+	ocl::oclMat d_left, d_right,d_disp;
+	int n_disp= 128;
+	int winSize =19;
 
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-    }
-};
+	SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
 
-TEST_P(PyrUp, Accuracy)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
-        Mat dst_gold;
-        pyrUp(src, dst_gold);
-        ocl::oclMat dst;
-        ocl::oclMat srcMat(src);
-        ocl::pyrUp(srcMat, dst);
+	Ptr<StereoBM> bm = createStereoBM(n_disp, winSize);
+	bm->compute(left_image, right_image, dst);
 
-        EXPECT_MAT_NEAR(dst_gold, Mat(dst), (type == CV_32F ? 1e-4f : 1.0));
-    }
+	CPU_ON;
+	bm->compute(left_image, right_image, dst);
+	CPU_OFF;
 
+	d_left.upload(left_image);
+	d_right.upload(right_image);
+
+	ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
+
+	WARMUP_ON;
+	d_bm(d_left, d_right, d_disp);
+	WARMUP_OFF;
+
+    cv::Mat ocl_mat;
+    d_disp.download(ocl_mat);
+    ocl_mat.convertTo(ocl_mat, dst.type());
+
+	GPU_ON;
+	d_bm(d_left, d_right, d_disp);
+	GPU_OFF;
+
+	GPU_FULL_ON;
+	d_left.upload(left_image);
+	d_right.upload(right_image);
+	d_bm(d_left, d_right, d_disp);
+	d_disp.download(disp);
+	GPU_FULL_OFF;
+    
+    TestSystem::instance().setAccurate(-1, 0.);
 }
 
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
 
 
-#endif // HAVE_OPENCL
+
+
+
+
+	
