@@ -173,7 +173,7 @@ void cv::gpu::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray 
     (void) _dst;
     (void) flags;
     (void) stream;
-    CV_Error(:Error::StsNotImplemented, "The library was build without CUBLAS");
+    CV_Error(Error::StsNotImplemented, "The library was build without CUBLAS");
 #else
     // CUBLAS works with column-major matrices
 
@@ -624,10 +624,10 @@ namespace
 
 Ptr<Convolution> cv::gpu::createConvolution(Size user_block_size)
 {
-#ifndef HAVE_CUBLAS
+#ifndef HAVE_CUFFT
     (void) user_block_size;
-    CV_Error(cv::Error::StsNotImplemented, "The library was build without CUFFT");
-    return Ptr<BLAS>();
+    CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
+    return Ptr<Convolution>();
 #else
     return new ConvolutionImpl(user_block_size);
 #endif
