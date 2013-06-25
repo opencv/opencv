@@ -92,6 +92,7 @@ namespace cv
         // Dennis Mitzel, Thomas Pock, Thomas Schoenemann, Daniel Cremers. Video Super Resolution using Duality Based TV-L1 Optical Flow.
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1();
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_GPU();
+        CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_OCL();
     }
 }
 
