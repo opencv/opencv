@@ -46,20 +46,22 @@
 ************************************************************************************************/
 
 
-
-#include "Barcode1Ddecoder.hpp"
+#include "precomp.hpp"
 
 namespace cv
 {
 
-Barcode1Ddecoder::~Barcode1Ddecoder() {
+namespace barcode {
+
+Decoder1d::~Decoder1d() {
   // TODO Auto-generated destructor stub
 }
 
-Ptr<Barcode1Ddecoder> Barcode1Ddecoder::create( const std::string& decoder_type)
+Ptr<Decoder1d> Decoder1d::create( const std::string& decoder_type)
 {
 	(void) decoder_type;
 	return NULL;
 }
 
+}
 }

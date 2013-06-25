@@ -45,10 +45,13 @@
 ** 	        Stefano Fabri (s.fabri@email.it), Rome, Italy                                       *
 ************************************************************************************************/
 
-#include "Symbologies.hpp"
+#include "precomp.hpp"
+#include "symbologies.hpp"
 
 namespace cv
 {
+
+namespace barcode {
 
 int Symbology::symbology = -1;
 int Symbology::barcode_lenght = -1;
@@ -79,6 +82,11 @@ bool Symbology::verifyCheckCode(const std::vector<int>& index_of_digit) const
 Symbology::~Symbology() {
   delete(this);
 }
+
+const int SymbologyUPCA::symbology = UPC_A;
+const int SymbologyUPCA::barcode_lenght = 15;
+const bool SymbologyUPCA::fixed_lenght = true;
+
 
 //this is an example of a Symbology
 SymbologyUPCA::SymbologyUPCA() {
@@ -187,4 +195,5 @@ std::string SymbologyUPCA::getCheckCodeValue(const std::vector<int>& index_of_di
   return encoding.at(digit);
 }
 
+}
 }

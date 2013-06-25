@@ -44,28 +44,32 @@
 ** Authors: Claudia Rapuano (c.rapuano@gmail.com), University La Sapienza di Roma, Rome, Italy  *
 ** 	        Stefano Fabri (s.fabri@email.it), Rome, Italy                                       *
 ************************************************************************************************/
-
-#ifndef BARCODE1DDECODER_H_
-#define BARCODE1DDECODER_H_
-
-#ifdef __cplusplus
+#ifndef __OPENCV_BARCODE_1D_HPP__
+#define __OPENCV_BARCODE_1D_HPP__
 
 #include <stdio.h>
 #include <iostream>
 
 #include "opencv2/core.hpp"
 
-#include "Symbologies.hpp"
-
-
 namespace cv {
 
+namespace barcode {
 
-class CV_EXPORTS_W Barcode1Ddecoder : public virtual Algorithm
+class CV_EXPORTS_W Detector1d : public virtual Algorithm{
+ public:
+  //create specific 1D barcode locator
+  CV_WRAP static Ptr<Detector1d> create( const std::string& locator_type );
+  //locate barcodes in image, return related rotated rect
+  virtual void locate(const Mat& image, std::vector<RotatedRect>& barcodes) = 0;
+  virtual ~Detector1d();
+};
+
+class CV_EXPORTS_W Decoder1d : public virtual Algorithm
 {
  public:
   //create the specific barcode decoder
-  CV_WRAP static Ptr<Barcode1Ddecoder> create( const std::string& decoder_type);
+  CV_WRAP static Ptr<Decoder1d> create( const std::string& decoder_type);
 
   /* This method returns the string of decoded barcode, here is implemented the decoding algorithm
    * it matches the pixels of barcode with the symbols of symbology and takes a vector that represents 
@@ -73,16 +77,15 @@ class CV_EXPORTS_W Barcode1Ddecoder : public virtual Algorithm
    * this vector is then decoded by getDecoding of Symbology class.
    */
   virtual std::string decodeBarcode() = 0;
-  virtual ~Barcode1Ddecoder();
+  virtual ~Decoder1d();
  protected:
   Mat barcode;//ROI barcode
-  int symbology_type;//we can set symbology of barcode (i.e. UPC_A, CODE_128, etc.)
   int lenght;//we can set number of digit in barcode
   std::vector<int> decoded_digit;//indexes of decoded digit
-  Symbology* symbology;
 };
+
+}
 }
 
-#endif /* __cplusplus */
+#endif /* __OPENCV_BARCODE_1D_HPP__ */
 
-#endif /* BARCODE1DDECODER_H */

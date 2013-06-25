@@ -45,29 +45,8 @@
 ** 	        Stefano Fabri (s.fabri@email.it), Rome, Italy                                       *
 ************************************************************************************************/
 
-#ifndef BARCODE1DLOCATOR_HPP_
-#define BARCODE1DLOCATOR_HPP_
+#ifdef __OPENCV_BUILD
+#error this is a compatibility header which should not be used inside the OpenCV library
+#endif
 
-#ifdef __cplusplus
-
-#include <stdio.h>
-#include <iostream>
-
-#include "opencv2/core.hpp"
-
-
-namespace cv {
-
-class CV_EXPORTS_W Barcode1Dlocator : public virtual Algorithm{
- public:
-  //create specific 1D barcode locator
-  CV_WRAP static Ptr<Barcode1Dlocator> create( const std::string& locator_type );
-  //locate barcodes in image, return related rotated rect
-  virtual void locate(const Mat& image, std::vector<RotatedRect>& barcodes) = 0;
-  virtual ~Barcode1Dlocator();
-};
-}
-
-#endif /* __cplusplus */
-
-#endif /* BARCODE1DLOCATOR_HPP */
+#include "opencv2/barcode1d.hpp"

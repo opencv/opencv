@@ -45,18 +45,15 @@
 ** 	        Stefano Fabri (s.fabri@email.it), Rome, Italy                                       *
 ************************************************************************************************/
 
-#ifndef SYMBOLOGIES_HPP_
-#define SYMBOLOGIES_HPP_
+#ifndef __OPENCV_SYMBOLOGIES_HPP_
+#define __OPENCV_SYMBOLOGIES_HPP_
 
-#ifdef __cplusplus
-
-#include <stdio.h>
-#include <vector>
 #include <iostream>
 #include "opencv2/core/types_c.h"
 
 namespace cv {
 
+namespace barcode {
 /*
  * Here there are defined each Barcode symbology. (UPCA, CODE128, etc)
  * Each symbology extend the class Symbology where are defined common members
@@ -66,7 +63,7 @@ namespace cv {
 class Symbology {
  public:
   //list of sybologies covered
-  enum symbology_type{
+  enum{
    UPC_A,
    /*.
      .
@@ -127,23 +124,27 @@ class SymbologyUPCA : public virtual Symbology {
  public:
   virtual ~SymbologyUPCA();
 
-  static const int ENDCODE_POSITION_BARCODE = 14;
-  static const int CHECKCODE_POSITION_BARCODE = 13;
-  static const int CENTER_BAR_POSITION_BARCODE = 7;
+  enum{
+    CENTER_BAR_POSITION_BARCODE = 7,
+    CHECKCODE_POSITION_BARCODE = 13,
+    ENDCODE_POSITION_BARCODE = 14
+  };
+  
+  enum{
+    CENTER_BAR_LENGHT = 5,
+    BORDER_BAR_LENGHT = 3,
+    DIGIT_LENGHT = 7
+  };
 
-  static const int CENTER_BAR_LENGHT = 5;
-  static const int BORDER_BAR_LENGHT = 3;
-  static const int DIGIT_LENGHT = 7;
+  enum{
+    BORDER_BAR_INDEX_ALPHABET = 10,
+	CENTER_BAR_INDEX_ALPHABET = 11
+  };
 
-  static const int BORDER_BAR_INDEX_ALPHABET = 10;
-  static const int CENTER_BAR_INDEX_ALPHABET = 11;
-
-  static const int ALPHABET_LENGHT = 12;
-
-  static const int barcode_lenght = 15;
-  static const bool fixed_lenght = true;
-
-
+  static const int symbology;
+  static const int barcode_lenght;
+  static const bool fixed_lenght;
+  
   /*****TODO We want to use a map?*****/
   std::vector<std::string> bars_pattern_left; //vector of bars (i.e. of a bars "1101001") 
   std::vector<std::string> bars_pattern_right; 
@@ -162,9 +163,8 @@ class SymbologyUPCA : public virtual Symbology {
  private:
 };
 }
+}
 
-#endif /* __cplusplus */
-
-#endif /* SYMBOLOGIES_HPP_ */
+#endif /* __OPENCV_SYMBOLOGIES_HPP_ */
 
 //==========================================================================//

@@ -45,20 +45,12 @@
 ** 	        Stefano Fabri (s.fabri@email.it), Rome, Italy                                       *
 ************************************************************************************************/
 
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#include "Barcode1Dlocator.hpp"
+#include "opencv2/barcode1d.hpp"
+#include "opencv2/core.hpp"
 
-namespace cv
-{
+#include <algorithm>
 
-Barcode1Dlocator::~Barcode1Dlocator() {
-  // TODO Auto-generated destructor stub
-}
-
-Ptr<Barcode1Dlocator> Barcode1Dlocator::create( const std::string& locator_type )
-{
-  (void) locator_type;
-  return NULL;
-}
-
-}
+#endif
