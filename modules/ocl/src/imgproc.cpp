@@ -1598,7 +1598,7 @@ namespace cv
 
                 cv::AlgorithmInfo* info() const;
 
-                void apply(const oclMat &src, oclMat &dst);
+                void apply(cv::InputArray src, cv::OutputArray dst);
 
                 void setClipLimit(double clipLimit);
                 double getClipLimit() const;
@@ -1616,14 +1616,19 @@ namespace cv
                 oclMat srcExt_;
                 oclMat lut_;
             };
-
             CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
             clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
             {
             }
 
-            void CLAHE_Impl::apply(const oclMat &src, oclMat &dst)
+            CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_OCL",
+                obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
+                obj.info()->addParam(obj, "tilesX", obj.tilesX_);
+                obj.info()->addParam(obj, "tilesY", obj.tilesY_))
+            void CLAHE_Impl::apply(cv::InputArray src_raw, cv::OutputArray dst_raw)
             {
+                oclMat& src = getOclMatRef(src_raw);
+                oclMat& dst = getOclMatRef(dst_raw);
                 CV_Assert( src.type() == CV_8UC1 );
 
                 dst.create( src.size(), src.type() );
