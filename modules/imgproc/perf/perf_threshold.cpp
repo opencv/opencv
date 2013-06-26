@@ -51,7 +51,8 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
+    int runs = 15;
+    TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
 
     SANITY_CHECK(dst);
 }
