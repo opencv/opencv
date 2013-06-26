@@ -1335,6 +1335,13 @@ void temp_viz::convertToVtkMatrix (const cv::Matx44f &m, vtkSmartPointer<vtkMatr
             vtk_matrix->SetElement (i, k, m (i, k));
 }
 
+void temp_viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m)
+{
+    for (int i = 0; i < 4; i++)
+        for (int k = 0; k < 4; k++)
+            m(i,k) = vtk_matrix->GetElement (i, k);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 void temp_viz::convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m)
 {

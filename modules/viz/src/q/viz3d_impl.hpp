@@ -144,6 +144,8 @@ public:
     void showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
     void showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color);
     void showCircle (const String &id, const Point3f &pt, double radius, const Color &color);
+    Affine3f getShapePose (const String &id);
+    bool setShapePose (const String &id, const Affine3f &pose);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");
@@ -422,6 +424,7 @@ private:
 //void convertToVtkMatrix (const Eigen::Matrix4f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 
 void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
+void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
 
 /** \brief Convert origin and orientation to vtkMatrix4x4
       * \param[in] origin the point cloud origin

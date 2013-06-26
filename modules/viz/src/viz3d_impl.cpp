@@ -477,6 +477,51 @@ void temp_viz::Viz3d::VizImpl::showCircle (const String &id, const Point3f &pt, 
     }
 }
 
+cv::Affine3f temp_viz::Viz3d::VizImpl::getShapePose (const String &id)
+{
+    // Get the shape with the id and return the pose
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    if (!exists)
+    {
+        std::cout << "[getShapePose] A shape with id " << id << " does not exist!" << std::endl;
+        return Affine3f();
+    }
+
+    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
+
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    
+    Matx44f pose_mat;
+    convertToCvMatrix(matrix, pose_mat);
+    
+    Affine3f pose;
+    pose.matrix = pose_mat;
+    return pose;
+}
+
+bool temp_viz::Viz3d::VizImpl::setShapePose (const String &id, const Affine3f &pose)
+{
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    if (!exists)
+    {
+        return false;
+    }
+   
+    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New ();
+
+    convertToVtkMatrix (pose.matrix, matrix);
+
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
+
+    return (true);
+}
+
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
