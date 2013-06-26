@@ -407,6 +407,40 @@ void temp_viz::Viz3d::VizImpl::showCube (const String &id, const Point3f &pt1, c
     }
 }
 
+void temp_viz::Viz3d::VizImpl::showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createCylinder(pt_on_axis, axis_direction, radius, num_sides));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createCylinder(pt_on_axis, axis_direction, radius, num_sides);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
 
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {

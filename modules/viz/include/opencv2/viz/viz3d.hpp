@@ -32,10 +32,11 @@ namespace temp_viz
 
         bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String &id = "cloud");
         
-        void showLine(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
-        void showPlane(const String &id, const Vec4f &coefs, const Color &color);
-        void showPlane(const String &id, const Vec4f &coefs, const Point3f &pt, const Color &color);
-        void showCube(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
+        void showLine(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color = Color(255,255,255));
+        void showPlane(const String &id, const Vec4f &coefs, const Color &color = Color(255,255,255));
+        void showPlane(const String &id, const Vec4f &coefs, const Point3f &pt, const Color &color = Color(255,255,255));
+        void showCube(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color = Color(255,255,255));
+        void showCylinder(const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color = Color(255,255,255));
 
         bool addPlane (const ModelCoefficients &coefficients, const String &id = "plane");
         bool addPlane (const ModelCoefficients &coefficients, double x, double y, double z, const String &id = "plane");

@@ -98,6 +98,11 @@ void temp_viz::Viz3d::showCube(const String &id, const Point3f &pt1, const Point
     impl_->showCube(id, pt1, pt2, color);
 }
 
+void temp_viz::Viz3d::showCylinder(const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color)
+{
+    impl_->showCylinder(id, pt_on_axis, axis_direction, radius, num_sides, color);
+}
+
 bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)
 {
     return impl_->removeCoordinateSystem(id);

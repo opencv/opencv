@@ -104,6 +104,8 @@ TEST(Viz_viz3d, accuracy)
         v.showLine("line4", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, 1.0f-pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
         v.showPlane("plane1", cv::Vec4f(pos_x*pos_y,pos_y,pos_z,pos_x+pos_y*pos_z), temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
         v.showCube("cube1", cv::Point3f(pos_x, pos_y, pos_z), cv::Point3f(pos_x+0.5, pos_y+0.5, pos_z+0.5), temp_viz::Color(255,150,50));
+        v.showCylinder("cylinder1", cv::Point3f(0,0,0), cv::Point3f(pos_x, 1.0, 1.0), 0.5, 5*pos_x+3, temp_viz::Color(0,255,0));
+        
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
