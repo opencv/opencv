@@ -896,7 +896,7 @@ bool CV_OperationsTest::TestMatxElementwiseDivison()
 {
     try
     {
-        Matx22f mat(2, 4, 6, 8); // Identity matrix
+        Matx22f mat(2, 4, 6, 8);
         Matx22f mat2(2, 2, 2, 2);
 
         Matx22f res = mat / mat2;
@@ -1130,6 +1130,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestMatxMultiplication())
+        return;
+
+    if (!TestMatxElementwiseDivison())
         return;
 
     if (!TestSubMatAccess())
