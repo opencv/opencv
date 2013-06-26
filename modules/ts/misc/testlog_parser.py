@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
-import sys, re, os.path
+import collections
+import re
+import os.path
+import sys
 from xml.dom.minidom import parse
 
 class TestInfo(object):
@@ -159,12 +162,31 @@ class TestInfo(object):
                 return 1
         return 0
 
+# This is a Sequence for compatibility with old scripts,
+# which treat parseLogFile's return value as a list.
+class TestRunInfo(collections.Sequence):
+    def __init__(self, properties, tests):
+        self.properties = properties
+        self.tests = tests
+
+    def __len__(self):
+        return len(self.tests)
+
+    def __getitem__(self, key):
+        return self.tests[key]
+
 def parseLogFile(filename):
-    tests = []
     log = parse(filename)
-    for case in log.getElementsByTagName("testcase"):
-        tests.append(TestInfo(case))
-    return tests
+
+    properties = {
+        attr_name[3:]: attr_value
+        for (attr_name, attr_value) in log.documentElement.attributes.items()
+        if attr_name.startswith('cv_')
+    }
+
+    tests = map(TestInfo, log.getElementsByTagName("testcase"))
+
+    return TestRunInfo(properties, tests)
 
 
 if __name__ == "__main__":
@@ -173,8 +195,18 @@ if __name__ == "__main__":
         exit(0)
 
     for arg in sys.argv[1:]:
-        print "Tests found in", arg
-        tests = parseLogFile(arg)
-        for t in sorted(tests):
+        print "Processing {}...".format(arg)
+
+        run = parseLogFile(arg)
+
+        print "Properties:"
+
+        for (prop_name, prop_value) in run.properties.items():
+          print "\t{} = {}".format(prop_name, prop_value)
+
+        print "Tests:"
+
+        for t in sorted(run.tests):
             t.dump()
+
         print
