@@ -7,10 +7,12 @@
 //  copy or use the software.
 //
 //
-//                        Intel License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -23,7 +25,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of Intel Corporation may not be used to endorse or promote products
+//   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -39,89 +41,69 @@
 //
 //M*/
 
-#include "test_precomp.hpp"
-#include "opencv2/video/tracker.hpp"
+#include "precomp.hpp"
 
-using namespace cv;
-using namespace std;
-
-class CV_TrackerBaseTest : public cvtest::BaseTest
+namespace cv
 {
-public:
-	CV_TrackerBaseTest();
-    virtual ~CV_TrackerBaseTest();
 
-};
+/*
+ *  TrackerBoosting
+ */
 
+/*
+ * Parameters
+ */
+TrackerBoosting::Params::Params()
+{
 
-CV_TrackerBaseTest::CV_TrackerBaseTest()
+}
+
+void TrackerBoosting::Params::read(const cv::FileNode& fn )
+{
+
+}
+
+void TrackerBoosting::Params::write(cv::FileStorage& fs) const
 {
 
 }
 
 
-CV_TrackerBaseTest::~CV_TrackerBaseTest()
+/*
+ * Constructor
+ */
+TrackerBoosting::TrackerBoosting(const TrackerBoosting::Params &parameters) :
+params(parameters)
 {
 
 }
 
-
-
-/************************************ TrackerMIL ************************************/
-
-class CV_TrackerMILTest : public CV_TrackerBaseTest
+/*
+ * Destructor
+ */
+TrackerBoosting::~TrackerBoosting()
 {
-public:
-	CV_TrackerMILTest();
-	~CV_TrackerMILTest();
 
-protected:
-	void run( int );
-};
-
-CV_TrackerMILTest::CV_TrackerMILTest()
-{
 }
 
-CV_TrackerMILTest::~CV_TrackerMILTest()
+void TrackerBoosting::read( const cv::FileNode& fn )
 {
+    params.read(fn);
 }
 
-void CV_TrackerMILTest::run( int )
+void TrackerBoosting::write( cv::FileStorage& fs ) const
 {
-	ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-	ts->printf( cvtest::TS::LOG, "CV_TrackerMILTest to be implemented" );
+    params.write(fs);
 }
 
-
-/************************************ TrackerBoosting ************************************/
-
-class CV_TrackerBoostingTest : public CV_TrackerBaseTest
+bool TrackerBoosting::initImpl( const Mat& image, const Rect& boundingBox )
 {
-public:
-	CV_TrackerBoostingTest();
-	~CV_TrackerBoostingTest();
-
-protected:
-	void run( int );
-};
-
-CV_TrackerBoostingTest::CV_TrackerBoostingTest()
-{
+	return false;
 }
 
-CV_TrackerBoostingTest::~CV_TrackerBoostingTest()
+bool TrackerBoosting::updateImpl( const Mat& image, Rect& boundingBox )
 {
+	return false;
 }
 
-void CV_TrackerBoostingTest::run( int )
-{
-	ts->set_failed_test_info(cvtest::TS::FAIL_GENERIC);
-	ts->printf( cvtest::TS::LOG, "CV_TrackerBoostingTest to be implemented" );
-}
-
-
-TEST(Video_TrackerMIL, accuracy) { CV_TrackerMILTest test; test.safe_run(); }
-TEST(Video_TrackerBoosting, accuracy) { CV_TrackerBoostingTest test; test.safe_run(); }
-
-/* End of file. */
+} /* namespace cv */

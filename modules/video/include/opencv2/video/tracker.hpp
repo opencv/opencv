@@ -116,14 +116,92 @@ public:
 
 protected:
 
-	virtual bool initImpl( const Mat& image, const Rect& boundingBox ) const = 0;
-	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) const = 0;
+	virtual bool initImpl( const Mat& image, const Rect& boundingBox ) = 0;
+	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
 
 };
 
 
 
+/************************************ Specific Tracker Classes ************************************/
 
+/**
+  \brief TrackerMIL implementation.
+  For more details see B Babenko, MH Yang, S Belongie, Visual Tracking with Online Multiple Instance Learning
+*/
+class CV_EXPORTS_W TrackerMIL : public Tracker
+{
+public:
+	struct CV_EXPORTS Params
+	{
+		Params();
+
+		void read( const FileNode& fn );
+		void write( FileStorage& fs ) const;
+	};
+
+	/**
+	 * \brief TrackerMIL Constructor
+	 * \param parameters        TrackerMIL parameters
+	 */
+	TrackerMIL(const TrackerMIL::Params &parameters = TrackerMIL::Params());
+
+	virtual ~TrackerMIL();
+
+	void read( const FileNode& fn );
+	void write( FileStorage& fs ) const;
+
+protected:
+
+	bool initImpl( const Mat& image, const Rect& boundingBox );
+	bool updateImpl( const Mat& image, Rect& boundingBox );
+
+	Params params;
+	AlgorithmInfo* info() const { return 0; }
+};
+
+
+/**
+  \brief TrackerBoosting implementation.
+  For more details see H Grabner, M Grabner, H Bischof, Real-time tracking via on-line boosting
+*/
+class CV_EXPORTS_W TrackerBoosting : public Tracker
+{
+public:
+	struct CV_EXPORTS Params
+	{
+		Params();
+
+		/**
+		 * \brief Read parameters from file
+		 */
+		void read( const FileNode& fn );
+
+		/**
+		 * \brief Write parameters in a file
+		 */
+		void write( FileStorage& fs ) const;
+	};
+
+	/**
+	 * \brief TrackerBoosting Constructor
+	 * \param parameters        TrackerBoosting parameters
+	 */
+	TrackerBoosting(const TrackerBoosting::Params &parameters = TrackerBoosting::Params());
+
+	virtual ~TrackerBoosting();
+
+	void read( const FileNode& fn );
+	void write( FileStorage& fs ) const;
+
+protected:
+
+	bool initImpl( const Mat& image, const Rect& boundingBox );
+	bool updateImpl( const Mat& image, Rect& boundingBox );
+
+	Params params;
+	AlgorithmInfo* info() const { return 0; }
+};
 
 } /* namespace cv */
 
