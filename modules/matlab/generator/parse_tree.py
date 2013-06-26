@@ -172,7 +172,18 @@ class Constant(object):
         return ('const ' if self.const else '')+self.tp+self.ref+\
                 ' '+self.name+('='+self.default if self.default else '')+';'
 
-
+def constants(tree):
+    if isinstance(tree, dict) and 'constants' in tree and isinstance(tree['constants'], list):
+        for node in tree['constants']:
+            yield (node['name'], node['default'])
+    if isinstance(tree, dict):
+        for key, val in tree.items():
+            for gen in constants(val):
+                yield gen
+    if isinstance(tree, list):
+        for val in tree:
+            for gen in constants(val):
+                yield gen
 
 def todict(obj, classkey=None):
     if isinstance(obj, dict):

@@ -38,17 +38,22 @@ class MatlabWrapperGenerator(object):
         tclassm    = jtemplate.get_template('template_class_base.m')
         tclassc    = jtemplate.get_template('template_class_base.cpp')
         tdoc       = jtemplate.get_template('template_doc_base.m')
+        tconstc    = jtemplate.get_template('template_map_base.cpp')
+        tconstm    = jtemplate.get_template('template_map_base.m')
 
         # create the build directory
         output_source_dir  = output_dir+'/src'
         output_private_dir = output_source_dir+'/private' 
         output_class_dir   = output_dir+'/+cv'
+        output_map_dir     = output_dir+'/map'
         if not os.path.isdir(output_source_dir):
           os.mkdir(output_source_dir)
         if not os.path.isdir(output_private_dir):
           os.mkdir(output_private_dir)
         if not os.path.isdir(output_class_dir):
           os.mkdir(output_class_dir)
+        if not os.path.isdir(output_map_dir):
+          os.mkdir(output_map_dir)
 
         # populate templates
         for namespace in parse_tree.namespaces:
@@ -68,6 +73,15 @@ class MatlabWrapperGenerator(object):
                 with open(output_class_dir+'/'+clss.name+'.m', 'wb') as f:
                     f.write(populated)
 
+        # create a global constants lookup table
+        const = dict(constants(todict(parse_tree.namespaces)))
+        populatedc = tconstc.render(constants=const)
+        populatedm = tconstm.render(constants=const)
+        with open(output_map_dir+'/map.cpp', 'wb') as f:
+            f.write(populatedc)
+        with open(output_map_dir+'/map.m', 'wb') as f:
+            f.write(populatedm)
+
 
 
 if __name__ == "__main__":
@@ -77,7 +91,7 @@ if __name__ == "__main__":
     sys.path.append(sys.argv[1])
     from string import Template
     from hdr_parser import CppHeaderParser
-    from parse_tree import ParseTree, todict
+    from parse_tree import ParseTree, todict, constants
     from filters import *
     from jinja2 import Environment, PackageLoader
 
