@@ -93,6 +93,11 @@ void temp_viz::Viz3d::showPlane(const String &id, const Vec4f &coefs, const Poin
     impl_->showPlane(id, coefs, pt, color);
 }
 
+void temp_viz::Viz3d::showCube(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    impl_->showCube(id, pt1, pt2, color);
+}
+
 bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)
 {
     return impl_->removeCoordinateSystem(id);

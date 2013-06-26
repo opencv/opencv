@@ -35,6 +35,7 @@ namespace temp_viz
         void showLine(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
         void showPlane(const String &id, const Vec4f &coefs, const Color &color);
         void showPlane(const String &id, const Vec4f &coefs, const Point3f &pt, const Color &color);
+        void showCube(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
 
         bool addPlane (const ModelCoefficients &coefficients, const String &id = "plane");
         bool addPlane (const ModelCoefficients &coefficients, double x, double y, double z, const String &id = "plane");
