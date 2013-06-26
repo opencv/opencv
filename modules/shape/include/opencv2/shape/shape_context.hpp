@@ -112,23 +112,27 @@ struct CV_EXPORTS DistanceSCDFlags
     { 
         DEFAULT = 0, // CHI Squared Distance
         DIST_CHI = 0,
-        DIST_EMD = 1, // Earth Mover's Distance
-        DIST_EUCLIDEAN = 2 // Euclidean Distance
+        DIST_EMD = 1, // Earth Mover's Distance (Not defined yet)
+        DIST_EUCLIDEAN = 2 // Euclidean Distance (Not defined yet)
     };
 };
 
 class CV_EXPORTS_W SCDMatcher 
 {
 public:
-    //! the default constructor
-    CV_WRAP SCDMatcher();
-    //! the full constructor taking all the necessary parameters
-    // Define it here
+    //! the full constructor
+    CV_WRAP SCDMatcher(float outlierWeight=0.1, int flags=DistanceSCDFlags::DEFAULT);
+    //! the matcher function using Hungarian method
+    CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches) const;
 private:
+    float outlierWeight;
+    int configFlags;
 protected:
-    CV_WRAP void buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix,
-                                 int flags=DistanceSCDFlags::DEFAULT) const;
+    CV_WRAP void buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void buildEucCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void hungarian(Mat& costMatrix, std::vector<DMatch>& matches) const;
 };
 
 typedef SCDMatcher ShapeContextDescriptorMatcher;

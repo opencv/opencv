@@ -48,17 +48,28 @@
 namespace cv
 {
 /* Constructors */
-SCDMatcher::SCDMatcher()
-{   
+SCDMatcher::SCDMatcher(float _outlierWeight, int _configFlags)
+{
+    outlierWeight=_outlierWeight;
+    configFlags=_configFlags;
 }
+
 /* Public methods */
+void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches) const
+{
+    CV_Assert((descriptors1.cols>0) & (descriptors1.rows>0) & (descriptors2.cols>0) & (descriptors2.rows>0));
+    /* Build the cost Matrix between descriptors*/
+    Mat costMat;
+    buildCostMatrix(descriptors1, descriptors2, costMat, configFlags);
+    
+    /* Solve the matching problem using the hungarian method */
+    hungarian(costMat, matches);
+}
+
 /* Protected methods */
 void SCDMatcher::buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, 
                                    Mat& costMatrix, int flags) const
-{
-    CV_Assert((descriptors1.cols>0) & (descriptors1.rows>0) & (descriptors2.cols>0) & (descriptors2.rows>0));
-    costMatrix = Mat::zeros(descriptors1.rows, descriptors2.rows, CV_32F);
-    
+{  
     switch (flags)
     {
         case DistanceSCDFlags::DIST_CHI:
@@ -87,8 +98,12 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
     for(int i=0; i<scd2.rows; i++)
     {
         scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+DBL_EPSILON);
-    }
-    
+    }   
+
+    /* initializing costMatrix with oulier weight values*/
+    int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
+    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
+        
     /* compute the Cost Matrix*/
     for(int i=0; i<scd1.rows; i++)
     {
@@ -101,6 +116,91 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
                         (DBL_EPSILON+scd1.at<float>(i,k)+scd2.at<float>(j,k));
             }
             costMatrix.at<float>(i,j)=csum/2;
+        }
+    }
+}
+
+void SCDMatcher::buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
+{
+}
+
+void SCDMatcher::buildEucCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
+{
+}
+
+void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches) const
+{
+    bool unassignedfound;
+    int  imin, numfree = 0, prvnumfree, f, i0, freerow;
+    int  j1, j2, endofpath, last, low, up;
+    float min, h, umin, usubmin, v2;
+    std::vector<int> free, collist, matches, pred;
+    std::vector<float> d, v;
+    int dim = costMatrix.rows;
+    
+    free.resize(dim);
+    collist.resize(dim);
+    matches.resize(dim);
+    pred.resize(dim);
+    d.resize(dim);
+    v.resize(dim);
+    
+    for (int i = 0; i < dim; i++)  
+    {
+        matches.push_back(0);
+    }
+
+    // COLUMN REDUCTION 
+    for (int j=dim-1; j>=0; j--)    
+    {
+        min = costMatrix.at<float>(0,j); 
+        imin = 0;
+        for (int i = 1; i < dim; i++)  
+        {
+            if (costMatrix.at<float>(i,j) < min) 
+            { 
+                min = costMatrix.at<float>(i,j); 
+                imin = i;
+            }
+        }
+        v[j] = min; 
+
+        if (++matches[imin] == 1) 
+        { 
+            //rowsol[imin] = j; 
+            //colsol[j] = imin; 
+        }
+        else
+        {
+            //colsol[j] = -1;
+        }
+    }
+    
+    // REDUCTION TRANSFER
+    for (int i = 0; i < dim; i++)
+    { 
+        if (matches[i] == 0)
+        {
+            free[numfree++] = i;
+        }
+        else
+        {
+            if (matches[i] == 1)
+            {
+                //j1 = rowsol[i]; 
+                min = 1e10;
+                for (int j = 0; j < dim; j++)
+                {
+                    if (j != j1)
+                    {
+                        if (costMatrix.at<float>(i,j) - v[j] < min) 
+                        {
+                            min = costMatrix.at<float>(i,j) - v[j];
+                        }
+                    }
+                }
+                v[j1] = v[j1] - min;
+            }
         }
     }
 }
