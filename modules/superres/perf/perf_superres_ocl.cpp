@@ -41,10 +41,10 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/ocl/ocl.hpp"
 
 #ifdef HAVE_OPENCL
 
+#include "opencv2/ocl/ocl.hpp"
 using namespace std;
 using namespace testing;
 using namespace perf;
@@ -58,13 +58,9 @@ namespace
     public:
         explicit OneFrameSource_OCL(const ocl::oclMat& frame) : frame_(frame) {}
 
-        void nextFrame(OutputArray)
+        void nextFrame(OutputArray frame)
         {
-        }
-
-        void nextFrame(ocl::oclMat& frame)
-        {
-            frame_.copyTo(frame);
+            ocl::getOclMatRef(frame) = frame_;
         }
         void reset()
         {
@@ -78,15 +74,27 @@ namespace
     class ZeroOpticalFlowOCL : public DenseOpticalFlowExt
     {
     public:
-        void calc(ocl::oclMat& frame0, ocl::oclMat&, ocl::oclMat& flow1, ocl::oclMat& flow2)
+        void calc(InputArray frame0, InputArray, OutputArray flow1, OutputArray flow2)
         {
-            cv::Size size = frame0.size();
+            ocl::oclMat& frame0_ = ocl::getOclMatRef(frame0);
+            ocl::oclMat& flow1_ = ocl::getOclMatRef(flow1);
+            ocl::oclMat& flow2_ = ocl::getOclMatRef(flow2);
 
-            flow1.create(size, CV_32FC1);
-            flow2.create(size, CV_32FC1);
+            cv::Size size = frame0_.size();
 
-            flow1.setTo(Scalar::all(0));
-            flow2.setTo(Scalar::all(0));
+            if(!flow2.needed())
+            {
+                flow1_.create(size, CV_32FC2);
+                flow1_.setTo(Scalar::all(0));
+            }
+            else
+            {
+                flow1_.create(size, CV_32FC1);
+                flow2_.create(size, CV_32FC1);
+
+                flow1_.setTo(Scalar::all(0));
+                flow2_.setTo(Scalar::all(0));
+            }
         }
 
         void collectGarbage()
