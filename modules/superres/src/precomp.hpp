@@ -65,6 +65,10 @@
     #endif
 #endif
 
+#ifdef HAVE_OPENCV_OCL
+    #include "opencv2/ocl/private/util.hpp"
+#endif
+
 #ifdef HAVE_OPENCV_HIGHGUI
     #include "opencv2/highgui/highgui.hpp"
 #endif
