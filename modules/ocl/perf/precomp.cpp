@@ -42,7 +42,9 @@
 
 #include "precomp.hpp"
 #if GTEST_OS_WINDOWS
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 # include <windows.h>
 #endif
 
@@ -278,7 +280,7 @@ enum GTestColor {
 };
 #if GTEST_OS_WINDOWS&&!GTEST_OS_WINDOWS_MOBILE
 // Returns the character attribute for the given color.
-WORD GetColorAttribute(GTestColor color) {
+static WORD GetColorAttribute(GTestColor color) {
     switch (color) {
     case COLOR_RED:    return FOREGROUND_RED;
     case COLOR_GREEN:  return FOREGROUND_GREEN;
