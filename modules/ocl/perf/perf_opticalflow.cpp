@@ -293,12 +293,10 @@ PERFTEST(FarnebackOpticalFlow)
                 std::vector<cv::Mat> flowxy;
                 cv::split(flow, flowxy);
 
-                double diff0 = 0.0;
-                TestSystem::instance().setAccurate(ExceptedMatSimilar(flowxy[0], cv::Mat(d_flowx), 0.1, diff0));                     
-                TestSystem::instance().setDiff(diff0);
-                double diff1 = 0.0;
-                TestSystem::instance().setAccurate(ExceptedMatSimilar(flowxy[1], cv::Mat(d_flowy), 0.1, diff1));                     
-                TestSystem::instance().setDiff(diff1);
+                Mat md_flowx = cv::Mat(d_flowx);
+                Mat md_flowy = cv::Mat(d_flowy);
+                TestSystem::instance().ExceptedMatSimilar(flowxy[0], md_flowx, 0.1);
+                TestSystem::instance().ExceptedMatSimilar(flowxy[1], md_flowy, 0.1);
 
                 if (useInitFlow)
                 {

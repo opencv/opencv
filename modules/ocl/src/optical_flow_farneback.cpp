@@ -82,7 +82,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
         gKer.upload(t_gKer);
     }
 
-    void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
+    static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
     {
         string kernelName("gaussianBlur");
         size_t localThreads[3] = { 256, 1, 1 };
@@ -105,7 +105,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
             globalThreads, localThreads, args, -1, -1);
     }
 
-    void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
+    static void polynomialExpansionOcl(const oclMat &src, int polyN, oclMat &dst)
     {
         string kernelName("polynomialExpansion");
         size_t localThreads[3] = { 256, 1, 1 };
@@ -132,7 +132,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
             globalThreads, localThreads, args, -1, -1, opt);
     }
 
-    void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
+    static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oclMat &R0, const oclMat &R1, oclMat &M)
     {
         string kernelName("updateMatrices");
         size_t localThreads[3] = { 32, 8, 1 };
@@ -158,7 +158,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
             globalThreads, localThreads, args, -1, -1);
     }
 
-    void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
+    static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
     {
         string kernelName("boxFilter5");
         int height = src.rows / 5;
@@ -180,7 +180,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
             globalThreads, localThreads, args, -1, -1);
     }
 
-    void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
+    static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
     {
         string kernelName("updateFlow");
         int cols = divUp(flowx.cols, 4);
@@ -203,7 +203,7 @@ namespace cv { namespace ocl { namespace optflow_farneback
             globalThreads, localThreads, args, -1, -1);
     }
 
-    void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
+    static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
     {
         string kernelName("gaussianBlur5");
         int height = src.rows / 5;
