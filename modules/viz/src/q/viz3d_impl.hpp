@@ -143,6 +143,7 @@ public:
     void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color);
     void showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
     void showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color);
+    void showCircle (const String &id, const Point3f &pt, double radius, const Color &color);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");

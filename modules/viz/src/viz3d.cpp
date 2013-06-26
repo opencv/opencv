@@ -103,6 +103,11 @@ void temp_viz::Viz3d::showCylinder(const String &id, const Point3f &pt_on_axis, 
     impl_->showCylinder(id, pt_on_axis, axis_direction, radius, num_sides, color);
 }
 
+void temp_viz::Viz3d::showCircle(const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    impl_->showCircle(id, pt, radius, color);
+}
+
 bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)
 {
     return impl_->removeCoordinateSystem(id);
