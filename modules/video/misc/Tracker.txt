@@ -2,44 +2,40 @@
 package "Tracker package" #DDDDDD {
 
 enum TrackerType {
-  	MIL_TRACKER
-  	BOOSTING_TRACKER
+  	TRACKER_MIL
+  	TRACKER_BOOSTING
   	. . .
 }
 enum TrackerType
 note right: Algorithms
 
 
-class TrackerParams{
-	int trackerFeatureType;
-	int trackerSamplerType;
-	int trackerStateEstimatorType;
-}
 class Algorithm {
 }
 class Tracker{
-	TrackerParams p;
-	...
-	+Ptr<Tracker> create(string trackerType, TrackerParams p);
-	+init(const Mat& frame, const Rect& boundingBox);
-	+bool update(const Mat& frame, Rect& boundingBox);
+	+static Ptr<Tracker> create(string trackerType, TrackerParams p);
+	+bool init(const Mat& image, const Rect& boundingBox);
+	+bool update(const Mat& image, Rect& boundingBox);
 }
 class Tracker 
-note left: Tracker is the general interface for each specialized trackers
+note right: Tracker is the general interface for each specialized trackers
 class TrackerMIL{
-	TrackerMIL(TrackerParams param);
-	+init(const Mat& frame, const Rect& boundingBox);
-	+bool update(const Mat& frame, Rect& boundingBox);
+	+Params
+	---
+	TrackerMIL(TrackerMIL::Params param);
+	+bool init(const Mat& image, const Rect& boundingBox);
+	+bool update(const Mat& image, Rect& boundingBox);
 }
 class TrackerBoosting{
-	TrackerBoosting(TrackerParams param);
-	+init(const Mat& frame, const Rect& boundingBox);
-	+bool update(const Mat& frame, Rect& boundingBox);
+	+Params
+	---
+	TrackerBoosting(TrackerBoosting::Params param);
+	+bool init(const Mat& image, const Rect& boundingBox);
+	+bool update(const Mat& image, Rect& boundingBox);
 }
 Algorithm <|-- Tracker : virtual inheritance 
 Tracker <|-- TrackerMIL
 Tracker <|-- TrackerBoosting
-Tracker -> TrackerParams : create
 
 note "Single instance of the Tracker" as N1
 TrackerBoosting .. N1
