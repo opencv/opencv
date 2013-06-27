@@ -12,7 +12,7 @@ typedef std::unordered_map Map;
  * from Matlab as, e.g.
  *    cv.dft(x, xf, "DFT_FORWARD");
  *
- * Note that an alternative MAtlab class exists as well, so that functions
+ * Note that an alternative Matlab class exists as well, so that functions
  * can be called as, e.g.
  *    cv.dft(x, xf, cv.DFT_FORWARD);
  *

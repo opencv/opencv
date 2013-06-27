@@ -13,6 +13,7 @@
 typedef std::vector<cv::Mat> vector_Mat;
 typedef std::vector<cv::Point> vector_Point;
 typedef std::vector<int> vector_int;
+typedef std::vector<float> vector_float;
 
 
 void conditionalError(bool expr, const std::string& str) {
@@ -127,6 +128,11 @@ public:
   vector_int toVectorInt() { return vector_int(); }
   operator vector_int() { return toVectorInt(); }
 
+  // --------------------------- vector_float  ----------------------------------
+  Bridge& operator=(const vector_float& obj) { return *this; }
+  vector_float toVectorFloat() { return vector_float(); }
+  operator vector_float() { return toVectorFloat(); }
+
   // --------------------------- string  --------------------------------------
   Bridge& operator=(const std::string& obj) { return *this; }
   std::string toString() { return ""; }
@@ -147,10 +153,25 @@ public:
   cv::Point toPoint() { return cv::Point(); }
   operator cv::Point() { return toPoint(); }
 
+  // --------------------------   Point2f  ------------------------------------
+  Bridge& operator=(const cv::Point2f& obj) { return *this; }
+  cv::Point2f toPoint2f() { return cv::Point2f(); }
+  operator cv::Point2f() { return toPoint2f(); }
+
+  // --------------------------   Point2d  ------------------------------------
+  Bridge& operator=(const cv::Point2d& obj) { return *this; }
+  cv::Point2d toPoint2d() { return cv::Point2d(); }
+  operator cv::Point2d() { return toPoint2d(); }
+
   // --------------------------   Size  ---------------------------------------
   Bridge& operator=(const cv::Size& obj) { return *this; }
   cv::Size toSize() { return cv::Size(); }
   operator cv::Size() { return toSize(); }
+
+  // -------------------------- Moments  ---------------------------------------
+  Bridge& operator=(const cv::Moments& obj) { return *this; }
+  cv::Moments toMoments() { return cv::Moments(); }
+  operator cv::Moments() { return toMoments(); }
 
   // ------------------------ vector_Point ------------------------------------
   Bridge& operator=(const vector_Point& obj) { return *this; }

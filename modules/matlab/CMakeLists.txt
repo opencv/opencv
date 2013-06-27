@@ -159,6 +159,7 @@ add_custom_command(
 add_custom_command(
     OUTPUT ${COMPILE_PROXY}
     COMMAND ${CMAKE_COMMAND} -DMATLAB_MEX_SCRIPT=${MATLAB_MEX_SCRIPT}
+                             -DMATLAB_MEXEXT=${MATLAB_MEXEXT}
                              -DMEX_OPTS=${MEX_OPTS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
                              -DMEX_LIB_DIR=${MEX_LIB_DIR}

@@ -1,5 +1,6 @@
 from string import join
 from textwrap import fill
+from filters import *
 
 class ParseTree(object):
     def __init__(self, namespaces=None):
@@ -52,7 +53,7 @@ class Translator(object):
             return self.translateClass(defn)
         # --- function ---
         # functions either need to have input arguments, or not uppercase names
-        elif defn[3] or not self.translateName(defn[0]).isupper():
+        elif defn[3] or not self.translateName(defn[0]).split('_')[0].isupper():
             return self.translateFunction(defn)
         # --- constant ---
         else:
