@@ -516,10 +516,7 @@ namespace cv
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
         
         //! only 8UC1 is supported now
-        class CV_EXPORTS CLAHE : public cv::CLAHE
-        {
-        };
-        CV_EXPORTS Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+        CV_EXPORTS Ptr<cv::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
         
         //! bilateralFilter
         // supports 8UC1 8UC4

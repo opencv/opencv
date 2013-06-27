@@ -1591,7 +1591,7 @@ namespace cv
 
         namespace
         {
-            class CLAHE_Impl : public cv::ocl::CLAHE
+            class CLAHE_Impl : public cv::CLAHE
             {
             public:
                 CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
@@ -1696,7 +1696,7 @@ namespace cv
             }
         }
 
-        cv::Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit, cv::Size tileGridSize)
+        cv::Ptr<cv::CLAHE> createCLAHE(double clipLimit, cv::Size tileGridSize)
         {
             return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
         }
