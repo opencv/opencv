@@ -23,7 +23,11 @@
 classdef cv
     properties (Constant = true)
     {% for key, val in constants.items() %}
+        {% if val|convertibleToInt %}
         {{key}} = {{val}};
+        {% else %}
+        {{key}} = {{constants[val]}};
+        {% endif %}
     {% endfor %}
     end
 end

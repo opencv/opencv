@@ -43,6 +43,13 @@ def noutputs(args):
     '''Counts the number of output arguments in the input list'''
     return len(outputs(args))
 
+def convertibleToInt(string):
+    try:
+        int(string)
+        return True
+    except ValueError:
+        return False
+
 def capitalizeFirst(text):
     return text[0].upper() + text[1:]
 

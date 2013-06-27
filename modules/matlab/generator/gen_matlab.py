@@ -20,6 +20,7 @@ class MatlabWrapperGenerator(object):
         jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)
 
         # add the custom filters
+        jtemplate.filters['convertibleToInt'] = convertibleToInt
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
         jtemplate.filters['toUnderCase'] = toUnderCase
@@ -79,7 +80,7 @@ class MatlabWrapperGenerator(object):
         populatedm = tconstm.render(constants=const)
         with open(output_map_dir+'/map.cpp', 'wb') as f:
             f.write(populatedc)
-        with open(output_map_dir+'/map.m', 'wb') as f:
+        with open(output_dir+'/cv.m', 'wb') as f:
             f.write(populatedm)
 
 
