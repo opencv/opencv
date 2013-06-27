@@ -49,8 +49,8 @@
 /*
  * Partially based on:
  * ====================================================================================================================
- * 	- S. Salti, A. Cavallaro, L. Di Stefano, Adaptive Appearance Modeling for Video Tracking: Survey and Evaluation
- *  - X. Li, W. Hu, C. Shen, Z. Zhang, A. Dick, A. van den Hengel, A Survey of Appearance Models in Visual Object Tracking
+ * 	- [AAM] S. Salti, A. Cavallaro, L. Di Stefano, Adaptive Appearance Modeling for Video Tracking: Survey and Evaluation
+ *  - [AMVOT] X. Li, W. Hu, C. Shen, Z. Zhang, A. Dick, A. van den Hengel, A Survey of Appearance Models in Visual Object Tracking
  *
  * This Tracking API has been designed with PlantUML. If you modify this API please change UML files under modules/video/misc/
  *
@@ -75,20 +75,6 @@ public:
 	 */
 	enum{ TRACKER_MIL = 1,    	//!< TRACKER_MIL
 	      TRACKER_BOOSTING = 2	//!< TRACKER_BOOSTING
-	};
-
-	/**
-	 * \enum Tracker features types
-	 * \brief List of features types
-	 */
-	enum{ TRACKER_FEATURE_FEATURE2D = 1,   //!< TRACKER_FEATURE_FEATURE2D
-		  TRACKER_FEATURE_HOG = 2,         //!< TRACKER_FEATURE_HOG
-		  TRACKER_FEATURE_HAAR = 3,        //!< TRACKER_FEATURE_HAAR
-		  TRACKER_FEATURE_LBP = 4,         //!< TRACKER_FEATURE_LBP
-		  TRACKER_FEATURE_HISTOGRAM = 5,   //!< TRACKER_FEATURE_HISTOGRAM
-		  TRACKER_FEATURE_TEMPLATE = 6,    //!< TRACKER_FEATURE_TEMPLATE
-		  TRACKER_FEATURE_PIXEL = 7,       //!< TRACKER_FEATURE_PIXEL
-		  TRACKER_FEATURE_CORNER = 8       //!< TRACKER_FEATURE_CORNER
 	};
 
 	virtual ~Tracker();
@@ -120,6 +106,119 @@ protected:
 	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
 
 };
+
+
+/**
+ * \brief Abstract base class for TrackerFeature that represents the feature.
+ */
+class CV_EXPORTS_W TrackerFeature
+{
+public:
+	virtual ~TrackerFeature();
+
+	/**
+	 * \brief Compute the features in a image
+	 * \param image         The image.
+	 * \param response    	Computed features.
+	 */
+	void compute( const Mat& image, Mat& response );
+
+	/**
+	 * \brief Create TrackerFeature by tracker feature type.
+	 */
+	static Ptr<TrackerFeature> create( const String& trackerFeatureType );
+
+	/**
+	 * \brief Identify most effective features
+	 * \param response Collection of response for the specific TrackerFeature
+	 * \param npoints Max number of features
+	 */
+	virtual void selection( Mat& response, int npoints ) = 0;
+
+protected:
+
+	virtual bool computeImpl( const Mat& image, Mat& response ) = 0;
+};
+
+
+/**
+ * \brief Class that manages the extraction and selection of features
+ * [AAM] Feature Extraction and Feature Set Refinement (Feature Processing and Feature Selection)
+ * [AMVOT] Appearance modelling -> Visual representation (Table II, section 3.1 - 3.2)
+ */
+class CV_EXPORTS_W TrackerFeatureSet
+{
+public:
+	/**
+	 * \enum Tracker features types
+	 * \brief List of features types
+	 */
+	enum{ TRACKER_FEATURE_FEATURE2D = 1,   //!< TRACKER_FEATURE_FEATURE2D
+		  TRACKER_FEATURE_HOG = 2,         //!< TRACKER_FEATURE_HOG
+		  TRACKER_FEATURE_HAAR = 3,        //!< TRACKER_FEATURE_HAAR
+		  TRACKER_FEATURE_LBP = 4,         //!< TRACKER_FEATURE_LBP
+		  TRACKER_FEATURE_HISTOGRAM = 5,   //!< TRACKER_FEATURE_HISTOGRAM
+		  TRACKER_FEATURE_TEMPLATE = 6,    //!< TRACKER_FEATURE_TEMPLATE
+		  TRACKER_FEATURE_PIXEL = 7,       //!< TRACKER_FEATURE_PIXEL
+		  TRACKER_FEATURE_CORNER = 8       //!< TRACKER_FEATURE_CORNER
+	};
+
+	TrackerFeatureSet();
+
+	~TrackerFeatureSet();
+
+	/**
+	 * \brief Extract features from the image
+	 * \param image The image
+	 */
+	void extraction( const Mat& image );
+
+	/**
+	 * \brief Identify most effective features for all feature types
+	 */
+	void selection();
+
+	/**
+	 * \brief Remove outliers for all feature types
+	 */
+	void removeOutliers();
+
+	/**
+	 * \brief Add TrackerFeature in the collection from tracker feature type
+	 * \param trackerFeatureType the tracker feature type
+	 * \return true if feature is added, false otherwise
+	 */
+	bool addTrackerFeature( String trackerFeatureType );
+
+	/**
+	 * \brief Add TrackerFeature in collection directly
+	 * \param feature The TrackerFeature
+	 * \return true if feature is added, false otherwise
+	 */
+	bool addTrackerFeature( Ptr<TrackerFeature> feature );
+
+	/**
+	 * \brief Get the TrackerFeature collection
+	 * \return The TrackerFeature collection
+	 */
+	std::vector<Ptr<TrackerFeature> >& getTrackerFeature() const;
+
+	/**
+	 * \brief Get the reponses
+	 * \return the reponses
+	 */
+	std::vector<Mat>& getResponses() const;
+
+private:
+
+	void clearResponses();
+	bool blockAddTrackerFeature;
+
+	std::vector<TrackerFeature> features;	//list of features
+	std::vector<Mat> responses;				//list of response after compute
+
+};
+
 
 
 

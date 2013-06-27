@@ -13,37 +13,44 @@ enum TrackerFeatureType{
 }
 
 class TrackerFeatureSet{
-	-list<TrackerFeature>
-	-list<Mat response>
+	-vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > features
+	-vector<Mat> responses
 	...
 	TrackerFeatureSet();
 	~TrackerFeatureSet();
 	--
-	+extraction();
+	+extraction(const Mat& image);
 	+selection();
 	+remove_outliers();
-	+list<Mat response> getResponse();
-	+list<TrackerFeature> getTrackerFeatures();
-	-clearResponse();
+	+vector<Mat response> getResponses();
+	+vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > getTrackerFeatures();
+	+addTrackerFeature(string trackerFeatureType);
+	+addTrackerFeature(Ptr<TrackerFeature> feature);
+	-clearResponses();
 }
 
 class TrackerFeature <<virtual>>{
-	Ptr<TrackerFeature> = create(string TrackerFeatureType);
+	Ptr<TrackerFeature> = create(string trackerFeatureType);
 	compute(const Mat& image, Mat& response);
+	selection(Mat& response, int npoints);
 }
 note bottom: Can be specialized as in table II\nA tracker can use more types of features
 
 class TrackerFeatureFeature2D{
+	-vector<Keypoints> keypoints
+	---
 	TrackerFeatureFeature2D(string detectorType, string descriptorType);
 	~TrackerFeatureFeature2D();
 	---
 	compute(const Mat& image, Mat& response);
+	selection( Mat& response, int npoints);
 }
 class TrackerFeatureHOG{
 	TrackerFeatureHOG();
 	~TrackerFeatureHOG();
 	---
 	compute(const Mat& image, Mat& response);
+	selection(Mat& response, int npoints);
 }
 
 TrackerFeatureSet *-- TrackerFeature
