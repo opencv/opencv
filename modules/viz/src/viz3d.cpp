@@ -108,6 +108,11 @@ void temp_viz::Viz3d::showCircle(const String &id, const Point3f &pt, double rad
     impl_->showCircle(id, pt, radius, color);
 }
 
+void temp_viz::Viz3d::showSphere (const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    impl_->showSphere(id, pt, radius, color);
+}
+
 cv::Affine3f temp_viz::Viz3d::getShapePose(const String &id)
 {
     return impl_->getShapePose(id);

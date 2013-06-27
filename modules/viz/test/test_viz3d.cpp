@@ -92,7 +92,8 @@ TEST(Viz_viz3d, accuracy)
     int col_blue = 0;
     int col_green = 0;
     int col_red = 0;
-    v.showCircle("circle1", cv::Point3f(0,0,0), fabs(1.0f), temp_viz::Color(0,255,0));
+    v.showCircle("circle1", cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
+    v.showSphere("sphere1", cv::Point3f(0,0,0), 0.5, temp_viz::Color(0,0,255));
     
     while(!v.wasStopped())
     {
@@ -107,6 +108,7 @@ TEST(Viz_viz3d, accuracy)
 //         v.showCube("cube1", cv::Point3f(pos_x, pos_y, pos_z), cv::Point3f(pos_x+0.5, pos_y+0.5, pos_z+0.5), temp_viz::Color(255,150,50));
 //         v.showCylinder("cylinder1", cv::Point3f(0,0,0), cv::Point3f(pos_x, 1.0, 1.0), 0.5, 5*pos_x+3, temp_viz::Color(0,255,0));
         v.setShapePose("circle1", cloudPosition);
+        v.setShapePose("sphere1", cloudPosition);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

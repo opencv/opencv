@@ -144,6 +144,8 @@ public:
     void showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
     void showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color);
     void showCircle (const String &id, const Point3f &pt, double radius, const Color &color);
+    void showSphere (const String &id, const Point3f &pt, double radius, const Color &color);
+    
     Affine3f getShapePose (const String &id);
     bool setShapePose (const String &id, const Affine3f &pose);
 

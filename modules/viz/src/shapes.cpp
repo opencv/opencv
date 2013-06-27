@@ -71,6 +71,19 @@ vtkSmartPointer<vtkDataSet> temp_viz::createCube(const cv::Point3f& pt_min, cons
     return (cube->GetOutput ());
 }
 
+vtkSmartPointer<vtkDataSet> temp_viz::createSphere (const Point3f& pt, double radius)
+{
+    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New ();
+    sphere->SetRadius (radius);
+    sphere->SetCenter (pt.x, pt.y, pt.z);
+    sphere->SetPhiResolution (10);
+    sphere->SetThetaResolution (10);
+    sphere->LatLongTessellationOff ();
+    sphere->Update ();
+    
+    return (sphere->GetOutput ());
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkDataSet> temp_viz::createCylinder (const temp_viz::ModelCoefficients &coefficients, int numsides)
 {
