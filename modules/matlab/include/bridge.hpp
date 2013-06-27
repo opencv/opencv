@@ -149,6 +149,11 @@ public:
   double toDouble() { return 0; }
   operator double() { return toDouble(); }
 
+  // --------------------------- float  --------------------------------------
+  Bridge& operator=(const float& obj) { return *this; }
+  float toFloat() { return 0; }
+  operator float() { return toFloat(); }
+
   // --------------------------   Point  --------------------------------------
   Bridge& operator=(const cv::Point& obj) { return *this; }
   cv::Point toPoint() { return cv::Point(); }

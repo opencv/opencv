@@ -43,9 +43,12 @@ endif()
 set(the_description "The Matlab/Octave bindings")
 ocv_add_module(matlab   BINDINGS #TODO: does it actually NEED to depend on core?
                         OPTIONAL opencv_core
-                                 opencv_objdetect opencv_features2d opencv_video
-                                 opencv_highgui opencv_ml opencv_calib3d opencv_photo
-                                 opencv_nonfree opencv_calib opencv_imgproc)
+                                 opencv_imgproc opencv_ml opencv_highgui
+                                 #opencv_objdetect opencv_features2d
+                                 opencv_video opencv_photo
+                                 #opencv_calib opencv_calib3d
+                                 #opencv_nonfree
+)
 
 # TODO: Undo this when building all modules to find python properly
 #set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
