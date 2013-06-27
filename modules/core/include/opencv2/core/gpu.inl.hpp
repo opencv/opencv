@@ -619,7 +619,7 @@ size_t DeviceInfo::totalMemory() const
 inline
 bool DeviceInfo::supports(FeatureSet feature_set) const
 {
-    int version = major() * 10 + minor();
+    int version = majorVersion() * 10 + minorVersion();
     return version >= feature_set;
 }
 

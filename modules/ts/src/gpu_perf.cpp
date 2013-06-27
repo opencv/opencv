@@ -288,7 +288,7 @@ namespace perf
 
             printf("[----------]\n"), fflush(stdout);
             printf("[ DEVICE   ] \t# %d %s.\n", i, info.name()), fflush(stdout);
-            printf("[          ] \tCompute capability: %d.%d\n", (int)info.major(), (int)info.minor()), fflush(stdout);
+            printf("[          ] \tCompute capability: %d.%d\n", (int)info.majorVersion(), (int)info.minorVersion()), fflush(stdout);
             printf("[          ] \tMulti Processor Count:  %d\n", info.multiProcessorCount()), fflush(stdout);
             printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)), fflush(stdout);
             printf("[          ] \tFree  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory()  / 1024.0) / 1024.0)), fflush(stdout);
