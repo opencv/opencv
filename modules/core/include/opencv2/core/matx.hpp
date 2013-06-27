@@ -77,6 +77,7 @@ struct CV_EXPORTS Matx_AddOp {};
 struct CV_EXPORTS Matx_SubOp {};
 struct CV_EXPORTS Matx_ScaleOp {};
 struct CV_EXPORTS Matx_MulOp {};
+struct CV_EXPORTS Matx_DivOp {};
 struct CV_EXPORTS Matx_MatMulOp {};
 struct CV_EXPORTS Matx_TOp {};
 
@@ -174,6 +175,7 @@ public:
     Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_SubOp);
     template<typename _T2> Matx(const Matx<_Tp, m, n>& a, _T2 alpha, Matx_ScaleOp);
     Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_MulOp);
+    Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_DivOp);
     template<int l> Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp);
     Matx(const Matx<_Tp, n, m>& a, Matx_TOp);
 
@@ -746,6 +748,13 @@ Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_Mul
         val[i] = saturate_cast<_Tp>(a.val[i] * b.val[i]);
 }
 
+template<typename _Tp, int m, int n> inline
+Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b, Matx_DivOp)
+{
+    for( int i = 0; i < channels; i++ )
+        val[i] = saturate_cast<_Tp>(a.val[i] / b.val[i]);
+}
+
 template<typename _Tp, int m, int n> template<int l> inline
 Matx<_Tp,m,n>::Matx(const Matx<_Tp, m, l>& a, const Matx<_Tp, l, n>& b, Matx_MatMulOp)
 {
@@ -1160,6 +1169,12 @@ Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
 {
     Matx<_Tp, m, 1> c(a, b, Matx_MatMulOp());
     return (const Vec<_Tp, m>&)(c);
+}
+
+template<typename _Tp, int m, int n> static inline
+Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
+{
+    return Matx<_Tp, m, n>(a, b, Matx_DivOp());
 }
 
 template<typename _Tp, int m, int n> static inline
