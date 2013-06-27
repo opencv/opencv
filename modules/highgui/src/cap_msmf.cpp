@@ -2759,8 +2759,7 @@ public:
     virtual int getCaptureDomain() { return CV_CAP_MSMF; } // Return the type of the capture object: CV_CAP_VFW, etc...
 protected:
     void init();
-    int index, width, height,fourcc;
-    int widthSet, heightSet;
+    int index, width, height, fourcc;
     IplImage* frame;
     videoInput VI;
 };
@@ -2777,18 +2776,18 @@ CvCaptureCAM_MSMF::CvCaptureCAM_MSMF():
     width(-1),
     height(-1),
     fourcc(-1),
-    widthSet(-1),
-    heightSet(-1),
     frame(NULL),
     VI(videoInput::getInstance())
 {
     CoInitialize(0);
 }
+
 CvCaptureCAM_MSMF::~CvCaptureCAM_MSMF()
 {
     close();
     CoUninitialize();
 }
+
 void CvCaptureCAM_MSMF::close()
 {
     if( index >= 0 )
@@ -2797,7 +2796,7 @@ void CvCaptureCAM_MSMF::close()
         index = -1;
         cvReleaseImage(&frame);
     }
-    widthSet = heightSet = width = height = -1;
+    width = height = -1;
 }
 
 // Initialize camera input
@@ -2846,50 +2845,7 @@ double CvCaptureCAM_MSMF::getProperty( int property_id )
         return VI.getWidth(index);
     case CV_CAP_PROP_FRAME_HEIGHT:
         return VI.getHeight(index);
-    case CV_CAP_PROP_FOURCC:
-        // FIXME: implement method in VideoInput back end
-        //return VI.getFourcc(index);
-        ;
-    case CV_CAP_PROP_FPS:
-        // FIXME: implement method in VideoInput back end
-        //return VI.getFPS(index);
-        ;
     }
-    // video filter properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_SHARPNESS:
-    case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-    case CV_CAP_PROP_BACKLIGHT:
-    case CV_CAP_PROP_GAIN:
-        // FIXME: implement method in VideoInput back end
-        // if ( VI.getVideoSettingFilter(index, VI.getVideoPropertyFromCV(property_id), min_value,
-        //                               max_value, stepping_delta, current_value, flags,defaultValue) )
-        //     return (double)current_value;
-        return 0.;
-    }
-    // camera properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_PAN:
-    case CV_CAP_PROP_TILT:
-    case CV_CAP_PROP_ROLL:
-    case CV_CAP_PROP_ZOOM:
-    case CV_CAP_PROP_EXPOSURE:
-    case CV_CAP_PROP_IRIS:
-    case CV_CAP_PROP_FOCUS:
-    // FIXME: implement method in VideoInput back end
-    //     if (VI.getVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),min_value,
-    //          max_value,stepping_delta,current_value,flags,defaultValue) ) return (double)current_value;
-        return 0.;
-    }
-    // unknown parameter or value not available
     return -1;
 }
 bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
@@ -2906,89 +2862,21 @@ bool CvCaptureCAM_MSMF::setProperty( int property_id, double value )
         height = cvRound(value);
         handled = true;
         break;
-    case CV_CAP_PROP_FOURCC:
-        fourcc = (int)(unsigned long)(value);
-        if ( fourcc == -1 ) {
-            // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
-            // TODO - how to create a capture pin dialog
-        }
-        handled = true;
-        break;
-    case CV_CAP_PROP_FPS:
-        // FIXME: implement method in VideoInput back end
-        // int fps = cvRound(value);
-        // if (fps != VI.getFPS(index))
-        // {
-        //     VI.stopDevice(index);
-        //     VI.setIdealFramerate(index,fps);
-        //     if (widthSet > 0 && heightSet > 0)
-        //         VI.setupDevice(index, widthSet, heightSet);
-        //     else
-        //         VI.setupDevice(index);
-        // }
-        // return VI.isDeviceSetup(index);
-        ;
     }
+
     if ( handled ) {
-        // a stream setting
         if( width > 0 && height > 0 )
         {
-            if( width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index) )//|| fourcc != VI.getFourcc(index) )
+            if( width != (int)VI.getWidth(index) || height != (int)VI.getHeight(index)  && VI.isDeviceSetup(index))//|| fourcc != VI.getFourcc(index) )
             {
-                // FIXME: implement method in VideoInput back end
-                // int fps = static_cast<int>(VI.getFPS(index));
-                // VI.stopDevice(index);
-                // VI.setIdealFramerate(index, fps);
-                // VI.setupDeviceFourcc(index, width, height, fourcc);
+                VI.closeDevice(index);
+                VI.setupDevice(index, width, height);
             }
-            bool success = VI.isDeviceSetup(index);
-            if (success)
-            {
-                widthSet = width;
-                heightSet = height;
-                width = height = fourcc = -1;
-            }
-            return success;
+            return VI.isDeviceSetup(index);
         }
         return true;
     }
-    // show video/camera filter dialog
-    // FIXME: implement method in VideoInput back end
-    // if ( property_id == CV_CAP_PROP_SETTINGS ) {
-    //     VI.showSettingsWindow(index);
-    //     return true;
-    // }
-    //video Filter properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_SHARPNESS:
-    case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-    case CV_CAP_PROP_BACKLIGHT:
-    case CV_CAP_PROP_GAIN:
-        // FIXME: implement method in VideoInput back end
-        //return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
-        ;
-    }
-    //camera properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_PAN:
-    case CV_CAP_PROP_TILT:
-    case CV_CAP_PROP_ROLL:
-    case CV_CAP_PROP_ZOOM:
-    case CV_CAP_PROP_EXPOSURE:
-    case CV_CAP_PROP_IRIS:
-    case CV_CAP_PROP_FOCUS:
-        // FIXME: implement method in VideoInput back end
-        //return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),(long)value);
-        ;
-    }
+
     return false;
 }
 
@@ -3109,103 +2997,9 @@ void CvCaptureFile_MSMF::close()
 bool CvCaptureFile_MSMF::setProperty(int property_id, double value)
 {
     // image capture properties
-    bool handled = false;
-    unsigned int width, height;
-    int fourcc;
-    switch( property_id )
-    {
-    case CV_CAP_PROP_FRAME_WIDTH:
-        // width = cvRound(value);
-        // handled = true;
-        break;
-    case CV_CAP_PROP_FRAME_HEIGHT:
-        // height = cvRound(value);
-        // handled = true;
-        break;
-    case CV_CAP_PROP_FOURCC:
-        fourcc = (int)(unsigned long)(value);
-        if ( fourcc == -1 ) {
-            // following cvCreateVideo usage will pop up caprturepindialog here if fourcc=-1
-            // TODO - how to create a capture pin dialog
-        }
-        handled = true;
-        break;
-    case CV_CAP_PROP_FPS:
-        // FIXME: implement method in VideoInput back end
-        // int fps = cvRound(value);
-        // if (fps != VI.getFPS(index))
-        // {
-        //     VI.stopDevice(index);
-        //     VI.setIdealFramerate(index,fps);
-        //     if (widthSet > 0 && heightSet > 0)
-        //         VI.setupDevice(index, widthSet, heightSet);
-        //     else
-        //         VI.setupDevice(index);
-        // }
-        // return VI.isDeviceSetup(index);
-        ;
-    }
-    if ( handled ) {
-        // a stream setting
-        if( width > 0 && height > 0 )
-        {
-            if( width != captureFormats[captureFormatIndex].width ||
-                height != captureFormats[captureFormatIndex].height )//|| fourcc != VI.getFourcc(index) )
-            {
-                // FIXME: implement method in VideoInput back end
-                // int fps = static_cast<int>(VI.getFPS(index));
-                // VI.stopDevice(index);
-                // VI.setIdealFramerate(index, fps);
-                // VI.setupDeviceFourcc(index, width, height, fourcc);
-            }
-            if (isOpened)
-            {
-                // widthSet = width;
-                // heightSet = height;
-                // width = height = fourcc = -1;
-            }
-            return isOpened;
-        }
-        return true;
-    }
-    // show video/camera filter dialog
     // FIXME: implement method in VideoInput back end
-    // if ( property_id == CV_CAP_PROP_SETTINGS ) {
-    //     VI.showSettingsWindow(index);
-    //     return true;
-    // }
-    //video Filter properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_BRIGHTNESS:
-    case CV_CAP_PROP_CONTRAST:
-    case CV_CAP_PROP_HUE:
-    case CV_CAP_PROP_SATURATION:
-    case CV_CAP_PROP_SHARPNESS:
-    case CV_CAP_PROP_GAMMA:
-    case CV_CAP_PROP_MONOCROME:
-    case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-    case CV_CAP_PROP_BACKLIGHT:
-    case CV_CAP_PROP_GAIN:
-        // FIXME: implement method in VideoInput back end
-        //return VI.setVideoSettingFilter(index,VI.getVideoPropertyFromCV(property_id),(long)value);
-        ;
-    }
-    //camera properties
-    switch( property_id )
-    {
-    case CV_CAP_PROP_PAN:
-    case CV_CAP_PROP_TILT:
-    case CV_CAP_PROP_ROLL:
-    case CV_CAP_PROP_ZOOM:
-    case CV_CAP_PROP_EXPOSURE:
-    case CV_CAP_PROP_IRIS:
-    case CV_CAP_PROP_FOCUS:
-        // FIXME: implement method in VideoInput back end
-        //return VI.setVideoSettingCamera(index,VI.getCameraPropertyFromCV(property_id),(long)value);
-        ;
-    }
-
+    (void) property_id;
+    (void) value;
     return false;
 }
 
@@ -3238,7 +3032,7 @@ double CvCaptureFile_MSMF::getProperty(int property_id)
 
 bool CvCaptureFile_MSMF::grabFrame()
 {
-    DWORD waitResult = -1;
+    DWORD waitResult = (DWORD)-1;
     if (isOpened)
     {
         SetEvent(grabberThread->getImageGrabber()->ig_hFrameGrabbed);
@@ -3507,7 +3301,7 @@ void CvVideoWriter_MSMF::close()
     }
 
     initiated = false;
-    HRESULT hr = sinkWriter->Finalize();
+    sinkWriter->Finalize();
     MFShutdown();
 }
 
@@ -3667,6 +3461,16 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
 
     if (SUCCEEDED(hr))
     {
+#if defined(_M_ARM)
+        hr = MFCopyImage(
+            pData,                      // Destination buffer.
+            -cbWidth,                   // Destination stride.
+            (BYTE*)videoFrameBuffer,    // First row in source image.
+            cbWidth,                    // Source stride.
+            cbWidth,                    // Image width in bytes.
+            videoHeight                 // Image height in pixels.
+            );
+#else
         hr = MFCopyImage(
             pData,                      // Destination buffer.
             cbWidth,                    // Destination stride.
@@ -3675,6 +3479,7 @@ HRESULT CvVideoWriter_MSMF::WriteFrame(DWORD *videoFrameBuffer, const LONGLONG& 
             cbWidth,                    // Image width in bytes.
             videoHeight                 // Image height in pixels.
             );
+#endif
     }
 
     if (buffer)

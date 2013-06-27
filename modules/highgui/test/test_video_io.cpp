@@ -73,10 +73,12 @@ const VideoFormat g_specific_fmt_list[] =
         VideoFormat("wmv", CV_FOURCC_MACRO('M', 'P', 'G', '1')),
         VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '1')),
         VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '2')),*/
-        //VideoFormat("avi", CV_FOURCC_MACRO('H', '2', '6', '4')),
+#if !defined(_M_ARM)
         VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '1')),
         VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '2')),
+#endif
         VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '3')),
+        VideoFormat("avi", CV_FOURCC_MACRO('H', '2', '6', '4')),
         //VideoFormat("wmv", CV_FOURCC_MACRO('W', 'V', 'C', '1')),
         VideoFormat()
 };
