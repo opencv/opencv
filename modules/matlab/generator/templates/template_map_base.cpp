@@ -22,6 +22,10 @@ typedef std::unordered_map Map;
  */
 Map<std::string, int> constants = {
   {% for key, val in constants.items() %}
+  {% if val|convertibleToInt %}
   { "{{key}}", {{val}} },
+  {% else %}
+  { "{{key}}", {{constants[val]}} },
+  {% endif %}
   {% endfor %}
 };

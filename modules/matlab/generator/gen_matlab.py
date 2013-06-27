@@ -33,7 +33,6 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['void'] = void 
         jtemplate.filters['not'] = flip
 
-
         # load the templates
         tfunction  = jtemplate.get_template('template_function_base.cpp')
         tclassm    = jtemplate.get_template('template_class_base.m')
