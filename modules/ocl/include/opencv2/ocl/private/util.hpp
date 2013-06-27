@@ -49,7 +49,7 @@
 #include "opencv2/ocl/ocl.hpp"
 
 #if defined __APPLE__
-#include <OpenCL/OpenCL.h>
+#include <OpenCL/opencl.h>
 #else
 #include <CL/opencl.h>
 #endif
@@ -120,6 +120,33 @@ namespace cv
         cl_mem CV_EXPORTS bindTexture(const oclMat &mat);
         void CV_EXPORTS releaseTexture(cl_mem& texture);
 
+        //Represents an image texture object
+        class CV_EXPORTS TextureCL
+        {
+        public:
+            TextureCL(cl_mem tex, int r, int c, int t)
+                : tex_(tex), rows(r), cols(c), type(t) {}
+            ~TextureCL()
+            {
+                openCLFree(tex_);
+            }
+            operator cl_mem() 
+            {
+                return tex_;
+            }
+            cl_mem const tex_;
+            const int rows;
+            const int cols;
+            const int type;
+        private:
+            //disable assignment
+            void operator=(const TextureCL&);
+        };
+        // bind oclMat to OpenCL image textures and retunrs an TextureCL object
+        // note:
+        //   for faster clamping, there is no buffer padding for the constructed texture
+        Ptr<TextureCL> CV_EXPORTS bindTexturePtr(const oclMat &mat);
+
         // returns whether the current context supports image2d_t format or not
         bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
 
@@ -128,11 +155,17 @@ namespace cv
         enum DEVICE_INFO
         {
             WAVEFRONT_SIZE,             //in AMD speak
-            WARP_SIZE = WAVEFRONT_SIZE, //in nvidia speak
             IS_CPU_DEVICE               //check if the device is CPU
         };
-        //info should have been pre-allocated
-        void CV_EXPORTS queryDeviceInfo(DEVICE_INFO info_type, void* info);
+        template<DEVICE_INFO _it, typename _ty>
+        _ty queryDeviceInfo(cl_kernel kernel = NULL);
+
+        template<>
+        int CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel);
+        template<>
+        size_t CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel);
+        template<>
+        bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
 
     }//namespace ocl
 

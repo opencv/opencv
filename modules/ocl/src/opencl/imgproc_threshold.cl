@@ -143,7 +143,7 @@ __kernel void threshold_C1_D5(__global const float * restrict src, __global floa
         int4 dpos = (int4)(dstart, dstart+1, dstart+2, dstart+3);
         float4 dVal = *(__global float4*)(dst+dst_offset+gy*dst_step+dstart);
         int4 con = dpos >= 0 && dpos < dst_cols;
-        ddata = convert_float4(con) != 0 ? ddata : dVal;
+        ddata = convert_float4(con) != (float4)(0) ? ddata : dVal;
         if(dstart < dst_cols)
         {
             *(__global float4*)(dst+dst_offset+gy*dst_step+dstart) = ddata;

@@ -162,8 +162,8 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
     int y_tex;
     int x_tex = X - radius;
 
-    if (x_tex >= cwidth)
-        return;
+    //if (x_tex >= cwidth)
+    //    return;
 
     for(int d = STEREO_MIND; d < maxdisp; d += STEREO_DISP_STEP)
     {

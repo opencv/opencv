@@ -50,6 +50,9 @@
 
 #include <vector>
 
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/types_c.h"
+
 #if defined WIN32 || defined _WIN32
 #  ifndef WIN32
 #    define WIN32
@@ -251,6 +254,10 @@ namespace cv
         body(range);
     }
 #endif
+
+    // Returns a static string if there is a parallel framework,
+    // NULL otherwise.
+    CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \

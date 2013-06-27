@@ -45,7 +45,16 @@
 
 #include <unistd.h>
 #include <stdint.h>
-#include <sys/select.h>
+#ifdef WIN32
+  // On Windows, we have no sys/select.h, but we need to pick up
+  // select() which is in winsock2.
+  #ifndef __SYS_SELECT_H__
+    #define __SYS_SELECT_H__ 1
+    #include <winsock2.h>
+  #endif
+#else
+  #include <sys/select.h>
+#endif /*WIN32*/
 #include <dc1394/dc1394.h>
 #include <stdlib.h>
 #include <string.h>

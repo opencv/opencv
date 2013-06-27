@@ -18,6 +18,7 @@
 //    Zhang Chunpeng	chunpeng@multicorewareinc.com
 //    Dachuan Zhao, dachuan@multicorewareinc.com
 //    Yao Wang, yao@multicorewareinc.com
+//    Peng Xiao, pengxiao@outlook.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -47,7 +48,7 @@
 
 //#pragma OPENCL EXTENSION cl_amd_printf : enable
 
-uchar get_valid_uchar(uchar data)
+uchar get_valid_uchar(float data)
 {
     return (uchar)(data <= 255 ? data : data > 0 ? 255 : 0);
 }
@@ -142,7 +143,7 @@ __kernel void pyrUp_C1_D0(__global uchar* src,__global uchar* dst,
     sum = sum + 0.0625f * s_dstPatch[2 + tidy + 2][tidx];
 
     if ((x < dstCols) && (y < dstRows))
-        dst[x + y * dstStep] = (float)(4.0f * sum);
+        dst[x + y * dstStep] = convert_uchar_sat_rte(4.0f * sum);
 
 }
 
@@ -244,7 +245,7 @@ __kernel void pyrUp_C1_D2(__global ushort* src,__global ushort* dst,
     sum = sum + 0.0625f * s_dstPatch[2 + tidy + 2][get_local_id(0)];
 
     if ((x < dstCols) && (y < dstRows))
-        dst[x + y * dstStep] = (float)(4.0f * sum);
+        dst[x + y * dstStep] = convert_short_sat_rte(4.0f * sum);
 
 }
 
@@ -351,31 +352,6 @@ __kernel void pyrUp_C1_D5(__global float* src,__global float* dst,
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_8UC4  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-float4 covert_uchar4_to_float4(uchar4 data)
-{
-    float4 f4Data = {0,0,0,0};
-
-    f4Data.x = (float)data.x;
-    f4Data.y = (float)data.y;
-    f4Data.z = (float)data.z;
-    f4Data.w = (float)data.w;
-
-    return f4Data;
-}
-
-
-uchar4 convert_float4_to_uchar4(float4 data)
-{
-    uchar4 u4Data;
-
-    u4Data.x = get_valid_uchar(data.x);
-    u4Data.y = get_valid_uchar(data.y);
-    u4Data.z = get_valid_uchar(data.z);
-    u4Data.w = get_valid_uchar(data.w);
-
-    return u4Data;
-}
-
 __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
                           int srcRows,int dstRows,int srcCols,int dstCols,
                           int srcOffset,int dstOffset,int srcStep,int dstStep)
@@ -406,15 +382,15 @@ __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
         srcy = abs(srcy);
         srcy = min(srcRows -1 ,srcy);
 
-        s_srcPatch[tidy][tidx] = covert_uchar4_to_float4(src[srcx + srcy * srcStep]);
+        s_srcPatch[tidy][tidx] = convert_float4(src[srcx + srcy * srcStep]);
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((tidx & 1) == 0);
-    const int oddFlag = (int)((tidx & 1) != 0);
+    const float4 evenFlag = (float4)((tidx & 1) == 0);
+    const float4 oddFlag = (float4)((tidx & 1) != 0);
     const bool  eveny = ((tidy & 1) == 0);
 
     float4 co1 = (float4)(0.375f, 0.375f, 0.375f, 0.375f);
@@ -476,38 +452,13 @@ __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
 
     if ((x < dstCols) && (y < dstRows))
     {
-        dst[x + y * dstStep] = convert_float4_to_uchar4(4.0f * sum);
+        dst[x + y * dstStep] = convert_uchar4_sat_rte(4.0f * sum);
     }
 }
+
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_16UC4 //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-float4 covert_ushort4_to_float4(ushort4 data)
-{
-    float4 f4Data = {0,0,0,0};
-
-    f4Data.x = (float)data.x;
-    f4Data.y = (float)data.y;
-    f4Data.z = (float)data.z;
-    f4Data.w = (float)data.w;
-
-    return f4Data;
-}
-
-
-ushort4 convert_float4_to_ushort4(float4 data)
-{
-    ushort4 u4Data;
-
-    u4Data.x = (float)data.x;
-    u4Data.y = (float)data.y;
-    u4Data.z = (float)data.z;
-    u4Data.w = (float)data.w;
-
-    return u4Data;
-}
-
-
 __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
                           int srcRows,int dstRows,int srcCols,int dstCols,
                           int srcOffset,int dstOffset,int srcStep,int dstStep)
@@ -535,15 +486,15 @@ __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
         srcy = abs(srcy);
         srcy = min(srcRows -1 ,srcy);
 
-        s_srcPatch[get_local_id(1)][get_local_id(0)] = covert_ushort4_to_float4(src[srcx + srcy * srcStep]);
+        s_srcPatch[get_local_id(1)][get_local_id(0)] = convert_float4(src[srcx + srcy * srcStep]);
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((get_local_id(0) & 1) == 0);
-    const int oddFlag = (int)((get_local_id(0) & 1) != 0);
+    const float4 evenFlag = (float4)((get_local_id(0) & 1) == 0);
+    const float4 oddFlag = (float4)((get_local_id(0) & 1) != 0);
     const bool  eveny = ((get_local_id(1) & 1) == 0);
     const int tidx = get_local_id(0);
 
@@ -570,11 +521,11 @@ __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
 
         if (eveny)
         {
-            sum = sum + (evenFlag * co3) * s_srcPatch[0][1 + ((tidx - 2) >> 1)];
-            sum = sum + ( oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[0][1 + ((tidx - 2) >> 1)];
+            sum = sum + (oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx - 1) >> 1)];
             sum = sum + (evenFlag * co1 ) * s_srcPatch[0][1 + ((tidx    ) >> 1)];
-            sum = sum + ( oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx + 1) >> 1)];
-            sum = sum + (evenFlag * co3) * s_srcPatch[0][1 + ((tidx + 2) >> 1)];
+            sum = sum + (oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[0][1 + ((tidx + 2) >> 1)];
         }
 
         s_dstPatch[get_local_id(1)][get_local_id(0)] = sum;
@@ -610,7 +561,7 @@ __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
 
     if ((x < dstCols) && (y < dstRows))
     {
-        dst[x + y * dstStep] = convert_float4_to_ushort4(4.0f * sum);
+        dst[x + y * dstStep] = convert_ushort4_sat_rte(4.0f * sum);
     }
 }
 
@@ -654,8 +605,8 @@ __kernel void pyrUp_C4_D5(__global float4* src,__global float4* dst,
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((tidx & 1) == 0);
-    const int oddFlag = (int)((tidx & 1) != 0);
+    const float4 evenFlag = (float4)((tidx & 1) == 0);
+    const float4 oddFlag = (float4)((tidx & 1) != 0);
     const bool  eveny = ((tidy & 1) == 0);
 
     float4 co1 = (float4)(0.375f, 0.375f, 0.375f, 0.375f);
@@ -681,11 +632,11 @@ __kernel void pyrUp_C4_D5(__global float4* src,__global float4* dst,
 
         if (eveny)
         {
-            sum = sum + (evenFlag * co3) * s_srcPatch[lsizey-16][1 + ((tidx - 2) >> 1)];
-            sum = sum + ( oddFlag * co2  ) * s_srcPatch[lsizey-16][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[lsizey-16][1 + ((tidx - 2) >> 1)];
+            sum = sum + (oddFlag * co2  ) * s_srcPatch[lsizey-16][1 + ((tidx - 1) >> 1)];
             sum = sum + (evenFlag * co1 ) * s_srcPatch[lsizey-16][1 + ((tidx    ) >> 1)];
-            sum = sum + ( oddFlag * co2  ) * s_srcPatch[lsizey-16][1 + ((tidx + 1) >> 1)];
-            sum = sum + (evenFlag * co3) * s_srcPatch[lsizey-16][1 + ((tidx + 2) >> 1)];
+            sum = sum + ( oddFlag * co2 ) * s_srcPatch[lsizey-16][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[lsizey-16][1 + ((tidx + 2) >> 1)];
         }
 
         s_dstPatch[tidy][tidx] = sum;

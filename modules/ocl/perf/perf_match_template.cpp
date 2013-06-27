@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -52,13 +53,11 @@
 //	ocl::oclMat d_src(src), d_templ(templ), d_dst;
 //	ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
 //}
-TEST(matchTemplate)
+PERFTEST(matchTemplate)
 {
     //InitMatchTemplate();
-
-    Mat src, templ, dst;
+    Mat src, templ, dst, ocl_dst;
     int templ_size = 5;
-
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
@@ -81,9 +80,7 @@ TEST(matchTemplate)
                 matchTemplate(src, templ, dst, CV_TM_CCORR);
                 CPU_OFF;
 
-                ocl::oclMat d_src(src), d_templ, d_dst;
-
-                d_templ.upload(templ);
+                ocl::oclMat d_src(src), d_templ(templ), d_dst;
 
                 WARMUP_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
@@ -91,15 +88,16 @@ TEST(matchTemplate)
 
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-                 ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
                 d_src.upload(src);
                 d_templ.upload(templ);
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-                d_dst.download(dst);
+                d_dst.download(ocl_dst);
                 GPU_FULL_OFF;
+
+                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
             }
         }
 
@@ -131,15 +129,16 @@ TEST(matchTemplate)
 
                 GPU_ON;
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
-                 ;
                 GPU_OFF;
 
                 GPU_FULL_ON;
                 d_src.upload(src);
                 d_templ.upload(templ);
                 ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR_NORMED);
-                d_dst.download(dst);
+                d_dst.download(ocl_dst);
                 GPU_FULL_OFF;
+
+                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
             }
         }
     }

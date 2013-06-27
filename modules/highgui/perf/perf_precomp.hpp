@@ -21,6 +21,7 @@
     defined(HAVE_QUICKTIME)    || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_VFW)
     /*defined(HAVE_OPENNI) too specialized */ \
 
@@ -34,6 +35,7 @@
     defined(HAVE_QUICKTIME)    || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_VFW)
 #  define BUILD_WITH_VIDEO_OUTPUT_SUPPORT 1
 #else

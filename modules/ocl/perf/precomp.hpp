@@ -50,10 +50,15 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/ocl/ocl.hpp"
+#include "opencv2/ts/ts.hpp"
+#include "opencv2/ts/ts_perf.hpp"
+#include "opencv2/ts/ts_gtest.h"
+
 
 #define Min_Size 1000
 #define Max_Size 4000
@@ -64,6 +69,8 @@ using namespace std;
 using namespace cv;
 
 void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high);
+void gen(Mat &mat, int rows, int cols, int type, int low, int high, int n);
+
 string abspath(const string &relpath);
 int CV_CDECL cvErrorCallback(int, const char *, const char *, const char *, int, void *);
 typedef struct
@@ -75,6 +82,50 @@ COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep,
                   cv::Size size, int sp, int sr, int maxIter, float eps, int *tab);
 void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi,
                     int sp, int sr, cv::TermCriteria crit);
+
+
+template<class T1, class T2>
+int ExpectedEQ(T1 expected, T2 actual)
+{
+    if(expected == actual)
+        return 1;
+
+    return 0;
+}
+
+template<class T1>
+int EeceptDoubleEQ(T1 expected, T1 actual)
+{
+    testing::internal::Double lhs(expected);
+    testing::internal::Double rhs(actual);
+
+    if (lhs.AlmostEquals(rhs)) 
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+template<class T>
+int AssertEQ(T expected, T actual)
+{
+    if(expected == actual)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+int ExceptDoubleNear(double val1, double val2, double abs_error);
+bool match_rect(cv::Rect r1, cv::Rect r2, int threshold);
+
+double checkNorm(const cv::Mat &m);
+double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
+double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
+
+int ExpectedMatNear(cv::Mat dst, cv::Mat cpu_dst, double eps);
+int ExceptedMatSimilar(cv::Mat dst, cv::Mat cpu_dst, double eps);
 
 class Runnable
 {
@@ -171,6 +222,16 @@ public:
         return cur_iter_idx_ >= cpu_num_iters_;
     }
 
+    int get_cur_iter_idx()
+    {
+        return cur_iter_idx_;
+    }
+
+    int get_cpu_num_iters()
+    {
+        return cpu_num_iters_;
+    }
+
     bool warmupStop()
     {
         return cur_warmup_idx_++ >= gpu_warmup_iters_;
@@ -252,6 +313,53 @@ public:
         itname_changed_ = true;
     }
 
+    void setAccurate(int accurate, double diff)
+    {
+        is_accurate_ = accurate;
+        accurate_diff_ = diff;
+    }
+
+    void ExpectMatsNear(vector<Mat>& dst, vector<Mat>& cpu_dst, vector<double>& eps)
+    {
+        assert(dst.size() == cpu_dst.size());
+        assert(cpu_dst.size() == eps.size());
+        is_accurate_ = 1;
+        for(size_t i=0; i<dst.size(); i++)
+        {
+            double cur_diff = checkNorm(dst[i], cpu_dst[i]);
+            accurate_diff_ = max(accurate_diff_, cur_diff);
+            if(cur_diff > eps[i])
+                is_accurate_ = 0;
+        }
+    }
+
+    void ExpectedMatNear(cv::Mat& dst, cv::Mat& cpu_dst, double eps)
+    {
+        assert(dst.type() == cpu_dst.type());
+        assert(dst.size() == cpu_dst.size());
+        accurate_diff_ = checkNorm(dst, cpu_dst);
+        if(accurate_diff_ <= eps)
+            is_accurate_ = 1;
+        else
+            is_accurate_ = 0;
+    }
+
+    void ExceptedMatSimilar(cv::Mat& dst, cv::Mat& cpu_dst, double eps)
+    {
+        assert(dst.type() == cpu_dst.type());
+        assert(dst.size() == cpu_dst.size());
+        accurate_diff_ = checkSimilarity(cpu_dst, dst);
+        if(accurate_diff_ <= eps)
+            is_accurate_ = 1;
+        else
+            is_accurate_ = 0;    
+    }
+
+    std::stringstream &getCurSubtestDescription()
+    {
+        return cur_subtest_description_;
+    }
+
 private:
     TestSystem():
         cur_subtest_is_empty_(true), cpu_elapsed_(0),
@@ -261,7 +369,8 @@ private:
         speedup_full_faster_count_(0), speedup_full_slower_count_(0), speedup_full_equal_count_(0), is_list_mode_(false),
         num_iters_(10), cpu_num_iters_(2),
         gpu_warmup_iters_(1), cur_iter_idx_(0), cur_warmup_idx_(0),
-        record_(0), recordname_("performance"), itname_changed_(true)
+        record_(0), recordname_("performance"), itname_changed_(true), 
+        is_accurate_(-1), accurate_diff_(0.)
     {
         cpu_times_.reserve(num_iters_);
         gpu_times_.reserve(num_iters_);
@@ -277,16 +386,19 @@ private:
         cur_subtest_description_.str("");
         cur_subtest_is_empty_ = true;
         cur_iter_idx_ = 0;
+        cur_warmup_idx_ = 0;
         cpu_times_.clear();
         gpu_times_.clear();
         gpu_full_times_.clear();
+        is_accurate_ = -1;
+        accurate_diff_ = 0.;
     }
 
     double meanTime(const std::vector<int64> &samples);
 
     void printHeading();
     void printSummary();
-    void printMetrics(double cpu_time, double gpu_time = 0.0f, double gpu_full_time = 0.0f, double speedup = 0.0f, double fullspeedup = 0.0f);
+    void printMetrics(int is_accurate, double cpu_time, double gpu_time = 0.0f, double gpu_full_time = 0.0f, double speedup = 0.0f, double fullspeedup = 0.0f);
 
     void writeHeading();
     void writeSummary();
@@ -340,6 +452,9 @@ private:
     std::string recordname_;
     std::string itname_;
     bool itname_changed_;
+
+    int is_accurate_;
+    double accurate_diff_;
 };
 
 
@@ -353,7 +468,7 @@ struct name##_init: Runnable { \
 	void name##_init::run()
 
 
-#define TEST(name) \
+#define PERFTEST(name) \
 struct name##_test: Runnable { \
 	name##_test(): Runnable(#name) { \
 	TestSystem::instance().addTest(this); \
@@ -375,7 +490,7 @@ struct name##_test: Runnable { \
 	while (!TestSystem::instance().stop()) { \
 	TestSystem::instance().gpuOn()
 #define GPU_OFF \
-    ocl::finish(); \
+	ocl::finish();\
 	TestSystem::instance().gpuOff(); \
 	} TestSystem::instance().gpuComplete()
 
@@ -389,5 +504,5 @@ struct name##_test: Runnable { \
 #define WARMUP_ON \
 	while (!TestSystem::instance().warmupStop()) {
 #define WARMUP_OFF \
-        ocl::finish(); \
+	ocl::finish();\
 	} TestSystem::instance().warmupComplete()

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 ///////////// Canny ////////////////////////
-TEST(Canny)
+PERFTEST(Canny)
 {
     Mat img = imread(abspath("aloeL.jpg"), CV_LOAD_IMAGE_GRAYSCALE);
 
@@ -56,7 +57,7 @@ TEST(Canny)
 
     SUBTEST << img.cols << 'x' << img.rows << "; aloeL.jpg" << "; edges" << "; CV_8UC1";
 
-    Mat edges(img.size(), CV_8UC1);
+    Mat edges(img.size(), CV_8UC1), ocl_edges;
 
     CPU_ON;
     Canny(img, edges, 50.0, 100.0);
@@ -72,12 +73,13 @@ TEST(Canny)
 
     GPU_ON;
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-     ;
     GPU_OFF;
 
     GPU_FULL_ON;
     d_img.upload(img);
     ocl::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
-    d_edges.download(edges);
+    d_edges.download(ocl_edges);
     GPU_FULL_OFF;
+
+    TestSystem::instance().ExceptedMatSimilar(edges, ocl_edges, 2e-2);
 }

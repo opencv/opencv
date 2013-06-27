@@ -256,12 +256,17 @@ namespace
 
 void cv::imshow( const string& winname, InputArray _img )
 {
+    const Size size = _img.size();
 #ifndef HAVE_OPENGL
-    Mat img = _img.getMat();
-    CvMat c_img = img;
-    cvShowImage(winname.c_str(), &c_img);
+    CV_Assert(size.width>0 && size.height>0);
+    {
+        Mat img = _img.getMat();
+        CvMat c_img = img;
+        cvShowImage(winname.c_str(), &c_img);
+    }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+    CV_Assert(size.width>0 && size.height>0);
 
     if (useGl <= 0)
     {
@@ -275,7 +280,6 @@ void cv::imshow( const string& winname, InputArray _img )
 
         if (autoSize > 0)
         {
-            Size size = _img.size();
             resizeWindow(winname, size.width, size.height);
         }
 

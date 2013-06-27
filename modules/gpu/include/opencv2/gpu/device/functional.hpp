@@ -63,8 +63,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a + b;
         }
-        __device__ __forceinline__ plus(const plus& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ plus():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ plus() {}
+        __host__ __device__ __forceinline__ plus(const plus&) {}
     };
 
     template <typename T> struct minus : binary_function<T, T, T>
@@ -74,8 +74,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a - b;
         }
-        __device__ __forceinline__ minus(const minus& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ minus():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ minus() {}
+        __host__ __device__ __forceinline__ minus(const minus&) {}
     };
 
     template <typename T> struct multiplies : binary_function<T, T, T>
@@ -85,8 +85,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a * b;
         }
-        __device__ __forceinline__ multiplies(const multiplies& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ multiplies():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ multiplies() {}
+        __host__ __device__ __forceinline__ multiplies(const multiplies&) {}
     };
 
     template <typename T> struct divides : binary_function<T, T, T>
@@ -96,8 +96,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a / b;
         }
-        __device__ __forceinline__ divides(const divides& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ divides():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ divides() {}
+        __host__ __device__ __forceinline__ divides(const divides&) {}
     };
 
     template <typename T> struct modulus : binary_function<T, T, T>
@@ -107,8 +107,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a % b;
         }
-        __device__ __forceinline__ modulus(const modulus& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ modulus():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ modulus() {}
+        __host__ __device__ __forceinline__ modulus(const modulus&) {}
     };
 
     template <typename T> struct negate : unary_function<T, T>
@@ -117,8 +117,8 @@ namespace cv { namespace gpu { namespace device
         {
             return -a;
         }
-        __device__ __forceinline__ negate(const negate& other):unary_function<T,T>(){}
-        __device__ __forceinline__ negate():unary_function<T,T>(){}
+        __host__ __device__ __forceinline__ negate() {}
+        __host__ __device__ __forceinline__ negate(const negate&) {}
     };
 
     // Comparison Operations
@@ -129,8 +129,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a == b;
         }
-        __device__ __forceinline__ equal_to(const equal_to& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ equal_to():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ equal_to() {}
+        __host__ __device__ __forceinline__ equal_to(const equal_to&) {}
     };
 
     template <typename T> struct not_equal_to : binary_function<T, T, bool>
@@ -140,8 +140,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a != b;
         }
-        __device__ __forceinline__ not_equal_to(const not_equal_to& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ not_equal_to():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ not_equal_to() {}
+        __host__ __device__ __forceinline__ not_equal_to(const not_equal_to&) {}
     };
 
     template <typename T> struct greater : binary_function<T, T, bool>
@@ -151,8 +151,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a > b;
         }
-        __device__ __forceinline__ greater(const greater& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ greater():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ greater() {}
+        __host__ __device__ __forceinline__ greater(const greater&) {}
     };
 
     template <typename T> struct less : binary_function<T, T, bool>
@@ -162,8 +162,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a < b;
         }
-        __device__ __forceinline__ less(const less& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ less():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ less() {}
+        __host__ __device__ __forceinline__ less(const less&) {}
     };
 
     template <typename T> struct greater_equal : binary_function<T, T, bool>
@@ -173,8 +173,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a >= b;
         }
-        __device__ __forceinline__ greater_equal(const greater_equal& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ greater_equal():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ greater_equal() {}
+        __host__ __device__ __forceinline__ greater_equal(const greater_equal&) {}
     };
 
     template <typename T> struct less_equal : binary_function<T, T, bool>
@@ -184,8 +184,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a <= b;
         }
-        __device__ __forceinline__ less_equal(const less_equal& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ less_equal():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ less_equal() {}
+        __host__ __device__ __forceinline__ less_equal(const less_equal&) {}
     };
 
     // Logical Operations
@@ -196,8 +196,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a && b;
         }
-        __device__ __forceinline__ logical_and(const logical_and& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ logical_and():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ logical_and() {}
+        __host__ __device__ __forceinline__ logical_and(const logical_and&) {}
     };
 
     template <typename T> struct logical_or : binary_function<T, T, bool>
@@ -207,8 +207,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a || b;
         }
-        __device__ __forceinline__ logical_or(const logical_or& other):binary_function<T,T,bool>(){}
-        __device__ __forceinline__ logical_or():binary_function<T,T,bool>(){}
+        __host__ __device__ __forceinline__ logical_or() {}
+        __host__ __device__ __forceinline__ logical_or(const logical_or&) {}
     };
 
     template <typename T> struct logical_not : unary_function<T, bool>
@@ -217,8 +217,8 @@ namespace cv { namespace gpu { namespace device
         {
             return !a;
         }
-        __device__ __forceinline__ logical_not(const logical_not& other):unary_function<T,bool>(){}
-        __device__ __forceinline__ logical_not():unary_function<T,bool>(){}
+        __host__ __device__ __forceinline__ logical_not() {}
+        __host__ __device__ __forceinline__ logical_not(const logical_not&) {}
     };
 
     // Bitwise Operations
@@ -229,8 +229,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a & b;
         }
-        __device__ __forceinline__ bit_and(const bit_and& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ bit_and():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ bit_and() {}
+        __host__ __device__ __forceinline__ bit_and(const bit_and&) {}
     };
 
     template <typename T> struct bit_or : binary_function<T, T, T>
@@ -240,8 +240,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a | b;
         }
-        __device__ __forceinline__ bit_or(const bit_or& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ bit_or():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ bit_or() {}
+        __host__ __device__ __forceinline__ bit_or(const bit_or&) {}
     };
 
     template <typename T> struct bit_xor : binary_function<T, T, T>
@@ -251,8 +251,8 @@ namespace cv { namespace gpu { namespace device
         {
             return a ^ b;
         }
-        __device__ __forceinline__ bit_xor(const bit_xor& other):binary_function<T,T,T>(){}
-        __device__ __forceinline__ bit_xor():binary_function<T,T,T>(){}
+        __host__ __device__ __forceinline__ bit_xor() {}
+        __host__ __device__ __forceinline__ bit_xor(const bit_xor&) {}
     };
 
     template <typename T> struct bit_not : unary_function<T, T>
@@ -261,8 +261,8 @@ namespace cv { namespace gpu { namespace device
         {
             return ~v;
         }
-        __device__ __forceinline__ bit_not(const bit_not& other):unary_function<T,T>(){}
-        __device__ __forceinline__ bit_not():unary_function<T,T>(){}
+        __host__ __device__ __forceinline__ bit_not() {}
+        __host__ __device__ __forceinline__ bit_not(const bit_not&) {}
     };
 
     // Generalized Identity Operations
@@ -272,8 +272,8 @@ namespace cv { namespace gpu { namespace device
         {
             return x;
         }
-        __device__ __forceinline__ identity(const identity& other):unary_function<T,T>(){}
-        __device__ __forceinline__ identity():unary_function<T,T>(){}
+        __host__ __device__ __forceinline__ identity() {}
+        __host__ __device__ __forceinline__ identity(const identity&) {}
     };
 
     template <typename T1, typename T2> struct project1st : binary_function<T1, T2, T1>
@@ -282,8 +282,8 @@ namespace cv { namespace gpu { namespace device
         {
             return lhs;
         }
-        __device__ __forceinline__ project1st(const project1st& other):binary_function<T1,T2,T1>(){}
-        __device__ __forceinline__ project1st():binary_function<T1,T2,T1>(){}
+        __host__ __device__ __forceinline__ project1st() {}
+        __host__ __device__ __forceinline__ project1st(const project1st&) {}
     };
 
     template <typename T1, typename T2> struct project2nd : binary_function<T1, T2, T2>
@@ -292,8 +292,8 @@ namespace cv { namespace gpu { namespace device
         {
             return rhs;
         }
-        __device__ __forceinline__ project2nd(const project2nd& other):binary_function<T1,T2,T2>(){}
-        __device__ __forceinline__ project2nd():binary_function<T1,T2,T2>(){}
+        __host__ __device__ __forceinline__ project2nd() {}
+        __host__ __device__ __forceinline__ project2nd(const project2nd&) {}
     };
 
     // Min/Max Operations
@@ -302,8 +302,8 @@ namespace cv { namespace gpu { namespace device
     template <> struct name<type> : binary_function<type, type, type> \
     { \
         __device__ __forceinline__ type operator()(type lhs, type rhs) const {return op(lhs, rhs);} \
-        __device__ __forceinline__ name() {}\
-        __device__ __forceinline__ name(const name&) {}\
+        __host__ __device__ __forceinline__ name() {}\
+        __host__ __device__ __forceinline__ name(const name&) {}\
     };
 
     template <typename T> struct maximum : binary_function<T, T, T>
@@ -312,8 +312,8 @@ namespace cv { namespace gpu { namespace device
         {
             return max(lhs, rhs);
         }
-        __device__ __forceinline__ maximum() {}
-        __device__ __forceinline__ maximum(const maximum&) {}
+        __host__ __device__ __forceinline__ maximum() {}
+        __host__ __device__ __forceinline__ maximum(const maximum&) {}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(maximum, uchar, ::max)
@@ -332,8 +332,8 @@ namespace cv { namespace gpu { namespace device
         {
             return min(lhs, rhs);
         }
-        __device__ __forceinline__ minimum() {}
-        __device__ __forceinline__ minimum(const minimum&) {}
+        __host__ __device__ __forceinline__ minimum() {}
+        __host__ __device__ __forceinline__ minimum(const minimum&) {}
     };
 
     OPENCV_GPU_IMPLEMENT_MINMAX(minimum, uchar, ::min)
@@ -349,7 +349,6 @@ namespace cv { namespace gpu { namespace device
 #undef OPENCV_GPU_IMPLEMENT_MINMAX
 
     // Math functions
-///bound=========================================
 
     template <typename T> struct abs_func : unary_function<T, T>
     {
@@ -358,8 +357,8 @@ namespace cv { namespace gpu { namespace device
             return abs(x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned char> : unary_function<unsigned char, unsigned char>
     {
@@ -368,8 +367,8 @@ namespace cv { namespace gpu { namespace device
             return x;
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<signed char> : unary_function<signed char, signed char>
     {
@@ -378,8 +377,8 @@ namespace cv { namespace gpu { namespace device
             return ::abs((int)x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<char> : unary_function<char, char>
     {
@@ -388,8 +387,8 @@ namespace cv { namespace gpu { namespace device
             return ::abs((int)x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned short> : unary_function<unsigned short, unsigned short>
     {
@@ -398,8 +397,8 @@ namespace cv { namespace gpu { namespace device
             return x;
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<short> : unary_function<short, short>
     {
@@ -408,8 +407,8 @@ namespace cv { namespace gpu { namespace device
             return ::abs((int)x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<unsigned int> : unary_function<unsigned int, unsigned int>
     {
@@ -418,8 +417,8 @@ namespace cv { namespace gpu { namespace device
             return x;
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<int> : unary_function<int, int>
     {
@@ -428,8 +427,8 @@ namespace cv { namespace gpu { namespace device
             return ::abs(x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<float> : unary_function<float, float>
     {
@@ -438,8 +437,8 @@ namespace cv { namespace gpu { namespace device
             return ::fabsf(x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
     template <> struct abs_func<double> : unary_function<double, double>
     {
@@ -448,8 +447,8 @@ namespace cv { namespace gpu { namespace device
             return ::fabs(x);
         }
 
-        __device__ __forceinline__ abs_func() {}
-        __device__ __forceinline__ abs_func(const abs_func&) {}
+        __host__ __device__ __forceinline__ abs_func() {}
+        __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
 
 #define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
@@ -459,8 +458,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func ## f(v); \
         } \
-        __device__ __forceinline__ name ## _func() {} \
-        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
+        __host__ __device__ __forceinline__ name ## _func() {} \
+        __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     }; \
     template <> struct name ## _func<double> : unary_function<double, double> \
     { \
@@ -468,8 +467,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func(v); \
         } \
-        __device__ __forceinline__ name ## _func() {} \
-        __device__ __forceinline__ name ## _func(const name ## _func&) {} \
+        __host__ __device__ __forceinline__ name ## _func() {} \
+        __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
 #define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(name, func) \
@@ -479,6 +478,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func ## f(v1, v2); \
         } \
+        __host__ __device__ __forceinline__ name ## _func() {} \
+        __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     }; \
     template <> struct name ## _func<double> : binary_function<double, double, double> \
     { \
@@ -486,6 +487,8 @@ namespace cv { namespace gpu { namespace device
         { \
             return func(v1, v2); \
         } \
+        __host__ __device__ __forceinline__ name ## _func() {} \
+        __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
     OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sqrt, ::sqrt)
@@ -522,8 +525,8 @@ namespace cv { namespace gpu { namespace device
         {
             return src1 * src1 + src2 * src2;
         }
-        __device__ __forceinline__ hypot_sqr_func(const hypot_sqr_func& other) : binary_function<T, T, float>(){}
-        __device__ __forceinline__ hypot_sqr_func() : binary_function<T, T, float>(){}
+        __host__ __device__ __forceinline__ hypot_sqr_func() {}
+        __host__ __device__ __forceinline__ hypot_sqr_func(const hypot_sqr_func&) {}
     };
 
     // Saturate Cast Functor
@@ -533,8 +536,8 @@ namespace cv { namespace gpu { namespace device
         {
             return saturate_cast<D>(v);
         }
-        __device__ __forceinline__ saturate_cast_func(const saturate_cast_func& other):unary_function<T, D>(){}
-        __device__ __forceinline__ saturate_cast_func():unary_function<T, D>(){}
+        __host__ __device__ __forceinline__ saturate_cast_func() {}
+        __host__ __device__ __forceinline__ saturate_cast_func(const saturate_cast_func&) {}
     };
 
     // Threshold Functors
@@ -547,10 +550,9 @@ namespace cv { namespace gpu { namespace device
             return (src > thresh) * maxVal;
         }
 
-        __device__ __forceinline__ thresh_binary_func(const thresh_binary_func& other)
-            : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
-
-        __device__ __forceinline__ thresh_binary_func():unary_function<T, T>(){}
+        __host__ __device__ __forceinline__ thresh_binary_func() {}
+        __host__ __device__ __forceinline__ thresh_binary_func(const thresh_binary_func& other)
+            : thresh(other.thresh), maxVal(other.maxVal) {}
 
         const T thresh;
         const T maxVal;
@@ -565,10 +567,9 @@ namespace cv { namespace gpu { namespace device
             return (src <= thresh) * maxVal;
         }
 
-        __device__ __forceinline__ thresh_binary_inv_func(const thresh_binary_inv_func& other)
-            : unary_function<T, T>(), thresh(other.thresh), maxVal(other.maxVal){}
-
-        __device__ __forceinline__ thresh_binary_inv_func():unary_function<T, T>(){}
+        __host__ __device__ __forceinline__ thresh_binary_inv_func() {}
+        __host__ __device__ __forceinline__ thresh_binary_inv_func(const thresh_binary_inv_func& other)
+            : thresh(other.thresh), maxVal(other.maxVal) {}
 
         const T thresh;
         const T maxVal;
@@ -583,10 +584,9 @@ namespace cv { namespace gpu { namespace device
             return minimum<T>()(src, thresh);
         }
 
-        __device__ __forceinline__ thresh_trunc_func(const thresh_trunc_func& other)
-            : unary_function<T, T>(), thresh(other.thresh){}
-
-        __device__ __forceinline__ thresh_trunc_func():unary_function<T, T>(){}
+        __host__ __device__ __forceinline__ thresh_trunc_func() {}
+        __host__ __device__ __forceinline__ thresh_trunc_func(const thresh_trunc_func& other)
+            : thresh(other.thresh) {}
 
         const T thresh;
     };
@@ -599,10 +599,10 @@ namespace cv { namespace gpu { namespace device
         {
             return (src > thresh) * src;
         }
-        __device__ __forceinline__ thresh_to_zero_func(const thresh_to_zero_func& other)
-            : unary_function<T, T>(), thresh(other.thresh){}
 
-        __device__ __forceinline__ thresh_to_zero_func():unary_function<T, T>(){}
+        __host__ __device__ __forceinline__ thresh_to_zero_func() {}
+       __host__  __device__ __forceinline__ thresh_to_zero_func(const thresh_to_zero_func& other)
+            : thresh(other.thresh) {}
 
         const T thresh;
     };
@@ -615,14 +615,14 @@ namespace cv { namespace gpu { namespace device
         {
             return (src <= thresh) * src;
         }
-        __device__ __forceinline__ thresh_to_zero_inv_func(const thresh_to_zero_inv_func& other)
-            : unary_function<T, T>(), thresh(other.thresh){}
 
-        __device__ __forceinline__ thresh_to_zero_inv_func():unary_function<T, T>(){}
+        __host__ __device__ __forceinline__ thresh_to_zero_inv_func() {}
+        __host__ __device__ __forceinline__ thresh_to_zero_inv_func(const thresh_to_zero_inv_func& other)
+            : thresh(other.thresh) {}
 
         const T thresh;
     };
-//bound!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ============>
+
     // Function Object Adaptors
     template <typename Predicate> struct unary_negate : unary_function<typename Predicate::argument_type, bool>
     {
@@ -633,8 +633,8 @@ namespace cv { namespace gpu { namespace device
           return !pred(x);
       }
 
-        __device__ __forceinline__ unary_negate(const unary_negate& other) : unary_function<typename Predicate::argument_type, bool>(){}
-        __device__ __forceinline__ unary_negate() : unary_function<typename Predicate::argument_type, bool>(){}
+      __host__ __device__ __forceinline__ unary_negate() {}
+      __host__ __device__ __forceinline__ unary_negate(const unary_negate& other) : pred(other.pred) {}
 
       const Predicate pred;
     };
@@ -653,11 +653,9 @@ namespace cv { namespace gpu { namespace device
         {
             return !pred(x,y);
         }
-        __device__ __forceinline__ binary_negate(const binary_negate& other)
-        : binary_function<typename Predicate::first_argument_type, typename Predicate::second_argument_type, bool>(){}
 
-        __device__ __forceinline__ binary_negate() :
-        binary_function<typename Predicate::first_argument_type, typename Predicate::second_argument_type, bool>(){}
+        __host__ __device__ __forceinline__ binary_negate() {}
+        __host__ __device__ __forceinline__ binary_negate(const binary_negate& other) : pred(other.pred) {}
 
         const Predicate pred;
     };
@@ -676,8 +674,8 @@ namespace cv { namespace gpu { namespace device
             return op(arg1, a);
         }
 
-        __device__ __forceinline__ binder1st(const binder1st& other) :
-        unary_function<typename Op::second_argument_type, typename Op::result_type>(){}
+        __host__ __device__ __forceinline__ binder1st() {}
+        __host__ __device__ __forceinline__ binder1st(const binder1st& other) : op(other.op), arg1(other.arg1) {}
 
         const Op op;
         const typename Op::first_argument_type arg1;
@@ -697,8 +695,8 @@ namespace cv { namespace gpu { namespace device
             return op(a, arg2);
         }
 
-         __device__ __forceinline__ binder2nd(const binder2nd& other) :
-        unary_function<typename Op::first_argument_type, typename Op::result_type>(), op(other.op), arg2(other.arg2){}
+        __host__ __device__ __forceinline__ binder2nd() {}
+        __host__ __device__ __forceinline__ binder2nd(const binder2nd& other) : op(other.op), arg2(other.arg2) {}
 
         const Op op;
         const typename Op::second_argument_type arg2;

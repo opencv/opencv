@@ -100,12 +100,6 @@ Mat randomMat(Size size, int type, double minVal, double maxVal)
     return randomMat(TS::ptr()->get_rng(), size, type, minVal, maxVal, false);
 }
 
-
-
-
-
-
-
 /*
 void showDiff(InputArray gold_, InputArray actual_, double eps)
 {
@@ -137,58 +131,7 @@ void showDiff(InputArray gold_, InputArray actual_, double eps)
 }
 */
 
-/*
-bool supportFeature(const DeviceInfo& info, FeatureSet feature)
-{
-    return TargetArchs::builtWith(feature) && info.supports(feature);
-}
 
-const vector<DeviceInfo>& devices()
-{
-    static vector<DeviceInfo> devs;
-    static bool first = true;
-
-    if (first)
-    {
-        int deviceCount = getCudaEnabledDeviceCount();
-
-        devs.reserve(deviceCount);
-
-        for (int i = 0; i < deviceCount; ++i)
-        {
-            DeviceInfo info(i);
-            if (info.isCompatible())
-                devs.push_back(info);
-        }
-
-        first = false;
-    }
-
-    return devs;
-}
-
-vector<DeviceInfo> devices(FeatureSet feature)
-{
-    const vector<DeviceInfo>& d = devices();
-
-    vector<DeviceInfo> devs_filtered;
-
-    if (TargetArchs::builtWith(feature))
-    {
-        devs_filtered.reserve(d.size());
-
-        for (size_t i = 0, size = d.size(); i < size; ++i)
-        {
-            const DeviceInfo& info = d[i];
-
-            if (info.supports(feature))
-                devs_filtered.push_back(info);
-        }
-    }
-
-    return devs_filtered;
-}
-*/
 
 vector<MatType> types(int depth_start, int depth_end, int cn_start, int cn_end)
 {
@@ -262,5 +205,50 @@ void PrintTo(const Inverse &inverse, std::ostream *os)
         (*os) << "inverse";
     else
         (*os) << "direct";
+}
+
+double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& ob2)
+{
+    double final_test_result = 0.0;
+    size_t sz1 = ob1.size();
+    size_t sz2 = ob2.size();
+
+    if(sz1 != sz2)
+    {
+        return sz1 > sz2 ? (double)(sz1 - sz2) : (double)(sz2 - sz1);
+    }
+    else
+    {
+        if(sz1==0 && sz2==0)
+            return 0;
+        cv::Mat cpu_result(sz, CV_8UC1);
+        cpu_result.setTo(0);
+
+        for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
+        {      
+            cv::Mat cpu_result_roi(cpu_result, *r);
+            cpu_result_roi.setTo(1);
+            cpu_result.copyTo(cpu_result);
+        }
+        int cpu_area = cv::countNonZero(cpu_result > 0);
+
+        cv::Mat gpu_result(sz, CV_8UC1);
+        gpu_result.setTo(0);
+        for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); r2++)
+        {
+            cv::Mat gpu_result_roi(gpu_result, *r2);
+            gpu_result_roi.setTo(1);
+            gpu_result.copyTo(gpu_result);
+        }
+
+        cv::Mat result_;
+        multiply(cpu_result, gpu_result, result_);
+        int result = cv::countNonZero(result_ > 0);
+        if(cpu_area!=0 && result!=0)
+            final_test_result = 1.0 - (double)result/(double)cpu_area;
+        else if(cpu_area==0 && result!=0)
+            final_test_result = -1;
+    }
+    return final_test_result;
 }
 

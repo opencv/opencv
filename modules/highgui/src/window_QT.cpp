@@ -38,6 +38,7 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
+#include "precomp.hpp"
 
 #if defined(HAVE_QT)
 
@@ -2473,35 +2474,33 @@ void DefaultViewPort::saveView()
     if (!fileName.isEmpty()) //save the picture
     {
         QString extension = fileName.right(3);
-
-        //   (no need anymore) create the image resized to receive the 'screenshot'
-        //    image2Draw_qt_resized = QImage(viewport()->width(), viewport()->height(),QImage::Format_RGB888);
-
-        QPainter saveimage(&image2Draw_qt_resized);
-        this->render(&saveimage);
+        
+        // Create a new pixmap to render the viewport into
+        QPixmap viewportPixmap(viewport()->size());
+        viewport()->render(&viewportPixmap);
 
         // Save it..
         if (QString::compare(extension, "png", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "PNG");
+            viewportPixmap.save(fileName, "PNG");
             return;
         }
 
         if (QString::compare(extension, "jpg", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "JPG");
+            viewportPixmap.save(fileName, "JPG");
             return;
         }
 
         if (QString::compare(extension, "bmp", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "BMP");
+            viewportPixmap.save(fileName, "BMP");
             return;
         }
 
         if (QString::compare(extension, "jpeg", Qt::CaseInsensitive) == 0)
         {
-            image2Draw_qt_resized.save(fileName, "JPEG");
+            viewportPixmap.save(fileName, "JPEG");
             return;
         }
 
@@ -2651,17 +2650,16 @@ void DefaultViewPort::paintEvent(QPaintEvent* evnt)
     //Now disable matrixWorld for overlay display
     myPainter.setWorldMatrixEnabled(false);
 
+    //overlay pixel values if zoomed in far enough
+    if (param_matrixWorld.m11()*ratioX >= threshold_zoom_img_region &&
+        param_matrixWorld.m11()*ratioY >= threshold_zoom_img_region)
+    {
+        drawImgRegion(&myPainter);
+    }
+
     //in mode zoom/panning
     if (param_matrixWorld.m11() > 1)
     {
-        if (param_matrixWorld.m11() >= threshold_zoom_img_region)
-        {
-            if (centralWidget->param_flags == CV_WINDOW_NORMAL)
-                startDisplayInfo("WARNING: The values displayed are the resized image's values. If you want the original image's values, use CV_WINDOW_AUTOSIZE", 1000);
-
-            drawImgRegion(&myPainter);
-        }
-
         drawViewOverview(&myPainter);
     }
 
@@ -2887,22 +2885,24 @@ void DefaultViewPort::drawStatusBar()
 //accept only CV_8UC1 and CV_8UC8 image for now
 void DefaultViewPort::drawImgRegion(QPainter *painter)
 {
-
     if (nbChannelOriginImage!=CV_8UC1 && nbChannelOriginImage!=CV_8UC3)
         return;
 
-    qreal offsetX = param_matrixWorld.dx()/param_matrixWorld.m11();
+    double pixel_width = param_matrixWorld.m11()*ratioX;
+    double pixel_height = param_matrixWorld.m11()*ratioY;
+
+    qreal offsetX = param_matrixWorld.dx()/pixel_width;
     offsetX = offsetX - floor(offsetX);
-    qreal offsetY = param_matrixWorld.dy()/param_matrixWorld.m11();
+    qreal offsetY = param_matrixWorld.dy()/pixel_height;
     offsetY = offsetY - floor(offsetY);
 
     QSize view = size();
     QVarLengthArray<QLineF, 30> linesX;
-    for (qreal _x = offsetX*param_matrixWorld.m11(); _x < view.width(); _x += param_matrixWorld.m11() )
+    for (qreal _x = offsetX*pixel_width; _x < view.width(); _x += pixel_width )
         linesX.append(QLineF(_x, 0, _x, view.height()));
 
     QVarLengthArray<QLineF, 30> linesY;
-    for (qreal _y = offsetY*param_matrixWorld.m11(); _y < view.height(); _y += param_matrixWorld.m11() )
+    for (qreal _y = offsetY*pixel_height; _y < view.height(); _y += pixel_height )
         linesY.append(QLineF(0, _y, view.width(), _y));
 
 
@@ -2910,27 +2910,25 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
     int original_font_size = f.pointSize();
     //change font size
     //f.setPointSize(4+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
-    f.setPixelSize(10+(param_matrixWorld.m11()-threshold_zoom_img_region)/5);
+    f.setPixelSize(10+(pixel_height-threshold_zoom_img_region)/5);
     painter->setFont(f);
-    QString val;
-    QRgb rgbValue;
 
-    QPointF point1;//sorry, I do not know how to name it
-    QPointF point2;//idem
 
-    for (int j=-1;j<height()/param_matrixWorld.m11();j++)//-1 because display the pixels top rows left colums
-        for (int i=-1;i<width()/param_matrixWorld.m11();i++)//-1
+    for (int j=-1;j<height()/pixel_height;j++)//-1 because display the pixels top rows left columns
+        for (int i=-1;i<width()/pixel_width;i++)//-1
         {
-            point1.setX((i+offsetX)*param_matrixWorld.m11());
-            point1.setY((j+offsetY)*param_matrixWorld.m11());
+            // Calculate top left of the pixel's position in the viewport (screen space)
+            QPointF pos_in_view((i+offsetX)*pixel_width, (j+offsetY)*pixel_height);
 
-            matrixWorld_inv.map(point1.x(),point1.y(),&point2.rx(),&point2.ry());
+            // Calculate top left of the pixel's position in the image (image space)
+            QPointF pos_in_image = matrixWorld_inv.map(pos_in_view);// Top left of pixel in view
+            pos_in_image.rx() = pos_in_image.x()/ratioX;
+            pos_in_image.ry() = pos_in_image.y()/ratioY;
+            QPoint point_in_image(pos_in_image.x() + 0.5f,pos_in_image.y() + 0.5f);// Add 0.5 for rounding
 
-            point2.rx()= (long) (point2.x() + 0.5);
-            point2.ry()= (long) (point2.y() + 0.5);
-
-            if (point2.x() >= 0 && point2.y() >= 0)
-                rgbValue = image2Draw_qt_resized.pixel(QPoint(point2.x(),point2.y()));
+            QRgb rgbValue;
+            if (image2Draw_qt.valid(point_in_image))
+                rgbValue = image2Draw_qt.pixel(point_in_image);
             else
                 rgbValue = qRgb(0,0,0);
 
@@ -2943,29 +2941,29 @@ void DefaultViewPort::drawImgRegion(QPainter *painter)
                 painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/2),
                     Qt::AlignCenter, val);
                 */
+                QString val;
 
                 val = tr("%1").arg(qRed(rgbValue));
                 painter->setPen(QPen(Qt::red, 1));
-                painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()/3),
+                painter->drawText(QRect(pos_in_view.x(),pos_in_view.y(),pixel_width,pixel_height/3),
                     Qt::AlignCenter, val);
 
                 val = tr("%1").arg(qGreen(rgbValue));
                 painter->setPen(QPen(Qt::green, 1));
-                painter->drawText(QRect(point1.x(),point1.y()+param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
+                painter->drawText(QRect(pos_in_view.x(),pos_in_view.y()+pixel_height/3,pixel_width,pixel_height/3),
                     Qt::AlignCenter, val);
 
                 val = tr("%1").arg(qBlue(rgbValue));
                 painter->setPen(QPen(Qt::blue, 1));
-                painter->drawText(QRect(point1.x(),point1.y()+2*param_matrixWorld.m11()/3,param_matrixWorld.m11(),param_matrixWorld.m11()/3),
+                painter->drawText(QRect(pos_in_view.x(),pos_in_view.y()+2*pixel_height/3,pixel_width,pixel_height/3),
                     Qt::AlignCenter, val);
 
             }
 
             if (nbChannelOriginImage==CV_8UC1)
             {
-
-                val = tr("%1").arg(qRed(rgbValue));
-                painter->drawText(QRect(point1.x(),point1.y(),param_matrixWorld.m11(),param_matrixWorld.m11()),
+                QString val = tr("%1").arg(qRed(rgbValue));
+                painter->drawText(QRect(pos_in_view.x(),pos_in_view.y(),pixel_width,pixel_height),
                     Qt::AlignCenter, val);
             }
         }

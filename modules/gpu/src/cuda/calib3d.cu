@@ -67,8 +67,8 @@ namespace cv { namespace gpu { namespace device
                         crot1.x * p.x + crot1.y * p.y + crot1.z * p.z + ctransl.y,
                         crot2.x * p.x + crot2.y * p.y + crot2.z * p.z + ctransl.z);
             }
-            __device__ __forceinline__ TransformOp() {}
-            __device__ __forceinline__ TransformOp(const TransformOp&) {}
+            __host__ __device__ __forceinline__ TransformOp() {}
+            __host__ __device__ __forceinline__ TransformOp(const TransformOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,
@@ -106,8 +106,8 @@ namespace cv { namespace gpu { namespace device
                         (cproj0.x * t.x + cproj0.y * t.y) / t.z + cproj0.z,
                         (cproj1.x * t.x + cproj1.y * t.y) / t.z + cproj1.z);
             }
-            __device__ __forceinline__ ProjectOp() {}
-            __device__ __forceinline__ ProjectOp(const ProjectOp&) {}
+            __host__ __device__ __forceinline__ ProjectOp() {}
+            __host__ __device__ __forceinline__ ProjectOp(const ProjectOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,

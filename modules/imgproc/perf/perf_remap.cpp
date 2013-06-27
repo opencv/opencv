@@ -63,7 +63,8 @@ PERF_TEST_P( TestRemap, Remap,
 
     declare.in(src, WARMUP_RNG).out(dst).time(20);
 
-    TEST_CYCLE() remap(src, dst, map1, map2, inter_type);
+    int runs = (sz.width <= 640) ? 3 : 1;
+    TEST_CYCLE_MULTIRUN(runs) remap(src, dst, map1, map2, inter_type);
 
     SANITY_CHECK(dst);
 }

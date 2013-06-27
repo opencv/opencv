@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -82,7 +83,7 @@ public:
 
 }
 }
-TEST(Haar)
+PERFTEST(Haar)
 {
     Mat img = imread(abspath("basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
 
@@ -106,6 +107,8 @@ TEST(Haar)
                                     1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     CPU_OFF;
 
+
+    vector<Rect> oclfaces;
     ocl::CascadeClassifier_GPU faceCascade;
 
     if (!faceCascade.load(abspath("haarcascade_frontalface_alt.xml")))
@@ -115,24 +118,26 @@ TEST(Haar)
 
     ocl::oclMat d_img(img);
 
-    faces.clear();
-
     WARMUP_ON;
-    faceCascade.detectMultiScale(d_img, faces,
+    faceCascade.detectMultiScale(d_img, oclfaces,
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     WARMUP_OFF;
+
+    if(faces.size() == oclfaces.size())
+        TestSystem::instance().setAccurate(1, 0);
+    else
+        TestSystem::instance().setAccurate(0, abs((int)faces.size() - (int)oclfaces.size()));
 
     faces.clear();
 
     GPU_ON;
-    faceCascade.detectMultiScale(d_img, faces,
+    faceCascade.detectMultiScale(d_img, oclfaces,
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
-     ;
     GPU_OFF;
 
     GPU_FULL_ON;
     d_img.upload(img);
-    faceCascade.detectMultiScale(d_img, faces,
+    faceCascade.detectMultiScale(d_img, oclfaces,
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     GPU_FULL_OFF;
 }

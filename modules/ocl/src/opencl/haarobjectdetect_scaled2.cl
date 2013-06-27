@@ -17,7 +17,7 @@
 // @Authors
 //    Wu Xinglong, wxl370@126.com
 //    Sen Liu, swjtuls1987@126.com
-//
+//    Peng Xiao, pengxiao@outlook.com
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
 //
@@ -49,25 +49,13 @@
 #define CV_HAAR_FEATURE_MAX           3
 typedef int   sumtype;
 typedef float sqsumtype;
-typedef struct  __attribute__((aligned(128)))  GpuHidHaarFeature
-{
-    struct __attribute__((aligned(32)))
-{
-    int p0 __attribute__((aligned(4)));
-    int p1 __attribute__((aligned(4)));
-    int p2 __attribute__((aligned(4)));
-    int p3 __attribute__((aligned(4)));
-    float weight __attribute__((aligned(4)));
-}
-rect[CV_HAAR_FEATURE_MAX] __attribute__((aligned(32)));
-}
-GpuHidHaarFeature;
+
 typedef struct __attribute__((aligned(128))) GpuHidHaarTreeNode
 {
     int p[CV_HAAR_FEATURE_MAX][4] __attribute__((aligned(64)));
     float weight[CV_HAAR_FEATURE_MAX] /*__attribute__((aligned (16)))*/;
     float threshold /*__attribute__((aligned (4)))*/;
-    float alpha[2] __attribute__((aligned(8)));
+    float alpha[3] __attribute__((aligned(16)));
     int left __attribute__((aligned(4)));
     int right __attribute__((aligned(4)));
 }
@@ -174,45 +162,83 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                 const int p_offset = mad24(y, step, x);
                 cascadeinfo.x += p_offset;
                 cascadeinfo.z += p_offset;
-                mean = (sum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.x), 0, max_idx)] - sum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.z), 0, max_idx)] -
-                        sum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.x), 0, max_idx)] + sum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.z), 0, max_idx)])
+                mean = (sum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.x), 0, max_idx)]
+                - sum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.z), 0, max_idx)] -
+                        sum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.x), 0, max_idx)]
+                + sum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.z), 0, max_idx)])
                        * correction_t;
-                variance_norm_factor = sqsum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.x), 0, max_idx)] - sqsum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.z), 0, max_idx)] -
-                                       sqsum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.x), 0, max_idx)] + sqsum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.z), 0, max_idx)];
+                variance_norm_factor = sqsum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.x), 0, max_idx)]
+                - sqsum[clamp(mad24(cascadeinfo.y, step, cascadeinfo.z), 0, max_idx)] -
+                                       sqsum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.x), 0, max_idx)]
+                + sqsum[clamp(mad24(cascadeinfo.w, step, cascadeinfo.z), 0, max_idx)];
                 variance_norm_factor = variance_norm_factor * correction_t - mean * mean;
                 variance_norm_factor = variance_norm_factor >= 0.f ? sqrt(variance_norm_factor) : 1.f;
                 bool result = true;
                 nodecounter = startnode + nodecount * scalei;
-
                 for (int stageloop = start_stage; (stageloop < end_stage) && result; stageloop++)
                 {
                     float stage_sum = 0.f;
                     int   stagecount = stagecascadeptr[stageloop].count;
-                    for (int nodeloop = 0; nodeloop < stagecount; nodeloop++)
+                    for (int nodeloop = 0; nodeloop < stagecount;)
                     {
                         __global GpuHidHaarTreeNode *currentnodeptr = (nodeptr + nodecounter);
                         int4 info1 = *(__global int4 *)(&(currentnodeptr->p[0][0]));
                         int4 info2 = *(__global int4 *)(&(currentnodeptr->p[1][0]));
                         int4 info3 = *(__global int4 *)(&(currentnodeptr->p[2][0]));
                         float4 w = *(__global float4 *)(&(currentnodeptr->weight[0]));
-                        float2 alpha2 = *(__global float2 *)(&(currentnodeptr->alpha[0]));
+                        float3 alpha3 = *(__global float3 *)(&(currentnodeptr->alpha[0]));
                         float nodethreshold  = w.w * variance_norm_factor;
+
                         info1.x += p_offset;
                         info1.z += p_offset;
                         info2.x += p_offset;
                         info2.z += p_offset;
-                        float classsum = (sum[clamp(mad24(info1.y, step, info1.x), 0, max_idx)] - sum[clamp(mad24(info1.y, step, info1.z), 0, max_idx)] -
-                                          sum[clamp(mad24(info1.w, step, info1.x), 0, max_idx)] + sum[clamp(mad24(info1.w, step, info1.z), 0, max_idx)]) * w.x;
-                        classsum += (sum[clamp(mad24(info2.y, step, info2.x), 0, max_idx)] - sum[clamp(mad24(info2.y, step, info2.z), 0, max_idx)] -
-                                     sum[clamp(mad24(info2.w, step, info2.x), 0, max_idx)] + sum[clamp(mad24(info2.w, step, info2.z), 0, max_idx)]) * w.y;
                         info3.x += p_offset;
                         info3.z += p_offset;
-                        classsum += (sum[clamp(mad24(info3.y, step, info3.x), 0, max_idx)] - sum[clamp(mad24(info3.y, step, info3.z), 0, max_idx)] -
-                                     sum[clamp(mad24(info3.w, step, info3.x), 0, max_idx)] + sum[clamp(mad24(info3.w, step, info3.z), 0, max_idx)]) * w.z;
-                        stage_sum += classsum >= nodethreshold ? alpha2.y : alpha2.x;
+                        float classsum = (sum[clamp(mad24(info1.y, step, info1.x), 0, max_idx)]
+                        - sum[clamp(mad24(info1.y, step, info1.z), 0, max_idx)] -
+                                          sum[clamp(mad24(info1.w, step, info1.x), 0, max_idx)]
+                        + sum[clamp(mad24(info1.w, step, info1.z), 0, max_idx)]) * w.x;
+                        classsum += (sum[clamp(mad24(info2.y, step, info2.x), 0, max_idx)]
+                        - sum[clamp(mad24(info2.y, step, info2.z), 0, max_idx)] -
+                                     sum[clamp(mad24(info2.w, step, info2.x), 0, max_idx)]
+                        + sum[clamp(mad24(info2.w, step, info2.z), 0, max_idx)]) * w.y;
+                        classsum += (sum[clamp(mad24(info3.y, step, info3.x), 0, max_idx)]
+                        - sum[clamp(mad24(info3.y, step, info3.z), 0, max_idx)] -
+                                     sum[clamp(mad24(info3.w, step, info3.x), 0, max_idx)]
+                        + sum[clamp(mad24(info3.w, step, info3.z), 0, max_idx)]) * w.z;
+                        
+                        bool passThres = classsum >= nodethreshold;
+
+#if STUMP_BASED
+                        stage_sum += passThres ? alpha3.y : alpha3.x;
                         nodecounter++;
+                        nodeloop++;
+#else
+                        bool isRootNode = (nodecounter & 1) == 0;
+                        if(isRootNode)
+                        {
+                            if( (passThres && currentnodeptr->right) ||
+                                (!passThres && currentnodeptr->left))
+                            {
+                                nodecounter ++;
+                            }
+                            else
+                            {
+                                stage_sum += alpha3.x;
+                                nodecounter += 2;
+                                nodeloop ++;
+                            }
+                        }
+                        else
+                        {
+                            stage_sum += (passThres ? alpha3.z : alpha3.y);
+                            nodecounter ++;
+                            nodeloop ++;
+                        }
+#endif
                     }
-                    result = (bool)(stage_sum >= stagecascadeptr[stageloop].threshold);
+                    result = (int)(stage_sum >= stagecascadeptr[stageloop].threshold);
                 }
 
                 barrier(CLK_LOCAL_MEM_FENCE);
@@ -222,7 +248,6 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                     int queueindex = atomic_inc(lclcount);
                     lcloutindex[queueindex] = (y << 16) | x;
                 }
-
                 barrier(CLK_LOCAL_MEM_FENCE);
                 int queuecount = lclcount[0];
 
@@ -277,5 +302,6 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     newnode[counter].threshold = t1.threshold;
     newnode[counter].alpha[0] = t1.alpha[0];
     newnode[counter].alpha[1] = t1.alpha[1];
+    newnode[counter].alpha[2] = t1.alpha[2];
 }
 

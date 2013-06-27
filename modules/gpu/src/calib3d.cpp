@@ -151,7 +151,7 @@ namespace
     }
 
     // Computes rotation, translation pair for small subsets if the input data
-    class TransformHypothesesGenerator
+    class TransformHypothesesGenerator : public ParallelLoopBody
     {
     public:
         TransformHypothesesGenerator(const Mat& object_, const Mat& image_, const Mat& dist_coef_,
@@ -161,7 +161,7 @@ namespace
                   num_points(num_points_), subset_size(subset_size_), rot_matrices(rot_matrices_),
                   transl_vectors(transl_vectors_) {}
 
-        void operator()(const BlockedRange& range) const
+        void operator()(const Range& range) const
         {
             // Input data for generation of the current hypothesis
             vector<int> subset_indices(subset_size);
@@ -173,7 +173,7 @@ namespace
             Mat rot_mat(3, 3, CV_64F);
             Mat transl_vec(1, 3, CV_64F);
 
-            for (int iter = range.begin(); iter < range.end(); ++iter)
+            for (int iter = range.start; iter < range.end; ++iter)
             {
                 selectRandom(subset_size, num_points, subset_indices);
                 for (int i = 0; i < subset_size; ++i)
@@ -239,7 +239,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     // Generate set of hypotheses using small subsets of the input data
     TransformHypothesesGenerator body(object, image_normalized, empty_dist_coef, eye_camera_mat,
                                       num_points, subset_size, rot_matrices, transl_vectors);
-    parallel_for(BlockedRange(0, num_iters), body);
+    parallel_for_(Range(0, num_iters), body);
 
     // Compute scores (i.e. number of inliers) for each hypothesis
     GpuMat d_object(object);

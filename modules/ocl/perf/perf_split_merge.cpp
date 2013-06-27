@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,9 +46,9 @@
 #include "precomp.hpp"
 
 ///////////// Merge////////////////////////
-TEST(Merge)
+PERFTEST(Merge)
 {
-    Mat dst;
+    Mat dst, ocl_dst;
     ocl::oclMat d_dst;
 
     int channels = 4;
@@ -86,26 +87,25 @@ TEST(Merge)
 
             GPU_ON;
             ocl::merge(d_src, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
-
             for (int i = 0; i < channels; ++i)
             {
-                d_src[i] = ocl::oclMat(size1, CV_8U, cv::Scalar::all(i));
+                d_src[i] = ocl::oclMat(size1, all_type[j], cv::Scalar::all(i));
             }
-
             ocl::merge(d_src, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
         }
 
     }
 }
 
 ///////////// Split////////////////////////
-TEST(Split)
+PERFTEST(Split)
 {
     //int channels = 4;
     int all_type[] = {CV_8UC1, CV_32FC1};
@@ -120,7 +120,7 @@ TEST(Split)
 
             Mat src(size1, CV_MAKE_TYPE(all_type[j], 4), cv::Scalar(1, 2, 3, 4));
 
-            std::vector<cv::Mat> dst;
+            std::vector<cv::Mat> dst, ocl_dst(4);
 
             split(src, dst);
 
@@ -133,17 +133,21 @@ TEST(Split)
 
             WARMUP_ON;
             ocl::split(d_src, d_dst);
-            WARMUP_OFF;
+            WARMUP_OFF;         
 
             GPU_ON;
             ocl::split(d_src, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
             d_src.upload(src);
             ocl::split(d_src, d_dst);
+            for(size_t i = 0; i < dst.size(); i++)
+                d_dst[i].download(ocl_dst[i]);
             GPU_FULL_OFF;
+
+            vector<double> eps(4, 0.);
+            TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);
         }
 
     }

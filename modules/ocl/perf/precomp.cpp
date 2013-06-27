@@ -41,6 +41,12 @@
 //M*/
 
 #include "precomp.hpp"
+#if GTEST_OS_WINDOWS
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+# include <windows.h>
+#endif
 
 // This program test most of the functions in ocl module and generate data metrix of x-factor in .csv files
 // All images needed in this test are in samples/gpu folder.
@@ -166,7 +172,7 @@ void TestSystem::finishCurrentSubtest()
         deviation = std::sqrt(sum / gpu_times_.size());
     }
 
-    printMetrics(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
+    printMetrics(is_accurate_, cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup);
     writeMetrics(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, gpu_min, gpu_max, deviation);
 
     num_subtests_called_++;
@@ -184,10 +190,19 @@ double TestSystem::meanTime(const vector<int64> &samples)
 void TestSystem::printHeading()
 {
     cout << endl;
-    cout << setiosflags(ios_base::left);
-    cout << TAB << setw(10) << "CPU, ms" << setw(10) << "GPU, ms"
-         << setw(14) << "SPEEDUP" << setw(14) << "GPUTOTAL, ms" << setw(14) << "TOTALSPEEDUP"
-         << "DESCRIPTION\n";
+    cout<< setiosflags(ios_base::left);
+
+#if 0
+    cout<<TAB<<setw(7)<< "Accu." << setw(10) << "CPU (ms)" << setw(10) << "GPU, ms"
+        << setw(8) << "Speedup"<< setw(10)<<"GPUTotal" << setw(10) << "Total"
+        << "Description\n";
+    cout<<TAB<<setw(7)<<""<<setw(10)<<""<<setw(10)<<""<<setw(8)<<""<<setw(10)<<"(ms)"<<setw(10)<<"Speedup\n";
+#endif
+
+    cout<<TAB<< setw(10) << "CPU (ms)" << setw(10) << "GPU, ms"
+        << setw(8) << "Speedup"<< setw(10)<<"GPUTotal" << setw(10) << "Total"
+        << "Description\n";
+    cout<<TAB<<setw(10)<<""<<setw(10)<<""<<setw(8)<<""<<setw(10)<<"(ms)"<<setw(10)<<"Speedup\n";
 
     cout << resetiosflags(ios_base::left);
 }
@@ -198,9 +213,14 @@ void TestSystem::writeHeading()
     {
         recordname_ += "_OCL.csv";
         record_ = fopen(recordname_.c_str(), "w");
+        if(record_ == NULL)
+        {
+            cout<<".csv file open failed.\n";
+            exit(0);
+        }
     }
 
-    fprintf(record_, "NAME,DESCRIPTION,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
+    fprintf(record_, "NAME,DESCRIPTION,ACCURACY,DIFFERENCE,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)\n");
 
     fflush(record_);
 }
@@ -209,54 +229,82 @@ void TestSystem::printSummary()
 {
     cout << setiosflags(ios_base::fixed);
     cout << "\naverage GPU speedup: x"
-         << setprecision(3) << speedup_total_ / std::max(1, num_subtests_called_)
-         << endl;
+        << setprecision(3) << speedup_total_ / std::max(1, num_subtests_called_)
+        << endl;
     cout << "\nGPU exceeded: "
-         << setprecision(3) << speedup_faster_count_
-         << "\nGPU passed: "
-         << setprecision(3) << speedup_equal_count_
-         << "\nGPU failed: "
-         << setprecision(3) << speedup_slower_count_
-         << endl;
+        << setprecision(3) << speedup_faster_count_
+        << "\nGPU passed: "
+        << setprecision(3) << speedup_equal_count_
+        << "\nGPU failed: "
+        << setprecision(3) << speedup_slower_count_
+        << endl;
     cout << "\nGPU exceeded rate: "
-         << setprecision(3) << (float)speedup_faster_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << "\nGPU passed rate: "
-         << setprecision(3) << (float)speedup_equal_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << "\nGPU failed rate: "
-         << setprecision(3) << (float)speedup_slower_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << endl;
+        << setprecision(3) << (float)speedup_faster_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << "\nGPU passed rate: "
+        << setprecision(3) << (float)speedup_equal_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << "\nGPU failed rate: "
+        << setprecision(3) << (float)speedup_slower_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << endl;
     cout << "\naverage GPUTOTAL speedup: x"
-         << setprecision(3) << speedup_full_total_ / std::max(1, num_subtests_called_)
-         << endl;
+        << setprecision(3) << speedup_full_total_ / std::max(1, num_subtests_called_)
+        << endl;
     cout << "\nGPUTOTAL exceeded: "
-         << setprecision(3) << speedup_full_faster_count_
-         << "\nGPUTOTAL passed: "
-         << setprecision(3) << speedup_full_equal_count_
-         << "\nGPUTOTAL failed: "
-         << setprecision(3) << speedup_full_slower_count_
-         << endl;
+        << setprecision(3) << speedup_full_faster_count_
+        << "\nGPUTOTAL passed: "
+        << setprecision(3) << speedup_full_equal_count_
+        << "\nGPUTOTAL failed: "
+        << setprecision(3) << speedup_full_slower_count_
+        << endl;
     cout << "\nGPUTOTAL exceeded rate: "
-         << setprecision(3) << (float)speedup_full_faster_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << "\nGPUTOTAL passed rate: "
-         << setprecision(3) << (float)speedup_full_equal_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << "\nGPUTOTAL failed rate: "
-         << setprecision(3) << (float)speedup_full_slower_count_ / std::max(1, num_subtests_called_) * 100
-         << "%"
-         << endl;
+        << setprecision(3) << (float)speedup_full_faster_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << "\nGPUTOTAL passed rate: "
+        << setprecision(3) << (float)speedup_full_equal_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << "\nGPUTOTAL failed rate: "
+        << setprecision(3) << (float)speedup_full_slower_count_ / std::max(1, num_subtests_called_) * 100
+        << "%"
+        << endl;
     cout << resetiosflags(ios_base::fixed);
 }
 
 
-void TestSystem::printMetrics(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup)
-{
-    cout << TAB << setiosflags(ios_base::left);
-    stringstream stream;
+enum GTestColor {
+    COLOR_DEFAULT,
+    COLOR_RED,
+    COLOR_GREEN,
+    COLOR_YELLOW
+};
+#if GTEST_OS_WINDOWS&&!GTEST_OS_WINDOWS_MOBILE
+// Returns the character attribute for the given color.
+static WORD GetColorAttribute(GTestColor color) {
+    switch (color) {
+    case COLOR_RED:    return FOREGROUND_RED;
+    case COLOR_GREEN:  return FOREGROUND_GREEN;
+    case COLOR_YELLOW: return FOREGROUND_RED | FOREGROUND_GREEN;
+    default:           return 0;
+    }
+}
+#else
+static const char* GetAnsiColorCode(GTestColor color) {
+    switch (color) {
+    case COLOR_RED:     return "1";
+    case COLOR_GREEN:   return "2";
+    case COLOR_YELLOW:  return "3";
+    default:            return NULL;
+    };
+}
+#endif
 
+static void printMetricsUti(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, std::stringstream& stream, std::stringstream& cur_subtest_description)
+{
+    //cout <<TAB<< setw(7) << stream.str(); 
+    cout <<TAB; 
+
+    stream.str("");
     stream << cpu_time;
     cout << setw(10) << stream.str();
 
@@ -266,18 +314,69 @@ void TestSystem::printMetrics(double cpu_time, double gpu_time, double gpu_full_
 
     stream.str("");
     stream << "x" << setprecision(3) << speedup;
-    cout << setw(14) << stream.str();
+    cout << setw(8) << stream.str();
 
     stream.str("");
     stream << gpu_full_time;
-    cout << setw(14) << stream.str();
+    cout << setw(10) << stream.str();
 
     stream.str("");
     stream << "x" << setprecision(3) << fullspeedup;
-    cout << setw(14) << stream.str();
+    cout << setw(10) << stream.str();
 
-    cout << cur_subtest_description_.str();
+    cout << cur_subtest_description.str();
     cout << resetiosflags(ios_base::left) << endl;
+}
+
+void TestSystem::printMetrics(int is_accurate, double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup)
+{
+    cout << setiosflags(ios_base::left);
+    stringstream stream;
+
+    std::stringstream &cur_subtest_description = getCurSubtestDescription();
+   
+#if GTEST_OS_WINDOWS&&!GTEST_OS_WINDOWS_MOBILE
+    
+    WORD color;
+    const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    // Gets the current text color.
+    CONSOLE_SCREEN_BUFFER_INFO buffer_info;
+    GetConsoleScreenBufferInfo(stdout_handle, &buffer_info);
+    const WORD old_color_attrs = buffer_info.wAttributes;
+    // We need to flush the stream buffers into the console before each
+    // SetConsoleTextAttribute call lest it affect the text that is already
+    // printed but has not yet reached the console.
+    fflush(stdout);
+
+    if(is_accurate == 1||is_accurate == -1)
+    {
+        color = old_color_attrs;
+        printMetricsUti(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, stream, cur_subtest_description);
+
+    }else
+    {
+        color = GetColorAttribute(COLOR_RED);
+        SetConsoleTextAttribute(stdout_handle,
+            color| FOREGROUND_INTENSITY);
+
+        printMetricsUti(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, stream, cur_subtest_description);
+        fflush(stdout);
+        // Restores the text color.
+        SetConsoleTextAttribute(stdout_handle, old_color_attrs);
+    }
+#else
+    GTestColor color = COLOR_RED;
+    if(is_accurate == 1|| is_accurate == -1)
+    {
+        printMetricsUti(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, stream, cur_subtest_description);
+
+    }else
+    {
+        printf("\033[0;3%sm", GetAnsiColorCode(color));
+        printMetricsUti(cpu_time, gpu_time, gpu_full_time, speedup, fullspeedup, stream, cur_subtest_description);
+        printf("\033[m");  // Resets the terminal to default.
+    }
+#endif
 }
 
 void TestSystem::writeMetrics(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, double gpu_min, double gpu_max, double std_dev)
@@ -288,10 +387,27 @@ void TestSystem::writeMetrics(double cpu_time, double gpu_time, double gpu_full_
         record_ = fopen(recordname_.c_str(), "w");
     }
 
-    fprintf(record_, "%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", itname_changed_ ? itname_.c_str() : "",
-            cur_subtest_description_.str().c_str(),
-            cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
-            gpu_min, gpu_max, std_dev);
+    string _is_accurate_;
+
+    if(is_accurate_ == 1)
+        _is_accurate_ = "Pass";
+    else if(is_accurate_ == 0)
+        _is_accurate_ = "Fail";
+    else if(is_accurate_ == -1)
+        _is_accurate_ = " ";
+    else
+    {
+        std::cout<<"is_accurate errer: "<<is_accurate_<<"\n";
+        exit(-1);
+    }
+
+    fprintf(record_, "%s,%s,%s,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", 
+        itname_changed_ ? itname_.c_str() : "",
+        cur_subtest_description_.str().c_str(),
+        _is_accurate_.c_str(), 
+        accurate_diff_,
+        cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
+        gpu_min, gpu_max, std_dev);
 
     if (itname_changed_)
     {
@@ -310,31 +426,31 @@ void TestSystem::writeSummary()
     }
 
     fprintf(record_, "\nAverage GPU speedup: %.3f\n"
-            "exceeded: %d (%.3f%%)\n"
-            "passed: %d (%.3f%%)\n"
-            "failed: %d (%.3f%%)\n"
-            "\nAverage GPUTOTAL speedup: %.3f\n"
-            "exceeded: %d (%.3f%%)\n"
-            "passed: %d (%.3f%%)\n"
-            "failed: %d (%.3f%%)\n",
-            speedup_total_ / std::max(1, num_subtests_called_),
-            speedup_faster_count_, (float)speedup_faster_count_ / std::max(1, num_subtests_called_) * 100,
-            speedup_equal_count_, (float)speedup_equal_count_ / std::max(1, num_subtests_called_) * 100,
-            speedup_slower_count_, (float)speedup_slower_count_ / std::max(1, num_subtests_called_) * 100,
-            speedup_full_total_ / std::max(1, num_subtests_called_),
-            speedup_full_faster_count_, (float)speedup_full_faster_count_ / std::max(1, num_subtests_called_) * 100,
-            speedup_full_equal_count_, (float)speedup_full_equal_count_ / std::max(1, num_subtests_called_) * 100,
-            speedup_full_slower_count_, (float)speedup_full_slower_count_ / std::max(1, num_subtests_called_) * 100
-           );
+        "exceeded: %d (%.3f%%)\n"
+        "passed: %d (%.3f%%)\n"
+        "failed: %d (%.3f%%)\n"
+        "\nAverage GPUTOTAL speedup: %.3f\n"
+        "exceeded: %d (%.3f%%)\n"
+        "passed: %d (%.3f%%)\n"
+        "failed: %d (%.3f%%)\n",
+        speedup_total_ / std::max(1, num_subtests_called_),
+        speedup_faster_count_, (float)speedup_faster_count_ / std::max(1, num_subtests_called_) * 100,
+        speedup_equal_count_, (float)speedup_equal_count_ / std::max(1, num_subtests_called_) * 100,
+        speedup_slower_count_, (float)speedup_slower_count_ / std::max(1, num_subtests_called_) * 100,
+        speedup_full_total_ / std::max(1, num_subtests_called_),
+        speedup_full_faster_count_, (float)speedup_full_faster_count_ / std::max(1, num_subtests_called_) * 100,
+        speedup_full_equal_count_, (float)speedup_full_equal_count_ / std::max(1, num_subtests_called_) * 100,
+        speedup_full_slower_count_, (float)speedup_full_slower_count_ / std::max(1, num_subtests_called_) * 100
+        );
     fflush(record_);
 }
 
 void TestSystem::printError(const std::string &msg)
 {
-	if(msg != "CL_INVALID_BUFFER_SIZE")
-	{
-		cout << TAB << "[error: " << msg << "] " << cur_subtest_description_.str() << endl;
-	}
+    if(msg != "CL_INVALID_BUFFER_SIZE")
+    {
+        cout << TAB << "[error: " << msg << "] " << cur_subtest_description_.str() << endl;
+    }
 }
 
 void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high)
@@ -344,7 +460,6 @@ void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high)
     rng.fill(mat, RNG::UNIFORM, low, high);
 }
 
-
 string abspath(const string &relpath)
 {
     return TestSystem::instance().workingDir() + relpath;
@@ -352,11 +467,30 @@ string abspath(const string &relpath)
 
 
 int CV_CDECL cvErrorCallback(int /*status*/, const char * /*func_name*/,
-                             const char *err_msg, const char * /*file_name*/,
-                             int /*line*/, void * /*userdata*/)
+    const char *err_msg, const char * /*file_name*/,
+    int /*line*/, void * /*userdata*/)
 {
     TestSystem::instance().printError(err_msg);
     return 0;
 }
+
+double checkNorm(const Mat &m)
+{
+    return norm(m, NORM_INF);
+}
+
+double checkNorm(const Mat &m1, const Mat &m2)
+{
+    return norm(m1, m2, NORM_INF);
+}
+
+double checkSimilarity(const Mat &m1, const Mat &m2)
+{
+    Mat diff;
+    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    return std::abs(diff.at<float>(0, 0) - 1.f);
+}
+
+
 
 
