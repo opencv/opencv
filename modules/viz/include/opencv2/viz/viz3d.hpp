@@ -39,6 +39,7 @@ namespace temp_viz
         void showCylinder(const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color = Color(255,255,255));
         void showCircle(const String &id, const Point3f &pt, double radius, const Color &color = Color(255,255,255));
         void showSphere (const String &id, const Point3f &pt, double radius, const Color &color = Color(255,255,255));
+        void showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color = Color(255,255,255));
         
         Affine3f getShapePose(const String &id);
         bool setShapePose(const String &id, const Affine3f &pose);

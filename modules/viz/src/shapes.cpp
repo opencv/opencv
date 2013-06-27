@@ -84,6 +84,61 @@ vtkSmartPointer<vtkDataSet> temp_viz::createSphere (const Point3f& pt, double ra
     return (sphere->GetOutput ());
 }
 
+vtkSmartPointer<vtkDataSet> temp_viz::createArrow (const Point3f& pt1, const Point3f& pt2)
+{
+    vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New ();
+    
+    float startPoint[3], endPoint[3];
+    startPoint[0] = pt1.x;
+    startPoint[1] = pt1.y;
+    startPoint[2] = pt1.z;
+    endPoint[0] = pt2.x;
+    endPoint[1] = pt2.y;
+    endPoint[2] = pt2.z;
+    float normalizedX[3], normalizedY[3], normalizedZ[3];
+    
+    // The X axis is a vector from start to end
+    vtkMath::Subtract(endPoint, startPoint, normalizedX);
+    float length = vtkMath::Norm(normalizedX);
+    vtkMath::Normalize(normalizedX);
+
+    // The Z axis is an arbitrary vecotr cross X
+    float arbitrary[3];
+    arbitrary[0] = vtkMath::Random(-10,10);
+    arbitrary[1] = vtkMath::Random(-10,10);
+    arbitrary[2] = vtkMath::Random(-10,10);
+    vtkMath::Cross(normalizedX, arbitrary, normalizedZ);
+    vtkMath::Normalize(normalizedZ);
+
+    // The Y axis is Z cross X
+    vtkMath::Cross(normalizedZ, normalizedX, normalizedY);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+
+    // Create the direction cosine matrix
+    matrix->Identity();
+    for (unsigned int i = 0; i < 3; i++)
+    {
+        matrix->SetElement(i, 0, normalizedX[i]);
+        matrix->SetElement(i, 1, normalizedY[i]);
+        matrix->SetElement(i, 2, normalizedZ[i]);
+    }    
+
+    // Apply the transforms
+    vtkSmartPointer<vtkTransform> transform = 
+    vtkSmartPointer<vtkTransform>::New();
+    transform->Translate(startPoint);
+    transform->Concatenate(matrix);
+    transform->Scale(length, length, length);
+
+    // Transform the polydata
+    vtkSmartPointer<vtkTransformPolyDataFilter> transformPD = 
+    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transformPD->SetTransform(transform);
+    transformPD->SetInputConnection(arrowSource->GetOutputPort());
+    
+    return (transformPD->GetOutput());
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkDataSet> temp_viz::createCylinder (const temp_viz::ModelCoefficients &coefficients, int numsides)
 {

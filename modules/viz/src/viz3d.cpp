@@ -113,6 +113,11 @@ void temp_viz::Viz3d::showSphere (const String &id, const Point3f &pt, double ra
     impl_->showSphere(id, pt, radius, color);
 }
 
+void temp_viz::Viz3d::showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    impl_->showArrow(id,pt1,pt2,color);
+}
+
 cv::Affine3f temp_viz::Viz3d::getShapePose(const String &id)
 {
     return impl_->getShapePose(id);

@@ -512,6 +512,42 @@ void temp_viz::Viz3d::VizImpl::showSphere (const String &id, const Point3f &pt, 
     }
 }
 
+void temp_viz::Viz3d::VizImpl::showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createArrow(pt1,pt2));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createArrow(pt1,pt2);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
 cv::Affine3f temp_viz::Viz3d::VizImpl::getShapePose (const String &id)
 {
     // Get the shape with the id and return the pose

@@ -49,6 +49,7 @@
 #include <vtkDiskSource.h>
 #include <vtkPlaneSource.h>
 #include <vtkSphereSource.h>
+#include <vtkArrowSource.h>
 #include <vtkIdentityTransform.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>

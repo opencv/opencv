@@ -14,6 +14,7 @@ namespace temp_viz
     CV_EXPORTS vtkSmartPointer<vtkDataSet> create2DCircle (const Point3f& pt, double radius);
     CV_EXPORTS vtkSmartPointer<vtkDataSet> createCube(const Point3f& pt_min, const Point3f& pt_max);
     CV_EXPORTS vtkSmartPointer<vtkDataSet> createSphere (const Point3f& pt, double radius);
+    CV_EXPORTS vtkSmartPointer<vtkDataSet> createArrow (const Point3f& pt1, const Point3f& pt2);
 //     CV_EXPORTS vtkSmartPointer<vtkDataSet> createCube (const Point3f& pt, const Quaternionf& qt,  );
 //     CV_EXPORTS vtkSmartPointer<vtkDataSet> createCube (const Eigen::Vector3f &translation, const Eigen::Quaternionf &rotation, double width, double height, double depth);
 //     CV_EXPORTS vtkSmartPointer<vtkDataSet> createCube (double x_min, double x_max, double y_min, double y_max, double z_min, double z_max);
