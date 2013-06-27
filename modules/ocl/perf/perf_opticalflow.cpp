@@ -136,11 +136,13 @@ PERFTEST(PyrLKOpticalFlow)
             size_t mismatch = 0;
             for (int i = 0; i < (int)nextPts.size(); ++i)
             {
-                if(status[i] != ocl_status.at<unsigned char>(0, i)){
+                if(status[i] != ocl_status.at<unsigned char>(0, i))
+                {
                     mismatch++;
                     continue;
                 }
-                if(status[i]){
+                if(status[i])
+                {
                     Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
                     Point2f cpu_rst = nextPts[i];
                     if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
@@ -193,24 +195,24 @@ PERFTEST(tvl1flow)
     WARMUP_ON;
     d_alg(d0, d1, d_flowx, d_flowy);
     WARMUP_OFF;
-/*
-    double diff1 = 0.0, diff2 = 0.0;
-    if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
-        &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
-        TestSystem::instance().setAccurate(1);
-    else
-        TestSystem::instance().setAccurate(0);
+    /*
+        double diff1 = 0.0, diff2 = 0.0;
+        if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
+            &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
+            TestSystem::instance().setAccurate(1);
+        else
+            TestSystem::instance().setAccurate(0);
 
-    TestSystem::instance().setDiff(diff1);
-    TestSystem::instance().setDiff(diff2);
-*/
+        TestSystem::instance().setDiff(diff1);
+        TestSystem::instance().setDiff(diff2);
+    */
 
 
     GPU_ON;
     d_alg(d0, d1, d_flowx, d_flowy);
     d_alg.collectGarbage();
     GPU_OFF;
-    
+
 
     cv::Mat flowx, flowy;
 
@@ -352,4 +354,3 @@ PERFTEST(FarnebackOpticalFlow)
         }
     }
 }
-

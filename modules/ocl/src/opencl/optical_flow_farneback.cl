@@ -71,7 +71,7 @@ __kernel void polynomialExpansion(__global float * dst,
 
     dstStep /= sizeof(*dst);
     srcStep /= sizeof(*src);
-    
+
     int xWarped;
     __local float *row = smem + tx;
 
@@ -168,7 +168,7 @@ __kernel void gaussianBlur(__global float * dst,
     srcStep /= sizeof(*src);
 
     __local float *row = smem + ty * (bdx + 2*ksizeHalf);
-    
+
     if (y < height)
     {
         // Vertical pass
@@ -184,7 +184,7 @@ __kernel void gaussianBlur(__global float * dst,
     }
 
     barrier(CLK_LOCAL_MEM_FENCE);
-        
+
     if (y < height && y >= 0 && x < width && x >= 0)
     {
         // Horizontal pass
@@ -207,7 +207,7 @@ __kernel void updateMatrices(__global float * M,
 {
     const int y = get_global_id(1);
     const int x = get_global_id(0);
-    
+
     mStep /= sizeof(*M);
     xStep /= sizeof(*flowx);
     yStep /= sizeof(*flowy);
@@ -223,7 +223,8 @@ __kernel void updateMatrices(__global float * M,
 
         int x1 = convert_int(floor(fx));
         int y1 = convert_int(floor(fy));
-        fx -= x1; fy -= y1;
+        fx -= x1;
+        fy -= y1;
 
         float r2, r3, r4, r5, r6;
 
@@ -278,13 +279,16 @@ __kernel void updateMatrices(__global float * M,
         r3 += r6*dy + r5*dx;
 
         float scale =
-                c_border[min(x, BORDER_SIZE)] *
-                c_border[min(y, BORDER_SIZE)] *
-                c_border[min(width - x - 1, BORDER_SIZE)] *
-                c_border[min(height - y - 1, BORDER_SIZE)];
+            c_border[min(x, BORDER_SIZE)] *
+            c_border[min(y, BORDER_SIZE)] *
+            c_border[min(width - x - 1, BORDER_SIZE)] *
+            c_border[min(height - y - 1, BORDER_SIZE)];
 
-        r2 *= scale; r3 *= scale; r4 *= scale;
-        r5 *= scale; r6 *= scale;
+        r2 *= scale;
+        r3 *= scale;
+        r4 *= scale;
+        r5 *= scale;
+        r6 *= scale;
 
         M[mad24(y, mStep, x)] = r4*r4 + r6*r6;
         M[mad24(height + y, mStep, x)] = (r4 + r5)*r6;
@@ -303,7 +307,7 @@ __kernel void boxFilter5(__global float * dst,
 {
     const int y = get_global_id(1);
     const int x = get_global_id(0);
-        
+
     const float boxAreaInv = 1.f / ((1 + 2*ksizeHalf) * (1 + 2*ksizeHalf));
     const int smw = bdx + 2*ksizeHalf; // shared memory "width"
     __local float *row = smem + 5 * ty * smw;
@@ -319,16 +323,16 @@ __kernel void boxFilter5(__global float * dst,
             int xExt = (int)(bx * bdx) + i - ksizeHalf;
             xExt = min(max(xExt, 0), width - 1);
 
-            #pragma unroll
+#pragma unroll
             for (int k = 0; k < 5; ++k)
                 row[k*smw + i] = src[mad24(k*height + y, srcStep, xExt)];
 
             for (int j = 1; j <= ksizeHalf; ++j)
-                #pragma unroll
+#pragma unroll
                 for (int k = 0; k < 5; ++k)
                     row[k*smw + i] +=
-                            src[mad24(k*height + max(y - j, 0), srcStep, xExt)] +
-                            src[mad24(k*height + min(y + j, height - 1), srcStep, xExt)];
+                        src[mad24(k*height + max(y - j, 0), srcStep, xExt)] +
+                        src[mad24(k*height + min(y + j, height - 1), srcStep, xExt)];
         }
     }
 
@@ -341,16 +345,16 @@ __kernel void boxFilter5(__global float * dst,
         row += tx + ksizeHalf;
         float res[5];
 
-        #pragma unroll
+#pragma unroll
         for (int k = 0; k < 5; ++k)
             res[k] = row[k*smw];
 
         for (int i = 1; i <= ksizeHalf; ++i)
-            #pragma unroll
+#pragma unroll
             for (int k = 0; k < 5; ++k)
                 res[k] += row[k*smw - i] + row[k*smw + i];
 
-        #pragma unroll
+#pragma unroll
         for (int k = 0; k < 5; ++k)
             dst[mad24(k*height + y, dstStep, x)] = res[k] * boxAreaInv;
     }
@@ -372,7 +376,7 @@ __kernel void updateFlow(__global float4 * flowx, __global float4 * flowy,
     {
         float4 g11 = M[mad24(y, mStep, x)];
         float4 g12 = M[mad24(height + y, mStep, x)];
-        float4 g22 = M[mad24(2*height + y, mStep, x)]; 
+        float4 g22 = M[mad24(2*height + y, mStep, x)];
         float4 h1 =  M[mad24(3*height + y, mStep, x)];
         float4 h2 =  M[mad24(4*height + y, mStep, x)];
 
@@ -408,16 +412,16 @@ __kernel void gaussianBlur5(__global float * dst,
             int xExt = (int)(bx * bdx) + i - ksizeHalf;
             xExt = idx_col(xExt, width - 1);
 
-            #pragma unroll
+#pragma unroll
             for (int k = 0; k < 5; ++k)
                 row[k*smw + i] = src[mad24(k*height + y, srcStep, xExt)] * c_gKer[0];
 
             for (int j = 1; j <= ksizeHalf; ++j)
-                #pragma unroll
+#pragma unroll
                 for (int k = 0; k < 5; ++k)
                     row[k*smw + i] +=
-                            (src[mad24(k*height + idx_row_low(y - j, height - 1), srcStep, xExt)] +
-                                src[mad24(k*height + idx_row_high(y + j, height - 1), srcStep, xExt)]) * c_gKer[j];
+                        (src[mad24(k*height + idx_row_low(y - j, height - 1), srcStep, xExt)] +
+                         src[mad24(k*height + idx_row_high(y + j, height - 1), srcStep, xExt)]) * c_gKer[j];
         }
     }
 
@@ -430,16 +434,16 @@ __kernel void gaussianBlur5(__global float * dst,
         row += tx + ksizeHalf;
         float res[5];
 
-        #pragma unroll
+#pragma unroll
         for (int k = 0; k < 5; ++k)
             res[k] = row[k*smw] * c_gKer[0];
 
         for (int i = 1; i <= ksizeHalf; ++i)
-            #pragma unroll
+#pragma unroll
             for (int k = 0; k < 5; ++k)
                 res[k] += (row[k*smw - i] + row[k*smw + i]) * c_gKer[i];
 
-        #pragma unroll
+#pragma unroll
         for (int k = 0; k < 5; ++k)
             dst[mad24(k*height + y, dstStep, x)] = res[k];
     }
