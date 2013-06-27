@@ -80,7 +80,7 @@ GPU_TEST_P(BroxOpticalFlow, Regression)
     brox(loadMat(frame0), loadMat(frame1), u, v);
 
     std::string fname(cvtest::TS::ptr()->get_data_path());
-    if (devInfo.major() >= 2)
+    if (devInfo.majorVersion() >= 2)
         fname += "opticalflow/brox_optical_flow_cc20.bin";
     else
         fname += "opticalflow/brox_optical_flow.bin";

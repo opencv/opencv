@@ -409,7 +409,7 @@ namespace
         ensureSizeIsEnough(src.size(), bufType_, buf_);
 
         DeviceInfo devInfo;
-        const int cc = devInfo.major() * 10 + devInfo.minor();
+        const int cc = devInfo.majorVersion() * 10 + devInfo.minorVersion();
 
         cudaStream_t stream = StreamAccessor::getStream(_stream);
 

@@ -191,7 +191,7 @@ int main(int argc, const char* argv[])
     DeviceInfo dev_info(device);
     if (!dev_info.isCompatible())
     {
-        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.major() << '.' << dev_info.minor() << endl;
+        cerr << "GPU module isn't built for GPU #" << device << " " << dev_info.name() << ", CC " << dev_info.majorVersion() << '.' << dev_info.minorVersion() << endl;
         return -1;
     }
     setDevice(device);
