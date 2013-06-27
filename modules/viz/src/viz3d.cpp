@@ -63,11 +63,6 @@ bool temp_viz::Viz3d::addPolygon(const Mat& cloud, const Color& color, const Str
     return impl_->addPolygon(cloud, color, id);
 }
 
-bool temp_viz::Viz3d::addSphere (const cv::Point3f &center, double radius, const Color& color, const std::string &id)
-{
-    return impl_->addSphere(center, radius, color, id);
-}
-
 void temp_viz::Viz3d::spin()
 {
     impl_->spin();
