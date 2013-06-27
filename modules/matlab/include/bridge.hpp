@@ -14,7 +14,9 @@ typedef std::vector<cv::Mat> vector_Mat;
 typedef std::vector<cv::Point> vector_Point;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
+typedef std::vector<cv::String> vector_String;
 typedef std::vector<unsigned char> vector_uchar;
+typedef std::vector<cv::Rect> vector_Rect;
 
 
 void conditionalError(bool expr, const std::string& str) {
@@ -133,6 +135,16 @@ public:
   Bridge& operator=(const vector_float& obj) { return *this; }
   vector_float toVectorFloat() { return vector_float(); }
   operator vector_float() { return toVectorFloat(); }
+
+  // --------------------------- vector_Rect  ----------------------------------
+  Bridge& operator=(const vector_Rect& obj) { return *this; }
+  vector_Rect toVectorRect() { return vector_Rect(); }
+  operator vector_Rect() { return toVectorRect(); }
+
+  // --------------------------- vector_String  ----------------------------------
+  Bridge& operator=(const vector_String& obj) { return *this; }
+  vector_String toVectorString() { return vector_String(); }
+  operator vector_String() { return toVectorString(); }
 
   // --------------------------- string  --------------------------------------
   Bridge& operator=(const std::string& obj) { return *this; }

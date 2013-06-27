@@ -44,10 +44,10 @@ set(the_description "The Matlab/Octave bindings")
 ocv_add_module(matlab   BINDINGS #TODO: does it actually NEED to depend on core?
                         OPTIONAL opencv_core
                                  opencv_imgproc opencv_ml opencv_highgui
-                                 #opencv_objdetect opencv_features2d
+                                 opencv_objdetect #opencv_features2d TODO: Re-enable when Flann is in a compliant state
                                  opencv_video opencv_photo
                                  #opencv_calib opencv_calib3d
-                                 #opencv_nonfree
+                                 opencv_nonfree
 )
 
 # TODO: Undo this when building all modules to find python properly
@@ -143,6 +143,7 @@ set(MEX_WORKS True CACHE BOOL ADVANCED)
 # (which do the real work) only when they're outdated
 set(GENERATE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/generate.proxy)
 set(COMPILE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/compile.proxy)
+file(REMOVE ${GENERATE_PROXY} ${COMPILE_PROXY})
 
 # generate
 # call the python executable to generate the Matlab gateways

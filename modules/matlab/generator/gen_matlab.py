@@ -13,10 +13,8 @@ class MatlabWrapperGenerator(object):
             ns[name] = parser.parse(file)
 
         # cleanify the parser output
-        print ns['ml']
         parse_tree = ParseTree()
         parse_tree.build(ns)
-        print parse_tree
        
         # setup the template engine
         jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)

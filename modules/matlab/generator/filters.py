@@ -44,10 +44,11 @@ def noutputs(args):
     return len(outputs(args))
 
 def convertibleToInt(string):
+    salt = '1+'
     try:
-        int(string)
+        exec(salt+string)
         return True
-    except ValueError:
+    except:
         return False
 
 def capitalizeFirst(text):

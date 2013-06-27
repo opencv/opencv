@@ -51,6 +51,13 @@ class Translator(object):
         # classes have 'class' prefixed on their name 
         if 'class' in defn[0].split(' ') or 'struct' in defn[0].split(' '):
             return self.translateClass(defn)
+        # --- operators! ---
+        #TODO: implement operators: http://www.mathworks.com.au/help/matlab/matlab_oop/implementing-operators-for-your-class.html
+        if 'operator' in defn[0]:
+            return self.translateFunction(defn)
+        # --- constant ---
+        elif convertibleToInt(defn[1]):
+            return self.translateConstant(defn)
         # --- function ---
         # functions either need to have input arguments, or not uppercase names
         elif defn[3] or not self.translateName(defn[0]).split('_')[0].isupper():
