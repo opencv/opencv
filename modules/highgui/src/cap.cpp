@@ -117,6 +117,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_DSHOW
         CV_CAP_DSHOW,
 #endif
+#ifdef HAVE_MSMF
+        CV_CAP_MSMF,
+#endif
 #if 1
         CV_CAP_IEEE1394,   // identical to CV_CAP_DC1394
 #endif
@@ -196,13 +199,6 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 
         switch (domains[i])
         {
-#ifdef HAVE_MSMF
-        case CV_CAP_MSMF:
-             capture = cvCreateCameraCapture_MSMF (index);
-             if (capture)
-                 return capture;
-            break;
-#endif
 #ifdef HAVE_DSHOW
         case CV_CAP_DSHOW:
              capture = cvCreateCameraCapture_DShow (index);
@@ -210,7 +206,13 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                  return capture;
             break;
 #endif
-
+#ifdef HAVE_MSMF
+        case CV_CAP_MSMF:
+             capture = cvCreateCameraCapture_MSMF (index);
+             if (capture)
+                 return capture;
+            break;
+#endif
 #ifdef HAVE_TYZX
         case CV_CAP_STEREO:
             capture = cvCreateCameraCapture_TYZX (index);
@@ -218,14 +220,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
             break;
 #endif
-
-        case CV_CAP_VFW:
 #ifdef HAVE_VFW
+        case CV_CAP_VFW:
             capture = cvCreateCameraCapture_VFW (index);
             if (capture)
                 return capture;
 #endif
-
 #if defined HAVE_LIBV4L || defined HAVE_CAMV4L || defined HAVE_CAMV4L2 || defined HAVE_VIDEOIO
             capture = cvCreateCameraCapture_V4L (index);
             if (capture)
@@ -358,6 +358,16 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_FFMPEG_proxy (filename);
 
+#ifdef HAVE_VFW
+    if (! result)
+        result = cvCreateFileCapture_VFW (filename);
+#endif
+
+#ifdef HAVE_MSMF
+    if (! result)
+        result = cvCreateFileCapture_MSMF (filename);
+#endif
+
 #ifdef HAVE_XINE
     if (! result)
         result = cvCreateFileCapture_XINE (filename);
@@ -405,6 +415,16 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
 
     if(!result)
         result = cvCreateVideoWriter_FFMPEG_proxy (filename, fourcc, fps, frameSize, is_color);
+
+#ifdef HAVE_VFW
+    if(!result)
+        result = cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, is_color);
+#endif
+
+#ifdef HAVE_MSMF
+    if (!result)
+        result = cvCreateVideoWriter_MSMF(filename, fourcc, fps, frameSize, is_color);
+#endif
 
 /*  #ifdef HAVE_XINE
     if(!result)
