@@ -14,6 +14,7 @@ typedef std::vector<cv::Mat> vector_Mat;
 typedef std::vector<cv::Point> vector_Point;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
+typedef std::vector<unsigned char> vector_uchar;
 
 
 void conditionalError(bool expr, const std::string& str) {
@@ -177,6 +178,11 @@ public:
   Bridge& operator=(const vector_Point& obj) { return *this; }
   vector_Point toVectorPoint() { return vector_Point(); }
   operator vector_Point() { return toVectorPoint(); }
+
+  // ------------------------ vector_uchar -------------------------------------
+  Bridge& operator=(const vector_uchar& obj) { return *this; }
+  vector_uchar toVectorUchar() { return vector_uchar(); }
+  operator vector_uchar() { return toVectorUchar(); }
 
   // --------------------------  Scalar  --------------------------------------
   Bridge& operator=(const cv::Scalar& obj) { return *this; }

@@ -12,8 +12,8 @@ class MatlabWrapperGenerator(object):
             name = os.path.splitext(os.path.basename(file))[0]
             ns[name] = parser.parse(file)
 
-        print ns['imgproc']
         # cleanify the parser output
+        print ns['ml']
         parse_tree = ParseTree()
         parse_tree.build(ns)
         print parse_tree

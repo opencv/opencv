@@ -49,7 +49,7 @@ class Translator(object):
     def translate(self, defn):
         # --- class ---
         # classes have 'class' prefixed on their name 
-        if 'class' in defn[0]:
+        if 'class' in defn[0].split(' ') or 'struct' in defn[0].split(' '):
             return self.translateClass(defn)
         # --- function ---
         # functions either need to have input arguments, or not uppercase names
@@ -100,8 +100,9 @@ class Translator(object):
         return name.split(' ')[-1].split('.')[-1]
 
     def translateClassName(self, name):
+        name  = name.split(' ')[-1]
         parts = name.split('.')
-        return parts[1] if len(parts) == 3 else ''
+        return parts[-2] if len(parts) > 1 and not parts[-2] == 'cv' else ''
 
 
 
