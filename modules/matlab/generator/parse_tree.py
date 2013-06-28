@@ -17,6 +17,8 @@ class ParseTree(object):
             constants = []
             for defn in definitions:
                 obj = babel.translate(defn) 
+                if obj is None:
+                    continue
                 if type(obj) is Class or obj.clss:
                     self.insertIntoClassTree(obj, class_tree)
                 elif type(obj) is Function:
@@ -54,7 +56,7 @@ class Translator(object):
         # --- operators! ---
         #TODO: implement operators: http://www.mathworks.com.au/help/matlab/matlab_oop/implementing-operators-for-your-class.html
         if 'operator' in defn[0]:
-            return self.translateFunction(defn)
+            return
         # --- constant ---
         elif convertibleToInt(defn[1]):
             return self.translateConstant(defn)

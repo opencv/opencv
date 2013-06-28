@@ -3,7 +3,9 @@
 
 #include "mex.h"
 #include <vector>
+#include <string>
 #include <opencv2/core.hpp>
+#include <opencv2/calib3d.hpp>
 #include <ext/hash_map>
 
 /* 
@@ -17,6 +19,10 @@ typedef std::vector<float> vector_float;
 typedef std::vector<cv::String> vector_String;
 typedef std::vector<unsigned char> vector_uchar;
 typedef std::vector<cv::Rect> vector_Rect;
+typedef std::vector<cv::KeyPoint> vector_KeyPoint;
+typedef cv::Ptr<cv::StereoBM> Ptr_StereoBM;
+typedef cv::Ptr<cv::StereoSGBM> Ptr_StereoSGBM;
+typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
 
 
 void conditionalError(bool expr, const std::string& str) {
@@ -126,6 +132,21 @@ public:
   int toInt() { return 0; }
   operator int() { return toInt(); }
 
+  // ---------------------------   Ptr_StereoBM   --------------------------------------
+  Bridge& operator=(const Ptr_StereoBM& obj) { return *this; }
+  Ptr_StereoBM toPtrStereoBM() { return Ptr_StereoBM(); }
+  operator Ptr_StereoBM() { return toPtrStereoBM(); }
+
+  // ---------------------------   Ptr_StereoSGBM   --------------------------------------
+  Bridge& operator=(const Ptr_StereoSGBM& obj) { return *this; }
+  Ptr_StereoSGBM toPtrStereoSGBM() { return Ptr_StereoSGBM(); }
+  operator Ptr_StereoSGBM() { return toPtrStereoSGBM(); }
+
+  // ---------------------------   Ptr_FeatureDetector   --------------------------------------
+  Bridge& operator=(const Ptr_FeatureDetector& obj) { return *this; }
+  Ptr_FeatureDetector toPtrFeatureDetector() { return Ptr_FeatureDetector(); }
+  operator Ptr_FeatureDetector() { return toPtrFeatureDetector(); }
+
   // --------------------------- vector_int  ----------------------------------
   Bridge& operator=(const vector_int& obj) { return *this; }
   vector_int toVectorInt() { return vector_int(); }
@@ -140,6 +161,11 @@ public:
   Bridge& operator=(const vector_Rect& obj) { return *this; }
   vector_Rect toVectorRect() { return vector_Rect(); }
   operator vector_Rect() { return toVectorRect(); }
+
+  // --------------------------- vector_KeyPoint  ----------------------------------
+  Bridge& operator=(const vector_KeyPoint& obj) { return *this; }
+  vector_KeyPoint toVectorKeyPoint() { return vector_KeyPoint(); }
+  operator vector_KeyPoint() { return toVectorKeyPoint(); }
 
   // --------------------------- vector_String  ----------------------------------
   Bridge& operator=(const vector_String& obj) { return *this; }

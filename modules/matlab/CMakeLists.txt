@@ -41,12 +41,13 @@ if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
 endif()
 
 set(the_description "The Matlab/Octave bindings")
-ocv_add_module(matlab   BINDINGS #TODO: does it actually NEED to depend on core?
+ocv_add_module(matlab   BINDINGS
                         OPTIONAL opencv_core
                                  opencv_imgproc opencv_ml opencv_highgui
-                                 opencv_objdetect #opencv_features2d TODO: Re-enable when Flann is in a compliant state
-                                 opencv_video opencv_photo
-                                 #opencv_calib opencv_calib3d
+                                 opencv_objdetect opencv_flann opencv_features2d
+                                 opencv_photo opencv_video opencv_videostab
+                                 opencv_calib opencv_calib3d
+                                 opencv_stitching opencv_superres 
                                  opencv_nonfree
 )
 
