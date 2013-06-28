@@ -43,6 +43,14 @@ if(HAVE_CUDA)
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+  
+  if(HAVE_CUFFT)
+      set(cuda_link_libs ${cuda_link_libs} ${CUDA_cufft_LIBRARY})
+  endif()
+
+  if(HAVE_CUBLAS)
+      set(cuda_link_libs ${cuda_link_libs} ${CUDA_cublas_LIBRARY})
+  endif()
 
   if(WITH_NVCUVID)
     set(cuda_link_libs ${cuda_link_libs} ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})
@@ -71,14 +79,6 @@ ocv_set_module_sources(
 ocv_create_module(${cuda_link_libs})
 
 if(HAVE_CUDA)
-  if(HAVE_CUFFT)
-    CUDA_ADD_CUFFT_TO_TARGET(${the_module})
-  endif()
-
-  if(HAVE_CUBLAS)
-    CUDA_ADD_CUBLAS_TO_TARGET(${the_module})
-  endif()
-
   install(FILES src/nvidia/NPP_staging/NPP_staging.hpp  src/nvidia/core/NCV.hpp
     DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH}/opencv2/${name}
     COMPONENT main)
