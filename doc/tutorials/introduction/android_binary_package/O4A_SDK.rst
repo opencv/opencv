@@ -98,7 +98,7 @@ The structure of package contents looks as follows:
 * :file:`doc` folder contains various OpenCV documentation in PDF format.
   It's also available online at http://docs.opencv.org.
 
-  .. note:: The most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
+  .. note:: The most recent docs (nightly build) are at http://docs.opencv.org/2.4.
             Generally, it's more up-to-date, but can refer to not-yet-released functionality.
 
 .. TODO: I'm not sure that this is the best place to talk about OpenCV Manager

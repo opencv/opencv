@@ -14,15 +14,12 @@
      Or: http://oreilly.com/catalog/9780596516130/
      ISBN-10: 0596516134 or: ISBN-13: 978-0596516130
 
-   OTHER OPENCV SITES:
-   * The source code is on sourceforge at:
-     http://sourceforge.net/projects/opencvlibrary/
-   * The OpenCV wiki page (As of Oct 1, 2008 this is down for changing over servers, but should come back):
-     http://opencvlibrary.sourceforge.net/
-   * An active user group is at:
-     http://tech.groups.yahoo.com/group/OpenCV/
-   * The minutes of weekly OpenCV development meetings are at:
-     http://code.opencv.org/projects/opencv/wiki/Meeting_notes
+   OPENCV WEBSITES:
+     Homepage:      http://opencv.org
+     Online docs:   http://docs.opencv.org
+     Q&A forum:     http://answers.opencv.org
+     Issue tracker: http://code.opencv.org
+     GitHub:        https://github.com/Itseez/opencv/
    ************************************************** */
 
 #include "opencv2/calib3d/calib3d.hpp"
