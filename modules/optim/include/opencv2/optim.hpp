@@ -82,12 +82,12 @@ class CV_EXPORTS LPSolver : public Solver
 public:
   class CV_EXPORTS LPFunction:public Solver::Function
   {
-      cv::Mat z;
+      Mat z;
   public:
       //! Note, that this class is supposed to be immutable, so it's ok to make only a shallow copy of z_in.*/
-      LPFunction(cv::Mat z_in):z(z_in){}
+      LPFunction(Mat z_in):z(z_in){}
       ~LPFunction(){};
-      const cv::Mat& getz()const{return z;}
+      const Mat& getz()const{return z;}
       double calc(InputArray args)const;
   };
 
@@ -96,18 +96,19 @@ public:
   //!this form and **we shall create various constructors for this class that will perform these conversions**.
   class CV_EXPORTS LPConstraints:public Solver::Constraints
   {
-      cv::Mat A,b;
+      Mat A,b;
   public:
       ~LPConstraints(){};
       //! Note, that this class is supposed to be immutable, so it's ok to make only a shallow copy of A_in and b_in.*/
-      LPConstraints(cv::Mat A_in, cv::Mat b_in):A(A_in),b(b_in){}
-      const cv::Mat& getA()const{return A;}
-      const cv::Mat& getb()const{return b;}
+      LPConstraints(Mat A_in, Mat b_in):A(A_in),b(b_in){}
+      const Mat& getA()const{return A;}
+      const Mat& getb()const{return b;}
   };
 
   LPSolver(){}
   double solve(const Function& F,const Constraints& C, OutputArray result)const;
 };
+CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
 }}// cv
 
 #endif
