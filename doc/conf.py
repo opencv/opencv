@@ -311,7 +311,7 @@ extlinks = {
             'feature2d' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/feature_detection.html#%s', None ),
             'imgproc_geometric' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/geometric_transformations.html#%s', None ),
 
-            'opencv_group' : ('http://answers.opencv.org/%s', None),
+            # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
             'how_to_contribute' : ('http://code.opencv.org/projects/opencv/wiki/How_to_contribute/%s', None),
 
