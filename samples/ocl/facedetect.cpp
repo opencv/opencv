@@ -252,8 +252,13 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
         radius = cvRound((r->width + r->height)*0.25*scale);
         circle( img, center, radius, color, 3, 8, 0 );
     }
-    imshow( "result", img );
     imwrite( outputName, img );
+    if(abs(scale-1.0)>.001)
+    {
+        resize(img, img, Size(img.cols/scale, img.rows/scale));
+    }
+    imshow( "result", img );
+    
 }
 
 
