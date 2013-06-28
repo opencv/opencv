@@ -371,17 +371,17 @@ Now here's our recommendation for the structure of the tutorial (although, remem
 Take home the pride and joy of a job well done!
 ===============================================
 
-Once you are done please make a pull request with the tutorial. Now, to see your work
-**live** you may need to wait some time. The PDFs are updated usually at the launch
-of a new OpenCV version. The web pages are a little more diverse. They are
-automatically rebuilt nightly. However, the **docs.opencv.org** website contains only
-the most recent **stable branch** of OpenCV. Currently this is 2.4. If, for example,
-you have submitted your tutorial to the Git's ``master`` branch, then it should appear at
-the **docs.opencv.org/master** website soon. Although, we try to make a build every
-night, occasionally we might freeze any of the branches to fix upcoming issues.
-During this it may take a little longer to see your work online, however if you
-submited it, be sure that eventually it will show up.
+Once you are done please make a GitHub pull request with the tutorial. Now, to see
+your work **live** you may need to wait some time. The PDFs are updated usually at
+the launch of a new OpenCV version. The web pages are a little more diverse. They are
+automatically rebuilt nightly. Currently we use ``2.4`` and ``master`` branches for
+daily builds. So, if your pull request was merged to any of these branches, your
+material will be published at **docs.opencv.org/2.4** or **docs.opencv.org/master**
+correspondingly. Everything that was added to ``2.4`` is merged to ``master`` branch
+every week. Although, we try to make a build every night, occasionally we might
+freeze any of the branches to fix upcoming issues. During this it may take a little
+longer to see your work online, however if you submitted it, be sure that eventually
+it will show up.
 
 If you have any questions or advices relating to this tutorial you can contact us at
--delete-admin@-delete-opencv.org. Of course, delete the -delete- parts of that email
-address.
+-delete-admin@-delete-opencv.org (delete the -delete- parts of that email address).
