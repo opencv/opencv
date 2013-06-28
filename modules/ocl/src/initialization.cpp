@@ -168,13 +168,13 @@ namespace cv
         };
 
         // global variables to hold binary cache properties
-        static bool enable_disk_cache = 
+        static int enable_disk_cache = 
 #ifdef _DEBUG
             false;
 #else
             true;
 #endif
-        static bool update_disk_cache = false;
+        static int update_disk_cache = false;
         static String binpath = "";
 
         Info::Impl::Impl()
@@ -506,8 +506,14 @@ namespace cv
 
         void setBinaryDiskCache(int mode, String path)
         {
-            update_disk_cache = (mode & CACHE_UPDATE) == CACHE_UPDATE;
-            enable_disk_cache = 
+            if(mode == CACHE_NONE)
+            {
+                update_disk_cache = 0;
+                enable_disk_cache = 0;
+                return;
+            }
+            update_disk_cache |= (mode & CACHE_UPDATE) == CACHE_UPDATE;
+            enable_disk_cache |= 
 #ifdef _DEBUG 
                 (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
