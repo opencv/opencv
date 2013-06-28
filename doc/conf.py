@@ -284,7 +284,7 @@ latex_domain_indices = True
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('index', 'opencv', u'The OpenCV Reference Manual',
-     [u'opencv-dev@itseez.com'], 1)
+     [u'admin@opencv.org'], 1)
 ]
 
 # ---- External links for tutorials -----------------
