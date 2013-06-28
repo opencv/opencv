@@ -1816,8 +1816,14 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
                              localThreads, args, -1, -1, "-D CPU");
     else
+    {
+        cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
+        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        char opt[32] = {0};
+        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
-                             localThreads, args, -1, -1);
+                             localThreads, args, -1, -1, opt);
+    }
 }
 
 void cv::ocl::device::hog::classify_hists(int win_height, int win_width, 
@@ -1879,8 +1885,14 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width,
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
                              localThreads, args, -1, -1, "-D CPU");
     else
+    {
+        cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
+        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        char opt[32] = {0};
+        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
-                             localThreads, args, -1, -1);
+                             localThreads, args, -1, -1, opt);
+    }
 }
 
 void cv::ocl::device::hog::extract_descrs_by_rows(int win_height, int win_width, 
