@@ -307,9 +307,9 @@ extlinks = {
             'gpumatrixreduct' : ('http://opencv.itseez.com/modules/gpu/doc/matrix_reductions.html#%s', None),
             'filtering':('http://opencv.itseez.com/modules/imgproc/doc/filtering.html#%s', None),
             'flann' : ('http://opencv.itseez.com/modules/flann/doc/flann_fast_approximate_nearest_neighbor_search.html#%s', None ),
-            'calib3d' : ('http://opencv.itseez.com/trunk/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#%s', None ),
-            'feature2d' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/feature_detection.html#%s', None ),
-            'imgproc_geometric' : ('http://opencv.itseez.com/trunk/modules/imgproc/doc/geometric_transformations.html#%s', None ),
+            'calib3d' : ('http://opencv.itseez.com/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html#%s', None ),
+            'feature2d' : ('http://opencv.itseez.com/modules/imgproc/doc/feature_detection.html#%s', None ),
+            'imgproc_geometric' : ('http://opencv.itseez.com/modules/imgproc/doc/geometric_transformations.html#%s', None ),
 
             # 'opencv_group' : ('http://answers.opencv.org/%s', None),
             'opencv_qa' : ('http://answers.opencv.org/%s', None),
