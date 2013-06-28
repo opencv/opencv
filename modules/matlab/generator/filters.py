@@ -51,6 +51,25 @@ def convertibleToInt(string):
     except:
         return False
 
+def binaryToDecimal(string):
+    try:
+        return str(eval(string))
+    except:
+        return string
+
+def formatMatlabConstant(string, table):
+    import re
+    # split the string into expressions
+    words = re.split('(\W+)', string)
+    # add a 'cv' prefix if an expression is also a key in the lookup table
+    words = ''.join([('cv.'+word if word in table else word) for word in words]) 
+    # attempt to convert arithmetic expressions and binary/hex to decimal
+    words = binaryToDecimal(words)
+    # convert any remaining bitshifts to Matlab 'bitshift' methods
+    shift = re.sub('[\(\) ]', '', words).split('<<')
+    words = 'bitshift('+shift[0]+', '+shift[1]+')' if len(shift) == 2 else words
+    return words
+
 def capitalizeFirst(text):
     return text[0].upper() + text[1:]
 

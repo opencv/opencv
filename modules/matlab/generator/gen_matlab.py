@@ -20,6 +20,7 @@ class MatlabWrapperGenerator(object):
         jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)
 
         # add the custom filters
+        jtemplate.filters['formatMatlabConstant'] = formatMatlabConstant
         jtemplate.filters['convertibleToInt'] = convertibleToInt
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
@@ -38,8 +39,7 @@ class MatlabWrapperGenerator(object):
         tclassm    = jtemplate.get_template('template_class_base.m')
         tclassc    = jtemplate.get_template('template_class_base.cpp')
         tdoc       = jtemplate.get_template('template_doc_base.m')
-        tconstc    = jtemplate.get_template('template_map_base.cpp')
-        tconstm    = jtemplate.get_template('template_map_base.m')
+        tconst     = jtemplate.get_template('template_map_base.m')
 
         # create the build directory
         output_source_dir  = output_dir+'/src'
@@ -75,12 +75,9 @@ class MatlabWrapperGenerator(object):
 
         # create a global constants lookup table
         const = dict(constants(todict(parse_tree.namespaces)))
-        populatedc = tconstc.render(constants=const)
-        populatedm = tconstm.render(constants=const)
-        with open(output_map_dir+'/map.cpp', 'wb') as f:
-            f.write(populatedc)
+        populated = tconst.render(constants=const)
         with open(output_dir+'/cv.m', 'wb') as f:
-            f.write(populatedm)
+            f.write(populated)
 
 
 

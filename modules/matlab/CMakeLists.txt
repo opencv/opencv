@@ -51,8 +51,7 @@ ocv_add_module(matlab   BINDINGS
                                  opencv_nonfree
 )
 
-# TODO: Undo this when building all modules to find python properly
-#set(HDR_PARSER_PATH ${OPENCV_MODULE_opencv_python_LOCATION}/src2)
+# set the path to the C++ header parser
 set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 
 # set mex compiler options
