@@ -241,6 +241,34 @@ static oclMat allocMatFromBuf(int rows, int cols, int type, oclMat &mat)
     return mat = oclMat(rows, cols, type);
 }
 
+cv::ocl::FarnebackOpticalFlow::FarnebackOpticalFlow()
+{
+    numLevels = 5;
+    pyrScale = 0.5;
+    fastPyramids = false;
+    winSize = 13;
+    numIters = 10;
+    polyN = 5;
+    polySigma = 1.1;
+    flags = 0;
+}
+
+void cv::ocl::FarnebackOpticalFlow::releaseMemory()
+{
+    frames_[0].release();
+    frames_[1].release();
+    pyrLevel_[0].release();
+    pyrLevel_[1].release();
+    M_.release();
+    bufM_.release();
+    R_[0].release();
+    R_[1].release();
+    blurredFrame_[0].release();
+    blurredFrame_[1].release();
+    pyramid0_.clear();
+    pyramid1_.clear();
+}
+
 void cv::ocl::FarnebackOpticalFlow::prepareGaussian(
     int n, double sigma, float *g, float *xg, float *xxg,
     double &ig11, double &ig03, double &ig33, double &ig55)
