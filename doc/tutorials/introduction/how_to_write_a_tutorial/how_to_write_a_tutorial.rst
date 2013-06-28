@@ -310,13 +310,13 @@ Now here's our recommendation for the structure of the tutorial (although, remem
 
      After the directive you specify a relative path to the file from what to import. It has four options: the language to use, if you add the ``:linenos:`` the line numbers will be shown, you can specify the tab size with the ``:tab-width:`` and you do not need to load the whole file, you can show just the important lines. Use the *lines* option to do not show redundant information (such as the *help* function). Here basically you specify ranges, if the second range line number is missing than that means that until the end of the file. The ranges specified here do no need to be in an ascending order, you may even reorganize the structure of how you want to show your sample inside the tutorial.
    + The tutorial. Well here goes the explanation for why and what have you used. Try to be short, clear, concise and yet a thorough one. There's no magic formula. Look into a few already made tutorials and start out from there. Try to mix sample OpenCV code with your explanations. If with words is hard to describe something do not hesitate to add in a reasonable size image, to overcome this issue.
-     When you present OpenCV functionality it's a good idea to give a link to the used OpenCV data structure or function. Because the OpenCV tutorials and reference manual are in separate PDF files it is not possible to make this link work for the PDF format. Therefore, we use here only web page links to the **opencv.itseez.com** website. The OpenCV functions and data structures may be used for multiple tasks. Nevertheless, we want to avoid that every users creates its own reference to a commonly used function. So for this we use the global link collection of *Sphinx*. This is defined in the file:`opencv/doc/conf.py` configuration file. Open it and go all the way down to the last entry:
+     When you present OpenCV functionality it's a good idea to give a link to the used OpenCV data structure or function. Because the OpenCV tutorials and reference manual are in separate PDF files it is not possible to make this link work for the PDF format. Therefore, we use here only web page links to the http://docs.opencv.org website. The OpenCV functions and data structures may be used for multiple tasks. Nevertheless, we want to avoid that every users creates its own reference to a commonly used function. So for this we use the global link collection of *Sphinx*. This is defined in the file:`opencv/doc/conf.py` configuration file. Open it and go all the way down to the last entry:
 
      .. code-block:: py
 
        # ---- External links for tutorials -----------------
        extlinks = {
-           'hgvideo' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None)
+           'hgvideo' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#%s', None)
            }
 
      In short here we defined a new **hgvideo** directive that refers to an external webpage link. Its usage is:
@@ -325,7 +325,7 @@ Now here's our recommendation for the structure of the tutorial (although, remem
 
        A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`.
 
-     Which turns to: A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`. The argument you give between the <> will be put in place of the ``%s`` in the upper definition, and as the link will anchor to the correct function. To find out the anchor of a given function just open up a web page, search for the function and click on it. In the address bar it should appear like: ``http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#imread`` .  Look here for the name of the directives for each page of the OpenCV reference manual. If none present for one of them feel free to add one for it.
+     Which turns to: A sample function of the highgui modules image write and read page is the :hgvideo:`imread() function <imread>`. The argument you give between the <> will be put in place of the ``%s`` in the upper definition, and as the link will anchor to the correct function. To find out the anchor of a given function just open up a web page, search for the function and click on it. In the address bar it should appear like: ``http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#imread`` .  Look here for the name of the directives for each page of the OpenCV reference manual. If none present for one of them feel free to add one for it.
      For formulas you can add LATEX code that will translate in the web pages into images. You do this by using the *math* directive. A usage tip:
 
      .. code-block:: latex

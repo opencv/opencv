@@ -129,7 +129,7 @@ Explanation
 
 3. **Train the SVM**
 
-   We call the method `CvSVM::train <http://opencv.itseez.com/modules/ml/doc/support_vector_machines.html#cvsvm-train>`_ to build the SVM model.
+   We call the method `CvSVM::train <http://docs.opencv.org/modules/ml/doc/support_vector_machines.html#cvsvm-train>`_ to build the SVM model.
 
    .. code-block:: cpp
 
