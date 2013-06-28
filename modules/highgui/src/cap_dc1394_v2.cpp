@@ -304,6 +304,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
         return false;
     if (isoSpeed > 0)
     {
+        // if capable set operation mode to 1394b for iso speeds above 400
+        if (isoSpeed > 400 && dcCam->bmode_capable == DC1394_TRUE)
+        {
+            dc1394_video_set_operation_mode(dcCam, DC1394_OPERATION_MODE_1394B);
+        }
         code = dc1394_video_set_iso_speed(dcCam,
                                           isoSpeed <= 100 ? DC1394_ISO_SPEED_100 :
                                           isoSpeed <= 200 ? DC1394_ISO_SPEED_200 :
