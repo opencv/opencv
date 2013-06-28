@@ -46,6 +46,7 @@
 
 #include "opencv2/core.hpp"
 
+
 /*
  * Partially based on:
  * ====================================================================================================================
@@ -61,52 +62,6 @@ namespace cv
 
 
 /************************************ Base Classes ************************************/
-
-
-/**
- * \brief Abstract base class for Tracker algorithm.
- */
-class CV_EXPORTS_W Tracker : public virtual Algorithm
-{
-public:
-	/**
-	 * \enum Tracker algorithms
-	 * \brief List of tracker algorithms
-	 */
-	enum{ TRACKER_MIL = 1,    	//!< TRACKER_MIL
-	      TRACKER_BOOSTING = 2	//!< TRACKER_BOOSTING
-	};
-
-	virtual ~Tracker();
-
-	/**
-	 * \brief Initialize the tracker at the first frame.
-	 * \param image		     The image.
-	 * \param boundingBox    The bounding box.
-	 * \return true the tracker is initialized, false otherwise
-	 */
-	bool init( const Mat& image, const Rect& boundingBox );
-
-	/**
-	 * \brief Update the tracker at the next frames.
-	 * \param image          The image.
-	 * \param boundingBox    The bounding box.
-	 * \return true the tracker is updated, false otherwise
-	 */
-	bool update( const Mat& image, Rect& boundingBox );
-
-	/**
-	 * \brief Create tracker by tracker type.
-	 */
-	static Ptr<Tracker> create( const String& trackerType );
-
-protected:
-
-	virtual bool initImpl( const Mat& image, const Rect& boundingBox ) = 0;
-	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
-
-};
-
 
 /**
  * \brief Abstract base class for TrackerFeature that represents the feature.
@@ -135,9 +90,17 @@ public:
 	 */
 	virtual void selection( Mat& response, int npoints ) = 0;
 
+	/**
+	 * \brief Get the name of the specific tracker feature
+	 * \return The name of the tracker feature
+	 */
+	String getClassName() const;
+
 protected:
 
 	virtual bool computeImpl( const Mat& image, Mat& response ) = 0;
+
+	String className;
 };
 
 
@@ -185,7 +148,7 @@ public:
 
 	/**
 	 * \brief Add TrackerFeature in the collection from tracker feature type
-	 * \param trackerFeatureType the tracker feature type
+	 * \param trackerFeatureType the tracker feature type FEATURE2D.DETECTOR.DESCRIPTOR - HOG - HAAR - LBP
 	 * \return true if feature is added, false otherwise
 	 */
 	bool addTrackerFeature( String trackerFeatureType );
@@ -201,24 +164,151 @@ public:
 	 * \brief Get the TrackerFeature collection
 	 * \return The TrackerFeature collection
 	 */
-	std::vector<Ptr<TrackerFeature> >& getTrackerFeature() const;
+	const std::vector<std::pair<String, Ptr<TrackerFeature> > >& getTrackerFeature() const;
 
 	/**
 	 * \brief Get the reponses
 	 * \return the reponses
 	 */
-	std::vector<Mat>& getResponses() const;
+	const std::vector<Mat>& getResponses() const;
 
 private:
 
 	void clearResponses();
 	bool blockAddTrackerFeature;
 
-	std::vector<TrackerFeature> features;	//list of features
+	std::vector<std::pair<String, Ptr<TrackerFeature> > > features;	//list of features
 	std::vector<Mat> responses;				//list of response after compute
 
 };
 
+/**
+ * \brief Abstract base class for Tracker algorithm.
+ */
+class CV_EXPORTS_W Tracker : public virtual Algorithm
+{
+public:
+	/**
+	 * \enum Tracker algorithms
+	 * \brief List of tracker algorithms
+	 */
+	enum{ TRACKER_MIL = 1,    	//!< TRACKER_MIL
+	      TRACKER_BOOSTING = 2	//!< TRACKER_BOOSTING
+	};
+
+	virtual ~Tracker();
+
+	/**
+	 * \brief Initialize the tracker at the first frame.
+	 * \param image		     The image.
+	 * \param boundingBox    The bounding box.
+	 * \return true the tracker is initialized, false otherwise
+	 */
+	bool init( const Mat& image, const Rect& boundingBox );
+
+	/**
+	 * \brief Update the tracker at the next frames.
+	 * \param image          The image.
+	 * \param boundingBox    The bounding box.
+	 * \return true the tracker is updated, false otherwise
+	 */
+	bool update( const Mat& image, Rect& boundingBox );
+
+	/**
+	 * \brief Create tracker by tracker type.
+	 */
+	static Ptr<Tracker> create( const String& trackerType );
+
+protected:
+
+	virtual bool initImpl( const Mat& image, const Rect& boundingBox ) = 0;
+	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
+
+	Ptr<TrackerFeatureSet> featureSet;
+
+};
+
+
+/************************************ Specific TrackerFeature Classes ************************************/
+
+/**
+ * \brief TrackerFeature based on Feature2D
+ */
+class CV_EXPORTS_W TrackerFeatureFeature2d : public TrackerFeature
+{
+public:
+
+	/**
+	 * \brief Constructor
+	 * \param detectorType string of FeatureDetector
+	 * \param descriptorType string of DescriptorExtractor
+	 */
+	TrackerFeatureFeature2d( String detectorType, String descriptorType );
+
+	~TrackerFeatureFeature2d();
+
+	bool computeImpl( const Mat& image, Mat& response );
+
+	void selection( Mat& response, int npoints );
+
+private:
+
+	std::vector<KeyPoint> keypoints;
+};
+
+
+/**
+ * \brief TrackerFeature based on HOG
+ */
+class CV_EXPORTS_W TrackerFeatureHOG : public TrackerFeature
+{
+public:
+
+	TrackerFeatureHOG();
+
+	~TrackerFeatureHOG();
+
+	bool computeImpl( const Mat& image, Mat& response );
+
+	void selection( Mat& response, int npoints );
+
+};
+
+
+/**
+ * \brief TrackerFeature based on HAAR
+ */
+class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
+{
+public:
+
+	TrackerFeatureHAAR();
+
+	~TrackerFeatureHAAR();
+
+	bool computeImpl( const Mat& image, Mat& response );
+
+	void selection( Mat& response, int npoints );
+
+};
+
+
+/**
+ * \brief TrackerFeature based on LBP
+ */
+class CV_EXPORTS_W TrackerFeatureLBP : public TrackerFeature
+{
+public:
+
+	TrackerFeatureLBP();
+
+	~TrackerFeatureLBP();
+
+	bool computeImpl( const Mat& image, Mat& response );
+
+	void selection( Mat& response, int npoints );
+
+};
 
 
 

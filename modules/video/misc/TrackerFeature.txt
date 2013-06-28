@@ -24,8 +24,8 @@ class TrackerFeatureSet{
 	+remove_outliers();
 	+vector<Mat response> getResponses();
 	+vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > getTrackerFeatures();
-	+addTrackerFeature(string trackerFeatureType);
-	+addTrackerFeature(Ptr<TrackerFeature> feature);
+	+bool addTrackerFeature(string trackerFeatureType);
+	+bool addTrackerFeature(Ptr<TrackerFeature> feature);
 	-clearResponses();
 }
 

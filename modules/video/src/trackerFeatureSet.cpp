@@ -47,38 +47,94 @@ namespace cv
 {
 
 /*
- *  Tracker
+ *  TrackerFeatureSet
  */
 
-Tracker::~Tracker()
-{}
-
-bool Tracker::init( const Mat& image, const Rect& boundingBox )
+/*
+ * Constructor
+ */
+TrackerFeatureSet::TrackerFeatureSet()
 {
-
-    if( image.empty() )
-        return false;
-
-    //instantiates the TrackerFeatureSet
-    featureSet = new TrackerFeatureSet;
-
-    return initImpl( image, boundingBox );
+	blockAddTrackerFeature = false;
 }
 
-bool Tracker::update( const Mat& image, Rect& boundingBox )
+/*
+ * Destructor
+ */
+TrackerFeatureSet::~TrackerFeatureSet()
 {
 
-    if( image.empty() )
-        return false;
-
-    return updateImpl( image, boundingBox );
 }
 
+void TrackerFeatureSet::extraction( const Mat& image ){
 
-Ptr<Tracker> Tracker::create( const String& trackerType )
+	clearResponses();
+
+	for( size_t i = 0; i < features.size(); i++ )
+	{
+		Mat response;
+		features.at(i).second->compute(image, response);
+		responses.push_back(response);
+	}
+
+	if( !blockAddTrackerFeature )
+	{
+		blockAddTrackerFeature = true;
+	}
+}
+
+void TrackerFeatureSet::selection()
 {
 
-    return Algorithm::create<Tracker>("Tracker." + trackerType);
+}
+
+void TrackerFeatureSet::removeOutliers()
+{
+
+}
+
+bool TrackerFeatureSet::addTrackerFeature( String trackerFeatureType ){
+	if(blockAddTrackerFeature)
+	{
+		return false;
+	}
+	Ptr<TrackerFeature> feature = TrackerFeature::create( trackerFeatureType );
+
+	if( feature == NULL )
+	{
+		return false;
+	}
+
+	features.push_back(std::make_pair( trackerFeatureType, feature ));
+
+	return true;
+}
+
+bool TrackerFeatureSet::addTrackerFeature( Ptr<TrackerFeature> feature ){
+	if(blockAddTrackerFeature)
+	{
+		return false;
+	}
+
+	String trackerFeatureType = feature->getClassName();
+	features.push_back(std::make_pair( trackerFeatureType, feature ));
+
+	return true;
+}
+
+const std::vector<std::pair<String, Ptr<TrackerFeature> > >& TrackerFeatureSet::getTrackerFeature() const
+{
+	return features;
+}
+
+const std::vector<Mat>& TrackerFeatureSet::getResponses() const
+{
+	return responses;
+}
+
+void TrackerFeatureSet::clearResponses()
+{
+	responses.clear();
 }
 
 
