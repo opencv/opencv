@@ -106,7 +106,7 @@ protected:
 
 /**
  * \brief Class that manages the extraction and selection of features
- * [AAM] Feature Extraction and Feature Set Refinement (Feature Processing and Feature Selection)
+ * [AAM] Feature Extraction and Feature Set Refinement (Feature Processing and Feature Selection). See table I and section III C
  * [AMVOT] Appearance modelling -> Visual representation (Table II, section 3.1 - 3.2)
  */
 class CV_EXPORTS_W TrackerFeatureSet
@@ -158,7 +158,7 @@ public:
 	 * \param feature The TrackerFeature
 	 * \return true if feature is added, false otherwise
 	 */
-	bool addTrackerFeature( Ptr<TrackerFeature> feature );
+	bool addTrackerFeature( Ptr<TrackerFeature>& feature );
 
 	/**
 	 * \brief Get the TrackerFeature collection
@@ -181,6 +181,100 @@ private:
 	std::vector<Mat> responses;				//list of response after compute
 
 };
+
+
+/**
+ * \brief Abstract base class for TrackerSamplerAlgorithm that represents the algorithm for the specific sampler.
+ */
+class CV_EXPORTS_W TrackerSamplerAlgorithm
+{
+public:
+	/**
+	 * \brief Destructor
+	 */
+	virtual ~TrackerSamplerAlgorithm();
+
+	/**
+	 * \brief Create TrackerSamplerAlgorithm by tracker sampler type.
+	 */
+	static Ptr<TrackerSamplerAlgorithm> create( const String& trackerSamplerType );
+
+	/**
+	 * \brief Computes the regions starting from a position in an image
+	 * \param image The image
+	 * \param position The position from which regions can be calculated
+	 * \param sample The computed samples [AAM] Fig. 1 variable Sk
+	 * \return true if samples is computed, false otherwise
+	 */
+	bool sampling( const Mat& image, Point2f position, std::vector<Mat>& sample );
+
+	/**
+	 * \brief Get the name of the specific sampler algorithm
+	 * \return The name of the tracker sampler algorithm
+	 */
+	String getClassName() const;
+
+protected:
+	String className;
+
+	virtual bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample ) = 0;
+};
+
+/**
+ * \brief Class that manages the sampler in order to select regions for the update the model of the tracker
+ * [AMM] Sampling e Labeling. See table I and section III B
+ */
+class CV_EXPORTS_W TrackerSampler
+{
+public:
+
+	/**
+	 * \enum Tracker sampler types
+	 * \brief List of sampler types
+	 */
+	enum{ TRACKER_SAMPLER_CS    = 1,   //!< TRACKER_SAMPLER_CS
+		  TRACKER_SAMPLER_CSC   = 2    //!< TRACKER_SAMPLER_CSC
+	};
+
+	/**
+	 * \brief Constructor
+	 */
+	TrackerSampler();
+
+	/**
+	 * \brief Destructor
+	 */
+	~TrackerSampler();
+
+	/**
+	 * \brief Computes the regions starting from a position in an image
+	 * \param image The image
+	 * \param position The position from which regions can be calculated
+	 */
+	void sampling( const Mat& image, Point2f position );
+
+	/**
+	 * Get the samples from all TrackerSamplerAlgorithm
+	 * \return The samples [AAM] Fig. 1 variable Sk
+	 */
+	const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > >& getSamples() const;
+
+	/**
+	 * \brief Add TrackerSamplerAlgorithm in the collection from tracker sampler type
+	 * \param trackerSamplerAlgorithmType the tracker sampler type CSC - CS
+	 * \return true if sampler is added, false otherwise
+	 */
+	bool addTrackerSamplerAlgorithm( String trackerSamplerAlgorithmType );
+
+private:
+	std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > > samplers;
+	std::vector<Mat> samples;
+	bool blockAddTrackerSampler;
+
+	void clearSamples();
+};
+
+
 
 /**
  * \brief Abstract base class for Tracker algorithm.
@@ -225,8 +319,43 @@ protected:
 	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
 
 	Ptr<TrackerFeatureSet> featureSet;
+	Ptr<TrackerSampler> sampler;
 
 };
+
+
+/************************************ Specific TrackerSamplerAlgorithm Classes ************************************/
+
+/**
+ * \brief TrackerSampler based on CSC (current state centered)
+ */
+class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
+{
+public:
+
+	TrackerSamplerCSC();
+
+	~TrackerSamplerCSC();
+
+	bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample );
+
+};
+
+/**
+ * \brief TrackerSampler based on CS (current state)
+ */
+class CV_EXPORTS_W TrackerSamplerCS : public TrackerSamplerAlgorithm
+{
+public:
+
+	TrackerSamplerCS();
+
+	~TrackerSamplerCS();
+
+	bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample );
+
+};
+
 
 
 /************************************ Specific TrackerFeature Classes ************************************/

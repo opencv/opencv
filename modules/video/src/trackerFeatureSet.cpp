@@ -66,7 +66,8 @@ TrackerFeatureSet::~TrackerFeatureSet()
 
 }
 
-void TrackerFeatureSet::extraction( const Mat& image ){
+void TrackerFeatureSet::extraction( const Mat& image )
+{
 
 	clearResponses();
 
@@ -110,7 +111,7 @@ bool TrackerFeatureSet::addTrackerFeature( String trackerFeatureType ){
 	return true;
 }
 
-bool TrackerFeatureSet::addTrackerFeature( Ptr<TrackerFeature> feature ){
+bool TrackerFeatureSet::addTrackerFeature( Ptr<TrackerFeature>& feature ){
 	if(blockAddTrackerFeature)
 	{
 		return false;

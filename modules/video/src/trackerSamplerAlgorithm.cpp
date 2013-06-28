@@ -47,42 +47,83 @@ namespace cv
 {
 
 /*
- *  Tracker
+ *  TrackerSamplerAlgorithm
  */
 
-Tracker::~Tracker()
-{}
-
-bool Tracker::init( const Mat& image, const Rect& boundingBox )
+TrackerSamplerAlgorithm::~TrackerSamplerAlgorithm()
 {
 
-    if( image.empty() )
-        return false;
-
-    //instantiates the TrackerFeatureSet
-    featureSet = new TrackerFeatureSet;
-
-    //instantiates the TrackerSampler
-    sampler = new TrackerSampler;
-
-    return initImpl( image, boundingBox );
 }
 
-bool Tracker::update( const Mat& image, Rect& boundingBox )
+bool TrackerSamplerAlgorithm::sampling( const Mat& image, Point2f position, std::vector<Mat>& sample )
 {
+	if( image.empty() )
+		return false;
 
-    if( image.empty() )
-        return false;
-
-    return updateImpl( image, boundingBox );
+	return samplingImpl( image, position, sample );
 }
 
 
-Ptr<Tracker> Tracker::create( const String& trackerType )
+Ptr<TrackerSamplerAlgorithm> TrackerSamplerAlgorithm::create( const String& trackerSamplerType )
+{
+	if( trackerSamplerType.find("CSC") == 0 )
+	{
+		return new TrackerSamplerCSC();
+	}
+
+	if( trackerSamplerType.find("CS") == 0 )
+	{
+		return new TrackerSamplerCS();
+	}
+
+	CV_Error(-1, "Tracker sampler algorithm type not supported");
+	return NULL;
+}
+
+String TrackerSamplerAlgorithm::getClassName() const
+{
+	return className;
+}
+
+/**
+ * TrackerSamplerCSC
+ */
+TrackerSamplerCSC::TrackerSamplerCSC()
+{
+	className = "CSC";
+}
+
+TrackerSamplerCSC::~TrackerSamplerCSC()
 {
 
-    return Algorithm::create<Tracker>("Tracker." + trackerType);
 }
+
+bool TrackerSamplerCSC::samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample  )
+{
+	return false;
+}
+
+
+
+/**
+ * TrackerSamplerCS
+ */
+TrackerSamplerCS::TrackerSamplerCS()
+{
+	className = "CS";
+}
+
+TrackerSamplerCS::~TrackerSamplerCS()
+{
+
+}
+
+bool TrackerSamplerCS::samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample )
+{
+	return false;
+}
+
+
 
 
 } /* namespace cv */
