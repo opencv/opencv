@@ -9,7 +9,7 @@ is an *open source project*. This means that anyone has access to the full sourc
 code and may propose extensions. And a good tutorial is a valuable addition to the
 library! Please read instructions on contribution process here:
 http://opencv.org/contribute.html. You may also find this page helpful:
-http://code.opencv.org/projects/opencv/wiki/How_to_contribute.
+:how_to_contribute:`How to contribute <>`.
 
 While making a robust and practical library (like OpenCV) is great, the success of a
 library also depends on how user friendly it is. To improve on this aspect, the
@@ -376,12 +376,12 @@ your work **live** you may need to wait some time. The PDFs are updated usually 
 the launch of a new OpenCV version. The web pages are a little more diverse. They are
 automatically rebuilt nightly. Currently we use ``2.4`` and ``master`` branches for
 daily builds. So, if your pull request was merged to any of these branches, your
-material will be published at **docs.opencv.org/2.4** or **docs.opencv.org/master**
-correspondingly. Everything that was added to ``2.4`` is merged to ``master`` branch
-every week. Although, we try to make a build every night, occasionally we might
-freeze any of the branches to fix upcoming issues. During this it may take a little
-longer to see your work online, however if you submitted it, be sure that eventually
-it will show up.
+material will be published at `docs.opencv.org/2.4 <http:/docs.opencv.org/2.4>`_ or
+`docs.opencv.org/master <http:/docs.opencv.org/master>`_ correspondingly. Everything
+that was added to ``2.4`` is merged to ``master`` branch every week. Although, we try
+to make a build every night, occasionally we might freeze any of the branches to fix
+upcoming issues. During this it may take a little longer to see your work online,
+however if you submitted it, be sure that eventually it will show up.
 
 If you have any questions or advices relating to this tutorial you can contact us at
 -delete-admin@-delete-opencv.org (delete the -delete- parts of that email address).
