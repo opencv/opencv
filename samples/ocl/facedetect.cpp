@@ -255,7 +255,7 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
     imwrite( outputName, img );
     if(abs(scale-1.0)>.001)
     {
-        resize(img, img, Size(img.cols/scale, img.rows/scale));
+        resize(img, img, Size((int)(img.cols/scale), (int)(img.rows/scale)));
     }
     imshow( "result", img );
     
