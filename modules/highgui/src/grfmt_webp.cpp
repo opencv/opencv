@@ -143,7 +143,15 @@ bool WebPDecoder::readData(Mat &img)
         uchar* out_data = img.data;
         unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
 
-        uchar *res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data, out_data_size, m_width * 3);
+        uchar *res_ptr = 0;
+        if (channels == 3)
+        {
+            res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data, out_data_size, img.step);
+        }
+        else if (channels == 4)
+        {
+            res_ptr = WebPDecodeBGRAInto(data.data, data.total(), out_data, out_data_size, img.step);
+        }
 
         if(res_ptr == out_data)
         {
