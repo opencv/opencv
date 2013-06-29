@@ -107,7 +107,7 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
     int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
     costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
         
-    /* compute the Cost Matrix */
+    /* Compute the Cost Matrix */
     for(int i=0; i<scd1.rows; i++)
     {
         for(int j=0; j<scd2.rows; j++)
@@ -129,6 +129,37 @@ void SCDMatcher::buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
 
 void SCDMatcher::buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
 {
+    /* Obtain copies of the descriptors */
+    Mat scd1 = descriptors1.clone();
+    Mat scd2 = descriptors2.clone();
+
+    /* row normalization */
+    for(int i=0; i<scd1.rows; i++)
+    {
+        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+DBL_EPSILON);
+    }
+    for(int i=0; i<scd2.rows; i++)
+    {
+        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+DBL_EPSILON);
+    }
+
+    /* initializing costMatrix with oulier weight values */
+    int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
+    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
+
+    /* Compute the Cost Matrix */
+    for(int i=0; i<scd1.rows; i++)
+    {
+        for(int j=0; j<scd2.rows; j++)
+        {
+            float csum = 0;
+            for(int k=0; k<scd2.cols; k++)
+            {
+                csum += pow(scd1.at<float>(i,k)-scd2.at<float>(j,k),2);
+            }
+            costMatrix.at<float>(i,j)=std::sqrt(csum);
+        }
+    }
 }
 
 void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches) const
