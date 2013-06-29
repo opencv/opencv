@@ -35,7 +35,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
   conditionalError(nlhs <= {{ fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length}}, "Too many output arguments specified");
 
   // setup
-  std::vector<Bridge> inputs(plhs, plhs+nrhs);
+  std::vector<Bridge> inputs(prhs, prhs+nrhs);
   {% set noutputs = fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length %}
   {%- if noutputs %}
   std::vector<Bridge> outputs({{noutputs}});

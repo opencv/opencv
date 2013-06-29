@@ -46,93 +46,139 @@ typedef cv::Ptr<cv::StereoSGBM> Ptr_StereoSGBM;
 typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
 
 
+/*!
+ * @brief raise error if condition fails
+ *
+ * This is a conditional wrapper for mexErrMsgTxt. If the conditional
+ * expression fails, an error is raised and the mex function returns
+ * to Matlab, otherwise this function does nothing
+ */
 void conditionalError(bool expr, const std::string& str) {
   if (!expr) mexErrMsgTxt(std::string("condition failed: ").append(str).c_str());
 }
 
+/*!
+ * @brief raise an error
+ *
+ * This function is a wrapper around mexErrMsgTxt
+ */
 void error(const std::string& str) {
   mexErrMsgTxt(str.c_str());
 }
 
 
+// ----------------------------------------------------------------------------
+//                          PREDECLARATIONS
+// ----------------------------------------------------------------------------
+class MxArray;
+class Bridge;
+
+template <typename InputScalar, typename OutputScalar>
+void deepCopyAndTranspose(const cv::Mat& src, MxArray& dst);
+
+template <typename InputScalar, typename OutputScalar>
+void deepCopyAndTranspose(const MxArray& src, cv::Mat& dst);
+
+
+
+
+// ----------------------------------------------------------------------------
+//                            MATLAB TRAITS
+// ----------------------------------------------------------------------------
 namespace Matlab {
   class DefaultTraits {};
   class InheritType {};
   static const int Dynamic = -1;
 
-  // --------------------------------------------------------------------------
-  //                       INTERNAL TRAITS CLASS
-  // --------------------------------------------------------------------------
   template<typename _Tp = DefaultTraits> class Traits {
   public:
     static const mxClassID ScalarType = mxUNKNOWN_CLASS;
     static const mxComplexity Complex = mxCOMPLEX;
     static const mxComplexity Real    = mxCOMPLEX;
+    static std::string ToString()  { return "Unknown/Unsupported"; }
   };
   // bool
   template<> class Traits<bool> {
   public:
     static const mxClassID ScalarType = mxLOGICAL_CLASS;
+    static std::string ToString()  { return "boolean"; }
   };
   // uint8_t
   template<> class Traits<uint8_t> {
   public:
     static const mxClassID ScalarType = mxUINT8_CLASS;
+    static std::string ToString()  { return "uint8_t"; }
   };
   // int8_t
   template<> class Traits<int8_t> {
   public:
     static const mxClassID ScalarType = mxINT8_CLASS;
+    static std::string ToString()  { return "int8_t"; }
   };
   // uint16_t
   template<> class Traits<uint16_t> {
   public:
     static const mxClassID ScalarType = mxUINT16_CLASS;
+    static std::string ToString()  { return "uint16_t"; }
   };
   // int16_t
   template<> class Traits<int16_t> {
   public:
     static const mxClassID ScalarType = mxINT16_CLASS;
+    static std::string ToString()  { return "int16_t"; }
   };
   // uint32_t
   template<> class Traits<uint32_t> {
   public:
     static const mxClassID ScalarType = mxUINT32_CLASS;
+    static std::string ToString()  { return "uint32_t"; }
   };
   // int32_t
   template<> class Traits<int32_t> {
   public:
     static const mxClassID ScalarType = mxINT32_CLASS;
+    static std::string ToString()  { return "int32_t"; }
   };
   // uint64_t
   template<> class Traits<uint64_t> {
   public:
     static const mxClassID ScalarType = mxUINT64_CLASS;
+    static std::string ToString()  { return "uint64_t"; }
   };
   // int64_t
   template<> class Traits<int64_t> {
   public:
     static const mxClassID ScalarType = mxINT64_CLASS;
+    static std::string ToString()  { return "int64_t"; }
   };
   // float
   template<> class Traits<float> {
   public:
     static const mxClassID ScalarType = mxSINGLE_CLASS;
+    static std::string ToString()  { return "float"; }
   };
   // double
   template<> class Traits<double> {
   public:
     static const mxClassID ScalarType = mxDOUBLE_CLASS;
+    static std::string ToString()  { return "double"; }
   };
   // size_t
   template<> class Traits<size_t> {
   public:
     static const mxClassID ScalarType = (sizeof(size_t) == 4) ? mxUINT32_CLASS : mxUINT64_CLASS;
+    static std::string ToString()  { return "size_t"; }
   };
   // char
   template<> class Traits<char> {
   public:
     static const mxClassID ScalarType = mxCHAR_CLASS;
+    static std::string ToString()  { return "char"; }
+  };
+  // char
+  template<> class Traits<Matlab::InheritType> {
+  public:
+    static std::string ToString()  { return "Inherited type"; }
   };
 };
 
@@ -149,18 +195,63 @@ namespace Matlab {
  *
  * MxArray provides a thin object oriented wrapper around Matlab's
  * native mxArray type which exposes most of the functionality of the
- * Matlab interface, but in a more C++ manner.
+ * Matlab interface, but in a more C++ manner. MxArray objects are scoped,
+ * so you can freely create and destroy them without worrying about memory
+ * management. If you wish to pass the underlying mxArray* representation
+ * back to Matlab as an lvalue, see the releaseOwnership() method
  */
 class MxArray {
 private:
   mxArray* ptr_;
   bool owns_;
+
+  // this function is called exclusively from constructors!!
+  template <typename Scalar>
+  void fromMat(const cv::Mat& mat) {
+    mwSize dims[] = { mat.rows, mat.cols, mat.channels() };
+    ptr_ = mxCreateNumericArray(3, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
+    owns_ = true;
+    switch (mat.depth()) {
+      case CV_8U:  deepCopyAndTranspose<uint8_t,  Scalar>(mat, *this); break;
+      case CV_8S:  deepCopyAndTranspose<int8_t,   Scalar>(mat, *this); break;
+      case CV_16U: deepCopyAndTranspose<uint16_t, Scalar>(mat, *this); break;
+      case CV_16S: deepCopyAndTranspose<int16_t,  Scalar>(mat, *this); break;
+      case CV_32S: deepCopyAndTranspose<int32_t,  Scalar>(mat, *this); break;
+      case CV_32F: deepCopyAndTranspose<float,    Scalar>(mat, *this); break;
+      case CV_64F: deepCopyAndTranspose<double,   Scalar>(mat, *this); break;
+      default: error("Attempted to convert from unknown class");
+    }
+  }
 public:
-  MxArray() : ptr_(NULL), owns_(false) {}
+  // constructors and destructor
+  MxArray() : ptr_(mxCreateDoubleMatrix(1, 1, Matlab::Traits<>::Real)), owns_(true) {}
   MxArray(const mxArray* ptr) : ptr_(const_cast<mxArray *>(ptr)), owns_(false) {}
-  ~MxArray() {
+  virtual ~MxArray() {
     if (owns_ && ptr_) mxDestroyArray(ptr_);
   }
+  // copy constructor
+  // all copies are deep copies
+  MxArray(const MxArray& other) : ptr_(mxDuplicateArray(other.ptr_)), owns_(true) {}
+  // swap
+  friend void swap(MxArray& first, MxArray& second) {
+    using std::swap;
+    swap(first.ptr_,  second.ptr_);
+    swap(first.owns_, second.owns_);
+  }
+  // assignment operator
+  // copy-and-swap idiom
+  // all copies are deep copies
+  MxArray& operator=(MxArray other) {
+    swap(*this, other);
+    return *this;
+  }
+#if __cplusplus >= 201103L
+  // move constructor, if C++11
+  // default construct and swap
+  MxArray(MxArray&& other) : MxArray() {
+    swap(*this, other);
+  }
+#endif
 
   /*
    * @brief release ownership to allow return into Matlab workspace
@@ -189,7 +280,6 @@ public:
   }
 
 
-  // TODO: Make sure NULL pointers are checked in all functions!
   template <typename Scalar>
   explicit MxArray(size_t m, size_t n, size_t k=1) : owns_(true) {
     mwSize dims[] = {m, n, k};
@@ -197,24 +287,29 @@ public:
   }
 
   template <typename Scalar>
-  explicit MxArray(const cv::Mat& mat) : owns_(true) {
-    mwSize dims[] = { mat.rows, mat.cols, mat.channels() };
-    if (mat.channels() == 2) {
-      ptr_ = mxCreateNumericArray(2, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Complex);
-    } else {
-      ptr_ = mxCreateNumericArray(2, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
-    }
+  explicit MxArray(const cv::Mat& mat) : owns_(false) {
+    fromMat<Scalar>(mat);
   }
 
   template <typename Scalar>
   cv::Mat toMat() const { 
     cv::Mat mat(cols(), rows(), CV_MAKETYPE(cv::DataType<Scalar>::type, channels()));
+    switch (ID()) {
+      case mxINT8_CLASS:    deepCopyAndTranspose<int8_t,   Scalar>(*this, mat); break;
+      case mxUINT8_CLASS:   deepCopyAndTranspose<uint8_t,  Scalar>(*this, mat); break;
+      case mxINT16_CLASS:   deepCopyAndTranspose<int16_t,  Scalar>(*this, mat); break;
+      case mxUINT16_CLASS:  deepCopyAndTranspose<uint16_t, Scalar>(*this, mat); break;
+      case mxINT32_CLASS:   deepCopyAndTranspose<int32_t,  Scalar>(*this, mat); break;
+      case mxUINT32_CLASS:  deepCopyAndTranspose<uint32_t, Scalar>(*this, mat); break;
+      case mxINT64_CLASS:   deepCopyAndTranspose<int64_t,  Scalar>(*this, mat); break;
+      case mxUINT64_CLASS:  deepCopyAndTranspose<uint64_t, Scalar>(*this, mat); break;
+      case mxSINGLE_CLASS:  deepCopyAndTranspose<float,    Scalar>(*this, mat); break;
+      case mxDOUBLE_CLASS:  deepCopyAndTranspose<double,   Scalar>(*this, mat); break;
+      case mxCHAR_CLASS:    deepCopyAndTranspose<char,     Scalar>(*this, mat); break;
+      case mxLOGICAL_CLASS: deepCopyAndTranspose<int8_t,   Scalar>(*this, mat); break;
+      default: error("Attempted to convert from unknown class");
+    }
     return mat;
-  }
-
-  template <typename Scalar>
-  void fromMat(const cv::Mat& mat) {
-
   }
 
   MxArray field(const std::string& name) { return MxArray(mxGetField(ptr_, 0, name.c_str())); }
@@ -259,14 +354,55 @@ public:
 };
 
 
-template <>
-cv::Mat MxArray::toMat<Matlab::InheritType>() const {
-  return cv::Mat();
-}
-
+/*!
+ * @brief template specialization for inheriting types
+ *
+ * This template specialization attempts to preserve the best mapping
+ * between OpenCV and Matlab types. Matlab uses double types almost universally, so
+ * all floating float types are converted to doubles.
+ * Unfortunately OpenCV does not have a native logical type, so
+ * that gets mapped to an unsigned 8-bit value
+ */
 template <>
 void MxArray::fromMat<Matlab::InheritType>(const cv::Mat& mat) {
+  switch (mat.depth()) {
+    case CV_8U:  fromMat<uint8_t>(mat);  break;
+    case CV_8S:  fromMat<int8_t>(mat);   break;
+    case CV_16U: fromMat<uint16_t>(mat); break;
+    case CV_16S: fromMat<int16_t>(mat);  break;
+    case CV_32S: fromMat<int32_t>(mat);  break;
+    case CV_32F: fromMat<double>(mat);   break; //NOTE: Matlab uses double as native type!
+    case CV_64F: fromMat<double>(mat);   break;
+    default: error("Attempted to convert from unknown class");
+  }
+}
 
+/*!
+ * @brief template specialization for inheriting types
+ * 
+ * This template specialization attempts to preserve the best mapping
+ * between Matlab and OpenCV types. OpenCV has poor support for double precision
+ * types, so all floating point types are cast to float. Logicals get cast
+ * to unsignd 8-bit value.
+ */
+template <>
+cv::Mat MxArray::toMat<Matlab::InheritType>() const {
+  switch (ID()) {
+    case mxINT8_CLASS:    return toMat<int8_t>();
+    case mxUINT8_CLASS:   return toMat<uint8_t>();;
+    case mxINT16_CLASS:   return toMat<int16_t>();
+    case mxUINT16_CLASS:  return toMat<uint16_t>();
+    case mxINT32_CLASS:   return toMat<int32_t>();
+    case mxUINT32_CLASS:  return toMat<int32_t>();
+    case mxINT64_CLASS:   return toMat<int64_t>();
+    case mxUINT64_CLASS:  return toMat<int64_t>();
+    case mxSINGLE_CLASS:  return toMat<float>();
+    case mxDOUBLE_CLASS:  return toMat<float>(); //NOTE: OpenCV uses float as native type!
+    case mxCHAR_CLASS:    return toMat<int8_t>();
+    case mxLOGICAL_CLASS: return toMat<int8_t>();
+    default: error("Attempted to convert from unknown class");
+  }
+  return cv::Mat();
 }
 
 
@@ -293,10 +429,12 @@ void deepCopyAndTranspose<double, double>(const cv::Mat& src, MxArray& dst) {
 
 template <> 
 void deepCopyAndTranspose<float, float>(const MxArray& src, cv::Mat& dst) {
+  // use mkl
 }
 
 template <> 
 void deepCopyAndTranspose<double, double>(const MxArray& src, cv::Mat& dst) {
+  // use mkl
 }
 
 
@@ -560,7 +698,7 @@ public:
   
   
   // --------------------------------------------------------------------------
-  //                       OPENCV COMPLEX TYPES
+  //                       OPENCV COMPOUND TYPES
   // --------------------------------------------------------------------------
 
   // ---------------------------   Ptr_StereoBM   -----------------------------
