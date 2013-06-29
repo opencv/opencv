@@ -46,7 +46,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
   {%- if noutputs %}
   // push the outputs back to matlab
   for (size_t n = 0; n < nlhs; ++n) {
-    plhs[n] = outputs[n].toMxArray();
+    plhs[n] = outputs[n].toMxArray().releaseOwnership();
   }
   {% endif %}
 }
