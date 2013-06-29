@@ -58,7 +58,7 @@ set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
 prepend("-l" MEX_LIBS opencv_core)
-set(MEX_OPTS "-largeArrayDims")
+set(MEX_OPTS -largeArrayDims)
 
 if (ENABLE_SOLUTION_FOLDERS)
     set_target_properties(${the_module} PROPERTIES FOLDER "Matlab bindings")
@@ -118,7 +118,7 @@ if (NOT MEX_WORKS)
                 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE MEX_ERROR
-        OUTPUT_QUIET
+        #OUTPUT_QUIET
     )
 
     if (MEX_ERROR)

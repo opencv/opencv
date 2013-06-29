@@ -12,9 +12,9 @@ def inputs(args):
     except:
       return [arg for arg in args if arg.I]
 
-def ninputs(args):
+def ninputs(fun):
     '''Counts the number of input arguments in the input list'''
-    return len(inputs(args))
+    return len(inputs(fun.req)) + len(inputs(fun.opt))
 
 def outputs(args):
     '''Determines whether any of the given arguments is an output
@@ -39,9 +39,9 @@ def void(arg):
 def flip(arg):
     return not arg
 
-def noutputs(args):
+def noutputs(fun):
     '''Counts the number of output arguments in the input list'''
-    return len(outputs(args))
+    return int(not void(fun.rtp)) + len(outputs(fun.req)) + len(outputs(fun.opt))
 
 def convertibleToInt(string):
     salt = '1+'

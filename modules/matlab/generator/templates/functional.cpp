@@ -29,6 +29,7 @@
 // create a full function invocation
 {%- macro generate(fun) -%}
 
+  {% if fun|ninputs or fun|noutputs %}
   // unpack the arguments
   {# ----------- Inputs ------------- #}
   {% for arg in fun.req|inputs %}
@@ -47,6 +48,7 @@
   {% if not fun.rtp|void %}
   {{fun.rtp}} retval;
   {% endif %}
+  {% endif %}
 
   // call the opencv function
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
@@ -60,6 +62,7 @@
     mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
   }
 
+  {% if fun|noutputs %}
   // assign the outputs into the bridge
   {% if not fun.rtp|void %}
   outputs[0] = retval;
@@ -70,5 +73,6 @@
   {% for opt in fun.opt|outputs %}
   outputs[{{loop.index0 + fun.rtp|void|not + fun.req|outputs|length}}] = {{opt.name}};
   {% endfor %}
+  {% endif %}
   
 {% endmacro %}

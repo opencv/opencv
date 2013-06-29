@@ -26,26 +26,29 @@ using namespace cv;
  *   nrhs - number of input arguments
  *   prhs - pointers to input arguments
  */
-void mexFunction(int nlhs, mxArray* plhs[],
-                 int nrhs, const mxArray* prhs[]) {
+void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% endif %},
+                 int nrhs, const mxArray*{% if fun|ninputs %} prhs[]{% else %}*{% endif %}) {
 
   // assertions
   conditionalError(nrhs >= {{fun.req|length - fun.req|only|outputs|length}}, "Too few required input arguments specified");
   conditionalError(nrhs <= {{fun.req|length + fun.opt|length - fun.req|only|outputs|length - fun.opt|only|outputs|length}}, "Too many input arguments specified");
   conditionalError(nlhs <= {{ fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length}}, "Too many output arguments specified");
 
+  {% if fun|ninputs or fun|noutputs %}
   // setup
+  {% if fun|ninputs %}
   std::vector<Bridge> inputs(prhs, prhs+nrhs);
-  {% set noutputs = fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length %}
-  {%- if noutputs %}
-  std::vector<Bridge> outputs({{noutputs}});
+  {% endif -%}
+  {%- if fun|noutputs %}
+  std::vector<Bridge> outputs({{fun|noutputs}});
+  {% endif %}
   {% endif %}
 
   {{ functional.generate(fun) }}
 
-  {%- if noutputs %}
+  {%- if fun|noutputs %}
   // push the outputs back to matlab
-  for (size_t n = 0; n < nlhs; ++n) {
+  for (size_t n = 0; n < static_cast<size_t>(nlhs); ++n) {
     plhs[n] = outputs[n].toMxArray().releaseOwnership();
   }
   {% endif %}

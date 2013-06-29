@@ -32,6 +32,11 @@ set(OPENCV_EXTRA_EXE_LINKER_FLAGS "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE "")
 set(OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG "")
 
+# if Apple and Clang, enable C++11 support :)
+if(APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  set(OPENCV_EXTRA_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+endif()
+
 macro(add_extra_compiler_option option)
   if(CMAKE_BUILD_TYPE)
     set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})

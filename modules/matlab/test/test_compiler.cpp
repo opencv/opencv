@@ -8,7 +8,6 @@
  * Copyright 2013 The OpenCV Foundation
  */
 #include "mex.h"
-#include "bridge.hpp"
 #include <vector>
 
 /* 
