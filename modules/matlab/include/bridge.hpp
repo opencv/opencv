@@ -282,7 +282,7 @@ public:
 
   template <typename Scalar>
   explicit MxArray(size_t m, size_t n, size_t k=1) : owns_(true) {
-    mwSize dims[] = {m, n, k};
+    mwSize dims[] = { static_cast<mwSize>(m), static_cast<mwSize>(n), static_cast<mwSize>(k) };
     ptr_ = mxCreateNumericArray(3, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
   }
 
