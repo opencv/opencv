@@ -1,8 +1,10 @@
 // Copyright 2010 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Main decoding functions for WEBP images.
@@ -192,6 +194,15 @@ static VP8StatusCode ParseOptionalChunks(const uint8_t** const data,
       return VP8_STATUS_BITSTREAM_ERROR;          // Not a valid chunk size.
     }
 
+    // Start of a (possibly incomplete) VP8/VP8L chunk implies that we have
+    // parsed all the optional chunks.
+    // Note: This check must occur before the check 'buf_size < disk_chunk_size'
+    // below to allow incomplete VP8/VP8L chunks.
+    if (!memcmp(buf, "VP8 ", TAG_SIZE) ||
+        !memcmp(buf, "VP8L", TAG_SIZE)) {
+      return VP8_STATUS_OK;
+    }
+
     if (buf_size < disk_chunk_size) {             // Insufficient data.
       return VP8_STATUS_NOT_ENOUGH_DATA;
     }
@@ -199,9 +210,6 @@ static VP8StatusCode ParseOptionalChunks(const uint8_t** const data,
     if (!memcmp(buf, "ALPH", TAG_SIZE)) {         // A valid ALPH header.
       *alpha_data = buf + CHUNK_HEADER_SIZE;
       *alpha_size = chunk_size;
-    } else if (!memcmp(buf, "VP8 ", TAG_SIZE) ||
-               !memcmp(buf, "VP8L", TAG_SIZE)) {  // A valid VP8/VP8L header.
-      return VP8_STATUS_OK;  // Found.
     }
 
     // We have a full and valid chunk; skip it.

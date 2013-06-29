@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // WebPPicture utils: colorspace conversion, crop, ...
@@ -709,7 +711,7 @@ static int Import(WebPPicture* const picture,
     for (y = 0; y < height; ++y) {
       for (x = 0; x < width; ++x) {
         const int offset = step * x + y * rgb_stride;
-        const uint32_t argb = (a_ptr[offset] << 24) |
+        const uint32_t argb = ((uint32_t)a_ptr[offset] << 24) |
                               (r_ptr[offset] << 16) |
                               (g_ptr[offset] <<  8) |
                               (b_ptr[offset]);
@@ -809,7 +811,7 @@ int WebPPictureYUVAToARGB(WebPPicture* picture) {
         const uint8_t* const src = picture->a + y * picture->a_stride;
         int x;
         for (x = 0; x < width; ++x) {
-          argb_dst[x] = (argb_dst[x] & 0x00ffffffu) | (src[x] << 24);
+          argb_dst[x] = (argb_dst[x] & 0x00ffffffu) | ((uint32_t)src[x] << 24);
         }
       }
     }
