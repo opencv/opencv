@@ -144,7 +144,7 @@ void SCDMatcher::buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& c
     }
 
     /* initializing costMatrix with oulier weight values */
-    int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
+    int costrows = (scd1.rows>scd2.rows)?scd2.rows:scd1.rows;
     costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
 
     /* Compute the Cost Matrix */
