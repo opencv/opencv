@@ -63,11 +63,6 @@ bool temp_viz::Viz3d::addPolygon(const Mat& cloud, const Color& color, const Str
     return impl_->addPolygon(cloud, color, id);
 }
 
-bool temp_viz::Viz3d::addSphere (const cv::Point3f &center, double radius, const Color& color, const std::string &id)
-{
-    return impl_->addSphere(center, radius, color, id);
-}
-
 void temp_viz::Viz3d::spin()
 {
     impl_->spin();
@@ -78,14 +73,54 @@ void temp_viz::Viz3d::spinOnce (int time, bool force_redraw)
     impl_->spinOnce(time, force_redraw);
 }
 
-bool temp_viz::Viz3d::addPlane (const ModelCoefficients &coefficients, const String &id)
+void temp_viz::Viz3d::showLine(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
 {
-    return impl_->addPlane(coefficients, id);
+    impl_->showLine(id, pt1, pt2, color);
 }
 
-bool temp_viz::Viz3d::addPlane (const ModelCoefficients &coefficients, double x, double y, double z, const String& id)
+void temp_viz::Viz3d::showPlane(const String &id, const Vec4f &coefs, const Color &color)
 {
-    return impl_->addPlane(coefficients, x, y, z, id);
+    impl_->showPlane(id, coefs, color);
+}
+
+void temp_viz::Viz3d::showPlane(const String &id, const Vec4f &coefs, const Point3f &pt, const Color &color)
+{
+    impl_->showPlane(id, coefs, pt, color);
+}
+
+void temp_viz::Viz3d::showCube(const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    impl_->showCube(id, pt1, pt2, color);
+}
+
+void temp_viz::Viz3d::showCylinder(const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color)
+{
+    impl_->showCylinder(id, pt_on_axis, axis_direction, radius, num_sides, color);
+}
+
+void temp_viz::Viz3d::showCircle(const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    impl_->showCircle(id, pt, radius, color);
+}
+
+void temp_viz::Viz3d::showSphere (const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    impl_->showSphere(id, pt, radius, color);
+}
+
+void temp_viz::Viz3d::showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    impl_->showArrow(id,pt1,pt2,color);
+}
+
+cv::Affine3f temp_viz::Viz3d::getShapePose(const String &id)
+{
+    return impl_->getShapePose(id);
+}
+
+bool temp_viz::Viz3d::setShapePose(const String &id, const Affine3f &pose)
+{
+    return impl_->setShapePose(id, pose);
 }
 
 bool temp_viz::Viz3d::removeCoordinateSystem (const String &id)

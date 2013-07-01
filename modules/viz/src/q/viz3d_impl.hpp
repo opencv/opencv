@@ -137,117 +137,28 @@ public:
         // This tends to close the window...
         interactor_->TerminateApp ();
     }
+    
+    void showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color);
+    void showPlane (const String &id, const cv::Vec4f &coefs, const Color &color);
+    void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color);
+    void showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
+    void showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color);
+    void showCircle (const String &id, const Point3f &pt, double radius, const Color &color);
+    void showSphere (const String &id, const Point3f &pt, double radius, const Color &color);
+    void showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
+    
+    Affine3f getShapePose (const String &id);
+    bool setShapePose (const String &id, const Affine3f &pose);
 
     bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
-    bool addLine (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, const std::string &id = "line");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");
     bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color_line, const Color& color_text, const std::string &id = "arrow");
-    bool addSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id = "sphere");
-    bool updateSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id = "sphere");
 
     // Add a vtkPolydata as a mesh
     bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const std::string & id = "PolyData");
     bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const std::string &id = "PolyData");
     bool addModelFromPLYFile (const std::string &filename, const std::string &id = "PLYModel");
     bool addModelFromPLYFile (const std::string &filename, vtkSmartPointer<vtkTransform> transform, const std::string &id = "PLYModel");
-
-    /** \brief Add a cylinder from a set of given model coefficients
-          * \param[in] coefficients the model coefficients (point_on_axis, axis_direction, radius)
-          * \param[in] id the cylinder id/name (default: "cylinder")
-          *
-          * \code
-          * // The following are given (or computed using sample consensus techniques)
-          * // See SampleConsensusModelCylinder for more information.
-          * // float radius;
-          *
-          * temp_viz::ModelCoefficients cylinder_coeff;
-          * cylinder_coeff.values.resize (7);    // We need 7 values
-          * cylinder_coeff.values[0] = pt_on_axis.x ();
-          * cylinder_coeff.values[1] = pt_on_axis.y ();
-          * cylinder_coeff.values[2] = pt_on_axis.z ();
-          *
-          * cylinder_coeff.values[3] = axis_direction.x ();
-          * cylinder_coeff.values[4] = axis_direction.y ();
-          * cylinder_coeff.values[5] = axis_direction.z ();
-          *
-          * cylinder_coeff.values[6] = radius;
-          *
-          * addCylinder (cylinder_coeff);
-          * \endcode
-          */
-    bool addCylinder (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "cylinder");
-
-    /** \brief Add a plane from a set of given model coefficients
-          * \param[in] coefficients the model coefficients (a, b, c, d with ax+by+cz+d=0)
-          * \param[in] id the plane id/name (default: "plane")
-          *
-          * \code
-          * // The following are given (or computed using sample consensus techniques)
-          * // See SampleConsensusModelPlane for more information
-
-          *
-          * temp_viz::ModelCoefficients plane_coeff;
-          * plane_coeff.values.resize (4);    // We need 4 values
-          * plane_coeff.values[0] = plane_parameters.x ();
-          * plane_coeff.values[1] = plane_parameters.y ();
-          * plane_coeff.values[2] = plane_parameters.z ();
-          * plane_coeff.values[3] = plane_parameters.w ();
-          *
-          * addPlane (plane_coeff);
-          * \endcode
-          */
-    bool addPlane (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "plane");
-    bool addPlane (const temp_viz::ModelCoefficients &coefficients, double x, double y, double z, const std::string &id = "plane");
-
-    /** \brief Add a circle from a set of given model coefficients
-          * \param[in] coefficients the model coefficients (x, y, radius)
-          * \param[in] id the circle id/name (default: "circle")
-          *
-          * \code
-          * // The following are given (or computed using sample consensus techniques)
-          * // See SampleConsensusModelCircle2D for more information
-          * // float x, y, radius;
-          *
-          * temp_viz::ModelCoefficients circle_coeff;
-          * circle_coeff.values.resize (3);    // We need 3 values
-          * circle_coeff.values[0] = x;
-          * circle_coeff.values[1] = y;
-          * circle_coeff.values[2] = radius;
-          *
-          * vtkSmartPointer<vtkDataSet> data = temp_viz::create2DCircle (circle_coeff, z);
-          * \endcode
-           */
-    bool addCircle (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "circle");
-
-    /** \brief Add a cube from a set of given model coefficients
-          * \param[in] coefficients the model coefficients (Tx, Ty, Tz, Qx, Qy, Qz, Qw, width, height, depth)
-          * \param[in] id the cube id/name (default: "cube")
-          */
-    bool addCube (const temp_viz::ModelCoefficients &coefficients, const std::string &id = "cube");
-
-    /** \brief Add a cube from a set of given model coefficients
-          * \param[in] translation a translation to apply to the cube from 0,0,0
-          * \param[in] rotation a quaternion-based rotation to apply to the cube
-          * \param[in] width the cube's width
-          * \param[in] height the cube's height
-          * \param[in] depth the cube's depth
-          * \param[in] id the cube id/name (default: "cube")
-          */
-    bool addCube (const cv::Vec3f& translation, const cv::Vec3f quaternion, double width, double height, double depth, const std::string &id = "cube");
-
-    /** \brief Add a cube
-          * \param[in] x_min the min X coordinate
-          * \param[in] x_max the max X coordinate
-          * \param[in] y_min the min Y coordinate
-          * \param[in] y_max the max Y coordinate
-          * \param[in] z_min the min Z coordinate
-          * \param[in] z_max the max Z coordinate
-          * \param[in] r how much red (0.0 -> 1.0)
-          * \param[in] g how much green (0.0 -> 1.0)
-          * \param[in] b how much blue (0.0 -> 1.0)
-          * \param[in] id the cube id/name (default: "cube")
-          */
-    bool addCube (float x_min, float x_max, float y_min, float y_max, float z_min, float z_max, const Color& color, const std::string &id = "cube");
 
     /** \brief Changes the visual representation for all actors to surface representation. */
     void setRepresentationToSurfaceForAllActors ();
@@ -438,6 +349,7 @@ private:
 //void convertToVtkMatrix (const Eigen::Matrix4f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 
 void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
+void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
 
 /** \brief Convert origin and orientation to vtkMatrix4x4
       * \param[in] origin the point cloud origin

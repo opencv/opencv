@@ -41,8 +41,15 @@
  //M*/
 #include "test_precomp.hpp"
 #include <opencv2/viz.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
+#include <fstream>
+#include <string>
+
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/mesh_load.hpp>
+
 
 cv::Mat cvcloud_load()
 {
@@ -79,36 +86,43 @@ TEST(Viz_viz3d, accuracy)
     float pos_x = 0.0f;
     float pos_y = 0.0f;
     float pos_z = 0.0f;
-    temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
-    v.addPolygonMesh(*mesh, "pq");
+//     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
+//     v.addPolygonMesh(*mesh, "pq");
 
     int col_blue = 0;
     int col_green = 0;
     int col_red = 0;
+    v.showCircle("circle1", cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
+    v.showSphere("sphere1", cv::Point3f(0,0,0), 0.5, temp_viz::Color(0,0,255));
+    v.showArrow("arrow1", cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     
-    bool alternate = true;
-
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
-        if (!alternate)
-            v.showPointCloud("cloud1", cloud, temp_viz::Color(255, 0, 0), cloudPosition);
-        else
-            v.showPointCloud("cloud1", cloud, colors, cloudPosition);
-        alternate = !alternate;
-
+//         v.showPointCloud("cloud1", cloud, temp_viz::Color(col_blue, col_green, col_red), cloudPosition);
+//         v.showLine("line1", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
+//         v.showLine("line2", cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0f-pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
+//         v.showLine("line3", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, 1.0f-pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
+//         v.showLine("line4", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, 1.0f-pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
+//         v.showPlane("plane1", cv::Vec4f(pos_x*pos_y,pos_y,pos_z,pos_x+pos_y*pos_z), temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
+//         v.showCube("cube1", cv::Point3f(pos_x, pos_y, pos_z), cv::Point3f(pos_x+0.5, pos_y+0.5, pos_z+0.5), temp_viz::Color(255,150,50));
+//         v.showCylinder("cylinder1", cv::Point3f(0,0,0), cv::Point3f(pos_x, 1.0, 1.0), 0.5, 5*pos_x+3, temp_viz::Color(0,255,0));
+        v.setShapePose("circle1", cloudPosition);
+        v.setShapePose("sphere1", cloudPosition);
+        v.setShapePose("arrow1", cloudPosition);
+        
         angle_x += 0.1f;
         angle_y -= 0.1f;
         angle_z += 0.1f;
         pos_x = std::sin(angle_x);
-        pos_y = std::sin(angle_x);
-        pos_z = std::sin(angle_x);
+        pos_y = std::sin(angle_y);
+        pos_z = std::sin(angle_z);
         col_blue = int(angle_x * 10) % 256;
         col_green = int(angle_x * 20) % 256;
         col_red = int(angle_x * 30) % 256;
 
-        v.spinOnce(10, true);
+        v.spinOnce(1, true);
     }
    
 //     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));

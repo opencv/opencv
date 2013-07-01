@@ -380,32 +380,332 @@ bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const
 }
 
 
-////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addLine (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, const std::string &id)
+void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color)
 {
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
+    // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-        return std::cout << "[addLine] A shape with id <" << id <<  "> already exists! Please choose a different id and retry." << std::endl, false;
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createLine(pt1,pt2));
+        Color c = vtkcolor(color);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create new line
+        vtkSmartPointer<vtkDataSet> data = createLine (pt1, pt2);
 
-    vtkSmartPointer<vtkDataSet> data = createLine (pt1, pt2);
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        actor->GetProperty ()->SetRepresentationToWireframe ();
 
-    // Create an Actor
-    vtkSmartPointer<vtkLODActor> actor;
-    createActorFromVTKDataSet (data, actor);
-    actor->GetProperty ()->SetRepresentationToWireframe ();
+        Color c = vtkcolor(color);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor (actor);
 
-    Color c = vtkcolor(color);
-    actor->GetProperty ()->SetColor (c.val);
-    actor->GetMapper ()->ScalarVisibilityOff ();
-    renderer_->AddActor (actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[id] = actor;
-    return (true);
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
 }
 
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coefs, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createPlane (coefs);
 
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs, pt));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createPlane (coefs, pt);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createCube(pt1, pt2));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createCube (pt1, pt2);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createCylinder(pt_on_axis, axis_direction, radius, num_sides));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createCylinder(pt_on_axis, axis_direction, radius, num_sides);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showCircle (const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(create2DCircle(pt, radius));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = create2DCircle(pt, radius);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showSphere (const String &id, const Point3f &pt, double radius, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createSphere(pt, radius));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createSphere(pt, radius);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+void temp_viz::Viz3d::VizImpl::showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+{
+    // Check if this Id already exists
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    Color c = vtkcolor(color);
+    
+    // If it exists just update
+    if (exists)
+    {
+        vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createArrow(pt1,pt2));
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        actor->Modified ();
+    }
+    else
+    {
+        // Create a plane
+        vtkSmartPointer<vtkDataSet> data = createArrow(pt1,pt2);
+
+        // Create an Actor
+        vtkSmartPointer<vtkLODActor> actor;
+        createActorFromVTKDataSet (data, actor);
+        //  actor->GetProperty ()->SetRepresentationToWireframe ();
+        actor->GetProperty ()->SetRepresentationToSurface ();
+        actor->GetProperty ()->SetLighting (false);
+        actor->GetProperty ()->SetColor (c.val);
+        actor->GetMapper ()->ScalarVisibilityOff ();
+        renderer_->AddActor(actor);
+
+        // Save the pointer/ID pair to the global actor map
+        (*shape_actor_map_)[id] = actor;
+    }
+}
+
+cv::Affine3f temp_viz::Viz3d::VizImpl::getShapePose (const String &id)
+{
+    // Get the shape with the id and return the pose
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    if (!exists)
+    {
+        std::cout << "[getShapePose] A shape with id <" << id << "> does not exist!" << std::endl;
+        return Affine3f();
+    }
+
+    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
+
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    
+    Matx44f pose_mat;
+    convertToCvMatrix(matrix, pose_mat);
+    
+    Affine3f pose;
+    pose.matrix = pose_mat;
+    return pose;
+}
+
+bool temp_viz::Viz3d::VizImpl::setShapePose (const String &id, const Affine3f &pose)
+{
+    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
+    bool exists = (am_it != shape_actor_map_->end());
+    
+    if (!exists)
+    {
+        return false;
+    }
+   
+    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
+    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New ();
+
+    convertToVtkMatrix (pose.matrix, matrix);
+
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
+
+    return (true);
+}
 
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
@@ -769,72 +1069,6 @@ bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3
 
     // Save the pointer/ID pair to the global actor map
     (*shape_actor_map_)[id] = leader;
-    return (true);
-}
-
-#include <vtkSphereSource.h>
-////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addSphere (const cv::Point3f& center, float radius, const Color& color, const std::string &id)
-{
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-        return std::cout << "[addSphere] A shape with id <"<<id << "> already exists! Please choose a different id and retry." << std::endl, false;
-
-    //vtkSmartPointer<vtkDataSet> data = createSphere (center.getVector4fMap (), radius);
-    vtkSmartPointer<vtkSphereSource> data = vtkSmartPointer<vtkSphereSource>::New ();
-    data->SetRadius (radius);
-    data->SetCenter (center.x, center.y, center.z);
-    data->SetPhiResolution (10);
-    data->SetThetaResolution (10);
-    data->LatLongTessellationOff ();
-    data->Update ();
-
-    // Setup actor and mapper
-    vtkSmartPointer <vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New ();
-    mapper->SetInputConnection (data->GetOutputPort ());
-
-    // Create an Actor
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New ();
-    actor->SetMapper (mapper);
-    //createActorFromVTKDataSet (data, actor);
-    actor->GetProperty ()->SetRepresentationToSurface ();
-    actor->GetProperty ()->SetInterpolationToFlat ();
-
-    Color c = vtkcolor(color);
-    actor->GetProperty ()->SetColor (c.val);
-    actor->GetMapper ()->ImmediateModeRenderingOn ();
-    actor->GetMapper ()->StaticOn ();
-    actor->GetMapper ()->ScalarVisibilityOff ();
-    actor->GetMapper ()->Update ();
-    renderer_->AddActor (actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[id] = actor;
-    return (true);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::updateSphere (const cv::Point3f &center, float radius, const Color& color, const std::string &id)
-{
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it == shape_actor_map_->end ())
-        return (false);
-
-    //////////////////////////////////////////////////////////////////////////
-    // Get the actor pointer
-    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
-    vtkAlgorithm *algo = actor->GetMapper ()->GetInput ()->GetProducerPort ()->GetProducer ();
-    vtkSphereSource *src = vtkSphereSource::SafeDownCast (algo);
-
-    src->SetCenter(center.x, center.y, center.z);
-    src->SetRadius(radius);
-    src->Update ();
-    Color c = vtkcolor(color);
-    actor->GetProperty ()->SetColor (c.val);
-    actor->Modified ();
-
     return (true);
 }
 
