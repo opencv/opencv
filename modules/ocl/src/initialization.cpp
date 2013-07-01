@@ -198,7 +198,8 @@ namespace cv
 
             if(clCmdQueue)
             {
-                openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
+                //temporarily disable command queue release as it causes program hang at exit
+                //openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
                 clCmdQueue = 0;
             }
 
@@ -1075,26 +1076,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-
-#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#include <windows.h>
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
-
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
-{
-    if( fdwReason == DLL_PROCESS_DETACH )
-    {
-        // application hangs if call clReleaseCommandQueue here, so release context only
-        // without context release application hangs as well
-        context_tear_down = 1;
-        Context* cv_ctx = Context::getContext();
-        if(cv_ctx)
-        {
-            cl_context ctx = cv_ctx->impl->oclcontext;
-            if(ctx)
-                openCLSafeCall(clReleaseContext(ctx));
-        }
-    }
-    return TRUE;
-}
-#endif
