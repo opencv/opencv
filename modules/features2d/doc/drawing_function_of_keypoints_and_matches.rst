@@ -67,6 +67,8 @@ Draws keypoints.
 
 .. ocv:function:: void drawKeypoints( const Mat& image, const vector<KeyPoint>& keypoints, Mat& outImage, const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT )
 
+.. ocv:pyfunction:: cv2.drawKeypoints(image, keypoints[, outImage[, color[, flags]]]) -> outImage
+
     :param image: Source image.
 
     :param keypoints: Keypoints from the source image.
@@ -77,3 +79,4 @@ Draws keypoints.
 
     :param flags: Flags setting drawing features. Possible  ``flags``  bit values are defined by  ``DrawMatchesFlags``. See details above in  :ocv:func:`drawMatches` .
 
+.. note:: For Python API, flags are modified as `cv2.DRAW_MATCHES_FLAGS_DEFAULT`, `cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS`, `cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG`, `cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS` 
