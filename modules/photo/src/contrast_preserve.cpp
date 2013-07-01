@@ -17,14 +17,17 @@ int rounding(double a)
 	return int(a + 0.5);
 }
 
-void cv::decolor(InputArray _src, OutputArray _dst)
+void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 {
-	Mat I = _src.getMat();
+    Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC1);
     Mat dst = _dst.getMat();
 
-    if(!I.data )      
-	{
+    _boost.create(I.size(), CV_8UC3);
+    Mat color_boost = _boost.getMat();
+
+    if(!I.data )
+    {
 		cout <<  "Could not open or find the image" << endl ;
 		return;
 	}
@@ -162,5 +165,40 @@ void cv::decolor(InputArray _src, OutputArray _dst)
 
 	Gray.convertTo(dst,CV_8UC1,255);
 
+    ///////////////////////////////////       Contrast Boosting   /////////////////////////////////
 	
+	Mat lab = Mat(img.size(),CV_8UC3);
+	Mat color = Mat(img.size(),CV_8UC3);
+	Mat l = Mat(img.size(),CV_8UC1);
+	Mat a = Mat(img.size(),CV_8UC1);
+	Mat b = Mat(img.size(),CV_8UC1);
+
+	cvtColor(I,lab,COLOR_BGR2Lab);
+
+	int h1 = img.size().height;
+	int w1 = img.size().width;
+
+	for(int i =0;i<h1;i++)
+		for(int j=0;j<w1;j++)
+		{
+			l.at<uchar>(i,j) = lab.at<uchar>(i,j*3+0);
+			a.at<uchar>(i,j) = lab.at<uchar>(i,j*3+1);
+			b.at<uchar>(i,j) = lab.at<uchar>(i,j*3+2);
+		}
+	
+	for(int i =0;i<h1;i++)
+		for(int j=0;j<w1;j++)
+		{
+			l.at<uchar>(i,j) = 255.0*Gray.at<float>(i,j);
+		}
+
+	for(int i =0;i<h1;i++)
+		for(int j=0;j<w1;j++)
+		{
+			lab.at<uchar>(i,j*3+0) = l.at<uchar>(i,j);
+			lab.at<uchar>(i,j*3+1) = a.at<uchar>(i,j);
+			lab.at<uchar>(i,j*3+2) = b.at<uchar>(i,j);
+		}
+
+	cvtColor(lab,color_boost,COLOR_Lab2BGR);
 }
