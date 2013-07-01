@@ -154,13 +154,13 @@ temp_viz::InteractorStyle::OnKeyDown ()
 {
     if (!init_)
     {
-        std::cout << "[PCLVisualizerInteractorStyle] Interactor style not initialized. Please call Initialize () before continuing" << std::endl;
+        std::cout << "Interactor style not initialized. Please call Initialize () before continuing" << std::endl;
         return;
     }
 
     if (!renderer_)
     {
-        std::cout << "[PCLVisualizerInteractorStyle] No renderer collection given! Use SetRendererCollection () before continuing." << std::endl;
+        std::cout << "No renderer given! Use SetRendererCollection () before continuing." << std::endl;
         return;
     }
 
@@ -186,21 +186,9 @@ temp_viz::InteractorStyle::OnKeyDown ()
     bool keymod = false;
     switch (modifier_)
     {
-    case KB_MOD_ALT:
-    {
-        keymod = alt;
-        break;
-    }
-    case KB_MOD_CTRL:
-    {
-        keymod = ctrl;
-        break;
-    }
-    case KB_MOD_SHIFT:
-    {
-        keymod = shift;
-        break;
-    }
+    case KB_MOD_ALT:   keymod = alt;   break;
+    case KB_MOD_CTRL:  keymod = ctrl;  break;
+    case KB_MOD_SHIFT: keymod = shift; break;
     }
 
     std::string key (Interactor->GetKeySym ());

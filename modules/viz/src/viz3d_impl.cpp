@@ -53,7 +53,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 
     // If the cloud already exists, update otherwise create new one
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool exist = (am_it == cloud_actor_map_->end());
+    bool exist = am_it == cloud_actor_map_->end();
     if (exist)
     {
         // Add as new cloud
@@ -181,7 +181,7 @@ void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _clou
 
     // If the cloud already exists, update otherwise create new one
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool exist = (am_it == cloud_actor_map_->end());
+    bool exist = am_it == cloud_actor_map_->end();
     if (exist)
     {
         // Add as new cloud
@@ -292,7 +292,7 @@ bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const
     CV_Assert(cloud.size() == normals.size() && cloud.type() == CV_32FC3 && normals.type() == CV_32FC3);
 
     if (cloud_actor_map_->find (id) != cloud_actor_map_->end ())
-        return (false);
+        return false;
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
@@ -380,11 +380,11 @@ bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const
 }
 
 
-void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color)
+void temp_viz::Viz3d::VizImpl::showLine (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     
     // If it exists just update
     if (exists)
@@ -416,11 +416,11 @@ void temp_viz::Viz3d::VizImpl::showLine (const String &id, const cv::Point3f &pt
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coefs, const Color &color)
+void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coefs, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -451,11 +451,11 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String &id, const cv::Vec4f &coe
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color)
+void temp_viz::Viz3d::VizImpl::showPlane (const String& id ,const cv::Vec4f &coefs, const Point3f& pt, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -486,11 +486,11 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String &id ,const cv::Vec4f &coe
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+void temp_viz::Viz3d::VizImpl::showCube (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -521,11 +521,11 @@ void temp_viz::Viz3d::VizImpl::showCube (const String &id, const Point3f &pt1, c
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color)
+void temp_viz::Viz3d::VizImpl::showCylinder (const String& id, const Point3f& pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -556,11 +556,11 @@ void temp_viz::Viz3d::VizImpl::showCylinder (const String &id, const Point3f &pt
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showCircle (const String &id, const Point3f &pt, double radius, const Color &color)
+void temp_viz::Viz3d::VizImpl::showCircle (const String& id, const Point3f& pt, double radius, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -591,11 +591,11 @@ void temp_viz::Viz3d::VizImpl::showCircle (const String &id, const Point3f &pt, 
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showSphere (const String &id, const Point3f &pt, double radius, const Color &color)
+void temp_viz::Viz3d::VizImpl::showSphere (const String& id, const Point3f& pt, double radius, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     // If it exists just update
     if (exists)
@@ -626,11 +626,11 @@ void temp_viz::Viz3d::VizImpl::showSphere (const String &id, const Point3f &pt, 
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color)
+void temp_viz::Viz3d::VizImpl::showArrow (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
+    bool exists = am_it != shape_actor_map_->end();
     Color c = vtkcolor(color);
     
     // If it exists just update
@@ -662,49 +662,24 @@ void temp_viz::Viz3d::VizImpl::showArrow (const String &id, const Point3f &pt1, 
     }
 }
 
-cv::Affine3f temp_viz::Viz3d::VizImpl::getShapePose (const String &id)
+cv::Affine3f temp_viz::Viz3d::VizImpl::getShapePose (const String& id)
 {
-    // Get the shape with the id and return the pose
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
-    
-    if (!exists)
-    {
-        std::cout << "[getShapePose] A shape with id <" << id << "> does not exist!" << std::endl;
-        return Affine3f();
-    }
 
-    vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
-
-    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-    
-    Matx44f pose_mat;
-    convertToCvMatrix(matrix, pose_mat);
-    
-    Affine3f pose;
-    pose.matrix = pose_mat;
-    return pose;
+    CV_Assert(am_it != shape_actor_map_->end());
+    vtkLODActor* actor = vtkLODActor::SafeDownCast(am_it->second);
+    return Affine3f(convertToMatx(actor->GetUserMatrix()));
 }
 
-bool temp_viz::Viz3d::VizImpl::setShapePose (const String &id, const Affine3f &pose)
+void temp_viz::Viz3d::VizImpl::setShapePose (const String& id, const Affine3f &pose)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    bool exists = (am_it != shape_actor_map_->end());
-    
-    if (!exists)
-    {
-        return false;
-    }
+    CV_Assert(am_it != shape_actor_map_->end());
    
     vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second);
-    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New ();
-
-    convertToVtkMatrix (pose.matrix, matrix);
-
+    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
     actor->SetUserMatrix (matrix);
     actor->Modified ();
-
-    return (true);
 }
 
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)

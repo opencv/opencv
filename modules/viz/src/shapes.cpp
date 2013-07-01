@@ -1,9 +1,7 @@
-#include <q/shapes.h>
+#include "precomp.hpp"
 
-inline float rad2deg (float alpha)
-{ return (alpha * 57.29578f); }
-
-inline double rad2deg (double alpha){return (alpha * 57.29578);}
+inline float rad2deg(float alpha) { return (alpha * 57.29578f); }
+inline double rad2deg(double alpha) { return (alpha * 57.29578); }
 
 vtkSmartPointer<vtkDataSet> temp_viz::createCylinder (const cv::Point3f& pt_on_axis, const cv::Point3f& axis_direction, double radius, int numsides)
 {
@@ -23,21 +21,20 @@ vtkSmartPointer<vtkDataSet> temp_viz::createPlane (const cv::Vec4f& coefs)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     plane->SetNormal (coefs[0], coefs[1], coefs[2]);
-    double norm = cv::norm (cv::Vec3f (coefs[0], coefs[1], coefs[2]));
+    double norm = cv::norm(cv::Vec3f(coefs.val));
     plane->Push (-coefs[3] / norm);
-    return (plane->GetOutput ());
+    return plane->GetOutput ();
 }
 
 vtkSmartPointer<vtkDataSet> temp_viz::createPlane(const cv::Vec4f& coefs, const cv::Point3f& pt)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
-    cv::Point3f coefs3 (coefs[0], coefs[1], coefs[2]);    
+    cv::Point3f coefs3(coefs[0], coefs[1], coefs[2]);
     double norm_sqr = 1.0 / coefs3.dot (coefs3);
-    plane->SetNormal (coefs[0], coefs[1], coefs[2]);
+    plane->SetNormal(coefs[0], coefs[1], coefs[2]);
 
-    double t = coefs3.dot (pt) + coefs[3];
-    cv::Vec3f p_center;
-    p_center = pt - coefs3 * t * norm_sqr;
+    double t = coefs3.dot(pt) + coefs[3];
+    cv::Vec3f p_center = pt - coefs3 * t * norm_sqr;
     plane->SetCenter (p_center[0], p_center[1], p_center[2]);
 
     return (plane->GetOutput ());
@@ -61,14 +58,14 @@ vtkSmartPointer<vtkDataSet> temp_viz::create2DCircle (const cv::Point3f& pt, dou
     tf->SetTransform (t);
     tf->SetInputConnection (disk->GetOutputPort ());
     
-    return (tf->GetOutput ());
+    return tf->GetOutput ();
 }
 
 vtkSmartPointer<vtkDataSet> temp_viz::createCube(const cv::Point3f& pt_min, const cv::Point3f& pt_max)
 {
     vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
     cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
-    return (cube->GetOutput ());
+    return cube->GetOutput ();
 }
 
 vtkSmartPointer<vtkDataSet> temp_viz::createSphere (const Point3f& pt, double radius)
@@ -81,7 +78,7 @@ vtkSmartPointer<vtkDataSet> temp_viz::createSphere (const Point3f& pt, double ra
     sphere->LatLongTessellationOff ();
     sphere->Update ();
     
-    return (sphere->GetOutput ());
+    return sphere->GetOutput ();
 }
 
 vtkSmartPointer<vtkDataSet> temp_viz::createArrow (const Point3f& pt1, const Point3f& pt2)
@@ -136,22 +133,21 @@ vtkSmartPointer<vtkDataSet> temp_viz::createArrow (const Point3f& pt1, const Poi
     transformPD->SetTransform(transform);
     transformPD->SetInputConnection(arrowSource->GetOutputPort());
     
-    return (transformPD->GetOutput());
+    return transformPD->GetOutput();
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
 vtkSmartPointer<vtkDataSet> temp_viz::createLine (const cv::Point3f& pt1, const cv::Point3f& pt2)
 {
-  vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
-  line->SetPoint1 (pt1.x, pt1.y, pt1.z);
-  line->SetPoint2 (pt2.x, pt2.y, pt2.z);
-  line->Update ();
-  return line->GetOutput ();
+    vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
+    line->SetPoint1 (pt1.x, pt1.y, pt1.z);
+    line->SetPoint2 (pt2.x, pt2.y, pt2.z);
+    line->Update ();
+    return line->GetOutput ();
 }
-//////////////////////////////////////////////////////////////////////////////////////////////
+
 void temp_viz::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
 {
-  polydata = vtkSmartPointer<vtkUnstructuredGrid>::New ();
+    polydata = vtkSmartPointer<vtkUnstructuredGrid>::New ();
 }
 
 

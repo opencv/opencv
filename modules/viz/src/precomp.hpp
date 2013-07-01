@@ -6,12 +6,6 @@
 #include <list>
 #include <vector>
 
-/*
-#include <boost/function.hpp>
-#include <boost/bind.hpp>
-#include <boost/signals2.hpp>
-#include <boost/thread.hpp>*/
-
 #include <Eigen/Geometry>
 
 #if defined __GNUC__
@@ -140,24 +134,13 @@
 #include <vtkImageData.h>
 
 
-
 #include <vtkPolyDataNormals.h>
 #include <vtkMapper.h>
 #include <vtkSelectionNode.h>
-
-
-
 #include <vtkAbstractPicker.h>
 #include <vtkAbstractPropPicker.h>
-
 #include <vtkMatrix4x4.h>
 #include <vtkInteractorObserver.h>
-
-
-
-
-
-
 #include <vtkMapper2D.h>
 #include <vtkLeaderActor2D.h>
 #include <vtkAlgorithmOutput.h>
@@ -168,3 +151,6 @@
 #define __DEPRECATED
 #undef __DEPRECATED_DISABLED__
 #endif
+
+
+#include <q/shapes.h>

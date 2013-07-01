@@ -17,11 +17,11 @@ class CV_EXPORTS Viz3d::VizImpl
 public:
     typedef cv::Ptr<VizImpl> Ptr;
 
-    VizImpl (const std::string &name = std::string());
+    VizImpl (const String &name = String());
 
     virtual ~VizImpl ();
     void setFullScreen (bool mode);
-    void setWindowName (const std::string &name);
+    void setWindowName (const String &name);
     
     /** \brief  Register a callback function for keyboard input
       * \param[in] callback function that will be registered as a callback for a keyboard event
@@ -68,34 +68,34 @@ public:
            *         |
            *         y
            */
-    void addCoordinateSystem (double scale, const cv::Affine3f& t, const std::string &id = "coordinate");
+    void addCoordinateSystem (double scale, const Affine3f& t, const String& id = "coordinate");
 
     /** \brief Removes a previously added 3D axes (coordinate system)
           */
-    bool removeCoordinateSystem (const std::string &id = "coordinate");
-    bool removePointCloud (const std::string &id = "cloud");
-    inline bool removePolygonMesh (const std::string &id = "polygon")
+    bool removeCoordinateSystem (const String& id = "coordinate");
+    bool removePointCloud (const String& id = "cloud");
+    inline bool removePolygonMesh (const String& id = "polygon")
     {
         // Polygon Meshes are represented internally as point clouds with special cell array structures since 1.4
         return removePointCloud (id);
     }
-    bool removeShape (const std::string &id = "cloud");
+    bool removeShape (const String& id = "cloud");
 
-    bool removeText3D (const std::string &id = "cloud");
+    bool removeText3D (const String& id = "cloud");
     bool removeAllPointClouds ();
     bool removeAllShapes ();
 
     void setBackgroundColor (const Color& color);
 
-    bool addText (const std::string &text, int xpos, int ypos, const Color& color, int fontsize = 10, const std::string &id = "");
-    bool updateText (const std::string &text, int xpos, int ypos, const Color& color, int fontsize = 10, const std::string &id = "");
+    bool addText (const String &text, int xpos, int ypos, const Color& color, int fontsize = 10, const String& id = "");
+    bool updateText (const String &text, int xpos, int ypos, const Color& color, int fontsize = 10, const String& id = "");
 
     /** \brief Set the pose of an existing shape. Returns false if the shape doesn't exist, true if the pose was succesfully updated. */
-    bool updateShapePose (const std::string &id, const cv::Affine3f& pose);
+    bool updateShapePose (const String& id, const Affine3f& pose);
 
-    bool addText3D (const std::string &text, const cv::Point3f &position, const Color& color, double textScale = 1.0, const std::string &id = "");
+    bool addText3D (const String &text, const Point3f &position, const Color& color, double textScale = 1.0, const String& id = "");
 
-    bool addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level = 100, float scale = 0.02f, const std::string &id = "cloud");
+    bool addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level = 100, float scale = 0.02f, const String& id = "cloud");
 
     /** \brief If the id exists, updates the point cloud; otherwise, adds a new point cloud to the scene
       * \param[in] id a variable to identify the point cloud
@@ -106,23 +106,23 @@ public:
     void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
     void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
 
-    bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
-    bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id = "polygon");
+    bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
+    bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
 
-    bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const std::string &id = "polyline");
+    bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
 
-    void setPointCloudColor (const Color& color, const std::string &id = "cloud");
-    bool setPointCloudRenderingProperties (int property, double value, const std::string &id = "cloud");
-    bool getPointCloudRenderingProperties (int property, double &value, const std::string &id = "cloud");
+    void setPointCloudColor (const Color& color, const String& id = "cloud");
+    bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
+    bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
 
-    bool setShapeRenderingProperties (int property, double value, const std::string &id);
-    void setShapeColor (const Color& color, const std::string &id);
+    bool setShapeRenderingProperties (int property, double value, const String& id);
+    void setShapeColor (const Color& color, const String& id);
 
     /** \brief Set whether the point cloud is selected or not
          *  \param[in] selected whether the cloud is selected or not (true = selected)
          *  \param[in] id the point cloud object id (default: cloud)
          */
-    bool setPointCloudSelected (const bool selected, const std::string &id = "cloud" );
+    bool setPointCloudSelected (const bool selected, const String& id = "cloud" );
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
@@ -138,27 +138,27 @@ public:
         interactor_->TerminateApp ();
     }
     
-    void showLine (const String &id, const cv::Point3f &pt1, const cv::Point3f &pt2, const Color &color);
-    void showPlane (const String &id, const cv::Vec4f &coefs, const Color &color);
-    void showPlane (const String &id ,const cv::Vec4f &coefs, const cv::Point3f &pt, const Color &color);
-    void showCube (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
-    void showCylinder (const String &id, const Point3f &pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color &color);
-    void showCircle (const String &id, const Point3f &pt, double radius, const Color &color);
-    void showSphere (const String &id, const Point3f &pt, double radius, const Color &color);
-    void showArrow (const String &id, const Point3f &pt1, const Point3f &pt2, const Color &color);
+    void showLine (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
+    void showPlane (const String& id, const cv::Vec4f &coefs, const Color& color);
+    void showPlane (const String& id ,const cv::Vec4f &coefs, const Point3f& pt, const Color& color);
+    void showCube (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
+    void showCylinder (const String& id, const Point3f& pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color& color);
+    void showCircle (const String& id, const Point3f& pt, double radius, const Color& color);
+    void showSphere (const String& id, const Point3f& pt, double radius, const Color& color);
+    void showArrow (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
     
-    Affine3f getShapePose (const String &id);
-    bool setShapePose (const String &id, const Affine3f &pose);
+    Affine3f getShapePose (const String& id);
+    void setShapePose (const String& id, const Affine3f& pose);
 
-    bool addPolygon(const cv::Mat& cloud, const Color& color, const std::string &id = "polygon");
-    bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color, bool display_length, const std::string &id = "arrow");
-    bool addArrow (const cv::Point3f &pt1, const cv::Point3f &pt2, const Color& color_line, const Color& color_text, const std::string &id = "arrow");
+    bool addPolygon(const cv::Mat& cloud, const Color& color, const String& id = "polygon");
+    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color, bool display_length, const String& id = "arrow");
+    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color_line, const Color& color_text, const String& id = "arrow");
 
     // Add a vtkPolydata as a mesh
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const std::string & id = "PolyData");
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const std::string &id = "PolyData");
-    bool addModelFromPLYFile (const std::string &filename, const std::string &id = "PLYModel");
-    bool addModelFromPLYFile (const std::string &filename, vtkSmartPointer<vtkTransform> transform, const std::string &id = "PLYModel");
+    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const String& id = "PolyData");
+    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const String& id = "PolyData");
+    bool addModelFromPLYFile (const String &filename, const String& id = "PLYModel");
+    bool addModelFromPLYFile (const String &filename, vtkSmartPointer<vtkTransform> transform, const String& id = "PLYModel");
 
     /** \brief Changes the visual representation for all actors to surface representation. */
     void setRepresentationToSurfaceForAllActors ();
@@ -187,7 +187,7 @@ public:
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
           * \param[in] id the point cloud object id (default: cloud)
           */
-    void resetCameraViewpoint (const std::string &id = "cloud");
+    void resetCameraViewpoint (const String& id = "cloud");
 
     /** \brief Set the camera pose given by position, viewpoint and up vector
           * \param[in] pos_x the x coordinate of the camera location
@@ -217,7 +217,7 @@ public:
           * \param[in] intrinsics the intrinsics that will be used to compute the VTK camera parameters
           * \param[in] extrinsics the extrinsics that will be used to compute the VTK camera parameters
           */
-    void setCameraParameters (const cv::Matx33f& intrinsics, const cv::Affine3f& extrinsics);
+    void setCameraParameters (const cv::Matx33f& intrinsics, const Affine3f& extrinsics);
 
     /** \brief Set the camera parameters by given a full camera data structure.
           * \param[in] camera camera structure containing all the camera parameters.
@@ -237,8 +237,8 @@ public:
     void getCameras (Camera& camera);
 
     /** \brief Get the current viewing pose. */
-    cv::Affine3f getViewerPose ();
-    void saveScreenshot (const std::string &file);
+    Affine3f getViewerPose ();
+    void saveScreenshot (const String &file);
 
     /** \brief Return a pointer to the underlying VTK Render Window used. */
     //vtkSmartPointer<vtkRenderWindow> getRenderWindow () { return (window_); }
@@ -350,6 +350,9 @@ private:
 
 void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
+
+vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
+cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
 
 /** \brief Convert origin and orientation to vtkMatrix4x4
       * \param[in] origin the point cloud origin

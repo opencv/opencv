@@ -97,14 +97,12 @@ void temp_viz::Viz3d::VizImpl::saveScreenshot (const std::string &file) { style_
 /////////////////////////////////////////////////////////////////////////////////////////////
 void temp_viz::Viz3d::VizImpl::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
 {
-    // Register the callback function in the interactor style
     style_->registerMouseCallback(callback, cookie);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void temp_viz::Viz3d::VizImpl::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie)
 {
-    // Register the callback function in the interactor style
     style_->registerKeyboardCallback(callback, cookie);
 }
 
@@ -1205,11 +1203,30 @@ void temp_viz::convertToVtkMatrix (const cv::Matx44f &m, vtkSmartPointer<vtkMatr
             vtk_matrix->SetElement (i, k, m (i, k));
 }
 
+vtkSmartPointer<vtkMatrix4x4> temp_viz::convertToVtkMatrix (const cv::Matx44f &m)
+{
+    vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    for (int i = 0; i < 4; i++)
+        for (int k = 0; k < 4; k++)
+            vtk_matrix->SetElement(i, k, m(i, k));
+    return vtk_matrix;
+}
+
 void temp_viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m)
 {
     for (int i = 0; i < 4; i++)
         for (int k = 0; k < 4; k++)
             m(i,k) = vtk_matrix->GetElement (i, k);
+}
+
+
+cv::Matx44f temp_viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
+{
+    cv::Matx44f m;
+    for (int i = 0; i < 4; i++)
+        for (int k = 0; k < 4; k++)
+            m(i, k) = vtk_matrix->GetElement (i, k);
+    return m;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
