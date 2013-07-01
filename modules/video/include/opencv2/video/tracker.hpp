@@ -61,7 +61,7 @@ namespace cv
 {
 
 
-/************************************ Base Classes ************************************/
+/************************************ TrackerFeature Base Classes ************************************/
 
 /**
  * \brief Abstract base class for TrackerFeature that represents the feature.
@@ -183,6 +183,10 @@ private:
 };
 
 
+
+
+/************************************ TrackerSampler Base Classes ************************************/
+
 /**
  * \brief Abstract base class for TrackerSamplerAlgorithm that represents the algorithm for the specific sampler.
  */
@@ -275,6 +279,142 @@ private:
 };
 
 
+/************************************ TrackerModel Base Classes ************************************/
+
+/**
+ * \brief Abstract base class for TrackerTargetState that represents a possible state of the target
+ * [AMM] x̄_i all state candidates
+ * Inherits this with your Target state
+ */
+class CV_EXPORTS_W TrackerTargetState
+{
+public:
+	~TrackerTargetState();
+	/**
+	 * \brief Get the position
+	 * \return The position
+	 */
+	Point2f getPosition() const;
+
+protected:
+	Point2f position;
+	String className;
+
+};
+
+/**
+ * \brief Represents the model of the target at frame k (all states and scores)
+ * [AAM] The set of the pair (x̄_k(i), C_k(i))
+ */
+typedef std::vector<std::pair<TrackerTargetState, float> > ConfidenceMap;
+/**
+ * \brief Represents the estimate states for all frames
+ * [AAM] Xk is the trajectory of the target up to time k
+ */
+typedef std::vector<TrackerTargetState> Trajectory;
+
+
+/**
+ * \brief Abstract base class for TrackerStateEstimator that estimates the most likely target state.
+ * [AAM] State estimator
+ * [AMVOT] Statistical modeling (Fig. 3), Table III (generative) - IV (discriminative) - V (hybrid)
+ */
+class CV_EXPORTS_W TrackerStateEstimator
+{
+public:
+	virtual ~TrackerStateEstimator();
+
+	/**
+	 * \brief Estimate the most likely target state
+	 * \param confidenceMaps The overall appearance model
+	 * \return The estimated state
+	 */
+	virtual TrackerTargetState estimate( const std::vector<ConfidenceMap>& confidenceMaps ) = 0;
+
+	/**
+	 * \brief Create TrackerStateEstimator by tracker state estimator type.
+	 */
+	static Ptr<TrackerStateEstimator> create( const String& trackeStateEstimatorType );
+
+	/**
+	 * \brief Get the name of the specific state estimator
+	 * \return The name of the state estimator
+	 */
+	String getClassName() const;
+
+protected:
+
+	virtual TrackerTargetState estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
+	String className;
+};
+
+
+/**
+ * \brief Class that represents the model of the target
+ * [AAM] Ak
+ */
+class CV_EXPORTS_W TrackerModel
+{
+public:
+	/**
+	 * \enum TrackerStateEstimator types
+	 * \brief List of state estimators
+	 */
+	enum{ TRACKER_STATE_ESTIMATOR_BOOSTING = 1,  //!< TRACKER_STATE_ESTIMATOR_BOOSTING
+		  TRACKER_STATE_ESTIMATOR_SVM      = 2	 //!< TRACKER_STATE_ESTIMATOR_SVM
+	};
+
+	/**
+	 * \brief Constructor
+	 * \param trackeStateEstimatorType the string for the specific state estimator
+	 */
+	TrackerModel( String trackeStateEstimatorType );
+
+	/**
+	 * \brief Destructor
+	 */
+	~TrackerModel();
+
+	/**
+	 * \brief Estimate the most likely target location
+	 * [AAM] ME, Model Estimation table I
+	 * \param responses Features extracted
+	 * \return Confidence map, all state candidates for current frame
+	 */
+	ConfidenceMap modelEstimation( const std::vector<Mat>& responses );
+
+	/**
+	 * \brief Update the model
+	 * [AAM] MU, Model Update table I
+	 * \param confidenceMap Confidence map, all state candidates for current frame
+	 */
+	void modelUpdate(ConfidenceMap confidenceMap);
+
+	/**
+	 * \brief Set the current estimated state
+	 * \param lastTargetState the current estimated state
+	 */
+	void setLastTargetState( const TrackerTargetState lastTargetState );
+
+	/**
+	 * Get the list of the confidence map
+	 * The list of the confidence map
+	 */
+	const std::vector<ConfidenceMap>& getConfidenceMaps() const;
+
+	/**
+	 * Get the last confidence map
+	 * The the last confidence map
+	 */
+	const ConfidenceMap& getLastConfidenceMap() const;
+
+private:
+	std::vector<ConfidenceMap> confidenceMaps;
+	Trajectory trajectory;
+};
+
+
+/************************************ Tracker Base Class ************************************/
 
 /**
  * \brief Abstract base class for Tracker algorithm.
@@ -321,6 +461,31 @@ protected:
 	Ptr<TrackerFeatureSet> featureSet;
 	Ptr<TrackerSampler> sampler;
 
+};
+
+
+/************************************ Specific TrackerStateEstimator Classes ************************************/
+
+/**
+ * \brief TrackerStateEstimator based on Boosting
+ */
+class CV_EXPORTS_W TrackerStateEstimatorBoosting
+{
+public:
+	TrackerStateEstimatorBoosting();
+	~TrackerStateEstimatorBoosting();
+	TrackerTargetState estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
+};
+
+/**
+ * \brief TrackerStateEstimator based on SVM
+ */
+class CV_EXPORTS_W TrackerStateSVM
+{
+public:
+	TrackerStateSVM();
+	~TrackerStateSVM();
+	TrackerTargetState estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
 };
 
 
