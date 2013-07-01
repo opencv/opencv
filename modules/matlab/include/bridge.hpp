@@ -2,11 +2,11 @@
 #define OPENCV_BRIDGE_HPP_
 
 #include "mex.h"
+#include "map.hpp"
 #include <vector>
 #include <string>
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
-#include <unordered_map>
 
 /*
  * All recent versions of Matlab ship with the MKL library which contains
@@ -180,7 +180,7 @@ namespace Matlab {
   public:
     static std::string ToString()  { return "Inherited type"; }
   };
-};
+}
 
 
 
@@ -205,29 +205,15 @@ private:
   mxArray* ptr_;
   bool owns_;
 
-  // this function is called exclusively from constructors!!
-  template <typename Scalar>
-  void fromMat(const cv::Mat& mat) {
-    mwSize dims[] = { static_cast<mwSize>(mat.rows), static_cast<mwSize>(mat.cols), static_cast<mwSize>(mat.channels()) };
-    ptr_ = mxCreateNumericArray(3, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
-    owns_ = true;
-    switch (mat.depth()) {
-      case CV_8U:  deepCopyAndTranspose<uint8_t,  Scalar>(mat, *this); break;
-      case CV_8S:  deepCopyAndTranspose<int8_t,   Scalar>(mat, *this); break;
-      case CV_16U: deepCopyAndTranspose<uint16_t, Scalar>(mat, *this); break;
-      case CV_16S: deepCopyAndTranspose<int16_t,  Scalar>(mat, *this); break;
-      case CV_32S: deepCopyAndTranspose<int32_t,  Scalar>(mat, *this); break;
-      case CV_32F: deepCopyAndTranspose<float,    Scalar>(mat, *this); break;
-      case CV_64F: deepCopyAndTranspose<double,   Scalar>(mat, *this); break;
-      default: error("Attempted to convert from unknown class");
-    }
+  void dealloc() { 
+    if (owns_ && ptr_) { mxDestroyArray(ptr_); ptr_ = NULL; owns_ = false; }
   }
 public:
   // constructors and destructor
   MxArray() : ptr_(mxCreateDoubleMatrix(1, 1, Matlab::Traits<>::Real)), owns_(true) {}
   MxArray(const mxArray* ptr) : ptr_(const_cast<mxArray *>(ptr)), owns_(false) {}
   virtual ~MxArray() {
-    if (owns_ && ptr_) mxDestroyArray(ptr_);
+    dealloc();
   }
   // copy constructor
   // all copies are deep copies
@@ -286,9 +272,25 @@ public:
     ptr_ = mxCreateNumericArray(3, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
   }
 
+  // this function is called exclusively from constructors!!
   template <typename Scalar>
-  explicit MxArray(const cv::Mat& mat) : owns_(false) {
-    fromMat<Scalar>(mat);
+  MxArray& fromMat(const cv::Mat& mat) {
+    // dealloc any existing storage before reallocating
+    dealloc();
+    mwSize dims[] = { static_cast<mwSize>(mat.rows), static_cast<mwSize>(mat.cols), static_cast<mwSize>(mat.channels()) };
+    ptr_ = mxCreateNumericArray(3, dims, Matlab::Traits<Scalar>::ScalarType, Matlab::Traits<>::Real);
+    owns_ = true;
+    switch (mat.depth()) {
+      case CV_8U:  deepCopyAndTranspose<uint8_t,  Scalar>(mat, *this); break;
+      case CV_8S:  deepCopyAndTranspose<int8_t,   Scalar>(mat, *this); break;
+      case CV_16U: deepCopyAndTranspose<uint16_t, Scalar>(mat, *this); break;
+      case CV_16S: deepCopyAndTranspose<int16_t,  Scalar>(mat, *this); break;
+      case CV_32S: deepCopyAndTranspose<int32_t,  Scalar>(mat, *this); break;
+      case CV_32F: deepCopyAndTranspose<float,    Scalar>(mat, *this); break;
+      case CV_64F: deepCopyAndTranspose<double,   Scalar>(mat, *this); break;
+      default: error("Attempted to convert from unknown class");
+    }
+    return *this;
   }
 
   template <typename Scalar>
@@ -364,17 +366,18 @@ public:
  * that gets mapped to an unsigned 8-bit value
  */
 template <>
-void MxArray::fromMat<Matlab::InheritType>(const cv::Mat& mat) {
+MxArray& MxArray::fromMat<Matlab::InheritType>(const cv::Mat& mat) {
   switch (mat.depth()) {
-    case CV_8U:  fromMat<uint8_t>(mat);  break;
-    case CV_8S:  fromMat<int8_t>(mat);   break;
-    case CV_16U: fromMat<uint16_t>(mat); break;
-    case CV_16S: fromMat<int16_t>(mat);  break;
-    case CV_32S: fromMat<int32_t>(mat);  break;
-    case CV_32F: fromMat<double>(mat);   break; //NOTE: Matlab uses double as native type!
-    case CV_64F: fromMat<double>(mat);   break;
+    case CV_8U:  return fromMat<uint8_t>(mat);  break;
+    case CV_8S:  return fromMat<int8_t>(mat);   break;
+    case CV_16U: return fromMat<uint16_t>(mat); break;
+    case CV_16S: return fromMat<int16_t>(mat);  break;
+    case CV_32S: return fromMat<int32_t>(mat);  break;
+    case CV_32F: return fromMat<double>(mat);   break; //NOTE: Matlab uses double as native type!
+    case CV_64F: return fromMat<double>(mat);   break;
     default: error("Attempted to convert from unknown class");
   }
+  return *this;
 }
 
 /*!
@@ -412,12 +415,39 @@ cv::Mat MxArray::toMat<Matlab::InheritType>() const {
 // ----------------------------------------------------------------------------
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const cv::Mat&, MxArray&) {
+void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
+  conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
+  conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
+  conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
+  OutputScalar* outp = out.real<OutputScalar>();
+  const size_t M = out.rows();
+  const size_t N = out.cols();
+  for (size_t m = 0; m < M; ++m) {
+    const InputScalar* inp = in.ptr<InputScalar>(m);
+    for (size_t n = 0; n < N; ++n) {
+      // copy and transpose
+      outp[m + n*M] = inp[n];
+    }
+  }
 }
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const MxArray&, cv::Mat&) {
+void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
+  conditionalError(in.rows() == static_cast<size_t>(out.rows), "Matrices must have the same number of rows");
+  conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
+  conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
+  const InputScalar* inp = in.real<InputScalar>();
+  const size_t M = in.rows();
+  const size_t N = in.cols();
+  for (size_t m = 0; m < M; ++m) {
+    OutputScalar* outp = out.ptr<OutputScalar>(m);
+    for (size_t n = 0; n < N; ++n) {
+      // copy and transpose
+      outp[n] = inp[m + n*M];
+    }
+  }
 }
+
 
 template <> 
 void deepCopyAndTranspose<float, float>(const cv::Mat&, MxArray&) {
@@ -583,7 +613,7 @@ public:
   // --------------------------------------------------------------------------
 
   // --------------------------- cv::Mat --------------------------------------
-  Bridge& operator=(const cv::Mat& ) { return *this; }
+  Bridge& operator=(const cv::Mat& mat) { ptr_ = MxArray().fromMat<Matlab::InheritType>(mat); return *this; }
   cv::Mat toMat() const { return ptr_.toMat<Matlab::InheritType>(); }
   operator cv::Mat() const { return toMat(); }
   

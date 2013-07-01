@@ -53,3 +53,4 @@ void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% end
   }
   {% endif %}
 }
+
