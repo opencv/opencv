@@ -1395,6 +1395,45 @@ namespace cv
             oclMat vPyr_[2];
             bool isDeviceArch11_;
         };
+
+        class CV_EXPORTS FarnebackOpticalFlow
+        {
+        public:
+            FarnebackOpticalFlow();
+
+            int numLevels;
+            double pyrScale;
+            bool fastPyramids;
+            int winSize;
+            int numIters;
+            int polyN;
+            double polySigma;
+            int flags;
+
+            void operator ()(const oclMat &frame0, const oclMat &frame1, oclMat &flowx, oclMat &flowy);
+
+            void releaseMemory();
+
+        private:
+            void prepareGaussian(
+                int n, double sigma, float *g, float *xg, float *xxg,
+                double &ig11, double &ig03, double &ig33, double &ig55);
+
+            void setPolynomialExpansionConsts(int n, double sigma);
+
+            void updateFlow_boxFilter(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat &flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            void updateFlow_gaussianBlur(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat& flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            oclMat frames_[2];
+            oclMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
+            std::vector<oclMat> pyramid0_, pyramid1_;
+        };
+
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
         CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T, float scale, oclMat &map_x, oclMat &map_y);
