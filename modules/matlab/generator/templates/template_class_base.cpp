@@ -9,30 +9,41 @@
  * Copyright {{time.strftime("%Y", time.localtime())}} The OpenCV Foundation
  */
 #include "mex.h"
+#include "map.hpp"
 #include "bridge.hpp"
 #include <vector>
-//TODO: Standard C++ does not have an unordered_map (only C++11 and Boost)
-#include <unordered_map>
 #include <string>
 #include <opencv2/core.hpp>
 using namespace cv;
 
 namespace {
 
-typedef std::unordered_map Map;
 typedef std::vector<Bridge> (*)({{clss.name}}&, const std::vector<Bridge>&) MethodSignature;
 
-{% for function in clss.functions %}
-// wrapper for {{function.name}}() method
-std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bridge>& args) {
-  {{ functional.generate(function) }}
-}
+{% for function in clss.methods %}
 
+{% if function.constructor %}
+// wrapper for {{function.name}}() constructor
+{{ function.clss }} {{function.name}}(const std::vector<Bridge>& inputs) {
+  {{ functional.handleInputs(function) }}
+  {{ functional.compose(function) }}
+  return obj;
+}
+{% else %}
+// wrapper for {{function.name}}() method
+std::vector<Bridge> {{function.name}}({{clss.name}}& inst, const std::vector<Bridge>& inputs) {
+  std::vector<Bridge> outputs{% if function|noutputs %}({{function|noutputs}}){% endif %};
+  {{ functional.handleInputs(function) }}
+  {{ functional.composeWithExceptionHandler(function) }}
+  {{ functional.handleOutputs(function) }}
+  return outputs;
+}
+{% endif %}
 {% endfor %}
 
-map<std::string, MethodSignature> createMethodMap() {
+Map<std::string, MethodSignature> createMethodMap() {
   Map<std::string, MethodSignature> m;
-  {% for function in clss.functions -%}
+  {% for function in clss.methods %}
   m["{{function.name}}"] = &{{function.name}};
   {% endfor %}
 
@@ -82,4 +93,4 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
 }
 
-}; // end namespace
+} // end namespace

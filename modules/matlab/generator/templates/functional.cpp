@@ -1,14 +1,14 @@
 /* 
  * compose
  * compose a function call
- * This macro takes as input a Function object and composes
+ * This macro takes as input a Method object and composes
  * a function call by inspecting the types and argument names
  */
-/
 {% macro compose(fun) %}
   {# ----------- Return type ------------- #}
-  {%- if not fun.rtp|void -%} retval = {% endif -%}
-  {%- if fun.clss -%}inst.{%- else -%} cv:: {%- endif -%}
+  {%- if not fun.rtp|void and not fun.constructor -%} retval = {% endif -%}
+  {%- if fun.constructor -%}{{fun.clss}} obj = {% endif -%}
+  {%- if fun.clss and not fun.constructor -%}inst.{%- else -%} cv:: {%- endif -%}
   {{fun.name}}(
   {#- ----------- Required ------------- -#}
   {%- for arg in fun.req -%} 
@@ -26,10 +26,39 @@
   );
 {%- endmacro %}
 
-// create a full function invocation
-{%- macro generate(fun) -%}
 
-  {% if fun|ninputs or fun|noutputs %}
+/*
+ * composeWithExceptionHandler
+ * compose a function call wrapped in exception traps
+ * This macro takes an input a Method object and composes a function
+ * call through the compose() macro, then wraps the return in traps
+ * for cv::Exceptions, std::exceptions, and all generic exceptions
+ * and returns a useful error message to the Matlab interpreter
+ */
+{%- macro composeWithExceptionHandler(fun) -%}
+  // call the opencv function
+  // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
+  try {
+    {{ compose(fun) }}
+  } catch(cv::Exception& e) {
+    error(std::string("cv::exception caught: ").append(e.what()).c_str());
+  } catch(std::exception& e) {
+    error(std::string("std::exception caught: ").append(e.what()).c_str());
+  } catch(...) {
+    error("Uncaught exception occurred in {{fun.name}}");
+  }
+{%- endmacro %}
+
+
+/*
+ * handleInputs
+ * unpack input arguments from the Bridge
+ * Given an input Bridge object, this unpacks the object from the Bridge and
+ * casts them into the correct type
+ */
+{%- macro handleInputs(fun) %}
+
+  {% if fun|ninputs or (fun|noutputs and not fun.constructor) %}
   // unpack the arguments
   {# ----------- Inputs ------------- #}
   {% for arg in fun.req|inputs %}
@@ -45,26 +74,24 @@
   {% for opt in fun.opt|only|outputs %}
   {{opt.tp}} {{opt.name}};
   {% endfor %}
-  {% if not fun.rtp|void %}
+  {% if not fun.rtp|void and not fun.constructor %}
   {{fun.rtp}} retval;
   {% endif %}
   {% endif %}
 
-  // call the opencv function
-  // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
-  try {
-    {{ compose(fun) }}
-  } catch(cv::Exception& e) {
-    mexErrMsgTxt(std::string("cv::exception caught: ").append(e.what()).c_str());
-  } catch(std::exception& e) {
-    mexErrMsgTxt(std::string("std::exception caught: ").append(e.what()).c_str());
-  } catch(...) {
-    mexErrMsgTxt("Uncaught exception occurred in {{fun.name}}");
-  }
+{%- endmacro %}
+
+/*
+ * handleOutputs
+ * pack outputs into the bridge
+ * Given a set of outputs, this methods assigns them into the bridge for
+ * return to the calling method
+ */
+{%- macro handleOutputs(fun) %}
 
   {% if fun|noutputs %}
   // assign the outputs into the bridge
-  {% if not fun.rtp|void %}
+  {% if not fun.rtp|void and not fun.constructor %}
   outputs[0] = retval;
   {% endif %}
   {% for arg in fun.req|outputs %}
@@ -74,5 +101,4 @@
   outputs[{{loop.index0 + fun.rtp|void|not + fun.req|outputs|length}}] = {{opt.name}};
   {% endfor %}
   {% endif %}
-  
-{% endmacro %}
+{%- endmacro %}

@@ -44,9 +44,11 @@ void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% end
   {% endif %}
   {% endif %}
 
-  {{ functional.generate(fun) }}
+  {{ functional.handleInputs(fun) }}
+  {{ functional.composeWithExceptionHandler(fun) }}
+  {{ functional.handleOutputs(fun) }}
 
-  {%- if fun|noutputs %}
+  {% if fun|noutputs %}
   // push the outputs back to matlab
   for (size_t n = 0; n < static_cast<size_t>(nlhs); ++n) {
     plhs[n] = outputs[n].toMxArray().releaseOwnership();

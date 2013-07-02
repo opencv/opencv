@@ -13,7 +13,7 @@ class ParseTree(object):
         babel = Translator()
         for name, definitions in namespaces.items():
             class_tree = {}
-            functions = []
+            methods = []
             constants = []
             for defn in definitions:
                 obj = babel.translate(defn) 
@@ -21,13 +21,13 @@ class ParseTree(object):
                     continue
                 if type(obj) is Class or obj.clss:
                     self.insertIntoClassTree(obj, class_tree)
-                elif type(obj) is Function:
-                    functions.append(obj)
+                elif type(obj) is Method:
+                    methods.append(obj)
                 elif type(obj) is Constant:
                     constants.append(obj)
                 else:
                     raise TypeError('Unexpected object type: '+str(type(obj)))
-            self.namespaces.append(Namespace(name, constants, class_tree.values(), functions))
+            self.namespaces.append(Namespace(name, constants, class_tree.values(), methods))
 
     def insertIntoClassTree(self, obj, class_tree):
         cname = obj.name if type(obj) is Class else obj.clss
@@ -38,8 +38,8 @@ class ParseTree(object):
             class_tree[cname] = Class(cname)
         # insert the definition into the class
         val = class_tree[cname]
-        if type(obj) is Function:
-            val.functions.append(obj)
+        if type(obj) is Method:
+            val.methods.append(obj)
         elif type(obj) is Constant:
             val.constants.append(obj)
         else:
@@ -63,7 +63,7 @@ class Translator(object):
         # --- function ---
         # functions either need to have input arguments, or not uppercase names
         elif defn[3] or not self.translateName(defn[0]).split('_')[0].isupper():
-            return self.translateFunction(defn)
+            return self.translateMethod(defn)
         # --- constant ---
         else:
             return self.translateConstant(defn)
@@ -71,7 +71,7 @@ class Translator(object):
     def translateClass(self, defn):
         return Class()
 
-    def translateFunction(self, defn, class_tree=None):
+    def translateMethod(self, defn, class_tree=None):
         name = self.translateName(defn[0])
         clss = self.translateClassName(defn[0])
         rtp  = defn[1]
@@ -83,7 +83,7 @@ class Translator(object):
             if arg:
                 a = self.translateArgument(arg)
                 opt.append(a) if a.default else req.append(a)
-        return Function(name, clss, static, '', rtp, False, req, opt)
+        return Method(name, clss, static, '', rtp, False, req, opt)
             
     def translateConstant(self, defn):
         const = True if 'const' in defn[0] else False
@@ -116,34 +116,35 @@ class Translator(object):
 
 
 class Namespace(object):
-    def __init__(self, name='', constants=None, classes=None, functions=None):
+    def __init__(self, name='', constants=None, classes=None, methods=None):
         self.name = name
         self.constants = constants if constants else []
         self.classes   = classes   if classes   else []
-        self.functions = functions if functions else []
+        self.methods = methods if methods else []
 
     def __str__(self):
         return 'namespace '+self.name+' {\n\n'+\
           (join((c.__str__() for c in self.constants), '\n')+'\n\n' if self.constants else '')+\
-          (join((f.__str__() for f in self.functions), '\n')+'\n\n' if self.functions else '')+\
+          (join((f.__str__() for f in self.methods), '\n')+'\n\n' if self.methods else '')+\
           (join((o.__str__() for o in self.classes), '\n\n')        if self.classes   else '')+'\n};'
 
 class Class(object):
-    def __init__(self, name='', namespace='', constants=None, functions=None):
+    def __init__(self, name='', namespace='', constants=None, methods=None):
         self.name = name
         self.namespace = namespace
         self.constants = constants if constants else []
-        self.functions = functions if functions else []
+        self.methods = methods if methods else []
 
     def __str__(self):
         return 'class '+self.name+' {\n\t'+\
           (join((c.__str__() for c in self.constants), '\n\t')+'\n\n\t' if self.constants else '')+\
-          (join((f.__str__() for f in self.functions), '\n\t')          if self.functions else '')+'\n};'
+          (join((f.__str__() for f in self.methods), '\n\t')          if self.methods else '')+'\n};'
 
-class Function(object):
+class Method(object):
     def __init__(self, name='', clss='', static=False, namespace='', rtp='', const=False, req=None, opt=None):
         self.name  = name
         self.clss  = clss
+        self.constructor = True if name == clss else False
         self.static = static
         self.const = const
         self.namespace = namespace

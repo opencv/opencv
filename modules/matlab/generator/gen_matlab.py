@@ -58,9 +58,9 @@ class MatlabWrapperGenerator(object):
         # populate templates
         for namespace in parse_tree.namespaces:
             # functions
-            for function in namespace.functions:
-                populated = tfunction.render(fun=function, time=time, includes=namespace.name)
-                with open(output_source_dir+'/'+function.name+'.cpp', 'wb') as f:
+            for method in namespace.methods:
+                populated = tfunction.render(fun=method, time=time, includes=namespace.name)
+                with open(output_source_dir+'/'+method.name+'.cpp', 'wb') as f:
                     f.write(populated)
             # classes
             for clss in namespace.classes:
