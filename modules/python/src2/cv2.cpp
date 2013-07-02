@@ -97,6 +97,7 @@ using namespace cv;
 typedef cv::softcascade::ChannelFeatureBuilder softcascade_ChannelFeatureBuilder;
 
 typedef std::vector<uchar> vector_uchar;
+typedef std::vector<char> vector_char;
 typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
 typedef std::vector<double> vector_double;
