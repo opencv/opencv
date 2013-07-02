@@ -71,6 +71,30 @@
 #  endif
 #endif
 
+#ifdef _OPENMP
+#  define HAVE_OPENMP
+#endif
+
+#ifdef __APPLE__
+#  define HAVE_GCD
+#endif
+
+#if defined _MSC_VER && _MSC_VER >= 1600
+#  define HAVE_CONCURRENCY
+#endif
+
+#if defined HAVE_TBB
+#  define CV_PARALLEL_FRAMEWORK "tbb"
+#elif defined HAVE_CSTRIPES
+#  define CV_PARALLEL_FRAMEWORK "cstripes"
+#elif defined HAVE_OPENMP
+#  define CV_PARALLEL_FRAMEWORK "openmp"
+#elif defined HAVE_GCD
+#  define CV_PARALLEL_FRAMEWORK "gcd"
+#elif defined HAVE_CONCURRENCY
+#  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
+#endif
+
 namespace cv
 {
 #ifdef HAVE_TBB

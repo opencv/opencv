@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -10,13 +10,13 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Dachuan Zhao, dachuan@multicorewareinc.com
-//    Yao Wang yao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -43,52 +43,50 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-
 #include "precomp.hpp"
-#include <iomanip>
-
-#ifdef HAVE_OPENCL
-
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-
-PARAM_TEST_CASE(PyrDown, MatType, int)
+///////////// Moments ////////////////////////
+PERFTEST(Moments)
 {
-    int type;
-    int channels;
+    Mat src;
+    bool binaryImage = 0;
 
-    virtual void SetUp()
+    int all_type[] = {CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1};
+    std::string type_name[] = {"CV_8UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-    }
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << size << 'x' << size << "; " << type_name[j];
 
-};
+            gen(src, size, size, all_type[j], 0, 256);
 
+            cv::Moments CvMom = moments(src, binaryImage);
 
-TEST_P(PyrDown, Mat)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        cv::Size size(MWIDTH, MHEIGHT);
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Mat src = randomMat(rng, size, CV_MAKETYPE(type, channels), 0, 100, false);
+            CPU_ON;
+            moments(src, binaryImage);
+            CPU_OFF;
 
-        cv::ocl::oclMat gsrc(src), gdst;
-        cv::Mat dst_cpu;
-        cv::pyrDown(src, dst_cpu);
-        cv::ocl::pyrDown(gsrc, gdst);
+            cv::Moments oclMom;
+            WARMUP_ON;
+            oclMom = ocl::ocl_moments(src, binaryImage);
+            WARMUP_OFF;
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
+            Mat gpu_dst, cpu_dst;
+            HuMoments(CvMom, cpu_dst);
+            HuMoments(oclMom, gpu_dst);
+
+            GPU_ON;
+            ocl::ocl_moments(src, binaryImage);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            ocl::ocl_moments(src, binaryImage);
+            GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(gpu_dst, cpu_dst, .5);
+
+        }
+
     }
 }
-
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
-
-
-#endif // HAVE_OPENCL

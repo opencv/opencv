@@ -61,17 +61,6 @@
     #endif
 #endif
 
-#ifdef _OPENMP
-    #define HAVE_OPENMP
-#endif
-
-#ifdef __APPLE__
-    #define HAVE_GCD
-#endif
-
-#if defined _MSC_VER && _MSC_VER >= 1600
-    #define HAVE_CONCURRENCY
-#endif
 
 /* IMPORTANT: always use the same order of defines
    1. HAVE_TBB         - 3rdparty library, should be explicitly enabled
@@ -110,10 +99,6 @@
     #endif
 #endif
 
-#if defined HAVE_TBB || defined HAVE_CSTRIPES || defined HAVE_OPENMP || defined HAVE_GCD || defined HAVE_CONCURRENCY
-   #define HAVE_PARALLEL_FRAMEWORK
-#endif
-
 namespace cv
 {
     ParallelLoopBody::~ParallelLoopBody() {}
@@ -121,7 +106,7 @@ namespace cv
 
 namespace
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
     class ParallelLoopBodyWrapper
     {
     public:
@@ -218,7 +203,7 @@ public:
 static SchedPtr pplScheduler;
 #endif
 
-#endif // HAVE_PARALLEL_FRAMEWORK
+#endif // CV_PARALLEL_FRAMEWORK
 
 } //namespace
 
@@ -226,7 +211,7 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads != 0)
     {
@@ -281,7 +266,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     }
     else
 
-#endif // HAVE_PARALLEL_FRAMEWORK
+#endif // CV_PARALLEL_FRAMEWORK
     {
         (void)nstripes;
         body(range);
@@ -290,7 +275,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 
 int cv::getNumThreads(void)
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads == 0)
         return 1;
@@ -333,7 +318,7 @@ int cv::getNumThreads(void)
 void cv::setNumThreads( int threads )
 {
     (void)threads;
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
     numThreads = threads;
 #endif
 

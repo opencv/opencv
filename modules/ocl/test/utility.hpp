@@ -57,13 +57,12 @@ cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 
 
 void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
-//! return true if device supports specified feature and gpu module was built with support the feature.
-//bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
+// This function test if gpu_rst matches cpu_rst.
+// If the two vectors are not equal, it will return the difference in vector size
+// Else it will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
+// The smaller, the better matched
+double checkRectSimilarity(cv::Size sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
 
-//! return all devices compatible with current gpu module build.
-//const std::vector<cv::ocl::DeviceInfo>& devices();
-//! return all devices compatible with current gpu module build which support specified feature.
-//std::vector<cv::ocl::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
 //! read image from testdata folder.
 cv::Mat readImage(const std::string &fileName, int flags = cv::IMREAD_COLOR);

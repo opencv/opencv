@@ -17,16 +17,19 @@ using namespace cv;
 #define LOOP_NUM 10
 
 const static Scalar colors[] =  { CV_RGB(0,0,255),
-        CV_RGB(0,128,255),
-        CV_RGB(0,255,255),
-        CV_RGB(0,255,0),
-        CV_RGB(255,128,0),
-        CV_RGB(255,255,0),
-        CV_RGB(255,0,0),
-        CV_RGB(255,0,255)} ;
+                                  CV_RGB(0,128,255),
+                                  CV_RGB(0,255,255),
+                                  CV_RGB(0,255,0),
+                                  CV_RGB(255,128,0),
+                                  CV_RGB(255,255,0),
+                                  CV_RGB(255,0,0),
+                                  CV_RGB(255,0,255)
+                                } ;
+
 
 int64 work_begin = 0;
 int64 work_end = 0;
+string outputName;
 
 static void workBegin()
 {
@@ -37,34 +40,40 @@ static void workEnd()
     work_end += (getTickCount() - work_begin);
 }
 
-
-static double getTime(){
+static double getTime()
+{
     return work_end /((double)cvGetTickFrequency() * 1000.);
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-    cv::ocl::OclCascadeClassifierBuf& cascade,
-    double scale, bool calTime);
+             ocl::OclCascadeClassifierBuf& cascade,
+             double scale, bool calTime);
+
 
 void detectCPU( Mat& img, vector<Rect>& faces,
-    CascadeClassifier& cascade,
-    double scale, bool calTime);
+                CascadeClassifier& cascade,
+                double scale, bool calTime);
 
 void Draw(Mat& img, vector<Rect>& faces, double scale);
+
 
 // This function test if gpu_rst matches cpu_rst.
 // If the two vectors are not equal, it will return the difference in vector size
 // Else if will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
-double checkRectSimilarity(Size sz, std::vector<Rect>& cpu_rst, std::vector<Rect>& gpu_rst);
+double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst);
+
 
 int main( int argc, const char** argv )
 {
     const char* keys =
         "{ h | help       | false       | print help message }"
         "{ i | input      |             | specify input image }"
-        "{ t | template   | ../../../data/haarcascades/haarcascade_frontalface_alt.xml  | specify template file }"
+        "{ t | template   | haarcascade_frontalface_alt.xml |"
+        " specify template file path }"
         "{ c | scale      |   1.0       | scale image }"
-        "{ s | use_cpu    | false       | use cpu or gpu to process the image }";
+        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ o | output     | facedetect_output.jpg  |"
+        " specify output image save path(only works when input is images) }";
 
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
@@ -78,9 +87,10 @@ int main( int argc, const char** argv )
 
     bool useCPU = cmd.get<bool>("s");
     string inputName = cmd.get<string>("i");
+    outputName = cmd.get<string>("o");
     string cascadeName = cmd.get<string>("t");
     double scale = cmd.get<double>("c");
-    cv::ocl::OclCascadeClassifierBuf cascade;
+    ocl::OclCascadeClassifierBuf cascade;
     CascadeClassifier  cpu_cascade;
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
@@ -114,9 +124,10 @@ int main( int argc, const char** argv )
         return -1;
     }
 
+
     cvNamedWindow( "result", 1 );
-    std::vector<cv::ocl::Info> oclinfo;
-    int devnums = cv::ocl::getDevice(oclinfo);
+    vector<ocl::Info> oclinfo;
+    int devnums = ocl::getDevice(oclinfo);
     if( devnums < 1 )
     {
         std::cout << "no device found\n";
@@ -139,10 +150,12 @@ int main( int argc, const char** argv )
                 frame.copyTo( frameCopy );
             else
                 flip( frame, frameCopy, 0 );
-            if(useCPU){
+            if(useCPU)
+            {
                 detectCPU(frameCopy, faces, cpu_cascade, scale, false);
             }
-            else{
+            else
+            {
                 detect(frameCopy, faces, cascade, scale, false);
             }
             Draw(frameCopy, faces, scale);
@@ -150,7 +163,9 @@ int main( int argc, const char** argv )
                 goto _cleanup_;
         }
 
+
         waitKey(0);
+
 
 _cleanup_:
         cvReleaseCapture( &capture );
@@ -161,15 +176,18 @@ _cleanup_:
         vector<Rect> faces;
         vector<Rect> ref_rst;
         double accuracy = 0.;
-        for(int i = 0; i <= LOOP_NUM;i ++)
+        for(int i = 0; i <= LOOP_NUM; i ++)
         {
             cout << "loop" << i << endl;
-            if(useCPU){
+            if(useCPU)
+            {
                 detectCPU(image, faces, cpu_cascade, scale, i==0?false:true);
             }
-            else{
+            else
+            {
                 detect(image, faces, cascade, scale, i==0?false:true);
-                if(i == 0){
+                if(i == 0)
+                {
                     detectCPU(image, ref_rst, cpu_cascade, scale, false);
                     accuracy = checkRectSimilarity(image.size(), ref_rst, faces);
                 }
@@ -189,31 +207,30 @@ _cleanup_:
     }
 
     cvDestroyWindow("result");
-
     return 0;
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-    cv::ocl::OclCascadeClassifierBuf& cascade,
-    double scale, bool calTime)
+             ocl::OclCascadeClassifierBuf& cascade,
+             double scale, bool calTime)
 {
-    cv::ocl::oclMat image(img);
-    cv::ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
+    ocl::oclMat image(img);
+    ocl::oclMat gray, smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
     if(calTime) workBegin();
-    cv::ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
-    cv::ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
-    cv::ocl::equalizeHist( smallImg, smallImg );
+    ocl::cvtColor( image, gray, COLOR_BGR2GRAY );
+    ocl::resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
+    ocl::equalizeHist( smallImg, smallImg );
 
     cascade.detectMultiScale( smallImg, faces, 1.1,
-        3, 0
-        |CV_HAAR_SCALE_IMAGE
-        , Size(30,30), Size(0, 0) );
+                              3, 0
+                              |CV_HAAR_SCALE_IMAGE
+                              , Size(30,30), Size(0, 0) );
     if(calTime) workEnd();
 }
 
 void detectCPU( Mat& img, vector<Rect>& faces,
-    CascadeClassifier& cascade,
-    double scale, bool calTime)
+                CascadeClassifier& cascade,
+                double scale, bool calTime)
 {
     if(calTime) workBegin();
     Mat cpu_gray, cpu_smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
@@ -221,10 +238,11 @@ void detectCPU( Mat& img, vector<Rect>& faces,
     resize(cpu_gray, cpu_smallImg, cpu_smallImg.size(), 0, 0, INTER_LINEAR);
     equalizeHist(cpu_smallImg, cpu_smallImg);
     cascade.detectMultiScale(cpu_smallImg, faces, 1.1,
-        3, 0 | CV_HAAR_SCALE_IMAGE,
-        Size(30, 30), Size(0, 0));
+                             3, 0 | CV_HAAR_SCALE_IMAGE,
+                             Size(30, 30), Size(0, 0));
     if(calTime) workEnd();
 }
+
 
 void Draw(Mat& img, vector<Rect>& faces, double scale)
 {
@@ -239,31 +257,38 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
         radius = cvRound((r->width + r->height)*0.25*scale);
         circle( img, center, radius, color, 3, 8, 0 );
     }
-    cv::imshow( "result", img );
+    imshow( "result", img );
+    imwrite( outputName, img );
 }
 
-double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& ob2)
+
+double checkRectSimilarity(Size sz, vector<Rect>& ob1, vector<Rect>& ob2)
 {
     double final_test_result = 0.0;
     size_t sz1 = ob1.size();
     size_t sz2 = ob2.size();
 
     if(sz1 != sz2)
+    {
         return sz1 > sz2 ? (double)(sz1 - sz2) : (double)(sz2 - sz1);
+    }
     else
     {
-        cv::Mat cpu_result(sz, CV_8UC1);
+        if(sz1==0 && sz2==0)
+            return 0;
+        Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
         for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
         {
-            cv::Mat cpu_result_roi(cpu_result, *r);
+            Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
             cpu_result.copyTo(cpu_result);
         }
-        int cpu_area = cv::countNonZero(cpu_result > 0);
+        int cpu_area = countNonZero(cpu_result > 0);
 
-        cv::Mat gpu_result(sz, CV_8UC1);
+
+        Mat gpu_result(sz, CV_8UC1);
         gpu_result.setTo(0);
         for(vector<Rect>::const_iterator r2 = ob2.begin(); r2 != ob2.end(); r2++)
         {
@@ -272,11 +297,13 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
             gpu_result.copyTo(gpu_result);
         }
 
-        cv::Mat result_;
+        Mat result_;
         multiply(cpu_result, gpu_result, result_);
-        int result = cv::countNonZero(result_ > 0);
-
-        final_test_result = 1.0 - (double)result/(double)cpu_area;
+        int result = countNonZero(result_ > 0);
+        if(cpu_area!=0 && result!=0)
+            final_test_result = 1.0 - (double)result/(double)cpu_area;
+        else if(cpu_area==0 && result!=0)
+            final_test_result = -1;
     }
     return final_test_result;
 }

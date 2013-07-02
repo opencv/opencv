@@ -12,19 +12,20 @@ using namespace cv;
 using namespace cv::ocl;
 
 typedef unsigned char uchar;
-#define LOOP_NUM 10 
+#define LOOP_NUM 10
 int64 work_begin = 0;
 int64 work_end = 0;
 
-static void workBegin() 
-{ 
+static void workBegin()
+{
     work_begin = getTickCount();
 }
 static void workEnd()
 {
     work_end += (getTickCount() - work_begin);
 }
-static double getTime(){
+static double getTime()
+{
     return work_end * 1000. / getTickFrequency();
 }
 
@@ -94,14 +95,15 @@ int main(int argc, const char* argv[])
     //set this to save kernel compile time from second time you run
     ocl::setBinpath("./");
     const char* keys =
-        "{ help h           | false | print help message }"
-        "{ left l           |       | specify left image }"
-        "{ right r          |       | specify right image }"
-        "{ camera c         | 0     | enable camera capturing }"
-        "{ use_cpu s        | false | use cpu or gpu to process the image }"
-        "{ video v          |       | use video as input }"
-        "{ points           | 1000  | specify points count [GoodFeatureToTrack] }"
-        "{ min_dist         | 0     | specify minimal distance between points [GoodFeatureToTrack] }";
+        "{ help h           | false           | print help message }"
+        "{ left l           |                 | specify left image }"
+        "{ right r          |                 | specify right image }"
+        "{ camera c         | 0               | enable camera capturing }"
+        "{ use_cpu s        | false           | use cpu or gpu to process the image }"
+        "{ video v          |                 | use video as input }"
+        "{ output o         | pyrlk_output.jpg| specify output save path when input is images }"
+        "{ points           | 1000            | specify points count [GoodFeatureToTrack] }"
+        "{ min_dist         | 0               | specify minimal distance between points [GoodFeatureToTrack] }";
 
     CommandLineParser cmd(argc, argv, keys);
 
@@ -115,10 +117,10 @@ int main(int argc, const char* argv[])
     string fname0 = cmd.get<string>("left");
     string fname1 = cmd.get<string>("right");
     string vdofile = cmd.get<string>("video");
+    string outfile = cmd.get<string>("output");
     int points = cmd.get<int>("points");
     double minDist = cmd.get<double>("min_dist");
     bool useCPU = cmd.has("s");
-    bool useCamera = cmd.has("c");
     int inputName = cmd.get<int>("c");
 
     oclMat d_nextPts, d_status;
@@ -131,21 +133,9 @@ int main(int argc, const char* argv[])
     vector<unsigned char> status(points);
     vector<float> err;
 
-    if (frame0.empty() || frame1.empty())
-    {
-        useCamera = true;
-        defaultPicturesFail = true;
-        VideoCapture capture(inputName);
-        if (!capture.isOpened())
-        {
-            cout << "Can't load input images" << endl;
-            return -1;
-        }
-    }
-
     cout << "Points count : " << points << endl << endl;
 
-    if (useCamera)
+    if (frame0.empty() || frame1.empty())
     {
         VideoCapture capture;
         Mat frame, frameCopy;
@@ -238,10 +228,10 @@ _cleanup_:
     else
     {
 nocamera:
-        for(int i = 0; i <= LOOP_NUM;i ++) 
+        for(int i = 0; i <= LOOP_NUM; i ++)
         {
             cout << "loop" << i << endl;
-            if (i > 0) workBegin();     
+            if (i > 0) workBegin();
 
             if (useCPU)
             {
@@ -271,8 +261,8 @@ nocamera:
                 cout << getTime() / LOOP_NUM << " ms" << endl;
 
                 drawArrows(frame0, pts, nextPts, status, Scalar(255, 0, 0));
-
                 imshow("PyrLK [Sparse]", frame0);
+                imwrite(outfile, frame0);
             }
         }
     }
