@@ -269,6 +269,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         Log.d(TAG, "Preview Frame received. Frame size: " + frame.length);
         synchronized (this) {
             mFrameChain[1 - mChainIdx].put(0, 0, frame);
+			/* Maybe it is enough to update the mCameraFrame reference everytime when we
+			   receive a new camera frame or we update the referenz before we call the
+               deliverAndDrawFrame() method in the CameraWorker Thread */
+			mCameraFrame = new JavaCameraFrame(mFrameChain[1 - mChainIdx], mFrameWidth, mFrameHeight);
             this.notify();
         }
         if (mCamera != null)
