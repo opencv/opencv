@@ -296,9 +296,14 @@ public:
 	 */
 	Point2f getPosition() const;
 
+	/**
+	 * \brief Set the position
+	 * \param position The position
+	 */
+	void setPosition( Point2f position );
+
 protected:
 	Point2f position;
-	String className;
 
 };
 
