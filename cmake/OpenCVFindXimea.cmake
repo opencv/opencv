@@ -23,7 +23,7 @@ if(WIN32)
   if(EXISTS ${XIMEA_PATH})
     set(XIMEA_FOUND 1)
     # set LIB folders
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    if(CMAKE_COMPILER_IS_64)
       link_directories("${XIMEA_PATH}/x64")
     else()
       link_directories("${XIMEA_PATH}/x86")
