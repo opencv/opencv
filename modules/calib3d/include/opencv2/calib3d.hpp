@@ -278,8 +278,8 @@ CV_EXPORTS int recoverPose( InputArray E, InputArray points1, InputArray points2
 
 
 //! finds coordinates of epipolar lines corresponding the specified points
-CV_EXPORTS void computeCorrespondEpilines( InputArray points, int whichImage,
-                                           InputArray F, OutputArray lines );
+CV_EXPORTS_W void computeCorrespondEpilines( InputArray points, int whichImage,
+                                             InputArray F, OutputArray lines );
 
 CV_EXPORTS_W void triangulatePoints( InputArray projMatr1, InputArray projMatr2,
                                      InputArray projPoints1, InputArray projPoints2,

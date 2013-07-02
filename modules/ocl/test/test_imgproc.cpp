@@ -1573,6 +1573,47 @@ TEST_P(Convolve, Mat)
     }
 }
 
+//////////////////////////////// ColumnSum //////////////////////////////////////
+PARAM_TEST_CASE(ColumnSum, cv::Size)
+{
+    cv::Size size;
+    cv::Mat src;
+
+    virtual void SetUp()
+    {
+        size = GET_PARAM(0);
+    }
+};
+
+TEST_P(ColumnSum, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_32FC1);
+    cv::ocl::oclMat d_dst;
+    cv::ocl::oclMat d_src(src);
+
+    cv::ocl::columnSum(d_src, d_dst);
+
+    cv::Mat dst(d_dst);
+
+    for (int j = 0; j < src.cols; ++j)
+    {
+        float gold = src.at<float>(0, j);
+        float res = dst.at<float>(0, j);
+        ASSERT_NEAR(res, gold, 1e-5);
+    }
+
+    for (int i = 1; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            float gold = src.at<float>(i, j) += src.at<float>(i - 1, j);
+            float res = dst.at<float>(i, j);
+            ASSERT_NEAR(res, gold, 1e-5);
+        }
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////
+
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
                             ONE_TYPE(CV_8UC1),
                             NULL_TYPE,
@@ -1688,7 +1729,6 @@ INSTANTIATE_TEST_CASE_P(ImgProc, CLAHE, Combine(
                         Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300)),
                         Values(0.0, 40.0)));
 
-//INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
-//                            Values(CV_32FC1, CV_32FC1),
-//                            Values(false))); // Values(false) is the reserved parameter
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
+
 #endif // HAVE_OPENCL

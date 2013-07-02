@@ -245,6 +245,11 @@ namespace cv
             operator Mat() const;
             void download(cv::Mat &m) const;
 
+            //! convert to _InputArray
+            operator _InputArray();
+
+            //! convert to _OutputArray
+            operator _OutputArray();
 
             //! returns a new oclMatrix header for the specified row
             oclMat row(int y) const;
@@ -386,6 +391,9 @@ namespace cv
             int wholecols;
         };
 
+        // convert InputArray/OutputArray to oclMat references
+        CV_EXPORTS oclMat& getOclMatRef(InputArray src);
+        CV_EXPORTS oclMat& getOclMatRef(OutputArray src);
 
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays

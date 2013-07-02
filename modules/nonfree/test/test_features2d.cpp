@@ -1149,3 +1149,76 @@ protected:
 
 TEST(Features2d_SIFTHomographyTest, regression) { CV_DetectPlanarTest test("SIFT", 80); test.safe_run(); }
 TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
+
+class FeatureDetectorUsingMaskTest : public cvtest::BaseTest
+{
+public:
+    FeatureDetectorUsingMaskTest(const Ptr<FeatureDetector>& featureDetector) :
+        featureDetector_(featureDetector)
+    {
+        CV_Assert(!featureDetector_.empty());
+    }
+
+protected:
+
+    void run(int)
+    {
+        const int nStepX = 2;
+        const int nStepY = 2;
+
+        const string imageFilename = string(ts->get_data_path()) + "/features2d/tsukuba.png";
+
+        Mat image = imread(imageFilename);
+        if(image.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        Mat mask(image.size(), CV_8U);
+
+        const int stepX = image.size().width / nStepX;
+        const int stepY = image.size().height / nStepY;
+
+        vector<KeyPoint> keyPoints;
+        vector<Point2f> points;
+        for(int i=0; i<nStepX; ++i)
+            for(int j=0; j<nStepY; ++j)
+            {
+
+                mask.setTo(0);
+                Rect whiteArea(i * stepX, j * stepY, stepX, stepY);
+                mask(whiteArea).setTo(255);
+
+                featureDetector_->detect(image, keyPoints, mask);
+                KeyPoint::convert(keyPoints, points);
+
+                for(size_t k=0; k<points.size(); ++k)
+                {
+                    if ( !whiteArea.contains(points[k]) )
+                    {
+                        ts->printf(cvtest::TS::LOG, "The feature point is outside of the mask.");
+                        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                }
+            }
+
+        ts->set_failed_test_info( cvtest::TS::OK );
+    }
+
+    Ptr<FeatureDetector> featureDetector_;
+};
+
+TEST(Features2d_SIFT_using_mask, regression)
+{
+    FeatureDetectorUsingMaskTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"));
+    test.safe_run();
+}
+
+TEST(DISABLED_Features2d_SURF_using_mask, regression)
+{
+    FeatureDetectorUsingMaskTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"));
+    test.safe_run();
+}
