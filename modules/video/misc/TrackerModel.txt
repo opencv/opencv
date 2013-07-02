@@ -14,20 +14,24 @@ class Typedef << (T,#FF7700) >>{
 class TrackerModel{
 	-vector<ConfidenceMap> confidenceMaps;
 	-Trajectory trajectory;
+	-Ptr<TrackerStateEstimator> stateEstimator;
 	...
-	TrackerModel(string trackeStateEstimatorType);
+	TrackerModel();
 	~TrackerModel();
-	+ConfidenceMap modelEstimation(const vector<Mat>& responses);
-	+void modelUpdate(ConfidenceMap confidenceMap);
+	+bool setTrackerStateEstimator(Ptr<TrackerStateEstimator> trackerStateEstimator);
+	+void modelEstimation(const vector<Mat>& responses, ConfidenceMap& confidenceMap);
+	+void modelUpdate(ConfidenceMap& confidenceMap);
 	+void setLastTargetState(const TrackerTargetState lastTargetState);
+	+void runStateEstimator();
+	+void run(const vector<Mat>& responses, ConfidenceMap& confidenceMap);
 	+const vector<ConfidenceMap>& getConfidenceMaps();
 	+const ConfidenceMap& getLastConfidenceMap();
 }
 class TrackerTargetState <<virtual>>{
-	Point2f position;
+	Point2f targetPosition;
 	---
-	Point2f getPosition();
-	void setPosition(Point2f position);
+	Point2f getTargetPosition();
+	void setTargetPosition(Point2f position);
 }
 class TrackerTargetState 
 note bottom: Each tracker can create own state

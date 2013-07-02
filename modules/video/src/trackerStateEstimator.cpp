@@ -47,44 +47,83 @@ namespace cv
 {
 
 /*
- *  Tracker
+ *  TrackerStateEstimator
  */
 
-Tracker::~Tracker()
-{}
-
-bool Tracker::init( const Mat& image, const Rect& boundingBox )
+TrackerStateEstimator::~TrackerStateEstimator()
 {
 
-    if( image.empty() )
-        return false;
-
-    //instantiates the TrackerFeatureSet
-    featureSet = new TrackerFeatureSet;
-
-    //instantiates the TrackerSampler
-    sampler = new TrackerSampler;
-
-    //instantiates the TrackerModel
-    model = new TrackerModel;
-
-    return initImpl( image, boundingBox );
 }
 
-bool Tracker::update( const Mat& image, Rect& boundingBox )
+Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<ConfidenceMap>& confidenceMaps )
 {
+	if( confidenceMaps.size() == 0 )
+		return NULL;
 
-    if( image.empty() )
-        return false;
+	return estimateImpl( confidenceMaps );
 
-    return updateImpl( image, boundingBox );
 }
 
 
-Ptr<Tracker> Tracker::create( const String& trackerType )
+Ptr<TrackerStateEstimator> TrackerStateEstimator::create( const String& trackeStateEstimatorType )
 {
 
-    return Algorithm::create<Tracker>("Tracker." + trackerType);
+	if( trackeStateEstimatorType.find("SVM") == 0 )
+	{
+		return new TrackerStateEstimatorSVM();
+	}
+
+	if( trackeStateEstimatorType.find("BOOSTING") == 0 )
+	{
+		return new TrackerStateEstimatorBoosting();
+	}
+
+
+	CV_Error(-1, "Tracker state estimator type not supported");
+	return NULL;
+}
+
+String TrackerStateEstimator::getClassName() const
+{
+	return className;
+}
+
+/**
+ * TrackerStateEstimatorBoosting
+ */
+TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( )
+{
+	className = "BOOSTING";
+}
+
+TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
+{
+
+}
+
+Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
+{
+	return confidenceMaps.back().back().first;
+}
+
+
+
+/**
+ * TrackerStateEstimatorSVM
+ */
+TrackerStateEstimatorSVM::TrackerStateEstimatorSVM( )
+{
+	className = "SVM";
+}
+
+TrackerStateEstimatorSVM::~TrackerStateEstimatorSVM()
+{
+
+}
+
+Ptr<TrackerTargetState> TrackerStateEstimatorSVM::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
+{
+	return confidenceMaps.back().back().first;
 }
 
 

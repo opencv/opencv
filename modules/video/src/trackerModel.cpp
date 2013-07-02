@@ -47,45 +47,94 @@ namespace cv
 {
 
 /*
- *  Tracker
+ *  TrackerModel
  */
 
-Tracker::~Tracker()
-{}
-
-bool Tracker::init( const Mat& image, const Rect& boundingBox )
+TrackerModel::TrackerModel()
 {
-
-    if( image.empty() )
-        return false;
-
-    //instantiates the TrackerFeatureSet
-    featureSet = new TrackerFeatureSet;
-
-    //instantiates the TrackerSampler
-    sampler = new TrackerSampler;
-
-    //instantiates the TrackerModel
-    model = new TrackerModel;
-
-    return initImpl( image, boundingBox );
+	stateEstimator = NULL;
 }
 
-bool Tracker::update( const Mat& image, Rect& boundingBox )
+TrackerModel::~TrackerModel()
 {
 
-    if( image.empty() )
-        return false;
+}
 
-    return updateImpl( image, boundingBox );
+bool TrackerModel::setTrackerStateEstimator( Ptr<TrackerStateEstimator> trackerStateEstimator )
+{
+	if( stateEstimator != NULL )
+	{
+		return false;
+	}
+
+	stateEstimator = trackerStateEstimator;
+	return true;
+}
+
+void TrackerModel::modelEstimation( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+{
+
+}
+
+void TrackerModel::modelUpdate( ConfidenceMap& confidenceMap )
+{
+	confidenceMaps.push_back( confidenceMap );
+}
+
+void TrackerModel::runStateEstimator()
+{
+	if( stateEstimator == NULL )
+	{
+		CV_Error(-1, "Tracker state estimator is not setted");
+		return;
+	}
+	Ptr<TrackerTargetState> targetState = stateEstimator->estimate(confidenceMaps);
+	setLastTargetState(targetState);
+}
+
+void TrackerModel::setLastTargetState( const Ptr<TrackerTargetState>& lastTargetState )
+{
+	trajectory.push_back(lastTargetState);
+}
+
+void TrackerModel::run( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+{
+	//model estimation
+	modelEstimation( responses, confidenceMap );
+
+	//model update
+	modelUpdate( confidenceMap );
+
+	//state estimation
+	runStateEstimator();
+}
+
+const std::vector<ConfidenceMap>& TrackerModel::getConfidenceMaps() const
+{
+	return confidenceMaps;
+}
+
+const ConfidenceMap& TrackerModel::getLastConfidenceMap() const
+{
+	return confidenceMaps.back();
 }
 
 
-Ptr<Tracker> Tracker::create( const String& trackerType )
-{
+/*
+ *  TrackerTargetState
+ */
 
-    return Algorithm::create<Tracker>("Tracker." + trackerType);
+Point2f TrackerTargetState::getTargetPosition() const
+{
+	return targetPosition;
+}
+
+
+void TrackerTargetState::setTargetPosition( Point2f position )
+{
+	targetPosition = position;
 }
 
 
 } /* namespace cv */
+

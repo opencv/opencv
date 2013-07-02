@@ -13,6 +13,10 @@ note right: Algorithms
 class Algorithm {
 }
 class Tracker{
+	Ptr<TrackerFeatureSet> featureSet;
+	Ptr<TrackerSampler> sampler;
+	Ptr<TrackerModel> model;
+	---
 	+static Ptr<Tracker> create(string trackerType, TrackerParams p);
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
