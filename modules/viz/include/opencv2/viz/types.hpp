@@ -113,4 +113,22 @@ namespace temp_viz
 
     template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
     { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
+    
+    class Widget
+    {
+    public:
+        Widget();
+        Widget(const String &id);
+        Widget(const Widget &other);
+        
+        void setId(const String &id);
+        void setColor(const Color &color);
+        void setPose(const Affine3f &pose);
+        void updatePose(const Affine3f &pose);
+        Affine3f getPose() const;
+    private:
+        class Impl;
+        cv::Ptr<Impl> impl_;
+        friend struct WidgetAccessor;
+    }; 
 }

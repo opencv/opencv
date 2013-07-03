@@ -50,7 +50,6 @@
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/mesh_load.hpp>
 
-
 cv::Mat cvcloud_load()
 {
     cv::Mat cloud(1, 20000, CV_32FC3);
