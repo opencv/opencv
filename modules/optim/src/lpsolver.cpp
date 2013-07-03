@@ -25,68 +25,232 @@ void print_matrix(const Mat& X){
       printf("]\n");
     } 
 }
-namespace solveLP_aux{
-    //return -1 if problem is unfeasible, 0 if feasible
-    //in latter case it returns feasible solution in z with homogenised b's and v
-    int initialize_simplex(const Mat& c, Mat& b, Mat& z,double& v);
+void print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
+    printf("\tprint simplex state\n");
+
+    printf("v=%g\n",v);
+
+    printf("here c goes\n");
+    print_matrix(c);
+
+    printf("non-basic: ");
+    for (std::vector<int>::const_iterator it = N.begin() ; it != N.end(); ++it){
+        printf("%d, ",*it);
+    }
+    printf("\n");
+
+    printf("here b goes\n");
+    print_matrix(b);
+    printf("basic: ");
+
+    for (std::vector<int>::const_iterator it = B.begin() ; it != B.end(); ++it){
+        printf("%d, ",*it);
+    }
+    printf("\n");
 }
+
+namespace solveLP_aux{
+    /**Due to technical considerations, the format of input b and c is somewhat special:
+     *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
+     by this procedure - it should not be cleaned before the call to procedure and may contain mess after
+     it also initializes N and B and does not make any assumptions about their init values
+     * @return -1 if problem is unfeasible, 0 if feasible.
+    */
+    int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+    inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index);
+    /**@return -2 means the problem is unbdd, 1 means multiple solutions, 0 means successful.
+     */
+    int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+    void swap_columns(Mat_<double>& A,int col1,int col2);
+}
+
+//return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
 int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
-    printf("call to solveLP\n");//-3(incorrect),-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
+    printf("call to solveLP\n");
 
     //sanity check (size, type, no. of channels) (and throw exception, if appropriate)
-    if(Func.type()!=CV_64FC1 || Constr.type()!=CV_64FC1){
-        printf("both Func and Constr should be one-channel matrices of double's\n");
-        return -3;
+    CV_Assert(Func.type()==CV_64FC1);
+    CV_Assert(Constr.type()==CV_64FC1);
+    CV_Assert(Func.rows==1);
+    CV_Assert(Constr.cols-Func.cols==1);
+
+    //copy arguments for we will shall modify them
+    Mat_<double> bigC=Mat_<double>(1,Func.cols+1),
+        bigB=Mat_<double>(Constr.rows,Constr.cols+1);
+    Func.copyTo(bigC.colRange(1,bigC.cols));
+    Constr.copyTo(bigB.colRange(1,bigB.cols));
+    double v=0;
+    vector<int> N,B;
+
+    if(solveLP_aux::initialize_simplex(bigC,bigB,v,N,B)==-1){
+        return -1;
     }
-    if(Func.rows!=1){
-        printf("Func should be row-vector\n");
-        return -3;
+    Mat_<double> c=bigC.colRange(1,bigC.cols),
+        b=bigB.colRange(1,bigB.cols);
+
+    int res=0;
+    if((res=solveLP_aux::inner_simplex(c,b,v,N,B))==-2){
+        return -2;
     }
-    vector<int> N(Func.cols);
-    N[0]=1;
+
+    //return the optimal solution
+    const int z_size[]={1,c.cols};
+    z.create(2,z_size,CV_64FC1);
+    MatIterator_<double> it=z.begin<double>();
+    for(int i=1;i<=c.cols;i++,it++){
+        std::vector<int>::iterator pos=B.begin();
+        if((pos=std::find(B.begin(),B.end(),i))==B.end()){
+            *it=0;
+        }else{
+            *it=b.at<double>(pos-B.begin(),b.cols-1);
+        }
+    }
+
+    return res;
+}
+
+int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
+    N.resize(c.cols);
+    N[0]=0;
     for (std::vector<int>::iterator it = N.begin()+1 ; it != N.end(); ++it){
         *it=it[-1]+1;
     }
-    if((Constr.cols-1)!=Func.cols){
-        printf("Constr should have one more column when compared to Func\n");
-        return -3;
-    }
-    vector<int> B(Constr.rows);
-    B[0]=Func.cols+1;
+    B.resize(b.rows);
+    B[0]=N.size();
     for (std::vector<int>::iterator it = B.begin()+1 ; it != B.end(); ++it){
         *it=it[-1]+1;
     }
+    v=0;
 
-    //copy arguments for we will shall modify them
-    Mat c=Func.clone(),
-        b=Constr.clone();
-    double v=0;
+    int k=0;
+    {
+        double min=DBL_MAX;
+        for(int i=0;i<b.rows;i++){
+            if(b(i,b.cols-1)<min){
+                min=b(i,b.cols-1);
+                k=i;
+            }
+        }
+    }
 
-    solveLP_aux::initialize_simplex(c,b,z,v);
+    if(b(k,b.cols-1)>=0){
+        N.erase(N.begin());
+        return 0;
+    }
 
+    Mat_<double> old_c=c.clone();
+    c=0;
+    c(0,0)=-1;
+    for(int i=0;i<b.rows;i++){
+        b(i,0)=-1;
+    }
+
+    print_simplex_state(c,b,v,N,B);
+
+    printf("\tWE MAKE PIVOT\n");
+    pivot(c,b,v,N,B,k,0);
+
+    print_simplex_state(c,b,v,N,B);
+
+    inner_simplex(c,b,v,N,B);
+
+    printf("\tAFTER INNER_SIMPLEX\n");
+    print_simplex_state(c,b,v,N,B);
+
+    vector<int>::iterator it=std::find(B.begin(),B.end(),0);
+    if(it!=B.end()){
+        int it_offset=it-B.begin();
+        if(b(it_offset,b.cols-1)>0){
+            return -1;
+        }
+        pivot(c,b,v,N,B,it_offset,0);
+    }
+
+    it=std::find(N.begin(),N.end(),0);
+    int it_offset=it-N.begin();
+    std::iter_swap(it,N.begin());
+    swap_columns(c,it_offset,0);
+    swap_columns(b,it_offset,0);
+
+    printf("after swaps\n");
+    print_simplex_state(c,b,v,N,B);
+
+    //start from 1, because we ignore x_0
+    c=0;
+    v=0;
+    for(int i=1;i<old_c.cols;i++){
+        if((it=std::find(N.begin(),N.end(),i))!=N.end()){
+            printf("i=%d from nonbasic\n",i);
+            fflush(stdout);
+            int it_offset=it-N.begin();
+            c(0,it_offset)+=old_c(0,i);     
+            print_matrix(c);
+        }else{
+            //cv::Mat_
+            printf("i=%d from basic\n",i);
+            fflush(stdout);
+            int it_offset=std::find(B.begin(),B.end(),i)-B.begin();
+            c-=old_c(0,i)*b.row(it_offset).colRange(0,b.cols-1);
+            v+=old_c(0,i)*b(it_offset,b.cols-1);
+            print_matrix(c);
+        }
+    }
+
+    printf("after restore\n");
+    print_simplex_state(c,b,v,N,B);
+
+    N.erase(N.begin());
+    return 0;
+}
+
+int solveLP_aux::inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     int count=0;
     while(1){
         printf("iteration #%d\n",count++);
 
         MatIterator_<double> pos_ptr;
-        int e=0;
-        for(pos_ptr=c.begin<double>();(*pos_ptr<=0) && pos_ptr!=c.end<double>();pos_ptr++,e++);
-        if(pos_ptr==c.end<double>()){
-            break;
+        int e=-1,pos_ctr=0,min_var=INT_MAX;
+        bool all_nonzero=true;
+        for(pos_ptr=c.begin();pos_ptr!=c.end();pos_ptr++,pos_ctr++){
+            if(*pos_ptr==0){
+                all_nonzero=false;
+            }
+            if(*pos_ptr>0){
+                if(N[pos_ctr]<min_var){
+                    e=pos_ctr;
+                    min_var=N[pos_ctr];
+                }
+            }
         }
-        printf("offset of first nonneg coef is %d\n",e);//TODO: choose the var with the smallest index
+        if(e==-1){
+            printf("hello from e==-1\n");
+            print_matrix(c);
+            if(all_nonzero==true){
+                return 0;
+            }else{
+                return 1;
+            }
+        }
+
+
+        /*for(pos_ptr=c.begin();(*pos_ptr<=0) && pos_ptr!=c.end();pos_ptr++,e++);//TODO: select the smallest index var w/ pos coef
+        if(pos_ptr==c.end()){
+            return 0;
+        }*/
 
         int l=-1;
+        min_var=INT_MAX;
         double min=DBL_MAX;
         int row_it=0;
         double ite=0;
-        MatIterator_<double> min_row_ptr=b.begin<double>();
-        for(MatIterator_<double> it=b.begin<double>();it!=b.end<double>();it+=b.cols,row_it++){
+        MatIterator_<double> min_row_ptr=b.begin();
+        for(MatIterator_<double> it=b.begin();it!=b.end();it+=b.cols,row_it++){
             double myite=0;
-            //check constraints, select the tightest one, TODO: smallest index
+            //check constraints, select the tightest one, reinforcing Bland's rule
             if((myite=it[e])>0){
                 double val=it[b.cols-1]/myite;
-                if(val<min){
+                if(val<min || (val==min && B[row_it]<min_var)){
+                    min_var=B[row_it];
                     min_row_ptr=it;
                     ite=myite;
                     min=val;
@@ -100,52 +264,7 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
         }
         printf("the tightest constraint is in row %d with %g\n",l,min);
 
-        //pivoting:
-        {
-            int col_count=0;
-            for(MatIterator_<double> it=min_row_ptr;col_count<b.cols;col_count++,it++){
-                if(col_count==e){
-                    *it=1/ite;
-                }else{
-                    *it/=ite;
-                }
-            }
-        }
-        int row_count=0;
-        for(MatIterator_<double> it=b.begin<double>();row_count<b.rows;row_count++){
-            printf("offset: %d\n",it-b.begin<double>());
-            if(row_count==l){
-                it+=b.cols;
-            }else{
-                //remaining constraints
-                double coef=it[e];
-                MatIterator_<double> shadow_it=min_row_ptr;
-                for(int col_it=0;col_it<(b.cols);col_it++,it++,shadow_it++){
-                    if(col_it==e){
-                        *it=-coef*(*shadow_it);
-                    }else{
-                        *it-=coef*(*shadow_it);
-                    }
-                }
-            }
-        }
-        //objective function
-        double coef=*pos_ptr;
-        MatIterator_<double> shadow_it=min_row_ptr;
-        MatIterator_<double> it=c.begin<double>();
-        for(int col_it=0;col_it<(b.cols-1);col_it++,it++,shadow_it++){
-            if(col_it==e){
-                *it=-coef*(*shadow_it);
-            }else{
-                *it-=coef*(*shadow_it);
-            }
-        }
-        v+=coef*(*shadow_it);
-        
-        //new basis and nonbasic sets
-        int tmp=N[e];
-        N[e]=B[l];
-        B[l]=tmp;
+        solveLP_aux::pivot(c,b,v,N,B,l,e);
 
         printf("objective, v=%g\n",v);
         print_matrix(c);
@@ -161,105 +280,57 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
         }
         printf("\n");
     }
-
-    //return the optimal solution
-    //z=cv::Mat_<double>(1,c.cols,0);
-    MatIterator_<double> it=z.begin<double>();
-    for(int i=1;i<=c.cols;i++,it++){
-        std::vector<int>::iterator pos=B.begin();
-        if((pos=std::find(B.begin(),B.end(),i))==B.end()){
-            *it+=0;
-        }else{
-            *it+=b.at<double>(pos-B.begin(),b.cols-1);
-        }
-    }
-
-    return 0;
 }
-int solveLP_aux::initialize_simplex(const Mat& c, Mat& b, Mat& z,double& v){//TODO
-    z=Mat_<double>(1,c.cols,0.0);
-    v=0;
-    return 0;
 
-    cv::Mat mod_b=(cv::Mat_<double>(1,b.rows));
-    bool gen_new_sol_flag=false,hom_sol_given=false;
-    if(z.type()!=CV_64FC1 || z.rows!=1 || z.cols!=c.cols || (hom_sol_given=(countNonZero(z)==0))){
-        printf("line %d\n",__LINE__);
-        if(hom_sol_given==false){
-            printf("line %d, %d\n",__LINE__,hom_sol_given);
-            z=cv::Mat_<double>(1,c.cols,(double)0);
-        }
-        //check homogeneous solution
-        printf("line %d\n",__LINE__);
-        for(MatIterator_<double> b_it=b.begin<double>()+b.cols-1,mod_b_it=mod_b.begin<double>();mod_b_it!=mod_b.end<double>();
-                b_it+=b.cols,mod_b_it++){
-            if(*b_it<0){
-                //if no - we need feasible solution
-                gen_new_sol_flag=true;
-                break;
-            }
-        }
-        printf("line %d, gen_new_sol_flag=%d - I've got here!!!\n",__LINE__,gen_new_sol_flag);
-        //if yes - we have feasible solution!
-    }else{
-        //check for feasibility
-        MatIterator_<double> it=b.begin<double>();
-        for(MatIterator_<double> mod_b_it=mod_b.begin<double>();it!=b.end<double>();mod_b_it++){
-            double sum=0;
-            for(MatIterator_<double> z_it=z.begin<double>();z_it!=z.end<double>();z_it++,it++){
-                sum+=(*it)*(*z_it);
-            }
-            if((*mod_b_it=(*it-sum))<0){
-                break;
-            }
-            it++;
-        }
-        if(it==b.end<double>()){
-            //z contains feasible solution - just homogenise b's TODO: and v
-            gen_new_sol_flag=false;
-            for(MatIterator_<double> b_it=b.begin<double>()+b.cols-1,mod_b_it=mod_b.begin<double>();mod_b_it!=mod_b.end<double>();
-                    b_it+=b.cols,mod_b_it++){
-                *b_it=*mod_b_it;
-            }
+inline void solveLP_aux::pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
+    double coef=b(leaving_index,entering_index);
+    for(int i=0;i<b.cols;i++){
+        if(i==entering_index){
+            b(leaving_index,i)=1/coef;
         }else{
-            //if no - we need feasible solution
-            gen_new_sol_flag=true;
+            b(leaving_index,i)/=coef;
         }
     }
-    if(gen_new_sol_flag==true){
-        //we should generate new solution - TODO
-        printf("we should generate new solution\n");
-        Mat new_c=Mat_<double>(1,c.cols+1,0.0),
-            new_b=Mat_<double>(b.rows,b.cols+1,-1.0),
-            new_z=Mat_<double>(1,c.cols+1,0.0);
 
-        new_c.end<double>()[-1]=-1;
-        c.copyTo(new_c.colRange(0,new_c.cols-1));
-
-        b.col(b.cols-1).copyTo(new_b.col(new_b.cols-1));
-        b.colRange(0,b.cols-1).copyTo(new_b.colRange(0,new_b.cols-2));
-
-        Mat b_slice=b.col(b.cols-1);
-        new_z.end<double>()[-1]=-*(std::min_element(b_slice.begin<double>(),b_slice.end<double>()));
-
-        /*printf("matrix new_c\n");
-        print_matrix(new_c);
-        printf("matrix new_b\n");
-        print_matrix(new_b);
-        printf("matrix new_z\n");
-        print_matrix(new_z);*/
-        
-        printf("run for the second time!\n");
-        solveLP(new_c,new_b,new_z);
-        printf("original z was\n");
-        print_matrix(z);
-        printf("that's what I've got\n");
-        print_matrix(new_z);
-        printf("for the constraints\n");
-        print_matrix(b);
-        return 0;
+    for(int i=0;i<b.rows;i++){
+        if(i!=leaving_index){
+            double coef=b(i,entering_index);
+            for(int j=0;j<b.cols;j++){
+                if(j==entering_index){
+                    b(i,j)=-coef*b(leaving_index,j);
+                }else{
+                    b(i,j)-=(coef*b(leaving_index,j));
+                }
+            }
+        }
     }
+
+    //objective function
+    coef=c(0,entering_index);
+    for(int i=0;i<(b.cols-1);i++){
+        if(i==entering_index){
+            c(0,i)=-coef*b(leaving_index,i);
+        }else{
+            c(0,i)-=coef*b(leaving_index,i);
+        }
+    }
+    printf("v was %g\n",v);
+    v+=coef*b(leaving_index,b.cols-1);
     
+    int tmp=N[entering_index];
+    N[entering_index]=B[leaving_index];
+    B[leaving_index]=tmp;
 }
 
+void solveLP_aux::swap_columns(Mat_<double>& A,int col1,int col2){
+    for(int i=0;i<A.rows;i++){
+        double tmp=A(i,col1);
+        A(i,col1)=A(i,col2);
+        A(i,col2)=tmp;
+    }
+}
 }}
+/*FIXME (possible optimizations)
+ * use iterator-style (as in ddc0010e7... commit version of this file)
+ * remove calls to pivot inside the while-loops
+ */
