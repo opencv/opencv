@@ -472,7 +472,7 @@ public:
 	bool update( const Mat& image, Rect& boundingBox );
 
 	/**
-	 * \brief Create tracker by tracker type.
+	 * \brief Create tracker by tracker type MIL - BOOSTING.
 	 */
 	static Ptr<Tracker> create( const String& trackerType );
 
@@ -664,7 +664,7 @@ protected:
 	bool updateImpl( const Mat& image, Rect& boundingBox );
 
 	Params params;
-	AlgorithmInfo* info() const { return 0; }
+	AlgorithmInfo* info() const;
 };
 
 
@@ -707,7 +707,7 @@ protected:
 	bool updateImpl( const Mat& image, Rect& boundingBox );
 
 	Params params;
-	AlgorithmInfo* info() const { return 0; }
+	AlgorithmInfo* info() const;
 };
 
 } /* namespace cv */

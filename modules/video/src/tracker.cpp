@@ -84,7 +84,7 @@ bool Tracker::update( const Mat& image, Rect& boundingBox )
 Ptr<Tracker> Tracker::create( const String& trackerType )
 {
 
-    return Algorithm::create<Tracker>("Tracker." + trackerType);
+    return Algorithm::create<Tracker>("TRACKER." + trackerType);
 }
 
 
