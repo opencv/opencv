@@ -1168,3 +1168,18 @@ bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& co
 
     return (true);
 }
+
+#include "opencv2/viz/widget_accessor.hpp"
+
+void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget)
+{
+    WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
+    bool exists = !(wam_itr == widget_actor_map_->end());
+    if (exists)
+    {
+        // Remove it if it exists and add it again
+        removeActorFromRenderer(wam_itr->second.actor);
+    }
+    renderer_->AddActor(WidgetAccessor::getActor(widget));
+    (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
+}

@@ -245,6 +245,9 @@ public:
 
     void setPosition (int x, int y);
     void setSize (int xw, int yw);
+    
+    void showWidget(const String &id, const Widget &widget);
+    void all_data();
 
 private:
     vtkSmartPointer<vtkRenderWindowInteractor> interactor_;
@@ -311,6 +314,9 @@ private:
 
     /** \brief Internal list with actor pointers and name IDs for shapes. */
     cv::Ptr<ShapeActorMap> shape_actor_map_;
+    
+    /** \brief Internal list with actor pointers and name IDs for all widget actors */
+    cv::Ptr<WidgetActorMap> widget_actor_map_;
 
     /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
     bool camera_set_;

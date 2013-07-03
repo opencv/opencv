@@ -94,6 +94,8 @@ TEST(Viz_viz3d, accuracy)
     v.showCircle("circle1", cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
     v.showSphere("sphere1", cv::Point3f(0,0,0), 0.5, temp_viz::Color(0,0,255));
     v.showArrow("arrow1", cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
+    temp_viz::LineWidget lw(cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0,1.0,1.0), temp_viz::Color(0,255,0));
+    v.showWidget("line", lw);
     
     while(!v.wasStopped())
     {
@@ -110,6 +112,7 @@ TEST(Viz_viz3d, accuracy)
         v.setShapePose("circle1", cloudPosition);
         v.setShapePose("sphere1", cloudPosition);
         v.setShapePose("arrow1", cloudPosition);
+        lw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

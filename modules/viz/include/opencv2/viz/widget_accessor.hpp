@@ -1,12 +1,11 @@
 #pragma once
 
-#include "precomp.hpp"
-#include "types.hpp"
+#include <opencv2/viz/types.hpp>
 
 namespace temp_viz
 {
     struct WidgetAccessor
     {
-        static CV_EXPORTS vtkSmartPointer<vtkActor> getActor(const Widget &widget);
+        static CV_EXPORTS vtkSmartPointer<vtkLODActor> getActor(const Widget &widget);
     };
 }

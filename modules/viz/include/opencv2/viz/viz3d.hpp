@@ -69,6 +69,8 @@ namespace temp_viz
         void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
 
         bool wasStopped() const;
+        
+        void showWidget(const String &id, const Widget &widget);
     private:
         Viz3d(const Viz3d&);
         Viz3d& operator=(const Viz3d&);

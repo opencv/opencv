@@ -139,3 +139,7 @@ void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const MouseEvent&, 
 
 bool temp_viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }
 
+void temp_viz::Viz3d::showWidget(const String &id, const Widget &widget)
+{
+    impl_->showWidget(id, widget);
+}

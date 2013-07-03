@@ -118,17 +118,22 @@ namespace temp_viz
     {
     public:
         Widget();
-        Widget(const String &id);
         Widget(const Widget &other);
         
-        void setId(const String &id);
         void setColor(const Color &color);
         void setPose(const Affine3f &pose);
         void updatePose(const Affine3f &pose);
         Affine3f getPose() const;
+        
     private:
         class Impl;
         cv::Ptr<Impl> impl_;
         friend struct WidgetAccessor;
     }; 
+    
+    class LineWidget : public Widget
+    {
+    public:
+        LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color);
+    };
 }

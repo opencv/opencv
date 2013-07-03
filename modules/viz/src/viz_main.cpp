@@ -17,6 +17,7 @@ temp_viz::Viz3d::VizImpl::VizImpl (const std::string &name)
     :  style_ (vtkSmartPointer<temp_viz::InteractorStyle>::New ())
     , cloud_actor_map_ (new CloudActorMap)
     , shape_actor_map_ (new ShapeActorMap)
+    , widget_actor_map_ (new WidgetActorMap)
     , s_lastDone_(0.0)
 {
     renderer_ = vtkSmartPointer<vtkRenderer>::New ();
