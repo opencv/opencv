@@ -48,7 +48,7 @@ See the "15-puzzle" OpenCV sample for details.
         super.onResume();
 
         Log.i(TAG, "Trying to load OpenCV library");
-        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_4, this, mOpenCVCallBack))
+        if (!OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mOpenCVCallBack))
         {
             Log.e(TAG, "Cannot connect to OpenCV Manager");
         }

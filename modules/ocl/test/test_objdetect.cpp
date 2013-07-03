@@ -149,17 +149,17 @@ TEST_P(HOG, Detect)
     if (winSize.width == 48 && winSize.height == 96)
     {
         // daimler's base
-        ocl_hog.setSVMDetector(ocl_hog.getPeopleDetector48x96());
+        ocl_hog.setSVMDetector(hog.getDaimlerPeopleDetector());
         hog.setSVMDetector(hog.getDaimlerPeopleDetector());
     }
     else if (winSize.width == 64 && winSize.height == 128)
     {
-        ocl_hog.setSVMDetector(ocl_hog.getPeopleDetector64x128());
+        ocl_hog.setSVMDetector(hog.getDefaultPeopleDetector());
         hog.setSVMDetector(hog.getDefaultPeopleDetector());
     }
     else
     {
-        ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
+        ocl_hog.setSVMDetector(hog.getDefaultPeopleDetector());
         hog.setSVMDetector(hog.getDefaultPeopleDetector());
     }
 

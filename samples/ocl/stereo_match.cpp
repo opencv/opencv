@@ -51,7 +51,7 @@ struct App
         return ss.str();
     }
 private:
-    bool running;
+    bool running, write_once;
 
     Mat left_src, right_src;
     Mat left, right;
@@ -117,6 +117,7 @@ App::App(CommandLineParser& cmd)
     cout << "stereo_match_ocl sample\n";
     cout << "\nControls:\n"
          << "\tesc - exit\n"
+         << "\to - save output image once\n"
          << "\tp - print current parameters\n"
          << "\tg - convert source images into gray\n"
          << "\tm - change stereo match method\n"
@@ -134,6 +135,7 @@ App::App(CommandLineParser& cmd)
     else cout << "unknown method!\n";
     ndisp = cmd.get<int>("n");
     out_img = cmd.get<string>("o");
+    write_once = false;
 }
 
 
@@ -163,10 +165,8 @@ void App::run()
     printParams();
 
     running = true;
-    bool written = false;
     while (running)
     {
-
         // Prepare disparity map of specified type
         Mat disp;
         oclMat d_disp;
@@ -194,19 +194,21 @@ void App::run()
             csbp(d_left, d_right, d_disp);
             break;
         }
+
         // Show results
         d_disp.download(disp);
         workEnd();
+
         if (method != BM)
         {
             disp.convertTo(disp, 0);
         }
         putText(disp, text(), Point(5, 25), FONT_HERSHEY_SIMPLEX, 1.0, Scalar::all(255));
         imshow("disparity", disp);
-        if(!written)
+        if(write_once)
         {
             imwrite(out_img, disp);
-            written = true;
+            write_once = false;
         }
         handleKey((char)waitKey(3));
     }
@@ -379,6 +381,10 @@ void App::handleKey(char key)
             csbp.levels = max(csbp.levels - 1, 1);
             cout << "level_count: " << csbp.levels << endl;
         }
+        break;
+    case 'o':
+    case 'O':
+        write_once = true;
         break;
     }
 }

@@ -1,1 +1,0 @@
-All Android specific sources are moved to platforms/android.

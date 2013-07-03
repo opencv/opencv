@@ -932,8 +932,8 @@ PERFTEST(CLAHE)
 
     double clipLimit = 40.0;
 
-    cv::Ptr<cv::CLAHE>      clahe   = cv::createCLAHE(clipLimit);
-    cv::Ptr<cv::ocl::CLAHE> d_clahe = cv::ocl::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe   = cv::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> d_clahe = cv::ocl::createCLAHE(clipLimit);
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {

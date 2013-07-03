@@ -14,30 +14,10 @@ int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;
 
-const std::string command_line_keys =
-    "{   perf_max_outliers   |8        |percent of allowed outliers}"
-    "{   perf_min_samples    |10       |minimal required numer of samples}"
-    "{   perf_force_samples  |100      |force set maximum number of samples for all tests}"
-    "{   perf_seed           |809564   |seed for random numbers generator}"
-    "{   perf_threads        |-1       |the number of worker threads, if parallel execution is enabled}"
-    "{   perf_write_sanity   |         |create new records for sanity checks}"
-    "{   perf_verify_sanity  |         |fail tests having no regression data for sanity checks}"
-#ifdef ANDROID
-    "{   perf_time_limit     |6.0      |default time limit for a single test (in seconds)}"
-    "{   perf_affinity_mask  |0        |set affinity mask for the main thread}"
-    "{   perf_log_power_checkpoints  | |additional xml logging for power measurement}"
-#else
-    "{   perf_time_limit     |3.0      |default time limit for a single test (in seconds)}"
-#endif
-    "{   perf_max_deviation  |1.0      |}"
-    "{   help h              |         |print help info}"
-#ifdef HAVE_CUDA
-    "{   perf_run_cpu        |false    |run GPU performance tests for analogical CPU functions}"
-    "{   perf_cuda_device    |0        |run GPU test suite onto specific CUDA capable device}"
-    "{   perf_cuda_info_only |false    |print an information about system and an available CUDA devices and then exit.}"
-#endif
-;
+// Item [0] will be considered the default implementation.
+static std::vector<std::string> available_impls;
 
+static std::string  param_impl;
 static double       param_max_outliers;
 static double       param_max_deviation;
 static unsigned int param_min_samples;
@@ -48,7 +28,6 @@ static int          param_threads;
 static bool         param_write_sanity;
 static bool         param_verify_sanity;
 #ifdef HAVE_CUDA
-static bool         param_run_cpu;
 static int          param_cuda_device;
 #endif
 
@@ -573,11 +552,12 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 
     std::string nodename = getCurrentTestNodeName();
 
-#ifdef HAVE_CUDA
-    static const std::string prefix = (param_run_cpu)? "CPU_" : "GPU_";
+    // This is a hack for compatibility and it should eventually get removed.
+    // gpu's tests don't even have CPU sanity data anymore.
     if(suiteName == "gpu")
-        nodename = prefix + nodename;
-#endif
+    {
+        nodename = (PERF_RUN_GPU() ? "GPU_" : "CPU_") + nodename;
+    }
 
     cv::FileNode n = rootIn[nodename];
     if(n.isNone())
@@ -642,6 +622,43 @@ performance_metrics::performance_metrics()
 
 void TestBase::Init(int argc, const char* const argv[])
 {
+    std::vector<std::string> plain_only;
+    plain_only.push_back("plain");
+    TestBase::Init(plain_only, argc, argv);
+}
+
+void TestBase::Init(const std::vector<std::string> & availableImpls,
+                 int argc, const char* const argv[])
+{
+    available_impls = availableImpls;
+
+    const std::string command_line_keys =
+        "{   perf_max_outliers           |8        |percent of allowed outliers}"
+        "{   perf_min_samples            |10       |minimal required numer of samples}"
+        "{   perf_force_samples          |100      |force set maximum number of samples for all tests}"
+        "{   perf_seed                   |809564   |seed for random numbers generator}"
+        "{   perf_threads                |-1       |the number of worker threads, if parallel execution is enabled}"
+        "{   perf_write_sanity           |false    |create new records for sanity checks}"
+        "{   perf_verify_sanity          |false    |fail tests having no regression data for sanity checks}"
+        "{   perf_impl                   |" + available_impls[0] +
+                                                  "|the implementation variant of functions under test}"
+        "{   perf_list_impls             |false    |list available implementation variants and exit}"
+        "{   perf_run_cpu                |false    |deprecated, equivalent to --perf_impl=plain}"
+#ifdef ANDROID
+        "{   perf_time_limit             |6.0      |default time limit for a single test (in seconds)}"
+        "{   perf_affinity_mask          |0        |set affinity mask for the main thread}"
+        "{   perf_log_power_checkpoints  |         |additional xml logging for power measurement}"
+#else
+        "{   perf_time_limit             |3.0      |default time limit for a single test (in seconds)}"
+#endif
+        "{   perf_max_deviation          |1.0      |}"
+        "{   help h                      |false    |print help info}"
+#ifdef HAVE_CUDA
+        "{   perf_cuda_device            |0        |run GPU test suite onto specific CUDA capable device}"
+        "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
+#endif
+    ;
+
     cv::CommandLineParser args(argc, argv, command_line_keys);
     if (args.has("help"))
     {
@@ -651,6 +668,7 @@ void TestBase::Init(int argc, const char* const argv[])
 
     ::testing::AddGlobalTestEnvironment(new PerfEnvironment);
 
+    param_impl          = args.has("perf_run_cpu") ? "plain" : args.get<std::string>("perf_impl");
     param_max_outliers  = std::min(100., std::max(0., args.get<double>("perf_max_outliers")));
     param_min_samples   = std::max(1u, args.get<unsigned int>("perf_min_samples"));
     param_max_deviation = std::max(0., args.get<double>("perf_max_deviation"));
@@ -665,19 +683,41 @@ void TestBase::Init(int argc, const char* const argv[])
     log_power_checkpoints = args.has("perf_log_power_checkpoints");
 #endif
 
+    bool param_list_impls = args.has("perf_list_impls");
+
+    if (param_list_impls)
+    {
+        fputs("Available implementation variants:", stdout);
+        for (size_t i = 0; i < available_impls.size(); ++i) {
+            putchar(' ');
+            fputs(available_impls[i].c_str(), stdout);
+        }
+        putchar('\n');
+        exit(0);
+    }
+
+    if (std::find(available_impls.begin(), available_impls.end(), param_impl) == available_impls.end())
+    {
+        printf("No such implementation: %s\n", param_impl.c_str());
+        exit(1);
+    }
+
 #ifdef HAVE_CUDA
 
     bool printOnly        = args.has("perf_cuda_info_only");
 
     if (printOnly)
         exit(0);
+#endif
 
-    param_run_cpu         = args.has("perf_run_cpu");
+    if (available_impls.size() > 1)
+        printf("[----------]\n[   INFO   ] \tImplementation variant: %s.\n[----------]\n", param_impl.c_str()), fflush(stdout);
+
+#ifdef HAVE_CUDA
+
     param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
 
-    if (param_run_cpu)
-        printf("[----------]\n[ GPU INFO ] \tRun test suite on CPU.\n[----------]\n"), fflush(stdout);
-    else
+    if (param_impl == "cuda")
     {
         cv::gpu::DeviceInfo info(param_cuda_device);
         if (!info.isCompatible())
@@ -702,6 +742,18 @@ void TestBase::Init(int argc, const char* const argv[])
     iterationsLimitDefault = param_force_samples == 0 ? (unsigned)(-1) : param_force_samples;
     _timeadjustment = _calibrate();
 }
+
+void TestBase::RecordRunParameters()
+{
+    ::testing::Test::RecordProperty("cv_implementation", param_impl);
+    ::testing::Test::RecordProperty("cv_num_threads", param_threads);
+}
+
+std::string TestBase::getSelectedImpl()
+{
+    return param_impl;
+}
+
 
 int64 TestBase::_calibrate()
 {
@@ -1322,11 +1374,7 @@ void perf::sort(std::vector<cv::KeyPoint>& pts, cv::InputOutputArray descriptors
 \*****************************************************************************************/
 bool perf::GpuPerf::targetDevice()
 {
-#ifdef HAVE_CUDA
-    return !param_run_cpu;
-#else
-    return false;
-#endif
+    return param_impl == "cuda";
 }
 
 /*****************************************************************************************\
@@ -1365,4 +1413,3 @@ void PrintTo(const Size& sz, ::std::ostream* os)
 }
 
 }  // namespace cv
-
