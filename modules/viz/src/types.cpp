@@ -75,17 +75,6 @@ public:
         return Affine3f(matrix_cv);
     }
     
-    void setActorMapperInput(const vtkSmartPointer<vtkDataSet> &data)
-    {   
-        vtkSmartPointer<vtkDataSetMapper> mapper = reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ());
-        if (mapper == 0)
-        {
-            mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
-            actor->SetMapper(mapper);
-        }
-        mapper->SetInput (data);
-    }
-    
 protected:
     
     vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m) const
@@ -113,6 +102,18 @@ temp_viz::Widget::Widget()
 temp_viz::Widget::Widget(const Widget &other)
 {
     impl_ = other.impl_;
+}
+
+temp_viz::Widget& temp_viz::Widget::operator =(const Widget &other)
+{
+    if (this != &other)
+        impl_ = other.impl_;
+    return *this;
+}
+
+void temp_viz::Widget::copyTo(Widget &dst)
+{
+    // TODO Deep copy the data if there is any
 }
 
 void temp_viz::Widget::setColor(const Color &color)

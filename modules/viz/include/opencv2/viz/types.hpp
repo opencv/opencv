@@ -119,6 +119,9 @@ namespace temp_viz
     public:
         Widget();
         Widget(const Widget &other);
+        Widget& operator =(const Widget &other);
+        
+        void copyTo(Widget &dst);
         
         void setColor(const Color &color);
         void setPose(const Affine3f &pose);
@@ -134,6 +137,6 @@ namespace temp_viz
     class LineWidget : public Widget
     {
     public:
-        LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color);
+        LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color(255,255,255));
     };
 }
