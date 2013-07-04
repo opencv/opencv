@@ -49,6 +49,12 @@ namespace temp_viz
         PlaneWidget(const Vec4f& coefs, const Color &color = Color::white());
         PlaneWidget(const Vec4f& coefs, const Point3f& pt, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS SphereWidget : public Widget
+    {
+    public:
+        SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
+    };
 
 
 }

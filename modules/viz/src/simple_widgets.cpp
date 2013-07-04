@@ -68,3 +68,25 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, const 
 
     setColor(color);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// sphere widget implementation
+
+temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution, const Color &color)
+{
+    vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New ();
+    sphere->SetRadius (radius);
+    sphere->SetCenter (center.x, center.y, center.z);
+    sphere->SetPhiResolution (sphere_resolution);
+    sphere->SetThetaResolution (sphere_resolution);
+    sphere->LatLongTessellationOff ();
+    sphere->Update ();
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput(sphere->GetOutput ());
+
+    vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
+    actor->SetMapper(mapper);
+
+    setColor(color);
+}

@@ -92,12 +92,14 @@ TEST(Viz_viz3d, accuracy)
     int col_green = 0;
     int col_red = 0;
     v.showCircle("circle1", cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
-    v.showSphere("sphere1", cv::Point3f(0,0,0), 0.5, temp_viz::Color(0,0,255));
     v.showArrow("arrow1", cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     temp_viz::LineWidget lw(cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0,1.0,1.0), temp_viz::Color(0,255,0));
     temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0));
+    temp_viz::SphereWidget sw(cv::Point3f(0,0,0), 0.5);
+    
     v.showWidget("line", lw);
     v.showWidget("plane", pw);
+    v.showWidget("sphere", sw);
     
     temp_viz::LineWidget lw2 = lw;
     
@@ -114,12 +116,14 @@ TEST(Viz_viz3d, accuracy)
 //         v.showCube("cube1", cv::Point3f(pos_x, pos_y, pos_z), cv::Point3f(pos_x+0.5, pos_y+0.5, pos_z+0.5), temp_viz::Color(255,150,50));
 //         v.showCylinder("cylinder1", cv::Point3f(0,0,0), cv::Point3f(pos_x, 1.0, 1.0), 0.5, 5*pos_x+3, temp_viz::Color(0,255,0));
         v.setShapePose("circle1", cloudPosition);
-        v.setShapePose("sphere1", cloudPosition);
         v.setShapePose("arrow1", cloudPosition);
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
         
         pw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        
+        sw.setPose(cloudPosition);
+        pw.setPose(cloudPosition);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
