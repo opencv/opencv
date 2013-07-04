@@ -98,6 +98,7 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::ArrowWidget aw(cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
+    temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1), temp_viz::Color(0,0,255));
     
     v.showWidget("line", lw);
     v.showWidget("plane", pw);
@@ -105,6 +106,7 @@ TEST(Viz_viz3d, accuracy)
     v.showWidget("arrow", aw);
     v.showWidget("circle", cw);
     v.showWidget("cylinder", cyw);
+    v.showWidget("cube", cuw);
     
     temp_viz::LineWidget lw2 = lw;
     
@@ -132,6 +134,7 @@ TEST(Viz_viz3d, accuracy)
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
+        cuw.setPose(cloudPosition);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

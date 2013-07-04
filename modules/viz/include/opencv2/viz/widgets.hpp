@@ -73,5 +73,11 @@ namespace temp_viz
     public:
         CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS CubeWidget : public Widget
+    {
+    public:
+        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, const Color &color = Color::white());
+    };
 
 }
