@@ -5,14 +5,23 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-# 4.1 update 4 - works fine
-set(tbb_ver "tbb41_20130613oss")
-set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
-set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
-set(tbb_version_file "version_string.ver")
-ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused-parameter)
+if (WIN32 AND ARM)
+  # 4.1 update 4 - The first release that supports Windows RT. Hangs on some Android devices
+  set(tbb_ver "tbb41_20130613oss")
+  set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
+  set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
+  set(tbb_version_file "version_string.ver")
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused-parameter)
+else()
+  # 4.1 update 2 - works fine
+  set(tbb_ver "tbb41_20130116oss")
+  set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130116oss_src.tgz")
+  set(tbb_md5 "3809790e1001a1b32d59c9fee590ee85")
+  set(tbb_version_file "version_string.ver")
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow)
+endif()
 
-# 4.1 update 3 dev - works fine
+# 4.1 update 3 dev - Hangs on some Android devices
 #set(tbb_ver "tbb41_20130401oss")
 #set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130401oss_src.tgz")
 #set(tbb_md5 "f2f591a0d2ca8f801e221ce7d9ea84bb")
