@@ -55,6 +55,17 @@ namespace temp_viz
     public:
         SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS ArrowWidget : public Widget
+    {
+    public:
+        ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color = Color::white());
+    };
 
+    class CV_EXPORTS CircleWidget : public Widget
+    {
+    public:
+        CircleWidget(const Point3f& pt, double radius, const Color &color = Color::white());
+    };
 
 }
