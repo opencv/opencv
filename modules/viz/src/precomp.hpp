@@ -153,6 +153,5 @@
 #endif
 
 
-#include <q/shapes.h>
 #include "opencv2/viz/widget_accessor.hpp"
 #include <opencv2/viz/widgets.hpp>

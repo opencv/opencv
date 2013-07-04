@@ -1,7 +1,6 @@
 #include "precomp.hpp"
 
 #include <opencv2/calib3d.hpp>
-#include <q/shapes.h>
 #include <q/viz3d_impl.hpp>
 
 #include <vtkRenderWindowInteractor.h>

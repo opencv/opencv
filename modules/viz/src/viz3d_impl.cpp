@@ -1,5 +1,4 @@
 #include "precomp.hpp"
-#include <q/shapes.h>
 #include <q/viz3d_impl.hpp>
 
 namespace temp_viz
