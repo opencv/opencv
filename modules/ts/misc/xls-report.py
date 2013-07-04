@@ -235,7 +235,7 @@ def main():
         sheet_comparisons = sheet_conf.get('comparisons', [])
 
         for i, w in enumerate([2000, 15000, 2500, 2000, 15000]
-                + (len(config_names) + 1 + len(sheet_comparisons)) * [3000]):
+                + (len(config_names) + 1 + len(sheet_comparisons)) * [4000]):
             sheet.col(i).width = w
 
         for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Parameters']
