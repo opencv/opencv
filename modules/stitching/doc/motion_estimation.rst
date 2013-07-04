@@ -18,12 +18,11 @@ Rotation estimator base class. It takes features of all images, pairwise matches
     public:
         virtual ~Estimator() {}
 
-        void operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
-                         std::vector<CameraParams> &cameras)
-            { estimate(features, pairwise_matches, cameras); }
+        bool operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+                         std::vector<CameraParams> &cameras);
 
     protected:
-        virtual void estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
+        virtual bool estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches,
                               std::vector<CameraParams> &cameras) = 0;
     };
 
@@ -40,6 +39,8 @@ Estimates camera parameters.
 
     :param cameras: Estimated camera parameters
 
+    :return: True in case of success, false otherwise
+
 detail::Estimator::estimate
 ---------------------------
 
@@ -52,6 +53,8 @@ This method must implement camera parameters estimation logic in order to make t
     :param pairwise_matches: Pairwise matches of images
 
     :param cameras: Estimated camera parameters
+
+    :return: True in case of success, false otherwise
 
 detail::HomographyBasedEstimator
 --------------------------------
