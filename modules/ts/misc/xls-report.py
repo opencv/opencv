@@ -81,7 +81,6 @@ import os, os.path
 import re
 
 from argparse import ArgumentParser
-from collections import OrderedDict
 from glob import glob
 from itertools import ifilter
 
@@ -160,7 +159,7 @@ class Collector(object):
 
         if configuration is None: return
 
-        module_tests = self.tests.setdefault(module, OrderedDict())
+        module_tests = self.tests.setdefault(module, {})
 
         for test in run.tests:
             test_results = module_tests.setdefault((test.shortName(), test.param()), {})
@@ -250,7 +249,7 @@ def main():
                          for module, color in module_colors.iteritems()}
 
         for module, tests in sorted(collector.tests.iteritems()):
-            for ((test, param), configs) in tests.iteritems():
+            for ((test, param), configs) in sorted(tests.iteritems()):
                 sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
                 sheet.write(row, 1, test)
 
