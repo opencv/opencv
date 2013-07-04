@@ -122,8 +122,8 @@ public:
   // --------------------------------------------------------------------------
   //                           MATLAB TYPES
   // --------------------------------------------------------------------------
-  Bridge& operator=(const mxArray*) { return *this; }
-  Bridge(const mxArray* obj) : ptr_(obj) {}
+  Bridge& operator=(const mxArray* obj) { ptr_ = obj; return *this; }
+  Bridge(const mxArray* obj) : ptr_(obj)  {}
   MxArray toMxArray() { return ptr_; }
   
   

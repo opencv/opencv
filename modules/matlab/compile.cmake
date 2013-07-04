@@ -3,7 +3,7 @@ macro(listify OUT_LIST IN_STRING)
 endmacro()
 
 listify(MEX_INCLUDE_DIRS_LIST ${MEX_INCLUDE_DIRS})
-set(MEX_CXXFLAGS "CXXFLAGS=\$CXXFLAGS -pedantic -Wall -Wextra -Weffc++ -Wno-unused -Wold-style-cast -Wshadow -Wmissing-declarations -Wmissing-include-dirs -Wnon-virtual-dtor -Wno-newline-eof")
+set(MEX_CXXFLAGS "CXXFLAGS=\$CXXFLAGS -msse -msse2 -msse3 -msse4.1 -msse4.2 -pedantic -Wall -Wextra -Weffc++ -Wno-unused-parameter -Wold-style-cast -Wshadow -Wmissing-declarations -Wmissing-include-dirs -Wnon-virtual-dtor -Wno-newline-eof")
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
     # strip out the filename

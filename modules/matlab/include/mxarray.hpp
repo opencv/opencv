@@ -21,8 +21,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-  void mkl_somatcopy(char, char, size_t, size_t, const float,  const float*,  size_t, float*,  size_t);
-  void mkl_domatcopy(char, char, size_t, size_t, const double, const double*, size_t, double*, size_t);
 #ifdef __cplusplus
 }
 #endif
@@ -224,6 +222,12 @@ public:
    * just encapsulate it
    */
   MxArray(const mxArray* ptr) : ptr_(const_cast<mxArray *>(ptr)), owns_(false) {}
+  MxArray& operator=(const mxArray* ptr) { 
+    dealloc();
+    ptr_ = const_cast<mxArray *>(ptr);
+    owns_ = false;
+    return *this;
+  }
 
   /*!
    * @brief explicit typed constructor
@@ -372,7 +376,7 @@ public:
 
   template <typename Scalar>
   cv::Mat toMat() const { 
-    cv::Mat mat(cols(), rows(), CV_MAKETYPE(cv::DataType<Scalar>::type, channels()));
+    cv::Mat mat(rows(), cols(), CV_MAKETYPE(cv::DataType<Scalar>::type, channels()));
     switch (ID()) {
       case mxINT8_CLASS:    deepCopyAndTranspose<int8_t,   Scalar>(*this, mat); break;
       case mxUINT8_CLASS:   deepCopyAndTranspose<uint8_t,  Scalar>(*this, mat); break;
@@ -397,7 +401,7 @@ public:
   Scalar* real() { return static_cast<Scalar *>(mxGetData(ptr_)); }
   
   template <typename Scalar>
-  Scalar* imag() { return static_cast<Scalar *>(mxGetData(ptr_)); }
+  Scalar* imag() { return static_cast<Scalar *>(mxGetImagData(ptr_)); }
 
   template <typename Scalar>
   const Scalar* real() const { return static_cast<const Scalar *>(mxGetData(ptr_)); }
@@ -413,6 +417,7 @@ public:
     std::string str;
     str.reserve(size()+1);
     mxGetString(ptr_, const_cast<char *>(str.data()), str.size());
+    mexPrintf(str.c_str());
     return str;
   }
 
@@ -492,20 +497,47 @@ cv::Mat MxArray::toMat<Matlab::InheritType>() const {
 // ----------------------------------------------------------------------------
 
 template <typename InputScalar, typename OutputScalar>
+void gemt(const char major, const size_t M, const size_t N, const InputScalar* a, size_t lda, OutputScalar* b, size_t ldb) {
+  switch (major) {
+  case 'R':
+    for (size_t m = 0; m < M; ++m) {
+      InputScalar const *       arow = a + m*lda;
+      InputScalar const * const aend = arow + N;
+      OutputScalar      *       bcol = b + m;
+      while (arow < aend) {
+        *bcol = *arow;
+        arow++;
+        bcol+=ldb;
+      }
+    }
+    return;
+  case 'C':
+    for (size_t n = 0; n < N; ++n) {
+      InputScalar const *       acol = a + n*lda;
+      InputScalar const * const aend = acol + M;
+      OutputScalar      *       brow = b + n;
+      while (acol < aend) {
+        *brow = *acol;
+        acol++;
+        brow+=ldb;
+      }
+    }
+    return;
+  default: 
+    error(std::string("Unknown ordering given: ").append(std::string(1,major)));
+  }
+}
+
+
+
+template <typename InputScalar, typename OutputScalar>
 void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
   conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
   conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
   conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
+  const InputScalar* inp = in.ptr<InputScalar>(0);
   OutputScalar* outp = out.real<OutputScalar>();
-  const size_t M = out.rows();
-  const size_t N = out.cols();
-  for (size_t m = 0; m < M; ++m) {
-    const InputScalar* inp = in.ptr<InputScalar>(m);
-    for (size_t n = 0; n < N; ++n) {
-      // copy and transpose
-      outp[m + n*M] = inp[n];
-    }
-  }
+  gemt('R', out.rows(), out.cols(), inp, in.step1(), outp, out.rows());
 }
 
 template <typename InputScalar, typename OutputScalar>
@@ -514,34 +546,10 @@ void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
   conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
   conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
   const InputScalar* inp = in.real<InputScalar>();
-  const size_t M = in.rows();
-  const size_t N = in.cols();
-  for (size_t m = 0; m < M; ++m) {
-    OutputScalar* outp = out.ptr<OutputScalar>(m);
-    for (size_t n = 0; n < N; ++n) {
-      // copy and transpose
-      outp[n] = inp[m + n*M];
-    }
-  }
+  OutputScalar* outp = out.ptr<OutputScalar>(0);
+  gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
 }
 
 
-template <> 
-void deepCopyAndTranspose<float, float>(const cv::Mat&, MxArray&) {
-}
-
-template <> 
-void deepCopyAndTranspose<double, double>(const cv::Mat&, MxArray&) {
-}
-
-template <> 
-void deepCopyAndTranspose<float, float>(const MxArray&, cv::Mat&) {
-  // use mkl
-}
-
-template <> 
-void deepCopyAndTranspose<double, double>(const MxArray&, cv::Mat& ) {
-  // use mkl
-}
 
 #endif
