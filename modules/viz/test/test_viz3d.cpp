@@ -95,7 +95,9 @@ TEST(Viz_viz3d, accuracy)
     v.showSphere("sphere1", cv::Point3f(0,0,0), 0.5, temp_viz::Color(0,0,255));
     v.showArrow("arrow1", cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     temp_viz::LineWidget lw(cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0,1.0,1.0), temp_viz::Color(0,255,0));
+    temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0));
     v.showWidget("line", lw);
+    v.showWidget("plane", pw);
     
     temp_viz::LineWidget lw2 = lw;
     
@@ -116,6 +118,8 @@ TEST(Viz_viz3d, accuracy)
         v.setShapePose("arrow1", cloudPosition);
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
+        
+        pw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

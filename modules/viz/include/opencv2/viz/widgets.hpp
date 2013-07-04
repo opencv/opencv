@@ -42,6 +42,13 @@ namespace temp_viz
         void setLineWidth(float line_width);
         float getLineWidth();
     };
+    
+    class CV_EXPORTS PlaneWidget : public Widget
+    {
+    public:
+        PlaneWidget(const Vec4f& coefs, const Color &color = Color::white());
+        PlaneWidget(const Vec4f& coefs, const Point3f& pt, const Color &color = Color::white());
+    };
 
 
 }
