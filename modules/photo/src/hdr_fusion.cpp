@@ -64,29 +64,34 @@ static void generateResponce(float responce[])
     responce[0] = responce[1];
 }
 
-void makeHDR(InputArrayOfArrays _images, std::vector<float> exp_times, OutputArray _dst)
+void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst)
 {
 	std::vector<Mat> images;
     _images.getMatVector(images);
 	if(images.empty()) {
-		printf("Need at least one vector image.");
+		CV_Error(Error::StsBadArg, "Need at least one image");
 	}
-	if(images.size() != exp_times.size()) {
-		printf("Number of images and number of exposure times must be equal.");
+	if(images.size() != _exp_times.size()) {
+		CV_Error(Error::StsBadArg, "Number of images and number of exposure times must be equal.");
 	}
 	int width = images[0].cols;
 	int height = images[0].rows;
 	for(size_t i = 0; i < images.size(); i++) {
 
 		if(images[i].cols != width || images[i].rows != height) {
-			printf("Image dimensions must be equal.");
+			CV_Error(Error::StsBadArg, "Image dimensions must be equal.");
 		}
 		if(images[i].type() != CV_8UC3) {
-			printf("Images must have CV_8UC3 type.");
+			CV_Error(Error::StsBadArg, "Images must have CV_8UC3 type.");
 		}
 	}
 	_dst.create(images[0].size(), CV_32FC3);
 	Mat result = _dst.getMat();
+	std::vector<float> exp_times(_exp_times.size());
+	for(size_t i = 0; i < exp_times.size(); i++) {
+		exp_times[i] = log(_exp_times[i]);
+	}
+
 	float weights[256], responce[256];
 	triangleWeights(weights);
 	generateResponce(responce);
@@ -104,7 +109,7 @@ void makeHDR(InputArrayOfArrays _images, std::vector<float> exp_times, OutputArr
 				       weights[img_ptr[2]]) / 3;
 			weight_sum += w;
 			for(int channel = 0; channel < 3; channel++) {
-				sum[channel] += w * (responce[img_ptr[channel]] - log(exp_times[im]));
+				sum[channel] += w * (responce[img_ptr[channel]] - exp_times[im]);
 			}
 		}
 		for(int channel = 0; channel < 3; channel++) {

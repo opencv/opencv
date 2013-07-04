@@ -72,7 +72,41 @@ TEST(Photo_MakeHdr, regression)
 	
 	Mat result;
 	makeHDR(images, times, result);
-	double min = 0.0, max = 1.0;
-	minMaxLoc(abs(result - expected), &min, &max);
+	double max = 1.0;
+	minMaxLoc(abs(result - expected), NULL, &max);
 	ASSERT_TRUE(max < 0.01);
+}
+
+TEST(Photo_Tonemap, regression)
+{
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	
+	vector<string>file_names(TONEMAP_COUNT);
+	file_names[TONEMAP_DRAGO] = folder + "grand_canal_drago_2.2.png";
+	file_names[TONEMAP_REINHARD] = folder + "grand_canal_reinhard_2.2.png";
+	file_names[TONEMAP_DURAND] = folder + "grand_canal_durand_2.2.png"; 
+	file_names[TONEMAP_LINEAR] = folder + "grand_canal_linear_map_2.2.png";
+
+	vector<Mat>images(TONEMAP_COUNT);
+	for(int i = 0; i < TONEMAP_COUNT; i++) {
+		images[i] = imread(file_names[i]);
+		ASSERT_FALSE(images[i].empty()) << "Could not load input image " << file_names[i];
+	}
+	
+	string hdr_file_name = folder + "grand_canal_rle.hdr";
+	Mat img = imread(hdr_file_name, -1);
+	ASSERT_FALSE(img.empty()) << "Could not load input image " << hdr_file_name;
+	
+	vector<float> param(1);
+	param[0] = 2.2f;
+
+	for(int i = TONEMAP_DURAND; i < TONEMAP_COUNT; i++) {
+		
+		Mat result;
+		tonemap(img, result, static_cast<tonemap_algorithms>(i), param);
+		result.convertTo(result, CV_8UC3, 255);
+		double max = 1.0;
+		minMaxLoc(abs(result - images[i]), NULL, &max);
+		ASSERT_FALSE(max > 0);
+	}
 }

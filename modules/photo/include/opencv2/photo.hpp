@@ -59,6 +59,20 @@ enum
     INPAINT_TELEA = 1 // A. Telea algorithm
 };
 
+//! the tonemapping algorithm
+enum tonemap_algorithms
+{
+	TONEMAP_LINEAR,
+
+    TONEMAP_DRAGO,    // Adaptive Logarithmic Mapping For 
+				   	  // Displaying High Contrast Scenes
+	TONEMAP_REINHARD, // Dynamic Range Reduction Inspired 
+					  // by Photoreceptor Physiology
+    TONEMAP_DURAND,   // Fast Bilateral Filtering for the 
+					  // Display of High-Dynamic-Range Images
+	TONEMAP_COUNT 
+};
+
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
@@ -80,7 +94,9 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
                                                     float h = 3, float hColor = 3,
                                                     int templateWindowSize = 7, int searchWindowSize = 21);
 
-CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, std::vector<float> expTimes, OutputArray dst);
+CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, const std::vector<float>& exp_times, OutputArray dst);
+
+CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, tonemap_algorithms algorithm, std::vector<float>& params = std::vector<float>());
 
 } // cv
 

@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include "grfmt_tiff.hpp"
+#include <opencv2/imgproc.hpp>
 
 namespace cv
 {
@@ -413,22 +414,13 @@ bool TiffDecoder::readHdrData(Mat& img)
 		size -= strip_size * sizeof(float);
 	}
 	close();
-	ptr = img.ptr<float>();
-	for(size_t i = 0; i < img.total(); i++, ptr += 3) 
+	if(photometric == PHOTOMETRIC_LOGLUV) 
 	{
-		if(photometric == PHOTOMETRIC_LOGLUV) 
-		{
-			float r =  3.240479f * ptr[0] + -1.537150f * ptr[1] + -0.498535f * ptr[2];
-			float g = -0.969256f * ptr[0] +  1.875991f * ptr[1] +  0.041556f * ptr[2];
-			float b =  0.055648f * ptr[0] + -0.204043f * ptr[1] +  1.057311f * ptr[2];
-			ptr[0] = b; ptr[1] = g; ptr[2] = r;
-		} 
-		else 
-		{
-			float tmp = ptr[0];
-			ptr[0] = ptr[2];
-			ptr[2] = tmp;
-		}
+		cvtColor(img, img, COLOR_XYZ2BGR);
+	} 
+	else 
+	{
+		cvtColor(img, img, COLOR_RGB2BGR);
 	}
 	return true;
 }
@@ -614,16 +606,10 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
     return true;
 }
 
-bool TiffEncoder::writeHdr(const Mat& img)
+bool TiffEncoder::writeHdr(const Mat& _img)
 {
-	float *ptr = const_cast<float*>(img.ptr<float>());
-	for(size_t i = 0; i < img.total(); i++, ptr += 3) 
-	{
-		float x = 0.412453f * ptr[2] + 0.357580f * ptr[1] + 0.180423f * ptr[0];
-		float y = 0.212671f * ptr[2] + 0.715160f * ptr[1] + 0.072169f * ptr[0];
-		float z = 0.019334f * ptr[2] + 0.119193f * ptr[1] + 0.950227f * ptr[0];
-		ptr[0] = x; ptr[1] = y; ptr[2] = z;
-	}
+	Mat img;
+	cvtColor(_img, img, COLOR_BGR2XYZ);
 	TIFF* tif = TIFFOpen(m_filename.c_str(), "w");
     if (!tif) 
 	{
@@ -638,7 +624,7 @@ bool TiffEncoder::writeHdr(const Mat& img)
 	TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
 	TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1);	
 	int strip_size = 3 * img.cols;
-	ptr = const_cast<float*>(img.ptr<float>());
+	float *ptr = const_cast<float*>(img.ptr<float>());
 	for (int i = 0; i < img.rows; i++, ptr += strip_size) 
 	{
 		TIFFWriteEncodedStrip(tif, i, ptr, strip_size * sizeof(float));

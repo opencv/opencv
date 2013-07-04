@@ -53,7 +53,7 @@ enum TiffCompression
 {
     TIFF_UNCOMP = 1,
     TIFF_HUFFMAN = 2,
-    TIFF_PACKBITS = 32773,
+    TIFF_PACKBITS = 32773
 };
 
 enum TiffByteOrder
