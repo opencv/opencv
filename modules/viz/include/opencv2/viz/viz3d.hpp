@@ -72,6 +72,7 @@ namespace temp_viz
         bool wasStopped() const;
         
         void showWidget(const String &id, const Widget &widget);
+        bool removeWidget(const String &id);
     private:
         Viz3d(const Viz3d&);
         Viz3d& operator=(const Viz3d&);

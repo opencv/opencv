@@ -247,6 +247,8 @@ public:
     void setSize (int xw, int yw);
     
     void showWidget(const String &id, const Widget &widget);
+    bool removeWidget(const String &id);
+    
     void all_data();
 
 private:

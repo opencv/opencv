@@ -143,3 +143,8 @@ void temp_viz::Viz3d::showWidget(const String &id, const Widget &widget)
 {
     impl_->showWidget(id, widget);
 }
+
+bool temp_viz::Viz3d::removeWidget(const String &id)
+{
+    return impl_->removeWidget(id);
+}

@@ -1183,3 +1183,21 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
     renderer_->AddActor(WidgetAccessor::getActor(widget));
     (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
 }
+
+bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
+{
+    WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
+    bool exists = !(wam_itr == widget_actor_map_->end());
+    
+    if (!exists)
+    {
+        std::cout << "[removeWidget] A widget with id <" << id << "> does not exist!" << std::endl;
+        return false;
+    }
+    
+    if (!removeActorFromRenderer (wam_itr->second.actor))
+        return false;
+    
+    widget_actor_map_->erase(wam_itr);
+    return true;
+}
