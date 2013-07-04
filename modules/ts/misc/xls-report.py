@@ -163,7 +163,13 @@ class Collector(object):
 
         for test in run.tests:
             test_results = module_tests.setdefault((test.shortName(), test.param()), {})
-            test_results[configuration] = test.get("gmean") if test.status == 'run' else test.status
+            new_result = test.get("gmean") if test.status == 'run' else test.status
+            test_results[configuration] = min(
+              test_results.get(configuration), new_result,
+              key=lambda r: (1, r) if isinstance(r, numbers.Number) else
+                            (2,) if r is not None else
+                            (3,)
+            ) # prefer lower result; prefer numbers to errors and errors to nothing
 
 def make_match_func(matchers):
     def match_func(properties):
