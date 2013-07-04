@@ -416,7 +416,7 @@ void temp_viz::Viz3d::VizImpl::showLine (const String& id, const Point3f& pt1, c
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coefs, const Color& color)
+void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coeffs, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -426,7 +426,7 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coe
     if (exists)
     {
         vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
-        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs));
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coeffs));
         actor->GetProperty ()->SetColor (c.val);
         actor->GetMapper ()->ScalarVisibilityOff ();
         actor->Modified ();
@@ -434,7 +434,7 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coe
     else
     {
         // Create a plane
-        vtkSmartPointer<vtkDataSet> data = createPlane (coefs);
+        vtkSmartPointer<vtkDataSet> data = createPlane (coeffs);
 
         // Create an Actor
         vtkSmartPointer<vtkLODActor> actor;
@@ -451,7 +451,7 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String& id, const cv::Vec4f &coe
     }
 }
 
-void temp_viz::Viz3d::VizImpl::showPlane (const String& id ,const cv::Vec4f &coefs, const Point3f& pt, const Color& color)
+void temp_viz::Viz3d::VizImpl::showPlane (const String& id ,const cv::Vec4f &coeffs, const Point3f& pt, const Color& color)
 {
     // Check if this Id already exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -461,7 +461,7 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String& id ,const cv::Vec4f &coe
     if (exists)
     {
         vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast (am_it->second);
-        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coefs, pt));
+        reinterpret_cast<vtkDataSetMapper*>(actor->GetMapper ())->SetInput(createPlane(coeffs, pt));
         actor->GetProperty ()->SetColor (c.val);
         actor->GetMapper ()->ScalarVisibilityOff ();
         actor->Modified ();
@@ -469,7 +469,7 @@ void temp_viz::Viz3d::VizImpl::showPlane (const String& id ,const cv::Vec4f &coe
     else
     {
         // Create a plane
-        vtkSmartPointer<vtkDataSet> data = createPlane (coefs, pt);
+        vtkSmartPointer<vtkDataSet> data = createPlane (coeffs, pt);
 
         // Create an Actor
         vtkSmartPointer<vtkLODActor> actor;

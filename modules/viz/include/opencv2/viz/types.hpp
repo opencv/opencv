@@ -36,8 +36,6 @@ namespace temp_viz
     using cv::DataType;
 
 
-
-
     struct CV_EXPORTS ModelCoefficients
     {
         std::vector<float> values;
@@ -81,6 +79,8 @@ namespace temp_viz
         std::vector<Vertices> polygons;
     };
 
+    /////////////////////////////////////////////////////////////////////////////
+    /// Utility functions
 
     inline Color vtkcolor(const Color& color)
     {
@@ -90,11 +90,7 @@ namespace temp_viz
     }
 
     inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
-
-
-
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
-
     
     inline bool isNan(float x)
     {
@@ -113,30 +109,4 @@ namespace temp_viz
 
     template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
     { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
-    
-    class Widget
-    {
-    public:
-        Widget();
-        Widget(const Widget &other);
-        Widget& operator =(const Widget &other);
-        
-        void copyTo(Widget &dst);
-        
-        void setColor(const Color &color);
-        void setPose(const Affine3f &pose);
-        void updatePose(const Affine3f &pose);
-        Affine3f getPose() const;
-        
-    private:
-        class Impl;
-        cv::Ptr<Impl> impl_;
-        friend struct WidgetAccessor;
-    }; 
-    
-    class LineWidget : public Widget
-    {
-    public:
-        LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color(255,255,255));
-    };
 }

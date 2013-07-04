@@ -47,7 +47,7 @@
 #include <fstream>
 #include <string>
 
-#include <opencv2/viz/types.hpp>
+#include <opencv2/viz.hpp>
 #include <opencv2/viz/mesh_load.hpp>
 
 cv::Mat cvcloud_load()

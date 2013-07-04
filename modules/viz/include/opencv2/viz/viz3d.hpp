@@ -10,6 +10,7 @@
 
 #include <string>
 #include <opencv2/viz/types.hpp>
+#include <opencv2/viz/widgets.hpp>
 #include <opencv2/viz/events.hpp>
 
 namespace temp_viz
@@ -33,8 +34,8 @@ namespace temp_viz
         bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String& id = "cloud");
         
         void showLine(const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color = Color::white());
-        void showPlane(const String& id, const Vec4f& coefs, const Color& color = Color::white());
-        void showPlane(const String& id, const Vec4f& coefs, const Point3f& pt, const Color& color = Color::white());
+        void showPlane(const String& id, const Vec4f& coeffs, const Color& color = Color::white());
+        void showPlane(const String& id, const Vec4f& coeffs, const Point3f& pt, const Color& color = Color::white());
         void showCube(const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color = Color::white());
         void showCylinder(const String& id, const Point3f& pt_on_axis, const Point3f&  axis_direction, double radius, int num_sides, const Color& color = Color::white());
         void showCircle(const String& id, const Point3f& pt, double radius, const Color& color = Color::white());
