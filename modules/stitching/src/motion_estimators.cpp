@@ -263,7 +263,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     if (!ok)
         return false;
 
-    obtainRefinedCameraParams(cameras);        
+    obtainRefinedCameraParams(cameras);
 
     // Normalize motion to center image
     Graph span_tree;
