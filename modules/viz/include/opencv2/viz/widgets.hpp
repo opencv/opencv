@@ -6,7 +6,7 @@
 namespace temp_viz
 {
     /////////////////////////////////////////////////////////////////////////////
-    /// brief The base class for all widgets
+    /// The base class for all widgets
     class CV_EXPORTS Widget
     {
     public:
