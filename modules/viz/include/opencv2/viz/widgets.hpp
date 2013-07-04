@@ -14,6 +14,8 @@ namespace temp_viz
         Widget(const Widget &other);
         Widget& operator =(const Widget &other);
 
+        ~Widget();
+        
         void copyTo(Widget &dst);
 
         void setColor(const Color &color);
@@ -23,7 +25,11 @@ namespace temp_viz
 
     private:
         class Impl;
-        cv::Ptr<Impl> impl_;
+        Impl* impl_;
+        
+        void create();
+        void release();
+        
         friend struct WidgetAccessor;
     };
 

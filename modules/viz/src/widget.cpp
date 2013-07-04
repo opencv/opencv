@@ -4,6 +4,7 @@ class temp_viz::Widget::Impl
 {
 public:
     vtkSmartPointer<vtkLODActor> actor;
+    int ref_counter;
 
     Impl() : actor(vtkSmartPointer<vtkLODActor>::New()) {}
 
@@ -79,21 +80,32 @@ vtkSmartPointer<vtkLODActor> temp_viz::WidgetAccessor::getActor(const Widget& wi
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget implementaion
 
-temp_viz::Widget::Widget()
+temp_viz::Widget::Widget() : impl_(0)
 {
-    impl_ = new Impl();
+    create();
 }
 
-temp_viz::Widget::Widget(const Widget& other)
+temp_viz::Widget::Widget(const Widget& other) : impl_(other.impl_)
 {
-    impl_ = other.impl_;
+    if (impl_)
+        CV_XADD(&impl_->ref_counter, 1);
 }
 
 temp_viz::Widget& temp_viz::Widget::operator =(const Widget &other)
 {
     if (this != &other)
+    {
+        release();
         impl_ = other.impl_;
+        if (impl_)
+            CV_XADD(&impl_->ref_counter, 1);
+    }
     return *this;
+}
+
+temp_viz::Widget::~Widget()
+{
+    release();
 }
 
 void temp_viz::Widget::copyTo(Widget& /*dst*/)
@@ -106,5 +118,19 @@ void temp_viz::Widget::setPose(const Affine3f& pose) { impl_->setPose(pose); }
 void temp_viz::Widget::updatePose(const Affine3f& pose) { impl_->updatePose(pose); }
 temp_viz::Affine3f temp_viz::Widget::getPose() const { return impl_->getPose(); }
 
+void temp_viz::Widget::create()
+{
+    if (impl_)
+        release();
+    impl_ = new Impl();
+    impl_->ref_counter = 1;
+}
 
+void temp_viz::Widget::release()
+{
+    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
+    {
+        delete impl_;
+    }
+}
 
