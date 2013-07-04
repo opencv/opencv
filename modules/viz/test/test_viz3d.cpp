@@ -115,6 +115,7 @@ TEST(Viz_viz3d, accuracy)
         v.setShapePose("sphere1", cloudPosition);
         v.setShapePose("arrow1", cloudPosition);
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

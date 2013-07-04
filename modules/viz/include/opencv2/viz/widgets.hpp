@@ -38,6 +38,9 @@ namespace temp_viz
     {
     public:
         LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
+        
+        void setLineWidth(float line_width);
+        float getLineWidth();
     };
 
 

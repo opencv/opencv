@@ -16,3 +16,15 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
 
     setColor(color);
 }
+
+void temp_viz::LineWidget::setLineWidth(float line_width)
+{
+    vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
+    actor->GetProperty()->SetLineWidth(line_width);
+}
+
+float temp_viz::LineWidget::getLineWidth()
+{
+    vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
+    return actor->GetProperty()->GetLineWidth();
+}
