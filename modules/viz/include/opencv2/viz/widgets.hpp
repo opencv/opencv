@@ -67,5 +67,11 @@ namespace temp_viz
     public:
         CircleWidget(const Point3f& pt, double radius, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS CylinderWidget : public Widget
+    {
+    public:
+        CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+    };
 
 }

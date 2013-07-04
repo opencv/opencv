@@ -158,7 +158,7 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
-temp_viz::CircleWidget::CircleWidget(const Point3f& pt, double radius, const Color &color)
+temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius, const temp_viz::Color& color)
 {
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New ();
     // Maybe the resolution should be lower e.g. 50 or 25
@@ -185,3 +185,26 @@ temp_viz::CircleWidget::CircleWidget(const Point3f& pt, double radius, const Col
     setColor(color);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// cylinder widget implementation
+
+temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides, const Color &color)
+{
+    const cv::Point3f pt2 = pt_on_axis + axis_direction;
+    vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
+    line->SetPoint1 (pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
+    line->SetPoint2 (pt2.x, pt2.y, pt2.z);
+    
+    vtkSmartPointer<vtkTubeFilter> tuber = vtkSmartPointer<vtkTubeFilter>::New ();
+    tuber->SetInputConnection (line->GetOutputPort ());
+    tuber->SetRadius (radius);
+    tuber->SetNumberOfSides (numsides);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput(tuber->GetOutput ());
+
+    vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
+    actor->SetMapper(mapper);
+    
+    setColor(color);
+}
