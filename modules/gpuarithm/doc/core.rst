@@ -6,12 +6,12 @@ Core Operations on Matrices
 
 
 gpu::merge
---------------
+----------
 Makes a multi-channel matrix out of several single-channel matrices.
 
-.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::merge(const vector<GpuMat>& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Array/vector of source matrices.
 
@@ -26,12 +26,12 @@ Makes a multi-channel matrix out of several single-channel matrices.
 
 
 gpu::split
---------------
+----------
 Copies each plane of a multi-channel matrix into an array.
 
-.. ocv:function:: void gpu::split(const GpuMat& src, GpuMat* dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::split(const GpuMat& src, vector<GpuMat>& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::split(InputArray src, vector<GpuMat>& dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -43,15 +43,95 @@ Copies each plane of a multi-channel matrix into an array.
 
 
 
+gpu::transpose
+--------------
+Transposes a matrix.
+
+.. ocv:function:: void gpu::transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null())
+
+    :param src1: Source matrix. 1-, 4-, 8-byte element sizes are supported for now.
+
+    :param dst: Destination matrix.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`transpose`
+
+
+
+gpu::flip
+---------
+Flips a 2D matrix around vertical, horizontal, or both axes.
+
+.. ocv:function:: void gpu::flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null())
+
+    :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
+
+    :param dst: Destination matrix.
+
+    :param flipCode: Flip mode for the source:
+
+        * ``0`` Flips around x-axis.
+
+        * ``> 0`` Flips around y-axis.
+
+        * ``< 0`` Flips around both axes.
+
+    :param stream: Stream for the asynchronous version.
+
+.. seealso:: :ocv:func:`flip`
+
+
+
+gpu::LookUpTable
+----------------
+.. ocv:class:: gpu::LookUpTable : public Algorithm
+
+Base class for transform using lookup table. ::
+
+    class CV_EXPORTS LookUpTable : public Algorithm
+    {
+    public:
+        virtual void transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0;
+    };
+
+.. seealso:: :ocv:func:`LUT`
+
+
+
+gpu::LookUpTable::transform
+---------------------------
+Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))`` .
+
+.. ocv:function:: void gpu::LookUpTable::transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+
+    :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
+
+    :param dst: Destination matrix.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::createLookUpTable
+----------------------
+Creates implementation for :ocv:class:`gpu::LookUpTable` .
+
+.. ocv:function:: Ptr<LookUpTable> createLookUpTable(InputArray lut)
+
+    :param lut: Look-up table of 256 elements. It is a continuous ``CV_8U`` matrix.
+
+
+
 gpu::copyMakeBorder
 -----------------------
 Forms a border around an image.
 
-.. ocv:function:: void gpu::copyMakeBorder(const GpuMat& src, GpuMat& dst, int top, int bottom, int left, int right, int borderType, const Scalar& value = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, Scalar value = Scalar(), Stream& stream = Stream::Null())
 
-    :param src: Source image. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and  ``CV_32FC1`` types are supported.
+    :param src: Source image. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` types are supported.
 
-    :param dst: Destination image with the same type as  ``src``. The size is  ``Size(src.cols+left+right, src.rows+top+bottom)`` .
+    :param dst: Destination image with the same type as  ``src``. The size is ``Size(src.cols+left+right, src.rows+top+bottom)`` .
 
     :param top:
 
@@ -68,61 +148,3 @@ Forms a border around an image.
     :param stream: Stream for the asynchronous version.
 
 .. seealso:: :ocv:func:`copyMakeBorder`
-
-
-
-gpu::transpose
-------------------
-Transposes a matrix.
-
-.. ocv:function:: void gpu::transpose( const GpuMat& src1, GpuMat& dst, Stream& stream=Stream::Null() )
-
-    :param src1: Source matrix. 1-, 4-, 8-byte element sizes are supported for now (CV_8UC1, CV_8UC4, CV_16UC2, CV_32FC1, etc).
-
-    :param dst: Destination matrix.
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`transpose`
-
-
-
-gpu::flip
--------------
-Flips a 2D matrix around vertical, horizontal, or both axes.
-
-.. ocv:function:: void gpu::flip( const GpuMat& a, GpuMat& b, int flipCode, Stream& stream=Stream::Null() )
-
-    :param a: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
-
-    :param b: Destination matrix.
-
-    :param flipCode: Flip mode for the source:
-
-        * ``0`` Flips around x-axis.
-
-        * ``>0`` Flips around y-axis.
-
-        * ``<0`` Flips around both axes.
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`flip`
-
-
-
-gpu::LUT
-------------
-Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))``
-
-.. ocv:function:: void gpu::LUT(const GpuMat& src, const Mat& lut, GpuMat& dst, Stream& stream = Stream::Null())
-
-    :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
-
-    :param lut: Look-up table of 256 elements. It is a continuous ``CV_8U`` matrix.
-
-    :param dst: Destination matrix with the same depth as  ``lut``  and the same number of channels as  ``src`` .
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`LUT`

@@ -10,13 +10,9 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Fangfang Bai, fangfang@multicorewareinc.com
-//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -26,12 +22,12 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -43,46 +39,26 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
 
-///////////// columnSum////////////////////////
-PERFTEST(columnSum)
-{
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+// Defines for Python 2/3 compatibility.
+#ifndef __PYCOMPAT_HPP__
+#define __PYCOMPAT_HPP__
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
-    {
-        SUBTEST << size << 'x' << size << "; CV_32FC1";
+#if PY_MAJOR_VERSION >= 3
+// Python3 treats all ints as longs, PyInt_X functions have been removed.
+#define PyInt_Check PyLong_Check
+#define PyInt_CheckExact PyLong_CheckExact
+#define PyInt_AsLong PyLong_AsLong
+#define PyInt_AS_LONG PyLong_AS_LONG
+#define PyInt_FromLong PyLong_FromLong
+#define PyNumber_Int PyNumber_Long
 
-        gen(src, size, size, CV_32FC1, 0, 256);
+// Python3 strings are unicode, these defines mimic the Python2 functionality.
+#define PyString_Check PyUnicode_Check
+#define PyString_FromString PyUnicode_FromString
+#define PyString_AsString PyUnicode_AsUTF8
+#define PyString_FromStringAndSize PyUnicode_FromStringAndSize
+#define PyString_Size PyUnicode_GET_SIZE
+#endif
 
-        CPU_ON;
-        dst.create(src.size(), src.type());
-        for (int j = 0; j < src.cols; j++)
-            dst.at<float>(0, j) = src.at<float>(0, j);
-
-        for (int i = 1; i < src.rows; ++i)
-            for (int j = 0; j < src.cols; ++j)
-                dst.at<float>(i, j) = dst.at<float>(i - 1 , j) + src.at<float>(i , j);
-        CPU_OFF;
-
-        d_src.upload(src);
-
-        WARMUP_ON;
-        ocl::columnSum(d_src, d_dst);
-        WARMUP_OFF;
-
-        GPU_ON;
-        ocl::columnSum(d_src, d_dst);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_src.upload(src);
-        ocl::columnSum(d_src, d_dst);
-        d_dst.download(ocl_dst);
-        GPU_FULL_OFF;
-
-        TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 5e-1);
-    }
-}
+#endif // END HEADER GUARD

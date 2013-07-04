@@ -67,7 +67,7 @@ else()
 endif()
 target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS})
 
-execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print distutils.sysconfig.get_config_var('SO')"
+execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import distutils.sysconfig; print(distutils.sysconfig.get_config_var('SO'))"
                 RESULT_VARIABLE PYTHON_CVPY_PROCESS
                 OUTPUT_VARIABLE CVPY_SUFFIX
                 OUTPUT_STRIP_TRAILING_WHITESPACE)

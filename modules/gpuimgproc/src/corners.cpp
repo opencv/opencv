@@ -70,6 +70,8 @@ namespace
 {
     void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
     {
+        (void) buf;
+
         double scale = static_cast<double>(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
 
         if (ksize < 0)
@@ -83,16 +85,21 @@ namespace
         Dx.create(src.size(), CV_32F);
         Dy.create(src.size(), CV_32F);
 
+        Ptr<gpu::Filter> filterDx, filterDy;
+
         if (ksize > 0)
         {
-            Sobel(src, Dx, CV_32F, 1, 0, buf, ksize, scale, borderType, -1, stream);
-            Sobel(src, Dy, CV_32F, 0, 1, buf, ksize, scale, borderType, -1, stream);
+            filterDx = gpu::createSobelFilter(src.type(), CV_32F, 1, 0, ksize, scale, borderType);
+            filterDy = gpu::createSobelFilter(src.type(), CV_32F, 0, 1, ksize, scale, borderType);
         }
         else
         {
-            Scharr(src, Dx, CV_32F, 1, 0, buf, scale, borderType, -1, stream);
-            Scharr(src, Dy, CV_32F, 0, 1, buf, scale, borderType, -1, stream);
+            filterDx = gpu::createScharrFilter(src.type(), CV_32F, 1, 0, scale, borderType);
+            filterDy = gpu::createScharrFilter(src.type(), CV_32F, 0, 1, scale, borderType);
         }
+
+        filterDx->apply(src, Dx);
+        filterDy->apply(src, Dy);
     }
 }
 

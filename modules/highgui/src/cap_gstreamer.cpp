@@ -651,17 +651,47 @@ bool CvCapture_GStreamer::open( int type, const char* filename )
 
     if(manualpipeline)
     {
+        GstIterator *it = NULL;
 #if GST_VERSION_MAJOR == 0
-        GstIterator *it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
+        it = gst_bin_iterate_sinks(GST_BIN(uridecodebin));
         if(gst_iterator_next(it, (gpointer *)&sink) != GST_ITERATOR_OK) {
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
             return false;
         }
 #else
-        sink = gst_bin_get_by_name(GST_BIN(uridecodebin), "opencvsink");
-        if (!sink){
-            sink = gst_bin_get_by_name(GST_BIN(uridecodebin), "appsink0");
+        it = gst_bin_iterate_sinks (GST_BIN(uridecodebin));
+
+        gboolean done = FALSE;
+        GstElement *element = NULL;
+        gchar* name = NULL;
+        GValue value = G_VALUE_INIT;
+
+        while (!done) {
+          switch (gst_iterator_next (it, &value)) {
+            case GST_ITERATOR_OK:
+              element = GST_ELEMENT (g_value_get_object (&value));
+              name = gst_element_get_name(element);
+              if (name){
+                if(strstr(name, "opencvsink") != NULL || strstr(name, "appsink") != NULL) {
+                  sink = GST_ELEMENT ( gst_object_ref (element) );
+                  done = TRUE;
+                }
+                g_free(name);
+              }
+              g_value_unset (&value);
+
+              break;
+            case GST_ITERATOR_RESYNC:
+              gst_iterator_resync (it);
+              break;
+            case GST_ITERATOR_ERROR:
+            case GST_ITERATOR_DONE:
+              done = TRUE;
+              break;
+          }
         }
+        gst_iterator_free (it);
+
 
         if (!sink){
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsink in manual pipeline\n");
@@ -1030,6 +1060,12 @@ void CvVideoWriter_GStreamer::close()
         handleMessage(pipeline);
 
         gst_object_unref (GST_OBJECT (pipeline));
+
+        if (source)
+          gst_object_unref (GST_OBJECT (source));
+
+        if (file)
+          gst_object_unref (GST_OBJECT (file));
     }
 }
 
@@ -1127,9 +1163,7 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
     GstEncodingVideoProfile* videoprofile = NULL;
 #endif
 
-#if GST_VERSION_MAJOR == 0
     GstIterator *it = NULL;
-#endif
 
     // we first try to construct a pipeline from the given string.
     // if that fails, we assume it is an ordinary filename
@@ -1150,10 +1184,38 @@ bool CvVideoWriter_GStreamer::open( const char * filename, int fourcc,
             return false;
         }
 #else
-        source = gst_bin_get_by_name(GST_BIN(encodebin), "opencvsrc");
-        if (!source){
-            source = gst_bin_get_by_name(GST_BIN(encodebin), "appsrc0");
+        it = gst_bin_iterate_sources (GST_BIN(encodebin));
+
+        gboolean done = FALSE;
+        GstElement *element = NULL;
+        gchar* name = NULL;
+        GValue value = G_VALUE_INIT;
+
+        while (!done) {
+          switch (gst_iterator_next (it, &value)) {
+            case GST_ITERATOR_OK:
+              element = GST_ELEMENT (g_value_get_object (&value));
+              name = gst_element_get_name(element);
+              if (name){
+                if(strstr(name, "opencvsrc") != NULL || strstr(name, "appsrc") != NULL) {
+                  source = GST_ELEMENT ( gst_object_ref (element) );
+                  done = TRUE;
+                }
+                g_free(name);
+              }
+              g_value_unset (&value);
+
+              break;
+            case GST_ITERATOR_RESYNC:
+              gst_iterator_resync (it);
+              break;
+            case GST_ITERATOR_ERROR:
+            case GST_ITERATOR_DONE:
+              done = TRUE;
+              break;
+          }
         }
+        gst_iterator_free (it);
 
         if (!source){
             CV_ERROR(CV_StsError, "GStreamer: cannot find appsrc in manual pipeline\n");

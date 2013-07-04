@@ -230,7 +230,7 @@ namespace
         Ptr<DenseOpticalFlowExt> opticalFlow_;
 
     private:
-        std::vector<Ptr<FilterEngine_GPU> > filters_;
+        std::vector<Ptr<gpu::Filter> > filters_;
         int curBlurKernelSize_;
         double curBlurSigma_;
         int curSrcType_;
@@ -299,7 +299,7 @@ namespace
         {
             filters_.resize(src.size());
             for (size_t i = 0; i < src.size(); ++i)
-                filters_[i] = createGaussianFilter_GPU(src[0].type(), Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+                filters_[i] = gpu::createGaussianFilter(src[0].type(), -1, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
             curBlurSigma_ = blurSigma_;
             curSrcType_ = src[0].type();
@@ -346,7 +346,7 @@ namespace
                 // a = M * Ih
                 gpu::remap(highRes_, a_[k], backwardMaps_[k].first, backwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
                 // b = HM * Ih
-                filters_[k]->apply(a_[k], b_[k], Rect(0,0,-1,-1), streams_[k]);
+                filters_[k]->apply(a_[k], b_[k], streams_[k]);
                 // c = DHF * Ih
                 gpu::resize(b_[k], c_[k], lowResSize, 0, 0, INTER_NEAREST, streams_[k]);
 
@@ -355,7 +355,7 @@ namespace
                 // a = Dt * diff
                 upscale(c_[k], a_[k], scale_, streams_[k]);
                 // b = HtDt * diff
-                filters_[k]->apply(a_[k], b_[k], Rect(0,0,-1,-1), streams_[k]);
+                filters_[k]->apply(a_[k], b_[k], streams_[k]);
                 // diffTerm = MtHtDt * diff
                 gpu::remap(b_[k], diffTerms_[k], forwardMaps_[k].first, forwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
             }

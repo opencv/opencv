@@ -80,7 +80,7 @@ namespace cv
         // provide additional methods for the user to interact with the command queue after a task is fired
         static void openCLExecuteKernel_2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                                   int depth, char *build_options, FLUSH_MODE finish_mode)
+                                   int depth, const char *build_options, FLUSH_MODE finish_mode)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
@@ -133,7 +133,7 @@ namespace cv
         }
         void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
-                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, char *build_options, FLUSH_MODE finish_mode)
+                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options, FLUSH_MODE finish_mode)
 
         {
             openCLExecuteKernel_2(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,

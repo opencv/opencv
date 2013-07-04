@@ -323,8 +323,10 @@ GPU_TEST_P(LUT, OneChannel)
     cv::Mat src = randomMat(size, type);
     cv::Mat lut = randomMat(cv::Size(256, 1), CV_8UC1);
 
+    cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+
     cv::gpu::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()));
-    cv::gpu::LUT(loadMat(src, useRoi), lut, dst);
+    lutAlg->transform(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::LUT(src, lut, dst_gold);
@@ -337,8 +339,10 @@ GPU_TEST_P(LUT, MultiChannel)
     cv::Mat src = randomMat(size, type);
     cv::Mat lut = randomMat(cv::Size(256, 1), CV_MAKE_TYPE(CV_8U, src.channels()));
 
+    cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+
     cv::gpu::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()), useRoi);
-    cv::gpu::LUT(loadMat(src, useRoi), lut, dst);
+    lutAlg->transform(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::LUT(src, lut, dst_gold);

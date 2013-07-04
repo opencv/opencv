@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -7,16 +7,13 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Dachuan Zhao, dachuan@multicorewareinc.com
-//    Yao Wang yao@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -26,7 +23,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -44,51 +41,31 @@
 //
 //M*/
 
+#ifndef __FFMPEG_VIDEO_SOURCE_HPP__
+#define __FFMPEG_VIDEO_SOURCE_HPP__
 
-#include "precomp.hpp"
-#include <iomanip>
+#include "opencv2/gpucodec.hpp"
 
-#ifdef HAVE_OPENCL
+struct InputMediaStream_FFMPEG;
 
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
+namespace cv { namespace gpucodec { namespace detail {
 
-PARAM_TEST_CASE(PyrDown, MatType, int)
+class FFmpegVideoSource : public RawVideoSource
 {
-    int type;
-    int channels;
+public:
+    FFmpegVideoSource(const String& fname);
+    ~FFmpegVideoSource();
 
-    virtual void SetUp()
-    {
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-    }
+    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile);
 
+    FormatInfo format() const;
+
+private:
+    FormatInfo format_;
+
+    InputMediaStream_FFMPEG* stream_;
 };
 
+}}}
 
-TEST_P(PyrDown, Mat)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        cv::Size size(MWIDTH, MHEIGHT);
-        cv::RNG &rng = TS::ptr()->get_rng();
-        cv::Mat src = randomMat(rng, size, CV_MAKETYPE(type, channels), 0, 100, false);
-
-        cv::ocl::oclMat gsrc(src), gdst;
-        cv::Mat dst_cpu;
-        cv::pyrDown(src, dst_cpu);
-        cv::ocl::pyrDown(gsrc, gdst);
-
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
-    }
-}
-
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
-
-
-#endif // HAVE_OPENCL
+#endif // __FFMPEG_VIDEO_SOURCE_HPP__

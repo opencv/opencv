@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,58 +41,47 @@
 //
 //M*/
 
-#ifndef __FRAME_QUEUE_H__
-#define __FRAME_QUEUE_H__
-
-#include "opencv2/core/utility.hpp"
-#include "opencv2/core/private.gpu.hpp"
+#ifndef __CUVID_VIDEO_SOURCE_HPP__
+#define __CUVID_VIDEO_SOURCE_HPP__
 
 #include <nvcuvid.h>
 
-namespace cv { namespace gpu { namespace detail
+#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/gpucodec.hpp"
+#include "video_source.hpp"
+
+namespace cv { namespace gpucodec { namespace detail
 {
 
-class FrameQueue
+class CuvidVideoSource : public VideoSource
 {
 public:
-    static const int MaximumSize = 20; // MAX_FRM_CNT;
+    explicit CuvidVideoSource(const String& fname);
+    ~CuvidVideoSource();
 
-    FrameQueue();
-
-    void endDecode() { endOfDecode_ = true; }
-    bool isEndOfDecode() const { return endOfDecode_ != 0;}
-
-    // Spins until frame becomes available or decoding gets canceled.
-    // If the requested frame is available the method returns true.
-    // If decoding was interupted before the requested frame becomes
-    // available, the method returns false.
-    bool waitUntilFrameAvailable(int pictureIndex);
-
-    void enqueue(const CUVIDPARSERDISPINFO* picParams);
-
-    // Deque the next frame.
-    // Parameters:
-    //      displayInfo - New frame info gets placed into this object.
-    // Returns:
-    //      true, if a new frame was returned,
-    //      false, if the queue was empty and no new frame could be returned.
-    bool dequeue(CUVIDPARSERDISPINFO& displayInfo);
-
-    void releaseFrame(const CUVIDPARSERDISPINFO& picParams) { isFrameInUse_[picParams.picture_index] = false; }
+    FormatInfo format() const;
+    void start();
+    void stop();
+    bool isStarted() const;
+    bool hasError() const;
 
 private:
-    bool isInUse(int pictureIndex) const { return isFrameInUse_[pictureIndex] != 0; }
+    // Callback for handling packages of demuxed video data.
+    //
+    // Parameters:
+    //      pUserData - Pointer to user data. We must pass a pointer to a
+    //          VideoSourceData struct here, that contains a valid CUvideoparser
+    //          and FrameQueue.
+    //      pPacket - video-source data packet.
+    //
+    // NOTE: called from a different thread that doesn't not have a cuda context
+    //
+    static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
 
-    Mutex mtx_;
-
-    volatile int isFrameInUse_[MaximumSize];
-    volatile int endOfDecode_;
-
-    int framesInQueue_;
-    int readPosition_;
-    CUVIDPARSERDISPINFO displayQueue_[MaximumSize];
+    CUvideosource videoSource_;
+    FormatInfo format_;
 };
 
 }}}
 
-#endif // __FRAME_QUEUE_H__
+#endif // __CUVID_VIDEO_SOURCE_HPP__

@@ -147,10 +147,10 @@ Class providing functionality for querying the specified GPU properties. ::
         size_t totalConstMem() const;
 
         //! major compute capability
-        int major() const;
+        int majorVersion() const;
 
         //! minor compute capability
-        int minor() const;
+        int minorVersion() const;
 
         //! alignment requirement for textures
         size_t textureAlignment() const;
@@ -313,19 +313,19 @@ Returns the device name.
 
 
 
-gpu::DeviceInfo::major
-----------------------
+gpu::DeviceInfo::majorVersion
+-----------------------------
 Returns the major compute capability version.
 
-.. ocv:function:: int gpu::DeviceInfo::major()
+.. ocv:function:: int gpu::DeviceInfo::majorVersion()
 
 
 
-gpu::DeviceInfo::minor
-----------------------
+gpu::DeviceInfo::minorVersion
+-----------------------------
 Returns the minor compute capability version.
 
-.. ocv:function:: int gpu::DeviceInfo::minor()
+.. ocv:function:: int gpu::DeviceInfo::minorVersion()
 
 
 

@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& videoFormat)
+void cv::gpucodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
 {
     release();
 
@@ -103,7 +104,7 @@ void cv::gpu::detail::VideoDecoder::create(const VideoReader_GPU::FormatInfo& vi
     cuSafeCall( cuvidCreateDecoder(&decoder_, &createInfo_) );
 }
 
-void cv::gpu::detail::VideoDecoder::release()
+void cv::gpucodec::detail::VideoDecoder::release()
 {
     if (decoder_)
     {

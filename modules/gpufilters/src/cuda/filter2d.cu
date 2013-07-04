@@ -48,111 +48,104 @@
 
 namespace cv { namespace gpu { namespace cudev
 {
-    namespace imgproc
+    template <class SrcPtr, typename D>
+    __global__ void filter2D(const SrcPtr src, PtrStepSz<D> dst,
+                             const float* __restrict__ kernel,
+                             const int kWidth, const int kHeight,
+                             const int anchorX, const int anchorY)
     {
-        #define FILTER2D_MAX_KERNEL_SIZE 16
+        typedef typename TypeVec<float, VecTraits<D>::cn>::vec_type sum_t;
 
-        __constant__ float c_filter2DKernel[FILTER2D_MAX_KERNEL_SIZE * FILTER2D_MAX_KERNEL_SIZE];
+        const int x = blockIdx.x * blockDim.x + threadIdx.x;
+        const int y = blockIdx.y * blockDim.y + threadIdx.y;
 
-        template <class SrcT, typename D>
-        __global__ void filter2D(const SrcT src, PtrStepSz<D> dst, const int kWidth, const int kHeight, const int anchorX, const int anchorY)
+        if (x >= dst.cols || y >= dst.rows)
+            return;
+
+        sum_t res = VecTraits<sum_t>::all(0);
+        int kInd = 0;
+
+        for (int i = 0; i < kHeight; ++i)
         {
-            typedef typename TypeVec<float, VecTraits<D>::cn>::vec_type sum_t;
-
-            const int x = blockIdx.x * blockDim.x + threadIdx.x;
-            const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-            if (x >= dst.cols || y >= dst.rows)
-                return;
-
-            sum_t res = VecTraits<sum_t>::all(0);
-            int kInd = 0;
-
-            for (int i = 0; i < kHeight; ++i)
-            {
-                for (int j = 0; j < kWidth; ++j)
-                    res = res + src(y - anchorY + i, x - anchorX + j) * c_filter2DKernel[kInd++];
-            }
-
-            dst(y, x) = saturate_cast<D>(res);
+            for (int j = 0; j < kWidth; ++j)
+                res = res + src(y - anchorY + i, x - anchorX + j) * kernel[kInd++];
         }
 
-        template <typename T, typename D, template <typename> class Brd> struct Filter2DCaller;
-
-        #define IMPLEMENT_FILTER2D_TEX_READER(type) \
-            texture< type , cudaTextureType2D, cudaReadModeElementType> tex_filter2D_ ## type (0, cudaFilterModePoint, cudaAddressModeClamp); \
-            struct tex_filter2D_ ## type ## _reader \
-            { \
-                typedef type elem_type; \
-                typedef int index_type; \
-                const int xoff; \
-                const int yoff; \
-                tex_filter2D_ ## type ## _reader (int xoff_, int yoff_) : xoff(xoff_), yoff(yoff_) {} \
-                __device__ __forceinline__ elem_type operator ()(index_type y, index_type x) const \
-                { \
-                    return tex2D(tex_filter2D_ ## type , x + xoff, y + yoff); \
-                } \
-            }; \
-            template <typename D, template <typename> class Brd> struct Filter2DCaller< type , D, Brd> \
-            { \
-                static void call(const PtrStepSz< type > srcWhole, int xoff, int yoff, PtrStepSz<D> dst, \
-                    int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream) \
-                { \
-                    typedef typename TypeVec<float, VecTraits< type >::cn>::vec_type work_type; \
-                    dim3 block(16, 16); \
-                    dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_filter2D_ ## type , srcWhole); \
-                    tex_filter2D_ ## type ##_reader texSrc(xoff, yoff); \
-                    Brd<work_type> brd(dst.rows, dst.cols, VecTraits<work_type>::make(borderValue)); \
-                    BorderReader< tex_filter2D_ ## type ##_reader, Brd<work_type> > brdSrc(texSrc, brd); \
-                    filter2D<<<grid, block, 0, stream>>>(brdSrc, dst, kWidth, kHeight, anchorX, anchorY); \
-                    cudaSafeCall( cudaGetLastError() ); \
-                    if (stream == 0) \
-                        cudaSafeCall( cudaDeviceSynchronize() ); \
-                } \
-            };
-
-        IMPLEMENT_FILTER2D_TEX_READER(uchar);
-        IMPLEMENT_FILTER2D_TEX_READER(uchar4);
-
-        IMPLEMENT_FILTER2D_TEX_READER(ushort);
-        IMPLEMENT_FILTER2D_TEX_READER(ushort4);
-
-        IMPLEMENT_FILTER2D_TEX_READER(float);
-        IMPLEMENT_FILTER2D_TEX_READER(float4);
-
-        #undef IMPLEMENT_FILTER2D_TEX_READER
-
-        template <typename T, typename D>
-        void filter2D_gpu(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst,
-                          int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel,
-                          int borderMode, const float* borderValue, cudaStream_t stream)
-        {
-            typedef void (*func_t)(const PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSz<D> dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
-            static const func_t funcs[] =
-            {
-                Filter2DCaller<T, D, BrdConstant>::call,
-                Filter2DCaller<T, D, BrdReplicate>::call,
-                Filter2DCaller<T, D, BrdReflect>::call,
-                Filter2DCaller<T, D, BrdWrap>::call,
-                Filter2DCaller<T, D, BrdReflect101>::call
-            };
-
-            if (stream == 0)
-                cudaSafeCall( cudaMemcpyToSymbol(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice) );
-            else
-                cudaSafeCall( cudaMemcpyToSymbolAsync(c_filter2DKernel, kernel, kWidth * kHeight * sizeof(float), 0, cudaMemcpyDeviceToDevice, stream) );
-
-            funcs[borderMode](static_cast< PtrStepSz<T> >(srcWhole), ofsX, ofsY, static_cast< PtrStepSz<D> >(dst), kWidth, kHeight, anchorX, anchorY, borderValue, stream);
-        }
-
-        template void filter2D_gpu<uchar, uchar>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<uchar4, uchar4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<ushort, ushort>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<ushort4, ushort4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<float, float>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
-        template void filter2D_gpu<float4, float4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, int kWidth, int kHeight, int anchorX, int anchorY, const float* kernel, int borderMode, const float* borderValue, cudaStream_t stream);
+        dst(y, x) = saturate_cast<D>(res);
     }
+
+    template <typename T, typename D, template <typename> class Brd> struct Filter2DCaller;
+
+    #define IMPLEMENT_FILTER2D_TEX_READER(type) \
+        texture< type , cudaTextureType2D, cudaReadModeElementType> tex_filter2D_ ## type (0, cudaFilterModePoint, cudaAddressModeClamp); \
+        struct tex_filter2D_ ## type ## _reader \
+        { \
+            typedef type elem_type; \
+            typedef int index_type; \
+            const int xoff; \
+            const int yoff; \
+            tex_filter2D_ ## type ## _reader (int xoff_, int yoff_) : xoff(xoff_), yoff(yoff_) {} \
+            __device__ __forceinline__ elem_type operator ()(index_type y, index_type x) const \
+            { \
+                return tex2D(tex_filter2D_ ## type , x + xoff, y + yoff); \
+            } \
+        }; \
+        template <typename D, template <typename> class Brd> struct Filter2DCaller< type , D, Brd> \
+        { \
+            static void call(const PtrStepSz< type > srcWhole, int xoff, int yoff, PtrStepSz<D> dst, const float* kernel, \
+                int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream) \
+            { \
+                typedef typename TypeVec<float, VecTraits< type >::cn>::vec_type work_type; \
+                dim3 block(16, 16); \
+                dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
+                bindTexture(&tex_filter2D_ ## type , srcWhole); \
+                tex_filter2D_ ## type ##_reader texSrc(xoff, yoff); \
+                Brd<work_type> brd(dst.rows, dst.cols, VecTraits<work_type>::make(borderValue)); \
+                BorderReader< tex_filter2D_ ## type ##_reader, Brd<work_type> > brdSrc(texSrc, brd); \
+                filter2D<<<grid, block, 0, stream>>>(brdSrc, dst, kernel, kWidth, kHeight, anchorX, anchorY); \
+                cudaSafeCall( cudaGetLastError() ); \
+                if (stream == 0) \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
+            } \
+        };
+
+    IMPLEMENT_FILTER2D_TEX_READER(uchar);
+    IMPLEMENT_FILTER2D_TEX_READER(uchar4);
+
+    IMPLEMENT_FILTER2D_TEX_READER(ushort);
+    IMPLEMENT_FILTER2D_TEX_READER(ushort4);
+
+    IMPLEMENT_FILTER2D_TEX_READER(float);
+    IMPLEMENT_FILTER2D_TEX_READER(float4);
+
+    #undef IMPLEMENT_FILTER2D_TEX_READER
+
+    template <typename T, typename D>
+    void filter2D(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel,
+                  int kWidth, int kHeight, int anchorX, int anchorY,
+                  int borderMode, const float* borderValue, cudaStream_t stream)
+    {
+        typedef void (*func_t)(const PtrStepSz<T> srcWhole, int xoff, int yoff, PtrStepSz<D> dst, const float* kernel,
+                               int kWidth, int kHeight, int anchorX, int anchorY, const float* borderValue, cudaStream_t stream);
+        static const func_t funcs[] =
+        {
+            Filter2DCaller<T, D, BrdConstant>::call,
+            Filter2DCaller<T, D, BrdReplicate>::call,
+            Filter2DCaller<T, D, BrdReflect>::call,
+            Filter2DCaller<T, D, BrdWrap>::call,
+            Filter2DCaller<T, D, BrdReflect101>::call
+        };
+
+        funcs[borderMode]((PtrStepSz<T>) srcWhole, ofsX, ofsY, (PtrStepSz<D>) dst, kernel,
+                          kWidth, kHeight, anchorX, anchorY, borderValue, stream);
+    }
+
+    template void filter2D<uchar  , uchar  >(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void filter2D<uchar4 , uchar4 >(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void filter2D<ushort , ushort >(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void filter2D<ushort4, ushort4>(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void filter2D<float  , float  >(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
+    template void filter2D<float4 , float4 >(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel, int kWidth, int kHeight, int anchorX, int anchorY, int borderMode, const float* borderValue, cudaStream_t stream);
 }}}
 
 #endif // CUDA_DISABLER

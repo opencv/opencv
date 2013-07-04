@@ -113,7 +113,7 @@ namespace cv
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
         void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                                  int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+                                  int depth, const char *build_options, FLUSH_MODE finish_mode = DISABLE);
         // bind oclMat to OpenCL image textures
         // note:
         //   1. there is no memory management. User need to explicitly release the resource

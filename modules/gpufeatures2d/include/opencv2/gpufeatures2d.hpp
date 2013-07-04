@@ -351,7 +351,7 @@ private:
 
     FAST_GPU fastDetector_;
 
-    Ptr<FilterEngine_GPU> blurFilter;
+    Ptr<gpu::Filter> blurFilter;
 
     GpuMat d_keypoints_;
 };

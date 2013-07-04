@@ -74,12 +74,11 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::VideoReader_GPU d_reader(inputFile);
-        ASSERT_TRUE( d_reader.isOpened() );
+        cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(inputFile);
 
         cv::gpu::GpuMat frame;
 
-        TEST_CYCLE_N(10) d_reader.read(frame);
+        TEST_CYCLE_N(10) d_reader->nextFrame(frame);
 
         GPU_SANITY_CHECK(frame);
     }
@@ -119,7 +118,7 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::VideoWriter_GPU d_writer;
+        cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
 
         cv::gpu::GpuMat d_frame;
 
@@ -130,11 +129,11 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
 
             d_frame.upload(frame);
 
-            if (!d_writer.isOpened())
-                d_writer.open(outputFile, frame.size(), FPS);
+            if (d_writer.empty())
+                d_writer = cv::gpucodec::createVideoWriter(outputFile, frame.size(), FPS);
 
             startTimer(); next();
-            d_writer.write(d_frame);
+            d_writer->write(d_frame);
             stopTimer();
         }
     }

@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -47,6 +48,10 @@
 #if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS) && !defined(WIN32)
     #include "../src/cap_ffmpeg_impl.hpp"
 #endif
+
+using namespace cv;
+using namespace cv::gpucodec;
+using namespace cv::gpucodec::detail;
 
 namespace
 {
@@ -94,7 +99,7 @@ namespace
     }
 }
 
-cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
+cv::gpucodec::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
     stream_(0)
 {
     CV_Assert( init_MediaStream_FFMPEG() );
@@ -106,75 +111,33 @@ cv::gpu::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
 
     stream_ = create_InputMediaStream_FFMPEG_p(fname.c_str(), &codec, &chroma_format, &width, &height);
     if (!stream_)
-        CV_Error(cv::Error::StsUnsupportedFormat, "Unsupported video source");
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported video source");
 
-    format_.codec = static_cast<VideoReader_GPU::Codec>(codec);
-    format_.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(chroma_format);
+    format_.codec = static_cast<Codec>(codec);
+    format_.chromaFormat = static_cast<ChromaFormat>(chroma_format);
     format_.width = width;
     format_.height = height;
 }
 
-cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::detail::FFmpegVideoSource::format() const
+cv::gpucodec::detail::FFmpegVideoSource::~FFmpegVideoSource()
+{
+    if (stream_)
+        release_InputMediaStream_FFMPEG_p(stream_);
+}
+
+FormatInfo cv::gpucodec::detail::FFmpegVideoSource::format() const
 {
     return format_;
 }
 
-void cv::gpu::detail::FFmpegVideoSource::start()
+bool cv::gpucodec::detail::FFmpegVideoSource::getNextPacket(unsigned char** data, int* size, bool* bEndOfFile)
 {
-    stop_ = false;
-    hasError_ = false;
-    thread_ = new Thread(readLoop, this);
-}
+    int endOfFile;
 
-void cv::gpu::detail::FFmpegVideoSource::stop()
-{
-    stop_ = true;
-    thread_->wait();
-    thread_.release();
-}
+    int res = read_InputMediaStream_FFMPEG_p(stream_, data, size, &endOfFile);
 
-bool cv::gpu::detail::FFmpegVideoSource::isStarted() const
-{
-    return !stop_;
-}
-
-bool cv::gpu::detail::FFmpegVideoSource::hasError() const
-{
-    return hasError_;
-}
-
-void cv::gpu::detail::FFmpegVideoSource::readLoop(void* userData)
-{
-    FFmpegVideoSource* thiz = static_cast<FFmpegVideoSource*>(userData);
-
-    for (;;)
-    {
-        unsigned char* data;
-        int size;
-        int endOfFile;
-
-        if (!read_InputMediaStream_FFMPEG_p(thiz->stream_, &data, &size, &endOfFile))
-        {
-            thiz->hasError_ = !endOfFile;
-            break;
-        }
-
-        if (!thiz->parseVideoData(data, size))
-        {
-            thiz->hasError_ = true;
-            break;
-        }
-
-        if (thiz->stop_)
-            break;
-    }
-
-    thiz->parseVideoData(0, 0, true);
-}
-
-template <> void cv::Ptr<InputMediaStream_FFMPEG>::delete_obj()
-{
-    if (obj) release_InputMediaStream_FFMPEG_p(obj);
+    *bEndOfFile = (endOfFile != 0);
+    return res != 0;
 }
 
 #endif // HAVE_CUDA

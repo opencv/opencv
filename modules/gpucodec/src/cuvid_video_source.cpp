@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -44,7 +45,11 @@
 
 #ifdef HAVE_NVCUVID
 
-cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
+using namespace cv;
+using namespace cv::gpucodec;
+using namespace cv::gpucodec::detail;
+
+cv::gpucodec::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
 {
     CUVIDSOURCEPARAMS params;
     std::memset(&params, 0, sizeof(CUVIDSOURCEPARAMS));
@@ -55,51 +60,51 @@ cv::gpu::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
     params.pfnAudioDataHandler = 0;
 
     // now create the actual source
-    CUresult res = cuvidCreateVideoSource(&videoSource_, fname.c_str(), &params);
-    if (res == CUDA_ERROR_INVALID_SOURCE)
-        throw std::runtime_error("Unsupported video source");
-    cuSafeCall( res );
+    CUresult cuRes = cuvidCreateVideoSource(&videoSource_, fname.c_str(), &params);
+    if (cuRes == CUDA_ERROR_INVALID_SOURCE)
+        throw std::runtime_error("");
+    cuSafeCall( cuRes );
 
     CUVIDEOFORMAT vidfmt;
     cuSafeCall( cuvidGetSourceVideoFormat(videoSource_, &vidfmt, 0) );
 
-    format_.codec = static_cast<VideoReader_GPU::Codec>(vidfmt.codec);
-    format_.chromaFormat = static_cast<VideoReader_GPU::ChromaFormat>(vidfmt.chroma_format);
+    format_.codec = static_cast<Codec>(vidfmt.codec);
+    format_.chromaFormat = static_cast<ChromaFormat>(vidfmt.chroma_format);
     format_.width = vidfmt.coded_width;
     format_.height = vidfmt.coded_height;
 }
 
-cv::gpu::detail::CuvidVideoSource::~CuvidVideoSource()
+cv::gpucodec::detail::CuvidVideoSource::~CuvidVideoSource()
 {
     cuvidDestroyVideoSource(videoSource_);
 }
 
-cv::gpu::VideoReader_GPU::FormatInfo cv::gpu::detail::CuvidVideoSource::format() const
+FormatInfo cv::gpucodec::detail::CuvidVideoSource::format() const
 {
     return format_;
 }
 
-void cv::gpu::detail::CuvidVideoSource::start()
+void cv::gpucodec::detail::CuvidVideoSource::start()
 {
     cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Started) );
 }
 
-void cv::gpu::detail::CuvidVideoSource::stop()
+void cv::gpucodec::detail::CuvidVideoSource::stop()
 {
     cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Stopped) );
 }
 
-bool cv::gpu::detail::CuvidVideoSource::isStarted() const
+bool cv::gpucodec::detail::CuvidVideoSource::isStarted() const
 {
     return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Started);
 }
 
-bool cv::gpu::detail::CuvidVideoSource::hasError() const
+bool cv::gpucodec::detail::CuvidVideoSource::hasError() const
 {
     return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Error);
 }
 
-int CUDAAPI cv::gpu::detail::CuvidVideoSource::HandleVideoData(void* userData, CUVIDSOURCEDATAPACKET* packet)
+int CUDAAPI cv::gpucodec::detail::CuvidVideoSource::HandleVideoData(void* userData, CUVIDSOURCEDATAPACKET* packet)
 {
     CuvidVideoSource* thiz = static_cast<CuvidVideoSource*>(userData);
 

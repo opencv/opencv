@@ -360,6 +360,9 @@ Mat estimateGlobalMotionRansac(
     const int npoints = points0.getMat().checkVector(2);
     CV_Assert(points1.getMat().checkVector(2) == npoints);
 
+    if (npoints < params.size)
+        return Mat::eye(3, 3, CV_32F);
+
     const Point2f *points0_ = points0.getMat().ptr<Point2f>();
     const Point2f *points1_ = points1.getMat().ptr<Point2f>();
     const int niters = params.niters();
@@ -678,6 +681,8 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 {
     // find keypoints
     detector_->detect(frame0, keypointsPrev_);
+    if (keypointsPrev_.empty())
+        return Mat::eye(3, 3, CV_32F);
 
     // extract points from keypoints
     pointsPrev_.resize(keypointsPrev_.size());

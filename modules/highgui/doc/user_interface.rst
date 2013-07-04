@@ -9,6 +9,8 @@ Creates a trackbar and attaches it to the specified window.
 
 .. ocv:function:: int createTrackbar( const String& trackbarname, const String& winname, int* value, int count, TrackbarCallback onChange=0, void* userdata=0)
 
+.. ocv:pyfunction:: cv2.createTrackbar(trackbarName, windowName, value, count, onChange) -> None
+
 .. ocv:cfunction:: int cvCreateTrackbar( const char* trackbar_name, const char* window_name, int* value, int count, CvTrackbarCallback on_change=NULL )
 
     :param trackbarname: Name of the created trackbar.
@@ -180,6 +182,8 @@ SetMouseCallback
 Sets mouse handler for the specified window
 
 .. ocv:function:: void setMouseCallback( const String& winname, MouseCallback onMouse, void* userdata=0 )
+
+.. ocv:pyfunction:: cv2.setMouseCallback(windowName, onMouse [, param]) -> None
 
 .. ocv:cfunction:: void cvSetMouseCallback( const char* window_name, CvMouseCallback on_mouse, void* param=NULL )
 

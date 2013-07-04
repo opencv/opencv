@@ -23,6 +23,7 @@
 //    Rock Li, Rock.Li@amd.com
 //    Wu Zailong, bullet@yeah.net
 //    Xu Pang, pangxu010@163.com
+//    Sen Liu, swjtuls1987@126.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -1393,6 +1394,46 @@ TEST_P(calcHist, Mat)
         EXPECT_MAT_NEAR(dst_hist, cpu_hist, 0.0);
     }
 }
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// CLAHE
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(ClipLimit, double)
+}
+
+PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
+{
+    cv::Size size;
+    double clipLimit;
+
+    cv::Mat src;
+    cv::Mat dst_gold;
+
+    cv::ocl::oclMat g_src;
+    cv::ocl::oclMat g_dst;
+
+    virtual void SetUp()
+    {
+        size = GET_PARAM(0);
+        clipLimit = GET_PARAM(1);
+
+        cv::RNG &rng = TS::ptr()->get_rng();
+        src = randomMat(rng, size, CV_8UC1, 0, 256, false);
+        g_src.upload(src);
+    }
+};
+
+TEST_P(CLAHE, Accuracy)
+{
+    cv::Ptr<cv::ocl::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit);
+    clahe->apply(g_src, g_dst);
+    cv::Mat dst(g_dst);
+
+    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
+    clahe_gold->apply(src, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
+}
 
 ///////////////////////////Convolve//////////////////////////////////
 PARAM_TEST_CASE(ConvolveTestBase, MatType, bool)
@@ -1532,6 +1573,47 @@ TEST_P(Convolve, Mat)
     }
 }
 
+//////////////////////////////// ColumnSum //////////////////////////////////////
+PARAM_TEST_CASE(ColumnSum, cv::Size)
+{
+    cv::Size size;
+    cv::Mat src;
+
+    virtual void SetUp()
+    {
+        size = GET_PARAM(0);
+    }
+};
+
+TEST_P(ColumnSum, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_32FC1);
+    cv::ocl::oclMat d_dst;
+    cv::ocl::oclMat d_src(src);
+
+    cv::ocl::columnSum(d_src, d_dst);
+
+    cv::Mat dst(d_dst);
+
+    for (int j = 0; j < src.cols; ++j)
+    {
+        float gold = src.at<float>(0, j);
+        float res = dst.at<float>(0, j);
+        ASSERT_NEAR(res, gold, 1e-5);
+    }
+
+    for (int i = 1; i < src.rows; ++i)
+    {
+        for (int j = 0; j < src.cols; ++j)
+        {
+            float gold = src.at<float>(i, j) += src.at<float>(i - 1, j);
+            float res = dst.at<float>(i, j);
+            ASSERT_NEAR(res, gold, 1e-5);
+        }
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////
+
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
                             ONE_TYPE(CV_8UC1),
                             NULL_TYPE,
@@ -1643,7 +1725,10 @@ INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-//INSTANTIATE_TEST_CASE_P(ConvolveTestBase, Convolve, Combine(
-//                            Values(CV_32FC1, CV_32FC1),
-//                            Values(false))); // Values(false) is the reserved parameter
+INSTANTIATE_TEST_CASE_P(ImgProc, CLAHE, Combine(
+                        Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300)),
+                        Values(0.0, 40.0)));
+
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
+
 #endif // HAVE_OPENCL

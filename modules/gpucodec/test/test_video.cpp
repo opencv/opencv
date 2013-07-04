@@ -57,19 +57,15 @@ GPU_TEST_P(Video, Reader)
 
     const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
-    cv::gpu::VideoReader_GPU reader(inputFile);
-    ASSERT_TRUE(reader.isOpened());
+    cv::Ptr<cv::gpucodec::VideoReader> reader = cv::gpucodec::createVideoReader(inputFile);
 
     cv::gpu::GpuMat frame;
 
     for (int i = 0; i < 10; ++i)
     {
-        ASSERT_TRUE(reader.read(frame));
+        ASSERT_TRUE(reader->nextFrame(frame));
         ASSERT_FALSE(frame.empty());
     }
-
-    reader.close();
-    ASSERT_FALSE(reader.isOpened());
 }
 
 //////////////////////////////////////////////////////
@@ -89,7 +85,7 @@ GPU_TEST_P(Video, Writer)
     cv::VideoCapture reader(inputFile);
     ASSERT_TRUE(reader.isOpened());
 
-    cv::gpu::VideoWriter_GPU d_writer;
+    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
 
     cv::Mat frame;
     cv::gpu::GpuMat d_frame;
@@ -101,14 +97,14 @@ GPU_TEST_P(Video, Writer)
 
         d_frame.upload(frame);
 
-        if (!d_writer.isOpened())
-            d_writer.open(outputFile, frame.size(), FPS);
+        if (d_writer.empty())
+            d_writer = cv::gpucodec::createVideoWriter(outputFile, frame.size(), FPS);
 
-        d_writer.write(d_frame);
+        d_writer->write(d_frame);
     }
 
     reader.release();
-    d_writer.close();
+    d_writer.release();
 
     reader.open(outputFile);
     ASSERT_TRUE(reader.isOpened());

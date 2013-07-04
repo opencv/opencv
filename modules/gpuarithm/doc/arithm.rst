@@ -6,10 +6,10 @@ Arithm Operations on Matrices
 
 
 gpu::gemm
-------------------
+---------
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gpu::gemm(const GpuMat& src1, const GpuMat& src2, double alpha, const GpuMat& src3, double beta, GpuMat& dst, int flags = 0, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null())
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -44,38 +44,40 @@ The function performs generalized matrix multiplication similar to the ``gemm`` 
 
 
 gpu::mulSpectrums
----------------------
+-----------------
 Performs a per-element multiplication of two Fourier spectrums.
 
-.. ocv:function:: void gpu::mulSpectrums( const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB=false, Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null())
 
-    :param a: First spectrum.
+    :param src1: First spectrum.
 
-    :param b: Second spectrum with the same size and type as  ``a`` .
+    :param src2: Second spectrum with the same size and type as  ``a`` .
 
-    :param c: Destination spectrum.
+    :param dst: Destination spectrum.
 
     :param flags: Mock parameter used for CPU/GPU interfaces similarity.
 
     :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
-    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
+    :param stream: Stream for the asynchronous version.
+
+Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 .. seealso:: :ocv:func:`mulSpectrums`
 
 
 
 gpu::mulAndScaleSpectrums
------------------------------
+-------------------------
 Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
-.. ocv:function:: void gpu::mulAndScaleSpectrums( const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB=false, Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null())
 
-    :param a: First spectrum.
+    :param src1: First spectrum.
 
-    :param b: Second spectrum with the same size and type as  ``a`` .
+    :param src2: Second spectrum with the same size and type as  ``a`` .
 
-    :param c: Destination spectrum.
+    :param dst: Destination spectrum.
 
     :param flags: Mock parameter used for CPU/GPU interfaces similarity.
 
@@ -83,17 +85,17 @@ Performs a per-element multiplication of two Fourier spectrums and scales the re
 
     :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
-    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
+Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
 
 .. seealso:: :ocv:func:`mulSpectrums`
 
 
 
 gpu::dft
-------------
+--------
 Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
-.. ocv:function:: void gpu::dft( const GpuMat& src, GpuMat& dst, Size dft_size, int flags=0, Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null())
 
     :param src: Source matrix (real or complex).
 
@@ -125,46 +127,25 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 
 
 
-gpu::ConvolveBuf
+gpu::Convolution
 ----------------
-.. ocv:struct:: gpu::ConvolveBuf
+.. ocv:class:: gpu::Convolution : public Algorithm
 
-Class providing a memory buffer for :ocv:func:`gpu::convolve` function, plus it allows to adjust some specific parameters. ::
+Base class for convolution (or cross-correlation) operator. ::
 
-    struct CV_EXPORTS ConvolveBuf
+    class CV_EXPORTS Convolution : public Algorithm
     {
-        Size result_size;
-        Size block_size;
-        Size user_block_size;
-        Size dft_size;
-        int spect_len;
-
-        GpuMat image_spect, templ_spect, result_spect;
-        GpuMat image_block, templ_block, result_data;
-
-        void create(Size image_size, Size templ_size);
-        static Size estimateBlockSize(Size result_size, Size templ_size);
+    public:
+        virtual void convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null()) = 0;
     };
 
-You can use field `user_block_size` to set specific block size for :ocv:func:`gpu::convolve` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 
-
-gpu::ConvolveBuf::create
-------------------------
-.. ocv:function:: gpu::ConvolveBuf::create(Size image_size, Size templ_size)
-
-Constructs a buffer for :ocv:func:`gpu::convolve` function with respective arguments.
-
-
-
-gpu::convolve
------------------
+gpu::Convolution::convolve
+---------------------------
 Computes a convolution (or cross-correlation) of two images.
 
-.. ocv:function:: void gpu::convolve(const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr=false)
-
-.. ocv:function:: void gpu::convolve( const GpuMat& image, const GpuMat& templ, GpuMat& result, bool ccorr, ConvolveBuf& buf, Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::Convolution::convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null())
 
     :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -174,38 +155,14 @@ Computes a convolution (or cross-correlation) of two images.
 
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
 
-    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`gpu::ConvolveBuf`.
-
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`gpu::filter2D`
 
 
+gpu::createConvolution
+----------------------
+Creates implementation for :ocv:class:`gpu::Convolution` .
 
-gpu::integral
------------------
-Computes an integral image.
+.. ocv:function:: Ptr<Convolution> createConvolution(Size user_block_size = Size())
 
-.. ocv:function:: void gpu::integral(const GpuMat& src, GpuMat& sum, Stream& stream = Stream::Null())
-
-    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
-
-    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
-
-    :param stream: Stream for the asynchronous version.
-
-.. seealso:: :ocv:func:`integral`
-
-
-
-gpu::sqrIntegral
---------------------
-Computes a squared integral image.
-
-.. ocv:function:: void gpu::sqrIntegral(const GpuMat& src, GpuMat& sqsum, Stream& stream = Stream::Null())
-
-    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
-
-    :param sqsum: Squared integral image containing 64-bit unsigned integer values packed into  ``CV_64FC1`` .
-
-    :param stream: Stream for the asynchronous version.
+    :param user_block_size: Block size. If you leave default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.

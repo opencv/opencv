@@ -65,8 +65,8 @@ void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
 
         if (apperture_size != 3)
         {
-            filterDX = createDerivFilter_GPU(CV_8UC1, CV_32S, 1, 0, apperture_size, BORDER_REPLICATE);
-            filterDY = createDerivFilter_GPU(CV_8UC1, CV_32S, 0, 1, apperture_size, BORDER_REPLICATE);
+            filterDX = createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size, false, 1, BORDER_REPLICATE);
+            filterDY = createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size, false, 1, BORDER_REPLICATE);
         }
     }
 
@@ -150,8 +150,8 @@ void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_th
     }
     else
     {
-        buf.filterDX->apply(src, buf.dx, Rect(0, 0, src.cols, src.rows));
-        buf.filterDY->apply(src, buf.dy, Rect(0, 0, src.cols, src.rows));
+        buf.filterDX->apply(src, buf.dx);
+        buf.filterDY->apply(src, buf.dy);
 
         calcMagnitude(buf.dx, buf.dy, buf.mag, L2gradient);
     }

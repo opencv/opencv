@@ -224,10 +224,12 @@ PERF_TEST_P(Sz_Type, LutOneChannel,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::LUT(d_src, lut, dst);
+        TEST_CYCLE() lutAlg->transform(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -259,10 +261,12 @@ PERF_TEST_P(Sz_Type, LutMultiChannel,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::LUT(d_src, lut, dst);
+        TEST_CYCLE() lutAlg->transform(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
