@@ -79,5 +79,11 @@ namespace temp_viz
     public:
         CubeWidget(const Point3f& pt_min, const Point3f& pt_max, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS CoordinateSystemWidget : public Widget
+    {
+    public:
+        CoordinateSystemWidget(double scale, const Affine3f& affine);
+    };
 
 }

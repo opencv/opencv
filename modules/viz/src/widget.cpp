@@ -31,6 +31,11 @@ public:
     void updatePose(const Affine3f& pose)
     {
         vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+        if (!matrix)
+        {
+            setPose(pose);
+            return ;
+        }
         Matx44f matrix_cv = convertToMatx(matrix);
 
         Affine3f updated_pose = pose * Affine3f(matrix_cv);

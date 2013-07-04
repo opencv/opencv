@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+#include <opencv2/calib3d.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
@@ -224,4 +225,53 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, c
     actor->SetMapper(mapper);
     
     setColor(color);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// coordinate system widget implementation
+
+temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Affine3f& affine)
+{
+    vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
+    axes->SetOrigin (0, 0, 0);
+    axes->SetScaleFactor (scale);
+
+    vtkSmartPointer<vtkFloatArray> axes_colors = vtkSmartPointer<vtkFloatArray>::New ();
+    axes_colors->Allocate (6);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (1.0);
+    axes_colors->InsertNextValue (1.0);
+
+    vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
+    axes_data->Update ();
+    axes_data->GetPointData ()->SetScalars (axes_colors);
+
+    vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
+    axes_tubes->SetInput (axes_data);
+    axes_tubes->SetRadius (axes->GetScaleFactor () / 50.0);
+    axes_tubes->SetNumberOfSides (6);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetScalarModeToUsePointData ();
+    mapper->SetInput(axes_tubes->GetOutput ());
+
+    vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
+    actor->SetMapper(mapper);
+
+    cv::Vec3d t = affine.translation();
+    actor->SetPosition (t[0], t[1], t[2]);
+
+    cv::Matx33f m = affine.rotation();
+
+    cv::Vec3f rvec;
+    cv::Rodrigues(m, rvec);
+
+    float r_angle = cv::norm(rvec);
+    rvec *= 1.f/r_angle;
+
+    actor->SetOrientation(0,0,0);
+    actor->RotateWXYZ(r_angle*180/CV_PI,rvec[0], rvec[1], rvec[2]);
 }

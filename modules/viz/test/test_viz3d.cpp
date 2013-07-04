@@ -73,8 +73,6 @@ TEST(Viz_viz3d, accuracy)
 
     v.setBackgroundColor();
 
-    v.addCoordinateSystem(1.0, cv::Affine3f::Identity());
-
     cv::Mat cloud = cvcloud_load();
 
     cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
@@ -91,7 +89,7 @@ TEST(Viz_viz3d, accuracy)
     int col_blue = 0;
     int col_green = 0;
     int col_red = 0;
-//     v.showCircle("circle1", cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
+
     temp_viz::LineWidget lw(cv::Point3f(0.0,0.0,0.0), cv::Point3f(4.0,4.0,4.0), temp_viz::Color(0,255,0));
     temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0));
     temp_viz::SphereWidget sw(cv::Point3f(0,0,0), 0.5);
@@ -99,6 +97,7 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
     temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1), temp_viz::Color(0,0,255));
+    temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
     
     v.showWidget("line", lw);
     v.showWidget("plane", pw);
@@ -107,6 +106,7 @@ TEST(Viz_viz3d, accuracy)
     v.showWidget("circle", cw);
     v.showWidget("cylinder", cyw);
     v.showWidget("cube", cuw);
+    v.showWidget("coordinateSystem", csw);
     
     temp_viz::LineWidget lw2 = lw;
     
@@ -114,15 +114,7 @@ TEST(Viz_viz3d, accuracy)
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
-//         v.showPointCloud("cloud1", cloud, temp_viz::Color(col_blue, col_green, col_red), cloudPosition);
-//         v.showLine("line1", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-//         v.showLine("line2", cv::Point3f(0.0,0.0,0.0), cv::Point3f(1.0f-pos_x, pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-//         v.showLine("line3", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, 1.0f-pos_y, pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-//         v.showLine("line4", cv::Point3f(0.0,0.0,0.0), cv::Point3f(pos_x, pos_y, 1.0f-pos_z) , temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-//         v.showPlane("plane1", cv::Vec4f(pos_x*pos_y,pos_y,pos_z,pos_x+pos_y*pos_z), temp_viz::Color(255-col_blue, 255-col_green, 255-col_red));
-//         v.showCube("cube1", cv::Point3f(pos_x, pos_y, pos_z), cv::Point3f(pos_x+0.5, pos_y+0.5, pos_z+0.5), temp_viz::Color(255,150,50));
-//         v.showCylinder("cylinder1", cv::Point3f(0,0,0), cv::Point3f(pos_x, 1.0, 1.0), 0.5, 5*pos_x+3, temp_viz::Color(0,255,0));
-//         v.setShapePose("circle1", cloudPosition);
+
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
         
@@ -134,7 +126,7 @@ TEST(Viz_viz3d, accuracy)
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
-        cuw.setPose(cloudPosition);
+        cuw.setPose(cloudPosition);        
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
