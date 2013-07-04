@@ -67,6 +67,7 @@
 from __future__ import division
 
 import ast
+import errno
 import fnmatch
 import logging
 import numbers
@@ -176,7 +177,8 @@ def main():
         try:
             with open(os.path.join(sheet_path, 'sheet.conf')) as sheet_conf_file:
                 sheet_conf = ast.literal_eval(sheet_conf_file.read())
-        except Exception:
+        except IOError as ioe:
+            if ioe.errno != errno.ENOENT: raise
             sheet_conf = {}
             logging.debug('no sheet.conf for %s', sheet_path)
 
