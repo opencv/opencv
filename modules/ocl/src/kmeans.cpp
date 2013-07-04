@@ -57,39 +57,6 @@ namespace cv
         extern const char *kmeans_kernel;
     }
 }
-//////////////////////////////////////////////////////////////////////////
-//////////////////common/////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-void swap( Mat& a, Mat& b )
-{
-    std::swap(a.flags, b.flags);
-    std::swap(a.dims, b.dims);
-    std::swap(a.rows, b.rows);
-    std::swap(a.cols, b.cols);
-    std::swap(a.data, b.data);
-    std::swap(a.refcount, b.refcount);
-    std::swap(a.datastart, b.datastart);
-    std::swap(a.dataend, b.dataend);
-    std::swap(a.datalimit, b.datalimit);
-    std::swap(a.allocator, b.allocator);
-
-    std::swap(a.size.p, b.size.p);
-    std::swap(a.step.p, b.step.p);
-    std::swap(a.step.buf[0], b.step.buf[0]);
-    std::swap(a.step.buf[1], b.step.buf[1]);
-
-    if( a.step.p == b.step.buf )
-    {
-        a.step.p = a.step.buf;
-        a.size.p = &a.rows;
-    }
-
-    if( b.step.p == a.step.buf )
-    {
-        b.step.p = b.step.buf;
-        b.size.p = &b.rows;
-    }
-}
 
 static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
 {
