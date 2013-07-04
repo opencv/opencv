@@ -35,13 +35,6 @@ namespace temp_viz
     using cv::DataDepth;
     using cv::DataType;
 
-
-    struct CV_EXPORTS ModelCoefficients
-    {
-        std::vector<float> values;
-    };
-
-
     class CV_EXPORTS Color : public Scalar
     {
     public:

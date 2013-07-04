@@ -38,41 +38,6 @@ public:
     void spin ();
     void spinOnce (int time = 1, bool force_redraw = false);
 
-    /** \brief Adds 3D axes describing a coordinate system to screen at x, y, z, Roll,Pitch,Yaw
-           *
-           * \param[in] scale the scale of the axes (default: 1)
-           * \param[in] t transformation matrix
-           *
-           * RPY Angles
-           * Rotate the reference frame by the angle roll about axis x
-           * Rotate the reference frame by the angle pitch about axis y
-           * Rotate the reference frame by the angle yaw about axis z
-           *
-           * Description:
-           * Sets the orientation of the Prop3D.  Orientation is specified as
-           * X,Y and Z rotations in that order, but they are performed as
-           * RotateZ, RotateX, and finally RotateY.
-           *
-           * All axies use right hand rule. x=red axis, y=green axis, z=blue axis
-           * z direction is point into the screen.
-           *     z
-           *      \
-           *       \
-           *        \
-           *         -----------> x
-           *         |
-           *         |
-           *         |
-           *         |
-           *         |
-           *         |
-           *         y
-           */
-    void addCoordinateSystem (double scale, const Affine3f& t, const String& id = "coordinate");
-
-    /** \brief Removes a previously added 3D axes (coordinate system)
-          */
-    bool removeCoordinateSystem (const String& id = "coordinate");
     bool removePointCloud (const String& id = "cloud");
     inline bool removePolygonMesh (const String& id = "polygon")
     {
@@ -138,18 +103,6 @@ public:
         interactor_->TerminateApp ();
     }
     
-    void showLine (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
-    void showPlane (const String& id, const cv::Vec4f &coefs, const Color& color);
-    void showPlane (const String& id ,const cv::Vec4f &coefs, const Point3f& pt, const Color& color);
-    void showCube (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
-    void showCylinder (const String& id, const Point3f& pt_on_axis, const Point3f &axis_direction, double radius, int num_sides, const Color& color);
-    void showCircle (const String& id, const Point3f& pt, double radius, const Color& color);
-    void showSphere (const String& id, const Point3f& pt, double radius, const Color& color);
-    void showArrow (const String& id, const Point3f& pt1, const Point3f& pt2, const Color& color);
-    
-    Affine3f getShapePose (const String& id);
-    void setShapePose (const String& id, const Affine3f& pose);
-
     bool addPolygon(const cv::Mat& cloud, const Color& color, const String& id = "polygon");
     bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color, bool display_length, const String& id = "arrow");
     bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color_line, const Color& color_text, const String& id = "arrow");
