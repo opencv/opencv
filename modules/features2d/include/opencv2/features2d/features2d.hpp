@@ -593,7 +593,7 @@ class CV_EXPORTS_W GFTTDetector : public FeatureDetector
 {
 public:
     CV_WRAP GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
-                  int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+                          int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
     AlgorithmInfo* info() const;
 
 protected:
