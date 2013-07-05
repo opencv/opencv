@@ -64,14 +64,12 @@ static void generateResponce(float responce[])
     responce[0] = responce[1];
 }
 
-void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst)
+static void checkImages(std::vector<Mat>& images, bool hdr, const std::vector<float>& _exp_times = std::vector<float>())
 {
-	std::vector<Mat> images;
-    _images.getMatVector(images);
 	if(images.empty()) {
 		CV_Error(Error::StsBadArg, "Need at least one image");
 	}
-	if(images.size() != _exp_times.size()) {
+	if(hdr && images.size() != _exp_times.size()) {
 		CV_Error(Error::StsBadArg, "Number of images and number of exposure times must be equal.");
 	}
 	int width = images[0].cols;
@@ -85,8 +83,16 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 			CV_Error(Error::StsBadArg, "Images must have CV_8UC3 type.");
 		}
 	}
+}
+
+void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst)
+{
+	std::vector<Mat> images;
+    _images.getMatVector(images);
+	checkImages(images, true, _exp_times);
 	_dst.create(images[0].size(), CV_32FC3);
 	Mat result = _dst.getMat();
+
 	std::vector<float> exp_times(_exp_times.size());
 	for(size_t i = 0; i < exp_times.size(); i++) {
 		exp_times[i] = log(_exp_times[i]);
@@ -120,6 +126,90 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 		}
 	}
 	result = result / max;
+}
+
+void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, float ws, float we)
+{
+	std::vector<Mat> images;
+    _images.getMatVector(images);
+	checkImages(images, false);
+
+	std::vector<Mat> weights(images.size());
+	Mat weight_sum = Mat::zeros(images[0].size(), CV_32FC1);
+	for(size_t im = 0; im < images.size(); im++) {
+		Mat img, gray, contrast, saturation, wellexp;
+		std::vector<Mat> channels(3);
+
+		images[im].convertTo(img, CV_32FC3, 1.0/255.0);
+		cvtColor(img, gray, COLOR_RGB2GRAY);
+		split(img, channels);
+
+		Laplacian(gray, contrast, CV_32F);
+		contrast = abs(contrast);
+
+		Mat mean = (channels[0] + channels[1] + channels[2]) / 3.0f;
+		saturation = Mat::zeros(channels[0].size(), CV_32FC1);
+		for(int i = 0; i < 3;  i++) {
+			Mat deviation = channels[i] - mean;
+			pow(deviation, 2.0, deviation);
+			saturation += deviation;
+		}
+		sqrt(saturation, saturation);
+
+		wellexp = Mat::ones(gray.size(), CV_32FC1);
+		for(int i = 0; i < 3; i++) {
+			Mat exp = channels[i] - 0.5f;
+			pow(exp, 2, exp);
+			exp = -exp / 0.08;
+			wellexp = wellexp.mul(exp);
+		}
+
+		pow(contrast, wc, contrast);
+		pow(saturation, ws, saturation);
+		pow(wellexp, we, wellexp);
+
+		weights[im] = contrast;
+		weights[im] = weights[im].mul(saturation);
+		weights[im] = weights[im].mul(wellexp);
+		weight_sum += weights[im];
+	}
+	int maxlevel = (int)(log((double)max(images[0].rows, images[0].cols)) / log(2.0)) - 1;
+	std::vector<Mat> res_pyr(maxlevel + 1);
+
+	for(size_t im = 0; im < images.size(); im++) {
+		weights[im] /= weight_sum;
+		Mat img;
+		images[im].convertTo(img, CV_32FC3, 1/255.0);
+		std::vector<Mat> img_pyr, weight_pyr;
+		buildPyramid(img, img_pyr, maxlevel);
+		buildPyramid(weights[im], weight_pyr, maxlevel);
+		for(int lvl = 0; lvl < maxlevel; lvl++) {
+			Mat up;
+			pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
+			img_pyr[lvl] -= up;
+		}
+		for(int lvl = 0; lvl <= maxlevel; lvl++) {
+			std::vector<Mat> channels(3);
+			split(img_pyr[lvl], channels);
+			for(int i = 0; i < 3; i++) {
+				channels[i] = channels[i].mul(weight_pyr[lvl]);
+			}
+			merge(channels, img_pyr[lvl]);
+			if(res_pyr[lvl].empty()) {
+				res_pyr[lvl] = img_pyr[lvl];
+			} else {
+				res_pyr[lvl] += img_pyr[lvl];
+			}
+		}
+	}
+	for(int lvl = maxlevel; lvl > 0; lvl--) {
+		Mat up;
+		pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
+	    res_pyr[lvl - 1] += up;
+	}
+	_dst.create(images[0].size(), CV_32FC3);
+	Mat result = _dst.getMat();
+	res_pyr[0].copyTo(result);
 }
 
 };

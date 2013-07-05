@@ -47,7 +47,7 @@
 using namespace cv;
 using namespace std;
 
-TEST(Photo_MakeHdr, regression)
+TEST(Photo_HdrFusion, regression)
 {
 	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
 	
@@ -75,6 +75,14 @@ TEST(Photo_MakeHdr, regression)
 	double max = 1.0;
 	minMaxLoc(abs(result - expected), NULL, &max);
 	ASSERT_TRUE(max < 0.01);
+
+	expected_path = folder + "grand_canal_exp_fusion.png";
+	expected = imread(expected_path);
+	ASSERT_FALSE(expected.empty()) << "Could not load input image " << expected_path;
+	exposureFusion(images, result);
+	result.convertTo(result, CV_8UC3, 255);
+	minMaxLoc(abs(result - expected), NULL, &max);
+	ASSERT_FALSE(max > 0);
 }
 
 TEST(Photo_Tonemap, regression)

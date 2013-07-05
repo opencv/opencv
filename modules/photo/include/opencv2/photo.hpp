@@ -96,8 +96,10 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
 
 CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, const std::vector<float>& exp_times, OutputArray dst);
 
-CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, tonemap_algorithms algorithm, std::vector<float>& params = std::vector<float>());
+CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, tonemap_algorithms algorithm, 
+	                      const std::vector<float>& params = std::vector<float>());
 
+CV_EXPORTS_W void exposureFusion(InputArrayOfArrays srcImgs, OutputArray dst, float wc = 1, float ws = 1, float we = 0);
 } // cv
 
 #endif

@@ -45,146 +45,147 @@
 
 namespace cv
 {
-	static float getParam(std::vector<float>& params, size_t i, float defval) 
-	{
-		if(params.size() > i) {
-			return params[i];
-		} else {
-			return defval;
-		}
-		
-	}
-	static void DragoMap(Mat& src_img, Mat &dst_img, std::vector<float>& params)
-	{
-		float bias_value = getParam(params, 1, 0.85f);
-		Mat gray_img;
-		cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
-		Mat log_img;
-		log(gray_img, log_img);
-		float mean = exp((float)sum(log_img)[0] / log_img.total());
-		gray_img /= mean;
-		log_img.release();
 
-		double max;
-		minMaxLoc(gray_img, NULL, &max);
+static float getParam(const std::vector<float>& params, size_t i, float defval) 
+{
+    if(params.size() > i) {
+        return params[i];
+    } else {
+        return defval;
+    }
+        
+}
 
-		Mat map;
-		log(gray_img + 1.0f, map);
-		Mat div;
-		pow(gray_img / (float)max, log(bias_value) / log(0.5f), div);
-		log(2.0f + 8.0f * div, div);
-		map = map.mul(1.0f / div);
-		map = map.mul(1.0f / gray_img);
-		div.release();
-		gray_img.release();
+static void DragoMap(Mat& src_img, Mat &dst_img, const std::vector<float>& params)
+{
+    float bias_value = getParam(params, 1, 0.85f);
+    Mat gray_img;
+    cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
+    Mat log_img;
+    log(gray_img, log_img);
+    float mean = exp((float)sum(log_img)[0] / log_img.total());
+    gray_img /= mean;
+    log_img.release();
 
-		std::vector<Mat> channels(3);
-		split(src_img, channels);
-		for(int i = 0; i < 3; i++) {
-			channels[i] = channels[i].mul(map);
-		}
-		map.release();
-		merge(channels, dst_img);
-	}
+    double max;
+    minMaxLoc(gray_img, NULL, &max);
 
-	static void ReinhardDevlinMap(Mat& src_img, Mat &dst_img, std::vector<float>& params)
-	{
-		float intensity   = getParam(params, 1, 0.0f);
-		float color_adapt = getParam(params, 2, 0.0f);
-		float light_adapt = getParam(params, 3, 1.0f);
+    Mat map;
+    log(gray_img + 1.0f, map);
+    Mat div;
+    pow(gray_img / (float)max, log(bias_value) / log(0.5f), div);
+    log(2.0f + 8.0f * div, div);
+    map = map.mul(1.0f / div);
+    map = map.mul(1.0f / gray_img);
+    div.release();
+    gray_img.release();
 
-		Mat gray_img;
-		cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
-		Mat log_img;
-		log(gray_img, log_img);
+    std::vector<Mat> channels(3);
+    split(src_img, channels);
+    for(int i = 0; i < 3; i++) {
+        channels[i] = channels[i].mul(map);
+    }
+    map.release();
+    merge(channels, dst_img);
+}
 
-		float log_mean = (float)sum(log_img)[0] / log_img.total();
-		double log_min, log_max;
-		minMaxLoc(log_img, &log_min, &log_max);
-		log_img.release();
+static void ReinhardDevlinMap(Mat& src_img, Mat &dst_img, const std::vector<float>& params)
+{
+    float intensity   = getParam(params, 1, 0.0f);
+    float color_adapt = getParam(params, 2, 0.0f);
+    float light_adapt = getParam(params, 3, 1.0f);
 
-		double key = (float)((log_max - log_mean) / (log_max - log_min));
-		float map_key = 0.3f + 0.7f * pow((float)key, 1.4f);
-		intensity = exp(-intensity);
-		Scalar chan_mean = mean(src_img);
-		float gray_mean = (float)mean(gray_img)[0];
+    Mat gray_img;
+    cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
+    Mat log_img;
+    log(gray_img, log_img);
 
-		std::vector<Mat> channels(3);
-		split(src_img, channels);
+    float log_mean = (float)sum(log_img)[0] / log_img.total();
+    double log_min, log_max;
+    minMaxLoc(log_img, &log_min, &log_max);
+    log_img.release();
 
-		for(int i = 0; i < 3; i++) {
-			float global = color_adapt * (float)chan_mean[i] + (1.0f - color_adapt) * gray_mean;
-			Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
-			adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
-			pow(intensity * adapt, map_key, adapt);
-			channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));		
-		}
-		gray_img.release();
-		merge(channels, dst_img);
-	}
+    double key = (float)((log_max - log_mean) / (log_max - log_min));
+    float map_key = 0.3f + 0.7f * pow((float)key, 1.4f);
+    intensity = exp(-intensity);
+    Scalar chan_mean = mean(src_img);
+    float gray_mean = (float)mean(gray_img)[0];
 
-	static void DurandMap(Mat& src_img, Mat& dst_img, std::vector<float>& params)
-	{
-		float contrast   = getParam(params, 1, 4.0f);
-		float sigma_color = getParam(params, 2, 2.0f);
-		float sigma_space = getParam(params, 3, 2.0f);
+    std::vector<Mat> channels(3);
+    split(src_img, channels);
 
-		Mat gray_img;
-		cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
-		Mat log_img;
-		log(gray_img, log_img);
-		Mat map_img;
-		bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
-		
-		double min, max;
-		minMaxLoc(map_img, &min, &max);
-		float scale = contrast / (float)(max - min);
+    for(int i = 0; i < 3; i++) {
+        float global = color_adapt * (float)chan_mean[i] + (1.0f - color_adapt) * gray_mean;
+        Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
+        adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
+        pow(intensity * adapt, map_key, adapt);
+        channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));		
+    }
+    gray_img.release();
+    merge(channels, dst_img);
+}
 
-		exp(map_img * (scale - 1.0f) + log_img, map_img);
-		log_img.release();
-		map_img = map_img.mul(1.0f / gray_img);
-		gray_img.release();
+static void DurandMap(Mat& src_img, Mat& dst_img, const std::vector<float>& params)
+{
+    float contrast   = getParam(params, 1, 4.0f);
+    float sigma_color = getParam(params, 2, 2.0f);
+    float sigma_space = getParam(params, 3, 2.0f);
 
-		std::vector<Mat> channels(3);
-		split(src_img, channels);
-		for(int i = 0; i < 3; i++) {
-			channels[i] = channels[i].mul(map_img);
-		}
-		merge(channels, dst_img);
-	}
+    Mat gray_img;
+    cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
+    Mat log_img;
+    log(gray_img, log_img);
+    Mat map_img;
+    bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
+        
+    double min, max;
+    minMaxLoc(map_img, &min, &max);
+    float scale = contrast / (float)(max - min);
 
-	void tonemap(InputArray _src, OutputArray _dst, tonemap_algorithms algorithm, 
-				 std::vector<float>& params)
-	{
-		typedef void (*tonemap_func)(Mat&, Mat&, std::vector<float>&);
-		const unsigned param_count[TONEMAP_COUNT] = {0, 1, 3, 3};
-		tonemap_func functions[TONEMAP_COUNT] = {
-			NULL, DragoMap, ReinhardDevlinMap, DurandMap};
+    exp(map_img * (scale - 1.0f) + log_img, map_img);
+    log_img.release();
+    map_img = map_img.mul(1.0f / gray_img);
+    gray_img.release();
 
-		Mat src = _src.getMat();
-		if(src.empty()) {
-			CV_Error(Error::StsBadArg, "Empty input image");
-		}
-		if(algorithm < 0 || algorithm >= TONEMAP_COUNT) {
-			CV_Error(Error::StsBadArg, "Wrong algorithm index");
-		}
+    std::vector<Mat> channels(3);
+    split(src_img, channels);
+    for(int i = 0; i < 3; i++) {
+        channels[i] = channels[i].mul(map_img);
+    }
+    merge(channels, dst_img);
+}
 
-		_dst.create(src.size(), CV_32FC3);
-		Mat dst = _dst.getMat();
-		src.copyTo(dst);
+void tonemap(InputArray _src, OutputArray _dst, tonemap_algorithms algorithm, 
+             const std::vector<float>& params)
+{
+    typedef void (*tonemap_func)(Mat&, Mat&, const std::vector<float>&);
+    tonemap_func functions[TONEMAP_COUNT] = {
+        NULL, DragoMap, ReinhardDevlinMap, DurandMap};
 
-		double min, max;
-		minMaxLoc(dst, &min, &max);
-		if(max - min < 1e-10f) {
-			return;
-		}
-		dst = (dst - min) / (max - min);
-		if(functions[algorithm]) {
-			functions[algorithm](dst, dst, params);
-		}
-		minMaxLoc(dst, &min, &max);
-		dst = (dst - min) / (max - min);
-		float gamma = getParam(params, 0, 1.0f);		
-		pow(dst, 1.0f / gamma, dst);			
-	}
+    Mat src = _src.getMat();
+    if(src.empty()) {
+        CV_Error(Error::StsBadArg, "Empty input image");
+    }
+    if(algorithm < 0 || algorithm >= TONEMAP_COUNT) {
+        CV_Error(Error::StsBadArg, "Wrong algorithm index");
+    }
+
+    _dst.create(src.size(), CV_32FC3);
+    Mat dst = _dst.getMat();
+    src.copyTo(dst);
+
+    double min, max;
+    minMaxLoc(dst, &min, &max);
+    if(max - min < 1e-10f) {
+        return;
+    }
+    dst = (dst - min) / (max - min);
+    if(functions[algorithm]) {
+        functions[algorithm](dst, dst, params);
+    }
+    minMaxLoc(dst, &min, &max);
+    dst = (dst - min) / (max - min);
+    float gamma = getParam(params, 0, 1.0f);		
+    pow(dst, 1.0f / gamma, dst);			
+}
 }
