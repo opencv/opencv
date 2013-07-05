@@ -251,11 +251,11 @@ def main():
 
         sheet_comparisons = sheet_conf.get('comparisons', [])
 
-        for i, w in enumerate([2500, 15000, 2500, 2000, 15000]
+        for i, w in enumerate([2500, 10000, 2500, 2000, 7500]
                 + (len(config_names) + 1 + len(sheet_comparisons)) * [4000]):
             sheet.col(i).width = w
 
-        for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Parameters']
+        for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Other parameters']
                 + config_names + [None]
                 + [comp['to'] + '\nvs\n' + comp['from'] for comp in sheet_comparisons]):
             sheet.row(2).write(i, caption, header_style)
@@ -271,11 +271,19 @@ def main():
                 sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
                 sheet.write(row, 1, test)
 
-                param_list = param[1:-1].split(", ")
-                sheet.write(row, 2, next(ifilter(re_image_size.match, param_list), None))
-                sheet.write(row, 3, next(ifilter(re_data_type.match, param_list), None))
+                param_list = param[1:-1].split(', ') if param.startswith('(') and param.endswith(')') else [param]
 
-                sheet.row(row).write(4, param)
+                image_size = next(ifilter(re_image_size.match, param_list), None)
+                if image_size is not None:
+                    sheet.write(row, 2, image_size)
+                    del param_list[param_list.index(image_size)]
+
+                data_type = next(ifilter(re_data_type.match, param_list), None)
+                if data_type is not None:
+                    sheet.write(row, 3, data_type)
+                    del param_list[param_list.index(data_type)]
+
+                sheet.row(row).write(4, ' | '.join(param_list))
                 for i, c in enumerate(config_names):
                     if c in configs:
                         sheet.write(row, 5 + i, configs[c], time_style)
