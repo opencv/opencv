@@ -510,6 +510,76 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
 
+
+    'Contrib' :
+    {
+        "createEigenFaceRecognizer"                     :  {
+            'j_code' :
+""" 
+    public static FaceRecognizer createEigenFaceRecognizer(int num_components, double threshold){
+         return new FaceRecognizer(n_createEigenFaceRecognizer(num_components, threshold));
+    }
+""", 
+            'jn_code' :
+"""    
+    private static native long n_createEigenFaceRecognizer(int num_components, double threshold);\n
+""", 
+            'cpp_code' :
+""" 
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createEigenFaceRecognizer (JNIEnv *, jclass, jint num_components, jdouble threshold);
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createEigenFaceRecognizer (JNIEnv *, jclass, jint num_components, jdouble threshold) { 
+    cv::Ptr<FaceRecognizer> model = cv::createEigenFaceRecognizer((int)num_components, (double)threshold); 
+    model.addref();
+    return (jlong)model.obj; 
+}
+""" 
+    }, # createEigenFaceRecognizer
+
+        "createFisherFaceRecognizer"                     :  {
+            'j_code' :
+""" 
+    public static FaceRecognizer createFisherFaceRecognizer(int num_components, double threshold){
+         return new FaceRecognizer(n_createFisherFaceRecognizer(num_components, threshold));
+    }
+""", 
+            'jn_code' :
+"""    
+    private static native long n_createFisherFaceRecognizer(int num_components, double threshold);\n
+""", 
+            'cpp_code' :
+""" 
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createFisherFaceRecognizer (JNIEnv *, jclass, jint num_components, jdouble threshold);
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createFisherFaceRecognizer (JNIEnv *, jclass, jint num_components, jdouble threshold) { 
+    cv::Ptr<FaceRecognizer> model = cv::createFisherFaceRecognizer((int)num_components, (double)threshold); 
+    model.addref();
+    return (jlong)model.obj; 
+}
+""" 
+    }, # createFisherFaceRecognizer
+
+		"createLBPHFaceRecognizer"                     :  {
+			'j_code' :
+""" 
+    public static FaceRecognizer createLBPHFaceRecognizer(int radius, int neighbors, int grid_x, int grid_y, double threshold){
+         return new FaceRecognizer(n_createLBPHFaceRecognizer(radius, neighbors, grid_x, grid_y, threshold));
+    }
+""", 
+            'jn_code' :
+"""    
+    private static native long n_createLBPHFaceRecognizer(int radius, int neighbors, int grid_x, int grid_y, double threshold);\n
+""", 
+            'cpp_code' :
+""" 
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createLBPHFaceRecognizer (JNIEnv *, jclass, jint radius, jint neighbors, jint grid_x, jint grid_y, jdouble threshold);
+JNIEXPORT jlong JNICALL Java_org_opencv_contrib_Contrib_n_1createLBPHFaceRecognizer (JNIEnv *, jclass, jint radius, jint neighbors, jint grid_x, jint grid_y, jdouble threshold) { 
+    cv::Ptr<FaceRecognizer> model = cv::createLBPHFaceRecognizer((int)radius, (int)neighbors, (int)grid_x, (int)grid_y, (double)threshold); 
+    model.addref();
+    return (jlong)model.obj; 
+}
+""" 
+    }, # createLBPHFaceRecognizer
+
+    }, # Contrib
 }
 
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
