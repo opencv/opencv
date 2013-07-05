@@ -51,11 +51,11 @@ using namespace ocl;
 
 namespace cv
 {
-    namespace ocl
-    {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        extern const char *kmeans_kernel;
-    }
+namespace ocl
+{
+////////////////////////////////////OpenCL kernel strings//////////////////////////
+extern const char *kmeans_kernel;
+}
 }
 
 static void generateRandomCenter(const vector<Vec2f>& box, float* center, RNG& rng)
@@ -142,7 +142,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
             int ci = i;
 
             parallel_for_(Range(0, N),
-                         KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
+                          KMeansPPDistanceComputer(tdist2, data, dist, dims, step, step*ci));
             for( i = 0; i < N; i++ )
             {
                 s += tdist2[i];
@@ -169,7 +169,7 @@ static void generateCentersPP(const Mat& _data, Mat& _out_centers,
     }
 }
 
-void cv::ocl::DistanceComputer(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers)
+void cv::ocl::distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers)
 {
     //if(src.clCxt -> impl -> double_support == 0 && src.type() == CV_64F)
     //{
@@ -179,7 +179,7 @@ void cv::ocl::DistanceComputer(oclMat &dists, oclMat &labels, const oclMat &src,
 
     Context  *clCxt = src.clCxt;
     int labels_step = (int)(labels.step/labels.elemSize());
-    string kernelname = "kmeansComputeDistance";
+    string kernelname = "distanceToCenters";
     int threadNum = src.rows > 256 ? 256 : src.rows;
     size_t localThreads[3]  = {1, threadNum, 1};
     size_t globalThreads[3] = {1, src.rows, 1};
@@ -198,7 +198,7 @@ void cv::ocl::DistanceComputer(oclMat &dists, oclMat &labels, const oclMat &src,
 }
 ///////////////////////////////////k - means /////////////////////////////////////////////////////////
 double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
-			 TermCriteria criteria, int attempts, int flags, oclMat &_centers)
+                       TermCriteria criteria, int attempts, int flags, oclMat &_centers)
 {
     const int SPP_TRIALS = 3;
     bool isrow = _src.rows == 1 && _src.oclchannels() > 1;
@@ -214,16 +214,16 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
     if( flags & CV_KMEANS_USE_INITIAL_LABELS )
     {
         CV_Assert( (_bestLabels.cols == 1 || _bestLabels.rows == 1) &&
-                  _bestLabels.cols * _bestLabels.rows == N &&
-                  _bestLabels.type() == CV_32S );
+                   _bestLabels.cols * _bestLabels.rows == N &&
+                   _bestLabels.type() == CV_32S );
         _bestLabels.download(_labels);
     }
     else
     {
         if( !((_bestLabels.cols == 1 || _bestLabels.rows == 1) &&
-             _bestLabels.cols * _bestLabels.rows == N &&
-            _bestLabels.type() == CV_32S &&
-            _bestLabels.isContinuous()))
+                _bestLabels.cols * _bestLabels.rows == N &&
+                _bestLabels.type() == CV_32S &&
+                _bestLabels.isContinuous()))
             _bestLabels.create(N, 1, CV_32S);
         _labels.create(_bestLabels.size(), _bestLabels.type());
     }
@@ -307,7 +307,7 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
                     k = labels[i];
                     float* center = centers.ptr<float>(k);
                     j=0;
-                    #if CV_ENABLE_UNROLLED
+#if CV_ENABLE_UNROLLED
                     for(; j <= dims - 4; j += 4 )
                     {
                         float t0 = center[j] + sample[j];
@@ -322,7 +322,7 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
                         center[j+2] = t0;
                         center[j+3] = t1;
                     }
-                    #endif
+#endif
                     for( ; j < dims; j++ )
                         center[j] += sample[j];
                     counters[k]++;
@@ -410,10 +410,10 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
 
             // assign labels
             oclMat _dists(1, N, CV_64F);
-            
+
             _bestLabels.upload(_labels);
             _centers.upload(centers);
-            DistanceComputer(_dists, _bestLabels, _src, _centers);
+            distanceToCenters(_dists, _bestLabels, _src, _centers);
 
             Mat dists;
             _dists.download(dists);

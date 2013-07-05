@@ -838,7 +838,7 @@ namespace cv
 
         //! Compute closest centers for each lines in source and lable it after center's index
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
-        void DistanceComputer(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
+        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
 
         //!Does k-means procedure on GPU 
         // supports CV_32FC1/CV_32FC2/CV_32FC4 data type

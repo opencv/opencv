@@ -43,7 +43,7 @@
 //
 //M*/
 
-__kernel void kmeansComputeDistance(
+__kernel void distanceToCenters(
     int label_step, int K,
     __global float *src,
     __global int *labels, int dims, int rows,
@@ -51,20 +51,20 @@ __kernel void kmeansComputeDistance(
     __global float *dists)
 {
     int gid = get_global_id(1);
-    
+
     float dist, euDist, min;
     int minCentroid;
-    
+
     if(gid >= rows)
         return;
 
-    for(int i = 0 ;i < K; i++)	
+    for(int i = 0 ; i < K; i++)
     {
         euDist = 0;
         for(int j = 0; j < dims; j++)
         {
-            dist = (src[j + gid * dims] 
-                   - centers[j + i * dims]);
+            dist = (src[j + gid * dims]
+                    - centers[j + i * dims]);
             euDist += dist * dist;
         }
 
@@ -72,7 +72,8 @@ __kernel void kmeansComputeDistance(
         {
             min = euDist;
             minCentroid = 0;
-        } else if(euDist < min) 
+        }
+        else if(euDist < min)
         {
             min = euDist;
             minCentroid = i;
