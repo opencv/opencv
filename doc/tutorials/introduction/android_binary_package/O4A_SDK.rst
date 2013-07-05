@@ -51,7 +51,7 @@ The structure of package contents looks as follows:
     OpenCV-2.4.6-android-sdk
     |_ apk
     |   |_ OpenCV_2.4.6_binary_pack_armv7a.apk
-    |   |_ OpenCV_2.4.6_Manager_2.8_XXX.apk
+    |   |_ OpenCV_2.4.6_Manager_2.9_XXX.apk
     |
     |_ doc
     |_ samples
@@ -295,7 +295,7 @@ Well, running samples from Eclipse is very simple:
   .. code-block:: sh
     :linenos:
 
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.6_Manager_2.8_armv7a-neon.apk
+    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.6_Manager_2.9_armv7a-neon.apk
 
   .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for
             platform targets:
