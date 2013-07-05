@@ -44,9 +44,11 @@
 
 #ifdef HAVE_CUDA
 
-using namespace cvtest;
+#include <cuda_runtime.h>
 
 #if CUDART_VERSION >= 5000
+
+using namespace cvtest;
 
 struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
@@ -61,20 +63,21 @@ struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::gpu::DeviceInfo devInfo = GetParam();
         cv::gpu::setDevice(devInfo.deviceID());
 
+        src = cv::gpu::CudaMem(cv::gpu::CudaMem::PAGE_LOCKED);
+
         cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
-        src.create(m.size(), m.type(), cv::gpu::CudaMem::ALLOC_PAGE_LOCKED);
-        m.copyTo(src.createMatHeader());
+        m.copyTo(src);
     }
 };
 
-void checkMemSet(cv::gpu::Stream&, int status, void* userData)
+void checkMemSet(int status, void* userData)
 {
     ASSERT_EQ(cudaSuccess, status);
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::Mat src = test->src;
-    cv::Mat dst = test->dst;
+    cv::gpu::CudaMem src = test->src;
+    cv::gpu::CudaMem dst = test->dst;
 
     cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
 
@@ -87,8 +90,8 @@ GPU_TEST_P(Async, MemSet)
 
     d_dst.upload(src);
 
-    stream.enqueueMemSet(d_dst, cv::Scalar::all(0));
-    stream.enqueueDownload(d_dst, dst);
+    d_dst.setTo(cv::Scalar::all(0), stream);
+    d_dst.download(dst, stream);
 
     Async* test = this;
     stream.enqueueHostCallback(checkMemSet, test);
@@ -96,17 +99,17 @@ GPU_TEST_P(Async, MemSet)
     stream.waitForCompletion();
 }
 
-void checkConvert(cv::gpu::Stream&, int status, void* userData)
+void checkConvert(int status, void* userData)
 {
     ASSERT_EQ(cudaSuccess, status);
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::Mat src = test->src;
-    cv::Mat dst = test->dst;
+    cv::gpu::CudaMem src = test->src;
+    cv::gpu::CudaMem dst = test->dst;
 
     cv::Mat dst_gold;
-    src.convertTo(dst_gold, CV_32S);
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
 
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
@@ -115,9 +118,9 @@ GPU_TEST_P(Async, Convert)
 {
     cv::gpu::Stream stream;
 
-    stream.enqueueUpload(src, d_src);
-    stream.enqueueConvert(d_src, d_dst, CV_32S);
-    stream.enqueueDownload(d_dst, dst);
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(dst, stream);
 
     Async* test = this;
     stream.enqueueHostCallback(checkConvert, test);
@@ -127,6 +130,6 @@ GPU_TEST_P(Async, Convert)
 
 INSTANTIATE_TEST_CASE_P(GPU_Stream, Async, ALL_DEVICES);
 
-#endif
+#endif // CUDART_VERSION >= 5000
 
 #endif // HAVE_CUDA
