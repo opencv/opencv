@@ -35,15 +35,6 @@ namespace temp_viz
     using cv::DataDepth;
     using cv::DataType;
 
-
-
-
-    struct CV_EXPORTS ModelCoefficients
-    {
-        std::vector<float> values;
-    };
-
-
     class CV_EXPORTS Color : public Scalar
     {
     public:
@@ -81,6 +72,8 @@ namespace temp_viz
         std::vector<Vertices> polygons;
     };
 
+    /////////////////////////////////////////////////////////////////////////////
+    /// Utility functions
 
     inline Color vtkcolor(const Color& color)
     {
@@ -90,11 +83,7 @@ namespace temp_viz
     }
 
     inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
-
-
-
     template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
-
     
     inline bool isNan(float x)
     {

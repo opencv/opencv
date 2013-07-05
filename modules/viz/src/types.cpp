@@ -1,9 +1,7 @@
 #include <opencv2/viz/types.hpp>
 
-
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////
-/// cv::Color
+/// cv::viz::Color
 
 temp_viz::Color::Color() : Scalar(0, 0, 0) {}
 temp_viz::Color::Color(double gray) : Scalar(gray, gray, gray) {}
