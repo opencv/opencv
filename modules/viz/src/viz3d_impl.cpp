@@ -1,5 +1,4 @@
 #include "precomp.hpp"
-#include <q/viz3d_impl.hpp>
 
 namespace temp_viz
 {
@@ -865,12 +864,10 @@ bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& co
     return (true);
 }
 
-#include "opencv2/viz/widget_accessor.hpp"
-
 void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
-    bool exists = !(wam_itr == widget_actor_map_->end());
+    bool exists = wam_itr != widget_actor_map_->end();
     if (exists)
     {
         // Remove it if it exists and add it again
@@ -883,14 +880,11 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
 bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
-    bool exists = !(wam_itr == widget_actor_map_->end());
+    bool exists = wam_itr != widget_actor_map_->end();
     
     if (!exists)
-    {
-        std::cout << "[removeWidget] A widget with id <" << id << "> does not exist!" << std::endl;
-        return false;
-    }
-    
+        return std::cout << "[removeWidget] A widget with id <" << id << "> does not exist!" << std::endl, false;
+
     if (!removeActorFromRenderer (wam_itr->second.actor))
         return false;
     

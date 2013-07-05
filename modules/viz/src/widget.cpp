@@ -136,6 +136,7 @@ void temp_viz::Widget::release()
     if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
     {
         delete impl_;
+        impl_ = 0;
     }
 }
 

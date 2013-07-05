@@ -1,5 +1,4 @@
 #include "precomp.hpp"
-#include <opencv2/calib3d.hpp>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
@@ -135,15 +134,13 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
     }    
 
     // Apply the transforms
-    vtkSmartPointer<vtkTransform> transform = 
-    vtkSmartPointer<vtkTransform>::New();
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
     transform->Translate(startPoint);
     transform->Concatenate(matrix);
     transform->Scale(length, length, length);
 
     // Transform the polydata
-    vtkSmartPointer<vtkTransformPolyDataFilter> transformPD = 
-    vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    vtkSmartPointer<vtkTransformPolyDataFilter> transformPD = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transformPD->SetTransform(transform);
     transformPD->SetInputConnection(arrowSource->GetOutputPort());
     

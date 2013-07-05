@@ -1,6 +1,5 @@
 #pragma once
 
-#include <opencv2/core.hpp>
 #include <map>
 #include <ctime>
 #include <list>
@@ -153,5 +152,8 @@
 #endif
 
 
+#include <q/viz3d_impl.hpp>
+#include <opencv2/core.hpp>
 #include "opencv2/viz/widget_accessor.hpp"
 #include <opencv2/viz/widgets.hpp>
+#include <opencv2/calib3d.hpp>
