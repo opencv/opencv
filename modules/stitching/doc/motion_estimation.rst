@@ -31,7 +31,7 @@ detail::Estimator::operator()
 
 Estimates camera parameters.
 
-.. ocv:function:: detail::Estimator::operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+.. ocv:function:: bool detail::Estimator::operator ()(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
 
     :param features: Features of images
 
@@ -46,7 +46,7 @@ detail::Estimator::estimate
 
 This method must implement camera parameters estimation logic in order to make the wrapper `detail::Estimator::operator()`_ work.
 
-.. ocv:function:: void detail::Estimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
+.. ocv:function:: bool detail::Estimator::estimate(const std::vector<ImageFeatures> &features, const std::vector<MatchesInfo> &pairwise_matches, std::vector<CameraParams> &cameras)
 
     :param features: Features of images
 
