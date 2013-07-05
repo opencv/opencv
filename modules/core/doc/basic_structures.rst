@@ -570,6 +570,9 @@ Various Ptr constructors.
 .. ocv:function:: Ptr::Ptr(_Tp* _obj)
 .. ocv:function:: Ptr::Ptr(const Ptr& ptr)
 
+    :param _obj: Object for copy.
+    :param ptr: Object for copy.
+
 Ptr::~Ptr
 ---------
 The Ptr destructor.
@@ -581,6 +584,8 @@ Ptr::operator =
 Assignment operator.
 
 .. ocv:function:: Ptr& Ptr::operator = (const Ptr& ptr)
+
+    :param ptr: Object for assignment.
 
 Decrements own reference counter (with ``release()``) and increments ptr's reference counter.
 
@@ -1542,6 +1547,7 @@ Adds elements to the bottom of the matrix.
 .. ocv:function:: void Mat::push_back( const Mat& m )
 
     :param elem: Added element(s).
+    :param m: Added line(s).
 
 The methods add one or more elements to the bottom of the matrix. They emulate the corresponding method of the STL vector class. When ``elem`` is ``Mat`` , its type and the number of columns must be the same as in the container matrix.
 
@@ -2209,7 +2215,6 @@ Various SparseMat constructors.
     :param dims: Array dimensionality.
     :param _sizes: Sparce matrix size on all dementions.
     :param _type: Sparse matrix data type.
-    :param try1d: if try1d is true and matrix is a single-column matrix (Nx1), then the sparse matrix will be 1-dimensional.
 
 SparseMat::~SparseMat
 ---------------------
@@ -2223,6 +2228,8 @@ Provides sparse matrix assignment operators.
 
 .. ocv:function:: SparseMat& SparseMat::operator = (const SparseMat& m)
 .. ocv:function:: SparseMat& SparseMat::operator = (const Mat& m)
+
+    :param m: Matrix for assignment.
 
 The last variant is equivalent to the corresponding constructor with try1d=false.
 
@@ -2250,6 +2257,10 @@ Convert sparse matrix with possible type change and scaling.
 
 .. ocv:function:: void SparseMat::convertTo( SparseMat& m, int rtype, double alpha=1 ) const
 .. ocv:function:: void SparseMat::convertTo( Mat& m, int rtype, double alpha=1, double beta=0 ) const
+
+    :param m: Destination matrix.
+    :param rtype: Destination matrix type.
+    :param alpha: Conversion multiplier.
 
 The first version converts arbitrary sparse matrix to dense matrix and multiplies all the matrix elements by the specified scalar.
 The second versiob converts sparse matrix to dense matrix with optional type conversion and scaling.
@@ -2343,7 +2354,7 @@ The method returns the number of matrix channels.
 
 SparseMat::size
 ---------------
-Returns the array of sizes or matrix size by i dimention and 0 if the matrix is not allocated.
+Returns the array of sizes or matrix size by i dimension and 0 if the matrix is not allocated.
 
 .. ocv:function:: const int* SparseMat::size() const
 .. ocv:function:: int SparseMat::size(int i) const
@@ -2371,6 +2382,11 @@ Compute element hash value from the element indices.
 .. ocv:function:: size_t SparseMat::hash(int i0, int i1, int i2) const
 .. ocv:function:: size_t SparseMat::hash(const int* idx) const
 
+    :param i0: The first dimension index.
+    :param i1: The second dimension index.
+    :param i2: The third dimension index.
+    :param idx: Array of element indices for multidimensional matices.
+
 SparseMat::ptr
 --------------
 Low-level element-access functions, special variants for 1D, 2D, 3D cases, and the generic one for n-D case.
@@ -2379,6 +2395,12 @@ Low-level element-access functions, special variants for 1D, 2D, 3D cases, and t
 .. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, bool createMissing, size_t* hashval=0)
 .. ocv:function:: uchar* SparseMat::ptr(int i0, int i1, int i2, bool createMissing, size_t* hashval=0)
 .. ocv:function:: uchar* SparseMat::ptr(const int* idx, bool createMissing, size_t* hashval=0)
+
+    :param i0: The first dimension index.
+    :param i1: The second dimension index.
+    :param i2: The third dimension index.
+    :param idx: Array of element indices for multidimensional matices.
+    :param createMissing: Create new element with 0 value if it does not exist in SparseMat.
 
 Return pointer to the matrix element. If the element is there (it is non-zero), the pointer to it is returned.
 If it is not there and ``createMissing=false``, NULL pointer is returned. If it is not there and ``createMissing=true``,
@@ -2392,6 +2414,11 @@ Erase the specified matrix element. When there is no such an element, the method
 .. ocv:function:: void SparseMat::erase(int i0, int i1, size_t* hashval=0)
 .. ocv:function:: void SparseMat::erase(int i0, int i1, int i2, size_t* hashval=0)
 .. ocv:function:: void SparseMat::erase(const int* idx, size_t* hashval=0)
+
+    :param i0: The first dimension index.
+    :param i1: The second dimension index.
+    :param i2: The third dimension index.
+    :param idx: Array of element indices for multidimensional matices.
 
 SparseMat\_
 -----------

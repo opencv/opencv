@@ -162,8 +162,8 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
     int y_tex;
     int x_tex = X - radius;
 
-    if (x_tex >= cwidth)
-        return;
+    //if (x_tex >= cwidth)
+    //    return;
 
     for(int d = STEREO_MIND; d < maxdisp; d += STEREO_DISP_STEP)
     {
@@ -258,27 +258,13 @@ float sobel(__global unsigned char *input, int x, int y, int rows, int cols)
 
 float CalcSums(__local float *cols, __local float *cols_cache, int winsz)
 {
-    float cache = 0;
-    float cache2 = 0;
-    int winsz2 = winsz/2;
+    unsigned int cache = cols[0];
 
-    int x = get_local_id(0);
-    int group_size_x = get_local_size(0);
-
-    for(int i = 1; i <= winsz2; i++)
+#pragma unroll
+    for(int i = 1; i <= winsz; i++)
         cache += cols[i];
 
-    cols_cache[0] = cache;
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (x < group_size_x - winsz2)
-        cache2 = cols_cache[winsz2];
-    else
-        for(int i = winsz2 + 1; i < winsz; i++)
-            cache2 += cols[i];
-
-    return cols[0] + cache + cache2;
+    return cache;
 }
 
 #define RpT (2 * ROWSperTHREAD)  // got experimentally
@@ -301,8 +287,7 @@ __kernel void textureness_kernel(__global unsigned char *disp, int disp_rows, in
     int beg_row = group_id_y * RpT;
     int end_row = min(beg_row + RpT, disp_rows);
 
-//   if (x < disp_cols)
-//   {
+
     int y = beg_row;
 
     float sum = 0;
@@ -340,11 +325,15 @@ __kernel void textureness_kernel(__global unsigned char *disp, int disp_rows, in
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
-        float sum_win = CalcSums(cols, cols_cache + local_id_x, winsz) * 255;
-        if (sum_win < threshold)
-            disp[y * disp_step + x] = 0;
+
+        if (x < disp_cols)
+        {
+            float sum_win = CalcSums(cols, cols_cache + local_id_x, winsz) * 255;
+            if (sum_win < threshold)
+                disp[y * disp_step + x] = 0;
+        }
 
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-    //  }
+
 }

@@ -3,7 +3,7 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
 #include <io.h>
 #else
 #include <dirent.h>
@@ -59,7 +59,7 @@ static void readDirectory( const string& directoryName, vector<String>& filename
 {
     filenames.clear();
 
-#ifdef WIN32
+#if defined(WIN32) | defined(_WIN32)
     struct _finddata_t s_file;
     string str = directoryName + "\\*.*";
 

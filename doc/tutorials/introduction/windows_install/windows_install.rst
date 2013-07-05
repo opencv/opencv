@@ -292,7 +292,7 @@ Building the library
 
    This will create an *Install* directory inside the *Build* one collecting all the built binaries into a single place. Use this only after you built both the *Release* and *Debug* versions.
 
-   To test your build just go into the :file:`Build/bin/Debug` or :file:`Build/bin/Release` directory and start a couple of applications like the *contours.exe*. If they run, you are done. Otherwise, something definitely went awfully wrong. In this case you should contact us via our :opencv_group:`user group <>`.
+   To test your build just go into the :file:`Build/bin/Debug` or :file:`Build/bin/Release` directory and start a couple of applications like the *contours.exe*. If they run, you are done. Otherwise, something definitely went awfully wrong. In this case you should contact us at our :opencv_qa:`Q&A forum <>`.
    If everything is okay the *contours.exe* output should resemble the following image (if built with Qt support):
 
    .. image:: images/WindowsQtContoursOutput.png

@@ -1,15 +1,15 @@
-message (STATUS "Setting up iPhoneSimulator toolchain")
-set (IPHONESIMULATOR TRUE)
+message (STATUS "Setting up iPhoneOS toolchain")
+set (IPHONEOS TRUE)
 
 # Standard settings
 set (CMAKE_SYSTEM_NAME iOS)
 # Include extra modules for the iOS platform files
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/ios/cmake/Modules")
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/platforms/ios/cmake/Modules")
 
-# Force the compilers to gcc for iOS
+# Force the compilers to clang for iOS
 include (CMakeForceCompiler)
-#CMAKE_FORCE_C_COMPILER (gcc gcc)
-#CMAKE_FORCE_CXX_COMPILER (g++ g++)
+#CMAKE_FORCE_C_COMPILER (clang GNU)
+#CMAKE_FORCE_CXX_COMPILER (clang++ GNU)
 
 set (CMAKE_C_SIZEOF_DATA_PTR 4)
 set (CMAKE_C_HAS_ISYSROOT 1)
@@ -28,4 +28,4 @@ SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ONLY)
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
-message (STATUS "iPhoneSimulator toolchain loaded")
+message (STATUS "iPhoneOS toolchain loaded")

@@ -149,7 +149,7 @@ namespace cv
             cl_image_format format;
             int err;
             int depth    = mat.depth();
-            int channels = mat.channels();
+            int channels = mat.oclchannels();
 
             switch(depth)
             {

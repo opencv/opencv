@@ -44,12 +44,12 @@ TEST_P(MomentsTest, Mat)
     {
         if(test_contours)
         {
-            Mat src = imread( workdir + "../cpp/pic3.png", 1 );
-            Mat src_gray, canny_output;
-            cvtColor( src, src_gray, COLOR_BGR2GRAY );
+            Mat src = imread( workdir + "../cpp/pic3.png", IMREAD_GRAYSCALE );
+            ASSERT_FALSE(src.empty());
+            Mat canny_output;
             vector<vector<Point> > contours;
             vector<Vec4i> hierarchy;
-            Canny( src_gray, canny_output, 100, 200, 3 );
+            Canny( src, canny_output, 100, 200, 3 );
             findContours( canny_output, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
             for( size_t i = 0; i < contours.size(); i++ )
             {

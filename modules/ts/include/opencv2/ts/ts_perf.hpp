@@ -218,8 +218,7 @@ public:
   static bool targetDevice();
 };
 
-# define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
-
+#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -261,7 +260,11 @@ public:
     TestBase();
 
     static void Init(int argc, const char* const argv[]);
+    static void Init(const std::vector<std::string> & availableImpls,
+                     int argc, const char* const argv[]);
+    static void RecordRunParameters();
     static std::string getDataPath(const std::string& relativePath);
+    static std::string getSelectedImpl();
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -475,15 +478,29 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     void fixture##_##name::PerfTestBody()
 
 
-#define CV_PERF_TEST_MAIN(testsuitname, ...) \
-int main(int argc, char **argv)\
-{\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...) \
     while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
-    ::perf::Regression::Init(#testsuitname);\
-    ::perf::TestBase::Init(argc, argv);\
+    ::perf::Regression::Init(#modulename);\
+    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls),\
+                           argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
     cvtest::printVersionInfo();\
-    return RUN_ALL_TESTS();\
+    ::testing::Test::RecordProperty("cv_module_name", #modulename);\
+    ::perf::TestBase::RecordRunParameters();\
+    return RUN_ALL_TESTS();
+
+// impls must be an array, not a pointer; "plain" should always be one of the implementations
+#define CV_PERF_TEST_MAIN_WITH_IMPLS(modulename, impls, ...) \
+int main(int argc, char **argv)\
+{\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, __VA_ARGS__)\
+}
+
+#define CV_PERF_TEST_MAIN(modulename, ...) \
+int main(int argc, char **argv)\
+{\
+    const char * plain_only[] = { "plain" };\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
 }
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())

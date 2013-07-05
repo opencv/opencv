@@ -180,8 +180,8 @@ namespace cv
 
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
-        // compiled OpenCL program to be cached to the path automatically as "path/*.clb" 
-        // binary file, which will be reused when the OpenCV executable is started again. 
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
+        // binary file, which will be reused when the OpenCV executable is started again.
         //
         // Caching mode is controlled by the following enums
         // Notes
@@ -198,7 +198,7 @@ namespace cv
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
-        //! set where binary cache to be saved to 
+        //! set where binary cache to be saved to
         CV_EXPORTS void setBinpath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
@@ -513,25 +513,10 @@ namespace cv
         CV_EXPORTS void calcHist(const oclMat &mat_src, oclMat &mat_hist);
         //! only 8UC1 and 256 bins is supported now
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
-        
+
         //! only 8UC1 is supported now
-        class CV_EXPORTS CLAHE
-        {
-        public:
-            virtual void apply(const oclMat &src, oclMat &dst) = 0;
+        CV_EXPORTS Ptr<cv::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
-            virtual void setClipLimit(double clipLimit) = 0;
-            virtual double getClipLimit() const = 0;
-
-            virtual void setTilesGridSize(Size tileGridSize) = 0;
-            virtual Size getTilesGridSize() const = 0;
-
-            virtual void collectGarbage() = 0;
-
-            virtual ~CLAHE() {}
-        };
-        CV_EXPORTS Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
-        
         //! bilateralFilter
         // supports 8UC1 8UC4
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
@@ -1554,6 +1539,45 @@ namespace cv
 
             bool isDeviceArch11_;
         };
+
+        class CV_EXPORTS FarnebackOpticalFlow
+        {
+        public:
+            FarnebackOpticalFlow();
+
+            int numLevels;
+            double pyrScale;
+            bool fastPyramids;
+            int winSize;
+            int numIters;
+            int polyN;
+            double polySigma;
+            int flags;
+
+            void operator ()(const oclMat &frame0, const oclMat &frame1, oclMat &flowx, oclMat &flowy);
+
+            void releaseMemory();
+
+        private:
+            void prepareGaussian(
+                int n, double sigma, float *g, float *xg, float *xxg,
+                double &ig11, double &ig03, double &ig33, double &ig55);
+
+            void setPolynomialExpansionConsts(int n, double sigma);
+
+            void updateFlow_boxFilter(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat &flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            void updateFlow_gaussianBlur(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat& flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            oclMat frames_[2];
+            oclMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
+            std::vector<oclMat> pyramid0_, pyramid1_;
+        };
+
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
         CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T, float scale, oclMat &map_x, oclMat &map_y);

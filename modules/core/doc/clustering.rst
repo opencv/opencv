@@ -15,11 +15,17 @@ Finds centers of clusters and groups input samples around the clusters.
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
+    :param data: Data for clustering.
+
     :param cluster_count: Number of clusters to split the set by.
+
+    :param K: Number of clusters to split the set by.
 
     :param labels: Input/output integer array that stores the cluster indices for every sample.
 
     :param criteria: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy. The accuracy is specified as ``criteria.epsilon``. As soon as each of the cluster centers moves by less than ``criteria.epsilon`` on some iteration, the algorithm stops.
+
+    :param termcrit: The algorithm termination criteria, that is, the maximum number of iterations and/or the desired accuracy.
 
     :param attempts: Flag to specify the number of times the algorithm is executed using different initial labellings. The algorithm returns the labels that yield the best compactness (see the last function parameter).
 
@@ -34,6 +40,8 @@ Finds centers of clusters and groups input samples around the clusters.
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
+
+    :param _centers: Output matrix of the cluster centers, one row per each cluster center.
 
     :param compactness: The returned value that is described below.
 
