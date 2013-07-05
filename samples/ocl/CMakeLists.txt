@@ -27,7 +27,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_OCL_SAMPLES_REQUIRED_DEPS})
 
     set_target_properties(${the_target} PROPERTIES
-      OUTPUT_NAME "${name}_${project}"
+      OUTPUT_NAME "${project}-example-${name}"
       PROJECT_LABEL "(EXAMPLE_${project_upper}) ${name}")
 
     if(ENABLE_SOLUTION_FOLDERS)

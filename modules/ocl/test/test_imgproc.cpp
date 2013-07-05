@@ -1425,7 +1425,7 @@ PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
 
 TEST_P(CLAHE, Accuracy)
 {
-    cv::Ptr<cv::ocl::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit);
     clahe->apply(g_src, g_dst);
     cv::Mat dst(g_dst);
 

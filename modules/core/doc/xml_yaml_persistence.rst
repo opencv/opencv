@@ -181,6 +181,17 @@ Opens a file.
 
 .. ocv:function:: bool FileStorage::open(const String& filename, int flags, const String& encoding=String())
 
+    :param filename: Name of the file to open or the text string to read the data from.
+                     Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively).
+                     Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``.
+                     If both ``FileStorage::WRITE`` and ``FileStorage::MEMORY`` flags are specified, ``source``
+                     is used just to specify the output file format (e.g. ``mydata.xml``, ``.yml`` etc.).
+
+    :param flags: Mode of operation. See FileStorage constructor for more details.
+
+    :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.
+
+
 See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
 
 

@@ -559,9 +559,11 @@ CVAPI(int)    cvGetCaptureDomain( CvCapture* capture);
 /* "black box" video file writer structure */
 typedef struct CvVideoWriter CvVideoWriter;
 
+#define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
+
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {
-    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
+    return CV_FOURCC_MACRO(c1, c2, c3, c4);
 }
 
 #define CV_FOURCC_PROMPT -1  /* Open Codec Selection Dialog (Windows only) */

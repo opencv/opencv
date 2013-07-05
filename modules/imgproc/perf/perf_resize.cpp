@@ -85,7 +85,8 @@ PERF_TEST_P(MatInfo_Size_Scale, ResizeAreaFast,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() resize(src, dst, dst.size(), 0, 0, INTER_AREA);
+    int runs = 15;
+    TEST_CYCLE_MULTIRUN(runs) resize(src, dst, dst.size(), 0, 0, INTER_AREA);
 
     //difference equal to 1 is allowed because of different possible rounding modes: round-to-nearest vs bankers' rounding
     SANITY_CHECK(dst, 1);
