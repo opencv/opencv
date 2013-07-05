@@ -64,6 +64,10 @@
         Name for the sheet. If this parameter is missing, the name of sheet's directory
         will be used.
 
+    * 'sheet_properties': [(string, string)]
+        List of arbitrary (key, value) pairs that somehow describe the sheet. Will be
+        dumped into the first row of the sheet in string form.
+
     Note that all keys are optional, although to get useful results, you'll want to
     specify at least 'configurations' and 'configuration_matchers'.
 
@@ -231,24 +235,32 @@ def main():
 
         sheet = wb.add_sheet(sheet_conf.get('sheet_name', os.path.basename(os.path.abspath(sheet_path))))
 
-        sheet.row(0).height = 800
+        sheet_properties = sheet_conf.get('sheet_properties', [])
+
+        sheet.write(0, 0, 'Properties:')
+
+        sheet.write(0, 1,
+          'N/A' if len(sheet_properties) == 0 else
+          ' '.join(str(k) + '=' + repr(v) for (k, v) in sheet_properties))
+
+        sheet.row(2).height = 800
         sheet.panes_frozen = True
         sheet.remove_splits = True
-        sheet.horz_split_pos = 1
-        sheet.horz_split_first_visible = 1
+        sheet.horz_split_pos = 3
+        sheet.horz_split_first_visible = 3
 
         sheet_comparisons = sheet_conf.get('comparisons', [])
 
-        for i, w in enumerate([2000, 15000, 2500, 2000, 15000]
+        for i, w in enumerate([2500, 15000, 2500, 2000, 15000]
                 + (len(config_names) + 1 + len(sheet_comparisons)) * [4000]):
             sheet.col(i).width = w
 
         for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Parameters']
                 + config_names + [None]
                 + [comp['to'] + '\nvs\n' + comp['from'] for comp in sheet_comparisons]):
-            sheet.row(0).write(i, caption, header_style)
+            sheet.row(2).write(i, caption, header_style)
 
-        row = 1
+        row = 3
 
         module_colors = sheet_conf.get('module_colors', {})
         module_styles = {module: xlwt.easyxf('pattern: pattern solid, fore_color {}'.format(color))
