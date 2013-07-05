@@ -13,10 +13,17 @@ class TestInfo(object):
         self.name = xmlnode.getAttribute("name")
         self.value_param = xmlnode.getAttribute("value_param")
         self.type_param = xmlnode.getAttribute("type_param")
-        if xmlnode.getElementsByTagName("failure"):
-            self.status = "failed"
+
+        failures = xmlnode.getElementsByTagName("failure")
+        if len(failures) > 0:
+            if any("No equivalent implementation" in f.getAttribute("message")
+                   for f in failures):
+                self.status = "notimpl"
+            else:
+                self.status = "failed"
         else:
             self.status = xmlnode.getAttribute("status")
+
         if self.name.startswith("DISABLED_"):
             self.status = "disabled"
             self.fixture = self.fixture.replace("DISABLED_", "")
