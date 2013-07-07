@@ -46,8 +46,8 @@ namespace temp_viz
     class CV_EXPORTS PlaneWidget : public Widget
     {
     public:
-        PlaneWidget(const Vec4f& coefs, const Color &color = Color::white());
-        PlaneWidget(const Vec4f& coefs, const Point3f& pt, const Color &color = Color::white());
+        PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
+        PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
     };
     
     class CV_EXPORTS SphereWidget : public Widget

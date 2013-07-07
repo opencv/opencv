@@ -33,23 +33,24 @@ float temp_viz::LineWidget::getLineWidth()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// plane widget implementation
 
-temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Color &color)
+temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     plane->SetNormal (coefs[0], coefs[1], coefs[2]);
     double norm = cv::norm(cv::Vec3f(coefs.val));
     plane->Push (-coefs[3] / norm);
-
+    
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(plane->GetOutput ());
-
+    
     vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
     actor->SetMapper(mapper);
-
+    actor->SetScale(size);
+    
     setColor(color);
 }
 
-temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, const Color &color)
+temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size, const Color &color)
 {
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     cv::Point3f coefs3(coefs[0], coefs[1], coefs[2]);
@@ -65,6 +66,7 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, const 
 
     vtkSmartPointer<vtkLODActor> actor = WidgetAccessor::getActor(*this);
     actor->SetMapper(mapper);
+    actor->SetScale(size);
 
     setColor(color);
 }
