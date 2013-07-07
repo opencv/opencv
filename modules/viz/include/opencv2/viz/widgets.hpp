@@ -65,7 +65,7 @@ namespace temp_viz
     class CV_EXPORTS CircleWidget : public Widget
     {
     public:
-        CircleWidget(const Point3f& pt, double radius, const Color &color = Color::white());
+        CircleWidget(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
     };
     
     class CV_EXPORTS CylinderWidget : public Widget

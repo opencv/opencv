@@ -156,14 +156,13 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
-temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius, const temp_viz::Color& color)
+temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius, double thickness, const temp_viz::Color& color)
 {
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New ();
     // Maybe the resolution should be lower e.g. 50 or 25
-    disk->SetCircumferentialResolution (100);
-    disk->SetInnerRadius (radius - 0.001);
-    disk->SetOuterRadius (radius + 0.001);
-    disk->SetCircumferentialResolution (20);
+    disk->SetCircumferentialResolution (50);
+    disk->SetInnerRadius (radius - thickness);
+    disk->SetOuterRadius (radius + thickness);
 
     // Set the circle origin
     vtkSmartPointer<vtkTransform> t = vtkSmartPointer<vtkTransform>::New ();

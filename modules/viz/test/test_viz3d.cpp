@@ -94,18 +94,18 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0));
     temp_viz::SphereWidget sw(cv::Point3f(0,0,0), 0.5);
     temp_viz::ArrowWidget aw(cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
-    temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 1.0, temp_viz::Color(0,255,0));
+    temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 0.5, 0.01, temp_viz::Color(0,255,0));
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
     temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1), temp_viz::Color(0,0,255));
     temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
     
-    v.showWidget("line", lw);
-    v.showWidget("plane", pw);
-    v.showWidget("sphere", sw);
-    v.showWidget("arrow", aw);
+//     v.showWidget("line", lw);
+//     v.showWidget("plane", pw);
+//     v.showWidget("sphere", sw);
+//     v.showWidget("arrow", aw);
     v.showWidget("circle", cw);
-    v.showWidget("cylinder", cyw);
-    v.showWidget("cube", cuw);
+//     v.showWidget("cylinder", cyw);
+//     v.showWidget("cube", cuw);
     v.showWidget("coordinateSystem", csw);
     
     temp_viz::LineWidget lw2 = lw;
