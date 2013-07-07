@@ -45,7 +45,8 @@
 #define __OPENCV_TRACKER_HPP__
 
 #include "opencv2/core.hpp"
-
+#include "opencv2/highgui.hpp"
+#include <iostream>
 
 /*
  * Partially based on:
@@ -206,11 +207,11 @@ public:
 	/**
 	 * \brief Computes the regions starting from a position in an image
 	 * \param image The image
-	 * \param position The position from which regions can be calculated
+	 * \param boundingBox The bounding box from which regions can be calculated
 	 * \param sample The computed samples [AAM] Fig. 1 variable Sk
 	 * \return true if samples is computed, false otherwise
 	 */
-	bool sampling( const Mat& image, Point2f position, std::vector<Mat>& sample );
+	bool sampling( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
 	/**
 	 * \brief Get the name of the specific sampler algorithm
@@ -221,7 +222,7 @@ public:
 protected:
 	String className;
 
-	virtual bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample ) = 0;
+	virtual bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample ) = 0;
 };
 
 /**
@@ -253,15 +254,21 @@ public:
 	/**
 	 * \brief Computes the regions starting from a position in an image
 	 * \param image The image
-	 * \param position The position from which regions can be calculated
+	 * \param boundingBox The bounding box from which regions can be calculated
 	 */
-	void sampling( const Mat& image, Point2f position );
+	void sampling( const Mat& image, Rect boundingBox );
+
+	/**
+	 * Get the all samplers
+	 * \return The samplers
+	 */
+	const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > >& getSamplers() const;
 
 	/**
 	 * Get the samples from all TrackerSamplerAlgorithm
 	 * \return The samples [AAM] Fig. 1 variable Sk
 	 */
-	const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > >& getSamples() const;
+	const std::vector<Mat>& getSamples() const;
 
 	/**
 	 * \brief Add TrackerSamplerAlgorithm in the collection from tracker sampler type
@@ -269,6 +276,13 @@ public:
 	 * \return true if sampler is added, false otherwise
 	 */
 	bool addTrackerSamplerAlgorithm( String trackerSamplerAlgorithmType );
+
+	/**
+	 * \brief Add TrackerSamplerAlgorithm in collection directly
+	 * \param sampler The TrackerSamplerAlgorithm
+	 * \return true if sampler is added, false otherwise
+	 */
+	bool addTrackerSamplerAlgorithm( Ptr<TrackerSamplerAlgorithm>& sampler );
 
 private:
 	std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > > samplers;
@@ -481,6 +495,8 @@ protected:
 	virtual bool initImpl( const Mat& image, const Rect& boundingBox ) = 0;
 	virtual bool updateImpl( const Mat& image, Rect& boundingBox ) = 0;
 
+	bool initialized;
+
 	Ptr<TrackerFeatureSet> featureSet;
 	Ptr<TrackerSampler> sampler;
 	Ptr<TrackerModel> model;
@@ -521,13 +537,47 @@ public:
 class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
 {
 public:
+	enum
+	{
+	    MODE_INIT_POS    = 1,  // mode for init positive samples
+	    MODE_INIT_NEG    = 2,  // mode for init negative samples
+	    MODE_TRACK_POS   = 3,  // mode for update positive samples
+	    MODE_TRACK_NEG   = 4,  // mode for update negative samples
+	    MODE_DETECT      = 5   // mode for detect samples
+	};
 
-	TrackerSamplerCSC();
+	struct CV_EXPORTS Params
+	{
+		Params();
+		float initInRad;        // radius for gathering positive instances during init
+		float trackInPosRad;    // radius for gathering positive instances during tracking
+		float searchWinSize;	// size of search window
+		int initMaxNegNum;      // # negative samples to use during init
+		int trackMaxPosNum;     // # positive samples to use during training
+		int trackMaxNegNum;     // # negative samples to use during training
+	};
+
+
+	TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameters = TrackerSamplerCSC::Params() );
+
+	/**
+	 * \brief set the sampling mode
+	 */
+	void setMode( int samplingMode );
 
 	~TrackerSamplerCSC();
 
-	bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample );
+	bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
+private:
+
+	Params params;
+	int mode;
+
+	void computeIntegral( const Mat& image, std::vector<Mat_<float> >& ii_imgs );
+
+	std::vector<Mat> sampleImage( const Mat& img, const std::vector<Mat_<float> > & ii_imgs, int x, int y, int w,
+            int h, float inrad, float outrad = 0, int maxnum = 1000000 );
 };
 
 /**
@@ -541,7 +591,7 @@ public:
 
 	~TrackerSamplerCS();
 
-	bool samplingImpl( const Mat& image, Point2f position, std::vector<Mat>& sample );
+	bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
 };
 
@@ -636,12 +686,20 @@ public:
   \brief TrackerMIL implementation.
   For more details see B Babenko, MH Yang, S Belongie, Visual Tracking with Online Multiple Instance Learning
 */
+
 class CV_EXPORTS_W TrackerMIL : public Tracker
 {
 public:
 	struct CV_EXPORTS Params
 	{
 		Params();
+		//parameters for sampler
+		float samplerInitInRadius;	// radius for gathering positive instances during init
+		int samplerInitMaxNegNum;	// # negative samples to use during init
+		float samplerSearchWinSize;	// size of search window
+		float samplerTrackInRadius;	// radius for gathering positive instances during tracking
+		int samplerTrackMaxPosNum;	// # positive samples to use during tracking
+		int samplerTrackMaxNegNum;	// # negative samples to use during tracking
 
 		void read( const FileNode& fn );
 		void write( FileStorage& fs ) const;
@@ -651,12 +709,15 @@ public:
 	 * \brief TrackerMIL Constructor
 	 * \param parameters        TrackerMIL parameters
 	 */
-	TrackerMIL(const TrackerMIL::Params &parameters = TrackerMIL::Params());
+	TrackerMIL( const TrackerMIL::Params &parameters = TrackerMIL::Params() );
 
 	virtual ~TrackerMIL();
 
 	void read( const FileNode& fn );
 	void write( FileStorage& fs ) const;
+
+	static int getRandInt( const int min, const int max );
+	static float getRandFloat( const float min = 0, const float max = 1 );
 
 protected:
 
@@ -665,6 +726,10 @@ protected:
 
 	Params params;
 	AlgorithmInfo* info() const;
+
+private:
+	static RNG rng;
+
 };
 
 

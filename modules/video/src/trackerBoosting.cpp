@@ -75,7 +75,7 @@ void TrackerBoosting::Params::write(cv::FileStorage& fs) const
 TrackerBoosting::TrackerBoosting(const TrackerBoosting::Params &parameters) :
 params(parameters)
 {
-
+	initialized = false;
 }
 
 /*

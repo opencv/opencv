@@ -68,11 +68,23 @@ bool Tracker::init( const Mat& image, const Rect& boundingBox )
     //instantiates the TrackerModel
     model = new TrackerModel;
 
-    return initImpl( image, boundingBox );
+    bool initTracker = initImpl( image, boundingBox );
+
+    if( initTracker )
+    {
+    	initialized = true;
+    }
+
+    return initTracker;
 }
 
 bool Tracker::update( const Mat& image, Rect& boundingBox )
 {
+
+	if( !initialized )
+	{
+		return false;
+	}
 
     if( image.empty() )
         return false;

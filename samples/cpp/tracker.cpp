@@ -93,7 +93,7 @@ int main( int argc, char** argv )
 	}
 
 	Mat frame;
-	paused = false;
+	paused = true;
 	namedWindow( "Tracking API", 1 );
 	setMouseCallback( "Tracking API", onMouse, 0 );
 

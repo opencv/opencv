@@ -46,6 +46,7 @@
 namespace cv
 {
 
+RNG TrackerMIL::rng;
 /*
  *  TrackerMIL
  */
@@ -55,16 +56,32 @@ namespace cv
  */
 TrackerMIL::Params::Params()
 {
-
+	samplerInitInRadius = 3;
+	samplerTrackInRadius = 37.5;
+	samplerSearchWinSize = 25;
+	samplerInitMaxNegNum = 65;
+	samplerTrackMaxPosNum = 65;
+	samplerTrackMaxNegNum = 100000;
 }
 
 void TrackerMIL::Params::read( const cv::FileNode& fn )
 {
-
+	samplerInitInRadius = fn["samplerInitInRadius"];
+	samplerSearchWinSize = fn["samplerSearchWinSize"];
+	samplerInitInRadius = fn["samplerInitInRadius"];
+	samplerTrackInRadius = fn["samplerTrackInRadius"];
+	samplerTrackMaxPosNum = fn["samplerTrackMaxPosNum"];
+	samplerTrackMaxNegNum = fn["samplerTrackMaxNegNum"];
 }
 
 void TrackerMIL::Params::write( cv::FileStorage& fs ) const
 {
+	fs << "samplerInitInRadius" << samplerInitInRadius;
+	fs << "samplerSearchWinSize" << samplerSearchWinSize;
+	fs << "samplerInitInRadius" << samplerInitInRadius;
+	fs << "samplerTrackInRadius" << samplerTrackInRadius;
+	fs << "samplerTrackMaxPosNum" << samplerTrackMaxPosNum;
+	fs << "samplerTrackMaxNegNum" << samplerTrackMaxNegNum;
 
 }
 
@@ -75,7 +92,8 @@ void TrackerMIL::Params::write( cv::FileStorage& fs ) const
 TrackerMIL::TrackerMIL( const TrackerMIL::Params &parameters ) :
 params(parameters)
 {
-
+	initialized = false;
+	rng = RNG( (int) time(0) );
 }
 
 
@@ -97,14 +115,48 @@ void TrackerMIL::write( cv::FileStorage& fs ) const
     params.write(fs);
 }
 
+int TrackerMIL::getRandInt( const int min, const int max )
+{
+	return rng.uniform( min, max );
+}
+
+float TrackerMIL::getRandFloat( const float min, const float max )
+{
+	return rng.uniform( min, max );
+}
+
 bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 {
-	return false;
+	TrackerSamplerCSC::Params CSCparameters;
+	CSCparameters.initInRad = params.samplerInitInRadius;
+	CSCparameters.searchWinSize = params.samplerSearchWinSize;
+	CSCparameters.initMaxNegNum = params.samplerInitMaxNegNum;
+	CSCparameters.trackInPosRad = params.samplerTrackInRadius;
+	CSCparameters.trackMaxPosNum = params.samplerTrackMaxPosNum;
+	CSCparameters.trackMaxNegNum = params.samplerTrackMaxNegNum;
+
+	Ptr<TrackerSamplerAlgorithm> CSCSampler = new TrackerSamplerCSC( CSCparameters );
+	sampler->addTrackerSamplerAlgorithm( CSCSampler );
+
+	//or add CSC sampler with default parameters
+	//sampler->addTrackerSamplerAlgorithm( "CSC" );
+
+	Ptr<TrackerSamplerCSC> ( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
+	sampler->sampling( image, boundingBox );
+	std::vector<Mat> posSamples = sampler->getSamples();
+
+	Ptr<TrackerSamplerCSC> ( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
+	sampler->sampling( image, boundingBox );
+	std::vector<Mat> negSamples = sampler->getSamples();
+
+	//TODO compute HAAR features
+
+	return true;
 }
 
 bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 {
-	return false;
+	return true;
 }
 
 

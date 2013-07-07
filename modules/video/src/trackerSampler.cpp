@@ -66,7 +66,7 @@ TrackerSampler::~TrackerSampler()
 
 }
 
-void TrackerSampler::sampling( const Mat& image, Point2f position )
+void TrackerSampler::sampling( const Mat& image, Rect boundingBox )
 {
 
 	clearSamples();
@@ -74,7 +74,7 @@ void TrackerSampler::sampling( const Mat& image, Point2f position )
 	for( size_t i = 0; i < samplers.size(); i++ )
 	{
 		std::vector<Mat> current_samples;
-		samplers.at(i).second->sampling(image, position, current_samples);
+		samplers.at(i).second->sampling(image, boundingBox, current_samples);
 
 		//push in samples all current_samples
 		for( size_t j = 0; j < current_samples.size(); j++ )
@@ -106,15 +106,38 @@ bool TrackerSampler::addTrackerSamplerAlgorithm( String trackerSamplerAlgorithmT
 	return true;
 }
 
-const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm > > >& TrackerSampler::getSamples() const
+bool TrackerSampler::addTrackerSamplerAlgorithm( Ptr<TrackerSamplerAlgorithm>& sampler )
+{
+	if(blockAddTrackerSampler)
+	{
+		return false;
+	}
+
+	if( sampler == NULL )
+	{
+		return false;
+	}
+
+	String trackerSamplerAlgorithmType = sampler->getClassName();
+	samplers.push_back(std::make_pair( trackerSamplerAlgorithmType, sampler ));
+
+	return true;
+}
+
+const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm > > >& TrackerSampler::getSamplers() const
 {
 	return samplers;
+}
+
+const std::vector<Mat>& TrackerSampler::getSamples() const
+{
+	return samples;
 }
 
 
 void TrackerSampler::clearSamples()
 {
-	samplers.clear();
+	samples.clear();
 }
 
 
