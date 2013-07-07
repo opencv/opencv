@@ -65,8 +65,6 @@ void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::ve
     
     /* Solve the matching problem using the hungarian method */
     hungarian(costMat, matches);
-    /*for (int i=0;i<costMat.rows;i++)
-        std::cout<<"Match:"<<matches[i].queryIdx<<","<<matches[i].trainIdx<<std::endl;*/
 }
 
 /* Protected methods */

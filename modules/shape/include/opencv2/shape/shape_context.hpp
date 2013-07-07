@@ -138,6 +138,54 @@ protected:
 typedef SCDMatcher ShapeContextDescriptorMatcher;
 
 /****************************************************************************************\
+*                              Transform Base Class                                     *
+\****************************************************************************************/
+class CV_EXPORTS_W Transform
+{
+public:
+    //! destructors
+    CV_WRAP virtual ~Transform(){}
+    //! methods
+    CV_WRAP virtual void applyTransformation(InputArray pts1, InputArray pts2,
+                                     std::vector<DMatch>&, std::vector<cv::Point> &outPts) const=0;
+};
+
+/****************************************************************************************\
+*                                       TPS  Class                                      *
+\****************************************************************************************/
+class CV_EXPORTS_W ThinPlateSplineTransform : public Transform
+{
+public:
+    //! *tructors
+    CV_WRAP ThinPlateSplineTransform();
+    CV_WRAP ThinPlateSplineTransform(double beta);
+
+    //! getters-setters
+    void setRegularizationParam(double beta);
+    double getRegularizationParam(void);
+    //! methods
+    CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
+                             std::vector<DMatch>&, std::vector<Point>& outPts) const;
+private:
+    double beta;
+    double distance(Point, Point) const;
+    Point tpsFunction(Mat &params, Point pt, cv::Mat &shape2) const;
+};
+
+/****************************************************************************************\
+*                                  Affine Class                                          *
+\****************************************************************************************/
+class CV_EXPORTS_W AffineTransform : public Transform
+{
+public:
+    //! *tructors
+    CV_WRAP AffineTransform();
+    //! methods
+    CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
+                             std::vector<DMatch>&, OutputArray outPts) const;
+};
+
+/****************************************************************************************\
 *                                   Drawing functions                                    *
 \****************************************************************************************/
 struct CV_EXPORTS DrawSCDFlags
