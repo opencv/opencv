@@ -48,6 +48,10 @@ namespace temp_viz
         
         void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
         bool removeWidget(const String &id);
+        
+        bool setWidgetPose(const String &id, const Affine3f &pose);
+        bool updateWidgetPose(const String &id, const Affine3f &pose);
+        Affine3f getWidgetPose(const String &id) const;
     private:
         Viz3d(const Viz3d&);
         Viz3d& operator=(const Viz3d&);

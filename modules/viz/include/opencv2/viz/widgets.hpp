@@ -81,7 +81,7 @@ namespace temp_viz
     class CV_EXPORTS CubeWidget : public Widget
     {
     public:
-        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, const Color &color = Color::white());
+        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
     };
     
     class CV_EXPORTS CoordinateSystemWidget : public Widget
@@ -96,5 +96,22 @@ namespace temp_viz
         TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
         
         // TODO Overload setColor method, and hide setPose, updatePose, getPose methods
+    };
+    
+    class CV_EXPORTS CloudWidget : public Widget
+    {
+    public:
+        CloudWidget(InputArray _cloud, InputArray _colors);
+        CloudWidget(InputArray _cloud, const Color &color = Color::white());
+    private:
+        struct CreateCloudWidget;
+    };
+    
+    class CV_EXPORTS CloudNormalsWidget : public Widget
+    {
+    public:
+        CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
+    private:
+        struct ApplyCloudNormals;
     };
 }

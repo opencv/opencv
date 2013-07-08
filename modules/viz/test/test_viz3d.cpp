@@ -96,26 +96,38 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::ArrowWidget aw(cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 0.5, 0.01, temp_viz::Color(0,255,0));
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
-    temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1), temp_viz::Color(0,0,255));
+    temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1));
     temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
     temp_viz::TextWidget tw("TEST", cv::Point2i(100,100), 20);
+    temp_viz::CloudWidget pcw(cloud, colors);
+    temp_viz::CloudWidget pcw2(cloud, temp_viz::Color(0,255,255));
     
 //     v.showWidget("line", lw);
-    v.showWidget("plane", pw);
+//     v.showWidget("plane", pw);
 //     v.showWidget("sphere", sw);
 //     v.showWidget("arrow", aw);
 //     v.showWidget("circle", cw);
 //     v.showWidget("cylinder", cyw);
 //     v.showWidget("cube", cuw);
     v.showWidget("coordinateSystem", csw);
-    v.showWidget("text",tw);
+//     v.showWidget("text",tw);
+//     v.showWidget("pcw",pcw);
+    v.showWidget("pcw2",pcw2);
     
     temp_viz::LineWidget lw2 = lw;
+//     v.showPointCloud("cld",cloud, colors);
+    
+    cv::Mat normals(cloud.size(), cloud.type(), cv::Scalar(0, 10, 0));
+
+//     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
+    temp_viz::CloudNormalsWidget cnw(cloud, normals);
+    v.showWidget("n", cnw);
     
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
+        cv::Affine3f cloudPosition2(angle_x, angle_y, angle_z, cv::Vec3f(pos_x+0.2, pos_y+0.2, pos_z+0.2));
 
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
@@ -128,9 +140,16 @@ TEST(Viz_viz3d, accuracy)
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
-        cuw.setPose(cloudPosition);        
+        cuw.setPose(cloudPosition);
+//         cnw.setPose(cloudPosition);
+//         v.showWidget("pcw",pcw, cloudPosition);
+//         v.showWidget("pcw2",pcw2, cloudPosition2);
+//         v.showWidget("plane", pw, cloudPosition);
         
-        v.showWidget("plane", pw, cloudPosition);
+        v.setWidgetPose("n",cloudPosition);
+        v.setWidgetPose("pcw2", cloudPosition);
+        cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
@@ -145,9 +164,7 @@ TEST(Viz_viz3d, accuracy)
         v.spinOnce(1, true);
     }
    
-//     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));
-// 
-//     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
+
 // 
 // 
 //     temp_viz::ModelCoefficients mc;

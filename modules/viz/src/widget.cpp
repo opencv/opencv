@@ -18,7 +18,7 @@ public:
 
     void setColor(const Color& color)
     {
-        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkLODActor *lod_actor = vtkLODActor::SafeDownCast(actor);
         Color c = vtkcolor(color);
         lod_actor->GetMapper ()->ScalarVisibilityOff ();
         lod_actor->GetProperty ()->SetColor (c.val);
@@ -32,7 +32,7 @@ public:
 
     void setPose(const Affine3f& pose)
     {
-        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkLODActor *lod_actor = vtkLODActor::SafeDownCast(actor);
         vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
         lod_actor->SetUserMatrix (matrix);
         lod_actor->Modified ();
@@ -40,7 +40,7 @@ public:
 
     void updatePose(const Affine3f& pose)
     {
-        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkLODActor *lod_actor = vtkLODActor::SafeDownCast(actor);
         vtkSmartPointer<vtkMatrix4x4> matrix = lod_actor->GetUserMatrix();
         if (!matrix)
         {
@@ -58,7 +58,7 @@ public:
 
     Affine3f getPose() const
     {
-        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkLODActor *lod_actor = vtkLODActor::SafeDownCast(actor);
         vtkSmartPointer<vtkMatrix4x4> matrix = lod_actor->GetUserMatrix();
         Matx44f matrix_cv = convertToMatx(matrix);
         return Affine3f(matrix_cv);
