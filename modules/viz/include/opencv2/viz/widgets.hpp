@@ -104,4 +104,12 @@ namespace temp_viz
         CloudWidget(InputArray _cloud, InputArray _colors);
         CloudWidget(InputArray _cloud, const Color &color = Color::white());
     };
+    
+    class CV_EXPORTS CloudNormalsWidget : public Widget
+    {
+    public:
+        CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f);
+    private:
+        struct ApplyCloudNormals;
+    };
 }

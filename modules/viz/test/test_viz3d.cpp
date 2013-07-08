@@ -52,16 +52,18 @@
 
 cv::Mat cvcloud_load()
 {
-    cv::Mat cloud(1, 20000, CV_32FC3);
+    cv::Mat cloud(1, 20000, CV_64FC4);
         std::ifstream ifs("cloud_dragon.ply");
 
     std::string str;
     for(size_t i = 0; i < 11; ++i)
         std::getline(ifs, str);
 
-    cv::Point3f* data = cloud.ptr<cv::Point3f>();
-    for(size_t i = 0; i < 20000; ++i)
-        ifs >> data[i].x >> data[i].y >> data[i].z;
+    cv::Vec4d* data = cloud.ptr<cv::Vec4d>();
+    for(size_t i = 0; i < 20000; ++i){
+        ifs >> data[i][0] >> data[i][1] >> data[i][2];
+        data[i][3] = 1.0;
+    }
 
     return cloud;
 }
@@ -100,7 +102,7 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
     temp_viz::TextWidget tw("TEST", cv::Point2i(100,100), 20);
     temp_viz::CloudWidget pcw(cloud, colors);
-    temp_viz::CloudWidget pcw2(cloud, temp_viz::Color(255,255,255));
+    temp_viz::CloudWidget pcw2(cloud, temp_viz::Color(0,255,255));
     
 //     v.showWidget("line", lw);
 //     v.showWidget("plane", pw);
@@ -111,11 +113,17 @@ TEST(Viz_viz3d, accuracy)
 //     v.showWidget("cube", cuw);
     v.showWidget("coordinateSystem", csw);
 //     v.showWidget("text",tw);
-    v.showWidget("pcw",pcw);
+//     v.showWidget("pcw",pcw);
     v.showWidget("pcw2",pcw2);
     
     temp_viz::LineWidget lw2 = lw;
 //     v.showPointCloud("cld",cloud, colors);
+    
+    cv::Mat normals(cloud.size(), cloud.type(), cv::Scalar(0, 10, 0));
+
+//     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
+    temp_viz::CloudNormalsWidget cnw(cloud, normals);
+    v.showWidget("n", cnw);
     
     while(!v.wasStopped())
     {
@@ -134,9 +142,10 @@ TEST(Viz_viz3d, accuracy)
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
-        cuw.setPose(cloudPosition);        
-        v.showWidget("pcw",pcw, cloudPosition);
-        v.showWidget("pcw2",pcw2, cloudPosition2);
+        cuw.setPose(cloudPosition);
+//         cnw.setPose(cloudPosition);
+//         v.showWidget("pcw",pcw, cloudPosition);
+//         v.showWidget("pcw2",pcw2, cloudPosition2);
 //         v.showWidget("plane", pw, cloudPosition);
         
         angle_x += 0.1f;
@@ -152,9 +161,7 @@ TEST(Viz_viz3d, accuracy)
         v.spinOnce(1, true);
     }
    
-//     cv::Mat normals(cloud.size(), CV_32FC3, cv::Scalar(0, 10, 0));
-// 
-//     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
+
 // 
 // 
 //     temp_viz::ModelCoefficients mc;

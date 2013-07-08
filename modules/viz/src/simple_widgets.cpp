@@ -524,12 +524,143 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     bool interpolation = (polydata && polydata->GetNumberOfCells () != polydata->GetNumberOfVerts ());
 
     mapper->SetInterpolateScalarsBeforeMapping (interpolation);
-    mapper->ScalarVisibilityOn ();
+    mapper->ScalarVisibilityOff ();
         
     mapper->ImmediateModeRenderingOff ();
     
     actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
     actor->GetProperty ()->SetInterpolationToFlat ();
     actor->GetProperty ()->BackfaceCullingOn ();
+    actor->GetProperty ()->SetColor(c.val);
     actor->SetMapper (mapper);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// cloud normals widget implementation
+
+struct temp_viz::CloudNormalsWidget::ApplyCloudNormals
+{
+    template<typename _Tp>
+    struct Impl 
+    {
+        static vtkSmartPointer<vtkCellArray> applyOrganized(const cv::Mat &cloud, const cv::Mat& normals, 
+                                                            int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+        {
+            vtkIdType point_step = static_cast<vtkIdType> (sqrt (double (level)));
+            nr_normals = (static_cast<vtkIdType> ((cloud.cols - 1)/ point_step) + 1) *
+                    (static_cast<vtkIdType> ((cloud.rows - 1) / point_step) + 1);
+            vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+            
+            pts = new _Tp[2 * nr_normals * 3];
+
+            int cch = cloud.channels();
+            vtkIdType cell_count = 0;    
+            for (vtkIdType y = 0; y < cloud.rows; y += point_step)
+            {
+                const _Tp *prow = cloud.ptr<_Tp>(y);
+                const _Tp *nrow = normals.ptr<_Tp>(y);
+                for (vtkIdType x = 0; x < cloud.cols; x += point_step + cch)
+                {
+                    pts[2 * cell_count * 3 + 0] = prow[x];
+                    pts[2 * cell_count * 3 + 1] = prow[x+1];
+                    pts[2 * cell_count * 3 + 2] = prow[x+2];
+                    pts[2 * cell_count * 3 + 3] = prow[x] + nrow[x] * scale;
+                    pts[2 * cell_count * 3 + 4] = prow[x+1] + nrow[x+1] * scale;
+                    pts[2 * cell_count * 3 + 5] = prow[x+2] + nrow[x+2] * scale;
+
+                    lines->InsertNextCell (2);
+                    lines->InsertCellPoint (2 * cell_count);
+                    lines->InsertCellPoint (2 * cell_count + 1);
+                    cell_count++;
+                }
+            }
+            return lines;
+        }
+        
+        static vtkSmartPointer<vtkCellArray> applyUnorganized(const cv::Mat &cloud, const cv::Mat& normals, 
+                                                              int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+        {
+            vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+            nr_normals = (cloud.size().area() - 1) / level + 1 ;
+            pts = new _Tp[2 * nr_normals * 3];
+
+            int cch = cloud.channels();
+            const _Tp *p = cloud.ptr<_Tp>();
+            const _Tp *n = normals.ptr<_Tp>();
+            for (vtkIdType i = 0, j = 0; j < nr_normals; j++, i = j * level * cch)
+            {
+                
+                pts[2 * j * 3 + 0] = p[i];
+                pts[2 * j * 3 + 1] = p[i+1];
+                pts[2 * j * 3 + 2] = p[i+2];
+                pts[2 * j * 3 + 3] = p[i] + n[i] * scale;
+                pts[2 * j * 3 + 4] = p[i+1] + n[i+1] * scale;
+                pts[2 * j * 3 + 5] = p[i+2] + n[i+2] * scale;
+
+                lines->InsertNextCell (2);
+                lines->InsertCellPoint (2 * j);
+                lines->InsertCellPoint (2 * j + 1);
+            }
+            return lines;
+        }
+    };
+    
+    template<typename _Tp>
+    static inline vtkSmartPointer<vtkCellArray> apply(const cv::Mat &cloud, const cv::Mat& normals, 
+                                                               int level, float scale, _Tp *&pts, vtkIdType &nr_normals)
+    {
+        if (cloud.cols > 1 && cloud.rows > 1)
+            return ApplyCloudNormals::Impl<_Tp>::applyOrganized(cloud, normals, level, scale, pts, nr_normals);
+        else
+            return ApplyCloudNormals::Impl<_Tp>::applyUnorganized(cloud, normals, level, scale, pts, nr_normals);
+    }
+};
+
+temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level, float scale)
+{
+    Mat cloud = _cloud.getMat();
+    Mat normals = _normals.getMat();
+    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
+    CV_Assert(cloud.size() == normals.size() && cloud.type() == normals.type());
+    
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+    vtkIdType nr_normals = 0;
+    
+    if (cloud.depth() == CV_32F)
+    {
+        points->SetDataTypeToFloat();
+    
+        vtkSmartPointer<vtkFloatArray> data = vtkSmartPointer<vtkFloatArray>::New ();
+        data->SetNumberOfComponents (3);
+        
+        float* pts = 0;
+        lines = ApplyCloudNormals::apply(cloud, normals, level, scale, pts, nr_normals);
+        data->SetArray (&pts[0], 2 * nr_normals * 3, 0);
+        points->SetData (data);
+    }
+    else
+    {
+        points->SetDataTypeToDouble();
+    
+        vtkSmartPointer<vtkDoubleArray> data = vtkSmartPointer<vtkDoubleArray>::New ();
+        data->SetNumberOfComponents (3);
+        
+        double* pts = 0;
+        lines = ApplyCloudNormals::apply(cloud, normals, level, scale, pts, nr_normals);
+        data->SetArray (&pts[0], 2 * nr_normals * 3, 0);
+        points->SetData (data);
+    }
+
+    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+    polyData->SetPoints (points);
+    polyData->SetLines (lines);
+
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput (polyData);
+    mapper->SetColorModeToMapScalars();
+    mapper->SetScalarModeToUsePointData();
+    
+    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    actor->SetMapper(mapper);
 }
