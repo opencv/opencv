@@ -515,9 +515,6 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     // Set the cells and the vertices
     vertices->SetCells (nr_points, cells);
     
-    Color c = vtkcolor(color);
-    polydata->GetPointData ()->SetScalars (0);
-
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput (polydata);
 
@@ -531,8 +528,9 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
     actor->GetProperty ()->SetInterpolationToFlat ();
     actor->GetProperty ()->BackfaceCullingOn ();
-    actor->GetProperty ()->SetColor(c.val);
     actor->SetMapper (mapper);
+    
+    setColor(color);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
