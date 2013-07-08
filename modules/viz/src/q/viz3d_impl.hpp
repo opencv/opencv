@@ -199,7 +199,7 @@ public:
     void setPosition (int x, int y);
     void setSize (int xw, int yw);
     
-    void showWidget(const String &id, const Widget &widget);
+    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
     bool removeWidget(const String &id);
     
     void all_data();

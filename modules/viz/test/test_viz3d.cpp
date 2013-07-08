@@ -121,12 +121,14 @@ TEST(Viz_viz3d, accuracy)
         pw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         sw.setPose(cloudPosition);
-        pw.setPose(cloudPosition);
+//         pw.setPose(cloudPosition);
         aw.setPose(cloudPosition);
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
         cuw.setPose(cloudPosition);        
+        
+        v.showWidget("plane", pw, cloudPosition);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

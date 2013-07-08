@@ -79,9 +79,9 @@ void temp_viz::Viz3d::registerMouseCallback(void (*callback)(const MouseEvent&, 
 
 bool temp_viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }
 
-void temp_viz::Viz3d::showWidget(const String &id, const Widget &widget)
+void temp_viz::Viz3d::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
 {
-    impl_->showWidget(id, widget);
+    impl_->showWidget(id, widget, pose);
 }
 
 bool temp_viz::Viz3d::removeWidget(const String &id)

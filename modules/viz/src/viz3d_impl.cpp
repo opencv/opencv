@@ -864,7 +864,7 @@ bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& co
     return (true);
 }
 
-void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget)
+void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -873,8 +873,13 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         // Remove it if it exists and add it again
         removeActorFromRenderer(wam_itr->second.actor);
     }
-    renderer_->AddActor(WidgetAccessor::getActor(widget));
-    (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
+    // Get the actor and set the user matrix
+    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(widget));
+    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    actor->SetUserMatrix (matrix);
+    actor->Modified();
+    renderer_->AddActor(actor);
+    (*widget_actor_map_)[id].actor = actor;
 }
 
 bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)

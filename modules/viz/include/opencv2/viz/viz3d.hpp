@@ -46,7 +46,7 @@ namespace temp_viz
 
         bool wasStopped() const;
         
-        void showWidget(const String &id, const Widget &widget);
+        void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
         bool removeWidget(const String &id);
     private:
         Viz3d(const Viz3d&);
