@@ -211,7 +211,7 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
-temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, const Color &color)
+temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame, const Color &color)
 {
     vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
     cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
@@ -221,6 +221,9 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, c
 
     vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
+    
+    if (wire_frame)
+        actor->GetProperty ()->SetRepresentationToWireframe ();
     
     setColor(color);
 }

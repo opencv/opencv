@@ -81,7 +81,7 @@ namespace temp_viz
     class CV_EXPORTS CubeWidget : public Widget
     {
     public:
-        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, const Color &color = Color::white());
+        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
     };
     
     class CV_EXPORTS CoordinateSystemWidget : public Widget
