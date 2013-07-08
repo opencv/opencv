@@ -103,6 +103,8 @@ namespace temp_viz
     public:
         CloudWidget(InputArray _cloud, InputArray _colors);
         CloudWidget(InputArray _cloud, const Color &color = Color::white());
+    private:
+        struct CreateCloudWidget;
     };
     
     class CV_EXPORTS CloudNormalsWidget : public Widget

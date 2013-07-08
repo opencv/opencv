@@ -889,9 +889,7 @@ bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    
-    if (!exists)
-        return std::cout << "[removeWidget] A widget with id <" << id << "> does not exist!" << std::endl, false;
+    CV_Assert(exists);
 
     if (!removeActorFromRenderer (wam_itr->second.actor))
         return false;
@@ -904,10 +902,8 @@ bool temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &p
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    if (!exists)
-    {
-        return std::cout << "[setWidgetPose] A widget with id <" << id << "> does not exist!" << std::endl, false;
-    }
+    CV_Assert(exists);
+    
     vtkLODActor *actor;
     if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
     {
@@ -923,10 +919,8 @@ bool temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    if (!exists)
-    {
-        return std::cout << "[setWidgetPose] A widget with id <" << id << "> does not exist!" << std::endl, false;
-    }
+    CV_Assert(exists);
+    
     vtkLODActor *actor;
     if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
     {
@@ -952,10 +946,8 @@ temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) con
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    if (!exists)
-    {
-        return Affine3f();
-    }
+    CV_Assert(exists);
+    
     vtkLODActor *actor;
     if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
     {
