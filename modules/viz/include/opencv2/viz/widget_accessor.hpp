@@ -12,6 +12,6 @@ namespace temp_viz
     //It is indended for those users who want to develop own widgets system using VTK library API.
     struct CV_EXPORTS WidgetAccessor
     {
-        static vtkSmartPointer<vtkLODActor> getActor(const Widget &widget);
+        static vtkSmartPointer<vtkProp> getActor(const Widget &widget);
     };
 }

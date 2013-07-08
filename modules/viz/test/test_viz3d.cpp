@@ -98,6 +98,7 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
     temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1), temp_viz::Color(0,0,255));
     temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
+    temp_viz::TextWidget tw("TEST", cv::Point2i(100,100), 20);
     
 //     v.showWidget("line", lw);
     v.showWidget("plane", pw);
@@ -107,6 +108,7 @@ TEST(Viz_viz3d, accuracy)
 //     v.showWidget("cylinder", cyw);
 //     v.showWidget("cube", cuw);
     v.showWidget("coordinateSystem", csw);
+    v.showWidget("text",tw);
     
     temp_viz::LineWidget lw2 = lw;
     

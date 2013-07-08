@@ -3,34 +3,45 @@
 class temp_viz::Widget::Impl
 {
 public:
-    vtkSmartPointer<vtkLODActor> actor;
+    vtkSmartPointer<vtkProp> actor;
     int ref_counter;
 
     Impl() : actor(vtkSmartPointer<vtkLODActor>::New()) {}
+    
+    Impl(bool text_widget) 
+    {
+        if (text_widget)
+            actor = vtkSmartPointer<vtkTextActor>::New();
+        else
+            actor = vtkSmartPointer<vtkLeaderActor2D>::New();
+    }
 
     void setColor(const Color& color)
     {
+        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
         Color c = vtkcolor(color);
-        actor->GetMapper ()->ScalarVisibilityOff ();
-        actor->GetProperty ()->SetColor (c.val);
-        actor->GetProperty ()->SetEdgeColor (c.val);
-        actor->GetProperty ()->SetAmbient (0.8);
-        actor->GetProperty ()->SetDiffuse (0.8);
-        actor->GetProperty ()->SetSpecular (0.8);
-        actor->GetProperty ()->SetLighting (0);
-        actor->Modified ();
+        lod_actor->GetMapper ()->ScalarVisibilityOff ();
+        lod_actor->GetProperty ()->SetColor (c.val);
+        lod_actor->GetProperty ()->SetEdgeColor (c.val);
+        lod_actor->GetProperty ()->SetAmbient (0.8);
+        lod_actor->GetProperty ()->SetDiffuse (0.8);
+        lod_actor->GetProperty ()->SetSpecular (0.8);
+        lod_actor->GetProperty ()->SetLighting (0);
+        lod_actor->Modified ();
     }
 
     void setPose(const Affine3f& pose)
     {
+        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
         vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
+        lod_actor->SetUserMatrix (matrix);
+        lod_actor->Modified ();
     }
 
     void updatePose(const Affine3f& pose)
     {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkSmartPointer<vtkMatrix4x4> matrix = lod_actor->GetUserMatrix();
         if (!matrix)
         {
             setPose(pose);
@@ -41,13 +52,14 @@ public:
         Affine3f updated_pose = pose * Affine3f(matrix_cv);
         matrix = convertToVtkMatrix(updated_pose.matrix);
 
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
+        lod_actor->SetUserMatrix (matrix);
+        lod_actor->Modified ();
     }
 
     Affine3f getPose() const
     {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+        vtkSmartPointer<vtkLODActor> lod_actor = vtkLODActor::SafeDownCast(actor);
+        vtkSmartPointer<vtkMatrix4x4> matrix = lod_actor->GetUserMatrix();
         Matx44f matrix_cv = convertToMatx(matrix);
         return Affine3f(matrix_cv);
     }
@@ -77,7 +89,7 @@ protected:
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// stream accessor implementaion
 
-vtkSmartPointer<vtkLODActor> temp_viz::WidgetAccessor::getActor(const Widget& widget)
+vtkSmartPointer<vtkProp> temp_viz::WidgetAccessor::getActor(const Widget& widget)
 {
     return widget.impl_->actor;
 }
@@ -88,6 +100,11 @@ vtkSmartPointer<vtkLODActor> temp_viz::WidgetAccessor::getActor(const Widget& wi
 temp_viz::Widget::Widget() : impl_(0)
 {
     create();
+}
+
+temp_viz::Widget::Widget(bool text_widget) : impl_(0)
+{
+    create(text_widget);
 }
 
 temp_viz::Widget::Widget(const Widget& other) : impl_(other.impl_)
@@ -138,5 +155,13 @@ void temp_viz::Widget::release()
         delete impl_;
         impl_ = 0;
     }
+}
+
+void temp_viz::Widget::create(bool text_widget)
+{
+    if (impl_)
+        release();
+    impl_ = new Impl(text_widget);
+    impl_->ref_counter = 1;
 }
 

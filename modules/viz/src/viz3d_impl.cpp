@@ -874,12 +874,15 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         removeActorFromRenderer(wam_itr->second.actor);
     }
     // Get the actor and set the user matrix
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(widget));
-    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
-    actor->SetUserMatrix (matrix);
-    actor->Modified();
-    renderer_->AddActor(actor);
-    (*widget_actor_map_)[id].actor = actor;
+    vtkSmartPointer<vtkLODActor> actor;
+    if (actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(widget)))
+    {
+        vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+        actor->SetUserMatrix (matrix);
+        actor->Modified();
+    }
+    renderer_->AddActor(WidgetAccessor::getActor(widget));
+    (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
 }
 
 bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)

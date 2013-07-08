@@ -22,13 +22,17 @@ namespace temp_viz
         void setPose(const Affine3f &pose);
         void updatePose(const Affine3f &pose);
         Affine3f getPose() const;
-
+        
+    protected:
+        Widget(bool text_widget);
+        
     private:
         class Impl;
         Impl* impl_;
         
         void create();
         void release();
+        void create(bool text_widget);
         
         friend struct WidgetAccessor;
     };
@@ -85,5 +89,12 @@ namespace temp_viz
     public:
         CoordinateSystemWidget(double scale, const Affine3f& affine);
     };
-
+    
+    class CV_EXPORTS TextWidget : public Widget
+    {
+    public:
+        TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
+        
+        // TODO Overload setColor method, and hide setPose, updatePose, getPose methods
+    };
 }

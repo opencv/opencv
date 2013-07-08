@@ -22,6 +22,7 @@ namespace temp_viz
     typedef cv::Matx33d Matx33d;
     typedef cv::Affine3f Affine3f;
     typedef cv::Affine3d Affine3d;
+    typedef cv::Point2i Point2i;
     typedef cv::Point3f Point3f;
     typedef cv::Point3d Point3d;
     typedef cv::Matx44d Matx44d;
