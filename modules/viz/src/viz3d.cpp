@@ -88,3 +88,18 @@ bool temp_viz::Viz3d::removeWidget(const String &id)
 {
     return impl_->removeWidget(id);
 }
+
+bool temp_viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose)
+{
+    return impl_->setWidgetPose(id, pose);
+}
+
+bool temp_viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose)
+{
+    return impl_->updateWidgetPose(id, pose);
+}
+
+temp_viz::Affine3f temp_viz::Viz3d::getWidgetPose(const String &id) const
+{
+    return impl_->getWidgetPose(id);
+}

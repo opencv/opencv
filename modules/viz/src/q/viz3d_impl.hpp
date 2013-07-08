@@ -202,6 +202,10 @@ public:
     void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
     bool removeWidget(const String &id);
     
+    bool setWidgetPose(const String &id, const Affine3f &pose);
+    bool updateWidgetPose(const String &id, const Affine3f &pose);
+    Affine3f getWidgetPose(const String &id) const;
+    
     void all_data();
 
 private:

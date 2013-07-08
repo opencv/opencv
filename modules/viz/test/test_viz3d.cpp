@@ -52,18 +52,16 @@
 
 cv::Mat cvcloud_load()
 {
-    cv::Mat cloud(1, 20000, CV_64FC4);
-        std::ifstream ifs("cloud_dragon.ply");
+    cv::Mat cloud(1, 20000, CV_32FC3);
+        std::ifstream ifs("d:/cloud_dragon.ply");
 
     std::string str;
     for(size_t i = 0; i < 11; ++i)
         std::getline(ifs, str);
 
-    cv::Vec4d* data = cloud.ptr<cv::Vec4d>();
-    for(size_t i = 0; i < 20000; ++i){
-        ifs >> data[i][0] >> data[i][1] >> data[i][2];
-        data[i][3] = 1.0;
-    }
+    cv::Point3f* data = cloud.ptr<cv::Point3f>();
+    for(size_t i = 0; i < 20000; ++i)
+        ifs >> data[i].x >> data[i].y >> data[i].z;
 
     return cloud;
 }
@@ -147,6 +145,11 @@ TEST(Viz_viz3d, accuracy)
 //         v.showWidget("pcw",pcw, cloudPosition);
 //         v.showWidget("pcw2",pcw2, cloudPosition2);
 //         v.showWidget("plane", pw, cloudPosition);
+        
+        v.setWidgetPose("n",cloudPosition);
+        v.setWidgetPose("pcw2", cloudPosition);
+        cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

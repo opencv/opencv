@@ -108,7 +108,7 @@ namespace temp_viz
     class CV_EXPORTS CloudNormalsWidget : public Widget
     {
     public:
-        CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f);
+        CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
     private:
         struct ApplyCloudNormals;
     };

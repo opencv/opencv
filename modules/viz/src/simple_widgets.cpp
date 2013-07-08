@@ -616,7 +616,7 @@ struct temp_viz::CloudNormalsWidget::ApplyCloudNormals
     }
 };
 
-temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level, float scale)
+temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     Mat normals = _normals.getMat();
@@ -663,4 +663,5 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     
     vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
+    setColor(color);
 }
