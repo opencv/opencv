@@ -107,7 +107,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
      * with L={[K|P];[P'|0]}
      */
     //Building K
-    //K=U*log(U)
+    //K=d2*log(d2)
     Mat matK(matches.size(),matches.size(),CV_32F);
     for (int i=0; i<matK.rows; i++)
     {
@@ -163,7 +163,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     matVec.push_back(up);
     matVec.push_back(down);
     vconcat(matVec, matL);
-    //matL+=beta; // regularization
+    matL+=beta; // regularization
 
     //Obtaining transformation params (w|a)
     Mat matX; //params for fx and fy respectively
@@ -174,37 +174,79 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
         std::cout<<"matX["<<i<<"]="<<matX.at<float>(i,0)<<","<<matX.at<float>(i,1)<<std::endl;
     }
 
-    //Apply transformation
+    //Apply transformation in the complete set of points
+    Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
     for (int i=0; i<pts1.cols; i++)
     {
-        Point current=pts1.at<Point>(0,i);
-        Point nextPt = tpsFunction(matX, current, shape2);
-        outPts.push_back(nextPt);
+        Point pt1=pts1.at<Point>(0,i);
+        complete_shape1.at<float>(i,0) = pt1.x;
+        complete_shape1.at<float>(i,1) = pt1.y;
     }
-}
-
-Point ThinPlateSplineTransform::tpsFunction(Mat &params, Point pt, Mat& shape2) const
-{
-    float a1x = params.at<float>(params.rows-3,0);
-    float a1y = params.at<float>(params.rows-3,1);
-    float a2x = params.at<float>(params.rows-2,0);
-    float a2y = params.at<float>(params.rows-2,1);
-    float a3x = params.at<float>(params.rows-1,0);
-    float a3y = params.at<float>(params.rows-1,1);
-
-    float fxyX = a1x + a2x*pt.x + a3x*pt.y;
-    float fxyY = a1y + a2y*pt.x + a3y*pt.y;
-
-    for (int i=0; i<params.rows-3; i++)
+    //Creating U=r^2*log(r^2)
+    Mat matU(complete_shape1.rows,complete_shape1.rows,CV_32F);
+    for (int i=0; i<matU.rows; i++)
     {
-        Point cmp(shape2.at<float>(i,0), shape2.at<float>(i,1));
-        double dis=distance(cmp,pt);
-
-        fxyX += params.at<float>(i,0)*dis*dis*log(dis*dis+std::numeric_limits<float>::min());
-        std::cout<<"U="<<dis*dis*log(dis*dis+std::numeric_limits<float>::min())<<std::endl;
-        fxyY += params.at<float>(i,1)*dis*dis*log(dis*dis+std::numeric_limits<float>::min());
+        for (int j=0; j<matU.cols; j++)
+        {
+            if (i==j)
+            {
+                matU.at<float>(i,j)=std::numeric_limits<float>::min();
+                continue;
+            }
+            matU.at<float>(i,j) = distance(Point(complete_shape1.at<float>(i,0),complete_shape1.at<float>(i,1)),
+                                           Point(complete_shape1.at<float>(j,0),complete_shape1.at<float>(j,1)));
+        }
     }
-    return Point(fxyX, fxyY);
+    normalize(matU, matU,0,1, NORM_MINMAX);
+    Mat logMatU;
+    log(matU,logMatU);
+    matU = matU.mul(logMatU);
+
+    //creating fxAffine
+    Mat afparam(1,3,CV_32F);
+    afparam.at<float>(0,0)=matX.at<float>(matX.rows-3,0);
+    afparam.at<float>(0,1)=matX.at<float>(matX.rows-2,0);
+    afparam.at<float>(0,2)=matX.at<float>(matX.rows-1,0);
+    Mat auxaf=Mat::ones(3,matU.rows,CV_32F);
+    for (int i=0; i<matU.cols; i++)
+    {
+        auxaf.at<float>(1,i)=complete_shape1.at<float>(i,0);
+        auxaf.at<float>(2,i)=complete_shape1.at<float>(i,1);
+    }
+    Mat fxAffine=afparam*auxaf;
+
+    //creating fxWarp
+    Mat warpaux(1,fxAffine.cols,CV_32F);
+    for (int i=0; i<warpaux.cols; i++)
+    {
+        warpaux.at<float>(0,i)=matX.at<float>(i,0);
+    }
+    Mat fxWarp=warpaux*matU;
+
+    //fx
+    Mat fx=fxWarp+fxAffine;
+
+    //Creating fyAffine
+    afparam.at<float>(0,0)=matX.at<float>(matX.rows-3,1);
+    afparam.at<float>(0,1)=matX.at<float>(matX.rows-2,1);
+    afparam.at<float>(0,2)=matX.at<float>(matX.rows-1,1);
+    Mat fyAffine=afparam*auxaf;
+
+    //creating fyWarp
+    for (int i=0; i<warpaux.cols; i++)
+    {
+        warpaux.at<float>(0,i)=matX.at<float>(i,1);
+    }
+    Mat fyWarp=warpaux*matU;
+
+    //fx
+    Mat fy=fyWarp+fyAffine;
+
+    //Ensambling output
+    for (int i=0; i<fy.cols; i++)
+    {
+        outPts.push_back(Point(fx.at<float>(0,i), fy.at<float>(0,i)));
+    }
 }
 
 double ThinPlateSplineTransform::distance(Point p, Point q) const

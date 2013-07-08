@@ -144,20 +144,20 @@ void CV_ShapeTest::test2()
         }
     }
 
-    ThinPlateSplineTransform tpsTra(0.0);
+    ThinPlateSplineTransform tpsTra(0.1);
     vector<Point> transformed_shape;
+    //TransformedShape=WarpedShape1
+    //Shape2=target shape
     tpsTra.applyTransformation(shape1, shape2, matches, transformed_shape);
     Mat im2=Mat::zeros(250, 250, CV_8UC3);
     for (size_t i=0; i<transformed_shape.size(); i++)
     {
-        circle(im2, transformed_shape[i], 3, Scalar(0,255,0), 1);
-        cout<<" Point["<<i<<"]=("<<transformed_shape[i].x<<","<<transformed_shape[i].y<<"). "<<endl;
+        circle(im1, transformed_shape[i], 3, Scalar(0,255,255), 1);
     }
 
     while(1)
     {
-        imshow("transformed shape", im2);
-        imshow("shapes (cyan=shape1, red=shape2)", im1);
+        imshow("shapes (cyan=shape1, red=shape2, yellow=warped shape1)", im1);
         imshow("matches", im);
 
         char key = (char)waitKey();

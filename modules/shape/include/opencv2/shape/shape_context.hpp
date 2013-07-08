@@ -169,7 +169,6 @@ public:
 private:
     double beta;
     double distance(Point, Point) const;
-    Point tpsFunction(Mat &params, Point pt, cv::Mat &shape2) const;
 };
 
 /****************************************************************************************\
