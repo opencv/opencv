@@ -53,7 +53,7 @@
 cv::Mat cvcloud_load()
 {
     cv::Mat cloud(1, 20000, CV_32FC3);
-        std::ifstream ifs("d:/cloud_dragon.ply");
+        std::ifstream ifs("cloud_dragon.ply");
 
     std::string str;
     for(size_t i = 0; i < 11; ++i)
@@ -99,23 +99,29 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1));
     temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
     temp_viz::TextWidget tw("TEST", cv::Point2i(100,100), 20);
+    temp_viz::CloudWidget pcw(cloud, colors);
+    temp_viz::CloudWidget pcw2(cloud, temp_viz::Color(255,255,255));
     
 //     v.showWidget("line", lw);
-    v.showWidget("plane", pw);
+//     v.showWidget("plane", pw);
 //     v.showWidget("sphere", sw);
 //     v.showWidget("arrow", aw);
 //     v.showWidget("circle", cw);
 //     v.showWidget("cylinder", cyw);
-    v.showWidget("cube", cuw);
+//     v.showWidget("cube", cuw);
     v.showWidget("coordinateSystem", csw);
-    v.showWidget("text",tw);
+//     v.showWidget("text",tw);
+    v.showWidget("pcw",pcw);
+    v.showWidget("pcw2",pcw2);
     
     temp_viz::LineWidget lw2 = lw;
+//     v.showPointCloud("cld",cloud, colors);
     
     while(!v.wasStopped())
     {
         // Creating new point cloud with id cloud1
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
+        cv::Affine3f cloudPosition2(angle_x, angle_y, angle_z, cv::Vec3f(pos_x+0.2, pos_y+0.2, pos_z+0.2));
 
         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
@@ -129,8 +135,9 @@ TEST(Viz_viz3d, accuracy)
         cyw.setPose(cloudPosition);
         lw.setPose(cloudPosition);
         cuw.setPose(cloudPosition);        
-        
-        v.showWidget("plane", pw, cloudPosition);
+        v.showWidget("pcw",pcw, cloudPosition);
+        v.showWidget("pcw2",pcw2, cloudPosition2);
+//         v.showWidget("plane", pw, cloudPosition);
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

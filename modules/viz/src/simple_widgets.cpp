@@ -1,5 +1,10 @@
 #include "precomp.hpp"
 
+namespace temp_viz
+{
+    template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
 temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color)
@@ -12,7 +17,7 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(line->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
 
     setColor(color);
@@ -20,13 +25,13 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
 
 void temp_viz::LineWidget::setLineWidth(float line_width)
 {
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->GetProperty()->SetLineWidth(line_width);
 }
 
 float temp_viz::LineWidget::getLineWidth()
 {
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     return actor->GetProperty()->GetLineWidth();
 }
 
@@ -43,7 +48,7 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(plane->GetOutput ());
     
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     actor->SetScale(size);
     
@@ -64,7 +69,7 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(plane->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     actor->SetScale(size);
 
@@ -87,7 +92,7 @@ temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, in
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(sphere->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
 
     setColor(color);
@@ -149,7 +154,7 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(transformPD->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     
     setColor(color);
@@ -178,7 +183,7 @@ temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius,
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(tf->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     
     setColor(color);
@@ -202,7 +207,7 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(tuber->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     
     setColor(color);
@@ -219,7 +224,7 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, b
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(cube->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     
     if (wire_frame)
@@ -259,7 +264,7 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
     mapper->SetScalarModeToUsePointData ();
     mapper->SetInput(axes_tubes->GetOutput ());
 
-    vtkSmartPointer<vtkLODActor> actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
 
     cv::Vec3d t = affine.translation();
@@ -277,9 +282,12 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
     actor->RotateWXYZ(r_angle*180/CV_PI,rvec[0], rvec[1], rvec[2]);
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// text widget implementation
+
 temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color) : Widget(true)
 {
-    vtkSmartPointer<vtkTextActor> actor = vtkTextActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetPosition (pos.x, pos.y);
     actor->SetInput (text.c_str ());
 
@@ -291,4 +299,237 @@ temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int fon
 
     Color c = vtkcolor(color);
     tprop->SetColor (c.val);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// point cloud widget implementation
+
+temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
+{
+    Mat cloud = _cloud.getMat();
+    Mat colors = _colors.getMat();
+    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
+    CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
+    
+    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New ();
+    vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New ();
+    
+    polydata->SetVerts (vertices);
+    
+    vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
+    vtkSmartPointer<vtkIdTypeArray> initcells;
+    vtkIdType nr_points = cloud.total();
+    
+    points = polydata->GetPoints ();
+
+    if (!points)
+    {
+        points = vtkSmartPointer<vtkPoints>::New ();
+        if (cloud.depth() == CV_32F)
+            points->SetDataTypeToFloat();
+        else if (cloud.depth() == CV_64F)
+            points->SetDataTypeToDouble();
+        polydata->SetPoints (points);
+    }
+    points->SetNumberOfPoints (nr_points);
+    
+    if (cloud.depth() == CV_32F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+        Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        nr_points = data_end - data_beg;
+
+    }
+    else if (cloud.depth() == CV_64F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3d *data_beg = vtkpoints_data<double>(points);
+        Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        nr_points = data_end - data_beg;
+    }
+    points->SetNumberOfPoints (nr_points);
+    
+    // Update cells
+    vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
+    // If no init cells and cells has not been initialized...
+    if (!cells)
+        cells = vtkSmartPointer<vtkIdTypeArray>::New ();
+
+    // If we have less values then we need to recreate the array
+    if (cells->GetNumberOfTuples () < nr_points)
+    {
+        cells = vtkSmartPointer<vtkIdTypeArray>::New ();
+
+        // If init cells is given, and there's enough data in it, use it
+        if (initcells && initcells->GetNumberOfTuples () >= nr_points)
+        {
+            cells->DeepCopy (initcells);
+            cells->SetNumberOfComponents (2);
+            cells->SetNumberOfTuples (nr_points);
+        }
+        else
+        {
+            // If the number of tuples is still too small, we need to recreate the array
+            cells->SetNumberOfComponents (2);
+            cells->SetNumberOfTuples (nr_points);
+            vtkIdType *cell = cells->GetPointer (0);
+            // Fill it with 1s
+            std::fill_n (cell, nr_points * 2, 1);
+            cell++;
+            for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
+                *cell = i;
+            // Save the results in initcells
+            initcells = vtkSmartPointer<vtkIdTypeArray>::New ();
+            initcells->DeepCopy (cells);
+        }
+    }
+    else
+    {
+        // The assumption here is that the current set of cells has more data than needed
+        cells->SetNumberOfComponents (2);
+        cells->SetNumberOfTuples (nr_points);
+    }
+    
+    // Set the cells and the vertices
+    vertices->SetCells (nr_points, cells);
+
+    Vec3b* colors_data = new Vec3b[nr_points];
+    NanFilter::copy(colors, colors_data, cloud);
+
+    vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+    scalars->SetNumberOfComponents (3);
+    scalars->SetNumberOfTuples (nr_points);
+    scalars->SetArray (colors_data->val, 3 * nr_points, 0);
+
+    // Assign the colors
+    polydata->GetPointData ()->SetScalars (scalars);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput (polydata);
+
+    cv::Vec3d minmax(scalars->GetRange());
+    mapper->SetScalarRange(minmax.val);
+    mapper->SetScalarModeToUsePointData ();
+
+    bool interpolation = (polydata && polydata->GetNumberOfCells () != polydata->GetNumberOfVerts ());
+
+    mapper->SetInterpolateScalarsBeforeMapping (interpolation);
+    mapper->ScalarVisibilityOn ();
+        
+    mapper->ImmediateModeRenderingOff ();
+    
+    actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
+    actor->GetProperty ()->SetInterpolationToFlat ();
+    actor->GetProperty ()->BackfaceCullingOn ();
+    actor->SetMapper (mapper);
+}
+
+temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
+{
+    Mat cloud = _cloud.getMat();
+    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
+    
+    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New ();
+    vtkSmartPointer<vtkCellArray> vertices = vtkSmartPointer<vtkCellArray>::New ();
+    
+    polydata->SetVerts (vertices);
+    
+    vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
+    vtkSmartPointer<vtkIdTypeArray> initcells;
+    vtkIdType nr_points = cloud.total();
+    
+    points = polydata->GetPoints ();
+
+    if (!points)
+    {
+        points = vtkSmartPointer<vtkPoints>::New ();
+        if (cloud.depth() == CV_32F)
+            points->SetDataTypeToFloat();
+        else if (cloud.depth() == CV_64F)
+            points->SetDataTypeToDouble();
+        polydata->SetPoints (points);
+    }
+    points->SetNumberOfPoints (nr_points);
+    
+    if (cloud.depth() == CV_32F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+        Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        nr_points = data_end - data_beg;
+
+    }
+    else if (cloud.depth() == CV_64F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3d *data_beg = vtkpoints_data<double>(points);
+        Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
+        nr_points = data_end - data_beg;
+    }
+    points->SetNumberOfPoints (nr_points);
+    
+    // Update cells
+    vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
+    // If no init cells and cells has not been initialized...
+    if (!cells)
+        cells = vtkSmartPointer<vtkIdTypeArray>::New ();
+
+    // If we have less values then we need to recreate the array
+    if (cells->GetNumberOfTuples () < nr_points)
+    {
+        cells = vtkSmartPointer<vtkIdTypeArray>::New ();
+
+        // If init cells is given, and there's enough data in it, use it
+        if (initcells && initcells->GetNumberOfTuples () >= nr_points)
+        {
+            cells->DeepCopy (initcells);
+            cells->SetNumberOfComponents (2);
+            cells->SetNumberOfTuples (nr_points);
+        }
+        else
+        {
+            // If the number of tuples is still too small, we need to recreate the array
+            cells->SetNumberOfComponents (2);
+            cells->SetNumberOfTuples (nr_points);
+            vtkIdType *cell = cells->GetPointer (0);
+            // Fill it with 1s
+            std::fill_n (cell, nr_points * 2, 1);
+            cell++;
+            for (vtkIdType i = 0; i < nr_points; ++i, cell += 2)
+                *cell = i;
+            // Save the results in initcells
+            initcells = vtkSmartPointer<vtkIdTypeArray>::New ();
+            initcells->DeepCopy (cells);
+        }
+    }
+    else
+    {
+        // The assumption here is that the current set of cells has more data than needed
+        cells->SetNumberOfComponents (2);
+        cells->SetNumberOfTuples (nr_points);
+    }
+    
+    // Set the cells and the vertices
+    vertices->SetCells (nr_points, cells);
+    
+    Color c = vtkcolor(color);
+    polydata->GetPointData ()->SetScalars (0);
+
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput (polydata);
+
+    bool interpolation = (polydata && polydata->GetNumberOfCells () != polydata->GetNumberOfVerts ());
+
+    mapper->SetInterpolateScalarsBeforeMapping (interpolation);
+    mapper->ScalarVisibilityOn ();
+        
+    mapper->ImmediateModeRenderingOff ();
+    
+    actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
+    actor->GetProperty ()->SetInterpolationToFlat ();
+    actor->GetProperty ()->BackfaceCullingOn ();
+    actor->SetMapper (mapper);
 }

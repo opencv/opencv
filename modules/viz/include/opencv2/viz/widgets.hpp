@@ -97,4 +97,11 @@ namespace temp_viz
         
         // TODO Overload setColor method, and hide setPose, updatePose, getPose methods
     };
+    
+    class CV_EXPORTS CloudWidget : public Widget
+    {
+    public:
+        CloudWidget(InputArray _cloud, InputArray _colors);
+        CloudWidget(InputArray _cloud, const Color &color = Color::white());
+    };
 }
