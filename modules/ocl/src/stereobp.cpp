@@ -235,13 +235,13 @@ namespace cv
                 args.push_back( std::make_pair( sizeof(cl_int) , (void *)&t));
                 args.push_back( std::make_pair( sizeof(cl_int) , (void *)&cols));
                 args.push_back( std::make_pair( sizeof(cl_int) , (void *)&rows));
-                args.push_back( std::make_pair( sizeof(cl_int) , (void *)&cndisp));
                 args.push_back( std::make_pair( sizeof(cl_float) , (void *)&cmax_disc_term));
                 args.push_back( std::make_pair( sizeof(cl_float) , (void *)&cdisc_single_jump));
 
                 size_t gt[3] = {cols, rows, 1}, lt[3] = {16, 16, 1};
-                const char* t_opt  = data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT";
-                openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, t_opt);
+                char opt[80] = "";
+                sprintf(opt, "-D %s -D CNDISP=%d", data_type == CV_16S ? "T_SHORT":"T_FLOAT", cndisp);
+                openCLExecuteKernel(clCxt, &stereobp, kernelName, gt, lt, args, -1, -1, opt);
             }
 
             static void calc_all_iterations_calls(int cols, int rows, int iters, oclMat &u,
