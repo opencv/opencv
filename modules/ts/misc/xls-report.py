@@ -40,9 +40,15 @@
            Corollary 2: an empty 'properties' dictionary matches every property set.
 
         3) If a matching matcher is found, its 'name' string is presumed to be the name
-           of the configuration the XML file corresponds to. Otherwise, a warning is
-           printed. A warning is also printed if two different property sets match to the
-           same configuration name.
+           of the configuration the XML file corresponds to. A warning is printed if
+           two different property sets match to the same configuration name.
+
+        4) If a such a matcher isn't found, if --include-unmatched was specified, the
+           configuration name is assumed to be the relative path from the sheet's
+           directory to the XML file's containing directory. If the XML file isinstance
+           directly inside the sheet's directory, the configuration name is instead
+           a dump of all its properties. If --include-unmatched wasn't specified,
+           the XML file is ignored and a warning is printed.
 
     * 'configurations': [string]
         List of names for compile-time and runtime configurations of OpenCV.
@@ -67,6 +73,7 @@
 from __future__ import division
 
 import ast
+import errno
 import fnmatch
 import logging
 import numbers
@@ -74,7 +81,6 @@ import os, os.path
 import re
 
 from argparse import ArgumentParser
-from collections import OrderedDict
 from glob import glob
 from itertools import ifilter
 
@@ -96,18 +102,25 @@ error_speedup_style = xlwt.easyxf('pattern: pattern solid, fore_color orange')
 header_style = xlwt.easyxf('font: bold true; alignment: horizontal centre, vertical top, wrap True')
 
 class Collector(object):
-    def __init__(self, config_match_func):
+    def __init__(self, config_match_func, include_unmatched):
         self.__config_cache = {}
         self.config_match_func = config_match_func
+        self.include_unmatched = include_unmatched
         self.tests = {}
+        self.extra_configurations = set()
 
     # Format a sorted sequence of pairs as if it was a dictionary.
     # We can't just use a dictionary instead, since we want to preserve the sorted order of the keys.
     @staticmethod
-    def __format_config_cache_key(pairs):
-        return '{' + ', '.join(repr(k) + ': ' + repr(v) for (k, v) in pairs) + '}'
+    def __format_config_cache_key(pairs, multiline=False):
+        return (
+          ('{\n' if multiline else '{') +
+          (',\n' if multiline else ', ').join(
+             ('  ' if multiline else '') + repr(k) + ': ' + repr(v) for (k, v) in pairs) +
+          ('\n}\n' if multiline else '}')
+        )
 
-    def collect_from(self, xml_path):
+    def collect_from(self, xml_path, default_configuration):
         run = parseLogFile(xml_path)
 
         module = run.properties['module_name']
@@ -123,8 +136,17 @@ class Collector(object):
             configuration = self.config_match_func(properties)
 
             if configuration is None:
-                logging.warning('failed to match properties to a configuration: %s',
-                    Collector.__format_config_cache_key(props_key))
+                if self.include_unmatched:
+                    if default_configuration is not None:
+                        configuration = default_configuration
+                    else:
+                        configuration = Collector.__format_config_cache_key(props_key, multiline=True)
+
+                    self.extra_configurations.add(configuration)
+                else:
+                    logging.warning('failed to match properties to a configuration: %s',
+                        Collector.__format_config_cache_key(props_key))
+
             else:
                 same_config_props = [it[0] for it in self.__config_cache.iteritems() if it[1] == configuration]
                 if len(same_config_props) > 0:
@@ -137,11 +159,17 @@ class Collector(object):
 
         if configuration is None: return
 
-        module_tests = self.tests.setdefault(module, OrderedDict())
+        module_tests = self.tests.setdefault(module, {})
 
         for test in run.tests:
             test_results = module_tests.setdefault((test.shortName(), test.param()), {})
-            test_results[configuration] = test.get("gmean") if test.status == 'run' else test.status
+            new_result = test.get("gmean") if test.status == 'run' else test.status
+            test_results[configuration] = min(
+              test_results.get(configuration), new_result,
+              key=lambda r: (1, r) if isinstance(r, numbers.Number) else
+                            (2,) if r is not None else
+                            (3,)
+            ) # prefer lower result; prefer numbers to errors and errors to nothing
 
 def make_match_func(matchers):
     def match_func(properties):
@@ -159,6 +187,8 @@ def main():
     arg_parser.add_argument('sheet_dirs', nargs='+', metavar='DIR', help='directory containing perf test logs')
     arg_parser.add_argument('-o', '--output', metavar='XLS', default='report.xls', help='name of output file')
     arg_parser.add_argument('-c', '--config', metavar='CONF', help='global configuration file')
+    arg_parser.add_argument('--include-unmatched', action='store_true',
+        help='include results from XML files that were not recognized by configuration matchers')
 
     args = arg_parser.parse_args()
 
@@ -176,7 +206,8 @@ def main():
         try:
             with open(os.path.join(sheet_path, 'sheet.conf')) as sheet_conf_file:
                 sheet_conf = ast.literal_eval(sheet_conf_file.read())
-        except Exception:
+        except IOError as ioe:
+            if ioe.errno != errno.ENOENT: raise
             sheet_conf = {}
             logging.debug('no sheet.conf for %s', sheet_path)
 
@@ -185,12 +216,18 @@ def main():
         config_names = sheet_conf.get('configurations', [])
         config_matchers = sheet_conf.get('configuration_matchers', [])
 
-        collector = Collector(make_match_func(config_matchers))
+        collector = Collector(make_match_func(config_matchers), args.include_unmatched)
 
         for root, _, filenames in os.walk(sheet_path):
             logging.info('looking in %s', root)
             for filename in fnmatch.filter(filenames, '*.xml'):
-                collector.collect_from(os.path.join(root, filename))
+                if os.path.normpath(sheet_path) == os.path.normpath(root):
+                  default_conf = None
+                else:
+                  default_conf = os.path.relpath(root, sheet_path)
+                collector.collect_from(os.path.join(root, filename), default_conf)
+
+        config_names.extend(sorted(collector.extra_configurations - set(config_names)))
 
         sheet = wb.add_sheet(sheet_conf.get('sheet_name', os.path.basename(os.path.abspath(sheet_path))))
 
@@ -203,7 +240,7 @@ def main():
         sheet_comparisons = sheet_conf.get('comparisons', [])
 
         for i, w in enumerate([2000, 15000, 2500, 2000, 15000]
-                + (len(config_names) + 1 + len(sheet_comparisons)) * [3000]):
+                + (len(config_names) + 1 + len(sheet_comparisons)) * [4000]):
             sheet.col(i).width = w
 
         for i, caption in enumerate(['Module', 'Test', 'Image\nsize', 'Data\ntype', 'Parameters']
@@ -218,7 +255,7 @@ def main():
                          for module, color in module_colors.iteritems()}
 
         for module, tests in sorted(collector.tests.iteritems()):
-            for ((test, param), configs) in tests.iteritems():
+            for ((test, param), configs) in sorted(tests.iteritems()):
                 sheet.write(row, 0, module, module_styles.get(module, xlwt.Style.default_style))
                 sheet.write(row, 1, test)
 

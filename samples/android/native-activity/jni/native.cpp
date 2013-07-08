@@ -78,18 +78,29 @@ static void engine_draw_frame(Engine* engine, const cv::Mat& frame)
         return;
     }
 
-    void* pixels = buffer.bits;
+    int32_t* pixels = (int32_t*)buffer.bits;
 
     int left_indent = (buffer.width-frame.cols)/2;
     int top_indent = (buffer.height-frame.rows)/2;
 
-    for (int yy = top_indent; yy < std::min(frame.rows+top_indent, buffer.height); yy++)
+    if (top_indent > 0)
     {
-        unsigned char* line = (unsigned char*)pixels + left_indent*4*sizeof(unsigned char);
-        size_t line_size = std::min(frame.cols, buffer.width)*4*sizeof(unsigned char);
+        memset(pixels, 0, top_indent*buffer.stride*sizeof(int32_t));
+        pixels += top_indent*buffer.stride;
+    }
+
+    for (int yy = 0; yy < frame.rows; yy++)
+    {
+        if (left_indent > 0)
+        {
+            memset(pixels, 0, left_indent*sizeof(int32_t));
+            memset(pixels+left_indent+frame.cols, 0, (buffer.stride-frame.cols-left_indent)*sizeof(int32_t));
+        }
+        int32_t* line = pixels + left_indent;
+        size_t line_size = frame.cols*4*sizeof(unsigned char);
         memcpy(line, frame.ptr<unsigned char>(yy), line_size);
         // go to next line
-        pixels = (int32_t*)pixels + buffer.stride;
+        pixels += buffer.stride;
     }
     ANativeWindow_unlockAndPost(engine->app->window);
 }
