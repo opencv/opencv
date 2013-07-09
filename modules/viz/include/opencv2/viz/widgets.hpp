@@ -21,6 +21,8 @@ namespace temp_viz
         Impl *impl_;
         friend struct WidgetAccessor;
         
+        void create();
+        void release();
     };
     
     /////////////////////////////////////////////////////////////////////////////
@@ -28,7 +30,7 @@ namespace temp_viz
     class CV_EXPORTS Widget3D : public Widget
     {
     public:
-        Widget3D();
+        Widget3D() {}
         
         void setPose(const Affine3f &pose);
         void updatePose(const Affine3f &pose);
@@ -46,7 +48,7 @@ namespace temp_viz
     class CV_EXPORTS Widget2D : public Widget
     {
     public:
-        Widget2D();
+        Widget2D() {}
     };
     
 
