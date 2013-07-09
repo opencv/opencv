@@ -15,7 +15,6 @@ namespace temp_viz
         Widget& operator =(const Widget &other);
         
         ~Widget();
-        
     private:
         class Impl;
         Impl *impl_;

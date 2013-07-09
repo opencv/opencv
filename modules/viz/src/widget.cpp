@@ -6,10 +6,10 @@
 class temp_viz::Widget::Impl
 {
 public:
-    vtkSmartPointer<vtkProp> actor;
+    vtkSmartPointer<vtkProp> prop;
     int ref_counter;
     
-    Impl() : actor(0) {}
+    Impl() : prop(0) {}
 };
 
 temp_viz::Widget::Widget() : impl_(0)
@@ -59,12 +59,12 @@ void temp_viz::Widget::release()
 
 vtkSmartPointer<vtkProp> temp_viz::WidgetAccessor::getProp(const Widget& widget)
 {
-    return widget.impl_->actor;
+    return widget.impl_->prop;
 }
 
-void temp_viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> actor)
+void temp_viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> prop)
 {
-    widget.impl_->actor = actor;
+    widget.impl_->prop = prop;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
