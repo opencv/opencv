@@ -874,9 +874,10 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         removeActorFromRenderer(wam_itr->second.actor);
     }
     // Get the actor and set the user matrix
-    vtkLODActor *actor;
-    if (actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(widget)))
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(widget));
+    if (actor)
     {
+        // If the actor is 3D, apply pose
         vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
         actor->SetUserMatrix (matrix);
         actor->Modified();
@@ -885,61 +886,61 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
     (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
 }
 
-bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
+void temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
-
-    if (!removeActorFromRenderer (wam_itr->second.actor))
-        return false;
-    
+    CV_Assert(removeActorFromRenderer (wam_itr->second.actor));
     widget_actor_map_->erase(wam_itr);
-    return true;
 }
 
-bool temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
+temp_viz::Widget temp_viz::Viz3d::VizImpl::getWidget(const String &id) const
+{
+    WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
+    bool exists = wam_itr != widget_actor_map_->end();
+    CV_Assert(exists);
+    
+    Widget widget;
+    WidgetAccessor::setVtkProp(widget, wam_itr->second.actor);
+    return widget;
+}
+
+void temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
-    {
-        vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
-        return true;
-    }
-    return false;
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
 }
 
-bool temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
+void temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    if (!matrix)
     {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-        if (!matrix)
-        {
-            setWidgetPose(id, pose);
-            return true;
-        }
-        Matx44f matrix_cv = convertToMatx(matrix);
-
-        Affine3f updated_pose = pose * Affine3f(matrix_cv);
-        matrix = convertToVtkMatrix(updated_pose.matrix);
-
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
-        return true;
+        setWidgetPose(id, pose);
+        return ;
     }
-    return false;
+    Matx44f matrix_cv = convertToMatx(matrix);
+    Affine3f updated_pose = pose * Affine3f(matrix_cv);
+    matrix = convertToVtkMatrix(updated_pose.matrix);
+
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
 }
 
 temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
@@ -948,12 +949,10 @@ temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) con
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
-    {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-        Matx44f matrix_cv = convertToMatx(matrix);
-        return Affine3f(matrix_cv);
-    }
-    return Affine3f();
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    Matx44f matrix_cv = convertToMatx(matrix);
+    return Affine3f(matrix_cv);
 }

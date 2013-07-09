@@ -25,6 +25,12 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
     setColor(color);
 }
 
+temp_viz::LineWidget& temp_viz::LineWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 void temp_viz::LineWidget::setLineWidth(float line_width)
 {
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
@@ -82,6 +88,12 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double
     setColor(color);
 }
 
+temp_viz::PlaneWidget& temp_viz::PlaneWidget::operator=(const Widget& other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// sphere widget implementation
 
@@ -104,6 +116,12 @@ temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, in
     actor->SetMapper(mapper);
 
     setColor(color);
+}
+
+temp_viz::SphereWidget& temp_viz::SphereWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,6 +188,12 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
     setColor(color);
 }
 
+temp_viz::ArrowWidget& temp_viz::ArrowWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// circle widget implementation
 
@@ -201,6 +225,12 @@ temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius,
     setColor(color);
 }
 
+temp_viz::CircleWidget& temp_viz::CircleWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
@@ -227,6 +257,12 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
     setColor(color);
 }
 
+temp_viz::CylinderWidget& temp_viz::CylinderWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cylinder widget implementation
 
@@ -247,6 +283,12 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, b
         actor->GetProperty ()->SetRepresentationToWireframe ();
     
     setColor(color);
+}
+
+temp_viz::CubeWidget& temp_viz::CubeWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -300,6 +342,12 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
     actor->RotateWXYZ(r_angle*180/CV_PI,rvec[0], rvec[1], rvec[2]);
 }
 
+temp_viz::CoordinateSystemWidget& temp_viz::CoordinateSystemWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
@@ -319,6 +367,12 @@ temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int fon
 
     Color c = vtkcolor(color);
     tprop->SetColor (c.val);
+}
+
+temp_viz::TextWidget& temp_viz::TextWidget::operator=(const Widget &other)
+{
+    Widget2D::operator=(other);
+    return *this;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -487,6 +541,12 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     setColor(color);
 }
 
+temp_viz::CloudWidget& temp_viz::CloudWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// cloud normals widget implementation
 
@@ -618,4 +678,10 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetMapper(mapper);
     setColor(color);
+}
+
+temp_viz::CloudNormalsWidget& temp_viz::CloudNormalsWidget::operator=(const Widget &other)
+{
+    Widget3D::operator=(other);
+    return *this;
 }

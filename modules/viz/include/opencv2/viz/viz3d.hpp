@@ -47,10 +47,11 @@ namespace temp_viz
         bool wasStopped() const;
         
         void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
-        bool removeWidget(const String &id);
+        void removeWidget(const String &id);
+        Widget getWidget(const String &id) const;
         
-        bool setWidgetPose(const String &id, const Affine3f &pose);
-        bool updateWidgetPose(const String &id, const Affine3f &pose);
+        void setWidgetPose(const String &id, const Affine3f &pose);
+        void updateWidgetPose(const String &id, const Affine3f &pose);
         Affine3f getWidgetPose(const String &id) const;
     private:
         Viz3d(const Viz3d&);

@@ -84,19 +84,24 @@ void temp_viz::Viz3d::showWidget(const String &id, const Widget &widget, const A
     impl_->showWidget(id, widget, pose);
 }
 
-bool temp_viz::Viz3d::removeWidget(const String &id)
+void temp_viz::Viz3d::removeWidget(const String &id)
 {
-    return impl_->removeWidget(id);
+    impl_->removeWidget(id);
 }
 
-bool temp_viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose)
+temp_viz::Widget temp_viz::Viz3d::getWidget(const String &id) const
 {
-    return impl_->setWidgetPose(id, pose);
+    return impl_->getWidget(id);
 }
 
-bool temp_viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose)
+void temp_viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose)
 {
-    return impl_->updateWidgetPose(id, pose);
+    impl_->setWidgetPose(id, pose);
+}
+
+void temp_viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose)
+{
+    impl_->updateWidgetPose(id, pose);
 }
 
 temp_viz::Affine3f temp_viz::Viz3d::getWidgetPose(const String &id) const
