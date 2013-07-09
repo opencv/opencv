@@ -55,14 +55,14 @@ Manager to access OpenCV libraries externally installed in the target system.
    :guilabel:`File -> Import -> Existing project in your workspace`.
 
    Press :guilabel:`Browse`  button and locate OpenCV4Android SDK
-   (:file:`OpenCV-2.4.5-android-sdk/sdk`).
+   (:file:`OpenCV-2.4.6-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
 #. In application project add a reference to the OpenCV Java SDK in
-   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.5``.
+   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.6``.
 
    .. image:: images/eclipse_opencv_dependency1.png
         :alt: Add dependency from OpenCV library
@@ -101,7 +101,7 @@ See the "15-puzzle" OpenCV sample for details.
         public void onResume()
         {
             super.onResume();
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_5, this, mLoaderCallback);
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback);
         }
 
         ...
@@ -125,30 +125,30 @@ designed mostly for development purposes. This approach is deprecated for the pr
 release package is recommended to communicate with OpenCV Manager via the async initialization
 described above.
 
-#. Add the OpenCV library project to your workspace the same way as for the async initialization
+#. Add the OpenCV library project to your workspace the same way as for the async initialization 
    above. Use menu :guilabel:`File -> Import -> Existing project in your workspace`,
-   press :guilabel:`Browse` button and select OpenCV SDK path
-   (:file:`OpenCV-2.4.5-android-sdk/sdk`).
+   press :guilabel:`Browse` button and select OpenCV SDK path 
+   (:file:`OpenCV-2.4.6-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png
         :alt: Add dependency from OpenCV library
         :align: center
 
 #. In the application project add a reference to the OpenCV4Android SDK in
-   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.5``;
+   :guilabel:`Project -> Properties -> Android -> Library -> Add` select ``OpenCV Library - 2.4.6``;
 
    .. image:: images/eclipse_opencv_dependency1.png
        :alt: Add dependency from OpenCV library
        :align: center
 
 #. If your application project **doesn't have a JNI part**, just copy the corresponding OpenCV
-   native libs from :file:`<OpenCV-2.4.5-android-sdk>/sdk/native/libs/<target_arch>` to your
+   native libs from :file:`<OpenCV-2.4.6-android-sdk>/sdk/native/libs/<target_arch>` to your
    project directory to folder :file:`libs/<target_arch>`.
 
    In case of the application project **with a JNI part**, instead of manual libraries copying you
    need to modify your ``Android.mk`` file:
    add the following two code lines after the ``"include $(CLEAR_VARS)"`` and before
-   ``"include path_to_OpenCV-2.4.5-android-sdk/sdk/native/jni/OpenCV.mk"``
+   ``"include path_to_OpenCV-2.4.6-android-sdk/sdk/native/jni/OpenCV.mk"``
 
    .. code-block:: make
       :linenos:
@@ -221,7 +221,7 @@ taken:
 
    .. code-block:: make
 
-      include C:\Work\OpenCV4Android\OpenCV-2.4.5-android-sdk\sdk\native\jni\OpenCV.mk
+      include C:\Work\OpenCV4Android\OpenCV-2.4.6-android-sdk\sdk\native\jni\OpenCV.mk
 
    Should be inserted into the :file:`jni/Android.mk` file **after** this line:
 
@@ -379,7 +379,7 @@ result.
        public void onResume()
        {
            super.onResume();
-           OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+           OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_6, this, mLoaderCallback);
        }
 
 #. Defines that your activity implements ``CvViewFrameListener2`` interface and fix activity related

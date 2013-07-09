@@ -225,3 +225,9 @@
 
 /* Clp support */
 #cmakedefine HAVE_CLP
+
+/* Qt support */
+#cmakedefine HAVE_QT
+
+/* Qt OpenGL support */
+#cmakedefine HAVE_QT_OPENGL

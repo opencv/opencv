@@ -136,11 +136,13 @@ PERFTEST(PyrLKOpticalFlow)
             size_t mismatch = 0;
             for (int i = 0; i < (int)nextPts.size(); ++i)
             {
-                if(status[i] != ocl_status.at<unsigned char>(0, i)){
+                if(status[i] != ocl_status.at<unsigned char>(0, i))
+                {
                     mismatch++;
                     continue;
                 }
-                if(status[i]){
+                if(status[i])
+                {
                     Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
                     Point2f cpu_rst = nextPts[i];
                     if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
@@ -193,24 +195,24 @@ PERFTEST(tvl1flow)
     WARMUP_ON;
     d_alg(d0, d1, d_flowx, d_flowy);
     WARMUP_OFF;
-/*
-    double diff1 = 0.0, diff2 = 0.0;
-    if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
-        &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
-        TestSystem::instance().setAccurate(1);
-    else
-        TestSystem::instance().setAccurate(0);
+    /*
+        double diff1 = 0.0, diff2 = 0.0;
+        if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
+            &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
+            TestSystem::instance().setAccurate(1);
+        else
+            TestSystem::instance().setAccurate(0);
 
-    TestSystem::instance().setDiff(diff1);
-    TestSystem::instance().setDiff(diff2);
-*/
+        TestSystem::instance().setDiff(diff1);
+        TestSystem::instance().setDiff(diff2);
+    */
 
 
     GPU_ON;
     d_alg(d0, d1, d_flowx, d_flowy);
     d_alg.collectGarbage();
     GPU_OFF;
-    
+
 
     cv::Mat flowx, flowy;
 
@@ -225,4 +227,130 @@ PERFTEST(tvl1flow)
 
     TestSystem::instance().ExceptedMatSimilar(gold[0], flowx, 3e-3);
     TestSystem::instance().ExceptedMatSimilar(gold[1], flowy, 3e-3);
+}
+
+///////////// FarnebackOpticalFlow ////////////////////////
+PERFTEST(FarnebackOpticalFlow)
+{
+    cv::Mat frame0 = imread("rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = imread("rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    cv::ocl::oclMat d_frame0(frame0), d_frame1(frame1);
+
+    int polyNs[2] = { 5, 7 };
+    double polySigmas[2] = { 1.1, 1.5 };
+    int farneFlags[2] = { 0, cv::OPTFLOW_FARNEBACK_GAUSSIAN };
+    bool UseInitFlows[2] = { false, true };
+    double pyrScale = 0.5;
+
+    string farneFlagStrs[2] = { "BoxFilter", "GaussianBlur" };
+    string useInitFlowStrs[2] = { "", "UseInitFlow" };
+
+    for ( int i = 0; i < 2; ++i)
+    {
+        int polyN = polyNs[i];
+        double polySigma = polySigmas[i];
+
+        for ( int j = 0; j < 2; ++j)
+        {
+            int flags = farneFlags[j];
+
+            for ( int k = 0; k < 2; ++k)
+            {
+                bool useInitFlow = UseInitFlows[k];
+                SUBTEST << "polyN(" << polyN << "); " << farneFlagStrs[j] << "; " << useInitFlowStrs[k];
+
+                cv::ocl::FarnebackOpticalFlow farn;
+                farn.pyrScale = pyrScale;
+                farn.polyN = polyN;
+                farn.polySigma = polySigma;
+                farn.flags = flags;
+
+                cv::ocl::oclMat d_flowx, d_flowy;
+                cv::Mat flow, flowBuf, flowxBuf, flowyBuf;
+
+                WARMUP_ON;
+                farn(d_frame0, d_frame1, d_flowx, d_flowy);
+
+                if (useInitFlow)
+                {
+                    cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
+                    cv::merge(flowxy, 2, flow);
+                    flow.copyTo(flowBuf);
+                    flowxy[0].copyTo(flowxBuf);
+                    flowxy[1].copyTo(flowyBuf);
+
+                    farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
+                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
+                }
+                WARMUP_OFF;
+
+                cv::calcOpticalFlowFarneback(
+                    frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
+                    farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+
+                std::vector<cv::Mat> flowxy;
+                cv::split(flow, flowxy);
+
+                Mat md_flowx = cv::Mat(d_flowx);
+                Mat md_flowy = cv::Mat(d_flowy);
+                TestSystem::instance().ExceptedMatSimilar(flowxy[0], md_flowx, 0.1);
+                TestSystem::instance().ExceptedMatSimilar(flowxy[1], md_flowy, 0.1);
+
+                if (useInitFlow)
+                {
+                    cv::Mat flowx, flowy;
+                    farn.flags = (flags | cv::OPTFLOW_USE_INITIAL_FLOW);
+
+                    CPU_ON;
+                    cv::calcOpticalFlowFarneback(
+                        frame0, frame1, flowBuf, farn.pyrScale, farn.numLevels, farn.winSize,
+                        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+                    CPU_OFF;
+
+                    GPU_ON;
+                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
+                    GPU_OFF;
+
+                    GPU_FULL_ON;
+                    d_frame0.upload(frame0);
+                    d_frame1.upload(frame1);
+                    d_flowx.upload(flowxBuf);
+                    d_flowy.upload(flowyBuf);
+                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
+                    d_flowx.download(flowx);
+                    d_flowy.download(flowy);
+                    GPU_FULL_OFF;
+                }
+                else
+                {
+                    cv::Mat flow, flowx, flowy;
+                    cv::ocl::oclMat d_flowx, d_flowy;
+
+                    farn.flags = flags;
+
+                    CPU_ON;
+                    cv::calcOpticalFlowFarneback(
+                        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
+                        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+                    CPU_OFF;
+
+                    GPU_ON;
+                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
+                    GPU_OFF;
+
+                    GPU_FULL_ON;
+                    d_frame0.upload(frame0);
+                    d_frame1.upload(frame1);
+                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
+                    d_flowx.download(flowx);
+                    d_flowy.download(flowy);
+                    GPU_FULL_OFF;
+                }
+            }
+        }
+    }
 }

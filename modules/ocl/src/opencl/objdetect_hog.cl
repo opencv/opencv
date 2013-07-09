@@ -133,7 +133,9 @@ __kernel void compute_hists_lut_kernel(
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] = 
                 hist_[0] + hist_[1] + hist_[2];
     }
+#ifdef CPU
     barrier(CLK_LOCAL_MEM_FENCE);
+#endif
 
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))
@@ -225,8 +227,9 @@ __kernel void compute_hists_kernel(
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
     }
+#ifdef CPU
     barrier(CLK_LOCAL_MEM_FENCE);
-
+#endif
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))
     {
@@ -318,6 +321,10 @@ float reduce_smem(volatile __local float* smem, int size)
     if (tid < 32)
     {
         if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
+#endif
         if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
         if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
         if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
@@ -418,6 +425,9 @@ __kernel void classify_hists_180_kernel(
     {
         smem[tid] = product = product + smem[tid + 32];
     }
+#if WAVE_SIZE < 32
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
     if (tid < 16)
     {
         smem[tid] = product = product + smem[tid + 16];
@@ -487,6 +497,10 @@ __kernel void classify_hists_252_kernel(
     if (tid < 32)
     {      
         smem[tid] = product = product + smem[tid + 32];
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
+#endif
         smem[tid] = product = product + smem[tid + 16];
         smem[tid] = product = product + smem[tid + 8];
         smem[tid] = product = product + smem[tid + 4];
@@ -553,6 +567,10 @@ __kernel void classify_hists_kernel(
     if (tid < 32)
     {       
         smem[tid] = product = product + smem[tid + 32];
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
+#endif
         smem[tid] = product = product + smem[tid + 16];
         smem[tid] = product = product + smem[tid + 8];
         smem[tid] = product = product + smem[tid + 4];
