@@ -14,13 +14,13 @@ class TestInfo(object):
         self.value_param = xmlnode.getAttribute("value_param")
         self.type_param = xmlnode.getAttribute("type_param")
 
+        custom_status = xmlnode.getAttribute("custom_status")
         failures = xmlnode.getElementsByTagName("failure")
-        if len(failures) > 0:
-            if any("No equivalent implementation" in f.getAttribute("message")
-                   for f in failures):
-                self.status = "notimpl"
-            else:
-                self.status = "failed"
+
+        if len(custom_status) > 0:
+            self.status = custom_status
+        elif len(failures) > 0:
+            self.status = "failed"
         else:
             self.status = xmlnode.getAttribute("status")
 
