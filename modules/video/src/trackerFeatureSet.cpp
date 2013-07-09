@@ -66,7 +66,7 @@ TrackerFeatureSet::~TrackerFeatureSet()
 
 }
 
-void TrackerFeatureSet::extraction( const Mat& image )
+void TrackerFeatureSet::extraction( const std::vector<Mat>& images )
 {
 
 	clearResponses();
@@ -74,7 +74,7 @@ void TrackerFeatureSet::extraction( const Mat& image )
 	for( size_t i = 0; i < features.size(); i++ )
 	{
 		Mat response;
-		features.at(i).second->compute(image, response);
+		features.at(i).second->compute(images, response);
 		responses.push_back(response);
 	}
 

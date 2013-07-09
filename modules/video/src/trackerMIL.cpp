@@ -141,15 +141,25 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	//or add CSC sampler with default parameters
 	//sampler->addTrackerSamplerAlgorithm( "CSC" );
 
+	//Positive sampling
 	Ptr<TrackerSamplerCSC> ( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_POS );
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> posSamples = sampler->getSamples();
 
+	//Negative sampling
 	Ptr<TrackerSamplerCSC> ( CSCSampler )->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> negSamples = sampler->getSamples();
 
 	//TODO compute HAAR features
+	Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR();
+	featureSet->addTrackerFeature( trackerFeature );
+
+	featureSet->extraction( posSamples );
+	std::vector<Mat> posResponse = featureSet->getResponses();
+
+	featureSet->extraction( negSamples );
+	std::vector<Mat> negResponse = featureSet->getResponses();
 
 	return true;
 }

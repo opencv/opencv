@@ -55,12 +55,12 @@ TrackerFeature::~TrackerFeature()
 
 }
 
-void TrackerFeature::compute( const Mat& image, Mat& response )
+void TrackerFeature::compute( const std::vector<Mat>& images, Mat& response )
 {
-	if( image.empty() )
+	if( images.size() == 0 )
 		return;
 
-	computeImpl( image, response );
+	computeImpl( images, response );
 }
 
 
@@ -114,7 +114,7 @@ TrackerFeatureFeature2d::~TrackerFeatureFeature2d()
 
 }
 
-bool TrackerFeatureFeature2d::computeImpl( const Mat& image, Mat& response )
+bool TrackerFeatureFeature2d::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
 	return false;
 }
@@ -137,7 +137,7 @@ TrackerFeatureHOG::~TrackerFeatureHOG()
 
 }
 
-bool TrackerFeatureHOG::computeImpl( const Mat& image, Mat& response )
+bool TrackerFeatureHOG::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
 	return false;
 }
@@ -160,7 +160,7 @@ TrackerFeatureHAAR::~TrackerFeatureHAAR()
 
 }
 
-bool TrackerFeatureHAAR::computeImpl( const Mat& image, Mat& response )
+bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
 	return false;
 }
@@ -183,7 +183,7 @@ TrackerFeatureLBP::~TrackerFeatureLBP()
 
 }
 
-bool TrackerFeatureLBP::computeImpl( const Mat& image, Mat& response )
+bool TrackerFeatureLBP::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
 	return false;
 }

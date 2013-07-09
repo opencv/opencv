@@ -74,10 +74,10 @@ public:
 
 	/**
 	 * \brief Compute the features in a image
-	 * \param image         The image.
+	 * \param image s        The images.
 	 * \param response    	Computed features.
 	 */
-	void compute( const Mat& image, Mat& response );
+	void compute( const std::vector<Mat>& images, Mat& response );
 
 	/**
 	 * \brief Create TrackerFeature by tracker feature type.
@@ -99,7 +99,7 @@ public:
 
 protected:
 
-	virtual bool computeImpl( const Mat& image, Mat& response ) = 0;
+	virtual bool computeImpl( const std::vector<Mat>& images, Mat& response ) = 0;
 
 	String className;
 };
@@ -133,9 +133,9 @@ public:
 
 	/**
 	 * \brief Extract features from the image
-	 * \param image The image
+	 * \param images The images
 	 */
-	void extraction( const Mat& image );
+	void extraction( const std::vector<Mat>& images );
 
 	/**
 	 * \brief Identify most effective features for all feature types
@@ -576,7 +576,7 @@ private:
 
 	void computeIntegral( const Mat& image, std::vector<Mat_<float> >& ii_imgs );
 
-	std::vector<Mat> sampleImage( const Mat& img, const std::vector<Mat_<float> > & ii_imgs, int x, int y, int w,
+	std::vector<Mat> sampleImage( const Mat& img, int x, int y, int w,
             int h, float inrad, float outrad = 0, int maxnum = 1000000 );
 };
 
@@ -615,7 +615,7 @@ public:
 
 	~TrackerFeatureFeature2d();
 
-	bool computeImpl( const Mat& image, Mat& response );
+	bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 	void selection( Mat& response, int npoints );
 
@@ -636,7 +636,7 @@ public:
 
 	~TrackerFeatureHOG();
 
-	bool computeImpl( const Mat& image, Mat& response );
+	bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 	void selection( Mat& response, int npoints );
 
@@ -654,7 +654,7 @@ public:
 
 	~TrackerFeatureHAAR();
 
-	bool computeImpl( const Mat& image, Mat& response );
+	bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 	void selection( Mat& response, int npoints );
 
@@ -672,7 +672,7 @@ public:
 
 	~TrackerFeatureLBP();
 
-	bool computeImpl( const Mat& image, Mat& response );
+	bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 	void selection( Mat& response, int npoints );
 

@@ -118,9 +118,6 @@ TrackerSamplerCSC::~TrackerSamplerCSC()
 
 bool TrackerSamplerCSC::samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample  )
 {
-	std::vector<Mat_<float> > ii_imgs;
-	computeIntegral( image, ii_imgs );
-
 	float inrad = 0;
 	float outrad = 0;
 	int maxnum = 0;
@@ -128,38 +125,38 @@ bool TrackerSamplerCSC::samplingImpl( const Mat& image, Rect boundingBox, std::v
 	switch ( mode ) {
 		case MODE_INIT_POS:
 			inrad = params.initInRad;
-			sample = sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad );
 			break;
 		case MODE_INIT_NEG:
 			inrad = 2.0f * params.searchWinSize;
 			outrad = 1.5f * params.initInRad;
 			maxnum = params.initMaxNegNum;
-			sample = sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad, outrad, maxnum );
 			break;
 		case MODE_TRACK_POS:
 			inrad = params.trackInPosRad;
 			outrad = 0;
 			maxnum = params.trackMaxPosNum;
-			sample = sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad, outrad, maxnum );
 			break;
 		case MODE_TRACK_NEG:
 			inrad = 1.5f * params.searchWinSize;
 			outrad = params.trackInPosRad + 5;
 			maxnum = params.trackMaxNegNum;
-			sample = sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad, outrad, maxnum );
 			break;
 		case MODE_DETECT:
 			inrad = params.searchWinSize;
-			sample = sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad );
 			break;
 		default:
 			inrad = params.initInRad;
-			sampleImage( image, ii_imgs, boundingBox.x, boundingBox.y, boundingBox.width,
+			sample = sampleImage( image, boundingBox.x, boundingBox.y, boundingBox.width,
 					boundingBox.height, inrad );
 			break;
 	}
@@ -171,14 +168,7 @@ void TrackerSamplerCSC::setMode( int samplingMode )
 	mode = samplingMode;
 }
 
-void TrackerSamplerCSC::computeIntegral( const Mat& image, std::vector<Mat_<float> >& ii_imgs )
-{
-  Mat ii_img;
-  integral(image, ii_img, CV_32F);
-  split(ii_img, ii_imgs);
-};
-
-std::vector<Mat> TrackerSamplerCSC::sampleImage( const Mat& img, const std::vector<Mat_<float> > & ii_imgs, int x, int y, int w,
+std::vector<Mat> TrackerSamplerCSC::sampleImage( const Mat& img, int x, int y, int w,
             int h, float inrad, float outrad, int maxnum )
 {
 	int rowsz = img.rows - h - 1;
