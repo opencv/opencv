@@ -220,8 +220,8 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
             break;
 #endif
-#ifdef HAVE_VFW
         case CV_CAP_VFW:
+#ifdef HAVE_VFW
             capture = cvCreateCameraCapture_VFW (index);
             if (capture)
                 return capture;
