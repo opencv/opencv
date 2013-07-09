@@ -8,9 +8,7 @@ namespace temp_viz
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
 temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color)
-{
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
+{   
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
     line->SetPoint1 (pt1.x, pt1.y, pt1.z);
     line->SetPoint2 (pt2.x, pt2.y, pt2.z);
@@ -19,9 +17,10 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(line->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
 
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -33,13 +32,15 @@ temp_viz::LineWidget& temp_viz::LineWidget::operator=(const Widget &other)
 
 void temp_viz::LineWidget::setLineWidth(float line_width)
 {
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
     actor->GetProperty()->SetLineWidth(line_width);
 }
 
 float temp_viz::LineWidget::getLineWidth()
 {
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
     return actor->GetProperty()->GetLineWidth();
 }
 
@@ -47,9 +48,7 @@ float temp_viz::LineWidget::getLineWidth()
 /// plane widget implementation
 
 temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color &color)
-{
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
+{    
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     plane->SetNormal (coefs[0], coefs[1], coefs[2]);
     double norm = cv::norm(cv::Vec3f(coefs.val));
@@ -58,17 +57,16 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(plane->GetOutput ());
     
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
     actor->SetScale(size);
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
 temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size, const Color &color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     cv::Point3f coefs3(coefs[0], coefs[1], coefs[2]);
     double norm_sqr = 1.0 / coefs3.dot (coefs3);
@@ -81,10 +79,11 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(plane->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
     actor->SetScale(size);
-
+    
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -99,8 +98,6 @@ temp_viz::PlaneWidget& temp_viz::PlaneWidget::operator=(const Widget& other)
 
 temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution, const Color &color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New ();
     sphere->SetRadius (radius);
     sphere->SetCenter (center.x, center.y, center.z);
@@ -112,9 +109,10 @@ temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, in
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(sphere->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
 
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -129,8 +127,6 @@ temp_viz::SphereWidget& temp_viz::SphereWidget::operator=(const Widget &other)
 
 temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New ();
     
     float startPoint[3], endPoint[3];
@@ -182,9 +178,10 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(transformPD->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -199,8 +196,6 @@ temp_viz::ArrowWidget& temp_viz::ArrowWidget::operator=(const Widget &other)
 
 temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius, double thickness, const temp_viz::Color& color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New ();
     // Maybe the resolution should be lower e.g. 50 or 25
     disk->SetCircumferentialResolution (50);
@@ -219,9 +214,10 @@ temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius,
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(tf->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -235,9 +231,7 @@ temp_viz::CircleWidget& temp_viz::CircleWidget::operator=(const Widget &other)
 /// cylinder widget implementation
 
 temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides, const Color &color)
-{
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
+{   
     const cv::Point3f pt2 = pt_on_axis + axis_direction;
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
     line->SetPoint1 (pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
@@ -251,9 +245,10 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(tuber->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New ();
     actor->SetMapper(mapper);
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -268,20 +263,19 @@ temp_viz::CylinderWidget& temp_viz::CylinderWidget::operator=(const Widget &othe
 
 temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame, const Color &color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
     cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
     
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
     mapper->SetInput(cube->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
     
     if (wire_frame)
         actor->GetProperty ()->SetRepresentationToWireframe ();
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -296,8 +290,6 @@ temp_viz::CubeWidget& temp_viz::CubeWidget::operator=(const Widget &other)
 
 temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Affine3f& affine)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
     axes->SetOrigin (0, 0, 0);
     axes->SetScaleFactor (scale);
@@ -324,7 +316,7 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
     mapper->SetScalarModeToUsePointData ();
     mapper->SetInput(axes_tubes->GetOutput ());
 
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
 
     cv::Vec3d t = affine.translation();
@@ -340,6 +332,8 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
 
     actor->SetOrientation(0,0,0);
     actor->RotateWXYZ(r_angle*180/CV_PI,rvec[0], rvec[1], rvec[2]);
+    
+    WidgetAccessor::setProp(*this, actor);
 }
 
 temp_viz::CoordinateSystemWidget& temp_viz::CoordinateSystemWidget::operator=(const Widget &other)
@@ -353,9 +347,7 @@ temp_viz::CoordinateSystemWidget& temp_viz::CoordinateSystemWidget::operator=(co
 
 temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color)
 {
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkTextActor>::New());
-    
-    vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkTextActor> actor = vtkSmartPointer<vtkTextActor>::New();
     actor->SetPosition (pos.x, pos.y);
     actor->SetInput (text.c_str ());
 
@@ -367,12 +359,28 @@ temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int fon
 
     Color c = vtkcolor(color);
     tprop->SetColor (c.val);
+    
+    WidgetAccessor::setProp(*this, actor);
 }
 
 temp_viz::TextWidget& temp_viz::TextWidget::operator=(const Widget &other)
 {
     Widget2D::operator=(other);
     return *this;
+}
+
+void temp_viz::TextWidget::setText(const String &text)
+{
+    vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    actor->SetInput(text.c_str());
+}
+
+temp_viz::String temp_viz::TextWidget::getText() const
+{
+    vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    return actor->GetInput();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -474,9 +482,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
     
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
-    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
 
@@ -510,6 +516,8 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     actor->GetProperty ()->SetInterpolationToFlat ();
     actor->GetProperty ()->BackfaceCullingOn ();
     actor->SetMapper (mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
 }
 
 temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
@@ -517,9 +525,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
-    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
     
@@ -538,6 +544,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     actor->GetProperty ()->BackfaceCullingOn ();
     actor->SetMapper (mapper);
     
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 
@@ -634,9 +641,7 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     Mat normals = _normals.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(cloud.size() == normals.size() && cloud.type() == normals.type());
-    
-    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
-    
+  
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
     vtkIdType nr_normals = 0;
@@ -675,8 +680,9 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     mapper->SetColorModeToMapScalars();
     mapper->SetScalarModeToUsePointData();
     
-    vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
+    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 

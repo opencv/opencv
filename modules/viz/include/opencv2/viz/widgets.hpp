@@ -132,6 +132,9 @@ namespace temp_viz
         TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
         TextWidget(const Widget& other) : Widget2D(other) {}
         TextWidget& operator=(const Widget &other);
+        
+        void setText(const String &text);
+        String getText() const;
     };
     
     class CV_EXPORTS CloudWidget : public Widget3D

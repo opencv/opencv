@@ -57,12 +57,12 @@ void temp_viz::Widget::release()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget accessor implementaion
 
-vtkSmartPointer<vtkProp> temp_viz::WidgetAccessor::getActor(const Widget& widget)
+vtkSmartPointer<vtkProp> temp_viz::WidgetAccessor::getProp(const Widget& widget)
 {
     return widget.impl_->actor;
 }
 
-void temp_viz::WidgetAccessor::setVtkProp(Widget& widget, vtkSmartPointer<vtkProp> actor)
+void temp_viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> actor)
 {
     widget.impl_->actor = actor;
 }
@@ -94,14 +94,14 @@ struct temp_viz::Widget3D::MatrixConverter
 temp_viz::Widget3D::Widget3D(const Widget& other) : Widget(other)
 {
     // Check if other's actor is castable to vtkProp3D
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(other));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(other));
     CV_Assert(actor);
 }
 
 temp_viz::Widget3D& temp_viz::Widget3D::operator =(const Widget &other)
 {
     // Check if other's actor is castable to vtkProp3D
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(other));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(other));
     CV_Assert(actor);
     
     Widget::operator=(other);
@@ -110,7 +110,7 @@ temp_viz::Widget3D& temp_viz::Widget3D::operator =(const Widget &other)
 
 void temp_viz::Widget3D::setPose(const Affine3f &pose)
 {
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
@@ -120,7 +120,7 @@ void temp_viz::Widget3D::setPose(const Affine3f &pose)
 
 void temp_viz::Widget3D::updatePose(const Affine3f &pose)
 {
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
@@ -140,7 +140,7 @@ void temp_viz::Widget3D::updatePose(const Affine3f &pose)
 
 temp_viz::Affine3f temp_viz::Widget3D::getPose() const
 {
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
@@ -151,7 +151,7 @@ temp_viz::Affine3f temp_viz::Widget3D::getPose() const
 void temp_viz::Widget3D::setColor(const Color &color)
 {
     // Cast to actor instead of prop3d since prop3d doesn't provide getproperty
-    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     
     Color c = vtkcolor(color);
@@ -171,14 +171,14 @@ void temp_viz::Widget3D::setColor(const Color &color)
 temp_viz::Widget2D::Widget2D(const Widget &other) : Widget(other)
 {
     // Check if other's actor is castable to vtkActor2D
-    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getActor(other));
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(other));
     CV_Assert(actor);
 }
 
 temp_viz::Widget2D& temp_viz::Widget2D::operator=(const Widget &other)
 {
     // Check if other's actor is castable to vtkActor2D
-    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getActor(other));
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(other));
     CV_Assert(actor);
     Widget::operator=(other);
     return *this;
@@ -186,7 +186,7 @@ temp_viz::Widget2D& temp_viz::Widget2D::operator=(const Widget &other)
 
 void temp_viz::Widget2D::setColor(const Color &color)
 {
-    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getActor(*this));
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     Color c = vtkcolor(color);
     actor->GetProperty ()->SetColor (c.val);

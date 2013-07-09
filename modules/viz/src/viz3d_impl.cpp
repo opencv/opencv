@@ -874,7 +874,7 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         removeActorFromRenderer(wam_itr->second.actor);
     }
     // Get the actor and set the user matrix
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getActor(widget));
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(widget));
     if (actor)
     {
         // If the actor is 3D, apply pose
@@ -882,8 +882,8 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         actor->SetUserMatrix (matrix);
         actor->Modified();
     }
-    renderer_->AddActor(WidgetAccessor::getActor(widget));
-    (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
+    renderer_->AddActor(WidgetAccessor::getProp(widget));
+    (*widget_actor_map_)[id].actor = WidgetAccessor::getProp(widget);
 }
 
 void temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
@@ -902,7 +902,7 @@ temp_viz::Widget temp_viz::Viz3d::VizImpl::getWidget(const String &id) const
     CV_Assert(exists);
     
     Widget widget;
-    WidgetAccessor::setVtkProp(widget, wam_itr->second.actor);
+    WidgetAccessor::setProp(widget, wam_itr->second.actor);
     return widget;
 }
 
