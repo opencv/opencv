@@ -165,6 +165,16 @@ void temp_viz::Widget3D::setColor(const Color &color)
     actor->Modified ();
 }
 
+template<> temp_viz::Widget3D temp_viz::Widget::cast<temp_viz::Widget3D>()
+{
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+
+    Widget3D widget;
+    WidgetAccessor::setProp(widget, actor);
+    return widget;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget2D implementation
 

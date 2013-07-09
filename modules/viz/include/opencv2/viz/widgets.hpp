@@ -15,6 +15,8 @@ namespace temp_viz
         Widget& operator =(const Widget &other);
         
         ~Widget();
+
+        template<typename _W> _W cast();
     private:
         class Impl;
         Impl *impl_;
@@ -56,18 +58,15 @@ namespace temp_viz
         void setColor(const Color &color);
     };
     
-
     class CV_EXPORTS LineWidget : public Widget3D
     {
     public:
         LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
-        LineWidget(const Widget &other) : Widget3D(other) {}
-        LineWidget& operator=(const Widget &other);
         
         void setLineWidth(float line_width);
         float getLineWidth();
     };
-    
+
     class CV_EXPORTS PlaneWidget : public Widget3D
     {
     public:
@@ -158,4 +157,10 @@ namespace temp_viz
     private:
         struct ApplyCloudNormals;
     };
+
+    template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
+    template<> CV_EXPORTS LineWidget Widget::cast<LineWidget>();
 }
+
+
+

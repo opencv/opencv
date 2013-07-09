@@ -24,12 +24,6 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
     setColor(color);
 }
 
-temp_viz::LineWidget& temp_viz::LineWidget::operator=(const Widget &other)
-{
-    Widget3D::operator=(other);
-    return *this;
-}
-
 void temp_viz::LineWidget::setLineWidth(float line_width)
 {
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -42,6 +36,12 @@ float temp_viz::LineWidget::getLineWidth()
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     return actor->GetProperty()->GetLineWidth();
+}
+
+template<> temp_viz::LineWidget temp_viz::Widget::cast<temp_viz::LineWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<LineWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
