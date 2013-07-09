@@ -9,6 +9,8 @@ namespace temp_viz
 /// line widget implementation
 temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New();
     line->SetPoint1 (pt1.x, pt1.y, pt1.z);
     line->SetPoint2 (pt2.x, pt2.y, pt2.z);
@@ -40,6 +42,8 @@ float temp_viz::LineWidget::getLineWidth()
 
 temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     plane->SetNormal (coefs[0], coefs[1], coefs[2]);
     double norm = cv::norm(cv::Vec3f(coefs.val));
@@ -57,6 +61,8 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color 
 
 temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
     cv::Point3f coefs3(coefs[0], coefs[1], coefs[2]);
     double norm_sqr = 1.0 / coefs3.dot (coefs3);
@@ -81,6 +87,8 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double
 
 temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkSphereSource> sphere = vtkSmartPointer<vtkSphereSource>::New ();
     sphere->SetRadius (radius);
     sphere->SetCenter (center.x, center.y, center.z);
@@ -103,6 +111,8 @@ temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, in
 
 temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New ();
     
     float startPoint[3], endPoint[3];
@@ -165,6 +175,8 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
 
 temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius, double thickness, const temp_viz::Color& color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkDiskSource> disk = vtkSmartPointer<vtkDiskSource>::New ();
     // Maybe the resolution should be lower e.g. 50 or 25
     disk->SetCircumferentialResolution (50);
@@ -194,6 +206,8 @@ temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius,
 
 temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     const cv::Point3f pt2 = pt_on_axis + axis_direction;
     vtkSmartPointer<vtkLineSource> line = vtkSmartPointer<vtkLineSource>::New ();
     line->SetPoint1 (pt_on_axis.x, pt_on_axis.y, pt_on_axis.z);
@@ -218,6 +232,8 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
 
 temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
     cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
     
@@ -238,6 +254,8 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, b
 
 temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Affine3f& affine)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
     axes->SetOrigin (0, 0, 0);
     axes->SetScaleFactor (scale);
@@ -285,8 +303,10 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
-temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color) : Widget(true)
+temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color)
 {
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkTextActor>::New());
+    
     vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getActor(*this));
     actor->SetPosition (pos.x, pos.y);
     actor->SetInput (text.c_str ());
@@ -400,6 +420,8 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
     
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
+    
     vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
@@ -440,6 +462,8 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
+    
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
     
     vtkLODActor * actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(*this));
     vtkIdType nr_points;
@@ -550,6 +574,8 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     Mat normals = _normals.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(cloud.size() == normals.size() && cloud.type() == normals.type());
+    
+    WidgetAccessor::setVtkProp(*this, vtkSmartPointer<vtkLODActor>::New());
     
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();

@@ -13,5 +13,6 @@ namespace temp_viz
     struct CV_EXPORTS WidgetAccessor
     {
         static vtkSmartPointer<vtkProp> getActor(const Widget &widget);
+        static void setVtkProp(Widget &widget, vtkSmartPointer<vtkProp> actor);
     };
 }
