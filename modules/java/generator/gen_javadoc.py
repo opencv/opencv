@@ -193,7 +193,7 @@ class JavadocGenerator(object):
             prefix = " *\n"
         elif "long" not in decl:
             if self.show_warnings:
-                print >> sys.stderr, "gen_javadoc warning: no description for " + decl_type + " \"%s\" File: %s (line %s)" % (func["name"], func["file"], func["line"])
+                print >> sys.stderr, "gen_javadoc warning: no description for " + decl_type + " \"%s\" File: %s (line %s)" % (decl["name"], decl["file"], decl["line"])
             doc += prefix + self.ReformatForJavadoc("This " + decl_type + " is undocumented")
             prefix = " *\n"
 
