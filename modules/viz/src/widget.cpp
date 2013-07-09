@@ -183,3 +183,12 @@ temp_viz::Widget2D& temp_viz::Widget2D::operator=(const Widget &other)
     Widget::operator=(other);
     return *this;
 }
+
+void temp_viz::Widget2D::setColor(const Color &color)
+{
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getActor(*this));
+    CV_Assert(actor);
+    Color c = vtkcolor(color);
+    actor->GetProperty ()->SetColor (c.val);
+    actor->Modified ();
+}

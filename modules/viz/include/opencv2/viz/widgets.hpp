@@ -53,6 +53,8 @@ namespace temp_viz
         Widget2D() {}
         Widget2D(const Widget &other);
         Widget2D& operator=(const Widget &other);
+        
+        void setColor(const Color &color);
     };
     
 
