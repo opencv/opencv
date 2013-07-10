@@ -87,7 +87,7 @@ void CV_ShapeTest::test2()
     shape1.push_back(Point(140,130));
     shape1.push_back(Point(130,150));
     shape1.push_back(Point(5,5)); //outlier
-    shape1.push_back(Point(10,240)); //outlier
+    //shape1.push_back(Point(10,240)); //outlier
     //shape1.push_back(Point(240,240)); //outlier
 
     shape2.push_back(Point(101.2,119.1));
@@ -145,6 +145,7 @@ void CV_ShapeTest::test2()
     }
 
     ThinPlateSplineTransform tpsTra(0.1);
+    //AffineTransform tpsTra(false);
     vector<Point> transformed_shape;
     //TransformedShape=WarpedShape1
     //Shape2=target shape

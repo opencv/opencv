@@ -69,6 +69,10 @@ double ThinPlateSplineTransform::getRegularizationParam()
     return beta;
 }
 
+/****************************************************************************************\
+*                                  TPS Class                                            *
+\****************************************************************************************/
+
 /* Public methods */
 void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
                                                    std::vector<DMatch>&_matches, std::vector<Point>& outPts) const
@@ -257,14 +261,85 @@ double ThinPlateSplineTransform::distance(Point p, Point q) const
 /****************************************************************************************\
 *                                  Affine Class                                          *
 \****************************************************************************************/
+/* Constructors */
+AffineTransform::AffineTransform()
+{
+    fullAffine=true;
+}
+
+AffineTransform::AffineTransform(bool _fullAffine)
+{
+    fullAffine=_fullAffine;
+}
+
+/* Setters/Getters */
+void AffineTransform::setFullAffine(bool _fullAffine)
+{
+    fullAffine=_fullAffine;
+}
+
+bool AffineTransform::getFullAffine()
+{
+    return fullAffine;
+}
 /* Public methods */
-void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2, std::vector<DMatch>& _matches,
-                                          OutputArray outPts) const
+void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
+                                          std::vector<DMatch>& _matches, std::vector<Point>& outPts) const
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
     CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0));
     CV_Assert(_matches.size()>1);
+
+    /* Use only valid matchings */
+    std::vector<DMatch> matches;
+    for (size_t i=0; i<_matches.size(); i++)
+    {
+        if (_matches[i].queryIdx<(int)pts1.cols &&
+            _matches[i].trainIdx<(int)pts2.cols)
+        {
+            matches.push_back(_matches[i]);
+        }
+    }
+
+    /* Organizing the correspondent points in vector style */
+    std::vector<Point> shape1; // transforming shape
+    std::vector<Point> shape2; // target shape
+    for (size_t i=0; i<matches.size(); i++)
+    {
+        Point pt1=pts1.at<Point>(0,matches[i].queryIdx);
+        shape1.push_back(pt1);
+
+        Point pt2=pts2.at<Point>(0,matches[i].trainIdx);
+        shape2.push_back(pt2);
+    }
+
+    /* estimateRigidTransform */
+    //Apply transformation in the complete set of points
+    Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
+    for (int i=0; i<pts1.cols; i++)
+    {
+        Point pt1=pts1.at<Point>(0,i);
+        complete_shape1.at<float>(i,0) = pt1.x;
+        complete_shape1.at<float>(i,1) = pt1.y;
+    }
+
+    Mat affine;
+    estimateRigidTransform(shape2, shape1, fullAffine).convertTo(affine, CV_32F);
+
+    Mat auxaf=Mat::ones(3,complete_shape1.rows,CV_32F);
+    for (int i=0; i<complete_shape1.rows; i++)
+    {
+        auxaf.at<float>(1,i)=complete_shape1.at<float>(i,0);
+        auxaf.at<float>(2,i)=complete_shape1.at<float>(i,1);
+    }
+    Mat fAffine=affine*auxaf;
+
+    /* Ensambling output */
+    for (int i=0; i<fAffine.cols; i++)
+    {
+        outPts.push_back(Point(fAffine.at<float>(0,i), fAffine.at<float>(1,i)));
+    }
 }
 }//cv
 

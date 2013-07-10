@@ -179,9 +179,16 @@ class CV_EXPORTS_W AffineTransform : public Transform
 public:
     //! *tructors
     CV_WRAP AffineTransform();
+    CV_WRAP AffineTransform(bool fullAffine);
+
+    //! getters-setters
+    void setFullAffine(bool fullAffine);
+    bool getFullAffine(void);
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, OutputArray outPts) const;
+                             std::vector<DMatch>&, std::vector<Point>& outPts) const;
+private:
+    bool fullAffine;
 };
 
 /****************************************************************************************\
