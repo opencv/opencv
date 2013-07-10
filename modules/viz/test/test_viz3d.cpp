@@ -112,16 +112,32 @@ TEST(Viz_viz3d, accuracy)
     v.showWidget("coordinateSystem", csw);
 //     v.showWidget("text",tw);
 //     v.showWidget("pcw",pcw);
-    v.showWidget("pcw2",pcw2);
+//     v.showWidget("pcw2",pcw2);
     
-    temp_viz::LineWidget lw2 = lw;
+//     temp_viz::LineWidget lw2 = lw;
 //     v.showPointCloud("cld",cloud, colors);
     
     cv::Mat normals(cloud.size(), cloud.type(), cv::Scalar(0, 10, 0));
 
 //     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
     temp_viz::CloudNormalsWidget cnw(cloud, normals);
-    v.showWidget("n", cnw);
+//     v.showWidget("n", cnw);
+    
+//     lw = v.getWidget("n").cast<temp_viz::LineWidget>();
+//     pw = v.getWidget("n").cast<temp_viz::PlaneWidget>();
+    
+    cv::Mat points(1, 4, CV_64FC4);
+    
+    cv::Vec4d* data = points.ptr<cv::Vec4d>();
+    data[0] = cv::Vec4d(0.0,0.0,0.0,0.0);
+    data[1] = cv::Vec4d(1.0,1.0,1.0,1.0);
+    data[2] = cv::Vec4d(0.0,2.0,0.0,0.0);
+    data[3] = cv::Vec4d(3.0,4.0,1.0,1.0);
+    points = points.reshape(0, 2);
+    
+    temp_viz::PolyLineWidget plw(points);
+    v.showWidget("polyline",plw);
+    lw = v.getWidget("polyline").cast<temp_viz::LineWidget>();
     
     while(!v.wasStopped())
     {
@@ -129,25 +145,25 @@ TEST(Viz_viz3d, accuracy)
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
         cv::Affine3f cloudPosition2(angle_x, angle_y, angle_z, cv::Vec3f(pos_x+0.2, pos_y+0.2, pos_z+0.2));
 
-        lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
-        lw.setLineWidth(lw.getLineWidth()+pos_x * 10);
+//         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        lw.setLineWidth(pos_x * 10);
         
-        pw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        plw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         sw.setPose(cloudPosition);
 //         pw.setPose(cloudPosition);
         aw.setPose(cloudPosition);
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
-        lw.setPose(cloudPosition);
+//         lw.setPose(cloudPosition);
         cuw.setPose(cloudPosition);
 //         cnw.setPose(cloudPosition);
 //         v.showWidget("pcw",pcw, cloudPosition);
 //         v.showWidget("pcw2",pcw2, cloudPosition2);
 //         v.showWidget("plane", pw, cloudPosition);
         
-        v.setWidgetPose("n",cloudPosition);
-        v.setWidgetPose("pcw2", cloudPosition);
+//         v.setWidgetPose("n",cloudPosition);
+//         v.setWidgetPose("pcw2", cloudPosition);
         cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         

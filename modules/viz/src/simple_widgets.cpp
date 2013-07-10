@@ -26,14 +26,14 @@ temp_viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const C
 
 void temp_viz::LineWidget::setLineWidth(float line_width)
 {
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     actor->GetProperty()->SetLineWidth(line_width);
 }
 
 float temp_viz::LineWidget::getLineWidth()
 {
-    vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     return actor->GetProperty()->GetLineWidth();
 }
@@ -343,6 +343,82 @@ template<> temp_viz::CoordinateSystemWidget temp_viz::Widget::cast<temp_viz::Coo
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+/// polyline widget implementation
+
+struct temp_viz::PolyLineWidget::CopyImpl
+{    
+    template<typename _Tp>
+    static void copy(const Mat& source, Vec<_Tp, 3> *output, vtkSmartPointer<vtkPolyLine> polyLine)
+    {
+        int s_chs = source.channels();
+
+        for(int y = 0, id = 0; y < source.rows; ++y)
+        {
+            const _Tp* srow = source.ptr<_Tp>(y);
+
+            for(int x = 0; x < source.cols; ++x, srow += s_chs, ++id)
+            {
+                *output++ = Vec<_Tp, 3>(srow);
+                polyLine->GetPointIds()->SetId(id,id);
+            }
+        }
+    }
+};
+
+temp_viz::PolyLineWidget::PolyLineWidget(InputArray _pointData, const Color &color)
+{
+    Mat pointData = _pointData.getMat();
+    CV_Assert(pointData.type() == CV_32FC3 || pointData.type() == CV_32FC4 || pointData.type() == CV_64FC3 || pointData.type() == CV_64FC4);
+    vtkIdType nr_points = pointData.total();    
+    
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New ();
+    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New ();
+    vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New ();
+    
+    if (pointData.depth() == CV_32F)
+        points->SetDataTypeToFloat();
+    else
+        points->SetDataTypeToDouble();
+    
+    points->SetNumberOfPoints(nr_points);
+    polyLine->GetPointIds()->SetNumberOfIds(nr_points);
+    
+    if (pointData.depth() == CV_32F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+        CopyImpl::copy(pointData, data_beg, polyLine);
+    }
+    else if (pointData.depth() == CV_64F)
+    {
+        // Get a pointer to the beginning of the data array
+        Vec3d *data_beg = vtkpoints_data<double>(points);
+        CopyImpl::copy(pointData, data_beg, polyLine);
+    }
+    
+    vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+    cells->InsertNextCell(polyLine);
+    
+    polyData->SetPoints(points);
+    polyData->SetLines(cells);
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInput(polyData);
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+template<> temp_viz::PolyLineWidget temp_viz::Widget::cast<temp_viz::PolyLineWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<PolyLineWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
 temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color)
@@ -398,8 +474,6 @@ struct temp_viz::CloudWidget::CreateCloudWidget
         vtkSmartPointer<vtkPoints> points = polydata->GetPoints();
         vtkSmartPointer<vtkIdTypeArray> initcells;
         nr_points = cloud.total();
-        
-        points = polydata->GetPoints ();
 
         if (!points)
         {

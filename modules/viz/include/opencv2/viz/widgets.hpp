@@ -106,6 +106,15 @@ namespace temp_viz
         CoordinateSystemWidget(double scale, const Affine3f& affine);
     };
     
+    class CV_EXPORTS PolyLineWidget : public Widget3D
+    {
+    public:
+        PolyLineWidget(InputArray _points, const Color &color = Color::white());
+        
+    private:
+        struct CopyImpl;
+    };
+    
     class CV_EXPORTS TextWidget : public Widget2D
     {
     public:
@@ -144,6 +153,7 @@ namespace temp_viz
     template<> CV_EXPORTS CircleWidget Widget::cast<CircleWidget>();
     template<> CV_EXPORTS CubeWidget Widget::cast<CubeWidget>();
     template<> CV_EXPORTS CoordinateSystemWidget Widget::cast<CoordinateSystemWidget>();
+    template<> CV_EXPORTS PolyLineWidget Widget::cast<PolyLineWidget>();
     template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
     template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
     template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
