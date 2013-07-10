@@ -2,73 +2,87 @@
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
+#include <cstdarg>
 
 namespace cv{namespace optim{
 using std::vector;
 
-double LPSolver::solve(const Function& F,const Constraints& C, OutputArray result)const{
+const void dprintf(const char* format,...){
+#ifdef ALEX_DEBUG
+	va_list args;
+	va_start (args,format);
+	vprintf(format,args);
+	va_end(args);
+#endif
+}
 
+double LPSolver::solve(const Function& F,const Constraints& C, OutputArray result)const{
     return 0.0;
 }
 
 double LPSolver::LPFunction::calc(InputArray args)const{
-    printf("call to LPFunction::calc()\n");
+    dprintf("call to LPFunction::calc()\n");
     return 0.0;
 }
-void print_matrix(const Mat& X){
-    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",X.type(),CV_64FC1,X.rows,X.cols);
+
+
+void const print_matrix(const Mat& X){
+#ifdef ALEX_DEBUG
+    dprintf("\ttype:%d vs %d,\tsize: %d-on-%d\n",X.type(),CV_64FC1,X.rows,X.cols);
     for(int i=0;i<X.rows;i++){
-      printf("\t[");
+      dprintf("\t[");
       for(int j=0;j<X.cols;j++){
-          printf("%g, ",X.at<double>(i,j));
+          dprintf("%g, ",X.at<double>(i,j));
       }
-      printf("]\n");
+      dprintf("]\n");
     } 
+#endif
 }
-void print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
-    printf("\tprint simplex state\n");
 
-    printf("v=%g\n",v);
+void const print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
+#ifdef ALEX_DEBUG
+    dprintf("\tprint simplex state\n");
 
-    printf("here c goes\n");
+    dprintf("v=%g\n",v);
+
+    dprintf("here c goes\n");
     print_matrix(c);
 
-    printf("non-basic: ");
+    dprintf("non-basic: ");
     for (std::vector<int>::const_iterator it = N.begin() ; it != N.end(); ++it){
-        printf("%d, ",*it);
+        dprintf("%d, ",*it);
     }
-    printf("\n");
+    dprintf("\n");
 
-    printf("here b goes\n");
+    dprintf("here b goes\n");
     print_matrix(b);
-    printf("basic: ");
+    dprintf("basic: ");
 
     for (std::vector<int>::const_iterator it = B.begin() ; it != B.end(); ++it){
-        printf("%d, ",*it);
+        dprintf("%d, ",*it);
     }
-    printf("\n");
+    dprintf("\n");
+#endif
 }
 
-namespace solveLP_aux{
-    /**Due to technical considerations, the format of input b and c is somewhat special:
-     *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
-     by this procedure - it should not be cleaned before the call to procedure and may contain mess after
-     it also initializes N and B and does not make any assumptions about their init values
-     * @return -1 if problem is unfeasible, 0 if feasible.
-    */
-    int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
-    inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index);
-    /**@return -2 means the problem is unbdd, 1 means multiple solutions, 0 means successful.
-     */
-    int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
-    void swap_columns(Mat_<double>& A,int col1,int col2);
-}
+/**Due to technical considerations, the format of input b and c is somewhat special:
+ *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
+ by this procedure - it should not be cleaned before the call to procedure and may contain mess after
+ it also initializes N and B and does not make any assumptions about their init values
+ * @return SOLVELP_UNFEASIBLE if problem is unfeasible, 0 if feasible.
+*/
+const int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+const inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index);
+/**@return SOLVELP_UNBOUNDED means the problem is unbdd, SOLVELP_MULTI means multiple solutions, SOLVELP_SINGLE means one solution.
+ */
+const int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+const void swap_columns(Mat_<double>& A,int col1,int col2);
 
 //return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
 int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
-    printf("call to solveLP\n");
+    dprintf("call to solveLP\n");
 
-    //sanity check (size, type, no. of channels) (and throw exception, if appropriate)
+    //sanity check (size, type, no. of channels)
     CV_Assert(Func.type()==CV_64FC1);
     CV_Assert(Constr.type()==CV_64FC1);
     CV_Assert(Func.rows==1);
@@ -82,15 +96,15 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     double v=0;
     vector<int> N,B;
 
-    if(solveLP_aux::initialize_simplex(bigC,bigB,v,N,B)==-1){
-        return -1;
+    if(initialize_simplex(bigC,bigB,v,N,B)==SOLVELP_UNFEASIBLE){
+        return SOLVELP_UNFEASIBLE;
     }
     Mat_<double> c=bigC.colRange(1,bigC.cols),
         b=bigB.colRange(1,bigB.cols);
 
     int res=0;
-    if((res=solveLP_aux::inner_simplex(c,b,v,N,B))==-2){
-        return -2;
+    if((res=inner_simplex(c,b,v,N,B))==SOLVELP_UNBOUNDED){
+        return SOLVELP_UNBOUNDED;
     }
 
     //return the optimal solution
@@ -109,7 +123,7 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     return res;
 }
 
-int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
+const int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     N.resize(c.cols);
     N[0]=0;
     for (std::vector<int>::iterator it = N.begin()+1 ; it != N.end(); ++it){
@@ -147,21 +161,21 @@ int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,v
 
     print_simplex_state(c,b,v,N,B);
 
-    printf("\tWE MAKE PIVOT\n");
+    dprintf("\tWE MAKE PIVOT\n");
     pivot(c,b,v,N,B,k,0);
 
     print_simplex_state(c,b,v,N,B);
 
     inner_simplex(c,b,v,N,B);
 
-    printf("\tAFTER INNER_SIMPLEX\n");
+    dprintf("\tAFTER INNER_SIMPLEX\n");
     print_simplex_state(c,b,v,N,B);
 
     vector<int>::iterator it=std::find(B.begin(),B.end(),0);
     if(it!=B.end()){
         int it_offset=it-B.begin();
         if(b(it_offset,b.cols-1)>0){
-            return -1;
+            return SOLVELP_UNFEASIBLE;
         }
         pivot(c,b,v,N,B,it_offset,0);
     }
@@ -172,7 +186,7 @@ int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,v
     swap_columns(c,it_offset,0);
     swap_columns(b,it_offset,0);
 
-    printf("after swaps\n");
+    dprintf("after swaps\n");
     print_simplex_state(c,b,v,N,B);
 
     //start from 1, because we ignore x_0
@@ -180,14 +194,14 @@ int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,v
     v=0;
     for(int i=1;i<old_c.cols;i++){
         if((it=std::find(N.begin(),N.end(),i))!=N.end()){
-            printf("i=%d from nonbasic\n",i);
+            dprintf("i=%d from nonbasic\n",i);
             fflush(stdout);
             int it_offset=it-N.begin();
             c(0,it_offset)+=old_c(0,i);     
             print_matrix(c);
         }else{
             //cv::Mat_
-            printf("i=%d from basic\n",i);
+            dprintf("i=%d from basic\n",i);
             fflush(stdout);
             int it_offset=std::find(B.begin(),B.end(),i)-B.begin();
             c-=old_c(0,i)*b.row(it_offset).colRange(0,b.cols-1);
@@ -196,19 +210,19 @@ int solveLP_aux::initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,v
         }
     }
 
-    printf("after restore\n");
+    dprintf("after restore\n");
     print_simplex_state(c,b,v,N,B);
 
     N.erase(N.begin());
     return 0;
 }
 
-int solveLP_aux::inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
+const int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     int count=0;
     while(1){
-        printf("iteration #%d\n",count++);
+        dprintf("iteration #%d\n",count++);
 
-        MatIterator_<double> pos_ptr;
+        static MatIterator_<double> pos_ptr;
         int e=-1,pos_ctr=0,min_var=INT_MAX;
         bool all_nonzero=true;
         for(pos_ptr=c.begin();pos_ptr!=c.end();pos_ptr++,pos_ctr++){
@@ -223,20 +237,14 @@ int solveLP_aux::inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector
             }
         }
         if(e==-1){
-            printf("hello from e==-1\n");
+            dprintf("hello from e==-1\n");
             print_matrix(c);
             if(all_nonzero==true){
-                return 0;
+                return SOLVELP_SINGLE;
             }else{
-                return 1;
+                return SOLVELP_MULTI;
             }
         }
-
-
-        /*for(pos_ptr=c.begin();(*pos_ptr<=0) && pos_ptr!=c.end();pos_ptr++,e++);//TODO: select the smallest index var w/ pos coef
-        if(pos_ptr==c.end()){
-            return 0;
-        }*/
 
         int l=-1;
         min_var=INT_MAX;
@@ -259,30 +267,29 @@ int solveLP_aux::inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector
             }
         }
         if(l==-1){
-            //unbounded
-            return -2;
+            return SOLVELP_UNBOUNDED;
         }
-        printf("the tightest constraint is in row %d with %g\n",l,min);
+        dprintf("the tightest constraint is in row %d with %g\n",l,min);
 
-        solveLP_aux::pivot(c,b,v,N,B,l,e);
+        pivot(c,b,v,N,B,l,e);
 
-        printf("objective, v=%g\n",v);
+        dprintf("objective, v=%g\n",v);
         print_matrix(c);
-        printf("constraints\n");
+        dprintf("constraints\n");
         print_matrix(b);
-        printf("non-basic: ");
+        dprintf("non-basic: ");
         for (std::vector<int>::iterator it = N.begin() ; it != N.end(); ++it){
-            printf("%d, ",*it);
+            dprintf("%d, ",*it);
         }
-        printf("\nbasic: ");
+        dprintf("\nbasic: ");
         for (std::vector<int>::iterator it = B.begin() ; it != B.end(); ++it){
-            printf("%d, ",*it);
+            dprintf("%d, ",*it);
         }
-        printf("\n");
+        dprintf("\n");
     }
 }
 
-inline void solveLP_aux::pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
+const inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
     double coef=b(leaving_index,entering_index);
     for(int i=0;i<b.cols;i++){
         if(i==entering_index){
@@ -314,7 +321,7 @@ inline void solveLP_aux::pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<
             c(0,i)-=coef*b(leaving_index,i);
         }
     }
-    printf("v was %g\n",v);
+    dprintf("v was %g\n",v);
     v+=coef*b(leaving_index,b.cols-1);
     
     int tmp=N[entering_index];
@@ -322,7 +329,7 @@ inline void solveLP_aux::pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<
     B[leaving_index]=tmp;
 }
 
-void solveLP_aux::swap_columns(Mat_<double>& A,int col1,int col2){
+const inline void swap_columns(Mat_<double>& A,int col1,int col2){
     for(int i=0;i<A.rows;i++){
         double tmp=A(i,col1);
         A(i,col1)=A(i,col2);

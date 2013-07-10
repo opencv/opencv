@@ -1,8 +1,7 @@
 #include "test_precomp.hpp"
 #include "opencv2/optim.hpp"
 
-TEST(Optim_LpSolver, regression_basic)
-{
+TEST(Optim_LpSolver, regression_basic){
     cv::Mat A,B,z,etalon_z;
 
     if(true){
@@ -120,9 +119,10 @@ TEST(Optim_LpSolver, regression_cycling){
     //
     // ??how_check_multiple_solutions & pass_test - DONE
     // Blands_rule - DONE
-    // (&1tests on cycling)
+    // (assert, assign) - DONE
     //
-    // make_more_clear (assert, assign)
+    // (&1tests on cycling)
+    // make_more_clear
     // wrap in OOP
     //
     // non-trivial tests
