@@ -419,6 +419,38 @@ template<> temp_viz::PolyLineWidget temp_viz::Widget::cast<temp_viz::PolyLineWid
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+/// grid widget implementation
+
+temp_viz::GridWidget::GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color)
+{
+    // Create the grid using image data
+    vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
+    
+    // Add 1 to dimensions because in ImageData dimensions is the number of lines
+    // - however here it means number of cells
+    grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
+    grid->SetSpacing(spacing[0], spacing[1], 0.);
+    
+    // Set origin of the grid to be the middle of the grid
+    grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    mapper->SetInput(grid);
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    // Show it as wireframe
+    actor->GetProperty ()->SetRepresentationToWireframe ();
+    WidgetAccessor::setProp(*this, actor);
+}
+
+template<> temp_viz::GridWidget temp_viz::Widget::cast<temp_viz::GridWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<GridWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
 temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color)

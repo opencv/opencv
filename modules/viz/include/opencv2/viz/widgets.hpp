@@ -115,6 +115,12 @@ namespace temp_viz
         struct CopyImpl;
     };
     
+    class CV_EXPORTS GridWidget : public Widget3D
+    {
+    public:
+        GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color = Color::white());
+    };
+    
     class CV_EXPORTS TextWidget : public Widget2D
     {
     public:
@@ -154,6 +160,7 @@ namespace temp_viz
     template<> CV_EXPORTS CubeWidget Widget::cast<CubeWidget>();
     template<> CV_EXPORTS CoordinateSystemWidget Widget::cast<CoordinateSystemWidget>();
     template<> CV_EXPORTS PolyLineWidget Widget::cast<PolyLineWidget>();
+    template<> CV_EXPORTS GridWidget Widget::cast<GridWidget>();
     template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
     template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
     template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();

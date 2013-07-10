@@ -136,8 +136,13 @@ TEST(Viz_viz3d, accuracy)
     points = points.reshape(0, 2);
     
     temp_viz::PolyLineWidget plw(points);
-    v.showWidget("polyline",plw);
-    lw = v.getWidget("polyline").cast<temp_viz::LineWidget>();
+//     v.showWidget("polyline",plw);
+//     lw = v.getWidget("polyline").cast<temp_viz::LineWidget>();
+    
+    temp_viz::GridWidget gw(temp_viz::Vec2i(10,10), temp_viz::Vec2d(0.1,0.1));
+    v.showWidget("grid", gw);
+    lw = v.getWidget("grid").cast<temp_viz::LineWidget>();
+//     float grid_x_angle = 0.0;
     
     while(!v.wasStopped())
     {
@@ -145,8 +150,8 @@ TEST(Viz_viz3d, accuracy)
         cv::Affine3f cloudPosition(angle_x, angle_y, angle_z, cv::Vec3f(pos_x, pos_y, pos_z));
         cv::Affine3f cloudPosition2(angle_x, angle_y, angle_z, cv::Vec3f(pos_x+0.2, pos_y+0.2, pos_z+0.2));
 
-//         lw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
-        lw.setLineWidth(pos_x * 10);
+        lw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+//         lw.setLineWidth(pos_x * 10);
         
         plw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
@@ -166,6 +171,8 @@ TEST(Viz_viz3d, accuracy)
 //         v.setWidgetPose("pcw2", cloudPosition);
         cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        
+        gw.updatePose(temp_viz::Affine3f(0.0, 0.1, 0.0, cv::Vec3f(0.0,0.0,0.0)));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;
