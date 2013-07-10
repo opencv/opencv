@@ -269,6 +269,10 @@ else(ANDROID)
 endif(ANDROID)
 
 # step 5: build native part
+
+# workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
+string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")

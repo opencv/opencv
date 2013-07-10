@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,7 @@
 #include "precomp.hpp"
 
 //////////////////// BruteForceMatch /////////////////
-TEST(BruteForceMatcher)
+PERFTEST(BruteForceMatcher)
 {
     Mat trainIdx_cpu;
     Mat distance_cpu;
@@ -66,6 +67,7 @@ TEST(BruteForceMatcher)
         gen(train, size, desc_len, CV_32F, 0, 1);
         // Output
         vector< vector<DMatch> > matches(2);
+        vector< vector<DMatch> > d_matches(2);
         // Init GPU matcher
         ocl::BruteForceMatcher_OCL_base d_matcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
 
@@ -88,14 +90,19 @@ TEST(BruteForceMatcher)
 
         GPU_ON;
         d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;
         d_query.upload(query);
         d_train.upload(train);
-        d_matcher.match(d_query, d_train, matches[0]);
+        d_matcher.match(d_query, d_train, d_matches[0]);
         GPU_FULL_OFF;
+
+        int diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
 
         SUBTEST << size << "; knnMatch";
 
@@ -111,14 +118,19 @@ TEST(BruteForceMatcher)
 
         GPU_ON;
         d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;
         d_query.upload(query);
         d_train.upload(train);
-        d_matcher.knnMatch(d_query, d_train, matches, 2);
+        d_matcher.knnMatch(d_query, d_train, d_matches, 2);
         GPU_FULL_OFF;
+
+        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
 
         SUBTEST << size << "; radiusMatch";
 
@@ -138,13 +150,18 @@ TEST(BruteForceMatcher)
 
         GPU_ON;
         d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
-         ;
         GPU_OFF;
 
         GPU_FULL_ON;
         d_query.upload(query);
         d_train.upload(train);
-        d_matcher.radiusMatch(d_query, d_train, matches, max_distance);
+        d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
         GPU_FULL_OFF;
+
+        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
+        if(diff == 0)
+            TestSystem::instance().setAccurate(1, 0);
+        else
+            TestSystem::instance().setAccurate(0, diff);
     }
 }

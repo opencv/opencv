@@ -151,6 +151,14 @@ public:
 
     CV_WRAP virtual void detectMultiScale( const Mat& image,
                                    CV_OUT std::vector<Rect>& objects,
+                                   CV_OUT std::vector<int>& numDetections,
+                                   double scaleFactor=1.1,
+                                   int minNeighbors=3, int flags=0,
+                                   Size minSize=Size(),
+                                   Size maxSize=Size() );
+
+    CV_WRAP virtual void detectMultiScale( const Mat& image,
+                                   CV_OUT std::vector<Rect>& objects,
                                    CV_OUT std::vector<int>& rejectLevels,
                                    CV_OUT std::vector<double>& levelWeights,
                                    double scaleFactor = 1.1,
@@ -168,7 +176,12 @@ public:
 protected:
     virtual bool detectSingleScale( const Mat& image, int stripCount, Size processingRectSize,
                                     int stripSize, int yStep, double factor, std::vector<Rect>& candidates,
-                                    std::vector<int>& rejectLevels, std::vector<double>& levelWeights, bool outputRejectLevels = false);
+                                    std::vector<int>& rejectLevels, std::vector<double>& levelWeights, bool outputRejectLevels = false );
+
+    virtual void detectMultiScaleNoGrouping( const Mat& image, std::vector<Rect>& candidates,
+                                             std::vector<int>& rejectLevels, std::vector<double>& levelWeights,
+                                             double scaleFactor, Size minObjectSize, Size maxObjectSize,
+                                             bool outputRejectLevels = false );
 
 protected:
     enum { BOOST = 0

@@ -26,6 +26,7 @@
 //    Wu Zailong, bullet@yeah.net
 //    Wenju He, wenju@multicorewareinc.com
 //    Peng Xiao, pengxiao@outlook.com
+//    Sen Liu, swjtuls1987@126.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -81,6 +82,7 @@ namespace cv
         extern const char *imgproc_calcMinEigenVal;
         extern const char *imgproc_convolve;
         extern const char *imgproc_mulAndScaleSpectrums;
+        extern const char *imgproc_clahe;
         ////////////////////////////////////OpenCL call wrappers////////////////////////////
 
         template <typename T> struct index_and_sizeof;
@@ -270,7 +272,7 @@ namespace cv
             size_t globalThreads[3] = {glbSizeX, glbSizeY, 1};
             size_t localThreads[3] = {blkSizeX, blkSizeY, 1};
 
-
+            float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
             std::vector< std::pair<size_t, const void *> > args;
             if(map1.channels() == 2)
             {
@@ -292,7 +294,7 @@ namespace cv
                 args.push_back( std::make_pair(sizeof(cl_int), (void *)&cols));
                 float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
 
-               if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( std::make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -326,7 +328,6 @@ namespace cv
                 }
                 else
                 {
-                    float borderFloat[4] = {(float)borderValue[0], (float)borderValue[1], (float)borderValue[2], (float)borderValue[3]};
                     args.push_back( std::make_pair(sizeof(cl_float4), (void *)&borderFloat));
                 }
             }
@@ -1210,30 +1211,41 @@ namespace cv
         void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize,
                           double k, int borderType)
         {
-            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
-            {
-                CV_Error(Error::GpuNotSupported, "select device don't support double");
-            }
-            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            oclMat Dx, Dy;
-            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-            extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
-            dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), Dx, Dy, dst, borderType);
+            oclMat dx, dy;
+            cornerHarris_dxdy(src, dst, dx, dy, blockSize, ksize, k, borderType);
         }
 
-        void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
+        void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize,
+                          double k, int borderType)
         {
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(Error::GpuNotSupported, "select device don't support double");
             }
             CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
-            oclMat Dx, Dy;
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-            extractCovData(src, Dx, Dy, blockSize, ksize, borderType);
+            extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, Dx, Dy, dst, borderType);
+            corner_ocl(imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
+        }
+
+        void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
+        {
+            oclMat dx, dy;
+            cornerMinEigenVal_dxdy(src, dst, dx, dy, blockSize, ksize, borderType);
+        }
+
+        void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize, int borderType)
+        {
+            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+            {
+                CV_Error(Error::GpuNotSupported, "select device don't support double");
+            }
+            CV_Assert(src.cols >= blockSize / 2 && src.rows >= blockSize / 2);
+            CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
+            extractCovData(src, dx, dy, blockSize, ksize, borderType);
+            dst.create(src.size(), CV_32F);
+            corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, dx, dy, dst, borderType);
         }
         /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
         static void meanShiftFiltering_gpu(const oclMat &src, oclMat dst, int sp, int sr, int maxIter, float eps)
@@ -1495,6 +1507,194 @@ namespace cv
             openCLExecuteKernel(clCxt, &imgproc_histogram, kernelName, globalThreads, localThreads, args, -1, -1);
             LUT(mat_src, lut, mat_dst);
         }
+
+        ////////////////////////////////////////////////////////////////////////
+        // CLAHE
+        namespace clahe
+        {
+            inline int divUp(int total, int grain)
+            {
+                return (total + grain - 1) / grain * grain;
+            }
+
+            static void calcLut(const oclMat &src, oclMat &dst,
+                const int tilesX, const int tilesY, const cv::Size tileSize,
+                const int clipLimit, const float lutScale)
+            {
+                cl_int2 tile_size;
+                tile_size.s[0] = tileSize.width;
+                tile_size.s[1] = tileSize.height;
+
+                std::vector<std::pair<size_t , const void *> > args;
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+                args.push_back( std::make_pair( sizeof(cl_int2), (void *)&tile_size ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesX ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&clipLimit ));
+                args.push_back( std::make_pair( sizeof(cl_float), (void *)&lutScale ));
+
+                String kernelName = "calcLut";
+                size_t localThreads[3]  = { 32, 8, 1 };
+                size_t globalThreads[3] = { tilesX * localThreads[0], tilesY * localThreads[1], 1 };
+                bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+                if (is_cpu)
+                {
+                    openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, (char*)" -D CPU");
+                }
+                else
+                {
+                    cl_kernel kernel = openCLGetKernelFromSource(Context::getContext(), &imgproc_clahe, kernelName);
+                    int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+                    openCLSafeCall(clReleaseKernel(kernel));
+
+                    static char opt[20] = {0};
+                    sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
+                    openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, opt);
+                }
+            }
+
+            static void transform(const oclMat &src, oclMat &dst, const oclMat &lut,
+                const int tilesX, const int tilesY, const cv::Size tileSize)
+            {
+                cl_int2 tile_size;
+                tile_size.s[0] = tileSize.width;
+                tile_size.s[1] = tileSize.height;
+
+                std::vector<std::pair<size_t , const void *> > args;
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&dst.data ));
+                args.push_back( std::make_pair( sizeof(cl_mem), (void *)&lut.data ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&lut.step ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.cols ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.rows ));
+                args.push_back( std::make_pair( sizeof(cl_int2), (void *)&tile_size ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesX ));
+                args.push_back( std::make_pair( sizeof(cl_int), (void *)&tilesY ));
+
+                String kernelName = "transform";
+                size_t localThreads[3]  = { 32, 8, 1 };
+                size_t globalThreads[3] = { divUp(src.cols, localThreads[0]), divUp(src.rows, localThreads[1]), 1 };
+
+                openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1);
+            }
+        }
+
+        namespace
+        {
+            class CLAHE_Impl : public cv::CLAHE
+            {
+            public:
+                CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
+
+                cv::AlgorithmInfo* info() const;
+
+                void apply(cv::InputArray src, cv::OutputArray dst);
+
+                void setClipLimit(double clipLimit);
+                double getClipLimit() const;
+
+                void setTilesGridSize(cv::Size tileGridSize);
+                cv::Size getTilesGridSize() const;
+
+                void collectGarbage();
+
+            private:
+                double clipLimit_;
+                int tilesX_;
+                int tilesY_;
+
+                oclMat srcExt_;
+                oclMat lut_;
+            };
+            CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
+            clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
+            {
+            }
+
+            CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_OCL",
+                obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
+                obj.info()->addParam(obj, "tilesX", obj.tilesX_);
+                obj.info()->addParam(obj, "tilesY", obj.tilesY_))
+            void CLAHE_Impl::apply(cv::InputArray src_raw, cv::OutputArray dst_raw)
+            {
+                oclMat& src = getOclMatRef(src_raw);
+                oclMat& dst = getOclMatRef(dst_raw);
+                CV_Assert( src.type() == CV_8UC1 );
+
+                dst.create( src.size(), src.type() );
+
+                const int histSize = 256;
+
+                ensureSizeIsEnough(tilesX_ * tilesY_, histSize, CV_8UC1, lut_);
+
+                cv::Size tileSize;
+                oclMat srcForLut;
+
+                if (src.cols % tilesX_ == 0 && src.rows % tilesY_ == 0)
+                {
+                    tileSize = cv::Size(src.cols / tilesX_, src.rows / tilesY_);
+                    srcForLut = src;
+                }
+                else
+                {
+                    cv::ocl::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar());
+
+                    tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
+                    srcForLut = srcExt_;
+                }
+
+                const int tileSizeTotal = tileSize.area();
+                const float lutScale = static_cast<float>(histSize - 1) / tileSizeTotal;
+
+                int clipLimit = 0;
+                if (clipLimit_ > 0.0)
+                {
+                    clipLimit = static_cast<int>(clipLimit_ * tileSizeTotal / histSize);
+                    clipLimit = std::max(clipLimit, 1);
+                }
+
+                clahe::calcLut(srcForLut, lut_, tilesX_, tilesY_, tileSize, clipLimit, lutScale);
+                //finish();
+                clahe::transform(src, dst, lut_, tilesX_, tilesY_, tileSize);
+            }
+
+            void CLAHE_Impl::setClipLimit(double clipLimit)
+            {
+                clipLimit_ = clipLimit;
+            }
+
+            double CLAHE_Impl::getClipLimit() const
+            {
+                return clipLimit_;
+            }
+
+            void CLAHE_Impl::setTilesGridSize(cv::Size tileGridSize)
+            {
+                tilesX_ = tileGridSize.width;
+                tilesY_ = tileGridSize.height;
+            }
+
+            cv::Size CLAHE_Impl::getTilesGridSize() const
+            {
+                return cv::Size(tilesX_, tilesY_);
+            }
+
+            void CLAHE_Impl::collectGarbage()
+            {
+                srcExt_.release();
+                lut_.release();
+            }
+        }
+
+        cv::Ptr<cv::CLAHE> createCLAHE(double clipLimit, cv::Size tileGridSize)
+        {
+            return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
+        }
+
         //////////////////////////////////bilateralFilter////////////////////////////////////////////////////
         static void
         oclbilateralFilter_8u( const oclMat &src, oclMat &dst, int d,

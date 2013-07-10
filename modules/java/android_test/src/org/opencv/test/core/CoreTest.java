@@ -1827,9 +1827,9 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testRandShuffleMat() {
-        Mat original = new Mat(1, 5, CvType.CV_32F) {
+        Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
-                put(0, 0, 7, 5, 2, 8, 1);
+                put(0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
             }
         };
         Mat shuffled = original.clone();
@@ -1845,9 +1845,9 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testRandShuffleMatDouble() {
-        Mat original = new Mat(1, 5, CvType.CV_32F) {
+        Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
-                put(0, 0, 7, 5, 2, 8, 1);
+                put(0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
             }
         };
         Mat shuffled = original.clone();

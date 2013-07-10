@@ -702,14 +702,14 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
 
     parallel_for_(Range(0, image.rows),
                   MOG2Invoker(image, fgmask,
-                             (GMM*)bgmodel.data,
-                             (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
-                             bgmodelUsedModes.data, nmixtures, (float)learningRate,
-                             (float)varThreshold,
-                             backgroundRatio, varThresholdGen,
-                             fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                             bShadowDetection, nShadowDetection),
-                  image.total()/(double)(1 << 16));
+                              (GMM*)bgmodel.data,
+                              (float*)(bgmodel.data + sizeof(GMM)*nmixtures*image.rows*image.cols),
+                              bgmodelUsedModes.data, nmixtures, (float)learningRate,
+                              (float)varThreshold,
+                              backgroundRatio, varThresholdGen,
+                              fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
+                              bShadowDetection, nShadowDetection),
+                              image.total()/(double)(1 << 16));
 }
 
 void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImage) const

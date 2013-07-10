@@ -117,12 +117,10 @@ namespace cv
         //the devnum is the index of the selected device in DeviceName vector of INfo
         CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
 
-        //optional function, if you want save opencl binary kernel to the file, set its path
-        CV_EXPORTS  void setBinpath(const char *path);
-
         //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
+        //returns cl_context *
         CV_EXPORTS void* getoclContext();
-
+        //returns cl_command_queue *
         CV_EXPORTS void* getoclCommandQueue();
 
         //explicit call clFinish. The global command queue will be used.
@@ -132,6 +130,9 @@ namespace cv
         //getDevice also need to be called before this function
         CV_EXPORTS void setDeviceEx(Info &oclinfo, void *ctx, void *qu, int devnum = 0);
 
+        //returns true when global OpenCL context is initialized
+        CV_EXPORTS bool initialized();
+
         //////////////////////////////// OpenCL context ////////////////////////
         //This is a global singleton class used to represent a OpenCL context.
         class CV_EXPORTS Context
@@ -139,7 +140,7 @@ namespace cv
         protected:
             Context();
             friend class std::auto_ptr<Context>;
-
+            friend bool initialized();
         private:
             static std::auto_ptr<Context> clCxt;
             static int val;
@@ -176,6 +177,29 @@ namespace cv
                                                         int channels, int depth, const char *build_options,
                                                         bool finish = true, bool measureKernelTime = false,
                                                         bool cleanUp = true);
+
+        //! Enable or disable OpenCL program binary caching onto local disk
+        // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
+        // binary file, which will be reused when the OpenCV executable is started again.
+        //
+        // Caching mode is controlled by the following enums
+        // Notes
+        //   1. the feature is by default enabled when OpenCV is built in release mode.
+        //   2. the CACHE_DEBUG / CACHE_RELEASE flags only effectively work with MSVC compiler;
+        //      for GNU compilers, the function always treats the build as release mode (enabled by default).
+        enum
+        {
+            CACHE_NONE    = 0,        // do not cache OpenCL binary
+            CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
+            CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
+            CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
+            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
+        };
+        CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
+
+        //! set where binary cache to be saved to
+        CV_EXPORTS void setBinpath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////
@@ -221,6 +245,11 @@ namespace cv
             operator Mat() const;
             void download(cv::Mat &m) const;
 
+            //! convert to _InputArray
+            operator _InputArray();
+
+            //! convert to _OutputArray
+            operator _OutputArray();
 
             //! returns a new oclMatrix header for the specified row
             oclMat row(int y) const;
@@ -362,6 +391,9 @@ namespace cv
             int wholecols;
         };
 
+        // convert InputArray/OutputArray to oclMat references
+        CV_EXPORTS oclMat& getOclMatRef(InputArray src);
+        CV_EXPORTS oclMat& getOclMatRef(OutputArray src);
 
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays
@@ -460,6 +492,7 @@ namespace cv
         // support all C1 types
 
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
+        CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         // support all C1 types
@@ -480,6 +513,10 @@ namespace cv
         CV_EXPORTS void calcHist(const oclMat &mat_src, oclMat &mat_hist);
         //! only 8UC1 and 256 bins is supported now
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
+
+        //! only 8UC1 is supported now
+        CV_EXPORTS Ptr<cv::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
         //! bilateralFilter
         // supports 8UC1 8UC4
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
@@ -706,6 +743,8 @@ namespace cv
         }
 
         //! applies non-separable 2D linear filter to the image
+        //  Note, at the moment this function only works when anchor point is in the kernel center
+        //  and kernel size supported is either 3x3 or 5x5; otherwise the function will fail to output valid result
         CV_EXPORTS void filter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat &kernel,
                                  Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
@@ -808,7 +847,11 @@ namespace cv
         CV_EXPORTS void integral(const oclMat &src, oclMat &sum, oclMat &sqsum);
         CV_EXPORTS void integral(const oclMat &src, oclMat &sum);
         CV_EXPORTS void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
+        CV_EXPORTS void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
+            int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
+        CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
+            int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
@@ -826,13 +869,14 @@ namespace cv
         };
 #endif
 
+#if 0
         class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
         {
         public:
             OclCascadeClassifierBuf() :
                 m_flags(0), initialized(false), m_scaleFactor(0), buffers(NULL) {}
 
-            ~OclCascadeClassifierBuf() {}
+            ~OclCascadeClassifierBuf() { release(); }
 
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
                                   double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
@@ -864,6 +908,7 @@ namespace cv
             oclMat gimg1, gsum, gsqsum;
             void * buffers;
         };
+#endif
 
         /////////////////////////////// Pyramid /////////////////////////////////////
         CV_EXPORTS void pyrDown(const oclMat &src, oclMat &dst);
@@ -1388,6 +1433,51 @@ namespace cv
             explicit BFMatcher_OCL(int norm = NORM_L2) : BruteForceMatcher_OCL_base(norm == NORM_L1 ? L1Dist : norm == NORM_L2 ? L2Dist : HammingDist) {}
         };
 
+        class CV_EXPORTS GoodFeaturesToTrackDetector_OCL
+        {
+        public:
+            explicit GoodFeaturesToTrackDetector_OCL(int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0,
+                int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04);
+
+            //! return 1 rows matrix with CV_32FC2 type
+            void operator ()(const oclMat& image, oclMat& corners, const oclMat& mask = oclMat());
+            //! download points of type Point2f to a vector. the vector's content will be erased
+            void downloadPoints(const oclMat &points, std::vector<Point2f> &points_v);
+
+            int maxCorners;
+            double qualityLevel;
+            double minDistance;
+
+            int blockSize;
+            bool useHarrisDetector;
+            double harrisK;
+            void releaseMemory()
+            {
+                Dx_.release();
+                Dy_.release();
+                eig_.release();
+                minMaxbuf_.release();
+                tmpCorners_.release();
+            }
+        private:
+            oclMat Dx_;
+            oclMat Dy_;
+            oclMat eig_;
+            oclMat minMaxbuf_;
+            oclMat tmpCorners_;
+        };
+
+        inline GoodFeaturesToTrackDetector_OCL::GoodFeaturesToTrackDetector_OCL(int maxCorners_, double qualityLevel_, double minDistance_,
+            int blockSize_, bool useHarrisDetector_, double harrisK_)
+        {
+            maxCorners = maxCorners_;
+            qualityLevel = qualityLevel_;
+            minDistance = minDistance_;
+            blockSize = blockSize_;
+            useHarrisDetector = useHarrisDetector_;
+            harrisK = harrisK_;
+        }
+
         /////////////////////////////// PyrLKOpticalFlow /////////////////////////////////////
 
         class CV_EXPORTS PyrLKOpticalFlow
@@ -1449,6 +1539,45 @@ namespace cv
 
             bool isDeviceArch11_;
         };
+
+        class CV_EXPORTS FarnebackOpticalFlow
+        {
+        public:
+            FarnebackOpticalFlow();
+
+            int numLevels;
+            double pyrScale;
+            bool fastPyramids;
+            int winSize;
+            int numIters;
+            int polyN;
+            double polySigma;
+            int flags;
+
+            void operator ()(const oclMat &frame0, const oclMat &frame1, oclMat &flowx, oclMat &flowy);
+
+            void releaseMemory();
+
+        private:
+            void prepareGaussian(
+                int n, double sigma, float *g, float *xg, float *xxg,
+                double &ig11, double &ig03, double &ig33, double &ig55);
+
+            void setPolynomialExpansionConsts(int n, double sigma);
+
+            void updateFlow_boxFilter(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat &flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            void updateFlow_gaussianBlur(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat& flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            oclMat frames_[2];
+            oclMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
+            std::vector<oclMat> pyramid0_, pyramid1_;
+        };
+
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
         CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T, float scale, oclMat &map_x, oclMat &map_y);

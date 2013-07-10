@@ -1033,6 +1033,8 @@ Returns the determinant of a square floating-point matrix.
 
     :param mtx: input matrix that must have ``CV_32FC1`` or ``CV_64FC1`` type and square size.
 
+    :param mat: input matrix that must have ``CV_32FC1`` or ``CV_64FC1`` type and square size.
+
 The function ``determinant`` calculates and returns the determinant of the specified matrix. For small matrices ( ``mtx.cols=mtx.rows<=3`` ),
 the direct method is used. For larger matrices, the function uses LU factorization with partial pivoting.
 
@@ -3447,7 +3449,7 @@ function does not copy ``src`` itself but simply constructs the border, for exam
     // select the middle part of it w/o copying data
     Mat gray(gray_canvas, Rect(border, border, rgb.cols, rgb.rows));
     // convert image from RGB to grayscale
-    cvtColor(rgb, gray, CV_RGB2GRAY);
+    cvtColor(rgb, gray, COLOR_RGB2GRAY);
     // form a border in-place
     copyMakeBorder(gray, gray_buf, border, border,
                    border, border, BORDER_REPLICATE);

@@ -44,10 +44,16 @@ if(OPENCL_FOUND)
   set(OPENCL_INCLUDE_DIRS ${OPENCL_INCLUDE_DIR})
   set(OPENCL_LIBRARIES    ${OPENCL_LIBRARY})
 
-  if (X86_64)
+  if(WIN32 AND X86_64)
     set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64/import)
-  elseif (X86)
+  elseif(WIN32)
     set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32/import)
+  endif()
+
+  if(X86_64 AND UNIX)
+    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib64)
+  elseif(X86 AND UNIX)
+    set(CLAMD_POSSIBLE_LIB_SUFFIXES lib32)
   endif()
 
   if(WITH_OPENCLAMDFFT)
@@ -80,7 +86,7 @@ if(OPENCL_FOUND)
   if(WITH_OPENCLAMDBLAS)
     find_path(CLAMDBLAS_ROOT_DIR
               NAMES include/clAmdBlas.h
-              PATHS ENV CLAMDFFT_PATH ENV ProgramFiles
+              PATHS ENV CLAMDBLAS_PATH ENV ProgramFiles
               PATH_SUFFIXES clAmdBlas AMD/clAmdBlas
               DOC "AMD FFT root directory"
               NO_DEFAULT_PATH)

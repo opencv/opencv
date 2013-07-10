@@ -59,17 +59,17 @@ void cv::fastNlMeansDenoising( InputArray _src, OutputArray _dst, float h,
 
     switch (src.type()) {
         case CV_8U:
-            parallel_for(cv::BlockedRange(0, src.rows),
+            parallel_for_(cv::Range(0, src.rows),
                 FastNlMeansDenoisingInvoker<uchar>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
-            parallel_for(cv::BlockedRange(0, src.rows),
+            parallel_for_(cv::Range(0, src.rows),
                 FastNlMeansDenoisingInvoker<cv::Vec2b>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
-            parallel_for(cv::BlockedRange(0, src.rows),
+            parallel_for_(cv::Range(0, src.rows),
                 FastNlMeansDenoisingInvoker<cv::Vec3b>(
                     src, dst, templateWindowSize, searchWindowSize, h));
             break;
@@ -159,19 +159,19 @@ void cv::fastNlMeansDenoisingMulti( InputArrayOfArrays _srcImgs, OutputArray _ds
 
     switch (srcImgs[0].type()) {
         case CV_8U:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<uchar>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC2:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<cv::Vec2b>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));
             break;
         case CV_8UC3:
-            parallel_for(cv::BlockedRange(0, srcImgs[0].rows),
+            parallel_for_(cv::Range(0, srcImgs[0].rows),
                 FastNlMeansMultiDenoisingInvoker<cv::Vec3b>(
                     srcImgs, imgToDenoiseIndex, temporalWindowSize,
                     dst, templateWindowSize, searchWindowSize, h));

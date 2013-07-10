@@ -44,10 +44,7 @@
 
 using namespace cv;
 using namespace cv::detail;
-
-#ifdef HAVE_OPENCV_GPU
 using namespace cv::gpu;
-#endif
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree.hpp"
@@ -65,21 +62,17 @@ struct DistIdxPair
 };
 
 
-struct MatchPairsBody
+struct MatchPairsBody : ParallelLoopBody
 {
-    MatchPairsBody(const MatchPairsBody& other)
-            : matcher(other.matcher), features(other.features),
-              pairwise_matches(other.pairwise_matches), near_pairs(other.near_pairs) {}
-
     MatchPairsBody(FeaturesMatcher &_matcher, const std::vector<ImageFeatures> &_features,
                    std::vector<MatchesInfo> &_pairwise_matches, std::vector<std::pair<int,int> > &_near_pairs)
             : matcher(_matcher), features(_features),
               pairwise_matches(_pairwise_matches), near_pairs(_near_pairs) {}
 
-    void operator ()(const BlockedRange &r) const
+    void operator ()(const Range &r) const
     {
         const int num_images = static_cast<int>(features.size());
-        for (int i = r.begin(); i < r.end(); ++i)
+        for (int i = r.start; i < r.end; ++i)
         {
             int from = near_pairs[i].first;
             int to = near_pairs[i].second;
@@ -132,7 +125,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -207,7 +200,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_GPUFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -435,7 +428,7 @@ void OrbFeaturesFinder::find(const Mat &image, ImageFeatures &features)
     }
 }
 
-#if defined(HAVE_OPENCV_NONFREE) && defined(HAVE_OPENCV_GPU)
+#ifdef HAVE_OPENCV_NONFREE
 SurfFeaturesFinderGpu::SurfFeaturesFinderGpu(double hess_thresh, int num_octaves, int num_layers,
                                              int num_octaves_descr, int num_layers_descr)
 {
@@ -525,9 +518,9 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
     MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
 
     if (is_thread_safe_)
-        parallel_for(BlockedRange(0, static_cast<int>(near_pairs.size())), body);
+        parallel_for_(Range(0, static_cast<int>(near_pairs.size())), body);
     else
-        body(BlockedRange(0, static_cast<int>(near_pairs.size())));
+        body(Range(0, static_cast<int>(near_pairs.size())));
     LOGLN_CHAT("");
 }
 
@@ -536,14 +529,18 @@ void FeaturesMatcher::operator ()(const std::vector<ImageFeatures> &features, st
 
 BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf, int num_matches_thresh1, int num_matches_thresh2)
 {
-#ifdef HAVE_OPENCV_GPU
-    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
-        impl_ = new GpuMatcher(match_conf);
-    else
-#else
     (void)try_use_gpu;
+
+#ifdef HAVE_OPENCV_GPUFEATURES2D
+    if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
+    {
+        impl_ = new GpuMatcher(match_conf);
+    }
+    else
 #endif
+    {
         impl_ = new CpuMatcher(match_conf);
+    }
 
     is_thread_safe_ = impl_->isThreadSafe();
     num_matches_thresh1_ = num_matches_thresh1;

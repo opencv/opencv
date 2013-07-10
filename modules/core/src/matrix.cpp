@@ -41,8 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include "opencv2/core/opengl.hpp"
 
 /****************************************************************************************\
 *                           [scaled] Identity matrix initialization                      *
@@ -941,14 +939,15 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
 \*************************************************************************************************/
 
 _InputArray::_InputArray() : flags(0), obj(0) {}
-_InputArray::~_InputArray() {}
 _InputArray::_InputArray(const Mat& m) : flags(MAT), obj((void*)&m) {}
 _InputArray::_InputArray(const std::vector<Mat>& vec) : flags(STD_VECTOR_MAT), obj((void*)&vec) {}
 _InputArray::_InputArray(const double& val) : flags(FIXED_TYPE + FIXED_SIZE + MATX + CV_64F), obj((void*)&val), sz(Size(1,1)) {}
 _InputArray::_InputArray(const MatExpr& expr) : flags(FIXED_TYPE + FIXED_SIZE + EXPR), obj((void*)&expr) {}
 _InputArray::_InputArray(const gpu::GpuMat& d_mat) : flags(GPU_MAT), obj((void*)&d_mat) {}
 _InputArray::_InputArray(const ogl::Buffer& buf) : flags(OPENGL_BUFFER), obj((void*)&buf) {}
-_InputArray::_InputArray(const ogl::Texture2D& tex) : flags(OPENGL_TEXTURE), obj((void*)&tex) {}
+_InputArray::_InputArray(const gpu::CudaMem& cuda_mem) : flags(CUDA_MEM), obj((void*)&cuda_mem) {}
+
+_InputArray::~_InputArray() {}
 
 Mat _InputArray::getMat(int i) const
 {
@@ -996,13 +995,41 @@ Mat _InputArray::getMat(int i) const
         return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
     }
 
-    CV_Assert( k == STD_VECTOR_MAT );
-    //if( k == STD_VECTOR_MAT )
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
+    if( k == STD_VECTOR_MAT )
     {
         const std::vector<Mat>& v = *(const std::vector<Mat>*)obj;
         CV_Assert( 0 <= i && i < (int)v.size() );
 
         return v[i];
+    }
+
+    if( k == OPENGL_BUFFER )
+    {
+        CV_Assert( i < 0 );
+        CV_Error(cv::Error::StsNotImplemented, "You should explicitly call mapHost/unmapHost methods for ogl::Buffer object");
+        return Mat();
+    }
+
+    if( k == GPU_MAT )
+    {
+        CV_Assert( i < 0 );
+        CV_Error(cv::Error::StsNotImplemented, "You should explicitly call download method for gpu::GpuMat object");
+        return Mat();
+    }
+
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+    {
+        CV_Assert( i < 0 );
+
+        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+
+        return cuda_mem->createMatHeader();
     }
 }
 
@@ -1078,6 +1105,11 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
         return;
     }
 
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
     CV_Assert( k == STD_VECTOR_MAT );
     //if( k == STD_VECTOR_MAT )
     {
@@ -1092,10 +1124,29 @@ gpu::GpuMat _InputArray::getGpuMat() const
 {
     int k = kind();
 
-    CV_Assert(k == GPU_MAT);
+    if (k == GPU_MAT)
+    {
+        const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
+        return *d_mat;
+    }
 
-    const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
-    return *d_mat;
+    if (k == CUDA_MEM)
+    {
+        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+        return cuda_mem->createGpuMatHeader();
+    }
+
+    if (k == OPENGL_BUFFER)
+    {
+        CV_Error(cv::Error::StsNotImplemented, "You should explicitly call mapDevice/unmapDevice methods for ogl::Buffer object");
+        return gpu::GpuMat();
+    }
+
+    if (k == NONE)
+        return gpu::GpuMat();
+
+    CV_Error(cv::Error::StsNotImplemented, "getGpuMat is available only for gpu::GpuMat and gpu::CudaMem");
+    return gpu::GpuMat();
 }
 
 ogl::Buffer _InputArray::getOGlBuffer() const
@@ -1106,16 +1157,6 @@ ogl::Buffer _InputArray::getOGlBuffer() const
 
     const ogl::Buffer* gl_buf = (const ogl::Buffer*)obj;
     return *gl_buf;
-}
-
-ogl::Texture2D _InputArray::getOGlTexture2D() const
-{
-    int k = kind();
-
-    CV_Assert(k == OPENGL_TEXTURE);
-
-    const ogl::Texture2D* gl_tex = (const ogl::Texture2D*)obj;
-    return *gl_tex;
 }
 
 int _InputArray::kind() const
@@ -1186,19 +1227,24 @@ Size _InputArray::size(int i) const
         return buf->size();
     }
 
-    if( k == OPENGL_TEXTURE )
-    {
-        CV_Assert( i < 0 );
-        const ogl::Texture2D* tex = (const ogl::Texture2D*)obj;
-        return tex->size();
-    }
-
-    CV_Assert( k == GPU_MAT );
-    //if( k == GPU_MAT )
+    if( k == GPU_MAT )
     {
         CV_Assert( i < 0 );
         const gpu::GpuMat* d_mat = (const gpu::GpuMat*)obj;
         return d_mat->size();
+    }
+
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+    {
+        CV_Assert( i < 0 );
+        const gpu::CudaMem* cuda_mem = (const gpu::CudaMem*)obj;
+        return cuda_mem->size();
     }
 }
 
@@ -1252,9 +1298,12 @@ int _InputArray::type(int i) const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->type();
 
-    CV_Assert( k == GPU_MAT );
-    //if( k == GPU_MAT )
+    if( k == GPU_MAT )
         return ((const gpu::GpuMat*)obj)->type();
+
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+        return ((const gpu::CudaMem*)obj)->type();
 }
 
 int _InputArray::depth(int i) const
@@ -1304,29 +1353,34 @@ bool _InputArray::empty() const
     if( k == OPENGL_BUFFER )
         return ((const ogl::Buffer*)obj)->empty();
 
-    if( k == OPENGL_TEXTURE )
-        return ((const ogl::Texture2D*)obj)->empty();
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
 
-    CV_Assert( k == GPU_MAT );
-    //if( k == GPU_MAT )
+    if( k == GPU_MAT )
         return ((const gpu::GpuMat*)obj)->empty();
+
+    CV_Assert( k == CUDA_MEM );
+    //if( k == CUDA_MEM )
+        return ((const gpu::CudaMem*)obj)->empty();
 }
 
 
 _OutputArray::_OutputArray() {}
-_OutputArray::~_OutputArray() {}
 _OutputArray::_OutputArray(Mat& m) : _InputArray(m) {}
 _OutputArray::_OutputArray(std::vector<Mat>& vec) : _InputArray(vec) {}
 _OutputArray::_OutputArray(gpu::GpuMat& d_mat) : _InputArray(d_mat) {}
 _OutputArray::_OutputArray(ogl::Buffer& buf) : _InputArray(buf) {}
-_OutputArray::_OutputArray(ogl::Texture2D& tex) : _InputArray(tex) {}
+_OutputArray::_OutputArray(gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {}
 
 _OutputArray::_OutputArray(const Mat& m) : _InputArray(m) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const std::vector<Mat>& vec) : _InputArray(vec) {flags |= FIXED_SIZE;}
 _OutputArray::_OutputArray(const gpu::GpuMat& d_mat) : _InputArray(d_mat) {flags |= FIXED_SIZE|FIXED_TYPE;}
 _OutputArray::_OutputArray(const ogl::Buffer& buf) : _InputArray(buf) {flags |= FIXED_SIZE|FIXED_TYPE;}
-_OutputArray::_OutputArray(const ogl::Texture2D& tex) : _InputArray(tex) {flags |= FIXED_SIZE|FIXED_TYPE;}
+_OutputArray::_OutputArray(const gpu::CudaMem& cuda_mem) : _InputArray(cuda_mem) {flags |= FIXED_SIZE|FIXED_TYPE;}
 
+_OutputArray::~_OutputArray() {}
 
 bool _OutputArray::fixedSize() const
 {
@@ -1362,6 +1416,13 @@ void _OutputArray::create(Size _sz, int mtype, int i, bool allowTransposed, int 
         ((ogl::Buffer*)obj)->create(_sz, mtype);
         return;
     }
+    if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::CudaMem*)obj)->size() == _sz);
+        CV_Assert(!fixedType() || ((gpu::CudaMem*)obj)->type() == mtype);
+        ((gpu::CudaMem*)obj)->create(_sz, mtype);
+        return;
+    }
     int sizes[] = {_sz.height, _sz.width};
     create(2, sizes, mtype, i, allowTransposed, fixedDepthMask);
 }
@@ -1388,6 +1449,13 @@ void _OutputArray::create(int rows, int cols, int mtype, int i, bool allowTransp
         CV_Assert(!fixedSize() || ((ogl::Buffer*)obj)->size() == Size(cols, rows));
         CV_Assert(!fixedType() || ((ogl::Buffer*)obj)->type() == mtype);
         ((ogl::Buffer*)obj)->create(rows, cols, mtype);
+        return;
+    }
+    if( k == CUDA_MEM && i < 0 && !allowTransposed && fixedDepthMask == 0 )
+    {
+        CV_Assert(!fixedSize() || ((gpu::CudaMem*)obj)->size() == Size(cols, rows));
+        CV_Assert(!fixedType() || ((gpu::CudaMem*)obj)->type() == mtype);
+        ((gpu::CudaMem*)obj)->create(rows, cols, mtype);
         return;
     }
     int sizes[] = {rows, cols};
@@ -1525,6 +1593,11 @@ void _OutputArray::create(int dims, const int* sizes, int mtype, int i, bool all
         return;
     }
 
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
+    }
+
     if( k == NONE )
     {
         CV_Error(CV_StsNullPtr, "create() called for the missing output array" );
@@ -1609,15 +1682,15 @@ void _OutputArray::release() const
         return;
     }
 
-    if( k == OPENGL_BUFFER )
+    if( k == CUDA_MEM )
     {
-        ((ogl::Buffer*)obj)->release();
+        ((gpu::CudaMem*)obj)->release();
         return;
     }
 
-    if( k == OPENGL_TEXTURE )
+    if( k == OPENGL_BUFFER )
     {
-        ((ogl::Texture2D*)obj)->release();
+        ((ogl::Buffer*)obj)->release();
         return;
     }
 
@@ -1634,6 +1707,11 @@ void _OutputArray::release() const
     {
         ((std::vector<std::vector<uchar> >*)obj)->clear();
         return;
+    }
+
+    if( k == OCL_MAT )
+    {
+        CV_Error(CV_StsNotImplemented, "This method is not implemented for oclMat yet");
     }
 
     CV_Assert( k == STD_VECTOR_MAT );
@@ -1693,11 +1771,11 @@ ogl::Buffer& _OutputArray::getOGlBufferRef() const
     return *(ogl::Buffer*)obj;
 }
 
-ogl::Texture2D& _OutputArray::getOGlTexture2DRef() const
+gpu::CudaMem& _OutputArray::getCudaMemRef() const
 {
     int k = kind();
-    CV_Assert( k == OPENGL_TEXTURE );
-    return *(ogl::Texture2D*)obj;
+    CV_Assert( k == CUDA_MEM );
+    return *(gpu::CudaMem*)obj;
 }
 
 static _OutputArray _none;

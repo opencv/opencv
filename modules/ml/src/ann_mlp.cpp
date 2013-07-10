@@ -40,10 +40,6 @@
 
 #include "precomp.hpp"
 
-#ifdef HAVE_TBB
-#include <tbb/tbb.h>
-#endif
-
 CvANN_MLP_TrainParams::CvANN_MLP_TrainParams()
 {
     term_crit = cvTermCriteria( CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 1000, 0.01 );
@@ -255,7 +251,7 @@ void CvANN_MLP::create( const CvMat* _layer_sizes, int _activ_func,
     buf_sz += (l_dst[0] + l_dst[l_count-1]*2)*2;
 
     CV_CALL( wbuf = cvCreateMat( 1, buf_sz, CV_64F ));
-    CV_CALL( weights = (double**)cvAlloc( (l_count+1)*sizeof(weights[0]) ));
+    CV_CALL( weights = (double**)cvAlloc( (l_count+2)*sizeof(weights[0]) ));
 
     weights[0] = wbuf->data.db;
     weights[1] = weights[0] + l_dst[0]*2;
@@ -1022,7 +1018,7 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
     return iter;
 }
 
-struct rprop_loop {
+struct rprop_loop : cv::ParallelLoopBody {
   rprop_loop(const CvANN_MLP* _point, double**& _weights, int& _count, int& _ivcount, CvVectors* _x0,
      int& _l_count, CvMat*& _layer_sizes, int& _ovcount, int& _max_count,
      CvVectors* _u, const double*& _sw, double& _inv_count, CvMat*& _dEdw, int& _dcount0, double* _E, int _buf_sz)
@@ -1063,7 +1059,7 @@ struct rprop_loop {
   int buf_sz;
 
 
-  void operator()( const cv::BlockedRange& range ) const
+  void operator()( const cv::Range& range ) const
   {
     double* buf_ptr;
     double** x = 0;
@@ -1084,7 +1080,7 @@ struct rprop_loop {
         buf_ptr += (df[i] - x[i])*2;
     }
 
-    for(int si = range.begin(); si < range.end(); si++ )
+    for(int si = range.start; si < range.end; si++ )
     {
         if (si % dcount0 != 0) continue;
         int n1, n2, k;
@@ -1170,36 +1166,33 @@ struct rprop_loop {
             }
 
         // backward pass, update dEdw
-        #ifdef HAVE_TBB
-        static tbb::spin_mutex mutex;
-        tbb::spin_mutex::scoped_lock lock;
-        #endif
+        static cv::Mutex mutex;
+
         for(int i = l_count-1; i > 0; i-- )
         {
             n1 = layer_sizes->data.i[i-1]; n2 = layer_sizes->data.i[i];
             cvInitMatHeader( &_df, dcount, n2, CV_64F, df[i] );
             cvMul( grad1, &_df, grad1 );
-            #ifdef HAVE_TBB
-            lock.acquire(mutex);
-            #endif
-            cvInitMatHeader( &_dEdw, n1, n2, CV_64F, dEdw->data.db+(weights[i]-weights[0]) );
-            cvInitMatHeader( x1, dcount, n1, CV_64F, x[i-1] );
-            cvGEMM( x1, grad1, 1, &_dEdw, 1, &_dEdw, CV_GEMM_A_T );
 
-            // update bias part of dEdw
-           for( k = 0; k < dcount; k++ )
-           {
-               double* dst = _dEdw.data.db + n1*n2;
-               const double* src = grad1->data.db + k*n2;
-               for(int j = 0; j < n2; j++ )
-                   dst[j] += src[j];
+            {
+                cv::AutoLock lock(mutex);
+                cvInitMatHeader( &_dEdw, n1, n2, CV_64F, dEdw->data.db+(weights[i]-weights[0]) );
+                cvInitMatHeader( x1, dcount, n1, CV_64F, x[i-1] );
+                cvGEMM( x1, grad1, 1, &_dEdw, 1, &_dEdw, CV_GEMM_A_T );
+
+                // update bias part of dEdw
+                for( k = 0; k < dcount; k++ )
+                {
+                    double* dst = _dEdw.data.db + n1*n2;
+                    const double* src = grad1->data.db + k*n2;
+                    for(int j = 0; j < n2; j++ )
+                        dst[j] += src[j];
+                }
+
+                if (i > 1)
+                    cvInitMatHeader( &_w, n1, n2, CV_64F, weights[i] );
            }
 
-           if (i > 1)
-               cvInitMatHeader( &_w, n1, n2, CV_64F, weights[i] );
-           #ifdef HAVE_TBB
-           lock.release();
-           #endif
            cvInitMatHeader( grad2, dcount, n1, CV_64F, grad2->data.db );
            if( i > 1 )
                cvGEMM( grad1, &_w, 1, 0, 0, grad2, CV_GEMM_B_T );
@@ -1297,7 +1290,7 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
         double E = 0;
 
         // first, iterate through all the samples and compute dEdw
-        cv::parallel_for(cv::BlockedRange(0, count),
+        cv::parallel_for_(cv::Range(0, count),
             rprop_loop(this, weights, count, ivcount, &x0, l_count, layer_sizes,
                        ovcount, max_count, &u, sw, inv_count, dEdw, dcount0, &E, buf_sz)
         );

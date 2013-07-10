@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+  <Identity Name="Microsoft.SDKSamples.MediaCapture.CPP" Publisher="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US" Version="1.0.0.0" />
+  <Properties>
+    <DisplayName>MediaCapture CPP sample</DisplayName>
+    <PublisherDisplayName>Microsoft Corporation</PublisherDisplayName>
+    <Logo>Assets\storeLogo-sdk.png</Logo>
+  </Properties>
+  <Prerequisites>
+    <OSMinVersion>6.2.1</OSMinVersion>
+    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+  </Prerequisites>
+  <Resources>
+    <Resource Language="x-generate" />
+  </Resources>
+  <Applications>
+    <Application Id="MediaCapture.App" Executable="$targetnametoken$.exe" EntryPoint="MediaCapture.App">
+      <VisualElements DisplayName="OCV Image Manipulations" Logo="assets\opencv-logo-150.png" SmallLogo="assets\opencv-logo-30.png" Description="OpenCV Image Manipulations sample" ForegroundText="light" BackgroundColor="#00b2f0">
+        <DefaultTile ShortName="Ocv ImageManipulations" ShowName="allLogos" />
+        <SplashScreen Image="Assets\splash-sdk.png" BackgroundColor="#00b2f0" />
+      </VisualElements>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <DeviceCapability Name="webcam" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+  <Extensions>
+    <Extension Category="windows.activatableClass.inProcessServer">
+      <InProcessServer>
+        <Path>OcvTransform.dll</Path>
+        <ActivatableClass ActivatableClassId="OcvTransform.OcvImageManipulations" ThreadingModel="both" />
+      </InProcessServer>
+    </Extension>
+  </Extensions>
+</Package>

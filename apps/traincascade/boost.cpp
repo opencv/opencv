@@ -815,7 +815,7 @@ float CvCascadeBoostTrainData::getVarValue( int vi, int si )
 }
 
 
-struct FeatureIdxOnlyPrecalc
+struct FeatureIdxOnlyPrecalc : ParallelLoopBody
 {
     FeatureIdxOnlyPrecalc( const CvFeatureEvaluator* _featureEvaluator, CvMat* _buf, int _sample_count, bool _is_buf_16u )
     {
@@ -825,11 +825,11 @@ struct FeatureIdxOnlyPrecalc
         idst = _buf->data.i;
         is_buf_16u = _is_buf_16u;
     }
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
         cv::AutoBuffer<float> valCache(sample_count);
         float* valCachePtr = (float*)valCache;
-        for ( int fi = range.begin(); fi < range.end(); fi++)
+        for ( int fi = range.start; fi < range.end; fi++)
         {
             for( int si = 0; si < sample_count; si++ )
             {
@@ -852,7 +852,7 @@ struct FeatureIdxOnlyPrecalc
     bool is_buf_16u;
 };
 
-struct FeatureValAndIdxPrecalc
+struct FeatureValAndIdxPrecalc : ParallelLoopBody
 {
     FeatureValAndIdxPrecalc( const CvFeatureEvaluator* _featureEvaluator, CvMat* _buf, Mat* _valCache, int _sample_count, bool _is_buf_16u )
     {
@@ -863,9 +863,9 @@ struct FeatureValAndIdxPrecalc
         idst = _buf->data.i;
         is_buf_16u = _is_buf_16u;
     }
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        for ( int fi = range.begin(); fi < range.end(); fi++)
+        for ( int fi = range.start; fi < range.end; fi++)
         {
             for( int si = 0; si < sample_count; si++ )
             {
@@ -889,7 +889,7 @@ struct FeatureValAndIdxPrecalc
     bool is_buf_16u;
 };
 
-struct FeatureValOnlyPrecalc
+struct FeatureValOnlyPrecalc : ParallelLoopBody
 {
     FeatureValOnlyPrecalc( const CvFeatureEvaluator* _featureEvaluator, Mat* _valCache, int _sample_count )
     {
@@ -897,9 +897,9 @@ struct FeatureValOnlyPrecalc
         valCache = _valCache;
         sample_count = _sample_count;
     }
-    void operator()( const BlockedRange& range ) const
+    void operator()( const Range& range ) const
     {
-        for ( int fi = range.begin(); fi < range.end(); fi++)
+        for ( int fi = range.start; fi < range.end; fi++)
             for( int si = 0; si < sample_count; si++ )
                 valCache->at<float>(fi,si) = (*featureEvaluator)( fi, si );
     }
@@ -913,12 +913,12 @@ void CvCascadeBoostTrainData::precalculate()
     int minNum = MIN( numPrecalcVal, numPrecalcIdx);
 
     double proctime = -TIME( 0 );
-    parallel_for( BlockedRange(numPrecalcVal, numPrecalcIdx),
-                  FeatureIdxOnlyPrecalc(featureEvaluator, buf, sample_count, is_buf_16u!=0) );
-    parallel_for( BlockedRange(0, minNum),
-                  FeatureValAndIdxPrecalc(featureEvaluator, buf, &valCache, sample_count, is_buf_16u!=0) );
-    parallel_for( BlockedRange(minNum, numPrecalcVal),
-                  FeatureValOnlyPrecalc(featureEvaluator, &valCache, sample_count) );
+    parallel_for_( Range(numPrecalcVal, numPrecalcIdx),
+                   FeatureIdxOnlyPrecalc(featureEvaluator, buf, sample_count, is_buf_16u!=0) );
+    parallel_for_( Range(0, minNum),
+                   FeatureValAndIdxPrecalc(featureEvaluator, buf, &valCache, sample_count, is_buf_16u!=0) );
+    parallel_for_( Range(minNum, numPrecalcVal),
+                   FeatureValOnlyPrecalc(featureEvaluator, &valCache, sample_count) );
     cout << "Precalculation time: " << (proctime + TIME( 0 )) << endl;
 }
 

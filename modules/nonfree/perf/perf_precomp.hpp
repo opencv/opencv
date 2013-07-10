@@ -19,9 +19,8 @@
 #  include "opencv2/nonfree/ocl.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-    #include "opencv2/nonfree/gpu.hpp"
-    #include "opencv2/ts/gpu_perf.hpp"
+#ifdef HAVE_CUDA
+#  include "opencv2/nonfree/gpu.hpp"
 #endif
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY

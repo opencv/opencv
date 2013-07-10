@@ -774,9 +774,6 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
         findScaleSpaceExtrema(gpyr, dogpyr, keypoints);
         KeyPointsFilter::removeDuplicated( keypoints );
 
-        if( !mask.empty() )
-            KeyPointsFilter::runByPixelsMask( keypoints, mask );
-
         if( nfeatures > 0 )
             KeyPointsFilter::retainBest(keypoints, nfeatures);
         //t = (double)getTickCount() - t;
@@ -791,6 +788,9 @@ void SIFT::operator()(InputArray _image, InputArray _mask,
                 kpt.pt *= scale;
                 kpt.size *= scale;
             }
+
+        if( !mask.empty() )
+            KeyPointsFilter::runByPixelsMask( keypoints, mask );
     }
     else
     {

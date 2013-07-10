@@ -8,22 +8,32 @@
 #include <cstdio>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
 
 #ifdef HAVE_CUDA
-#include "NCVHaarObjectDetection.hpp"
+#include "opencv2/gpulegacy.hpp"
 #endif
 
 using namespace std;
 using namespace cv;
 
 
-#if !defined(HAVE_CUDA)
+#if !defined(HAVE_CUDA) || defined(__arm__)
+
 int main( int, const char** )
 {
-    cout << "Please compile the library with CUDA support" << endl;
-    return -1;
+#if !defined(HAVE_CUDA)
+    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true)." << std::endl;
+#endif
+
+#if defined(__arm__)
+    std::cout << "Unsupported for ARM CUDA library." << std::endl;
+#endif
+
+    return 0;
 }
+
 #else
 
 

@@ -117,6 +117,8 @@ int main(int argc, char **argv)
     }
 
     setDevice(oclinfo[pid], device);
+    setBinaryDiskCache(CACHE_UPDATE);
+
     cout << "Platform name:" << oclinfo[pid].PlatformName << endl;
     cout << "Device type:" << type << endl << "Device name:" << oclinfo[pid].DeviceName[device] << endl;
     return RUN_ALL_TESTS();

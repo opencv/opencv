@@ -522,7 +522,6 @@ private:
 
     CvMat* image2Draw_mat;
     QImage image2Draw_qt;
-    QImage image2Draw_qt_resized;
     int nbChannelOriginImage;
 
     //for mouse callback

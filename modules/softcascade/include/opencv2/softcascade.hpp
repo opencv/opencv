@@ -43,9 +43,10 @@
 #ifndef __OPENCV_SOFTCASCADE_HPP__
 #define __OPENCV_SOFTCASCADE_HPP__
 
+#include <iosfwd>
+
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
-#include <ostream>
+#include "opencv2/core/gpu.hpp"
 
 namespace cv { namespace softcascade {
 

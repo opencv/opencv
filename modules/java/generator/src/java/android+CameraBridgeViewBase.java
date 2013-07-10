@@ -81,6 +81,14 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         styledAttrs.recycle();
     }
 
+    /**
+     * Sets the camera index
+     * @param cameraIndex new camera index
+     */
+    public void setCameraIndex(int cameraIndex) {
+        this.mCameraIndex = cameraIndex;
+    }
+
     public interface CvCameraViewListener {
         /**
          * This method is invoked when camera preview has started. After this method is invoked

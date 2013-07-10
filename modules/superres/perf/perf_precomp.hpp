@@ -52,7 +52,7 @@
 #define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 #include "opencv2/superres.hpp"

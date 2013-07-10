@@ -206,6 +206,8 @@ public:
                                      OutputArray descriptors,
                                      bool useProvidedKeypoints=false ) const = 0;
 
+    CV_WRAP void compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
+
     // Create feature detector and descriptor extractor by name.
     CV_WRAP static Ptr<Feature2D> create( const String& name );
 };
@@ -533,11 +535,11 @@ protected:
 };
 
 
-class CV_EXPORTS GFTTDetector : public FeatureDetector
+class CV_EXPORTS_W GFTTDetector : public FeatureDetector
 {
 public:
-    GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
-                  int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
+                          int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
     AlgorithmInfo* info() const;
 
 protected:

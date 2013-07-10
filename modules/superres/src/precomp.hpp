@@ -48,16 +48,37 @@
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/core/private.hpp"
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
-#  include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
+
+#ifdef HAVE_OPENCV_GPUARITHM
+#  include "opencv2/gpuarithm.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUWARPING
+#  include "opencv2/gpuwarping.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUFILTERS
+#  include "opencv2/gpufilters.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+#  include "opencv2/gpuimgproc.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUOPTFLOW
+#  include "opencv2/gpuoptflow.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUCODEC
+#  include "opencv2/gpucodec.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_HIGHGUI

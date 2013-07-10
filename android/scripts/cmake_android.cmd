@@ -1,5 +1,0 @@
-@ECHO OFF
-
-PUSHD %~dp0..
-CALL .\scripts\build.cmd %* -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON
-POPD

@@ -121,6 +121,10 @@ namespace cv
         body(range);
     }
 #endif
+
+    // Returns a static string if there is a parallel framework,
+    // NULL otherwise.
+    CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \

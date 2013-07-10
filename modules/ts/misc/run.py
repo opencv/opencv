@@ -288,6 +288,16 @@ class TestSuite(object):
             if self.adb:
                 # construct name for aapt tool
                 self.aapt = [os.path.join(os.path.dirname(self.adb[0]), ("aapt","aapt.exe")[hostos == 'nt'])]
+                if not os.path.isfile(self.aapt[0]):
+                    # it's moved in SDK r22
+                    sdk_dir = os.path.dirname( os.path.dirname(self.adb[0]) )
+                    aapt_fn = ("aapt", "aapt.exe")[hostos == 'nt']
+                    for r, ds, fs in os.walk( os.path.join(sdk_dir, 'build-tools') ):
+                        if aapt_fn in fs:
+                            self.aapt = [ os.path.join(r, aapt_fn) ]
+                            break
+                    else:
+                        self.error = "Can't find '%s' tool!" % aapt_fn
 
         # fix has_perf_tests param
         self.has_perf_tests = self.has_perf_tests == "ON"

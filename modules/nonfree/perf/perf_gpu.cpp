@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-#if defined(HAVE_OPENCV_GPU) && defined(HAVE_CUDA)
+#ifdef HAVE_CUDA
 
 #include "opencv2/ts/gpu_perf.hpp"
 
@@ -52,6 +52,8 @@ using namespace perf;
 
 //////////////////////////////////////////////////////////////////////
 // SURF
+
+#ifdef HAVE_OPENCV_GPUARITHM
 
 DEF_PARAM_TEST_1(Image, string);
 
@@ -96,4 +98,6 @@ PERF_TEST_P(Image, GPU_SURF,
     }
 }
 
-#endif
+#endif // HAVE_OPENCV_GPUARITHM
+
+#endif // HAVE_CUDA

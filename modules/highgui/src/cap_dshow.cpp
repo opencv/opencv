@@ -3193,8 +3193,10 @@ IplImage* CvCaptureCAM_DShow::retrieveFrame(int)
         frame = cvCreateImage( cvSize(w,h), 8, 3 );
     }
 
-    VI.getPixels( index, (uchar*)frame->imageData, false, true );
-    return frame;
+    if (VI.getPixels( index, (uchar*)frame->imageData, false, true ))
+        return frame;
+    else
+        return NULL;
 }
 
 double CvCaptureCAM_DShow::getProperty( int property_id )

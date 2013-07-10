@@ -389,8 +389,8 @@ __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((tidx & 1) == 0);
-    const int oddFlag = (int)((tidx & 1) != 0);
+    const float4 evenFlag = (float4)((tidx & 1) == 0);
+    const float4 oddFlag = (float4)((tidx & 1) != 0);
     const bool  eveny = ((tidy & 1) == 0);
 
     float4 co1 = (float4)(0.375f, 0.375f, 0.375f, 0.375f);
@@ -455,6 +455,7 @@ __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
         dst[x + y * dstStep] = convert_uchar4_sat_rte(4.0f * sum);
     }
 }
+
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_16UC4 //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
@@ -492,8 +493,8 @@ __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((get_local_id(0) & 1) == 0);
-    const int oddFlag = (int)((get_local_id(0) & 1) != 0);
+    const float4 evenFlag = (float4)((get_local_id(0) & 1) == 0);
+    const float4 oddFlag = (float4)((get_local_id(0) & 1) != 0);
     const bool  eveny = ((get_local_id(1) & 1) == 0);
     const int tidx = get_local_id(0);
 
@@ -604,8 +605,8 @@ __kernel void pyrUp_C4_D5(__global float4* src,__global float4* dst,
 
     float4 sum = (float4)(0,0,0,0);
 
-    const int evenFlag = (int)((tidx & 1) == 0);
-    const int oddFlag = (int)((tidx & 1) != 0);
+    const float4 evenFlag = (float4)((tidx & 1) == 0);
+    const float4 oddFlag = (float4)((tidx & 1) != 0);
     const bool  eveny = ((tidy & 1) == 0);
 
     float4 co1 = (float4)(0.375f, 0.375f, 0.375f, 0.375f);

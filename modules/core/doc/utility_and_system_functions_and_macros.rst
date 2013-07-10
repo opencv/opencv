@@ -165,6 +165,8 @@ Checks a condition at runtime and throws exception if it fails
 
 .. ocv:function:: CV_Assert(expr)
 
+    :param expr: Expression for check.
+
 The macros ``CV_Assert`` (and ``CV_DbgAssert``) evaluate the specified expression. If it is 0, the macros raise an error (see :ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations while ``CV_DbgAssert`` is only retained in the Debug configuration.
 
 
@@ -180,7 +182,13 @@ Signals an error and raises an exception.
 
     :param status: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .
 
+    :param func_name: The function name where error occurs.
+
     :param err_msg: Text of the error message.
+
+    :param file_name: The file name where error occurs.
+
+    :param line: The line number where error occurs.
 
     :param args: ``printf`` -like formatted error message in parentheses.
 
@@ -241,6 +249,7 @@ Allocates an aligned memory buffer.
 .. ocv:cfunction:: void* cvAlloc( size_t size )
 
     :param size: Allocated buffer size.
+    :param bufSize: Allocated buffer size.
 
 The function allocates the buffer of the specified size and returns it. When the buffer size is 16 bytes or more, the returned buffer is aligned to 16 bytes.
 

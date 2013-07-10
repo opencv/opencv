@@ -412,11 +412,11 @@ static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, String kernelN
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
+    float f_scalar = (float)scalar;
     if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
         args.push_back( std::make_pair( sizeof(cl_double), (void *)&scalar ));
     else
     {
-        float f_scalar = (float)scalar;
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&f_scalar));
     }
 
@@ -783,45 +783,55 @@ static void arithmetic_minMax_mask_run(const oclMat &src, const oclMat &mask, cl
     }
 }
 
-template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
+template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
+                                             const oclMat &mask, oclMat &buf)
 {
     size_t groupnum = src.clCxt->computeUnits();
     CV_Assert(groupnum != 0);
     groupnum = groupnum * 2;
     int vlen = 8;
     int dbsize = groupnum * 2 * vlen * sizeof(T) ;
-    Context *clCxt = src.clCxt;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize);
-    *minVal = std::numeric_limits<double>::max() , *maxVal = -std::numeric_limits<double>::max();
+
+    ensureSizeIsEnough(1, dbsize, CV_8UC1, buf);
+
+    cl_mem buf_data = reinterpret_cast<cl_mem>(buf.data);
+
     if (mask.empty())
     {
-        arithmetic_minMax_run(src, mask, dstBuffer, vlen, groupnum, "arithm_op_minMax");
+        arithmetic_minMax_run(src, mask, buf_data, vlen, groupnum, "arithm_op_minMax");
     }
     else
     {
-        arithmetic_minMax_mask_run(src, mask, dstBuffer, vlen, groupnum, "arithm_op_minMax_mask");
+        arithmetic_minMax_mask_run(src, mask, buf_data, vlen, groupnum, "arithm_op_minMax_mask");
     }
-    T *p = new T[groupnum * vlen * 2];
-    memset(p, 0, dbsize);
-    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize);
-    if(minVal != NULL){
+
+    Mat matbuf = Mat(buf);
+    T *p = matbuf.ptr<T>();
+    if(minVal != NULL)
+    {
+        *minVal = std::numeric_limits<double>::max();
         for(int i = 0; i < vlen * (int)groupnum; i++)
         {
             *minVal = *minVal < p[i] ? *minVal : p[i];
         }
     }
-    if(maxVal != NULL){
+    if(maxVal != NULL)
+    {
+        *maxVal = -std::numeric_limits<double>::max();
         for(int i = vlen * (int)groupnum; i < 2 * vlen * (int)groupnum; i++)
         {
             *maxVal = *maxVal > p[i] ? *maxVal : p[i];
         }
     }
-    delete[] p;
-    openCLFree(dstBuffer);
 }
 
-typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask);
+typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf);
 void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
+{
+    oclMat buf;
+    minMax_buf(src, minVal, maxVal, mask, buf);
+}
+void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf)
 {
     CV_Assert(src.oclchannels() == 1);
     if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
@@ -841,7 +851,7 @@ void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oc
     };
     minMaxFunc func;
     func = functab[src.depth()];
-    func(src, minVal, maxVal, mask);
+    func(src, minVal, maxVal, mask, buf);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1688,10 +1698,11 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, String ker
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
+    T scalar;
     if(_scalar != NULL)
     {
         double scalar1 = *((double *)_scalar);
-        T scalar = (T)scalar1;
+        scalar = (T)scalar1;
         args.push_back( std::make_pair( sizeof(T), (void *)&scalar ));
     }
 
@@ -2308,9 +2319,9 @@ static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, String
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.rows ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    float pf = p;
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE))
     {
-        float pf = p;
         args.push_back( std::make_pair( sizeof(cl_float), (void *)&pf ));
     }
     else

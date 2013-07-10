@@ -239,7 +239,7 @@ void canny::calcSobelRowPass_gpu(const oclMat &src, oclMat &dx_buf, oclMat &dy_b
 
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void canny::calcMagnitude_gpu(const oclMat &dx_buf, const oclMat &dy_buf, oclMat &dx, oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad)
@@ -269,12 +269,8 @@ void canny::calcMagnitude_gpu(const oclMat &dx_buf, const oclMat &dy_buf, oclMat
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
 
-    char build_options [15] = "";
-    if(L2Grad)
-    {
-        strcat(build_options, "-D L2GRAD");
-    }
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    const char * build_options = L2Grad ? "-D L2GRAD":"";
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 void canny::calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, int rows, int cols, bool L2Grad)
 {
@@ -297,12 +293,8 @@ void canny::calcMagnitude_gpu(const oclMat &dx, const oclMat &dy, oclMat &mag, i
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
 
-    char build_options [15] = "";
-    if(L2Grad)
-    {
-        strcat(build_options, "-D L2GRAD");
-    }
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
+    const char * build_options = L2Grad ? "-D L2GRAD":"";
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
 
 void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int rows, int cols, float low_thresh, float high_thresh)
@@ -333,7 +325,7 @@ void canny::calcMap_gpu(oclMat &dx, oclMat &dy, oclMat &mag, oclMat &map, int ro
     String kernelName = "calcMap";
     size_t localThreads[3]  = {16, 16, 1};
 
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, int rows, int cols)
@@ -353,7 +345,7 @@ void canny::edgesHysteresisLocal_gpu(oclMat &map, oclMat &st1, void *counter, in
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
 
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }
 
 void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, void *counter, int rows, int cols)
@@ -383,7 +375,7 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.step));
         args.push_back( std::make_pair( sizeof(cl_int), (void *)&map.offset));
 
-        openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1, DISABLE);
+        openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
         openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
         std::swap(st1, st2);
     }
@@ -408,5 +400,5 @@ void canny::getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols)
     size_t globalThreads[3] = {cols, rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
 
-    openCLExecuteKernel2(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &imgproc_canny, kernelName, globalThreads, localThreads, args, -1, -1);
 }

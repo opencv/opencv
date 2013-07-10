@@ -42,41 +42,31 @@
 
 #include "precomp.hpp"
 
+static int cvErrorCallback(int /*status*/, const char * /*func_name*/,
+    const char *err_msg, const char * /*file_name*/,
+    int /*line*/, void * /*userdata*/)
+{
+    TestSystem::instance().printError(err_msg);
+    return 0;
+}
+
 int main(int argc, const char *argv[])
 {
-    vector<ocl::Info> oclinfo;
-    int num_devices = getDevice(oclinfo);
-
-    if (num_devices < 1)
-    {
-        cerr << "no device found\n";
-        return -1;
-    }
-
-    int devidx = 0;
-
-    for (size_t i = 0; i < oclinfo.size(); i++)
-    {
-        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++)
-        {
-            printf("device %d: %s\n", devidx++, oclinfo[i].DeviceName[j].c_str());
-        }
-    }
-
     const char *keys =
         "{ h help    | false | print help message }"
         "{ f filter  |       | filter for test }"
         "{ w workdir |       | set working directory }"
         "{ l list    | false | show all tests }"
         "{ d device  | 0     | device id }"
+        "{ c cpu_ocl | false | use cpu as ocl device}"
         "{ i iters   | 10    | iteration count }"
         "{ m warmup  | 1     | gpu warm up iteration count}"
-        "{ t xtop    | 1.1	  | xfactor top boundary}"
-        "{ b xbottom | 0.9	  | xfactor bottom boundary}"
+        "{ t xtop    | 1.1	 | xfactor top boundary}"
+        "{ b xbottom | 0.9	 | xfactor bottom boundary}"
         "{ v verify  | false | only run gpu once to verify if problems occur}";
 
+    redirectError(cvErrorCallback);
     CommandLineParser cmd(argc, argv, keys);
-
     if (cmd.has("help"))
     {
         cout << "Avaible options:" << endl;
@@ -84,13 +74,39 @@ int main(int argc, const char *argv[])
         return 0;
     }
 
-    int device = cmd.get<int>("device");
+    // get ocl devices
+    bool use_cpu = cmd.get<bool>("c");
+    vector<ocl::Info> oclinfo;
+    int num_devices = 0;
+    if(use_cpu)
+        num_devices = getDevice(oclinfo, ocl::CVCL_DEVICE_TYPE_CPU);
+    else
+        num_devices = getDevice(oclinfo);
+    if (num_devices < 1)
+    {
+        cerr << "no device found\n";
+        return -1;
+    }
 
+    // show device info
+    int devidx = 0;
+    for (size_t i = 0; i < oclinfo.size(); i++)
+    {
+        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++)
+        {
+            cout << "device " << devidx++ << ": " << oclinfo[i].DeviceName[j] << endl;
+        }
+    }
+
+    int device = cmd.get<int>("device");
     if (device < 0 || device >= num_devices)
     {
         cerr << "Invalid device ID" << endl;
         return -1;
     }
+
+    // set this to overwrite binary cache every time the test starts
+    ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
 
     if (cmd.get<bool>("verify"))
     {
@@ -100,7 +116,6 @@ int main(int argc, const char *argv[])
     }
 
     devidx = 0;
-
     for (size_t i = 0; i < oclinfo.size(); i++)
     {
         for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++, devidx++)
@@ -109,7 +124,7 @@ int main(int argc, const char *argv[])
             {
                 ocl::setDevice(oclinfo[i], (int)j);
                 TestSystem::instance().setRecordName(oclinfo[i].DeviceName[j]);
-                printf("\nuse %d: %s\n", devidx, oclinfo[i].DeviceName[j].c_str());
+                cout << "use " << devidx << ": " <<oclinfo[i].DeviceName[j] << endl;
                 goto END_DEV;
             }
         }

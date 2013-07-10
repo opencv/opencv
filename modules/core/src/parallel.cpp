@@ -110,8 +110,16 @@
     #endif
 #endif
 
-#if defined HAVE_TBB || defined HAVE_CSTRIPES || defined HAVE_OPENMP || defined HAVE_GCD || defined HAVE_CONCURRENCY
-   #define HAVE_PARALLEL_FRAMEWORK
+#if defined HAVE_TBB && TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#  define CV_PARALLEL_FRAMEWORK "tbb"
+#elif defined HAVE_CSTRIPES
+#  define CV_PARALLEL_FRAMEWORK "cstripes"
+#elif defined HAVE_OPENMP
+#  define CV_PARALLEL_FRAMEWORK "openmp"
+#elif defined HAVE_GCD
+#  define CV_PARALLEL_FRAMEWORK "gcd"
+#elif defined HAVE_CONCURRENCY
+#  define CV_PARALLEL_FRAMEWORK "ms-concurrency"
 #endif
 
 namespace cv
@@ -121,7 +129,7 @@ namespace cv
 
 namespace
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
     class ParallelLoopBodyWrapper
     {
     public:
@@ -218,7 +226,7 @@ public:
 static SchedPtr pplScheduler;
 #endif
 
-#endif // HAVE_PARALLEL_FRAMEWORK
+#endif // CV_PARALLEL_FRAMEWORK
 
 } //namespace
 
@@ -226,7 +234,7 @@ static SchedPtr pplScheduler;
 
 void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body, double nstripes)
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads != 0)
     {
@@ -281,7 +289,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
     }
     else
 
-#endif // HAVE_PARALLEL_FRAMEWORK
+#endif // CV_PARALLEL_FRAMEWORK
     {
         (void)nstripes;
         body(range);
@@ -290,7 +298,7 @@ void cv::parallel_for_(const cv::Range& range, const cv::ParallelLoopBody& body,
 
 int cv::getNumThreads(void)
 {
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
 
     if(numThreads == 0)
         return 1;
@@ -333,7 +341,7 @@ int cv::getNumThreads(void)
 void cv::setNumThreads( int threads )
 {
     (void)threads;
-#ifdef HAVE_PARALLEL_FRAMEWORK
+#ifdef CV_PARALLEL_FRAMEWORK
     numThreads = threads;
 #endif
 
@@ -477,6 +485,14 @@ int cv::getNumberOfCPUs(void)
     return (int)numCPU;
 #else
     return 1;
+#endif
+}
+
+const char* cv::currentParallelFramework() {
+#ifdef CV_PARALLEL_FRAMEWORK
+    return CV_PARALLEL_FRAMEWORK;
+#else
+    return NULL;
 #endif
 }
 

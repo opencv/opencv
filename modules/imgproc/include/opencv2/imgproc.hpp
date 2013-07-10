@@ -1318,6 +1318,9 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 //! computes the minimal rotated rectangle for a set of points
 CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 
+//! computes boxpoints
+CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
+
 //! computes the minimal enclosing circle for a set of points
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
