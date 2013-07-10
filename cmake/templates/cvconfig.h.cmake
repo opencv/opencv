@@ -1,11 +1,3 @@
-/* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
-   systems. This function is required for `alloca.c' support on those systems.
-   */
-#cmakedefine  CRAY_STACKSEG_END
-
-/* Define to 1 if using `alloca.c'. */
-#cmakedefine C_ALLOCA
-
 /* Define to 1 if you have `alloca', as a function or macro. */
 #cmakedefine HAVE_ALLOCA 1
 
@@ -70,23 +62,11 @@
 /* Apple ImageIO Framework */
 #cmakedefine  HAVE_IMAGEIO
 
-/* Define to 1 if you have the <inttypes.h> header file. */
-#cmakedefine  HAVE_INTTYPES_H 1
-
 /* JPEG-2000 codec */
 #cmakedefine  HAVE_JASPER
 
 /* IJG JPEG codec */
 #cmakedefine  HAVE_JPEG
-
-/* Define to 1 if you have the `dl' library (-ldl). */
-#cmakedefine  HAVE_LIBDL 1
-
-/* Define to 1 if you have the `gomp' library (-lgomp). */
-#cmakedefine  HAVE_LIBGOMP 1
-
-/* Define to 1 if you have the `m' library (-lm). */
-#cmakedefine  HAVE_LIBM 1
 
 /* libpng/png.h needs to be included */
 #cmakedefine  HAVE_LIBPNG_PNG_H
@@ -100,14 +80,8 @@
 /* PNG codec */
 #cmakedefine  HAVE_PNG
 
-/* Define to 1 if you have the `png_get_valid' function. */
-#cmakedefine  HAVE_PNG_GET_VALID 1
-
 /* png.h needs to be included */
 #cmakedefine  HAVE_PNG_H
-
-/* Define to 1 if you have the `png_set_tRNS_to_alpha' function. */
-#cmakedefine  HAVE_PNG_SET_TRNS_TO_ALPHA 1
 
 /* QuickTime video libraries */
 #cmakedefine  HAVE_QUICKTIME
@@ -129,9 +103,6 @@
 
 /* OpenNI library */
 #cmakedefine  HAVE_OPENNI
-
-/* LZ77 compression/decompression library (used for PNG) */
-#cmakedefine  HAVE_ZLIB
 
 /* Intel Integrated Performance Primitives */
 #cmakedefine  HAVE_IPP
@@ -156,14 +127,6 @@
 
 /* Define to the version of this package. */
 #define  PACKAGE_VERSION "${PACKAGE_VERSION}"
-
-/* If using the C implementation of alloca, define if you know the
-   direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
-    STACK_DIRECTION > 0 => grows toward higher addresses
-    STACK_DIRECTION < 0 => grows toward lower addresses
-    STACK_DIRECTION = 0 => direction of growth unknown */
-#cmakedefine  STACK_DIRECTION
 
 /* Version number of package */
 #define  VERSION "${PACKAGE_VERSION}"
@@ -225,9 +188,6 @@
 
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
-
-/* Clp support */
-#cmakedefine HAVE_CLP
 
 /* Qt support */
 #cmakedefine HAVE_QT
