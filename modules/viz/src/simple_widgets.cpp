@@ -87,10 +87,10 @@ temp_viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double
     setColor(color);
 }
 
-temp_viz::PlaneWidget& temp_viz::PlaneWidget::operator=(const Widget& other)
+template<> temp_viz::PlaneWidget temp_viz::Widget::cast<temp_viz::PlaneWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<PlaneWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,10 +116,10 @@ temp_viz::SphereWidget::SphereWidget(const cv::Point3f &center, float radius, in
     setColor(color);
 }
 
-temp_viz::SphereWidget& temp_viz::SphereWidget::operator=(const Widget &other)
+template<> temp_viz::SphereWidget temp_viz::Widget::cast<temp_viz::SphereWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<SphereWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -185,10 +185,10 @@ temp_viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const
     setColor(color);
 }
 
-temp_viz::ArrowWidget& temp_viz::ArrowWidget::operator=(const Widget &other)
+template<> temp_viz::ArrowWidget temp_viz::Widget::cast<temp_viz::ArrowWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<ArrowWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -221,10 +221,10 @@ temp_viz::CircleWidget::CircleWidget(const temp_viz::Point3f& pt, double radius,
     setColor(color);
 }
 
-temp_viz::CircleWidget& temp_viz::CircleWidget::operator=(const Widget &other)
+template<> temp_viz::CircleWidget temp_viz::Widget::cast<temp_viz::CircleWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CircleWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -252,10 +252,10 @@ temp_viz::CylinderWidget::CylinderWidget(const Point3f& pt_on_axis, const Point3
     setColor(color);
 }
 
-temp_viz::CylinderWidget& temp_viz::CylinderWidget::operator=(const Widget &other)
+template<> temp_viz::CylinderWidget temp_viz::Widget::cast<temp_viz::CylinderWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CylinderWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -279,10 +279,10 @@ temp_viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, b
     setColor(color);
 }
 
-temp_viz::CubeWidget& temp_viz::CubeWidget::operator=(const Widget &other)
+template<> temp_viz::CubeWidget temp_viz::Widget::cast<temp_viz::CubeWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CubeWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -336,10 +336,10 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
     WidgetAccessor::setProp(*this, actor);
 }
 
-temp_viz::CoordinateSystemWidget& temp_viz::CoordinateSystemWidget::operator=(const Widget &other)
+template<> temp_viz::CoordinateSystemWidget temp_viz::Widget::cast<temp_viz::CoordinateSystemWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CoordinateSystemWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -363,10 +363,10 @@ temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int fon
     WidgetAccessor::setProp(*this, actor);
 }
 
-temp_viz::TextWidget& temp_viz::TextWidget::operator=(const Widget &other)
+template<> temp_viz::TextWidget temp_viz::Widget::cast<temp_viz::TextWidget>()
 {
-    Widget2D::operator=(other);
-    return *this;
+    Widget2D widget = this->cast<Widget2D>();
+    return static_cast<TextWidget&>(widget);
 }
 
 void temp_viz::TextWidget::setText(const String &text)
@@ -548,10 +548,10 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     setColor(color);
 }
 
-temp_viz::CloudWidget& temp_viz::CloudWidget::operator=(const Widget &other)
+template<> temp_viz::CloudWidget temp_viz::Widget::cast<temp_viz::CloudWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CloudWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -686,8 +686,8 @@ temp_viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _
     setColor(color);
 }
 
-temp_viz::CloudNormalsWidget& temp_viz::CloudNormalsWidget::operator=(const Widget &other)
+template<> temp_viz::CloudNormalsWidget temp_viz::Widget::cast<temp_viz::CloudNormalsWidget>()
 {
-    Widget3D::operator=(other);
-    return *this;
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CloudNormalsWidget&>(widget);
 }

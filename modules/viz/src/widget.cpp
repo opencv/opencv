@@ -91,23 +91,6 @@ struct temp_viz::Widget3D::MatrixConverter
     }
 };
 
-temp_viz::Widget3D::Widget3D(const Widget& other) : Widget(other)
-{
-    // Check if other's actor is castable to vtkProp3D
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(other));
-    CV_Assert(actor);
-}
-
-temp_viz::Widget3D& temp_viz::Widget3D::operator =(const Widget &other)
-{
-    // Check if other's actor is castable to vtkProp3D
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(other));
-    CV_Assert(actor);
-    
-    Widget::operator=(other);
-    return *this;
-}
-
 void temp_viz::Widget3D::setPose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -178,22 +161,6 @@ template<> temp_viz::Widget3D temp_viz::Widget::cast<temp_viz::Widget3D>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget2D implementation
 
-temp_viz::Widget2D::Widget2D(const Widget &other) : Widget(other)
-{
-    // Check if other's actor is castable to vtkActor2D
-    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(other));
-    CV_Assert(actor);
-}
-
-temp_viz::Widget2D& temp_viz::Widget2D::operator=(const Widget &other)
-{
-    // Check if other's actor is castable to vtkActor2D
-    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(other));
-    CV_Assert(actor);
-    Widget::operator=(other);
-    return *this;
-}
-
 void temp_viz::Widget2D::setColor(const Color &color)
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -201,4 +168,14 @@ void temp_viz::Widget2D::setColor(const Color &color)
     Color c = vtkcolor(color);
     actor->GetProperty ()->SetColor (c.val);
     actor->Modified ();
+}
+
+template<> temp_viz::Widget2D temp_viz::Widget::cast<temp_viz::Widget2D>()
+{
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+
+    Widget2D widget;
+    WidgetAccessor::setProp(widget, actor);
+    return widget;
 }

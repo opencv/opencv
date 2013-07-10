@@ -32,8 +32,6 @@ namespace temp_viz
     {
     public:
         Widget3D() {}
-        Widget3D(const Widget& other);
-        Widget3D& operator =(const Widget &other);
         
         void setPose(const Affine3f &pose);
         void updatePose(const Affine3f &pose);
@@ -52,8 +50,6 @@ namespace temp_viz
     {
     public:
         Widget2D() {}
-        Widget2D(const Widget &other);
-        Widget2D& operator=(const Widget &other);
         
         void setColor(const Color &color);
     };
@@ -72,64 +68,48 @@ namespace temp_viz
     public:
         PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
         PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
-        PlaneWidget(const Widget& other) : Widget3D(other) {}
-        PlaneWidget& operator=(const Widget& other);
     };
     
     class CV_EXPORTS SphereWidget : public Widget3D
     {
     public:
         SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
-        SphereWidget(const Widget &other) : Widget3D(other) {}
-        SphereWidget& operator=(const Widget &other);
     };
     
     class CV_EXPORTS ArrowWidget : public Widget3D
     {
     public:
         ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color = Color::white());
-        ArrowWidget(const Widget &other) : Widget3D(other) {}
-        ArrowWidget& operator=(const Widget &other);
     };
 
     class CV_EXPORTS CircleWidget : public Widget3D
     {
     public:
         CircleWidget(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
-        CircleWidget(const Widget& other) : Widget3D(other) {}
-        CircleWidget& operator=(const Widget &other);
     };
     
     class CV_EXPORTS CylinderWidget : public Widget3D
     {
     public:
         CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
-        CylinderWidget(const Widget& other) : Widget3D(other) {}
-        CylinderWidget& operator=(const Widget &other);
     };
     
     class CV_EXPORTS CubeWidget : public Widget3D
     {
     public:
         CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
-        CubeWidget(const Widget& other) : Widget3D(other) {}
-        CubeWidget& operator=(const Widget &other);
     };
     
     class CV_EXPORTS CoordinateSystemWidget : public Widget3D
     {
     public:
         CoordinateSystemWidget(double scale, const Affine3f& affine);
-        CoordinateSystemWidget(const Widget &other) : Widget3D(other) {}
-        CoordinateSystemWidget& operator=(const Widget &other);
     };
     
     class CV_EXPORTS TextWidget : public Widget2D
     {
     public:
         TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
-        TextWidget(const Widget& other) : Widget2D(other) {}
-        TextWidget& operator=(const Widget &other);
         
         void setText(const String &text);
         String getText() const;
@@ -140,8 +120,6 @@ namespace temp_viz
     public:
         CloudWidget(InputArray _cloud, InputArray _colors);
         CloudWidget(InputArray _cloud, const Color &color = Color::white());
-        CloudWidget(const Widget &other) : Widget3D(other) {}
-        CloudWidget& operator=(const Widget &other);
         
     private:
         struct CreateCloudWidget;
@@ -151,15 +129,24 @@ namespace temp_viz
     {
     public:
         CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
-        CloudNormalsWidget(const Widget &other) : Widget3D(other) {}
-        CloudNormalsWidget& operator=(const Widget &other);
 
     private:
         struct ApplyCloudNormals;
     };
 
+    template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
     template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
     template<> CV_EXPORTS LineWidget Widget::cast<LineWidget>();
+    template<> CV_EXPORTS PlaneWidget Widget::cast<PlaneWidget>();
+    template<> CV_EXPORTS SphereWidget Widget::cast<SphereWidget>();
+    template<> CV_EXPORTS CylinderWidget Widget::cast<CylinderWidget>();
+    template<> CV_EXPORTS ArrowWidget Widget::cast<ArrowWidget>();
+    template<> CV_EXPORTS CircleWidget Widget::cast<CircleWidget>();
+    template<> CV_EXPORTS CubeWidget Widget::cast<CubeWidget>();
+    template<> CV_EXPORTS CoordinateSystemWidget Widget::cast<CoordinateSystemWidget>();
+    template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
+    template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
+    template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
 }
 
 
