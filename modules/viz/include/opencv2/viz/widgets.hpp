@@ -121,6 +121,15 @@ namespace temp_viz
         GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color = Color::white());
     };
     
+    class CV_EXPORTS Text3DWidget : public Widget3D
+    {
+    public:
+        Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, const Color &color = Color::white());
+        
+        void setText(const String &text);
+        String getText() const;
+    };
+    
     class CV_EXPORTS TextWidget : public Widget2D
     {
     public:
@@ -161,6 +170,7 @@ namespace temp_viz
     template<> CV_EXPORTS CoordinateSystemWidget Widget::cast<CoordinateSystemWidget>();
     template<> CV_EXPORTS PolyLineWidget Widget::cast<PolyLineWidget>();
     template<> CV_EXPORTS GridWidget Widget::cast<GridWidget>();
+    template<> CV_EXPORTS Text3DWidget Widget::cast<Text3DWidget>();
     template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
     template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
     template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();

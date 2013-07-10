@@ -142,6 +142,9 @@ TEST(Viz_viz3d, accuracy)
     temp_viz::GridWidget gw(temp_viz::Vec2i(10,10), temp_viz::Vec2d(0.1,0.1));
     v.showWidget("grid", gw);
     lw = v.getWidget("grid").cast<temp_viz::LineWidget>();
+    
+    temp_viz::Text3DWidget t3w("OpenCV", cv::Point3f(0.0, 2.0, 0.0), 1.0, temp_viz::Color(255,255,0));
+    v.showWidget("txt3d", t3w);
 //     float grid_x_angle = 0.0;
     
     while(!v.wasStopped())

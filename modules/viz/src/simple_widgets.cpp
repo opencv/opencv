@@ -451,6 +451,59 @@ template<> temp_viz::GridWidget temp_viz::Widget::cast<temp_viz::GridWidget>()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+/// text3D widget implementation
+
+temp_viz::Text3DWidget::Text3DWidget(const String &text, const Point3f &position, double text_scale, const Color &color)
+{
+    vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New ();
+    textSource->SetText (text.c_str());
+    textSource->Update ();
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New ();
+    mapper->SetInputConnection (textSource->GetOutputPort ());
+    
+    vtkSmartPointer<vtkFollower> actor = vtkSmartPointer<vtkFollower>::New ();
+    actor->SetMapper (mapper);
+    actor->SetPosition (position.x, position.y, position.z);
+    actor->SetScale (text_scale);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+void temp_viz::Text3DWidget::setText(const String &text)
+{
+    vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    
+    // Update text source
+    vtkPolyDataMapper *mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    vtkVectorText * textSource = vtkVectorText::SafeDownCast(mapper->GetInputConnection(0,0)->GetProducer());
+    CV_Assert(textSource);
+    
+    textSource->SetText(text.c_str());
+    textSource->Update();
+}
+
+temp_viz::String temp_viz::Text3DWidget::getText() const
+{
+    vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    
+    vtkPolyDataMapper *mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
+    vtkVectorText * textSource = vtkVectorText::SafeDownCast(mapper->GetInputConnection(0,0)->GetProducer());
+    CV_Assert(textSource);
+    
+    return textSource->GetText();
+}
+
+template<> temp_viz::Text3DWidget temp_viz::Widget::cast<temp_viz::Text3DWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<Text3DWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 /// text widget implementation
 
 temp_viz::TextWidget::TextWidget(const String &text, const Point2i &pos, int font_size, const Color &color)
