@@ -15,7 +15,7 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Xiaopeng Fu, fuxiaopeng2222@163.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -25,7 +25,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other GpuMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -43,47 +43,42 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#ifdef HAVE_OPENCL
-
-////////////////////////////////////////////////////////
-// Canny
-IMPLEMENT_PARAM_CLASS(AppertureSize, int);
-IMPLEMENT_PARAM_CLASS(L2gradient, bool);
-
-PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
+__kernel void distanceToCenters(
+    int label_step, int K,
+    __global float *src,
+    __global int *labels, int dims, int rows,
+    __global float *centers,
+    __global float *dists)
 {
-    int apperture_size;
-    bool useL2gradient;
+    int gid = get_global_id(1);
 
-    cv::Mat edges_gold;
-    virtual void SetUp()
+    float dist, euDist, min;
+    int minCentroid;
+
+    if(gid >= rows)
+        return;
+
+    for(int i = 0 ; i < K; i++)
     {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
+        euDist = 0;
+        for(int j = 0; j < dims; j++)
+        {
+            dist = (src[j + gid * dims]
+                    - centers[j + i * dims]);
+            euDist += dist * dist;
+        }
+
+        if(i == 0)
+        {
+            min = euDist;
+            minCentroid = 0;
+        }
+        else if(euDist < min)
+        {
+            min = euDist;
+            minCentroid = i;
+        }
     }
-};
-
-TEST_P(Canny, Accuracy)
-{
-    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    double low_thresh = 50.0;
-    double high_thresh = 100.0;
-
-    cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);
-
-    cv::ocl::oclMat edges;
-    cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    cv::Mat edges_gold;
-    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
-
-    EXPECT_MAT_SIMILAR(edges_gold, edges, 1e-2);
+    dists[gid] = min;
+    labels[label_step * gid] = minCentroid;
 }
-
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Canny, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-#endif
