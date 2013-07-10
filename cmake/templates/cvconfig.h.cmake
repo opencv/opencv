@@ -16,6 +16,9 @@
 /* Carbon windowing environment */
 #cmakedefine HAVE_CARBON
 
+/* Cocoa API */
+#cmakedefine HAVE_COCOA
+
 /* IEEE1394 capturing support */
 #cmakedefine HAVE_DC1394
 

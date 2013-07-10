@@ -162,3 +162,8 @@ endif()
 if(ZLIB_FOUND)
   ocv_parse_header2(ZLIB "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_VERSION)
 endif()
+
+# --- Apple ImageIO ---
+if(WITH_IMAGEIO)
+  set(HAVE_IMAGEIO YES)
+endif()
