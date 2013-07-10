@@ -159,14 +159,10 @@ while(1):
         print """ For finer touchups, mark foreground and background after pressing keys 0-3
         and again press 'n' \n"""
         if (rect_or_mask == 0):         # grabcut with rect
-            bgdmodel = np.zeros((1,65),np.float64)
-            fgdmodel = np.zeros((1,65),np.float64)    
-            cv2.grabCut(img2,mask,rect,bgdmodel,fgdmodel,1,cv2.GC_INIT_WITH_RECT)
+            cv2.grabCut(img2,mask,rect,None,None,1,cv2.GC_INIT_WITH_RECT)
             rect_or_mask = 1
         elif rect_or_mask == 1:         # grabcut with mask
-            bgdmodel = np.zeros((1,65),np.float64)
-            fgdmodel = np.zeros((1,65),np.float64) 
-            cv2.grabCut(img2,mask,rect,bgdmodel,fgdmodel,1,cv2.GC_INIT_WITH_MASK)
+            cv2.grabCut(img2,mask,rect,None,None,1,cv2.GC_INIT_WITH_MASK)
 
     mask2 = np.where((mask==1) + (mask==3),255,0).astype('uint8')
     output = cv2.bitwise_and(img2,img2,mask=mask2)   
