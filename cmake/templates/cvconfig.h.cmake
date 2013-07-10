@@ -1,10 +1,3 @@
-/* Define to 1 if you have `alloca', as a function or macro. */
-#cmakedefine HAVE_ALLOCA 1
-
-/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
-   */
-#cmakedefine HAVE_ALLOCA_H 1
-
 /* Video for Windows support */
 #cmakedefine HAVE_VFW
 
@@ -71,9 +64,6 @@
 /* libpng/png.h needs to be included */
 #cmakedefine  HAVE_LIBPNG_PNG_H
 
-/* Define to 1 if you have the `pthread' library (-lpthread). */
-#cmakedefine  HAVE_LIBPTHREAD 1
-
 /* Define to 1 if you have the `lrint' function. */
 #cmakedefine  HAVE_LRINT 1
 
@@ -94,9 +84,6 @@
 
 /* Unicap video capture library */
 #cmakedefine  HAVE_UNICAP
-
-/* Define to 1 if you have the <unistd.h> header file. */
-#cmakedefine  HAVE_UNISTD_H 1
 
 /* Xine video library */
 #cmakedefine  HAVE_XINE

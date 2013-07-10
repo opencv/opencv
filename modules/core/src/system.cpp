@@ -469,40 +469,6 @@ redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 
 }
 
-/*CV_IMPL int
-cvGuiBoxReport( int code, const char *func_name, const char *err_msg,
-                const char *file, int line, void* )
-{
-#if (!defined WIN32 && !defined _WIN32) || defined WINCE
-    return cvStdErrReport( code, func_name, err_msg, file, line, 0 );
-#else
-    if( code != CV_StsBackTrace && code != CV_StsAutoTrace )
-    {
-        size_t msg_len = strlen(err_msg ? err_msg : "") + 1024;
-        char* message = (char*)alloca(msg_len);
-        char title[100];
-
-        wsprintf( message, "%s (%s)\nin function %s, %s(%d)\n\n"
-                  "Press \"Abort\" to terminate application.\n"
-                  "Press \"Retry\" to debug (if the app is running under debugger).\n"
-                  "Press \"Ignore\" to continue (this is not safe).\n",
-                  cvErrorStr(code), err_msg ? err_msg : "no description",
-                  func_name, file, line );
-
-        wsprintf( title, "OpenCV GUI Error Handler" );
-
-        int answer = MessageBox( NULL, message, title, MB_ICONERROR|MB_ABORTRETRYIGNORE|MB_SYSTEMMODAL );
-
-        if( answer == IDRETRY )
-        {
-            CV_DBG_BREAK();
-        }
-        return answer != IDIGNORE;
-    }
-    return 0;
-#endif
-}*/
-
 CV_IMPL int cvCheckHardwareSupport(int feature)
 {
     CV_DbgAssert( 0 <= feature && feature <= CV_HARDWARE_MAX_FEATURE );
