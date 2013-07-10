@@ -13,6 +13,9 @@ Draws the found matches of keypoints from two images.
 
 .. ocv:pyfunction:: cv2.drawMatches(img1, keypoints1, img2, keypoints2, matches1to2[, outImg[, matchColor[, singlePointColor[, matchesMask[, flags]]]]]) -> outImg
 
+.. ocv:pyfunction:: cv2.drawMatchesKnn(img1, keypoints1, img2, keypoints2, matches1to2[, outImg[, matchColor[, singlePointColor[, matchesMask[, flags]]]]]) -> outImg
+
+
     :param img1: First source image.
 
     :param keypoints1: Keypoints from the first source image.

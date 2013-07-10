@@ -1410,7 +1410,7 @@ CV_EXPORTS_W void drawMatches( const Mat& img1, const std::vector<KeyPoint>& key
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
 
-CV_EXPORTS void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
                              const Mat& img2, const std::vector<KeyPoint>& keypoints2,
                              const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
