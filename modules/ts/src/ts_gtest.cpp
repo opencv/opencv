@@ -497,6 +497,7 @@ const char kBreakOnFailureFlag[] = "break_on_failure";
 const char kCatchExceptionsFlag[] = "catch_exceptions";
 const char kColorFlag[] = "color";
 const char kFilterFlag[] = "filter";
+const char kParamFilterFlag[] = "param_filter";
 const char kListTestsFlag[] = "list_tests";
 const char kOutputFlag[] = "output";
 const char kPrintTimeFlag[] = "print_time";
@@ -575,6 +576,7 @@ class GTestFlagSaver {
     death_test_style_ = GTEST_FLAG(death_test_style);
     death_test_use_fork_ = GTEST_FLAG(death_test_use_fork);
     filter_ = GTEST_FLAG(filter);
+    param_filter_ = GTEST_FLAG(param_filter);
     internal_run_death_test_ = GTEST_FLAG(internal_run_death_test);
     list_tests_ = GTEST_FLAG(list_tests);
     output_ = GTEST_FLAG(output);
@@ -596,6 +598,7 @@ class GTestFlagSaver {
     GTEST_FLAG(death_test_style) = death_test_style_;
     GTEST_FLAG(death_test_use_fork) = death_test_use_fork_;
     GTEST_FLAG(filter) = filter_;
+    GTEST_FLAG(param_filter) = param_filter_;
     GTEST_FLAG(internal_run_death_test) = internal_run_death_test_;
     GTEST_FLAG(list_tests) = list_tests_;
     GTEST_FLAG(output) = output_;
@@ -617,6 +620,7 @@ class GTestFlagSaver {
   std::string death_test_style_;
   bool death_test_use_fork_;
   std::string filter_;
+  std::string param_filter_;
   std::string internal_run_death_test_;
   bool list_tests_;
   std::string output_;
@@ -1698,6 +1702,12 @@ GTEST_DEFINE_string_(
     "'-' and a : separated list of negative patterns (tests to "
     "exclude).  A test is run if it matches one of the positive "
     "patterns and does not match any of the negative patterns.");
+
+GTEST_DEFINE_string_(
+    param_filter,
+    internal::StringFromGTestEnv("param_filter", kUniversalFilter),
+    "Same syntax and semantics as for param, but these patterns "
+    "have to match the test's parameters.");
 
 GTEST_DEFINE_bool_(list_tests, false,
                    "List all tests without running them.");
@@ -4188,6 +4198,14 @@ void PrettyUnitTestResultPrinter::OnTestIterationStart(
                   "Note: %s filter = %s\n", GTEST_NAME_, filter);
   }
 
+  const char* const param_filter = GTEST_FLAG(param_filter).c_str();
+
+  // Ditto.
+  if (!String::CStringEquals(param_filter, kUniversalFilter)) {
+    ColoredPrintf(COLOR_YELLOW,
+                  "Note: %s parameter filter = %s\n", GTEST_NAME_, param_filter);
+  }
+
   if (internal::ShouldShard(kTestTotalShards, kTestShardIndex, false)) {
     const Int32 shard_index = Int32FromEnvOrDie(kTestShardIndex, -1);
     ColoredPrintf(COLOR_YELLOW,
@@ -5873,9 +5891,15 @@ int UnitTestImpl::FilterTests(ReactionToSharding shard_tests) {
                                                    kDisableTestFilter);
       test_info->is_disabled_ = is_disabled;
 
+      const std::string value_param(test_info->value_param() == NULL ?
+                                    "" : test_info->value_param());
+
       const bool matches_filter =
           internal::UnitTestOptions::FilterMatchesTest(test_case_name,
-                                                       test_name);
+                                                       test_name) &&
+          internal::UnitTestOptions::MatchesFilter(value_param,
+                                                   GTEST_FLAG(param_filter).c_str());
+
       test_info->matches_filter_ = matches_filter;
 
       const bool is_runnable =
@@ -6223,6 +6247,12 @@ static const char kColorEncodedHelpMessage[] =
 "      Run only the tests whose name matches one of the positive patterns but\n"
 "      none of the negative patterns. '?' matches any single character; '*'\n"
 "      matches any substring; ':' separates two patterns.\n"
+"  @G--" GTEST_FLAG_PREFIX_ "param_filter=@YPOSITIVE_PATTERNS"
+    "[@G-@YNEGATIVE_PATTERNS]@D\n"
+"      Like @G--" GTEST_FLAG_PREFIX_
+                      "filter@D, but applies to the test's parameter. If a\n"
+"      test is not parameterized, its parameter is considered to be the\n"
+"      empty string.\n"
 "  @G--" GTEST_FLAG_PREFIX_ "also_run_disabled_tests@D\n"
 "      Run all disabled tests too.\n"
 "\n"
@@ -6300,6 +6330,7 @@ void ParseGoogleTestFlagsOnlyImpl(int* argc, CharType** argv) {
         ParseBoolFlag(arg, kDeathTestUseFork,
                       &GTEST_FLAG(death_test_use_fork)) ||
         ParseStringFlag(arg, kFilterFlag, &GTEST_FLAG(filter)) ||
+        ParseStringFlag(arg, kParamFilterFlag, &GTEST_FLAG(param_filter)) ||
         ParseStringFlag(arg, kInternalRunDeathTestFlag,
                         &GTEST_FLAG(internal_run_death_test)) ||
         ParseBoolFlag(arg, kListTestsFlag, &GTEST_FLAG(list_tests)) ||

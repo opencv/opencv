@@ -38,6 +38,7 @@
 
 //--------------------Google Code 2010 -- Yannick Verdie--------------------//
 
+#include "precomp.hpp"
 
 #if defined(HAVE_QT)
 

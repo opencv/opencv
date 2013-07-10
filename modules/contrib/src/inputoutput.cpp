@@ -1,7 +1,7 @@
 
 #include "opencv2/contrib.hpp"
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
     #include <windows.h>
     #include <tchar.h>
 #else

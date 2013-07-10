@@ -120,9 +120,6 @@ namespace cv
             codeCache.clear();
             cacheSize = 0;
         }
-
-        // not to be exported to dynamic lib
-        void setBinaryDiskCacheImpl(int mode, String path, Info::Impl * impl);
         struct Info::Impl
         {
             cl_platform_id oclplatform;
@@ -141,9 +138,6 @@ namespace cv
             char extra_options[512];
             int  double_support;
             int unified_memory; //1 means integrated GPU, otherwise this value is 0
-            bool enable_disk_cache; 
-            bool update_disk_cache;
-            String binpath;
             int refcounter;
 
             Impl();
@@ -171,6 +165,16 @@ namespace cv
             void releaseResources();
         };
 
+        // global variables to hold binary cache properties
+        static int enable_disk_cache =
+#ifdef _DEBUG
+            false;
+#else
+            true;
+#endif
+        static int update_disk_cache = false;
+        static String binpath = "";
+
         Info::Impl::Impl()
             :oclplatform(0),
             oclcontext(0),
@@ -181,13 +185,9 @@ namespace cv
             maxComputeUnits(0),
             double_support(0),
             unified_memory(0),
-            enable_disk_cache(false),
-            update_disk_cache(false),
-            binpath("./"),
             refcounter(1)
         {
             memset(extra_options, 0, 512);
-            setBinaryDiskCacheImpl(CACHE_RELEASE, String("./"), this);
         }
 
         void Info::Impl::releaseResources()
@@ -196,7 +196,8 @@ namespace cv
 
             if(clCmdQueue)
             {
-                openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
+                //temporarily disable command queue release as it causes program hang at exit
+                //openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
                 clCmdQueue = 0;
             }
 
@@ -508,29 +509,30 @@ namespace cv
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
 
-        void setBinaryDiskCacheImpl(int mode, String path, Info::Impl * impl)
+        void setBinaryDiskCache(int mode, String path)
         {
-            impl->update_disk_cache = (mode & CACHE_UPDATE) == CACHE_UPDATE;
-            impl->enable_disk_cache = 
-#ifdef _DEBUG 
+            if(mode == CACHE_NONE)
+            {
+                update_disk_cache = 0;
+                enable_disk_cache = 0;
+                return;
+            }
+            update_disk_cache |= (mode & CACHE_UPDATE) == CACHE_UPDATE;
+            enable_disk_cache |=
+#ifdef _DEBUG
                 (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
                 (mode & CACHE_RELEASE) == CACHE_RELEASE;
 #endif
-            if(impl->enable_disk_cache && !path.empty())
+            if(enable_disk_cache && !path.empty())
             {
-                impl->binpath = path;
+                binpath = path;
             }
-        }
-        void setBinaryDiskCache(int mode, cv::String path)
-        {
-            setBinaryDiskCacheImpl(mode, path, Context::getContext()->impl);
         }
 
         void setBinpath(const char *path)
         {
-            Context *clcxt = Context::getContext();
-            clcxt->impl->binpath = path;
+            binpath = path;
         }
 
         int savetofile(const Context*,  cl_program &program, const char *fileName)
@@ -598,15 +600,15 @@ namespace cv
                     strcat(all_build_options, build_options);
                 if(all_build_options != NULL)
                 {
-                    filename = clCxt->impl->binpath  + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + all_build_options + ".clb";
+                    filename = binpath + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + all_build_options + ".clb";
                 }
                 else
                 {
-                    filename = clCxt->impl->binpath  + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + ".clb";
+                    filename = binpath + kernelName + "_" + clCxt->impl->devName[clCxt->impl->devnum] + ".clb";
                 }
 
-                FILE *fp = clCxt->impl->enable_disk_cache ? fopen(filename.c_str(), "rb") : NULL;
-                if(fp == NULL || clCxt->impl->update_disk_cache)
+                FILE *fp = enable_disk_cache ? fopen(filename.c_str(), "rb") : NULL;
+                if(fp == NULL || update_disk_cache)
                 {
                     if(fp != NULL)
                         fclose(fp);
@@ -615,7 +617,7 @@ namespace cv
                                   clCxt->impl->oclcontext, 1, source, NULL, &status);
                     openCLVerifyCall(status);
                     status = clBuildProgram(program, 1, &(clCxt->impl->devices[clCxt->impl->devnum]), all_build_options, NULL, NULL);
-                    if(status == CL_SUCCESS && clCxt->impl->enable_disk_cache)
+                    if(status == CL_SUCCESS && enable_disk_cache)
                         savetofile(clCxt, program, filename.c_str());
                 }
                 else
@@ -952,8 +954,8 @@ namespace cv
 
         bool initialized()
         {
-            return *((volatile int*)&Context::val) != 0 && 
-                Context::clCxt->impl->clCmdQueue != NULL&& 
+            return *((volatile int*)&Context::val) != 0 &&
+                Context::clCxt->impl->clCmdQueue != NULL&&
                 Context::clCxt->impl->oclcontext != NULL;
         }
 
@@ -1087,26 +1089,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-
-#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
-#include <windows.h>
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
-
-BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
-{
-    if( fdwReason == DLL_PROCESS_DETACH )
-    {
-        // application hangs if call clReleaseCommandQueue here, so release context only
-        // without context release application hangs as well
-        context_tear_down = 1;
-        Context* cv_ctx = Context::getContext();
-        if(cv_ctx)
-        {
-            cl_context ctx = cv_ctx->impl->oclcontext;
-            if(ctx)
-                openCLSafeCall(clReleaseContext(ctx));
-        }
-    }
-    return TRUE;
-}
-#endif

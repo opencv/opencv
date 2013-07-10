@@ -141,7 +141,7 @@ typedef struct
     int imgoff;
     float factor;
 } detect_piramid_info;
-#ifdef WIN32
+#ifdef _MSC_VER
 #define _ALIGNED_ON(_ALIGNMENT) __declspec(align(_ALIGNMENT))
 
 typedef _ALIGNED_ON(128) struct  GpuHidHaarTreeNode

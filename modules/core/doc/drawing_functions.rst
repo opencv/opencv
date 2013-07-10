@@ -225,6 +225,8 @@ Calculates the width and height of a text string.
 
     :param text: Input text string.
 
+    :param text_string: Input text string in C format.
+
     :param fontFace: Font to use. See the  :ocv:func:`putText` for details.
 
     :param fontScale: Font scale. See the  :ocv:func:`putText`  for details.
@@ -232,6 +234,12 @@ Calculates the width and height of a text string.
     :param thickness: Thickness of lines used to render the text. See  :ocv:func:`putText`  for details.
 
     :param baseLine: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+
+    :param baseline: Output parameter - y-coordinate of the baseline relative to the bottom-most text point.
+
+    :param font: Font description in terms of old C API.
+
+    :param text_size: Output parameter - The size of a box that contains the specified text.
 
 The function ``getTextSize`` calculates and returns the size of a box that contains the specified text.
 That is, the following code renders some text, the tight box surrounding it, and the baseline: ::

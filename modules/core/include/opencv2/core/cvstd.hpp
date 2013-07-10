@@ -580,6 +580,8 @@ String::~String()
 inline
 String& String::operator=(const String& str)
 {
+    if (&str == this) return *this;
+
     deallocate();
     if (str.cstr_) CV_XADD(((int*)str.cstr_)-1, 1);
     cstr_ = str.cstr_;

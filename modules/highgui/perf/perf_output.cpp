@@ -22,10 +22,16 @@ PERF_TEST_P(VideoWriter_Writing, WriteFrame,
 {
   string filename = getDataPath(get<0>(GetParam()));
   bool isColor = get<1>(GetParam());
+  Mat image = imread(filename, 1);
+#if defined(HAVE_MSMF) && !defined(HAVE_VFW) && !defined(HAVE_FFMPEG) // VFW has greater priority
+  VideoWriter writer(cv::tempfile(".wmv"), VideoWriter::fourcc('W', 'M', 'V', '3'),
+                            25, cv::Size(image.cols, image.rows), isColor);
+#else
+  VideoWriter writer(cv::tempfile(".avi"), VideoWriter::fourcc('X', 'V', 'I', 'D'),
+                            25, cv::Size(image.cols, image.rows), isColor);
+#endif
 
-  VideoWriter writer(cv::tempfile(".avi"), VideoWriter::fourcc('X', 'V', 'I', 'D'), 25, cv::Size(640, 480), isColor);
-
-  TEST_CYCLE() { Mat image = imread(filename, 1); writer << image; }
+  TEST_CYCLE() { image = imread(filename, 1); writer << image; }
 
   bool dummy = writer.isOpened();
   SANITY_CHECK(dummy);
