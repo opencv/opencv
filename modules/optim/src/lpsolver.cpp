@@ -7,7 +7,7 @@
 namespace cv{namespace optim{
 using std::vector;
 
-const void dprintf(const char* format,...){
+static void dprintf(const char* format,...){
 #ifdef ALEX_DEBUG
 	va_list args;
 	va_start (args,format);
@@ -16,7 +16,7 @@ const void dprintf(const char* format,...){
 #endif
 }
 
-void const print_matrix(const Mat& X){
+static void print_matrix(const Mat& X){
 #ifdef ALEX_DEBUG
     dprintf("\ttype:%d vs %d,\tsize: %d-on-%d\n",X.type(),CV_64FC1,X.rows,X.cols);
     for(int i=0;i<X.rows;i++){
@@ -29,7 +29,7 @@ void const print_matrix(const Mat& X){
 #endif
 }
 
-void const print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
+static void print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
 #ifdef ALEX_DEBUG
     dprintf("\tprint simplex state\n");
 
@@ -61,12 +61,12 @@ void const print_simplex_state(const Mat& c,const Mat&b,double v,const vector<in
  it also initializes N and B and does not make any assumptions about their init values
  * @return SOLVELP_UNFEASIBLE if problem is unfeasible, 0 if feasible.
 */
-const int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
-const inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index);
+static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index);
 /**@return SOLVELP_UNBOUNDED means the problem is unbdd, SOLVELP_MULTI means multiple solutions, SOLVELP_SINGLE means one solution.
  */
-const int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
-const void swap_columns(Mat_<double>& A,int col1,int col2);
+static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B);
+static void swap_columns(Mat_<double>& A,int col1,int col2);
 
 //return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
 int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
@@ -113,7 +113,7 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     return res;
 }
 
-const int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
+static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     N.resize(c.cols);
     N[0]=0;
     for (std::vector<int>::iterator it = N.begin()+1 ; it != N.end(); ++it){
@@ -207,7 +207,7 @@ const int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<i
     return 0;
 }
 
-const int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
+static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     int count=0;
     while(1){
         dprintf("iteration #%d\n",count++);
@@ -279,7 +279,7 @@ const int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& 
     }
 }
 
-const inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
+static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
     double coef=b(leaving_index,entering_index);
     for(int i=0;i<b.cols;i++){
         if(i==entering_index){
@@ -319,7 +319,7 @@ const inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N
     B[leaving_index]=tmp;
 }
 
-const inline void swap_columns(Mat_<double>& A,int col1,int col2){
+static inline void swap_columns(Mat_<double>& A,int col1,int col2){
     for(int i=0;i<A.rows;i++){
         double tmp=A(i,col1);
         A(i,col1)=A(i,col2);
