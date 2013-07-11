@@ -442,6 +442,7 @@ temp_viz::GridWidget::GridWidget(Vec2i dimensions, Vec2d spacing, const Color &c
     // Show it as wireframe
     actor->GetProperty ()->SetRepresentationToWireframe ();
     WidgetAccessor::setProp(*this, actor);
+    setColor(color);
 }
 
 template<> temp_viz::GridWidget temp_viz::Widget::cast<temp_viz::GridWidget>()
