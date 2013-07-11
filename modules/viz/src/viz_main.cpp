@@ -351,21 +351,6 @@ void temp_viz::Viz3d::VizImpl::setBackgroundColor (const Color& color)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setPointCloudColor (const Color& color, const std::string &id)
-{
-    CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    if (am_it != cloud_actor_map_->end ())
-    {
-        vtkLODActor* actor = vtkLODActor::SafeDownCast (am_it->second.actor);
-
-        Color c = vtkcolor(color);
-        actor->GetProperty ()->SetColor (c.val);
-        actor->GetMapper ()->ScalarVisibilityOff ();
-        actor->Modified ();
-    }
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 bool temp_viz::Viz3d::VizImpl::getPointCloudRenderingProperties (int property, double &value, const std::string &id)
 {
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
@@ -468,26 +453,6 @@ bool temp_viz::Viz3d::VizImpl::setPointCloudSelected (const bool selected, const
     }
 
     return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setShapeColor (const Color& color, const std::string &id)
-{
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it != shape_actor_map_->end ())
-    {
-        vtkActor* actor = vtkActor::SafeDownCast (am_it->second);
-
-        Color c = vtkcolor(color);
-        actor->GetMapper ()->ScalarVisibilityOff ();
-        actor->GetProperty ()->SetColor (c.val);
-        actor->GetProperty ()->SetEdgeColor (c.val);
-        actor->GetProperty ()->SetAmbient (0.8);
-        actor->GetProperty ()->SetDiffuse (0.8);
-        actor->GetProperty ()->SetSpecular (0.8);
-        actor->GetProperty ()->SetLighting (0);
-        actor->Modified ();
-    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -616,28 +581,6 @@ void temp_viz::Viz3d::VizImpl::updateCamera ()
     // Update the camera parameters
 
     renderer_->Render ();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::updateShapePose (const std::string &id, const cv::Affine3f& pose)
-{
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-
-    vtkLODActor* actor;
-
-    if (am_it == shape_actor_map_->end ())
-        return (false);
-    else
-        actor = vtkLODActor::SafeDownCast (am_it->second);
-
-    vtkSmartPointer<vtkMatrix4x4> matrix = vtkSmartPointer<vtkMatrix4x4>::New ();
-
-    convertToVtkMatrix (pose.matrix, matrix);
-
-    actor->SetUserMatrix (matrix);
-    actor->Modified ();
-
-    return (true);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -913,62 +856,6 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename,
     renderer_->AddActor(actor);
 
     (*shape_actor_map_)[id] = actor;
-    return (true);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addText (const std::string &text, int xpos, int ypos, const Color& color, int fontsize, const std::string &id)
-{
-   std::string tid = id.empty() ? text : id;
-
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (tid);
-    if (am_it != shape_actor_map_->end ())
-        return std::cout << "[addText] A text with id <"<<id <<"> already exists! Please choose a different id and retry.\n" << std::endl, false;
-
-    // Create an Actor
-    vtkSmartPointer<vtkTextActor> actor = vtkSmartPointer<vtkTextActor>::New ();
-    actor->SetPosition (xpos, ypos);
-    actor->SetInput (text.c_str ());
-
-    vtkSmartPointer<vtkTextProperty> tprop = actor->GetTextProperty ();
-    tprop->SetFontSize (fontsize);
-    tprop->SetFontFamilyToArial ();
-    tprop->SetJustificationToLeft ();
-    tprop->BoldOn ();
-
-    Color c = vtkcolor(color);
-    tprop->SetColor (c.val);
-    renderer_->AddActor(actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*shape_actor_map_)[tid] = actor;
-    return (true);
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::updateText (const std::string &text, int xpos, int ypos, const Color& color, int fontsize, const std::string &id)
-{
-    std::string tid = id.empty() ? text : id;
-
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (tid);
-    if (am_it == shape_actor_map_->end ())
-        return false;
-
-    // Retrieve the Actor
-    vtkTextActor *actor = vtkTextActor::SafeDownCast (am_it->second);
-
-    actor->SetPosition (xpos, ypos);
-    actor->SetInput (text.c_str ());
-
-    vtkTextProperty* tprop = actor->GetTextProperty ();
-    tprop->SetFontSize (fontsize);
-
-    Color c = vtkcolor(color);
-    tprop->SetColor (c.val);
-
-    actor->Modified ();
-
     return (true);
 }
 

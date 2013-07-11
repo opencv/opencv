@@ -17,21 +17,6 @@ void temp_viz::Viz3d::setBackgroundColor(const Color& color)
     impl_->setBackgroundColor(color);
 }
 
-void temp_viz::Viz3d::showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose)
-{
-    impl_->showPointCloud(id, cloud, colors, pose);
-}
-
-void temp_viz::Viz3d::showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose)
-{
-    impl_->showPointCloud(id, cloud, color, pose);
-}
-
-bool temp_viz::Viz3d::addPointCloudNormals (const Mat &cloud, const Mat& normals, int level, float scale, const String& id)
-{
-    return impl_->addPointCloudNormals(cloud, normals, level, scale, id);
-}
-
 bool temp_viz::Viz3d::addPolygonMesh (const Mesh3d& mesh, const String& id)
 {
     return impl_->addPolygonMesh(mesh, Mat(), id);
@@ -45,11 +30,6 @@ bool temp_viz::Viz3d::updatePolygonMesh (const Mesh3d& mesh, const String& id)
 bool temp_viz::Viz3d::addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id)
 {
     return impl_->addPolylineFromPolygonMesh(mesh, id);
-}
-
-bool temp_viz::Viz3d::addText (const String &text, int xpos, int ypos, const Color& color, int fontsize, const String& id)
-{
-    return impl_->addText(text, xpos, ypos, color, fontsize, id);
 }
 
 bool temp_viz::Viz3d::addPolygon(const Mat& cloud, const Color& color, const String& id)
