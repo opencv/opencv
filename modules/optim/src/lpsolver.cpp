@@ -7,53 +7,46 @@
 namespace cv{namespace optim{
 using std::vector;
 
-static void dprintf(const char* format,...){
 #ifdef ALEX_DEBUG
-	va_list args;
-	va_start (args,format);
-	vprintf(format,args);
-	va_end(args);
+#define dprintf(x) printf x
+#define print_matrix(x) do{\
+    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",(x).type(),CV_64FC1,(x).rows,(x).cols);\
+    for(int i=0;i<(x).rows;i++){\
+        printf("\t[");\
+        for(int j=0;j<(x).cols;j++){\
+            printf("%g, ",(x).at<double>(i,j));\
+        }\
+        printf("]\n");\
+    }\
+}while(0)
+#define print_simplex_state(c,b,v,N,B) do{\
+    printf("\tprint simplex state\n");\
+    \
+    printf("v=%g\n",(v));\
+    \
+    printf("here c goes\n");\
+    print_matrix((c));\
+    \
+    printf("non-basic: ");\
+    for (std::vector<int>::const_iterator it = (N).begin() ; it != (N).end(); ++it){\
+        printf("%d, ",*it);\
+    }\
+    printf("\n");\
+    \
+    printf("here b goes\n");\
+    print_matrix((b));\
+    printf("basic: ");\
+    \
+    for (std::vector<int>::const_iterator it = (B).begin() ; it != (B).end(); ++it){\
+        printf("%d, ",*it);\
+    }\
+    printf("\n");\
+}while(0)
+#else
+#define dprintf(x) do {} while (0)
+#define print_matrix(x) do {} while (0)
+#define print_simplex_state(c,b,v,N,B) do {} while (0)
 #endif
-}
-
-static void print_matrix(const Mat& X){
-#ifdef ALEX_DEBUG
-    dprintf("\ttype:%d vs %d,\tsize: %d-on-%d\n",X.type(),CV_64FC1,X.rows,X.cols);
-    for(int i=0;i<X.rows;i++){
-      dprintf("\t[");
-      for(int j=0;j<X.cols;j++){
-          dprintf("%g, ",X.at<double>(i,j));
-      }
-      dprintf("]\n");
-    } 
-#endif
-}
-
-static void print_simplex_state(const Mat& c,const Mat&b,double v,const vector<int>& N,const vector<int>& B){
-#ifdef ALEX_DEBUG
-    dprintf("\tprint simplex state\n");
-
-    dprintf("v=%g\n",v);
-
-    dprintf("here c goes\n");
-    print_matrix(c);
-
-    dprintf("non-basic: ");
-    for (std::vector<int>::const_iterator it = N.begin() ; it != N.end(); ++it){
-        dprintf("%d, ",*it);
-    }
-    dprintf("\n");
-
-    dprintf("here b goes\n");
-    print_matrix(b);
-    dprintf("basic: ");
-
-    for (std::vector<int>::const_iterator it = B.begin() ; it != B.end(); ++it){
-        dprintf("%d, ",*it);
-    }
-    dprintf("\n");
-#endif
-}
 
 /**Due to technical considerations, the format of input b and c is somewhat special:
  *both b and c should be one column bigger than corresponding b and c of linear problem and the leftmost column will be used internally
@@ -70,7 +63,7 @@ static void swap_columns(Mat_<double>& A,int col1,int col2);
 
 //return codes:-2 (no_sol - unbdd),-1(no_sol - unfsbl), 0(single_sol), 1(multiple_sol=>least_l2_norm)
 int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
-    dprintf("call to solveLP\n");
+    dprintf(("call to solveLP\n"));
 
     //sanity check (size, type, no. of channels)
     CV_Assert(Func.type()==CV_64FC1);
@@ -151,56 +144,57 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 
     print_simplex_state(c,b,v,N,B);
 
-    dprintf("\tWE MAKE PIVOT\n");
+    dprintf(("\tWE MAKE PIVOT\n"));
     pivot(c,b,v,N,B,k,0);
 
     print_simplex_state(c,b,v,N,B);
 
     inner_simplex(c,b,v,N,B);
 
-    dprintf("\tAFTER INNER_SIMPLEX\n");
+    dprintf(("\tAFTER INNER_SIMPLEX\n"));
     print_simplex_state(c,b,v,N,B);
 
-    vector<int>::iterator it=std::find(B.begin(),B.end(),0);
-    if(it!=B.end()){
-        int it_offset=it-B.begin();
-        if(b(it_offset,b.cols-1)>0){
+    vector<int>::iterator iterator=std::find(B.begin(),B.end(),0);
+    if(iterator!=B.end()){
+        int iterator_offset=iterator-B.begin();
+        if(b(iterator_offset,b.cols-1)>0){
             return SOLVELP_UNFEASIBLE;
         }
-        pivot(c,b,v,N,B,it_offset,0);
+        pivot(c,b,v,N,B,iterator_offset,0);
     }
 
-    it=std::find(N.begin(),N.end(),0);
-    int it_offset=it-N.begin();
-    std::iter_swap(it,N.begin());
-    swap_columns(c,it_offset,0);
-    swap_columns(b,it_offset,0);
+    {
+        iterator=std::find(N.begin(),N.end(),0);
+        int iterator_offset=iterator-N.begin();
+        std::iter_swap(iterator,N.begin());
+        swap_columns(c,iterator_offset,0);
+        swap_columns(b,iterator_offset,0);
+    }
 
-    dprintf("after swaps\n");
+    dprintf(("after swaps\n"));
     print_simplex_state(c,b,v,N,B);
 
     //start from 1, because we ignore x_0
     c=0;
     v=0;
-    for(int i=1;i<old_c.cols;i++){
-        if((it=std::find(N.begin(),N.end(),i))!=N.end()){
-            dprintf("i=%d from nonbasic\n",i);
+    for(int I=1;I<old_c.cols;I++){
+        if((iterator=std::find(N.begin(),N.end(),I))!=N.end()){
+            dprintf(("I=%d from nonbasic\n",I));
             fflush(stdout);
-            int it_offset=it-N.begin();
-            c(0,it_offset)+=old_c(0,i);     
+            int iterator_offset=iterator-N.begin();
+            c(0,iterator_offset)+=old_c(0,I);     
             print_matrix(c);
         }else{
-            //cv::Mat_
-            dprintf("i=%d from basic\n",i);
+            dprintf(("I=%d from basic\n",I));
             fflush(stdout);
-            int it_offset=std::find(B.begin(),B.end(),i)-B.begin();
-            c-=old_c(0,i)*b.row(it_offset).colRange(0,b.cols-1);
-            v+=old_c(0,i)*b(it_offset,b.cols-1);
+            int iterator_offset=std::find(B.begin(),B.end(),I)-B.begin();
+            c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
+            v+=old_c(0,I)*b(iterator_offset,b.cols-1);
             print_matrix(c);
         }
     }
 
-    dprintf("after restore\n");
+    dprintf(("after restore\n"));
     print_simplex_state(c,b,v,N,B);
 
     N.erase(N.begin());
@@ -210,7 +204,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     int count=0;
     while(1){
-        dprintf("iteration #%d\n",count++);
+        dprintf(("iteration #%d\n",count++));
 
         static MatIterator_<double> pos_ptr;
         int e=-1,pos_ctr=0,min_var=INT_MAX;
@@ -227,7 +221,7 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
             }
         }
         if(e==-1){
-            dprintf("hello from e==-1\n");
+            dprintf(("hello from e==-1\n"));
             print_matrix(c);
             if(all_nonzero==true){
                 return SOLVELP_SINGLE;
@@ -259,33 +253,33 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         if(l==-1){
             return SOLVELP_UNBOUNDED;
         }
-        dprintf("the tightest constraint is in row %d with %g\n",l,min);
+        dprintf(("the tightest constraint is in row %d with %g\n",l,min));
 
         pivot(c,b,v,N,B,l,e);
 
-        dprintf("objective, v=%g\n",v);
+        dprintf(("objective, v=%g\n",v));
         print_matrix(c);
-        dprintf("constraints\n");
+        dprintf(("constraints\n"));
         print_matrix(b);
-        dprintf("non-basic: ");
+        dprintf(("non-basic: "));
         for (std::vector<int>::iterator it = N.begin() ; it != N.end(); ++it){
-            dprintf("%d, ",*it);
+            dprintf(("%d, ",*it));
         }
-        dprintf("\nbasic: ");
+        dprintf(("\nbasic: "));
         for (std::vector<int>::iterator it = B.begin() ; it != B.end(); ++it){
-            dprintf("%d, ",*it);
+            dprintf(("%d, ",*it));
         }
-        dprintf("\n");
+        dprintf(("\n"));
     }
 }
 
 static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, int leaving_index,int entering_index){
-    double coef=b(leaving_index,entering_index);
+    double Coef=b(leaving_index,entering_index);
     for(int i=0;i<b.cols;i++){
         if(i==entering_index){
-            b(leaving_index,i)=1/coef;
+            b(leaving_index,i)=1/Coef;
         }else{
-            b(leaving_index,i)/=coef;
+            b(leaving_index,i)/=Coef;
         }
     }
 
@@ -303,16 +297,16 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
     }
 
     //objective function
-    coef=c(0,entering_index);
+    Coef=c(0,entering_index);
     for(int i=0;i<(b.cols-1);i++){
         if(i==entering_index){
-            c(0,i)=-coef*b(leaving_index,i);
+            c(0,i)=-Coef*b(leaving_index,i);
         }else{
-            c(0,i)-=coef*b(leaving_index,i);
+            c(0,i)-=Coef*b(leaving_index,i);
         }
     }
-    dprintf("v was %g\n",v);
-    v+=coef*b(leaving_index,b.cols-1);
+    dprintf(("v was %g\n",v));
+    v+=Coef*b(leaving_index,b.cols-1);
     
     int tmp=N[entering_index];
     N[entering_index]=B[leaving_index];
