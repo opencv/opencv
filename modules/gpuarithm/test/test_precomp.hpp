@@ -51,6 +51,8 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <functional>
+
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
