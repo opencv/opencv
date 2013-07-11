@@ -2,7 +2,7 @@
 
 #include <opencv2/core/cvdef.h>
 #include <vtkSmartPointer.h>
-#include <vtkLODActor.h>
+#include <vtkProp.h>
 
 namespace temp_viz
 {
@@ -12,6 +12,7 @@ namespace temp_viz
     //It is indended for those users who want to develop own widgets system using VTK library API.
     struct CV_EXPORTS WidgetAccessor
     {
-        static vtkSmartPointer<vtkProp> getActor(const Widget &widget);
+        static vtkSmartPointer<vtkProp> getProp(const Widget &widget);
+        static void setProp(Widget &widget, vtkSmartPointer<vtkProp> prop);
     };
 }

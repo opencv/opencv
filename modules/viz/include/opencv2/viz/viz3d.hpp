@@ -26,16 +26,11 @@ namespace temp_viz
 
         void setBackgroundColor(const Color& color = Color::black());
 
-        void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
-        void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
-
-        bool addPointCloudNormals (const Mat &cloud, const Mat& normals, int level = 100, float scale = 0.02f, const String& id = "cloud");
         bool addPolygonMesh (const Mesh3d& mesh, const String& id = "polygon");
         bool updatePolygonMesh (const Mesh3d& mesh, const String& id = "polygon");
 
         bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
 
-        bool addText (const String &text, int xpos, int ypos, const Color& color, int fontsize = 10, const String& id = "");
         bool addPolygon(const Mat& cloud, const Color& color, const String& id = "polygon");
 
         void spin ();
@@ -47,10 +42,11 @@ namespace temp_viz
         bool wasStopped() const;
         
         void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
-        bool removeWidget(const String &id);
+        void removeWidget(const String &id);
+        Widget getWidget(const String &id) const;
         
-        bool setWidgetPose(const String &id, const Affine3f &pose);
-        bool updateWidgetPose(const String &id, const Affine3f &pose);
+        void setWidgetPose(const String &id, const Affine3f &pose);
+        void updateWidgetPose(const String &id, const Affine3f &pose);
         Affine3f getWidgetPose(const String &id) const;
     private:
         Viz3d(const Viz3d&);

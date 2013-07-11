@@ -52,36 +52,15 @@ public:
 
     void setBackgroundColor (const Color& color);
 
-    bool addText (const String &text, int xpos, int ypos, const Color& color, int fontsize = 10, const String& id = "");
-    bool updateText (const String &text, int xpos, int ypos, const Color& color, int fontsize = 10, const String& id = "");
-
-    /** \brief Set the pose of an existing shape. Returns false if the shape doesn't exist, true if the pose was succesfully updated. */
-    bool updateShapePose (const String& id, const Affine3f& pose);
-
-    bool addText3D (const String &text, const Point3f &position, const Color& color, double textScale = 1.0, const String& id = "");
-
-    bool addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level = 100, float scale = 0.02f, const String& id = "cloud");
-
-    /** \brief If the id exists, updates the point cloud; otherwise, adds a new point cloud to the scene
-      * \param[in] id a variable to identify the point cloud
-      * \param[in] cloud cloud input in x,y,z coordinates
-      * \param[in] colors color input in the same order of the points or single uniform color
-      * \param[in] pose transform to be applied on the point cloud
-      */
-    void showPointCloud(const String& id, InputArray cloud, InputArray colors, const Affine3f& pose = Affine3f::Identity());
-    void showPointCloud(const String& id, InputArray cloud, const Color& color, const Affine3f& pose = Affine3f::Identity());
-
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
 
     bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
 
-    void setPointCloudColor (const Color& color, const String& id = "cloud");
     bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
     bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
 
     bool setShapeRenderingProperties (int property, double value, const String& id);
-    void setShapeColor (const Color& color, const String& id);
 
     /** \brief Set whether the point cloud is selected or not
          *  \param[in] selected whether the cloud is selected or not (true = selected)
@@ -200,10 +179,11 @@ public:
     void setSize (int xw, int yw);
     
     void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
-    bool removeWidget(const String &id);
+    void removeWidget(const String &id);
+    Widget getWidget(const String &id) const;
     
-    bool setWidgetPose(const String &id, const Affine3f &pose);
-    bool updateWidgetPose(const String &id, const Affine3f &pose);
+    void setWidgetPose(const String &id, const Affine3f &pose);
+    void updateWidgetPose(const String &id, const Affine3f &pose);
     Affine3f getWidgetPose(const String &id) const;
     
     void all_data();

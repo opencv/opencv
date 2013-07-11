@@ -36,347 +36,6 @@ void temp_viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 void temp_viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition (x, y); }
 void temp_viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
-void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _cloud, InputArray _colors, const Affine3f& pose)
-{
-    Mat cloud = _cloud.getMat();
-    Mat colors = _colors.getMat();
-    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
-    CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
-        
-    vtkSmartPointer<vtkPolyData> polydata;
-    vtkSmartPointer<vtkCellArray> vertices;
-    vtkSmartPointer<vtkPoints> points;
-    vtkSmartPointer<vtkIdTypeArray> initcells;
-    vtkIdType nr_points = cloud.total();
-
-    // If the cloud already exists, update otherwise create new one
-    CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool exist = am_it == cloud_actor_map_->end();
-    if (exist)
-    {
-        // Add as new cloud
-        allocVtkPolyData(polydata);
-        //polydata = vtkSmartPointer<vtkPolyData>::New ();
-        vertices = vtkSmartPointer<vtkCellArray>::New ();
-        polydata->SetVerts (vertices);
-
-        points = polydata->GetPoints ();
-
-        if (!points)
-        {
-            points = vtkSmartPointer<vtkPoints>::New ();
-            if (cloud.depth() == CV_32F)
-                points->SetDataTypeToFloat();
-            else if (cloud.depth() == CV_64F)
-                points->SetDataTypeToDouble();
-            polydata->SetPoints (points);
-        }
-        points->SetNumberOfPoints (nr_points);
-    }
-    else
-    {
-        // Update the cloud
-        // Get the current poly data
-        polydata = reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->GetInput ();
-        vertices = polydata->GetVerts ();
-        points = polydata->GetPoints ();
-        // Update the point data type based on the cloud
-        if (cloud.depth() == CV_32F)
-            points->SetDataTypeToFloat ();
-        else if (cloud.depth() == CV_64F)
-            points->SetDataTypeToDouble ();
-
-        points->SetNumberOfPoints (nr_points);
-    }
-
-    if (cloud.depth() == CV_32F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3f *data_beg = vtkpoints_data<float>(points);
-        Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
-        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
-        nr_points = data_end - data_beg;
-
-    }
-    else if (cloud.depth() == CV_64F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3d *data_beg = vtkpoints_data<double>(points);
-        Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
-        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
-        nr_points = data_end - data_beg;
-    }
-
-    points->SetNumberOfPoints (nr_points);
-
-    vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
-
-    if (exist)
-        updateCells (cells, initcells, nr_points);
-    else
-        updateCells (cells, am_it->second.cells, nr_points);
-
-    // Set the cells and the vertices
-    vertices->SetCells (nr_points, cells);
-
-    // Get a random color
-    Vec3b* colors_data = new Vec3b[nr_points];
-    NanFilter::copy(colors, colors_data, cloud);
-
-    vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
-    scalars->SetNumberOfComponents (3);
-    scalars->SetNumberOfTuples (nr_points);
-    scalars->SetArray (colors_data->val, 3 * nr_points, 0);
-
-    // Assign the colors
-    Vec2d minmax;
-    polydata->GetPointData ()->SetScalars (scalars);
-    scalars->GetRange (minmax.val);
-
-    // If this is the new point cloud, a new actor is created
-    if (exist)
-    {
-        vtkSmartPointer<vtkLODActor> actor;
-        createActorFromVTKDataSet (polydata, actor);
-
-        actor->GetMapper ()->SetScalarRange (minmax.val);
-
-        // Add it to all renderers
-        renderer_->AddActor (actor);
-
-        // Save the pointer/ID pair to the global actor map
-        (*cloud_actor_map_)[id].actor = actor;
-        (*cloud_actor_map_)[id].cells = initcells;
-
-        const Eigen::Vector4f sensor_origin = Eigen::Vector4f::Zero ();
-        const Eigen::Quaternionf sensor_orientation = Eigen::Quaternionf::Identity ();
-
-        // Save the viewpoint transformation matrix to the global actor map
-        vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
-        convertToVtkMatrix (sensor_origin, sensor_orientation, transformation);
-
-        (*cloud_actor_map_)[id].viewpoint_transformation_ = transformation;
-    }
-    else
-    {
-        // Update the mapper
-        reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->SetInput (polydata);
-        am_it->second.actor->GetMapper ()->ScalarVisibilityOn();
-        am_it->second.actor->Modified ();
-    }
-}
-
-void temp_viz::Viz3d::VizImpl::showPointCloud(const String& id, InputArray _cloud, const Color& color, const Affine3f& pose)
-{
-    Mat cloud = _cloud.getMat();
-    CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
-        
-    vtkSmartPointer<vtkPolyData> polydata;
-    vtkSmartPointer<vtkCellArray> vertices;
-    vtkSmartPointer<vtkPoints> points;
-    vtkSmartPointer<vtkIdTypeArray> initcells;
-    vtkIdType nr_points = cloud.total();
-
-    // If the cloud already exists, update otherwise create new one
-    CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    bool exist = am_it == cloud_actor_map_->end();
-    if (exist)
-    {
-        // Add as new cloud
-        allocVtkPolyData(polydata);
-        //polydata = vtkSmartPointer<vtkPolyData>::New ();
-        vertices = vtkSmartPointer<vtkCellArray>::New ();
-        polydata->SetVerts (vertices);
-
-        points = polydata->GetPoints ();
-
-        if (!points)
-        {
-            points = vtkSmartPointer<vtkPoints>::New ();
-            if (cloud.depth() == CV_32F)
-                points->SetDataTypeToFloat();
-            else if (cloud.depth() == CV_64F)
-                points->SetDataTypeToDouble();
-            polydata->SetPoints (points);
-        }
-        points->SetNumberOfPoints (nr_points);
-    }
-    else
-    {
-        // Update the cloud
-        // Get the current poly data
-        polydata = reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->GetInput ();
-        vertices = polydata->GetVerts ();
-        points = polydata->GetPoints ();
-        // Update the point data type based on the cloud
-        if (cloud.depth() == CV_32F)
-            points->SetDataTypeToFloat ();
-        else if (cloud.depth() == CV_64F)
-            points->SetDataTypeToDouble ();
-
-        points->SetNumberOfPoints (nr_points);
-    }
-
-    if (cloud.depth() == CV_32F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3f *data_beg = vtkpoints_data<float>(points);
-        Vec3f *data_end = NanFilter::copy(cloud, data_beg, cloud);
-        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
-        nr_points = data_end - data_beg;
-
-    }
-    else if (cloud.depth() == CV_64F)
-    {
-        // Get a pointer to the beginning of the data array
-        Vec3d *data_beg = vtkpoints_data<double>(points);
-        Vec3d *data_end = NanFilter::copy(cloud, data_beg, cloud);
-        std::transform(data_beg, data_end, data_beg, ApplyAffine(pose));
-        nr_points = data_end - data_beg;
-    }
-
-    points->SetNumberOfPoints (nr_points);
-
-    vtkSmartPointer<vtkIdTypeArray> cells = vertices->GetData ();
-
-    if (exist)
-        updateCells (cells, initcells, nr_points);
-    else
-        updateCells (cells, am_it->second.cells, nr_points);
-
-    // Set the cells and the vertices
-    vertices->SetCells (nr_points, cells);
-
-    // Get a random color
-    Color c = vtkcolor(color);
-    polydata->GetPointData ()->SetScalars (0);
-
-    // If this is the new point cloud, a new actor is created
-    if (exist)
-    {
-        vtkSmartPointer<vtkLODActor> actor;
-        createActorFromVTKDataSet (polydata, actor, false);
-        
-        actor->GetProperty ()->SetColor(c.val);
-
-        // Add it to all renderers
-        renderer_->AddActor (actor);
-
-        // Save the pointer/ID pair to the global actor map
-        (*cloud_actor_map_)[id].actor = actor;
-        (*cloud_actor_map_)[id].cells = initcells;
-
-        const Eigen::Vector4f sensor_origin = Eigen::Vector4f::Zero ();
-        const Eigen::Quaternionf sensor_orientation = Eigen::Quaternionf::Identity ();
-
-        // Save the viewpoint transformation matrix to the global actor map
-        vtkSmartPointer<vtkMatrix4x4> transformation = vtkSmartPointer<vtkMatrix4x4>::New();
-        convertToVtkMatrix (sensor_origin, sensor_orientation, transformation);
-
-        (*cloud_actor_map_)[id].viewpoint_transformation_ = transformation;
-    }
-    else
-    {
-        // Update the mapper
-        reinterpret_cast<vtkPolyDataMapper*>(am_it->second.actor->GetMapper ())->SetInput (polydata);
-        am_it->second.actor->GetProperty ()->SetColor(c.val);
-        am_it->second.actor->GetMapper ()->ScalarVisibilityOff();
-        am_it->second.actor->Modified ();
-    }
-}
-
-bool temp_viz::Viz3d::VizImpl::addPointCloudNormals (const cv::Mat &cloud, const cv::Mat& normals, int level, float scale, const std::string &id)
-{
-    CV_Assert(cloud.size() == normals.size() && cloud.type() == CV_32FC3 && normals.type() == CV_32FC3);
-
-    if (cloud_actor_map_->find (id) != cloud_actor_map_->end ())
-        return false;
-
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
-
-    points->SetDataTypeToFloat ();
-    vtkSmartPointer<vtkFloatArray> data = vtkSmartPointer<vtkFloatArray>::New ();
-    data->SetNumberOfComponents (3);
-
-    vtkIdType nr_normals = 0;
-    float* pts = 0;
-
-    // If the cloud is organized, then distribute the normal step in both directions
-    if (cloud.cols > 1 && cloud.rows > 1)
-    {
-        vtkIdType point_step = static_cast<vtkIdType> (sqrt (double (level)));
-        nr_normals = (static_cast<vtkIdType> ((cloud.cols - 1)/ point_step) + 1) *
-                (static_cast<vtkIdType> ((cloud.rows - 1) / point_step) + 1);
-        pts = new float[2 * nr_normals * 3];
-
-        vtkIdType cell_count = 0;
-        for (vtkIdType y = 0; y < cloud.rows; y += point_step)
-            for (vtkIdType x = 0; x < cloud.cols; x += point_step)
-            {
-                cv::Point3f p = cloud.at<cv::Point3f>(y, x);
-                cv::Point3f n = normals.at<cv::Point3f>(y, x) * scale;
-
-                pts[2 * cell_count * 3 + 0] = p.x;
-                pts[2 * cell_count * 3 + 1] = p.y;
-                pts[2 * cell_count * 3 + 2] = p.z;
-                pts[2 * cell_count * 3 + 3] = p.x + n.x;
-                pts[2 * cell_count * 3 + 4] = p.y + n.y;
-                pts[2 * cell_count * 3 + 5] = p.z + n.z;
-
-                lines->InsertNextCell (2);
-                lines->InsertCellPoint (2 * cell_count);
-                lines->InsertCellPoint (2 * cell_count + 1);
-                cell_count++;
-            }
-    }
-    else
-    {
-        nr_normals = (cloud.size().area() - 1) / level + 1 ;
-        pts = new float[2 * nr_normals * 3];
-
-        for (vtkIdType i = 0, j = 0; j < nr_normals; j++, i = j * level)
-        {
-            cv::Point3f p = cloud.ptr<cv::Point3f>()[i];
-            cv::Point3f n = normals.ptr<cv::Point3f>()[i] * scale;
-
-            pts[2 * j * 3 + 0] = p.x;
-            pts[2 * j * 3 + 1] = p.y;
-            pts[2 * j * 3 + 2] = p.z;
-            pts[2 * j * 3 + 3] = p.x + n.x;
-            pts[2 * j * 3 + 4] = p.y + n.y;
-            pts[2 * j * 3 + 5] = p.z + n.z;
-
-            lines->InsertNextCell (2);
-            lines->InsertCellPoint (2 * j);
-            lines->InsertCellPoint (2 * j + 1);
-        }
-    }
-
-    data->SetArray (&pts[0], 2 * nr_normals * 3, 0);
-    points->SetData (data);
-
-    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-    polyData->SetPoints (points);
-    polyData->SetLines (lines);
-
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
-    mapper->SetInput (polyData);
-    mapper->SetColorModeToMapScalars();
-    mapper->SetScalarModeToUsePointData();
-
-    // create actor
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New ();
-    actor->SetMapper (mapper);
-
-    // Add it to all renderers
-    renderer_->AddActor (actor);
-
-    // Save the pointer/ID pair to the global actor map
-    (*cloud_actor_map_)[id].actor = actor;
-    return (true);
-}
-
 bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
@@ -742,50 +401,6 @@ bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3
     return (true);
 }
 
-//////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addText3D (const std::string &text, const cv::Point3f& position, const Color& color, double textScale, const std::string &id)
-{
-    std::string tid;
-    if (id.empty ())
-        tid = text;
-    else
-        tid = id;
-
-    // Check to see if this ID entry already exists (has it been already added to the visualizer?)
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (tid);
-    if (am_it != shape_actor_map_->end ())
-        return std::cout << "[addText3d] A text with id <" << tid << "> already exists! Please choose a different id and retry." << std::endl, false;
-
-    vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New ();
-    textSource->SetText (text.c_str());
-    textSource->Update ();
-
-    vtkSmartPointer<vtkPolyDataMapper> textMapper = vtkSmartPointer<vtkPolyDataMapper>::New ();
-    textMapper->SetInputConnection (textSource->GetOutputPort ());
-
-    // Since each follower may follow a different camera, we need different followers
-    vtkRenderer* renderer = renderer_;
-
-    vtkSmartPointer<vtkFollower> textActor = vtkSmartPointer<vtkFollower>::New ();
-    textActor->SetMapper (textMapper);
-    textActor->SetPosition (position.x, position.y, position.z);
-    textActor->SetScale (textScale);
-
-    Color c = vtkcolor(color);
-    textActor->GetProperty ()->SetColor (c.val);
-    textActor->SetCamera (renderer->GetActiveCamera ());
-
-    renderer->AddActor (textActor);
-    renderer->Render ();
-
-    // Save the pointer/ID pair to the global actor map. If we are saving multiple vtkFollowers
-    // for multiple viewport
-    (*shape_actor_map_)[tid] = textActor;
-
-
-    return (true);
-}
-
 bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& color, const std::string &id)
 {
     CV_Assert(cloud.type() == CV_32FC3 && cloud.rows == 1);
@@ -874,72 +489,80 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
         removeActorFromRenderer(wam_itr->second.actor);
     }
     // Get the actor and set the user matrix
-    vtkLODActor *actor;
-    if (actor = vtkLODActor::SafeDownCast(WidgetAccessor::getActor(widget)))
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(widget));
+    if (actor)
     {
+        // If the actor is 3D, apply pose
         vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
         actor->SetUserMatrix (matrix);
         actor->Modified();
     }
-    renderer_->AddActor(WidgetAccessor::getActor(widget));
-    (*widget_actor_map_)[id].actor = WidgetAccessor::getActor(widget);
+    // If the actor is a vtkFollower, then it should always face the camera
+    vtkFollower *follower = vtkFollower::SafeDownCast(actor);
+    if (follower)
+    {
+        follower->SetCamera(renderer_->GetActiveCamera());
+    }
+    
+    renderer_->AddActor(WidgetAccessor::getProp(widget));
+    (*widget_actor_map_)[id].actor = WidgetAccessor::getProp(widget);
 }
 
-bool temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
+void temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
-
-    if (!removeActorFromRenderer (wam_itr->second.actor))
-        return false;
-    
+    CV_Assert(removeActorFromRenderer (wam_itr->second.actor));
     widget_actor_map_->erase(wam_itr);
-    return true;
 }
 
-bool temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
+temp_viz::Widget temp_viz::Viz3d::VizImpl::getWidget(const String &id) const
+{
+    WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
+    bool exists = wam_itr != widget_actor_map_->end();
+    CV_Assert(exists);
+    
+    Widget widget;
+    WidgetAccessor::setProp(widget, wam_itr->second.actor);
+    return widget;
+}
+
+void temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
-    {
-        vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
-        return true;
-    }
-    return false;
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
 }
 
-bool temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
+void temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    if (!matrix)
     {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-        if (!matrix)
-        {
-            setWidgetPose(id, pose);
-            return true;
-        }
-        Matx44f matrix_cv = convertToMatx(matrix);
-
-        Affine3f updated_pose = pose * Affine3f(matrix_cv);
-        matrix = convertToVtkMatrix(updated_pose.matrix);
-
-        actor->SetUserMatrix (matrix);
-        actor->Modified ();
-        return true;
+        setWidgetPose(id, pose);
+        return ;
     }
-    return false;
+    Matx44f matrix_cv = convertToMatx(matrix);
+    Affine3f updated_pose = pose * Affine3f(matrix_cv);
+    matrix = convertToVtkMatrix(updated_pose.matrix);
+
+    actor->SetUserMatrix (matrix);
+    actor->Modified ();
 }
 
 temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
@@ -948,12 +571,10 @@ temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) con
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
     
-    vtkLODActor *actor;
-    if ((actor = vtkLODActor::SafeDownCast(wam_itr->second.actor)))
-    {
-        vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
-        Matx44f matrix_cv = convertToMatx(matrix);
-        return Affine3f(matrix_cv);
-    }
-    return Affine3f();
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    CV_Assert(actor);
+    
+    vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
+    Matx44f matrix_cv = convertToMatx(matrix);
+    return Affine3f(matrix_cv);
 }
