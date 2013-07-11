@@ -8,28 +8,14 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4189 /wd4505 -Wundef -Wmissing-declarati
 
 ocv_add_module(cudev)
 
+ocv_module_include_directories(opencv_core)
+
 file(GLOB_RECURSE lib_hdrs "include/opencv2/*.hpp")
+file(GLOB         lib_srcs "src/*.cpp")
 
-add_custom_target(${the_module} SOURCES ${lib_hdrs})
+ocv_set_module_sources(HEADERS ${lib_hdrs} SOURCES ${lib_srcs})
 
-if(ENABLE_SOLUTION_FOLDERS)
-  set_target_properties(${the_module} PROPERTIES FOLDER "modules")
-endif()
-
-foreach(var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEBUG)
-  # we remove /EHa as it generates warnings under windows
-  string(REPLACE "/EHa" "" ${var} "${${var}}")
-
-  # we remove -ggdb3 flag as it leads to preprocessor errors when compiling CUDA files (CUDA 4.1)
-  string(REPLACE "-ggdb3" "" ${var} "${${var}}")
-
-  # we remove -Wsign-promo as it generates warnings under linux
-  string(REPLACE "-Wsign-promo" "" ${var} "${${var}}")
-
-  # we remove -fvisibility-inlines-hidden because it's used for C++ compiler
-  # but NVCC uses C compiler by default
-  string(REPLACE "-fvisibility-inlines-hidden" "" ${var} "${${var}}")
-endforeach()
+ocv_create_module()
 
 if(BUILD_TESTS)
   add_subdirectory(test)
