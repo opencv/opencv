@@ -1,26 +1,5 @@
 #include "precomp.hpp"
 
-namespace temp_viz
-{
-    template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-
-    template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
-    {
-        CV_Assert(points->GetDataType() == VTK_FLOAT);
-        vtkDataArray *data = points->GetData();
-        float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
-        return reinterpret_cast<Vec3f*>(pointer);
-    }
-
-    template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
-    {
-        CV_Assert(points->GetDataType() == VTK_DOUBLE);
-        vtkDataArray *data = points->GetData();
-        double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
-        return reinterpret_cast<Vec3d*>(pointer);
-    }
-}
-
 void temp_viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {
     if (window_)

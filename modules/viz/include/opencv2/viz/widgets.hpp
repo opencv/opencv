@@ -142,8 +142,8 @@ namespace temp_viz
     class CV_EXPORTS CloudWidget : public Widget3D
     {
     public:
-        CloudWidget(InputArray _cloud, InputArray _colors);
-        CloudWidget(InputArray _cloud, const Color &color = Color::white());
+        CloudWidget(InputArray cloud, InputArray colors);
+        CloudWidget(InputArray cloud, const Color &color = Color::white());
         
     private:
         struct CreateCloudWidget;
@@ -152,7 +152,7 @@ namespace temp_viz
     class CV_EXPORTS CloudNormalsWidget : public Widget3D
     {
     public:
-        CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
+        CloudNormalsWidget(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
 
     private:
         struct ApplyCloudNormals;

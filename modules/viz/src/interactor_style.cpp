@@ -78,7 +78,7 @@ void temp_viz::InteractorStyle::OnChar ()
     else if (key.find ("XF86ZoomOut") != std::string::npos)
         zoomOut ();
 
-    bool keymod = false;
+    int keymod = false;
     switch (modifier_)
     {
     case KB_MOD_ALT:

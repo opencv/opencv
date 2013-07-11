@@ -28,7 +28,7 @@ namespace temp_viz
           * \author Radu B. Rusu
           * \ingroup visualization
           */
-        class CV_EXPORTS InteractorStyle : public vtkInteractorStyleTrackballCamera
+        class InteractorStyle : public vtkInteractorStyleTrackballCamera
         {
         public:
 

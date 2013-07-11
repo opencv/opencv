@@ -12,7 +12,7 @@
 namespace temp_viz
 {
 
-class CV_EXPORTS Viz3d::VizImpl
+struct Viz3d::VizImpl
 {
 public:
     typedef cv::Ptr<VizImpl> Ptr;
@@ -366,6 +366,10 @@ struct ApplyAffine
         result[2] = (_Tp)(m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11]);
         return result;
     }
+
+private:
+    ApplyAffine(const ApplyAffine&);
+    ApplyAffine& operator=(const ApplyAffine&);
 };
 
 }
