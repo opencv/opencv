@@ -64,9 +64,6 @@
 /* libpng/png.h needs to be included */
 #cmakedefine  HAVE_LIBPNG_PNG_H
 
-/* Define to 1 if you have the `lrint' function. */
-#cmakedefine  HAVE_LRINT 1
-
 /* PNG codec */
 #cmakedefine  HAVE_PNG
 
