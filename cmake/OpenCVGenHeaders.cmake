@@ -10,6 +10,7 @@ set(PACKAGE_VERSION "${OPENCV_VERSION}")
 
 # platform-specific config file
 configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/cvconfig.h.cmake" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
+install(FILES "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH}/opencv2 COMPONENT main)
 
 # ----------------------------------------------------------------------------
 #  opencv_modules.hpp based on actual modules list
