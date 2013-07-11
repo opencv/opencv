@@ -204,7 +204,8 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B){
     int count=0;
     while(1){
-        dprintf(("iteration #%d\n",count++));
+        dprintf(("iteration #%d\n",count));
+        count++;
 
         static MatIterator_<double> pos_ptr;
         int e=-1,pos_ctr=0,min_var=INT_MAX;
@@ -234,7 +235,6 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         min_var=INT_MAX;
         double min=DBL_MAX;
         int row_it=0;
-        double ite=0;
         MatIterator_<double> min_row_ptr=b.begin();
         for(MatIterator_<double> it=b.begin();it!=b.end();it+=b.cols,row_it++){
             double myite=0;
@@ -244,7 +244,6 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
                 if(val<min || (val==min && B[row_it]<min_var)){
                     min_var=B[row_it];
                     min_row_ptr=it;
-                    ite=myite;
                     min=val;
                     l=row_it;
                 }
