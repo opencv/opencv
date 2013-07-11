@@ -112,23 +112,3 @@ TEST(Optim_LpSolver, regression_cycling){
     //ASSERT_EQ(res,1);
     }
 }
-
-//TODO
-// get optimal solution from initial (0,0,...,0) - DONE
-// milestone: pass first test (wo initial solution) - DONE
-    //
-    // ??how_check_multiple_solutions & pass_test - DONE
-    // Blands_rule - DONE
-    // (assert, assign) - DONE
-    //
-    // (&1tests on cycling)
-    // make_more_clear
-    // wrap in OOP
-    //
-    // non-trivial tests
-    // pull-request
-    //
-    // study hill and other algos
-    //
-// ??how to get smallest l2 norm
-// FUTURE: compress&debug-> more_tests(Cormen) -> readNumRecipes-> fast&stable || hill_climbing

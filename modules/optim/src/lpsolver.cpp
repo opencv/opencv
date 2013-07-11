@@ -16,16 +16,6 @@ const void dprintf(const char* format,...){
 #endif
 }
 
-double LPSolver::solve(const Function& F,const Constraints& C, OutputArray result)const{
-    return 0.0;
-}
-
-double LPSolver::LPFunction::calc(InputArray args)const{
-    dprintf("call to LPFunction::calc()\n");
-    return 0.0;
-}
-
-
 void const print_matrix(const Mat& X){
 #ifdef ALEX_DEBUG
     dprintf("\ttype:%d vs %d,\tsize: %d-on-%d\n",X.type(),CV_64FC1,X.rows,X.cols);
@@ -337,7 +327,3 @@ const inline void swap_columns(Mat_<double>& A,int col1,int col2){
     }
 }
 }}
-/*FIXME (possible optimizations)
- * use iterator-style (as in ddc0010e7... commit version of this file)
- * remove calls to pivot inside the while-loops
- */
