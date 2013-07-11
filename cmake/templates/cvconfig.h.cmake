@@ -53,7 +53,7 @@
 #cmakedefine  HAVE_GTK
 
 /* OpenEXR codec */
-#cmakedefine  HAVE_ILMIMF
+#cmakedefine  HAVE_OPENEXR
 
 /* Apple ImageIO Framework */
 #cmakedefine  HAVE_IMAGEIO
@@ -72,9 +72,6 @@
 
 /* PNG codec */
 #cmakedefine  HAVE_PNG
-
-/* png.h needs to be included */
-#cmakedefine  HAVE_PNG_H
 
 /* QuickTime video libraries */
 #cmakedefine  HAVE_QUICKTIME
