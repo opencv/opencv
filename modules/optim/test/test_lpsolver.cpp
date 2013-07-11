@@ -1,17 +1,17 @@
 #include "test_precomp.hpp"
-#include "opencv2/optim.hpp"
+#include <iostream>
 
 TEST(Optim_LpSolver, regression_basic){
     cv::Mat A,B,z,etalon_z;
 
     if(true){
     //cormen's example #1
-    A=(cv::Mat_<double>(1,3)<<3,1,2);
+    A=(cv::Mat_<double>(3,1)<<3,1,2);
     B=(cv::Mat_<double>(3,4)<<1,1,3,30,2,2,5,24,4,1,2,36);
     std::cout<<"here A goes\n"<<A<<"\n";
     cv::optim::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
-    etalon_z=(cv::Mat_<double>(1,3)<<8,4,0);
+    etalon_z=(cv::Mat_<double>(3,1)<<8,4,0);
     ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
     }
 
@@ -22,7 +22,7 @@ TEST(Optim_LpSolver, regression_basic){
     std::cout<<"here A goes\n"<<A<<"\n";
     cv::optim::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
-    etalon_z=(cv::Mat_<double>(1,2)<<20,0);
+    etalon_z=(cv::Mat_<double>(2,1)<<20,0);
     ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
     }
 
@@ -33,7 +33,7 @@ TEST(Optim_LpSolver, regression_basic){
     std::cout<<"here A goes\n"<<A<<"\n";
     cv::optim::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
-    etalon_z=(cv::Mat_<double>(1,2)<<1,0);
+    etalon_z=(cv::Mat_<double>(2,1)<<1,0);
     ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
     }
 }
@@ -48,7 +48,7 @@ TEST(Optim_LpSolver, regression_init_unfeasible){
     std::cout<<"here A goes\n"<<A<<"\n";
     cv::optim::solveLP(A,B,z);
     std::cout<<"here z goes\n"<<z<<"\n";
-    etalon_z=(cv::Mat_<double>(1,3)<<1250,1000,0);
+    etalon_z=(cv::Mat_<double>(3,1)<<1250,1000,0);
     ASSERT_EQ(cv::countNonZero(z!=etalon_z),0);
     }
 }
@@ -71,7 +71,7 @@ TEST(Optim_LpSolver, regression_multiple_solutions){
 
     if(true){
     //trivial example with multiple solutions
-    A=(cv::Mat_<double>(1,2)<<1,1);
+    A=(cv::Mat_<double>(2,1)<<1,1);
     B=(cv::Mat_<double>(1,3)<<1,1,1);
     std::cout<<"here A goes\n"<<A<<"\n";
     int res=cv::optim::solveLP(A,B,z);
@@ -85,7 +85,7 @@ TEST(Optim_LpSolver, regression_multiple_solutions){
     if(false){
     //cormen's example from chapter about initialize_simplex
     //online solver told it has inf many solutions, but I'm not sure
-    A=(cv::Mat_<double>(1,2)<<2,-1);
+    A=(cv::Mat_<double>(2,1)<<2,-1);
     B=(cv::Mat_<double>(2,3)<<2,-1,2,1,-5,-4);
     std::cout<<"here A goes\n"<<A<<"\n";
     int res=cv::optim::solveLP(A,B,z);
@@ -101,7 +101,7 @@ TEST(Optim_LpSolver, regression_cycling){
 
     if(true){
     //example with cycling from http://people.orie.cornell.edu/miketodd/or630/SimplexCyclingExample.pdf
-    A=(cv::Mat_<double>(1,4)<<10,-57,-9,-24);
+    A=(cv::Mat_<double>(4,1)<<10,-57,-9,-24);
     B=(cv::Mat_<double>(3,5)<<0.5,-5.5,-2.5,9,0,0.5,-1.5,-0.5,1,0,1,0,0,0,1);
     std::cout<<"here A goes\n"<<A<<"\n";
     int res=cv::optim::solveLP(A,B,z);

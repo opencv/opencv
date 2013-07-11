@@ -9,39 +9,39 @@ using std::vector;
 
 #ifdef ALEX_DEBUG
 #define dprintf(x) printf x
-#define print_matrix(x) do{\
-    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",(x).type(),CV_64FC1,(x).rows,(x).cols);\
-    for(int i=0;i<(x).rows;i++){\
-        printf("\t[");\
-        for(int j=0;j<(x).cols;j++){\
-            printf("%g, ",(x).at<double>(i,j));\
-        }\
-        printf("]\n");\
-    }\
-}while(0)
-#define print_simplex_state(c,b,v,N,B) do{\
-    printf("\tprint simplex state\n");\
-    \
-    printf("v=%g\n",(v));\
-    \
-    printf("here c goes\n");\
-    print_matrix((c));\
-    \
-    printf("non-basic: ");\
-    for (std::vector<int>::const_iterator it = (N).begin() ; it != (N).end(); ++it){\
-        printf("%d, ",*it);\
-    }\
-    printf("\n");\
-    \
-    printf("here b goes\n");\
-    print_matrix((b));\
-    printf("basic: ");\
-    \
-    for (std::vector<int>::const_iterator it = (B).begin() ; it != (B).end(); ++it){\
-        printf("%d, ",*it);\
-    }\
-    printf("\n");\
-}while(0)
+static void print_matrix(const Mat& x){
+    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",(x).type(),CV_64FC1,(x).rows,(x).cols);
+    for(int i=0;i<(x).rows;i++){
+        printf("\t[");
+        for(int j=0;j<(x).cols;j++){
+            printf("%g, ",(x).at<double>(i,j));
+        }
+        printf("]\n");
+    }
+}
+static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
+    printf("\tprint simplex state\n");
+    
+    printf("v=%g\n",(v));
+    
+    printf("here c goes\n");
+    print_matrix((c));
+    
+    printf("non-basic: ");
+    for (std::vector<int>::const_iterator it = (N).begin() ; it != (N).end(); ++it){
+        printf("%d, ",*it);
+    }
+    printf("\n");
+    
+    printf("here b goes\n");
+    print_matrix((b));
+    printf("basic: ");
+    
+    for (std::vector<int>::const_iterator it = (B).begin() ; it != (B).end(); ++it){
+        printf("%d, ",*it);
+    }
+    printf("\n");
+}
 #else
 #define dprintf(x) do {} while (0)
 #define print_matrix(x) do {} while (0)
@@ -66,16 +66,36 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     dprintf(("call to solveLP\n"));
 
     //sanity check (size, type, no. of channels)
-    CV_Assert(Func.type()==CV_64FC1);
-    CV_Assert(Constr.type()==CV_64FC1);
-    CV_Assert(Func.rows==1);
-    CV_Assert(Constr.cols-Func.cols==1);
+    CV_Assert(Func.type()==CV_64FC1 || Func.type()==CV_32FC1);
+    CV_Assert(Constr.type()==CV_64FC1 || Constr.type()==CV_32FC1);
+    CV_Assert((Func.rows==1 && (Constr.cols-Func.cols==1))||
+            (Func.cols==1 && (Constr.cols-Func.rows==1)));
 
     //copy arguments for we will shall modify them
-    Mat_<double> bigC=Mat_<double>(1,Func.cols+1),
+    Mat_<double> bigC=Mat_<double>(1,(Func.rows==1?Func.cols:Func.rows)+1),
         bigB=Mat_<double>(Constr.rows,Constr.cols+1);
-    Func.copyTo(bigC.colRange(1,bigC.cols));
-    Constr.copyTo(bigB.colRange(1,bigB.cols));
+    if(Func.rows==1){
+        Func.convertTo(bigC.colRange(1,bigC.cols),CV_64FC1);
+    }else{
+        dprintf(("hi from other branch\n"));
+        Mat_<double> slice=bigC.colRange(1,bigC.cols);
+        MatIterator_<double> slice_iterator=slice.begin();
+        switch(Func.type()){
+            case CV_64FC1:
+                for(MatConstIterator_<double> it=Func.begin<double>();it!=Func.end<double>();it++,slice_iterator++){
+                    * slice_iterator= *it;
+                }
+                break;
+            case CV_32FC1:
+                for(MatConstIterator_<float> it=Func.begin<float>();it!=Func.end<double>();it++,slice_iterator++){
+                    * slice_iterator= *it;
+                }
+                break;
+        }
+        print_matrix(Func);
+        print_matrix(bigC);
+    }
+    Constr.convertTo(bigB.colRange(1,bigB.cols),CV_64FC1);
     double v=0;
     vector<int> N,B;
 
@@ -91,8 +111,7 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     }
 
     //return the optimal solution
-    const int z_size[]={1,c.cols};
-    z.create(2,z_size,CV_64FC1);
+    z.create(c.cols,1,CV_64FC1);
     MatIterator_<double> it=z.begin<double>();
     for(int i=1;i<=c.cols;i++,it++){
         std::vector<int>::iterator pos=B.begin();

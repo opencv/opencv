@@ -28,11 +28,11 @@ by T. H. Cormen, C. E. Leiserson, R. L. Rivest and Clifford Stein. In particular
 
 .. ocv:function:: int optim::solveLP(const Mat& Func, const Mat& Constr, Mat& z)
 
-    :param Func: This row-vector corresponds to :math:`c` in the LP problem formulation (see above).
+    :param Func: This row-vector corresponds to :math:`c` in the LP problem formulation (see above). It should contain 32- or 64-bit floating point numbers. As a convenience, column-vector may be also submitted, in the latter case it is understood to correspond to :math:`c^T`.
 
-    :param Constr: *m*-by-*n\+1* matrix, whose rightmost column corresponds to :math:`b` in formulation above and the remaining to :math:`A`.
+    :param Constr: *m*-by-*n\+1* matrix, whose rightmost column corresponds to :math:`b` in formulation above and the remaining to :math:`A`. It should containt 32- or 64-bit floating point numbers.
 
-    :param z: The solution will be returned here as a row-vector - it corresponds to (transposed) :math:`c` in the formulation above.
+    :param z: The solution will be returned here as a column-vector - it corresponds to :math:`c` in the formulation above. It will contain 64-bit floating point numbers.
 
     :return: One of the return codes:
 

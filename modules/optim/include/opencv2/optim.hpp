@@ -43,10 +43,6 @@
 #ifndef __OPENCV_OPTIM_HPP__
 #define __OPENCV_OPTIM_HPP__
 
-#include <iostream>
-#include "opencv2/core.hpp"
-#include "opencv2/core/mat.hpp"
-
 //uncomment the next line to print the debug info
 //#define ALEX_DEBUG
 
