@@ -167,16 +167,11 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     matVec.push_back(up);
     matVec.push_back(down);
     vconcat(matVec, matL);
-    matL+=beta; // regularization
+    matL=matL+beta; // regularization
 
     //Obtaining transformation params (w|a)
     Mat matX; //params for fx and fy respectively
     solve(matL, matB, matX, DECOMP_LU);
-
-    for (int i=0; i<matX.rows; i++)
-    {
-        std::cout<<"matX["<<i<<"]="<<matX.at<float>(i,0)<<","<<matX.at<float>(i,1)<<std::endl;
-    }
 
     //Apply transformation in the complete set of points
     Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
@@ -325,13 +320,13 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
     }
 
     Mat affine;
-    estimateRigidTransform(shape2, shape1, fullAffine).convertTo(affine, CV_32F);
+    estimateRigidTransform(shape1, shape2, fullAffine).convertTo(affine, CV_32F);
 
     Mat auxaf=Mat::ones(3,complete_shape1.rows,CV_32F);
     for (int i=0; i<complete_shape1.rows; i++)
     {
-        auxaf.at<float>(1,i)=complete_shape1.at<float>(i,0);
-        auxaf.at<float>(2,i)=complete_shape1.at<float>(i,1);
+        auxaf.at<float>(0,i)=complete_shape1.at<float>(i,0);
+        auxaf.at<float>(1,i)=complete_shape1.at<float>(i,1);
     }
     Mat fAffine=affine*auxaf;
 
