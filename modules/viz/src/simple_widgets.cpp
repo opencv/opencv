@@ -635,7 +635,12 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     Mat colors = _colors.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
-    
+
+    if (cloud.isContinuous() && colors.isContinuous())
+    {
+        cloud.reshape(cloud.channels(), 1);
+        colors.reshape(colors.channels(), 1);
+    }
 
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
