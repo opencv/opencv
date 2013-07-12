@@ -47,8 +47,9 @@
 #include "opencv2/core.hpp"
 #include <iostream>
 #include <string>
+
 /*
- * This is a copy from apps/traincascade/
+ * TODO This is a copy from apps/traincascade/
  */
 
 
@@ -143,6 +144,7 @@ public:
     static Ptr<CvFeatureParams> create( int featureType );
     int maxCatCount; // 0 in case of numerical features
     int featSize; // 1 in case of simple features (HAAR, LBP) and N_BINS(9)*N_CELLS(4) in case of Dalal's HOG features
+    int numFeatures;
 };
 
 class CvFeatureEvaluator
@@ -205,6 +207,14 @@ public:
     void writeFeature( FileStorage &fs, int fi ) const; // for old file fornat
 protected:
     virtual void generateFeatures();
+
+    /**
+     * TODO new method
+     * \brief Overload the original generateFeatures in order to limit the number of the features
+     * @param numFeatures Number of the features
+     */
+
+    virtual void generateFeatures( int numFeatures );
 
     class Feature
     {

@@ -62,6 +62,7 @@ TrackerMIL::Params::Params()
 	samplerInitMaxNegNum = 65;
 	samplerTrackMaxPosNum = 65;
 	samplerTrackMaxNegNum = 100000;
+	featureSetNumFeatures = 250;
 }
 
 void TrackerMIL::Params::read( const cv::FileNode& fn )
@@ -72,6 +73,7 @@ void TrackerMIL::Params::read( const cv::FileNode& fn )
 	samplerTrackInRadius = fn["samplerTrackInRadius"];
 	samplerTrackMaxPosNum = fn["samplerTrackMaxPosNum"];
 	samplerTrackMaxNegNum = fn["samplerTrackMaxNegNum"];
+	featureSetNumFeatures = fn["featureSetNumFeatures"];
 }
 
 void TrackerMIL::Params::write( cv::FileStorage& fs ) const
@@ -82,6 +84,7 @@ void TrackerMIL::Params::write( cv::FileStorage& fs ) const
 	fs << "samplerTrackInRadius" << samplerTrackInRadius;
 	fs << "samplerTrackMaxPosNum" << samplerTrackMaxPosNum;
 	fs << "samplerTrackMaxNegNum" << samplerTrackMaxNegNum;
+	fs << "featureSetNumFeatures" << featureSetNumFeatures;
 
 }
 
@@ -136,7 +139,8 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	CSCparameters.trackMaxNegNum = params.samplerTrackMaxNegNum;
 
 	Ptr<TrackerSamplerAlgorithm> CSCSampler = new TrackerSamplerCSC( CSCparameters );
-	sampler->addTrackerSamplerAlgorithm( CSCSampler );
+	if( !sampler->addTrackerSamplerAlgorithm( CSCSampler ))
+		return false;
 
 	//or add CSC sampler with default parameters
 	//sampler->addTrackerSamplerAlgorithm( "CSC" );
@@ -152,7 +156,10 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	std::vector<Mat> negSamples = sampler->getSamples();
 
 	//TODO compute HAAR features
-	Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR();
+	TrackerFeatureHAAR::Params HAARparameters;
+	HAARparameters.numFeatures = params.featureSetNumFeatures;
+	HAARparameters.rectSize = Size( boundingBox.width, boundingBox.height );
+	Ptr<TrackerFeature> trackerFeature = new TrackerFeatureHAAR( HAARparameters );
 	featureSet->addTrackerFeature( trackerFeature );
 
 	featureSet->extraction( posSamples );

@@ -150,9 +150,27 @@ void TrackerFeatureHOG::selection( Mat& response, int npoints )
 /**
  * TrackerFeatureHAAR
  */
-TrackerFeatureHAAR::TrackerFeatureHAAR()
+
+/**
+ * Parameters
+ */
+
+TrackerFeatureHAAR::Params::Params()
+{
+	numFeatures = 250;
+	rectSize = Size( 100, 100 );
+}
+
+TrackerFeatureHAAR::TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters ) :
+params(parameters)
 {
 	className = "HAAR";
+
+	CvHaarFeatureParams haarParams;
+	haarParams.mode = CvHaarFeatureParams::CORE;
+	haarParams.numFeatures = params.numFeatures;
+	featureEvaluator = CvFeatureEvaluator::create( CvFeatureParams::HAAR );
+	featureEvaluator->init( &haarParams, 1, params.rectSize );
 }
 
 TrackerFeatureHAAR::~TrackerFeatureHAAR()
@@ -162,7 +180,19 @@ TrackerFeatureHAAR::~TrackerFeatureHAAR()
 
 bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
-	return false;
+	if( images.size() == 0 )
+	{
+		return false;
+	}
+
+	//TODO for each sample compute #n_feature -> put each feature (3 Rect) in response
+	for( size_t i = 0; i < images.size(); i++ )
+	{
+
+	}
+
+
+	return true;
 }
 
 void TrackerFeatureHAAR::selection( Mat& response, int npoints )

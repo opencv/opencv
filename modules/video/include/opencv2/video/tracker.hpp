@@ -45,7 +45,7 @@
 #define __OPENCV_TRACKER_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/highgui.hpp"
+#include "feature.hpp"
 #include <iostream>
 
 /*
@@ -649,8 +649,15 @@ public:
 class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
 {
 public:
+	struct CV_EXPORTS Params
+	{
+		Params();
+		int numFeatures;
+		Size rectSize;
 
-	TrackerFeatureHAAR();
+	};
+
+	TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters = TrackerFeatureHAAR::Params() );
 
 	~TrackerFeatureHAAR();
 
@@ -658,6 +665,10 @@ public:
 
 	void selection( Mat& response, int npoints );
 
+private:
+
+	Params params;
+	Ptr<CvHaarEvaluator> featureEvaluator;
 };
 
 
@@ -700,6 +711,8 @@ public:
 		float samplerTrackInRadius;	// radius for gathering positive instances during tracking
 		int samplerTrackMaxPosNum;	// # positive samples to use during tracking
 		int samplerTrackMaxNegNum;	// # negative samples to use during tracking
+
+		int featureSetNumFeatures;
 
 		void read( const FileNode& fn );
 		void write( FileStorage& fs ) const;
