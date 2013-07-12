@@ -64,15 +64,12 @@ namespace
 
 PARAM_TEST_CASE(MOG, UseGray, LearningRate, bool)
 {
-    std::string inputFile;
     bool useGray;
     double learningRate;
     bool useRoi;
 
     virtual void SetUp()
     {
-        inputFile = workdir + "../gpu/768x576.avi";
-
         useGray = GET_PARAM(0);
 
         learningRate = GET_PARAM(1);
@@ -83,6 +80,8 @@ PARAM_TEST_CASE(MOG, UseGray, LearningRate, bool)
 
 TEST_P(MOG, Update)
 {
+    std::string inputFile = workdir + "../gpu/768x576.avi";
+
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -130,13 +129,11 @@ namespace
 
 PARAM_TEST_CASE(MOG2, UseGray, DetectShadow, bool)
 {
-    std::string inputFile;
     bool useGray;
     bool detectShadow;
     bool useRoi;
     virtual void SetUp()
     {
-        inputFile = workdir + "../gpu/768x576.avi";
         useGray = GET_PARAM(0);
         detectShadow = GET_PARAM(1);
         useRoi = GET_PARAM(2);
@@ -145,6 +142,7 @@ PARAM_TEST_CASE(MOG2, UseGray, DetectShadow, bool)
 
 TEST_P(MOG2, Update)
 {
+    std::string inputFile = workdir + "../gpu/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -178,7 +176,7 @@ TEST_P(MOG2, Update)
 
         if (detectShadow)
         {
-            
+
             EXPECT_MAT_SIMILAR(foreground_gold, foreground, 1e-2);
         }
         else
@@ -193,6 +191,7 @@ TEST_P(MOG2, getBackgroundImage)
     if (useGray)
         return;
 
+    std::string inputFile = workdir + "../gpu/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
