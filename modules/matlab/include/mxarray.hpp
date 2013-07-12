@@ -2,6 +2,7 @@
 #define OPENCV_MXARRAY_HPP_
 
 #include "mex.h"
+#include "transpose.hpp"
 #include <vector>
 #include <string>
 #include <opencv2/core.hpp>
@@ -495,39 +496,6 @@ cv::Mat MxArray::toMat<Matlab::InheritType>() const {
 // ----------------------------------------------------------------------------
 //                            MATRIX TRANSPOSE
 // ----------------------------------------------------------------------------
-
-template <typename InputScalar, typename OutputScalar>
-void gemt(const char major, const size_t M, const size_t N, const InputScalar* a, size_t lda, OutputScalar* b, size_t ldb) {
-  switch (major) {
-  case 'R':
-    for (size_t m = 0; m < M; ++m) {
-      InputScalar const *       arow = a + m*lda;
-      InputScalar const * const aend = arow + N;
-      OutputScalar      *       bcol = b + m;
-      while (arow < aend) {
-        *bcol = *arow;
-        arow++;
-        bcol+=ldb;
-      }
-    }
-    return;
-  case 'C':
-    for (size_t n = 0; n < N; ++n) {
-      InputScalar const *       acol = a + n*lda;
-      InputScalar const * const aend = acol + M;
-      OutputScalar      *       brow = b + n;
-      while (acol < aend) {
-        *brow = *acol;
-        acol++;
-        brow+=ldb;
-      }
-    }
-    return;
-  default: 
-    error(std::string("Unknown ordering given: ").append(std::string(1,major)));
-  }
-}
-
 
 
 template <typename InputScalar, typename OutputScalar>

@@ -118,7 +118,7 @@ if (NOT MEX_WORKS)
                 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE MEX_ERROR
-        #OUTPUT_QUIET
+        OUTPUT_QUIET
     )
 
     if (MEX_ERROR)
