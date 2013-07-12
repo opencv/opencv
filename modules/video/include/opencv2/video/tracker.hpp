@@ -168,8 +168,8 @@ public:
 	const std::vector<std::pair<String, Ptr<TrackerFeature> > >& getTrackerFeature() const;
 
 	/**
-	 * \brief Get the reponses
-	 * \return the reponses
+	 * \brief Get the responses
+	 * \return the responses
 	 */
 	const std::vector<Mat>& getResponses() const;
 
