@@ -489,14 +489,14 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const string& filename)
 {
-    if (!isOpened())
+    if (isOpened()) release();
     cap = cvCreateFileCapture(filename.c_str());
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
-    if (!isOpened())
+    if (isOpened()) release();
     cap = cvCreateCameraCapture(device);
     return isOpened();
 }
