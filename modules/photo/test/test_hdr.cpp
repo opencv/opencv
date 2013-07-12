@@ -118,3 +118,26 @@ TEST(Photo_Tonemap, regression)
 		ASSERT_FALSE(max > 0);
 	}
 }
+
+TEST(Photo_Align, regression)
+{
+	const int TESTS_COUNT = 100;
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	
+	string file_name = folder + "grand_canal_1_45.jpg";
+	Mat img = imread(file_name);
+	ASSERT_FALSE(img.empty()) << "Could not load input image " << file_name;
+	cvtColor(img, img, COLOR_RGB2GRAY);
+
+	int max_bits = 6;
+	int max_shift = 64;
+	srand(time(0));
+
+	for(int i = 0; i < TESTS_COUNT; i++) {
+		Point shift(rand() % max_shift, rand() % max_shift);
+		Mat res;
+		shiftMat(img, shift, res);
+		Point calc = getExpShift(img, res, max_bits);
+		ASSERT_TRUE(calc == -shift);
+	}
+}

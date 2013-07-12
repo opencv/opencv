@@ -85,7 +85,27 @@ static void checkImages(std::vector<Mat>& images, bool hdr, const std::vector<fl
 	}
 }
 
-void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst)
+static void alignImages(std::vector<Mat>& src, std::vector<Mat>& dst)
+{
+	dst.resize(src.size());
+
+	size_t pivot = src.size() / 2;
+	dst[pivot] = src[pivot];
+	Mat gray_base;
+	cvtColor(src[pivot], gray_base, COLOR_RGB2GRAY);
+
+	for(size_t i = 0; i < src.size(); i++) {
+		if(i == pivot) {
+			continue;
+		}
+		Mat gray;
+		cvtColor(src[i], gray, COLOR_RGB2GRAY);
+		Point shift = getExpShift(gray_base, gray);
+		shiftMat(src[i], shift, dst[i]);
+	}
+}
+
+void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst, bool align)
 {
 	std::vector<Mat> images;
     _images.getMatVector(images);
@@ -93,6 +113,11 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 	_dst.create(images[0].size(), CV_32FC3);
 	Mat result = _dst.getMat();
 
+	if(align) {
+		std::vector<Mat> new_images;
+		alignImages(images, new_images);
+		images = new_images;
+	}
 	std::vector<float> exp_times(_exp_times.size());
 	for(size_t i = 0; i < exp_times.size(); i++) {
 		exp_times[i] = log(_exp_times[i]);
@@ -128,12 +153,17 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 	result = result / max;
 }
 
-void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, float ws, float we)
+void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, bool align, float wc, float ws, float we)
 {
 	std::vector<Mat> images;
     _images.getMatVector(images);
 	checkImages(images, false);
 
+	if(align) {
+		std::vector<Mat> new_images;
+		alignImages(images, new_images);
+		images = new_images;
+	}
 	std::vector<Mat> weights(images.size());
 	Mat weight_sum = Mat::zeros(images[0].size(), CV_32FC1);
 	for(size_t im = 0; im < images.size(); im++) {
