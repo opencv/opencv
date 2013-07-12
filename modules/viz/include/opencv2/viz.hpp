@@ -44,8 +44,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_VIZ_HPP
-#define __OPENCV_VIZ_HPP
+#ifndef __OPENCV_VIZ_HPP__
+#define __OPENCV_VIZ_HPP__
 
 
 #include <opencv2/viz/types.hpp>
@@ -53,5 +53,14 @@
 #include <opencv2/viz/viz3d.hpp>
 
 
-#endif __OPENCV_VIZ_HPP
+namespace temp_viz
+{
+    //! takes coordiante frame data and builds transfrom to global coordinate frame
+    CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
+
+    CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& up_vector);
+}
+
+
+#endif /* __OPENCV_VIZ_HPP__ */
 
