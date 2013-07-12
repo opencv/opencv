@@ -35,6 +35,7 @@ void transpose4x4(const InputScalar* src, size_t lda, OutputScalar* dst, size_t 
  */
 template <typename InputScalar, typename OutputScalar>
 void gemt(const char major, const size_t M, const size_t N, const InputScalar* a, size_t lda, OutputScalar* b, size_t ldb) {
+
   // 1x1 transpose is just copy
   if (M == 1 && N == 1) { *b = *a; return; }
 

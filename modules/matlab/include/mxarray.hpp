@@ -411,20 +411,19 @@ public:
   const Scalar* imag() const { return static_cast<const Scalar *>(mxGetData(ptr_)); }
 
   template <typename Scalar>
-  Scalar scalar() const { return static_cast<Scalar *>(mxGetData(ptr_))[0]; }
+  Scalar scalar() const { return static_cast<double *>(mxGetData(ptr_))[0]; }
 
   std::string toString() const {
     conditionalError(isString(), "Attempted to convert non-string type to string");
-    std::string str;
-    str.reserve(size()+1);
+    std::string str(size()+1, '\0');
     mxGetString(ptr_, const_cast<char *>(str.data()), str.size());
-    mexPrintf(str.c_str());
+    mexPrintf("string: %s\n", str.c_str());
     return str;
   }
 
   size_t size() const { return mxGetNumberOfElements(ptr_); }
-  size_t rows() const { return mxGetM(ptr_); }
-  size_t cols() const { return mxGetN(ptr_); }
+  size_t rows() const { return mxGetDimensions(ptr_)[0]; }
+  size_t cols() const { return mxGetDimensions(ptr_)[1]; }
   size_t channels() const { return (mxGetNumberOfDimensions(ptr_) > 2) ? mxGetDimensions(ptr_)[2] : 1; }
   bool isComplex() const { return mxIsComplex(ptr_); }
   bool isNumeric() const { return mxIsNumeric(ptr_); }
@@ -475,7 +474,7 @@ template <>
 cv::Mat MxArray::toMat<Matlab::InheritType>() const {
   switch (ID()) {
     case mxINT8_CLASS:    return toMat<int8_t>();
-    case mxUINT8_CLASS:   return toMat<uint8_t>();;
+    case mxUINT8_CLASS:   return toMat<uint8_t>();
     case mxINT16_CLASS:   return toMat<int16_t>();
     case mxUINT16_CLASS:  return toMat<uint16_t>();
     case mxINT32_CLASS:   return toMat<int32_t>();
@@ -503,9 +502,18 @@ void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
   conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
   conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
   conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
-  const InputScalar* inp = in.ptr<InputScalar>(0);
-  OutputScalar* outp = out.real<OutputScalar>();
-  gemt('R', out.rows(), out.cols(), inp, in.step1(), outp, out.rows());
+  std::vector<cv::Mat> channels;
+  cv::split(in, channels);
+  for (size_t c = 0; c < out.channels(); ++c) {
+    cv::transpose(channels[c], channels[c]);
+    cv::Mat outmat(out.cols(), out.rows(), cv::DataType<OutputScalar>::type, 
+      static_cast<void *>(out.real<OutputScalar>() + out.cols()*out.rows()*c));
+    channels[c].convertTo(outmat, cv::DataType<OutputScalar>::type);
+  }
+
+  //const InputScalar* inp = in.ptr<InputScalar>(0);
+  //OutputScalar* outp = out.real<OutputScalar>();
+  //gemt('R', out.rows(), out.cols(), inp, in.step1(), outp, out.rows());
 }
 
 template <typename InputScalar, typename OutputScalar>
@@ -513,9 +521,20 @@ void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
   conditionalError(in.rows() == static_cast<size_t>(out.rows), "Matrices must have the same number of rows");
   conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
   conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
-  const InputScalar* inp = in.real<InputScalar>();
-  OutputScalar* outp = out.ptr<OutputScalar>(0);
-  gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
+  std::vector<cv::Mat> channels;
+  for (size_t c = 0; c < in.channels(); ++c) {
+    cv::Mat outmat;
+    cv::Mat inmat(in.cols(), in.rows(), cv::DataType<InputScalar>::type,
+      static_cast<void *>(const_cast<InputScalar *>(in.real<InputScalar>() + in.cols()*in.rows()*c)));
+    inmat.convertTo(outmat, cv::DataType<OutputScalar>::type);
+    cv::transpose(outmat, outmat);
+    channels.push_back(outmat);
+  }
+  cv::merge(channels, out);
+
+  //const InputScalar* inp = in.real<InputScalar>();
+  //OutputScalar* outp = out.ptr<OutputScalar>(0);
+  //gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
 }
 
 
