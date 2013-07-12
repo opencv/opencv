@@ -4,6 +4,11 @@ classdef OpenCVTest < matlab.unittest.TestCase
 
   methods(Test)
     
+    % -------------------------------------------------------------------------
+    % EXCEPTIONS
+    % Check that errors and exceptions are thrown correctly
+    % -------------------------------------------------------------------------
+
     % check that std exception is thrown
     function stdException(testcase)
       try
@@ -37,6 +42,11 @@ classdef OpenCVTest < matlab.unittest.TestCase
       end
     end
 
+    % -------------------------------------------------------------------------
+    % SIZES AND FILLS
+    % Check that matrices are correctly filled and resized
+    % -------------------------------------------------------------------------
+
     % check that a matrix is correctly filled with random numbers
     function randomFill(testcase)
       sz = [7 11];
@@ -46,6 +56,61 @@ classdef OpenCVTest < matlab.unittest.TestCase
       testcase.verifyNotEqual(mat, zeros(sz), 'Matrix should be nonzero');
     end
 
+    function transpose(testcase)
+      m = randn(19, 81);
+      mt1 = transpose(m);
+      mt2 = cv.transpose(m);
+      testcase.verifyEqual(size(mt1), size(mt2), 'Matrix transposed to incorrect dimensionality');
+      testcase.verifyLessThan(norm(mt1 - mt2), 1e-8, 'Too much precision lost in tranposition');
+    end
+
+
+    % -------------------------------------------------------------------------
+    % TYPE CASTS
+    % Check that types are correctly cast
+    % -------------------------------------------------------------------------
+
+    % -------------------------------------------------------------------------
+    % PRECISION
+    % Check that basic operations are performed with sufficient precision
+    % -------------------------------------------------------------------------
+
+    % check that summing elements is within reasonable precision
+    function sumElements(testcase)
+      a = randn(5000);
+      b = sum(a(:));
+      c = cv.sum(a);
+      testcase.verifyLessThan(norm(b - c), 1e-8, 'Matrix reduction with insufficient precision');
+    end
+
+
+    % check that adding two matrices is within reasonable precision
+    function addPrecision(testcase)
+      a = randn(50);
+      b = randn(50);
+      c = a+b;
+      d = cv.add(a, b);
+      testcase.verifyLessThan(norm(c - d), 1e-8, 'Matrices are added with insufficient precision');
+    end
+
+    % check that performing gemm is within reasonable precision
+    function gemmPrecision(testcase)
+      a = randn(10, 50);
+      b = randn(50, 10);
+      c = randn(10, 10);
+      alpha = 2.71828;
+      gamma = 1.61803;
+      d = alpha*a*b + gamma*c;
+      e = cv.gemm(a, b, alpha, c, gamma);
+      testcase.verifyLessThan(norm(d - e), 1e-8, 'Matrices are multiplied with insufficient precision');
+    end
+
+
+    % -------------------------------------------------------------------------
+    % MISCELLANEOUS
+    % Miscellaneous tests
+    % -------------------------------------------------------------------------
+
     % check that cv::waitKey waits for at least specified time
     function waitKey(testcase)
       tic();
@@ -53,5 +118,22 @@ classdef OpenCVTest < matlab.unittest.TestCase
       elapsed = toc();
       testcase.verifyGreaterThan(elapsed, 0.5, 'Elapsed time should be at least 0.5 seconds');
     end
+
+    % check that highgui window can be created and destroyed
+    function createAndDestroyWindow(testcase)
+      try
+        cv.namedWindow('test window');
+      catch
+        testcase.verifyFail('could not create window');
+      end
+
+      try
+        cv.destroyWindow('test window');
+      catch
+        testcase.verifyFail('could not destroy window');
+      end
+      testcase.verifyTrue(true);
+    end
+
   end
 end
