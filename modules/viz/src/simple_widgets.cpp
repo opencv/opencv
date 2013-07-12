@@ -636,7 +636,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     CV_Assert(colors.type() == CV_8UC3 && cloud.size() == colors.size());
     
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
 
@@ -666,6 +666,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
         
     mapper->ImmediateModeRenderingOff ();
     
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
     actor->GetProperty ()->SetInterpolationToFlat ();
     actor->GetProperty ()->BackfaceCullingOn ();
@@ -679,7 +680,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
     
-    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+
     vtkIdType nr_points;
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
     
@@ -693,6 +694,7 @@ temp_viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
         
     mapper->ImmediateModeRenderingOff ();
     
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, polydata->GetNumberOfPoints () / 10)));
     actor->GetProperty ()->SetInterpolationToFlat ();
     actor->GetProperty ()->BackfaceCullingOn ();
@@ -845,3 +847,5 @@ template<> temp_viz::CloudNormalsWidget temp_viz::Widget::cast<temp_viz::CloudNo
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<CloudNormalsWidget&>(widget);
 }
+
+
