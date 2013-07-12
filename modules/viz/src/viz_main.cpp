@@ -7,7 +7,7 @@
 #ifndef __APPLE__
 vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew ()
 {
-  return (vtkRenderWindowInteractor::New ());
+  return vtkRenderWindowInteractor::New();
 }
 #endif
 

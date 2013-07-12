@@ -283,7 +283,7 @@ template<> temp_viz::CubeWidget temp_viz::Widget::cast<temp_viz::CubeWidget>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// coordinate system widget implementation
 
-temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Affine3f& affine)
+temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
     axes->SetOrigin (0, 0, 0);
@@ -313,20 +313,6 @@ temp_viz::CoordinateSystemWidget::CoordinateSystemWidget(double scale, const Aff
 
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
-
-    cv::Vec3d t = affine.translation();
-    actor->SetPosition (t[0], t[1], t[2]);
-
-    cv::Matx33f m = affine.rotation();
-
-    cv::Vec3f rvec;
-    cv::Rodrigues(m, rvec);
-
-    float r_angle = cv::norm(rvec);
-    rvec *= 1.f/r_angle;
-
-    actor->SetOrientation(0,0,0);
-    actor->RotateWXYZ(r_angle*180/CV_PI,rvec[0], rvec[1], rvec[2]);
     
     WidgetAccessor::setProp(*this, actor);
 }

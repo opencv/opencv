@@ -103,13 +103,13 @@ namespace temp_viz
     class CV_EXPORTS CoordinateSystemWidget : public Widget3D
     {
     public:
-        CoordinateSystemWidget(double scale, const Affine3f& affine);
+        CoordinateSystemWidget(double scale = 1.0);
     };
     
     class CV_EXPORTS PolyLineWidget : public Widget3D
     {
     public:
-        PolyLineWidget(InputArray _points, const Color &color = Color::white());
+        PolyLineWidget(InputArray points, const Color &color = Color::white());
         
     private:
         struct CopyImpl;
