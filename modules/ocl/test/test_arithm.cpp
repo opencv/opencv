@@ -1201,7 +1201,24 @@ TEST_P(AddWeighted, Mat)
     }
 }
 
+struct SetIdentity : ArithmTestBase {};
 
+TEST_P(SetIdentity, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::setIdentity(mat1_roi);
+
+        cv::ocl::setIdentity(gmat1, 1);
+
+        cv::Mat cpu_dst;
+        gdst_whole.download(cpu_dst);
+
+        EXPECT_MAT_NEAR(cv::Mat(gmat1), mat1_roi, 0);
+    }
+}
 
 
 //********test****************
@@ -1310,6 +1327,9 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
                             Values(CV_8UC1, CV_32SC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
+INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(
+    Values(CV_32SC1, CV_32FC1),
+    Values(false))); // Values(false) is the reserved parameter
 
 
 #endif // HAVE_OPENCL
