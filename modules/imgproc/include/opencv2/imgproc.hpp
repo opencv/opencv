@@ -844,7 +844,7 @@ public:
  * Create an LSD object. Specifying scale, number of subdivisions for the image, should the lines be refined and other constants as follows:
  *
  * @param _refine       How should the lines found be refined? 
- *                      NO_REFINE   - No refinement applied.
+ *                      REFINE_NONE - No refinement applied.
  *                      REFINE_STD  - Standard refinement is applied. E.g. breaking arches into smaller line approximations. 
  *                      REFINE_ADV  - Advanced refinement. Number of false alarms is calculated, 
  *                                    lines are refined through increase of precision, decrement in size, etc.

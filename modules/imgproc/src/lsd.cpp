@@ -1,4 +1,4 @@
-/*///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 // IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
@@ -37,13 +37,8 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//*/
+//M*/
 
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
-#include <climits>
-#include <cfloat>
 #include <vector>
 
 #include "precomp.hpp"
@@ -61,13 +56,12 @@ using namespace cv;
 
 // PI 
 #ifndef M_PI
-#define M_PI        CV_PI           // 3.14159265358979323846 
+#define M_PI        CV_PI             // 3.14159265358979323846 
 #endif
 #define M_3_2_PI    (3 * CV_PI) / 2   // 4.71238898038  // 3/2 pi 
 #define M_2__PI     2 * CV_PI         // 6.28318530718  // 2 pi 
 
-// Label for pixels with undefined gradient. 
-#define NOTDEF      double(-1024.0)
+#define NOTDEF      double(-1024.0) // Label for pixels with undefined gradient. 
 
 #define NOTUSED     0   // Label for pixels not used in yet. 
 #define USED        1   // Label for pixels already used in detection. 
