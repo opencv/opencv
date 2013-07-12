@@ -153,7 +153,7 @@ add_custom_command(
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
             ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
-    COMMENT "Generating matlab source files"
+    COMMENT "Generating Matlab source files"
 )
 
 # compile

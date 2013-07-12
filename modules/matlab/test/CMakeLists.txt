@@ -1,25 +1,20 @@
-# compile the test sources
-file(GLOB SOURCE_FILES "*.cpp")
-add_custom_target(opencv_test_matlab_sources)
-foreach(SOURCE_FILE ${SOURCE_FILES})
-  get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
-  # compile the source file using mex
-  add_custom_command(TARGET opencv_test_matlab_sources PRE_BUILD
-      COMMAND echo ${MATLAB_MEX_SCRIPT} ${MEX_INCLUDES}
-              ${SOURCE_FILE}
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  )
-endforeach()
+set(TEST_PROXY ${CMAKE_CURRENT_BINARY_DIR}/test.proxy)
+file(REMOVE ${TEST_PROXY})
 
-# copy the test files into the build dir
-file(GLOB TEST_FILES "*.m")
-foreach(TEST_FILE ${TEST_FILES})
-  add_custom_command(TARGET opencv_test_matlab_sources PRE_BUILD
-      COMMAND ${CMAKE_COMMAND} -E
-      copy ${TEST_FILE} ${CMAKE_CURRENT_BINARY_DIR}
-  )
-endforeach()
-    
+# generate
+# call the python executable to generate the Matlab gateways
+add_custom_command(
+    OUTPUT ${TEST_PROXY}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/OpenCVTest.m ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/testsuite.m ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E touch ${TEST_PROXY}
+    COMMENT "Building Matlab tests"
+)
+
+# targets
+# opencv_matlab_sources --> opencv_matlab
+add_custom_target(opencv_test_matlab ALL DEPENDS ${TEST_PROXY})
+add_dependencies(opencv_test_matlab ${the_module})
 
 # run the matlab test suite
 add_test(opencv_test_matlab

@@ -1,3 +1,6 @@
+% add the opencv bindings folder
+addpath ..
+
 %setup the tests
 opencv_tests = OpenCVTest();
 
