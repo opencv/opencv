@@ -1,3 +1,6 @@
+set(BUILD_opencv_viz_INIT OFF)
+
+
 ###############################################################################
 # Find qvtk
 # This sets the following variables:
@@ -36,18 +39,21 @@ macro(find_vtk)
   endif()
 endmacro()
 
+
+
+
+#find_package(OpenGL)
+#if (OPENGL_FOUND)
+#  if(OPENGL_INCLUDE_DIR)
+#    include_directories("${OPENGL_INCLUDE_DIR}")
+#  endif()
+#  if(OPENGL_DEFINITIONS)
+#    add_definitions("${OPENGL_DEFINITIONS}")
+#  endif()
+#endif()
+
+
 find_vtk()
-
-
-find_package(OpenGL)
-if (OPENGL_FOUND)
-  if(OPENGL_INCLUDE_DIR)
-    include_directories("${OPENGL_INCLUDE_DIR}")
-  endif()
-  if(OPENGL_DEFINITIONS)
-    add_definitions("${OPENGL_DEFINITIONS}")
-  endif()
-endif()
 
 
 if(NOT HAVE_VTK)
@@ -65,14 +71,13 @@ endif()
 add_definitions(-DHAVE_VTK)
 
 
-set(BUILD_opencv_viz_INIT OFF)
-
-include_directories(src)
 set(the_description "Viz")
-ocv_define_module(viz opencv_core opencv_calib3d)
-#${PCL_LIBRARIES}
+set(BUILD_opencv_viz_INIT OFF)
+include_directories(src)
+ocv_define_module(viz opencv_core)
 
-target_link_libraries(opencv_viz vtkCommon vtkWidgets vtkHybrid vtkCharts vtkFiltering vtkRendering ${OPENGL_LIBRARIES})
+target_link_libraries(opencv_viz vtkCommon vtkWidgets vtkFiltering vtkRendering)
+#${OPENGL_LIBRARIES})
 
 if(APPLE)
     target_link_libraries(opencv_viz "-framework Cocoa")

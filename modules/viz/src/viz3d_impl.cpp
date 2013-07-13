@@ -626,11 +626,9 @@ void cv::viz::Viz3d::VizImpl::resetCamera ()
     renderer_->ResetCamera ();
 }
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up)
 {
-
     vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
     cam->SetPosition (pos[0], pos[1], pos[2]);
     cam->SetFocalPoint (view[0], view[1], view[2]);
@@ -642,13 +640,10 @@ void cv::viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv:
 void cv::viz::Viz3d::VizImpl::setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z)
 {
     //rens_->InitTraversal ();
-
-
     vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
     cam->SetPosition (pos_x, pos_y, pos_z);
     cam->SetViewUp (up_x, up_y, up_z);
     renderer_->Render ();
-
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -980,20 +975,13 @@ void cv::viz::Viz3d::VizImpl::updateCells (vtkSmartPointer<vtkIdTypeArray> &cell
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata)
-{
-    polydata = vtkSmartPointer<vtkAppendPolyData>::New ();
-}
-//////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata)
-{
-    polydata = vtkSmartPointer<vtkPolyData>::New ();
-}
-//////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
-{
-    polydata = vtkSmartPointer<vtkUnstructuredGrid>::New ();
-}
+{polydata = vtkSmartPointer<vtkAppendPolyData>::New (); }
 
+void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata)
+{ polydata = vtkSmartPointer<vtkPolyData>::New (); }
+
+void cv::viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
+{ polydata = vtkSmartPointer<vtkUnstructuredGrid>::New (); }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
@@ -1011,23 +999,6 @@ void cv::viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Qu
     vtk_matrix->SetElement (3, 3, 1.0f);
 }
 
-vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix (const cv::Matx44f &m)
-{
-    vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            vtk_matrix->SetElement(i, k, m(i, k));
-    return vtk_matrix;
-}
-
-cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
-{
-    cv::Matx44f m;
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            m(i, k) = vtk_matrix->GetElement (i, k);
-    return m;
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1043,8 +1014,8 @@ void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
         window_->SetWindowName (name.c_str ());
 }
 
-void cv::viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition (x, y); }
-void cv::viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
+void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }
+void cv::viz::Viz3d::VizImpl::setWindowSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
 bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {

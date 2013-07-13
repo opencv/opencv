@@ -13,46 +13,49 @@ public:
     typedef Viz3d::MouseCallback MouseCallback;
 
     VizImpl (const String &name);
-
     virtual ~VizImpl ();
-    void setFullScreen (bool mode);
-    void setWindowName (const String &name);
-    
-    void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
-    void registerMouseCallback(MouseCallback callback, void* cookie = 0);
 
-    void spin ();
-    void spinOnce (int time = 1, bool force_redraw = false);
 
+
+
+
+
+
+
+
+    //to refactor
     bool removePointCloud (const String& id = "cloud");
-    inline bool removePolygonMesh (const String& id = "polygon")
-    {
-        // Polygon Meshes are represented internally as point clouds with special cell array structures since 1.4
-        return removePointCloud (id);
-    }
+    inline bool removePolygonMesh (const String& id = "polygon") { return removePointCloud (id); }
     bool removeShape (const String& id = "cloud");
-
     bool removeText3D (const String& id = "cloud");
     bool removeAllPointClouds ();
+
+    //create Viz3d::removeAllWidgets()
     bool removeAllShapes ();
 
-    void setBackgroundColor (const Color& color);
-
+    //to refactor
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
     bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
-
     bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
 
+    // to refactor: Widget3D:: & Viz3d::
     bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
     bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
-
     bool setShapeRenderingProperties (int property, double value, const String& id);
 
     /** \brief Set whether the point cloud is selected or not
          *  \param[in] selected whether the cloud is selected or not (true = selected)
          *  \param[in] id the point cloud object id (default: cloud)
          */
+    // probably should just remove
     bool setPointCloudSelected (const bool selected, const String& id = "cloud" );
+
+
+
+
+
+
+
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
@@ -64,106 +67,113 @@ public:
     void close ()
     {
         stopped_ = true;
-        // This tends to close the window...
-        interactor_->TerminateApp ();
+        interactor_->TerminateApp (); // This tends to close the window...
     }
+
+
+
+
+
+
+
+
+
+
     
+    // to refactor
     bool addPolygon(const cv::Mat& cloud, const Color& color, const String& id = "polygon");
     bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color, bool display_length, const String& id = "arrow");
     bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color_line, const Color& color_text, const String& id = "arrow");
 
-    // Add a vtkPolydata as a mesh
+    // Probably remove this
     bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const String& id = "PolyData");
     bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const String& id = "PolyData");
+
+    // I think this should be moved to 'static Widget Widget::fromPlyFile(const String&)';
     bool addModelFromPLYFile (const String &filename, const String& id = "PLYModel");
     bool addModelFromPLYFile (const String &filename, vtkSmartPointer<vtkTransform> transform, const String& id = "PLYModel");
 
-    /** \brief Changes the visual representation for all actors to surface representation. */
-    void setRepresentationToSurfaceForAllActors ();
 
-    /** \brief Changes the visual representation for all actors to points representation. */
-    void setRepresentationToPointsForAllActors ();
+    // to implement in Viz3d with shorter name
+    void setRepresentationToSurfaceForAllActors();
+    void setRepresentationToPointsForAllActors();
+    void setRepresentationToWireframeForAllActors();
 
-    /** \brief Changes the visual representation for all actors to wireframe representation. */
-    void setRepresentationToWireframeForAllActors ();
 
-    /** \brief Initialize camera parameters with some default values. */
-    void initCameraParameters ();
 
-    /** \brief Search for camera parameters at the command line and set them internally.
-        bool getCameraParameters (int argc, char **argv);
 
-        /** \brief Checks whether the camera parameters were manually loaded from file.*/
-    bool cameraParamsSet () const;
 
-    /** \brief Update camera parameters and render. */
-    void updateCamera ();
 
-    /** \brief Reset camera parameters and render. */
-    void resetCamera ();
+
+
+    // ////////////////////////////////////////////////////////////////////////////////////
+    // All camera methods to refactor into set/getViewwerPose, setCamera()
+    // and 'Camera' class itself with various constructors/fields
+
+    void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
+    bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/
+    void updateCamera (); /** \brief Update camera parameters and render. */
+    void resetCamera (); /** \brief Reset camera parameters and render. */
 
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
-          * \param[in] id the point cloud object id (default: cloud)
-          */
+      * \param[in] id the point cloud object id (default: cloud) */
     void resetCameraViewpoint (const String& id = "cloud");
-
     /** \brief Set the camera pose given by position, viewpoint and up vector
-          * \param[in] pos_x the x coordinate of the camera location
-          * \param[in] pos_y the y coordinate of the camera location
-          * \param[in] pos_z the z coordinate of the camera location
-          * \param[in] view_x the x component of the view point of the camera
-          * \param[in] view_y the y component of the view point of the camera
-          * \param[in] view_z the z component of the view point of the camera
-          * \param[in] up_x the x component of the view up direction of the camera
-          * \param[in] up_y the y component of the view up direction of the camera
-          * \param[in] up_z the y component of the view up direction of the camera
-          */
+      * \param[in] pos camera location
+      * \param[in] view the view point of the camera
+      * \param[in] up the view up direction of the camera */
     void setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up);
 
     /** \brief Set the camera location and viewup according to the given arguments
-          * \param[in] pos_x the x coordinate of the camera location
-          * \param[in] pos_y the y coordinate of the camera location
-          * \param[in] pos_z the z coordinate of the camera location
-          * \param[in] up_x the x component of the view up direction of the camera
-          * \param[in] up_y the y component of the view up direction of the camera
-          * \param[in] up_z the z component of the view up direction of the camera
-          */
+      * \param[in] pos_x,y,z the x,y,z coordinate of the camera location
+      * \param[in] up_x,y,z the x,y,z component of the view up direction of the camera */
     void setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z);
 
     /** \brief Set the camera parameters via an intrinsics and and extrinsics matrix
-          * \note This assumes that the pixels are square and that the center of the image is at the center of the sensor.
-          * \param[in] intrinsics the intrinsics that will be used to compute the VTK camera parameters
-          * \param[in] extrinsics the extrinsics that will be used to compute the VTK camera parameters
-          */
+      * \note This assumes that the pixels are square and that the center of the image is at the center of the sensor.
+      * \param[in] intrinsics the intrinsics that will be used to compute the VTK camera parameters
+      * \param[in] extrinsics the extrinsics that will be used to compute the VTK camera parameters */
     void setCameraParameters (const cv::Matx33f& intrinsics, const Affine3f& extrinsics);
-
-    /** \brief Set the camera parameters by given a full camera data structure.
-          * \param[in] camera camera structure containing all the camera parameters.
-          */
     void setCameraParameters (const Camera &camera);
-
-    /** \brief Set the camera clipping distances.
-          * \param[in] near the near clipping distance (no objects closer than this to the camera will be drawn)
-          * \param[in] far the far clipping distance (no objects further away than this to the camera will be drawn)
-          */
     void setCameraClipDistances (double near, double far);
-
-    /** \brief Set the camera vertical field of view in radians */
     void setCameraFieldOfView (double fovy);
-
-    /** \brief Get the current camera parameters. */
     void getCameras (Camera& camera);
 
-    /** \brief Get the current viewing pose. */
-    Affine3f getViewerPose ();
+    //to implement Viz3d set/getViewerPose()
+    Affine3f getViewerPose();
+
+
+
+
+
+
+
+
+
+
+
+    //to implemnt in Viz3d
     void saveScreenshot (const String &file);
+    void setWindowPosition (int x, int y);
+    void setWindowSize (int xw, int yw);
+    void setFullScreen (bool mode);
+    void setWindowName (const String &name);
+    void setBackgroundColor (const Color& color);
 
-    /** \brief Return a pointer to the underlying VTK Render Window used. */
-    //vtkSmartPointer<vtkRenderWindow> getRenderWindow () { return (window_); }
+    void spin ();
+    void spinOnce (int time = 1, bool force_redraw = false);
 
-    void setPosition (int x, int y);
-    void setSize (int xw, int yw);
-    
+    void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
+    void registerMouseCallback(MouseCallback callback, void* cookie = 0);
+
+
+
+
+
+
+
+
+    //declare above (to move to up)
     void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
     void removeWidget(const String &id);
     Widget getWidget(const String &id) const;

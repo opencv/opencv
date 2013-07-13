@@ -38,9 +38,12 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-//  * Point Cloud Library (PCL) - www.pointclouds.org
-//  During implementation if OpenCV Viz module, similar module
-//  from PCL was used as reference implementation.
+// Authors:
+//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
+//  * Ozan Tonkal
+//
+//  During implementation of OpenCV Viz module, similar module
+//  from PCL (www.pointclouds.org) was used as reference implementation.
 //
 //M*/
 
@@ -60,8 +63,9 @@ namespace cv
         //! takes coordiante frame data and builds transfrom to global coordinate frame
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
-        //! constructs camera pose from posiont, focal_point and up_vector (see gluLookAt() for more infromation
+        //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation
         CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& up_vector);
+
 
         //! checks float value for Nan
         inline bool isNan(float x)

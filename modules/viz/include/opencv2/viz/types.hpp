@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <opencv2/core/cvdef.h>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
 
