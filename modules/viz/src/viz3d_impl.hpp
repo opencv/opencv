@@ -2,17 +2,15 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/viz/events.hpp>
-#include <q/interactor_style.h>
-#include <q/viz_types.h>
-#include <q/common.h>
+#include "interactor_style.h"
+#include "viz_types.h"
+#include "common.h"
 #include <opencv2/viz/types.hpp>
 #include <opencv2/core/affine.hpp>
 #include <opencv2/viz/viz3d.hpp>
 
-namespace temp_viz
-{
 
-struct Viz3d::VizImpl
+struct temp_viz::Viz3d::VizImpl
 {
 public:
     typedef cv::Ptr<VizImpl> Ptr;
@@ -23,16 +21,7 @@ public:
     void setFullScreen (bool mode);
     void setWindowName (const String &name);
     
-    /** \brief  Register a callback function for keyboard input
-      * \param[in] callback function that will be registered as a callback for a keyboard event
-      * \param[in] cookie for passing user data to callback
-      */
     void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie = 0);
-    
-    /** \brief Register a callback function for mouse events
-          * \param[in] ccallback function that will be registered as a callback for a mouse event
-          * \param[in] cookie for passing user data to callback
-          */
     void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
 
     void spin ();
@@ -288,6 +277,11 @@ private:
     void allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata);
     void allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata);
 };
+
+
+
+namespace temp_viz
+{
 
 //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
 

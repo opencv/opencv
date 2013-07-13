@@ -1,6 +1,6 @@
 #pragma once
 
-#include <q/viz_types.h>
+#include "viz_types.h"
 #include <opencv2/viz/events.hpp>
 
 namespace temp_viz

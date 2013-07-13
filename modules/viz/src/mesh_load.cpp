@@ -1,5 +1,3 @@
-#include <opencv2/viz/mesh_load.hpp>
-
 #include "precomp.hpp"
 
 #include <vtkPLYReader.h>
@@ -8,7 +6,7 @@
 #include <vtkPointData.h>
 #include <vtkCellArray.h>
 
-temp_viz::Mesh3d::Ptr temp_viz::mesh_load(const String& file)
+temp_viz::Mesh3d::Ptr temp_viz::Mesh3d::mesh_load(const String& file)
 {
     Mesh3d::Ptr mesh = new Mesh3d();
 

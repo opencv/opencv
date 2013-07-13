@@ -48,7 +48,6 @@
 #include <string>
 
 #include <opencv2/viz.hpp>
-#include <opencv2/viz/mesh_load.hpp>
 
 cv::Mat cvcloud_load()
 {
@@ -83,45 +82,50 @@ TEST(Viz_viz3d, accuracy)
     float pos_x = 0.0f;
     float pos_y = 0.0f;
     float pos_z = 0.0f;
-//     temp_viz::Mesh3d::Ptr mesh = temp_viz::mesh_load("d:/horse.ply");
-//     v.addPolygonMesh(*mesh, "pq");
+     temp_viz::Mesh3d::Ptr mesh = temp_viz::Mesh3d::mesh_load("d:/horse.ply");
+     v.addPolygonMesh(*mesh, "pq");
 
     int col_blue = 0;
     int col_green = 0;
     int col_red = 0;
 
     temp_viz::LineWidget lw(cv::Point3f(0.0,0.0,0.0), cv::Point3f(4.0,4.0,4.0), temp_viz::Color(0,255,0));
-    temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0), 5.0);
+    temp_viz::PlaneWidget pw(cv::Vec4f(0.0,1.0,2.0,3.0), 50.0);
     temp_viz::SphereWidget sw(cv::Point3f(0,0,0), 0.5);
     temp_viz::ArrowWidget aw(cv::Point3f(0,0,0), cv::Point3f(1,1,1), temp_viz::Color(255,0,0));
     temp_viz::CircleWidget cw(cv::Point3f(0,0,0), 0.5, 0.01, temp_viz::Color(0,255,0));
     temp_viz::CylinderWidget cyw(cv::Point3f(0,0,0), cv::Point3f(-1,-1,-1), 0.5, 30, temp_viz::Color(0,255,0));
     temp_viz::CubeWidget cuw(cv::Point3f(-2,-2,-2), cv::Point3f(-1,-1,-1));
-    temp_viz::CoordinateSystemWidget csw(1.0f, cv::Affine3f::Identity());
+    temp_viz::CoordinateSystemWidget csw;
     temp_viz::TextWidget tw("TEST", cv::Point2i(100,100), 20);
     temp_viz::CloudWidget pcw(cloud, colors);
     temp_viz::CloudWidget pcw2(cloud, temp_viz::Color(0,255,255));
     
 //     v.showWidget("line", lw);
 //     v.showWidget("plane", pw);
-//     v.showWidget("sphere", sw);
-//     v.showWidget("arrow", aw);
-//     v.showWidget("circle", cw);
-//     v.showWidget("cylinder", cyw);
-//     v.showWidget("cube", cuw);
-    v.showWidget("coordinateSystem", csw);
-//     v.showWidget("text",tw);
-//     v.showWidget("pcw",pcw);
-//     v.showWidget("pcw2",pcw2);
+     v.showWidget("sphere", sw);
+     v.spin();
+     //v.showWidget("arrow", aw);
+     //v.showWidget("circle", cw);
+     //v.showWidget("cylinder", cyw);
+     //v.showWidget("cube", cuw);
+    //v.showWidget("coordinateSystem", csw);
+    //v.showWidget("coordinateSystem2", temp_viz::CoordinateSystemWidget(2.0), cv::Affine3f(0, 0, 0, cv::Vec3f(2, 0, 0)));
+     //v.showWidget("text",tw);
+     //v.showWidget("pcw",pcw);
+     //v.showWidget("pcw2",pcw2);
     
 //     temp_viz::LineWidget lw2 = lw;
 //     v.showPointCloud("cld",cloud, colors);
-    
+
     cv::Mat normals(cloud.size(), cloud.type(), cv::Scalar(0, 10, 0));
 
 //     v.addPointCloudNormals(cloud, normals, 100, 0.02, "n");
-    temp_viz::CloudNormalsWidget cnw(cloud, normals);
-//     v.showWidget("n", cnw);
+    //temp_viz::CloudNormalsWidget cnw(cloud, normals);
+     //v.showWidget("n", cnw);
+
+
+
     
 //     lw = v.getWidget("n").cast<temp_viz::LineWidget>();
 //     pw = v.getWidget("n").cast<temp_viz::PlaneWidget>();
@@ -135,16 +139,18 @@ TEST(Viz_viz3d, accuracy)
     data[3] = cv::Vec4d(3.0,4.0,1.0,1.0);
     points = points.reshape(0, 2);
     
-    temp_viz::PolyLineWidget plw(points);
-//     v.showWidget("polyline",plw);
+    temp_viz::PolyLineWidget plw(points, temp_viz::Color::green());
+    v.showWidget("polyline",plw);
 //     lw = v.getWidget("polyline").cast<temp_viz::LineWidget>();
     
-    temp_viz::GridWidget gw(temp_viz::Vec2i(10,10), temp_viz::Vec2d(0.1,0.1));
-    v.showWidget("grid", gw);
+    v.spin();
+
+    //temp_viz::GridWidget gw(temp_viz::Vec2i(100,100), temp_viz::Vec2d(1,1));
+    //v.showWidget("grid", gw);
     lw = v.getWidget("grid").cast<temp_viz::LineWidget>();
     
-    temp_viz::Text3DWidget t3w("OpenCV", cv::Point3f(0.0, 2.0, 0.0), 1.0, temp_viz::Color(255,255,0));
-    v.showWidget("txt3d", t3w);
+    //temp_viz::Text3DWidget t3w("OpenCV", cv::Point3f(0.0, 2.0, 0.0), 1.0, temp_viz::Color(255,255,0));
+    //v.showWidget("txt3d", t3w);
 //     float grid_x_angle = 0.0;
     
     while(!v.wasStopped())
@@ -156,7 +162,7 @@ TEST(Viz_viz3d, accuracy)
         lw.setColor(temp_viz::Color(col_blue, col_green, col_red));
 //         lw.setLineWidth(pos_x * 10);
         
-        plw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        //plw.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
         sw.setPose(cloudPosition);
 //         pw.setPose(cloudPosition);
@@ -172,10 +178,10 @@ TEST(Viz_viz3d, accuracy)
         
 //         v.setWidgetPose("n",cloudPosition);
 //         v.setWidgetPose("pcw2", cloudPosition);
-        cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
-        pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        //cnw.setColor(temp_viz::Color(col_blue, col_green, col_red));
+        //pcw2.setColor(temp_viz::Color(col_blue, col_green, col_red));
         
-        gw.updatePose(temp_viz::Affine3f(0.0, 0.1, 0.0, cv::Vec3f(0.0,0.0,0.0)));
+        //gw.updatePose(temp_viz::Affine3f(0.0, 0.1, 0.0, cv::Vec3f(0.0,0.0,0.0)));
         
         angle_x += 0.1f;
         angle_y -= 0.1f;

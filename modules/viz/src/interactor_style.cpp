@@ -1,6 +1,6 @@
 #include "precomp.hpp"
 
-#include <q/interactor_style.h>
+#include "interactor_style.h"
 
 //#include <q/visualization/vtk/vtkVertexBufferObjectMapper.h>
 

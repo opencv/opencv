@@ -152,7 +152,7 @@
 #endif
 
 
-#include <q/viz3d_impl.hpp>
+#include "viz3d_impl.hpp"
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include "opencv2/viz/widget_accessor.hpp"

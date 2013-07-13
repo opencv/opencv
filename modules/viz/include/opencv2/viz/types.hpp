@@ -67,10 +67,13 @@ namespace temp_viz
     class CV_EXPORTS Mesh3d
     {
     public:
-        typedef cv::Ptr<Mesh3d> Ptr;
+        typedef Ptr<Mesh3d> Ptr;
 
         Mat cloud, colors;
         std::vector<Vertices> polygons;
+
+        static Mesh3d::Ptr mesh_load(const String& file);
+
     };
 
     /////////////////////////////////////////////////////////////////////////////
