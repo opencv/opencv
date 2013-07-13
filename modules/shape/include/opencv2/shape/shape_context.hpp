@@ -66,7 +66,7 @@ public:
     CV_WRAP SCD();
     //! the full constructor taking all the necessary parameters
     explicit CV_WRAP SCD(int nAngularBins=12, int nRadialBins = 5, 
-                           double innerRadius=0.1, double outerRadius=1);
+                           double innerRadius=0.1, double outerRadius=1, bool rotationInvariant=false);
 
     //! returns the descriptor size in float's 
     CV_WRAP int descriptorSize() const;
@@ -79,18 +79,21 @@ public:
     void setRadialBins(int);
     void setInnerRadius(double);
     void setOuterRadius(double);
+    void setRotationInvariant(bool);
 
     //! Getters
     int getAngularBins(void);
     int getRadialBins(void);
     double getInnerRadius(void);
     double getOuterRadius(void);
+    bool getRotationInvariant(void);
     
 private:
     CV_PROP_RW int nAngularBins;
     CV_PROP_RW int nRadialBins;
     CV_PROP_RW double innerRadius;
     CV_PROP_RW double outerRadius;
+    CV_PROP_RW bool rotationInvariant;
 protected:
     CV_WRAP void logarithmicSpaces(std::vector<double>& vecSpaces) const;
     CV_WRAP void angularSpaces(std::vector<double>& vecSpaces) const;                              

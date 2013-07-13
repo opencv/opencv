@@ -203,7 +203,7 @@ void CV_ShapeTest::test3()
     shape2.push_back(Point(115,156));
     //shape2.push_back(Point(15.6,6.3)); //outlier
 
-    SCD shapeDescriptor(12,10,0.1,5);
+    SCD shapeDescriptor(12,10,0.1,5,true);
     SCDMatcher scdmatcher(1, DistanceSCDFlags::DIST_CHI);
     Mat scdesc1, scdesc2;
     vector<DMatch> matches;

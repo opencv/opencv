@@ -55,14 +55,16 @@ SCD::SCD()
     setAngularBins(5);
     setInnerRadius(0.1);
     setOuterRadius(1);
+    setRotationInvariant(false);
 }
 
-SCD::SCD(int _nAngularBins, int _nRadialBins, double _innerRadius, double _outerRadius)
+SCD::SCD(int _nAngularBins, int _nRadialBins, double _innerRadius, double _outerRadius, bool _rotationInvariant)
 {
     setAngularBins(_nAngularBins);
     setRadialBins(_nRadialBins);
     setInnerRadius(_innerRadius);
     setOuterRadius(_outerRadius);
+    setRotationInvariant(_rotationInvariant);
 }
 
 /* Public methods */
@@ -126,13 +128,34 @@ void SCD::buildAngleMatrix(InputArray contour,
 {
     Mat contourMat = contour.getMat();
     
+    /* if descriptor is rotationInvariant compute massCenter */
+    Point massCenter(0,0);
+    if (rotationInvariant)
+    {
+        for (int i=0; i<contourMat.cols; i++)
+        {
+            massCenter=massCenter+contourMat.at<Point>(0,i);
+        }
+        massCenter.x=massCenter.x/contourMat.cols;
+        massCenter.y=massCenter.y/contourMat.cols;
+        std::cout<<"massCenter: "<<massCenter.x<<","<<massCenter.y<<std::endl;
+    }
+
+
     for (int i=0; i<contourMat.cols; i++)
     {
         for (int j=0; j<contourMat.cols; j++)
         {
-            if (i==j) continue;
+            if (i==j) angleMatrix.at<float>(i,j)=-CV_PI;
             Point dif = contourMat.at<Point>(0,i) - contourMat.at<Point>(0,j);
             angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
+
+            if (rotationInvariant)
+            {
+                Point refPt = contourMat.at<Point>(0,i) - massCenter;
+                float refAngle = atan2(refPt.y, refPt.x);
+                angleMatrix.at<float>(i,j) -= refAngle;
+            }
         }
     }
 }
@@ -222,6 +245,11 @@ void SCD::setOuterRadius(double r)
     outerRadius=r;
 }
 
+void SCD::setRotationInvariant(bool _rotationInvariant)
+{
+    rotationInvariant=_rotationInvariant;
+}
+
 int SCD::getAngularBins(void)
 {
     return nAngularBins;
@@ -240,6 +268,11 @@ double SCD::getInnerRadius(void)
 double SCD::getOuterRadius(void)
 {
     return outerRadius;
+}
+
+bool SCD::getRotationInvariant(void)
+{
+    return rotationInvariant;
 }
 
 } /* namespace cv */
