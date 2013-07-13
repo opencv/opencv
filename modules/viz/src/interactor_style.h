@@ -1,15 +1,14 @@
 #pragma once
 
 #include "viz_types.h"
-#include <opencv2/viz/events.hpp>
+#include <opencv2/viz/types.hpp>
 
 namespace cv
 {
     namespace viz
     {
-        /** \brief PCLVisualizerInteractorStyle defines an unique, custom VTK
-          * based interactory style for PCL Visualizer applications. Besides
-          * defining the rendering style, we also create a list of custom actions
+        /** \brief InteractorStyle defines an unique, custom VTK based interactory style Viz applications.
+          * Besides defining the rendering style, we also create a list of custom actions
           * that are triggered on different keys being pressed:
           *
           * -        p, P   : switch to a point-based representation
@@ -28,7 +27,6 @@ namespace cv
           * -  SHIFT + left click   : select a point
           *
           * \author Radu B. Rusu
-          * \ingroup visualization
           */
         class InteractorStyle : public vtkInteractorStyleTrackballCamera
         {
@@ -43,41 +41,19 @@ namespace cv
 
             static InteractorStyle *New ();
 
-
             InteractorStyle () {}
             virtual ~InteractorStyle () {}
 
             // this macro defines Superclass, the isA functionality and the safe downcast method
-            vtkTypeMacro (InteractorStyle, vtkInteractorStyleTrackballCamera);
+            vtkTypeMacro (InteractorStyle, vtkInteractorStyleTrackballCamera)
 
             /** \brief Initialization routine. Must be called before anything else. */
             virtual void Initialize ();
 
-            /** \brief Pass a pointer to the actor map
-              * \param[in] actors the actor map that will be used with this style
-              */
             inline void setCloudActorMap (const Ptr<CloudActorMap>& actors) { actors_ = actors; }
-
-            /** \brief Pass a set of renderers to the interactor style.
-                  * \param[in] rens the vtkRendererCollection to use
-                  */
             void setRenderer (vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
-
-            /** \brief Register a callback function for mouse events
-              * \param[in] ccallback function that will be registered as a callback for a mouse event
-              * \param[in] cookie for passing user data to callback
-              */
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
-
-            /** \brief Register a callback function for keyboard events
-                  * \param[in] callback a function that will be registered as a callback for a keyboard event
-                  * \param[in] cookie user data passed to the callback function
-                  */
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
-
-            /** \brief Save the current rendered image to disk, as a PNG screenshot.
-                  * \param[in] file the name of the PNG file
-                  */
             void saveScreenshot (const std::string &file);
 
             /** \brief Change the default keyboard modified from ALT to a different special key.
@@ -134,24 +110,18 @@ namespace cv
             /** \brief Interactor style internal method. Gets called periodically if a timer is set. */
             virtual void OnTimer ();
 
-
             void zoomIn ();
             void zoomOut ();
 
             /** \brief True if we're using red-blue colors for anaglyphic stereo, false if magenta-green. */
             bool stereo_anaglyph_mask_default_;
 
-            /** \brief The keyboard modifier to use. Default: Alt. */
             KeyboardModifier modifier_;
 
-            /** \brief KeyboardEvent callback function pointer*/
             void (*keyboardCallback_)(const KeyboardEvent&, void*);
-            /** \brief KeyboardEvent callback user data*/
             void *keyboard_callback_cookie_;
 
-            /** \brief MouseEvent callback function pointer */
             void (*mouseCallback_)(const MouseEvent&, void*);
-            /** \brief MouseEvent callback user data */
             void *mouse_callback_cookie_;
         };
     }

@@ -20,3 +20,42 @@ cv::viz::Color cv::viz::Color::white()   { return Color(255, 255, 255); }
 
 cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
 
+////////////////////////////////////////////////////////////////////
+/// cv::viz::KeyboardEvent
+
+cv::viz::KeyboardEvent::KeyboardEvent (bool _action, const std::string& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
+  : action_ (_action), modifiers_ (0), key_code_(key), key_sym_ (_key_sym)
+{
+  if (alt)
+    modifiers_ = Alt;
+
+  if (ctrl)
+    modifiers_ |= Ctrl;
+
+  if (shift)
+    modifiers_ |= Shift;
+}
+
+bool cv::viz::KeyboardEvent::isAltPressed () const { return (modifiers_ & Alt) != 0; }
+bool cv::viz::KeyboardEvent::isCtrlPressed () const { return (modifiers_ & Ctrl) != 0; }
+bool cv::viz::KeyboardEvent::isShiftPressed () const { return (modifiers_ & Shift) != 0; }
+unsigned char cv::viz::KeyboardEvent::getKeyCode () const { return key_code_; }
+const cv::String& cv::viz::KeyboardEvent::getKeySym () const { return key_sym_; }
+bool cv::viz::KeyboardEvent::keyDown () const { return action_; }
+bool cv::viz::KeyboardEvent::keyUp () const { return !action_; }
+
+////////////////////////////////////////////////////////////////////
+/// cv::viz::MouseEvent
+
+cv::viz::MouseEvent::MouseEvent (const Type& _type, const MouseButton& _button, const Point& _p,  bool alt, bool ctrl, bool shift)
+    : type(_type), button(_button), pointer(_p), key_state(0)
+{
+    if (alt)
+        key_state = KeyboardEvent::Alt;
+
+    if (ctrl)
+        key_state |= KeyboardEvent::Ctrl;
+
+    if (shift)
+        key_state |= KeyboardEvent::Shift;
+}

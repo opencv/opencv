@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <string>
 #include <opencv2/core/cvdef.h>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
@@ -8,35 +8,7 @@
 namespace cv
 {
     typedef std::string String;
-//    //qt creator hack
-//    typedef cv::Scalar Scalar;
-//    typedef cv::Mat Mat;
-//    typedef std::string String;
 
-//    typedef cv::Vec3d Vec3d;
-//    typedef cv::Vec3f Vec3f;
-//    typedef cv::Vec4d Vec4d;
-//    typedef cv::Vec4f Vec4f;
-//    typedef cv::Vec2d Vec2d;
-//    typedef cv::Vec2i Vec2i;
-//    typedef cv::Vec3b Vec3b;
-//    typedef cv::Matx33d Matx33d;
-//    typedef cv::Affine3f Affine3f;
-//    typedef cv::Affine3d Affine3d;
-//    typedef cv::Point2i Point2i;
-//    typedef cv::Point3f Point3f;
-//    typedef cv::Point3d Point3d;
-//    typedef cv::Matx44d Matx44d;
-//    typedef cv::Matx44f Matx44f;
-//    typedef cv::Size Size;
-//    typedef cv::Point Point;
-//    typedef cv::InputArray InputArray;
-//    using cv::Point3_;
-//    using cv::Vec;
-//    using cv::Mat_;
-//    using cv::DataDepth;
-//    using cv::DataType;
-//    using cv::Ptr;
     namespace viz
     {
         class CV_EXPORTS Color : public Scalar
@@ -79,35 +51,58 @@ namespace cv
 
         };
 
-        /////////////////////////////////////////////////////////////////////////////
-        /// Utility functions
-
-        inline Color vtkcolor(const Color& color)
+        class CV_EXPORTS KeyboardEvent
         {
-            Color scaled_color = color * (1.0/255.0);
-            std::swap(scaled_color[0], scaled_color[2]);
-            return scaled_color;
-        }
+        public:
+            static const unsigned int Alt   = 1;
+            static const unsigned int Ctrl  = 2;
+            static const unsigned int Shift = 4;
 
-        inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
-        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
+            /** \brief Constructor
+              * \param[in] action    true for key was pressed, false for released
+              * \param[in] key_sym   the key-name that caused the action
+              * \param[in] key       the key code that caused the action
+              * \param[in] alt       whether the alt key was pressed at the time where this event was triggered
+              * \param[in] ctrl      whether the ctrl was pressed at the time where this event was triggered
+              * \param[in] shift     whether the shift was pressed at the time where this event was triggered
+              */
+            KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
 
-        inline bool isNan(float x)
+            bool isAltPressed () const;
+            bool isCtrlPressed () const;
+            bool isShiftPressed () const;
+
+            unsigned char getKeyCode () const;
+
+            const String& getKeySym () const;
+            bool keyDown () const;
+            bool keyUp () const;
+
+        protected:
+
+            bool action_;
+            unsigned int modifiers_;
+            unsigned char key_code_;
+            String key_sym_;
+        };
+
+        class CV_EXPORTS MouseEvent
         {
-            unsigned int *u = reinterpret_cast<unsigned int *>(&x);
-            return ((u[0] & 0x7f800000) == 0x7f800000) && (u[0] & 0x007fffff);
-        }
+        public:
+            enum Type { MouseMove = 1, MouseButtonPress, MouseButtonRelease, MouseScrollDown, MouseScrollUp, MouseDblClick } ;
+            enum MouseButton { NoButton = 0, LeftButton, MiddleButton, RightButton, VScroll } ;
 
-        inline bool isNan(double x)
-        {
-            unsigned int *u = reinterpret_cast<unsigned int *>(&x);
-            return (u[1] & 0x7ff00000) == 0x7ff00000 && (u[0] != 0 || (u[1] & 0x000fffff) != 0);
-        }
+            MouseEvent (const Type& type, const MouseButton& button, const Point& p, bool alt, bool ctrl, bool shift);
 
-        template<typename _Tp, int cn> inline bool isNan(const Vec<_Tp, cn>& v)
-        { return isNan(v.val[0]) || isNan(v.val[1]) || isNan(v.val[2]); }
+            Type type;
+            MouseButton button;
+            Point pointer;
+            unsigned int key_state;
+        };
 
-        template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
-        { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
-    }
-}
+    } /* namespace viz */
+} /* namespace cv */
+
+
+
+

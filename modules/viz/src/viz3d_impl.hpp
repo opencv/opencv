@@ -1,28 +1,25 @@
 #pragma once
 
-#include <opencv2/core.hpp>
-#include <opencv2/viz/events.hpp>
+#include <opencv2/viz.hpp>
 #include "interactor_style.h"
 #include "viz_types.h"
 #include "common.h"
-#include <opencv2/viz/types.hpp>
-#include <opencv2/core/affine.hpp>
-#include <opencv2/viz/viz3d.hpp>
-
 
 struct cv::viz::Viz3d::VizImpl
 {
 public:
     typedef cv::Ptr<VizImpl> Ptr;
+    typedef Viz3d::KeyboardCallback KeyboardCallback;
+    typedef Viz3d::MouseCallback MouseCallback;
 
-    VizImpl (const String &name = String());
+    VizImpl (const String &name);
 
     virtual ~VizImpl ();
     void setFullScreen (bool mode);
     void setWindowName (const String &name);
     
-    void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie = 0);
-    void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
+    void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
+    void registerMouseCallback(MouseCallback callback, void* cookie = 0);
 
     void spin ();
     void spinOnce (int time = 1, bool force_redraw = false);
@@ -173,9 +170,7 @@ public:
     
     void setWidgetPose(const String &id, const Affine3f &pose);
     void updateWidgetPose(const String &id, const Affine3f &pose);
-    Affine3f getWidgetPose(const String &id) const;
-    
-    void all_data();
+    Affine3f getWidgetPose(const String &id) const; 
 
 private:
     vtkSmartPointer<vtkRenderWindowInteractor> interactor_;
@@ -285,12 +280,6 @@ namespace cv
     namespace viz
     {
         //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
-
-        //void convertToVtkMatrix (const Eigen::Matrix4f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-
-        void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-        void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
-
         vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
         cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
 
@@ -300,8 +289,6 @@ namespace cv
               * \param[out] vtk_matrix the resultant VTK 4x4 matrix
               */
         void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-        void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
-
 
         struct NanFilter
         {
@@ -366,6 +353,17 @@ namespace cv
             ApplyAffine(const ApplyAffine&);
             ApplyAffine& operator=(const ApplyAffine&);
         };
+
+
+        inline Color vtkcolor(const Color& color)
+        {
+            Color scaled_color = color * (1.0/255.0);
+            std::swap(scaled_color[0], scaled_color[2]);
+            return scaled_color;
+        }
+
+        inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
+        template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
     }
 
 }

@@ -1,6 +1,4 @@
 #include "precomp.hpp"
-
-#include <opencv2/calib3d.hpp>
 #include "viz3d_impl.hpp"
 
 #include <vtkRenderWindowInteractor.h>
@@ -95,16 +93,11 @@ cv::viz::Viz3d::VizImpl::~VizImpl ()
 void cv::viz::Viz3d::VizImpl::saveScreenshot (const std::string &file) { style_->saveScreenshot (file); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
-{
-    style_->registerMouseCallback(callback, cookie);
-}
+void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void* cookie)
+{ style_->registerMouseCallback(callback, cookie); }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie)
-{
-    style_->registerKeyboardCallback(callback, cookie);
-}
+void cv::viz::Viz3d::VizImpl::registerKeyboardCallback(KeyboardCallback callback, void* cookie)
+{ style_->registerKeyboardCallback(callback, cookie); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::spin ()
@@ -1018,13 +1011,6 @@ void cv::viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Qu
     vtk_matrix->SetElement (3, 3, 1.0f);
 }
 
-void cv::viz::convertToVtkMatrix (const Matx44f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
-{
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            vtk_matrix->SetElement (i, k, m (i, k));
-}
-
 vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix (const cv::Matx44f &m)
 {
     vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
@@ -1033,14 +1019,6 @@ vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix (const cv::Matx44f &m)
             vtk_matrix->SetElement(i, k, m(i, k));
     return vtk_matrix;
 }
-
-void cv::viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m)
-{
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            m(i,k) = vtk_matrix->GetElement (i, k);
-}
-
 
 cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
 {
@@ -1052,13 +1030,6 @@ cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matr
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m)
-{
-    for (int i = 0; i < 4; i++)
-        for (int k = 0; k < 4; k++)
-            m (i,k) = static_cast<float> (vtk_matrix->GetElement (i, k));
-}
-
 
 void cv::viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {

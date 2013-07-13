@@ -222,7 +222,6 @@ cv::viz::InteractorStyle::OnKeyDown ()
                      "    ALT + s, S   : turn stereo mode on/off\n"
                      "    ALT + f, F   : switch between maximized window mode and original size\n"
                      "\n"
-                     "    SHIFT + left click   : select a point\n"
                      << std::endl;
         break;
     }
@@ -676,9 +675,6 @@ void cv::viz::InteractorStyle::OnTimer ()
 }
 
 
-
-
-
 namespace cv
 {
     namespace viz
@@ -687,4 +683,3 @@ namespace cv
         vtkStandardNewMacro(InteractorStyle)
     }
 }
-

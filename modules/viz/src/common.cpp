@@ -1,19 +1,8 @@
 #include <common.h>
 #include <cstdlib>
 #include <opencv2/viz/types.hpp>
+#include "viz3d_impl.hpp"
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-
-//Eigen::Matrix4d cv::viz::vtkToEigen (vtkMatrix4x4* vtk_matrix)
-//{
-//    Eigen::Matrix4d eigen_matrix = Eigen::Matrix4d::Identity ();
-//    for (int i=0; i < 4; i++)
-//        for (int j=0; j < 4; j++)
-//            eigen_matrix (i, j) = vtk_matrix->GetElement (i, j);
-
-//    return eigen_matrix;
-//}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 //Eigen::Vector2i cv::viz::worldToView (const Eigen::Vector4d &world_pt, const Eigen::Matrix4d &view_projection_matrix, int width, int height)
