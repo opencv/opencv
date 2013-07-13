@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 
 
-cv::Affine3f temp_viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin)
+cv::Affine3f cv::viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin)
 {
     Affine3f::Mat3 R;
     R.val[0] = axis_x.val[0];

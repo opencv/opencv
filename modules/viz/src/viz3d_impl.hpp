@@ -10,7 +10,7 @@
 #include <opencv2/viz/viz3d.hpp>
 
 
-struct temp_viz::Viz3d::VizImpl
+struct cv::viz::Viz3d::VizImpl
 {
 public:
     typedef cv::Ptr<VizImpl> Ptr;
@@ -280,91 +280,93 @@ private:
 
 
 
-namespace temp_viz
+namespace cv
 {
-
-//void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
-
-//void convertToVtkMatrix (const Eigen::Matrix4f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-
-void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
-
-vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
-cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
-
-/** \brief Convert origin and orientation to vtkMatrix4x4
-      * \param[in] origin the point cloud origin
-      * \param[in] orientation the point cloud orientation
-      * \param[out] vtk_matrix the resultant VTK 4x4 matrix
-      */
-void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
-void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
-
-
-struct NanFilter
-{
-    template<typename _Tp, typename _Msk>
-    struct Impl
+    namespace viz
     {
-        typedef Vec<_Tp, 3> _Out;
+        //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
 
-        static _Out* copy(const Mat& source, _Out* output, const Mat& nan_mask)
+        //void convertToVtkMatrix (const Eigen::Matrix4f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
+
+        void convertToVtkMatrix (const cv::Matx44f& m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
+        void convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m);
+
+        vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
+        cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
+
+        /** \brief Convert origin and orientation to vtkMatrix4x4
+              * \param[in] origin the point cloud origin
+              * \param[in] orientation the point cloud orientation
+              * \param[out] vtk_matrix the resultant VTK 4x4 matrix
+              */
+        void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
+        void convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m);
+
+
+        struct NanFilter
         {
-            CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
-            CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-            CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
-
-            int s_chs = source.channels();
-            int m_chs = nan_mask.channels();
-
-            for(int y = 0; y < source.rows; ++y)
+            template<typename _Tp, typename _Msk>
+            struct Impl
             {
-                const _Tp* srow = source.ptr<_Tp>(y);
-                const _Msk* mrow = nan_mask.ptr<_Msk>(y);
+                typedef Vec<_Tp, 3> _Out;
 
-                for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
-                    if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
-                        *output++ = _Out(srow);
+                static _Out* copy(const Mat& source, _Out* output, const Mat& nan_mask)
+                {
+                    CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+                    CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
+                    CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
+
+                    int s_chs = source.channels();
+                    int m_chs = nan_mask.channels();
+
+                    for(int y = 0; y < source.rows; ++y)
+                    {
+                        const _Tp* srow = source.ptr<_Tp>(y);
+                        const _Msk* mrow = nan_mask.ptr<_Msk>(y);
+
+                        for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+                            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+                                *output++ = _Out(srow);
+                    }
+                    return output;
+                }
+            };
+
+            template<typename _Tp>
+            static inline Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
+            {
+                CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
+
+                typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
+                const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copy, &NanFilter::Impl<_Tp, double>::copy };
+
+                return table[nan_mask.depth() - 5](source, output, nan_mask);
             }
-            return output;
-        }
-    };
+        };
 
-    template<typename _Tp>
-    static inline Vec<_Tp, 3>* copy(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
-    {
-        CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
+        struct ApplyAffine
+        {
+            const Affine3f& affine_;
+            ApplyAffine(const Affine3f& affine) : affine_(affine) {}
 
-        typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
-        const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copy, &NanFilter::Impl<_Tp, double>::copy };
+            template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) const { return affine_ * p; }
 
-        return table[nan_mask.depth() - 5](source, output, nan_mask);
+            template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v) const
+            {
+                const float* m = affine_.matrix.val;
+
+                Vec<_Tp, 3> result;
+                result[0] = (_Tp)(m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3]);
+                result[1] = (_Tp)(m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7]);
+                result[2] = (_Tp)(m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11]);
+                return result;
+            }
+
+        private:
+            ApplyAffine(const ApplyAffine&);
+            ApplyAffine& operator=(const ApplyAffine&);
+        };
     }
-};
-
-struct ApplyAffine
-{
-    const Affine3f& affine_;
-    ApplyAffine(const Affine3f& affine) : affine_(affine) {}
-
-    template<typename _Tp> Point3_<_Tp> operator()(const Point3_<_Tp>& p) const { return affine_ * p; }
-
-    template<typename _Tp> Vec<_Tp, 3> operator()(const Vec<_Tp, 3>& v) const
-    {
-        const float* m = affine_.matrix.val;
-
-        Vec<_Tp, 3> result;
-        result[0] = (_Tp)(m[0] * v[0] + m[1] * v[1] + m[ 2] * v[2] + m[ 3]);
-        result[1] = (_Tp)(m[4] * v[0] + m[5] * v[1] + m[ 6] * v[2] + m[ 7]);
-        result[2] = (_Tp)(m[8] * v[0] + m[9] * v[1] + m[10] * v[2] + m[11]);
-        return result;
-    }
-
-private:
-    ApplyAffine(const ApplyAffine&);
-    ApplyAffine& operator=(const ApplyAffine&);
-};
 
 }
 

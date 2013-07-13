@@ -7,9 +7,9 @@
 using namespace cv;
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::Initialize ()
+void cv::viz::InteractorStyle::Initialize ()
 {
-    modifier_ = temp_viz::InteractorStyle::KB_MOD_ALT;
+    modifier_ = cv::viz::InteractorStyle::KB_MOD_ALT;
     // Set windows size (width, height) to unknown (-1)
     win_size_ = Vec2i(-1, -1);
     win_pos_ = Vec2i(0, 0);
@@ -33,7 +33,7 @@ void temp_viz::InteractorStyle::Initialize ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::saveScreenshot (const std::string &file)
+void cv::viz::InteractorStyle::saveScreenshot (const std::string &file)
 {
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
     wif_->SetInput (Interactor->GetRenderWindow ());
@@ -44,29 +44,29 @@ void temp_viz::InteractorStyle::saveScreenshot (const std::string &file)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::zoomIn ()
+void cv::viz::InteractorStyle::zoomIn ()
 {
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
     // Zoom in
     StartDolly ();
     double factor = 10.0 * 0.2 * .5;
-    Dolly (pow (1.1, factor));
+    Dolly (std::pow (1.1, factor));
     EndDolly ();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::zoomOut ()
+void cv::viz::InteractorStyle::zoomOut ()
 {
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
     // Zoom out
     StartDolly ();
     double factor = 10.0 * -0.2 * .5;
-    Dolly (pow (1.1, factor));
+    Dolly (std::pow (1.1, factor));
     EndDolly ();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnChar ()
+void cv::viz::InteractorStyle::OnChar ()
 {
     // Make sure we ignore the same events we handle in OnKeyDown to avoid calling things twice
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
@@ -133,7 +133,7 @@ void temp_viz::InteractorStyle::OnChar ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
+void cv::viz::InteractorStyle::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
 {
     // Register the callback function and store the user data
     mouseCallback_ = callback;
@@ -141,7 +141,7 @@ void temp_viz::InteractorStyle::registerMouseCallback(void (*callback)(const Mou
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void *cookie)
+void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void *cookie)
 {
     // Register the callback function and store the user data
     keyboardCallback_ = callback;
@@ -150,7 +150,7 @@ void temp_viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const 
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void
-temp_viz::InteractorStyle::OnKeyDown ()
+cv::viz::InteractorStyle::OnKeyDown ()
 {
     if (!init_)
     {
@@ -507,7 +507,7 @@ temp_viz::InteractorStyle::OnKeyDown ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnKeyUp ()
+void cv::viz::InteractorStyle::OnKeyUp ()
 {
     KeyboardEvent event (false, Interactor->GetKeySym (), Interactor->GetKeyCode (), Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
     // Check if there is a keyboard callback registered
@@ -518,7 +518,7 @@ void temp_viz::InteractorStyle::OnKeyUp ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnMouseMove ()
+void cv::viz::InteractorStyle::OnMouseMove ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseMove, MouseEvent::NoButton, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -528,7 +528,7 @@ void temp_viz::InteractorStyle::OnMouseMove ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnLeftButtonDown ()
+void cv::viz::InteractorStyle::OnLeftButtonDown ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent::Type type = (Interactor->GetRepeatCount() == 0) ? MouseEvent::MouseButtonPress : MouseEvent::MouseDblClick;
@@ -539,7 +539,7 @@ void temp_viz::InteractorStyle::OnLeftButtonDown ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnLeftButtonUp ()
+void cv::viz::InteractorStyle::OnLeftButtonUp ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseButtonRelease, MouseEvent::LeftButton, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -549,7 +549,7 @@ void temp_viz::InteractorStyle::OnLeftButtonUp ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnMiddleButtonDown ()
+void cv::viz::InteractorStyle::OnMiddleButtonDown ()
 {
     Vec2i p(Interactor->GetEventPosition());
 
@@ -561,7 +561,7 @@ void temp_viz::InteractorStyle::OnMiddleButtonDown ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnMiddleButtonUp ()
+void cv::viz::InteractorStyle::OnMiddleButtonUp ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseButtonRelease, MouseEvent::MiddleButton, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -571,7 +571,7 @@ void temp_viz::InteractorStyle::OnMiddleButtonUp ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnRightButtonDown ()
+void cv::viz::InteractorStyle::OnRightButtonDown ()
 {
     Vec2i p(Interactor->GetEventPosition());
 
@@ -583,7 +583,7 @@ void temp_viz::InteractorStyle::OnRightButtonDown ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnRightButtonUp ()
+void cv::viz::InteractorStyle::OnRightButtonUp ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseButtonRelease, MouseEvent::RightButton, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -593,7 +593,7 @@ void temp_viz::InteractorStyle::OnRightButtonUp ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnMouseWheelForward ()
+void cv::viz::InteractorStyle::OnMouseWheelForward ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseScrollUp, MouseEvent::VScroll, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -625,7 +625,7 @@ void temp_viz::InteractorStyle::OnMouseWheelForward ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnMouseWheelBackward ()
+void cv::viz::InteractorStyle::OnMouseWheelBackward ()
 {
     Vec2i p(Interactor->GetEventPosition());
     MouseEvent event (MouseEvent::MouseScrollDown, MouseEvent::VScroll, p, Interactor->GetAltKey (), Interactor->GetControlKey (), Interactor->GetShiftKey ());
@@ -658,7 +658,7 @@ void temp_viz::InteractorStyle::OnMouseWheelBackward ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::InteractorStyle::OnTimer ()
+void cv::viz::InteractorStyle::OnTimer ()
 {
     if (!init_)
     {
@@ -676,10 +676,15 @@ void temp_viz::InteractorStyle::OnTimer ()
 }
 
 
-namespace temp_viz
-{
-    // Standard VTK macro for *New ()
-    vtkStandardNewMacro (InteractorStyle);
 
+
+
+namespace cv
+{
+    namespace viz
+    {
+        //Standard VTK macro for *New()
+        vtkStandardNewMacro(InteractorStyle)
+    }
 }
 

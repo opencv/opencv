@@ -12,8 +12,8 @@ vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew ()
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-temp_viz::Viz3d::VizImpl::VizImpl (const std::string &name)
-    :  style_ (vtkSmartPointer<temp_viz::InteractorStyle>::New ())
+cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
+    :  style_ (vtkSmartPointer<cv::viz::InteractorStyle>::New ())
     , cloud_actor_map_ (new CloudActorMap)
     , shape_actor_map_ (new ShapeActorMap)
     , widget_actor_map_ (new WidgetActorMap)
@@ -83,7 +83,7 @@ temp_viz::Viz3d::VizImpl::VizImpl (const std::string &name)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-temp_viz::Viz3d::VizImpl::~VizImpl ()
+cv::viz::Viz3d::VizImpl::~VizImpl ()
 {
     if (interactor_ != NULL)
         interactor_->DestroyTimer (timer_id_);
@@ -92,22 +92,22 @@ temp_viz::Viz3d::VizImpl::~VizImpl ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::saveScreenshot (const std::string &file) { style_->saveScreenshot (file); }
+void cv::viz::Viz3d::VizImpl::saveScreenshot (const std::string &file) { style_->saveScreenshot (file); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
+void cv::viz::Viz3d::VizImpl::registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie)
 {
     style_->registerMouseCallback(callback, cookie);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie)
+void cv::viz::Viz3d::VizImpl::registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void* cookie)
 {
     style_->registerKeyboardCallback(callback, cookie);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::spin ()
+void cv::viz::Viz3d::VizImpl::spin ()
 {
     resetStoppedFlag ();
     window_->Render ();
@@ -115,7 +115,7 @@ void temp_viz::Viz3d::VizImpl::spin ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::spinOnce (int time, bool force_redraw)
+void cv::viz::Viz3d::VizImpl::spinOnce (int time, bool force_redraw)
 {
     resetStoppedFlag ();
 
@@ -139,7 +139,7 @@ void temp_viz::Viz3d::VizImpl::spinOnce (int time, bool force_redraw)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removePointCloud (const std::string &id)
+bool cv::viz::Viz3d::VizImpl::removePointCloud (const std::string &id)
 {
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
     if (am_it == cloud_actor_map_->end ())
@@ -152,7 +152,7 @@ bool temp_viz::Viz3d::VizImpl::removePointCloud (const std::string &id)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeShape (const std::string &id)
+bool cv::viz::Viz3d::VizImpl::removeShape (const std::string &id)
 {
     // Check to see if the given ID entry exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -191,7 +191,7 @@ bool temp_viz::Viz3d::VizImpl::removeShape (const std::string &id)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeText3D (const std::string &id)
+bool cv::viz::Viz3d::VizImpl::removeText3D (const std::string &id)
 {
     // Check to see if the given ID entry exists
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -206,7 +206,7 @@ bool temp_viz::Viz3d::VizImpl::removeText3D (const std::string &id)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeAllPointClouds ()
+bool cv::viz::Viz3d::VizImpl::removeAllPointClouds ()
 {
     // Check to see if the given ID entry exists
     CloudActorMap::iterator am_it = cloud_actor_map_->begin ();
@@ -221,7 +221,7 @@ bool temp_viz::Viz3d::VizImpl::removeAllPointClouds ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeAllShapes ()
+bool cv::viz::Viz3d::VizImpl::removeAllShapes ()
 {
     // Check to see if the given ID entry exists
     ShapeActorMap::iterator am_it = shape_actor_map_->begin ();
@@ -237,7 +237,7 @@ bool temp_viz::Viz3d::VizImpl::removeAllShapes ()
 
 
 //////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor)
+bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor)
 {
     vtkLODActor* actor_to_remove = vtkLODActor::SafeDownCast (actor);
 
@@ -262,7 +262,7 @@ bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vt
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkActor> &actor)
+bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkActor> &actor)
 {
     vtkActor* actor_to_remove = vtkActor::SafeDownCast (actor);
 
@@ -287,7 +287,7 @@ bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vt
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkProp> &actor)
+bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkProp> &actor)
 {
     vtkProp* actor_to_remove = vtkProp::SafeDownCast(actor);
 
@@ -305,7 +305,7 @@ bool temp_viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vt
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::createActorFromVTKDataSet (const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars)
+void cv::viz::Viz3d::VizImpl::createActorFromVTKDataSet (const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars)
 {
     if (!actor)
         actor = vtkSmartPointer<vtkLODActor>::New ();
@@ -344,14 +344,14 @@ void temp_viz::Viz3d::VizImpl::createActorFromVTKDataSet (const vtkSmartPointer<
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setBackgroundColor (const Color& color)
+void cv::viz::Viz3d::VizImpl::setBackgroundColor (const Color& color)
 {
     Color c = vtkcolor(color);
     renderer_->SetBackground (c.val);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::getPointCloudRenderingProperties (int property, double &value, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::getPointCloudRenderingProperties (int property, double &value, const std::string &id)
 {
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
     if (am_it == cloud_actor_map_->end ())
@@ -387,7 +387,7 @@ bool temp_viz::Viz3d::VizImpl::getPointCloudRenderingProperties (int property, d
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::setPointCloudRenderingProperties (int property, double value, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::setPointCloudRenderingProperties (int property, double value, const std::string &id)
 {
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
     if (am_it == cloud_actor_map_->end ())
@@ -433,7 +433,7 @@ bool temp_viz::Viz3d::VizImpl::setPointCloudRenderingProperties (int property, d
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::setPointCloudSelected (const bool selected, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::setPointCloudSelected (const bool selected, const std::string &id)
 {
     CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
     if (am_it == cloud_actor_map_->end ())
@@ -456,7 +456,7 @@ bool temp_viz::Viz3d::VizImpl::setPointCloudSelected (const bool selected, const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double value, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double value, const std::string &id)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     if (am_it == shape_actor_map_->end ())
@@ -512,7 +512,7 @@ bool temp_viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double
         {
             if (!actor->GetMapper ()->GetInput ()->GetPointData ()->GetNormals ())
             {
-                std::cout << "[temp_viz::PCLVisualizer::setShapeRenderingProperties] Normals do not exist in the dataset, but Gouraud shading was requested. Estimating normals...\n" << std::endl;
+                std::cout << "[cv::viz::PCLVisualizer::setShapeRenderingProperties] Normals do not exist in the dataset, but Gouraud shading was requested. Estimating normals...\n" << std::endl;
 
                 vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New ();
                 normals->SetInput (actor->GetMapper ()->GetInput ());
@@ -526,7 +526,7 @@ bool temp_viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double
         {
             if (!actor->GetMapper ()->GetInput ()->GetPointData ()->GetNormals ())
             {
-                std::cout << "[temp_viz::PCLVisualizer::setShapeRenderingProperties] Normals do not exist in the dataset, but Phong shading was requested. Estimating normals...\n" << std::endl;
+                std::cout << "[cv::viz::PCLVisualizer::setShapeRenderingProperties] Normals do not exist in the dataset, but Phong shading was requested. Estimating normals...\n" << std::endl;
                 vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New ();
                 normals->SetInput (actor->GetMapper ()->GetInput ());
                 normals->Update ();
@@ -547,7 +547,7 @@ bool temp_viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::initCameraParameters ()
+void cv::viz::Viz3d::VizImpl::initCameraParameters ()
 {
     Camera camera_temp;
     // Set default camera parameters to something meaningful
@@ -571,12 +571,12 @@ void temp_viz::Viz3d::VizImpl::initCameraParameters ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::cameraParamsSet () const { return (camera_set_); }
+bool cv::viz::Viz3d::VizImpl::cameraParamsSet () const { return (camera_set_); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::updateCamera ()
+void cv::viz::Viz3d::VizImpl::updateCamera ()
 {
-    std::cout << "[temp_viz::PCLVisualizer::updateCamera()] This method was deprecated, just re-rendering all scenes now." << std::endl;
+    std::cout << "[cv::viz::PCLVisualizer::updateCamera()] This method was deprecated, just re-rendering all scenes now." << std::endl;
     //rens_->InitTraversal ();
     // Update the camera parameters
 
@@ -584,7 +584,7 @@ void temp_viz::Viz3d::VizImpl::updateCamera ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::getCameras (temp_viz::Camera& camera)
+void cv::viz::Viz3d::VizImpl::getCameras (cv::viz::Camera& camera)
 {
     vtkCamera* active_camera = renderer_->GetActiveCamera ();
 
@@ -599,7 +599,7 @@ void temp_viz::Viz3d::VizImpl::getCameras (temp_viz::Camera& camera)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::Affine3f temp_viz::Viz3d::VizImpl::getViewerPose ()
+cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose ()
 {
     vtkCamera& camera = *renderer_->GetActiveCamera ();
 
@@ -628,14 +628,14 @@ cv::Affine3f temp_viz::Viz3d::VizImpl::getViewerPose ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::resetCamera ()
+void cv::viz::Viz3d::VizImpl::resetCamera ()
 {
     renderer_->ResetCamera ();
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up)
+void cv::viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up)
 {
 
     vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
@@ -646,7 +646,7 @@ void temp_viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z)
+void cv::viz::Viz3d::VizImpl::setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z)
 {
     //rens_->InitTraversal ();
 
@@ -659,7 +659,7 @@ void temp_viz::Viz3d::VizImpl::setCameraPosition (double pos_x, double pos_y, do
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraParameters (const cv::Matx33f& intrinsics, const cv::Affine3f& extrinsics)
+void cv::viz::Viz3d::VizImpl::setCameraParameters (const cv::Matx33f& intrinsics, const cv::Affine3f& extrinsics)
 {
     // Position = extrinsic translation
     cv::Vec3f pos_vec = extrinsics.translation();
@@ -698,7 +698,7 @@ void temp_viz::Viz3d::VizImpl::setCameraParameters (const cv::Matx33f& intrinsic
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraParameters (const temp_viz::Camera &camera)
+void cv::viz::Viz3d::VizImpl::setCameraParameters (const cv::viz::Camera &camera)
 {
     //rens_->InitTraversal ();
 
@@ -715,7 +715,7 @@ void temp_viz::Viz3d::VizImpl::setCameraParameters (const temp_viz::Camera &came
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraClipDistances (double near, double far)
+void cv::viz::Viz3d::VizImpl::setCameraClipDistances (double near, double far)
 {
     //rens_->InitTraversal ();
 
@@ -724,7 +724,7 @@ void temp_viz::Viz3d::VizImpl::setCameraClipDistances (double near, double far)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setCameraFieldOfView (double fovy)
+void cv::viz::Viz3d::VizImpl::setCameraFieldOfView (double fovy)
 {
     //rens_->InitTraversal ();
 
@@ -735,7 +735,7 @@ void temp_viz::Viz3d::VizImpl::setCameraFieldOfView (double fovy)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
+void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
 {
     vtkSmartPointer<vtkMatrix4x4> camera_pose;
     static CloudActorMap::iterator it = cloud_actor_map_->find (id);
@@ -771,7 +771,7 @@ void temp_viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const std::string & id)
+bool cv::viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const std::string & id)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     if (am_it != shape_actor_map_->end ())
@@ -791,7 +791,7 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const std::string & id)
+bool cv::viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const std::string & id)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     if (am_it != shape_actor_map_->end ())
@@ -818,7 +818,7 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPolyData (vtkSmartPointer<vtkPolyData
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename, const std::string &id)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     if (am_it != shape_actor_map_->end ())
@@ -837,7 +837,7 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename,
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename, vtkSmartPointer<vtkTransform> transform, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename, vtkSmartPointer<vtkTransform> transform, const std::string &id)
 {
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
     if (am_it != shape_actor_map_->end ())
@@ -859,7 +859,7 @@ bool temp_viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename,
     return (true);
 }
 
-bool temp_viz::Viz3d::VizImpl::addPolylineFromPolygonMesh (const Mesh3d& mesh, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addPolylineFromPolygonMesh (const Mesh3d& mesh, const std::string &id)
 {
     CV_Assert(mesh.cloud.rows == 1 && mesh.cloud.type() == CV_32FC3);
 
@@ -913,7 +913,7 @@ bool temp_viz::Viz3d::VizImpl::addPolylineFromPolygonMesh (const Mesh3d& mesh, c
 
 
 ///////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setRepresentationToSurfaceForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToSurfaceForAllActors ()
 {
     vtkActorCollection * actors = renderer_->GetActors ();
     actors->InitTraversal ();
@@ -923,7 +923,7 @@ void temp_viz::Viz3d::VizImpl::setRepresentationToSurfaceForAllActors ()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setRepresentationToPointsForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToPointsForAllActors ()
 {
     vtkActorCollection * actors = renderer_->GetActors ();
     actors->InitTraversal ();
@@ -933,7 +933,7 @@ void temp_viz::Viz3d::VizImpl::setRepresentationToPointsForAllActors ()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::setRepresentationToWireframeForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToWireframeForAllActors ()
 {
     vtkActorCollection * actors = renderer_->GetActors ();
     actors->InitTraversal ();
@@ -943,7 +943,7 @@ void temp_viz::Viz3d::VizImpl::setRepresentationToWireframeForAllActors ()
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::updateCells (vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points)
+void cv::viz::Viz3d::VizImpl::updateCells (vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points)
 {
     // If no init cells and cells has not been initialized...
     if (!cells)
@@ -986,24 +986,24 @@ void temp_viz::Viz3d::VizImpl::updateCells (vtkSmartPointer<vtkIdTypeArray> &cel
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata)
+void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata)
 {
     polydata = vtkSmartPointer<vtkAppendPolyData>::New ();
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata)
+void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata)
 {
     polydata = vtkSmartPointer<vtkPolyData>::New ();
 }
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
+void cv::viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
 {
     polydata = vtkSmartPointer<vtkUnstructuredGrid>::New ();
 }
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
+void cv::viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
 {
     // set rotation
     Eigen::Matrix3f rot = orientation.toRotationMatrix ();
@@ -1018,14 +1018,14 @@ void temp_viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Q
     vtk_matrix->SetElement (3, 3, 1.0f);
 }
 
-void temp_viz::convertToVtkMatrix (const cv::Matx44f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
+void cv::viz::convertToVtkMatrix (const Matx44f &m, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
 {
     for (int i = 0; i < 4; i++)
         for (int k = 0; k < 4; k++)
             vtk_matrix->SetElement (i, k, m (i, k));
 }
 
-vtkSmartPointer<vtkMatrix4x4> temp_viz::convertToVtkMatrix (const cv::Matx44f &m)
+vtkSmartPointer<vtkMatrix4x4> cv::viz::convertToVtkMatrix (const cv::Matx44f &m)
 {
     vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New();
     for (int i = 0; i < 4; i++)
@@ -1034,7 +1034,7 @@ vtkSmartPointer<vtkMatrix4x4> temp_viz::convertToVtkMatrix (const cv::Matx44f &m
     return vtk_matrix;
 }
 
-void temp_viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m)
+void cv::viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, cv::Matx44f &m)
 {
     for (int i = 0; i < 4; i++)
         for (int k = 0; k < 4; k++)
@@ -1042,7 +1042,7 @@ void temp_viz::convertToCvMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matri
 }
 
 
-cv::Matx44f temp_viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
+cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
 {
     cv::Matx44f m;
     for (int i = 0; i < 4; i++)
@@ -1052,7 +1052,7 @@ cv::Matx44f temp_viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_mat
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m)
+void cv::viz::convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_matrix, Eigen::Matrix4f &m)
 {
     for (int i = 0; i < 4; i++)
         for (int k = 0; k < 4; k++)
@@ -1060,22 +1060,22 @@ void temp_viz::convertToEigenMatrix (const vtkSmartPointer<vtkMatrix4x4> &vtk_ma
 }
 
 
-void temp_viz::Viz3d::VizImpl::setFullScreen (bool mode)
+void cv::viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {
     if (window_)
         window_->SetFullScreen (mode);
 }
 
-void temp_viz::Viz3d::VizImpl::setWindowName (const std::string &name)
+void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 {
     if (window_)
         window_->SetWindowName (name.c_str ());
 }
 
-void temp_viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition (x, y); }
-void temp_viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
+void cv::viz::Viz3d::VizImpl::setPosition (int x, int y) { window_->SetPosition (x, y); }
+void cv::viz::Viz3d::VizImpl::setSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
-bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
@@ -1088,9 +1088,9 @@ bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& ma
     //    std::vector<sensor_msgs::PointField> fields;
 
 
-    //    rgb_idx = temp_viz::getFieldIndex (*cloud, "rgb", fields);
+    //    rgb_idx = cv::viz::getFieldIndex (*cloud, "rgb", fields);
     //    if (rgb_idx == -1)
-    //      rgb_idx = temp_viz::getFieldIndex (*cloud, "rgba", fields);
+    //      rgb_idx = cv::viz::getFieldIndex (*cloud, "rgba", fields);
 
     vtkSmartPointer<vtkUnsignedCharArray> colors_array;
 #if 1
@@ -1108,12 +1108,12 @@ bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& ma
         for(int i = 0; i < mesh.colors.cols; ++i)
             colors_array->InsertNextTupleValue(&data[i*3]);
 
-        //      temp_viz::RGB rgb_data;
+        //      cv::viz::RGB rgb_data;
         //      for (size_t i = 0; i < cloud->size (); ++i)
         //      {
         //        if (!isFinite (cloud->points[i]))
         //          continue;
-        //        memcpy (&rgb_data, reinterpret_cast<const char*> (&cloud->points[i]) + fields[rgb_idx].offset, sizeof (temp_viz::RGB));
+        //        memcpy (&rgb_data, reinterpret_cast<const char*> (&cloud->points[i]) + fields[rgb_idx].offset, sizeof (cv::viz::RGB));
         //        unsigned char color[3];
         //        color[0] = rgb_data.r;
         //        color[1] = rgb_data.g;
@@ -1262,7 +1262,7 @@ bool temp_viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& ma
 }
 
 
-bool temp_viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id)
 {
     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
@@ -1379,7 +1379,7 @@ bool temp_viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3f &p2, const Color& color, bool display_length, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3f &p2, const Color& color, bool display_length, const std::string &id)
 {
     // Check to see if this ID entry already exists (has it been already added to the visualizer?)
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -1409,7 +1409,7 @@ bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3
     return (true);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////
-bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3f &p2, const Color& color_line, const Color& color_text, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3f &p2, const Color& color_line, const Color& color_text, const std::string &id)
 {
     // Check to see if this ID entry already exists (has it been already added to the visualizer?)
     ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
@@ -1440,7 +1440,7 @@ bool temp_viz::Viz3d::VizImpl::addArrow (const cv::Point3f &p1, const cv::Point3
     return (true);
 }
 
-bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& color, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& color, const std::string &id)
 {
     CV_Assert(cloud.type() == CV_32FC3 && cloud.rows == 1);
 
@@ -1518,7 +1518,7 @@ bool temp_viz::Viz3d::VizImpl::addPolygon (const cv::Mat& cloud, const Color& co
     return (true);
 }
 
-void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -1547,7 +1547,7 @@ void temp_viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget
     (*widget_actor_map_)[id].actor = WidgetAccessor::getProp(widget);
 }
 
-void temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
+void cv::viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -1556,7 +1556,7 @@ void temp_viz::Viz3d::VizImpl::removeWidget(const String &id)
     widget_actor_map_->erase(wam_itr);
 }
 
-temp_viz::Widget temp_viz::Viz3d::VizImpl::getWidget(const String &id) const
+cv::viz::Widget cv::viz::Viz3d::VizImpl::getWidget(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -1567,7 +1567,7 @@ temp_viz::Widget temp_viz::Viz3d::VizImpl::getWidget(const String &id) const
     return widget;
 }
 
-void temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -1581,7 +1581,7 @@ void temp_viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &p
     actor->Modified ();
 }
 
-void temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
+void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f &pose)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
@@ -1604,7 +1604,7 @@ void temp_viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f
     actor->Modified ();
 }
 
-temp_viz::Affine3f temp_viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
+cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();

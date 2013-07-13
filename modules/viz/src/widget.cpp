@@ -3,7 +3,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget implementation
 
-class temp_viz::Widget::Impl
+class cv::viz::Widget::Impl
 {
 public:
     vtkSmartPointer<vtkProp> prop;
@@ -12,17 +12,17 @@ public:
     Impl() : prop(0) {}
 };
 
-temp_viz::Widget::Widget() : impl_(0)
+cv::viz::Widget::Widget() : impl_(0)
 {
     create();
 }
 
-temp_viz::Widget::Widget(const Widget &other) : impl_(other.impl_) 
+cv::viz::Widget::Widget(const Widget &other) : impl_(other.impl_) 
 {
     if (impl_) CV_XADD(&impl_->ref_counter, 1);
 }
 
-temp_viz::Widget& temp_viz::Widget::operator=(const Widget &other)
+cv::viz::Widget& cv::viz::Widget::operator=(const Widget &other)
 {
     if (this != &other)
     {
@@ -33,19 +33,19 @@ temp_viz::Widget& temp_viz::Widget::operator=(const Widget &other)
     return *this;
 }
 
-temp_viz::Widget::~Widget()
+cv::viz::Widget::~Widget()
 {
     release();
 }
 
-void temp_viz::Widget::create()
+void cv::viz::Widget::create()
 {
     if (impl_) release();
     impl_ = new Impl();
     impl_->ref_counter = 1;
 }
 
-void temp_viz::Widget::release()
+void cv::viz::Widget::release()
 {
     if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
     {
@@ -57,12 +57,12 @@ void temp_viz::Widget::release()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget accessor implementaion
 
-vtkSmartPointer<vtkProp> temp_viz::WidgetAccessor::getProp(const Widget& widget)
+vtkSmartPointer<vtkProp> cv::viz::WidgetAccessor::getProp(const Widget& widget)
 {
     return widget.impl_->prop;
 }
 
-void temp_viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> prop)
+void cv::viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> prop)
 {
     widget.impl_->prop = prop;
 }
@@ -70,18 +70,18 @@ void temp_viz::WidgetAccessor::setProp(Widget& widget, vtkSmartPointer<vtkProp> 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget3D implementation
 
-struct temp_viz::Widget3D::MatrixConverter
+struct cv::viz::Widget3D::MatrixConverter
 {
-    static cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
+    static Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix)
     {
-        cv::Matx44f m;
+        Matx44f m;
         for (int i = 0; i < 4; i++)
             for (int k = 0; k < 4; k++)
                 m(i, k) = vtk_matrix->GetElement (i, k);
         return m;
     }
     
-    static vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f& m)
+    static vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const Matx44f& m)
     {
         vtkSmartPointer<vtkMatrix4x4> vtk_matrix = vtkSmartPointer<vtkMatrix4x4>::New ();
         for (int i = 0; i < 4; i++)
@@ -91,7 +91,7 @@ struct temp_viz::Widget3D::MatrixConverter
     }
 };
 
-void temp_viz::Widget3D::setPose(const Affine3f &pose)
+void cv::viz::Widget3D::setPose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
@@ -101,7 +101,7 @@ void temp_viz::Widget3D::setPose(const Affine3f &pose)
     actor->Modified ();
 }
 
-void temp_viz::Widget3D::updatePose(const Affine3f &pose)
+void cv::viz::Widget3D::updatePose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
@@ -121,7 +121,7 @@ void temp_viz::Widget3D::updatePose(const Affine3f &pose)
     actor->Modified ();
 }
 
-temp_viz::Affine3f temp_viz::Widget3D::getPose() const
+cv::Affine3f cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
@@ -131,7 +131,7 @@ temp_viz::Affine3f temp_viz::Widget3D::getPose() const
     return Affine3f(matrix_cv);
 }
 
-void temp_viz::Widget3D::setColor(const Color &color)
+void cv::viz::Widget3D::setColor(const Color &color)
 {
     // Cast to actor instead of prop3d since prop3d doesn't provide getproperty
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -148,7 +148,7 @@ void temp_viz::Widget3D::setColor(const Color &color)
     actor->Modified ();
 }
 
-template<> temp_viz::Widget3D temp_viz::Widget::cast<temp_viz::Widget3D>()
+template<> cv::viz::Widget3D cv::viz::Widget::cast<cv::viz::Widget3D>()
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
@@ -161,7 +161,7 @@ template<> temp_viz::Widget3D temp_viz::Widget::cast<temp_viz::Widget3D>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget2D implementation
 
-void temp_viz::Widget2D::setColor(const Color &color)
+void cv::viz::Widget2D::setColor(const Color &color)
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
@@ -170,7 +170,7 @@ void temp_viz::Widget2D::setColor(const Color &color)
     actor->Modified ();
 }
 
-template<> temp_viz::Widget2D temp_viz::Widget::cast<temp_viz::Widget2D>()
+template<> cv::viz::Widget2D cv::viz::Widget::cast<cv::viz::Widget2D>()
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);

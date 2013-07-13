@@ -53,12 +53,15 @@
 #include <opencv2/viz/viz3d.hpp>
 
 
-namespace temp_viz
+namespace cv
 {
-    //! takes coordiante frame data and builds transfrom to global coordinate frame
-    CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
+    namespace viz
+    {
+        //! takes coordiante frame data and builds transfrom to global coordinate frame
+        CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
-    CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& up_vector);
+        CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& up_vector);
+    }
 }
 
 

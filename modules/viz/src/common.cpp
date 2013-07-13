@@ -5,7 +5,7 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
-//Eigen::Matrix4d temp_viz::vtkToEigen (vtkMatrix4x4* vtk_matrix)
+//Eigen::Matrix4d cv::viz::vtkToEigen (vtkMatrix4x4* vtk_matrix)
 //{
 //    Eigen::Matrix4d eigen_matrix = Eigen::Matrix4d::Identity ();
 //    for (int i=0; i < 4; i++)
@@ -16,7 +16,7 @@
 //}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-//Eigen::Vector2i temp_viz::worldToView (const Eigen::Vector4d &world_pt, const Eigen::Matrix4d &view_projection_matrix, int width, int height)
+//Eigen::Vector2i cv::viz::worldToView (const Eigen::Vector4d &world_pt, const Eigen::Matrix4d &view_projection_matrix, int width, int height)
 //{
 //    // Transform world to clipping coordinates
 //    Eigen::Vector4d world (view_projection_matrix * world_pt);
@@ -34,7 +34,7 @@
 //}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-//void temp_viz::getViewFrustum (const Eigen::Matrix4d &view_projection_matrix, double planes[24])
+//void cv::viz::getViewFrustum (const Eigen::Matrix4d &view_projection_matrix, double planes[24])
 //{
 //    // Set up the normals
 //    Eigen::Vector4d normals[6];
@@ -65,7 +65,7 @@
 //    }
 //}
 
-//int temp_viz::cullFrustum (double frustum[24], const Eigen::Vector3d &min_bb, const Eigen::Vector3d &max_bb)
+//int cv::viz::cullFrustum (double frustum[24], const Eigen::Vector3d &min_bb, const Eigen::Vector3d &max_bb)
 //{
 //    int result = PCL_INSIDE_FRUSTUM;
 
@@ -104,7 +104,7 @@
 //}
 
 //void
-//temp_viz::getModelViewPosition (Eigen::Matrix4d model_view_matrix, Eigen::Vector3d &position)
+//cv::viz::getModelViewPosition (Eigen::Matrix4d model_view_matrix, Eigen::Vector3d &position)
 //{
 //  //Compute eye or position from model view matrix
 //  Eigen::Matrix4d inverse_model_view_matrix = model_view_matrix.inverse();
@@ -174,7 +174,7 @@ int hull_vertex_table[43][7] = {
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 //float
-//temp_viz::viewScreenArea (
+//cv::viz::viewScreenArea (
 //        const Eigen::Vector3d &eye,
 //        const Eigen::Vector3d &min_bb, const Eigen::Vector3d &max_bb,
 //        const Eigen::Matrix4d &view_projection_matrix, int width, int height)
@@ -261,7 +261,7 @@ int hull_vertex_table[43][7] = {
 //    for (int i = 0; i < num; i++)
 //    {
 //        Eigen::Vector4d world_pt = bounding_box[hull_vertex_table[pos][i]];
-//        Eigen::Vector2i screen_pt = temp_viz::worldToView(world_pt, view_projection_matrix, width, height);
+//        Eigen::Vector2i screen_pt = cv::viz::worldToView(world_pt, view_projection_matrix, width, height);
 //        //    cout << "point[" << i << "]: " << screen_pt.x() << " " << screen_pt.y() << endl;
 //        dst[i] = Eigen::Vector2d(screen_pt.x (), screen_pt.y ());
 //    }
@@ -276,7 +276,7 @@ int hull_vertex_table[43][7] = {
 //}
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void temp_viz::Camera::computeViewMatrix (Affine3d& view_mat) const
+void cv::viz::Camera::computeViewMatrix (Affine3d& view_mat) const
 {
     //constructs view matrix from camera pos, view up, and the point it is looking at
     //this code is based off of gluLookAt http://www.opengl.org/wiki/GluLookAt_code
@@ -297,7 +297,7 @@ void temp_viz::Camera::computeViewMatrix (Affine3d& view_mat) const
 }
 
 ///////////////////////////////////////////////////////////////////////
-void temp_viz::Camera::computeProjectionMatrix (Matx44d& proj) const
+void cv::viz::Camera::computeProjectionMatrix (Matx44d& proj) const
 {
     double top    = clip[0] * tan (0.5 * fovy);
     double left   = -(top * window_size[0]) / window_size[1];

@@ -3,8 +3,10 @@
 #include "viz_types.h"
 #include <opencv2/viz/events.hpp>
 
-namespace temp_viz
+namespace cv
 {
+    namespace viz
+    {
         /** \brief PCLVisualizerInteractorStyle defines an unique, custom VTK
           * based interactory style for PCL Visualizer applications. Besides
           * defining the rendering style, we also create a list of custom actions
@@ -54,7 +56,7 @@ namespace temp_viz
             /** \brief Pass a pointer to the actor map
               * \param[in] actors the actor map that will be used with this style
               */
-            inline void setCloudActorMap (const cv::Ptr<CloudActorMap>& actors) { actors_ = actors; }
+            inline void setCloudActorMap (const Ptr<CloudActorMap>& actors) { actors_ = actors; }
 
             /** \brief Pass a set of renderers to the interactor style.
                   * \param[in] rens the vtkRendererCollection to use
@@ -152,4 +154,5 @@ namespace temp_viz
             /** \brief MouseEvent callback user data */
             void *mouse_callback_cookie_;
         };
+    }
 }
