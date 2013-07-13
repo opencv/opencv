@@ -957,13 +957,15 @@ void LSD::drawSegments(cv::Mat& image, const std::vector<cv::Vec4i>& lines)
     }
 }
 
-int LSD::compareSegments(cv::Size& size, const std::vector<cv::Vec4i>& lines1, const std::vector<cv::Vec4i> lines2, cv::Mat* image)
-{
-    if (image && image->size() != size) size = image->size();
-    CV_Assert(size.area());
 
-    Mat_<uchar> I1 = Mat_<uchar>::zeros(size);
-    Mat_<uchar> I2 = Mat_<uchar>::zeros(size);
+int LSD::compareSegments(const cv::Size& size, const std::vector<cv::Vec4i>& lines1, const std::vector<cv::Vec4i> lines2, cv::Mat* image)
+{
+    Size sz = size;
+    if (image && image->size() != size) sz = image->size();
+    CV_Assert(sz.area());
+
+    Mat_<uchar> I1 = Mat_<uchar>::zeros(sz);
+    Mat_<uchar> I2 = Mat_<uchar>::zeros(sz);
 
     // Draw segments
     for(unsigned int i = 0; i < lines1.size(); ++i)
