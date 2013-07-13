@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Lossless decoder: internal header.
@@ -63,7 +65,8 @@ typedef struct {
 
   const WebPDecBuffer *output_;    // shortcut to io->opaque->output
 
-  uint32_t        *argb_;          // Internal data: always in BGRA color mode.
+  uint32_t        *pixels_;        // Internal data: either uint8_t* for alpha
+                                   // or uint32_t* for BGRA.
   uint32_t        *argb_cache_;    // Scratch buffer for temporary BGRA storage.
 
   VP8LBitReader    br_;

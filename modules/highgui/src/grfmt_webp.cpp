@@ -46,6 +46,7 @@
 
 #include <webp/decode.h>
 #include <webp/encode.h>
+
 #include <stdio.h>
 #include <limits.h>
 
@@ -53,36 +54,43 @@
 
 #include "opencv2/imgproc.hpp"
 
+const size_t WEBP_HEADER_SIZE = 32;
+
 namespace cv
 {
 
 WebPDecoder::WebPDecoder()
 {
-    m_signature = "RIFF....WEBPVP8 ";
     m_buf_supported = true;
 }
 
-WebPDecoder::~WebPDecoder()
+WebPDecoder::~WebPDecoder() {}
+
+size_t WebPDecoder::signatureLength() const
 {
+    return WEBP_HEADER_SIZE;
+}
+
+bool WebPDecoder::checkSignature(const String & signature) const
+{
+    bool ret = false;
+
+    if(signature.size() >= WEBP_HEADER_SIZE)
+    {
+        WebPBitstreamFeatures features;
+        if(VP8_STATUS_OK == WebPGetFeatures((uint8_t *)signature.c_str(),
+                                            WEBP_HEADER_SIZE, &features))
+        {
+            ret = true;
+        }
+    }
+
+    return ret;
 }
 
 ImageDecoder WebPDecoder::newDecoder() const
 {
     return new WebPDecoder;
-}
-
-bool WebPDecoder::checkSignature( const String& signature ) const
-{
-    size_t len = signatureLength();
-    bool ret = false;
-
-    if(signature.size() >= len)
-    {
-        ret = ( (memcmp(signature.c_str(), m_signature.c_str(), 4) == 0) &&
-            (memcmp(signature.c_str() + 8, m_signature.c_str() + 8, 4) == 0) );
-    }
-
-    return ret;
 }
 
 bool WebPDecoder::readHeader()
@@ -99,16 +107,16 @@ bool WebPDecoder::readHeader()
         }
 
         fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
+        long int wfile_size = ftell(wfile);
         fseek(wfile, 0, SEEK_SET);
 
-        if(wfile_size > (size_t)INT_MAX)
+        if(wfile_size > static_cast<long int>(INT_MAX))
         {
             fclose(wfile);
             return false;
         }
 
-        data.create(1, (int)wfile_size, CV_8U);
+        data.create(1, wfile_size, CV_8U);
 
         size_t data_size = fread(data.data, 1, wfile_size, wfile);
 
@@ -117,7 +125,7 @@ bool WebPDecoder::readHeader()
             fclose(wfile);
         }
 
-        if( data_size < wfile_size )
+        if(static_cast<long int>(data_size) != wfile_size)
         {
             return false;
         }
@@ -127,9 +135,23 @@ bool WebPDecoder::readHeader()
         data = m_buf;
     }
 
-    if(WebPGetInfo(data.data, data.total(), &m_width, &m_height) == 1)
+    WebPBitstreamFeatures features;
+    if(VP8_STATUS_OK == WebPGetFeatures(data.data, WEBP_HEADER_SIZE, &features))
     {
-        m_type = CV_8UC3;
+        m_width  = features.width;
+        m_height = features.height;
+
+        if (features.has_alpha)
+        {
+            m_type = CV_8UC4;
+            channels = 4;
+        }
+        else
+        {
+            m_type = CV_8UC3;
+            channels = 3;
+        }
+
         return true;
     }
 
@@ -140,10 +162,25 @@ bool WebPDecoder::readData(Mat &img)
 {
     if( m_width > 0 && m_height > 0 )
     {
-        uchar* out_data = img.data;
-        unsigned int out_data_size = m_width * m_height * 3 * sizeof(uchar);
+        if (img.cols != m_width || img.rows != m_height || img.type() != m_type)
+        {
+            img.create(m_height, m_width, m_type);
+        }
 
-        uchar *res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data, out_data_size, m_width * 3);
+        uchar* out_data = img.data;
+        size_t out_data_size = img.cols * img.rows * img.elemSize();
+
+        uchar *res_ptr = 0;
+        if (channels == 3)
+        {
+            res_ptr = WebPDecodeBGRInto(data.data, data.total(), out_data,
+                                        out_data_size, img.step);
+        }
+        else if (channels == 4)
+        {
+            res_ptr = WebPDecodeBGRAInto(data.data, data.total(), out_data,
+                                         out_data_size, img.step);
+        }
 
         if(res_ptr == out_data)
         {
@@ -160,9 +197,7 @@ WebPEncoder::WebPEncoder()
     m_buf_supported = true;
 }
 
-WebPEncoder::~WebPEncoder()
-{
-}
+WebPEncoder::~WebPEncoder() { }
 
 ImageEncoder WebPEncoder::newEncoder() const
 {
@@ -179,19 +214,19 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     size_t size = 0;
 
     bool comp_lossless = true;
-    int quality = 100;
+    float quality = 100.0f;
 
     if (params.size() > 1)
     {
         if (params[0] == CV_IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
-            quality = params[1];
-            if (quality < 1)
+            quality = static_cast<float>(params[1]);
+            if (quality < 1.0f)
             {
-                quality = 1;
+                quality = 1.0f;
             }
-            if (quality > 100)
+            if (quality > 100.0f)
             {
                 comp_lossless = true;
             }
@@ -211,14 +246,32 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         image = &temp;
         channels = 3;
     }
+    else if (channels == 2)
+    {
+        return false;
+    }
 
     if (comp_lossless)
     {
-        size = WebPEncodeLosslessBGR(image->data, width, height, ((width * 3 + 3) & ~3), &out);
+        if(channels == 3)
+        {
+            size = WebPEncodeLosslessBGR(image->data, width, height, image->step, &out);
+        }
+        else if(channels == 4)
+        {
+            size = WebPEncodeLosslessBGRA(image->data, width, height, image->step, &out);
+        }
     }
     else
     {
-        size = WebPEncodeBGR(image->data, width, height, ((width * 3 + 3) & ~3), (float)quality, &out);
+        if(channels == 3)
+        {
+            size = WebPEncodeBGR(image->data, width, height, image->step, quality, &out);
+        }
+        else if(channels == 4)
+        {
+            size = WebPEncodeBGRA(image->data, width, height, image->step, quality, &out);
+        }
     }
 
     if(size > 0)

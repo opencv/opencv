@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Image transforms and color space conversion methods for lossless decoder.
@@ -1093,38 +1095,63 @@ static void ColorSpaceInverseTransform(const VP8LTransform* const transform,
 }
 
 // Separate out pixels packed together using pixel-bundling.
-static void ColorIndexInverseTransform(
-    const VP8LTransform* const transform,
-    int y_start, int y_end, const uint32_t* src, uint32_t* dst) {
-  int y;
-  const int bits_per_pixel = 8 >> transform->bits_;
-  const int width = transform->xsize_;
-  const uint32_t* const color_map = transform->data_;
-  if (bits_per_pixel < 8) {
-    const int pixels_per_byte = 1 << transform->bits_;
-    const int count_mask = pixels_per_byte - 1;
-    const uint32_t bit_mask = (1 << bits_per_pixel) - 1;
-    for (y = y_start; y < y_end; ++y) {
-      uint32_t packed_pixels = 0;
-      int x;
-      for (x = 0; x < width; ++x) {
-        // We need to load fresh 'packed_pixels' once every 'pixels_per_byte'
-        // increments of x. Fortunately, pixels_per_byte is a power of 2, so
-        // can just use a mask for that, instead of decrementing a counter.
-        if ((x & count_mask) == 0) packed_pixels = ((*src++) >> 8) & 0xff;
-        *dst++ = color_map[packed_pixels & bit_mask];
-        packed_pixels >>= bits_per_pixel;
-      }
-    }
-  } else {
-    for (y = y_start; y < y_end; ++y) {
-      int x;
-      for (x = 0; x < width; ++x) {
-        *dst++ = color_map[((*src++) >> 8) & 0xff];
-      }
-    }
-  }
+// We define two methods for ARGB data (uint32_t) and alpha-only data (uint8_t).
+#define COLOR_INDEX_INVERSE(FUNC_NAME, TYPE, GET_INDEX, GET_VALUE)             \
+void FUNC_NAME(const VP8LTransform* const transform,                           \
+               int y_start, int y_end, const TYPE* src, TYPE* dst) {           \
+  int y;                                                                       \
+  const int bits_per_pixel = 8 >> transform->bits_;                            \
+  const int width = transform->xsize_;                                         \
+  const uint32_t* const color_map = transform->data_;                          \
+  if (bits_per_pixel < 8) {                                                    \
+    const int pixels_per_byte = 1 << transform->bits_;                         \
+    const int count_mask = pixels_per_byte - 1;                                \
+    const uint32_t bit_mask = (1 << bits_per_pixel) - 1;                       \
+    for (y = y_start; y < y_end; ++y) {                                        \
+      uint32_t packed_pixels = 0;                                              \
+      int x;                                                                   \
+      for (x = 0; x < width; ++x) {                                            \
+        /* We need to load fresh 'packed_pixels' once every                */  \
+        /* 'pixels_per_byte' increments of x. Fortunately, pixels_per_byte */  \
+        /* is a power of 2, so can just use a mask for that, instead of    */  \
+        /* decrementing a counter.                                         */  \
+        if ((x & count_mask) == 0) packed_pixels = GET_INDEX(*src++);          \
+        *dst++ = GET_VALUE(color_map[packed_pixels & bit_mask]);               \
+        packed_pixels >>= bits_per_pixel;                                      \
+      }                                                                        \
+    }                                                                          \
+  } else {                                                                     \
+    for (y = y_start; y < y_end; ++y) {                                        \
+      int x;                                                                   \
+      for (x = 0; x < width; ++x) {                                            \
+        *dst++ = GET_VALUE(color_map[GET_INDEX(*src++)]);                      \
+      }                                                                        \
+    }                                                                          \
+  }                                                                            \
 }
+
+static WEBP_INLINE uint32_t GetARGBIndex(uint32_t idx) {
+  return (idx >> 8) & 0xff;
+}
+
+static WEBP_INLINE uint8_t GetAlphaIndex(uint8_t idx) {
+  return idx;
+}
+
+static WEBP_INLINE uint32_t GetARGBValue(uint32_t val) {
+  return val;
+}
+
+static WEBP_INLINE uint8_t GetAlphaValue(uint32_t val) {
+  return (val >> 8) & 0xff;
+}
+
+static COLOR_INDEX_INVERSE(ColorIndexInverseTransform, uint32_t, GetARGBIndex,
+                           GetARGBValue)
+COLOR_INDEX_INVERSE(VP8LColorIndexInverseTransformAlpha, uint8_t, GetAlphaIndex,
+                    GetAlphaValue)
+
+#undef COLOR_INDEX_INVERSE
 
 void VP8LInverseTransform(const VP8LTransform* const transform,
                           int row_start, int row_end,
@@ -1254,11 +1281,12 @@ static void CopyOrSwap(const uint32_t* src, int num_pixels, uint8_t* dst,
     while (src < src_end) {
       uint32_t argb = *src++;
 
+#if !defined(__BIG_ENDIAN__)
 #if !defined(WEBP_REFERENCE_IMPLEMENTATION)
-#if !defined(__BIG_ENDIAN__) && (defined(__i386__) || defined(__x86_64__))
+#if defined(__i386__) || defined(__x86_64__)
       __asm__ volatile("bswap %0" : "=r"(argb) : "0"(argb));
       *(uint32_t*)dst = argb;
-#elif !defined(__BIG_ENDIAN__) && defined(_MSC_VER)
+#elif defined(_MSC_VER)
       argb = _byteswap_ulong(argb);
       *(uint32_t*)dst = argb;
 #else
@@ -1267,11 +1295,17 @@ static void CopyOrSwap(const uint32_t* src, int num_pixels, uint8_t* dst,
       dst[2] = (argb >>  8) & 0xff;
       dst[3] = (argb >>  0) & 0xff;
 #endif
-#else   // WEBP_REFERENCE_IMPLEMENTATION
+#else  // WEBP_REFERENCE_IMPLEMENTATION
       dst[0] = (argb >> 24) & 0xff;
       dst[1] = (argb >> 16) & 0xff;
       dst[2] = (argb >>  8) & 0xff;
       dst[3] = (argb >>  0) & 0xff;
+#endif
+#else  // __BIG_ENDIAN__
+      dst[0] = (argb >>  0) & 0xff;
+      dst[1] = (argb >>  8) & 0xff;
+      dst[2] = (argb >> 16) & 0xff;
+      dst[3] = (argb >> 24) & 0xff;
 #endif
       dst += sizeof(argb);
     }
@@ -1322,6 +1356,27 @@ void VP8LConvertFromBGRA(const uint32_t* const in_data, int num_pixels,
       break;
     default:
       assert(0);          // Code flow should not reach here.
+  }
+}
+
+// Bundles multiple (1, 2, 4 or 8) pixels into a single pixel.
+void VP8LBundleColorMap(const uint8_t* const row, int width,
+                        int xbits, uint32_t* const dst) {
+  int x;
+  if (xbits > 0) {
+    const int bit_depth = 1 << (3 - xbits);
+    const int mask = (1 << xbits) - 1;
+    uint32_t code = 0xff000000;
+    for (x = 0; x < width; ++x) {
+      const int xsub = x & mask;
+      if (xsub == 0) {
+        code = 0xff000000;
+      }
+      code |= row[x] << (8 + bit_depth * xsub);
+      dst[x >> xbits] = code;
+    }
+  } else {
+    for (x = 0; x < width; ++x) dst[x] = 0xff000000 | (row[x] << 8);
   }
 }
 
