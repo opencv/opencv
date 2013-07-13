@@ -135,7 +135,7 @@ inline bool AsmallerB_XoverY(const edge& a, const edge& b)
 inline double log_gamma_windschitl(const double& x)
 {
     return 0.918938533204673 + (x-0.5)*log(x) - x
-         + 0.5*x*log( x*sinh(1/x) + 1/(810.0*pow(x,6.0)));
+         + 0.5*x*log(x*sinh(1/x) + 1/(810.0*pow(x, 6.0)));
 }
 
 /** 
@@ -221,7 +221,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
         Mat gaussian_img;
         const double sigma = (SCALE < 1)?(SIGMA_SCALE / SCALE):(SIGMA_SCALE);
         const double sprec = 3;
-        const unsigned int h =  (unsigned int)(ceil(sigma * sqrt(2 * sprec * log(10))));
+        const unsigned int h =  (unsigned int)(ceil(sigma * sqrt(2 * sprec * log(10.0))));
         Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size 
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
@@ -234,7 +234,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
         ll_angle(rho, N_BINS, list);
     }
 
-    LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11);
+    LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11.0);
     const int min_reg_size = int(-LOG_NT/log10(p)); // minimal number of points in region that can give a meaningful event 
     
     // // Initialize region only when needed

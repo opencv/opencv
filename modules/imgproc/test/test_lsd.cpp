@@ -109,7 +109,7 @@ TEST_F(LSD_ADV, whiteNoise)
 	LSD detector(LSD_REFINE_ADV);
 	detector.detect(test_image, lines);
 
-	ASSERT_GE(40, lines.size());
+	ASSERT_GE((unsigned int)(40), lines.size());
 }
 
 TEST_F(LSD_ADV, constColor)
@@ -118,12 +118,12 @@ TEST_F(LSD_ADV, constColor)
 	LSD detector(LSD_REFINE_ADV);
 	detector.detect(test_image, lines);
 
-	ASSERT_EQ(0, lines.size());
+	ASSERT_EQ((unsigned int)(0), lines.size());
 }
 
 TEST_F(LSD_ADV, lines)
 {
-	const int numOfLines = 3;
+	const unsigned int numOfLines = 3;
 	GenerateLines(test_image, numOfLines);
 	LSD detector(LSD_REFINE_ADV);
 	detector.detect(test_image, lines);
@@ -136,7 +136,7 @@ TEST_F(LSD_ADV, rotatedRect)
 	GenerateRotatedRect(test_image);
 	LSD detector(LSD_REFINE_ADV);
 	detector.detect(test_image, lines);
-	ASSERT_LE(4, lines.size()); 
+	ASSERT_LE((unsigned int)(4), lines.size()); 
 }
 
 TEST_F(LSD_STD, whiteNoise)
@@ -145,7 +145,7 @@ TEST_F(LSD_STD, whiteNoise)
 	LSD detector(LSD_REFINE_STD);
 	detector.detect(test_image, lines);
 
-	ASSERT_GE(50, lines.size());
+	ASSERT_GE((unsigned int)(50), lines.size());
 }
 
 TEST_F(LSD_STD, constColor)
@@ -154,12 +154,12 @@ TEST_F(LSD_STD, constColor)
 	LSD detector(LSD_REFINE_STD);
 	detector.detect(test_image, lines);
 
-	ASSERT_EQ(0, lines.size());
+	ASSERT_EQ((unsigned int)(0), lines.size());
 }
 
 TEST_F(LSD_STD, lines)
 {
-	const int numOfLines = 3; //1
+	const unsigned int numOfLines = 3; //1
 	GenerateLines(test_image, numOfLines);
 	LSD detector(LSD_REFINE_STD);
 	detector.detect(test_image, lines);
@@ -172,7 +172,7 @@ TEST_F(LSD_STD, rotatedRect)
 	GenerateRotatedRect(test_image);
 	LSD detector(LSD_REFINE_STD);
 	detector.detect(test_image, lines);
-	ASSERT_EQ(8, lines.size()); 
+	ASSERT_EQ((unsigned int)(8), lines.size()); 
 }
 
 TEST_F(LSD_NONE, whiteNoise)
@@ -181,7 +181,7 @@ TEST_F(LSD_NONE, whiteNoise)
 	LSD detector(LSD_REFINE_NONE);
 	detector.detect(test_image, lines);
 
-	ASSERT_GE(50, lines.size());
+	ASSERT_GE((unsigned int)(50), lines.size());
 }
 
 TEST_F(LSD_NONE, constColor)
@@ -190,12 +190,12 @@ TEST_F(LSD_NONE, constColor)
 	LSD detector(LSD_REFINE_NONE);
 	detector.detect(test_image, lines);
 
-	ASSERT_EQ(0, lines.size());
+	ASSERT_EQ((unsigned int)(0), lines.size());
 }
 
 TEST_F(LSD_NONE, lines)
 {
-	const int numOfLines = 3; //1
+	const unsigned int numOfLines = 3; //1
 	GenerateLines(test_image, numOfLines);
 	LSD detector(LSD_REFINE_NONE);
 	detector.detect(test_image, lines);
@@ -208,5 +208,5 @@ TEST_F(LSD_NONE, rotatedRect)
 	GenerateRotatedRect(test_image);
 	LSD detector(LSD_REFINE_NONE);
 	detector.detect(test_image, lines);
-	ASSERT_EQ(8, lines.size()); 
+	ASSERT_EQ((unsigned int)(8), lines.size()); 
 }
