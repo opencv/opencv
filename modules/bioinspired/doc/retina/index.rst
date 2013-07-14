@@ -7,6 +7,8 @@ Retina
 ======
 .. ocv:class:: Retina : public Algorithm
 
+**Note** : do not forget that the retina model is included in the following namespace : *cv::bioinspired*.
+
 Introduction
 ++++++++++++
 
@@ -55,6 +57,8 @@ As observed in this preliminary demo, the retina can be settled up with various 
 
 Here is an overview of the abstract Retina interface, allocate one instance with the *createRetina* functions.::
 
+  namespace cv{namespace bioinspired{
+
   class Retina : public Algorithm
   {
   public:
@@ -102,7 +106,7 @@ Here is an overview of the abstract Retina interface, allocate one instance with
     // Allocators
     cv::Ptr<Retina> createRetina (Size inputSize);
     cv::Ptr<Retina> createRetina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
-
+    }} // cv and bioinspired namespaces end
 
 Description
 +++++++++++

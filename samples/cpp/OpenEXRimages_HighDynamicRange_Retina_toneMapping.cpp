@@ -128,7 +128,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, cv::NORM_MINMAX);
  }
 
- cv::Ptr<Retina> retina;
+ cv::Ptr<cv::bioinspired::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -218,10 +218,10 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
           */
          if (useLogSampling)
          {
-             retina = createRetina(inputImage.size(),true, RETINA_COLOR_BAYER, true, 2.0, 10.0);
+             retina = cv::bioinspired::createRetina(inputImage.size(),true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = createRetina(inputImage.size());
+             retina = cv::bioinspired::createRetina(inputImage.size());
 
          // create a fast retina tone mapper (Meyla&al algorithm)
          std::cout<<"Allocating fast tone mapper..."<<std::endl;

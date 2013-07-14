@@ -7,7 +7,7 @@
  ** copy or use the software.
  **
  **
- ** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+ ** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
  **
@@ -34,7 +34,7 @@
  ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
  ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
  **
- **               For Human Visual System tools (hvstools)
+ **               For Human Visual System tools (bioinspired)
  ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
  **
  ** Third party copyrights are property of their respective owners.
@@ -75,10 +75,9 @@
  */
 
 #include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
-#include <valarray>
 
 namespace cv{
-namespace hvstools{
+namespace bioinspired{
 
 /**
  * @class RetinaFastToneMappingImpl a wrapper class which allows the tone mapping algorithm of Meylan&al(2007) to be used with OpenCV.

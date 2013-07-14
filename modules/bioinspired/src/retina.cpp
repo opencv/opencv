@@ -6,7 +6,7 @@
  ** copy or use the software.
  **
  **
- ** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+ ** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
  ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
  ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
  ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
  **
- **               For Human Visual System tools (hvstools)
+ **               For Human Visual System tools (bioinspired)
  ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
  **
  ** Third party copyrights are property of their respective owners.
@@ -72,10 +72,11 @@
 #include "retinafilter.hpp"
 #include <cstdio>
 #include <sstream>
+#include <valarray>
 
 namespace cv
 {
-namespace hvstools
+namespace bioinspired
 {
 
 class RetinaImpl : public Retina
@@ -96,7 +97,7 @@ public:
      * @param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
      * @param samplingStrenght: only usefull if param useRetinaLogSampling=true, specifies the strenght of the log scale that is applied
      */
-    RetinaImpl(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+    RetinaImpl(Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
     virtual ~RetinaImpl();
     /**
@@ -270,14 +271,32 @@ private:
     RetinaFilter* _retinaFilter; //!< the pointer to the retina module, allocated with instance construction
 
     //! private method called by constructors, gathers their parameters and use them in a unified way
-    void _init(const Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+    void _init(const Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+
+    /**
+     * exports a valarray buffer outing from bioinspired objects to a cv::Mat in CV_8UC1 (gray level picture) or CV_8UC3 (color) format
+     * @param grayMatrixToConvert the valarray to export to OpenCV
+     * @param nbRows : the number of rows of the valarray flatten matrix
+     * @param nbColumns : the number of rows of the valarray flatten matrix
+     * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
+     * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
+     */
+    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer);
+
+    /**
+     * convert a cv::Mat to a valarray buffer in float format
+     * @param inputMatToConvert : the OpenCV cv::Mat that has to be converted to gray or RGB valarray buffer that will be processed by the retina model
+     * @param outputValarrayMatrix : the output valarray
+     * @return the input image color mode (color=true, gray levels=false)
+     */
+    bool _convertCvMat2ValarrayBuffer(InputArray inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
 
 };
 
 // smart pointers allocation :
 Ptr<Retina> createRetina(Size inputSize){ return new RetinaImpl(inputSize); }
-Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){return new RetinaImpl(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);}
+Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){return new RetinaImpl(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);}
 
 
 // RetinaImpl code
@@ -287,7 +306,7 @@ RetinaImpl::RetinaImpl(const cv::Size inputSz)
     _init(inputSz, true, RETINA_COLOR_BAYER, false);
 }
 
-RetinaImpl::RetinaImpl(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+RetinaImpl::RetinaImpl(const cv::Size inputSz, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     _retinaFilter = 0;
     _init(inputSz, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
@@ -594,7 +613,7 @@ const Mat RetinaImpl::getParvoRAW() const {
 }
 
 // private method called by constructirs
-void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
+void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
     // basic error check
     if (inputSz.height*inputSz.width <= 0)
@@ -619,7 +638,7 @@ void RetinaImpl::_init(const cv::Size inputSz, const bool colorMode, RETINA_COLO
     printf("%s\n", printSetup().c_str());
 }
 
-void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
+void RetinaImpl::_convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
 {
     // fill output buffer with the valarray buffer
     const float *valarrayPTR=get_data(grayMatrixToConvert);
@@ -657,7 +676,7 @@ void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConver
     }
 }
 
-bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
+bool RetinaImpl::_convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
 {
     const Mat inputMatToConvert=inputMat.getMat();
     // first check input consistency
@@ -717,5 +736,5 @@ void RetinaImpl::activateMovingContoursProcessing(const bool activate){_retinaFi
 
 void RetinaImpl::activateContoursProcessing(const bool activate){_retinaFilter->activateContoursProcessing(activate);}
 
-}// end of namespace hvstools
+}// end of namespace bioinspired
 }// end of namespace cv

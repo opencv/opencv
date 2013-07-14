@@ -7,7 +7,7 @@
  ** copy or use the software.
  **
  **
- ** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+ ** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
  **
@@ -31,7 +31,7 @@
  ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
  ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
  **
- **               For Human Visual System tools (hvstools)
+ **               For Human Visual System tools (bioinspired)
  ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
  **
  ** Third party copyrights are property of their respective owners.
@@ -77,7 +77,7 @@
 
 namespace cv
 {
-namespace hvstools
+namespace bioinspired
 {
 /**
  * @class RetinaFastToneMappingImpl a wrapper class which allows the tone mapping algorithm of Meylan&al(2007) to be used with OpenCV.
@@ -176,6 +176,100 @@ private:
     std::valarray<float> _temp2;
     float _meanLuminanceModulatorK;
 
+
+void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer)
+{
+    // fill output buffer with the valarray buffer
+    const float *valarrayPTR=get_data(grayMatrixToConvert);
+    if (!colorMode)
+    {
+        outBuffer.create(cv::Size(nbColumns, nbRows), CV_8U);
+        Mat outMat = outBuffer.getMat();
+        for (unsigned int i=0;i<nbRows;++i)
+        {
+            for (unsigned int j=0;j<nbColumns;++j)
+            {
+                cv::Point2d pixel(j,i);
+                outMat.at<unsigned char>(pixel)=(unsigned char)*(valarrayPTR++);
+            }
+        }
+    }else
+    {
+        const unsigned int nbPixels=nbColumns*nbRows;
+        const unsigned int doubleNBpixels=nbColumns*nbRows*2;
+        outBuffer.create(cv::Size(nbColumns, nbRows), CV_8UC3);
+        Mat outMat = outBuffer.getMat();
+        for (unsigned int i=0;i<nbRows;++i)
+        {
+            for (unsigned int j=0;j<nbColumns;++j,++valarrayPTR)
+            {
+                cv::Point2d pixel(j,i);
+                cv::Vec3b pixelValues;
+                pixelValues[2]=(unsigned char)*(valarrayPTR);
+                pixelValues[1]=(unsigned char)*(valarrayPTR+nbPixels);
+                pixelValues[0]=(unsigned char)*(valarrayPTR+doubleNBpixels);
+
+                outMat.at<cv::Vec3b>(pixel)=pixelValues;
+            }
+        }
+    }
+}
+
+bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &outputValarrayMatrix)
+{
+    const Mat inputMatToConvert=inputMat.getMat();
+    // first check input consistency
+    if (inputMatToConvert.empty())
+        throw cv::Exception(-1, "RetinaImpl cannot be applied, input buffer is empty", "RetinaImpl::run", "RetinaImpl.h", 0);
+
+    // retreive color mode from image input
+    int imageNumberOfChannels = inputMatToConvert.channels();
+
+        // convert to float AND fill the valarray buffer
+    typedef float T; // define here the target pixel format, here, float
+    const int dsttype = DataType<T>::depth; // output buffer is float format
+
+    const unsigned int nbPixels=inputMat.getMat().rows*inputMat.getMat().cols;
+    const unsigned int doubleNBpixels=inputMat.getMat().rows*inputMat.getMat().cols*2;
+
+    if(imageNumberOfChannels==4)
+    {
+    // create a cv::Mat table (for RGBA planes)
+        cv::Mat planes[4] =
+        {
+            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[doubleNBpixels]),
+            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[nbPixels]),
+            cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
+        };
+        planes[3] = cv::Mat(inputMatToConvert.size(), dsttype);     // last channel (alpha) does not point on the valarray (not usefull in our case)
+        // split color cv::Mat in 4 planes... it fills valarray directely
+        cv::split(Mat_<Vec<T, 4> >(inputMatToConvert), planes);
+    }
+    else if (imageNumberOfChannels==3)
+    {
+        // create a cv::Mat table (for RGB planes)
+        cv::Mat planes[] =
+        {
+        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[doubleNBpixels]),
+        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[nbPixels]),
+        cv::Mat(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0])
+        };
+        // split color cv::Mat in 3 planes... it fills valarray directely
+        cv::split(cv::Mat_<Vec<T, 3> >(inputMatToConvert), planes);
+    }
+    else if(imageNumberOfChannels==1)
+    {
+        // create a cv::Mat header for the valarray
+        cv::Mat dst(inputMatToConvert.size(), dsttype, &outputValarrayMatrix[0]);
+        inputMatToConvert.convertTo(dst, dsttype);
+    }
+        else
+            CV_Error(Error::StsUnsupportedFormat, "input image must be single channel (gray levels), bgr format (color) or bgra (color with transparency which won't be considered");
+
+    return imageNumberOfChannels>1; // return bool : false for gray level image processing, true for color mode
+}
+
+
     // run the initilized retina filter in order to perform gray image tone mapping, after this call all retina outputs are updated
     void _runGrayToneMapping(const std::valarray<float> &grayImageInput, std::valarray<float> &grayImageOutput)
     {
@@ -218,5 +312,5 @@ CV_EXPORTS Ptr<RetinaFastToneMapping> createRetinaFastToneMapping(Size inputSize
     return new RetinaFastToneMappingImpl(inputSize);
 }
 
-}// end of namespace hvstools
+}// end of namespace bioinspired
 }// end of namespace cv

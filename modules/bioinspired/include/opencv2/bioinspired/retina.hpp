@@ -6,7 +6,7 @@
  ** copy or use the software.
  **
  **
- ** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+ ** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
  ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
  ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
  ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
  **
- **               For Human Visual System tools (hvstools)
+ **               For Human Visual System tools (bioinspired)
  ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
  **
  ** Third party copyrights are property of their respective owners.
@@ -73,13 +73,12 @@
  */
 
 #include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
-#include <valarray>
+
 
 namespace cv{
-namespace hvstools{
+namespace bioinspired{
 
-enum RETINA_COLORSAMPLINGMETHOD
-{
+enum {
     RETINA_COLOR_RANDOM, //!< each pixel position is either R, G or B in a random choice
     RETINA_COLOR_DIAGONAL,//!< color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
     RETINA_COLOR_BAYER//!< standard bayer sampling
@@ -303,26 +302,8 @@ public:
     virtual void activateContoursProcessing(const bool activate)=0;
 };
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize);
-CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
-
-    /**
-     * exports a valarray buffer outing from HVStools objects to a cv::Mat in CV_8UC1 (gray level picture) or CV_8UC3 (color) format
-     * @param grayMatrixToConvert the valarray to export to OpenCV
-     * @param nbRows : the number of rows of the valarray flatten matrix
-     * @param nbColumns : the number of rows of the valarray flatten matrix
-     * @param colorMode : a flag which mentions if matrix is color (true) or graylevel (false)
-     * @param outBuffer : the output matrix which is reallocated to satisfy Retina output buffer dimensions
-     */
-    void _convertValarrayBuffer2cvMat(const std::valarray<float> &grayMatrixToConvert, const unsigned int nbRows, const unsigned int nbColumns, const bool colorMode, OutputArray outBuffer);
-
-    /**
-     * convert a cv::Mat to a valarray buffer in float format
-     * @param inputMatToConvert : the OpenCV cv::Mat that has to be converted to gray or RGB valarray buffer that will be processed by the retina model
-     * @param outputValarrayMatrix : the output valarray
-     * @return the input image color mode (color=true, gray levels=false)
-     */
-     bool _convertCvMat2ValarrayBuffer(InputArray inputMatToConvert, std::valarray<float> &outputValarrayMatrix);
 
 }
 }

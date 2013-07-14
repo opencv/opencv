@@ -161,7 +161,7 @@ static void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, con
 
  }
 
- cv::Ptr<Retina> retina;
+ cv::Ptr<cv::bioinspired::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -281,10 +281,10 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
           */
          if (useLogSampling)
                 {
-                     retina = createRetina(inputImage.size(),true, RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = cv::bioinspired::createRetina(inputImage.size(),true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = createRetina(inputImage.size());
+             retina = cv::bioinspired::createRetina(inputImage.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         retina->write("RetinaDefaultParameters.xml");

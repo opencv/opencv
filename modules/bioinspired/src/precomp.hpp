@@ -45,9 +45,9 @@
 
 #include "opencv2/bioinspired.hpp"
 #include "opencv2/core/utility.hpp"
-
 #include "opencv2/core/private.hpp"
 
+#include <valarray>
 namespace cv
 {
 

@@ -47,5 +47,4 @@
 #include "opencv2/bioinspired/retina.hpp"
 #include "opencv2/bioinspired/retinafasttonemapping.hpp"
 
-using namespace cv::hvstools; // used to avoid complex namespace inclusions cv::hvstools::Retina => cv::Retina preferred
 #endif

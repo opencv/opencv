@@ -95,16 +95,16 @@ int main(int argc, char* argv[]) {
     try
     {
         // create a retina instance with default parameters setup, uncomment the initialisation you wanna test
-        cv::Ptr<Retina> myRetina;
+        cv::Ptr<cv::bioinspired::Retina> myRetina;
 
         // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
         if (useLogSampling)
         {
-            myRetina = createRetina(inputFrame.size(), true, RETINA_COLOR_BAYER, true, 2.0, 10.0);
+            myRetina = cv::bioinspired::createRetina(inputFrame.size(), true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
         }
         else// -> else allocate "classical" retina :
         {
-            myRetina = createRetina(inputFrame.size());
+            myRetina = cv::bioinspired::createRetina(inputFrame.size());
         }
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
