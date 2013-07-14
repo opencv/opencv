@@ -56,10 +56,14 @@ using namespace cv;
 
 // PI
 #ifndef M_PI
-#define M_PI        CV_PI             // 3.14159265358979323846
+#define M_PI        CV_PI
 #endif
-#define M_3_2_PI    (3 * CV_PI) / 2   // 4.71238898038  // 3/2 pi
-#define M_2__PI     2 * CV_PI         // 6.28318530718  // 2 pi
+#define M_3_2_PI    (3 * CV_PI) / 2   // 3/2 pi
+#define M_2__PI     (2 * CV_PI)         // 2 pi
+
+#ifndef M_LN10
+#define M_LN10      2.30258509299404568402
+#endif
 
 #define NOTDEF      double(-1024.0) // Label for pixels with undefined gradient.
 
@@ -298,7 +302,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
             }
 
             //Store the relevant data
-            lines.push_back(Vec4i(rec.x1, rec.y1, rec.x2, rec.y2));
+            lines.push_back(Vec4i(int(rec.x1), int(rec.y1), int(rec.x2), int(rec.y2)));
             if (widths) widths->push_back(rec.width);
             if (precisions) precisions->push_back(rec.p);
             if (nfas && doRefine >= LSD_REFINE_ADV) nfas->push_back(log_nfa);
@@ -353,7 +357,7 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
             }
             else
             {
-                angles_data[addr] = cv::fastAtan2(gx, -gy) * DEG_TO_RADS;  // gradient angle computation
+                angles_data[addr] = double(cv::fastAtan2(gx, -gy)) * DEG_TO_RADS;  // gradient angle computation
                 if (norm > max_grad) { max_grad = norm; }
             }
 
@@ -422,8 +426,8 @@ void LSD::region_grow(const cv::Point2i& s, std::vector<RegionPoint>& reg,
     reg[0].angle = reg_angle;
     reg[0].modgrad = modgrad_data[addr];
 
-    float sumdx = cos(reg_angle);
-    float sumdy = sin(reg_angle);
+    float sumdx = float(std::cos(reg_angle));
+    float sumdy = float(std::sin(reg_angle));
     *reg[0].used = USED;
 
     //Try neighboring regions
@@ -548,7 +552,8 @@ double LSD::get_theta(const std::vector<RegionPoint>& reg, const int& reg_size, 
 
     // Compute angle
     double theta = (fabs(Ixx)>fabs(Iyy))?
-                    cv::fastAtan2(lambda - Ixx, Ixy):cv::fastAtan2(Ixy, lambda - Iyy); // in degs
+                    double(cv::fastAtan2(float(lambda - Ixx), float(Ixy))):
+                    double(cv::fastAtan2(float(Ixy), float(lambda - Iyy))); // in degs
     theta *= DEG_TO_RADS;
 
     // Correct angle by 180 deg if necessary
@@ -758,10 +763,10 @@ double LSD::rect_nfa(const rect& rec) const
     edge* min_y = &ordered_x[0];
     edge* max_y = &ordered_x[0]; // Will be used for loop range
 
-    ordered_x[0].p.x = rec.x1 - dyhw; ordered_x[0].p.y = rec.y1 + dxhw; ordered_x[0].taken = false;
-    ordered_x[1].p.x = rec.x2 - dyhw; ordered_x[1].p.y = rec.y2 + dxhw; ordered_x[1].taken = false;
-    ordered_x[2].p.x = rec.x2 + dyhw; ordered_x[2].p.y = rec.y2 - dxhw; ordered_x[2].taken = false;
-    ordered_x[3].p.x = rec.x1 + dyhw; ordered_x[3].p.y = rec.y1 - dxhw; ordered_x[3].taken = false;
+    ordered_x[0].p.x = int(rec.x1 - dyhw); ordered_x[0].p.y = int(rec.y1 + dxhw); ordered_x[0].taken = false;
+    ordered_x[1].p.x = int(rec.x2 - dyhw); ordered_x[1].p.y = int(rec.y2 + dxhw); ordered_x[1].taken = false;
+    ordered_x[2].p.x = int(rec.x2 + dyhw); ordered_x[2].p.y = int(rec.y2 - dxhw); ordered_x[2].taken = false;
+    ordered_x[3].p.x = int(rec.x1 + dyhw); ordered_x[3].p.y = int(rec.y1 - dxhw); ordered_x[3].taken = false;
 
     std::sort(ordered_x.begin(), ordered_x.end(), AsmallerB_XoverY);
 
@@ -839,15 +844,15 @@ double LSD::rect_nfa(const rect& rec) const
 
     double lstep = flstep, rstep = frstep;
 
-    int left_x = min_y->p.x, right_x = min_y->p.x;
+    double left_x = min_y->p.x, right_x = min_y->p.x;
 
     // Loop around all points in the region and count those that are aligned.
     int min_iter = std::max(min_y->p.y, 0);
     int max_iter = std::min(max_y->p.y, img_height - 1);
     for(int y = min_iter; y <= max_iter; ++y)
     {
-        int adx = y * img_width + left_x;
-        for(int x = left_x; x <= right_x; ++x, ++adx)
+        int adx = y * img_width + int(left_x);
+        for(int x = int(left_x); x <= int(right_x); ++x, ++adx)
         {
             ++total_pts;
             if(isAligned(adx, rec.theta, rec.prec))

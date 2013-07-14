@@ -974,7 +974,7 @@ private:
  * Finds the angles and the gradients of the image. Generates a list of pseudo ordered points.
  *
  * @param threshold The minimum value of the angle that is considered defined, otherwise NOTDEF
- * @param n_bins    The number of bins with which gradients are ordered by, using bucket sort. 
+ * @param n_bins    The number of bins with which gradients are ordered by, using bucket sort.
  * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude.
  *                  Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */

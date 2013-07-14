@@ -83,7 +83,7 @@ void LSDBase::GenerateRotatedRect(Mat& image)
                  rng.uniform(img_size.height/4, img_size.height*3/4));
     Size rect_size(rng.uniform(img_size.width/8, img_size.width/6),
                    rng.uniform(img_size.height/8, img_size.height/6));
-    float angle = rng.uniform(0, 360);
+    float angle = rng.uniform(0.f, 360.f);
 
     Point2f vertices[4];
 
