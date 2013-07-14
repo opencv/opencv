@@ -191,10 +191,10 @@ enum { HOUGH_STANDARD      = 0,
        HOUGH_GRADIENT      = 3
      };
 
-//! Variants of Line Segment Detector 
+//! Variants of Line Segment Detector
 enum lsd_refine_lvl
-     { LSD_REFINE_NONE = 0, 
-       LSD_REFINE_STD  = 1, 
+     { LSD_REFINE_NONE = 0,
+       LSD_REFINE_STD  = 1,
        LSD_REFINE_ADV  = 2
      };
 
@@ -843,35 +843,35 @@ public:
 /**
  * Create an LSD object. Specifying scale, number of subdivisions for the image, should the lines be refined and other constants as follows:
  *
- * @param _refine       How should the lines found be refined? 
+ * @param _refine       How should the lines found be refined?
  *                      REFINE_NONE - No refinement applied.
- *                      REFINE_STD  - Standard refinement is applied. E.g. breaking arches into smaller line approximations. 
- *                      REFINE_ADV  - Advanced refinement. Number of false alarms is calculated, 
+ *                      REFINE_STD  - Standard refinement is applied. E.g. breaking arches into smaller line approximations.
+ *                      REFINE_ADV  - Advanced refinement. Number of false alarms is calculated,
  *                                    lines are refined through increase of precision, decrement in size, etc.
  * @param _scale        The scale of the image that will be used to find the lines. Range (0..1].
  * @param _sigma_scale  Sigma for Gaussian filter is computed as sigma = _sigma_scale/_scale.
- * @param _quant        Bound to the quantization error on the gradient norm. 
+ * @param _quant        Bound to the quantization error on the gradient norm.
  * @param _ang_th       Gradient angle tolerance in degrees.
  * @param _log_eps      Detection threshold: -log10(NFA) > _log_eps
  * @param _density_th   Minimal density of aligned region points in rectangle.
  * @param _n_bins       Number of bins in pseudo-ordering of gradient modulus.
  */
-    LSD(lsd_refine_lvl _refine = LSD_REFINE_STD, double _scale = 0.8, 
-        double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, 
+    LSD(lsd_refine_lvl _refine = LSD_REFINE_STD, double _scale = 0.8,
+        double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
         double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
 /**
  * Detect lines in the input image with the specified ROI.
  *
- * @param _image    A grayscale(CV_8UC1) input image. 
+ * @param _image    A grayscale(CV_8UC1) input image.
  * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end. 
+ *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
- * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning 
+ * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning
  *                          lines coordinates are image wise.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
- * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%. 
+ * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%.
  *                          The bigger the value, logarithmically better the detection.
  *                              * -1 corresponds to 10 mean false alarms
  *                              * 0 corresponds to 1 mean false alarm
@@ -884,16 +884,16 @@ public:
 /**
  * Draw lines on the given canvas.
  *
- * @param image     The image, where lines will be drawn. 
+ * @param image     The image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
- */    
+ */
     static void drawSegments(cv::Mat& image, const std::vector<cv::Vec4i>& lines);
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
  *
- * @param image     The image, where lines will be drawn. 
+ * @param image     The image, where lines will be drawn.
  *                  Should have the size of the image, where the lines were found
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
@@ -905,7 +905,7 @@ private:
     cv::Mat image;
     cv::Mat_<double> scaled_image;
     double *scaled_image_data;
-    cv::Mat_<double> angles;     // in rads 
+    cv::Mat_<double> angles;     // in rads
     double *angles_data;
     cv::Mat_<double> modgrad;
     double *modgrad_data;
@@ -956,18 +956,18 @@ private:
  * Detect lines in the whole input image.
  *
  * @param lines         Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
- *                              Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end. 
+ *                              Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                              Returned lines are strictly oriented depending on the gradient.
  * @param widths        Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param precisions    Return: Vector of precisions with which the lines are found.
- * @param nfas          Return: Vector containing number of false alarms in the line region, with precision of 10%. 
+ * @param nfas          Return: Vector containing number of false alarms in the line region, with precision of 10%.
  *                              The bigger the value, logarithmically better the detection.
  *                                  * -1 corresponds to 10 mean false alarms
  *                                  * 0 corresponds to 1 mean false alarm
  *                                  * 1 corresponds to 0.1 mean false alarms
  */
-    void flsd(std::vector<cv::Vec4i>& lines, 
-              std::vector<double>* widths, std::vector<double>* precisions, 
+    void flsd(std::vector<cv::Vec4i>& lines,
+              std::vector<double>* widths, std::vector<double>* precisions,
               std::vector<double>* nfas);
 
 /**
@@ -975,13 +975,13 @@ private:
  *
  * @param threshold The minimum value of the angle that is considered defined, otherwise NOTDEF
  * @param n_bins    The number of bins with which gradients are ordered by, using bucket sort. 
- * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude. 
+ * @param list      Return: Vector of coordinate points that are pseudo ordered by magnitude.
  *                  Pixels would be ordered by norm value, up to a precision given by max_grad/n_bins.
  */
     void ll_angle(const double& threshold, const unsigned int& n_bins, std::vector<coorlist>& list);
 
 /**
- * Grow a region starting from point s with a defined precision, 
+ * Grow a region starting from point s with a defined precision,
  * returning the containing points size and the angle of the gradients.
  *
  * @param s         Starting point for the region.
@@ -1014,41 +1014,41 @@ private:
                      const double& y, const double& reg_angle, const double& prec) const;
 
 /**
- * An estimation of the angle tolerance is performed by the standard deviation of the angle at points 
- * near the region's starting point. Then, a new region is grown starting from the same point, but using the 
- * estimated angle tolerance. If this fails to produce a rectangle with the right density of region points, 
+ * An estimation of the angle tolerance is performed by the standard deviation of the angle at points
+ * near the region's starting point. Then, a new region is grown starting from the same point, but using the
+ * estimated angle tolerance. If this fails to produce a rectangle with the right density of region points,
  * 'reduce_region_radius' is called to try to satisfy this condition.
- */ 
+ */
     bool refine(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
                 const double prec, double p, rect& rec, const double& density_th);
 
 /**
- * Reduce the region size, by elimination the points far from the starting point, until that leads to 
+ * Reduce the region size, by elimination the points far from the starting point, until that leads to
  * rectangle with the right density of region points or to discard the region if too small.
  */
     bool reduce_region_radius(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
                 const double prec, double p, rect& rec, double density, const double& density_th);
 
-/** 
+/**
  * Try some rectangles variations to improve NFA value. Only if the rectangle is not meaningful (i.e., log_nfa <= log_eps).
  * @return      The new NFA value.
  */
     double rect_improve(rect& rec) const;
 
-/** 
+/**
  * Calculates the number of correctly aligned points within the rectangle.
  * @return      The new NFA value.
  */
     double rect_nfa(const rect& rec) const;
 
-/** 
+/**
  * Computes the NFA values based on the total number of points, points that agree.
- * n, k, p are the binomial parameters. 
+ * n, k, p are the binomial parameters.
  * @return      The new NFA value.
  */
     double nfa(const int& n, const int& k, const double& p) const;
 
-/** 
+/**
  * Is the point at place 'address' aligned to angle theta, up to precision 'prec'?
  * @return      Whether the point is aligned.
  */

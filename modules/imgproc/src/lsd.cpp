@@ -46,25 +46,25 @@
 using namespace cv;
 
 /////////////////////////////////////////////////////////////////////////////////////////
-// Default LSD parameters 
+// Default LSD parameters
 // SIGMA_SCALE 0.6    - Sigma for Gaussian filter is computed as sigma = sigma_scale/scale.
-// QUANT       2.0    - Bound to the quantization error on the gradient norm. 
+// QUANT       2.0    - Bound to the quantization error on the gradient norm.
 // ANG_TH      22.5   - Gradient angle tolerance in degrees.
 // LOG_EPS     0.0    - Detection threshold: -log10(NFA) > log_eps
 // DENSITY_TH  0.7    - Minimal density of region points in rectangle.
 // N_BINS      1024   - Number of bins in pseudo-ordering of gradient modulus.
 
-// PI 
+// PI
 #ifndef M_PI
-#define M_PI        CV_PI             // 3.14159265358979323846 
+#define M_PI        CV_PI             // 3.14159265358979323846
 #endif
-#define M_3_2_PI    (3 * CV_PI) / 2   // 4.71238898038  // 3/2 pi 
-#define M_2__PI     2 * CV_PI         // 6.28318530718  // 2 pi 
+#define M_3_2_PI    (3 * CV_PI) / 2   // 4.71238898038  // 3/2 pi
+#define M_2__PI     2 * CV_PI         // 6.28318530718  // 2 pi
 
-#define NOTDEF      double(-1024.0) // Label for pixels with undefined gradient. 
+#define NOTDEF      double(-1024.0) // Label for pixels with undefined gradient.
 
-#define NOTUSED     0   // Label for pixels not used in yet. 
-#define USED        1   // Label for pixels already used in detection. 
+#define NOTUSED     0   // Label for pixels not used in yet.
+#define USED        1   // Label for pixels already used in detection.
 
 #define RELATIVE_ERROR_FACTOR 100.0
 
@@ -127,7 +127,7 @@ inline bool AsmallerB_XoverY(const edge& a, const edge& b)
     else return a.p.x < b.p.x;
 }
 
-/** 
+/**
  *   Computes the natural logarithm of the absolute value of
  *   the gamma function of x using Windschitl method.
  *   See http://www.rskey.org/gamma.htm
@@ -138,7 +138,7 @@ inline double log_gamma_windschitl(const double& x)
          + 0.5*x*log(x*sinh(1/x) + 1/(810.0*pow(x, 6.0)));
 }
 
-/** 
+/**
  *   Computes the natural logarithm of the absolute value of
  *   the gamma function of x using the Lanczos approximation.
  *   See http://www.rskey.org/gamma.htm
@@ -159,8 +159,8 @@ inline double log_gamma_lanczos(const double& x)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-LSD::LSD(lsd_refine_lvl _refine, double _scale, double _sigma_scale, double _quant, 
-         double _ang_th, double _log_eps, double _density_th, int _n_bins)
+LSD::LSD(lsd_refine_lvl _refine, double _scale, double _sigma_scale, double _quant,
+        double _ang_th, double _log_eps, double _density_th, int _n_bins)
         :SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
         ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
 {
@@ -197,7 +197,7 @@ void LSD::detect(const cv::InputArray _image, cv::OutputArray _lines, cv::Rect _
     flsd(lines, w, p, n);
 
     Mat(lines).copyTo(_lines);
-    if (w) Mat(*w).copyTo(_width); 
+    if (w) Mat(*w).copyTo(_width);
     if (p) Mat(*p).copyTo(_prec);
     if (n) Mat(*n).copyTo(_nfa);
 
@@ -206,15 +206,15 @@ void LSD::detect(const cv::InputArray _image, cv::OutputArray _lines, cv::Rect _
     delete n;
 }
 
-void LSD::flsd(std::vector<Vec4i>& lines, 
-    std::vector<double>* widths, std::vector<double>* precisions, 
+void LSD::flsd(std::vector<Vec4i>& lines,
+    std::vector<double>* widths, std::vector<double>* precisions,
     std::vector<double>* nfas)
 {
     // Angle tolerance
     const double prec = M_PI * ANG_TH / 180;
     const double p = ANG_TH / 180;
     const double rho = QUANT / sin(prec);    // gradient magnitude threshold
- 
+
     std::vector<coorlist> list;
     if (SCALE != 1)
     {
@@ -222,7 +222,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
         const double sigma = (SCALE < 1)?(SIGMA_SCALE / SCALE):(SIGMA_SCALE);
         const double sprec = 3;
         const unsigned int h =  (unsigned int)(ceil(sigma * sqrt(2 * sprec * log(10.0))));
-        Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size 
+        Size ksize(1 + 2 * h, 1 + 2 * h); // kernel size
         GaussianBlur(image, gaussian_img, ksize, sigma);
         // Scale image to needed size
         resize(gaussian_img, scaled_image, Size(), SCALE, SCALE);
@@ -235,14 +235,14 @@ void LSD::flsd(std::vector<Vec4i>& lines,
     }
 
     LOG_NT = 5 * (log10(double(img_width)) + log10(double(img_height))) / 2 + log10(11.0);
-    const int min_reg_size = int(-LOG_NT/log10(p)); // minimal number of points in region that can give a meaningful event 
-    
+    const int min_reg_size = int(-LOG_NT/log10(p)); // minimal number of points in region that can give a meaningful event
+
     // // Initialize region only when needed
     // Mat region = Mat::zeros(scaled_image.size(), CV_8UC1);
     used = Mat_<uchar>::zeros(scaled_image.size()); // zeros = NOTUSED
     std::vector<RegionPoint> reg(img_width * img_height);
-    
-    // Search for line segments 
+
+    // Search for line segments
     unsigned int ls_count = 0;
     unsigned int list_size = list.size();
     for(unsigned int i = 0; i < list_size; ++i)
@@ -253,10 +253,10 @@ void LSD::flsd(std::vector<Vec4i>& lines,
             int reg_size;
             double reg_angle;
             region_grow(list[i].p, reg, reg_size, reg_angle, prec);
-            
+
             // Ignore small regions
             if(reg_size < min_reg_size) { continue; }
-            
+
             // Construct rectangular approximation for the region
             rect rec;
             region2rect(reg, reg_size, reg_angle, prec, p, rec);
@@ -288,7 +288,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
                 rec.x2 /= SCALE; rec.y2 /= SCALE;
                 rec.width /= SCALE;
             }
-            
+
             if(roi.area()) // if a roi has been given by the user, adjust coordinates
             {
                 rec.x1 += roix;
@@ -308,11 +308,8 @@ void LSD::flsd(std::vector<Vec4i>& lines,
             // {
             //     region.data[reg[i].x + reg[i].y * width] = ls_count;
             // }
-
         }
-    
     }
- 
 }
 
 void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vector<coorlist>& list)
@@ -320,21 +317,21 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
     //Initialize data
     angles = cv::Mat_<double>(scaled_image.size());
     modgrad = cv::Mat_<double>(scaled_image.size());
-    
+
     angles_data = angles.ptr<double>(0);
     modgrad_data = modgrad.ptr<double>(0);
     scaled_image_data = scaled_image.ptr<double>(0);
 
-    img_width = scaled_image.cols; 
+    img_width = scaled_image.cols;
     img_height = scaled_image.rows;
 
-    // Undefined the down and right boundaries 
+    // Undefined the down and right boundaries
     angles.row(img_height - 1).setTo(NOTDEF);
     angles.col(img_width - 1).setTo(NOTDEF);
-    
+
     // Computing gradient for remaining pixels
-    CV_Assert(scaled_image.isContinuous() && 
-              modgrad.isContinuous() && 
+    CV_Assert(scaled_image.isContinuous() &&
+              modgrad.isContinuous() &&
               angles.isContinuous());   // Accessing image data linearly
 
     double max_grad = -1;
@@ -344,13 +341,13 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
         {
             double DA = scaled_image_data[addr + img_width + 1] - scaled_image_data[addr];
             double BC = scaled_image_data[addr + 1] - scaled_image_data[addr + img_width];
-            double gx = DA + BC;    // gradient x component 
-            double gy = DA - BC;    // gradient y component 
-            double norm = std::sqrt((gx * gx + gy * gy) / 4); // gradient norm 
-            
+            double gx = DA + BC;    // gradient x component
+            double gy = DA - BC;    // gradient y component
+            double norm = std::sqrt((gx * gx + gy * gy) / 4); // gradient norm
+
             modgrad_data[addr] = norm;    // store gradient
 
-            if (norm <= threshold)  // norm too small, gradient no defined 
+            if (norm <= threshold)  // norm too small, gradient no defined
             {
                 angles_data[addr] = NOTDEF;
             }
@@ -362,7 +359,7 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
 
         }
     }
-    
+
     // Compute histogram of gradient values
     list = std::vector<coorlist>(img_width * img_height);
     std::vector<coorlist*> range_s(n_bins);
@@ -375,7 +372,7 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
         const double* norm = modgrad_data + y * img_width;
         for(int x = 0; x < img_width - 1; ++x, ++norm)
         {
-            // Store the point in the right bin according to its norm 
+            // Store the point in the right bin according to its norm
             int i = int((*norm) * bin_coef);
             if(!range_e[i])
             {
@@ -480,7 +477,7 @@ void LSD::region2rect(const std::vector<RegionPoint>& reg, const int reg_size, c
 
     // Weighted sum must differ from 0
     CV_Assert(sum > 0);
-    
+
     x /= sum;
     y /= sum;
 
@@ -495,7 +492,7 @@ void LSD::region2rect(const std::vector<RegionPoint>& reg, const int reg_size, c
     {
         double regdx = double(reg[i].x) - x;
         double regdy = double(reg[i].y) - y;
-        
+
         double l = regdx * dx + regdy * dy;
         double w = -regdx * dy + regdy * dx;
 
@@ -530,10 +527,10 @@ double LSD::get_theta(const std::vector<RegionPoint>& reg, const int& reg_size, 
     double Iyy = 0.0;
     double Ixy = 0.0;
 
-    // Compute inertia matrix 
+    // Compute inertia matrix
     for(int i = 0; i < reg_size; ++i)
     {
-        const double& regx = reg[i].x; 
+        const double& regx = reg[i].x;
         const double& regy = reg[i].y;
         const double& weight = reg[i].modgrad;
         double dx = regx - x;
@@ -554,7 +551,7 @@ double LSD::get_theta(const std::vector<RegionPoint>& reg, const int& reg_size, 
                     cv::fastAtan2(lambda - Ixx, Ixy):cv::fastAtan2(Ixy, lambda - Iyy); // in degs
     theta *= DEG_TO_RADS;
 
-    // Correct angle by 180 deg if necessary 
+    // Correct angle by 180 deg if necessary
     if(angle_diff(theta, reg_angle) > prec) { theta += M_PI; }
 
     return theta;
@@ -588,7 +585,7 @@ bool LSD::refine(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
     }
     double mean_angle = sum / double(n);
     // 2 * standard deviation
-    double tau = 2.0 * sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle); 
+    double tau = 2.0 * sqrt((s_sum - 2.0 * mean_angle * sum) / double(n) + mean_angle * mean_angle);
 
     // Try new region
     region_grow(Point(reg[0].x, reg[0].y), reg, reg_size, reg_angle, tau);
@@ -598,8 +595,8 @@ bool LSD::refine(std::vector<RegionPoint>& reg, int& reg_size, double reg_angle,
     region2rect(reg, reg_size, reg_angle, prec, p, rec);
     density = double(reg_size) / (dist(rec.x1, rec.y1, rec.x2, rec.y2) * rec.width);
 
-    if (density < density_th) 
-    { 
+    if (density < density_th)
+    {
         return reduce_region_radius(reg, reg_size, reg_angle, prec, p, rec, density, density_th);
     }
     else
@@ -621,22 +618,22 @@ bool LSD::reduce_region_radius(std::vector<RegionPoint>& reg, int& reg_size, dou
     while(density < density_th)
     {
         radSq *= 0.75*0.75; // Reduce region's radius to 75% of its value
-        // Remove points from the region and update 'used' map 
+        // Remove points from the region and update 'used' map
         for(int i = 0; i < reg_size; ++i)
         {
             if(distSq(xc, yc, double(reg[i].x), double(reg[i].y)) > radSq)
             {
-                // Remove point from the region 
+                // Remove point from the region
                 *(reg[i].used) = NOTUSED;
                 std::swap(reg[i], reg[reg_size - 1]);
                 --reg_size;
-                --i; // To avoid skipping one point 
+                --i; // To avoid skipping one point
             }
         }
 
         if(reg_size < 2) { return false; }
 
-        // Re-compute rectangle 
+        // Re-compute rectangle
         region2rect(reg, reg_size ,reg_angle, prec, p, rec);
 
         // Re-compute region points density
@@ -687,7 +684,7 @@ double LSD::rect_improve(rect& rec) const
         }
     }
     if(log_nfa > LOG_EPS) return log_nfa;
-    
+
     // Try to reduce one side of rectangle
     r = rect(rec);
     for(unsigned int n = 0; n < 5; ++n)
@@ -765,9 +762,9 @@ double LSD::rect_nfa(const rect& rec) const
     ordered_x[1].p.x = rec.x2 - dyhw; ordered_x[1].p.y = rec.y2 + dxhw; ordered_x[1].taken = false;
     ordered_x[2].p.x = rec.x2 + dyhw; ordered_x[2].p.y = rec.y2 - dxhw; ordered_x[2].taken = false;
     ordered_x[3].p.x = rec.x1 + dyhw; ordered_x[3].p.y = rec.y1 - dxhw; ordered_x[3].taken = false;
-    
+
     std::sort(ordered_x.begin(), ordered_x.end(), AsmallerB_XoverY);
-    
+
     // Find min y. And mark as taken. find max y.
     for(unsigned int i = 1; i < 4; ++i)
     {
@@ -782,7 +779,7 @@ double LSD::rect_nfa(const rect& rec) const
     {
         if(!ordered_x[i].taken)
         {
-            if(!leftmost) // if uninitialized 
+            if(!leftmost) // if uninitialized
             {
                 leftmost = &ordered_x[i];
             }
@@ -800,7 +797,7 @@ double LSD::rect_nfa(const rect& rec) const
     {
         if(!ordered_x[i].taken)
         {
-            if(!rightmost) // if uninitialized 
+            if(!rightmost) // if uninitialized
             {
                 rightmost = &ordered_x[i];
             }
@@ -818,7 +815,7 @@ double LSD::rect_nfa(const rect& rec) const
     {
         if(!ordered_x[i].taken)
         {
-            if(!tailp) // if uninitialized 
+            if(!tailp) // if uninitialized
             {
                 tailp = &ordered_x[i];
             }
@@ -830,20 +827,20 @@ double LSD::rect_nfa(const rect& rec) const
     }
     tailp->taken = true;
 
-    double flstep = (min_y->p.y != leftmost->p.y) ? 
+    double flstep = (min_y->p.y != leftmost->p.y) ?
                     (min_y->p.x - leftmost->p.x) / (min_y->p.y - leftmost->p.y) : 0; //first left step
-    double slstep = (leftmost->p.y != tailp->p.x) ? 
+    double slstep = (leftmost->p.y != tailp->p.x) ?
                     (leftmost->p.x - tailp->p.x) / (leftmost->p.y - tailp->p.x) : 0; //second left step
-    
-    double frstep = (min_y->p.y != rightmost->p.y) ? 
+
+    double frstep = (min_y->p.y != rightmost->p.y) ?
                     (min_y->p.x - rightmost->p.x) / (min_y->p.y - rightmost->p.y) : 0; //first right step
-    double srstep = (rightmost->p.y != tailp->p.x) ? 
+    double srstep = (rightmost->p.y != tailp->p.x) ?
                     (rightmost->p.x - tailp->p.x) / (rightmost->p.y - tailp->p.x) : 0; //second right step
-    
+
     double lstep = flstep, rstep = frstep;
 
-    int left_x = min_y->p.x, right_x = min_y->p.x; 
-    
+    int left_x = min_y->p.x, right_x = min_y->p.x;
+
     // Loop around all points in the region and count those that are aligned.
     int min_iter = std::max(min_y->p.y, 0);
     int max_iter = std::min(max_y->p.y, img_height - 1);
@@ -872,7 +869,7 @@ double LSD::rect_nfa(const rect& rec) const
 double LSD::nfa(const int& n, const int& k, const double& p) const
 {
     // Trivial cases
-    if(n == 0 || k == 0) { return -LOG_NT; }  
+    if(n == 0 || k == 0) { return -LOG_NT; }
     if(n == k) { return -LOG_NT - double(n) * log10(p); }
 
     double p_term = p / (1 - p);
@@ -882,7 +879,7 @@ double LSD::nfa(const int& n, const int& k, const double& p) const
                 + double(k) * log(p) + double(n-k) * log(1.0 - p);
     double term = exp(log1term);
 
-    if(double_equal(term, 0))              
+    if(double_equal(term, 0))
     {
         if(k > n * p) return -log1term / M_LN10 - LOG_NT;
         else return -LOG_NT;
@@ -913,7 +910,7 @@ inline bool LSD::isAligned(const int& address, const double& theta, const double
     const double& a = angles_data[address];
     if(a == NOTDEF) { return false; }
 
-    // It is assumed that 'theta' and 'a' are in the range [-pi,pi] 
+    // It is assumed that 'theta' and 'a' are in the range [-pi,pi]
     double n_theta = theta - a;
     if(n_theta < 0) { n_theta = -n_theta; }
     if(n_theta > M_3_2_PI)
@@ -939,7 +936,7 @@ void LSD::drawSegments(cv::Mat& image, const std::vector<cv::Vec4i>& lines)
     {
         cv::cvtColor(image, gray, CV_BGR2GRAY);
     }
-    
+
     // Create a 3 channel image in order to draw colored lines
     std::vector<Mat> planes;
     planes.push_back(gray);
@@ -991,10 +988,10 @@ int LSD::compareSegments(const cv::Size& size, const std::vector<cv::Vec4i>& lin
         Mat Ig;
         if (image->channels() == 1)
         {
-            cv::cvtColor(*image, *image, CV_GRAY2BGR);   
+            cv::cvtColor(*image, *image, CV_GRAY2BGR);
         }
         CV_Assert(image->isContinuous() && I1.isContinuous() && I2.isContinuous());
-        
+
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
             uchar i1 = I1.data[i];
