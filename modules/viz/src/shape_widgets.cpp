@@ -128,9 +128,13 @@ template<> cv::viz::SphereWidget cv::viz::Widget::cast<cv::viz::SphereWidget>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// arrow widget implementation
 
-cv::viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color)
+cv::viz::ArrowWidget::ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness, const Color &color)
 {
     vtkSmartPointer<vtkArrowSource> arrowSource = vtkSmartPointer<vtkArrowSource>::New ();
+    arrowSource->SetShaftRadius(thickness);
+    // The thickness and radius of the tip are adjusted based on the thickness of the arrow
+    arrowSource->SetTipRadius(thickness * 3.0);
+    arrowSource->SetTipLength(thickness * 10.0);
     
     float startPoint[3], endPoint[3];
     startPoint[0] = pt1.x;

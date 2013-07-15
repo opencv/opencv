@@ -90,7 +90,7 @@ TEST(Viz_viz3d, accuracy)
     viz::LineWidget lw(Point3f(0, 0, 0), Point3f(4.f, 4.f,4.f), viz::Color::green());
     viz::PlaneWidget pw(Vec4f(0.0,1.0,2.0,3.0), 5.0);
     viz::SphereWidget sw(Point3f(0, 0, 0), 0.5);
-    viz::ArrowWidget aw(Point3f(0, 0, 0), Point3f(1, 1, 1), viz::Color::red());
+    viz::ArrowWidget aw(Point3f(0, 0, 0), Point3f(1, 1, 1), 0.01, viz::Color::red());
     viz::CircleWidget cw(Point3f(0, 0, 0), 0.5, 0.01, viz::Color::green());
     viz::CylinderWidget cyw(Point3f(0, 0, 0), Point3f(-1, -1, -1), 0.5, 30, viz::Color::green());
     viz::CubeWidget cuw(Point3f(-2, -2, -2), Point3f(-1, -1, -1));

@@ -81,7 +81,7 @@ namespace cv
         class CV_EXPORTS ArrowWidget : public Widget3D
         {
         public:
-            ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color = Color::white());
+            ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
         };
 
         class CV_EXPORTS CircleWidget : public Widget3D
