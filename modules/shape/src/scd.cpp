@@ -177,7 +177,7 @@ void SCD::buildNormalizedDistanceMatrix(InputArray contour,
      * However, the paper recommends to avoid using outliers in the 
      * mean computation. Short term future work.*/
     float _meanDistance=mean(disMatrix)[0];
-    normalize(disMatrix, disMatrix,0,1, NORM_MINMAX);
+    //normalize(disMatrix, disMatrix,0,1, NORM_MINMAX);
     sqrt(disMatrix, disMatrix);
     float _normMeanDistance=mean(disMatrix)[0];
     if (_meanDistance!=0)

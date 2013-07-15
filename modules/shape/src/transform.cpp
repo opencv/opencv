@@ -75,7 +75,7 @@ double ThinPlateSplineTransform::getRegularizationParam()
 
 /* Public methods */
 void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
-                                                   std::vector<DMatch>&_matches, std::vector<Point2f>& outPts) const
+                                                   std::vector<DMatch>&_matches, std::vector<Point2f>& outPts)
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
@@ -246,8 +246,27 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     {
         outPts.push_back(Point2f(fx.at<float>(0,i), fy.at<float>(0,i)));
     }
+
+    //Setting transform Cost
+    Mat wt(2,matX.rows-3,CV_32F);
+    Mat w;
+    for (int i=0; i<wt.cols; i++)
+    {
+        wt.at<float>(0,i)=matX.at<float>(i,0);
+        wt.at<float>(1,i)=matX.at<float>(i,1);
+    }
+    transpose(wt,w);
+    Mat Q=wt*matK*w;
+    transformCost=mean(Q.diag(0))[0];
 }
 
+/* getters */
+float ThinPlateSplineTransform::getTranformCost(void) const
+{
+    return transformCost;
+}
+
+/* private methods */
 double ThinPlateSplineTransform::distance(Point2f p, Point2f q) const
 {
     Point2f diff = p - q;
@@ -277,9 +296,15 @@ bool AffineTransform::getFullAffine()
 {
     return fullAffine;
 }
+
+float AffineTransform::getTranformCost(void) const
+{
+    return transformCost;
+}
+
 /* Public methods */
 void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
-                                          std::vector<DMatch>& _matches, std::vector<Point2f>& outPts) const
+                                          std::vector<DMatch>& _matches, std::vector<Point2f>& outPts)
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
@@ -328,8 +353,13 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
         auxaf.at<float>(0,i)=complete_shape1.at<float>(i,0);
         auxaf.at<float>(1,i)=complete_shape1.at<float>(i,1);
     }
-    Mat fAffine=affine*auxaf;
 
+    if (affine.cols==0)
+    {   /* add a LLS solution here */
+        affine = Mat::ones(2,3,CV_32F);
+    }
+
+    Mat fAffine=affine*auxaf;
     /* Ensambling output */
     for (int i=0; i<fAffine.cols; i++)
     {

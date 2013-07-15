@@ -272,6 +272,8 @@ void CV_ShapeTest::test4()
 {
     vector<Point2f> shape1, shape2;
 
+    shape1.push_back(Point2f(55,40));
+    shape1.push_back(Point2f(55,50));
     shape1.push_back(Point2f(50,60));
     shape1.push_back(Point2f(50,70));
     shape1.push_back(Point2f(50,80));
@@ -285,31 +287,37 @@ void CV_ShapeTest::test4()
     shape1.push_back(Point2f(60,100));
     shape1.push_back(Point2f(60,110));
 
-    shape2.push_back(Point2f(2*60,2.5*50)-Point2f(15,16));
-    shape2.push_back(Point2f(2*70,2.5*50)-Point2f(15,17));
-    shape2.push_back(Point2f(2*80,2.5*50)-Point2f(15,18));
-    shape2.push_back(Point2f(2*90,2.5*50)-Point2f(15,19));
-    shape2.push_back(Point2f(2*100,2.5*50)-Point2f(15,20));
-    shape2.push_back(Point2f(2*110,2.5*50)-Point2f(15,21));
-    shape2.push_back(Point2f(2*60,2.5*60)-Point2f(15,16));
-    shape2.push_back(Point2f(2*70,2.5*60)-Point2f(15,17));
-    shape2.push_back(Point2f(2*80,2.5*60)-Point2f(15,18));
-    shape2.push_back(Point2f(2*90,2.5*60)-Point2f(15,19));
-    shape2.push_back(Point2f(2*100,2.5*60)-Point2f(15,20));
-    shape2.push_back(Point2f(2*110,2.5*60)-Point2f(15,21));
+    shape2.push_back(Point2f(2*40,2*55)-Point2f(16,14));
+    shape2.push_back(Point2f(2*50,2*55)-Point2f(14.5,15.5));
+    shape2.push_back(Point2f(2*60,2*50)-Point2f(14,15));
+    shape2.push_back(Point2f(2*70,2*50)-Point2f(15,16));
+    shape2.push_back(Point2f(2*80,2*50)-Point2f(16,14.5));
+    shape2.push_back(Point2f(2*90,2*50)-Point2f(15.5,15.5));
+    shape2.push_back(Point2f(2*100,2*50)-Point2f(15,15));
+    shape2.push_back(Point2f(2*110,2*50)-Point2f(15,14.5));
+    shape2.push_back(Point2f(2*60,2*60)-Point2f(15,16));
+    shape2.push_back(Point2f(2*70,2*60)-Point2f(16,15));
+    shape2.push_back(Point2f(2*80,2*60)-Point2f(14,15));
+    shape2.push_back(Point2f(2*90,2*60)-Point2f(15,15));
+    shape2.push_back(Point2f(2*100,2*60)-Point2f(15.5,15));
+    shape2.push_back(Point2f(2*110,2*60)-Point2f(14.5,14.5));
+    //shape2.push_back(Point2f(2*110,2*60)-Point2f(16,17));
+    //shape2.push_back(Point2f(2,2));
 
-    SCD shapeDescriptor(8,5,0.1,10,true);
-    SCDMatcher scdmatcher(1, DistanceSCDFlags::DIST_CHI);
+    SCD shapeDescriptor(12,5,0.2,4,true);
+    SCDMatcher scdmatcher(2.0, DistanceSCDFlags::DIST_CHI);
     Mat scdesc1, scdesc2;
     vector<DMatch> matches;
+    //AffineTransform tpsTra(false);
+    //AffineTransform tpsTra(true);
     ThinPlateSplineTransform tpsTra;
     float betai=0; //Regularization params
     float annRate=1;
 
     vector<Point2f> old_shape1=shape1;
     /* iterative process */
-    //beta_k=(mean_dist_1^2)*beta_init*r^(k-1);
-    for (int i=0;i<5;i++)
+    float scdistance=0.0, benergy=0.0;
+    for (int i=0;i<3;i++)
     {
         /* compute SCD and Match */
         shapeDescriptor.extractSCD(shape1, scdesc1);
@@ -324,7 +332,12 @@ void CV_ShapeTest::test4()
         tpsTra.setRegularizationParam(betai);
         tpsTra.applyTransformation(shape1, shape2, matches, transformed_shape);
         shape1=transformed_shape;
+
+        scdistance += scdmatcher.getMatchingCost();
+        benergy += tpsTra.getTranformCost();
     }
+    std::cout<<"Shape Context Distance: "<<scdistance<<std::endl;
+    std::cout<<"Bending Energy: "<<benergy<<std::endl;
 
     /* draw */
     int max=(shape1.size()>shape2.size())?shape1.size():shape2.size();

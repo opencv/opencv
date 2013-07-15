@@ -129,16 +129,19 @@ public:
     //! the full constructor
     CV_WRAP SCDMatcher(float outlierWeight=0.1, int flags=DistanceSCDFlags::DEFAULT);
     //! the matcher function using Hungarian method
-    CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches) const;
+    CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches);
+    //! *etters
+    CV_WRAP float getMatchingCost(void);
 private:
-    float outlierWeight;
-    int configFlags;
+    CV_PROP_RW float outlierWeight;
+    CV_PROP_RW int configFlags;
+    CV_PROP_RW float minMatchCost;
 protected:
     CV_WRAP void buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
-    CV_WRAP void hungarian(Mat&, std::vector<DMatch>&) const;
+    CV_WRAP void hungarian(Mat&, std::vector<DMatch>&);
 };
 
 typedef SCDMatcher ShapeContextDescriptorMatcher;
@@ -153,7 +156,11 @@ public:
     CV_WRAP virtual ~Transform(){}
     //! methods
     CV_WRAP virtual void applyTransformation(InputArray pts1, InputArray pts2,
-                                     std::vector<DMatch>&, std::vector<Point2f> &outPts) const=0;
+                                     std::vector<DMatch>&, std::vector<Point2f> &outPts)=0;
+    //! getters
+    CV_WRAP virtual float getTranformCost(void) const=0;
+protected:
+    CV_PROP_RW float transformCost;
 };
 
 /****************************************************************************************\
@@ -171,7 +178,9 @@ public:
     double getRegularizationParam(void);
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point2f>& outPts) const;
+                             std::vector<DMatch>&, std::vector<Point2f>& outPts);
+    //! getters
+    CV_WRAP float getTranformCost(void) const;
 private:
     double beta;
     double distance(Point2f, Point2f) const;
@@ -188,11 +197,12 @@ public:
     CV_WRAP AffineTransform(bool fullAffine);
 
     //! getters-setters
-    void setFullAffine(bool fullAffine);
-    bool getFullAffine(void);
+    CV_WRAP float getTranformCost(void) const;
+    CV_WRAP void setFullAffine(bool fullAffine);
+    CV_WRAP bool getFullAffine(void);
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point2f>& outPts) const;
+                             std::vector<DMatch>&, std::vector<Point2f>& outPts);
 private:
     bool fullAffine;
 };

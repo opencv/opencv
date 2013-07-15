@@ -55,9 +55,10 @@ SCDMatcher::SCDMatcher(float _outlierWeight, int _configFlags)
 }
 
 /* Public methods */
-void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches) const
+void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches)
 {
     CV_Assert((descriptors1.cols>0) & (descriptors1.rows>0) & (descriptors2.cols>0) & (descriptors2.rows>0));
+    matches.clear();
 
     /* Build the cost Matrix between descriptors*/
     Mat costMat;
@@ -103,7 +104,7 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
 
     /* initializing costMatrix with oulier weight values */
     int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
-    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
+    costMatrix = Mat::zeros(costrows, costrows, CV_32F);
         
     /* Compute the Cost Matrix */
     for(int i=0; i<scd1.rows; i++)
@@ -117,6 +118,18 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
                         (DBL_EPSILON+scd1.at<float>(i,k)+scd2.at<float>(j,k));
             }
             costMatrix.at<float>(i,j)=csum/2;
+        }
+    }
+
+    /* normalizing cost */
+    normalize(costMatrix, costMatrix, 0,1, NORM_MINMAX);
+
+    /* settin ouliers weight */
+    for(int i=scd1.rows; i<costrows; i++)
+    {
+        for(int j=scd2.rows; j<costrows; j++)
+        {
+            costMatrix.at<float>(i,j)=outlierWeight;
         }
     }
 }
@@ -160,7 +173,7 @@ void SCDMatcher::buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& c
     }
 }
 
-void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches) const
+void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
 {
     std::vector<int> free(costMatrix.rows, 0), collist(costMatrix.rows, 0);
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
@@ -397,12 +410,13 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches) con
     }
 
     // calculate optimal cost.
-    double lapcost = 0;
+    minMatchCost = 0;
     for (i = 0; i<costMatrix.rows; i++)
     {
         j = rowsol[i];
-        lapcost=lapcost+costMatrix.at<float>(i,j);
+        minMatchCost+=costMatrix.at<float>(i,j);
     }
+    minMatchCost/=costMatrix.rows;
 
     // Save in a DMatch vector
     for (i=0;i<costMatrix.rows;i++)
@@ -410,6 +424,12 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches) con
         DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));
         outMatches.push_back(singleMatch);
     }
+}
+
+/* Getters */
+float SCDMatcher::getMatchingCost()
+{
+    return minMatchCost;
 }
 
 }//cv
