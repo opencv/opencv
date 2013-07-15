@@ -43,6 +43,7 @@
 #include <vtkPlaneSource.h>
 #include <vtkSphereSource.h>
 #include <vtkArrowSource.h>
+#include <vtkOutlineSource.h>
 #include <vtkIdentityTransform.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>

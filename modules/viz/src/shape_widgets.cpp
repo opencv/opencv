@@ -269,18 +269,23 @@ template<> cv::viz::CylinderWidget cv::viz::Widget::cast<cv::viz::CylinderWidget
 /// cylinder widget implementation
 
 cv::viz::CubeWidget::CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame, const Color &color)
-{
-    vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
-    cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+{   
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();   
+    if (wire_frame)
+    {
+        vtkSmartPointer<vtkOutlineSource> cube = vtkSmartPointer<vtkOutlineSource>::New();
+        cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+        mapper->SetInput(cube->GetOutput ());
+    }
+    else
+    {
+        vtkSmartPointer<vtkCubeSource> cube = vtkSmartPointer<vtkCubeSource>::New ();
+        cube->SetBounds (pt_min.x, pt_max.x, pt_min.y, pt_max.y, pt_min.z, pt_max.z);
+        mapper->SetInput(cube->GetOutput ());
+    }
     
-    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
-    mapper->SetInput(cube->GetOutput ());
-
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
-    
-    if (wire_frame)
-        actor->GetProperty ()->SetRepresentationToWireframe ();
     
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
