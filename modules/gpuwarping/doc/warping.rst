@@ -9,7 +9,7 @@ gpu::remap
 --------------
 Applies a generic geometrical transformation to an image.
 
-.. ocv:function:: void gpu::remap( const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap, int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -43,7 +43,7 @@ gpu::resize
 ---------------
 Resizes an image.
 
-.. ocv:function:: void gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -80,7 +80,7 @@ gpu::warpAffine
 -------------------
 Applies an affine transformation to an image.
 
-.. ocv:function:: void gpu::warpAffine( const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image.  ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -102,7 +102,7 @@ gpu::buildWarpAffineMaps
 ------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
 
     :param M: *2x3*  transformation matrix.
 
@@ -124,7 +124,7 @@ gpu::warpPerspective
 ------------------------
 Applies a perspective transformation to an image.
 
-.. ocv:function:: void gpu::warpPerspective( const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags=INTER_LINEAR, int borderMode=BORDER_CONSTANT, Scalar borderValue=Scalar(), Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -146,7 +146,7 @@ gpu::buildWarpPerspectiveMaps
 -----------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
 
     :param M: *3x3*  transformation matrix.
 
@@ -164,11 +164,41 @@ Builds transformation maps for perspective transformation.
 
 
 
+gpu::buildWarpPlaneMaps
+-----------------------
+Builds plane warping maps.
+
+.. ocv:function:: void gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, InputArray T, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::buildWarpCylindricalMaps
+-----------------------------
+Builds cylindrical warping maps.
+
+.. ocv:function:: void gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
+gpu::buildWarpSphericalMaps
+---------------------------
+Builds spherical warping maps.
+
+.. ocv:function:: void gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+
+    :param stream: Stream for the asynchronous version.
+
+
+
 gpu::rotate
 ---------------
 Rotates an image around the origin (0,0) and then shifts it.
 
-.. ocv:function:: void gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image. Supports 1, 3 or 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32F`` depth.
 
@@ -190,41 +220,11 @@ Rotates an image around the origin (0,0) and then shifts it.
 
 
 
-gpu::buildWarpPlaneMaps
------------------------
-Builds plane warping maps.
-
-.. ocv:function:: void gpu::buildWarpPlaneMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, const Mat & T, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
-
-    :param stream: Stream for the asynchronous version.
-
-
-
-gpu::buildWarpCylindricalMaps
------------------------------
-Builds cylindrical warping maps.
-
-.. ocv:function:: void gpu::buildWarpCylindricalMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
-
-    :param stream: Stream for the asynchronous version.
-
-
-
-gpu::buildWarpSphericalMaps
----------------------------
-Builds spherical warping maps.
-
-.. ocv:function:: void gpu::buildWarpSphericalMaps( Size src_size, Rect dst_roi, const Mat & K, const Mat& R, float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream=Stream::Null() )
-
-    :param stream: Stream for the asynchronous version.
-
-
-
 gpu::pyrDown
 -------------------
 Smoothes an image and downsamples it.
 
-.. ocv:function:: void gpu::pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -240,7 +240,7 @@ gpu::pyrUp
 -------------------
 Upsamples an image and then smoothes it.
 
-.. ocv:function:: void gpu::pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
