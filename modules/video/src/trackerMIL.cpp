@@ -46,6 +46,34 @@
 namespace cv
 {
 
+
+/**
+ * Implementation of the target state
+ * Width and height are the dimensions of the bounding box
+ */
+class TrackerMILTargetState : public TrackerTargetState
+{
+
+public:
+
+	TrackerMILTargetState( Point2f position, int width, int height )
+	{
+		setTargetPosition( position );
+		setWidth( width );
+		setHeight( height );
+	};
+	inline void setWidth( int targetWidth ){ targetWidth = width; };
+	inline void setHeight( int targetHeight ){ targetHeight = height; };
+	inline int getWidth() const { return width; };
+	inline int getHeight() const { return height; };
+
+private:
+	int width;
+	int height;
+};
+
+
+
 RNG TrackerMIL::rng;
 /*
  *  TrackerMIL
