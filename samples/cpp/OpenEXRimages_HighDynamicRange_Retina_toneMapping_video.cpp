@@ -14,8 +14,9 @@
 #include <stdio.h>
 #include <cstring>
 
-#include "opencv2/contrib.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/bioinspired.hpp" // retina based algorithms
+#include "opencv2/imgproc.hpp" // cvCvtcolor function
+#include "opencv2/highgui.hpp" // display
 
 static void help(std::string errorMessage)
 {
@@ -160,7 +161,7 @@ static void rescaleGrayLevelMat(const cv::Mat &inputMat, cv::Mat &outputMat, con
 
  }
 
- cv::Ptr<cv::Retina> retina;
+ cv::Ptr<cv::bioinspired::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -280,10 +281,10 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
           */
          if (useLogSampling)
                 {
-                     retina = cv::createRetina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                     retina = cv::bioinspired::createRetina(inputImage.size(),true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = cv::createRetina(inputImage.size());
+             retina = cv::bioinspired::createRetina(inputImage.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         retina->write("RetinaDefaultParameters.xml");

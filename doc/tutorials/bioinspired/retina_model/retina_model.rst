@@ -107,14 +107,16 @@ This retina filter code includes the research contributions of phd/research coll
 Code tutorial
 =============
 
-Please refer to the original tutorial source code in file *opencv_folder/samples/cpp/tutorial_code/contrib/retina_tutorial.cpp*.
+Please refer to the original tutorial source code in file *opencv_folder/samples/cpp/tutorial_code/bioinspired/retina_tutorial.cpp*.
 
-To compile it, assuming OpenCV is correctly installed, use the following command. It requires the opencv_core *(cv::Mat and friends objects management)*, opencv_highgui *(display and image/video read)* and opencv_contrib *(Retina description)* libraries to compile.
+**Note :** do not forget that the retina model is included in the following namespace : *cv::bioinspired*.
+
+To compile it, assuming OpenCV is correctly installed, use the following command. It requires the opencv_core *(cv::Mat and friends objects management)*, opencv_highgui *(display and image/video read)* and opencv_bioinspired *(Retina description)* libraries to compile.
 
 .. code-block:: cpp
 
    // compile
-   gcc retina_tutorial.cpp -o Retina_tuto -lopencv_core -lopencv_highgui -lopencv_contrib
+   gcc retina_tutorial.cpp -o Retina_tuto -lopencv_core -lopencv_highgui -lopencv_bioinspired
 
    // Run commands : add 'log' as a last parameter to apply a spatial log sampling (simulates retina sampling)
    // run on webcam
@@ -128,7 +130,7 @@ To compile it, assuming OpenCV is correctly installed, use the following command
 
 Here is a code explanation :
 
-Retina definition is present in the contrib package and a simple include allows to use it
+Retina definition is present in the bioinspired package and a simple include allows to use it. You can rather use the specific header : *opencv2/bioinspired.hpp* if you prefer but then include the other required openv modules : *opencv2/core.hpp* and *opencv2/highgui.hpp* 
 
 .. code-block:: cpp
 
@@ -229,20 +231,20 @@ Once all input parameters are processed, a first image should have been loaded, 
         return -1;
     }
 
-Now, everything is ready to run the retina model. I propose here to allocate a retina instance and to manage the eventual log sampling option. The Retina constructor expects at least a cv::Size object that shows the input data size that will have to be managed. One can activate other options such as color and its related color multiplexing strategy (here Bayer multiplexing is chosen using enum cv::RETINA_COLOR_BAYER). If using log sampling, the image reduction factor (smaller output images) and log sampling strengh can be adjusted.
+Now, everything is ready to run the retina model. I propose here to allocate a retina instance and to manage the eventual log sampling option. The Retina constructor expects at least a cv::Size object that shows the input data size that will have to be managed. One can activate other options such as color and its related color multiplexing strategy (here Bayer multiplexing is chosen using *enum cv::bioinspired::RETINA_COLOR_BAYER*). If using log sampling, the image reduction factor (smaller output images) and log sampling strengh can be adjusted.
 
 .. code-block:: cpp
 
     // pointer to a retina object
-    cv::Ptr<cv::Retina> myRetina;
+    cv::Ptr<cv::bioinspired::Retina> myRetina;
 
     // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
     if (useLogSampling)
     {
-        myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+        myRetina = cv::bioinspired::createRetina(inputFrame.size(), true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
     }
     else// -> else allocate "classical" retina :
-        myRetina = cv::createRetina(inputFrame.size());
+        myRetina = cv::bioinspired::createRetina(inputFrame.size());
 
 Once done, the proposed code writes a default xml file that contains the default parameters of the retina. This is useful to make your own config using this template. Here generated template xml file is called *RetinaDefaultParameters.xml*.
 

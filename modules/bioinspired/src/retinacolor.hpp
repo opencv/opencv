@@ -6,7 +6,7 @@
 ** copy or use the software.
 **
 **
-** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
 ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
 **
 ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
 ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
 **
-**               For Human Visual System tools (hvstools)
+**               For Human Visual System tools (bioinspired)
 ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
 **
 ** Third party copyrights are property of their respective owners.
@@ -85,7 +85,8 @@
 
 namespace cv
 {
-
+namespace bioinspired
+{
     class RetinaColor: public BasicRetinaFilter
     {
     public:
@@ -99,7 +100,7 @@ namespace cv
         * @param NBcolumns: number of columns of the input image
         * @param samplingMethod: the chosen color sampling method
         */
-        RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_DIAGONAL);
+        RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const int samplingMethod=RETINA_COLOR_BAYER);
 
         /**
         * standard destructor
@@ -219,7 +220,7 @@ namespace cv
     protected:
 
         // private functions
-        RETINA_COLORSAMPLINGMETHOD _samplingMethod;
+        int _samplingMethod;
         bool _saturateColors;
         float _colorSaturationValue;
         // links to parent buffers (more convienient names
@@ -382,8 +383,7 @@ namespace cv
 
 #endif
     };
-}
+}// end of namespace bioinspired
+}// end of namespace cv
 
 #endif /*RETINACOLOR_HPP_*/
-
-

@@ -633,7 +633,6 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 CV_EXPORTS bool initModule_contrib();
 }
 
-#include "opencv2/contrib/retina.hpp"
 #include "opencv2/contrib/openfabmap.hpp"
 
 #endif

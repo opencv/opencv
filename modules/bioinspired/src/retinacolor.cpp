@@ -6,7 +6,7 @@
 ** copy or use the software.
 **
 **
-** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
 ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
 **
 ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
 ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
 **
-**               For Human Visual System tools (hvstools)
+**               For Human Visual System tools (bioinspired)
 ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
 **
 ** Third party copyrights are property of their respective owners.
@@ -73,14 +73,15 @@
 
 namespace cv
 {
-
+namespace bioinspired
+{
 // init static values
 static float _LMStoACr1Cr2[]={1.0,  1.0, 0.0,  1.0, -1.0, 0.0,  -0.5, -0.5, 1.0};
 //static double _ACr1Cr2toLMS[]={0.5,  0.5, 0.0,   0.5, -0.5, 0.0,  0.5,  0.0, 1.0};
 static float _LMStoLab[]={0.5774f, 0.5774f, 0.5774f, 0.4082f, 0.4082f, -0.8165f, 0.7071f, -0.7071f, 0.f};
 
 // constructor/desctructor
-RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const RETINA_COLORSAMPLINGMETHOD samplingMethod)
+RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const int samplingMethod)
 :BasicRetinaFilter(NBrows, NBcolumns, 3),
  _colorSampling(NBrows*NBcolumns),
  _RGBmosaic(NBrows*NBcolumns*3),
@@ -720,4 +721,5 @@ void RetinaColor::_applyImageColorSpaceConversion(const std::valarray<float> &in
     }
 }
 
-}
+}// end of namespace bioinspired
+}// end of namespace cv

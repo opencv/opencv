@@ -6,7 +6,7 @@
 ** copy or use the software.
 **
 **
-** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
 ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
 **
 ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
 ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
 **
-**               For Human Visual System tools (hvstools)
+**               For Human Visual System tools (bioinspired)
 ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
 **
 ** Third party copyrights are property of their respective owners.
@@ -110,7 +110,8 @@
 //#define __RETINADEBUG // define RETINADEBUG to display debug data
 namespace cv
 {
-
+namespace bioinspired
+{
 // retina class that process the 3 outputs of the retina filtering stages
 class RetinaFilter//: public BasicRetinaFilter
 {
@@ -126,7 +127,7 @@ public:
     * @param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
     * @param samplingStrenght: only usefull if param useRetinaLogSampling=true, specifies the strenght of the log scale that is applied
     */
-    RetinaFilter(const unsigned int sizeRows, const unsigned int sizeColumns, const bool colorMode=false, const RETINA_COLORSAMPLINGMETHOD samplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+    RetinaFilter(const unsigned int sizeRows, const unsigned int sizeColumns, const bool colorMode=false, const int samplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
 
     /**
     * standard destructor
@@ -541,9 +542,7 @@ private:
 
 };
 
-}
+}// end of namespace bioinspired
+}// end of namespace cv
+
 #endif /*RETINACLASSES_H_*/
-
-
-
-

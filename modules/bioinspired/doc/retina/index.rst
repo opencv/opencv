@@ -7,6 +7,8 @@ Retina
 ======
 .. ocv:class:: Retina : public Algorithm
 
+**Note** : do not forget that the retina model is included in the following namespace : *cv::bioinspired*.
+
 Introduction
 ++++++++++++
 
@@ -17,7 +19,7 @@ Class which provides the main controls to the Gipsa/Listic labs human  retina mo
 * peripheral vision for sensitive transient signals detection (motion and events) : the magnocellular pathway.
 
 From a general point of view, this filter whitens the image spectrum and corrects luminance thanks to local adaptation. An other important property is its hability to filter out spatio-temporal noise while enhancing details.
-This model originates from Jeanny Herault work [Herault2010]_. It has been involved in Alexandre Benoit phd and his current research [Benoit2010]_ (he currently maintains this module within OpenCV). It includes the work of other Jeanny's phd student such as [Chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
+This model originates from Jeanny Herault work [Herault2010]_. It has been involved in Alexandre Benoit phd and his current research [Benoit2010]_, [Strat2013]_ (he currently maintains this module within OpenCV). It includes the work of other Jeanny's phd student such as [Chaix2007]_ and the log polar transformations of Barthelemy Durette described in Jeanny's book.
 
 **NOTES :**
 
@@ -55,14 +57,19 @@ As observed in this preliminary demo, the retina can be settled up with various 
 
 Here is an overview of the abstract Retina interface, allocate one instance with the *createRetina* functions.::
 
+  namespace cv{namespace bioinspired{
+
   class Retina : public Algorithm
   {
   public:
     // parameters setup instance
     struct RetinaParameters; // this class is detailled later
 
-    // main method for input frame processing
+    // main method for input frame processing (all use method, can also perform High Dynamic Range tone mapping)
     void run (InputArray inputImage);
+
+    // specific method aiming at correcting luminance only (faster High Dynamic Range tone mapping)
+    void applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)
 
     // output buffers retreival methods
     // -> foveal color vision details channel with luminance and noise correction
@@ -99,7 +106,7 @@ Here is an overview of the abstract Retina interface, allocate one instance with
     // Allocators
     cv::Ptr<Retina> createRetina (Size inputSize);
     cv::Ptr<Retina> createRetina (Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
-
+    }} // cv and bioinspired namespaces end
 
 Description
 +++++++++++
@@ -120,11 +127,19 @@ Use : this model can be used basically for spatio-temporal video effects but als
 
 * performing motion analysis also taking benefit of the previously cited properties  (check out the magnocellular retina channel output, by using the provided **getMagno** methods)
 
+* general image/video sequence description using either one or both channels. An example of the use of Retina in a Bag of Words approach is given in [Strat2013]_.
+
 Literature
 ==========
 For more information, refer to the following papers :
 
+* Model description :
+
 .. [Benoit2010] Benoit A., Caplier A., Durette B., Herault, J., "Using Human Visual System Modeling For Bio-Inspired Low Level Image Processing", Elsevier, Computer Vision and Image Understanding 114 (2010), pp. 758-773. DOI <http://dx.doi.org/10.1016/j.cviu.2010.01.011>
+
+* Model use in a Bag of Words approach :
+
+.. [Strat2013] Strat S., Benoit A., Lambert P., "Retina enhanced SIFT descriptors for video indexing", CBMI2013, Veszprém, Hungary, 2013.
 
 * Please have a look at the reference work of Jeanny Herault that you can read in his book :
 
@@ -137,6 +152,10 @@ This retina filter code includes the research contributions of phd/research coll
 .. [Chaix2007] B. Chaix de Lavarene, D. Alleysson, B. Durette, J. Herault (2007). "Efficient demosaicing through recursive filtering", IEEE International Conference on Image Processing ICIP 2007
 
 * take a look at *imagelogpolprojection.hpp* to discover retina spatial log sampling which originates from Barthelemy Durette phd with Jeanny Herault. A Retina / V1 cortex projection is also proposed and originates from Jeanny's discussions. More informations in the above cited Jeanny Heraults's book.
+
+* Meylan&al work on HDR tone mapping that is implemented as a specific method within the model :
+
+.. [Meylan2007] L. Meylan , D. Alleysson, S. Susstrunk, "A Model of Retinal Local Adaptation for the Tone Mapping of Color Filter Array Images", Journal of Optical Society of America, A, Vol. 24, N 9, September, 1st, 2007, pp. 2807-2816
 
 Demos and experiments !
 =======================
@@ -161,11 +180,13 @@ Take a look at the provided C++ examples provided with OpenCV :
 
    Then, take a HDR image using bracketing with your camera and generate an OpenEXR image and then process it using the demo.
 
-   Typical use, supposing that you have the OpenEXR image *memorial.exr* (present in the samples/cpp/ folder)
+   Typical use, supposing that you have the OpenEXR image such as *memorial.exr* (present in the samples/cpp/ folder)
 
-   **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr**
+   **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr [optionnal: 'fast']**
 
       Note that some sliders are made available to allow you to play with luminance compression.
+
+      If not using the 'fast' option, then, tone mapping is performed using the full retina model [Benoit2010]_. It includes spectral whitening that allows luminance energy to be reduced. When using the 'fast' option, then, a simpler method is used, it is an adaptation of the algorithm presented in [Meylan2007]_. This method gives also good results and is faster to process but it sometimes requires some more parameters adjustement.
 
 
 Methods description
@@ -176,8 +197,8 @@ Here are detailled the main methods to control the retina model
 Ptr<Retina>::createRetina
 +++++++++++++++++++++++++
 
-.. ocv:function:: Ptr<Retina> createRetina(Size inputSize)
-.. ocv:function:: Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
+.. ocv:function:: Ptr<cv::bioinspired::Retina> createRetina(Size inputSize)
+.. ocv:function:: Ptr<cv::bioinspired::Retina> createRetina(Size inputSize, const bool colorMode, cv::bioinspired::RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = cv::bioinspired::RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
 
     Constructors from standardized interfaces : retreive a smart pointer to a Retina instance
 
@@ -185,11 +206,11 @@ Ptr<Retina>::createRetina
     :param colorMode: the chosen processing mode : with or without color processing
     :param colorSamplingMethod: specifies which kind of color sampling will be used :
 
-        * RETINA_COLOR_RANDOM: each pixel position is either R, G or B in a random choice
+        * cv::bioinspired::RETINA_COLOR_RANDOM: each pixel position is either R, G or B in a random choice
 
-        * RETINA_COLOR_DIAGONAL: color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
+        * cv::bioinspired::RETINA_COLOR_DIAGONAL: color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
 
-        * RETINA_COLOR_BAYER: standard bayer sampling
+        * cv::bioinspired::RETINA_COLOR_BAYER: standard bayer sampling
 
     :param useRetinaLogSampling: activate retina log sampling, if true, the 2 following parameters can be used
     :param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
@@ -275,7 +296,7 @@ Retina::printSetup
 
     Outputs a string showing the used parameters setup
 
-    :return: a string which contains formatted parameters information
+    :return: a string which contains formated parameters information
 
 Retina::run
 +++++++++++
@@ -285,6 +306,18 @@ Retina::run
     Method which allows retina to be applied on an input image, after run, encapsulated retina module is ready to deliver its outputs using dedicated acccessors, see getParvo and getMagno methods
 
     :param inputImage: the input Mat image to be processed, can be gray level or BGR coded in any format (from 8bit to 16bits)
+
+Retina::applyFastToneMapping
+++++++++++++++++++++++++++++
+
+.. ocv:function:: void Retina::applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)
+
+    Method which processes an image in the aim to correct its luminance : correct backlight problems, enhance details in shadows. This method is designed to perform High Dynamic Range image tone mapping (compress >8bit/pixel images to 8bit/pixel). This is a simplified version of the Retina Parvocellular model (simplified version of the run/getParvo methods call) since it does not include the spatio-temporal filter modelling the Outer Plexiform Layer of the retina that performs spectral whitening and many other stuff. However, it works great for tone mapping and in a faster way.
+
+    Check the demos and experiments section to see examples and the way to perform tone mapping using the original retina model and the method.
+
+    :param inputImage: the input image to process (should be coded in float format : CV_32F, CV_32FC1, CV_32F_C3, CV_32F_C4, the 4th channel won't be considered).
+    :param outputToneMappedImage: the output 8bit/channel tone mapped image (CV_8U or CV_8UC3 format).
 
 Retina::setColorSaturation
 ++++++++++++++++++++++++++

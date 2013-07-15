@@ -11,7 +11,7 @@
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2010, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,19 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_ALL_HPP__
-#define __OPENCV_ALL_HPP__
+#ifndef __OPENCV_BIOINSPIRED_HPP__
+#define __OPENCV_BIOINSPIRED_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/photo.hpp"
-#include "opencv2/video.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/objdetect.hpp"
-#include "opencv2/calib3d.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/contrib.hpp"
-#include "opencv2/bioinspired.hpp"
-#include "opencv2/ml.hpp"
+#include "opencv2/bioinspired/retina.hpp"
+#include "opencv2/bioinspired/retinafasttonemapping.hpp"
 
 #endif

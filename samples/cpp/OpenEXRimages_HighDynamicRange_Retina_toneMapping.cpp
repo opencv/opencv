@@ -10,8 +10,9 @@
 #include <iostream>
 #include <cstring>
 
-#include "opencv2/contrib.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/bioinspired.hpp" // retina based algorithms
+#include "opencv2/imgproc.hpp" // cvCvtcolor function
+#include "opencv2/highgui.hpp" // display
 
 static void help(std::string errorMessage)
 {
@@ -127,7 +128,7 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      normalize(imageInputRescaled, imageInputRescaled, 0.0, 255.0, cv::NORM_MINMAX);
  }
 
- cv::Ptr<cv::Retina> retina;
+ cv::Ptr<cv::bioinspired::Retina> retina;
  int retinaHcellsGain;
  int localAdaptation_photoreceptors, localAdaptation_Gcells;
  static void callBack_updateRetinaParams(int, void*)
@@ -175,6 +176,12 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
      }
 
      bool useLogSampling = !strcmp(argv[argc-1], "log"); // check if user wants retina log sampling processing
+     int chosenMethod=0;
+     if (!strcmp(argv[argc-1], "fast"))
+     {
+         chosenMethod=1;
+         std::cout<<"Using fast method (no spectral whithning), adaptation of Meylan&al 2008 method"<<std::endl;
+     }
 
      std::string inputImageName=argv[1];
 
@@ -210,17 +217,22 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
           * -> if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
           */
          if (useLogSampling)
-                {
-                     retina = cv::createRetina(inputImage.size(),true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+         {
+             retina = cv::bioinspired::createRetina(inputImage.size(),true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                  }
          else// -> else allocate "classical" retina :
-             retina = cv::createRetina(inputImage.size());
+             retina = cv::bioinspired::createRetina(inputImage.size());
 
-        // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
-        retina->write("RetinaDefaultParameters.xml");
+         // create a fast retina tone mapper (Meyla&al algorithm)
+         std::cout<<"Allocating fast tone mapper..."<<std::endl;
+         //cv::Ptr<cv::RetinaFastToneMapping> fastToneMapper=createRetinaFastToneMapping(inputImage.size());
+         std::cout<<"Fast tone mapper allocated"<<std::endl;
 
-                 // desactivate Magnocellular pathway processing (motion information extraction) since it is not usefull here
-                 retina->activateMovingContoursProcessing(false);
+         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
+         retina->write("RetinaDefaultParameters.xml");
+
+         // desactivate Magnocellular pathway processing (motion information extraction) since it is not usefull here
+         retina->activateMovingContoursProcessing(false);
 
          // declare retina output buffers
          cv::Mat retinaOutput_parvo;
@@ -230,20 +242,19 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
          histogramClippingValue=0; // default value... updated with interface slider
          //inputRescaleMat = inputImage;
          //outputRescaleMat = imageInputRescaled;
-         cv::namedWindow("Retina input image (with cut edges histogram for basic pixels error avoidance)",1);
-         cv::createTrackbar("histogram edges clipping limit", "Retina input image (with cut edges histogram for basic pixels error avoidance)",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
+         cv::namedWindow("Processing configuration",1);
+         cv::createTrackbar("histogram edges clipping limit", "Processing configuration",&histogramClippingValue,50,callBack_rescaleGrayLevelMat);
 
-         cv::namedWindow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", 1);
          colorSaturationFactor=3;
-         cv::createTrackbar("Color saturation", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &colorSaturationFactor,5,callback_saturateColors);
+         cv::createTrackbar("Color saturation", "Processing configuration", &colorSaturationFactor,5,callback_saturateColors);
 
          retinaHcellsGain=40;
-         cv::createTrackbar("Hcells gain", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping",&retinaHcellsGain,100,callBack_updateRetinaParams);
+         cv::createTrackbar("Hcells gain", "Processing configuration",&retinaHcellsGain,100,callBack_updateRetinaParams);
 
          localAdaptation_photoreceptors=197;
          localAdaptation_Gcells=190;
-         cv::createTrackbar("Ph sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_photoreceptors,199,callBack_updateRetinaParams);
-         cv::createTrackbar("Gcells sensitivity", "Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", &localAdaptation_Gcells,199,callBack_updateRetinaParams);
+         cv::createTrackbar("Ph sensitivity", "Processing configuration", &localAdaptation_photoreceptors,199,callBack_updateRetinaParams);
+         cv::createTrackbar("Gcells sensitivity", "Processing configuration", &localAdaptation_Gcells,199,callBack_updateRetinaParams);
 
 
          /////////////////////////////////////////////
@@ -257,11 +268,28 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
          while(continueProcessing)
          {
              // run retina filter
-             retina->run(imageInputRescaled);
-             // Retrieve and display retina output
-             retina->getParvo(retinaOutput_parvo);
-             cv::imshow("Retina input image (with cut edges histogram for basic pixels error avoidance)", imageInputRescaled/255.0);
-             cv::imshow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", retinaOutput_parvo);
+             if (!chosenMethod)
+             {
+                 retina->run(imageInputRescaled);
+                 // Retrieve and display retina output
+                 retina->getParvo(retinaOutput_parvo);
+                 cv::imshow("Retina input image (with cut edges histogram for basic pixels error avoidance)", imageInputRescaled/255.0);
+                 cv::imshow("Retina Parvocellular pathway output : 16bit=>8bit image retina tonemapping", retinaOutput_parvo);
+                 cv::imwrite("HDRinput.jpg",imageInputRescaled/255.0);
+                 cv::imwrite("RetinaToneMapping.jpg",retinaOutput_parvo);
+             }
+             else
+             {
+                 // apply the simplified hdr tone mapping method
+                 cv::Mat fastToneMappingOutput;
+                 retina->applyFastToneMapping(imageInputRescaled, fastToneMappingOutput);
+                 cv::imshow("Retina fast tone mapping output : 16bit=>8bit image retina tonemapping", fastToneMappingOutput);
+             }
+             /*cv::Mat fastToneMappingOutput_specificObject;
+             fastToneMapper->setup(3.f, 1.5f, 1.f);
+             fastToneMapper->applyFastToneMapping(imageInputRescaled, fastToneMappingOutput_specificObject);
+             cv::imshow("### Retina fast tone mapping output : 16bit=>8bit image retina tonemapping", fastToneMappingOutput_specificObject);
+*/
              cv::waitKey(10);
          }
      }catch(cv::Exception e)
