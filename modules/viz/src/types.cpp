@@ -1,4 +1,4 @@
-#include <opencv2/viz/types.hpp>
+#include "precomp.hpp"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 /// cv::viz::Color
@@ -78,7 +78,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
         
         vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints ();
         vtkIdType nr_points = mesh_points->GetNumberOfPoints ();
-        vtkIdType nr_polygons = poly_data->GetNumberOfPolys ();
+        //vtkIdType nr_polygons = poly_data->GetNumberOfPolys ();
 
         mesh->cloud.create(1, nr_points, CV_32FC3);
 
@@ -123,7 +123,6 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkIdType nr_cell_points;
         vtkCellArray * mesh_polygons = poly_data->GetPolys ();
         mesh_polygons->InitTraversal ();
-        int id_poly = 0;
         
         mesh->polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
         

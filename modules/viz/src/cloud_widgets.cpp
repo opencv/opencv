@@ -329,7 +329,7 @@ struct cv::viz::MeshWidget::CopyImpl
     {
         CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
         CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
-        CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
+        CV_DbgAssert(DataDepth<_Tp>::value == nan_mask.depth());
 
         int s_chs = source.channels();
         int m_chs = nan_mask.channels();
