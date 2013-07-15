@@ -37,3 +37,27 @@ cv::Matx44f cv::viz::convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matr
             m(i, k) = vtk_matrix->GetElement (i, k);
     return m;
 }
+
+namespace cv
+{
+    namespace viz
+    {
+        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+
+        template<> Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
+        {
+            CV_Assert(points->GetDataType() == VTK_FLOAT);
+            vtkDataArray *data = points->GetData();
+            float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
+            return reinterpret_cast<Vec3f*>(pointer);
+        }
+
+        template<> Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
+        {
+            CV_Assert(points->GetDataType() == VTK_DOUBLE);
+            vtkDataArray *data = points->GetData();
+            double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
+            return reinterpret_cast<Vec3d*>(pointer);
+        }
+    }
+}

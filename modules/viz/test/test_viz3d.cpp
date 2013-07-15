@@ -99,18 +99,18 @@ TEST(Viz_viz3d, accuracy)
     viz::CloudWidget pcw(cloud, colors);
     viz::CloudWidget pcw2(cloud, viz::Color::magenta());
     
-     viz.showWidget("line", lw);
-     viz.showWidget("plane", pw);
-     viz.showWidget("sphere", sw);
-     viz.showWidget("arrow", aw);
-     viz.showWidget("circle", cw);
-     viz.showWidget("cylinder", cyw);
-     viz.showWidget("cube", cuw);
-     viz.showWidget("coordinateSystem", csw);
-     viz.showWidget("coordinateSystem2", viz::CoordinateSystemWidget(2.0), Affine3f().translate(Vec3f(2, 0, 0)));
-     viz.showWidget("text",tw);
-     viz.showWidget("pcw",pcw);
-     viz.showWidget("pcw2",pcw2);
+    viz.showWidget("line", lw);
+    viz.showWidget("plane", pw);
+    viz.showWidget("sphere", sw);
+    viz.showWidget("arrow", aw);
+    viz.showWidget("circle", cw);
+    viz.showWidget("cylinder", cyw);
+    viz.showWidget("cube", cuw);
+    viz.showWidget("coordinateSystem", csw);
+    viz.showWidget("coordinateSystem2", viz::CoordinateSystemWidget(2.0), Affine3f().translate(Vec3f(2, 0, 0)));
+    viz.showWidget("text",tw);
+    viz.showWidget("pcw",pcw);
+    viz.showWidget("pcw2",pcw2);
     
 //     viz::LineWidget lw2 = lw;
 //     v.showPointCloud("cld",cloud, colors);
@@ -128,15 +128,22 @@ TEST(Viz_viz3d, accuracy)
     viz.showWidget("polyline", plw);
 //     lw = v.getWidget("polyline").cast<viz::LineWidget>();
     
+    viz::Mesh3d::Ptr mesh = cv::viz::Mesh3d::loadMesh("horse.ply");
+    
+    viz::MeshWidget mw(*mesh);
+    viz.showWidget("mesh", mw);
+    
     viz.spin();
 
     //viz::GridWidget gw(viz::Vec2i(100,100), viz::Vec2d(1,1));
     //v.showWidget("grid", gw);
-    lw = viz.getWidget("grid").cast<cv::viz::LineWidget>();
+//     lw = viz.getWidget("grid").cast<cv::viz::LineWidget>();
     
     //viz::Text3DWidget t3w("OpenCV", cv::Point3f(0.0, 2.0, 0.0), 1.0, viz::Color(255,255,0));
     //v.showWidget("txt3d", t3w);
+
 //     float grid_x_angle = 0.0;
+    
     
     while(!viz.wasStopped())
     {

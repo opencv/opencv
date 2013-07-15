@@ -1,5 +1,12 @@
 #include "precomp.hpp"
 
+namespace cv
+{
+    namespace viz
+    {
+        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Point Cloud Widget implementation
@@ -310,4 +317,156 @@ template<> cv::viz::CloudNormalsWidget cv::viz::Widget::cast<cv::viz::CloudNorma
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<CloudNormalsWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Mesh Widget implementation
+
+struct cv::viz::MeshWidget::CopyImpl
+{
+    template<typename _Tp>
+    static Vec<_Tp, 3> * copy(const Mat &source, Vec<_Tp, 3> *output, int *look_up, const Mat &nan_mask)
+    {
+        CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+        CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
+        CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
+
+        int s_chs = source.channels();
+        int m_chs = nan_mask.channels();
+
+        int index = 0;
+        const _Tp* srow = source.ptr<_Tp>(0);
+        const _Tp* mrow = nan_mask.ptr<_Tp>(0);
+        
+        for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+        {
+            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+            {
+                look_up[x] = index;
+                *output++ = Vec<_Tp, 3>(srow);
+                ++index;
+            }
+        }
+        return output;
+    }
+};
+
+cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
+{
+    CV_Assert(mesh.cloud.rows == 1 && (mesh.cloud.type() == CV_32FC3 || mesh.cloud.type() == CV_64FC3 || mesh.cloud.type() == CV_32FC4 || mesh.cloud.type() == CV_64FC4));
+    CV_Assert(mesh.colors.empty() || (mesh.colors.type() == CV_8UC3 && mesh.cloud.size() == mesh.colors.size()));
+    CV_Assert(!mesh.polygons.empty() && mesh.polygons.type() == CV_32SC1);
+    
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New ();
+    vtkIdType nr_points = mesh.cloud.total();
+    int * look_up = new int[nr_points];
+    points->SetNumberOfPoints (nr_points);
+      
+    // Copy data from cloud to vtkPoints
+    if (mesh.cloud.depth() == CV_32F)
+    {
+        points->SetDataTypeToFloat();
+        Vec3f *data_beg = vtkpoints_data<float>(points);
+        Vec3f *data_end = CopyImpl::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
+        nr_points = data_end - data_beg;
+    }
+    else
+    {
+        points->SetDataTypeToDouble();
+        Vec3d *data_beg = vtkpoints_data<double>(points);
+        Vec3d *data_end = CopyImpl::copy(mesh.cloud, data_beg, look_up, mesh.cloud);
+        nr_points = data_end - data_beg;
+    }
+    
+    vtkSmartPointer<vtkUnsignedCharArray> scalars;
+    
+    if (!mesh.colors.empty())
+    {
+        Vec3b * colors_data = 0;
+        colors_data = new Vec3b[nr_points];
+        NanFilter::copy(mesh.colors, colors_data, mesh.cloud);
+        
+        scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+        scalars->SetNumberOfComponents (3);
+        scalars->SetNumberOfTuples (nr_points);
+        scalars->SetArray (colors_data->val, 3 * nr_points, 0);
+    }
+    
+    points->SetNumberOfPoints(nr_points);
+    
+    vtkSmartPointer<vtkPointSet> data;
+    
+    if (mesh.polygons.size().area() > 1)
+    {
+        vtkSmartPointer<vtkCellArray> cell_array = vtkSmartPointer<vtkCellArray>::New();
+        const int * polygons = mesh.polygons.ptr<int>();
+        
+        int idx = 0;
+        int poly_size = mesh.polygons.total();
+        for (int i = 0; i < poly_size; ++idx)
+        {
+            int n_points = polygons[i++];
+            
+            cell_array->InsertNextCell(n_points);
+            for (int j = 0; j < n_points; ++j, ++idx)
+                cell_array->InsertCellPoint(look_up[polygons[i++]]);
+        }
+        vtkSmartPointer<vtkPolyData> polydata = vtkSmartPointer<vtkPolyData>::New();
+        cell_array->GetData ()->SetNumberOfValues (idx);
+        cell_array->Squeeze ();
+        polydata->SetStrips (cell_array);
+        polydata->SetPoints (points);
+
+        if (scalars)
+            polydata->GetPointData ()->SetScalars (scalars);
+        
+        data = polydata;
+    }
+    else
+    {
+        // Only one polygon
+        vtkSmartPointer<vtkPolygon> polygon = vtkSmartPointer<vtkPolygon>::New ();
+        const int * polygons = mesh.polygons.ptr<int>();
+        int n_points = polygons[0];
+        
+        polygon->GetPointIds()->SetNumberOfIds(n_points);
+        
+        for (int j = 1; j < n_points+1; ++j)
+            polygon->GetPointIds ()->SetId (j, look_up[polygons[j]]);
+        
+        vtkSmartPointer<vtkUnstructuredGrid> poly_grid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+        poly_grid->Allocate (1, 1);
+        poly_grid->InsertNextCell (polygon->GetCellType (), polygon->GetPointIds ());
+        poly_grid->SetPoints (points);
+        poly_grid->Update ();
+        
+        if (scalars)
+            poly_grid->GetPointData ()->SetScalars (scalars);
+        
+        data = poly_grid;
+    }
+
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+
+    actor->GetProperty()->SetRepresentationToSurface();
+    actor->GetProperty()->BackfaceCullingOff(); // Backface culling is off for higher efficiency
+    actor->GetProperty()->SetInterpolationToFlat();
+    actor->GetProperty()->EdgeVisibilityOff();
+    actor->GetProperty()->ShadingOff();
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput (data);
+    mapper->ImmediateModeRenderingOff ();
+    
+    vtkIdType numberOfCloudPoints = nr_points * 0.1;
+    actor->SetNumberOfCloudPoints (int (numberOfCloudPoints > 1 ? numberOfCloudPoints : 1));
+    actor->SetMapper (mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
+template<> CV_EXPORTS cv::viz::MeshWidget cv::viz::Widget::cast<cv::viz::MeshWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<MeshWidget&>(widget);
 }
