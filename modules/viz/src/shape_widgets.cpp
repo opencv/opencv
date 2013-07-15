@@ -1,5 +1,13 @@
 #include "precomp.hpp"
 
+namespace cv
+{
+    namespace viz
+    {
+        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// line widget implementation
 cv::viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color)

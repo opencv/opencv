@@ -32,22 +32,15 @@ namespace cv
             static Color gray();
         };
 
-
-        struct CV_EXPORTS Vertices
-        {
-            std::vector<unsigned int> vertices;
-        };
-
         class CV_EXPORTS Mesh3d
         {
         public:
-            typedef Ptr<Mesh3d> Ptr;
-
-            Mat cloud, colors;
-            std::vector<Vertices> polygons;
-
-            static Mesh3d::Ptr mesh_load(const String& file);
-
+            typedef cv::Ptr<Mesh3d> Ptr;
+            Mat cloud, colors, polygons;
+            static cv::viz::Mesh3d::Ptr loadMesh(const String& file);
+            
+        private:
+            struct loadMeshImpl;
         };
 
         class CV_EXPORTS KeyboardEvent
@@ -101,7 +94,3 @@ namespace cv
 
     } /* namespace viz */
 } /* namespace cv */
-
-
-
-

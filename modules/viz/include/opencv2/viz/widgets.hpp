@@ -159,6 +159,15 @@ namespace cv
         private:
             struct ApplyCloudNormals;
         };
+        
+        class CV_EXPORTS MeshWidget : public Widget3D
+        {
+        public:
+            MeshWidget(const Mesh3d &mesh);
+            
+        private:
+            struct CopyImpl;
+        };
 
         template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
         template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
@@ -179,6 +188,3 @@ namespace cv
 
     } /* namespace viz */
 } /* namespace cv */
-
-
-

@@ -156,27 +156,3 @@
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include "opencv2/viz/widget_accessor.hpp"
-
-namespace cv
-{
-    namespace viz
-    {
-        template<typename _Tp> Vec<_Tp, 3>* vtkpoints_data(vtkSmartPointer<vtkPoints>& points);
-
-        template<> static inline Vec3f* vtkpoints_data<float>(vtkSmartPointer<vtkPoints>& points)
-        {
-            CV_Assert(points->GetDataType() == VTK_FLOAT);
-            vtkDataArray *data = points->GetData();
-            float *pointer = static_cast<vtkFloatArray*>(data)->GetPointer(0);
-            return reinterpret_cast<Vec3f*>(pointer);
-        }
-
-        template<> static inline Vec3d* vtkpoints_data<double>(vtkSmartPointer<vtkPoints>& points)
-        {
-            CV_Assert(points->GetDataType() == VTK_DOUBLE);
-            vtkDataArray *data = points->GetData();
-            double *pointer = static_cast<vtkDoubleArray*>(data)->GetPointer(0);
-            return reinterpret_cast<Vec3d*>(pointer);
-        }
-    }
-}
