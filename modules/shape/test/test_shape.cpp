@@ -15,9 +15,13 @@ public:
     ~CV_ShapeTest();
 protected:
     void run(int);
+private:
     void test1();
     void test2();
     void test3();
+    void test4();
+    void mpegTest();
+    void listShapeNames(vector<string> &listHeaders);
 };
 
 CV_ShapeTest::CV_ShapeTest()
@@ -39,7 +43,7 @@ void CV_ShapeTest::test1()
     imshow("image 2", shape2);
 
     //Extract the Contours
-    vector<vector<Point> > contours1, contours2;
+    vector<vector<Point2f> > contours1, contours2;
     findContours(shape1, contours1, RETR_EXTERNAL, CHAIN_APPROX_NONE);
     findContours(shape2, contours2, RETR_EXTERNAL, CHAIN_APPROX_NONE);
     cout<<"1. Number of points in the contour before simplification: "<<contours1[0].size()<<std::endl;
@@ -73,7 +77,7 @@ void CV_ShapeTest::test1()
 
 void CV_ShapeTest::test2()
 {
-    vector<Point> shape1, shape2;
+    vector<Point2f> shape1, shape2;
 
     shape1.push_back(Point(100,100));
     shape1.push_back(Point(90,110));
@@ -147,7 +151,7 @@ void CV_ShapeTest::test2()
 
     ThinPlateSplineTransform tpsTra(0.1);
     //AffineTransform tpsTra(true);
-    vector<Point> transformed_shape;
+    vector<Point2f> transformed_shape;
     /* transformin shape1 to look like shape2 (saving it into transformed_shape) */
     /* cyan transforms in yellow accodring to red */
     tpsTra.applyTransformation(shape1, shape2, matches, transformed_shape);
@@ -171,37 +175,37 @@ void CV_ShapeTest::test2()
 
 void CV_ShapeTest::test3()
 {
-    vector<Point> shape1, shape2;
+    vector<Point2f> shape1, shape2;
 
-    shape1.push_back(Point(100,100));
-    shape1.push_back(Point(90,110));
-    shape1.push_back(Point(90,140));
-    shape1.push_back(Point(100,150));
-    shape1.push_back(Point(110,120));
-    shape1.push_back(Point(110,130));
-    shape1.push_back(Point(120,120.5));
-    shape1.push_back(Point(130,100));
-    shape1.push_back(Point(140,120));
-    shape1.push_back(Point(150,120.5));
-    shape1.push_back(Point(140,130));
-    shape1.push_back(Point(130,150));
-    //shape1.push_back(Point(5,5)); //outlier
-    //shape1.push_back(Point(10,240)); //outlier
-    //shape1.push_back(Point(240,240)); //outlier
+    shape1.push_back(Point2f(100,100));
+    shape1.push_back(Point2f(90,110));
+    shape1.push_back(Point2f(90,140));
+    shape1.push_back(Point2f(100,150));
+    shape1.push_back(Point2f(110,120));
+    shape1.push_back(Point2f(110,130));
+    shape1.push_back(Point2f(120,120.5));
+    shape1.push_back(Point2f(130,100));
+    shape1.push_back(Point2f(140,120));
+    shape1.push_back(Point2f(150,120.5));
+    shape1.push_back(Point2f(140,130));
+    shape1.push_back(Point2f(130,150));
+    //shape1.push_back(Point2f(5,5)); //outlier
+    //shape1.push_back(Point2f(10,240)); //outlier
+    //shape1.push_back(Point2f(240,240)); //outlier
 
-    shape2.push_back(Point(145,106));
-    shape2.push_back(Point(145,156));
-    shape2.push_back(Point(115,106));
-    shape2.push_back(Point(105,116));
-    shape2.push_back(Point(155,126));
-    shape2.push_back(Point(165,126.5));
-    shape2.push_back(Point(155,136));
-    shape2.push_back(Point(125,126));
-    shape2.push_back(Point(125,136));
-    shape2.push_back(Point(135,126.5));
-    shape2.push_back(Point(105,146));
-    shape2.push_back(Point(115,156));
-    //shape2.push_back(Point(15.6,6.3)); //outlier
+    shape2.push_back(Point2f(145,106));
+    shape2.push_back(Point2f(145,156));
+    shape2.push_back(Point2f(115,106));
+    shape2.push_back(Point2f(105,116));
+    shape2.push_back(Point2f(155,126));
+    shape2.push_back(Point2f(165,126.5));
+    shape2.push_back(Point2f(155,136));
+    shape2.push_back(Point2f(125,126));
+    shape2.push_back(Point2f(125,136));
+    shape2.push_back(Point2f(135,126.5));
+    shape2.push_back(Point2f(105,146));
+    shape2.push_back(Point2f(115,156));
+    //shape2.push_back(Point2f(15.6,6.3)); //outlier
 
     SCD shapeDescriptor(12,10,0.1,5,true);
     SCDMatcher scdmatcher(1, DistanceSCDFlags::DIST_CHI);
@@ -209,9 +213,9 @@ void CV_ShapeTest::test3()
     vector<DMatch> matches;
     ThinPlateSplineTransform tpsTra(0.0);
 
-    vector<Point> old_shape1=shape1;
+    vector<Point2f> old_shape1=shape1;
     /* iterative process */
-    for (int i=0;i<10;i++)
+    for (int i=0;i<3;i++)
     {
         /* compute SCD and Match */
         shapeDescriptor.extractSCD(shape1, scdesc1);
@@ -220,7 +224,7 @@ void CV_ShapeTest::test3()
 
         /* transformin shape1 to look like shape2 (saving it into transformed_shape) */
         /* cyan transforms in yellow accodring to red */
-        vector<Point> transformed_shape;
+        vector<Point2f> transformed_shape;
         tpsTra.applyTransformation(shape1, shape2, matches, transformed_shape);
         shape1=transformed_shape;
     }
@@ -264,9 +268,138 @@ void CV_ShapeTest::test3()
     }
 }
 
+void CV_ShapeTest::test4()
+{
+    vector<Point2f> shape1, shape2;
+
+    shape1.push_back(Point2f(50,60));
+    shape1.push_back(Point2f(50,70));
+    shape1.push_back(Point2f(50,80));
+    shape1.push_back(Point2f(50,90));
+    shape1.push_back(Point2f(50,100));
+    shape1.push_back(Point2f(50,110));
+    shape1.push_back(Point2f(60,60));
+    shape1.push_back(Point2f(60,70));
+    shape1.push_back(Point2f(60,80));
+    shape1.push_back(Point2f(60,90));
+    shape1.push_back(Point2f(60,100));
+    shape1.push_back(Point2f(60,110));
+
+    shape2.push_back(Point2f(2*60,2.5*50)-Point2f(15,16));
+    shape2.push_back(Point2f(2*70,2.5*50)-Point2f(15,17));
+    shape2.push_back(Point2f(2*80,2.5*50)-Point2f(15,18));
+    shape2.push_back(Point2f(2*90,2.5*50)-Point2f(15,19));
+    shape2.push_back(Point2f(2*100,2.5*50)-Point2f(15,20));
+    shape2.push_back(Point2f(2*110,2.5*50)-Point2f(15,21));
+    shape2.push_back(Point2f(2*60,2.5*60)-Point2f(15,16));
+    shape2.push_back(Point2f(2*70,2.5*60)-Point2f(15,17));
+    shape2.push_back(Point2f(2*80,2.5*60)-Point2f(15,18));
+    shape2.push_back(Point2f(2*90,2.5*60)-Point2f(15,19));
+    shape2.push_back(Point2f(2*100,2.5*60)-Point2f(15,20));
+    shape2.push_back(Point2f(2*110,2.5*60)-Point2f(15,21));
+
+    SCD shapeDescriptor(8,5,0.1,10,true);
+    SCDMatcher scdmatcher(1, DistanceSCDFlags::DIST_CHI);
+    Mat scdesc1, scdesc2;
+    vector<DMatch> matches;
+    ThinPlateSplineTransform tpsTra;
+    float betai=0; //Regularization params
+    float annRate=1;
+
+    vector<Point2f> old_shape1=shape1;
+    /* iterative process */
+    //beta_k=(mean_dist_1^2)*beta_init*r^(k-1);
+    for (int i=0;i<5;i++)
+    {
+        /* compute SCD and Match */
+        shapeDescriptor.extractSCD(shape1, scdesc1);
+        /* regularization parameter with annealing rate = 1 */
+        betai=pow(shapeDescriptor.getMeanDistance(),2)*pow(annRate, i+1);
+        shapeDescriptor.extractSCD(shape2, scdesc2);
+        scdmatcher.matchDescriptors(scdesc1, scdesc2, matches);
+
+        /* transformin shape1 to look like shape2 (saving it into transformed_shape) */
+        /* cyan transforms in yellow accodring to red */
+        vector<Point2f> transformed_shape;
+        tpsTra.setRegularizationParam(betai);
+        tpsTra.applyTransformation(shape1, shape2, matches, transformed_shape);
+        shape1=transformed_shape;
+    }
+
+    /* draw */
+    int max=(shape1.size()>shape2.size())?shape1.size():shape2.size();
+
+    Mat im=Mat::zeros(250, 250, CV_8UC3);
+    Mat im1=Mat::zeros(250, 250, CV_8UC3);
+
+    for (int i=0; i<max; i++)
+    {
+        if ((int)shape1.size()>i)
+        {
+            circle(im, shape1[i], 3, Scalar(255,255,0), 1);
+            //circle(im1, shape1[i], 3, Scalar(255,255,0), 1);
+            circle(im1, old_shape1[i], 3, Scalar(255,0,0), 1);
+        }
+
+        if ((int)shape2.size()>i)
+        {
+            circle(im, shape2[i], 3, Scalar(0,0,255), 1);
+            circle(im1, shape2[i], 3, Scalar(0,0,255), 1);
+        }
+
+        if ((size_t)matches[i].queryIdx<shape1.size() && (size_t)matches[i].trainIdx<shape2.size())
+        {
+            line(im, shape1[matches[i].queryIdx], shape2[matches[i].trainIdx], Scalar(0,255,255));
+            line(im1, old_shape1[matches[i].queryIdx], shape2[matches[i].trainIdx], Scalar(0,255,255));
+        }
+    }
+
+    while(1)
+    {
+        /* cyan transforms in yellow accodring to red */
+        imshow("shapes (cyan=shape1, red=shape2, yellow=warped shape1)", im1);
+        imshow("matches", im);
+
+        char key = (char)waitKey();
+        if(key == 27 || key == 'q' || key == 'Q') // 'ESC'
+            break;
+    }
+}
+
+void CV_ShapeTest::mpegTest()
+{
+    string baseTestFolder="shape/mpeg_test/";
+    cvtest::TS::ptr()->get_data_path() + baseTestFolder;
+
+
+}
+
+void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
+{
+    listHeaders.push_back("apple");
+    listHeaders.push_back("bat");
+    listHeaders.push_back("beetle");
+    listHeaders.push_back("bird");
+    listHeaders.push_back("Bone");
+    listHeaders.push_back("bottle");
+    listHeaders.push_back("brick");
+    listHeaders.push_back("butterfly");
+    listHeaders.push_back("camel");
+    listHeaders.push_back("car");
+    listHeaders.push_back("carriage");
+    listHeaders.push_back("butterfly");
+    listHeaders.push_back("cattle");
+    listHeaders.push_back("cellular_phone");
+    listHeaders.push_back("chicken");
+    listHeaders.push_back("children");
+    listHeaders.push_back("chopper");
+    listHeaders.push_back("classic");
+}
+
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    test3();
+    test4();
+    //mpegTest();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 

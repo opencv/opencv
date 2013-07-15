@@ -72,7 +72,7 @@ public:
     CV_WRAP int descriptorSize() const;
 
     //! Compute keypoints descriptors. 
-    CV_WRAP void extractSCD(InputArray contour, Mat& descriptors) const;
+    CV_WRAP void extractSCD(InputArray contour, Mat& descriptors);
 
     //! Setters
     void setAngularBins(int);
@@ -87,6 +87,7 @@ public:
     double getInnerRadius(void);
     double getOuterRadius(void);
     bool getRotationInvariant(void);
+    float getMeanDistance(void);
     
 private:
     CV_PROP_RW int nAngularBins;
@@ -94,14 +95,16 @@ private:
     CV_PROP_RW double innerRadius;
     CV_PROP_RW double outerRadius;
     CV_PROP_RW bool rotationInvariant;
+    CV_PROP_RW float meanDistance;
+
 protected:
     CV_WRAP void logarithmicSpaces(std::vector<double>& vecSpaces) const;
     CV_WRAP void angularSpaces(std::vector<double>& vecSpaces) const;                              
     CV_WRAP void buildNormalizedDistanceMatrix(InputArray contour, 
-                              Mat& disMatrix) const;
+                              Mat& disMatrix);
     CV_WRAP void buildAngleMatrix(InputArray contour, 
                               Mat& angleMatrix) const;
-    CV_WRAP double distance(Point p, Point q) const;
+    CV_WRAP double distance(Point2f p, Point2f q) const;
 };
 
 typedef SCD ShapeContextDescriptorExtractor;
@@ -150,7 +153,7 @@ public:
     CV_WRAP virtual ~Transform(){}
     //! methods
     CV_WRAP virtual void applyTransformation(InputArray pts1, InputArray pts2,
-                                     std::vector<DMatch>&, std::vector<cv::Point> &outPts) const=0;
+                                     std::vector<DMatch>&, std::vector<Point2f> &outPts) const=0;
 };
 
 /****************************************************************************************\
@@ -168,10 +171,10 @@ public:
     double getRegularizationParam(void);
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point>& outPts) const;
+                             std::vector<DMatch>&, std::vector<Point2f>& outPts) const;
 private:
     double beta;
-    double distance(Point, Point) const;
+    double distance(Point2f, Point2f) const;
 };
 
 /****************************************************************************************\
@@ -189,7 +192,7 @@ public:
     bool getFullAffine(void);
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point>& outPts) const;
+                             std::vector<DMatch>&, std::vector<Point2f>& outPts) const;
 private:
     bool fullAffine;
 };

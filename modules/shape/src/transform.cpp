@@ -75,7 +75,7 @@ double ThinPlateSplineTransform::getRegularizationParam()
 
 /* Public methods */
 void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
-                                                   std::vector<DMatch>&_matches, std::vector<Point>& outPts) const
+                                                   std::vector<DMatch>&_matches, std::vector<Point2f>& outPts) const
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
@@ -98,11 +98,11 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     Mat shape2 = Mat::zeros(matches.size(),2,CV_32F); // target shape
     for (size_t i=0; i<matches.size(); i++)
     {
-        Point pt1=pts1.at<Point>(0,matches[i].queryIdx);
+        Point2f pt1=pts1.at<Point2f>(0,matches[i].queryIdx);
         shape1.at<float>(i,0) = pt1.x;
         shape1.at<float>(i,1) = pt1.y;
 
-        Point pt2=pts2.at<Point>(0,matches[i].trainIdx);
+        Point2f pt2=pts2.at<Point2f>(0,matches[i].trainIdx);
         shape2.at<float>(i,0) = pt2.x;
         shape2.at<float>(i,1) = pt2.y;
     }
@@ -122,14 +122,15 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
                 matK.at<float>(i,j)=1;
                 continue;
             }
-            matK.at<float>(i,j) = distance(Point(shape1.at<float>(i,0),shape1.at<float>(i,1)),
-                                           Point(shape1.at<float>(j,0),shape1.at<float>(j,1)));
+            matK.at<float>(i,j) = distance(Point2f(shape1.at<float>(i,0),shape1.at<float>(i,1)),
+                                           Point2f(shape1.at<float>(j,0),shape1.at<float>(j,1)));
         }
     }
     normalize(matK, matK,0,1, NORM_MINMAX);
     Mat logMatK;
     log(matK,logMatK);
     matK = matK.mul(logMatK);
+    matK += Mat::eye(matK.rows, matK.cols, CV_32F)*beta; // Regularization
 
     //Building P
     //rowi = (1,xi,yi)
@@ -167,7 +168,6 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     matVec.push_back(up);
     matVec.push_back(down);
     vconcat(matVec, matL);
-    matL=matL+beta; // regularization
 
     //Obtaining transformation params (w|a)
     Mat matX; //params for fx and fy respectively
@@ -177,7 +177,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
     for (int i=0; i<pts1.cols; i++)
     {
-        Point pt1=pts1.at<Point>(0,i);
+        Point2f pt1=pts1.at<Point2f>(0,i);
         complete_shape1.at<float>(i,0) = pt1.x;
         complete_shape1.at<float>(i,1) = pt1.y;
     }
@@ -192,8 +192,8 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
                 matU.at<float>(i,j)=std::numeric_limits<float>::min();
                 continue;
             }
-            matU.at<float>(i,j) = distance(Point(complete_shape1.at<float>(i,0),complete_shape1.at<float>(i,1)),
-                                           Point(complete_shape1.at<float>(j,0),complete_shape1.at<float>(j,1)));
+            matU.at<float>(i,j) = distance(Point2f(complete_shape1.at<float>(i,0),complete_shape1.at<float>(i,1)),
+                                           Point2f(complete_shape1.at<float>(j,0),complete_shape1.at<float>(j,1)));
         }
     }
     normalize(matU, matU,0,1, NORM_MINMAX);
@@ -244,13 +244,13 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     //Ensambling output
     for (int i=0; i<fy.cols; i++)
     {
-        outPts.push_back(Point(fx.at<float>(0,i), fy.at<float>(0,i)));
+        outPts.push_back(Point2f(fx.at<float>(0,i), fy.at<float>(0,i)));
     }
 }
 
-double ThinPlateSplineTransform::distance(Point p, Point q) const
+double ThinPlateSplineTransform::distance(Point2f p, Point2f q) const
 {
-    Point diff = p - q;
+    Point2f diff = p - q;
     return sqrt(diff.x*diff.x + diff.y*diff.y);
 }
 /****************************************************************************************\
@@ -279,7 +279,7 @@ bool AffineTransform::getFullAffine()
 }
 /* Public methods */
 void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
-                                          std::vector<DMatch>& _matches, std::vector<Point>& outPts) const
+                                          std::vector<DMatch>& _matches, std::vector<Point2f>& outPts) const
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
@@ -298,14 +298,14 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
     }
 
     /* Organizing the correspondent points in vector style */
-    std::vector<Point> shape1; // transforming shape
-    std::vector<Point> shape2; // target shape
+    std::vector<Point2f> shape1; // transforming shape
+    std::vector<Point2f> shape2; // target shape
     for (size_t i=0; i<matches.size(); i++)
     {
-        Point pt1=pts1.at<Point>(0,matches[i].queryIdx);
+        Point2f pt1=pts1.at<Point2f>(0,matches[i].queryIdx);
         shape1.push_back(pt1);
 
-        Point pt2=pts2.at<Point>(0,matches[i].trainIdx);
+        Point2f pt2=pts2.at<Point2f>(0,matches[i].trainIdx);
         shape2.push_back(pt2);
     }
 
@@ -314,7 +314,7 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
     Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
     for (int i=0; i<pts1.cols; i++)
     {
-        Point pt1=pts1.at<Point>(0,i);
+        Point2f pt1=pts1.at<Point2f>(0,i);
         complete_shape1.at<float>(i,0) = pt1.x;
         complete_shape1.at<float>(i,1) = pt1.y;
     }
@@ -333,7 +333,7 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
     /* Ensambling output */
     for (int i=0; i<fAffine.cols; i++)
     {
-        outPts.push_back(Point(fAffine.at<float>(0,i), fAffine.at<float>(1,i)));
+        outPts.push_back(Point2f(fAffine.at<float>(0,i), fAffine.at<float>(1,i)));
     }
 }
 }//cv

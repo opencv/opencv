@@ -74,7 +74,7 @@ int SCD::descriptorSize() const
 }
 
 void SCD::extractSCD(InputArray contour /* Vector of points */, 
-                      Mat& descriptors /* Mat containing the descriptor */) const
+                      Mat& descriptors /* Mat containing the descriptor */)
 {
     Mat contourMat = contour.getMat();
     CV_Assert((contourMat.channels()==2) & (contourMat.cols>0));
@@ -129,16 +129,15 @@ void SCD::buildAngleMatrix(InputArray contour,
     Mat contourMat = contour.getMat();
     
     /* if descriptor is rotationInvariant compute massCenter */
-    Point massCenter(0,0);
+    Point2f massCenter(0,0);
     if (rotationInvariant)
     {
         for (int i=0; i<contourMat.cols; i++)
         {
-            massCenter=massCenter+contourMat.at<Point>(0,i);
+            massCenter=massCenter+contourMat.at<Point2f>(0,i);
         }
-        massCenter.x=massCenter.x/contourMat.cols;
-        massCenter.y=massCenter.y/contourMat.cols;
-        std::cout<<"massCenter: "<<massCenter.x<<","<<massCenter.y<<std::endl;
+        massCenter.x=massCenter.x/(float)contourMat.cols;
+        massCenter.y=massCenter.y/(float)contourMat.cols;
     }
 
 
@@ -147,12 +146,12 @@ void SCD::buildAngleMatrix(InputArray contour,
         for (int j=0; j<contourMat.cols; j++)
         {
             if (i==j) angleMatrix.at<float>(i,j)=-CV_PI;
-            Point dif = contourMat.at<Point>(0,i) - contourMat.at<Point>(0,j);
+            Point2f dif = contourMat.at<Point2f>(0,i) - contourMat.at<Point2f>(0,j);
             angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
 
             if (rotationInvariant)
             {
-                Point refPt = contourMat.at<Point>(0,i) - massCenter;
+                Point2f refPt = contourMat.at<Point2f>(0,i) - massCenter;
                 float refAngle = atan2(refPt.y, refPt.x);
                 angleMatrix.at<float>(i,j) -= refAngle;
             }
@@ -161,7 +160,7 @@ void SCD::buildAngleMatrix(InputArray contour,
 }
 
 void SCD::buildNormalizedDistanceMatrix(InputArray contour, 
-                      Mat& disMatrix) const
+                      Mat& disMatrix)
 {
     Mat contourMat = contour.getMat();
     
@@ -169,22 +168,23 @@ void SCD::buildNormalizedDistanceMatrix(InputArray contour,
     {
         for (int j=0; j<contourMat.cols; j++)
         {
-            disMatrix.at<float>(i,j) = distance(contourMat.at<Point>(0,i),
-                                                 contourMat.at<Point>(0,j));
+            disMatrix.at<float>(i,j) = distance(contourMat.at<Point2f>(0,i),
+                                                 contourMat.at<Point2f>(0,j));
         }
     }
     
     /* Now normalizing according to the mean for scale invariance.
      * However, the paper recommends to avoid using outliers in the 
      * mean computation. Short term future work.*/
-    
+    float _meanDistance=mean(disMatrix)[0];
     normalize(disMatrix, disMatrix,0,1, NORM_MINMAX);
     sqrt(disMatrix, disMatrix);
-    Scalar m=mean(disMatrix);
-    if (m[0]!=0)
+    float _normMeanDistance=mean(disMatrix)[0];
+    if (_meanDistance!=0)
     {
-        disMatrix=disMatrix/m[0];
+        disMatrix=disMatrix/_normMeanDistance;
     }
+    meanDistance=_meanDistance;
 }
 
 void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
@@ -214,9 +214,9 @@ void SCD::angularSpaces(std::vector<double>& vecSpaces) const
    }
 }
 
-double SCD::distance(Point p, Point q) const
+double SCD::distance(Point2f p, Point2f q) const
 {
-    Point diff = p - q;
+    Point2f diff = p - q;
     return (diff.x*diff.x + diff.y*diff.y)/2;
 }
 
@@ -273,6 +273,11 @@ double SCD::getOuterRadius(void)
 bool SCD::getRotationInvariant(void)
 {
     return rotationInvariant;
+}
+
+float SCD::getMeanDistance(void)
+{
+    return meanDistance;
 }
 
 } /* namespace cv */
