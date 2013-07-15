@@ -327,6 +327,31 @@ namespace cv
                     }
                     return output;
                 }
+                
+                static _Out* copyColor(const Mat& source, _Out* output, const Mat& nan_mask)
+                {
+                    CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
+                    CV_Assert(nan_mask.channels() == 3 || nan_mask.channels() == 4);
+                    CV_DbgAssert(DataDepth<_Msk>::value == nan_mask.depth());
+
+                    int s_chs = source.channels();
+                    int m_chs = nan_mask.channels();
+
+                    for(int y = 0; y < source.rows; ++y)
+                    {
+                        const _Tp* srow = source.ptr<_Tp>(y);
+                        const _Msk* mrow = nan_mask.ptr<_Msk>(y);
+
+                        for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+                            if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
+                            {
+                                *output = _Out(srow);
+                                std::swap((*output)[0], (*output)[2]); // BGR -> RGB
+                                ++output;
+                            }
+                    }
+                    return output;
+                }
             };
 
             template<typename _Tp>
@@ -336,6 +361,17 @@ namespace cv
 
                 typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
                 const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copy, &NanFilter::Impl<_Tp, double>::copy };
+
+                return table[nan_mask.depth() - 5](source, output, nan_mask);
+            }
+            
+            template<typename _Tp>
+            static inline Vec<_Tp, 3>* copyColor(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
+            {
+                CV_Assert(nan_mask.depth() == CV_32F || nan_mask.depth() == CV_64F);
+
+                typedef Vec<_Tp, 3>* (*copy_func)(const Mat&, Vec<_Tp, 3>*, const Mat&);
+                const static copy_func table[2] = { &NanFilter::Impl<_Tp, float>::copyColor, &NanFilter::Impl<_Tp, double>::copyColor };
 
                 return table[nan_mask.depth() - 5](source, output, nan_mask);
             }

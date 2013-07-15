@@ -116,7 +116,7 @@ cv::viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
 
     // Filter colors
     Vec3b* colors_data = new Vec3b[nr_points];
-    NanFilter::copy(colors, colors_data, cloud);
+    NanFilter::copyColor(colors, colors_data, cloud);
 
     vtkSmartPointer<vtkUnsignedCharArray> scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
     scalars->SetNumberOfComponents (3);
@@ -384,7 +384,7 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
     {
         Vec3b * colors_data = 0;
         colors_data = new Vec3b[nr_points];
-        NanFilter::copy(mesh.colors, colors_data, mesh.cloud);
+        NanFilter::copyColor(mesh.colors, colors_data, mesh.cloud);
         
         scalars = vtkSmartPointer<vtkUnsignedCharArray>::New ();
         scalars->SetNumberOfComponents (3);

@@ -111,7 +111,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
                 Vec3b point_color;
                 poly_colors->GetTupleValue (i, point_color.val);
 
-                //RGB or BGR? should we swap channels????
+                std::swap(point_color[0], point_color[2]); // RGB -> BGR
                 mesh_colors[i] = point_color;
             }
         }
