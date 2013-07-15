@@ -10,9 +10,12 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Xiaopeng Fu, fuxiaopeng2222@163.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -22,12 +25,12 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other GpuMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -40,31 +43,42 @@
 //
 //M*/
 
-#ifndef __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
-#define __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
-
-#include "opencv2/core.hpp"
-#include "opencv2/core/gpu.hpp"
-#ifdef HAVE_OPENCV_OCL
-#include "opencv2/ocl.hpp"
-#endif
-
-namespace cv
+__kernel void distanceToCenters(
+    int label_step, int K,
+    __global float *src,
+    __global int *labels, int dims, int rows,
+    __global float *centers,
+    __global float *dists)
 {
-    namespace superres
+    int gid = get_global_id(1);
+
+    float dist, euDist, min;
+    int minCentroid;
+
+    if(gid >= rows)
+        return;
+
+    for(int i = 0 ; i < K; i++)
     {
-        CV_EXPORTS Mat arrGetMat(InputArray arr, Mat& buf);
-        CV_EXPORTS gpu::GpuMat arrGetGpuMat(InputArray arr, gpu::GpuMat& buf);
+        euDist = 0;
+        for(int j = 0; j < dims; j++)
+        {
+            dist = (src[j + gid * dims]
+                    - centers[j + i * dims]);
+            euDist += dist * dist;
+        }
 
-        CV_EXPORTS void arrCopy(InputArray src, OutputArray dst);
-
-        CV_EXPORTS Mat convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1);
-        CV_EXPORTS gpu::GpuMat convertToType(const gpu::GpuMat& src, int type, gpu::GpuMat& buf0, gpu::GpuMat& buf1);
-
-#ifdef HAVE_OPENCV_OCL
-        CV_EXPORTS ocl::oclMat convertToType(const ocl::oclMat& src, int type, ocl::oclMat& buf0, ocl::oclMat& buf1);
-#endif
+        if(i == 0)
+        {
+            min = euDist;
+            minCentroid = 0;
+        }
+        else if(euDist < min)
+        {
+            min = euDist;
+            minCentroid = i;
+        }
     }
+    dists[gid] = min;
+    labels[label_step * gid] = minCentroid;
 }
-
-#endif // __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__

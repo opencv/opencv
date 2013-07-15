@@ -55,7 +55,7 @@ namespace cv
     namespace ocl
     {
         ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *imgproc_gfft;
+        extern const char *imgproc_gftt;
     }
 }
 
@@ -133,7 +133,7 @@ struct Sorter<BITONIC>
             for(int passOfStage = 0; passOfStage < stage + 1; ++passOfStage)
             {
                 args[4] = std::make_pair(sizeof(cl_int), (void *)&passOfStage);
-                openCLExecuteKernel(cxt, &imgproc_gfft, kernelname, globalThreads, localThreads, args, -1, -1);
+                openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1);
             }
         }
     }
@@ -160,12 +160,12 @@ struct Sorter<SELECTION>
         args.push_back( std::make_pair( sizeof(cl_int), (void*)&count) );
         args.push_back( std::make_pair( lds_size,       (void*)NULL) );
 
-        openCLExecuteKernel(cxt, &imgproc_gfft, kernelname, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1);
 
         //final
         kernelname = "sortCorners_selectionSortFinal";
         args.pop_back();
-        openCLExecuteKernel(cxt, &imgproc_gfft, kernelname, globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1);
     }
 };
 
@@ -201,7 +201,7 @@ int findCorners_caller(
     size_t localThreads[3]  = {16, 16, 1};
 
     const char * opt = mask.empty() ? "" : "-D WITH_MASK";
-    openCLExecuteKernel(cxt, &imgproc_gfft, kernelname, globalThreads, localThreads, args, -1, -1, opt);
+    openCLExecuteKernel(cxt, &imgproc_gftt, kernelname, globalThreads, localThreads, args, -1, -1, opt);
     return std::min(Mat(g_counter).at<int>(0), max_count);
 }
 }//unnamed namespace
