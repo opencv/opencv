@@ -47,6 +47,8 @@
 
 #ifdef HAVE_WEBP
 
+
+
 namespace cv
 {
 
@@ -60,12 +62,15 @@ public:
     bool readData( Mat& img );
     bool readHeader();
     void close();
-    bool checkSignature( const String& signature ) const;
+
+    size_t signatureLength() const;
+    bool checkSignature( const String& signature) const;
 
     ImageDecoder newDecoder() const;
 
 protected:
     Mat data;
+    int channels;
 };
 
 class WebPEncoder : public BaseImageEncoder

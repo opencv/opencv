@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Incremental decoding
@@ -97,6 +99,23 @@ static WEBP_INLINE size_t MemDataSize(const MemBuffer* mem) {
   return (mem->end_ - mem->start_);
 }
 
+// Check if we need to preserve the compressed alpha data, as it may not have
+// been decoded yet.
+static int NeedCompressedAlpha(const WebPIDecoder* const idec) {
+  if (idec->state_ == STATE_PRE_VP8) {
+    // We haven't parsed the headers yet, so we don't know whether the image is
+    // lossy or lossless. This also means that we haven't parsed the ALPH chunk.
+    return 0;
+  }
+  if (idec->is_lossless_) {
+    return 0;  // ALPH chunk is not present for lossless images.
+  } else {
+    const VP8Decoder* const dec = (VP8Decoder*)idec->dec_;
+    assert(dec != NULL);  // Must be true as idec->state_ != STATE_PRE_VP8.
+    return (dec->alpha_data_ != NULL) && !dec->is_alpha_decoded_;
+  }
+}
+
 static void DoRemap(WebPIDecoder* const idec, ptrdiff_t offset) {
   MemBuffer* const mem = &idec->mem_;
   const uint8_t* const new_base = mem->buf_ + mem->start_;
@@ -122,6 +141,7 @@ static void DoRemap(WebPIDecoder* const idec, ptrdiff_t offset) {
       }
       assert(last_part >= 0);
       dec->parts_[last_part].buf_end_ = mem->buf_ + mem->end_;
+      if (NeedCompressedAlpha(idec)) dec->alpha_data_ += offset;
     } else {    // Resize lossless bitreader
       VP8LDecoder* const dec = (VP8LDecoder*)idec->dec_;
       VP8LBitReaderSetBuffer(&dec->br_, new_base, MemDataSize(mem));
@@ -133,8 +153,12 @@ static void DoRemap(WebPIDecoder* const idec, ptrdiff_t offset) {
 // size if required and also updates VP8BitReader's if new memory is allocated.
 static int AppendToMemBuffer(WebPIDecoder* const idec,
                              const uint8_t* const data, size_t data_size) {
+  VP8Decoder* const dec = (VP8Decoder*)idec->dec_;
   MemBuffer* const mem = &idec->mem_;
-  const uint8_t* const old_base = mem->buf_ + mem->start_;
+  const int need_compressed_alpha = NeedCompressedAlpha(idec);
+  const uint8_t* const old_start = mem->buf_ + mem->start_;
+  const uint8_t* const old_base =
+      need_compressed_alpha ? dec->alpha_data_ : old_start;
   assert(mem->mode_ == MEM_MODE_APPEND);
   if (data_size > MAX_CHUNK_PAYLOAD) {
     // security safeguard: trying to allocate more than what the format
@@ -143,7 +167,8 @@ static int AppendToMemBuffer(WebPIDecoder* const idec,
   }
 
   if (mem->end_ + data_size > mem->buf_size_) {  // Need some free memory
-    const size_t current_size = MemDataSize(mem);
+    const size_t new_mem_start = old_start - old_base;
+    const size_t current_size = MemDataSize(mem) + new_mem_start;
     const uint64_t new_size = (uint64_t)current_size + data_size;
     const uint64_t extra_size = (new_size + CHUNK_SIZE - 1) & ~(CHUNK_SIZE - 1);
     uint8_t* const new_buf =
@@ -153,7 +178,7 @@ static int AppendToMemBuffer(WebPIDecoder* const idec,
     free(mem->buf_);
     mem->buf_ = new_buf;
     mem->buf_size_ = (size_t)extra_size;
-    mem->start_ = 0;
+    mem->start_ = new_mem_start;
     mem->end_ = current_size;
   }
 
@@ -161,14 +186,15 @@ static int AppendToMemBuffer(WebPIDecoder* const idec,
   mem->end_ += data_size;
   assert(mem->end_ <= mem->buf_size_);
 
-  DoRemap(idec, mem->buf_ + mem->start_ - old_base);
+  DoRemap(idec, mem->buf_ + mem->start_ - old_start);
   return 1;
 }
 
 static int RemapMemBuffer(WebPIDecoder* const idec,
                           const uint8_t* const data, size_t data_size) {
   MemBuffer* const mem = &idec->mem_;
-  const uint8_t* const old_base = mem->buf_ + mem->start_;
+  const uint8_t* const old_buf = mem->buf_;
+  const uint8_t* const old_start = old_buf + mem->start_;
   assert(mem->mode_ == MEM_MODE_MAP);
 
   if (data_size < mem->buf_size_) return 0;  // can't remap to a shorter buffer!
@@ -176,7 +202,7 @@ static int RemapMemBuffer(WebPIDecoder* const idec,
   mem->buf_ = (uint8_t*)data;
   mem->end_ = mem->buf_size_ = data_size;
 
-  DoRemap(idec, mem->buf_ + mem->start_ - old_base);
+  DoRemap(idec, mem->buf_ + mem->start_ - old_start);
   return 1;
 }
 

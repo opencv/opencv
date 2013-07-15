@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Speed-critical encoding functions.
@@ -142,9 +144,9 @@ static void FTransform(const uint8_t* src, const uint8_t* ref, int16_t* out) {
     const int a1 = (d1 + d2);
     const int a2 = (d1 - d2);
     const int a3 = (d0 - d3);
-    tmp[0 + i * 4] = (a0 + a1) << 3;  // 14b                      [-8160,8160]
+    tmp[0 + i * 4] = (a0 + a1) * 8;   // 14b                      [-8160,8160]
     tmp[1 + i * 4] = (a2 * 2217 + a3 * 5352 + 1812) >> 9;      // [-7536,7542]
-    tmp[2 + i * 4] = (a0 - a1) << 3;
+    tmp[2 + i * 4] = (a0 - a1) * 8;
     tmp[3 + i * 4] = (a3 * 2217 - a2 * 5352 +  937) >> 9;
   }
   for (i = 0; i < 4; ++i) {
@@ -187,31 +189,32 @@ static void ITransformWHT(const int16_t* in, int16_t* out) {
 }
 
 static void FTransformWHT(const int16_t* in, int16_t* out) {
-  int tmp[16];
+  // input is 12b signed
+  int16_t tmp[16];
   int i;
   for (i = 0; i < 4; ++i, in += 64) {
-    const int a0 = (in[0 * 16] + in[2 * 16]) << 2;
-    const int a1 = (in[1 * 16] + in[3 * 16]) << 2;
-    const int a2 = (in[1 * 16] - in[3 * 16]) << 2;
-    const int a3 = (in[0 * 16] - in[2 * 16]) << 2;
-    tmp[0 + i * 4] = (a0 + a1) + (a0 != 0);
+    const int a0 = (in[0 * 16] + in[2 * 16]);  // 13b
+    const int a1 = (in[1 * 16] + in[3 * 16]);
+    const int a2 = (in[1 * 16] - in[3 * 16]);
+    const int a3 = (in[0 * 16] - in[2 * 16]);
+    tmp[0 + i * 4] = a0 + a1;   // 14b
     tmp[1 + i * 4] = a3 + a2;
     tmp[2 + i * 4] = a3 - a2;
     tmp[3 + i * 4] = a0 - a1;
   }
   for (i = 0; i < 4; ++i) {
-    const int a0 = (tmp[0 + i] + tmp[8 + i]);
+    const int a0 = (tmp[0 + i] + tmp[8 + i]);  // 15b
     const int a1 = (tmp[4 + i] + tmp[12+ i]);
     const int a2 = (tmp[4 + i] - tmp[12+ i]);
     const int a3 = (tmp[0 + i] - tmp[8 + i]);
-    const int b0 = a0 + a1;
+    const int b0 = a0 + a1;    // 16b
     const int b1 = a3 + a2;
     const int b2 = a3 - a2;
     const int b3 = a0 - a1;
-    out[ 0 + i] = (b0 + (b0 > 0) + 3) >> 3;
-    out[ 4 + i] = (b1 + (b1 > 0) + 3) >> 3;
-    out[ 8 + i] = (b2 + (b2 > 0) + 3) >> 3;
-    out[12 + i] = (b3 + (b3 > 0) + 3) >> 3;
+    out[ 0 + i] = b0 >> 1;     // 15b
+    out[ 4 + i] = b1 >> 1;
+    out[ 8 + i] = b2 >> 1;
+    out[12 + i] = b3 >> 1;
   }
 }
 
