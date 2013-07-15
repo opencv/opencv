@@ -3457,7 +3457,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
         case CV_BGR2YUV: case CV_RGB2YUV:
             {
             CV_Assert( scn == 3 || scn == 4 );
-            bidx = code == CV_BGR2YCrCb || code == CV_RGB2YUV ? 0 : 2;
+            bidx = code == CV_BGR2YCrCb || code == CV_BGR2YUV ? 0 : 2;
             static const float yuv_f[] = { 0.114f, 0.587f, 0.299f, 0.492f, 0.877f };
             static const int yuv_i[] = { B2Y, G2Y, R2Y, 8061, 14369 };
             const float* coeffs_f = code == CV_BGR2YCrCb || code == CV_RGB2YCrCb ? 0 : yuv_f;
