@@ -254,7 +254,7 @@ cv::ocl::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size blo
 
     effect_size = Size(0, 0);
 
-	if (queryDeviceInfo<IS_CPU_DEVICE, bool>())
+    if (queryDeviceInfo<IS_CPU_DEVICE, bool>())
         hog_device_cpu = true;
     else
         hog_device_cpu = false;
@@ -1758,8 +1758,20 @@ void cv::ocl::device::hog::compute_hists(int nbins,
     args.push_back( make_pair( sizeof(cl_mem), (void *)&block_hists.data));
     args.push_back( make_pair( smem, (void *)NULL));
 
-    openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
-        localThreads, args, -1, -1);
+
+    if(hog_device_cpu)
+    {
+        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
+            localThreads, args, -1, -1, "-D CPU");
+    }else
+    {
+        cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
+        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        char opt[32] = {0};
+        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
+        openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads, 
+            localThreads, args, -1, -1, opt);
+    }
 }
 
 void cv::ocl::device::hog::normalize_hists(int nbins, 
