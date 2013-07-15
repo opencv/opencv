@@ -65,9 +65,9 @@ cv::viz::MouseEvent::MouseEvent (const Type& _type, const MouseButton& _button, 
 
 struct cv::viz::Mesh3d::loadMeshImpl
 {
-    static cv::viz::Mesh3d::Ptr loadMesh(const String &file)
+    static cv::viz::Mesh3d loadMesh(const String &file)
     {
-        Mesh3d::Ptr mesh = new Mesh3d();
+        Mesh3d mesh;
 
         vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
         reader->SetFileName(file.c_str());
@@ -78,9 +78,9 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkIdType nr_points = mesh_points->GetNumberOfPoints ();
         //vtkIdType nr_polygons = poly_data->GetNumberOfPolys ();
 
-        mesh->cloud.create(1, nr_points, CV_32FC3);
+        mesh.cloud.create(1, nr_points, CV_32FC3);
 
-        Vec3f *mesh_cloud = mesh->cloud.ptr<Vec3f>();
+        Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
         for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
         {
             Vec3d point;
@@ -103,8 +103,8 @@ struct cv::viz::Mesh3d::loadMeshImpl
         // TODO: currently only handles rgb values with 3 components
         if (poly_colors && (poly_colors->GetNumberOfComponents () == 3))
         {
-            mesh->colors.create(1, nr_points, CV_8UC3);
-            Vec3b *mesh_colors = mesh->colors.ptr<cv::Vec3b>();
+            mesh.colors.create(1, nr_points, CV_8UC3);
+            Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
 
             for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
             {
@@ -116,7 +116,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
             }
         }
         else
-            mesh->colors.release();
+            mesh.colors.release();
 
         // Now handle the polygons
         vtkIdType* cell_points;
@@ -124,9 +124,9 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkCellArray * mesh_polygons = poly_data->GetPolys ();
         mesh_polygons->InitTraversal ();
         
-        mesh->polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
+        mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
         
-        int * polygons = mesh->polygons.ptr<int>();
+        int* polygons = mesh.polygons.ptr<int>();
         while (mesh_polygons->GetNextCell (nr_cell_points, cell_points))
         {
             *polygons++ = nr_cell_points;
@@ -138,7 +138,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
     }
 };
 
-cv::viz::Mesh3d::Ptr cv::viz::Mesh3d::loadMesh(const String& file)
+cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 {
     return loadMeshImpl::loadMesh(file);
 }

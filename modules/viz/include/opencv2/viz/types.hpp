@@ -35,9 +35,11 @@ namespace cv
         class CV_EXPORTS Mesh3d
         {
         public:
-            typedef cv::Ptr<Mesh3d> Ptr;
-            Mat cloud, colors, polygons;
-            static cv::viz::Mesh3d::Ptr loadMesh(const String& file);
+
+            Mat cloud, colors;
+            Mat polygons;
+
+            static cv::viz::Mesh3d loadMesh(const String& file);
             
         private:
             struct loadMeshImpl;
