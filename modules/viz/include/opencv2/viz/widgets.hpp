@@ -185,6 +185,7 @@ namespace cv
         template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
+        template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();
 
     } /* namespace viz */
 } /* namespace cv */

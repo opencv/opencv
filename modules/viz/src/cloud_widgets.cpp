@@ -464,3 +464,9 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
     
     WidgetAccessor::setProp(*this, actor);
 }
+
+template<> CV_EXPORTS cv::viz::MeshWidget cv::viz::Widget::cast<cv::viz::MeshWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<MeshWidget&>(widget);
+}
