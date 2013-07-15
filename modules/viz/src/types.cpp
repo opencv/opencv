@@ -73,8 +73,6 @@ struct cv::viz::Mesh3d::loadMeshImpl
         reader->SetFileName(file.c_str());
         reader->Update();
         vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput ();
-
-        typedef unsigned int uint32_t;
         
         vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints ();
         vtkIdType nr_points = mesh_points->GetNumberOfPoints ();
@@ -82,11 +80,12 @@ struct cv::viz::Mesh3d::loadMeshImpl
 
         mesh->cloud.create(1, nr_points, CV_32FC3);
 
-        double point_xyz[3];
+        Vec3f *mesh_cloud = mesh->cloud.ptr<Vec3f>();
         for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
         {
-            mesh_points->GetPoint (i, &point_xyz[0]);
-            mesh->cloud.ptr<cv::Point3f>()[i] = cv::Point3d(point_xyz[0], point_xyz[1], point_xyz[2]);;
+            Vec3d point;
+            mesh_points->GetPoint (i, point.val);
+            mesh_cloud[i] = point;
         }
 
         // Then the color information, if any
@@ -105,14 +104,15 @@ struct cv::viz::Mesh3d::loadMeshImpl
         if (poly_colors && (poly_colors->GetNumberOfComponents () == 3))
         {
             mesh->colors.create(1, nr_points, CV_8UC3);
-            unsigned char point_color[3];
+            Vec3b *mesh_colors = mesh->colors.ptr<cv::Vec3b>();
 
             for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
             {
-                poly_colors->GetTupleValue (i, &point_color[0]);
+                Vec3b point_color;
+                poly_colors->GetTupleValue (i, point_color.val);
 
-                //RGB or BGR?????
-                mesh->colors.ptr<cv::Vec3b>()[i] = cv::Vec3b(point_color[0], point_color[1], point_color[2]);
+                //RGB or BGR? should we swap channels????
+                mesh_colors[i] = point_color;
             }
         }
         else
