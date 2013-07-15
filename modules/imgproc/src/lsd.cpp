@@ -39,9 +39,9 @@
 //
 //M*/
 
-#include <vector>
-
 #include "precomp.hpp"
+
+#include <vector>
 
 using namespace cv;
 
@@ -163,7 +163,7 @@ inline double log_gamma_lanczos(const double& x)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-LSD::LSD(lsd_refine_lvl _refine, double _scale, double _sigma_scale, double _quant,
+LSD::LSD(int _refine, double _scale, double _sigma_scale, double _quant,
         double _ang_th, double _log_eps, double _density_th, int _n_bins)
         :SCALE(_scale), doRefine(_refine), SIGMA_SCALE(_sigma_scale), QUANT(_quant),
         ANG_TH(_ang_th), LOG_EPS(_log_eps), DENSITY_TH(_density_th), N_BINS(_n_bins)
@@ -201,9 +201,9 @@ void LSD::detect(const cv::InputArray _image, cv::OutputArray _lines, cv::Rect _
     flsd(lines, w, p, n);
 
     Mat(lines).copyTo(_lines);
-    if (w) Mat(*w).copyTo(_width);
-    if (p) Mat(*p).copyTo(_prec);
-    if (n) Mat(*n).copyTo(_nfa);
+    if(w) Mat(*w).copyTo(_width);
+    if(p) Mat(*p).copyTo(_prec);
+    if(n) Mat(*n).copyTo(_nfa);
 
     delete w;
     delete p;
@@ -220,7 +220,7 @@ void LSD::flsd(std::vector<Vec4i>& lines,
     const double rho = QUANT / sin(prec);    // gradient magnitude threshold
 
     std::vector<coorlist> list;
-    if (SCALE != 1)
+    if(SCALE != 1)
     {
         Mat gaussian_img;
         const double sigma = (SCALE < 1)?(SIGMA_SCALE / SCALE):(SIGMA_SCALE);
@@ -357,7 +357,7 @@ void LSD::ll_angle(const double& threshold, const unsigned int& n_bins, std::vec
             }
             else
             {
-                angles_data[addr] = double(cv::fastAtan2(gx, -gy)) * DEG_TO_RADS;  // gradient angle computation
+                angles_data[addr] = cv::fastAtan2(float(gx), float(-gy)) * DEG_TO_RADS;  // gradient angle computation
                 if (norm > max_grad) { max_grad = norm; }
             }
 

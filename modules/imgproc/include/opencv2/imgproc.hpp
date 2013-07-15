@@ -192,8 +192,7 @@ enum { HOUGH_STANDARD      = 0,
      };
 
 //! Variants of Line Segment Detector
-enum lsd_refine_lvl
-     { LSD_REFINE_NONE = 0,
+enum { LSD_REFINE_NONE = 0,
        LSD_REFINE_STD  = 1,
        LSD_REFINE_ADV  = 2
      };
@@ -844,10 +843,10 @@ public:
  * Create an LSD object. Specifying scale, number of subdivisions for the image, should the lines be refined and other constants as follows:
  *
  * @param _refine       How should the lines found be refined?
- *                      REFINE_NONE - No refinement applied.
- *                      REFINE_STD  - Standard refinement is applied. E.g. breaking arches into smaller line approximations.
- *                      REFINE_ADV  - Advanced refinement. Number of false alarms is calculated,
- *                                    lines are refined through increase of precision, decrement in size, etc.
+ *                      LSD_REFINE_NONE - No refinement applied.
+ *                      LSD_REFINE_STD  - Standard refinement is applied. E.g. breaking arches into smaller line approximations.
+ *                      LSD_REFINE_ADV  - Advanced refinement. Number of false alarms is calculated,
+ *                                        lines are refined through increase of precision, decrement in size, etc.
  * @param _scale        The scale of the image that will be used to find the lines. Range (0..1].
  * @param _sigma_scale  Sigma for Gaussian filter is computed as sigma = _sigma_scale/_scale.
  * @param _quant        Bound to the quantization error on the gradient norm.
@@ -856,7 +855,7 @@ public:
  * @param _density_th   Minimal density of aligned region points in rectangle.
  * @param _n_bins       Number of bins in pseudo-ordering of gradient modulus.
  */
-    LSD(lsd_refine_lvl _refine = LSD_REFINE_STD, double _scale = 0.8,
+    LSD(int _refine = LSD_REFINE_STD, double _scale = 0.8,
         double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
         double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
@@ -919,7 +918,7 @@ private:
     int roix, roiy;
 
     const double SCALE;
-    const lsd_refine_lvl doRefine;
+    const int doRefine;
     const double SIGMA_SCALE;
     const double QUANT;
     const double ANG_TH;
