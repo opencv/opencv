@@ -197,8 +197,8 @@ Here are detailled the main methods to control the retina model
 Ptr<Retina>::createRetina
 +++++++++++++++++++++++++
 
-.. ocv:function:: Ptr<Retina> createRetina(Size inputSize)
-.. ocv:function:: Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
+.. ocv:function:: Ptr<cv::bioinspired::Retina> createRetina(Size inputSize)
+.. ocv:function:: Ptr<cv::bioinspired::Retina> createRetina(Size inputSize, const bool colorMode, cv::bioinspired::RETINA_COLORSAMPLINGMETHOD colorSamplingMethod = cv::bioinspired::RETINA_COLOR_BAYER, const bool useRetinaLogSampling = false, const double reductionFactor = 1.0, const double samplingStrenght = 10.0 )
 
     Constructors from standardized interfaces : retreive a smart pointer to a Retina instance
 
@@ -206,11 +206,11 @@ Ptr<Retina>::createRetina
     :param colorMode: the chosen processing mode : with or without color processing
     :param colorSamplingMethod: specifies which kind of color sampling will be used :
 
-        * RETINA_COLOR_RANDOM: each pixel position is either R, G or B in a random choice
+        * cv::bioinspired::RETINA_COLOR_RANDOM: each pixel position is either R, G or B in a random choice
 
-        * RETINA_COLOR_DIAGONAL: color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
+        * cv::bioinspired::RETINA_COLOR_DIAGONAL: color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
 
-        * RETINA_COLOR_BAYER: standard bayer sampling
+        * cv::bioinspired::RETINA_COLOR_BAYER: standard bayer sampling
 
     :param useRetinaLogSampling: activate retina log sampling, if true, the 2 following parameters can be used
     :param reductionFactor: only usefull if param useRetinaLogSampling=true, specifies the reduction factor of the output frame (as the center (fovea) is high resolution and corners can be underscaled, then a reduction of the output is allowed without precision leak
