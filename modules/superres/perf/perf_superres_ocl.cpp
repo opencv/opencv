@@ -46,6 +46,7 @@
 
 #include "opencv2/ocl/ocl.hpp"
 using namespace std;
+using namespace std::tr1;
 using namespace testing;
 using namespace perf;
 using namespace cv;
