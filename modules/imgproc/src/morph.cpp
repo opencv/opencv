@@ -1136,11 +1136,397 @@ private:
     Scalar borderValue;
 };
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+static bool IPPDilateReplicate(const Mat &src, Mat &dst, const Mat &kernel, const Point &anchor)
+{
+	int cnn = src.channels();
+	switch( src.depth() )
+	{
+	case CV_8U:
+		{
+			switch( cnn ) 
+			{
+			case 1:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C1( src.cols, src.rows, &step );
+						ippiCopy_8u_C1R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C1R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_8u_C1R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 3:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C3( src.cols, src.rows, &step );
+						ippiCopy_8u_C3R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C3R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_8u_C3R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 4:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C4( src.cols, src.rows, &step );
+						ippiCopy_8u_C4R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C4R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_8u_C4R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			}
+			break;
+		}
+	case CV_32F:
+		{
+			switch( cnn )
+			{
+			case 1:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C1( src.cols, src.rows, &step );
+						ippiCopy_32f_C1R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C1R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_32f_C1R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 3:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C3( src.cols, src.rows, &step );
+						ippiCopy_32f_C3R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C3R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_32f_C3R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 4:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C4( src.cols, src.rows, &step );
+						ippiCopy_32f_C4R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C4R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiDilateBorderReplicate_32f_C4R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			}
+			break;
+		}
+	}
+	return false;
+}
+
+static bool IPPErodeReplicate(const Mat &src, Mat &dst, const Mat &kernel, const Point &anchor)
+{
+	int cnn = src.channels();
+	switch( src.depth() )
+	{
+	case CV_8U:
+		{
+			switch( cnn ) 
+			{
+			case 1:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C1( src.cols, src.rows, &step );
+						ippiCopy_8u_C1R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C1R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_8u_C1R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 3:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C3( src.cols, src.rows, &step );
+						ippiCopy_8u_C3R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C3R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_8u_C3R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 4:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp8u *data = (Ipp8u *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp8u *temp = ippiMalloc_8u_C4( src.cols, src.rows, &step );
+						ippiCopy_8u_C4R( (Ipp8u *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_8u_C4R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_8u_C4R( data, step,  (Ipp8u *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			}
+			break;
+		}
+	case CV_32F:
+		{
+			switch( cnn )
+			{
+			case 1:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C1( src.cols, src.rows, &step );
+						ippiCopy_32f_C1R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C1R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_32f_C1R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 3:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C3( src.cols, src.rows, &step );
+						ippiCopy_32f_C3R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C3R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_32f_C3R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			case 4:
+				{
+					IppiSize roiSize = {src.cols, src.rows};
+					Ipp32f *data = (Ipp32f *)src.data;
+					int step = src.step;
+					if( src.data == dst.data )
+					{
+						Ipp32f *temp = ippiMalloc_32f_C4( src.cols, src.rows, &step );
+						ippiCopy_32f_C4R( (Ipp32f *)src.data, src.step, temp, step, roiSize );
+						data = temp;
+					}
+					IppiMorphState* ppState;
+					IppiSize kernelSize = {kernel.cols, kernel.rows};
+					IppiPoint point = {anchor.x, anchor.y};
+					ippiMorphologyInitAlloc_32f_C4R( roiSize.width, (Ipp8u *)kernel.data, kernelSize, point, &ppState );
+					ippiErodeBorderReplicate_32f_C4R( data, step,  (Ipp32f *)dst.data, dst.step, roiSize, ippBorderRepl, ppState );
+					ippiMorphologyFree(ppState);
+					if( src.data == dst.data )
+					{
+						ippiFree(data);
+					}
+					return true;
+				}
+			}
+			break;
+		}
+	}
+	return false;
+}
+
+static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
+                     InputArray _kernel,
+                     Point anchor, int iterations,
+                     int borderType)
+{
+	Mat src = _src.getMat(), kernel = _kernel.getMat();
+	if( !(src.depth() == CV_8U || src.depth() == CV_32F) || (iterations > 1) || 
+		(borderType != cv::BORDER_REPLICATE) || !( op == MORPH_DILATE || op == MORPH_ERODE) )
+	{
+		return false;
+	}
+	Size ksize = kernel.data ? kernel.size() : Size(3,3);
+    Point normanchor = normalizeAnchor(anchor, ksize);
+
+    CV_Assert( normanchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
+
+    _dst.create( src.size(), src.type() );
+    Mat dst = _dst.getMat();
+
+    if( iterations == 0 || kernel.rows*kernel.cols == 1 )
+    {
+        src.copyTo(dst);
+        return true;
+    }
+
+    if( !kernel.data )
+    {
+        kernel = getStructuringElement(MORPH_RECT, Size(1+iterations*2,1+iterations*2));
+        normanchor = Point(iterations, iterations);
+        iterations = 1;
+    }
+    else if( iterations > 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
+    {
+        normanchor = Point(normanchor.x*iterations, normanchor.y*iterations);
+        kernel = getStructuringElement(MORPH_RECT,
+                                       Size(ksize.width + (iterations-1)*(ksize.width-1),
+                                            ksize.height + (iterations-1)*(ksize.height-1)),
+                                       normanchor);
+        iterations = 1;
+    }
+	switch( op )
+	{
+	case MORPH_DILATE:
+		{
+			return IPPDilateReplicate( src, dst, kernel, normanchor );
+		}
+	case MORPH_ERODE:
+		{
+			return IPPErodeReplicate( src, dst, kernel, normanchor );
+		}
+	}
+	return false;
+}
+#endif
+
 static void morphOp( int op, InputArray _src, OutputArray _dst,
                      InputArray _kernel,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+	if (IPPMorphOp(op, _src, _dst, _kernel, anchor, iterations, borderType))
+	{
+		return;
+	}
+#endif
+
     Mat src = _src.getMat(), kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
