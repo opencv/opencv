@@ -58,7 +58,7 @@ PERFTEST(GoodFeaturesToTrack)
     
     std::vector<cv::Point2f> pts_gold, pts_ocl;
 
-    for(int imgIdx = 0; imgIdx < sizeof(images)/sizeof(std::string); ++imgIdx)
+    for(size_t imgIdx = 0; imgIdx < (sizeof(images)/sizeof(std::string)); ++imgIdx)
     {
         Mat frame = imread(abspath(images[imgIdx]), IMREAD_GRAYSCALE);
         CV_Assert(!frame.empty());
