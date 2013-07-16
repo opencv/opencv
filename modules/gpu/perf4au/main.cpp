@@ -52,16 +52,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-int main(int argc, char* argv[])
-{
-    perf::printCudaInfo();
-
-    perf::Regression::Init("gpu_perf4au");
-    perf::TestBase::Init(argc, argv);
-    testing::InitGoogleTest(&argc, argv);
-
-    return RUN_ALL_TESTS();
-}
+CV_PERF_TEST_CUDA_MAIN(gpu_perf4au)
 
 //////////////////////////////////////////////////////////
 // HoughLinesP
