@@ -6,6 +6,13 @@
 
 using namespace std;
 
+/*
+
+Add some lines of comments here for testing and illustration purposes.
+Created by @StevenPuttemans
+
+*/
+
 int main( int argc, char* argv[] )
 {
     CvCascadeClassifier classifier;
