@@ -22,6 +22,7 @@ private:
     void test4();
     void mpegTest();
     void listShapeNames(vector<string> &listHeaders);
+    vector<Point2f> convertContourType( Mat& );
 };
 
 CV_ShapeTest::CV_ShapeTest()
@@ -43,27 +44,36 @@ void CV_ShapeTest::test1()
     imshow("image 2", shape2);
 
     //Extract the Contours
-    vector<vector<Point2f> > contours1, contours2;
-    findContours(shape1, contours1, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    findContours(shape2, contours2, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    cout<<"1. Number of points in the contour before simplification: "<<contours1[0].size()<<std::endl;
-    cout<<"2. Number of points in the contour before simplification: "<<contours2[0].size()<<std::endl;
+    vector<vector<Point> > _contours1, _contours2;
+    findContours(shape1, _contours1, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    findContours(shape2, _contours2, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+    cout<<"1. Number of points in the contour before simplification: "<<_contours1[0].size()<<std::endl;
+    cout<<"2. Number of points in the contour before simplification: "<<_contours2[0].size()<<std::endl;
 
-    approxPolyDP(Mat(contours1[0]), contours1[0], 0.5, true);
-    approxPolyDP(Mat(contours2[0]), contours2[0], 0.5, true);
+    approxPolyDP(Mat(_contours1[0]), _contours1[0], 0.5, true);
+    approxPolyDP(Mat(_contours2[0]), _contours2[0], 0.5, true);
 
-    cout<<"1. Number of points in the contour after simplification: "<<contours1[0].size()<<std::endl;
-    cout<<"2. Number of points in the contour after simplification: "<<contours2[0].size()<<std::endl;
+    cout<<"1. Number of points in the contour after simplification: "<<_contours1[0].size()<<std::endl;
+    cout<<"2. Number of points in the contour after simplification: "<<_contours2[0].size()<<std::endl;
+
+    vector<Point2f> contours1, contours2;
+
+    Mat(_contours1[0]).convertTo(contours1, Mat(contours1).type());
+    Mat(_contours2[0]).convertTo(contours2, Mat(contours2).type());
+
+    std::cout<<"test x: "<<contours1[0].x<<std::endl;
+    std::cout<<"test y: "<<contours1[0].y<<std::endl;
 
     SCDMatcher sMatcher(0.01, DistanceSCDFlags::DEFAULT);
+
     while(1)
     {
         Mat scdesc1, scdesc2;
         int abins=9, rbins=5;
         SCD shapeDescriptor(abins,rbins,0.1,2);
 
-        shapeDescriptor.extractSCD(contours1[0], scdesc1);
-        shapeDescriptor.extractSCD(contours2[0], scdesc2);
+        shapeDescriptor.extractSCD(contours1, scdesc1);
+        shapeDescriptor.extractSCD(contours2, scdesc2);
 
         vector<DMatch> matches;
         sMatcher.matchDescriptors(scdesc1, scdesc2, matches);
@@ -369,7 +379,7 @@ void CV_ShapeTest::test4()
 
     while(1)
     {
-        /* cyan transforms in yellow accodring to red */
+        /* cyan transforms in yellow according to red */
         imshow("shapes (cyan=shape1, red=shape2, yellow=warped shape1)", im1);
         imshow("matches", im);
 
@@ -379,12 +389,69 @@ void CV_ShapeTest::test4()
     }
 }
 
+vector <Point2f> CV_ShapeTest::convertContourType(Mat& currentQuery)
+{
+    vector<vector<Point> > _contoursQuery;
+    vector <Point2f> contoursQuery;
+    findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
+    for (size_t border=0; border<_contoursQuery.size(); border++)
+        for (size_t p=0; p<_contoursQuery[border].size(); p++)
+            contoursQuery.push_back(Point2f((float)_contoursQuery[border][p].x,
+                                            (float)_contoursQuery[border][p].y));
+    return contoursQuery;
+}
+
 void CV_ShapeTest::mpegTest()
 {
     string baseTestFolder="shape/mpeg_test/";
-    cvtest::TS::ptr()->get_data_path() + baseTestFolder;
+    string path = cvtest::TS::ptr()->get_data_path() + baseTestFolder;
+    vector<string> namesHeaders;
+    listShapeNames(namesHeaders);
 
+    const int angularBins=12;
+    const int radialBins=4;
+    const float minRad=0.2;
+    const float maxRad=2;
 
+    SCD shapeDescriptor(angularBins,radialBins, minRad, maxRad,true);
+    SCDMatcher scdmatcher(2.0, DistanceSCDFlags::DIST_CHI);
+    vector<Point2f> contoursQuery, contoursTesting;
+
+    //Mat(_contours2[0]).convertTo(contours2, Mat(contours2).type());
+
+    Mat querySCDMatrix;
+    Mat testingSCDMatrix;
+
+    //vector<Point2f>
+
+    /* reading query and computing its properties */
+    for (size_t n=0; n<namesHeaders.size(); n++)
+    {
+        for (int i=1; i<=20; i++)
+        {
+            /* read current image */
+            stringstream thepathandname;
+            thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
+            Mat currentQuery;
+            std::cout<<"the current image: "<<(thepathandname.str());
+            std::cout<<std::endl;
+            currentQuery=imread(thepathandname.str().c_str(), 0);
+
+            /* compute border and descriptor of the query */
+            contoursQuery=convertContourType(currentQuery);
+
+            //Mat(_contoursQuery[0]).convertTo(contoursQuery, Mat(contoursQuery).type());
+            /* draw */
+            Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+            for (size_t p=0; p<contoursQuery.size(); p++)
+                circle(queryImage, contoursQuery[p], 3, Scalar(0,255,0), 1);
+            imshow("Query Contour Points", queryImage);
+            std::cout<<"Size of the contour: "<<contoursQuery.size()<<std::endl;
+            char key = (char)waitKey();
+            if(key == 27 || key == 'n' || key == ' ')
+                continue;
+        }
+    }
 }
 
 void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
@@ -407,12 +474,64 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
     listHeaders.push_back("children");
     listHeaders.push_back("chopper");
     listHeaders.push_back("classic");
+    listHeaders.push_back("Comma");
+    listHeaders.push_back("crown");
+    listHeaders.push_back("cup");
+    listHeaders.push_back("deer");
+    listHeaders.push_back("device0");
+    listHeaders.push_back("device1");
+    listHeaders.push_back("device2");
+    listHeaders.push_back("device3");
+    listHeaders.push_back("device4");
+    listHeaders.push_back("device5");
+    listHeaders.push_back("device6");
+    listHeaders.push_back("device7");
+    listHeaders.push_back("device8");
+    listHeaders.push_back("device9");
+    listHeaders.push_back("dog");
+    listHeaders.push_back("elephant");
+    listHeaders.push_back("face");
+    listHeaders.push_back("fish");
+    listHeaders.push_back("flatfish");
+    listHeaders.push_back("fly");
+    listHeaders.push_back("fork");
+    listHeaders.push_back("fountain");
+    listHeaders.push_back("frog");
+    listHeaders.push_back("Glas");
+    listHeaders.push_back("guitar");
+    listHeaders.push_back("hammer");
+    listHeaders.push_back("hat");
+    listHeaders.push_back("HCircle");
+    listHeaders.push_back("Heart");
+    listHeaders.push_back("horse");
+    listHeaders.push_back("horseshoe");
+    listHeaders.push_back("jar");
+    listHeaders.push_back("key");
+    listHeaders.push_back("lizzard");
+    listHeaders.push_back("lmfish");
+    listHeaders.push_back("Misk");
+    listHeaders.push_back("octopus");
+    listHeaders.push_back("pencil");
+    listHeaders.push_back("personal_car");
+    listHeaders.push_back("pocket");
+    listHeaders.push_back("rat");
+    listHeaders.push_back("ray");
+    listHeaders.push_back("sea_snake");
+    listHeaders.push_back("shoe");
+    listHeaders.push_back("spoon");
+    listHeaders.push_back("spring");
+    listHeaders.push_back("stef");
+    listHeaders.push_back("teddy");
+    listHeaders.push_back("tree");
+    listHeaders.push_back("truck");
+    listHeaders.push_back("turtle");
+    listHeaders.push_back("watch");
 }
 
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    test4();
-    //mpegTest();
+    //test1();
+    mpegTest();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
