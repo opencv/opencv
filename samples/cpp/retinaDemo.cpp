@@ -9,7 +9,7 @@
 #include <iostream>
 #include <cstring>
 
-#include "opencv2/contrib.hpp"
+#include "opencv2/bioinspired.hpp"
 #include "opencv2/highgui.hpp"
 
 static void help(std::string errorMessage)
@@ -106,15 +106,15 @@ int main(int argc, char* argv[]) {
     try
     {
         // create a retina instance with default parameters setup, uncomment the initialisation you wanna test
-        cv::Ptr<cv::Retina> myRetina;
+        cv::Ptr<cv::bioinspired::Retina> myRetina;
 
         // if the last parameter is 'log', then activate log sampling (favour foveal vision and subsamples peripheral vision)
         if (useLogSampling)
                 {
-                        myRetina = cv::createRetina(inputFrame.size(), true, cv::RETINA_COLOR_BAYER, true, 2.0, 10.0);
+                        myRetina = cv::bioinspired::createRetina(inputFrame.size(), true, cv::bioinspired::RETINA_COLOR_BAYER, true, 2.0, 10.0);
                 }
         else// -> else allocate "classical" retina :
-            myRetina = cv::createRetina(inputFrame.size());
+            myRetina = cv::bioinspired::createRetina(inputFrame.size());
 
         // save default retina parameters file in order to let you see this and maybe modify it and reload using method "setup"
         myRetina->write("RetinaDefaultParameters.xml");
@@ -143,7 +143,8 @@ int main(int argc, char* argv[]) {
             cv::imshow("retina input", inputFrame);
             cv::imshow("Retina Parvo", retinaOutput_parvo);
             cv::imshow("Retina Magno", retinaOutput_magno);
-            cv::waitKey(10);
+
+            cv::waitKey(5);
         }
     }catch(cv::Exception e)
     {

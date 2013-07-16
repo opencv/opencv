@@ -6,12 +6,12 @@
  ** copy or use the software.
  **
  **
- ** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+ ** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
  ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
  **
  ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
  **
- **  Creation - enhancement process 2007-2011
+ **  Creation - enhancement process 2007-2013
  **      Author: Alexandre Benoit (benoit.alexandre.vision@gmail.com), LISTIC lab, Annecy le vieux, France
  **
  ** Theses algorithm have been developped by Alexandre BENOIT since his thesis with Alice Caplier at Gipsa-Lab (www.gipsa-lab.inpg.fr) and the research he pursues at LISTIC Lab (www.listic.univ-savoie.fr).
@@ -32,7 +32,7 @@
  ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
  ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
  **
- **               For Human Visual System tools (hvstools)
+ **               For Human Visual System tools (bioinspired)
  ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
  **
  ** Third party copyrights are property of their respective owners.
@@ -62,8 +62,8 @@
  ** the use of this software, even if advised of the possibility of such damage.
  *******************************************************************************/
 
-#ifndef __OPENCV_CONTRIB_RETINA_HPP__
-#define __OPENCV_CONTRIB_RETINA_HPP__
+#ifndef __OPENCV_BIOINSPIRED_RETINA_HPP__
+#define __OPENCV_BIOINSPIRED_RETINA_HPP__
 
 /*
  * Retina.hpp
@@ -73,13 +73,12 @@
  */
 
 #include "opencv2/core.hpp" // for all OpenCV core functionalities access, including cv::Exception support
-#include <valarray>
 
-namespace cv
-{
 
-enum RETINA_COLORSAMPLINGMETHOD
-{
+namespace cv{
+namespace bioinspired{
+
+enum {
     RETINA_COLOR_RANDOM, //!< each pixel position is either R, G or B in a random choice
     RETINA_COLOR_DIAGONAL,//!< color sampling is RGBRGBRGB..., line 2 BRGBRGBRG..., line 3, GBRGBRGBR...
     RETINA_COLOR_BAYER//!< standard bayer sampling
@@ -242,6 +241,14 @@ public:
     virtual void run(InputArray inputImage)=0;
 
     /**
+     * method that applies a luminance correction (initially High Dynamic Range (HDR) tone mapping) using only the 2 local adaptation stages of the retina parvo channel : photoreceptors level and ganlion cells level. Spatio temporal filtering is applied but limited to temporal smoothing and eventually high frequencies attenuation. This is a lighter method than the one available using the regular run method. It is then faster but it does not include complete temporal filtering nor retina spectral whitening. Then, it can have a more limited effect on images with a very high dynamic range. This is an adptation of the original still image HDR tone mapping algorithm of David Alleyson, Sabine Susstruck and Laurence Meylan's work, please cite:
+    * -> Meylan L., Alleysson D., and Susstrunk S., A Model of Retinal Local Adaptation for the Tone Mapping of Color Filter Array Images, Journal of Optical Society of America, A, Vol. 24, N 9, September, 1st, 2007, pp. 2807-2816
+     @param inputImage the input image to process RGB or gray levels
+     @param outputToneMappedImage the output tone mapped image
+     */
+    virtual void applyFastToneMapping(InputArray inputImage, OutputArray outputToneMappedImage)=0;
+
+    /**
      * accessor of the details channel of the retina (models foveal vision)
      * @param retinaOutput_parvo : the output buffer (reallocated if necessary), this output is rescaled for standard 8bits image processing use in OpenCV
      */
@@ -295,8 +302,9 @@ public:
     virtual void activateContoursProcessing(const bool activate)=0;
 };
 CV_EXPORTS Ptr<Retina> createRetina(Size inputSize);
-CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, RETINA_COLORSAMPLINGMETHOD colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+CV_EXPORTS Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod=RETINA_COLOR_BAYER, const bool useRetinaLogSampling=false, const double reductionFactor=1.0, const double samplingStrenght=10.0);
+
 
 }
-#endif /* __OPENCV_CONTRIB_RETINA_HPP__ */
-
+}
+#endif /* __OPENCV_BIOINSPIRED_RETINA_HPP__ */

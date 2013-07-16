@@ -6,7 +6,7 @@
 ** copy or use the software.
 **
 **
-** HVStools : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
+** bioinspired : interfaces allowing OpenCV users to integrate Human Vision System models. Presented models originate from Jeanny Herault's original research and have been reused and adapted by the author&collaborators for computed vision applications since his thesis with Alice Caplier at Gipsa-Lab.
 ** Use: extract still images & image sequences features, from contours details to motion spatio-temporal features, etc. for high level visual scene analysis. Also contribute to image enhancement/compression such as tone mapping.
 **
 ** Maintainers : Listic lab (code author current affiliation & applications) and Gipsa Lab (original research origins & applications)
@@ -32,7 +32,7 @@
 ** Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 ** Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
 **
-**               For Human Visual System tools (hvstools)
+**               For Human Visual System tools (bioinspired)
 ** Copyright (C) 2007-2011, LISTIC Lab, Annecy le Vieux and GIPSA Lab, Grenoble, France, all rights reserved.
 **
 ** Third party copyrights are property of their respective owners.
@@ -113,6 +113,8 @@
 //#define __BASIC_RETINA_ELEMENT_DEBUG
 
 namespace cv
+{
+namespace bioinspired
 {
     class BasicRetinaFilter
     {
@@ -287,7 +289,7 @@ namespace cv
         * @param maxInputValue: the maximum amplitude value measured after local adaptation processing (c.f. function runFilter_LocalAdapdation & runFilter_LocalAdapdation_autonomous)
         * @param meanLuminance: the a priori meann luminance of the input data (should be 128 for 8bits images but can vary greatly in case of High Dynamic Range Images (HDRI)
         */
-        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f){ _v0=v0*maxInputValue; _localLuminanceFactor=1.0f; _localLuminanceAddon=meanLuminance*_v0; _maxInputValue=maxInputValue;};
+        void setV0CompressionParameterToneMapping(const float v0, const float maxInputValue, const float meanLuminance=128.0f){ _v0=v0*maxInputValue; _localLuminanceFactor=1.0f; _localLuminanceAddon=meanLuminance*v0; _maxInputValue=maxInputValue;};
 
         /**
         * update compression parameters while keeping v0 parameter value
@@ -650,7 +652,6 @@ namespace cv
 
     };
 
-}
+}// end of namespace bioinspired
+}// end of namespace cv
 #endif
-
-
