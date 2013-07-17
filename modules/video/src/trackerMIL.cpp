@@ -46,7 +46,6 @@
 namespace cv
 {
 
-
 /**
  * Implementation of the target state
  * Width and height are the dimensions of the bounding box
@@ -56,23 +55,104 @@ class TrackerMILTargetState : public TrackerTargetState
 
 public:
 
-	TrackerMILTargetState( Point2f position, int width, int height )
-	{
+	TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& HAARFeatures )
+{
 		setTargetPosition( position );
 		setWidth( width );
 		setHeight( height );
-	};
+		setTargetFg( foreground );
+		setFeatures( HAARFeatures );
+};
 	inline void setWidth( int targetWidth ){ targetWidth = width; };
 	inline void setHeight( int targetHeight ){ targetHeight = height; };
+	inline void setTargetFg( bool foreground ){ isTarget = foreground; };
+	inline void setFeatures( const Mat& HAARFeatures ){ features = HAARFeatures; };
 	inline int getWidth() const { return width; };
 	inline int getHeight() const { return height; };
+	inline bool isTargetFg() const { return isTarget; };
+	inline Mat getFeatures() const { return features; };
 
 private:
 	int width;
 	int height;
+	bool isTarget;
+	Mat features;
 };
 
 
+
+class TrackerMILModel : public TrackerModel
+{
+public:
+	enum
+	{
+		MODE_POSITIVE    = 1,  // mode for positive features
+		MODE_NEGATIVE    = 2   // mode for negative features
+	};
+
+	TrackerMILModel();
+	~TrackerMILModel(){};
+	void setMode( int trainingMode, const std::vector<Mat>& samples );
+
+protected:
+	void modelEstimationImpl( const std::vector<Mat>& responses );
+	void modelUpdateImpl(){};
+
+private:
+	int mode;
+	std::vector<Mat> currentSample;
+};
+
+/**
+ * TrackerMILModel
+ */
+TrackerMILModel::TrackerMILModel()
+{
+	currentSample.clear();
+	mode = MODE_POSITIVE;
+}
+
+void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
+{
+	if( currentSample.size() == 0)
+	{
+		CV_Error(-1, "The samples in Model estimation are empty");
+		return;
+	}
+
+	for( size_t i = 0; i <  responses.size(); i++ )
+	{
+		//for each column (one sample) there are #num_feature
+		//get informations from currentSample
+		for( size_t j = 0; j < responses.at(i).cols; j++)
+		{
+			//TODO fill all object state
+
+			Size currentSize;
+			Point currentOfs;
+			bool foreground;
+			if( mode == MODE_POSITIVE )
+			{
+				foreground = true;
+			}
+			else
+			{
+				foreground = false;
+			}
+
+		}
+
+
+	}
+}
+
+void TrackerMILModel::setMode( int trainingMode, const std::vector<Mat>& samples )
+{
+	currentSample.clear();
+	currentSample = samples;
+
+	mode = trainingMode;
+}
 
 RNG TrackerMIL::rng;
 /*
@@ -183,7 +263,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> negSamples = sampler->getSamples();
 
-	//TODO compute HAAR features
+	//compute HAAR features
 	TrackerFeatureHAAR::Params HAARparameters;
 	HAARparameters.numFeatures = params.featureSetNumFeatures;
 	HAARparameters.rectSize = Size( boundingBox.width, boundingBox.height );
@@ -195,6 +275,20 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
 	featureSet->extraction( negSamples );
 	std::vector<Mat> negResponse = featureSet->getResponses();
+
+
+	//TODO train a boosted classified
+	model = new TrackerMILModel();
+	Ptr<TrackerStateEstimatorBoosting> stateEstimator;
+	model->setTrackerStateEstimator( stateEstimator );
+
+	//Run model estimation and update
+	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
+	model->modelEstimation( posResponse );
+	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
+	model->modelEstimation( negResponse );
+	model->modelUpdate();
+
 
 	return true;
 }

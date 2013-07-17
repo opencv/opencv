@@ -65,9 +65,6 @@ bool Tracker::init( const Mat& image, const Rect& boundingBox )
     //instantiates the TrackerSampler
     sampler = new TrackerSampler;
 
-    //instantiates the TrackerModel
-    model = new TrackerModel;
-
     bool initTracker = initImpl( image, boundingBox );
 
     if( initTracker )

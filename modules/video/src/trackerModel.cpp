@@ -71,14 +71,24 @@ bool TrackerModel::setTrackerStateEstimator( Ptr<TrackerStateEstimator> trackerS
 	return true;
 }
 
-void TrackerModel::modelEstimation( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+void TrackerModel::modelEstimation( const std::vector<Mat>& responses )
 {
+	modelEstimationImpl( responses );
 
 }
 
-void TrackerModel::modelUpdate( ConfidenceMap& confidenceMap )
+void TrackerModel::clearCurrentConfidenceMap()
 {
-	confidenceMaps.push_back( confidenceMap );
+	currentConfidenceMap.clear();
+}
+
+void TrackerModel::modelUpdate()
+{
+	modelUpdateImpl();
+
+	confidenceMaps.push_back( currentConfidenceMap );
+
+	clearCurrentConfidenceMap();
 }
 
 void TrackerModel::runStateEstimator()
@@ -97,13 +107,13 @@ void TrackerModel::setLastTargetState( const Ptr<TrackerTargetState>& lastTarget
 	trajectory.push_back(lastTargetState);
 }
 
-void TrackerModel::run( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
+void TrackerModel::run( const std::vector<Mat>& responses )
 {
 	//model estimation
-	modelEstimation( responses, confidenceMap );
+	modelEstimation( responses );
 
 	//model update
-	modelUpdate( confidenceMap );
+	modelUpdate();
 
 	//state estimation
 	runStateEstimator();

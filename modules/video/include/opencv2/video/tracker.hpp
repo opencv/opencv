@@ -392,7 +392,7 @@ public:
 	/**
 	 * \brief Destructor
 	 */
-	~TrackerModel();
+	virtual ~TrackerModel();
 
 	/**
 	 * \brief Set TrackerEstimator
@@ -404,16 +404,14 @@ public:
 	 * \brief Estimate the most likely target location
 	 * [AAM] ME, Model Estimation table I
 	 * \param responses Features extracted
-	 * \param confidenceMap Confidence map, all specialized state candidates for current frame
 	 */
-	void modelEstimation( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
+	void modelEstimation( const std::vector<Mat>& responses );
 
 	/**
 	 * \brief Update the model
 	 * [AAM] MU, Model Update table I
-	 * \param confidenceMap Confidence map, all state candidates for current frame
 	 */
-	void modelUpdate( ConfidenceMap& confidenceMap );
+	void modelUpdate();
 
 	/**
 	 * \brief Run the TrackerStateEstimator
@@ -430,7 +428,7 @@ public:
 	 * \brief run the model estimation-update and run the state estimator
 	 * \param responses Features extracted
 	 */
-	void run( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
+	void run( const std::vector<Mat>& responses );
 
 	/**
 	 * \brief Get the list of the confidence map
@@ -448,6 +446,14 @@ private:
 	std::vector<ConfidenceMap> confidenceMaps;
 	Trajectory trajectory;
 	Ptr<TrackerStateEstimator> stateEstimator;
+	ConfidenceMap currentConfidenceMap;
+
+	void clearCurrentConfidenceMap();
+
+protected:
+	virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
+	virtual void modelUpdateImpl() = 0;
+
 };
 
 
