@@ -888,9 +888,10 @@ void ellipse2Poly( Point center, Size axes, int angle,
         pt.y = cvRound( cy + x * beta + y * alpha );
         if( pt != prevPt )
             pts.push_back(pt);
+            prevPt = pt;
     }
 
-    if( pts.size() < 2 )
+    if( pts.size() == 1 )
         pts.push_back(pts[0]);
 }
 
