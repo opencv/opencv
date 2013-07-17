@@ -270,6 +270,8 @@ public:
     }
 
 private:
+    calcHist1D_Invoker operator=(const calcHist1D_Invoker&);
+
     T* p_[one];
     uchar* mask_;
     int step_[one];
@@ -342,6 +344,8 @@ public:
     }
 
 private:
+    calcHist2D_Invoker operator=(const calcHist2D_Invoker&);
+
     T* p_[two];
     uchar* mask_;
     int step_[two];
@@ -432,6 +436,8 @@ public:
     }
 
 private:
+    calcHist3D_Invoker operator=(const calcHist3D_Invoker&);
+
     T* p_[three];
     uchar* mask_;
     int step_[three];
