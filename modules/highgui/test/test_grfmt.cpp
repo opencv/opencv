@@ -338,11 +338,11 @@ TEST(Highgui_Tiff, decode_tile16384x16384)
 TEST(Highgui_WebP, encode_decode_lossless_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
-    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+    string input = string(ts.get_data_path()) + "../cv/shared/lena.png";
     cv::Mat img = cv::imread(input);
     ASSERT_FALSE(img.empty());
 
-    std::string output = cv::tempfile(".webp");
+    string output = cv::tempfile(".webp");
     EXPECT_NO_THROW(cv::imwrite(output, img)); // lossless
 
     cv::Mat img_webp = cv::imread(output);
@@ -387,7 +387,7 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
 TEST(Highgui_WebP, encode_decode_lossy_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
-    std::string input = std::string(ts.get_data_path()) + "/../cv/shared/lena.png";
+    string input = string(ts.get_data_path()) + "/../cv/shared/lena.png";
     cv::Mat img = cv::imread(input);
     ASSERT_FALSE(img.empty());
 
@@ -407,7 +407,7 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
 
 #endif
 
-TEST(Highgui_hdr, regression)
+TEST(Highgui_Hdr, regression)
 {
 	string folder = string(cvtest::TS::ptr()->get_data_path()) + "../cv/hdr/";
 	string name_rle = folder + "grand_canal_rle.hdr";
@@ -419,7 +419,7 @@ TEST(Highgui_hdr, regression)
 
 	double min = 0.0, max = 1.0;
 	minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
-	ASSERT_FALSE(max > 0);
+    ASSERT_FALSE(max > DBL_EPSILON);
 	string tmp_file_name = tempfile(".hdr");
 	vector<int>param(1); 
 	for(int i = 0; i < 2; i++) {
@@ -428,6 +428,6 @@ TEST(Highgui_hdr, regression)
 		Mat written_img = imread(tmp_file_name, -1);
 		ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
 		minMaxLoc(abs(img_rle - written_img), &min, &max);
-		ASSERT_FALSE(max > 0);
+        ASSERT_FALSE(max > DBL_EPSILON);
 	}
 }
