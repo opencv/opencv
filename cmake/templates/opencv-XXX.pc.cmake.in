@@ -3,7 +3,7 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
-includedir_old=@includedir@/opencv -I@includedir@/opencv2
+includedir_old=@includedir@/opencv
 includedir_new=@includedir@
 
 Name: OpenCV
