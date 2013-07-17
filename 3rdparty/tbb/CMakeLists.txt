@@ -230,9 +230,15 @@ endif()
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
+if (WIN32)
+  set(tbb_debug_postfix "_debug") # to fit pragmas in _windef.h inside TBB
+else()
+  set(tbb_debug_postfix ${OPENCV_DEBUG_POSTFIX})
+endif()
+
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
-  DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  DEBUG_POSTFIX "${tbb_debug_postfix}"
   ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
   RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
   )
