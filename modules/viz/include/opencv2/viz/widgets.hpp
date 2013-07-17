@@ -140,6 +140,28 @@ namespace cv
             void setText(const String &text);
             String getText() const;
         };
+        
+        class CV_EXPORTS ImageOverlayWidget : public Widget2D
+        {
+        public:
+            ImageOverlayWidget(const Mat &image, const Point2i &pos);
+            
+            void setImage(const Mat &image);
+            
+        private:
+            struct CopyImpl;
+        };
+        
+        class CV_EXPORTS Image3DWidget : public Widget3D
+        {
+        public:
+            Image3DWidget(const Mat &image);
+            
+            void setImage(const Mat &image);
+        
+        private:
+            struct CopyImpl;
+        };
 
         class CV_EXPORTS CloudWidget : public Widget3D
         {
@@ -183,6 +205,8 @@ namespace cv
         template<> CV_EXPORTS GridWidget Widget::cast<GridWidget>();
         template<> CV_EXPORTS Text3DWidget Widget::cast<Text3DWidget>();
         template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
+        template<> CV_EXPORTS ImageOverlayWidget Widget::cast<ImageOverlayWidget>();
+        template<> CV_EXPORTS Image3DWidget Widget::cast<Image3DWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
         template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();

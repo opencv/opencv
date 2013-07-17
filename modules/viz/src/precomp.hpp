@@ -108,6 +108,7 @@
 #include <vtkImageCanvasSource2D.h>
 #include <vtkImageBlend.h>
 #include <vtkImageStencilData.h>
+#include <vtkImageActor.h>
 
 #include <vtkRenderWindowInteractor.h>
 #include <vtkChartXY.h>
@@ -132,7 +133,7 @@
 #include <vtkImageReader2Factory.h>
 #include <vtkImageReader2.h>
 #include <vtkImageData.h>
-
+#include <vtkExtractEdges.h>
 
 #include <vtkPolyDataNormals.h>
 #include <vtkMapper.h>

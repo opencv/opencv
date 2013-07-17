@@ -432,13 +432,17 @@ cv::viz::GridWidget::GridWidget(Vec2i dimensions, Vec2d spacing, const Color &co
     // Set origin of the grid to be the middle of the grid
     grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0);
     
+    // Extract the edges so we have the grid
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInputConnection(grid->GetProducerPort());
+    filter->Update();
+    
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    mapper->SetInput(grid);
+    mapper->SetInput(filter->GetOutput());
+    
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
     
-    // Show it as wireframe
-    actor->GetProperty ()->SetRepresentationToWireframe ();
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
@@ -541,4 +545,233 @@ cv::String cv::viz::TextWidget::getText() const
     vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     return actor->GetInput();
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// image overlay widget implementation
+
+struct cv::viz::ImageOverlayWidget::CopyImpl
+{
+    struct Impl
+    {
+        static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            int i_chs = image.channels();
+    
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, irows += i_chs)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    memcpy(vrows, irows, i_chs);
+                    std::swap(vrows[0], vrows[2]); // BGR -> RGB
+                }
+            }
+            output->Modified();
+        }
+        
+        static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, ++irows)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    *vrows = *irows;
+                }
+            }
+            output->Modified();
+        }
+    };
+    
+    static void copyImage(const Mat &image, vtkSmartPointer<vtkImageData> output)
+    {
+        int i_chs = image.channels();
+        if (i_chs > 1)
+        {
+            // Multi channel images are handled differently because of BGR <-> RGB
+            Impl::copyImageMultiChannel(image, output);
+        }
+        else
+        {
+            Impl::copyImageSingleChannel(image, output);
+        }
+    }
+};
+
+cv::viz::ImageOverlayWidget::ImageOverlayWidget(const Mat &image, const Point2i &pos)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    vtkSmartPointer<vtkImageMapper> imageMapper = vtkSmartPointer<vtkImageMapper>::New();
+    imageMapper->SetInputConnection(flipFilter->GetOutputPort());
+    imageMapper->SetColorWindow(255); // OpenCV color
+    imageMapper->SetColorLevel(127.5);  
+    
+    vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
+    actor->SetMapper(imageMapper);
+    actor->SetPosition(pos.x, pos.y);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
+void cv::viz::ImageOverlayWidget::setImage(const Mat &image)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    
+    vtkImageMapper *mapper = vtkImageMapper::SafeDownCast(actor->GetMapper());
+    CV_Assert(mapper);
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    mapper->SetInputConnection(flipFilter->GetOutputPort());
+}
+
+template<> cv::viz::ImageOverlayWidget cv::viz::Widget::cast<cv::viz::ImageOverlayWidget>()
+{
+    Widget2D widget = this->cast<Widget2D>();
+    return static_cast<ImageOverlayWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// image 3D widget implementation
+
+struct cv::viz::Image3DWidget::CopyImpl
+{
+    struct Impl
+    {
+        static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            int i_chs = image.channels();
+    
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, irows += i_chs)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    memcpy(vrows, irows, i_chs);
+                    std::swap(vrows[0], vrows[2]); // BGR -> RGB
+                }
+            }
+            output->Modified();
+        }
+        
+        static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, ++irows)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    *vrows = *irows;
+                }
+            }
+            output->Modified();
+        }
+    };
+    
+    static void copyImage(const Mat &image, vtkSmartPointer<vtkImageData> output)
+    {
+        int i_chs = image.channels();
+        if (i_chs > 1)
+        {
+            // Multi channel images are handled differently because of BGR <-> RGB
+            Impl::copyImageMultiChannel(image, output);
+        }
+        else
+        {
+            Impl::copyImageSingleChannel(image, output);
+        }
+    }
+};
+
+cv::viz::Image3DWidget::Image3DWidget(const Mat &image)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
+    actor->SetInput(flipFilter->GetOutput());
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
+void cv::viz::Image3DWidget::setImage(const Mat &image)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    vtkImageActor *actor = vtkImageActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    CV_Assert(actor);
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    actor->SetInput(flipFilter->GetOutput());
+}
+
+template<> cv::viz::Image3DWidget cv::viz::Widget::cast<cv::viz::Image3DWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<Image3DWidget&>(widget);
 }
