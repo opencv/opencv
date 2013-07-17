@@ -40,11 +40,13 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "grfmt_hdr.hpp"
 #include "rgbe.hpp"
 
 namespace cv
 {
+
 HdrDecoder::HdrDecoder()
 {
 	m_signature = "#?RGBE";

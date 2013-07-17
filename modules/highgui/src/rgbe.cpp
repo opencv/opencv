@@ -40,9 +40,12 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "rgbe.hpp"
 #include <math.h>
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <ctype.h>
 
@@ -189,7 +192,7 @@ int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info)
   }
   else if (info) {
     info->valid |= RGBE_VALID_PROGRAMTYPE;
-    for(i=0;i<sizeof(info->programtype)-1;i++) {
+    for(i=0;i<static_cast<int>(sizeof(info->programtype)-1);i++) {
       if ((buf[i+2] == 0) || isspace(buf[i+2]))
 	break;
       info->programtype[i] = buf[i+2];
