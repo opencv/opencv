@@ -87,7 +87,7 @@
 #  elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
 #    define CV_INLINE __inline
 #  else
-#    define CV_INLINE __attribute__ ((always_inline))
+#    define CV_INLINE static inline
 #  endif
 #endif
 
