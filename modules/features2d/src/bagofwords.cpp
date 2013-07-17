@@ -180,8 +180,8 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& key
     imgDescriptor /= descriptors.rows;
 	
 	// Return image keypoint descriptors
-	if (_descriptors) {
-		*_descriptors = descriptors.clone(); 
+    if (_descriptors) {
+        *_descriptors = descriptors.clone(); 
     }
 }
 
