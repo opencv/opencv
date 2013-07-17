@@ -53,8 +53,6 @@ Use for example the *OpenCV_Debug* name. Then by selecting the sheet :menuselect
 .. code-block:: bash
 
    $(OPENCV_DIR)\..\..\include
-   
-Note: the location of the include library is different of the libs folder, so don't forget to add the dots to go to the required parent folder.
 
 .. image:: images/PropertySheetOpenCVInclude.jpg
    :alt: Add the include dir like this. 
@@ -66,7 +64,7 @@ Next go to the :menuselection:`Linker --> General` and under the *"Additional Li
 
 .. code-block:: bash
 
-   $(OPENCV_DIR)\libs
+   $(OPENCV_DIR)\lib
 
 .. image:: images/PropertySheetOpenCVLib.jpg
    :alt: Add the library folder like this. 
