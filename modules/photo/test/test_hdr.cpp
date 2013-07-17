@@ -111,7 +111,7 @@ TEST(Photo_Tonemap, regression)
 	for(int i = TONEMAP_DURAND; i < TONEMAP_COUNT; i++) {
 		
 		Mat result;
-		tonemap(img, result, static_cast<tonemap_algorithms>(i), param);
+        tonemap(img, result, i, param);
 		result.convertTo(result, CV_8UC3, 255);
 		double max = 1.0;
 		minMaxLoc(abs(result - images[i]), NULL, &max);

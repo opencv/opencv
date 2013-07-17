@@ -155,7 +155,7 @@ static void DurandMap(Mat& src_img, Mat& dst_img, const std::vector<float>& para
     merge(channels, dst_img);
 }
 
-void tonemap(InputArray _src, OutputArray _dst, tonemap_algorithms algorithm, 
+void tonemap(InputArray _src, OutputArray _dst, int algorithm,
              const std::vector<float>& params)
 {
     typedef void (*tonemap_func)(Mat&, Mat&, const std::vector<float>&);

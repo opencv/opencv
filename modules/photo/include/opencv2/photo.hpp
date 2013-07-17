@@ -60,7 +60,7 @@ enum
 };
 
 //! the tonemapping algorithm
-enum tonemap_algorithms
+enum
 {
 	TONEMAP_LINEAR,
 
@@ -96,7 +96,7 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
 
 CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, const std::vector<float>& exp_times, OutputArray dst, bool align = false);
 
-CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, tonemap_algorithms algorithm, 
+CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, int algorithm,
 	                      const std::vector<float>& params = std::vector<float>());
 
 CV_EXPORTS_W void exposureFusion(InputArrayOfArrays srcImgs, OutputArray dst, bool align = false, float wc = 1, float ws = 1, float we = 0);
