@@ -524,6 +524,37 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1colRange
 
 
 //
+//  int Mat::dims()
+//
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
+  (JNIEnv* env, jclass, jlong self);
+
+JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
+  (JNIEnv* env, jclass, jlong self)
+{
+    try {
+        LOGD("Mat::n_1dims()");
+        Mat* me = (Mat*) self; //TODO: check for NULL
+        int _retval_ = me->dims;
+
+        return _retval_;
+    } catch(cv::Exception e) {
+        LOGD("Mat::n_1cols() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("Mat::n_1cols() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {Mat::n_1cols()}");
+        return 0;
+    }
+}
+
+
+//
 //  int Mat::cols()
 //
 
