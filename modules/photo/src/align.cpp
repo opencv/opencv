@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 
