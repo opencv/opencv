@@ -179,10 +179,11 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
     std::vector<float> d(costMatrix.rows), pred(costMatrix.rows), v(costMatrix.rows);
 
+    const float LOWV=1e-6;
     bool unassignedfound;
     int  i, imin, numfree = 0, prvnumfree, f, i0, k, freerow;
     int  j, j1, j2, endofpath, last, low, up;
-    double min, h, umin, usubmin, v2;
+    float min, h, umin, usubmin, v2;
 
     /* COLUMN REDUCTION */
     for (j = costMatrix.rows-1; j >= 0; j--)
@@ -272,7 +273,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
             }
             i0 = colsol[j1];
 
-            if (fabs(umin-usubmin) > 1e-10) //if( umin < usubmin )
+            if (fabs(umin-usubmin) > LOWV) //if( umin < usubmin )
             {
                 v[j1] = v[j1] - (usubmin - umin);
             }
@@ -291,7 +292,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
             if (i0 >= 0)
             {
                 //if( umin < usubmin )
-                if (fabs(umin-usubmin) > 1e-10)
+                if (fabs(umin-usubmin) > LOWV)
                 {
                     free[--k] = i0;
                 }

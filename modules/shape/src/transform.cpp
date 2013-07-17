@@ -79,7 +79,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0));
+    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0) & (pts2.cols>=pts1.cols));
     CV_Assert(_matches.size()>1);
 
     /* Use only valid matchings */
@@ -126,6 +126,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
                                            Point2f(shape1.at<float>(j,0),shape1.at<float>(j,1)));
         }
     }
+
     normalize(matK, matK,0,1, NORM_MINMAX);
     Mat logMatK;
     log(matK,logMatK);
@@ -181,6 +182,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
         complete_shape1.at<float>(i,0) = pt1.x;
         complete_shape1.at<float>(i,1) = pt1.y;
     }
+
     //Creating U=r^2*log(r^2)
     Mat matU(complete_shape1.rows,complete_shape1.rows,CV_32F);
     for (int i=0; i<matU.rows; i++)
@@ -207,13 +209,14 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     afparam.at<float>(0,1)=matX.at<float>(matX.rows-2,0);
     afparam.at<float>(0,2)=matX.at<float>(matX.rows-1,0);
     Mat auxaf=Mat::ones(3,matU.rows,CV_32F);
+
     for (int i=0; i<matU.cols; i++)
     {
         auxaf.at<float>(1,i)=complete_shape1.at<float>(i,0);
         auxaf.at<float>(2,i)=complete_shape1.at<float>(i,1);
     }
-    Mat fxAffine=afparam*auxaf;
 
+    Mat fxAffine=afparam*auxaf;
     //creating fxWarp
     Mat warpaux(1,fxAffine.cols,CV_32F);
     for (int i=0; i<warpaux.cols; i++)
@@ -221,7 +224,6 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
         warpaux.at<float>(0,i)=matX.at<float>(i,0);
     }
     Mat fxWarp=warpaux*matU;
-
     //fx
     Mat fx=fxWarp+fxAffine;
 
@@ -242,6 +244,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     Mat fy=fyWarp+fyAffine;
 
     //Ensambling output
+    outPts.clear();
     for (int i=0; i<fy.cols; i++)
     {
         outPts.push_back(Point2f(fx.at<float>(0,i), fy.at<float>(0,i)));
