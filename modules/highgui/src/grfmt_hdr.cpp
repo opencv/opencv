@@ -78,17 +78,19 @@ bool  HdrDecoder::readHeader()
 	return true;
 }
 
-bool HdrDecoder::readData(Mat& img)
+bool HdrDecoder::readData(Mat& _img)
 {
+	Mat img(m_height, m_width, CV_32FC3);
 	if(!file) {
 		readHeader();
 	}
-	if(img.cols != m_width || img.rows != m_height ||
-	   img.type() != CV_32FC3) {
-		CV_Error(Error::StsError, "HDR decoder: bad mat");
-	}
 	RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
 	fclose(file); file = NULL;
+	if(_img.depth() == img.depth()) {
+		img.convertTo(_img, _img.type());
+	} else {
+		img.convertTo(_img, _img.type(), 255);
+	}
 	return true;
 }
 
@@ -115,10 +117,13 @@ HdrEncoder::~HdrEncoder()
 {
 }
 
-bool HdrEncoder::write( const Mat& img, const std::vector<int>& params )
+bool HdrEncoder::write( const Mat& _img, const std::vector<int>& params )
 {
-	if(img.type() != CV_32FC3) {
-		CV_Error(Error::StsBadArg, "HDR encoder: need 32FC3 mat");
+	Mat img;
+	if(_img.depth() == CV_32F) {
+		_img.convertTo(img, CV_32FC3);
+	} else {
+		_img.convertTo(img, CV_32FC3, 1/255.0f);
 	}
 	if(!(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE)) {
 		CV_Error(Error::StsBadArg, "HDR encoder: wrong compression param");
