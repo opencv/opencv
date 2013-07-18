@@ -40,6 +40,7 @@
 //
 //M*/
 
+#include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 
@@ -52,8 +53,7 @@ static float getParam(const std::vector<float>& params, size_t i, float defval)
         return params[i];
     } else {
         return defval;
-    }
-        
+    }       
 }
 
 static void DragoMap(Mat& src_img, Mat &dst_img, const std::vector<float>& params)
@@ -63,7 +63,7 @@ static void DragoMap(Mat& src_img, Mat &dst_img, const std::vector<float>& param
     cvtColor(src_img, gray_img, COLOR_RGB2GRAY);
     Mat log_img;
     log(gray_img, log_img);
-    float mean = exp((float)sum(log_img)[0] / log_img.total());
+    float mean = expf(static_cast<float>(sum(log_img)[0]) / log_img.total());
     gray_img /= mean;
     log_img.release();
 
