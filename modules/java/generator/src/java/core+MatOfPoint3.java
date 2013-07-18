@@ -1,4 +1,4 @@
-cpackage org.opencv.core;
+package org.opencv.core;
 
 import java.util.Arrays;
 import java.util.List;
