@@ -619,6 +619,7 @@ namespace cv { namespace gpu { namespace device
         //////////////////////////////////////////////////////////////////////////
         // mulSpectrums
 
+#ifdef HAVE_CUFFT
         __global__ void mulSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -642,11 +643,13 @@ namespace cv { namespace gpu { namespace device
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
+#endif
 
 
         //////////////////////////////////////////////////////////////////////////
         // mulSpectrums_CONJ
 
+#ifdef HAVE_CUFFT
         __global__ void mulSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -670,11 +673,13 @@ namespace cv { namespace gpu { namespace device
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
+#endif
 
 
         //////////////////////////////////////////////////////////////////////////
         // mulAndScaleSpectrums
 
+#ifdef HAVE_CUFFT
         __global__ void mulAndScaleSpectrumsKernel(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -699,11 +704,13 @@ namespace cv { namespace gpu { namespace device
             if (stream)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
+#endif
 
 
         //////////////////////////////////////////////////////////////////////////
         // mulAndScaleSpectrums_CONJ
 
+#ifdef HAVE_CUFFT
         __global__ void mulAndScaleSpectrumsKernel_CONJ(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c)
         {
             const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -728,6 +735,7 @@ namespace cv { namespace gpu { namespace device
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
         }
+#endif
 
         //////////////////////////////////////////////////////////////////////////
         // buildWarpMaps
