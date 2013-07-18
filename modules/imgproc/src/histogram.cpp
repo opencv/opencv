@@ -777,7 +777,6 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
 #ifdef HAVE_TBB
             calcHist1D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size[0], dims, imsize);
             parallel_for(BlockedRange(0, imsize.height), body);
-            return;
 #else
             double a = uniranges[0], b = uniranges[1];
             int sz = size[0], d0 = deltas[0], step0 = deltas[1];
@@ -802,13 +801,13 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
                         }
             }
 #endif //HAVE_TBB
+            return;
         }
         else if( dims == 2 )
         {
 #ifdef HAVE_TBB
             calcHist2D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size, dims, imsize, hstep);
             parallel_for(BlockedRange(0, imsize.height), body);
-            return;
 #else
             double a0 = uniranges[0], b0 = uniranges[1], a1 = uniranges[2], b1 = uniranges[3];
             int sz0 = size[0], sz1 = size[1];
@@ -839,6 +838,7 @@ calcHist_( vector<uchar*>& _ptrs, const vector<int>& _deltas,
                         }
             }
 #endif //HAVE_TBB
+            return;
         }
         else if( dims == 3 )
         {
