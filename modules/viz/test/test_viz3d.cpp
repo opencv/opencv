@@ -43,6 +43,7 @@
 #include <opencv2/viz.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
 #include <fstream>
 #include <string>
@@ -89,7 +90,7 @@ TEST(Viz_viz3d, accuracy)
 
     viz::LineWidget lw(Point3f(0, 0, 0), Point3f(4.f, 4.f,4.f), viz::Color::green());
     viz::PlaneWidget pw(Vec4f(0.0,1.0,2.0,3.0), 5.0);
-    viz::SphereWidget sw(Point3f(0, 0, 0), 0.5);
+    viz::SphereWidget sw(Point3f(0, 0, 0), 0.2);
     viz::ArrowWidget aw(Point3f(0, 0, 0), Point3f(1, 1, 1), 0.01, viz::Color::red());
     viz::CircleWidget cw(Point3f(0, 0, 0), 0.5, 0.01, viz::Color::green());
     viz::CylinderWidget cyw(Point3f(0, 0, 0), Point3f(-1, -1, -1), 0.5, 30, viz::Color::green());
@@ -99,18 +100,18 @@ TEST(Viz_viz3d, accuracy)
     viz::CloudWidget pcw(cloud, colors);
     viz::CloudWidget pcw2(cloud, viz::Color::magenta());
     
-    viz.showWidget("line", lw);
-    viz.showWidget("plane", pw);
+//     viz.showWidget("line", lw);
+//     viz.showWidget("plane", pw);
     viz.showWidget("sphere", sw);
-    viz.showWidget("arrow", aw);
-    viz.showWidget("circle", cw);
-    viz.showWidget("cylinder", cyw);
-    viz.showWidget("cube", cuw);
+//     viz.showWidget("arrow", aw);
+//     viz.showWidget("circle", cw);
+//     viz.showWidget("cylinder", cyw);
+//     viz.showWidget("cube", cuw);
     viz.showWidget("coordinateSystem", csw);
-    viz.showWidget("coordinateSystem2", viz::CoordinateSystemWidget(2.0), Affine3f().translate(Vec3f(2, 0, 0)));
-    viz.showWidget("text",tw);
-    viz.showWidget("pcw",pcw);
-    viz.showWidget("pcw2",pcw2);
+//     viz.showWidget("coordinateSystem2", viz::CoordinateSystemWidget(2.0), Affine3f().translate(Vec3f(2, 0, 0)));
+//     viz.showWidget("text",tw);
+//     viz.showWidget("pcw",pcw);
+//     viz.showWidget("pcw2",pcw2);
     
 //     viz::LineWidget lw2 = lw;
 //     v.showPointCloud("cld",cloud, colors);
@@ -125,13 +126,26 @@ TEST(Viz_viz3d, accuracy)
     
     
     viz::PolyLineWidget plw(points, viz::Color::green());
-    viz.showWidget("polyline", plw);
+//     viz.showWidget("polyline", plw);
 //     lw = v.getWidget("polyline").cast<viz::LineWidget>();
     
-    viz::Mesh3d::Ptr mesh = cv::viz::Mesh3d::loadMesh("horse.ply");
+    viz::Mesh3d mesh = cv::viz::Mesh3d::loadMesh("horse.ply");
     
-    viz::MeshWidget mw(*mesh);
-    viz.showWidget("mesh", mw);
+    viz::MeshWidget mw(mesh);
+//     viz.showWidget("mesh", mw);
+    
+    Mat img = imread("opencv.png");
+//     resize(img, img, Size(50,50));
+//     viz.showWidget("img", viz::ImageOverlayWidget(img, Point2i(50,50)));
+    
+    viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
+    viz::Text3DWidget t3w1("Camera1", Point3f(0.4, 0.6, 3.0), 0.1);
+    
+    
+    viz.showWidget("CameraPositionWidget", cpw);
+    viz.showWidget("camera_label", t3w1);
+//     viz.showWidget("CameraPositionWidget2", cpw2);
+//     viz.showWidget("CameraPositionWidget3", cpw3);
     
     viz.spin();
 
@@ -156,13 +170,14 @@ TEST(Viz_viz3d, accuracy)
         
         //plw.setColor(viz::Color(col_blue, col_green, col_red));
         
-        sw.setPose(cloudPosition);
+//         sw.setPose(cloudPosition);
 //         pw.setPose(cloudPosition);
         aw.setPose(cloudPosition);
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
 //         lw.setPose(cloudPosition);
-        cuw.setPose(cloudPosition);
+//         cpw.updatePose(Affine3f(0.1,0.0,0.0, cv::Vec3f(0.0,0.0,0.0)));
+//         cpw.setPose(cloudPosition);
 //         cnw.setPose(cloudPosition);
 //         v.showWidget("pcw",pcw, cloudPosition);
 //         v.showWidget("pcw2",pcw2, cloudPosition2);

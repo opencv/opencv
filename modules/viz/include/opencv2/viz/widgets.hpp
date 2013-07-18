@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opencv2/viz/types.hpp>
+#include <common.h>
 
 
 namespace cv
@@ -161,6 +162,13 @@ namespace cv
         
         private:
             struct CopyImpl;
+        };
+        
+        class CV_EXPORTS CameraPositionWidget : public Widget3D
+        {
+        public:
+            CameraPositionWidget(const Vec3f &position, const Vec3f &look_at, const Vec3f &up_vector, double scale = 1.0);
+            
         };
 
         class CV_EXPORTS CloudWidget : public Widget3D

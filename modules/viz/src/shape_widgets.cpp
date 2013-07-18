@@ -775,3 +775,73 @@ template<> cv::viz::Image3DWidget cv::viz::Widget::cast<cv::viz::Image3DWidget>(
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<Image3DWidget&>(widget);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// camera position widget implementation
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec3f &position, const Vec3f &look_at, const Vec3f &up_vector, double scale)
+{
+    vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
+    axes->SetOrigin (0, 0, 0);
+    axes->SetScaleFactor (scale);
+    
+    // Compute the transformation matrix for drawing the camera frame in a scene
+    Vec3f u,v,n;
+    n = normalize(look_at - position);
+    u = normalize(up_vector.cross(n));
+    v = n.cross(u);
+    
+    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+    mat_trans->SetElement(0,0,u[0]);
+    mat_trans->SetElement(0,1,u[1]);
+    mat_trans->SetElement(0,2,u[2]);
+    mat_trans->SetElement(1,0,v[0]);
+    mat_trans->SetElement(1,1,v[1]);
+    mat_trans->SetElement(1,2,v[2]);
+    mat_trans->SetElement(2,0,n[0]);
+    mat_trans->SetElement(2,1,n[1]);
+    mat_trans->SetElement(2,2,n[2]);
+    // Inverse rotation (orthogonal, so just take transpose)
+    mat_trans->Transpose(); 
+    // Then translate the coordinate frame to camera position
+    mat_trans->SetElement(0,3,position[0]);
+    mat_trans->SetElement(1,3,position[1]);
+    mat_trans->SetElement(2,3,position[2]);
+    mat_trans->SetElement(3,3,1);
+
+    vtkSmartPointer<vtkFloatArray> axes_colors = vtkSmartPointer<vtkFloatArray>::New ();
+    axes_colors->Allocate (6);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (1.0);
+    axes_colors->InsertNextValue (1.0);
+
+    vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
+    axes_data->Update ();
+    axes_data->GetPointData ()->SetScalars (axes_colors);
+    
+    // Transform the default coordinate frame
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->PreMultiply();
+    transform->SetMatrix(mat_trans);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    filter->SetInput(axes_data);
+    filter->SetTransform(transform);
+    filter->Update();
+    
+    vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
+    axes_tubes->SetInput (filter->GetOutput());
+    axes_tubes->SetRadius (axes->GetScaleFactor () / 50.0);
+    axes_tubes->SetNumberOfSides (6);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetScalarModeToUsePointData ();
+    mapper->SetInput(axes_tubes->GetOutput ());
+
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
