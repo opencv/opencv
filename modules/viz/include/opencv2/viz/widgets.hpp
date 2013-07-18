@@ -169,7 +169,7 @@ namespace cv
         public:
             CameraPositionWidget(double scale = 1.0);
             CameraPositionWidget(const Vec3f &position, const Vec3f &look_at, const Vec3f &up_vector, double scale = 1.0);
-            CameraPositionWidget(const Matx33f &K, const Color &color = Color::white());
+            CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
         };
 
         class CV_EXPORTS CloudWidget : public Widget3D

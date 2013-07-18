@@ -881,22 +881,21 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec3f &position, const
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Color &color)
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, double scale, const Color &color)
 {
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    float focal_length = K(0,0);
-    float c_x = K(0,2);
+    float f_x = K(0,0);
+    float f_y = K(1,1);
     float c_y = K(1,2);
-    float aspect_ratio = c_x / c_y;
-    float img_width = c_x * 2;
-    float img_height = c_y * 2;
+    float aspect_ratio = f_y / f_x;
     // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
-    float fovy = 2.0f * atan2(c_y,focal_length) * 180 / CV_PI;
+    float fovy = 2.0f * atan2(c_y,f_y) * 180 / CV_PI;
     
     camera->SetViewAngle(fovy);
     camera->SetPosition(0.0,0.0,0.0);
     camera->SetViewUp(0.0,1.0,0.0);
     camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetClippingRange(0.01, scale * f_y * 0.001);
     
     double planesArray[24];
     camera->GetFrustumPlanes(aspect_ratio, planesArray);

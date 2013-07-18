@@ -144,7 +144,8 @@ TEST(Viz_viz3d, accuracy)
     
     viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
     viz::CameraPositionWidget cpw2(0.5);
-    viz::CameraPositionWidget frustum(K, viz::Color::green());
+    viz::CameraPositionWidget frustum(K, 2.0, viz::Color::green());
+    viz::CameraPositionWidget frustum2(K, 4.0, viz::Color::red());
     viz::Text3DWidget t3w1("Camera1", Point3f(0.4, 0.6, 3.0), 0.1);
     viz::Text3DWidget t3w2("Camera2", Point3f(0,0,0), 0.1);
     
@@ -153,6 +154,7 @@ TEST(Viz_viz3d, accuracy)
     viz.showWidget("camera_label", t3w1);
     viz.showWidget("camera_label2", t3w2, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
     viz.showWidget("frustrum", frustum, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
+    viz.showWidget("frustrum2", frustum2, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
     
 //     viz.showWidget("CameraPositionWidget2", cpw2);
 //     viz.showWidget("CameraPositionWidget3", cpw3);
