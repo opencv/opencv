@@ -44,4 +44,4 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN(gpuimgproc, printCudaInfo())
+CV_PERF_TEST_CUDA_MAIN(gpuimgproc)
