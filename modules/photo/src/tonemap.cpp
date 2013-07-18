@@ -73,7 +73,7 @@ static void DragoMap(Mat& src_img, Mat &dst_img, const std::vector<float>& param
     Mat map;
     log(gray_img + 1.0f, map);
     Mat div;
-    pow(gray_img / (float)max, log(bias_value) / log(0.5f), div);
+    pow(gray_img / (float)max, logf(bias_value) / logf(0.5f), div);
     log(2.0f + 8.0f * div, div);
     map = map.mul(1.0f / div);
     map = map.mul(1.0f / gray_img);
