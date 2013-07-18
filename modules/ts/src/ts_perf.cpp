@@ -51,10 +51,6 @@ static void setCurrentThreadAffinityMask(int mask)
 }
 #endif
 
-#ifdef HAVE_CUDA
-# include <opencv2/core/gpumat.hpp>
-#endif
-
 namespace {
 
 class PerfEnvironment: public ::testing::Environment
@@ -135,7 +131,7 @@ Regression& Regression::addKeypoints(TestBase* test, const std::string& name, co
 
 Regression& Regression::addMatches(TestBase* test, const std::string& name, const std::vector<cv::DMatch>& array, double eps, ERROR_TYPE err)
 {
-    int len = (int)array.size();      
+    int len = (int)array.size();
     cv::Mat queryIdx(len, 1, CV_32SC1, len ? (void*)&array[0].queryIdx : 0, sizeof(cv::DMatch));
     cv::Mat trainIdx(len, 1, CV_32SC1, len ? (void*)&array[0].trainIdx : 0, sizeof(cv::DMatch));
     cv::Mat imgIdx  (len, 1, CV_32SC1, len ? (void*)&array[0].imgIdx : 0,   sizeof(cv::DMatch));
@@ -555,13 +551,6 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
     }
 
     std::string nodename = getCurrentTestNodeName();
-
-    // This is a hack for compatibility and it should eventually get removed.
-    // gpu's tests don't even have CPU sanity data anymore.
-    if(suiteName == "gpu")
-    {
-        nodename = (PERF_RUN_GPU() ? "GPU_" : "CPU_") + nodename;
-    }
 
     cv::FileNode n = rootIn[nodename];
     if(n.isNone())
