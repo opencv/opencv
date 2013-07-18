@@ -51,7 +51,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 {
     if (src.channels() == 3)
     {
-        gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
+        cv::gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -62,7 +62,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 
     if (scale != 1)
     {
-        gpu::resize(gray, resized, sz);
+        cv::gpu::resize(gray, resized, sz);
     }
     else
     {
@@ -294,7 +294,7 @@ int main(int argc, const char *argv[])
         }
         cout << endl;
 
-        cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
+        cv::cvtColor(resized_cpu, frameDisp, COLOR_GRAY2BGR);
         displayState(frameDisp, helpScreen, useGPU, findLargestObject, filterRects, fps);
         imshow("result", frameDisp);
 

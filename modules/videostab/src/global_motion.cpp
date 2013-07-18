@@ -742,6 +742,8 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
+    detector_ = gpu::createGoodFeaturesToTrackDetector(CV_8UC1);
+
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
     setOutlierRejector(new NullOutlierRejector());
 }
@@ -769,7 +771,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
     }
 
     // find keypoints
-    detector_(grayFrame0, pointsPrev_);
+    detector_->detect(grayFrame0, pointsPrev_);
 
     // find correspondences
     optFlowEstimator_.run(frame0, frame1, pointsPrev_, points_, status_);

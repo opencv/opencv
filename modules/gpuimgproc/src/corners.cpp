@@ -45,15 +45,10 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
 
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int) { throw_no_cuda(); }
-void cv::gpu::cornerHarris(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, double, int, Stream&) { throw_no_cuda(); }
-
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int) { throw_no_cuda(); }
-void cv::gpu::cornerMinEigenVal(const GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, int, int, int, Stream&) { throw_no_cuda(); }
+Ptr<gpu::CornernessCriteria> cv::gpu::createHarrisCorner(int, int, int, double, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }
+Ptr<gpu::CornernessCriteria> cv::gpu::createMinEigenValCorner(int, int, int, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -68,89 +63,127 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    void extractCovData(const GpuMat& src, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
+    class CornerBase : public CornernessCriteria
     {
-        (void) buf;
+    protected:
+        CornerBase(int srcType, int blockSize, int ksize, int borderType);
 
-        double scale = static_cast<double>(1 << ((ksize > 0 ? ksize : 3) - 1)) * blockSize;
+        void extractCovData(const GpuMat& src, Stream& stream);
 
-        if (ksize < 0)
+        int srcType_;
+        int blockSize_;
+        int ksize_;
+        int borderType_;
+        GpuMat Dx_, Dy_;
+
+    private:
+        Ptr<gpu::Filter> filterDx_, filterDy_;
+    };
+
+    CornerBase::CornerBase(int srcType, int blockSize, int ksize, int borderType) :
+        srcType_(srcType), blockSize_(blockSize), ksize_(ksize), borderType_(borderType)
+    {
+        CV_Assert( borderType_ == BORDER_REFLECT101 || borderType_ == BORDER_REPLICATE || borderType_ == BORDER_REFLECT );
+
+        const int sdepth = CV_MAT_DEPTH(srcType_);
+        const int cn = CV_MAT_CN(srcType_);
+
+        CV_Assert( cn == 1 );
+
+        double scale = static_cast<double>(1 << ((ksize_ > 0 ? ksize_ : 3) - 1)) * blockSize_;
+
+        if (ksize_ < 0)
             scale *= 2.;
 
-        if (src.depth() == CV_8U)
+        if (sdepth == CV_8U)
             scale *= 255.;
 
         scale = 1./scale;
 
-        Dx.create(src.size(), CV_32F);
-        Dy.create(src.size(), CV_32F);
-
-        Ptr<gpu::Filter> filterDx, filterDy;
-
-        if (ksize > 0)
+        if (ksize_ > 0)
         {
-            filterDx = gpu::createSobelFilter(src.type(), CV_32F, 1, 0, ksize, scale, borderType);
-            filterDy = gpu::createSobelFilter(src.type(), CV_32F, 0, 1, ksize, scale, borderType);
+            filterDx_ = gpu::createSobelFilter(srcType, CV_32F, 1, 0, ksize_, scale, borderType_);
+            filterDy_ = gpu::createSobelFilter(srcType, CV_32F, 0, 1, ksize_, scale, borderType_);
         }
         else
         {
-            filterDx = gpu::createScharrFilter(src.type(), CV_32F, 1, 0, scale, borderType);
-            filterDy = gpu::createScharrFilter(src.type(), CV_32F, 0, 1, scale, borderType);
+            filterDx_ = gpu::createScharrFilter(srcType, CV_32F, 1, 0, scale, borderType_);
+            filterDy_ = gpu::createScharrFilter(srcType, CV_32F, 0, 1, scale, borderType_);
+        }
+    }
+
+    void CornerBase::extractCovData(const GpuMat& src, Stream& stream)
+    {
+        CV_Assert( src.type() == srcType_ );
+        filterDx_->apply(src, Dx_, stream);
+        filterDy_->apply(src, Dy_, stream);
+    }
+
+    class Harris : public CornerBase
+    {
+    public:
+        Harris(int srcType, int blockSize, int ksize, double k, int borderType) :
+            CornerBase(srcType, blockSize, ksize, borderType), k_(static_cast<float>(k))
+        {
         }
 
-        filterDx->apply(src, Dx);
-        filterDy->apply(src, Dy);
+        void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        float k_;
+    };
+
+    void Harris::compute(InputArray _src, OutputArray _dst, Stream& stream)
+    {
+        using namespace cv::gpu::cudev::imgproc;
+
+        GpuMat src = _src.getGpuMat();
+
+        extractCovData(src, stream);
+
+        _dst.create(src.size(), CV_32FC1);
+        GpuMat dst = _dst.getGpuMat();
+
+        cornerHarris_gpu(blockSize_, k_, Dx_, Dy_, dst, borderType_, StreamAccessor::getStream(stream));
+    }
+
+    class MinEigenVal : public CornerBase
+    {
+    public:
+        MinEigenVal(int srcType, int blockSize, int ksize, int borderType) :
+            CornerBase(srcType, blockSize, ksize, borderType)
+        {
+        }
+
+        void compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
+
+    private:
+        float k_;
+    };
+
+    void MinEigenVal::compute(InputArray _src, OutputArray _dst, Stream& stream)
+    {
+        using namespace cv::gpu::cudev::imgproc;
+
+        GpuMat src = _src.getGpuMat();
+
+        extractCovData(src, stream);
+
+        _dst.create(src.size(), CV_32FC1);
+        GpuMat dst = _dst.getGpuMat();
+
+        cornerMinEigenVal_gpu(blockSize_, Dx_, Dy_, dst, borderType_, StreamAccessor::getStream(stream));
     }
 }
 
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, double k, int borderType)
+Ptr<gpu::CornernessCriteria> cv::gpu::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType)
 {
-    GpuMat Dx, Dy;
-    cornerHarris(src, dst, Dx, Dy, blockSize, ksize, k, borderType);
+    return new Harris(srcType, blockSize, ksize, k, borderType);
 }
 
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, double k, int borderType)
+Ptr<gpu::CornernessCriteria> cv::gpu::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType)
 {
-    GpuMat buf;
-    cornerHarris(src, dst, Dx, Dy, buf, blockSize, ksize, k, borderType);
-}
-
-void cv::gpu::cornerHarris(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, double k, int borderType, Stream& stream)
-{
-    using namespace cv::gpu::cudev::imgproc;
-
-    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-
-    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-
-    dst.create(src.size(), CV_32F);
-
-    cornerHarris_gpu(blockSize, static_cast<float>(k), Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, int blockSize, int ksize, int borderType)
-{
-    GpuMat Dx, Dy;
-    cornerMinEigenVal(src, dst, Dx, Dy, blockSize, ksize, borderType);
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, int blockSize, int ksize, int borderType)
-{
-    GpuMat buf;
-    cornerMinEigenVal(src, dst, Dx, Dy, buf, blockSize, ksize, borderType);
-}
-
-void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuMat& Dy, GpuMat& buf, int blockSize, int ksize, int borderType, Stream& stream)
-{
-    using namespace ::cv::gpu::cudev::imgproc;
-
-    CV_Assert(borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
-
-    extractCovData(src, Dx, Dy, buf, blockSize, ksize, borderType, stream);
-
-    dst.create(src.size(), CV_32F);
-
-    cornerMinEigenVal_gpu(blockSize, Dx, Dy, dst, borderType, StreamAccessor::getStream(stream));
+    return new MinEigenVal(srcType, blockSize, ksize, borderType);
 }
 
 #endif /* !defined (HAVE_CUDA) */

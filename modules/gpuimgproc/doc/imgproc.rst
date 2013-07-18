@@ -5,11 +5,72 @@ Image Processing
 
 
 
+gpu::CannyEdgeDetector
+----------------------
+.. ocv:class:: gpu::CannyEdgeDetector : public Algorithm
+
+Base class for Canny Edge Detector. ::
+
+    class CV_EXPORTS CannyEdgeDetector : public Algorithm
+    {
+    public:
+        virtual void detect(InputArray image, OutputArray edges) = 0;
+        virtual void detect(InputArray dx, InputArray dy, OutputArray edges) = 0;
+
+        virtual void setLowThreshold(double low_thresh) = 0;
+        virtual double getLowThreshold() const = 0;
+
+        virtual void setHighThreshold(double high_thresh) = 0;
+        virtual double getHighThreshold() const = 0;
+
+        virtual void setAppertureSize(int apperture_size) = 0;
+        virtual int getAppertureSize() const = 0;
+
+        virtual void setL2Gradient(bool L2gradient) = 0;
+        virtual bool getL2Gradient() const = 0;
+    };
+
+
+
+gpu::CannyEdgeDetector::detect
+------------------------------
+Finds edges in an image using the [Canny86]_ algorithm.
+
+.. ocv:function:: void gpu::CannyEdgeDetector::detect(InputArray image, OutputArray edges)
+
+.. ocv:function:: void gpu::CannyEdgeDetector::detect(InputArray dx, InputArray dy, OutputArray edges)
+
+    :param image: Single-channel 8-bit input image.
+
+    :param dx: First derivative of image in the vertical direction. Support only ``CV_32S`` type.
+
+    :param dy: First derivative of image in the horizontal direction. Support only ``CV_32S`` type.
+
+    :param edges: Output edge map. It has the same size and type as  ``image`` .
+
+
+
+gpu::createCannyEdgeDetector
+----------------------------
+Creates implementation for :ocv:class:`gpu::CannyEdgeDetector` .
+
+.. ocv:function:: Ptr<CannyEdgeDetector> gpu::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+
+    :param low_thresh: First threshold for the hysteresis procedure.
+
+    :param high_thresh: Second threshold for the hysteresis procedure.
+
+    :param apperture_size: Aperture size for the  :ocv:func:`Sobel`  operator.
+
+    :param L2gradient: Flag indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to compute the image gradient magnitude ( ``L2gradient=true`` ), or a faster default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
+
+
+
 gpu::meanShiftFiltering
----------------------------
+-----------------------
 Performs mean-shift filtering for each point of the source image.
 
-.. ocv:function:: void gpu::meanShiftFiltering( const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -26,10 +87,10 @@ It maps each point of the source image into another point. As a result, you have
 
 
 gpu::meanShiftProc
-----------------------
+------------------
 Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
-.. ocv:function:: void gpu::meanShiftProc( const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria=TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -48,14 +109,14 @@ Performs a mean-shift procedure and stores information about processed points (t
 
 
 gpu::meanShiftSegmentation
-------------------------------
+--------------------------
 Performs a mean-shift segmentation of the source image and eliminates small segments.
 
-.. ocv:function:: void gpu::meanShiftSegmentation(const GpuMat& src, Mat& dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void gpu::meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
-    :param dst: Segmented image with the same size and type as  ``src`` .
+    :param dst: Segmented image with the same size and type as  ``src`` (host memory).
 
     :param sp: Spatial window radius.
 
@@ -67,46 +128,49 @@ Performs a mean-shift segmentation of the source image and eliminates small segm
 
 
 
-gpu::MatchTemplateBuf
+gpu::TemplateMatching
 ---------------------
-.. ocv:struct:: gpu::MatchTemplateBuf
+.. ocv:class:: gpu::TemplateMatching : public Algorithm
 
-Class providing memory buffers for :ocv:func:`gpu::matchTemplate` function, plus it allows to adjust some specific parameters. ::
+Base class for Template Matching. ::
 
-    struct CV_EXPORTS MatchTemplateBuf
+    class CV_EXPORTS TemplateMatching : public Algorithm
     {
-        Size user_block_size;
-        GpuMat imagef, templf;
-        std::vector<GpuMat> images;
-        std::vector<GpuMat> image_sums;
-        std::vector<GpuMat> image_sqsums;
+    public:
+        virtual void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null()) = 0;
     };
 
-You can use field `user_block_size` to set specific block size for :ocv:func:`gpu::matchTemplate` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 
-
-gpu::matchTemplate
-----------------------
+gpu::TemplateMatching::match
+----------------------------
 Computes a proximity map for a raster template and an image where the template is searched for.
 
-.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, Stream &stream = Stream::Null())
+.. ocv:function:: void gpu::TemplateMatching::match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::matchTemplate(const GpuMat& image, const GpuMat& templ, GpuMat& result, int method, MatchTemplateBuf &buf, Stream& stream = Stream::Null())
-
-    :param image: Source image.  ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
+    :param image: Source image.
 
     :param templ: Template image with the size and type the same as  ``image`` .
 
     :param result: Map containing comparison results ( ``CV_32FC1`` ). If  ``image`` is  *W x H*  and ``templ`` is  *w x h*, then  ``result`` must be *W-w+1 x H-h+1*.
 
-    :param method: Specifies the way to compare the template with the image.
-
-    :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`gpu::MatchTemplateBuf`.
-
     :param stream: Stream for the asynchronous version.
 
-    The following methods are supported for the ``CV_8U`` depth images for now:
+
+
+gpu::createTemplateMatching
+---------------------------
+Creates implementation for :ocv:class:`gpu::TemplateMatching` .
+
+.. ocv:function:: Ptr<TemplateMatching> gpu::createTemplateMatching(int srcType, int method, Size user_block_size = Size())
+
+    :param srcType: Input source type. ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
+
+    :param method: Specifies the way to compare the template with the image.
+
+    :param user_block_size: You can use field `user_block_size` to set specific block size. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
+
+The following methods are supported for the ``CV_8U`` depth images for now:
 
     * ``CV_TM_SQDIFF``
     * ``CV_TM_SQDIFF_NORMED``
@@ -115,7 +179,7 @@ Computes a proximity map for a raster template and an image where the template i
     * ``CV_TM_CCOEFF``
     * ``CV_TM_CCOEFF_NORMED``
 
-    The following methods are supported for the ``CV_32F`` images for now:
+The following methods are supported for the ``CV_32F`` images for now:
 
     * ``CV_TM_SQDIFF``
     * ``CV_TM_CCORR``
@@ -124,45 +188,11 @@ Computes a proximity map for a raster template and an image where the template i
 
 
 
-gpu::Canny
--------------------
-Finds edges in an image using the [Canny86]_ algorithm.
-
-.. ocv:function:: void gpu::Canny(const GpuMat& image, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
-
-.. ocv:function:: void gpu::Canny(const GpuMat& image, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
-
-.. ocv:function:: void gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false)
-
-.. ocv:function:: void gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& edges, double low_thresh, double high_thresh, bool L2gradient = false)
-
-    :param image: Single-channel 8-bit input image.
-
-    :param dx: First derivative of image in the vertical direction. Support only ``CV_32S`` type.
-
-    :param dy: First derivative of image in the horizontal direction. Support only ``CV_32S`` type.
-
-    :param edges: Output edge map. It has the same size and type as  ``image`` .
-
-    :param low_thresh: First threshold for the hysteresis procedure.
-
-    :param high_thresh: Second threshold for the hysteresis procedure.
-
-    :param apperture_size: Aperture size for the  :ocv:func:`Sobel`  operator.
-
-    :param L2gradient: Flag indicating whether a more accurate  :math:`L_2`  norm  :math:`=\sqrt{(dI/dx)^2 + (dI/dy)^2}`  should be used to compute the image gradient magnitude ( ``L2gradient=true`` ), or a faster default  :math:`L_1`  norm  :math:`=|dI/dx|+|dI/dy|`  is enough ( ``L2gradient=false`` ).
-
-    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
-
-.. seealso:: :ocv:func:`Canny`
-
-
-
 gpu::bilateralFilter
 --------------------
 Performs bilateral filtering of passed image
 
-.. ocv:function:: void gpu::bilateralFilter( const GpuMat& src, GpuMat& dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode=BORDER_DEFAULT, Stream& stream=Stream::Null() )
+.. ocv:function:: void gpu::bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode=BORDER_DEFAULT, Stream& stream=Stream::Null())
 
     :param src: Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S && depth() != CV_64F).
 
@@ -178,9 +208,7 @@ Performs bilateral filtering of passed image
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso::
-
-    :ocv:func:`bilateralFilter`
+.. seealso:: :ocv:func:`bilateralFilter`
 
 
 
@@ -188,7 +216,7 @@ gpu::blendLinear
 -------------------
 Performs linear blending of two images.
 
-.. ocv:function:: void gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2, GpuMat& result, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2, OutputArray result, Stream& stream = Stream::Null())
 
     :param img1: First image. Supports only ``CV_8U`` and ``CV_32F`` depth.
 
