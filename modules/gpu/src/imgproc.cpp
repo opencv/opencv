@@ -1136,6 +1136,8 @@ void cv::gpu::cornerMinEigenVal(const GpuMat& src, GpuMat& dst, GpuMat& Dx, GpuM
 //////////////////////////////////////////////////////////////////////////////
 // mulSpectrums
 
+#ifdef HAVE_CUFFT
+
 namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
@@ -1146,9 +1148,20 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
+#endif
+
 void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, bool conjB, Stream& stream)
 {
-    (void)flags;
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) conjB;
+    (void) stream;
+    throw_nogpu();
+#else
+    (void) flags;
     using namespace ::cv::gpu::device::imgproc;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
@@ -1162,10 +1175,13 @@ void cv::gpu::mulSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flag
 
     Caller caller = callers[(int)conjB];
     caller(a, b, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // mulAndScaleSpectrums
+
+#ifdef HAVE_CUFFT
 
 namespace cv { namespace gpu { namespace device
 {
@@ -1177,8 +1193,20 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
+#endif
+
 void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, int flags, float scale, bool conjB, Stream& stream)
 {
+#ifndef HAVE_CUFFT
+    (void) a;
+    (void) b;
+    (void) c;
+    (void) flags;
+    (void) scale;
+    (void) conjB;
+    (void) stream;
+    throw_nogpu();
+#else
     (void)flags;
     using namespace ::cv::gpu::device::imgproc;
 
@@ -1192,6 +1220,7 @@ void cv::gpu::mulAndScaleSpectrums(const GpuMat& a, const GpuMat& b, GpuMat& c, 
 
     Caller caller = callers[(int)conjB];
     caller(a, b, scale, c, StreamAccessor::getStream(stream));
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////
