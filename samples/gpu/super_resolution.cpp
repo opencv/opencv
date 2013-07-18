@@ -7,6 +7,11 @@
 #include "opencv2/contrib/contrib.hpp"
 #include "opencv2/superres/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
+#include "opencv2/opencv_modules.hpp"
+
+#if defined(HAVE_OPENCV_OCL)
+#include "opencv2/ocl/ocl.hpp"
+#endif
 
 using namespace std;
 using namespace cv;
@@ -49,7 +54,38 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
         exit(-1);
     }
 }
-
+#if defined(HAVE_OPENCV_OCL)
+static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
+{
+    if (name == "farneback")
+    {
+        printf("farneback has not been implemented!\n");
+        return NULL;
+        //return createOptFlow_Farneback_GPU();
+    }
+    else if (name == "simple")
+    {
+        printf("simple has not been implemented!\n");
+        return NULL;
+        //return createOptFlow_Simple();
+    }
+    else if (name == "tvl1")
+        return createOptFlow_DualTVL1_OCL();
+    else if (name == "brox")
+    {
+        printf("simple has not been implemented!\n");
+        return NULL;
+        //return createOptFlow_Brox_OCL();
+    }
+    else if (name == "pyrlk")
+        return createOptFlow_PyrLK_OCL();
+    else
+    {
+        cerr << "Incorrect Optical Flow algorithm - " << name << endl;
+    }
+    return 0;
+}
+#endif
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
@@ -61,6 +97,7 @@ int main(int argc, const char* argv[])
         "{ f   | flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
         "{ gpu | gpu        | false     | Use GPU }"
         "{ h   | help       | false     | Print help message }"
+        "{ ocl | ocl        | false     | Use OCL }"
     );
 
     if (cmd.get<bool>("help"))
@@ -77,17 +114,63 @@ int main(int argc, const char* argv[])
     const int temporalAreaRadius = cmd.get<int>("temporal");
     const string optFlow = cmd.get<string>("flow");
     const bool useGpu = cmd.get<bool>("gpu");
+    const bool useOcl = cmd.get<bool>("ocl");
 
+#ifndef HAVE_OPENCV_OCL
+    if(useOcl)
+    {
+        {
+            cout<<"OPENCL is not compiled\n";
+            return 0;
+        }
+    }
+#endif
+#if defined(HAVE_OPENCV_OCL)
+    std::vector<cv::ocl::Info>info;
+    if(useGpu)
+    {
+        CV_Assert(!useOcl);
+        info.clear();
+    }
+    
+    if(useOcl)
+    {
+        CV_Assert(!useGpu);
+        cv::ocl::getDevice(info);
+    }
+#endif
     Ptr<SuperResolution> superRes;
     if (useGpu)
         superRes = createSuperResolution_BTVL1_GPU();
+#if defined(HAVE_OPENCV_OCL)
+    else if(useOcl)
+        superRes = createSuperResolution_BTVL1_OCL();
+#endif
     else
         superRes = createSuperResolution_BTVL1();
 
     superRes->set("scale", scale);
     superRes->set("iterations", iterations);
     superRes->set("temporalAreaRadius", temporalAreaRadius);
-    superRes->set("opticalFlow", createOptFlow(optFlow, useGpu));
+
+#if defined(HAVE_OPENCV_OCL)
+    if(useOcl)
+    {
+        Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow);
+        if (of.empty())
+            exit(-1);
+        
+        superRes->set("opticalFlow", of);
+    }
+    else
+#endif
+    {
+        Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useGpu);
+        
+        if (of.empty())
+            exit(-1);
+        superRes->set("opticalFlow", of);
+    }
 
     Ptr<FrameSource> frameSource;
     if (useGpu)
@@ -116,7 +199,11 @@ int main(int argc, const char* argv[])
         cout << "Iterations      : " << iterations << endl;
         cout << "Temporal radius : " << temporalAreaRadius << endl;
         cout << "Optical Flow    : " << optFlow << endl;
+#if defined(HAVE_OPENCV_OCL)
+        cout << "Mode            : " << (useGpu ? "GPU" : useOcl? "OCL" : "CPU") << endl;
+#else
         cout << "Mode            : " << (useGpu ? "GPU" : "CPU") << endl;
+#endif
     }
 
     superRes->setInput(frameSource);
@@ -126,10 +213,31 @@ int main(int argc, const char* argv[])
     for (int i = 0;; ++i)
     {
         cout << '[' << setw(3) << i << "] : ";
-
         Mat result;
-        MEASURE_TIME(superRes->nextFrame(result));
 
+#if defined(HAVE_OPENCV_OCL)
+        cv::ocl::oclMat result_;
+
+        if(useOcl)
+        {
+            MEASURE_TIME(superRes->nextFrame(result_));
+        }
+        else
+#endif
+        {
+            MEASURE_TIME(superRes->nextFrame(result));
+        }
+
+#ifdef HAVE_OPENCV_OCL
+        if(useOcl)
+        {
+            if(!result_.empty())
+            {
+                Mat temp_res;
+                result_.download(result);
+            }
+        }
+#endif
         if (result.empty())
             break;
 
