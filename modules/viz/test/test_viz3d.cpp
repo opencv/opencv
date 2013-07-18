@@ -138,12 +138,22 @@ TEST(Viz_viz3d, accuracy)
 //     resize(img, img, Size(50,50));
 //     viz.showWidget("img", viz::ImageOverlayWidget(img, Point2i(50,50)));
     
-    viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
-    viz::Text3DWidget t3w1("Camera1", Point3f(0.4, 0.6, 3.0), 0.1);
+    Matx33f K(657, 0, 320, 
+              0, 657, 240, 
+              0, 0, 1);
     
+    viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
+    viz::CameraPositionWidget cpw2(0.5);
+    viz::CameraPositionWidget frustum(K, viz::Color::green());
+    viz::Text3DWidget t3w1("Camera1", Point3f(0.4, 0.6, 3.0), 0.1);
+    viz::Text3DWidget t3w2("Camera2", Point3f(0,0,0), 0.1);
     
     viz.showWidget("CameraPositionWidget", cpw);
+    viz.showWidget("CameraPositionWidget2", cpw2, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
     viz.showWidget("camera_label", t3w1);
+    viz.showWidget("camera_label2", t3w2, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
+    viz.showWidget("frustrum", frustum, Affine3f(0.524, 0, 0, Vec3f(-1.0, 0.5, 0.5)));
+    
 //     viz.showWidget("CameraPositionWidget2", cpw2);
 //     viz.showWidget("CameraPositionWidget3", cpw3);
     
@@ -175,6 +185,8 @@ TEST(Viz_viz3d, accuracy)
         aw.setPose(cloudPosition);
         cw.setPose(cloudPosition);
         cyw.setPose(cloudPosition);
+        
+        frustum.setPose(cloudPosition);
 //         lw.setPose(cloudPosition);
 //         cpw.updatePose(Affine3f(0.1,0.0,0.0, cv::Vec3f(0.0,0.0,0.0)));
 //         cpw.setPose(cloudPosition);

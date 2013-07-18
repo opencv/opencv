@@ -134,6 +134,7 @@
 #include <vtkImageReader2.h>
 #include <vtkImageData.h>
 #include <vtkExtractEdges.h>
+#include <vtkFrustumSource.h>
 
 #include <vtkPolyDataNormals.h>
 #include <vtkMapper.h>

@@ -778,6 +778,41 @@ template<> cv::viz::Image3DWidget cv::viz::Widget::cast<cv::viz::Image3DWidget>(
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// camera position widget implementation
+
+cv::viz::CameraPositionWidget::CameraPositionWidget(double scale)
+{
+    vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
+    axes->SetOrigin (0, 0, 0);
+    axes->SetScaleFactor (scale);
+    
+    vtkSmartPointer<vtkFloatArray> axes_colors = vtkSmartPointer<vtkFloatArray>::New ();
+    axes_colors->Allocate (6);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.0);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (0.5);
+    axes_colors->InsertNextValue (1.0);
+    axes_colors->InsertNextValue (1.0);
+
+    vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
+    axes_data->Update ();
+    axes_data->GetPointData ()->SetScalars (axes_colors);
+    
+    vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
+    axes_tubes->SetInput (axes_data);
+    axes_tubes->SetRadius (axes->GetScaleFactor () / 50.0);
+    axes_tubes->SetNumberOfSides (6);
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetScalarModeToUsePointData ();
+    mapper->SetInput(axes_tubes->GetOutput ());
+
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
 cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec3f &position, const Vec3f &look_at, const Vec3f &up_vector, double scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
@@ -844,4 +879,47 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec3f &position, const
     actor->SetMapper(mapper);
     
     WidgetAccessor::setProp(*this, actor);
+}
+
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Color &color)
+{
+    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    float focal_length = K(0,0);
+    float c_x = K(0,2);
+    float c_y = K(1,2);
+    float aspect_ratio = c_x / c_y;
+    float img_width = c_x * 2;
+    float img_height = c_y * 2;
+    // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
+    float fovy = 2.0f * atan2(c_y,focal_length) * 180 / CV_PI;
+    
+    camera->SetViewAngle(fovy);
+    camera->SetPosition(0.0,0.0,0.0);
+    camera->SetViewUp(0.0,1.0,0.0);
+    camera->SetFocalPoint(0.0,0.0,1.0);
+    
+    double planesArray[24];
+    camera->GetFrustumPlanes(aspect_ratio, planesArray);
+    
+    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+    planes->SetFrustumPlanes(planesArray);
+    
+    vtkSmartPointer<vtkFrustumSource> frustumSource =
+    vtkSmartPointer<vtkFrustumSource>::New();
+    frustumSource->SetPlanes(planes);
+    frustumSource->Update();
+
+    // Extract the edges so we have the grid
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInput(frustumSource->GetOutput());
+    filter->Update();
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInput(filter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
 }
