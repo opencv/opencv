@@ -149,7 +149,7 @@ void BOWImgDescriptorExtractor::compute( const Mat& image, vector<KeyPoint>& key
     int clusterCount = descriptorSize(); // = vocabulary.rows
 
     // Compute descriptors for the image.
-    Mat descriptors = _descriptors ? *_descriptors : Mat();
+    Mat descriptors;
     dextractor->compute( image, keypoints, descriptors );
 
     // Match keypoint descriptors to cluster center (to vocabulary)
