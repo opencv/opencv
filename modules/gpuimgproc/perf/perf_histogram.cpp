@@ -167,10 +167,9 @@ PERF_TEST_P(Sz, EqualizeHist,
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_hist;
         cv::gpu::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::equalizeHist(d_src, dst, d_hist, d_buf);
+        TEST_CYCLE() cv::gpu::equalizeHist(d_src, dst, d_buf);
 
         GPU_SANITY_CHECK(dst);
     }

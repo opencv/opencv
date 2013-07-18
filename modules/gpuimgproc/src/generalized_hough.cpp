@@ -45,335 +45,15 @@
 using namespace cv;
 using namespace cv::gpu;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUARITHM)
 
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, float, float, int, bool, int) { throw_no_cuda(); }
-void cv::gpu::HoughLines(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, bool, int) { throw_no_cuda(); }
-void cv::gpu::HoughLinesDownload(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
-
-void cv::gpu::HoughLinesP(const GpuMat&, GpuMat&, HoughLinesBuf&, float, float, int, int, int) { throw_no_cuda(); }
-
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
-void cv::gpu::HoughCircles(const GpuMat&, GpuMat&, HoughCirclesBuf&, int, float, float, int, int, int, int, int) { throw_no_cuda(); }
-void cv::gpu::HoughCirclesDownload(const GpuMat&, OutputArray) { throw_no_cuda(); }
-
-Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough_GPU>(); }
-cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU() {}
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, int, Point) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat&, const GpuMat&, const GpuMat&, Point) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, GpuMat&, int) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::download(const GpuMat&, OutputArray, OutputArray) { throw_no_cuda(); }
-void cv::gpu::GeneralizedHough_GPU::release() {}
+Ptr<gpu::GeneralizedHough> cv::gpu::GeneralizedHough::create(int) { throw_no_cuda(); return Ptr<GeneralizedHough>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-#include "opencv2/core/utility.hpp"
-
 namespace cv { namespace gpu { namespace cudev
 {
-    namespace hough
-    {
-        int buildPointList_gpu(PtrStepSzb src, unsigned int* list);
-    }
-}}}
-
-//////////////////////////////////////////////////////////
-// HoughLines
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace hough
-    {
-        void linesAccum_gpu(const unsigned int* list, int count, PtrStepSzi accum, float rho, float theta, size_t sharedMemPerBlock, bool has20);
-        int linesGetResult_gpu(PtrStepSzi accum, float2* out, int* votes, int maxSize, float rho, float theta, int threshold, bool doSort);
-    }
-}}}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    HoughLinesBuf buf;
-    HoughLines(src, lines, buf, rho, theta, threshold, doSort, maxLines);
-}
-
-void cv::gpu::HoughLines(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int threshold, bool doSort, int maxLines)
-{
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert(src.type() == CV_8UC1);
-    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
-    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
-
-    const int pointsCount = buildPointList_gpu(src, srcPoints);
-    if (pointsCount == 0)
-    {
-        lines.release();
-        return;
-    }
-
-    const int numangle = cvRound(CV_PI / theta);
-    const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    CV_Assert(numangle > 0 && numrho > 0);
-
-    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
-
-    DeviceInfo devInfo;
-    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
-
-    ensureSizeIsEnough(2, maxLines, CV_32FC2, lines);
-
-    int linesCount = linesGetResult_gpu(buf.accum, lines.ptr<float2>(0), lines.ptr<int>(1), maxLines, rho, theta, threshold, doSort);
-    if (linesCount > 0)
-        lines.cols = linesCount;
-    else
-        lines.release();
-}
-
-void cv::gpu::HoughLinesDownload(const GpuMat& d_lines, OutputArray h_lines_, OutputArray h_votes_)
-{
-    if (d_lines.empty())
-    {
-        h_lines_.release();
-        if (h_votes_.needed())
-            h_votes_.release();
-        return;
-    }
-
-    CV_Assert(d_lines.rows == 2 && d_lines.type() == CV_32FC2);
-
-    h_lines_.create(1, d_lines.cols, CV_32FC2);
-    Mat h_lines = h_lines_.getMat();
-    d_lines.row(0).download(h_lines);
-
-    if (h_votes_.needed())
-    {
-        h_votes_.create(1, d_lines.cols, CV_32SC1);
-        Mat h_votes = h_votes_.getMat();
-        GpuMat d_votes(1, d_lines.cols, CV_32SC1, const_cast<int*>(d_lines.ptr<int>(1)));
-        d_votes.download(h_votes);
-    }
-}
-
-//////////////////////////////////////////////////////////
-// HoughLinesP
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace hough
-    {
-        int houghLinesProbabilistic_gpu(PtrStepSzb mask, PtrStepSzi accum, int4* out, int maxSize, float rho, float theta, int lineGap, int lineLength);
-    }
-}}}
-
-void cv::gpu::HoughLinesP(const GpuMat& src, GpuMat& lines, HoughLinesBuf& buf, float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
-{
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert( src.type() == CV_8UC1 );
-    CV_Assert( src.cols < std::numeric_limits<unsigned short>::max() );
-    CV_Assert( src.rows < std::numeric_limits<unsigned short>::max() );
-
-    ensureSizeIsEnough(1, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>();
-
-    const int pointsCount = buildPointList_gpu(src, srcPoints);
-    if (pointsCount == 0)
-    {
-        lines.release();
-        return;
-    }
-
-    const int numangle = cvRound(CV_PI / theta);
-    const int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
-    CV_Assert( numangle > 0 && numrho > 0 );
-
-    ensureSizeIsEnough(numangle + 2, numrho + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
-
-    DeviceInfo devInfo;
-    linesAccum_gpu(srcPoints, pointsCount, buf.accum, rho, theta, devInfo.sharedMemPerBlock(), devInfo.supports(FEATURE_SET_COMPUTE_20));
-
-    ensureSizeIsEnough(1, maxLines, CV_32SC4, lines);
-
-    int linesCount = houghLinesProbabilistic_gpu(src, buf.accum, lines.ptr<int4>(), maxLines, rho, theta, maxLineGap, minLineLength);
-
-    if (linesCount > 0)
-        lines.cols = linesCount;
-    else
-        lines.release();
-}
-
-//////////////////////////////////////////////////////////
-// HoughCircles
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace hough
-    {
-        void circlesAccumCenters_gpu(const unsigned int* list, int count, PtrStepi dx, PtrStepi dy, PtrStepSzi accum, int minRadius, int maxRadius, float idp);
-        int buildCentersList_gpu(PtrStepSzi accum, unsigned int* centers, int threshold);
-        int circlesAccumRadius_gpu(const unsigned int* centers, int centersCount, const unsigned int* list, int count,
-                                   float3* circles, int maxCircles, float dp, int minRadius, int maxRadius, int threshold, bool has20);
-    }
-}}}
-
-void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
-{
-    HoughCirclesBuf buf;
-    HoughCircles(src, circles, buf, method, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
-}
-
-void cv::gpu::HoughCircles(const GpuMat& src, GpuMat& circles, HoughCirclesBuf& buf, int method,
-                           float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
-{
-    using namespace cv::gpu::cudev::hough;
-
-    CV_Assert(src.type() == CV_8UC1);
-    CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
-    CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == cv::HOUGH_GRADIENT);
-    CV_Assert(dp > 0);
-    CV_Assert(minRadius > 0 && maxRadius > minRadius);
-    CV_Assert(cannyThreshold > 0);
-    CV_Assert(votesThreshold > 0);
-    CV_Assert(maxCircles > 0);
-
-    const float idp = 1.0f / dp;
-
-    cv::gpu::Canny(src, buf.cannyBuf, buf.edges, std::max(cannyThreshold / 2, 1), cannyThreshold);
-
-    ensureSizeIsEnough(2, src.size().area(), CV_32SC1, buf.list);
-    unsigned int* srcPoints = buf.list.ptr<unsigned int>(0);
-    unsigned int* centers = buf.list.ptr<unsigned int>(1);
-
-    const int pointsCount = buildPointList_gpu(buf.edges, srcPoints);
-    if (pointsCount == 0)
-    {
-        circles.release();
-        return;
-    }
-
-    ensureSizeIsEnough(cvCeil(src.rows * idp) + 2, cvCeil(src.cols * idp) + 2, CV_32SC1, buf.accum);
-    buf.accum.setTo(Scalar::all(0));
-
-    circlesAccumCenters_gpu(srcPoints, pointsCount, buf.cannyBuf.dx, buf.cannyBuf.dy, buf.accum, minRadius, maxRadius, idp);
-
-    int centersCount = buildCentersList_gpu(buf.accum, centers, votesThreshold);
-    if (centersCount == 0)
-    {
-        circles.release();
-        return;
-    }
-
-    if (minDist > 1)
-    {
-        cv::AutoBuffer<ushort2> oldBuf_(centersCount);
-        cv::AutoBuffer<ushort2> newBuf_(centersCount);
-        int newCount = 0;
-
-        ushort2* oldBuf = oldBuf_;
-        ushort2* newBuf = newBuf_;
-
-        cudaSafeCall( cudaMemcpy(oldBuf, centers, centersCount * sizeof(ushort2), cudaMemcpyDeviceToHost) );
-
-        const int cellSize = cvRound(minDist);
-        const int gridWidth = (src.cols + cellSize - 1) / cellSize;
-        const int gridHeight = (src.rows + cellSize - 1) / cellSize;
-
-        std::vector< std::vector<ushort2> > grid(gridWidth * gridHeight);
-
-        const float minDist2 = minDist * minDist;
-
-        for (int i = 0; i < centersCount; ++i)
-        {
-            ushort2 p = oldBuf[i];
-
-            bool good = true;
-
-            int xCell = static_cast<int>(p.x / cellSize);
-            int yCell = static_cast<int>(p.y / cellSize);
-
-            int x1 = xCell - 1;
-            int y1 = yCell - 1;
-            int x2 = xCell + 1;
-            int y2 = yCell + 1;
-
-            // boundary check
-            x1 = std::max(0, x1);
-            y1 = std::max(0, y1);
-            x2 = std::min(gridWidth - 1, x2);
-            y2 = std::min(gridHeight - 1, y2);
-
-            for (int yy = y1; yy <= y2; ++yy)
-            {
-                for (int xx = x1; xx <= x2; ++xx)
-                {
-                    std::vector<ushort2>& m = grid[yy * gridWidth + xx];
-
-                    for(size_t j = 0; j < m.size(); ++j)
-                    {
-                        float dx = (float)(p.x - m[j].x);
-                        float dy = (float)(p.y - m[j].y);
-
-                        if (dx * dx + dy * dy < minDist2)
-                        {
-                            good = false;
-                            goto break_out;
-                        }
-                    }
-                }
-            }
-
-            break_out:
-
-            if(good)
-            {
-                grid[yCell * gridWidth + xCell].push_back(p);
-
-                newBuf[newCount++] = p;
-            }
-        }
-
-        cudaSafeCall( cudaMemcpy(centers, newBuf, newCount * sizeof(unsigned int), cudaMemcpyHostToDevice) );
-        centersCount = newCount;
-    }
-
-    ensureSizeIsEnough(1, maxCircles, CV_32FC3, circles);
-
-    const int circlesCount = circlesAccumRadius_gpu(centers, centersCount, srcPoints, pointsCount, circles.ptr<float3>(), maxCircles,
-                                                    dp, minRadius, maxRadius, votesThreshold, deviceSupports(FEATURE_SET_COMPUTE_20));
-
-    if (circlesCount > 0)
-        circles.cols = circlesCount;
-    else
-        circles.release();
-}
-
-void cv::gpu::HoughCirclesDownload(const GpuMat& d_circles, cv::OutputArray h_circles_)
-{
-    if (d_circles.empty())
-    {
-        h_circles_.release();
-        return;
-    }
-
-    CV_Assert(d_circles.rows == 1 && d_circles.type() == CV_32FC3);
-
-    h_circles_.create(1, d_circles.cols, CV_32FC3);
-    Mat h_circles = h_circles_.getMat();
-    d_circles.download(h_circles);
-}
-
-//////////////////////////////////////////////////////////
-// GeneralizedHough
-
-namespace cv { namespace gpu { namespace cudev
-{
-    namespace hough
+    namespace ght
     {
         template <typename T>
         int buildEdgePointList_gpu(PtrStepSzb edges, PtrStepSzb dx, PtrStepSzb dy, unsigned int* coordList, float* thetaList);
@@ -381,59 +61,203 @@ namespace cv { namespace gpu { namespace cudev
                              PtrStepSz<short2> r_table, int* r_sizes,
                              short2 templCenter, int levels);
 
-        void GHT_Ballard_Pos_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
-                                          PtrStepSz<short2> r_table, const int* r_sizes,
-                                          PtrStepSzi hist,
-                                          float dp, int levels);
-        int GHT_Ballard_Pos_findPosInHist_gpu(PtrStepSzi hist, float4* out, int3* votes, int maxSize, float dp, int threshold);
+        void Ballard_Pos_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
+                                      PtrStepSz<short2> r_table, const int* r_sizes,
+                                      PtrStepSzi hist,
+                                      float dp, int levels);
+        int Ballard_Pos_findPosInHist_gpu(PtrStepSzi hist, float4* out, int3* votes, int maxSize, float dp, int threshold);
 
-        void GHT_Ballard_PosScale_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
-                                               PtrStepSz<short2> r_table, const int* r_sizes,
-                                               PtrStepi hist, int rows, int cols,
-                                               float minScale, float scaleStep, int scaleRange,
-                                               float dp, int levels);
-        int GHT_Ballard_PosScale_findPosInHist_gpu(PtrStepi hist, int rows, int cols, int scaleRange, float4* out, int3* votes, int maxSize,
-                                                   float minScale, float scaleStep, float dp, int threshold);
+        void Ballard_PosScale_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
+                                           PtrStepSz<short2> r_table, const int* r_sizes,
+                                           PtrStepi hist, int rows, int cols,
+                                           float minScale, float scaleStep, int scaleRange,
+                                           float dp, int levels);
+        int Ballard_PosScale_findPosInHist_gpu(PtrStepi hist, int rows, int cols, int scaleRange, float4* out, int3* votes, int maxSize,
+                                               float minScale, float scaleStep, float dp, int threshold);
 
-        void GHT_Ballard_PosRotation_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
-                                                  PtrStepSz<short2> r_table, const int* r_sizes,
-                                                  PtrStepi hist, int rows, int cols,
-                                                  float minAngle, float angleStep, int angleRange,
-                                                  float dp, int levels);
-        int GHT_Ballard_PosRotation_findPosInHist_gpu(PtrStepi hist, int rows, int cols, int angleRange, float4* out, int3* votes, int maxSize,
-                                                      float minAngle, float angleStep, float dp, int threshold);
+        void Ballard_PosRotation_calcHist_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
+                                              PtrStepSz<short2> r_table, const int* r_sizes,
+                                              PtrStepi hist, int rows, int cols,
+                                              float minAngle, float angleStep, int angleRange,
+                                              float dp, int levels);
+        int Ballard_PosRotation_findPosInHist_gpu(PtrStepi hist, int rows, int cols, int angleRange, float4* out, int3* votes, int maxSize,
+                                                  float minAngle, float angleStep, float dp, int threshold);
 
-        void GHT_Guil_Full_setTemplFeatures(PtrStepb p1_pos, PtrStepb p1_theta, PtrStepb p2_pos, PtrStepb d12, PtrStepb r1, PtrStepb r2);
-        void GHT_Guil_Full_setImageFeatures(PtrStepb p1_pos, PtrStepb p1_theta, PtrStepb p2_pos, PtrStepb d12, PtrStepb r1, PtrStepb r2);
-        void GHT_Guil_Full_buildTemplFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
-                                                     int* sizes, int maxSize,
-                                                     float xi, float angleEpsilon, int levels,
-                                                     float2 center, float maxDist);
-        void GHT_Guil_Full_buildImageFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
-                                                     int* sizes, int maxSize,
-                                                     float xi, float angleEpsilon, int levels,
-                                                     float2 center, float maxDist);
-        void GHT_Guil_Full_calcOHist_gpu(const int* templSizes, const int* imageSizes, int* OHist,
-                                         float minAngle, float maxAngle, float angleStep, int angleRange,
-                                         int levels, int tMaxSize);
-        void GHT_Guil_Full_calcSHist_gpu(const int* templSizes, const int* imageSizes, int* SHist,
-                                         float angle, float angleEpsilon,
-                                         float minScale, float maxScale, float iScaleStep, int scaleRange,
-                                         int levels, int tMaxSize);
-        void GHT_Guil_Full_calcPHist_gpu(const int* templSizes, const int* imageSizes, PtrStepSzi PHist,
-                                         float angle, float angleEpsilon, float scale,
-                                         float dp,
-                                         int levels, int tMaxSize);
-        int GHT_Guil_Full_findPosInHist_gpu(PtrStepSzi hist, float4* out, int3* votes, int curSize, int maxSize,
-                                             float angle, int angleVotes, float scale, int scaleVotes,
-                                             float dp, int threshold);
+        void Guil_Full_setTemplFeatures(PtrStepb p1_pos, PtrStepb p1_theta, PtrStepb p2_pos, PtrStepb d12, PtrStepb r1, PtrStepb r2);
+        void Guil_Full_setImageFeatures(PtrStepb p1_pos, PtrStepb p1_theta, PtrStepb p2_pos, PtrStepb d12, PtrStepb r1, PtrStepb r2);
+        void Guil_Full_buildTemplFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
+                                                 int* sizes, int maxSize,
+                                                 float xi, float angleEpsilon, int levels,
+                                                 float2 center, float maxDist);
+        void Guil_Full_buildImageFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,
+                                                 int* sizes, int maxSize,
+                                                 float xi, float angleEpsilon, int levels,
+                                                 float2 center, float maxDist);
+        void Guil_Full_calcOHist_gpu(const int* templSizes, const int* imageSizes, int* OHist,
+                                     float minAngle, float maxAngle, float angleStep, int angleRange,
+                                     int levels, int tMaxSize);
+        void Guil_Full_calcSHist_gpu(const int* templSizes, const int* imageSizes, int* SHist,
+                                     float angle, float angleEpsilon,
+                                     float minScale, float maxScale, float iScaleStep, int scaleRange,
+                                     int levels, int tMaxSize);
+        void Guil_Full_calcPHist_gpu(const int* templSizes, const int* imageSizes, PtrStepSzi PHist,
+                                     float angle, float angleEpsilon, float scale,
+                                     float dp,
+                                     int levels, int tMaxSize);
+        int Guil_Full_findPosInHist_gpu(PtrStepSzi hist, float4* out, int3* votes, int curSize, int maxSize,
+                                        float angle, int angleVotes, float scale, int scaleVotes,
+                                        float dp, int threshold);
     }
 }}}
 
 namespace
 {
     /////////////////////////////////////
-    // Common
+    // GeneralizedHoughBase
+
+    class GeneralizedHoughBase : public gpu::GeneralizedHough
+    {
+    public:
+        GeneralizedHoughBase();
+
+        void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
+        void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1));
+
+        void detect(InputArray image, OutputArray positions, int cannyThreshold = 100);
+        void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions);
+
+        void downloadResults(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray());
+
+    protected:
+        virtual void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter) = 0;
+        virtual void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions) = 0;
+
+    private:
+#ifdef HAVE_OPENCV_GPUFILTERS
+        GpuMat dx_, dy_;
+        GpuMat edges_;
+        Ptr<gpu::CannyEdgeDetector> canny_;
+        Ptr<gpu::Filter> filterDx_;
+        Ptr<gpu::Filter> filterDy_;
+#endif
+    };
+
+    GeneralizedHoughBase::GeneralizedHoughBase()
+    {
+#ifdef HAVE_OPENCV_GPUFILTERS
+        canny_ = gpu::createCannyEdgeDetector(50, 100);
+        filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+        filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+#endif
+    }
+
+    void GeneralizedHoughBase::setTemplate(InputArray _templ, int cannyThreshold, Point templCenter)
+    {
+#ifndef HAVE_OPENCV_GPUFILTERS
+        (void) _templ;
+        (void) cannyThreshold;
+        (void) templCenter;
+        throw_no_cuda();
+#else
+        GpuMat templ = _templ.getGpuMat();
+
+        CV_Assert( templ.type() == CV_8UC1 );
+        CV_Assert( cannyThreshold > 0 );
+
+        ensureSizeIsEnough(templ.size(), CV_32SC1, dx_);
+        ensureSizeIsEnough(templ.size(), CV_32SC1, dy_);
+
+        filterDx_->apply(templ, dx_);
+        filterDy_->apply(templ, dy_);
+
+        ensureSizeIsEnough(templ.size(), CV_8UC1, edges_);
+
+        canny_->setLowThreshold(cannyThreshold / 2);
+        canny_->setHighThreshold(cannyThreshold);
+        canny_->detect(dx_, dy_, edges_);
+
+        if (templCenter == Point(-1, -1))
+            templCenter = Point(templ.cols / 2, templ.rows / 2);
+
+        setTemplateImpl(edges_, dx_, dy_, templCenter);
+#endif
+    }
+
+    void GeneralizedHoughBase::setTemplate(InputArray _edges, InputArray _dx, InputArray _dy, Point templCenter)
+    {
+        GpuMat edges = _edges.getGpuMat();
+        GpuMat dx = _dx.getGpuMat();
+        GpuMat dy = _dy.getGpuMat();
+
+        if (templCenter == Point(-1, -1))
+            templCenter = Point(edges.cols / 2, edges.rows / 2);
+
+        setTemplateImpl(edges, dx, dy, templCenter);
+    }
+
+    void GeneralizedHoughBase::detect(InputArray _image, OutputArray positions, int cannyThreshold)
+    {
+#ifndef HAVE_OPENCV_GPUFILTERS
+        (void) _image;
+        (void) positions;
+        (void) cannyThreshold;
+        throw_no_cuda();
+#else
+        GpuMat image = _image.getGpuMat();
+
+        CV_Assert( image.type() == CV_8UC1 );
+        CV_Assert( cannyThreshold > 0 );
+
+        ensureSizeIsEnough(image.size(), CV_32SC1, dx_);
+        ensureSizeIsEnough(image.size(), CV_32SC1, dy_);
+
+        filterDx_->apply(image, dx_);
+        filterDy_->apply(image, dy_);
+
+        ensureSizeIsEnough(image.size(), CV_8UC1, edges_);
+
+        canny_->setLowThreshold(cannyThreshold / 2);
+        canny_->setHighThreshold(cannyThreshold);
+        canny_->detect(dx_, dy_, edges_);
+
+        detectImpl(edges_, dx_, dy_, positions);
+#endif
+    }
+
+    void GeneralizedHoughBase::detect(InputArray _edges, InputArray _dx, InputArray _dy, OutputArray positions)
+    {
+        GpuMat edges = _edges.getGpuMat();
+        GpuMat dx = _dx.getGpuMat();
+        GpuMat dy = _dy.getGpuMat();
+
+        detectImpl(edges, dx, dy, positions);
+    }
+
+    void GeneralizedHoughBase::downloadResults(InputArray _d_positions, OutputArray h_positions, OutputArray h_votes)
+    {
+        GpuMat d_positions = _d_positions.getGpuMat();
+
+        if (d_positions.empty())
+        {
+            h_positions.release();
+            if (h_votes.needed())
+                h_votes.release();
+            return;
+        }
+
+        CV_Assert( d_positions.rows == 2 && d_positions.type() == CV_32FC4 );
+
+        d_positions.row(0).download(h_positions);
+
+        if (h_votes.needed())
+        {
+            GpuMat d_votes(1, d_positions.cols, CV_32SC3, d_positions.ptr<int3>(1));
+            d_votes.download(h_votes);
+        }
+    }
+
+    /////////////////////////////////////
+    // GHT_Pos
 
     template <typename T, class A> void releaseVector(std::vector<T, A>& v)
     {
@@ -441,14 +265,14 @@ namespace
         empty.swap(v);
     }
 
-    class GHT_Pos : public GeneralizedHough_GPU
+    class GHT_Pos : public GeneralizedHoughBase
     {
     public:
         GHT_Pos();
 
     protected:
         void setTemplateImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter);
-        void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions);
+        void detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions);
         void releaseImpl();
 
         virtual void processTempl() = 0;
@@ -456,7 +280,7 @@ namespace
 
         void buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy);
         void filterMinDist();
-        void convertTo(GpuMat& positions);
+        void convertTo(OutputArray positions);
 
         int maxSize;
         double minDist;
@@ -506,7 +330,7 @@ namespace
         processTempl();
     }
 
-    void GHT_Pos::detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions)
+    void GHT_Pos::detectImpl(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, OutputArray positions)
     {
         imageSize = edges.size();
 
@@ -559,7 +383,7 @@ namespace
 
     void GHT_Pos::buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy)
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         typedef int (*func_t)(PtrStepSzb edges, PtrStepSzb dx, PtrStepSzb dy, unsigned int* coordList, float* thetaList);
         static const func_t funcs[] =
@@ -681,7 +505,7 @@ namespace
         cudaSafeCall( cudaMemcpy(outBuf.ptr(1), &newVoteBuf[0], posCount * sizeof(int3), cudaMemcpyHostToDevice) );
     }
 
-    void GHT_Pos::convertTo(GpuMat& positions)
+    void GHT_Pos::convertTo(OutputArray positions)
     {
         ensureSizeIsEnough(2, posCount, CV_32FC4, positions);
         GpuMat(2, posCount, CV_32FC4, outBuf.data, outBuf.step).copyTo(positions);
@@ -747,7 +571,7 @@ namespace
 
     void GHT_Ballard_Pos::processTempl()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(levels > 0);
 
@@ -773,7 +597,7 @@ namespace
 
     void GHT_Ballard_Pos::calcHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -787,22 +611,22 @@ namespace
 
         if (edgePointList.cols > 0)
         {
-            GHT_Ballard_Pos_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
-                                         r_table, r_sizes.ptr<int>(),
-                                         hist,
-                                         (float)dp, levels);
+            Ballard_Pos_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
+                                     r_table, r_sizes.ptr<int>(),
+                                     hist,
+                                     (float)dp, levels);
         }
     }
 
     void GHT_Ballard_Pos::findPosInHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(votesThreshold > 0);
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount = GHT_Ballard_Pos_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)dp, votesThreshold);
+        posCount = Ballard_Pos_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////
@@ -851,7 +675,7 @@ namespace
 
     void GHT_Ballard_PosScale::calcHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -870,16 +694,16 @@ namespace
 
         if (edgePointList.cols > 0)
         {
-            GHT_Ballard_PosScale_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
-                                              r_table, r_sizes.ptr<int>(),
-                                              hist, rows, cols,
-                                              (float)minScale, (float)scaleStep, scaleRange, (float)dp, levels);
+            Ballard_PosScale_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
+                                          r_table, r_sizes.ptr<int>(),
+                                          hist, rows, cols,
+                                          (float)minScale, (float)scaleStep, scaleRange, (float)dp, levels);
         }
     }
 
     void GHT_Ballard_PosScale::findPosInHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(votesThreshold > 0);
 
@@ -890,7 +714,7 @@ namespace
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount =  GHT_Ballard_PosScale_findPosInHist_gpu(hist, rows, cols, scaleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minScale, (float)scaleStep, (float)dp, votesThreshold);
+        posCount =  Ballard_PosScale_findPosInHist_gpu(hist, rows, cols, scaleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minScale, (float)scaleStep, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////
@@ -939,7 +763,7 @@ namespace
 
     void GHT_Ballard_PosRotation::calcHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(levels > 0 && r_table.rows == (levels + 1) && r_sizes.cols == (levels + 1));
         CV_Assert(dp > 0.0);
@@ -958,16 +782,16 @@ namespace
 
         if (edgePointList.cols > 0)
         {
-            GHT_Ballard_PosRotation_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
-                                                 r_table, r_sizes.ptr<int>(),
-                                                 hist, rows, cols,
-                                                 (float)minAngle, (float)angleStep, angleRange, (float)dp, levels);
+            Ballard_PosRotation_calcHist_gpu(edgePointList.ptr<unsigned int>(0), edgePointList.ptr<float>(1), edgePointList.cols,
+                                             r_table, r_sizes.ptr<int>(),
+                                             hist, rows, cols,
+                                             (float)minAngle, (float)angleStep, angleRange, (float)dp, levels);
         }
     }
 
     void GHT_Ballard_PosRotation::findPosInHist()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(votesThreshold > 0);
 
@@ -978,7 +802,7 @@ namespace
 
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
-        posCount = GHT_Ballard_PosRotation_findPosInHist_gpu(hist, rows, cols, angleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minAngle, (float)angleStep, (float)dp, votesThreshold);
+        posCount = Ballard_PosRotation_findPosInHist_gpu(hist, rows, cols, angleRange, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1), maxSize, (float)minAngle, (float)angleStep, (float)dp, votesThreshold);
     }
 
     /////////////////////////////////////////
@@ -1146,10 +970,10 @@ namespace
 
     void GHT_Guil_Full::processTempl()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         buildFeatureList(templEdges, templDx, templDy, templFeatures,
-            GHT_Guil_Full_setTemplFeatures, GHT_Guil_Full_buildTemplFeatureList_gpu,
+            Guil_Full_setTemplFeatures, Guil_Full_buildTemplFeatureList_gpu,
             true, templCenter);
 
         h_buf.resize(templFeatures.sizes.cols);
@@ -1159,7 +983,7 @@ namespace
 
     void GHT_Guil_Full::processImage()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         CV_Assert(levels > 0);
         CV_Assert(templFeatures.sizes.cols == levels + 1);
@@ -1188,7 +1012,7 @@ namespace
         ensureSizeIsEnough(2, maxSize, CV_32FC4, outBuf);
 
         buildFeatureList(imageEdges, imageDx, imageDy, imageFeatures,
-            GHT_Guil_Full_setImageFeatures, GHT_Guil_Full_buildImageFeatureList_gpu,
+            Guil_Full_setImageFeatures, Guil_Full_buildImageFeatureList_gpu,
             false);
 
         calcOrientation();
@@ -1271,14 +1095,14 @@ namespace
 
     void GHT_Guil_Full::calcOrientation()
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         const double iAngleStep = 1.0 / angleStep;
         const int angleRange = cvCeil((maxAngle - minAngle) * iAngleStep);
 
         hist.setTo(Scalar::all(0));
-        GHT_Guil_Full_calcOHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist.ptr<int>(), (float)minAngle, (float)maxAngle, (float)angleStep, angleRange, levels, templFeatures.maxSize);
+        Guil_Full_calcOHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0), hist.ptr<int>(),
+                                (float)minAngle, (float)maxAngle, (float)angleStep, angleRange, levels, templFeatures.maxSize);
         cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         angles.clear();
@@ -1295,14 +1119,15 @@ namespace
 
     void GHT_Guil_Full::calcScale(double angle)
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         const double iScaleStep = 1.0 / scaleStep;
         const int scaleRange = cvCeil((maxScale - minScale) * iScaleStep);
 
         hist.setTo(Scalar::all(0));
-        GHT_Guil_Full_calcSHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist.ptr<int>(), (float)angle, (float)angleEpsilon, (float)minScale, (float)maxScale, (float)iScaleStep, scaleRange, levels, templFeatures.maxSize);
+        Guil_Full_calcSHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0), hist.ptr<int>(),
+                                (float)angle, (float)angleEpsilon, (float)minScale, (float)maxScale,
+                                (float)iScaleStep, scaleRange, levels, templFeatures.maxSize);
         cudaSafeCall( cudaMemcpy(&h_buf[0], hist.data, h_buf.size() * sizeof(int), cudaMemcpyDeviceToHost) );
 
         scales.clear();
@@ -1319,18 +1144,19 @@ namespace
 
     void GHT_Guil_Full::calcPosition(double angle, int angleVotes, double scale, int scaleVotes)
     {
-        using namespace cv::gpu::cudev::hough;
+        using namespace cv::gpu::cudev::ght;
 
         hist.setTo(Scalar::all(0));
-        GHT_Guil_Full_calcPHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0),
-            hist,(float) (float)angle, (float)angleEpsilon, (float)scale, (float)dp, levels, templFeatures.maxSize);
+        Guil_Full_calcPHist_gpu(templFeatures.sizes.ptr<int>(), imageFeatures.sizes.ptr<int>(0), hist,
+                                (float)angle, (float)angleEpsilon, (float)scale, (float)dp, levels, templFeatures.maxSize);
 
-        posCount = GHT_Guil_Full_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1),
-            posCount, maxSize, (float)angle, angleVotes, (float)scale, scaleVotes, (float)dp, posThresh);
+        posCount = Guil_Full_findPosInHist_gpu(hist, outBuf.ptr<float4>(0), outBuf.ptr<int3>(1),
+                                               posCount, maxSize, (float)angle, angleVotes,
+                                               (float)scale, scaleVotes, (float)dp, posThresh);
     }
 }
 
-Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
+Ptr<gpu::GeneralizedHough> cv::gpu::GeneralizedHough::create(int method)
 {
     switch (method)
     {
@@ -1349,84 +1175,11 @@ Ptr<GeneralizedHough_GPU> cv::gpu::GeneralizedHough_GPU::create(int method)
     case (cv::GeneralizedHough::GHT_POSITION | cv::GeneralizedHough::GHT_SCALE | cv::GeneralizedHough::GHT_ROTATION):
         CV_Assert( !GHT_Guil_Full_info_auto.name().empty() );
         return new GHT_Guil_Full();
+
+    default:
+        CV_Error(Error::StsBadArg, "Unsupported method");
+        return Ptr<GeneralizedHough>();
     }
-
-    CV_Error(cv::Error::StsBadArg, "Unsupported method");
-    return Ptr<GeneralizedHough_GPU>();
-}
-
-cv::gpu::GeneralizedHough_GPU::~GeneralizedHough_GPU()
-{
-}
-
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& templ, int cannyThreshold, Point templCenter)
-{
-    CV_Assert(templ.type() == CV_8UC1);
-    CV_Assert(cannyThreshold > 0);
-
-    ensureSizeIsEnough(templ.size(), CV_8UC1, edges_);
-    Canny(templ, cannyBuf_, edges_, cannyThreshold / 2, cannyThreshold);
-
-    if (templCenter == Point(-1, -1))
-        templCenter = Point(templ.cols / 2, templ.rows / 2);
-
-    setTemplateImpl(edges_, cannyBuf_.dx, cannyBuf_.dy, templCenter);
-}
-
-void cv::gpu::GeneralizedHough_GPU::setTemplate(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, Point templCenter)
-{
-    if (templCenter == Point(-1, -1))
-        templCenter = Point(edges.cols / 2, edges.rows / 2);
-
-    setTemplateImpl(edges, dx, dy, templCenter);
-}
-
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& image, GpuMat& positions, int cannyThreshold)
-{
-    CV_Assert(image.type() == CV_8UC1);
-    CV_Assert(cannyThreshold > 0);
-
-    ensureSizeIsEnough(image.size(), CV_8UC1, edges_);
-    Canny(image, cannyBuf_, edges_, cannyThreshold / 2, cannyThreshold);
-
-    detectImpl(edges_, cannyBuf_.dx, cannyBuf_.dy, positions);
-}
-
-void cv::gpu::GeneralizedHough_GPU::detect(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy, GpuMat& positions)
-{
-    detectImpl(edges, dx, dy, positions);
-}
-
-void cv::gpu::GeneralizedHough_GPU::download(const GpuMat& d_positions, OutputArray h_positions_, OutputArray h_votes_)
-{
-    if (d_positions.empty())
-    {
-        h_positions_.release();
-        if (h_votes_.needed())
-            h_votes_.release();
-        return;
-    }
-
-    CV_Assert(d_positions.rows == 2 && d_positions.type() == CV_32FC4);
-
-    h_positions_.create(1, d_positions.cols, CV_32FC4);
-    Mat h_positions = h_positions_.getMat();
-    d_positions.row(0).download(h_positions);
-
-    if (h_votes_.needed())
-    {
-        h_votes_.create(1, d_positions.cols, CV_32SC3);
-        Mat h_votes = h_votes_.getMat();
-        GpuMat d_votes(1, d_positions.cols, CV_32SC3, const_cast<int3*>(d_positions.ptr<int3>(1)));
-        d_votes.download(h_votes);
-    }
-}
-
-void cv::gpu::GeneralizedHough_GPU::release()
-{
-    edges_.release();
-    cannyBuf_.release();
-    releaseImpl();
 }
 
 #endif /* !defined (HAVE_CUDA) */

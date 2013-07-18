@@ -169,7 +169,7 @@ namespace
             break;
 
         default:
-            cvtColor(src, dst, code, cn);
+            cv::cvtColor(src, dst, code, cn);
             break;
         }
     }

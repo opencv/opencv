@@ -82,8 +82,10 @@ GPU_TEST_P(CornerHarris, Accuracy)
 
     double k = randomDouble(0.1, 0.9);
 
+    cv::Ptr<cv::gpu::CornernessCriteria> harris = cv::gpu::createHarrisCorner(src.type(), blockSize, apertureSize, k, borderType);
+
     cv::gpu::GpuMat dst;
-    cv::gpu::cornerHarris(loadMat(src), dst, blockSize, apertureSize, k, borderType);
+    harris->compute(loadMat(src), dst);
 
     cv::Mat dst_gold;
     cv::cornerHarris(src, dst_gold, blockSize, apertureSize, k, borderType);
@@ -126,8 +128,10 @@ GPU_TEST_P(CornerMinEigen, Accuracy)
     cv::Mat src = readImageType("stereobm/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
 
+    cv::Ptr<cv::gpu::CornernessCriteria> minEigenVal = cv::gpu::createMinEigenValCorner(src.type(), blockSize, apertureSize, borderType);
+
     cv::gpu::GpuMat dst;
-    cv::gpu::cornerMinEigenVal(loadMat(src), dst, blockSize, apertureSize, borderType);
+    minEigenVal->compute(loadMat(src), dst);
 
     cv::Mat dst_gold;
     cv::cornerMinEigenVal(src, dst_gold, blockSize, apertureSize, borderType);
