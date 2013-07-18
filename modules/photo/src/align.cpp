@@ -102,9 +102,6 @@ static void computeBitmaps(Mat& img, Mat& tb, Mat& eb, int exclude_range)
 void shiftMat(InputArray _src, Point shift, OutputArray _dst) 
 {
 	Mat src = _src.getMat();
-	if(src.depth() != CV_8U) {
-		CV_Error(Error::StsBadArg, "Image must have CV_8U depth.");
-	}
 	_dst.create(src.size(), src.type());
 	Mat dst = _dst.getMat();
 
