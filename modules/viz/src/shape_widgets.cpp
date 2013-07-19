@@ -895,7 +895,7 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, double sca
     camera->SetPosition(0.0,0.0,0.0);
     camera->SetViewUp(0.0,1.0,0.0);
     camera->SetFocalPoint(0.0,0.0,1.0);
-    camera->SetClippingRange(0.01, scale * f_y * 0.001);
+    camera->SetClippingRange(0.01, scale);
     
     double planesArray[24];
     camera->GetFrustumPlanes(aspect_ratio, planesArray);
@@ -912,6 +912,44 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, double sca
     vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
     filter->SetInput(frustumSource->GetOutput());
     filter->Update();
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInput(filter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double scale, const Color &color)
+{
+    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    
+    camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
+    camera->SetPosition(0.0,0.0,0.0);
+    camera->SetViewUp(0.0,1.0,0.0);
+    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetClippingRange(0.01, scale);
+    
+    double planesArray[24];
+    // Default aspect ratio = 1.0? fovx/fovy?
+    camera->GetFrustumPlanes(1.0, planesArray);
+    
+    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+    planes->SetFrustumPlanes(planesArray);
+    
+    vtkSmartPointer<vtkFrustumSource> frustumSource =
+    vtkSmartPointer<vtkFrustumSource>::New();
+    frustumSource->SetPlanes(planes);
+    frustumSource->Update();
+
+    // Extract the edges so we have the grid
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInput(frustumSource->GetOutput());
+    filter->Update();    
     
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInput(filter->GetOutput());
