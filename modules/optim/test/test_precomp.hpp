@@ -9,8 +9,6 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/mat.hpp"
 #include "opencv2/ts.hpp"
 #include "opencv2/optim.hpp"
 

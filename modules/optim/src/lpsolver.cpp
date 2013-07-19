@@ -1,51 +1,59 @@
-#include "opencv2/ts.hpp"
 #include "precomp.hpp"
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
 
+#define ALEX_DEBUG
+
 namespace cv{namespace optim{
 using std::vector;
+using namespace std;
 
 #ifdef ALEX_DEBUG
 #define dprintf(x) printf x
 static void print_matrix(const Mat& x){
-    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",(x).type(),CV_64FC1,(x).rows,(x).cols);
-    for(int i=0;i<(x).rows;i++){
+    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",x.type(),CV_64FC1,x.rows,x.cols);
+    if(!true){
+        //cout<<x;
+    }
+    else{
+
+    for(int i=0;i<x.rows;i++){
         printf("\t[");
-        for(int j=0;j<(x).cols;j++){
-            printf("%g, ",(x).at<double>(i,j));
+        for(int j=0;j<x.cols;j++){
+            printf("%g, ",x.at<double>(i,j));
         }
         printf("]\n");
+    }
     }
 }
 static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
     printf("\tprint simplex state\n");
     
-    printf("v=%g\n",(v));
+    printf("v=%g\n",v);
     
     printf("here c goes\n");
-    print_matrix((c));
+    print_matrix(c);
     
     printf("non-basic: ");
-    for (std::vector<int>::const_iterator it = (N).begin() ; it != (N).end(); ++it){
+    for (std::vector<int>::const_iterator it = N.begin() ; it != N.end(); ++it){
         printf("%d, ",*it);
     }
     printf("\n");
     
     printf("here b goes\n");
-    print_matrix((b));
+    print_matrix(b);
     printf("basic: ");
     
-    for (std::vector<int>::const_iterator it = (B).begin() ; it != (B).end(); ++it){
+    for (std::vector<int>::const_iterator it = B.begin() ; it != B.end(); ++it){
         printf("%d, ",*it);
     }
     printf("\n");
 }
 #else
-#define dprintf(x) do {} while (0)
-#define print_matrix(x) do {} while (0)
-#define print_simplex_state(c,b,v,N,B) do {} while (0)
+#define dprintf(x)
+#define print_matrix(x)
+#define print_simplex_state(c,b,v,N,B)
 #endif
 
 /**Due to technical considerations, the format of input b and c is somewhat special:
@@ -199,13 +207,11 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
     for(int I=1;I<old_c.cols;I++){
         if((iterator=std::find(N.begin(),N.end(),I))!=N.end()){
             dprintf(("I=%d from nonbasic\n",I));
-            fflush(stdout);
             int iterator_offset=iterator-N.begin();
             c(0,iterator_offset)+=old_c(0,I);     
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
-            fflush(stdout);
             int iterator_offset=std::find(B.begin(),B.end(),I)-B.begin();
             c-=old_c(0,I)*b.row(iterator_offset).colRange(0,b.cols-1);
             v+=old_c(0,I)*b(iterator_offset,b.cols-1);

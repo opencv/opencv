@@ -43,11 +43,12 @@
 #ifndef __OPENCV_OPTIM_HPP__
 #define __OPENCV_OPTIM_HPP__
 
-//uncomment the next line to print the debug info
-//#define ALEX_DEBUG
+#include "opencv2/core.hpp"
+#include <iostream>
 
 namespace cv{namespace optim
 {
+    using namespace std;
 //!the return codes for solveLP() function
 enum
 {

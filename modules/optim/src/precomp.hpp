@@ -43,8 +43,6 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "opencv2/core.hpp"
-#include "opencv2/core/mat.hpp"
 #include "opencv2/optim.hpp"
 
 #endif
