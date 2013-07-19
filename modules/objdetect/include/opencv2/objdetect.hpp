@@ -394,5 +394,6 @@ CV_EXPORTS_W void drawDataMatrixCodes(InputOutputArray image,
 }
 
 #include "opencv2/objdetect/linemod.hpp"
+#include "opencv2/objdetect/erfilter.hpp"
 
 #endif
