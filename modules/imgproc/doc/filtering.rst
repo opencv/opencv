@@ -947,7 +947,7 @@ Returns Gaussian filter coefficients.
     :param ksize: Aperture size. It should be odd ( :math:`\texttt{ksize} \mod 2 = 1` ) and positive.
 
     :param sigma: Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`` .
-    :param ktype: Type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F`` .
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
 
 The function computes and returns the
 :math:`\texttt{ksize} \times 1` matrix of Gaussian filter coefficients:
@@ -973,6 +973,32 @@ Two of such generated kernels can be passed to
    :ocv:func:`getDerivKernels`,
    :ocv:func:`getStructuringElement`,
    :ocv:func:`GaussianBlur`
+
+
+
+getGaborKernel
+-----------------
+Returns Gabor filter coefficients.
+
+.. ocv:function:: Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd, double gamma, double psi = CV_PI*0.5, int ktype = CV_64F )
+
+.. ocv:pyfunction:: cv2.getGaborKernel(ksize, sigma, theta, lambd, gamma[, psi[, ktype]]) -> retval
+
+    :param ksize: Size of the filter returned.
+    
+    :param sigma: Standard deviation of the gaussian envelope.
+    
+    :param theta: Orientation of the normal to the parallel stripes of a Gabor function.
+    
+    :param lambd: Wavelength of the sinusoidal factor.
+    
+    :param gamma: Spatial aspect ratio.
+    
+    :param psi: Phase offset.
+    
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
+
+For more details about gabor filter equations and parameters, see: `Gabor Filter <http://en.wikipedia.org/wiki/Gabor_filter>`_.
 
 
 
