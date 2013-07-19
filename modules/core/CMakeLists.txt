@@ -2,6 +2,10 @@ set(the_description "The Core Functionality")
 ocv_add_module(core ${ZLIB_LIBRARIES})
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
+if (HAVE_WINRT)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW /GS /Gm- /AI\"C:/Program Files/Windows Kits/8.0/References/CommonConfiguration/Neutral\" /AI\"C:/Program Files/Microsoft Visual Studio 11.0/VC/vcpackages\"")
+endif()
+
 if(HAVE_CUDA)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)

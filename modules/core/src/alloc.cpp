@@ -42,6 +42,10 @@
 
 #include "precomp.hpp"
 
+#if (_WIN32_WINNT >= 0x0602)
+#include <synchapi.h>
+#endif
+
 #define CV_USE_SYSTEM_MALLOC 1
 
 namespace cv
@@ -96,7 +100,14 @@ void fastFree(void* ptr)
 #ifdef WIN32
 struct CriticalSection
 {
-    CriticalSection() { InitializeCriticalSection(&cs); }
+    CriticalSection()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        InitializeCriticalSection(&cs);
+#endif
+    }
     ~CriticalSection() { DeleteCriticalSection(&cs); }
     void lock() { EnterCriticalSection(&cs); }
     void unlock() { LeaveCriticalSection(&cs); }

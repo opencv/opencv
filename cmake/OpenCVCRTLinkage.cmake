@@ -2,6 +2,21 @@ if(NOT MSVC)
   message(FATAL_ERROR "CRT options are available only for MSVC")
 endif()
 
+#INCLUDE (CheckIncludeFiles)
+
+if (WITH_WINRT)
+  #CHECK_INCLUDE_FILES("wrl/client.h" HAVE_WINRT)
+  TRY_COMPILE(HAVE_WINRT
+    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/winrttest.cpp"
+    CMAKE_FLAGS "\"kernel.lib\" \"user32.lib\""
+    OUTPUT_VARIABLE OUTPUT)
+  if (HAVE_WINRT)
+    add_definitions(/DWINVER=0x0602 /DNTDDI_VERSION=NTDDI_WIN8 /D_WIN32_WINNT=0x0602)
+  endif()
+  message(STATUS "Windows RT: ${HAVE_WINRT}")
+endif(WITH_WINRT)
+
 if(NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
   foreach(flag_var
           CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
