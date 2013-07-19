@@ -4,8 +4,6 @@
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
-#include "cvconfig.h"
-
 #ifndef GTEST_CREATE_SHARED_LIBRARY
 #ifdef BUILD_SHARED_LIBS
 #define GTEST_LINKED_AS_SHARED_LIBRARY 1
