@@ -187,7 +187,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr_to_bgr565(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -200,7 +200,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgb_to_bgr555(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -213,7 +213,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::rgb_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::rgb_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgb_to_bgr565(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -226,7 +226,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::rgb_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::rgb_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgra_to_bgr555(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -239,7 +239,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgra_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgra_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgra_to_bgr565(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -252,7 +252,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgra_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgra_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgba_to_bgr555(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -265,7 +265,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::rgba_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::rgba_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgba_to_bgr565(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -278,7 +278,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::rgba_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::rgba_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_rgb(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -291,7 +291,7 @@ namespace
         _dst.create(src.size(), CV_8UC3);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr555_to_rgb(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr555_to_rgb(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_rgb(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -304,7 +304,7 @@ namespace
         _dst.create(src.size(), CV_8UC3);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr565_to_rgb(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr565_to_rgb(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_bgr(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -317,7 +317,7 @@ namespace
         _dst.create(src.size(), CV_8UC3);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr555_to_bgr(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr555_to_bgr(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_bgr(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -330,7 +330,7 @@ namespace
         _dst.create(src.size(), CV_8UC3);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr565_to_bgr(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr565_to_bgr(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_rgba(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -343,7 +343,7 @@ namespace
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr555_to_rgba(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr555_to_rgba(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_rgba(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -356,7 +356,7 @@ namespace
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr565_to_rgba(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr565_to_rgba(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_bgra(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -369,7 +369,7 @@ namespace
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr555_to_bgra(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr555_to_bgra(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_bgra(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -382,7 +382,7 @@ namespace
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr565_to_bgra(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr565_to_bgra(src, dst, StreamAccessor::getStream(stream));
     }
 
     void gray_to_bgr(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -427,7 +427,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::gray_to_bgr555(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::gray_to_bgr555(src, dst, StreamAccessor::getStream(stream));
     }
 
     void gray_to_bgr565(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -440,7 +440,7 @@ namespace
         _dst.create(src.size(), CV_8UC2);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::gray_to_bgr565(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::gray_to_bgr565(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr555_to_gray(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -453,7 +453,7 @@ namespace
         _dst.create(src.size(), CV_8UC1);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr555_to_gray(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr555_to_gray(src, dst, StreamAccessor::getStream(stream));
     }
 
     void bgr565_to_gray(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -466,7 +466,7 @@ namespace
         _dst.create(src.size(), CV_8UC1);
         GpuMat dst = _dst.getGpuMat();
 
-        cudev::bgr565_to_gray(src, dst, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::bgr565_to_gray(src, dst, StreamAccessor::getStream(stream));
     }
 
     void rgb_to_gray(InputArray _src, OutputArray _dst, int, Stream& stream)
@@ -2145,9 +2145,9 @@ void cv::gpu::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn, 
                                         code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
 
         if (dcn == 3)
-            cudev::MHCdemosaic<3>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+            cv::gpu::cudev::MHCdemosaic<3>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
         else
-            cudev::MHCdemosaic<4>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+            cv::gpu::cudev::MHCdemosaic<4>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
 
         break;
     }
@@ -2172,7 +2172,7 @@ void cv::gpu::demosaicing(InputArray _src, OutputArray _dst, int code, int dcn, 
         const int2 firstRed = make_int2(code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGB2BGR_MHT ? 0 : 1,
                                         code == COLOR_BayerRG2BGR_MHT || code == COLOR_BayerGR2BGR_MHT ? 0 : 1);
 
-        cudev::MHCdemosaic<1>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
+        cv::gpu::cudev::MHCdemosaic<1>(srcWhole, make_int2(ofs.x, ofs.y), dst, firstRed, StreamAccessor::getStream(stream));
 
         break;
     }
