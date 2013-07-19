@@ -44,7 +44,6 @@
 #define __OPENCV_OPTIM_HPP__
 
 #include "opencv2/core.hpp"
-#include <iostream>
 
 namespace cv{namespace optim
 {

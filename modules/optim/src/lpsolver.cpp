@@ -12,20 +12,8 @@ using namespace std;
 #ifdef ALEX_DEBUG
 #define dprintf(x) printf x
 static void print_matrix(const Mat& x){
-    printf("\ttype:%d vs %d,\tsize: %d-on-%d\n",x.type(),CV_64FC1,x.rows,x.cols);
-    if(!true){
-        //cout<<x;
-    }
-    else{
-
-    for(int i=0;i<x.rows;i++){
-        printf("\t[");
-        for(int j=0;j<x.cols;j++){
-            printf("%g, ",x.at<double>(i,j));
-        }
-        printf("]\n");
-    }
-    }
+    print(x);
+    printf("\n");
 }
 static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
     printf("\tprint simplex state\n");
@@ -36,18 +24,14 @@ static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::ve
     print_matrix(c);
     
     printf("non-basic: ");
-    for (std::vector<int>::const_iterator it = N.begin() ; it != N.end(); ++it){
-        printf("%d, ",*it);
-    }
+    print(Mat(N));
     printf("\n");
     
     printf("here b goes\n");
     print_matrix(b);
     printf("basic: ");
     
-    for (std::vector<int>::const_iterator it = B.begin() ; it != B.end(); ++it){
-        printf("%d, ",*it);
-    }
+    print(Mat(B));
     printf("\n");
 }
 #else
@@ -85,23 +69,8 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     if(Func.rows==1){
         Func.convertTo(bigC.colRange(1,bigC.cols),CV_64FC1);
     }else{
-        dprintf(("hi from other branch\n"));
-        Mat_<double> slice=bigC.colRange(1,bigC.cols);
-        MatIterator_<double> slice_iterator=slice.begin();
-        switch(Func.type()){
-            case CV_64FC1:
-                for(MatConstIterator_<double> it=Func.begin<double>();it!=Func.end<double>();it++,slice_iterator++){
-                    * slice_iterator= *it;
-                }
-                break;
-            case CV_32FC1:
-                for(MatConstIterator_<float> it=Func.begin<float>();it!=Func.end<double>();it++,slice_iterator++){
-                    * slice_iterator= *it;
-                }
-                break;
-        }
-        print_matrix(Func);
-        print_matrix(bigC);
+        Mat FuncT=Func.t();
+        FuncT.convertTo(bigC.colRange(1,bigC.cols),CV_64FC1);
     }
     Constr.convertTo(bigB.colRange(1,bigB.cols),CV_64FC1);
     double v=0;
@@ -286,14 +255,9 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         dprintf(("constraints\n"));
         print_matrix(b);
         dprintf(("non-basic: "));
-        for (std::vector<int>::iterator it = N.begin() ; it != N.end(); ++it){
-            dprintf(("%d, ",*it));
-        }
-        dprintf(("\nbasic: "));
-        for (std::vector<int>::iterator it = B.begin() ; it != B.end(); ++it){
-            dprintf(("%d, ",*it));
-        }
-        dprintf(("\n"));
+        print_matrix(Mat(N));
+        dprintf(("basic: "));
+        print_matrix(Mat(B));
     }
 }
 
