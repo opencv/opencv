@@ -21,6 +21,7 @@ private:
     void listShapeNames(vector<string> &listHeaders);
     vector<Point2f> convertContourType( Mat&, int n=0 );
     float computeShapeDistance(vector <Point2f>&, vector <Point2f>&, vector<Point2f>&, vector<Point2f>&, vector<DMatch> &);
+    void displayMPEGResults();
 };
 
 CV_ShapeTest::CV_ShapeTest()
@@ -195,6 +196,8 @@ const int angularBins=12;
 const int radialBins=4;
 const float minRad=0.2;
 const float maxRad=2;
+const int NSN=20; //number of shapes per code (car, butterfly, etc)
+const int NP=200; //number of points sympliying the contour
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
                                          vector <Point2f>& query3, vector <Point2f>& test, vector<DMatch>& matches)
@@ -296,11 +299,9 @@ void CV_ShapeTest::mpegTest()
     string path = cvtest::TS::ptr()->get_data_path() + baseTestFolder;
     vector<string> namesHeaders;
     listShapeNames(namesHeaders);
-    const int NSN=20; //number of shapes per code (car, butterfly, etc)
-    const int NP=200; //number of points sympliying the contour
 
     /* distance matrix */
-    Mat distanceMat=Mat::zeros(1400, 1400, CV_32F);
+    Mat distanceMat=Mat::zeros(NSN*namesHeaders.size(), NSN*namesHeaders.size(), CV_32F);
 
     /* query contours (normal v flipped, h flipped) and testing contour */
     vector<Point2f> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
@@ -386,10 +387,51 @@ void CV_ShapeTest::mpegTest()
     fs << "distanceMat" << distanceMat;
 }
 
+void CV_ShapeTest::displayMPEGResults()
+{
+    string baseTestFolder="shape/mpeg_test/";
+    Mat distanceMat, sortedMat;
+    FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::READ);
+    vector<string> namesHeaders;
+    listShapeNames(namesHeaders);
+
+    /* Read generated MAT */
+    fs["distanceMat"]>>distanceMat;
+    /* sortIdx */
+    sortIdx(distanceMat, sortedMat, SORT_EVERY_ROW+SORT_ASCENDING);
+
+    int corrects=0;
+    float acum=0.0;
+    for (int row=0; row<sortedMat.rows; row++)
+    {
+        int divi=0;
+        corrects=0;
+        for (int col=0; col<sortedMat.cols; col++)
+        {
+            if (sortedMat.at<int>(row,col)<40)
+            {
+                //there is an index belonging to the correct group
+                if (sortedMat.at<int>(row,col)<(float(NSN)/(row+1))+divi && sortedMat.at<int>(row,col)>(float(NSN)/(row+1))+divi-NSN)
+                {
+                    corrects++;
+                }
+                if (col%NSN==0) //another group
+                {
+                    divi+=NSN;
+                }
+            }
+        }
+        acum+=float(corrects)/NSN;
+    }
+    //std::cout<<"#number of correct matches in the first 40 groups: "<<corrects<<std::endl;
+    std::cout<<"% porcentage of succes: "<<acum/sortedMat.rows<<std::endl;
+}
+
 void CV_ShapeTest::run( int /*start_from*/ )
 {
     //test1();
     mpegTest();
+    displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
 
