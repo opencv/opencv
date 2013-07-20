@@ -259,7 +259,6 @@ void ERFilterNM::er_tree_extract( cv::InputArray image )
     quads[2][0] = (1<<2)|(1<<1);
     quads[2][1] = (1<<3)|(1);
     quads[2][3] = 255;
-    quads[2][4] = 255;
 
 
     // masks to know if a pixel is accessible and if it has been already added to some region
@@ -267,8 +266,8 @@ void ERFilterNM::er_tree_extract( cv::InputArray image )
     vector<bool> accumulated_pixel_mask(width * height);
 
     // heap of boundary pixels
-    vector<int> boundary_pixes[(255/thresholdDelta)+1];
-    vector<int> boundary_edges[(255/thresholdDelta)+1];
+    vector<int> boundary_pixes[256];
+    vector<int> boundary_edges[256];
 
     // add a dummy-component before start
     er_stack.push_back(new ERStat);
@@ -453,23 +452,23 @@ void ERFilterNM::er_tree_extract( cv::InputArray image )
         {
             for (int q=0; q<4; q++)
             {
-                if ( (quad_before[0] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_before[p]++;
-                if ( (quad_before[1] == quads[p][q]) )
-                    if ((p<2)||(q<2)) C_before[p]++;
-                if ( (quad_before[2] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_before[p]++;
-                if ( (quad_before[3] == quads[p][q]) )
-                    if ((p<2)||(q<2)) C_before[p]++;
+                if ( (quad_before[0] == quads[p][q]) && ((p<2)||(q<2)) )
+                    C_before[p]++;
+                if ( (quad_before[1] == quads[p][q]) && ((p<2)||(q<2)) )
+                    C_before[p]++;
+                if ( (quad_before[2] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                    C_before[p]++;
+                if ( (quad_before[3] == quads[p][q]) && ((p<2)||(q<2)) )
+                    C_before[p]++;
 
-                if ( (quad_after[0] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_after[p]++;
-                if ( (quad_after[1] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_after[p]++;
-                if ( (quad_after[2] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_after[p]++;
-                if ( (quad_after[3] == quads[p][q]) ) 
-                    if ((p<2)||(q<2)) C_after[p]++;
+                if ( (quad_after[0] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                    C_after[p]++;
+                if ( (quad_after[1] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                    C_after[p]++;
+                if ( (quad_after[2] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                    C_after[p]++;
+                if ( (quad_after[3] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                    C_after[p]++;
             }
         }
 
