@@ -23,26 +23,26 @@ protected:
     virtual void SetUp();
 };
 
-class LSD_ADV: public LSDBase
+class Imgproc_LSD_ADV: public LSDBase
 {
 public:
-    LSD_ADV() {};
+    Imgproc_LSD_ADV() {};
 protected:
 
 };
 
-class LSD_STD: public LSDBase
+class Imgproc_LSD_STD: public LSDBase
 {
 public:
-    LSD_STD() {};
+    Imgproc_LSD_STD() {};
 protected:
 
 };
 
-class LSD_NONE: public LSDBase
+class Imgproc_LSD_NONE: public LSDBase
 {
 public:
-    LSD_NONE() {};
+    Imgproc_LSD_NONE() {};
 protected:
 
 };
@@ -92,7 +92,7 @@ void LSDBase::GenerateRotatedRect(Mat& image)
     rRect.points(vertices);
     for (int i = 0; i < 4; i++)
     {
-        line(image, vertices[i], vertices[(i + 1) % 4], Scalar(255));
+        line(image, vertices[i], vertices[(i + 1) % 4], Scalar(255), 3);
     }
 }
 
@@ -103,110 +103,113 @@ void LSDBase::SetUp()
 }
 
 
-TEST_F(LSD_ADV, whiteNoise)
+TEST_F(Imgproc_LSD_ADV, whiteNoise)
 {
     GenerateWhiteNoise(test_image);
-    LSD detector(LSD_REFINE_ADV);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
+    detector->detect(test_image, lines);
 
     ASSERT_GE((unsigned int)(40), lines.size());
 }
 
-TEST_F(LSD_ADV, constColor)
+TEST_F(Imgproc_LSD_ADV, constColor)
 {
     GenerateConstColor(test_image);
-    LSD detector(LSD_REFINE_ADV);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
+    detector->detect(test_image, lines);
 
     ASSERT_EQ((unsigned int)(0), lines.size());
 }
 
-TEST_F(LSD_ADV, lines)
+TEST_F(Imgproc_LSD_ADV, lines)
 {
     const unsigned int numOfLines = 3;
     GenerateLines(test_image, numOfLines);
-    LSD detector(LSD_REFINE_ADV);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
+    detector->detect(test_image, lines);
 
     ASSERT_EQ(numOfLines * 2, lines.size()); // * 2 because of Gibbs effect
 }
 
-TEST_F(LSD_ADV, rotatedRect)
+TEST_F(Imgproc_LSD_ADV, rotatedRect)
 {
     GenerateRotatedRect(test_image);
-    LSD detector(LSD_REFINE_ADV);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
+    detector->detect(test_image, lines);
+
+    ASSERT_LE((unsigned int)(2), lines.size());
+}
+
+TEST_F(Imgproc_LSD_STD, whiteNoise)
+{
+    GenerateWhiteNoise(test_image);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    detector->detect(test_image, lines);
+
+    ASSERT_GE((unsigned int)(50), lines.size());
+}
+
+TEST_F(Imgproc_LSD_STD, constColor)
+{
+    GenerateConstColor(test_image);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    detector->detect(test_image, lines);
+
+    ASSERT_EQ((unsigned int)(0), lines.size());
+}
+
+TEST_F(Imgproc_LSD_STD, lines)
+{
+    const unsigned int numOfLines = 3; //1
+    GenerateLines(test_image, numOfLines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    detector->detect(test_image, lines);
+
+    ASSERT_EQ(numOfLines * 2, lines.size()); // * 2 because of Gibbs effect
+}
+
+TEST_F(Imgproc_LSD_STD, rotatedRect)
+{
+    GenerateRotatedRect(test_image);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    detector->detect(test_image, lines);
+
     ASSERT_LE((unsigned int)(4), lines.size());
 }
 
-TEST_F(LSD_STD, whiteNoise)
+TEST_F(Imgproc_LSD_NONE, whiteNoise)
 {
     GenerateWhiteNoise(test_image);
-    LSD detector(LSD_REFINE_STD);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
+    detector->detect(test_image, lines);
 
     ASSERT_GE((unsigned int)(50), lines.size());
 }
 
-TEST_F(LSD_STD, constColor)
+TEST_F(Imgproc_LSD_NONE, constColor)
 {
     GenerateConstColor(test_image);
-    LSD detector(LSD_REFINE_STD);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
+    detector->detect(test_image, lines);
 
     ASSERT_EQ((unsigned int)(0), lines.size());
 }
 
-TEST_F(LSD_STD, lines)
+TEST_F(Imgproc_LSD_NONE, lines)
 {
     const unsigned int numOfLines = 3; //1
     GenerateLines(test_image, numOfLines);
-    LSD detector(LSD_REFINE_STD);
-    detector.detect(test_image, lines);
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
+    detector->detect(test_image, lines);
 
     ASSERT_EQ(numOfLines * 2, lines.size()); // * 2 because of Gibbs effect
 }
 
-TEST_F(LSD_STD, rotatedRect)
+TEST_F(Imgproc_LSD_NONE, rotatedRect)
 {
     GenerateRotatedRect(test_image);
-    LSD detector(LSD_REFINE_STD);
-    detector.detect(test_image, lines);
-    ASSERT_EQ((unsigned int)(8), lines.size());
-}
+    LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
+    detector->detect(test_image, lines);
 
-TEST_F(LSD_NONE, whiteNoise)
-{
-    GenerateWhiteNoise(test_image);
-    LSD detector(LSD_REFINE_NONE);
-    detector.detect(test_image, lines);
-
-    ASSERT_GE((unsigned int)(50), lines.size());
-}
-
-TEST_F(LSD_NONE, constColor)
-{
-    GenerateConstColor(test_image);
-    LSD detector(LSD_REFINE_NONE);
-    detector.detect(test_image, lines);
-
-    ASSERT_EQ((unsigned int)(0), lines.size());
-}
-
-TEST_F(LSD_NONE, lines)
-{
-    const unsigned int numOfLines = 3; //1
-    GenerateLines(test_image, numOfLines);
-    LSD detector(LSD_REFINE_NONE);
-    detector.detect(test_image, lines);
-
-    ASSERT_EQ(numOfLines * 2, lines.size()); // * 2 because of Gibbs effect
-}
-
-TEST_F(LSD_NONE, rotatedRect)
-{
-    GenerateRotatedRect(test_image);
-    LSD detector(LSD_REFINE_NONE);
-    detector.detect(test_image, lines);
-    ASSERT_EQ((unsigned int)(8), lines.size());
+    ASSERT_LE((unsigned int)(8), lines.size());
 }
