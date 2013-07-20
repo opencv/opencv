@@ -303,7 +303,7 @@ private:
 class CV_EXPORTS_W TrackerTargetState
 {
 public:
-	virtual ~TrackerTargetState();
+	virtual ~TrackerTargetState(){};
 	/**
 	 * \brief Get the position
 	 * \return The position
@@ -314,7 +314,7 @@ public:
 	 * \brief Set the position
 	 * \param position The position
 	 */
-	void setTargetPosition( Point2f position );
+	void setTargetPosition( const Point2f& position );
 
 protected:
 	Point2f targetPosition;
@@ -446,11 +446,12 @@ private:
 	std::vector<ConfidenceMap> confidenceMaps;
 	Trajectory trajectory;
 	Ptr<TrackerStateEstimator> stateEstimator;
-	ConfidenceMap currentConfidenceMap;
 
 	void clearCurrentConfidenceMap();
 
 protected:
+	ConfidenceMap currentConfidenceMap;
+
 	virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
 	virtual void modelUpdateImpl() = 0;
 

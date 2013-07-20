@@ -47,22 +47,37 @@ namespace cv
 {
 
 /**
- * Implementation of the target state
- * Width and height are the dimensions of the bounding box
+ * Implementation of the target state for MIL algorithm
  */
 class TrackerMILTargetState : public TrackerTargetState
 {
 
 public:
-
+	/**
+	 * \brief Constructor
+	 * \param position Top left corner of the bounding box
+	 * \param width Width of the bounding box
+	 * \param height Height of the bounding box
+	 * \param foreground label for target or background
+	 * \param HAARFeatures features extracted
+	 */
 	TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& HAARFeatures )
-{
+	{
 		setTargetPosition( position );
 		setWidth( width );
 		setHeight( height );
 		setTargetFg( foreground );
 		setFeatures( HAARFeatures );
-};
+	};
+
+	/**
+	 * \brief Destructor
+	 */
+	~TrackerMILTargetState(){};
+
+	/**
+	 * setters and getters
+	 */
 	inline void setWidth( int targetWidth ){ targetWidth = width; };
 	inline void setHeight( int targetHeight ){ targetHeight = height; };
 	inline void setTargetFg( bool foreground ){ isTarget = foreground; };
@@ -80,7 +95,9 @@ private:
 };
 
 
-
+/**
+ * \brief Implementation of TrackerModel for MIL algorithm
+ */
 class TrackerMILModel : public TrackerModel
 {
 public:
@@ -90,8 +107,19 @@ public:
 		MODE_NEGATIVE    = 2   // mode for negative features
 	};
 
+	/**
+	 * \brief Constructor
+	 */
 	TrackerMILModel();
+
+	/**
+	 * \brief Destructor
+	 */
 	~TrackerMILModel(){};
+
+	/**
+	 * \brief Set the mode
+	 */
 	void setMode( int trainingMode, const std::vector<Mat>& samples );
 
 protected:
@@ -120,16 +148,17 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 		return;
 	}
 
+
 	for( size_t i = 0; i <  responses.size(); i++ )
 	{
 		//for each column (one sample) there are #num_feature
 		//get informations from currentSample
 		for( size_t j = 0; j < responses.at(i).cols; j++)
 		{
-			//TODO fill all object state
 
 			Size currentSize;
 			Point currentOfs;
+			currentSample.at(j).locateROI( currentSize, currentOfs );
 			bool foreground;
 			if( mode == MODE_POSITIVE )
 			{
@@ -140,10 +169,23 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 				foreground = false;
 			}
 
+			//get the column of the HAAR responses
+			Mat singleResponse = responses.at(i).col(j);
+
+			//create the state
+			Ptr<TrackerMILTargetState> currentState = new TrackerMILTargetState( currentOfs,
+					currentSize.width,
+					currentSize.height,
+					foreground,
+					singleResponse);
+
+			currentConfidenceMap.push_back( std::make_pair(currentState, 0) );
+
 		}
 
 
 	}
+
 }
 
 void TrackerMILModel::setMode( int trainingMode, const std::vector<Mat>& samples )
@@ -288,7 +330,6 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
 	model->modelEstimation( negResponse );
 	model->modelUpdate();
-
 
 	return true;
 }

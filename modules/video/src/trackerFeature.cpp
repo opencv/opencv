@@ -190,7 +190,7 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
 
 	response = Mat_<float>( Size( images.size(), numFeatures ));
 
-	//TODO for each sample compute #n_feature -> put each feature (3 Rect) in response
+	//for each sample compute #n_feature -> put each feature (3 Rect) in response
 	for( size_t i = 0; i < images.size(); i++ )
 	{
 		featureEvaluator->setImage( images.at(i), 1, 0 );

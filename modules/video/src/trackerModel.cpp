@@ -140,7 +140,7 @@ Point2f TrackerTargetState::getTargetPosition() const
 }
 
 
-void TrackerTargetState::setTargetPosition( Point2f position )
+void TrackerTargetState::setTargetPosition( const Point2f& position )
 {
 	targetPosition = position;
 }
