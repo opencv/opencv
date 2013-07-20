@@ -60,7 +60,7 @@ if(WITH_PVAPI)
 
     if(WIN32)
       if(MINGW)
-        set(PVAPI_DECLARATIONS "-DPVDECL=__stdcall")
+        set(PVAPI_DEFINITIONS "-DPVDECL=__stdcall")
       endif(MINGW)
       set(PVAPI_LIBRARY "${_PVAPI_LIBRARY}/PvAPI.lib" CACHE PATH "The PvAPI library")
     else(WIN32)
