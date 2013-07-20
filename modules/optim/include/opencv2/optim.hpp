@@ -47,7 +47,6 @@
 
 namespace cv{namespace optim
 {
-    using namespace std;
 //!the return codes for solveLP() function
 enum
 {

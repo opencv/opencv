@@ -81,19 +81,6 @@ TEST(Optim_LpSolver, regression_multiple_solutions){
     ASSERT_EQ(res,1);
     ASSERT_EQ(z.dot(A),1);
     }
-
-    if(false){
-    //cormen's example from chapter about initialize_simplex
-    //online solver told it has inf many solutions, but I'm not sure
-    A=(cv::Mat_<double>(2,1)<<2,-1);
-    B=(cv::Mat_<double>(2,3)<<2,-1,2,1,-5,-4);
-    std::cout<<"here A goes\n"<<A<<"\n";
-    int res=cv::optim::solveLP(A,B,z);
-    printf("res=%d\n",res);
-    printf("scalar %g\n",z.dot(A));
-    std::cout<<"here z goes\n"<<z<<"\n";
-    ASSERT_EQ(res,1);
-    }
 }
 
 TEST(Optim_LpSolver, regression_cycling){
