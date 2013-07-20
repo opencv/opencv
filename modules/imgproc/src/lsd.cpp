@@ -93,8 +93,8 @@ inline double dist(const double x1, const double y1,
 inline double angle_diff_signed(const double& a, const double& b)
 {
     double diff = a - b;
-    while(diff <= -M_PI) diff += M_2__PI;
-    while(diff >   M_PI) diff -= M_2__PI;
+    while(diff <= -CV_PI) diff += M_2__PI;
+    while(diff >   CV_PI) diff -= M_2__PI;
     return diff;
 }
 
@@ -448,7 +448,7 @@ void LineSegmentDetectorImpl::flsd(std::vector<Vec4i>& lines,
     std::vector<double>& nfas)
 {
     // Angle tolerance
-    const double prec = M_PI * ANG_TH / 180;
+    const double prec = CV_PI * ANG_TH / 180;
     const double p = ANG_TH / 180;
     const double rho = QUANT / sin(prec);    // gradient magnitude threshold
 
@@ -785,7 +785,7 @@ double LineSegmentDetectorImpl::get_theta(const std::vector<RegionPoint>& reg, c
     theta *= DEG_TO_RADS;
 
     // Correct angle by 180 deg if necessary
-    if(angle_diff(theta, reg_angle) > prec) { theta += M_PI; }
+    if(angle_diff(theta, reg_angle) > prec) { theta += CV_PI; }
 
     return theta;
 }
@@ -892,7 +892,7 @@ double LineSegmentDetectorImpl::rect_improve(rect& rec) const
     for(int n = 0; n < 5; ++n)
     {
         r.p /= 2;
-        r.prec = r.p * M_PI;
+        r.prec = r.p * CV_PI;
         double log_nfa_new = rect_nfa(r);
         if(log_nfa_new > log_nfa)
         {
@@ -968,7 +968,7 @@ double LineSegmentDetectorImpl::rect_improve(rect& rec) const
         if((r.width - delta) >= 0.5)
         {
             r.p /= 2;
-            r.prec = r.p * M_PI;
+            r.prec = r.p * CV_PI;
             double log_nfa_new = rect_nfa(r);
             if(log_nfa_new > log_nfa)
             {
