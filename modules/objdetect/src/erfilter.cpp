@@ -607,14 +607,14 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
 
     // child region done, we can calculate 1st stage features from the incrementally computable descriptors
     child->aspect_ratio = (float)(child->bbox[2]-child->bbox[0]+1)/(child->bbox[3]-child->bbox[1]+1);
-    child->compactness  = sqrt(child->area)/child->perimeter;
+    child->compactness  = sqrt((float)(child->area))/child->perimeter;
     child->num_holes    = (float)(1-child->euler);
 
     vector<int> m_crossings;
     m_crossings.push_back(child->crossings->at((int)(child->bbox[3]-child->bbox[1]+1)/6));
     m_crossings.push_back(child->crossings->at((int)3*(child->bbox[3]-child->bbox[1]+1)/6));
     m_crossings.push_back(child->crossings->at((int)5*(child->bbox[3]-child->bbox[1]+1)/6));
-    sort(m_crossings.begin(), m_crossings.end());
+    std::sort(m_crossings.begin(), m_crossings.end());
     child->med_crossings = (float)m_crossings.at(1);
 
     // free unnecessary mem 
@@ -784,8 +784,10 @@ ERStat* ERFilterNM::er_tree_filter ( cv::InputArray image, ERStat * stat, ERStat
         if (p_next == (int)contour_poly.size())
             p_next = 0;
 
-        double angle_next = atan2((contour_poly[p_next].y-contour_poly[p].y),(contour_poly[p_next].x-contour_poly[p].x));
-        double angle_prev = atan2((contour_poly[p_prev].y-contour_poly[p].y),(contour_poly[p_prev].x-contour_poly[p].x));
+        double angle_next = atan2((double)(contour_poly[p_next].y-contour_poly[p].y),
+                                  (double)(contour_poly[p_next].x-contour_poly[p].x));
+        double angle_prev = atan2((double)(contour_poly[p_prev].y-contour_poly[p].y),
+                                  (double)(contour_poly[p_prev].x-contour_poly[p].x));
         if ( angle_next < 0 )
             angle_next = 2.*CV_PI + angle_next;
 
@@ -813,12 +815,12 @@ ERStat* ERFilterNM::er_tree_filter ( cv::InputArray image, ERStat * stat, ERStat
 
         vector<Point> hull;
         cv::convexHull(contours[0], hull, false);
-        hull_area = contourArea(hull);
+        hull_area = (int)contourArea(hull);
     }
 
 
     stat->hole_area_ratio = (float)holes_area / stat->area;
-    stat->convex_hull_ratio = (float)hull_area / contourArea(contours[0]);
+    stat->convex_hull_ratio = (float)hull_area / (float)contourArea(contours[0]);
     stat->num_inflexion_points = (float)num_inflexion_points;
 
 
