@@ -467,7 +467,7 @@ void CV_ShapeTest::displayMPEGResults()
 
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    //mpegTest();
+    mpegTest();
     displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
