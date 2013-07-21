@@ -202,7 +202,7 @@ const int radialBins=4;
 const float minRad=0.2;
 const float maxRad=2;
 const int NSN=20; //number of shapes per code (car, butterfly, etc)
-const int NP=200; //number of points sympliying the contour
+const int NP=300; //number of points sympliying the contour
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
                                          vector <Point2f>& query3, vector <Point2f>& test, vector<DMatch>& matches)
@@ -224,13 +224,13 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     vector<DMatch> matches1, matches2, matches3;
     /* Regularization params */
     float beta1=0, beta2=0, beta3=0;
-    float annRate=1;
+    float annRate=0.5;
 
     /* Iterative process with NC cycles */
-    int NC=2;//number of cycles
-    float scdistance1=0.0, benergy1=0.0, dist1=0.0;
-    float scdistance2=0.0, benergy2=0.0, dist2=0.0;
-    float scdistance3=0.0, benergy3=0.0, dist3=0.0;
+    int NC=5;//number of cycles
+    float scdistance1=0.0, benergy1=0.0;// dist1=0.0;
+    float scdistance2=0.0, benergy2=0.0;// dist2=0.0;
+    float scdistance3=0.0, benergy3=0.0;// dist3=0.0;
     for (int i=0; i<NC; i++)
     {
         //std::cout<<"CICLO: "<<i<<std::endl;
@@ -266,19 +266,23 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
         query3=transformed_shape;
 
         // updating distances values //
-        scdistance1 += scdmatcher1.getMatchingCost();
-        scdistance2 += scdmatcher2.getMatchingCost();
-        scdistance3 += scdmatcher3.getMatchingCost();
-        benergy1 += tpsTra1.getTranformCost();
-        benergy2 += tpsTra2.getTranformCost();
-        benergy3 += tpsTra3.getTranformCost();
-        dist1 += point2PointEuclideanDistance(query1, test, matches1);
-        dist2 += point2PointEuclideanDistance(query2, test, matches2);
-        dist3 += point2PointEuclideanDistance(query3, test, matches3);
+        scdistance1 = scdmatcher1.getMatchingCost();
+        scdistance2 = scdmatcher2.getMatchingCost();
+        scdistance3 = scdmatcher3.getMatchingCost();
+        benergy1 = tpsTra1.getTranformCost();
+        benergy2 = tpsTra2.getTranformCost();
+        benergy3 = tpsTra3.getTranformCost();
+        //dist1 = point2PointEuclideanDistance(query1, test, matches1);
+        //dist2 = point2PointEuclideanDistance(query2, test, matches2);
+        //dist3 = point2PointEuclideanDistance(query3, test, matches3);
     }
     float distance1T=scdistance1+benergy1;//+dist1;
     float distance2T=scdistance2+benergy2;//+dist2;
     float distance3T=scdistance3+benergy3;//+dist3;
+
+    //distance1T/=NC;
+    //distance2T/=NC;
+    //distance3T/=NC;
 
     if ( distance1T<=distance2T && distance1T<=distance3T )
     {
@@ -399,7 +403,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<"The distance is: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     /* draw */
-                    /*Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+                    Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -415,7 +419,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<"Size of the contour and matches: "<<contoursQuery1.size()<<", matches: "<<
                             matches.size()<<std::endl;
                     char key=(char)waitKey();
-                    if (key == ' ') continue;*/
+                    if (key == ' ') continue;
                 }
             }
         }

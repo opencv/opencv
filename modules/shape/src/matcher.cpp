@@ -181,7 +181,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
     std::vector<float> d(costMatrix.rows), pred(costMatrix.rows), v(costMatrix.rows);
 
-    const float LOWV=1e-6;
+    const float LOWV=1e-7;
     bool unassignedfound;
     int  i=0, imin=0, numfree=0, prvnumfree=0, f=0, i0=0, k=0, freerow=0;
     int  j=0, j1=0, j2=0, endofpath=0, last=0, low=0, up=0;
@@ -424,7 +424,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
     // Save in a DMatch vector
     for (i=0;i<costMatrix.rows;i++)
     {
-        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));
+        DMatch singleMatch(i,rowsol[i],costMatrix.at<float>(colsol[i],i));
         outMatches.push_back(singleMatch);
     }
 }
