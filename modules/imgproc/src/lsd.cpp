@@ -282,6 +282,8 @@ private:
         double p;                 // probability of a point with angle within 'prec'
     };
 
+    LineSegmentDetectorImpl& operator= (const LineSegmentDetectorImpl&); // to quiet MSVC
+
 /**
  * Detect lines in the whole input image.
  *
