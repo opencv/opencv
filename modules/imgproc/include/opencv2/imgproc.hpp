@@ -883,18 +883,11 @@ public:
  */
     virtual int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* image = 0) = 0;
 
-    ~LineSegmentDetector() {};
-protected:
-    LineSegmentDetector() {};
+    virtual ~LineSegmentDetector() {};
 };
 
 //! Returns a pointer to a LineSegmentDetector class.
-CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorSmrtPtr(
-    int _refine = LSD_REFINE_STD, double _scale = 0.8,
-    double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
-    double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
-
-CV_EXPORTS LineSegmentDetector* createLineSegmentDetectorPtr(
+CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
     int _refine = LSD_REFINE_STD, double _scale = 0.8,
     double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
     double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
