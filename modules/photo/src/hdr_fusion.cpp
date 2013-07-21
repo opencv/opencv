@@ -62,7 +62,7 @@ static Mat linearResponse()
 {
 	Mat response(256, 1, CV_32F);
     for(int i = 1; i < 256; i++) {
-        response.at<float>(i) = log((float)i);
+        response.at<float>(i) = logf((float)i);
     }
     response.at<float>(0) = response.at<float>(1);
 	return response;
@@ -84,7 +84,7 @@ static void modifyCheckResponse(Mat &response)
 	}
 }
 
-static void checkImages(std::vector<Mat>& images, bool hdr, const std::vector<float>& _exp_times = std::vector<float>())
+static void checkImages(const std::vector<Mat>& images, bool hdr, const std::vector<float>& _exp_times = std::vector<float>())
 {
 	CV_Assert(!images.empty());
 	CV_Assert(!hdr || images.size() == _exp_times.size());
@@ -132,7 +132,7 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 
 	std::vector<float> exp_times(_exp_times.size());
 	for(size_t i = 0; i < exp_times.size(); i++) {
-		exp_times[i] = log(_exp_times[i]);
+        exp_times[i] = logf(_exp_times[i]);
 	}
 
 	float weights[256];
@@ -190,7 +190,7 @@ void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, floa
 			pow(deviation, 2.0, deviation);
 			saturation += deviation;
 		}
-		sqrt(saturation, saturation);
+        sqrt(saturation, saturation);
 
 		wellexp = Mat::ones(gray.size(), CV_32FC1);
 		for(int i = 0; i < 3; i++) {
@@ -209,7 +209,7 @@ void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, floa
 		weights[im] = weights[im].mul(wellexp);
 		weight_sum += weights[im];
 	}
-	int maxlevel = (int)(log((double)max(images[0].rows, images[0].cols)) / log(2.0)) - 1;
+    int maxlevel = static_cast<int>(logf(static_cast<float>(max(images[0].rows, images[0].cols))) / logf(2.0)) - 1;
 	std::vector<Mat> res_pyr(maxlevel + 1);
 
 	for(size_t im = 0; im < images.size(); im++) {
@@ -292,3 +292,4 @@ void estimateResponse(InputArrayOfArrays _images, const std::vector<float>& exp_
 }
 
 };
+

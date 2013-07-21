@@ -99,7 +99,7 @@ CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, const std::vector<float>& 
 CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, int algorithm,
 	                      const std::vector<float>& params = std::vector<float>());
 
-CV_EXPORTS_W void exposureFusion(InputArrayOfArrays srcImgs, OutputArray dst, float wc = 1, float ws = 1, float we = 0);
+CV_EXPORTS_W void exposureFusion(InputArrayOfArrays srcImgs, OutputArray dst, float wc = 1.0f, float ws = 1.0f, float we = 0.0f);
 
 CV_EXPORTS_W void shiftMat(InputArray src, Point shift, OutputArray dst);
 
