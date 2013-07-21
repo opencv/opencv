@@ -70,7 +70,7 @@ void LSDBase::GenerateLines(Mat& image, const unsigned int numLines)
         int y = rng.uniform(10, img_size.width - 10);
         Point p1(y, 10);
         Point p2(y, img_size.height - 10);
-        line(image, p1, p2, Scalar(255), 1);
+        line(image, p1, p2, Scalar(255), 3);
     }
 }
 
@@ -123,7 +123,7 @@ TEST_F(Imgproc_LSD_ADV, constColor)
 
 TEST_F(Imgproc_LSD_ADV, lines)
 {
-    const unsigned int numOfLines = 3;
+    const unsigned int numOfLines = 1;
     GenerateLines(test_image, numOfLines);
     LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
     detector->detect(test_image, lines);
@@ -160,7 +160,7 @@ TEST_F(Imgproc_LSD_STD, constColor)
 
 TEST_F(Imgproc_LSD_STD, lines)
 {
-    const unsigned int numOfLines = 3; //1
+    const unsigned int numOfLines = 1;
     GenerateLines(test_image, numOfLines);
     LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
     detector->detect(test_image, lines);
@@ -197,7 +197,7 @@ TEST_F(Imgproc_LSD_NONE, constColor)
 
 TEST_F(Imgproc_LSD_NONE, lines)
 {
-    const unsigned int numOfLines = 3; //1
+    const unsigned int numOfLines = 1;
     GenerateLines(test_image, numOfLines);
     LineSegmentDetector* detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
     detector->detect(test_image, lines);
