@@ -87,8 +87,10 @@ void TrackerModel::modelUpdate()
 	modelUpdateImpl();
 
 	confidenceMaps.push_back( currentConfidenceMap );
+	stateEstimator->update( confidenceMaps );
 
 	clearCurrentConfidenceMap();
+
 }
 
 void TrackerModel::runStateEstimator()

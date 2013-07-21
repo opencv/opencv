@@ -64,6 +64,15 @@ Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<Confi
 
 }
 
+void TrackerStateEstimator::update( std::vector<ConfidenceMap>& confidenceMaps )
+{
+	if( confidenceMaps.size() == 0 )
+		return;
+
+	return updateImpl( confidenceMaps );
+
+}
+
 
 Ptr<TrackerStateEstimator> TrackerStateEstimator::create( const String& trackeStateEstimatorType )
 {
@@ -94,6 +103,7 @@ String TrackerStateEstimator::getClassName() const
 TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( )
 {
 	className = "BOOSTING";
+	trained = false;
 }
 
 TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
@@ -103,9 +113,14 @@ TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
 
 Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
+	//TODO run cvBoost predict in order to compute next location
 	return confidenceMaps.back().back().first;
 }
 
+void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
+{
+	//TODO update the scores of the confidence maps
+}
 
 
 /**
@@ -126,5 +141,9 @@ Ptr<TrackerTargetState> TrackerStateEstimatorSVM::estimateImpl( const std::vecto
 	return confidenceMaps.back().back().first;
 }
 
+void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
+{
+
+}
 
 } /* namespace cv */

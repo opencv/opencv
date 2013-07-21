@@ -61,11 +61,11 @@ public:
 	 * \param foreground label for target or background
 	 * \param HAARFeatures features extracted
 	 */
-	TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& HAARFeatures )
+	TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& HAARFeatures )
 	{
 		setTargetPosition( position );
-		setWidth( width );
-		setHeight( height );
+		setWidth( targetWidth );
+		setHeight( targetHeight );
 		setTargetFg( foreground );
 		setFeatures( HAARFeatures );
 	};
@@ -78,8 +78,8 @@ public:
 	/**
 	 * setters and getters
 	 */
-	inline void setWidth( int targetWidth ){ targetWidth = width; };
-	inline void setHeight( int targetHeight ){ targetHeight = height; };
+	inline void setWidth( int targetWidth ){ width = targetWidth; };
+	inline void setHeight( int targetHeight ){ height = targetHeight; };
 	inline void setTargetFg( bool foreground ){ isTarget = foreground; };
 	inline void setFeatures( const Mat& HAARFeatures ){ features = HAARFeatures; };
 	inline int getWidth() const { return width; };
@@ -124,7 +124,7 @@ public:
 
 protected:
 	void modelEstimationImpl( const std::vector<Mat>& responses );
-	void modelUpdateImpl(){};
+	void modelUpdateImpl();
 
 private:
 	int mode;
@@ -153,7 +153,7 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 	{
 		//for each column (one sample) there are #num_feature
 		//get informations from currentSample
-		for( size_t j = 0; j < responses.at(i).cols; j++)
+		for( int j = 0; j < responses.at(i).cols; j++)
 		{
 
 			Size currentSize;
@@ -185,6 +185,11 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 
 
 	}
+
+}
+
+void TrackerMILModel::modelUpdateImpl()
+{
 
 }
 
@@ -321,7 +326,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
 	//TODO train a boosted classified
 	model = new TrackerMILModel();
-	Ptr<TrackerStateEstimatorBoosting> stateEstimator;
+	Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting();
 	model->setTrackerStateEstimator( stateEstimator );
 
 	//Run model estimation and update

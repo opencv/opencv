@@ -46,6 +46,7 @@
 
 #include "opencv2/core.hpp"
 #include "feature.hpp"
+#include "opencv2/ml.hpp"
 #include <iostream>
 
 /*
@@ -352,6 +353,12 @@ public:
 	Ptr<TrackerTargetState> estimate( const std::vector<ConfidenceMap>& confidenceMaps );
 
 	/**
+	 * \brief Update the ConfidenceMap with the scores
+	 * \param confidenceMaps The overall appearance model
+	 */
+	void update( std::vector<ConfidenceMap>& confidenceMaps );
+
+	/**
 	 * \brief Create TrackerStateEstimator by tracker state estimator type SVM - BOOSTING.
 	 */
 	static Ptr<TrackerStateEstimator> create( const String& trackeStateEstimatorType );
@@ -365,6 +372,7 @@ public:
 protected:
 
 	virtual Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps ) = 0;
+	virtual void updateImpl( std::vector<ConfidenceMap>& confidenceMaps ) = 0;
 	String className;
 };
 
@@ -443,13 +451,13 @@ public:
 	const ConfidenceMap& getLastConfidenceMap() const;
 
 private:
-	std::vector<ConfidenceMap> confidenceMaps;
 	Trajectory trajectory;
-	Ptr<TrackerStateEstimator> stateEstimator;
 
 	void clearCurrentConfidenceMap();
 
 protected:
+	std::vector<ConfidenceMap> confidenceMaps;
+	Ptr<TrackerStateEstimator> stateEstimator;
 	ConfidenceMap currentConfidenceMap;
 
 	virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
@@ -521,7 +529,14 @@ class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
 public:
 	TrackerStateEstimatorBoosting();
 	~TrackerStateEstimatorBoosting();
+
+protected:
 	Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
+	void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
+
+private:
+	CvBoost boostModel;
+	bool trained;
 };
 
 /**
@@ -532,7 +547,10 @@ class CV_EXPORTS_W TrackerStateEstimatorSVM : public TrackerStateEstimator
 public:
 	TrackerStateEstimatorSVM();
 	~TrackerStateEstimatorSVM();
+
+protected:
 	Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
+	void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
 };
 
 
