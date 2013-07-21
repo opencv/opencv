@@ -804,7 +804,7 @@ cvFitEllipse2( const CvArr* array )
     CvPoint2D32f c = {0,0};
     double gfp[5], rp[5], t;
     CvMat A, b, x;
-    const double min_eps = 1e-6;
+    const double min_eps = 1e-8;
     int i, is_float;
     CvSeqReader reader;
 
