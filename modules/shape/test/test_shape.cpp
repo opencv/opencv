@@ -20,7 +20,12 @@ private:
     void mpegTest();
     void listShapeNames(vector<string> &listHeaders);
     vector<Point2f> convertContourType( Mat&, int n=0 );
-    float computeShapeDistance(vector <Point2f>&, vector <Point2f>&, vector<Point2f>&, vector<Point2f>&, vector<DMatch> &);
+    float computeShapeDistance(vector <Point2f>& queryNormal,
+                               vector <Point2f>& queryFlipped1,
+                               vector <Point2f>& queryFlipped2,
+                               vector<Point2f>& test, vector<DMatch> &);
+    float point2PointEuclideanDistance(vector <Point2f>& query, vector <Point2f>& test, vector<DMatch>& matches);
+    float distance(Point2f p, Point2f q);
     void displayMPEGResults();
 };
 
@@ -223,9 +228,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
 
     /* Iterative process with NC cycles */
     int NC=2;//number of cycles
-    float scdistance1=0.0, benergy1=0.0;
-    float scdistance2=0.0, benergy2=0.0;
-    float scdistance3=0.0, benergy3=0.0;
+    float scdistance1=0.0, benergy1=0.0, dist1=0.0;
+    float scdistance2=0.0, benergy2=0.0, dist2=0.0;
+    float scdistance3=0.0, benergy3=0.0, dist3=0.0;
     for (int i=0; i<NC; i++)
     {
         //std::cout<<"CICLO: "<<i<<std::endl;
@@ -267,10 +272,13 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
         benergy1 += tpsTra1.getTranformCost();
         benergy2 += tpsTra2.getTranformCost();
         benergy3 += tpsTra3.getTranformCost();
+        dist1 += point2PointEuclideanDistance(query1, test, matches1);
+        dist2 += point2PointEuclideanDistance(query2, test, matches2);
+        dist3 += point2PointEuclideanDistance(query3, test, matches3);
     }
-    float distance1T=scdistance1+benergy1;
-    float distance2T=scdistance2+benergy2;
-    float distance3T=scdistance3+benergy3;
+    float distance1T=scdistance1+benergy1;//+dist1;
+    float distance2T=scdistance2+benergy2;//+dist2;
+    float distance3T=scdistance3+benergy3;//+dist3;
 
     if ( distance1T<=distance2T && distance1T<=distance3T )
     {
@@ -291,6 +299,37 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     }
     matches=matches1;
     return 0.0;
+}
+
+float CV_ShapeTest::point2PointEuclideanDistance(vector <Point2f>& _query, vector <Point2f>& _test, vector<DMatch>& _matches)
+{
+    /* Use only valid matchings */
+    std::vector<DMatch> matches;
+    for (size_t i=0; i<_matches.size(); i++)
+    {
+        if (_matches[i].queryIdx<(int)_query.size() &&
+            _matches[i].trainIdx<(int)_test.size())
+        {
+            matches.push_back(_matches[i]);
+        }
+    }
+
+    /* Organizing the correspondent points in vector style */
+    float dist=0.0;
+    for (size_t i=0; i<matches.size(); i++)
+    {
+        Point2f pt1=_query[matches[i].queryIdx];
+        Point2f pt2=_test[matches[i].trainIdx];
+        dist+=distance(pt1,pt2);
+    }
+
+    return dist/matches.size();
+}
+
+float CV_ShapeTest::distance(Point2f p, Point2f q)
+{
+    Point2f diff = p - q;
+    return (diff.x*diff.x + diff.y*diff.y)/2;
 }
 
 void CV_ShapeTest::mpegTest()
@@ -387,50 +426,48 @@ void CV_ShapeTest::mpegTest()
     fs << "distanceMat" << distanceMat;
 }
 
+const int FIRST_MANY=40;
 void CV_ShapeTest::displayMPEGResults()
 {
     string baseTestFolder="shape/mpeg_test/";
-    Mat distanceMat, sortedMat;
+    Mat distanceMat, sortedMat, actualSorted;
     FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::READ);
     vector<string> namesHeaders;
     listShapeNames(namesHeaders);
 
     /* Read generated MAT */
     fs["distanceMat"]>>distanceMat;
-    /* sortIdx */
-    sortIdx(distanceMat, sortedMat, SORT_EVERY_ROW+SORT_ASCENDING);
-
+    // sortIdx //
+    cv::sortIdx(distanceMat, sortedMat, SORT_EVERY_ROW+SORT_ASCENDING);
+    cv::sort(distanceMat, actualSorted, SORT_EVERY_ROW+SORT_ASCENDING);
     int corrects=0;
-    float acum=0.0;
+    int divi=0;
+
     for (int row=0; row<sortedMat.rows; row++)
     {
-        int divi=0;
-        corrects=0;
+        if (row%NSN==0) //another group
+        {
+            divi+=NSN;
+        }
         for (int col=0; col<sortedMat.cols; col++)
         {
-            if (sortedMat.at<int>(row,col)<40)
+            if (sortedMat.at<int>(row,col)<FIRST_MANY)
             {
                 //there is an index belonging to the correct group
-                if (sortedMat.at<int>(row,col)<(float(NSN)/(row+1))+divi && sortedMat.at<int>(row,col)>(float(NSN)/(row+1))+divi-NSN)
+                if (col<divi)
                 {
                     corrects++;
                 }
-                if (col%NSN==0) //another group
-                {
-                    divi+=NSN;
-                }
             }
         }
-        acum+=float(corrects)/NSN;
     }
     //std::cout<<"#number of correct matches in the first 40 groups: "<<corrects<<std::endl;
-    std::cout<<"% porcentage of succes: "<<acum/sortedMat.rows<<std::endl;
+    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*sortedMat.rows)<<std::endl;
 }
 
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    //test1();
-    mpegTest();
+    //mpegTest();
     displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);
 }

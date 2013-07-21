@@ -62,8 +62,6 @@ namespace cv
 class CV_EXPORTS_W SCD 
 {
 public:
-    //! the default constructor
-    CV_WRAP SCD();
     //! the full constructor taking all the necessary parameters
     explicit CV_WRAP SCD(int nAngularBins=12, int nRadialBins = 5, 
                            double innerRadius=0.1, double outerRadius=1, bool rotationInvariant=false);
@@ -75,19 +73,19 @@ public:
     CV_WRAP void extractSCD(InputArray contour, Mat& descriptors);
 
     //! Setters
-    void setAngularBins(int);
-    void setRadialBins(int);
-    void setInnerRadius(double);
-    void setOuterRadius(double);
-    void setRotationInvariant(bool);
+    void setAngularBins(int angularBins);
+    void setRadialBins(int radialBins);
+    void setInnerRadius(double innerRadius);
+    void setOuterRadius(double outerRadius);
+    void setRotationInvariant(bool rotationInvariant);
 
     //! Getters
-    int getAngularBins(void);
-    int getRadialBins(void);
-    double getInnerRadius(void);
-    double getOuterRadius(void);
-    bool getRotationInvariant(void);
-    float getMeanDistance(void);
+    int getAngularBins();
+    int getRadialBins();
+    double getInnerRadius();
+    double getOuterRadius();
+    bool getRotationInvariant();
+    float getMeanDistance();
     
 private:
     CV_PROP_RW int nAngularBins;
@@ -104,7 +102,7 @@ protected:
                               Mat& disMatrix);
     CV_WRAP void buildAngleMatrix(InputArray contour, 
                               Mat& angleMatrix) const;
-    CV_WRAP double distance(Point2f p, Point2f q) const;
+    CV_WRAP double distance(Point2f pt1, Point2f pt2) const;
 };
 
 typedef SCD ShapeContextDescriptorExtractor;
@@ -131,17 +129,17 @@ public:
     //! the matcher function using Hungarian method
     CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches);
     //! *etters
-    CV_WRAP float getMatchingCost(void);
+    CV_WRAP float getMatchingCost();
 private:
     CV_PROP_RW float outlierWeight;
     CV_PROP_RW int configFlags;
     CV_PROP_RW float minMatchCost;
 protected:
-    CV_WRAP void buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix, int flags) const;
-    CV_WRAP void buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
-    CV_WRAP void buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
-    CV_WRAP void buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const;
-    CV_WRAP void hungarian(Mat&, std::vector<DMatch>&);
+    CV_WRAP void buildCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix, int flags) const;
+    CV_WRAP void buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void buildEMDCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void buildL2CostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches);
 };
 
 typedef SCDMatcher ShapeContextDescriptorMatcher;
@@ -156,9 +154,9 @@ public:
     CV_WRAP virtual ~Transform(){}
     //! methods
     CV_WRAP virtual void applyTransformation(InputArray pts1, InputArray pts2,
-                                     std::vector<DMatch>&, std::vector<Point2f> &outPts)=0;
+                                     std::vector<DMatch>& matches, std::vector<Point2f> &outPts)=0;
     //! getters
-    CV_WRAP virtual float getTranformCost(void) const=0;
+    CV_WRAP virtual float getTranformCost() const=0;
 protected:
     CV_PROP_RW float transformCost;
 };
@@ -175,15 +173,15 @@ public:
 
     //! getters-setters
     void setRegularizationParam(double beta);
-    double getRegularizationParam(void);
+    double getRegularizationParam();
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point2f>& outPts);
+                             std::vector<DMatch>& matches, std::vector<Point2f>& outPts);
     //! getters
-    CV_WRAP float getTranformCost(void) const;
+    CV_WRAP float getTranformCost() const;
 private:
     double beta;
-    double distance(Point2f, Point2f) const;
+    double distance(Point2f pt1, Point2f pt2) const;
 };
 
 /****************************************************************************************\
@@ -197,12 +195,12 @@ public:
     CV_WRAP AffineTransform(bool fullAffine);
 
     //! getters-setters
-    CV_WRAP float getTranformCost(void) const;
+    CV_WRAP float getTranformCost() const;
     CV_WRAP void setFullAffine(bool fullAffine);
-    CV_WRAP bool getFullAffine(void);
+    CV_WRAP bool getFullAffine();
     //! methods
     CV_WRAP void applyTransformation(InputArray pts1, InputArray pts2,
-                             std::vector<DMatch>&, std::vector<Point2f>& outPts);
+                             std::vector<DMatch>& matches, std::vector<Point2f>& outPts);
 private:
     bool fullAffine;
 };

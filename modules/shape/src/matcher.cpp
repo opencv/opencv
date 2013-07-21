@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 /*
  * Implementation of the paper Shape Matching and Object Recognition Using Shape Contexts
@@ -57,7 +58,7 @@ SCDMatcher::SCDMatcher(float _outlierWeight, int _configFlags)
 /* Public methods */
 void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches)
 {
-    CV_Assert((descriptors1.cols>0) & (descriptors1.rows>0) & (descriptors2.cols>0) & (descriptors2.rows>0));
+    CV_Assert(!descriptors1.empty() && !descriptors2.empty());
     matches.clear();
 
     /* Build the cost Matrix between descriptors*/
@@ -69,8 +70,8 @@ void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::ve
 }
 
 /* Protected methods */
-void SCDMatcher::buildCostMatrix(Mat& descriptors1,  Mat& descriptors2, 
-                                   Mat& costMatrix, int flags) const
+void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors2,
+                                 Mat& costMatrix, int flags) const
 {  
     switch (flags)
     {
@@ -86,7 +87,8 @@ void SCDMatcher::buildCostMatrix(Mat& descriptors1,  Mat& descriptors2,
     }
 }
 
-void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
+void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2,
+                                    Mat& costMatrix) const
 {
     /* Obtain copies of the descriptors */
     Mat scd1 = descriptors1.clone();
@@ -103,7 +105,7 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
     }   
 
     /* initializing costMatrix with oulier weight values */
-    int costrows = (scd1.rows<scd2.rows)?scd2.rows:scd1.rows;
+    int costrows = std::max(scd1.rows, scd2.rows);
     costMatrix = Mat::zeros(costrows, costrows, CV_32F);
         
     /* Compute the Cost Matrix */
@@ -134,11 +136,11 @@ void SCDMatcher::buildChiCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& 
     }
 }
 
-void SCDMatcher::buildEMDCostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
+void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
 {
 }
 
-void SCDMatcher::buildL2CostMatrix(Mat& descriptors1,  Mat& descriptors2, Mat& costMatrix) const
+void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
 {
     /* Obtain copies of the descriptors */
     Mat scd1 = descriptors1.clone();
@@ -181,9 +183,9 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
 
     const float LOWV=1e-6;
     bool unassignedfound;
-    int  i, imin, numfree = 0, prvnumfree, f, i0, k, freerow;
-    int  j, j1, j2, endofpath, last, low, up;
-    float min, h, umin, usubmin, v2;
+    int  i=0, imin=0, numfree=0, prvnumfree=0, f=0, i0=0, k=0, freerow=0;
+    int  j=0, j1=0, j2=0, endofpath=0, last=0, low=0, up=0;
+    float min=0, h=0, umin=0, usubmin=0, v2=0;
 
     /* COLUMN REDUCTION */
     for (j = costMatrix.rows-1; j >= 0; j--)

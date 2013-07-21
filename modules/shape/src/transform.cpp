@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 /*
  * Implementation of the paper Shape Matching and Object Recognition Using Shape Contexts
@@ -86,8 +87,8 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     std::vector<DMatch> matches;
     for (size_t i=0; i<_matches.size(); i++)
     {
-        if (_matches[i].queryIdx<(int)pts1.cols &&
-            _matches[i].trainIdx<(int)pts2.cols)
+        if (_matches[i].queryIdx<pts1.cols &&
+            _matches[i].trainIdx<pts2.cols)
         {
             matches.push_back(_matches[i]);
         }
@@ -264,7 +265,7 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
 }
 
 /* getters */
-float ThinPlateSplineTransform::getTranformCost(void) const
+float ThinPlateSplineTransform::getTranformCost() const
 {
     return transformCost;
 }
@@ -300,7 +301,7 @@ bool AffineTransform::getFullAffine()
     return fullAffine;
 }
 
-float AffineTransform::getTranformCost(void) const
+float AffineTransform::getTranformCost() const
 {
     return transformCost;
 }
@@ -318,8 +319,8 @@ void AffineTransform::applyTransformation(InputArray _pts1, InputArray _pts2,
     std::vector<DMatch> matches;
     for (size_t i=0; i<_matches.size(); i++)
     {
-        if (_matches[i].queryIdx<(int)pts1.cols &&
-            _matches[i].trainIdx<(int)pts2.cols)
+        if (_matches[i].queryIdx<pts1.cols &&
+            _matches[i].trainIdx<pts2.cols)
         {
             matches.push_back(_matches[i]);
         }

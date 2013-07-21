@@ -49,15 +49,6 @@
 namespace cv
 {
 /* Constructors */
-SCD::SCD()
-{
-    setAngularBins(12);
-    setAngularBins(5);
-    setInnerRadius(0.1);
-    setOuterRadius(1);
-    setRotationInvariant(false);
-}
-
 SCD::SCD(int _nAngularBins, int _nRadialBins, double _innerRadius, double _outerRadius, bool _rotationInvariant)
 {
     setAngularBins(_nAngularBins);
@@ -250,32 +241,32 @@ void SCD::setRotationInvariant(bool _rotationInvariant)
     rotationInvariant=_rotationInvariant;
 }
 
-int SCD::getAngularBins(void)
+int SCD::getAngularBins()
 {
     return nAngularBins;
 }
 
-int SCD::getRadialBins(void)
+int SCD::getRadialBins()
 {
     return nRadialBins;
 }
 
-double SCD::getInnerRadius(void)
+double SCD::getInnerRadius()
 {
     return innerRadius;
 }
 
-double SCD::getOuterRadius(void)
+double SCD::getOuterRadius()
 {
     return outerRadius;
 }
 
-bool SCD::getRotationInvariant(void)
+bool SCD::getRotationInvariant()
 {
     return rotationInvariant;
 }
 
-float SCD::getMeanDistance(void)
+float SCD::getMeanDistance()
 {
     return meanDistance;
 }
