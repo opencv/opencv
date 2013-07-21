@@ -117,12 +117,8 @@ Point getExpShift(InputArray _img0, InputArray _img1, int max_bits, int exclude_
 {
 	Mat img0 = _img0.getMat();
 	Mat img1 = _img1.getMat();
-	if(img0.type() != CV_8UC1 || img1.type() != CV_8UC1) {
-		CV_Error(Error::StsBadArg, "Images must have CV_8UC1 type.");
-	}
-	if(img0.size() != img0.size()) {
-		CV_Error(Error::StsBadArg, "Image dimensions must be equal.");
-	}
+	CV_Assert(img0.type() == CV_8UC1 && img1.type() == CV_8UC1);
+	CV_Assert(img0.size() == img0.size());
 	int maxlevel = (int)(log((double)max(img0.rows, img0.cols)) / log(2.0)) - 1;
 	maxlevel = min(maxlevel, max_bits - 1);
 
@@ -161,4 +157,5 @@ Point getExpShift(InputArray _img0, InputArray _img1, int max_bits, int exclude_
 	}
 	return shift;
 }
+
 };

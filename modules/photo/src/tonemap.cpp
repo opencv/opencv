@@ -163,20 +163,15 @@ void tonemap(InputArray _src, OutputArray _dst, int algorithm,
         NULL, DragoMap, ReinhardDevlinMap, DurandMap};
 
     Mat src = _src.getMat();
-    if(src.empty()) {
-        CV_Error(Error::StsBadArg, "Empty input image");
-    }
-    if(algorithm < 0 || algorithm >= TONEMAP_COUNT) {
-        CV_Error(Error::StsBadArg, "Wrong algorithm index");
-    }
-
+    CV_Assert(!src.empty());
+    CV_Assert(0 <= algorithm && algorithm < TONEMAP_COUNT);
     _dst.create(src.size(), CV_32FC3);
     Mat dst = _dst.getMat();
     src.copyTo(dst);
 
     double min, max;
     minMaxLoc(dst, &min, &max);
-    if(max - min < 1e-10f) {
+    if(max - min < DBL_EPSILON) {
         return;
     }
     dst = (dst - min) / (max - min);

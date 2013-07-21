@@ -69,11 +69,13 @@ bool  HdrDecoder::readHeader()
 {
 	file = fopen(m_filename.c_str(), "rb");
 	if(!file) {
-		CV_Error(Error::StsError, "HDR decoder: can't open file");
+		return false;
 	}
 	RGBE_ReadHeader(file, &m_width, &m_height, NULL);
 	if(m_width <= 0 || m_height <= 0) {
-		CV_Error(Error::StsError, "HDR decoder: invalid image size");
+		fclose(file); 
+		file = NULL;
+		return false;
 	}
 	return true;
 }
@@ -82,7 +84,9 @@ bool HdrDecoder::readData(Mat& _img)
 {
 	Mat img(m_height, m_width, CV_32FC3);
 	if(!file) {
-		readHeader();
+		if(!readHeader()) {
+			return false;
+		}
 	}
 	RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
 	fclose(file); file = NULL;
@@ -125,13 +129,10 @@ bool HdrEncoder::write( const Mat& _img, const std::vector<int>& params )
 	} else {
 		_img.convertTo(img, CV_32FC3, 1/255.0f);
 	}
-	if(!(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE)) {
-		CV_Error(Error::StsBadArg, "HDR encoder: wrong compression param");
-	}
-
+	CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);
 	FILE *fout = fopen(m_filename.c_str(), "wb");
 	if(!fout) {
-		CV_Error(Error::StsError, "HDR encoder: can't open file");
+		return false;
 	}
 
 	RGBE_WriteHeader(fout, img.cols, img.rows, NULL);
@@ -151,7 +152,7 @@ ImageEncoder HdrEncoder::newEncoder() const
 }
 
 bool HdrEncoder::isFormatSupported( int depth ) const {
-	return depth == CV_32F;
+	return depth != CV_64F;
 }
 
 }

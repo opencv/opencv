@@ -43,79 +43,93 @@
 #include "test_precomp.hpp"
 #include <string>
 #include <algorithm>
+#include <fstream>
 
 using namespace cv;
 using namespace std;
 
+void loadImage(string path, Mat &img) 
+{
+	img = imread(path, -1);
+	ASSERT_FALSE(img.empty()) << "Could not load input image " << path;
+}
+
+void checkEqual(Mat img0, Mat img1, double threshold)
+{
+	double max = 1.0;
+	minMaxLoc(abs(img0 - img1), NULL, &max);
+	ASSERT_FALSE(max > threshold);
+}
+
 TEST(Photo_HdrFusion, regression)
 {
-	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	string fuse_path = test_path + "fusion/";
 	
-	vector<string>file_names(3);
-	file_names[0] = folder + "grand_canal_1_45.jpg";
-	file_names[1] = folder + "grand_canal_1_180.jpg";
-	file_names[2] = folder + "grand_canal_1_750.jpg";
-	vector<Mat>images(3);
-	for(int i = 0; i < 3; i++) {
-		images[i] = imread(file_names[i]);
-		ASSERT_FALSE(images[i].empty()) << "Could not load input image " << file_names[i];
+	vector<float> times;
+	vector<Mat> images;
+
+	ifstream list_file(fuse_path + "list.txt");
+	string name; 
+	float val;
+	while(list_file >> name >> val) {
+		Mat img = imread(fuse_path + name);
+		ASSERT_FALSE(img.empty()) << "Could not load input image " << fuse_path + name;
+		images.push_back(img);
+		times.push_back(1 / val);
 	}
-	
-	string expected_path = folder + "grand_canal_rle.hdr";
-	Mat expected = imread(expected_path, -1);
-	ASSERT_FALSE(expected.empty()) << "Could not load input image " << expected_path;
+	list_file.close();
 
-	vector<float>times(3);
-	times[0] = 1.0f/45.0f;
-	times[1] = 1.0f/180.0f;
-	times[2] = 1.0f/750.0f;
-	
+	Mat response, expected(256, 3, CV_32F);
+	ifstream resp_file(test_path + "response.csv");
+	for(int i = 0; i < 256; i++) {
+		for(int channel = 0; channel < 3; channel++) {
+			resp_file >> expected.at<float>(i, channel);
+			resp_file.ignore(1);
+		}
+	}
+	resp_file.close();
+
+	estimateResponse(images, times, response);
+	checkEqual(expected, response, 0.001);
+
 	Mat result;
+	loadImage(test_path + "no_calibration.hdr", expected);
 	makeHDR(images, times, result);
-	double max = 1.0;
-	minMaxLoc(abs(result - expected), NULL, &max);
-	ASSERT_TRUE(max < 0.01);
+	checkEqual(expected, result, 0.01);
 
-	expected_path = folder + "grand_canal_exp_fusion.png";
-	expected = imread(expected_path);
-	ASSERT_FALSE(expected.empty()) << "Could not load input image " << expected_path;
+	loadImage(test_path + "rle.hdr", expected);
+	makeHDR(images, times, result, response);
+	checkEqual(expected, result, 0.01);
+
+	loadImage(test_path + "exp_fusion.png", expected);
 	exposureFusion(images, result);
 	result.convertTo(result, CV_8UC3, 255);
-	minMaxLoc(abs(result - expected), NULL, &max);
-	ASSERT_FALSE(max > 0);
+	checkEqual(expected, result, 0);
 }
 
 TEST(Photo_Tonemap, regression)
 {
 	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
-	
-	vector<string>file_names(TONEMAP_COUNT);
-	file_names[TONEMAP_DRAGO] = folder + "grand_canal_drago_2.2.png";
-	file_names[TONEMAP_REINHARD] = folder + "grand_canal_reinhard_2.2.png";
-	file_names[TONEMAP_DURAND] = folder + "grand_canal_durand_2.2.png"; 
-	file_names[TONEMAP_LINEAR] = folder + "grand_canal_linear_map_2.2.png";
-
 	vector<Mat>images(TONEMAP_COUNT);
 	for(int i = 0; i < TONEMAP_COUNT; i++) {
-		images[i] = imread(file_names[i]);
-		ASSERT_FALSE(images[i].empty()) << "Could not load input image " << file_names[i];
+		stringstream stream;
+		stream << "tonemap" << i << ".png";
+		string file_name;
+		stream >> file_name;
+		loadImage(folder + "tonemap/" + file_name ,images[i]);
 	}
-	
-	string hdr_file_name = folder + "grand_canal_rle.hdr";
-	Mat img = imread(hdr_file_name, -1);
-	ASSERT_FALSE(img.empty()) << "Could not load input image " << hdr_file_name;
-	
+	Mat img;
+	loadImage(folder + "rle.hdr", img);
 	vector<float> param(1);
 	param[0] = 2.2f;
 
-	for(int i = TONEMAP_DURAND; i < TONEMAP_COUNT; i++) {
+	for(int i = 0; i < TONEMAP_COUNT; i++) {
 		
 		Mat result;
         tonemap(img, result, i, param);
 		result.convertTo(result, CV_8UC3, 255);
-		double max = 1.0;
-		minMaxLoc(abs(result - images[i]), NULL, &max);
-		ASSERT_FALSE(max > 0);
+		checkEqual(images[i], result, 0);
 	}
 }
 
@@ -124,7 +138,7 @@ TEST(Photo_Align, regression)
 	const int TESTS_COUNT = 100;
 	string folder = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
 	
-	string file_name = folder + "grand_canal_1_45.jpg";
+	string file_name = folder + "exp_fusion.png";
 	Mat img = imread(file_name);
 	ASSERT_FALSE(img.empty()) << "Could not load input image " << file_name;
 	cvtColor(img, img, COLOR_RGB2GRAY);

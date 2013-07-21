@@ -43,6 +43,8 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 
+#include <iostream>
+
 namespace cv
 {
 
@@ -56,37 +58,51 @@ static void triangleWeights(float weights[])
 	}
 }
 
-static void generateResponce(float responce[])
+static Mat linearResponse()
 {
-    for(int i = 0; i < 256; i++) {
-        responce[i] = log((float)i);
+	Mat response(256, 1, CV_32F);
+    for(int i = 1; i < 256; i++) {
+        response.at<float>(i) = log((float)i);
     }
-    responce[0] = responce[1];
+    response.at<float>(0) = response.at<float>(1);
+	return response;
+}
+
+static void modifyCheckResponse(Mat &response)
+{
+	if(response.empty()) {
+		response = linearResponse();
+	}
+	CV_Assert(response.rows == 256 && (response.cols == 1 || response.cols == 3));
+	response.convertTo(response, CV_32F);
+	if(response.cols == 1) {
+		Mat result(256, 3, CV_32F);
+		for(int i = 0; i < 3; i++) {
+			response.copyTo(result.col(i));
+		}
+		response = result;
+	}
 }
 
 static void checkImages(std::vector<Mat>& images, bool hdr, const std::vector<float>& _exp_times = std::vector<float>())
 {
-	if(images.empty()) {
-		CV_Error(Error::StsBadArg, "Need at least one image");
-	}
-	if(hdr && images.size() != _exp_times.size()) {
-		CV_Error(Error::StsBadArg, "Number of images and number of exposure times must be equal.");
-	}
+	CV_Assert(!images.empty());
+	CV_Assert(!hdr || images.size() == _exp_times.size());
 	int width = images[0].cols;
 	int height = images[0].rows;
+	int channels = images[0].channels();
 	for(size_t i = 0; i < images.size(); i++) {
 
-		if(images[i].cols != width || images[i].rows != height) {
-			CV_Error(Error::StsBadArg, "Image dimensions must be equal.");
-		}
-		if(images[i].type() != CV_8UC3) {
-			CV_Error(Error::StsBadArg, "Images must have CV_8UC3 type.");
-		}
+		CV_Assert(images[i].cols == width && images[i].rows == height);
+		CV_Assert(images[i].channels() == channels && images[i].depth() == CV_8U);
 	}
 }
 
-static void alignImages(std::vector<Mat>& src, std::vector<Mat>& dst)
+void alignImages(InputArrayOfArrays _src, std::vector<Mat>& dst)
 {
+	std::vector<Mat> src;
+    _src.getMatVector(src);
+	checkImages(src, false);
 	dst.resize(src.size());
 
 	size_t pivot = src.size() / 2;
@@ -105,65 +121,55 @@ static void alignImages(std::vector<Mat>& src, std::vector<Mat>& dst)
 	}
 }
 
-void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst, bool align)
+void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, OutputArray _dst, Mat response)
 {
 	std::vector<Mat> images;
     _images.getMatVector(images);
 	checkImages(images, true, _exp_times);
-	_dst.create(images[0].size(), CV_32FC3);
+	modifyCheckResponse(response);
+	_dst.create(images[0].size(), CV_MAKETYPE(CV_32F, images[0].channels()));
 	Mat result = _dst.getMat();
 
-	if(align) {
-		std::vector<Mat> new_images;
-		alignImages(images, new_images);
-		images = new_images;
-	}
 	std::vector<float> exp_times(_exp_times.size());
 	for(size_t i = 0; i < exp_times.size(); i++) {
 		exp_times[i] = log(_exp_times[i]);
 	}
 
-	float weights[256], responce[256];
+	float weights[256];
 	triangleWeights(weights);
-	generateResponce(responce);
-
-	float max = 0;
+	
+	int channels = images[0].channels();
 	float *res_ptr = result.ptr<float>();
-	for(size_t pos = 0; pos < result.total(); pos++, res_ptr += 3) {
+	for(size_t pos = 0; pos < result.total(); pos++, res_ptr += channels) {
 
-		float sum[3] = {0, 0, 0};
+		std::vector<float> sum(channels, 0);
 		float weight_sum = 0;
 		for(size_t im = 0; im < images.size(); im++) {
 
-			uchar *img_ptr = images[im].ptr() + 3 * pos;
-			float w = (weights[img_ptr[0]] + weights[img_ptr[1]] +
-				       weights[img_ptr[2]]) / 3;
+			uchar *img_ptr = images[im].ptr() + channels * pos;
+			float w = 0;
+			for(int channel = 0; channel < channels; channel++) {
+				w += weights[img_ptr[channel]];
+			}
+			w /= channels;
 			weight_sum += w;
-			for(int channel = 0; channel < 3; channel++) {
-				sum[channel] += w * (responce[img_ptr[channel]] - exp_times[im]);
+			for(int channel = 0; channel < channels; channel++) {
+				sum[channel] += w * (response.at<float>(img_ptr[channel], channel) - exp_times[im]);
 			}
 		}
-		for(int channel = 0; channel < 3; channel++) {
+		for(int channel = 0; channel < channels; channel++) {
 			res_ptr[channel] = exp(sum[channel] / weight_sum);
-			if(res_ptr[channel] > max) {
-				max = res_ptr[channel];
-			}
 		}
 	}
-	result = result / max;
+	tonemap(result, result, 0);
 }
 
-void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, bool align, float wc, float ws, float we)
+void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, float ws, float we)
 {
 	std::vector<Mat> images;
     _images.getMatVector(images);
 	checkImages(images, false);
 
-	if(align) {
-		std::vector<Mat> new_images;
-		alignImages(images, new_images);
-		images = new_images;
-	}
 	std::vector<Mat> weights(images.size());
 	Mat weight_sum = Mat::zeros(images[0].size(), CV_32FC1);
 	for(size_t im = 0; im < images.size(); im++) {
@@ -240,6 +246,49 @@ void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, bool align, fl
 	_dst.create(images[0].size(), CV_32FC3);
 	Mat result = _dst.getMat();
 	res_pyr[0].copyTo(result);
+}
+
+void estimateResponse(InputArrayOfArrays _images, const std::vector<float>& exp_times, OutputArray _dst, int samples, float lambda)
+{
+	std::vector<Mat> images;
+    _images.getMatVector(images);
+	checkImages(images, true, exp_times);
+	_dst.create(256, images[0].channels(), CV_32F);
+	Mat response = _dst.getMat();
+
+	float w[256];
+	triangleWeights(w);
+
+	for(int channel = 0; channel < images[0].channels(); channel++) {
+		Mat A = Mat::zeros(samples * images.size() + 257, 256 + samples, CV_32F);
+		Mat B = Mat::zeros(A.rows, 1, CV_32F);
+
+		int eq = 0;
+		for(int i = 0; i < samples; i++) {
+
+			int pos = 3 * (rand() % images[0].total()) + channel;
+			for(size_t j = 0; j < images.size(); j++) {
+
+				int val = (images[j].ptr() + pos)[0];
+				A.at<float>(eq, val) = w[val];
+				A.at<float>(eq, 256 + i) = -w[val];
+				B.at<float>(eq, 0) = w[val] * log(exp_times[j]);		
+				eq++;
+			}
+		}
+		A.at<float>(eq, 128) = 1;
+		eq++;
+
+		for(int i = 0; i < 254; i++) {
+			A.at<float>(eq, i) = lambda * w[i + 1];
+			A.at<float>(eq, i + 1) = -2 * lambda * w[i + 1];
+			A.at<float>(eq, i + 2) = lambda * w[i + 1];
+			eq++;
+		}
+		Mat solution;
+		solve(A, B, solution, DECOMP_SVD);
+		solution.rowRange(0, 256).copyTo(response.col(channel));
+	}
 }
 
 };
