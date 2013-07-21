@@ -118,10 +118,22 @@ namespace
         {
             vc_ >> _frame.getMatRef();
         }
-        else
+        else if(_frame.kind() == _InputArray::GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
+        }
+        else if(_frame.kind() == _InputArray::OCL_MAT)
+        {
+            vc_ >> frame_;
+            if(!frame_.empty())
+            {
+                arrCopy(frame_, _frame);
+            }
+        }
+        else
+        {
+            //should never get here
         }
     }
 

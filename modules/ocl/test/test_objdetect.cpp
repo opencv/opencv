@@ -66,11 +66,8 @@ PARAM_TEST_CASE(HOG, Size, int)
     {
         winSize = GET_PARAM(0);
         type = GET_PARAM(1);
-        img_rgb = readImage(workdir + "../gpu/road.png");
-        if(img_rgb.empty())
-        {
-            std::cout << "Couldn't read road.png" << std::endl;
-        }
+        img_rgb = readImage("gpu/hog/road.png");
+        ASSERT_FALSE(img_rgb.empty());
     }
 };
 
@@ -215,18 +212,11 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
     virtual void SetUp()
     {
         flags = GET_PARAM(0);
-        cascadeName = (workdir + "../../data/haarcascades/").append(GET_PARAM(1));
-        if( (!cascade.load( cascadeName )) || (!cpucascade.load(cascadeName)) )
-        {
-            std::cout << "ERROR: Could not load classifier cascade" << std::endl;
-            return;
-        }
-        img = readImage(workdir + "lena.jpg", IMREAD_GRAYSCALE);
-        if(img.empty())
-        {
-            std::cout << "Couldn't read lena.jpg" << std::endl;
-            return ;
-        }
+        cascadeName = (string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
+        ASSERT_TRUE(cascade.load( cascadeName ));
+        ASSERT_TRUE(cpucascade.load(cascadeName));
+        img = readImage("cv/shared/lena.png", IMREAD_GRAYSCALE);
+        ASSERT_FALSE(img.empty());
         equalizeHist(img, img);
         d_img.upload(img);
     }
