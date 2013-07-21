@@ -394,7 +394,7 @@ void CV_ShapeTest::mpegTest()
                     contoursTesting=convertContourType(currentTest, NP);
 
                     /* compute shape distance */
-                    std::cout<<std::endl<<"Progress: "<<100*double(counter)/loops<<"% *******"<<std::endl;
+                    std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
                     std::cout<<"Computing shape distance between "<<thepathandname.str()<<
                                " and "<<thetestpathandname.str()<<std::endl;
                     vector<DMatch> matches; //for drawing purposes
@@ -403,7 +403,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<"The distance is: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     /* draw */
-                    Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+                    /*Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -419,7 +419,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<"Size of the contour and matches: "<<contoursQuery1.size()<<", matches: "<<
                             matches.size()<<std::endl;
                     char key=(char)waitKey();
-                    if (key == ' ') continue;
+                    if (key == ' ') continue;*/
                 }
             }
         }
