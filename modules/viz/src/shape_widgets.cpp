@@ -622,7 +622,7 @@ struct cv::viz::ImageOverlayWidget::CopyImpl
     }
 };
 
-cv::viz::ImageOverlayWidget::ImageOverlayWidget(const Mat &image, const Point2i &pos)
+cv::viz::ImageOverlayWidget::ImageOverlayWidget(const Mat &image, const Rect &rect)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
@@ -641,14 +641,25 @@ cv::viz::ImageOverlayWidget::ImageOverlayWidget(const Mat &image, const Point2i 
     flipFilter->SetInputConnection(vtk_image->GetProducerPort());
     flipFilter->Update();
     
+    // Scale the image based on the Rect
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->Scale(double(image.cols)/rect.width,double(image.rows)/rect.height,1.0);
+    
+    vtkSmartPointer<vtkImageReslice> image_reslice = vtkSmartPointer<vtkImageReslice>::New();
+    image_reslice->SetResliceTransform(transform);
+    image_reslice->SetInputConnection(flipFilter->GetOutputPort());
+    image_reslice->SetOutputDimensionality(2);
+    image_reslice->InterpolateOn();
+    image_reslice->AutoCropOutputOn(); 
+    
     vtkSmartPointer<vtkImageMapper> imageMapper = vtkSmartPointer<vtkImageMapper>::New();
-    imageMapper->SetInputConnection(flipFilter->GetOutputPort());
+    imageMapper->SetInputConnection(image_reslice->GetOutputPort());
     imageMapper->SetColorWindow(255); // OpenCV color
     imageMapper->SetColorLevel(127.5);  
     
     vtkSmartPointer<vtkActor2D> actor = vtkSmartPointer<vtkActor2D>::New();
     actor->SetMapper(imageMapper);
-    actor->SetPosition(pos.x, pos.y);
+    actor->SetPosition(rect.x, rect.y);
     
     WidgetAccessor::setProp(*this, actor);
 }

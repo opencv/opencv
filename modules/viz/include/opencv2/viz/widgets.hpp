@@ -147,7 +147,7 @@ namespace cv
         class CV_EXPORTS ImageOverlayWidget : public Widget2D
         {
         public:
-            ImageOverlayWidget(const Mat &image, const Point2i &pos);
+            ImageOverlayWidget(const Mat &image, const Rect &rect);
             
             void setImage(const Mat &image);
             
