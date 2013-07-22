@@ -125,9 +125,9 @@ vector <Point2f> CV_ShapeTest::convertContourType(Mat& currentQuery, int n)
 
 void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 {
-    //listHeaders.push_back("apple");
-    //listHeaders.push_back("bat");
-    /*listHeaders.push_back("beetle");
+    listHeaders.push_back("apple");
+    listHeaders.push_back("bat");
+    listHeaders.push_back("beetle");
     listHeaders.push_back("bell");
     listHeaders.push_back("bird");
     listHeaders.push_back("Bone");
@@ -147,7 +147,7 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
     listHeaders.push_back("crown");
     listHeaders.push_back("cup");
     listHeaders.push_back("deer");
-    listHeaders.push_back("device0");*/
+    listHeaders.push_back("device0");
     listHeaders.push_back("device1");
     listHeaders.push_back("device2");
     listHeaders.push_back("device3");
@@ -227,7 +227,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     float annRate=0.5;
 
     /* Iterative process with NC cycles */
-    int NC=5;//number of cycles
+    int NC=3;//number of cycles
     float scdistance1=0.0, benergy1=0.0;// dist1=0.0;
     float scdistance2=0.0, benergy2=0.0;// dist2=0.0;
     float scdistance3=0.0, benergy3=0.0;// dist3=0.0;
