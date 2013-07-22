@@ -381,7 +381,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
     // New fitellipse algorithm, contributed by Dr. Daniel Weiss
     Point2f c(0,0);
     double gfp[5], rp[5], t;
-    const double min_eps = 1e-6;
+    const double min_eps = 1e-8;
     bool is_float = depth == CV_32F;
     const Point* ptsi = (const Point*)points.data;
     const Point2f* ptsf = (const Point2f*)points.data;

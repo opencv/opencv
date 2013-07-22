@@ -1,6 +1,7 @@
 #include <Python.h>
 
 #define MODULESTR "cv2"
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarrayobject.h>
 
 #include "opencv2/core.hpp"
@@ -200,10 +201,10 @@ public:
         if(!o)
             CV_Error_(Error::StsError, ("The numpy array of typenum=%d, ndims=%d can not be created", typenum, dims));
         refcount = refcountFromPyObject(o);
-        npy_intp* _strides = PyArray_STRIDES(o);
+        npy_intp* _strides = PyArray_STRIDES((PyArrayObject*) o);
         for( i = 0; i < dims - (cn > 1); i++ )
             step[i] = (size_t)_strides[i];
-        datastart = data = (uchar*)PyArray_DATA(o);
+        datastart = data = (uchar*)PyArray_DATA((PyArrayObject*) o);
     }
 
     void deallocate(int* refcount, uchar*, uchar*)
@@ -278,8 +279,10 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
         return false;
     }
 
+    PyArrayObject* oarr = (PyArrayObject*) o;
+
     bool needcopy = false, needcast = false;
-    int typenum = PyArray_TYPE(o), new_typenum = typenum;
+    int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
     int type = typenum == NPY_UBYTE ? CV_8U :
                typenum == NPY_BYTE ? CV_8S :
                typenum == NPY_USHORT ? CV_16U :
@@ -308,7 +311,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     const int CV_MAX_DIM = 32;
 #endif
 
-    int ndims = PyArray_NDIM(o);
+    int ndims = PyArray_NDIM(oarr);
     if(ndims >= CV_MAX_DIM)
     {
         failmsg("%s dimensionality (=%d) is too high", info.name, ndims);
@@ -318,8 +321,8 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
     int size[CV_MAX_DIM+1];
     size_t step[CV_MAX_DIM+1];
     size_t elemsize = CV_ELEM_SIZE1(type);
-    const npy_intp* _sizes = PyArray_DIMS(o);
-    const npy_intp* _strides = PyArray_STRIDES(o);
+    const npy_intp* _sizes = PyArray_DIMS(oarr);
+    const npy_intp* _strides = PyArray_STRIDES(oarr);
     bool ismultichannel = ndims == 3 && _sizes[2] <= CV_CN_MAX;
 
     for( int i = ndims-1; i >= 0 && !needcopy; i-- )
@@ -343,11 +346,17 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
             failmsg("Layout of the output array %s is incompatible with cv::Mat (step[ndims-1] != elemsize or step[1] != elemsize*nchannels)", info.name);
             return false;
         }
-        if( needcast )
-            o = (PyObject*)PyArray_Cast((PyArrayObject*)o, new_typenum);
-        else
-            o = (PyObject*)PyArray_GETCONTIGUOUS((PyArrayObject*)o);
-        _strides = PyArray_STRIDES(o);
+
+        if( needcast ) {
+            o = PyArray_Cast(oarr, new_typenum);
+            oarr = (PyArrayObject*) o;
+        }
+        else {
+            oarr = PyArray_GETCONTIGUOUS(oarr);
+            o = (PyObject*) oarr;
+        }
+
+        _strides = PyArray_STRIDES(oarr);
     }
 
     for(int i = 0; i < ndims; i++)
@@ -375,7 +384,7 @@ static bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo info)
         return false;
     }
 
-    m = Mat(ndims, size, type, PyArray_DATA(o), step);
+    m = Mat(ndims, size, type, PyArray_DATA(oarr), step);
 
     if( m.data )
     {
