@@ -64,7 +64,7 @@ struct CV_EXPORTS ERStat
 {
 public:
     //! Constructor
-    ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
+    explicit ERStat(int level = 256, int pixel = 0, int x = 0, int y = 0);
     //! Destructor
     ~ERStat(){};
 
