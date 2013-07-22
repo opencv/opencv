@@ -1079,4 +1079,3 @@ void OclCascadeClassifier::detectMultiScale(oclMat &gimg, CV_OUT std::vector<cv:
         faces = rectList;
     }
 }
-

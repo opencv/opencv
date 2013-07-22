@@ -21,7 +21,7 @@ ocl::OclCascadeClassifier::oclHaarDetectObjects
 ------------------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
+.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
 
     :param image:  Matrix of type CV_8U containing an image where objects should be detected.
 

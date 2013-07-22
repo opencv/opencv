@@ -104,4 +104,3 @@ PERFTEST(Haar)
                                  1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     GPU_FULL_OFF;
 }
-

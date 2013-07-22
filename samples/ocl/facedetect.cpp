@@ -308,4 +308,3 @@ double checkRectSimilarity(Size sz, vector<Rect>& ob1, vector<Rect>& ob2)
     }
     return final_test_result;
 }
-
