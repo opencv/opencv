@@ -1095,9 +1095,7 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
 }
 
 cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale, const Color &color)
-{
-    vtkIdType nr_points = path.size();
-    
+{   
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
     
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
