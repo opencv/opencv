@@ -84,7 +84,7 @@
 #ifndef CV_INLINE
 #  if defined __cplusplus
 #    define CV_INLINE static inline
-#  elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
+#  elif defined _MSC_VER
 #    define CV_INLINE __inline
 #  else
 #    define CV_INLINE static

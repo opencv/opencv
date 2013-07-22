@@ -552,13 +552,6 @@ Regression& Regression::operator() (const std::string& name, cv::InputArray arra
 
     std::string nodename = getCurrentTestNodeName();
 
-    // This is a hack for compatibility and it should eventually get removed.
-    // gpu's tests don't even have CPU sanity data anymore.
-    if(suiteName == "gpu")
-    {
-        nodename = (PERF_RUN_GPU() ? "GPU_" : "CPU_") + nodename;
-    }
-
     cv::FileNode n = rootIn[nodename];
     if(n.isNone())
     {
