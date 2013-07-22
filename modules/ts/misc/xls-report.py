@@ -291,6 +291,7 @@ def main():
                 sheet.write_merge(row, row + 1, col, col, caption, header_style)
             else:
                 sheet.write(row, col, caption, header_style)
+            col += 1
 
         row += 2 if args.show_times_per_pixel else 1
 
