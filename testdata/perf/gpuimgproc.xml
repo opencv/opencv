@@ -5525,7 +5525,7 @@
       <x>237</x>
       <y>536</y>
       <val>149.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--COLOR_BayerGR2GRAY->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerBG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5542,8 +5542,8 @@
     <rng2>
       <x>1206</x>
       <y>42</y>
-      <val>117.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerBG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGB2BGR_MHT->
+      <val>117.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGB2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5562,8 +5562,8 @@
       <x>144</x>
       <y>695</y>
       <cn>2</cn>
-      <val>172.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGB2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerRG2BGR_MHT->
+      <val>172.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGB2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerRG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5582,8 +5582,8 @@
       <x>108</x>
       <y>596</y>
       <cn>1</cn>
-      <val>162.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerRG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGR2BGR_MHT->
+      <val>162.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerRG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGR2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5601,8 +5601,8 @@
       <x>848</x>
       <y>597</y>
       <cn>2</cn>
-      <val>96.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGR2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerBG2GRAY_MHT->
+      <val>96.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGR2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerBG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5619,8 +5619,8 @@
     <rng2>
       <x>308</x>
       <y>322</y>
-      <val>174.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerBG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGB2GRAY_MHT->
+      <val>174.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerBG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGB2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5637,8 +5637,8 @@
     <rng2>
       <x>487</x>
       <y>513</y>
-      <val>203.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGB2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerRG2GRAY_MHT->
+      <val>203.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGB2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerRG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5655,8 +5655,8 @@
     <rng2>
       <x>803</x>
       <y>389</y>
-      <val>175.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerRG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>175.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerRG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGR2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5673,7 +5673,7 @@
     <rng2>
       <x>44</x>
       <y>326</y>
-      <val>111.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>111.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x720--cv--cuda--COLOR_BayerGR2GRAY_MHT->
 <Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--COLOR_BayerBG2BGR->
   <gpu_dst>
     <kind>65536</kind>
@@ -5821,7 +5821,7 @@
       <x>196</x>
       <y>104</y>
       <val>65.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--COLOR_BayerGR2GRAY->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerBG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5839,8 +5839,8 @@
     <rng2>
       <x>405</x>
       <y>616</y>
-      <val>98.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerBG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGB2BGR_MHT->
+      <val>98.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGB2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5858,8 +5858,8 @@
       <x>973</x>
       <y>821</y>
       <cn>1</cn>
-      <val>108.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGB2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerRG2BGR_MHT->
+      <val>108.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGB2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerRG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5877,8 +5877,8 @@
       <x>1014</x>
       <y>419</y>
       <cn>2</cn>
-      <val>200.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerRG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGR2BGR_MHT->
+      <val>200.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerRG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGR2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -5897,8 +5897,8 @@
       <x>493</x>
       <y>874</y>
       <cn>1</cn>
-      <val>99.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGR2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerBG2GRAY_MHT->
+      <val>99.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGR2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerBG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5915,8 +5915,8 @@
     <rng2>
       <x>275</x>
       <y>418</y>
-      <val>138.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerBG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGB2GRAY_MHT->
+      <val>138.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerBG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGB2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5933,8 +5933,8 @@
     <rng2>
       <x>927</x>
       <y>224</y>
-      <val>50.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGB2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerRG2GRAY_MHT->
+      <val>50.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGB2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerRG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5951,8 +5951,8 @@
     <rng2>
       <x>680</x>
       <y>211</y>
-      <val>230.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerRG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>230.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerRG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGR2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -5969,7 +5969,7 @@
     <rng2>
       <x>1013</x>
       <y>518</y>
-      <val>203.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>203.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1280x1024--cv--cuda--COLOR_BayerGR2GRAY_MHT->
 <Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--COLOR_BayerBG2BGR->
   <gpu_dst>
     <kind>65536</kind>
@@ -6118,7 +6118,7 @@
       <x>1253</x>
       <y>755</y>
       <val>65.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--COLOR_BayerGR2GRAY->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerBG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -6137,8 +6137,8 @@
       <x>1403</x>
       <y>127</y>
       <cn>2</cn>
-      <val>70.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerBG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGB2BGR_MHT->
+      <val>70.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerBG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGB2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -6157,8 +6157,8 @@
       <x>1350</x>
       <y>319</y>
       <cn>1</cn>
-      <val>213.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGB2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerRG2BGR_MHT->
+      <val>213.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGB2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerRG2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -6176,8 +6176,8 @@
       <x>1090</x>
       <y>872</y>
       <cn>2</cn>
-      <val>205.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerRG2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGR2BGR_MHT->
+      <val>205.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerRG2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGR2BGR_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -6196,8 +6196,8 @@
       <x>59</x>
       <y>778</y>
       <cn>1</cn>
-      <val>58.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGR2BGR_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerBG2GRAY_MHT->
+      <val>58.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGR2BGR_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerBG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -6214,8 +6214,8 @@
     <rng2>
       <x>170</x>
       <y>705</y>
-      <val>79.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerBG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGB2GRAY_MHT->
+      <val>79.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerBG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGB2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -6232,8 +6232,8 @@
     <rng2>
       <x>1508</x>
       <y>696</y>
-      <val>126.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGB2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerRG2GRAY_MHT->
+      <val>126.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGB2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerRG2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -6250,8 +6250,8 @@
     <rng2>
       <x>25</x>
       <y>82</y>
-      <val>198.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerRG2GRAY_MHT->
-<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>198.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerRG2GRAY_MHT->
+<Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGR2GRAY_MHT->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -6268,7 +6268,7 @@
     <rng2>
       <x>1034</x>
       <y>157</y>
-      <val>38.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--gpu--COLOR_BayerGR2GRAY_MHT->
+      <val>38.</val></rng2></gpu_dst></Sz_Code_Demosaicing--Demosaicing---1920x1080--cv--cuda--COLOR_BayerGR2GRAY_MHT->
 <Sz_SwapChannels--SwapChannels--1280x720>
   <gpu_dst>
     <kind>65536</kind>
@@ -6327,7 +6327,7 @@
       <y>753</y>
       <cn>3</cn>
       <val>125.</val></rng2></gpu_dst></Sz_SwapChannels--SwapChannels--1920x1080>
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6346,8 +6346,8 @@
       <x>1029</x>
       <y>559</y>
       <cn>2</cn>
-      <val>37.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_IN->
+      <val>37.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6366,8 +6366,8 @@
       <x>1196</x>
       <y>625</y>
       <cn>2</cn>
-      <val>6.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OUT->
+      <val>6.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6386,8 +6386,8 @@
       <x>451</x>
       <y>150</y>
       <cn>2</cn>
-      <val>12.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_ATOP->
+      <val>12.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6405,8 +6405,8 @@
     <rng2>
       <x>299</x>
       <y>544</y>
-      <val>23.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_XOR->
+      <val>23.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6425,8 +6425,8 @@
       <x>1238</x>
       <y>17</y>
       <cn>3</cn>
-      <val>76.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PLUS->
+      <val>76.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6445,8 +6445,8 @@
       <x>96</x>
       <y>421</y>
       <cn>1</cn>
-      <val>31.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>31.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6465,8 +6465,8 @@
       <x>498</x>
       <y>528</y>
       <cn>1</cn>
-      <val>144.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>144.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6485,8 +6485,8 @@
       <x>415</x>
       <y>618</y>
       <cn>2</cn>
-      <val>110.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>110.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6505,8 +6505,8 @@
       <x>650</x>
       <y>275</y>
       <cn>3</cn>
-      <val>19.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>19.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6525,8 +6525,8 @@
       <x>620</x>
       <y>153</y>
       <cn>2</cn>
-      <val>66.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>66.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6544,8 +6544,8 @@
       <x>1083</x>
       <y>621</y>
       <cn>2</cn>
-      <val>245.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>245.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6563,8 +6563,8 @@
       <x>919</x>
       <y>449</y>
       <cn>1</cn>
-      <val>151.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PREMUL->
+      <val>151.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -6581,8 +6581,8 @@
     <rng2>
       <x>232</x>
       <y>25</y>
-      <val>126.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OVER->
+      <val>126.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--8UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6601,8 +6601,8 @@
       <x>89</x>
       <y>715</y>
       <cn>1</cn>
-      <val>15564.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_IN->
+      <val>15564.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6621,8 +6621,8 @@
       <x>493</x>
       <y>323</y>
       <cn>2</cn>
-      <val>5101.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OUT->
+      <val>5101.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6639,8 +6639,8 @@
     <rng2>
       <x>24</x>
       <y>651</y>
-      <val>6603.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_ATOP->
+      <val>6603.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6658,8 +6658,8 @@
       <x>671</x>
       <y>192</y>
       <cn>1</cn>
-      <val>22967.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_XOR->
+      <val>22967.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6678,8 +6678,8 @@
       <x>289</x>
       <y>570</y>
       <cn>2</cn>
-      <val>20571.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PLUS->
+      <val>20571.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6696,8 +6696,8 @@
     <rng2>
       <x>501</x>
       <y>96</y>
-      <val>47648.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>47648.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6716,8 +6716,8 @@
       <x>868</x>
       <y>550</y>
       <cn>2</cn>
-      <val>44796.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>44796.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6735,8 +6735,8 @@
     <rng2>
       <x>484</x>
       <y>534</y>
-      <val>19944.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>19944.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6754,8 +6754,8 @@
     <rng2>
       <x>647</x>
       <y>323</y>
-      <val>23515.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>23515.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6773,8 +6773,8 @@
     <rng2>
       <x>786</x>
       <y>560</y>
-      <val>60145.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>60145.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6793,8 +6793,8 @@
       <x>874</x>
       <y>568</y>
       <cn>1</cn>
-      <val>24766.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>24766.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6812,8 +6812,8 @@
     <rng2>
       <x>828</x>
       <y>665</y>
-      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PREMUL->
+      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -6832,8 +6832,8 @@
       <x>25</x>
       <y>570</y>
       <cn>3</cn>
-      <val>8116.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OVER->
+      <val>8116.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--16UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6852,8 +6852,8 @@
       <x>1244</x>
       <y>434</y>
       <cn>1</cn>
-      <val>269003606.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_IN->
+      <val>269003606.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6872,8 +6872,8 @@
       <x>452</x>
       <y>615</y>
       <cn>1</cn>
-      <val>1486339597.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OUT->
+      <val>1486339597.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6891,8 +6891,8 @@
     <rng2>
       <x>709</x>
       <y>82</y>
-      <val>633005445.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_ATOP->
+      <val>633005445.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6911,8 +6911,8 @@
       <x>519</x>
       <y>498</y>
       <cn>2</cn>
-      <val>331576152.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_XOR->
+      <val>331576152.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6930,8 +6930,8 @@
       <x>605</x>
       <y>645</y>
       <cn>1</cn>
-      <val>13282944.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PLUS->
+      <val>13282944.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6950,8 +6950,8 @@
       <x>222</x>
       <y>279</y>
       <cn>1</cn>
-      <val>600646337.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>600646337.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6969,8 +6969,8 @@
       <x>902</x>
       <y>635</y>
       <cn>2</cn>
-      <val>1868510645.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>1868510645.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -6989,8 +6989,8 @@
       <x>523</x>
       <y>466</y>
       <cn>2</cn>
-      <val>-1109997399.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>-1109997399.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7009,8 +7009,8 @@
       <x>85</x>
       <y>704</y>
       <cn>3</cn>
-      <val>37689767.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>37689767.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7027,8 +7027,8 @@
     <rng2>
       <x>948</x>
       <y>554</y>
-      <val>19228334.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>19228334.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7047,8 +7047,8 @@
       <x>337</x>
       <y>103</y>
       <cn>1</cn>
-      <val>195315008.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>195315008.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7066,8 +7066,8 @@
     <rng2>
       <x>1112</x>
       <y>305</y>
-      <val>373693428.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PREMUL->
+      <val>373693428.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7086,8 +7086,8 @@
       <x>837</x>
       <y>299</y>
       <cn>3</cn>
-      <val>1312094896.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OVER->
+      <val>1312094896.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32SC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7105,8 +7105,8 @@
       <x>175</x>
       <y>679</y>
       <cn>2</cn>
-      <val>-5.1173939200000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_IN->
+      <val>-5.1173939200000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7124,8 +7124,8 @@
     <rng2>
       <x>862</x>
       <y>571</y>
-      <val>-1694144768.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OUT->
+      <val>-1694144768.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7143,8 +7143,8 @@
       <x>122</x>
       <y>373</y>
       <cn>3</cn>
-      <val>-6.4134387500000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_ATOP->
+      <val>-6.4134387500000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7163,8 +7163,8 @@
       <x>10</x>
       <y>106</y>
       <cn>2</cn>
-      <val>482013344.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_XOR->
+      <val>482013344.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7183,8 +7183,8 @@
       <x>506</x>
       <y>582</y>
       <cn>1</cn>
-      <val>-2.0096348160000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PLUS->
+      <val>-2.0096348160000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7202,8 +7202,8 @@
     <rng2>
       <x>949</x>
       <y>554</y>
-      <val>-5437380.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>-5437380.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7221,8 +7221,8 @@
       <x>139</x>
       <y>342</y>
       <cn>3</cn>
-      <val>-4530582.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>-4530582.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7240,8 +7240,8 @@
     <rng2>
       <x>543</x>
       <y>41</y>
-      <val>6.1674656250000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>6.1674656250000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7259,8 +7259,8 @@
     <rng2>
       <x>1255</x>
       <y>415</y>
-      <val>1.1348862500000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>1.1348862500000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7277,8 +7277,8 @@
     <rng2>
       <x>374</x>
       <y>50</y>
-      <val>-4.7673145000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>-4.7673145000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7297,8 +7297,8 @@
       <x>821</x>
       <y>673</y>
       <cn>3</cn>
-      <val>-7.6815845000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>-7.6815845000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7317,8 +7317,8 @@
       <x>889</x>
       <y>92</y>
       <cn>3</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PREMUL->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -7336,8 +7336,8 @@
       <x>1040</x>
       <y>643</y>
       <cn>2</cn>
-      <val>-3.8707595000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OVER->
+      <val>-3.8707595000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x720--32FC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7354,8 +7354,8 @@
     <rng2>
       <x>1238</x>
       <y>398</y>
-      <val>91.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_IN->
+      <val>91.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7373,8 +7373,8 @@
       <x>482</x>
       <y>123</y>
       <cn>2</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OUT->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7392,8 +7392,8 @@
       <x>884</x>
       <y>292</y>
       <cn>2</cn>
-      <val>0.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_ATOP->
+      <val>0.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7412,8 +7412,8 @@
       <x>560</x>
       <y>934</y>
       <cn>3</cn>
-      <val>28.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_XOR->
+      <val>28.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7432,8 +7432,8 @@
       <x>558</x>
       <y>882</y>
       <cn>3</cn>
-      <val>140.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PLUS->
+      <val>140.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7451,8 +7451,8 @@
       <x>716</x>
       <y>388</y>
       <cn>3</cn>
-      <val>101.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>101.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7471,8 +7471,8 @@
       <x>911</x>
       <y>885</y>
       <cn>1</cn>
-      <val>205.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>205.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7490,8 +7490,8 @@
       <x>928</x>
       <y>620</y>
       <cn>3</cn>
-      <val>63.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>63.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7510,8 +7510,8 @@
       <x>767</x>
       <y>335</y>
       <cn>1</cn>
-      <val>30.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>30.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7530,8 +7530,8 @@
       <x>751</x>
       <y>937</y>
       <cn>3</cn>
-      <val>195.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>195.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7549,8 +7549,8 @@
     <rng2>
       <x>318</x>
       <y>558</y>
-      <val>45.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>45.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7568,8 +7568,8 @@
       <x>637</x>
       <y>545</y>
       <cn>1</cn>
-      <val>244.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PREMUL->
+      <val>244.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -7588,8 +7588,8 @@
       <x>309</x>
       <y>487</y>
       <cn>1</cn>
-      <val>34.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OVER->
+      <val>34.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--8UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7607,8 +7607,8 @@
       <x>972</x>
       <y>303</y>
       <cn>2</cn>
-      <val>45455.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_IN->
+      <val>45455.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7626,8 +7626,8 @@
       <x>642</x>
       <y>85</y>
       <cn>1</cn>
-      <val>195.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OUT->
+      <val>195.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7646,8 +7646,8 @@
       <x>810</x>
       <y>289</y>
       <cn>3</cn>
-      <val>9391.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_ATOP->
+      <val>9391.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7666,8 +7666,8 @@
       <x>215</x>
       <y>43</y>
       <cn>3</cn>
-      <val>34953.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_XOR->
+      <val>34953.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7686,8 +7686,8 @@
       <x>1264</x>
       <y>981</y>
       <cn>1</cn>
-      <val>15526.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PLUS->
+      <val>15526.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7706,8 +7706,8 @@
       <x>306</x>
       <y>41</y>
       <cn>2</cn>
-      <val>18013.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>18013.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7726,8 +7726,8 @@
       <x>836</x>
       <y>257</y>
       <cn>3</cn>
-      <val>61685.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>61685.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7744,8 +7744,8 @@
     <rng2>
       <x>721</x>
       <y>213</y>
-      <val>16322.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>16322.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7763,8 +7763,8 @@
       <x>1219</x>
       <y>585</y>
       <cn>2</cn>
-      <val>50893.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>50893.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7783,8 +7783,8 @@
       <x>708</x>
       <y>492</y>
       <cn>1</cn>
-      <val>34048.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>34048.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7802,8 +7802,8 @@
       <x>393</x>
       <y>468</y>
       <cn>3</cn>
-      <val>42858.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>42858.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7821,8 +7821,8 @@
     <rng2>
       <x>960</x>
       <y>890</y>
-      <val>40419.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PREMUL->
+      <val>40419.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -7840,8 +7840,8 @@
       <x>883</x>
       <y>197</y>
       <cn>3</cn>
-      <val>27914.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OVER->
+      <val>27914.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--16UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7859,8 +7859,8 @@
     <rng2>
       <x>388</x>
       <y>207</y>
-      <val>237982577.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_IN->
+      <val>237982577.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7878,8 +7878,8 @@
       <x>1141</x>
       <y>578</y>
       <cn>2</cn>
-      <val>695634027.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OUT->
+      <val>695634027.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7898,8 +7898,8 @@
       <x>412</x>
       <y>370</y>
       <cn>3</cn>
-      <val>622011665.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_ATOP->
+      <val>622011665.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7918,8 +7918,8 @@
       <x>1207</x>
       <y>785</y>
       <cn>2</cn>
-      <val>-1181104161.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_XOR->
+      <val>-1181104161.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7938,8 +7938,8 @@
       <x>1207</x>
       <y>786</y>
       <cn>3</cn>
-      <val>1188511797.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PLUS->
+      <val>1188511797.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7958,8 +7958,8 @@
       <x>454</x>
       <y>656</y>
       <cn>2</cn>
-      <val>602394643.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>602394643.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7978,8 +7978,8 @@
       <x>1048</x>
       <y>420</y>
       <cn>2</cn>
-      <val>501985620.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>501985620.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -7998,8 +7998,8 @@
       <x>381</x>
       <y>349</y>
       <cn>1</cn>
-      <val>722108733.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>722108733.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8017,8 +8017,8 @@
     <rng2>
       <x>332</x>
       <y>37</y>
-      <val>-547895631.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>-547895631.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8037,8 +8037,8 @@
       <x>1090</x>
       <y>934</y>
       <cn>1</cn>
-      <val>1197168785.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>1197168785.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8057,8 +8057,8 @@
       <x>855</x>
       <y>89</y>
       <cn>2</cn>
-      <val>-666046339.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>-666046339.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8076,8 +8076,8 @@
     <rng2>
       <x>46</x>
       <y>199</y>
-      <val>2147483647.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PREMUL->
+      <val>2147483647.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8095,8 +8095,8 @@
     <rng2>
       <x>1023</x>
       <y>40</y>
-      <val>356964520.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OVER->
+      <val>356964520.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32SC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8115,8 +8115,8 @@
       <x>500</x>
       <y>352</y>
       <cn>2</cn>
-      <val>-4.1942809600000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_IN->
+      <val>-4.1942809600000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8133,8 +8133,8 @@
     <rng2>
       <x>649</x>
       <y>876</y>
-      <val>-4.3013903360000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OUT->
+      <val>-4.3013903360000000e+09</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8152,8 +8152,8 @@
     <rng2>
       <x>582</x>
       <y>639</y>
-      <val>1.3522103296000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_ATOP->
+      <val>1.3522103296000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8171,8 +8171,8 @@
       <x>196</x>
       <y>221</y>
       <cn>1</cn>
-      <val>1.3414303744000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_XOR->
+      <val>1.3414303744000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8191,8 +8191,8 @@
       <x>69</x>
       <y>323</y>
       <cn>1</cn>
-      <val>-2.3369121792000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PLUS->
+      <val>-2.3369121792000000e+10</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8211,8 +8211,8 @@
       <x>1244</x>
       <y>187</y>
       <cn>1</cn>
-      <val>-10245231.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>-10245231.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8231,8 +8231,8 @@
       <x>173</x>
       <y>904</y>
       <cn>1</cn>
-      <val>1.7890062500000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>1.7890062500000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8251,8 +8251,8 @@
       <x>722</x>
       <y>343</y>
       <cn>2</cn>
-      <val>-3.5476295000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>-3.5476295000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8271,8 +8271,8 @@
       <x>1033</x>
       <y>404</y>
       <cn>2</cn>
-      <val>8487324.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>8487324.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8291,8 +8291,8 @@
       <x>582</x>
       <y>612</y>
       <cn>3</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8311,8 +8311,8 @@
       <x>156</x>
       <y>751</y>
       <cn>1</cn>
-      <val>17356994.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>17356994.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8330,8 +8330,8 @@
       <x>280</x>
       <y>972</y>
       <cn>3</cn>
-      <val>-1.7322583007812500e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PREMUL->
+      <val>-1.7322583007812500e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -8350,8 +8350,8 @@
       <x>1027</x>
       <y>505</y>
       <cn>2</cn>
-      <val>8.9911093750000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OVER->
+      <val>8.9911093750000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1280x1024--32FC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8369,8 +8369,8 @@
       <x>1780</x>
       <y>776</y>
       <cn>2</cn>
-      <val>13.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_IN->
+      <val>13.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8387,8 +8387,8 @@
     <rng2>
       <x>215</x>
       <y>411</y>
-      <val>86.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OUT->
+      <val>86.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8407,8 +8407,8 @@
       <x>846</x>
       <y>999</y>
       <cn>3</cn>
-      <val>30.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_ATOP->
+      <val>30.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8426,8 +8426,8 @@
     <rng2>
       <x>876</x>
       <y>1021</y>
-      <val>25.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_XOR->
+      <val>25.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8446,8 +8446,8 @@
       <x>189</x>
       <y>966</y>
       <cn>2</cn>
-      <val>111.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PLUS->
+      <val>111.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8466,8 +8466,8 @@
       <x>778</x>
       <y>462</y>
       <cn>1</cn>
-      <val>118.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>118.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8486,8 +8486,8 @@
       <x>720</x>
       <y>946</y>
       <cn>1</cn>
-      <val>236.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>236.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8506,8 +8506,8 @@
       <x>296</x>
       <y>680</y>
       <cn>1</cn>
-      <val>67.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>67.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8525,8 +8525,8 @@
       <x>1056</x>
       <y>1004</y>
       <cn>2</cn>
-      <val>98.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>98.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8545,8 +8545,8 @@
       <x>569</x>
       <y>449</y>
       <cn>3</cn>
-      <val>130.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>130.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8564,8 +8564,8 @@
       <x>609</x>
       <y>920</y>
       <cn>3</cn>
-      <val>160.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>160.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8583,8 +8583,8 @@
       <x>940</x>
       <y>331</y>
       <cn>2</cn>
-      <val>255.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PREMUL->
+      <val>255.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -8601,8 +8601,8 @@
     <rng2>
       <x>295</x>
       <y>238</y>
-      <val>39.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OVER->
+      <val>39.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--8UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8621,8 +8621,8 @@
       <x>726</x>
       <y>321</y>
       <cn>2</cn>
-      <val>22400.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_IN->
+      <val>22400.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8641,8 +8641,8 @@
       <x>255</x>
       <y>684</y>
       <cn>2</cn>
-      <val>3901.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OUT->
+      <val>3901.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8659,8 +8659,8 @@
     <rng2>
       <x>1828</x>
       <y>37</y>
-      <val>4116.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_ATOP->
+      <val>4116.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8678,8 +8678,8 @@
     <rng2>
       <x>968</x>
       <y>584</y>
-      <val>9316.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_XOR->
+      <val>9316.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8697,8 +8697,8 @@
       <x>69</x>
       <y>498</y>
       <cn>3</cn>
-      <val>34528.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PLUS->
+      <val>34528.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8717,8 +8717,8 @@
       <x>802</x>
       <y>395</y>
       <cn>3</cn>
-      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8737,8 +8737,8 @@
       <x>1442</x>
       <y>25</y>
       <cn>1</cn>
-      <val>31237.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>31237.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8757,8 +8757,8 @@
       <x>823</x>
       <y>155</y>
       <cn>1</cn>
-      <val>23835.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>23835.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8776,8 +8776,8 @@
     <rng2>
       <x>125</x>
       <y>800</y>
-      <val>28776.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>28776.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8796,8 +8796,8 @@
       <x>303</x>
       <y>1075</y>
       <cn>2</cn>
-      <val>12364.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>12364.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8815,8 +8815,8 @@
     <rng2>
       <x>1376</x>
       <y>888</y>
-      <val>58408.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>58408.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8835,8 +8835,8 @@
       <x>542</x>
       <y>774</y>
       <cn>1</cn>
-      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PREMUL->
+      <val>65535.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -8855,8 +8855,8 @@
       <x>197</x>
       <y>832</y>
       <cn>3</cn>
-      <val>11550.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OVER->
+      <val>11550.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--16UC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8873,8 +8873,8 @@
     <rng2>
       <x>1113</x>
       <y>788</y>
-      <val>-519184117.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_IN->
+      <val>-519184117.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8892,8 +8892,8 @@
     <rng2>
       <x>794</x>
       <y>859</y>
-      <val>-636479304.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OUT->
+      <val>-636479304.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8911,8 +8911,8 @@
     <rng2>
       <x>416</x>
       <y>849</y>
-      <val>271933474.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_ATOP->
+      <val>271933474.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8931,8 +8931,8 @@
       <x>859</x>
       <y>936</y>
       <cn>3</cn>
-      <val>2049623795.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_XOR->
+      <val>2049623795.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8951,8 +8951,8 @@
       <x>1157</x>
       <y>181</y>
       <cn>2</cn>
-      <val>-545198409.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PLUS->
+      <val>-545198409.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8971,8 +8971,8 @@
       <x>69</x>
       <y>666</y>
       <cn>1</cn>
-      <val>-452508484.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>-452508484.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -8990,8 +8990,8 @@
       <x>1812</x>
       <y>792</y>
       <cn>1</cn>
-      <val>-459396124.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>-459396124.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9008,8 +9008,8 @@
     <rng2>
       <x>616</x>
       <y>263</y>
-      <val>-465326385.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>-465326385.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9028,8 +9028,8 @@
       <x>1546</x>
       <y>727</y>
       <cn>3</cn>
-      <val>-397975467.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>-397975467.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9047,8 +9047,8 @@
     <rng2>
       <x>638</x>
       <y>837</y>
-      <val>634577432.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>634577432.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9066,8 +9066,8 @@
     <rng2>
       <x>829</x>
       <y>462</y>
-      <val>-742581861.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>-742581861.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9084,8 +9084,8 @@
     <rng2>
       <x>292</x>
       <y>356</y>
-      <val>-235259483.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PREMUL->
+      <val>-235259483.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>28</type>
@@ -9104,8 +9104,8 @@
       <x>820</x>
       <y>789</y>
       <cn>1</cn>
-      <val>-548584545.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--gpu--ALPHA_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OVER->
+      <val>-548584545.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32SC4--cv--cuda--ALPHA_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OVER->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9122,8 +9122,8 @@
     <rng2>
       <x>34</x>
       <y>723</y>
-      <val>1.0745195000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OVER->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_IN->
+      <val>1.0745195000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OVER->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_IN->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9141,8 +9141,8 @@
       <x>23</x>
       <y>971</y>
       <cn>3</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_IN->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OUT->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_IN->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OUT->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9161,8 +9161,8 @@
       <x>120</x>
       <y>494</y>
       <cn>1</cn>
-      <val>-1373579904.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OUT->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_ATOP->
+      <val>-1373579904.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OUT->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_ATOP->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9181,8 +9181,8 @@
       <x>126</x>
       <y>773</y>
       <cn>3</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_ATOP->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_XOR->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_ATOP->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_XOR->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9201,8 +9201,8 @@
       <x>1368</x>
       <y>90</y>
       <cn>1</cn>
-      <val>-336444480.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_XOR->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PLUS->
+      <val>-336444480.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_XOR->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PLUS->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9221,8 +9221,8 @@
       <x>830</x>
       <y>714</y>
       <cn>2</cn>
-      <val>10821092.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PLUS->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
+      <val>10821092.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PLUS->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9241,8 +9241,8 @@
       <x>498</x>
       <y>263</y>
       <cn>3</cn>
-      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OVER_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_IN_PREMUL->
+      <val>1.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OVER_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_IN_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9261,8 +9261,8 @@
       <x>8</x>
       <y>663</y>
       <cn>2</cn>
-      <val>4.2744615000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_IN_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
+      <val>4.2744615000000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_IN_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9280,8 +9280,8 @@
     <rng2>
       <x>286</x>
       <y>169</y>
-      <val>-1.3939928750000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_OUT_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
+      <val>-1.3939928750000000e+06</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_OUT_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9299,8 +9299,8 @@
       <x>1717</x>
       <y>982</y>
       <cn>1</cn>
-      <val>-5.5222931250000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_ATOP_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
+      <val>-5.5222931250000000e+05</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_ATOP_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9319,8 +9319,8 @@
       <x>1024</x>
       <y>125</y>
       <cn>1</cn>
-      <val>-10396362.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_XOR_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
+      <val>-10396362.</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_XOR_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9338,8 +9338,8 @@
     <rng2>
       <x>724</x>
       <y>969</y>
-      <val>2.3312844238281250e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PLUS_PREMUL->
-<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PREMUL->
+      <val>2.3312844238281250e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PLUS_PREMUL->
+<Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PREMUL->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -9358,7 +9358,7 @@
       <x>1490</x>
       <y>201</y>
       <cn>3</cn>
-      <val>1.8492725830078125e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--gpu--ALPHA_PREMUL->
+      <val>1.8492725830078125e+03</val></rng2></gpu_dst></Sz_Type_Op_AlphaComp--AlphaComp---1920x1080--32FC4--cv--cuda--ALPHA_PREMUL->
 <Sz_HoughLines--HoughLines--1280x720>
   <gpu_lines>
     <kind>65536</kind>
