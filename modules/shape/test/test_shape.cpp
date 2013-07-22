@@ -125,9 +125,9 @@ vector <Point2f> CV_ShapeTest::convertContourType(Mat& currentQuery, int n)
 
 void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 {
-    listHeaders.push_back("apple");
-    listHeaders.push_back("bat");
-    listHeaders.push_back("beetle");
+    //listHeaders.push_back("apple");
+    //listHeaders.push_back("bat");
+    /*listHeaders.push_back("beetle");
     listHeaders.push_back("bell");
     listHeaders.push_back("bird");
     listHeaders.push_back("Bone");
@@ -147,7 +147,7 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
     listHeaders.push_back("crown");
     listHeaders.push_back("cup");
     listHeaders.push_back("deer");
-    listHeaders.push_back("device0");
+    listHeaders.push_back("device0");*/
     listHeaders.push_back("device1");
     listHeaders.push_back("device2");
     listHeaders.push_back("device3");
@@ -200,7 +200,7 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 const int angularBins=12;
 const int radialBins=4;
 const float minRad=0.2;
-const float maxRad=2;
+const float maxRad=5;
 const int NSN=20; //number of shapes per code (car, butterfly, etc)
 const int NP=300; //number of points sympliying the contour
 
