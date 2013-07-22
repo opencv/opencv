@@ -9,6 +9,8 @@
 #
 # ----------------------------------------------------------------------------
 
+include(cmake/OpenCVMinDepVersions.cmake)
+
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
 # --------------------------------------------------------------
