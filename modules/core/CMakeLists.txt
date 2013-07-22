@@ -1,9 +1,9 @@
 set(the_description "The Core Functionality")
-ocv_add_module(core ${ZLIB_LIBRARIES})
+ocv_add_module(core ${ZLIB_LIBRARIES} OPTIONAL opencv_cudev)
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
 if(HAVE_CUDA)
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function)
 endif()
 
 file(GLOB lib_cuda_hdrs        "include/opencv2/${name}/cuda/*.hpp"        "include/opencv2/${name}/cuda/*.h")
