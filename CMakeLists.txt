@@ -4,22 +4,14 @@
 #    From the off-tree build directory, invoke:
 #      $ cmake <PATH_TO_OPENCV_ROOT>
 #
-#
-#   - OCT-2008: Initial version <joseluisblancoc@gmail.com>
-#
 # ----------------------------------------------------------------------------
 
 include(cmake/OpenCVMinDepVersions.cmake)
 
-set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
-
-# --------------------------------------------------------------
-# Indicate CMake 2.7 and above that we don't want to mix relative
-#  and absolute paths in linker lib lists.
-# Run "cmake --help-policy CMP0003" for more information.
-# --------------------------------------------------------------
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 NEW)
+if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
+  cmake_minimum_required(VERSION 2.8.8 FATAL_ERROR)
+else()
+  cmake_minimum_required(VERSION "${MIN_VER_CMAKE}" FATAL_ERROR)
 endif()
 
 # Following block can broke build in case of cross-compilng
@@ -43,16 +35,6 @@ else(NOT CMAKE_TOOLCHAIN_FILE)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Installation Directory")
 endif(NOT CMAKE_TOOLCHAIN_FILE)
 
-# --------------------------------------------------------------
-# Top level OpenCV project
-# --------------------------------------------------------------
-if(CMAKE_GENERATOR MATCHES Xcode AND XCODE_VERSION VERSION_GREATER 4.3)
-  cmake_minimum_required(VERSION 2.8.8)
-elseif(IOS)
-  cmake_minimum_required(VERSION 2.8.0)
-else()
-  cmake_minimum_required(VERSION 2.6.3)
-endif()
 
 # must go before the project command
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
