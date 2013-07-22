@@ -83,19 +83,7 @@ set(tbb_tarball "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_ver}_src.tgz")
 set(tbb_src_dir "${CMAKE_CURRENT_BINARY_DIR}/${tbb_ver}")
 
 macro(getMD5 filename varname)
-  if(CMAKE_VERSION VERSION_GREATER 2.8.6)
-    file(MD5 "${filename}" ${varname})
-  else()
-    execute_process(COMMAND ${CMAKE_COMMAND} -E md5sum "${filename}"
-              RESULT_VARIABLE getMD5_RESULT
-              OUTPUT_VARIABLE getMD5_OUTPUT
-              OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(getMD5_RESULT EQUAL 0)
-      string(REGEX MATCH "^[a-z0-9]+" ${varname} "${getMD5_OUTPUT}")
-    else()
-      set(${varname} "invalid_md5")
-    endif()
-  endif()
+  file(MD5 "${filename}" ${varname})
 endmacro()
 
 if(EXISTS "${tbb_tarball}")

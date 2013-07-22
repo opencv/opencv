@@ -38,11 +38,9 @@
 #      - OpenCV_STATIC
 #      - OpenCV_CUDA
 
-if(CMAKE_VERSION VERSION_GREATER 2.6)
-  get_property(OpenCV_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
-  if(NOT ";${OpenCV_LANGUAGES};" MATCHES ";CXX;")
-    enable_language(CXX)
-  endif()
+get_property(OpenCV_LANGUAGES GLOBAL PROPERTY ENABLED_LANGUAGES)
+if(NOT ";${OpenCV_LANGUAGES};" MATCHES ";CXX;")
+  enable_language(CXX)
 endif()
 
 if(NOT DEFINED OpenCV_STATIC)
@@ -92,9 +90,7 @@ elseif(MINGW)
   endif()
 endif()
 
-if(CMAKE_VERSION VERSION_GREATER 2.6.2)
-  unset(OpenCV_CONFIG_PATH CACHE)
-endif()
+unset(OpenCV_CONFIG_PATH CACHE)
 
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
 if(OpenCV_RUNTIME AND OpenCV_ARCH)
@@ -156,4 +152,3 @@ else()
   set(OpenCV_FOUND FALSE CACHE BOOL "" FORCE)
   set(OPENCV_FOUND FALSE CACHE BOOL "" FORCE)
 endif()
-

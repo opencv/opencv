@@ -1,8 +1,3 @@
-if(${CMAKE_VERSION} VERSION_LESS "2.8.3")
-  message(STATUS "WITH_CUDA flag requires CMake 2.8.3 or newer. CUDA support is disabled.")
-  return()
-endif()
-
 if(WIN32 AND NOT MSVC)
   message(STATUS "CUDA compilation is disabled (due to only Visual Studio compiler supported on your platform).")
   return()
