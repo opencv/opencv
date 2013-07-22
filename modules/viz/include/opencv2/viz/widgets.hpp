@@ -158,7 +158,7 @@ namespace cv
         class CV_EXPORTS Image3DWidget : public Widget3D
         {
         public:
-            Image3DWidget(const Mat &image);
+            Image3DWidget(const Mat &image, const Size &size);
             
             void setImage(const Mat &image);
         

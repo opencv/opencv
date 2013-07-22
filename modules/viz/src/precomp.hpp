@@ -135,6 +135,7 @@
 #include <vtkImageData.h>
 #include <vtkExtractEdges.h>
 #include <vtkFrustumSource.h>
+#include <vtkTextureMapToPlane.h>
 
 #include <vtkPolyDataNormals.h>
 #include <vtkMapper.h>

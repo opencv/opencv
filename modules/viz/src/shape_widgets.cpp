@@ -752,7 +752,7 @@ struct cv::viz::Image3DWidget::CopyImpl
     }
 };
 
-cv::viz::Image3DWidget::Image3DWidget(const Mat &image)
+cv::viz::Image3DWidget::Image3DWidget(const Mat &image, const Size &size)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
@@ -771,9 +771,37 @@ cv::viz::Image3DWidget::Image3DWidget(const Mat &image)
     flipFilter->SetInputConnection(vtk_image->GetProducerPort());
     flipFilter->Update();
     
-    vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
-    actor->SetInput(flipFilter->GetOutput());
+    Vec3d plane_center(size.width * 0.5, size.height * 0.5, 0.0);
     
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
+    plane->SetCenter(plane_center[0], plane_center[1], plane_center[2]);
+    plane->SetNormal(0.0, 0.0, 1.0);
+    
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->PreMultiply();
+    transform->Translate(plane_center[0], plane_center[1], plane_center[2]);
+    transform->Scale(size.width, size.height, 1.0);
+    transform->Translate(-plane_center[0], -plane_center[1], -plane_center[2]);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transform_filter->SetTransform(transform);
+    transform_filter->SetInputConnection(plane->GetOutputPort());
+    transform_filter->Update();
+    
+    // Apply the texture
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(flipFilter->GetOutputPort());
+    
+    vtkSmartPointer<vtkTextureMapToPlane> texturePlane = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    texturePlane->SetInputConnection(transform_filter->GetOutputPort());
+    
+    vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    planeMapper->SetInputConnection(texturePlane->GetOutputPort());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(planeMapper);
+    actor->SetTexture(texture);
+     
     WidgetAccessor::setProp(*this, actor);
 }
 
@@ -781,7 +809,7 @@ void cv::viz::Image3DWidget::setImage(const Mat &image)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
-    vtkImageActor *actor = vtkImageActor::SafeDownCast(WidgetAccessor::getProp(*this));
+    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
     CV_Assert(actor);
     
     // Create the vtk image and set its parameters based on input image
@@ -799,7 +827,11 @@ void cv::viz::Image3DWidget::setImage(const Mat &image)
     flipFilter->SetInputConnection(vtk_image->GetProducerPort());
     flipFilter->Update();
     
-    actor->SetInput(flipFilter->GetOutput());
+    // Apply the texture
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(flipFilter->GetOutputPort());
+    
+    actor->SetTexture(texture);
 }
 
 template<> cv::viz::Image3DWidget cv::viz::Widget::cast<cv::viz::Image3DWidget>()
