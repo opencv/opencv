@@ -42,6 +42,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "trackerMILModel.hpp"
 
 namespace cv
 {
@@ -119,7 +120,29 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 
 void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
+	ConfidenceMap lastConfidenceMap = confidenceMaps.back();
+
+
+	//prepare the trainData
+	for( size_t i = 0; i < lastConfidenceMap.size(); i++ )
+	{
+
+	}
+
+
 	//TODO update the scores of the confidence maps
+	if( !trained )
+	{
+		//this is the first time that the classifier is built
+		//boostModel.train();
+		trained = true;
+	}
+	else
+	{
+		//the classifier is updated
+		//boostModel.train();
+	}
+
 }
 
 
