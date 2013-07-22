@@ -984,6 +984,36 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double sca
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// trajectory widget implementation
 
+struct cv::viz::TrajectoryWidget::ApplyPath
+{
+    static void applyPath(vtkSmartPointer<vtkPolyData> poly_data, vtkSmartPointer<vtkAppendPolyData> append_filter, const std::vector<Affine3f> &path)
+    {
+        vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+        mat_trans->Identity();
+        
+        vtkIdType nr_points = path.size();
+        
+        for (vtkIdType i = 0; i < nr_points; ++i)
+        {
+            vtkSmartPointer<vtkPolyData> new_data = vtkSmartPointer<vtkPolyData>::New();
+            new_data->DeepCopy(poly_data);
+            
+            // Transform the default coordinate frame
+            vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+            transform->PreMultiply();
+            vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
+            transform->SetMatrix(mat_trans);
+            
+            vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+            filter->SetInput(new_data);
+            filter->SetTransform(transform);
+            filter->Update();
+            
+            append_filter->AddInputConnection(filter->GetOutputPort());
+        }
+    }
+};
+
 cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Color &color, bool show_frames, double scale)
 {
     vtkIdType nr_points = path.size();    
@@ -1016,49 +1046,33 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
     if (show_frames)
     {
-        vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-        mat_trans->Identity();
+        vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
+        axes->SetOrigin (0, 0, 0);
+        axes->SetScaleFactor (scale);
         
-        for (vtkIdType i = 0; i < nr_points; ++i)
-        {
-            vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
-            axes->SetOrigin (0, 0, 0);
-            axes->SetScaleFactor (scale);
-            
-            vtkSmartPointer<vtkUnsignedCharArray> axes_colors = vtkSmartPointer<vtkUnsignedCharArray>::New ();
-            axes_colors->SetNumberOfComponents(3);
-            axes_colors->InsertNextTuple3(255,0,0);
-            axes_colors->InsertNextTuple3(255,0,0);
-            axes_colors->InsertNextTuple3(0,255,0);
-            axes_colors->InsertNextTuple3(0,255,0);
-            axes_colors->InsertNextTuple3(0,0,255);
-            axes_colors->InsertNextTuple3(0,0,255);
-            
-            vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
-            axes_data->Update ();
-            axes_data->GetPointData ()->SetScalars (axes_colors);
-            
-            // Transform the default coordinate frame
-            vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-            transform->PreMultiply();
-            vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
-            transform->SetMatrix(mat_trans);
-            
-            vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-            filter->SetInput(axes_data);
-            filter->SetTransform(transform);
-            filter->Update();
-            
-            vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
-            axes_tubes->SetInput (filter->GetOutput());
-            axes_tubes->SetRadius (axes->GetScaleFactor () / 50.0);
-            axes_tubes->SetNumberOfSides (6);
-            
-            appendFilter->AddInputConnection(axes_tubes->GetOutputPort());
-        }
+        vtkSmartPointer<vtkUnsignedCharArray> axes_colors = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+        axes_colors->SetNumberOfComponents(3);
+        axes_colors->InsertNextTuple3(255,0,0);
+        axes_colors->InsertNextTuple3(255,0,0);
+        axes_colors->InsertNextTuple3(0,255,0);
+        axes_colors->InsertNextTuple3(0,255,0);
+        axes_colors->InsertNextTuple3(0,0,255);
+        axes_colors->InsertNextTuple3(0,0,255);
+        
+        vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
+        axes_data->Update ();
+        axes_data->GetPointData ()->SetScalars (axes_colors);
+        
+        vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
+        axes_tubes->SetInput (axes_data);
+        axes_tubes->SetRadius (axes->GetScaleFactor() / 50.0);
+        axes_tubes->SetNumberOfSides (6);
+        axes_tubes->Update();
+        
+        ApplyPath::applyPath(axes_tubes->GetOutput(), appendFilter, path);
     }
     
-    // Set the color only for polyData
+    // Set the color for polyData
     vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
     colors->SetNumberOfComponents(3);
     
@@ -1103,36 +1117,19 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
     double planesArray[24];
     camera->GetFrustumPlanes(aspect_ratio, planesArray);
     
-    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-    mat_trans->Identity();
+    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+    planes->SetFrustumPlanes(planesArray);
     
-    for (vtkIdType i = 0; i < nr_points; ++i)
-    {
-        vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
-        planes->SetFrustumPlanes(planesArray);
-        
-        vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
-        frustumSource->SetPlanes(planes);
-        frustumSource->Update();
+    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
+    frustumSource->SetPlanes(planes);
+    frustumSource->Update();
 
-        // Extract the edges
-        vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-        filter->SetInput(frustumSource->GetOutput());
-        filter->Update();
-        
-        // Transform the default coordinate frame
-        vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
-        transform->PreMultiply();
-        vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
-        transform->SetMatrix(mat_trans);
-        
-        vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
-        transform_filter->SetInput(filter->GetOutput());
-        transform_filter->SetTransform(transform);
-        transform_filter->Update();
-        
-        appendFilter->AddInputConnection(transform_filter->GetOutputPort());
-    }
+    // Extract the edges
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInput(frustumSource->GetOutput());
+    filter->Update();
+    
+    ApplyPath::applyPath(filter->GetOutput(), appendFilter, path);
     
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInput(appendFilter->GetOutput());
