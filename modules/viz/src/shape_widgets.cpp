@@ -908,7 +908,6 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, double sca
     frustumSource->SetPlanes(planes);
     frustumSource->Update();
 
-    // Extract the edges so we have the grid
     vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
     filter->SetInput(frustumSource->GetOutput());
     filter->Update();
@@ -1060,4 +1059,66 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
     WidgetAccessor::setProp(*this, actor);
 }
 
+cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale, const Color &color)
+{
+    vtkIdType nr_points = path.size();
+    
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+    
+    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    float f_x = K(0,0);
+    float f_y = K(1,1);
+    float c_y = K(1,2);
+    float aspect_ratio = f_y / f_x;
+    // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
+    float fovy = 2.0f * atan2(c_y,f_y) * 180 / CV_PI;
+    
+    camera->SetViewAngle(fovy);
+    camera->SetPosition(0.0,0.0,0.0);
+    camera->SetViewUp(0.0,1.0,0.0);
+    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetClippingRange(0.01, scale);
+    
+    double planesArray[24];
+    camera->GetFrustumPlanes(aspect_ratio, planesArray);
+    
+    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+    mat_trans->Identity();
+    
+    for (vtkIdType i = 0; i < nr_points; ++i)
+    {
+        vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+        planes->SetFrustumPlanes(planesArray);
+        
+        vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
+        frustumSource->SetPlanes(planes);
+        frustumSource->Update();
 
+        // Extract the edges
+        vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+        filter->SetInput(frustumSource->GetOutput());
+        filter->Update();
+        
+        // Transform the default coordinate frame
+        vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+        transform->PreMultiply();
+        vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
+        transform->SetMatrix(mat_trans);
+        
+        vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+        transform_filter->SetInput(filter->GetOutput());
+        transform_filter->SetTransform(transform);
+        transform_filter->Update();
+        
+        appendFilter->AddInputConnection(transform_filter->GetOutputPort());
+    }
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInput(appendFilter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}

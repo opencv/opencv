@@ -177,8 +177,7 @@ namespace cv
         {
         public:
             TrajectoryWidget(const std::vector<Affine3f> &path, const Color &color = Color::white(), bool show_frames = false, double scale = 1.0);
-//             TrajectoryWidget(const std::vector<Affine3f> &path, double scale = 1.0);
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K); // Camera frustums
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
         };
 
         class CV_EXPORTS CloudWidget : public Widget3D
