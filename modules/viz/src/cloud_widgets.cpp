@@ -359,7 +359,8 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
     
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New ();
     vtkIdType nr_points = mesh.cloud.total();
-    int * look_up = new int[nr_points];
+    Mat look_up_mat(1, nr_points, CV_32SC1);
+    int * look_up = look_up_mat.ptr<int>();
     points->SetNumberOfPoints (nr_points);
       
     // Copy data from cloud to vtkPoints
