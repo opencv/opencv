@@ -159,6 +159,7 @@ namespace cv
         {
         public:
             Image3DWidget(const Mat &image, const Size &size);
+            Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
             
             void setImage(const Mat &image);
         

@@ -805,6 +805,81 @@ cv::viz::Image3DWidget::Image3DWidget(const Mat &image, const Size &size)
     WidgetAccessor::setProp(*this, actor);
 }
 
+cv::viz::Image3DWidget::Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
+    plane->SetCenter(0.0, 0.0, 0.0);
+    plane->SetNormal(0.0, 0.0, 1.0);    
+    
+    // Compute the transformation matrix for drawing the camera frame in a scene
+    Vec3f u,v,n;
+    n = normalize(normal);
+    u = normalize(up_vector.cross(n));
+    v = n.cross(u);
+    
+    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+    mat_trans->SetElement(0,0,u[0]);
+    mat_trans->SetElement(0,1,u[1]);
+    mat_trans->SetElement(0,2,u[2]);
+    mat_trans->SetElement(1,0,v[0]);
+    mat_trans->SetElement(1,1,v[1]);
+    mat_trans->SetElement(1,2,v[2]);
+    mat_trans->SetElement(2,0,n[0]);
+    mat_trans->SetElement(2,1,n[1]);
+    mat_trans->SetElement(2,2,n[2]);
+    // Inverse rotation (orthogonal, so just take transpose)
+    mat_trans->Transpose(); 
+    // Then translate the coordinate frame to camera position
+    mat_trans->SetElement(0,3,position[0]);
+    mat_trans->SetElement(1,3,position[1]);
+    mat_trans->SetElement(2,3,position[2]);
+    mat_trans->SetElement(3,3,1);
+    
+    // Apply the texture
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(flipFilter->GetOutputPort());
+    
+    vtkSmartPointer<vtkTextureMapToPlane> texturePlane = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    texturePlane->SetInputConnection(plane->GetOutputPort());
+    
+    // Apply the transform after texture mapping
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->PreMultiply();
+    transform->SetMatrix(mat_trans);
+    transform->Scale(size.width, size.height, 1.0);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transform_filter->SetTransform(transform);
+    transform_filter->SetInputConnection(texturePlane->GetOutputPort());
+    transform_filter->Update();
+    
+    vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    planeMapper->SetInputConnection(transform_filter->GetOutputPort());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(planeMapper);
+    actor->SetTexture(texture);
+     
+    WidgetAccessor::setProp(*this, actor);
+}
+
 void cv::viz::Image3DWidget::setImage(const Mat &image)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
