@@ -50,6 +50,26 @@ template<> cv::viz::LineWidget cv::viz::Widget::cast<cv::viz::LineWidget>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// plane widget implementation
 
+struct cv::viz::PlaneWidget::SetSizeImpl
+{
+    template<typename _Tp>
+    static vtkSmartPointer<vtkPolyData> setSize(const Vec<_Tp, 3> &center, vtkSmartPointer<vtkPolyData> poly_data, double size)
+    {
+        vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+        transform->PreMultiply();
+        transform->Translate(center[0], center[1], center[2]);
+        transform->Scale(size, size, size);
+        transform->Translate(-center[0], -center[1], -center[2]);
+        
+        vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+        transform_filter->SetInput(poly_data);
+        transform_filter->SetTransform(transform);
+        transform_filter->Update();
+        
+        return transform_filter->GetOutput();
+    }
+};
+
 cv::viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color &color)
 {    
     vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New ();
@@ -57,12 +77,14 @@ cv::viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, double size, const Color &
     double norm = cv::norm(Vec3f(coefs.val));
     plane->Push (-coefs[3] / norm);
     
+    Vec3d p_center;
+    plane->GetOrigin(p_center.val);
+    
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
-    mapper->SetInput(plane->GetOutput ());
+    mapper->SetInput(SetSizeImpl::setSize(p_center, plane->GetOutput(), size));
     
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
-    actor->SetScale(size);
     
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
@@ -80,11 +102,10 @@ cv::viz::PlaneWidget::PlaneWidget(const Vec4f& coefs, const Point3f& pt, double 
     plane->SetCenter (p_center[0], p_center[1], p_center[2]);
     
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
-    mapper->SetInput(plane->GetOutput ());
+    mapper->SetInput(SetSizeImpl::setSize(p_center, plane->GetOutput(), size));
 
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     actor->SetMapper(mapper);
-    actor->SetScale(size);
     
     WidgetAccessor::setProp(*this, actor);
     setColor(color);

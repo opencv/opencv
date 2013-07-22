@@ -71,6 +71,8 @@ namespace cv
         public:
             PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
             PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+        private:
+            struct SetSizeImpl;
         };
 
         class CV_EXPORTS SphereWidget : public Widget3D
