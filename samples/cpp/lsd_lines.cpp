@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
     // Show found lines
     Mat drawnLines(image);
-    lsd_std->drawSegments(drawnLines, lines_std);
+    ls->drawSegments(drawnLines, lines_std);
     imshow("Standard refinement", drawnLines);
 
     waitKey();
