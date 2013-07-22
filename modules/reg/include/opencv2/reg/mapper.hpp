@@ -50,6 +50,8 @@ namespace reg {
 class CV_EXPORTS Mapper
 {
 public:
+    virtual ~Mapper(void) {}
+
     /*
      * Calculate mapping between two images
      * \param[in] img1 Reference image
