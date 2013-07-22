@@ -384,16 +384,16 @@ void CV_ShapeTest::mpegTest()
                                               NSN*nt+it-1)=0;
                         continue;
                     }
-                    /* read testing image */
+                    // read testing image //
                     stringstream thetestpathandname;
                     thetestpathandname<<path+namesHeaders[nt]<<"-"<<it<<".png";
                     Mat currentTest;
                     currentTest=imread(thetestpathandname.str().c_str(), 0);
 
-                    /* compute border of the testing */
+                    // compute border of the testing //
                     contoursTesting=convertContourType(currentTest, NP);
 
-                    /* compute shape distance */
+                    // compute shape distance //
                     std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
                     std::cout<<"Computing shape distance between "<<thepathandname.str()<<
                                " and "<<thetestpathandname.str()<<std::endl;
@@ -402,8 +402,8 @@ void CV_ShapeTest::mpegTest()
                             computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches);
                     std::cout<<"The distance is: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
-                    /* draw */
-                    /*Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+                    /*// draw //
+                    Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -415,6 +415,9 @@ void CV_ShapeTest::mpegTest()
                         line(queryImage, contoursTesting[matches[l].trainIdx],
                              contoursQuery1[matches[l].queryIdx], Scalar(160,230,189));
                     }
+                    stringstream text;
+                    text<<"Shape distance: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1);
+                    putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
                     std::cout<<"Size of the contour and matches: "<<contoursQuery1.size()<<", matches: "<<
                             matches.size()<<std::endl;
@@ -424,54 +427,65 @@ void CV_ShapeTest::mpegTest()
             }
         }
     }
-
-    /* save distance matrix */
+    // save distance matrix //
     FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::WRITE);
     fs << "distanceMat" << distanceMat;
 }
 
-const int FIRST_MANY=40;
+const int FIRST_MANY=10;
 void CV_ShapeTest::displayMPEGResults()
 {
     string baseTestFolder="shape/mpeg_test/";
-    Mat distanceMat, sortedMat, actualSorted;
+    Mat distanceMat;
     FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::READ);
     vector<string> namesHeaders;
     listShapeNames(namesHeaders);
 
     /* Read generated MAT */
     fs["distanceMat"]>>distanceMat;
-    // sortIdx //
-    cv::sortIdx(distanceMat, sortedMat, SORT_EVERY_ROW+SORT_ASCENDING);
-    cv::sort(distanceMat, actualSorted, SORT_EVERY_ROW+SORT_ASCENDING);
+    /*Mat draw;
+    resize(distanceMat, draw,Size(700,700));
+    imshow("test",draw);
+    while(1)
+    {
+        if ((char)waitKey()==' ')
+        {
+            break;
+        }
+    }*/
+
     int corrects=0;
     int divi=0;
-
-    for (int row=0; row<sortedMat.rows; row++)
+    for (int row=0; row<distanceMat.rows; row++)
     {
         if (row%NSN==0) //another group
         {
             divi+=NSN;
         }
-        for (int col=0; col<sortedMat.cols; col++)
+        for (int col=divi-NSN; col<divi; col++)
         {
-            if (sortedMat.at<int>(row,col)<FIRST_MANY)
+            int nsmall=0;
+            for (int i=0; i<distanceMat.cols; i++)
             {
-                //there is an index belonging to the correct group
-                if (col<divi)
+                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i))
                 {
-                    corrects++;
+                    nsmall++;
                 }
+            }
+            if (nsmall<=FIRST_MANY)
+            {
+                corrects++;
             }
         }
     }
-    //std::cout<<"#number of correct matches in the first 40 groups: "<<corrects<<std::endl;
-    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*sortedMat.rows)<<std::endl;
+
+    std::cout<<"number of correct matches in the first 40 matches: "<<corrects<<std::endl;
+    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*distanceMat.rows)<<std::endl;
 }
 
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    mpegTest();
+    //mpegTest();
     displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
