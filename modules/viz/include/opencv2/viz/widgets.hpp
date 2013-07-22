@@ -172,6 +172,14 @@ namespace cv
             CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
             CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
         };
+        
+        class CV_EXPORTS TrajectoryWidget : public Widget3D
+        {
+        public:
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Color &color = Color::white(), bool show_frames = false, double scale = 1.0);
+//             TrajectoryWidget(const std::vector<Affine3f> &path, double scale = 1.0);
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K); // Camera frustums
+        };
 
         class CV_EXPORTS CloudWidget : public Widget3D
         {

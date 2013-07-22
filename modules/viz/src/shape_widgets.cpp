@@ -960,3 +960,104 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double sca
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// trajectory widget implementation
+
+cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Color &color, bool show_frames, double scale)
+{
+    vtkIdType nr_points = path.size();    
+    
+    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New ();
+    vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New ();
+    vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New ();
+    
+    points->SetDataTypeToFloat();
+    points->SetNumberOfPoints(nr_points);
+    polyLine->GetPointIds()->SetNumberOfIds(nr_points);
+    
+    Vec3f last_pos(0.0f,0.0f,0.0f);
+    Vec3f *data_beg = vtkpoints_data<float>(points);
+    *data_beg = path[0] * last_pos;
+    
+    for (vtkIdType i = 0; i < nr_points; ++i)
+    {
+        last_pos = path[i] * last_pos;
+        *data_beg++ = last_pos;
+        polyLine->GetPointIds()->SetId(i,i);
+    }
+    
+    vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+    cells->InsertNextCell(polyLine);
+    
+    polyData->SetPoints(points);
+    polyData->SetLines(cells);
+    
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+    if (show_frames)
+    {
+        vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+        mat_trans->Identity();
+        
+        for (vtkIdType i = 0; i < nr_points; ++i)
+        {
+            vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
+            axes->SetOrigin (0, 0, 0);
+            axes->SetScaleFactor (scale);
+            
+            vtkSmartPointer<vtkUnsignedCharArray> axes_colors = vtkSmartPointer<vtkUnsignedCharArray>::New ();
+            axes_colors->SetNumberOfComponents(3);
+            axes_colors->InsertNextTuple3(255,0,0);
+            axes_colors->InsertNextTuple3(255,0,0);
+            axes_colors->InsertNextTuple3(0,255,0);
+            axes_colors->InsertNextTuple3(0,255,0);
+            axes_colors->InsertNextTuple3(0,0,255);
+            axes_colors->InsertNextTuple3(0,0,255);
+            
+            vtkSmartPointer<vtkPolyData> axes_data = axes->GetOutput ();
+            axes_data->Update ();
+            axes_data->GetPointData ()->SetScalars (axes_colors);
+            
+            // Transform the default coordinate frame
+            vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+            transform->PreMultiply();
+            vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
+            transform->SetMatrix(mat_trans);
+            
+            vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+            filter->SetInput(axes_data);
+            filter->SetTransform(transform);
+            filter->Update();
+            
+            vtkSmartPointer<vtkTubeFilter> axes_tubes = vtkSmartPointer<vtkTubeFilter>::New ();
+            axes_tubes->SetInput (filter->GetOutput());
+            axes_tubes->SetRadius (axes->GetScaleFactor () / 50.0);
+            axes_tubes->SetNumberOfSides (6);
+            
+            appendFilter->AddInputConnection(axes_tubes->GetOutputPort());
+        }
+    }
+    
+    // Set the color only for polyData
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    
+    // TODO Make this more efficient
+    for (int i = 0; i < nr_points; ++i)
+        colors->InsertNextTuple3(color[2], color[1], color[0]);
+    
+    polyData->GetPointData()->SetScalars(colors);
+    
+    appendFilter->AddInputConnection(polyData->GetProducerPort());
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetScalarModeToUsePointData ();
+    mapper->SetInput(appendFilter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
+
