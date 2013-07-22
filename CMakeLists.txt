@@ -346,7 +346,7 @@ endif(WIN32 AND NOT MINGW)
 #       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
-  include(cmake/OpenCVFindPkgConfig.cmake OPTIONAL)
+  find_package(PkgConfig QUIET)
   include(CheckFunctionExists)
   include(CheckIncludeFile)
 
