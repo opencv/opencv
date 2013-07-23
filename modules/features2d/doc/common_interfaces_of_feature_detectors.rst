@@ -220,7 +220,7 @@ StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector : public FeatureDetector
 
-The class implements the keypoint detector introduced by K. Konolige, synonym of ``StarDetector``.  ::
+The class implements the keypoint detector introduced by [Agrawal08_], synonym of ``StarDetector``.  ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -233,6 +233,9 @@ The class implements the keypoint detector introduced by K. Konolige, synonym of
     protected:
         ...
     };
+
+.. [Agrawal08] Agrawal, M., Konolige, K., & Blas, M. R. (2008). Censure: Center surround extremas for realtime feature detection and matching. In Computer Vision–ECCV 2008 (pp. 102-115). Springer Berlin Heidelberg.
+
 
 DenseFeatureDetector
 --------------------
