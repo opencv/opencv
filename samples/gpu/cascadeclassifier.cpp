@@ -12,7 +12,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/gpu.hpp"
 #include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpuwarping.hpp"
+#include "opencv2/cudawarping.hpp"
 
 using namespace std;
 using namespace cv;

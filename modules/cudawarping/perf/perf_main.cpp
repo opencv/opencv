@@ -40,25 +40,8 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#include "perf_precomp.hpp"
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+using namespace perf;
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-
-#include "opencv2/gpuwarping.hpp"
-#include "opencv2/imgproc.hpp"
-
-#include "cvconfig.h"
-
-#include "interpolation.hpp"
-
-#endif
+CV_PERF_TEST_CUDA_MAIN(cudawarping)

@@ -145,7 +145,7 @@ public:
 
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
 class PlaneWarperGpu: public WarperCreator
 {
 public:

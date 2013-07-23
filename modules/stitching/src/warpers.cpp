@@ -210,7 +210,7 @@ void SphericalWarper::detectResultRoi(Size src_size, Point &dst_tl, Point &dst_b
 }
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
 Rect PlaneWarperGpu::buildMaps(Size src_size, const Mat &K, const Mat &R, cuda::GpuMat &xmap, cuda::GpuMat &ymap)
 {
     return buildMaps(src_size, K, R, Mat::zeros(3, 1, CV_32F), xmap, ymap);

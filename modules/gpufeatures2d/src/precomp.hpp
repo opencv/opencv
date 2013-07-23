@@ -49,7 +49,7 @@
 
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/cudaarithm.hpp"
-#include "opencv2/gpuwarping.hpp"
+#include "opencv2/cudawarping.hpp"
 #include "opencv2/features2d.hpp"
 
 #include "opencv2/core/private.cuda.hpp"

@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUWARPING_HPP__
-#define __OPENCV_GPUWARPING_HPP__
+#ifndef __OPENCV_CUDAWARPING_HPP__
+#define __OPENCV_CUDAWARPING_HPP__
 
 #ifndef __cplusplus
-#  error gpuwarping.hpp header must be compiled as C++
+#  error cudawarping.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -110,4 +110,4 @@ CV_EXPORTS Ptr<ImagePyramid> createImagePyramid(InputArray img, int nLayers = -1
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUWARPING_HPP__ */
+#endif /* __OPENCV_CUDAWARPING_HPP__ */

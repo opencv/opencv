@@ -327,7 +327,7 @@ public:
 };
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
 class CV_EXPORTS PlaneWarperGpu : public PlaneWarper
 {
 public:

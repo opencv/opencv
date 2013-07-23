@@ -47,7 +47,7 @@
 
 #include "opencv2/gpuoptflow.hpp"
 #include "opencv2/cudaarithm.hpp"
-#include "opencv2/gpuwarping.hpp"
+#include "opencv2/cudawarping.hpp"
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/video.hpp"
 

@@ -552,7 +552,7 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#ifdef HAVE_OPENCV_GPUWARPING
+#ifdef HAVE_OPENCV_CUDAWARPING
     if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();

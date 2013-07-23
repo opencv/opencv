@@ -43,7 +43,7 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "opencv2/gpuwarping.hpp"
+#include "opencv2/cudawarping.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
 

@@ -50,7 +50,7 @@ using namespace cv::cuda;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_GPUWARPING) || !defined(HAVE_OPENCV_GPUFILTERS)
+#if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAWARPING) || !defined(HAVE_OPENCV_GPUFILTERS)
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
 {
