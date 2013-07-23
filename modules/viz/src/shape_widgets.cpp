@@ -918,6 +918,58 @@ template<> cv::viz::Image3DWidget cv::viz::Widget::cast<cv::viz::Image3DWidget>(
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// camera position widget implementation
 
+struct cv::viz::CameraPositionWidget::CopyImpl
+{
+    struct Impl
+    {
+        static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            int i_chs = image.channels();
+    
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, irows += i_chs)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    memcpy(vrows, irows, i_chs);
+                    std::swap(vrows[0], vrows[2]); // BGR -> RGB
+                }
+            }
+            output->Modified();
+        }
+        
+        static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+        {
+            for (int i = 0; i < image.rows; ++i)
+            {
+                const unsigned char * irows = image.ptr<unsigned char>(i);
+                for (int j = 0; j < image.cols; ++j, ++irows)
+                {
+                    unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                    *vrows = *irows;
+                }
+            }
+            output->Modified();
+        }
+    };
+    
+    static void copyImage(const Mat &image, vtkSmartPointer<vtkImageData> output)
+    {
+        int i_chs = image.channels();
+        if (i_chs > 1)
+        {
+            // Multi channel images are handled differently because of BGR <-> RGB
+            Impl::copyImageMultiChannel(image, output);
+        }
+        else
+        {
+            Impl::copyImageSingleChannel(image, output);
+        }
+    }
+};
+
+
 cv::viz::CameraPositionWidget::CameraPositionWidget(double scale)
 {
     vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New ();
@@ -1097,6 +1149,103 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double sca
     
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
+}
+
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat &image, double scale)
+{
+    CV_Assert(!image.empty() && image.depth() == CV_8U);
+    
+    // Create a camera
+    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    float f_x = K(0,0);
+    float f_y = K(1,1);
+    float c_y = K(1,2);
+    float aspect_ratio = float(image.cols)/float(image.rows);
+    // Assuming that this is an ideal camera (c_y and c_x are at the center of the image)
+    float fovy = 2.0f * atan2(c_y,f_y) * 180 / CV_PI;
+    float far_end_height = 2.0f * c_y * scale / f_y;
+    
+    // Create the vtk image and set its parameters based on input image
+    vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
+    vtk_image->SetDimensions(image.cols, image.rows, 1);
+    vtk_image->SetNumberOfScalarComponents(image.channels());
+    vtk_image->SetScalarTypeToUnsignedChar();
+    vtk_image->AllocateScalars();
+    
+    CopyImpl::copyImage(image, vtk_image);
+    
+    // Need to flip the image as the coordinates are different in OpenCV and VTK
+    vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
+    flipFilter->SetFilteredAxis(1); // Vertical flip
+    flipFilter->SetInputConnection(vtk_image->GetProducerPort());
+    flipFilter->Update();
+    
+    Vec3d plane_center(0.0, 0.0, scale);
+    
+    vtkSmartPointer<vtkPlaneSource> plane = vtkSmartPointer<vtkPlaneSource>::New();
+    plane->SetCenter(plane_center[0], plane_center[1], plane_center[2]);
+    plane->SetNormal(0.0, 0.0, 1.0);
+    
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->PreMultiply();
+    transform->Translate(plane_center[0], plane_center[1], plane_center[2]);
+    transform->Scale(far_end_height*aspect_ratio, far_end_height, 1.0);
+    transform->RotateY(180.0);
+    transform->Translate(-plane_center[0], -plane_center[1], -plane_center[2]);
+    
+    // Apply the texture
+    vtkSmartPointer<vtkTexture> texture = vtkSmartPointer<vtkTexture>::New();
+    texture->SetInputConnection(flipFilter->GetOutputPort());
+    
+    vtkSmartPointer<vtkTextureMapToPlane> texturePlane = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    texturePlane->SetInputConnection(plane->GetOutputPort());
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transform_filter->SetTransform(transform);
+    transform_filter->SetInputConnection(texturePlane->GetOutputPort());
+    transform_filter->Update();
+    
+    // Create frustum
+    camera->SetViewAngle(fovy);
+    camera->SetPosition(0.0,0.0,0.0);
+    camera->SetViewUp(0.0,1.0,0.0);
+    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetClippingRange(0.01, scale);
+    
+    double planesArray[24];
+    camera->GetFrustumPlanes(aspect_ratio, planesArray);
+     
+    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+    planes->SetFrustumPlanes(planesArray);
+    
+    vtkSmartPointer<vtkFrustumSource> frustumSource =
+    vtkSmartPointer<vtkFrustumSource>::New();
+    frustumSource->SetPlanes(planes);
+    frustumSource->Update();
+        
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInput(frustumSource->GetOutput());
+    filter->Update();
+    
+    // Frustum needs to be textured or else it can't be combined with image
+    vtkSmartPointer<vtkTextureMapToPlane> frustum_texture = vtkSmartPointer<vtkTextureMapToPlane>::New();
+    frustum_texture->SetInputConnection(filter->GetOutputPort());
+    // Texture mapping with only one pixel from the image to have constant color
+    frustum_texture->SetSRange(0.0, 0.0); 
+    frustum_texture->SetTRange(0.0, 0.0);
+    
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+    appendFilter->AddInputConnection(frustum_texture->GetOutputPort());
+    appendFilter->AddInputConnection(transform_filter->GetOutputPort());
+    
+    vtkSmartPointer<vtkPolyDataMapper> planeMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    planeMapper->SetInputConnection(appendFilter->GetOutputPort());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(planeMapper);
+    actor->SetTexture(texture);
+     
+    WidgetAccessor::setProp(*this, actor);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
