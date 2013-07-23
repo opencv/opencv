@@ -40,25 +40,14 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#ifndef __OPENCV_PERF_PRECOMP_HPP__
-#define __OPENCV_PERF_PRECOMP_HPP__
+#include <limits>
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+#include "opencv2/cudastereo.hpp"
 
-#include "opencv2/gpustereo.hpp"
-#include "opencv2/calib3d.hpp"
+#include "opencv2/core/private.cuda.hpp"
+#include "opencv2/core/utility.hpp"
 
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
-#endif
-
-#endif
+#endif /* __OPENCV_PRECOMP_H__ */

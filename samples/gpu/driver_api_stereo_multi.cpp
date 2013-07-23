@@ -11,7 +11,7 @@
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpustereo.hpp"
+#include "opencv2/cudastereo.hpp"
 
 #ifdef HAVE_TBB
 #  include "tbb/tbb_stddef.h"
