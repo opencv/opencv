@@ -267,7 +267,7 @@ namespace
         blurKernelSize_ = 5;
         blurSigma_ = 0.0;
 
-#ifdef HAVE_OPENCV_GPUOPTFLOW
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
         opticalFlow_ = createOptFlow_Farneback_GPU();
 #else
         opticalFlow_ = createOptFlow_Farneback();

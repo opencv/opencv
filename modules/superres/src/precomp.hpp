@@ -73,8 +73,8 @@
 #  include "opencv2/cudaimgproc.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUOPTFLOW
-#  include "opencv2/gpuoptflow.hpp"
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
+#  include "opencv2/cudaoptflow.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_CUDACODEC

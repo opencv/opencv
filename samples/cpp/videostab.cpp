@@ -216,7 +216,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
@@ -257,7 +257,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);

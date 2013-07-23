@@ -45,7 +45,7 @@
 
 #include <limits>
 
-#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/cudaoptflow.hpp"
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/cudaimgproc.hpp"

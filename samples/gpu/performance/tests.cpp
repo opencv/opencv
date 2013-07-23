@@ -9,7 +9,7 @@
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/cudafilters.hpp"
-#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/cudaoptflow.hpp"
 #include "opencv2/gpubgsegm.hpp"
 
 #include "opencv2/legacy.hpp"

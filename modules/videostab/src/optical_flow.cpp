@@ -58,7 +58,7 @@ void SparsePyrLkOptFlowEstimator::run(
 }
 
 
-#ifdef HAVE_OPENCV_GPUOPTFLOW
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
 
 SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu()
 {
@@ -135,7 +135,7 @@ void DensePyrLkOptFlowEstimatorGpu::run(
     flowY_.download(flowY.getMatRef());
 }
 
-#endif // HAVE_OPENCV_GPUOPTFLOW
+#endif // HAVE_OPENCV_CUDAOPTFLOW
 
 } // namespace videostab
 } // namespace cv

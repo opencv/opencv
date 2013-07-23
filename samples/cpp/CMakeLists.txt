@@ -16,8 +16,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   ocv_include_directories("${OpenCV_SOURCE_DIR}/include")#for opencv.hpp
   ocv_include_modules(${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
-  if(HAVE_opencv_gpuoptflow)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpuoptflow/include")
+  if(HAVE_opencv_cudaoptflow)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaoptflow/include")
   endif()
   if(HAVE_opencv_cudaimgproc)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaimgproc/include")

@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUOPTFLOW_HPP__
-#define __OPENCV_GPUOPTFLOW_HPP__
+#ifndef __OPENCV_CUDAOPTFLOW_HPP__
+#define __OPENCV_CUDAOPTFLOW_HPP__
 
 #ifndef __cplusplus
-#  error gpuoptflow.hpp header must be compiled as C++
+#  error cudaoptflow.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -308,4 +308,4 @@ CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, Gpu
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUOPTFLOW_HPP__ */
+#endif /* __OPENCV_CUDAOPTFLOW_HPP__ */
