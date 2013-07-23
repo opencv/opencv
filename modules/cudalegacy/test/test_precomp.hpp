@@ -40,13 +40,58 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPULEGACY_HPP__
-#define __OPENCV_GPULEGACY_HPP__
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
 
-#include "opencv2/gpulegacy/NCV.hpp"
-#include "opencv2/gpulegacy/NPP_staging.hpp"
-#include "opencv2/gpulegacy/NCVPyramid.hpp"
-#include "opencv2/gpulegacy/NCVHaarObjectDetection.hpp"
-#include "opencv2/gpulegacy/NCVBroxOpticalFlow.hpp"
+#ifndef __OPENCV_TEST_PRECOMP_HPP__
+#define __OPENCV_TEST_PRECOMP_HPP__
 
-#endif /* __OPENCV_GPULEGACY_HPP__ */
+#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
+    #include <fpu_control.h>
+#endif
+
+#include <cfloat>
+#include <cstdio>
+#include <cmath>
+#include <vector>
+#include <string>
+#include <map>
+#include <memory>
+#include <algorithm>
+#include <fstream>
+
+#include "opencv2/ts.hpp"
+#include "opencv2/ts/gpu_test.hpp"
+
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/cudalegacy.hpp"
+#include "opencv2/highgui.hpp"
+
+#include "opencv2/core/private.cuda.hpp"
+
+#include "cvconfig.h"
+
+#include "NCVTest.hpp"
+#include "NCVAutoTestLister.hpp"
+#include "NCVTestSourceProvider.hpp"
+
+#include "TestIntegralImage.h"
+#include "TestIntegralImageSquared.h"
+#include "TestRectStdDev.h"
+#include "TestResize.h"
+#include "TestCompact.h"
+#include "TestTranspose.h"
+#include "TestDrawRects.h"
+#include "TestHypothesesGrow.h"
+#include "TestHypothesesFilter.h"
+#include "TestHaarCascadeLoader.h"
+#include "TestHaarCascadeApplication.h"
+
+#include "main_test_nvidia.h"
+
+#endif

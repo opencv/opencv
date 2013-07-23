@@ -40,23 +40,70 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#ifndef _ncvpyramid_hpp_
+#define _ncvpyramid_hpp_
 
-#include <limits>
-#include <iostream>
-#include <algorithm>
+#include <memory>
+#include <vector>
+#include "opencv2/cudalegacy/NCV.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-#include "opencv2/gpulegacy.hpp"
-#include "opencv2/core/utility.hpp"
+namespace cv { namespace cuda { namespace device
+{
+    namespace pyramid
+    {
+        CV_EXPORTS void downsampleX2(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream);
+        CV_EXPORTS void interpolateFrom1(PtrStepSzb src, PtrStepSzb dst, int depth, int cn, cudaStream_t stream);
+    }
+}}}
 
-#include "opencv2/opencv_modules.hpp"
+#if 0 //def _WIN32
 
-#ifdef HAVE_OPENCV_OBJDETECT
-#  include "opencv2/objdetect.hpp"
-#endif
+template <class T>
+class CV_EXPORTS NCVMatrixStack
+{
+public:
+    NCVMatrixStack() {this->_arr.clear();}
+    ~NCVMatrixStack()
+    {
+        const Ncv32u nElem = this->_arr.size();
+        for (Ncv32u i=0; i<nElem; i++)
+        {
+            pop_back();
+        }
+    }
+    void push_back(NCVMatrix<T> *elem) {this->_arr.push_back(std::tr1::shared_ptr< NCVMatrix<T> >(elem));}
+    void pop_back() {this->_arr.pop_back();}
+    NCVMatrix<T> * operator [] (int i) const {return this->_arr[i].get();}
+private:
+    std::vector< std::tr1::shared_ptr< NCVMatrix<T> > > _arr;
+};
 
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/gpulegacy/private.hpp"
 
-#endif /* __OPENCV_PRECOMP_H__ */
+template <class T>
+class CV_EXPORTS NCVImagePyramid
+{
+public:
+
+    NCVImagePyramid(const NCVMatrix<T> &img,
+                    Ncv8u nLayers,
+                    INCVMemAllocator &alloc,
+                    cudaStream_t cuStream);
+    ~NCVImagePyramid();
+    NcvBool isInitialized() const;
+    NCVStatus getLayer(NCVMatrix<T> &outImg,
+                       NcvSize32u outRoi,
+                       NcvBool bTrilinear,
+                       cudaStream_t cuStream) const;
+
+private:
+
+    NcvBool _isInitialized;
+    const NCVMatrix<T> *layer0;
+    NCVMatrixStack<T> pyramid;
+    Ncv32u nLayers;
+};
+
+#endif //_WIN32
+
+#endif //_ncvpyramid_hpp_

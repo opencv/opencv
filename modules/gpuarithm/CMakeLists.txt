@@ -6,7 +6,7 @@ set(the_description "GPU-accelerated Operations on Matrices")
 
 ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4127 /wd4324 /wd4512 -Wundef -Wmissing-declarations)
 
-ocv_add_module(gpuarithm opencv_core OPTIONAL opencv_gpulegacy)
+ocv_add_module(gpuarithm opencv_core OPTIONAL opencv_cudalegacy)
 
 ocv_module_include_directories()
 ocv_glob_module_sources()

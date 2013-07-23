@@ -790,7 +790,7 @@ void cv::cuda::integral(InputArray _src, OutputArray _dst, GpuMat& buffer, Strea
     }
     else
     {
-    #ifndef HAVE_OPENCV_GPULEGACY
+    #ifndef HAVE_OPENCV_CUDALEGACY
         throw_no_cuda();
     #else
         _dst.create(src.rows + 1, src.cols + 1, CV_32SC1);
@@ -823,7 +823,7 @@ void cv::cuda::integral(InputArray _src, OutputArray _dst, GpuMat& buffer, Strea
 
 void cv::cuda::sqrIntegral(InputArray _src, OutputArray _dst, GpuMat& buf, Stream& _stream)
 {
-#ifndef HAVE_OPENCV_GPULEGACY
+#ifndef HAVE_OPENCV_CUDALEGACY
     (void) _src;
     (void) _dst;
     (void) _stream;

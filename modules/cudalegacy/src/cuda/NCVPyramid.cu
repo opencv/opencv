@@ -45,8 +45,8 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-#include "opencv2/gpulegacy/NCV.hpp"
-#include "opencv2/gpulegacy/NCVPyramid.hpp"
+#include "opencv2/cudalegacy/NCV.hpp"
+#include "opencv2/cudalegacy/NCVPyramid.hpp"
 
 #include "NCVAlg.hpp"
 #include "NCVPixelOperations.hpp"

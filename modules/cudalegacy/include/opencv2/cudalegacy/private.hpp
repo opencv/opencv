@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,58 +41,56 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
+#ifndef __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__
+#define __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__
+
+#ifndef __OPENCV_BUILD
+#  error this is a private header which should not be used from outside of the OpenCV library
 #endif
-
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#if defined(__GNUC__) && !defined(__APPLE__) && !defined(__arm__)
-    #include <fpu_control.h>
-#endif
-
-#include <cfloat>
-#include <cstdio>
-#include <cmath>
-#include <vector>
-#include <string>
-#include <map>
-#include <memory>
-#include <algorithm>
-#include <fstream>
-
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-
-#include "opencv2/core/cuda.hpp"
-#include "opencv2/gpulegacy.hpp"
-#include "opencv2/highgui.hpp"
 
 #include "opencv2/core/private.cuda.hpp"
 
-#include "cvconfig.h"
-
-#include "NCVTest.hpp"
-#include "NCVAutoTestLister.hpp"
-#include "NCVTestSourceProvider.hpp"
-
-#include "TestIntegralImage.h"
-#include "TestIntegralImageSquared.h"
-#include "TestRectStdDev.h"
-#include "TestResize.h"
-#include "TestCompact.h"
-#include "TestTranspose.h"
-#include "TestDrawRects.h"
-#include "TestHypothesesGrow.h"
-#include "TestHypothesesFilter.h"
-#include "TestHaarCascadeLoader.h"
-#include "TestHaarCascadeApplication.h"
-
-#include "main_test_nvidia.h"
-
+#ifndef HAVE_CUDA
+#  error cudalegacy module requires CUDA
 #endif
+
+#include "opencv2/cudalegacy.hpp"
+
+namespace cv { namespace cuda
+{
+    class NppStStreamHandler
+    {
+    public:
+        inline explicit NppStStreamHandler(cudaStream_t newStream = 0)
+        {
+            oldStream = nppStSetActiveCUDAstream(newStream);
+        }
+
+        inline ~NppStStreamHandler()
+        {
+            nppStSetActiveCUDAstream(oldStream);
+        }
+
+    private:
+        cudaStream_t oldStream;
+    };
+
+    CV_EXPORTS cv::String getNcvErrorMessage(int code);
+
+    static inline void checkNcvError(int err, const char* file, const int line, const char* func)
+    {
+        if (NCV_SUCCESS != err)
+        {
+            cv::String msg = getNcvErrorMessage(err);
+            cv::error(cv::Error::GpuApiCallError, msg, func, file, line);
+        }
+    }
+}}
+
+#if defined(__GNUC__)
+    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, __func__)
+#else /* defined(__CUDACC__) || defined(__MSVC__) */
+    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, "")
+#endif
+
+#endif // __OPENCV_CORE_CUDALEGACY_PRIVATE_HPP__

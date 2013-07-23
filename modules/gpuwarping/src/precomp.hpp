@@ -49,9 +49,9 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPULEGACY
-#  include "opencv2/gpulegacy.hpp"
-#  include "opencv2/gpulegacy/private.hpp"
+#ifdef HAVE_OPENCV_CUDALEGACY
+#  include "opencv2/cudalegacy.hpp"
+#  include "opencv2/cudalegacy/private.hpp"
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */

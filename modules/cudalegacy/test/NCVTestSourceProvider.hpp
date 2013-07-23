@@ -46,7 +46,7 @@
 #include <memory>
 
 #include "opencv2/highgui.hpp"
-#include "opencv2/gpulegacy.hpp"
+#include "opencv2/cudalegacy.hpp"
 
 
 template <class T>

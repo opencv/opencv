@@ -7,7 +7,7 @@
 #include <iomanip>
 #include <cstdio>
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/gpulegacy.hpp"
+#include "opencv2/cudalegacy.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/objdetect.hpp"

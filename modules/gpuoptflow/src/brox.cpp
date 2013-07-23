@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPULEGACY) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_CUDALEGACY) || defined (CUDA_DISABLER)
 
 void cv::cuda::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 

@@ -4,7 +4,8 @@ SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc ope
                                      opencv_nonfree opencv_softcascade opencv_superres
                                      opencv_gpuarithm opencv_gpufilters opencv_gpuwarping opencv_gpuimgproc
                                      opencv_gpufeatures2d opencv_gpuoptflow opencv_gpubgsegm
-                                     opencv_gpustereo opencv_gpulegacy)
+                                     opencv_gpustereo opencv_cudalegacy)
+
 ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
@@ -96,3 +97,4 @@ if (INSTALL_C_EXAMPLES AND NOT WIN32)
           DESTINATION share/OpenCV/samples/${project}
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
+

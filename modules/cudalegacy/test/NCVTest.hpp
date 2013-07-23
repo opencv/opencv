@@ -56,7 +56,7 @@
 
 #include <cuda_runtime.h>
 
-#include "opencv2/gpulegacy.hpp"
+#include "opencv2/cudalegacy.hpp"
 
 
 struct NCVTestReport

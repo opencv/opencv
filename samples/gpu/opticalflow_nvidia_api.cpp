@@ -12,7 +12,7 @@
 #include <iostream>
 #include <iomanip>
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/gpulegacy.hpp"
+#include "opencv2/cudalegacy.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
 

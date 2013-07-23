@@ -73,7 +73,7 @@ public:
     virtual bool read(const String& classifierAsXml) = 0;
 };
 
-#ifndef HAVE_OPENCV_GPULEGACY
+#ifndef HAVE_OPENCV_CUDALEGACY
 
 struct cv::cuda::CascadeClassifier_GPU::HaarCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
 {
@@ -509,7 +509,7 @@ private:
 
             integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
 
-#ifdef HAVE_OPENCV_GPULEGACY
+#ifdef HAVE_OPENCV_CUDALEGACY
             NcvSize32u roiSize;
             roiSize.width = frame.width;
             roiSize.height = frame.height;

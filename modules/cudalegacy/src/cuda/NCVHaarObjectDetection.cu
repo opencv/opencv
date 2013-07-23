@@ -69,9 +69,9 @@
 #  include "opencv2/objdetect/objdetect_c.h"
 #endif
 
-#include "opencv2/gpulegacy/NCV.hpp"
-#include "opencv2/gpulegacy/NPP_staging.hpp"
-#include "opencv2/gpulegacy/NCVHaarObjectDetection.hpp"
+#include "opencv2/cudalegacy/NCV.hpp"
+#include "opencv2/cudalegacy/NPP_staging.hpp"
+#include "opencv2/cudalegacy/NCVHaarObjectDetection.hpp"
 
 #include "NCVRuntimeTemplates.hpp"
 #include "NCVAlg.hpp"

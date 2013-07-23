@@ -136,7 +136,7 @@ void cv::cuda::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // ImagePyramid
 
-#ifdef HAVE_OPENCV_GPULEGACY
+#ifdef HAVE_OPENCV_CUDALEGACY
 
 namespace
 {
@@ -230,7 +230,7 @@ namespace
 
 Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray img, int nLayers, Stream& stream)
 {
-#ifndef HAVE_OPENCV_GPULEGACY
+#ifndef HAVE_OPENCV_CUDALEGACY
     (void) img;
     (void) numLayers;
     (void) stream;
