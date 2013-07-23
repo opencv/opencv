@@ -52,8 +52,8 @@
 #include "opencv2/videostab/motion_core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
-#  include "opencv2/gpuimgproc.hpp"
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
 namespace cv
@@ -199,7 +199,7 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
 
 class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
@@ -230,7 +230,7 @@ private:
     std::vector<uchar> rejectionStatus_;
 };
 
-#endif // defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 

@@ -47,7 +47,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUIMGPROC)
+#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAIMGPROC)
 
 using namespace std;
 using namespace testing;

@@ -48,7 +48,7 @@
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"
 
-#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUIMGPROC)
+#if defined (HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAIMGPROC)
 
 using namespace cvtest;
 

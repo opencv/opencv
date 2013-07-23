@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_OPENCV_IMGPROC) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
+#if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_OPENCV_IMGPROC) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAIMGPROC)
 
 cv::cuda::FGDParams::FGDParams() { throw_no_cuda(); }
 

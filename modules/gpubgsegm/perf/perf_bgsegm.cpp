@@ -46,8 +46,8 @@
 #  include "opencv2/legacy.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
-#  include "opencv2/gpuimgproc.hpp"
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
 using namespace std;
@@ -121,7 +121,7 @@ PERF_TEST_P(Video, FGDStatModel,
 
         GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
+#ifdef HAVE_OPENCV_CUDAIMGPROC
         cv::cuda::GpuMat background3, background;
         d_fgd->getBackgroundImage(background3);
         cv::cuda::cvtColor(background3, background, cv::COLOR_BGR2BGRA);

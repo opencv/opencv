@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUIMGPROC_HPP__
-#define __OPENCV_GPUIMGPROC_HPP__
+#ifndef __OPENCV_CUDAIMGPROC_HPP__
+#define __OPENCV_CUDAIMGPROC_HPP__
 
 #ifndef __cplusplus
-#  error gpuimgproc.hpp header must be compiled as C++
+#  error cudaimgproc.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -359,4 +359,4 @@ CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUIMGPROC_HPP__ */
+#endif /* __OPENCV_CUDAIMGPROC_HPP__ */

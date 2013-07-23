@@ -737,7 +737,7 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 }
 
 
-#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
 
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
@@ -812,7 +812,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const cuda::GpuMat &frame0, const 
     return motionEstimator_->estimate(hostPointsPrev_, hostPoints_, ok);
 }
 
-#endif // defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+#endif // defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
 
 
 Mat getMotion(int from, int to, const std::vector<Mat> &motions)

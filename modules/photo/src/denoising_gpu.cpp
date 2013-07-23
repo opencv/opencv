@@ -51,14 +51,14 @@
 #  include "opencv2/cudaarithm.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
-#  include "opencv2/gpuimgproc.hpp"
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
+#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAIMGPROC)
 
 void cv::cuda::nonLocalMeans(const GpuMat&, GpuMat&, float, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::FastNonLocalMeansDenoising::simpleMethod(const GpuMat&, GpuMat&, float, int, int, Stream&) { throw_no_cuda(); }

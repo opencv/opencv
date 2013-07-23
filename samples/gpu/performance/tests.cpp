@@ -4,7 +4,7 @@
 #include "opencv2/calib3d.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/gpu.hpp"
-#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/cudaimgproc.hpp"
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/gpufeatures2d.hpp"
