@@ -207,101 +207,85 @@ const int NP=300; //number of points sympliying the contour
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
                                          vector <Point2f>& query3, vector <Point2f>& test, vector<DMatch>& matches)
 {
-    /* executers */
-    SCD shapeDescriptor1(angularBins,radialBins, minRad, maxRad,false);
-    SCD shapeDescriptor2(angularBins,radialBins, minRad, maxRad,false);
-    SCD shapeDescriptor3(angularBins,radialBins, minRad, maxRad,false);
+    // queries //
+    vector< vector<Point2f> > query;
+    query.push_back(query1);
+    query.push_back(query2);
+    query.push_back(query3);
+    // executers //
     SCD shapeDescriptorT(angularBins,radialBins, minRad, maxRad,false);
-    SCDMatcher scdmatcher1(2.0, DistanceSCDFlags::DIST_CHI);
-    SCDMatcher scdmatcher2(2.0, DistanceSCDFlags::DIST_CHI);
-    SCDMatcher scdmatcher3(2.0, DistanceSCDFlags::DIST_CHI);
-    ThinPlateSplineTransform tpsTra1;
-    ThinPlateSplineTransform tpsTra2;
-    ThinPlateSplineTransform tpsTra3;
-    /* SCD descriptors */
-    Mat query1SCDMatrix, query2SCDMatrix, query3SCDMatrix;
+    vector<SCD> shapeDescriptors;
+    shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
+    shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
+    shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
+    vector<SCDMatcher> scdmatchers;
+    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
+    vector<ThinPlateSplineTransform> tpsTra(3);
+
+    // SCD descriptors //
+    vector<Mat> querySCD(3);
     Mat testingSCDMatrix;
-    vector<DMatch> matches1, matches2, matches3;
-    /* Regularization params */
-    float beta1=0, beta2=0, beta3=0;
+    vector< vector<DMatch> > matchesvec(3);
+
+    // Regularization params //
+    float beta;
     float annRate=0.5;
 
-    /* Iterative process with NC cycles */
+    // Iterative process with NC cycles //
     int NC=3;//number of cycles
-    float scdistance1=0.0, benergy1=0.0;// dist1=0.0;
-    float scdistance2=0.0, benergy2=0.0;// dist2=0.0;
-    float scdistance3=0.0, benergy3=0.0;// dist3=0.0;
-    for (int i=0; i<NC; i++)
+    vector<float> scdistances(3), benergies(3);
+
+    // Extract SCD descriptor of the testing shape //
+    shapeDescriptorT.extractSCD(test, testingSCDMatrix);
+
+    // start loop //
+    for (int i=0; i<3; i++)
     {
-        //std::cout<<"CICLO: "<<i<<std::endl;
-        //std::cout<<"computing SCD "<<std::endl;
-        // compute SCD //
-        shapeDescriptor1.extractSCD(query1, query1SCDMatrix);
-        shapeDescriptor2.extractSCD(query2, query2SCDMatrix);
-        shapeDescriptor3.extractSCD(query3, query3SCDMatrix);
+        for (int j=0; j<NC; j++)
+        {
+            // compute SCD //
+            shapeDescriptors[i].extractSCD(query[i], querySCD[i]);
 
-        // regularization parameter with annealing rate annRate //
-        beta1=pow(shapeDescriptor1.getMeanDistance(),2)*pow(annRate, i+1);
-        beta2=pow(shapeDescriptor2.getMeanDistance(),2)*pow(annRate, i+1);
-        beta3=pow(shapeDescriptor3.getMeanDistance(),2)*pow(annRate, i+1);
+            // regularization parameter with annealing rate annRate //
+            beta=pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j+1);
 
-        // compute SCD of the objective shape and match //
-        shapeDescriptorT.extractSCD(test, testingSCDMatrix);
-        //std::cout<<"Matching... "<<std::endl;
-        scdmatcher1.matchDescriptors(query1SCDMatrix, testingSCDMatrix, matches1);
-        scdmatcher2.matchDescriptors(query2SCDMatrix, testingSCDMatrix, matches2);
-        scdmatcher3.matchDescriptors(query3SCDMatrix, testingSCDMatrix, matches3);
+            // match //
+            scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i]);
 
-        vector<Point2f> transformed_shape;
-        // transformin queries to look like test (saving it into transformed_shape) //
-        //std::cout<<"Applying TPS "<<std::endl;
-        tpsTra1.setRegularizationParam(beta1);
-        tpsTra2.setRegularizationParam(beta2);
-        tpsTra3.setRegularizationParam(beta3);
-        tpsTra1.applyTransformation(query1, test, matches1, transformed_shape);
-        query1=transformed_shape;
-        tpsTra2.applyTransformation(query2, test, matches2, transformed_shape);
-        query2=transformed_shape;
-        tpsTra3.applyTransformation(query3, test, matches3, transformed_shape);
-        query3=transformed_shape;
-
+            // apply TPS transform //
+            vector<Point2f> transformed_shape;
+            tpsTra[i].setRegularizationParam(beta);
+            tpsTra[i].applyTransformation(query[i], test, matchesvec[i], transformed_shape);
+            query[i]=transformed_shape;
+        }
         // updating distances values //
-        scdistance1 = scdmatcher1.getMatchingCost();
-        scdistance2 = scdmatcher2.getMatchingCost();
-        scdistance3 = scdmatcher3.getMatchingCost();
-        benergy1 = tpsTra1.getTranformCost();
-        benergy2 = tpsTra2.getTranformCost();
-        benergy3 = tpsTra3.getTranformCost();
-        //dist1 = point2PointEuclideanDistance(query1, test, matches1);
-        //dist2 = point2PointEuclideanDistance(query2, test, matches2);
-        //dist3 = point2PointEuclideanDistance(query3, test, matches3);
+        scdistances[i] = scdmatchers[i].getMatchingCost();
+        benergies[i] = tpsTra[i].getTranformCost();
     }
-    float distance1T=scdistance1+benergy1;//+dist1;
-    float distance2T=scdistance2+benergy2;//+dist2;
-    float distance3T=scdistance3+benergy3;//+dist3;
-
-    //distance1T/=NC;
-    //distance2T/=NC;
-    //distance3T/=NC;
+    float distance1T=1*scdistances[1]+0.3*benergies[1];//+dist1;
+    float distance2T=1*scdistances[2]+0.3*benergies[2];//+dist2;
+    float distance3T=1*scdistances[3]+0.3*benergies[3];//+dist3;
 
     if ( distance1T<=distance2T && distance1T<=distance3T )
     {
-        matches=matches1;
+        matches=matchesvec[1];
         return distance1T;
     }
     if ( distance2T<=distance1T && distance2T<=distance3T )
     {
-        matches=matches2;
+        matches=matchesvec[2];
         query1=query2;
         return distance2T;
     }
     if ( distance3T<=distance1T && distance3T<=distance2T )
     {
-        matches=matches3;
-        query1=query3;
+        matches=matchesvec[3];
+        query1=query[3];
         return distance3T;
     }
-    matches=matches1;
+    matches=matchesvec[1];
     return 0.0;
 }
 
@@ -432,7 +416,7 @@ void CV_ShapeTest::mpegTest()
     fs << "distanceMat" << distanceMat;
 }
 
-const int FIRST_MANY=10;
+const int FIRST_MANY=140;
 void CV_ShapeTest::displayMPEGResults()
 {
     string baseTestFolder="shape/mpeg_test/";
@@ -464,10 +448,11 @@ void CV_ShapeTest::displayMPEGResults()
         }
         for (int col=divi-NSN; col<divi; col++)
         {
+            if (row==col) continue;
             int nsmall=0;
             for (int i=0; i<distanceMat.cols; i++)
             {
-                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i))
+                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i) )
                 {
                     nsmall++;
                 }
@@ -479,13 +464,13 @@ void CV_ShapeTest::displayMPEGResults()
         }
     }
 
-    std::cout<<"number of correct matches in the first 40 matches: "<<corrects<<std::endl;
-    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*distanceMat.rows)<<std::endl;
+    std::cout<<"number of correct matches in the first "<<FIRST_MANY<<" matches: "<<corrects<<std::endl;
+    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*distanceMat.rows-distanceMat.rows)<<std::endl;
 }
 
 void CV_ShapeTest::run( int /*start_from*/ )
 {
-    //mpegTest();
+    mpegTest();
     displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);
 }
