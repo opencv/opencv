@@ -69,7 +69,7 @@
 
 #define CV_IS_ROW_SAMPLE(flags) ((flags) & CV_ROW_SAMPLE)
 
-struct CvVectors#define CV_TYPE_NAME_ML_ANN_MLP     "opencv-ml-ann-mlp"
+struct CvVectors
 {
     int type;
     int dims, count;
