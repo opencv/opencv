@@ -375,3 +375,51 @@ PERFTEST(filter2D)
 
     }
 }
+
+///////////// Bilateral ////////////////////////
+PERFTEST(bilateralFilter)
+{
+    Mat src, dst, ocl_dst;
+    ocl::oclMat d_src, d_dst;
+	double sigmacolor = 50.0;
+	int d = 7;
+	double sigmaspace = 50.0;
+
+    int all_type[] = {CV_8UC1, CV_8UC3};
+    std::string type_name[] = {"CV_8UC1", "CV_8UC3"};
+
+    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    {
+        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
+        {
+            SUBTEST << "d = 7; " << size << 'x' << size << "; " << type_name[j];
+
+            gen(src, size, size, all_type[j], 0, 256);
+
+            cv::bilateralFilter(src, dst, d, sigmacolor, sigmaspace);
+
+            CPU_ON;
+            cv::bilateralFilter(src, dst, d, sigmacolor, sigmaspace);
+            CPU_OFF;
+
+            d_src.upload(src);
+
+            WARMUP_ON;
+            cv::ocl::bilateralFilter(d_src, d_dst, d, sigmacolor, sigmaspace);
+            WARMUP_OFF;
+
+            GPU_ON;
+            cv::ocl::bilateralFilter(d_src, d_dst, d, sigmacolor, sigmaspace);
+            GPU_OFF;
+
+            GPU_FULL_ON;
+            d_src.upload(src);
+            cv::ocl::bilateralFilter(d_src, d_dst, d, sigmacolor, sigmaspace);
+            d_dst.download(ocl_dst);
+            GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.);
+        }
+
+    }
+}
