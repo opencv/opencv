@@ -73,6 +73,7 @@ namespace cv
     }
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
 static void convert_C3C4(const cl_mem &src, oclMat &dst)
@@ -183,11 +184,21 @@ void cv::ocl::oclMat::upload(const Mat &m)
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
-                                     (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
-        openCLVerifyCall(err);
+        cl_mem temp;
+        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP){
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+            openCLVerifyCall(err);
+            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, 
+                           wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        }
+        else{
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, m.datastart, &err);
+            openCLVerifyCall(err);
+        }
 
-        openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        
         convert_C3C4(temp, *this);
         openCLSafeCall(clReleaseMemObject(temp));
     }
@@ -203,6 +214,34 @@ void cv::ocl::oclMat::upload(const Mat &m)
     rows = m.rows;
     cols = m.cols;
     offset = ofs.y * step + ofs.x * elemSize();
+}
+
+cv::ocl::oclMat::operator cv::_InputArray()
+{
+    _InputArray newInputArray;
+    newInputArray.flags = cv::_InputArray::OCL_MAT;
+    newInputArray.obj   = reinterpret_cast<void *>(this);
+    return newInputArray;
+}
+
+cv::ocl::oclMat::operator cv::_OutputArray()
+{
+    _OutputArray newOutputArray;
+    newOutputArray.flags = cv::_InputArray::OCL_MAT;
+    newOutputArray.obj   = reinterpret_cast<void *>(this);
+    return newOutputArray;
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(InputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
@@ -372,7 +411,7 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     if( rtype < 0 )
         rtype = type();
     else
-        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), oclchannels());
+        rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
 
     //int scn = channels();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
@@ -915,7 +954,7 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
+        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
                             rows, rw_type, mem_type, hptr);
 
         if (esz * cols == step)

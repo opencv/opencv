@@ -55,6 +55,83 @@ using namespace testing;
 using namespace std;
 
 extern string workdir;
+
+
+//////////////////////////////////////////////////////
+// GoodFeaturesToTrack
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(MinDistance, double)
+}
+PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
+{
+    double minDistance;
+
+    virtual void SetUp()
+    {
+        minDistance = GET_PARAM(0);
+    }
+};
+
+TEST_P(GoodFeaturesToTrack, Accuracy)
+{
+    cv::Mat frame = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame.empty());
+
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+
+    cv::ocl::oclMat d_pts;
+    detector(oclMat(frame), d_pts);
+
+    ASSERT_FALSE(d_pts.empty());
+
+    std::vector<cv::Point2f> pts(d_pts.cols);
+    
+    detector.downloadPoints(d_pts, pts);
+
+    std::vector<cv::Point2f> pts_gold;
+    cv::goodFeaturesToTrack(frame, pts_gold, maxCorners, qualityLevel, minDistance);
+
+    ASSERT_EQ(pts_gold.size(), pts.size());
+
+    size_t mistmatch = 0;
+    for (size_t i = 0; i < pts.size(); ++i)
+    {
+        cv::Point2i a = pts_gold[i];
+        cv::Point2i b = pts[i];
+
+        bool eq = std::abs(a.x - b.x) < 1 && std::abs(a.y - b.y) < 1;
+
+        if (!eq)
+            ++mistmatch;
+    }
+
+    double bad_ratio = static_cast<double>(mistmatch) / pts.size();
+
+    ASSERT_LE(bad_ratio, 0.01);
+}
+
+TEST_P(GoodFeaturesToTrack, EmptyCorners)
+{
+    int maxCorners = 1000;
+    double qualityLevel = 0.01;
+
+    cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+
+    cv::ocl::oclMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    cv::ocl::oclMat corners(1, maxCorners, CV_32FC2);
+
+    detector(src, corners);
+
+    ASSERT_TRUE(corners.empty());
+}
+
+INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack, 
+    testing::Values(MinDistance(0.0), MinDistance(3.0)));
+
 //////////////////////////////////////////////////////////////////////////
 PARAM_TEST_CASE(TVL1, bool)
 {
@@ -195,6 +272,78 @@ TEST_P(Sparse, Mat)
 INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(
     Values(false, true),
     Values(false, true)));
+//////////////////////////////////////////////////////
+// FarnebackOpticalFlow
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(PyrScale, double)
+        IMPLEMENT_PARAM_CLASS(PolyN, int)
+        CV_FLAGS(FarnebackOptFlowFlags, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+        IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
+}
+
+PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
+{
+    double pyrScale;
+    int polyN;
+    int flags;
+    bool useInitFlow;
+
+    virtual void SetUp()
+    {
+        pyrScale = GET_PARAM(0);
+        polyN = GET_PARAM(1);
+        flags = GET_PARAM(2);
+        useInitFlow = GET_PARAM(3);
+    }
+};
+
+TEST_P(Farneback, Accuracy)
+{
+    cv::Mat frame0 = imread(workdir + "/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = imread(workdir + "/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    double polySigma = polyN <= 5 ? 1.1 : 1.5;
+
+    cv::ocl::FarnebackOpticalFlow farn;
+    farn.pyrScale = pyrScale;
+    farn.polyN = polyN;
+    farn.polySigma = polySigma;
+    farn.flags = flags;
+
+    cv::ocl::oclMat d_flowx, d_flowy;
+    farn(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
+
+    cv::Mat flow;
+    if (useInitFlow)
+    {
+        cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
+        cv::merge(flowxy, 2, flow);
+
+        farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
+        farn(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
+    }
+
+    cv::calcOpticalFlowFarneback(
+        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
+        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+
+    std::vector<cv::Mat> flowxy;
+    cv::split(flow, flowxy);
+
+    EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
+    EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
+}
+
+INSTANTIATE_TEST_CASE_P(OCL_Video, Farneback, testing::Combine(
+    testing::Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
+    testing::Values(PolyN(5), PolyN(7)),
+    testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
+    testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
 #endif // HAVE_OPENCL
 

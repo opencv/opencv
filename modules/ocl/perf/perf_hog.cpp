@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,7 +46,8 @@
 #include "precomp.hpp"
 
 ///////////// HOG////////////////////////
-TEST(HOG)
+
+PERFTEST(HOG)
 {
     Mat src = imread(abspath("road.png"), cv::IMREAD_GRAYSCALE);
 
@@ -54,12 +56,12 @@ TEST(HOG)
         throw runtime_error("can't open road.png");
     }
 
-
     cv::HOGDescriptor hog;
     hog.setSVMDetector(hog.getDefaultPeopleDetector());
     std::vector<cv::Rect> found_locations;
+    std::vector<cv::Rect> d_found_locations;
 
-    SUBTEST << 768 << 'x' << 576 << "; road.png";
+    SUBTEST << src.cols << 'x' << src.rows << "; road.png";
 
     hog.detectMultiScale(src, found_locations);
 
@@ -73,12 +75,16 @@ TEST(HOG)
     d_src.upload(src);
 
     WARMUP_ON;
-    ocl_hog.detectMultiScale(d_src, found_locations);
+    ocl_hog.detectMultiScale(d_src, d_found_locations);
     WARMUP_OFF;
+    
+    if(d_found_locations.size() == found_locations.size())
+        TestSystem::instance().setAccurate(1, 0);
+    else
+        TestSystem::instance().setAccurate(0, abs((int)found_locations.size() - (int)d_found_locations.size()));
 
     GPU_ON;
     ocl_hog.detectMultiScale(d_src, found_locations);
-     ;
     GPU_OFF;
 
     GPU_FULL_ON;

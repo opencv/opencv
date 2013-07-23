@@ -56,7 +56,7 @@ public class VideoCapture {
  *   * CV_CAP_PROP_FRAME_WIDTH width of the frames in the video stream.
  *   * CV_CAP_PROP_FRAME_HEIGHT height of the frames in the video stream.
  *
- * @see <a href="http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-get">org.opencv.highgui.VideoCapture.get</a>
+ * @see <a href="http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-get">org.opencv.highgui.VideoCapture.get</a>
  */
     public double get(int propId)
     {
@@ -178,7 +178,7 @@ public class VideoCapture {
  *   * CV_CAP_PROP_FRAME_HEIGHT height of the frames in the video stream.
  * @param value value of the property.
  *
- * @see <a href="http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set">org.opencv.highgui.VideoCapture.set</a>
+ * @see <a href="http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html#videocapture-set">org.opencv.highgui.VideoCapture.set</a>
  */
     public boolean set(int propId, double value)
     {

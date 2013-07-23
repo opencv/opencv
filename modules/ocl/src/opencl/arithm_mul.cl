@@ -277,9 +277,15 @@ __kernel void arithm_mul_D6 (__global double *src1, int src1_step, int src1_offs
 }
 #endif
 
+#ifdef DOUBLE_SUPPORT
+#define SCALAR_TYPE double
+#else
+#define SCALAR_TYPE float
+#endif
+
 __kernel void arithm_muls_D5 (__global float *src1, int src1_step, int src1_offset,
                               __global float *dst,  int dst_step,  int dst_offset,
-                              int rows, int cols, int dst_step1, float scalar)
+                              int rows, int cols, int dst_step1, SCALAR_TYPE scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);

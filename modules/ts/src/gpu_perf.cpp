@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/gpu.hpp"
 
 #ifdef HAVE_CUDA
     #include <cuda_runtime.h>
@@ -287,7 +287,7 @@ namespace perf
             cv::gpu::DeviceInfo info(i);
 
             printf("[----------]\n"), fflush(stdout);
-            printf("[ DEVICE   ] \t# %d %s.\n", i, info.name().c_str()), fflush(stdout);
+            printf("[ DEVICE   ] \t# %d %s.\n", i, info.name()), fflush(stdout);
             printf("[          ] \tCompute capability: %d.%d\n", (int)info.majorVersion(), (int)info.minorVersion()), fflush(stdout);
             printf("[          ] \tMulti Processor Count:  %d\n", info.multiProcessorCount()), fflush(stdout);
             printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)), fflush(stdout);

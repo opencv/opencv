@@ -746,10 +746,12 @@ TEST(erode)
 
         d_src.upload(src);
 
-        gpu::erode(d_src, d_dst, ker, d_buf);
+        Ptr<gpu::Filter> erode = gpu::createMorphologyFilter(MORPH_ERODE, d_src.type(), ker);
+
+        erode->apply(d_src, d_dst);
 
         GPU_ON;
-        gpu::erode(d_src, d_dst, ker, d_buf);
+        erode->apply(d_src, d_dst);
         GPU_OFF;
     }
 }
@@ -929,10 +931,12 @@ TEST(GaussianBlur)
         gpu::GpuMat d_dst(src.size(), src.type());
         gpu::GpuMat d_buf;
 
-        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
+        cv::Ptr<cv::gpu::Filter> gauss = cv::gpu::createGaussianFilter(d_src.type(), -1, cv::Size(3, 3), 1);
+
+        gauss->apply(d_src, d_dst);
 
         GPU_ON;
-        gpu::GaussianBlur(d_src, d_dst, Size(3, 3), d_buf, 1);
+        gauss->apply(d_src, d_dst);
         GPU_OFF;
     }
 }
@@ -961,10 +965,11 @@ TEST(filter2D)
             gpu::GpuMat d_src(src);
             gpu::GpuMat d_dst;
 
-            gpu::filter2D(d_src, d_dst, -1, kernel);
+            Ptr<gpu::Filter> filter2D = gpu::createLinearFilter(d_src.type(), -1, kernel);
+            filter2D->apply(d_src, d_dst);
 
             GPU_ON;
-            gpu::filter2D(d_src, d_dst, -1, kernel);
+            filter2D->apply(d_src, d_dst);
             GPU_OFF;
         }
     }

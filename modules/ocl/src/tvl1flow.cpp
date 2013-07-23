@@ -472,4 +472,8 @@ void ocl_tvl1flow::warpBackward(const oclMat &I0, const oclMat &I1, oclMat &I1x,
     args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
 
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
+
+    releaseTexture(I1_tex);
+    releaseTexture(I1x_tex);
+    releaseTexture(I1y_tex);
 }

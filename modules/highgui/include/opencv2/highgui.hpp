@@ -148,6 +148,8 @@ CV_EXPORTS_W void setTrackbarPos(const String& trackbarname, const String& winna
 
 
 // OpenGL support
+CV_EXPORTS void imshow(const String& winname, const ogl::Texture2D& tex);
+
 CV_EXPORTS void setOpenGlDrawCallback(const String& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0);
 
 CV_EXPORTS void setOpenGlContext(const String& winname);

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -45,40 +46,42 @@
 #include "precomp.hpp"
 
 ///////////// norm////////////////////////
-TEST(norm)
+PERFTEST(norm)
 {
-    Mat src, buf;
-    ocl::oclMat d_src, d_buf;
-
+    Mat src1, src2, ocl_src1;
+    ocl::oclMat d_src1, d_src2;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {
         SUBTEST << size << 'x' << size << "; CV_8UC1; NORM_INF";
 
-        gen(src, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
-        gen(buf, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
+        gen(src1, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
+        gen(src2, size, size, CV_8UC1, Scalar::all(0), Scalar::all(1));
 
-        norm(src, NORM_INF);
+        norm(src1, src2, NORM_INF);
 
         CPU_ON;
-        norm(src, NORM_INF);
+        norm(src1, src2, NORM_INF);
         CPU_OFF;
 
-        d_src.upload(src);
-        d_buf.upload(buf);
+        d_src1.upload(src1);
+        d_src2.upload(src2);
 
         WARMUP_ON;
-        ocl::norm(d_src, d_buf, NORM_INF);
+        ocl::norm(d_src1, d_src2, NORM_INF);
         WARMUP_OFF;
 
+        d_src1.download(ocl_src1);
+        TestSystem::instance().ExpectedMatNear(src1, ocl_src1, .5);                        
+
         GPU_ON;
-        ocl::norm(d_src, d_buf, NORM_INF);
-         ;
+        ocl::norm(d_src1, d_src2, NORM_INF);
         GPU_OFF;
 
         GPU_FULL_ON;
-        d_src.upload(src);
-        ocl::norm(d_src, d_buf, NORM_INF);
+        d_src1.upload(src1);
+        d_src2.upload(src2);
+        ocl::norm(d_src1, d_src2, NORM_INF);
         GPU_FULL_OFF;
     }
 }

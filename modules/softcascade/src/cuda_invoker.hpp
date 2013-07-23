@@ -44,7 +44,7 @@
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
 #include "cuda_runtime_api.h"
 
 #if defined __CUDACC__

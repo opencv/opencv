@@ -40,8 +40,12 @@
 //
 //M*/
 
-#ifndef __OPENCV_OPENGL_INTEROP_HPP__
-#define __OPENCV_OPENGL_INTEROP_HPP__
+#ifndef __OPENCV_CORE_OPENGL_HPP__
+#define __OPENCV_CORE_OPENGL_HPP__
+
+#ifndef __cplusplus
+#  error opengl.hpp header must be compiled as C++
+#endif
 
 #include "opencv2/core.hpp"
 
@@ -84,7 +88,7 @@ public:
 
     //! create buffer
     void create(int arows, int acols, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
-    void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false) { create(asize.height, asize.width, atype, target, autoRelease); }
+    void create(Size asize, int atype, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
     //! release memory and delete buffer object
     void release();
@@ -92,11 +96,15 @@ public:
     //! set auto release mode (if true, release will be called in object's destructor)
     void setAutoRelease(bool flag);
 
-    //! copy from host/device memory
+    //! copy from host/device memory (blocking)
     void copyFrom(InputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false);
+    //! copy from device memory (non blocking)
+    void copyFrom(InputArray arr, gpu::Stream& stream, Target target = ARRAY_BUFFER, bool autoRelease = false);
 
-    //! copy to host/device memory
-    void copyTo(OutputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false) const;
+    //! copy to host/device memory (blocking)
+    void copyTo(OutputArray arr) const;
+    //! copy to device memory (non blocking)
+    void copyTo(OutputArray arr, gpu::Stream& stream) const;
 
     //! create copy of current buffer
     Buffer clone(Target target = ARRAY_BUFFER, bool autoRelease = false) const;
@@ -111,21 +119,26 @@ public:
     Mat mapHost(Access access);
     void unmapHost();
 
-    //! map to device memory
+    //! map to device memory (blocking)
     gpu::GpuMat mapDevice();
     void unmapDevice();
 
-    int rows() const { return rows_; }
-    int cols() const { return cols_; }
-    Size size() const { return Size(cols_, rows_); }
-    bool empty() const { return rows_ == 0 || cols_ == 0; }
+    //! map to device memory (non blocking)
+    gpu::GpuMat mapDevice(gpu::Stream& stream);
+    void unmapDevice(gpu::Stream& stream);
 
-    int type() const { return type_; }
-    int depth() const { return CV_MAT_DEPTH(type_); }
-    int channels() const { return CV_MAT_CN(type_); }
-    int elemSize() const { return CV_ELEM_SIZE(type_); }
-    int elemSize1() const { return CV_ELEM_SIZE1(type_); }
+    int rows() const;
+    int cols() const;
+    Size size() const;
+    bool empty() const;
 
+    int type() const;
+    int depth() const;
+    int channels() const;
+    int elemSize() const;
+    int elemSize1() const;
+
+    //! get OpenGL opject id
     unsigned int bufId() const;
 
     class Impl;
@@ -165,7 +178,7 @@ public:
 
     //! create texture
     void create(int arows, int acols, Format aformat, bool autoRelease = false);
-    void create(Size asize, Format aformat, bool autoRelease = false) { create(asize.height, asize.width, aformat, autoRelease); }
+    void create(Size asize, Format aformat, bool autoRelease = false);
 
     //! release memory and delete texture object
     void release();
@@ -182,13 +195,14 @@ public:
     //! bind texture to current active texture unit for GL_TEXTURE_2D target
     void bind() const;
 
-    int rows() const { return rows_; }
-    int cols() const { return cols_; }
-    Size size() const { return Size(cols_, rows_); }
-    bool empty() const { return rows_ == 0 || cols_ == 0; }
+    int rows() const;
+    int cols() const;
+    Size size() const;
+    bool empty() const;
 
-    Format format() const { return format_; }
+    Format format() const;
 
+    //! get OpenGL opject id
     unsigned int texId() const;
 
     class Impl;
@@ -224,8 +238,8 @@ public:
 
     void bind() const;
 
-    int size() const { return size_; }
-    bool empty() const { return size_ == 0; }
+    int size() const;
+    bool empty() const;
 
 private:
     int size_;
@@ -260,14 +274,14 @@ enum {
 CV_EXPORTS void render(const Arrays& arr, int mode = POINTS, Scalar color = Scalar::all(255));
 CV_EXPORTS void render(const Arrays& arr, InputArray indices, int mode = POINTS, Scalar color = Scalar::all(255));
 
-}} // namespace cv::gl
+}} // namespace cv::ogl
 
 namespace cv { namespace gpu {
 
 //! set a CUDA device to use OpenGL interoperability
 CV_EXPORTS void setGlDevice(int device = 0);
 
-}} // cv::gpu
+}}
 
 namespace cv {
 
@@ -276,4 +290,149 @@ template <> CV_EXPORTS void Ptr<cv::ogl::Texture2D::Impl>::delete_obj();
 
 }
 
-#endif // __OPENCV_OPENGL_INTEROP_HPP__
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+
+inline
+cv::ogl::Buffer::Buffer(int arows, int acols, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+{
+    create(arows, acols, atype, target, autoRelease);
+}
+
+inline
+cv::ogl::Buffer::Buffer(Size asize, int atype, Target target, bool autoRelease) : rows_(0), cols_(0), type_(0)
+{
+    create(asize, atype, target, autoRelease);
+}
+
+inline
+void cv::ogl::Buffer::create(Size asize, int atype, Target target, bool autoRelease)
+{
+    create(asize.height, asize.width, atype, target, autoRelease);
+}
+
+inline
+int cv::ogl::Buffer::rows() const
+{
+    return rows_;
+}
+
+inline
+int cv::ogl::Buffer::cols() const
+{
+    return cols_;
+}
+
+inline
+cv::Size cv::ogl::Buffer::size() const
+{
+    return Size(cols_, rows_);
+}
+
+inline
+bool cv::ogl::Buffer::empty() const
+{
+    return rows_ == 0 || cols_ == 0;
+}
+
+inline
+int cv::ogl::Buffer::type() const
+{
+    return type_;
+}
+
+inline
+int cv::ogl::Buffer::depth() const
+{
+    return CV_MAT_DEPTH(type_);
+}
+
+inline
+int cv::ogl::Buffer::channels() const
+{
+    return CV_MAT_CN(type_);
+}
+
+inline
+int cv::ogl::Buffer::elemSize() const
+{
+    return CV_ELEM_SIZE(type_);
+}
+
+inline
+int cv::ogl::Buffer::elemSize1() const
+{
+    return CV_ELEM_SIZE1(type_);
+}
+
+///////
+
+inline
+cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+{
+    create(arows, acols, aformat, autoRelease);
+}
+
+inline
+cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, bool autoRelease) : rows_(0), cols_(0), format_(NONE)
+{
+    create(asize, aformat, autoRelease);
+}
+
+inline
+void cv::ogl::Texture2D::create(Size asize, Format aformat, bool autoRelease)
+{
+    create(asize.height, asize.width, aformat, autoRelease);
+}
+
+inline
+int cv::ogl::Texture2D::rows() const
+{
+    return rows_;
+}
+
+inline
+int cv::ogl::Texture2D::cols() const
+{
+    return cols_;
+}
+
+inline
+cv::Size cv::ogl::Texture2D::size() const
+{
+    return Size(cols_, rows_);
+}
+
+inline
+bool cv::ogl::Texture2D::empty() const
+{
+    return rows_ == 0 || cols_ == 0;
+}
+
+inline
+cv::ogl::Texture2D::Format cv::ogl::Texture2D::format() const
+{
+    return format_;
+}
+
+///////
+
+inline
+cv::ogl::Arrays::Arrays() : size_(0)
+{
+}
+
+inline
+int cv::ogl::Arrays::size() const
+{
+    return size_;
+}
+
+inline
+bool cv::ogl::Arrays::empty() const
+{
+    return size_ == 0;
+}
+
+#endif /* __OPENCV_CORE_OPENGL_HPP__ */

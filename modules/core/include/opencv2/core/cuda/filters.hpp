@@ -67,7 +67,7 @@ namespace cv { namespace gpu { namespace cudev
             return src(__float2int_rz(y), __float2int_rz(x));
         }
 
-        const Ptr2D src;
+        Ptr2D src;
     };
 
     template <typename Ptr2D> struct LinearFilter
@@ -107,7 +107,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<elem_type>(out);
         }
 
-        const Ptr2D src;
+        Ptr2D src;
     };
 
     template <typename Ptr2D> struct CubicFilter
@@ -166,7 +166,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<elem_type>(res);
         }
 
-        const Ptr2D src;
+        Ptr2D src;
     };
     // for integer scaling
     template <typename Ptr2D> struct IntegerAreaFilter
@@ -203,7 +203,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<elem_type>(out);
         }
 
-        const Ptr2D src;
+        Ptr2D src;
         float scale_x, scale_y ,scale;
     };
 
@@ -269,7 +269,7 @@ namespace cv { namespace gpu { namespace cudev
             return saturate_cast<elem_type>(out);
         }
 
-        const Ptr2D src;
+        Ptr2D src;
         float scale_x, scale_y;
         int width, haight;
     };

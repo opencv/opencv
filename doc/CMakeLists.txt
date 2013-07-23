@@ -53,8 +53,8 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     endif()
   endforeach()
 
-  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/android/service/doc/*.rst")
-  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/android/service/doc/*.jpg")
+  file(GLOB_RECURSE _OPENCV_FILES_REF "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.rst")
+  file(GLOB_RECURSE _OPENCV_FILES_REF_PICT "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.png" "${OpenCV_SOURCE_DIR}/platforms/android/service/doc/*.jpg")
   list(APPEND OPENCV_FILES_REF ${_OPENCV_FILES_REF})
   list(APPEND OPENCV_FILES_REF_PICT ${_OPENCV_FILES_REF_PICT})
 

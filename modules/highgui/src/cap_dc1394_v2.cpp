@@ -45,7 +45,16 @@
 
 #include <unistd.h>
 #include <stdint.h>
-#include <sys/select.h>
+#ifdef WIN32
+  // On Windows, we have no sys/select.h, but we need to pick up
+  // select() which is in winsock2.
+  #ifndef __SYS_SELECT_H__
+    #define __SYS_SELECT_H__ 1
+    #include <winsock2.h>
+  #endif
+#else
+  #include <sys/select.h>
+#endif /*WIN32*/
 #include <dc1394/dc1394.h>
 #include <stdlib.h>
 #include <string.h>
@@ -295,6 +304,11 @@ bool CvCaptureCAM_DC1394_v2_CPP::startCapture()
         return false;
     if (isoSpeed > 0)
     {
+        // if capable set operation mode to 1394b for iso speeds above 400
+        if (isoSpeed > 400 && dcCam->bmode_capable == DC1394_TRUE)
+        {
+            dc1394_video_set_operation_mode(dcCam, DC1394_OPERATION_MODE_1394B);
+        }
         code = dc1394_video_set_iso_speed(dcCam,
                                           isoSpeed <= 100 ? DC1394_ISO_SPEED_100 :
                                           isoSpeed <= 200 ? DC1394_ISO_SPEED_200 :

@@ -86,7 +86,7 @@ The names of the libraries are as follow:
 
    opencv_(The Name of the module)(The version Number of the library you use)d.lib
 
-A full list, for the currently latest trunk version would contain:
+A full list, for the latest version would contain:
 
 .. code-block:: bash
 

@@ -512,48 +512,68 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
 
 }
 
-# { class : { func : {arg_name : ctype} } }
+# { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
 func_arg_fix = {
     '' : {
-        'randu'    : { 'low'     : 'double', 'high'   : 'double', },
-        'randn'    : { 'mean'    : 'double', 'stddev' : 'double', },
-        'inRange'  : { 'lowerb'  : 'Scalar', 'upperb' : 'Scalar', },
-        'goodFeaturesToTrack' : { 'corners' : 'vector_Point', },
-        'findFundamentalMat' : { 'points1' : 'vector_Point2f', 'points2' : 'vector_Point2f', },
-        'cornerSubPix' : { 'corners' : 'vector_Point2f', },
-        'minEnclosingCircle' : { 'points' : 'vector_Point2f', },
-        'findHomography' : { 'srcPoints' : 'vector_Point2f', 'dstPoints' : 'vector_Point2f', },
-        'solvePnP' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                       'distCoeffs' : 'vector_double' },
-        'solvePnPRansac' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                             'distCoeffs' : 'vector_double' },
-        'calcOpticalFlowPyrLK' : { 'prevPts' : 'vector_Point2f', 'nextPts' : 'vector_Point2f',
-                                   'status' : 'vector_uchar', 'err' : 'vector_float', },
-        'fitEllipse' : { 'points' : 'vector_Point2f', },
-        'fillPoly' : { 'pts' : 'vector_vector_Point', },
-        'polylines' : { 'pts' : 'vector_vector_Point', },
-        'fillConvexPoly' : { 'points' : 'vector_Point', },
-        'boundingRect' : { 'points' : 'vector_Point', },
-        'approxPolyDP' : { 'curve' : 'vector_Point2f', 'approxCurve' : 'vector_Point2f', },
-        'arcLength' : { 'curve' : 'vector_Point2f', },
-        'pointPolygonTest' : { 'contour' : 'vector_Point2f', },
-        'minAreaRect' : { 'points' : 'vector_Point2f', },
-        'getAffineTransform' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f', },
-        'hconcat' : { 'src' : 'vector_Mat', },
-        'vconcat' : { 'src' : 'vector_Mat', },
-        'undistortPoints' : { 'src' : 'vector_Point2f', 'dst' : 'vector_Point2f' },
-        'checkRange' : {'pos' : '*'},
-        'meanStdDev' : {'mean' : 'vector_double', 'stddev' : 'vector_double'},
-        'drawContours' : {'contours' : 'vector_vector_Point'},
-        'findContours' : {'contours' : 'vector_vector_Point'},
-        'convexityDefects' : {'contour' : 'vector_Point', 'convexhull' : 'vector_int', 'convexityDefects' : 'vector_Vec4i'},
-        'isContourConvex' : { 'contour' : 'vector_Point', },
-        'convexHull' : {'points' : 'vector_Point', 'hull' : 'vector_int', 'returnPoints' : ''},
-        'projectPoints' : { 'objectPoints' : 'vector_Point3f', 'imagePoints' : 'vector_Point2f',
-                            'distCoeffs' : 'vector_double' },
-        'initCameraMatrix2D' : {'objectPoints' : 'vector_vector_Point3f', 'imagePoints' : 'vector_vector_Point2f', },
-        'findChessboardCorners' : { 'corners' : 'vector_Point2f' },
-        'drawChessboardCorners' : { 'corners' : 'vector_Point2f' },
+        'randu'    : { 'low'  : {"ctype" : 'double'},
+                       'high' : {"ctype"    : 'double'} },
+        'randn'    : { 'mean'   : {"ctype" : 'double'},
+                       'stddev' : {"ctype"  : 'double'} },
+        'inRange'  : { 'lowerb' : {"ctype" : 'Scalar'},
+                       'upperb' : {"ctype" : 'Scalar'} },
+        'goodFeaturesToTrack' : { 'corners' : {"ctype" : 'vector_Point'} },
+        'findFundamentalMat'  : { 'points1' : {"ctype" : 'vector_Point2f'},
+                                  'points2' : {"ctype" : 'vector_Point2f'} },
+        'cornerSubPix' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'minEnclosingCircle' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'findHomography' : { 'srcPoints' : {"ctype" : 'vector_Point2f'},
+                             'dstPoints' : {"ctype" : 'vector_Point2f'} },
+        'solvePnP' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                      'imagePoints'   : {"ctype" : 'vector_Point2f'},
+                      'distCoeffs'    : {"ctype" : 'vector_double' } },
+        'solvePnPRansac' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                             'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                             'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'calcOpticalFlowPyrLK' : { 'prevPts' : {"ctype" : 'vector_Point2f'},
+                                   'nextPts' : {"ctype" : 'vector_Point2f'},
+                                   'status'  : {"ctype" : 'vector_uchar'},
+                                   'err'     : {"ctype" : 'vector_float'} },
+        'fitEllipse' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'fillPoly'   : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'polylines'  : { 'pts' : {"ctype" : 'vector_vector_Point'} },
+        'fillConvexPoly' : { 'points' : {"ctype" : 'vector_Point'} },
+        'boundingRect'   : { 'points' : {"ctype" : 'vector_Point'} },
+        'approxPolyDP' : { 'curve'       : {"ctype" : 'vector_Point2f'},
+                           'approxCurve' : {"ctype" : 'vector_Point2f'} },
+        'arcLength' : { 'curve' : {"ctype" : 'vector_Point2f'} },
+        'pointPolygonTest' : { 'contour' : {"ctype" : 'vector_Point2f'} },
+        'minAreaRect' : { 'points' : {"ctype" : 'vector_Point2f'} },
+        'getAffineTransform' : { 'src' : {"ctype" : 'vector_Point2f'},
+                                 'dst' : {"ctype" : 'vector_Point2f'} },
+        'hconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'vconcat' : { 'src' : {"ctype" : 'vector_Mat'} },
+        'undistortPoints' : { 'src' : {"ctype" : 'vector_Point2f'},
+                              'dst' : {"ctype" : 'vector_Point2f'} },
+        'checkRange' : {'pos' : {"ctype" : '*'} },
+        'meanStdDev' : { 'mean'   : {"ctype" : 'vector_double'},
+                         'stddev' : {"ctype" : 'vector_double'} },
+        'drawContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'findContours' : {'contours' : {"ctype" : 'vector_vector_Point'} },
+        'convexityDefects' : { 'contour'          : {"ctype" : 'vector_Point'},
+                               'convexhull'       : {"ctype" : 'vector_int'},
+                               'convexityDefects' : {"ctype" : 'vector_Vec4i'} },
+        'isContourConvex' : { 'contour' : {"ctype" : 'vector_Point'} },
+        'convexHull' : { 'points' : {"ctype" : 'vector_Point'},
+                         'hull'   : {"ctype" : 'vector_int'},
+                         'returnPoints' : {"ctype" : ''} },
+        'projectPoints' : { 'objectPoints' : {"ctype" : 'vector_Point3f'},
+                            'imagePoints'  : {"ctype" : 'vector_Point2f'},
+                            'distCoeffs'   : {"ctype" : 'vector_double' } },
+        'initCameraMatrix2D' : { 'objectPoints' : {"ctype" : 'vector_vector_Point3f'},
+                                 'imagePoints'  : {"ctype" : 'vector_vector_Point2f'} },
+        'findChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'drawChessboardCorners' : { 'corners' : {"ctype" : 'vector_Point2f'} },
+        'mixChannels' : { 'dst' : {"attrib" : []} },
     }, # '', i.e. no class
 } # func_arg_fix
 
@@ -641,10 +661,12 @@ class FuncInfo(object):
         self.static = ["","static"][ "/S" in decl[2] ]
         self.ctype = re.sub(r"^CvTermCriteria", "TermCriteria", decl[1] or "")
         self.args = []
-        arg_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
+        func_fix_map = func_arg_fix.get(classname, {}).get(self.jname, {})
         for a in decl[3]:
             arg = a[:]
-            arg[0] = arg_fix_map.get(arg[1], arg[0])
+            arg_fix_map = func_fix_map.get(arg[1], {})
+            arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
+            arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
             ai = ArgInfo(arg)
             self.args.append(ai)
 

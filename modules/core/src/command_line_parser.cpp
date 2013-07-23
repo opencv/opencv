@@ -136,18 +136,13 @@ void CommandLineParser::getByIndex(int index, bool space_delete, int type, void*
 
 static bool cmp_params(const CommandLineParserParams & p1, const CommandLineParserParams & p2)
 {
+    if (p1.number < p2.number)
+        return true;
+
     if (p1.number > p2.number)
         return false;
 
-    if (p1.number == -1 && p2.number == -1)
-    {
-        if (p1.keys[0].compare(p2.keys[0]) > 0)
-        {
-            return false;
-        }
-    }
-
-    return true;
+    return p1.keys[0].compare(p2.keys[0]) < 0;
 }
 
 CommandLineParser::CommandLineParser(int argc, const char* const argv[], const String& keys)

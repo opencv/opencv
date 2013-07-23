@@ -6,7 +6,6 @@ import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
-import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Build;
 import android.util.AttributeSet;
@@ -39,7 +38,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private boolean mStopThread;
 
     protected Camera mCamera;
-    protected JavaCameraFrame mCameraFrame;
+    protected JavaCameraFrame[] mCameraFrame;
     private SurfaceTexture mSurfaceTexture;
 
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
@@ -181,7 +180,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     AllocateCache();
 
-                    mCameraFrame = new JavaCameraFrame(mFrameChain[mChainIdx], mFrameWidth, mFrameHeight);
+                    mCameraFrame = new JavaCameraFrame[2];
+                    mCameraFrame[0] = new JavaCameraFrame(mFrameChain[0], mFrameWidth, mFrameHeight);
+                    mCameraFrame[1] = new JavaCameraFrame(mFrameChain[1], mFrameWidth, mFrameHeight);
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                         mSurfaceTexture = new SurfaceTexture(MAGIC_TEXTURE_ID);
@@ -217,8 +218,10 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 mFrameChain[0].release();
                 mFrameChain[1].release();
             }
-            if (mCameraFrame != null)
-                mCameraFrame.release();
+            if (mCameraFrame != null) {
+                mCameraFrame[0].release();
+                mCameraFrame[1].release();
+            }
         }
     }
 
@@ -319,7 +322,7 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                 if (!mStopThread) {
                     if (!mFrameChain[mChainIdx].empty())
-                        deliverAndDrawFrame(mCameraFrame);
+                        deliverAndDrawFrame(mCameraFrame[mChainIdx]);
                     mChainIdx = 1 - mChainIdx;
                 }
             } while (!mStopThread);

@@ -256,12 +256,17 @@ namespace
 
 void cv::imshow( const String& winname, InputArray _img )
 {
+    const Size size = _img.size();
 #ifndef HAVE_OPENGL
-    Mat img = _img.getMat();
-    CvMat c_img = img;
-    cvShowImage(winname.c_str(), &c_img);
+    CV_Assert(size.width>0 && size.height>0);
+    {
+        Mat img = _img.getMat();
+        CvMat c_img = img;
+        cvShowImage(winname.c_str(), &c_img);
+    }
 #else
     const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+    CV_Assert(size.width>0 && size.height>0);
 
     if (useGl <= 0)
     {
@@ -275,44 +280,68 @@ void cv::imshow( const String& winname, InputArray _img )
 
         if (autoSize > 0)
         {
-            Size size = _img.size();
             resizeWindow(winname, size.width, size.height);
         }
 
         setOpenGlContext(winname);
 
-        if (_img.kind() == _InputArray::OPENGL_TEXTURE)
+        cv::ogl::Texture2D& tex = ownWndTexs[winname];
+
+        if (_img.kind() == _InputArray::GPU_MAT)
         {
-            cv::ogl::Texture2D& tex = wndTexs[winname];
+            cv::ogl::Buffer& buf = ownWndBufs[winname];
+            buf.copyFrom(_img);
+            buf.setAutoRelease(false);
 
-            tex = _img.getOGlTexture2D();
-
+            tex.copyFrom(buf);
             tex.setAutoRelease(false);
-
-            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
         }
         else
         {
-            cv::ogl::Texture2D& tex = ownWndTexs[winname];
-
-            if (_img.kind() == _InputArray::GPU_MAT)
-            {
-                cv::ogl::Buffer& buf = ownWndBufs[winname];
-                buf.copyFrom(_img);
-                buf.setAutoRelease(false);
-
-                tex.copyFrom(buf);
-                tex.setAutoRelease(false);
-            }
-            else
-            {
-                tex.copyFrom(_img);
-            }
-
-            tex.setAutoRelease(false);
-
-            setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
+            tex.copyFrom(_img);
         }
+
+        tex.setAutoRelease(false);
+
+        setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
+
+        updateWindow(winname);
+    }
+#endif
+}
+
+void cv::imshow(const String& winname, const ogl::Texture2D& _tex)
+{
+#ifndef HAVE_OPENGL
+    (void) winname;
+    (void) _tex;
+    CV_Error(cv::Error::OpenGlNotSupported, "The library is compiled without OpenGL support");
+#else
+    const double useGl = getWindowProperty(winname, WND_PROP_OPENGL);
+
+    if (useGl <= 0)
+    {
+        CV_Error(cv::Error::OpenGlNotSupported, "The window was created without OpenGL context");
+    }
+    else
+    {
+        const double autoSize = getWindowProperty(winname, WND_PROP_AUTOSIZE);
+
+        if (autoSize > 0)
+        {
+            Size size = _tex.size();
+            resizeWindow(winname, size.width, size.height);
+        }
+
+        setOpenGlContext(winname);
+
+        cv::ogl::Texture2D& tex = wndTexs[winname];
+
+        tex = _tex;
+
+        tex.setAutoRelease(false);
+
+        setOpenGlDrawCallback(winname, glDrawTextureCallback, &tex);
 
         updateWindow(winname);
     }

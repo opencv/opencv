@@ -613,8 +613,10 @@ bool CvVideoWriter_VFW::open( const char* filename, int _fourcc, double _fps, Cv
             close();
             return false;
         }
+        return true;
     }
-    return true;
+    else
+        return false;
 }
 
 

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -68,9 +69,9 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
         }
     }
 }
-TEST(blend)
+PERFTEST(blend)
 {
-    Mat src1, src2, weights1, weights2, dst;
+    Mat src1, src2, weights1, weights2, dst, ocl_dst;
     ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
 
     int all_type[] = {CV_8UC1, CV_8UC4};
@@ -104,7 +105,6 @@ TEST(blend)
 
             GPU_ON;
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-             ;
             GPU_OFF;
 
             GPU_FULL_ON;
@@ -113,8 +113,10 @@ TEST(blend)
             d_weights1.upload(weights1);
             d_weights2.upload(weights2);
             ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            d_dst.download(dst);
+            d_dst.download(ocl_dst);
             GPU_FULL_OFF;
+
+            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.f);
         }
     }
 }

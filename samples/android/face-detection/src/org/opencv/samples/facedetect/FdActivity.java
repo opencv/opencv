@@ -215,9 +215,9 @@ public class FdActivity extends Activity implements CvCameraViewListener2 {
         else if (item == mItemFace20)
             setMinFaceSize(0.2f);
         else if (item == mItemType) {
-            mDetectorType = (mDetectorType + 1) % mDetectorName.length;
-            item.setTitle(mDetectorName[mDetectorType]);
-            setDetectorType(mDetectorType);
+            int tmpDetectorType = (mDetectorType + 1) % mDetectorName.length;
+            item.setTitle(mDetectorName[tmpDetectorType]);
+            setDetectorType(tmpDetectorType);
         }
         return true;
     }

@@ -43,13 +43,108 @@
 //
 //M*/
 
-
 #define CELL_WIDTH 8
 #define CELL_HEIGHT 8
 #define CELLS_PER_BLOCK_X 2
 #define CELLS_PER_BLOCK_Y 2
 #define NTHREADS 256
 #define CV_PI_F 3.1415926535897932384626433832795f
+
+//----------------------------------------------------------------------------
+// Histogram computation
+// 12 threads for a cell, 12x4 threads per block
+// Use pre-computed gaussian and interp_weight lookup tables if sigma is 4.0f
+__kernel void compute_hists_lut_kernel(
+    const int cblock_stride_x, const int cblock_stride_y,
+    const int cnbins, const int cblock_hist_size, const int img_block_width, 
+    const int blocks_in_group, const int blocks_total,
+    const int grad_quadstep, const int qangle_step,
+    __global const float* grad, __global const uchar* qangle,
+    __global const float* gauss_w_lut,
+    __global float* block_hists, __local float* smem)
+{
+    const int lx = get_local_id(0);
+    const int lp = lx / 24; /* local group id */
+    const int gid = get_group_id(0) * blocks_in_group + lp;/* global group id */
+    const int gidY = gid / img_block_width;
+    const int gidX = gid - gidY * img_block_width;
+
+    const int lidX = lx - lp * 24;
+    const int lidY = get_local_id(1);
+
+    const int cell_x = lidX / 12;
+    const int cell_y = lidY;
+    const int cell_thread_x = lidX - cell_x * 12;
+
+    __local float* hists = smem + lp * cnbins * (CELLS_PER_BLOCK_X * 
+        CELLS_PER_BLOCK_Y * 12 + CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y);
+    __local float* final_hist = hists + cnbins * 
+        (CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12);
+
+    const int offset_x = gidX * cblock_stride_x + (cell_x << 2) + cell_thread_x;
+    const int offset_y = gidY * cblock_stride_y + (cell_y << 2);
+
+    __global const float* grad_ptr = (gid < blocks_total) ? 
+        grad + offset_y * grad_quadstep + (offset_x << 1) : grad;
+    __global const uchar* qangle_ptr = (gid < blocks_total) ?
+        qangle + offset_y * qangle_step + (offset_x << 1) : qangle;
+
+    __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) + 
+        cell_thread_x;
+    for (int bin_id = 0; bin_id < cnbins; ++bin_id)
+        hist[bin_id * 48] = 0.f;
+
+    const int dist_x = -4 + cell_thread_x - 4 * cell_x;
+    const int dist_center_x = dist_x - 4 * (1 - 2 * cell_x);
+
+    const int dist_y_begin = -4 - 4 * lidY;
+    for (int dist_y = dist_y_begin; dist_y < dist_y_begin + 12; ++dist_y)
+    {
+        float2 vote = (float2) (grad_ptr[0], grad_ptr[1]);
+        uchar2 bin = (uchar2) (qangle_ptr[0], qangle_ptr[1]);
+
+        grad_ptr += grad_quadstep;
+        qangle_ptr += qangle_step;
+
+        int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
+
+        int idx = (dist_center_y + 8) * 16 + (dist_center_x + 8);
+        float gaussian = gauss_w_lut[idx];
+        idx = (dist_y + 8) * 16 + (dist_x + 8);
+        float interp_weight = gauss_w_lut[256+idx];
+
+        hist[bin.x * 48] += gaussian * interp_weight * vote.x;
+        hist[bin.y * 48] += gaussian * interp_weight * vote.y;
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    volatile __local float* hist_ = hist;
+    for (int bin_id = 0; bin_id < cnbins; ++bin_id, hist_ += 48)
+    {
+        if (cell_thread_x < 6)
+            hist_[0] += hist_[6];
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (cell_thread_x < 3)
+            hist_[0] += hist_[3];
+#ifdef CPU
+        barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+        if (cell_thread_x == 0)
+            final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] = 
+                hist_[0] + hist_[1] + hist_[2];
+    }
+#ifdef CPU
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+
+    int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
+    if ((tid < cblock_hist_size) && (gid < blocks_total))
+    {
+        __global float* block_hist = block_hists + 
+            (gidY * img_block_width + gidX) * cblock_hist_size;
+        block_hist[tid] = final_hist[tid];
+    }
+}
 
 //----------------------------------------------------------------------------
 // Histogram computation
@@ -125,17 +220,16 @@ __kernel void compute_hists_kernel(
         barrier(CLK_LOCAL_MEM_FENCE);
         if (cell_thread_x < 3)
             hist_[0] += hist_[3];
-#ifdef WAVE_SIZE_1
+#ifdef CPU
         barrier(CLK_LOCAL_MEM_FENCE);
 #endif
         if (cell_thread_x == 0)
             final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
     }
-#ifdef WAVE_SIZE_1
+#ifdef CPU
     barrier(CLK_LOCAL_MEM_FENCE);
 #endif
-
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))
     {
@@ -147,82 +241,111 @@ __kernel void compute_hists_kernel(
 
 //-------------------------------------------------------------
 //  Normalization of histograms via L2Hys_norm
+//  optimized for the case of 9 bins
+__kernel void normalize_hists_36_kernel(__global float* block_hists, 
+                                        const float threshold, __local float *squares)
+{
+    const int tid = get_local_id(0);
+    const int gid = get_global_id(0);
+    const int bid = tid / 36;      /* block-hist id, (0 - 6) */
+    const int boffset = bid * 36;  /* block-hist offset in the work-group */
+    const int hid = tid - boffset; /* histogram bin id, (0 - 35) */
+
+    float elem = block_hists[gid];
+    squares[tid] = elem * elem;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    __local float* smem = squares + boffset;
+    float sum = smem[hid];
+    if (hid < 18)
+        smem[hid] = sum = sum + smem[hid + 18];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (hid < 9)
+        smem[hid] = sum = sum + smem[hid + 9];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (hid < 4)
+        smem[hid] = sum + smem[hid + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    sum = smem[0] + smem[1] + smem[2] + smem[3] + smem[8];
+
+    elem = elem / (sqrt(sum) + 3.6f);
+    elem = min(elem, threshold);
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+    squares[tid] = elem * elem;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    sum = smem[hid];
+    if (hid < 18)
+      smem[hid] = sum = sum + smem[hid + 18];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (hid < 9)
+        smem[hid] = sum = sum + smem[hid + 9];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (hid < 4)
+        smem[hid] = sum + smem[hid + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    sum = smem[0] + smem[1] + smem[2] + smem[3] + smem[8];
+
+    block_hists[gid] = elem / (sqrt(sum) + 1e-3f);
+}
+
+//-------------------------------------------------------------
+//  Normalization of histograms via L2Hys_norm
 //
 float reduce_smem(volatile __local float* smem, int size)
 {
     unsigned int tid = get_local_id(0);
     float sum = smem[tid];
 
-    if (size >= 512)
-    {
-        if (tid < 256) smem[tid] = sum = sum + smem[tid + 256];
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-    if (size >= 256)
-    {
-        if (tid < 128) smem[tid] = sum = sum + smem[tid + 128];
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-    if (size >= 128)
-    {
-        if (tid < 64) smem[tid] = sum = sum + smem[tid + 64];
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
-
+    if (size >= 512) { if (tid < 256) smem[tid] = sum = sum + smem[tid + 256]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 256) { if (tid < 128) smem[tid] = sum = sum + smem[tid + 128]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 128) { if (tid < 64) smem[tid] = sum = sum + smem[tid + 64]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+#ifdef CPU
+    if (size >= 64) { if (tid < 32) smem[tid] = sum = sum + smem[tid + 32]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 32) { if (tid < 16) smem[tid] = sum = sum + smem[tid + 16]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }	
+    if (size >= 16) { if (tid < 8) smem[tid] = sum = sum + smem[tid + 8]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 8) { if (tid < 4) smem[tid] = sum = sum + smem[tid + 4]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+    if (size >= 4) { if (tid < 2) smem[tid] = sum = sum + smem[tid + 2]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }		
+    if (size >= 2) { if (tid < 1) smem[tid] = sum = sum + smem[tid + 1]; 
+        barrier(CLK_LOCAL_MEM_FENCE); }
+#else
     if (tid < 32)
     {
         if (size >= 64) smem[tid] = sum = sum + smem[tid + 32];
-#if defined(WAVE_SIZE_16) || defined(WAVE_SIZE_1)
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16)
-    {
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
 #endif
         if (size >= 32) smem[tid] = sum = sum + smem[tid + 16];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 8)
-    {
-#endif
         if (size >= 16) smem[tid] = sum = sum + smem[tid + 8];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 4)
-    {
-#endif
         if (size >= 8) smem[tid] = sum = sum + smem[tid + 4];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 2)
-    {
-#endif
         if (size >= 4) smem[tid] = sum = sum + smem[tid + 2];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 1)
-    {
-#endif
         if (size >= 2) smem[tid] = sum = sum + smem[tid + 1];
     }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-    sum = smem[0];
+#endif
 
     return sum;
 }
 
-__kernel void normalize_hists_kernel(const int nthreads, const int block_hist_size, const int img_block_width,
-                                     __global float* block_hists, const float threshold, __local float *squares)
+__kernel void normalize_hists_kernel(
+    const int nthreads, const int block_hist_size, const int img_block_width,
+    __global float* block_hists, const float threshold, __local float *squares)
 {
     const int tid = get_local_id(0);
     const int gidX = get_group_id(0);
     const int gidY = get_group_id(1);
 
-    __global float* hist = block_hists + (gidY * img_block_width + gidX) * block_hist_size + tid;
+    __global float* hist = block_hists + (gidY * img_block_width + gidX) * 
+        block_hist_size + tid;
 
     float elem = 0.f;
     if (tid < block_hist_size)
@@ -249,25 +372,101 @@ __kernel void normalize_hists_kernel(const int nthreads, const int block_hist_si
 
 //---------------------------------------------------------------------
 //  Linear SVM based classification
-//
-__kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr_size, const int cdescr_width,
-                                    const int img_win_width, const int img_block_width,
-                                    const int win_block_stride_x, const int win_block_stride_y,
-                                    __global const float * block_hists, __global const float* coefs,
-                                    float free_coef, float threshold, __global uchar* labels)
+//  48x96 window, 9 bins and default parameters
+//  180 threads, each thread corresponds to a bin in a row
+__kernel void classify_hists_180_kernel(
+    const int cdescr_width, const int cdescr_height, const int cblock_hist_size,
+    const int img_win_width, const int img_block_width,
+    const int win_block_stride_x, const int win_block_stride_y,
+    __global const float * block_hists, __global const float* coefs,
+    float free_coef, float threshold, __global uchar* labels)
 {
     const int tid = get_local_id(0);
     const int gidX = get_group_id(0);
     const int gidY = get_group_id(1);
 
-    __global const float* hist = block_hists + (gidY * win_block_stride_y * img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
+    __global const float* hist = block_hists + (gidY * win_block_stride_y * 
+        img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
 
     float product = 0.f;
-    for (int i = tid; i < cdescr_size; i += NTHREADS)
+
+    for (int i = 0; i < cdescr_height; i++)
     {
-        int offset_y = i / cdescr_width;
-        int offset_x = i - offset_y * cdescr_width;
-        product += coefs[i] * hist[offset_y * img_block_width * cblock_hist_size + offset_x];
+        product += coefs[i * cdescr_width + tid] * 
+            hist[i * img_block_width * cblock_hist_size + tid];
+    }
+
+    __local float products[180];
+
+    products[tid] = product;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 90) products[tid] = product = product + products[tid + 90];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 45) products[tid] = product = product + products[tid + 45];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    volatile __local float* smem = products;
+#ifdef CPU
+    if (tid < 13) smem[tid] = product = product + smem[tid + 32];
+	barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) smem[tid] = product = product + smem[tid + 16];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<8) smem[tid] = product = product + smem[tid + 8];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<4) smem[tid] = product = product + smem[tid + 4];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<2) smem[tid] = product = product + smem[tid + 2];
+	barrier(CLK_LOCAL_MEM_FENCE);
+#else
+    if (tid < 13)
+    {
+        smem[tid] = product = product + smem[tid + 32];
+    }
+#if WAVE_SIZE < 32
+    barrier(CLK_LOCAL_MEM_FENCE);
+#endif
+    if (tid < 16)
+    {
+        smem[tid] = product = product + smem[tid + 16];
+        smem[tid] = product = product + smem[tid + 8];
+        smem[tid] = product = product + smem[tid + 4];
+        smem[tid] = product = product + smem[tid + 2];
+    }
+#endif
+
+    if (tid == 0){
+		product = product + smem[tid + 1];
+        labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
+	}
+}
+
+//---------------------------------------------------------------------
+//  Linear SVM based classification
+//  64x128 window, 9 bins and default parameters
+//  256 threads, 252 of them are used
+__kernel void classify_hists_252_kernel(
+    const int cdescr_width, const int cdescr_height, const int cblock_hist_size,
+    const int img_win_width, const int img_block_width,
+    const int win_block_stride_x, const int win_block_stride_y,
+    __global const float * block_hists, __global const float* coefs,
+    float free_coef, float threshold, __global uchar* labels)
+{
+    const int tid = get_local_id(0);
+    const int gidX = get_group_id(0);
+    const int gidY = get_group_id(1);
+
+    __global const float* hist = block_hists + (gidY * win_block_stride_y * 
+        img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
+
+    float product = 0.f;
+    if (tid < cdescr_width)
+    {
+        for (int i = 0; i < cdescr_height; i++)
+            product += coefs[i * cdescr_width + tid] * 
+                hist[i * img_block_width * cblock_hist_size + tid];
     }
 
     __local float products[NTHREADS];
@@ -282,67 +481,128 @@ __kernel void classify_hists_kernel(const int cblock_hist_size, const int cdescr
     if (tid < 64) products[tid] = product = product + products[tid + 64];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    volatile __local float* smem = products;
+	volatile __local float* smem = products;
+#ifdef CPU
+	if(tid<32) smem[tid] = product = product + smem[tid + 32];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<16) smem[tid] = product = product + smem[tid + 16];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<8) smem[tid] = product = product + smem[tid + 8];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<4) smem[tid] = product = product + smem[tid + 4];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<2) smem[tid] = product = product + smem[tid + 2];
+	barrier(CLK_LOCAL_MEM_FENCE);
+#else
     if (tid < 32)
-    {
+    {      
         smem[tid] = product = product + smem[tid + 32];
-#if defined(WAVE_SIZE_16) || defined(WAVE_SIZE_1)
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16)
-    {
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
 #endif
         smem[tid] = product = product + smem[tid + 16];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 8)
-    {
-#endif
         smem[tid] = product = product + smem[tid + 8];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 4)
-    {
-#endif
         smem[tid] = product = product + smem[tid + 4];
-#ifdef WAVE_SIZE_1
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 2)
-    {
-#endif
         smem[tid] = product = product + smem[tid + 2];
-#ifdef WAVE_SIZE_1
     }
-    barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 1)
-    {
 #endif
-        smem[tid] = product = product + smem[tid + 1];
+    if (tid == 0){
+		product = product + smem[tid + 1];
+        labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
+	}
+}
+
+//---------------------------------------------------------------------
+//  Linear SVM based classification
+//  256 threads
+__kernel void classify_hists_kernel(
+    const int cdescr_size, const int cdescr_width, const int cblock_hist_size,
+    const int img_win_width, const int img_block_width,
+    const int win_block_stride_x, const int win_block_stride_y,
+    __global const float * block_hists, __global const float* coefs,
+    float free_coef, float threshold, __global uchar* labels)
+{
+    const int tid = get_local_id(0);
+    const int gidX = get_group_id(0);
+    const int gidY = get_group_id(1);
+
+    __global const float* hist = block_hists + (gidY * win_block_stride_y * 
+        img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
+
+    float product = 0.f;
+    for (int i = tid; i < cdescr_size; i += NTHREADS)
+    {
+        int offset_y = i / cdescr_width;
+        int offset_x = i - offset_y * cdescr_width;
+        product += coefs[i] * 
+            hist[offset_y * img_block_width * cblock_hist_size + offset_x];
     }
 
-    if (tid == 0)
+    __local float products[NTHREADS];
+
+    products[tid] = product;
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 128) products[tid] = product = product + products[tid + 128];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if (tid < 64) products[tid] = product = product + products[tid + 64];
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+	volatile __local float* smem = products;
+#ifdef CPU
+	if(tid<32) smem[tid] = product = product + smem[tid + 32];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<16) smem[tid] = product = product + smem[tid + 16];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<8) smem[tid] = product = product + smem[tid + 8];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<4) smem[tid] = product = product + smem[tid + 4];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if(tid<2) smem[tid] = product = product + smem[tid + 2];
+	barrier(CLK_LOCAL_MEM_FENCE);
+#else
+    if (tid < 32)
+    {       
+        smem[tid] = product = product + smem[tid + 32];
+#if WAVE_SIZE < 32
+    } barrier(CLK_LOCAL_MEM_FENCE);
+    if (tid < 16) {
+#endif
+        smem[tid] = product = product + smem[tid + 16];
+        smem[tid] = product = product + smem[tid + 8];
+        smem[tid] = product = product + smem[tid + 4];
+        smem[tid] = product = product + smem[tid + 2];
+    }
+#endif
+    if (tid == 0){
+		smem[tid] = product = product + smem[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
+	}
 }
 
 //----------------------------------------------------------------------------
 // Extract descriptors
 
-__kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size, const int cdescr_width,
-        const int img_block_width, const int win_block_stride_x, const int win_block_stride_y,
-        __global const float* block_hists, __global float* descriptors)
+__kernel void extract_descrs_by_rows_kernel(
+    const int cblock_hist_size, const int descriptors_quadstep, 
+    const int cdescr_size, const int cdescr_width, const int img_block_width, 
+    const int win_block_stride_x, const int win_block_stride_y,
+    __global const float* block_hists, __global float* descriptors)
 {
     int tid = get_local_id(0);
     int gidX = get_group_id(0);
     int gidY = get_group_id(1);
 
     // Get left top corner of the window in src
-    __global const float* hist = block_hists + (gidY * win_block_stride_y * img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
+    __global const float* hist = block_hists + (gidY * win_block_stride_y * 
+        img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
 
     // Get left top corner of the window in dst
-    __global float* descriptor = descriptors + (gidY * get_num_groups(0) + gidX) * descriptors_quadstep;
+    __global float* descriptor = descriptors + 
+        (gidY * get_num_groups(0) + gidX) * descriptors_quadstep;
 
     // Copy elements from src to dst
     for (int i = tid; i < cdescr_size; i += NTHREADS)
@@ -353,19 +613,23 @@ __kernel void extract_descrs_by_rows_kernel(const int cblock_hist_size, const in
     }
 }
 
-__kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size,
-        const int cnblocks_win_x, const int cnblocks_win_y, const int img_block_width, const int win_block_stride_x,
-        const int win_block_stride_y, __global const float* block_hists, __global float* descriptors)
+__kernel void extract_descrs_by_cols_kernel(
+    const int cblock_hist_size, const int descriptors_quadstep, const int cdescr_size,
+    const int cnblocks_win_x, const int cnblocks_win_y, const int img_block_width, 
+    const int win_block_stride_x, const int win_block_stride_y, 
+    __global const float* block_hists, __global float* descriptors)
 {
     int tid = get_local_id(0);
     int gidX = get_group_id(0);
     int gidY = get_group_id(1);
 
     // Get left top corner of the window in src
-    __global const float* hist = block_hists + (gidY * win_block_stride_y * img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
+    __global const float* hist = block_hists +  (gidY * win_block_stride_y * 
+        img_block_width + gidX * win_block_stride_x) * cblock_hist_size;
 
     // Get left top corner of the window in dst
-    __global float* descriptor = descriptors + (gidY * get_num_groups(0) + gidX) * descriptors_quadstep;
+    __global float* descriptor = descriptors + 
+        (gidY * get_num_groups(0) + gidX) * descriptors_quadstep;
 
     // Copy elements from src to dst
     for (int i = tid; i < cdescr_size; i += NTHREADS)
@@ -376,16 +640,19 @@ __kernel void extract_descrs_by_cols_kernel(const int cblock_hist_size, const in
         int y = block_idx / cnblocks_win_x;
         int x = block_idx - y * cnblocks_win_x;
 
-        descriptor[(x * cnblocks_win_y + y) * cblock_hist_size + idx_in_block] = hist[(y * img_block_width  + x) * cblock_hist_size + idx_in_block];
+        descriptor[(x * cnblocks_win_y + y) * cblock_hist_size + idx_in_block] = 
+            hist[(y * img_block_width  + x) * cblock_hist_size + idx_in_block];
     }
 }
 
 //----------------------------------------------------------------------------
 // Gradients computation
 
-__kernel void compute_gradients_8UC4_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
-        const __global uchar4 * img, __global float * grad, __global uchar * qangle,
-        const float angle_scale, const char correct_gamma, const int cnbins)
+__kernel void compute_gradients_8UC4_kernel(
+    const int height, const int width, 
+    const int img_step, const int grad_quadstep, const int qangle_step,
+    const __global uchar4 * img, __global float * grad, __global uchar * qangle,
+    const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
@@ -426,8 +693,10 @@ __kernel void compute_gradients_8UC4_kernel(const int height, const int width, c
     barrier(CLK_LOCAL_MEM_FENCE);
     if (x < width)
     {
-        float3 a = (float3) (sh_row[tid], sh_row[tid + (NTHREADS + 2)], sh_row[tid + 2 * (NTHREADS + 2)]);
-        float3 b = (float3) (sh_row[tid + 2], sh_row[tid + 2 + (NTHREADS + 2)], sh_row[tid + 2 + 2 * (NTHREADS + 2)]);
+        float3 a = (float3) (sh_row[tid], sh_row[tid + (NTHREADS + 2)], 
+            sh_row[tid + 2 * (NTHREADS + 2)]);
+        float3 b = (float3) (sh_row[tid + 2], sh_row[tid + 2 + (NTHREADS + 2)], 
+            sh_row[tid + 2 + 2 * (NTHREADS + 2)]);
 
         float3 dx;
         if (correct_gamma == 1)
@@ -482,9 +751,11 @@ __kernel void compute_gradients_8UC4_kernel(const int height, const int width, c
     }
 }
 
-__kernel void compute_gradients_8UC1_kernel(const int height, const int width, const int img_step, const int grad_quadstep, const int qangle_step,
-        __global const uchar * img, __global float * grad, __global uchar * qangle,
-        const float angle_scale, const char correct_gamma, const int cnbins)
+__kernel void compute_gradients_8UC1_kernel(
+    const int height, const int width, 
+    const int img_step, const int grad_quadstep, const int qangle_step,
+    __global const uchar * img, __global float * grad, __global uchar * qangle,
+    const float angle_scale, const char correct_gamma, const int cnbins)
 {
     const int x = get_global_id(0);
     const int tid = get_local_id(0);
@@ -539,43 +810,4 @@ __kernel void compute_gradients_8UC1_kernel(const int height, const int width, c
         grad[ (gidY * grad_quadstep + x) << 1 ]       = mag * (1.f - ang);
         grad[ ((gidY * grad_quadstep + x) << 1) + 1 ]   = mag * ang;
     }
-}
-
-//----------------------------------------------------------------------------
-// Resize
-
-__kernel void resize_8UC4_kernel(__global uchar4 * dst, __global const uchar4 * src,
-                                 int dst_offset, int src_offset, int dst_step, int src_step,
-                                 int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
-{
-    int dx = get_global_id(0);
-    int dy = get_global_id(1);
-
-    int sx = (int)floor(dx*ifx+0.5f);
-    int sy = (int)floor(dy*ify+0.5f);
-    sx = min(sx, src_cols-1);
-    sy = min(sy, src_rows-1);
-    int dpos = (dst_offset>>2) + dy * (dst_step>>2) + dx;
-    int spos = (src_offset>>2) + sy * (src_step>>2) + sx;
-
-    if(dx<dst_cols && dy<dst_rows)
-        dst[dpos] = src[spos];
-}
-
-__kernel void resize_8UC1_kernel(__global uchar * dst, __global const uchar * src,
-                                 int dst_offset, int src_offset, int dst_step, int src_step,
-                                 int src_cols, int src_rows, int dst_cols, int dst_rows, float ifx, float ify )
-{
-    int dx = get_global_id(0);
-    int dy = get_global_id(1);
-
-    int sx = (int)floor(dx*ifx+0.5f);
-    int sy = (int)floor(dy*ify+0.5f);
-    sx = min(sx, src_cols-1);
-    sy = min(sy, src_rows-1);
-    int dpos = dst_offset + dy * dst_step + dx;
-    int spos = src_offset + sy * src_step + sx;
-
-    if(dx<dst_cols && dy<dst_rows)
-        dst[dpos] = src[spos];
 }

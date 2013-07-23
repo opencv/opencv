@@ -23,7 +23,7 @@
 #  endif
 #endif
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
+#if !defined(HAVE_CUDA) || !defined(HAVE_TBB) || defined(__arm__)
 
 int main()
 {
@@ -33,6 +33,10 @@ int main()
 
 #if !defined(HAVE_TBB)
     std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
+#endif
+
+#if defined(__arm__)
+    std::cout << "Unsupported for ARM CUDA library." << std::endl;
 #endif
 
     return 0;
@@ -126,15 +130,15 @@ void Worker::operator()(int device_id) const
     rng.fill(src, RNG::UNIFORM, 0, 1);
 
     // CPU works
-    transpose(src, dst);
+    cv::transpose(src, dst);
 
     // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-    transpose(d_src, d_dst);
+    gpu::transpose(d_src, d_dst);
 
     // Check results
-    bool passed = norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
+    bool passed = cv::norm(dst - Mat(d_dst), NORM_INF) < 1e-3;
     std::cout << "GPU #" << device_id << " (" << DeviceInfo().name() << "): "
         << (passed ? "passed" : "FAILED") << endl;
 

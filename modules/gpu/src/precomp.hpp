@@ -43,64 +43,18 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-    #pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
-
-#include <cstring>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-#include <utility>
-#include <deque>
-#include <stdexcept>
-#include <memory>
-
-#include "opencv2/core.hpp"
-#include "opencv2/core/utility.hpp"
 #include "opencv2/gpu.hpp"
-#include "opencv2/imgproc.hpp"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuwarping.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/video.hpp"
+#include "opencv2/objdetect.hpp"
 
-#include "opencv2/core/private.hpp"
-#include "opencv2/core/gpu_private.hpp"
+#include "opencv2/core/private.gpu.hpp"
 
-#ifdef HAVE_CUDA
-    #ifdef HAVE_CUFFT
-        #include <cufft.h>
-    #endif
+#include "opencv2/opencv_modules.hpp"
 
-    #ifdef HAVE_CUBLAS
-        #include <cublas.h>
-    #endif
-
-    #ifdef HAVE_NVCUVID
-        #include <nvcuvid.h>
-
-        #ifdef WIN32
-            #include <windows.h>
-            #undef small
-            #undef min
-            #undef max
-            #undef abs
-
-            #include <NVEncoderAPI.h>
-        #endif
-    #endif
-
-    #include "internal_shared.hpp"
-    #include "opencv2/core/stream_accessor.hpp"
-
-    #include "nvidia/core/NCV.hpp"
-    #include "nvidia/NPP_staging/NPP_staging.hpp"
-    #include "nvidia/NCVHaarObjectDetection.hpp"
-    #include "nvidia/NCVBroxOpticalFlow.hpp"
-#endif /* defined(HAVE_CUDA) */
+#ifdef HAVE_OPENCV_GPULEGACY
+#  include "opencv2/gpulegacy/private.hpp"
+#endif
 
 #endif /* __OPENCV_PRECOMP_H__ */
