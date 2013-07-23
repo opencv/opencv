@@ -440,7 +440,7 @@ template<> cv::viz::PolyLineWidget cv::viz::Widget::cast<cv::viz::PolyLineWidget
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// grid widget implementation
 
-cv::viz::GridWidget::GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color)
+cv::viz::GridWidget::GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
 {
     // Create the grid using image data
     vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();

@@ -123,7 +123,7 @@ namespace cv
         class CV_EXPORTS GridWidget : public Widget3D
         {
         public:
-            GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color = Color::white());
+            GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
         };
 
         class CV_EXPORTS Text3DWidget : public Widget3D
