@@ -25,7 +25,7 @@ ocv_create_module()
 if(BUILD_SHARED_LIBS AND NOT MINGW)
   add_definitions(-DGTEST_CREATE_SHARED_LIBRARY=1)
 else()
-  add_definitions(-DGTEST_CREATE_SHARED_LIBRARY=0)
+  add_definitions(-DGTEST_LINKED_AS_SHARED_LIBRARY=1)
 endif()
 
 ocv_add_precompiled_headers(${the_module})
