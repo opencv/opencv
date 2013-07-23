@@ -79,13 +79,8 @@ public:
     Rect rect;
     double raw_moments[2];     //!< order 1 raw moments to derive the centroid
     double central_moments[3]; //!< order 2 central moments to construct the covariance matrix
-    std::deque<int> *crossings;//!< horizontal crossings
-
-    //! 1st stage features
-    float aspect_ratio;
-    float compactness;
-    float num_holes;
-    float med_crossings;
+    std::deque<int> *crossings;//!< horizontal crossings 
+    float med_crossings;       //!< median of the crossings at three different height levels
 
     //! 2nd stage features
     float hole_area_ratio;

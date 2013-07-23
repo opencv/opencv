@@ -611,11 +611,6 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     parent->central_moments[1] += child->central_moments[1];
     parent->central_moments[2] += child->central_moments[2];
 
-    // child region done, we can calculate 1st stage features from the incrementally computable descriptors
-    child->aspect_ratio = (float)(child->rect.width)/(child->rect.height);
-    child->compactness  = sqrt((float)(child->area))/child->perimeter;
-    child->num_holes    = (float)(1-child->euler);
-
     vector<int> m_crossings;
     m_crossings.push_back(child->crossings->at((int)(child->rect.height)/6));
     m_crossings.push_back(child->crossings->at((int)3*(child->rect.height)/6));
@@ -1004,7 +999,11 @@ ERClassifierNM1::ERClassifierNM1()
 double ERClassifierNM1::eval(const ERStat& stat)
 {
     //Classify
-    float arr[] = {0,stat.aspect_ratio, stat.compactness, stat.num_holes, stat.med_crossings};
+    float arr[] = {0,(float)(stat.rect.width)/(stat.rect.height), // aspect ratio
+                     sqrt((float)(stat.area))/stat.perimeter, // compactness
+                     (float)(1-stat.euler), //number of holes
+                     stat.med_crossings};
+
     vector<float> sample (arr, arr + sizeof(arr) / sizeof(arr[0]) );
 
     float votes = boost.predict( Mat(sample), Mat(), Range::all(), false, true );
@@ -1038,8 +1037,12 @@ ERClassifierNM2::ERClassifierNM2()
 double ERClassifierNM2::eval(const ERStat& stat)
 {
     //Classify
-    float arr[] = {0,stat.aspect_ratio, stat.compactness, stat.num_holes, stat.med_crossings, 
-                     stat.hole_area_ratio, stat.convex_hull_ratio, stat.num_inflexion_points};
+    float arr[] = {0,(float)(stat.rect.width)/(stat.rect.height), // aspect ratio
+                     sqrt((float)(stat.area))/stat.perimeter, // compactness
+                     (float)(1-stat.euler), //number of holes
+                     stat.med_crossings, stat.hole_area_ratio, 
+                     stat.convex_hull_ratio, stat.num_inflexion_points};
+
     vector<float> sample (arr, arr + sizeof(arr) / sizeof(arr[0]) );
 
     float votes = boost.predict( Mat(sample), Mat(), Range::all(), false, true );
