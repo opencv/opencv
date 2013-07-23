@@ -48,7 +48,7 @@
 #endif
 #include <windows.h>
 #if (_WIN32_WINNT >= 0x0602)
-#include <synchapi.h>
+  #include <synchapi.h>
 #endif
 #undef small
 #undef min
@@ -80,8 +80,8 @@
 #endif
 
 #ifdef HAVE_WINRT
-#pragma comment(lib, "MinCore_Downlevel")
 #include <wrl/client.h>
+#pragma comment(lib, "MinCore_Downlevel")
 
 std::wstring GetTempPathWinRT()
 {
