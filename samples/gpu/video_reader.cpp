@@ -30,7 +30,7 @@ int main(int argc, const char* argv[])
     cv::VideoCapture reader(fname);
 
     cv::cuda::GpuMat d_frame;
-    cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(fname);
+    cv::Ptr<cv::cudacodec::VideoReader> d_reader = cv::cudacodec::createVideoReader(fname);
 
     cv::TickMeter tm;
     std::vector<double> cpu_times;

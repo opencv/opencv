@@ -49,7 +49,7 @@
 #include "opencv2/core/private.gpu.hpp"
 #include "opencv2/gpucodec.hpp"
 
-namespace cv { namespace gpucodec { namespace detail
+namespace cv { namespace cudacodec { namespace detail
 {
 
 class VideoDecoder

@@ -46,8 +46,8 @@
 #ifdef HAVE_NVCUVID
 
 using namespace cv;
-using namespace cv::gpucodec;
-using namespace cv::gpucodec::detail;
+using namespace cv::cudacodec;
+using namespace cv::cudacodec::detail;
 
 namespace
 {
@@ -95,7 +95,7 @@ namespace
     }
 }
 
-cv::gpucodec::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
+cv::cudacodec::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) :
     stream_(0)
 {
     CV_Assert( init_MediaStream_FFMPEG() );
@@ -115,18 +115,18 @@ cv::gpucodec::detail::FFmpegVideoSource::FFmpegVideoSource(const String& fname) 
     format_.height = height;
 }
 
-cv::gpucodec::detail::FFmpegVideoSource::~FFmpegVideoSource()
+cv::cudacodec::detail::FFmpegVideoSource::~FFmpegVideoSource()
 {
     if (stream_)
         release_InputMediaStream_FFMPEG_p(stream_);
 }
 
-FormatInfo cv::gpucodec::detail::FFmpegVideoSource::format() const
+FormatInfo cv::cudacodec::detail::FFmpegVideoSource::format() const
 {
     return format_;
 }
 
-bool cv::gpucodec::detail::FFmpegVideoSource::getNextPacket(unsigned char** data, int* size, bool* bEndOfFile)
+bool cv::cudacodec::detail::FFmpegVideoSource::getNextPacket(unsigned char** data, int* size, bool* bEndOfFile)
 {
     int endOfFile;
 

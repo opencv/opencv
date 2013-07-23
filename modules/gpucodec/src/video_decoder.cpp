@@ -45,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-void cv::gpucodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
+void cv::cudacodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
 {
     release();
 
@@ -104,7 +104,7 @@ void cv::gpucodec::detail::VideoDecoder::create(const FormatInfo& videoFormat)
     cuSafeCall( cuvidCreateDecoder(&decoder_, &createInfo_) );
 }
 
-void cv::gpucodec::detail::VideoDecoder::release()
+void cv::cudacodec::detail::VideoDecoder::release()
 {
     if (decoder_)
     {

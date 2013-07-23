@@ -45,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-cv::gpucodec::detail::FrameQueue::FrameQueue() :
+cv::cudacodec::detail::FrameQueue::FrameQueue() :
     endOfDecode_(0),
     framesInQueue_(0),
     readPosition_(0)
@@ -54,7 +54,7 @@ cv::gpucodec::detail::FrameQueue::FrameQueue() :
     std::memset((void*) isFrameInUse_, 0, sizeof(isFrameInUse_));
 }
 
-bool cv::gpucodec::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
+bool cv::cudacodec::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
 {
     while (isInUse(pictureIndex))
     {
@@ -68,7 +68,7 @@ bool cv::gpucodec::detail::FrameQueue::waitUntilFrameAvailable(int pictureIndex)
     return true;
 }
 
-void cv::gpucodec::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
+void cv::cudacodec::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picParams)
 {
     // Mark the frame as 'in-use' so we don't re-use it for decoding until it is no longer needed
     // for display
@@ -99,7 +99,7 @@ void cv::gpucodec::detail::FrameQueue::enqueue(const CUVIDPARSERDISPINFO* picPar
     } while (!isEndOfDecode());
 }
 
-bool cv::gpucodec::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
+bool cv::cudacodec::detail::FrameQueue::dequeue(CUVIDPARSERDISPINFO& displayInfo)
 {
     AutoLock autoLock(mtx_);
 

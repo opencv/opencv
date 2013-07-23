@@ -33,7 +33,7 @@ int main(int argc, const char* argv[])
     cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
 
     cv::VideoWriter writer;
-    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
+    cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
     cv::Mat frame;
     cv::gpu::GpuMat d_frame;
@@ -68,7 +68,7 @@ int main(int argc, const char* argv[])
         {
             std::cout << "Open GPU Writer" << std::endl;
 
-            d_writer = cv::gpucodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
+            d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
         }
 
         d_frame.upload(frame);

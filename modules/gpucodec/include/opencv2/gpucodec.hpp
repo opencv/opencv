@@ -50,7 +50,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpucodec {
+namespace cv { namespace cudacodec {
 
 ////////////////////////////////// Video Encoding //////////////////////////////////
 
@@ -201,6 +201,6 @@ public:
 CV_EXPORTS Ptr<VideoReader> createVideoReader(const String& filename);
 CV_EXPORTS Ptr<VideoReader> createVideoReader(const Ptr<RawVideoSource>& source);
 
-}} // namespace cv { namespace gpucodec {
+}} // namespace cv { namespace cudacodec {
 
 #endif /* __OPENCV_GPUCODEC_HPP__ */

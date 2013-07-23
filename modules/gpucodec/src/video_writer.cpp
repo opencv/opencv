@@ -45,20 +45,20 @@
 
 using namespace cv;
 using namespace cv::cuda;
-using namespace cv::gpucodec;
+using namespace cv::cudacodec;
 
 #if !defined(HAVE_NVCUVID) || !defined(WIN32)
 
-cv::gpucodec::EncoderParams::EncoderParams() { throw_no_cuda(); }
-cv::gpucodec::EncoderParams::EncoderParams(const String&) { throw_no_cuda(); }
-void cv::gpucodec::EncoderParams::load(const String&) { throw_no_cuda(); }
-void cv::gpucodec::EncoderParams::save(const String&) const { throw_no_cuda(); }
+cv::cudacodec::EncoderParams::EncoderParams() { throw_no_cuda(); }
+cv::cudacodec::EncoderParams::EncoderParams(const String&) { throw_no_cuda(); }
+void cv::cudacodec::EncoderParams::load(const String&) { throw_no_cuda(); }
+void cv::cudacodec::EncoderParams::save(const String&) const { throw_no_cuda(); }
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const String&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const String&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>&, Size, double, const EncoderParams&, SurfaceFormat) { throw_no_cuda(); return Ptr<VideoWriter>(); }
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
@@ -811,7 +811,7 @@ namespace
 ///////////////////////////////////////////////////////////////////////////
 // EncoderParams
 
-cv::gpucodec::EncoderParams::EncoderParams()
+cv::cudacodec::EncoderParams::EncoderParams()
 {
     P_Interval = 3;
     IDR_Period = 15;
@@ -834,12 +834,12 @@ cv::gpucodec::EncoderParams::EncoderParams()
     DisableSPSPPS = 0;
 }
 
-cv::gpucodec::EncoderParams::EncoderParams(const String& configFile)
+cv::cudacodec::EncoderParams::EncoderParams(const String& configFile)
 {
     load(configFile);
 }
 
-void cv::gpucodec::EncoderParams::load(const String& configFile)
+void cv::cudacodec::EncoderParams::load(const String& configFile)
 {
     FileStorage fs(configFile, FileStorage::READ);
     CV_Assert( fs.isOpened() );
@@ -865,7 +865,7 @@ void cv::gpucodec::EncoderParams::load(const String& configFile)
     read(fs["DisableSPSPPS"  ], DisableSPSPPS, 0);
 }
 
-void cv::gpucodec::EncoderParams::save(const String& configFile) const
+void cv::cudacodec::EncoderParams::save(const String& configFile) const
 {
     FileStorage fs(configFile, FileStorage::WRITE);
     CV_Assert( fs.isOpened() );
@@ -894,24 +894,24 @@ void cv::gpucodec::EncoderParams::save(const String& configFile) const
 ///////////////////////////////////////////////////////////////////////////
 // createVideoWriter
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format)
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String& fileName, Size frameSize, double fps, SurfaceFormat format)
 {
     Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
     return createVideoWriter(encoderCallback, frameSize, fps, format);
 }
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const String& fileName, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     Ptr<EncoderCallBack> encoderCallback(new EncoderCallBackFFMPEG(fileName, frameSize, fps));
     return createVideoWriter(encoderCallback, frameSize, fps, params, format);
 }
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format)
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format)
 {
     return new VideoWriterImpl(encoderCallback, frameSize, fps, format);
 }
 
-Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
+Ptr<VideoWriter> cv::cudacodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
     return new VideoWriterImpl(encoderCallback, frameSize, fps, params, format);
 }

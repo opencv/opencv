@@ -51,7 +51,7 @@
 #include "frame_queue.hpp"
 #include "video_decoder.hpp"
 
-namespace cv { namespace gpucodec { namespace detail
+namespace cv { namespace cudacodec { namespace detail
 {
 
 class VideoParser

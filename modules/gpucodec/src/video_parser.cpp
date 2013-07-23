@@ -45,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-cv::gpucodec::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
+cv::cudacodec::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, FrameQueue* frameQueue) :
     videoDecoder_(videoDecoder), frameQueue_(frameQueue), unparsedPackets_(0), hasError_(false)
 {
     CUVIDPARSERPARAMS params;
@@ -62,7 +62,7 @@ cv::gpucodec::detail::VideoParser::VideoParser(VideoDecoder* videoDecoder, Frame
     cuSafeCall( cuvidCreateVideoParser(&parser_, &params) );
 }
 
-bool cv::gpucodec::detail::VideoParser::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
+bool cv::cudacodec::detail::VideoParser::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
 {
     CUVIDSOURCEDATAPACKET packet;
     std::memset(&packet, 0, sizeof(CUVIDSOURCEDATAPACKET));
@@ -96,7 +96,7 @@ bool cv::gpucodec::detail::VideoParser::parseVideoData(const unsigned char* data
     return !frameQueue_->isEndOfDecode();
 }
 
-int CUDAAPI cv::gpucodec::detail::VideoParser::HandleVideoSequence(void* userData, CUVIDEOFORMAT* format)
+int CUDAAPI cv::cudacodec::detail::VideoParser::HandleVideoSequence(void* userData, CUVIDEOFORMAT* format)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 
@@ -128,7 +128,7 @@ int CUDAAPI cv::gpucodec::detail::VideoParser::HandleVideoSequence(void* userDat
     return true;
 }
 
-int CUDAAPI cv::gpucodec::detail::VideoParser::HandlePictureDecode(void* userData, CUVIDPICPARAMS* picParams)
+int CUDAAPI cv::cudacodec::detail::VideoParser::HandlePictureDecode(void* userData, CUVIDPICPARAMS* picParams)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 
@@ -148,7 +148,7 @@ int CUDAAPI cv::gpucodec::detail::VideoParser::HandlePictureDecode(void* userDat
     return true;
 }
 
-int CUDAAPI cv::gpucodec::detail::VideoParser::HandlePictureDisplay(void* userData, CUVIDPARSERDISPINFO* picParams)
+int CUDAAPI cv::cudacodec::detail::VideoParser::HandlePictureDisplay(void* userData, CUVIDPARSERDISPINFO* picParams)
 {
     VideoParser* thiz = static_cast<VideoParser*>(userData);
 

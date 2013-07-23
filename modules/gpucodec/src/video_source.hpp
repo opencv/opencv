@@ -48,7 +48,7 @@
 #include "opencv2/gpucodec.hpp"
 #include "thread.hpp"
 
-namespace cv { namespace gpucodec { namespace detail
+namespace cv { namespace cudacodec { namespace detail
 {
 
 class VideoParser;

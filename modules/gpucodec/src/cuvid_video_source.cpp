@@ -46,10 +46,10 @@
 #ifdef HAVE_NVCUVID
 
 using namespace cv;
-using namespace cv::gpucodec;
-using namespace cv::gpucodec::detail;
+using namespace cv::cudacodec;
+using namespace cv::cudacodec::detail;
 
-cv::gpucodec::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
+cv::cudacodec::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
 {
     CUVIDSOURCEPARAMS params;
     std::memset(&params, 0, sizeof(CUVIDSOURCEPARAMS));
@@ -74,37 +74,37 @@ cv::gpucodec::detail::CuvidVideoSource::CuvidVideoSource(const String& fname)
     format_.height = vidfmt.coded_height;
 }
 
-cv::gpucodec::detail::CuvidVideoSource::~CuvidVideoSource()
+cv::cudacodec::detail::CuvidVideoSource::~CuvidVideoSource()
 {
     cuvidDestroyVideoSource(videoSource_);
 }
 
-FormatInfo cv::gpucodec::detail::CuvidVideoSource::format() const
+FormatInfo cv::cudacodec::detail::CuvidVideoSource::format() const
 {
     return format_;
 }
 
-void cv::gpucodec::detail::CuvidVideoSource::start()
+void cv::cudacodec::detail::CuvidVideoSource::start()
 {
     cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Started) );
 }
 
-void cv::gpucodec::detail::CuvidVideoSource::stop()
+void cv::cudacodec::detail::CuvidVideoSource::stop()
 {
     cuSafeCall( cuvidSetVideoSourceState(videoSource_, cudaVideoState_Stopped) );
 }
 
-bool cv::gpucodec::detail::CuvidVideoSource::isStarted() const
+bool cv::cudacodec::detail::CuvidVideoSource::isStarted() const
 {
     return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Started);
 }
 
-bool cv::gpucodec::detail::CuvidVideoSource::hasError() const
+bool cv::cudacodec::detail::CuvidVideoSource::hasError() const
 {
     return (cuvidGetVideoSourceState(videoSource_) == cudaVideoState_Error);
 }
 
-int CUDAAPI cv::gpucodec::detail::CuvidVideoSource::HandleVideoData(void* userData, CUVIDSOURCEDATAPACKET* packet)
+int CUDAAPI cv::cudacodec::detail::CuvidVideoSource::HandleVideoData(void* userData, CUVIDSOURCEDATAPACKET* packet)
 {
     CuvidVideoSource* thiz = static_cast<CuvidVideoSource*>(userData);
 

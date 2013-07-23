@@ -46,7 +46,7 @@
 
 #include "opencv2/core.hpp"
 
-namespace cv { namespace gpucodec { namespace detail {
+namespace cv { namespace cudacodec { namespace detail {
 
 class Thread
 {
@@ -68,7 +68,7 @@ private:
 }}}
 
 namespace cv {
-    template <> void Ptr<cv::gpucodec::detail::Thread::Impl>::delete_obj();
+    template <> void Ptr<cv::cudacodec::detail::Thread::Impl>::delete_obj();
 }
 
 #endif // __THREAD_WRAPPERS_HPP__

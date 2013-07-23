@@ -57,7 +57,7 @@ GPU_TEST_P(Video, Reader)
 
     const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
-    cv::Ptr<cv::gpucodec::VideoReader> reader = cv::gpucodec::createVideoReader(inputFile);
+    cv::Ptr<cv::cudacodec::VideoReader> reader = cv::cudacodec::createVideoReader(inputFile);
 
     cv::cuda::GpuMat frame;
 
@@ -85,7 +85,7 @@ GPU_TEST_P(Video, Writer)
     cv::VideoCapture reader(inputFile);
     ASSERT_TRUE(reader.isOpened());
 
-    cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
+    cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
     cv::Mat frame;
     cv::cuda::GpuMat d_frame;
@@ -98,7 +98,7 @@ GPU_TEST_P(Video, Writer)
         d_frame.upload(frame);
 
         if (d_writer.empty())
-            d_writer = cv::gpucodec::createVideoWriter(outputFile, frame.size(), FPS);
+            d_writer = cv::cudacodec::createVideoWriter(outputFile, frame.size(), FPS);
 
         d_writer->write(d_frame);
     }

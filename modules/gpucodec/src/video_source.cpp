@@ -46,50 +46,50 @@
 #ifdef HAVE_NVCUVID
 
 using namespace cv;
-using namespace cv::gpucodec;
-using namespace cv::gpucodec::detail;
+using namespace cv::cudacodec;
+using namespace cv::cudacodec::detail;
 
-bool cv::gpucodec::detail::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
+bool cv::cudacodec::detail::VideoSource::parseVideoData(const unsigned char* data, size_t size, bool endOfStream)
 {
     return videoParser_->parseVideoData(data, size, endOfStream);
 }
 
-cv::gpucodec::detail::RawVideoSourceWrapper::RawVideoSourceWrapper(const Ptr<RawVideoSource>& source) :
+cv::cudacodec::detail::RawVideoSourceWrapper::RawVideoSourceWrapper(const Ptr<RawVideoSource>& source) :
     source_(source)
 {
     CV_Assert( !source_.empty() );
 }
 
-cv::gpucodec::FormatInfo cv::gpucodec::detail::RawVideoSourceWrapper::format() const
+cv::cudacodec::FormatInfo cv::cudacodec::detail::RawVideoSourceWrapper::format() const
 {
     return source_->format();
 }
 
-void cv::gpucodec::detail::RawVideoSourceWrapper::start()
+void cv::cudacodec::detail::RawVideoSourceWrapper::start()
 {
     stop_ = false;
     hasError_ = false;
     thread_ = new Thread(readLoop, this);
 }
 
-void cv::gpucodec::detail::RawVideoSourceWrapper::stop()
+void cv::cudacodec::detail::RawVideoSourceWrapper::stop()
 {
     stop_ = true;
     thread_->wait();
     thread_.release();
 }
 
-bool cv::gpucodec::detail::RawVideoSourceWrapper::isStarted() const
+bool cv::cudacodec::detail::RawVideoSourceWrapper::isStarted() const
 {
     return !stop_;
 }
 
-bool cv::gpucodec::detail::RawVideoSourceWrapper::hasError() const
+bool cv::cudacodec::detail::RawVideoSourceWrapper::hasError() const
 {
     return hasError_;
 }
 
-void cv::gpucodec::detail::RawVideoSourceWrapper::readLoop(void* userData)
+void cv::cudacodec::detail::RawVideoSourceWrapper::readLoop(void* userData)
 {
     RawVideoSourceWrapper* thiz = static_cast<RawVideoSourceWrapper*>(userData);
 

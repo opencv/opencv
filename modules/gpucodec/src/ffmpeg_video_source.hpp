@@ -48,7 +48,7 @@
 
 struct InputMediaStream_FFMPEG;
 
-namespace cv { namespace gpucodec { namespace detail {
+namespace cv { namespace cudacodec { namespace detail {
 
 class FFmpegVideoSource : public RawVideoSource
 {

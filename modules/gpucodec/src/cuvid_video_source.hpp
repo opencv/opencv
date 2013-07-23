@@ -50,7 +50,7 @@
 #include "opencv2/gpucodec.hpp"
 #include "video_source.hpp"
 
-namespace cv { namespace gpucodec { namespace detail
+namespace cv { namespace cudacodec { namespace detail
 {
 
 class CuvidVideoSource : public VideoSource

@@ -45,7 +45,7 @@
 
 #ifdef HAVE_NVCUVID
 
-using namespace cv::gpucodec::detail;
+using namespace cv::cudacodec::detail;
 
 #ifdef WIN32
 
@@ -67,7 +67,7 @@ namespace
     }
 }
 
-class cv::gpucodec::detail::Thread::Impl
+class cv::cudacodec::detail::Thread::Impl
 {
 public:
     Impl(Thread::Func func, void* userData)
@@ -120,7 +120,7 @@ namespace
     }
 }
 
-class cv::gpucodec::detail::Thread::Impl
+class cv::cudacodec::detail::Thread::Impl
 {
 public:
     Impl(Thread::Func func, void* userData)
@@ -148,17 +148,17 @@ private:
 
 #endif
 
-cv::gpucodec::detail::Thread::Thread(Func func, void* userData) :
+cv::cudacodec::detail::Thread::Thread(Func func, void* userData) :
     impl_(new Impl(func, userData))
 {
 }
 
-void cv::gpucodec::detail::Thread::wait()
+void cv::cudacodec::detail::Thread::wait()
 {
     impl_->wait();
 }
 
-void cv::gpucodec::detail::Thread::sleep(int ms)
+void cv::cudacodec::detail::Thread::sleep(int ms)
 {
 #ifdef WIN32
     ::Sleep(ms);
@@ -167,7 +167,7 @@ void cv::gpucodec::detail::Thread::sleep(int ms)
 #endif
 }
 
-template <> void cv::Ptr<cv::gpucodec::detail::Thread::Impl>::delete_obj()
+template <> void cv::Ptr<cv::cudacodec::detail::Thread::Impl>::delete_obj()
 {
     if (obj) delete obj;
 }

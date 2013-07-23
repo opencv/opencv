@@ -222,7 +222,7 @@ namespace
 
     private:
         String fileName_;
-        Ptr<gpucodec::VideoReader> reader_;
+        Ptr<cudacodec::VideoReader> reader_;
         GpuMat frame_;
     };
 
@@ -251,7 +251,7 @@ namespace
 
     void VideoFrameSource_GPU::reset()
     {
-        reader_ = gpucodec::createVideoReader(fileName_);
+        reader_ = cudacodec::createVideoReader(fileName_);
     }
 }
 

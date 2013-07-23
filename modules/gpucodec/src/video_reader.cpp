@@ -44,12 +44,12 @@
 
 using namespace cv;
 using namespace cv::cuda;
-using namespace cv::gpucodec;
+using namespace cv::cudacodec;
 
 #ifndef HAVE_NVCUVID
 
-Ptr<VideoReader> cv::gpucodec::createVideoReader(const String&) { throw_no_cuda(); return Ptr<VideoReader>(); }
-Ptr<VideoReader> cv::gpucodec::createVideoReader(const Ptr<RawVideoSource>&) { throw_no_cuda(); return Ptr<VideoReader>(); }
+Ptr<VideoReader> cv::cudacodec::createVideoReader(const String&) { throw_no_cuda(); return Ptr<VideoReader>(); }
+Ptr<VideoReader> cv::cudacodec::createVideoReader(const Ptr<RawVideoSource>&) { throw_no_cuda(); return Ptr<VideoReader>(); }
 
 #else // HAVE_NVCUVID
 
@@ -208,7 +208,7 @@ namespace
     }
 }
 
-Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
+Ptr<VideoReader> cv::cudacodec::createVideoReader(const String& filename)
 {
     CV_Assert( !filename.empty() );
 
@@ -227,7 +227,7 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
     return new VideoReaderImpl(videoSource);
 }
 
-Ptr<VideoReader> cv::gpucodec::createVideoReader(const Ptr<RawVideoSource>& source)
+Ptr<VideoReader> cv::cudacodec::createVideoReader(const Ptr<RawVideoSource>& source)
 {
     Ptr<detail::VideoSource> videoSource(new detail::RawVideoSourceWrapper(source));
     return new VideoReaderImpl(videoSource);
