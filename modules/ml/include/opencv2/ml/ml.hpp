@@ -69,7 +69,7 @@
 
 #define CV_IS_ROW_SAMPLE(flags) ((flags) & CV_ROW_SAMPLE)
 
-struct CvVectors
+struct CvVectors#define CV_TYPE_NAME_ML_ANN_MLP     "opencv-ml-ann-mlp"
 {
     int type;
     int dims, count;
@@ -127,6 +127,7 @@ CV_INLINE CvParamLattice cvDefaultParamLattice( void )
 #define CV_TYPE_NAME_ML_RTREES      "opencv-ml-random-trees"
 #define CV_TYPE_NAME_ML_ERTREES     "opencv-ml-extremely-randomized-trees"
 #define CV_TYPE_NAME_ML_GBT         "opencv-ml-gradient-boosting-trees"
+#define CV_TYPE_NAME_ML_NG          "opencv-ml-neural-gas"
 
 #define CV_TRAIN_ERROR  0
 #define CV_TEST_ERROR   1
@@ -2102,6 +2103,72 @@ protected:
     cv::RNG* rng;
 };
 
+/****************************************************************************************\
+*                                 Neural Gas                                             *
+\****************************************************************************************/
+
+struct CV_EXPORTS CvGasNode {
+     unsigned long int id;
+     long int rank; // just to make more verbose the algorithm
+     CvScalar ref_vector;
+     float distance;
+};
+ 
+ 
+class CV_EXPORTS CvNeuralGas : public CvStatModel {
+ 
+public:
+     CvNeuralGas();
+     virtual ~CvNeuralGas();
+ 
+     CvNeuralGas( CvMat* _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
+     bool init();
+ 
+     virtual bool train( CvScalar* _input = NULL );
+     virtual bool train_auto();
+     virtual void clear();
+ 
+#ifndef SWIG
+     CvNeuralGas( const cv::Mat& _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
+ 
+     virtual bool train( cv::Scalar& _input );
+#endif
+     
+     std::vector<CvGasNode*>* get_nodes() const;
+     unsigned int get_iteration() const;
+     unsigned int get_max_iterations() const;
+     CvGasNode* get_bmu() const;
+     CvGasNode* get_smu() const;
+     CvGasNode* get_wmu() const;
+     CvScalar* get_input() const;
+     unsigned int get_total_nodes() const;
+ 
+     // The network`s settings are public so that be changed
+     // dynamically depending the problem.
+     float lambda0;
+     float lambdaT;
+     float epsilon0;
+     float epsilonT;
+ 
+protected:
+     std::vector<CvGasNode *>* nodes;
+     CvGasNode* bmu;
+     CvGasNode* smu;
+     CvGasNode* wmu;
+     unsigned int total_nodes;
+     unsigned int iteration, max_iterations;
+ 
+     CvScalar* input;
+     CvMat* distribution;
+ 
+     cv::RNG rng;
+
+private:
+     // Static method used for sorting the nodes.
+     static bool Compare( const CvGasNode* node1, const CvGasNode* node2 ) {
+         return ( node1->distance < node2->distance );
+     }
+};
 
 namespace cv
 {
