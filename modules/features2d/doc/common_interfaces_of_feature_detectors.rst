@@ -220,7 +220,7 @@ StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector : public FeatureDetector
 
-The class implements the keypoint detector introduced by [Agrawal08_], synonym of ``StarDetector``.  ::
+The class implements the keypoint detector introduced by [Agrawal08]_, synonym of ``StarDetector``.  ::
 
     class StarFeatureDetector : public FeatureDetector
     {
