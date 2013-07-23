@@ -51,7 +51,7 @@ void cv::cuda::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&,
 
 #else
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace optical_flow
     {
@@ -62,7 +62,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
 {
-    using namespace cv::cuda::cudev::optical_flow;
+    using namespace cv::cuda::device::optical_flow;
 
     CV_Assert(u.type() == CV_32FC1);
     CV_Assert(v.type() == u.type() && v.size() == u.size());

@@ -43,7 +43,7 @@
 #ifndef __cvt_color_internal_h__
 #define __cvt_color_internal_h__
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
 #define OPENCV_GPU_DECLARE_CVTCOLOR_ONE(name) \
     void name(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);

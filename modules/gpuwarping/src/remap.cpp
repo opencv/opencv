@@ -48,7 +48,7 @@ void cv::cuda::remap(InputArray, OutputArray, InputArray, InputArray, int, int, 
 
 #else // HAVE_CUDA
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -60,7 +60,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::remap(InputArray _src, OutputArray _dst, InputArray _xmap, InputArray _ymap, int interpolation, int borderMode, Scalar borderValue, Stream& stream)
 {
-    using namespace cv::cuda::cudev::imgproc;
+    using namespace cv::cuda::device::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation,
         int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);

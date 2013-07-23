@@ -53,7 +53,7 @@ Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int, 
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace stereobp
     {
@@ -164,7 +164,7 @@ namespace
 
     void StereoBPImpl::compute(InputArray _left, InputArray _right, OutputArray disparity, Stream& stream)
     {
-        using namespace cv::cuda::cudev::stereobp;
+        using namespace cv::cuda::device::stereobp;
 
         typedef void (*comp_data_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
         static const comp_data_t comp_data_callers[2][5] =
@@ -233,7 +233,7 @@ namespace
 
     void StereoBPImpl::init(Stream& stream)
     {
-        using namespace cv::cuda::cudev::stereobp;
+        using namespace cv::cuda::device::stereobp;
 
         u_.create(rows_ * ndisp_, cols_, msg_type_);
         d_.create(rows_ * ndisp_, cols_, msg_type_);
@@ -281,7 +281,7 @@ namespace
 
     void StereoBPImpl::calcBP(OutputArray disp, Stream& _stream)
     {
-        using namespace cv::cuda::cudev::stereobp;
+        using namespace cv::cuda::device::stereobp;
 
         typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         static const data_step_down_t data_step_down_callers[2] =

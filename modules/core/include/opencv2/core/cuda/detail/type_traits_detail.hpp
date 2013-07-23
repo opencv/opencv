@@ -46,7 +46,7 @@
 #include "../common.hpp"
 #include "../vec_traits.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace type_traits_detail
     {

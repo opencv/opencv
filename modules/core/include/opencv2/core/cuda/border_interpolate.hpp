@@ -47,7 +47,7 @@
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     //////////////////////////////////////////////////////////////
     // BrdConstant

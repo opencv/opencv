@@ -51,7 +51,7 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace arithm
 {
@@ -68,7 +68,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T, typename S, typename D> struct TransformFunctorTraits< arithm::MulScalar<T, S, D> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(D)>
     {
@@ -81,7 +81,7 @@ namespace arithm
     void mulScalar(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream)
     {
         MulScalar<T, S, D> op(static_cast<S>(val));
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
     }
 
     template void mulScalar<uchar, float, uchar>(PtrStepSzb src1, double val, PtrStepSzb dst, cudaStream_t stream);

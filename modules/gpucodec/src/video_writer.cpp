@@ -62,7 +62,7 @@ Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>&, Si
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst, cudaStream_t stream = 0);
 }}}
@@ -642,7 +642,7 @@ namespace
 
         if (inputFormat_ == SF_BGR)
         {
-            cudev::RGB_to_YV12(frame, frame.channels(), videoFrame_);
+            device::RGB_to_YV12(frame, frame.channels(), videoFrame_);
         }
         else
         {

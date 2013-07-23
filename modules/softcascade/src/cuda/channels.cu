@@ -375,7 +375,7 @@ namespace cv { namespace softcascade { namespace cudev
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(cv::cuda::cudev::divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::cuda::device::divUp(integral.cols, block.x), 1);
 
             shfl_integral_vertical<<<grid, block, 0, stream>>>(integral);
             cudaSafeCall( cudaGetLastError() );
@@ -460,7 +460,7 @@ namespace cv { namespace softcascade { namespace cudev
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(cv::cuda::cudev::divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::cuda::device::divUp(integral.cols, block.x), 1);
 
             shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::cuda::PtrStepSz<unsigned int>)buffer, integral);
             cudaSafeCall( cudaGetLastError() );
@@ -500,7 +500,7 @@ namespace cv { namespace softcascade { namespace cudev
     void transform(const cv::cuda::PtrStepSz<uchar3>& bgr, cv::cuda::PtrStepSzb gray)
     {
         const dim3 block(32, 8);
-        const dim3 grid(cv::cuda::cudev::divUp(bgr.cols, block.x), cv::cuda::cudev::divUp(bgr.rows, block.y));
+        const dim3 grid(cv::cuda::device::divUp(bgr.cols, block.x), cv::cuda::device::divUp(bgr.rows, block.y));
         device_transform<<<grid, block>>>(bgr, gray);
         cudaSafeCall(cudaDeviceSynchronize());
     }

@@ -51,7 +51,7 @@
 #include "opencv2/core/cuda/utility.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace canny
 {
@@ -77,7 +77,7 @@ namespace canny
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits<canny::L1> : DefaultTransformFunctorTraits<canny::L1>
     {
@@ -475,7 +475,7 @@ namespace canny
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits<canny::GetEdges> : DefaultTransformFunctorTraits<canny::GetEdges>
     {

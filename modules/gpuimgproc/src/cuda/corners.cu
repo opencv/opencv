@@ -52,7 +52,7 @@
 
 #ifdef HAVE_OPENCV_GPUFILTERS
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {

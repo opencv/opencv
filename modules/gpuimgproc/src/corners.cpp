@@ -52,7 +52,7 @@ Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(int, int, int, i
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -135,7 +135,7 @@ namespace
 
     void Harris::compute(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        using namespace cv::cuda::cudev::imgproc;
+        using namespace cv::cuda::device::imgproc;
 
         GpuMat src = _src.getGpuMat();
 
@@ -163,7 +163,7 @@ namespace
 
     void MinEigenVal::compute(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        using namespace cv::cuda::cudev::imgproc;
+        using namespace cv::cuda::device::imgproc;
 
         GpuMat src = _src.getGpuMat();
 

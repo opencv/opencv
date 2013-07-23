@@ -87,7 +87,7 @@ namespace cv { namespace cuda
 
 namespace cv { namespace cuda
 {
-    namespace cudev
+    namespace device
     {
         __host__ __device__ __forceinline__ int divUp(int total, int grain)
         {

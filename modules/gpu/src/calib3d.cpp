@@ -55,7 +55,7 @@ void cv::cuda::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Ma
 
 #else
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace transform_points
     {
@@ -78,7 +78,7 @@ namespace cv { namespace cuda { namespace cudev
     }
 }}}
 
-using namespace ::cv::cuda::cudev;
+using namespace ::cv::cuda::device;
 
 namespace
 {

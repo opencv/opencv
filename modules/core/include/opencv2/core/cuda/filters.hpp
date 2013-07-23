@@ -48,7 +48,7 @@
 #include "vec_math.hpp"
 #include "type_traits.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename Ptr2D> struct PointFilter
     {

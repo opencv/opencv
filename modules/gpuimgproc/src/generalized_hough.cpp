@@ -53,7 +53,7 @@ Ptr<GeneralizedHoughGuil> cv::cuda::createGeneralizedHoughGuil() { throw_no_cuda
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace ght
     {
@@ -298,7 +298,7 @@ namespace
 
     void GeneralizedHoughBase::buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy)
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         typedef int (*func_t)(PtrStepSzb edges, PtrStepSzb dx, PtrStepSzb dy, unsigned int* coordList, float* thetaList);
         static const func_t funcs[] =
@@ -493,7 +493,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::processTempl()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         CV_Assert( levels_ > 0 );
 
@@ -519,7 +519,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::calcHist()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         CV_Assert( levels_ > 0 && r_table_.rows == (levels_ + 1) && r_sizes_.cols == (levels_ + 1) );
         CV_Assert( dp_ > 0.0);
@@ -542,7 +542,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::findPosInHist()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         CV_Assert( votesThreshold_ > 0 );
 
@@ -728,7 +728,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::processTempl()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         buildFeatureList(templEdges_, templDx_, templDy_, templFeatures_,
             Guil_Full_setTemplFeatures, Guil_Full_buildTemplFeatureList_gpu,
@@ -741,7 +741,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::processImage()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         CV_Assert( levels_ > 0 );
         CV_Assert( templFeatures_.sizes.cols == levels_ + 1 );
@@ -837,7 +837,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcOrientation()
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         const double iAngleStep = 1.0 / angleStep_;
         const int angleRange = cvCeil((maxAngle_ - minAngle_) * iAngleStep);
@@ -861,7 +861,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcScale(double angle)
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         const double iScaleStep = 1.0 / scaleStep_;
         const int scaleRange = cvCeil((maxScale_ - minScale_) * iScaleStep);
@@ -886,7 +886,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcPosition(double angle, int angleVotes, double scale, int scaleVotes)
     {
-        using namespace cv::cuda::cudev::ght;
+        using namespace cv::cuda::device::ght;
 
         hist_.setTo(Scalar::all(0));
         Guil_Full_calcPHist_gpu(templFeatures_.sizes.ptr<int>(), imageFeatures_.sizes.ptr<int>(0), hist_,

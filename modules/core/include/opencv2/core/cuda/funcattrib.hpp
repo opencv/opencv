@@ -45,7 +45,7 @@
 
 #include <cstdio>
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template<class Func>
     void printFuncAttrib(Func& func)

@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda/emulation.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace countNonZero
 {
@@ -80,7 +80,7 @@ namespace countNonZero
             }
         }
 
-        cudev::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
+        device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
 
     #if __CUDA_ARCH__ >= 200
         if (tid == 0)
@@ -105,7 +105,7 @@ namespace countNonZero
         {
             mycount = tid < gridDim.x * gridDim.y ? count[tid] : 0;
 
-            cudev::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
+            device::reduce<BLOCK_SIZE>(scount, mycount, tid, plus<unsigned int>());
 
             if (tid == 0)
             {

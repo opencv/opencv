@@ -54,7 +54,7 @@ void cv::cuda::blendLinear(InputArray, InputArray, InputArray, InputArray, Outpu
 ////////////////////////////////////////////////////////////////////////
 // blendLinear
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace blend
     {
@@ -65,7 +65,7 @@ namespace cv { namespace cuda { namespace cudev
     }
 }}}
 
-using namespace ::cv::cuda::cudev::blend;
+using namespace ::cv::cuda::device::blend;
 
 void cv::cuda::blendLinear(InputArray _img1, InputArray _img2, InputArray _weights1, InputArray _weights2,
                           OutputArray _result, Stream& stream)

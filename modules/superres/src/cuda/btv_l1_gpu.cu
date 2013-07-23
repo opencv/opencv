@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda/vec_math.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace btv_l1_cudev
 {
@@ -173,7 +173,7 @@ namespace btv_l1_cudev
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits<btv_l1_cudev::DiffSign> : DefaultTransformFunctorTraits<btv_l1_cudev::DiffSign>
     {

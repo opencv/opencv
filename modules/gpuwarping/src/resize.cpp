@@ -48,7 +48,7 @@ void cv::cuda::resize(InputArray, OutputArray, Size, double, double, int, Stream
 
 #else // HAVE_CUDA
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T>
     void resize(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
@@ -61,12 +61,12 @@ void cv::cuda::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, 
     typedef void (*func_t)(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     static const func_t funcs[6][4] =
     {
-        {cudev::resize<uchar>      , 0 /*cudev::resize<uchar2>*/ , cudev::resize<uchar3>     , cudev::resize<uchar4>     },
-        {0 /*cudev::resize<schar>*/, 0 /*cudev::resize<char2>*/  , 0 /*cudev::resize<char3>*/, 0 /*cudev::resize<char4>*/},
-        {cudev::resize<ushort>     , 0 /*cudev::resize<ushort2>*/, cudev::resize<ushort3>    , cudev::resize<ushort4>    },
-        {cudev::resize<short>      , 0 /*cudev::resize<short2>*/ , cudev::resize<short3>     , cudev::resize<short4>     },
-        {0 /*cudev::resize<int>*/  , 0 /*cudev::resize<int2>*/   , 0 /*cudev::resize<int3>*/ , 0 /*cudev::resize<int4>*/ },
-        {cudev::resize<float>      , 0 /*cudev::resize<float2>*/ , cudev::resize<float3>     , cudev::resize<float4>     }
+        {device::resize<uchar>      , 0 /*device::resize<uchar2>*/ , device::resize<uchar3>     , device::resize<uchar4>     },
+        {0 /*device::resize<schar>*/, 0 /*device::resize<char2>*/  , 0 /*device::resize<char3>*/, 0 /*device::resize<char4>*/},
+        {device::resize<ushort>     , 0 /*device::resize<ushort2>*/, device::resize<ushort3>    , device::resize<ushort4>    },
+        {device::resize<short>      , 0 /*device::resize<short2>*/ , device::resize<short3>     , device::resize<short4>     },
+        {0 /*device::resize<int>*/  , 0 /*device::resize<int2>*/   , 0 /*device::resize<int3>*/ , 0 /*device::resize<int4>*/ },
+        {device::resize<float>      , 0 /*device::resize<float2>*/ , device::resize<float3>     , device::resize<float4>     }
     };
 
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );

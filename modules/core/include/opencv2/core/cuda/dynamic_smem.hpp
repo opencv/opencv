@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_DYNAMIC_SMEM_HPP__
 #define __OPENCV_GPU_DYNAMIC_SMEM_HPP__
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template<class T> struct DynamicSharedMem
     {

@@ -51,7 +51,7 @@ Ptr<cuda::TemplateMatching> cv::cuda::createTemplateMatching(int, int, Size) { t
 
 #else
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace match_template
     {
@@ -182,7 +182,7 @@ namespace
 
     void Match_CCORR_32F::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& _stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -232,7 +232,7 @@ namespace
 
     void Match_CCORR_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -276,7 +276,7 @@ namespace
 
     void Match_CCORR_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -306,7 +306,7 @@ namespace
 
     void Match_SQDIFF_32F::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -341,7 +341,7 @@ namespace
 
     void Match_SQDIFF_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -389,7 +389,7 @@ namespace
 
     void Match_SQDIFF_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -429,7 +429,7 @@ namespace
 
     void Match_CCOEFF_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -509,7 +509,7 @@ namespace
 
     void Match_CCOEFF_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::cuda::cudev::match_template;
+        using namespace cv::cuda::device::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();

@@ -55,7 +55,7 @@ typedef unsigned short ushort;
 //////////////////////////////////////////////////////////////////////////////////
 /// Bilateral filtering
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -163,7 +163,7 @@ namespace cv { namespace cuda { namespace cudev
 
 
 #define OCV_INSTANTIATE_BILATERAL_FILTER(T) \
-    template void cv::cuda::cudev::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
+    template void cv::cuda::device::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
 
 OCV_INSTANTIATE_BILATERAL_FILTER(uchar)
 //OCV_INSTANTIATE_BILATERAL_FILTER(uchar2)

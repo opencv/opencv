@@ -52,7 +52,7 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace arithm
 {
@@ -125,7 +125,7 @@ namespace arithm
 #undef TYPE_VEC
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <class Op, typename T> struct TransformFunctorTraits< arithm::CmpScalar<Op, T, 1> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(uchar)>
     {
@@ -144,7 +144,7 @@ namespace arithm
         src_t val1 = VecTraits<src_t>::make(sval);
 
         CmpScalar<Op<T>, T, cn> op(val1);
-        cudev::transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
+        device::transform((PtrStepSz<src_t>) src, (PtrStepSz<dst_t>) dst, op, WithOutMask(), stream);
     }
 
     template <typename T> void cmpScalarEq(PtrStepSzb src, int cn, double val[4], PtrStepSzb dst, cudaStream_t stream)

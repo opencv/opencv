@@ -52,7 +52,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -79,7 +79,7 @@ namespace cv { namespace cuda { namespace cudev
     }
 }}}
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -626,7 +626,7 @@ namespace cv { namespace cuda { namespace cudev
                 }
 
                 plus<float> op;
-                cudev::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
+                device::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
                                    thrust::tie(sumx, sumy), threadIdx.x, thrust::make_tuple(op, op));
 
                 const float temp_mod = sumx * sumx + sumy * sumy;

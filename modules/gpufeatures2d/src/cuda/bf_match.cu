@@ -49,7 +49,7 @@
 #include "opencv2/core/cuda/vec_distance.hpp"
 #include "opencv2/core/cuda/datamov_utils.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace bf_match
     {

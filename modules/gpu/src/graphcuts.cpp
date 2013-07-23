@@ -52,7 +52,7 @@ void cv::cuda::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_no_
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace ccl
     {
@@ -81,12 +81,12 @@ void cv::cuda::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Sca
 
     static const func_t suppotLookup[8][4] =
     {   //    1,    2,     3,     4
-        { cudev::ccl::computeEdges<uchar>,  0,  cudev::ccl::computeEdges<uchar3>,  cudev::ccl::computeEdges<uchar4>  },// CV_8U
+        { device::ccl::computeEdges<uchar>,  0,  device::ccl::computeEdges<uchar3>,  device::ccl::computeEdges<uchar4>  },// CV_8U
         { 0,                                 0,  0,                                  0                                  },// CV_16U
-        { cudev::ccl::computeEdges<ushort>, 0,  cudev::ccl::computeEdges<ushort3>, cudev::ccl::computeEdges<ushort4> },// CV_8S
+        { device::ccl::computeEdges<ushort>, 0,  device::ccl::computeEdges<ushort3>, device::ccl::computeEdges<ushort4> },// CV_8S
         { 0,                                 0,  0,                                  0                                  },// CV_16S
-        { cudev::ccl::computeEdges<int>,    0,  0,                                  0                                  },// CV_32S
-        { cudev::ccl::computeEdges<float>,  0,  0,                                  0                                  },// CV_32F
+        { device::ccl::computeEdges<int>,    0,  0,                                  0                                  },// CV_32S
+        { device::ccl::computeEdges<float>,  0,  0,                                  0                                  },// CV_32F
         { 0,                                 0,  0,                                  0                                  },// CV_64F
         { 0,                                 0,  0,                                  0                                  } // CV_USRTYPE1
     };
@@ -112,7 +112,7 @@ void cv::cuda::labelComponents(const GpuMat& mask, GpuMat& components, int flags
     components.create(mask.size(), CV_32SC1);
 
     cudaStream_t stream = StreamAccessor::getStream(s);
-    cudev::ccl::labelComponents(mask, components, flags, stream);
+    device::ccl::labelComponents(mask, components, flags, stream);
 }
 
 namespace

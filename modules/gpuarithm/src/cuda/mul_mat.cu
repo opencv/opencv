@@ -51,7 +51,7 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace arithm
 {
@@ -109,7 +109,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits<arithm::Mul_8uc4_32f> : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -128,12 +128,12 @@ namespace arithm
 {
     void mulMat_8uc4_32f(PtrStepSz<uint> src1, PtrStepSzf src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, Mul_8uc4_32f(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, Mul_8uc4_32f(), WithOutMask(), stream);
     }
 
     void mulMat_16sc4_32f(PtrStepSz<short4> src1, PtrStepSzf src2, PtrStepSz<short4> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, Mul_16sc4_32f(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, Mul_16sc4_32f(), WithOutMask(), stream);
     }
 
     template <typename T, typename S, typename D>
@@ -142,12 +142,12 @@ namespace arithm
         if (scale == 1)
         {
             Mul<T, D> op;
-            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
         else
         {
             MulScale<T, S, D> op(static_cast<S>(scale));
-            cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
+            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<D>) dst, op, WithOutMask(), stream);
         }
     }
 

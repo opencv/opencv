@@ -55,7 +55,7 @@ void cv::cuda::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_c
 ////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T, typename D>
     void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
@@ -63,7 +63,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, Stream& stream)
 {
-    using namespace cv::cuda::cudev;
+    using namespace cv::cuda::device;
 
     typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     static const func_t funcs[2][4] =
@@ -88,7 +88,7 @@ void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray
 ////////////////////////////////////////////////////////////////////////
 // drawColorDisp
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
     void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
@@ -99,7 +99,7 @@ namespace
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, OutputArray _dst, int ndisp, const cudaStream_t& stream)
     {
-        using namespace ::cv::cuda::cudev;
+        using namespace ::cv::cuda::device;
 
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();

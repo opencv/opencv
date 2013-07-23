@@ -43,7 +43,7 @@
 #ifndef __OPENCV_GPU_WARP_SHUFFLE_HPP__
 #define __OPENCV_GPU_WARP_SHUFFLE_HPP__
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T>
     __device__ __forceinline__ T shfl(T val, int srcLane, int width = warpSize)

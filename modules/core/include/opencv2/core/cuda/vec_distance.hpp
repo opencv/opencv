@@ -47,7 +47,7 @@
 #include "functional.hpp"
 #include "detail/vec_distance_detail.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct L1Dist
     {

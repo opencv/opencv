@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/limits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 ////////////////////////////////////////////////////////////
 // centeredGradient

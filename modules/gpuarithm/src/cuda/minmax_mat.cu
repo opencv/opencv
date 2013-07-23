@@ -51,7 +51,7 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 //////////////////////////////////////////////////////////////////////////
 // min
@@ -81,7 +81,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -104,17 +104,17 @@ namespace arithm
 {
     void minMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VMin4(), WithOutMask(), stream);
     }
 
     void minMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VMin2(), WithOutMask(), stream);
     }
 
     template <typename T> void minMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, minimum<T>(), WithOutMask(), stream);
     }
 
     template void minMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -127,7 +127,7 @@ namespace arithm
 
     template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::device::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
     template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -167,7 +167,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -190,17 +190,17 @@ namespace arithm
 {
     void maxMat_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VMax4(), WithOutMask(), stream);
     }
 
     void maxMat_v2(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VMax2(), WithOutMask(), stream);
     }
 
     template <typename T> void maxMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, maximum<T>(), WithOutMask(), stream);
     }
 
     template void maxMat<uchar >(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream);
@@ -213,7 +213,7 @@ namespace arithm
 
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::device::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
     }
 
     template void maxScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);

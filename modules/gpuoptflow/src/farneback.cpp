@@ -59,7 +59,7 @@ void cv::cuda::FarnebackOpticalFlow::operator ()(const GpuMat&, const GpuMat&, G
 
 #else
 
-namespace cv { namespace cuda { namespace cudev { namespace optflow_farneback
+namespace cv { namespace cuda { namespace device { namespace optflow_farneback
 {
     void setPolynomialExpansionConsts(
             int polyN, const float *g, const float *xg, const float *xxg,
@@ -163,7 +163,7 @@ void cv::cuda::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double 
     double ig11, ig03, ig33, ig55;
     prepareGaussian(n, sigma, g, xg, xxg, ig11, ig03, ig33, ig55);
 
-    cudev::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, static_cast<float>(ig11), static_cast<float>(ig03), static_cast<float>(ig33), static_cast<float>(ig55));
+    device::optflow_farneback::setPolynomialExpansionConsts(n, g, xg, xxg, static_cast<float>(ig11), static_cast<float>(ig03), static_cast<float>(ig33), static_cast<float>(ig55));
 }
 
 
@@ -172,17 +172,17 @@ void cv::cuda::FarnebackOpticalFlow::updateFlow_boxFilter(
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
     if (deviceSupports(FEATURE_SET_COMPUTE_12))
-        cudev::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
+        device::optflow_farneback::boxFilter5Gpu(M, blockSize/2, bufM, S(streams[0]));
     else
-        cudev::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
+        device::optflow_farneback::boxFilter5Gpu_CC11(M, blockSize/2, bufM, S(streams[0]));
     swap(M, bufM);
 
     for (int i = 1; i < 5; ++i)
         streams[i].waitForCompletion();
-    cudev::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
+    device::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
 
     if (updateMatrices)
-        cudev::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
+        device::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
 }
 
 
@@ -191,17 +191,17 @@ void cv::cuda::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
     if (deviceSupports(FEATURE_SET_COMPUTE_12))
-        cudev::optflow_farneback::gaussianBlur5Gpu(
+        device::optflow_farneback::gaussianBlur5Gpu(
                     M, blockSize/2, bufM, BORDER_REPLICATE, S(streams[0]));
     else
-        cudev::optflow_farneback::gaussianBlur5Gpu_CC11(
+        device::optflow_farneback::gaussianBlur5Gpu_CC11(
                     M, blockSize/2, bufM, BORDER_REPLICATE, S(streams[0]));
     swap(M, bufM);
 
-    cudev::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
+    device::optflow_farneback::updateFlowGpu(M, flowx, flowy, S(streams[0]));
 
     if (updateMatrices)
-        cudev::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
+        device::optflow_farneback::updateMatricesGpu(flowx, flowy, R0, R1, M, S(streams[0]));
 }
 
 
@@ -253,7 +253,7 @@ void cv::cuda::FarnebackOpticalFlow::operator ()(
     }
 
     setPolynomialExpansionConsts(polyN, polySigma);
-    cudev::optflow_farneback::setUpdateMatricesConsts();
+    device::optflow_farneback::setUpdateMatricesConsts();
 
     for (int k = numLevelsCropped; k >= 0; k--)
     {
@@ -320,8 +320,8 @@ void cv::cuda::FarnebackOpticalFlow::operator ()(
 
         if (fastPyramids)
         {
-            cudev::optflow_farneback::polynomialExpansionGpu(pyramid0_[k], polyN, R[0], S(streams[0]));
-            cudev::optflow_farneback::polynomialExpansionGpu(pyramid1_[k], polyN, R[1], S(streams[1]));
+            device::optflow_farneback::polynomialExpansionGpu(pyramid0_[k], polyN, R[0], S(streams[0]));
+            device::optflow_farneback::polynomialExpansionGpu(pyramid1_[k], polyN, R[1], S(streams[1]));
         }
         else
         {
@@ -337,24 +337,24 @@ void cv::cuda::FarnebackOpticalFlow::operator ()(
             };
 
             Mat g = getGaussianKernel(smoothSize, sigma, CV_32F);
-            cudev::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
+            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(smoothSize/2), smoothSize/2);
 
             for (int i = 0; i < 2; i++)
             {
-                cudev::optflow_farneback::gaussianBlurGpu(
+                device::optflow_farneback::gaussianBlurGpu(
                         frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101, S(streams[i]));
                 cuda::resize(blurredFrame[i], pyrLevel[i], Size(width, height), 0.0, 0.0, INTER_LINEAR, streams[i]);
-                cudev::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
+                device::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }
 
         streams[1].waitForCompletion();
-        cudev::optflow_farneback::updateMatricesGpu(curFlowX, curFlowY, R[0], R[1], M, S(streams[0]));
+        device::optflow_farneback::updateMatricesGpu(curFlowX, curFlowY, R[0], R[1], M, S(streams[0]));
 
         if (flags & OPTFLOW_FARNEBACK_GAUSSIAN)
         {
             Mat g = getGaussianKernel(winSize, winSize/2*0.3f, CV_32F);
-            cudev::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
+            device::optflow_farneback::setGaussianBlurKernel(g.ptr<float>(winSize/2), winSize/2);
         }
         for (int i = 0; i < numIters; i++)
         {

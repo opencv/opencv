@@ -50,7 +50,7 @@
 #include <iostream>
 #include <stdio.h>
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace ccl
     {

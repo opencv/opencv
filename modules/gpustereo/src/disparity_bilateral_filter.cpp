@@ -51,7 +51,7 @@ Ptr<cuda::DisparityBilateralFilter> cv::cuda::createDisparityBilateralFilter(int
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace disp_bilateral_filter
     {
@@ -160,7 +160,7 @@ namespace
                                         const GpuMat& disp, const GpuMat& img,
                                         OutputArray _dst, Stream& stream)
     {
-        using namespace cv::cuda::cudev::disp_bilateral_filter;
+        using namespace cv::cuda::device::disp_bilateral_filter;
 
         const short edge_disc = std::max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         const short max_disc = short(ndisp * max_disc_threshold + 0.5);

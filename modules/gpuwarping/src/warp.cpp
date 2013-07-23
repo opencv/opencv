@@ -61,7 +61,7 @@ void cv::cuda::rotate(InputArray, OutputArray, Size, double, double, double, int
 
 #else // HAVE_CUDA
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -81,7 +81,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
-    using namespace cv::cuda::cudev::imgproc;
+    using namespace cv::cuda::device::imgproc;
 
     Mat M = _M.getMat();
 
@@ -110,7 +110,7 @@ void cv::cuda::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, Outp
 
 void cv::cuda::buildWarpPerspectiveMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
-    using namespace cv::cuda::cudev::imgproc;
+    using namespace cv::cuda::device::imgproc;
 
     Mat M = _M.getMat();
 
@@ -285,7 +285,7 @@ void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size
     }
     else
     {
-        using namespace cv::cuda::cudev::imgproc;
+        using namespace cv::cuda::device::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -424,7 +424,7 @@ void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M,
     }
     else
     {
-        using namespace cv::cuda::cudev::imgproc;
+        using namespace cv::cuda::device::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -465,7 +465,7 @@ void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M,
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -499,14 +499,14 @@ void cv::cuda::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, In
     GpuMat map_x = _map_x.getGpuMat();
     GpuMat map_y = _map_y.getGpuMat();
 
-    cudev::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
+    device::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
                        T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -538,14 +538,14 @@ void cv::cuda::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray 
     GpuMat map_x = _map_x.getGpuMat();
     GpuMat map_y = _map_y.getGpuMat();
 
-    cudev::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    device::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -577,7 +577,7 @@ void cv::cuda::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K
     GpuMat map_x = _map_x.getGpuMat();
     GpuMat map_y = _map_y.getGpuMat();
 
-    cudev::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
+    device::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
 ////////////////////////////////////////////////////////////////////////

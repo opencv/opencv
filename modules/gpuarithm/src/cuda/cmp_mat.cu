@@ -51,7 +51,7 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace arithm
 {
@@ -107,7 +107,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <> struct TransformFunctorTraits< arithm::VCmpEq4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -131,26 +131,26 @@ namespace arithm
 {
     void cmpMatEq_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VCmpEq4(), WithOutMask(), stream);
     }
     void cmpMatNe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VCmpNe4(), WithOutMask(), stream);
     }
     void cmpMatLt_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VCmpLt4(), WithOutMask(), stream);
     }
     void cmpMatLe_v4(PtrStepSz<uint> src1, PtrStepSz<uint> src2, PtrStepSz<uint> dst, cudaStream_t stream)
     {
-        cudev::transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
+        device::transform(src1, src2, dst, VCmpLe4(), WithOutMask(), stream);
     }
 
     template <template <typename> class Op, typename T>
     void cmpMat(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)
     {
         Cmp<Op<T>, T> op;
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, dst, op, WithOutMask(), stream);
     }
 
     template <typename T> void cmpMatEq(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, cudaStream_t stream)

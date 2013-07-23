@@ -46,7 +46,7 @@
 #include "saturate_cast.hpp"
 #include "datamov_utils.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     #define OPENCV_GPU_LOG_WARP_SIZE        (5)
     #define OPENCV_GPU_WARP_SIZE            (1 << OPENCV_GPU_LOG_WARP_SIZE)

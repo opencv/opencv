@@ -51,7 +51,7 @@
 #include "fgd.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace fgd
 {

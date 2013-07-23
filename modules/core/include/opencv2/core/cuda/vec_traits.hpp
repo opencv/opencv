@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template<typename T, int N> struct TypeVec;
 

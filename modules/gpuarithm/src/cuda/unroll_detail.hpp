@@ -75,11 +75,11 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::cuda::cudev::smem_tuple(smem, smem + BLOCK_SIZE);
+            return cv::cuda::device::smem_tuple(smem, smem + BLOCK_SIZE);
         }
 
         template <typename R>
-        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&> tie(R& val)
+        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&> tie(R& val)
         {
             return thrust::tie(val.x, val.y);
         }
@@ -95,11 +95,11 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::cuda::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
+            return cv::cuda::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE);
         }
 
         template <typename R>
-        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&> tie(R& val)
+        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&> tie(R& val)
         {
             return thrust::tie(val.x, val.y, val.z);
         }
@@ -115,11 +115,11 @@ namespace detail
         template <int BLOCK_SIZE, typename R>
         static __device__ __forceinline__ thrust::tuple<volatile R*, volatile R*, volatile R*, volatile R*> smem_tuple(R* smem)
         {
-            return cv::cuda::cudev::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
+            return cv::cuda::device::smem_tuple(smem, smem + BLOCK_SIZE, smem + 2 * BLOCK_SIZE, smem + 3 * BLOCK_SIZE);
         }
 
         template <typename R>
-        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&, typename cv::cuda::cudev::VecTraits<R>::elem_type&> tie(R& val)
+        static __device__ __forceinline__ thrust::tuple<typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&, typename cv::cuda::device::VecTraits<R>::elem_type&> tie(R& val)
         {
             return thrust::tie(val.x, val.y, val.z, val.w);
         }

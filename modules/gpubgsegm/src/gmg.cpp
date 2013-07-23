@@ -51,7 +51,7 @@ Ptr<cuda::BackgroundSubtractorGMG> cv::cuda::createBackgroundSubtractorGMG(int, 
 
 #else
 
-namespace cv { namespace cuda { namespace cudev {
+namespace cv { namespace cuda { namespace device {
     namespace gmg
     {
         void loadConstants(int width, int height, float minVal, float maxVal, int quantizationLevels, float backgroundPrior,
@@ -167,7 +167,7 @@ namespace
 
     void GMGImpl::apply(InputArray _frame, OutputArray _fgmask, double newLearningRate, Stream& stream)
     {
-        using namespace cv::cuda::cudev::gmg;
+        using namespace cv::cuda::device::gmg;
 
         typedef void (*func_t)(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                                int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
@@ -237,7 +237,7 @@ namespace
 
     void GMGImpl::initialize(Size frameSize, float min, float max)
     {
-        using namespace cv::cuda::cudev::gmg;
+        using namespace cv::cuda::device::gmg;
 
         CV_Assert( maxFeatures_ > 0 );
         CV_Assert( learningRate_ >= 0.0f && learningRate_ <= 1.0f);

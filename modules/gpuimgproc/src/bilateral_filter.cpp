@@ -51,7 +51,7 @@ void cv::cuda::bilateralFilter(InputArray, OutputArray, int, float, float, int, 
 
 #else
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -62,7 +62,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::bilateralFilter(InputArray _src, OutputArray _dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream)
 {
-    using cv::cuda::cudev::imgproc::bilateral_filter_gpu;
+    using cv::cuda::device::imgproc::bilateral_filter_gpu;
 
     typedef void (*func_t)(const PtrStepSzb& src, PtrStepSzb dst, int kernel_size, float sigma_spatial, float sigma_color, int borderMode, cudaStream_t s);
 

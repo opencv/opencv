@@ -97,13 +97,13 @@ template <class T>
 inline __device__ T warpScanInclusive(T idata, volatile T *s_Data)
 {
 #if __CUDA_ARCH__ >= 300
-    const unsigned int laneId = cv::cuda::cudev::Warp::laneId();
+    const unsigned int laneId = cv::cuda::device::Warp::laneId();
 
     // scan on shuffl functions
     #pragma unroll
     for (int i = 1; i <= (K_WARP_SIZE / 2); i *= 2)
     {
-        const T n = cv::cuda::cudev::shfl_up(idata, i);
+        const T n = cv::cuda::device::shfl_up(idata, i);
         if (laneId >= i)
               idata += n;
     }

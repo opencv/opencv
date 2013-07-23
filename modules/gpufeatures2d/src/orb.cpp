@@ -62,7 +62,7 @@ void cv::cuda::ORB_GPU::mergeKeyPoints(GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace orb
     {
@@ -431,7 +431,7 @@ cv::cuda::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int ed
         ++v_0;
     }
     CV_Assert(u_max.size() < 32);
-    cv::cuda::cudev::orb::loadUMax(&u_max[0], static_cast<int>(u_max.size()));
+    cv::cuda::device::orb::loadUMax(&u_max[0], static_cast<int>(u_max.size()));
 
     // Calc pattern
     const int npoints = 512;
@@ -543,7 +543,7 @@ namespace
     //takes keypoints and culls them by the response
     void cull(GpuMat& keypoints, int& count, int n_points)
     {
-        using namespace cv::cuda::cudev::orb;
+        using namespace cv::cuda::device::orb;
 
         //this is only necessary if the keypoints size is greater than the number of desired points.
         if (count > n_points)
@@ -561,7 +561,7 @@ namespace
 
 void cv::cuda::ORB_GPU::computeKeyPointsPyramid()
 {
-    using namespace cv::cuda::cudev::orb;
+    using namespace cv::cuda::device::orb;
 
     int half_patch_size = patchSize_ / 2;
 
@@ -604,7 +604,7 @@ void cv::cuda::ORB_GPU::computeKeyPointsPyramid()
 
 void cv::cuda::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 {
-    using namespace cv::cuda::cudev::orb;
+    using namespace cv::cuda::device::orb;
 
     int nAllkeypoints = 0;
 
@@ -644,7 +644,7 @@ void cv::cuda::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 
 void cv::cuda::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
 {
-    using namespace cv::cuda::cudev::orb;
+    using namespace cv::cuda::device::orb;
 
     int nAllkeypoints = 0;
 

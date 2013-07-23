@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
 

@@ -45,7 +45,7 @@
 
 #include "../datamov_utils.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace vec_distance_detail
     {

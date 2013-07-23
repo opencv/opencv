@@ -46,7 +46,7 @@
 #include "opencv2/core/cuda/vec_traits.hpp"
 #include "opencv2/core/cuda/saturate_cast.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace lbp
     {

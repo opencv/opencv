@@ -108,7 +108,7 @@ void cv::cuda::FAST_GPU::operator ()(const GpuMat& img, const GpuMat& mask, GpuM
     keypoints.cols = getKeyPoints(keypoints);
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace fast
     {
@@ -119,7 +119,7 @@ namespace cv { namespace cuda { namespace cudev
 
 int cv::cuda::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& mask)
 {
-    using namespace cv::cuda::cudev::fast;
+    using namespace cv::cuda::device::fast;
 
     CV_Assert(img.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == img.size()));
@@ -142,7 +142,7 @@ int cv::cuda::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& m
 
 int cv::cuda::FAST_GPU::getKeyPoints(GpuMat& keypoints)
 {
-    using namespace cv::cuda::cudev::fast;
+    using namespace cv::cuda::device::fast;
 
     if (count_ == 0)
         return 0;

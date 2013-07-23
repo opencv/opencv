@@ -51,7 +51,7 @@ Ptr<cuda::HoughCirclesDetector> cv::cuda::createHoughCirclesDetector(float, floa
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace hough
     {
@@ -153,8 +153,8 @@ namespace
 
     void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles)
     {
-        using namespace cv::cuda::cudev::hough;
-        using namespace cv::cuda::cudev::hough_circles;
+        using namespace cv::cuda::device::hough;
+        using namespace cv::cuda::device::hough_circles;
 
         GpuMat src = _src.getGpuMat();
 

@@ -46,7 +46,7 @@
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace stereobp
     {
@@ -384,7 +384,7 @@ namespace cv { namespace cuda { namespace cudev
         template <typename T>
         __device__ void message(const T* msg1, const T* msg2, const T* msg3, const T* data, T* dst, size_t msg_disp_step, size_t data_disp_step)
         {
-            float minimum = cudev::numeric_limits<float>::max();
+            float minimum = device::numeric_limits<float>::max();
 
             for(int i = 0; i < cndisp; ++i)
             {

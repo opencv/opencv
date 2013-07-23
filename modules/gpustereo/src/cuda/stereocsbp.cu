@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/functional.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace stereocsbp
     {
@@ -146,7 +146,7 @@ namespace cv { namespace cuda { namespace cudev
 
                 for(int i = 0; i < nr_plane; i++)
                 {
-                    T minimum = cudev::numeric_limits<T>::max();
+                    T minimum = device::numeric_limits<T>::max();
                     int id = 0;
                     for(int d = 0; d < cndisp; d++)
                     {

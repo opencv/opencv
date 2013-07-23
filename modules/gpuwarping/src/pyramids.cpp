@@ -57,7 +57,7 @@ Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray, int, Stream&) { throw
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -67,7 +67,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    using namespace cv::cuda::cudev::imgproc;
+    using namespace cv::cuda::device::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -97,7 +97,7 @@ void cv::cuda::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -107,7 +107,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    using namespace cv::cuda::cudev::imgproc;
+    using namespace cv::cuda::device::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -181,7 +181,7 @@ namespace
 
             const GpuMat& prevLayer = i == 0 ? layer0_ : pyramid_[i - 1];
 
-            cv::cuda::cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
+            cv::cuda::device::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
 
             szLastLayer = szCurLayer;
         }
@@ -222,7 +222,7 @@ namespace
             lastLayer = curLayer;
         }
 
-        cv::cuda::cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
+        cv::cuda::device::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
     }
 }
 

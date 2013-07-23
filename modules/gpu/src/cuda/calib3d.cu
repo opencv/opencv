@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
@@ -79,7 +79,7 @@ namespace cv { namespace cuda { namespace cudev
             cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            cv::cuda::cudev::transform(src, dst, TransformOp(), WithOutMask(), stream);
+            cv::cuda::device::transform(src, dst, TransformOp(), WithOutMask(), stream);
         }
     } // namespace transform_points
 
@@ -120,7 +120,7 @@ namespace cv { namespace cuda { namespace cudev
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
-            cv::cuda::cudev::transform(src, dst, ProjectOp(), WithOutMask(), stream);
+            cv::cuda::device::transform(src, dst, ProjectOp(), WithOutMask(), stream);
         }
     } // namespace project_points
 

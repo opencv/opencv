@@ -52,7 +52,7 @@
 #include "opencv2/core/cuda/utility.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace minMax
 {
@@ -105,7 +105,7 @@ namespace minMax
 
                 const minimum<R> minOp;
                 const maximum<R> maxOp;
-                cudev::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
+                device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
 
                 if (tid == 0)
                 {
@@ -153,7 +153,7 @@ namespace minMax
             }
         }
 
-        cudev::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
+        device::reduce<BLOCK_SIZE>(smem_tuple(sminval, smaxval), thrust::tie(mymin, mymax), tid, thrust::make_tuple(minOp, maxOp));
 
         GlobalReduce<BLOCK_SIZE, R>::run(mymin, mymax, minval, maxval, tid, bid, sminval, smaxval);
     }

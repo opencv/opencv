@@ -46,7 +46,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 
-namespace cv { namespace cuda { namespace cudev {
+namespace cv { namespace cuda { namespace device {
 
 namespace lbp {
 

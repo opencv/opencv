@@ -53,12 +53,12 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 //////////////////////////////////////////////////////////////////////////
 // absMat
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< abs_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -70,7 +70,7 @@ namespace arithm
     template <typename T>
     void absMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, abs_func<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, abs_func<T>(), WithOutMask(), stream);
     }
 
     template void absMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -99,7 +99,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< arithm::Sqr<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -111,7 +111,7 @@ namespace arithm
     template <typename T>
     void sqrMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Sqr<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Sqr<T>(), WithOutMask(), stream);
     }
 
     template void sqrMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -126,7 +126,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // sqrtMat
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< sqrt_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -138,7 +138,7 @@ namespace arithm
     template <typename T>
     void sqrtMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, sqrt_func<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, sqrt_func<T>(), WithOutMask(), stream);
     }
 
     template void sqrtMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -153,7 +153,7 @@ namespace arithm
 //////////////////////////////////////////////////////////////////////////
 // logMat
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< log_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -165,7 +165,7 @@ namespace arithm
     template <typename T>
     void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, log_func<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, log_func<T>(), WithOutMask(), stream);
     }
 
     template void logMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -195,7 +195,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< arithm::Exp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -207,7 +207,7 @@ namespace arithm
     template <typename T>
     void expMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Exp<T>(), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, Exp<T>(), WithOutMask(), stream);
     }
 
     template void expMat<uchar>(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
@@ -275,7 +275,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< arithm::PowOp<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -287,7 +287,7 @@ namespace arithm
     template<typename T>
     void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, PowOp<T>(power), WithOutMask(), stream);
+        device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, PowOp<T>(power), WithOutMask(), stream);
     }
 
     template void pow<uchar>(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);

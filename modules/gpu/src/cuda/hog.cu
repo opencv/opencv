@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     // Other values are not supported
     #define CELL_WIDTH 8

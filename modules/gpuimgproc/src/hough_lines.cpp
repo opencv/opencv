@@ -51,7 +51,7 @@ Ptr<cuda::HoughLinesDetector> cv::cuda::createHoughLinesDetector(float, float, i
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace hough
     {
@@ -127,8 +127,8 @@ namespace
 
     void HoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines)
     {
-        using namespace cv::cuda::cudev::hough;
-        using namespace cv::cuda::cudev::hough_lines;
+        using namespace cv::cuda::device::hough;
+        using namespace cv::cuda::device::hough_lines;
 
         GpuMat src = _src.getGpuMat();
 

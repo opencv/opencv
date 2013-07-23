@@ -51,7 +51,7 @@ Ptr<cuda::StereoBM> cv::cuda::createStereoBM(int, int) { throw_no_cuda(); return
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace stereobm
     {
@@ -135,7 +135,7 @@ namespace
 
     void StereoBMImpl::compute(InputArray _left, InputArray _right, OutputArray _disparity, Stream& _stream)
     {
-        using namespace ::cv::cuda::cudev::stereobm;
+        using namespace ::cv::cuda::device::stereobm;
 
         const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
         CV_Assert( 0 < ndisp_ && ndisp_ <= max_supported_ndisp );

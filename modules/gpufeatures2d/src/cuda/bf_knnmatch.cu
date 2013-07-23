@@ -50,7 +50,7 @@
 #include "opencv2/core/cuda/datamov_utils.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace bf_knnmatch
     {

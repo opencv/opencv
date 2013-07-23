@@ -51,7 +51,7 @@ Ptr<cuda::HoughSegmentDetector> cv::cuda::createHoughSegmentDetector(float, floa
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace hough
     {
@@ -130,9 +130,9 @@ namespace
 
     void HoughSegmentDetectorImpl::detect(InputArray _src, OutputArray lines)
     {
-        using namespace cv::cuda::cudev::hough;
-        using namespace cv::cuda::cudev::hough_lines;
-        using namespace cv::cuda::cudev::hough_segments;
+        using namespace cv::cuda::device::hough;
+        using namespace cv::cuda::device::hough_lines;
+        using namespace cv::cuda::device::hough_segments;
 
         GpuMat src = _src.getGpuMat();
 

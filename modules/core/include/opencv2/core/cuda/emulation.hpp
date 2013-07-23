@@ -46,7 +46,7 @@
 #include "common.hpp"
 #include "warp_reduce.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     struct Emulation
     {

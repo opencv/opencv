@@ -46,7 +46,7 @@
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
 
 // saturate_cast

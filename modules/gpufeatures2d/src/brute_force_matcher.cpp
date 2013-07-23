@@ -81,7 +81,7 @@ void cv::cuda::BFMatcher_GPU::radiusMatch(const GpuMat&, std::vector< std::vecto
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace bf_match
     {
@@ -197,7 +197,7 @@ void cv::cuda::BFMatcher_GPU::matchSingle(const GpuMat& query, const GpuMat& tra
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_match;
+    using namespace cv::cuda::device::bf_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, const PtrStepSzb& mask,
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance,
@@ -340,7 +340,7 @@ void cv::cuda::BFMatcher_GPU::matchCollection(const GpuMat& query, const GpuMat&
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_match;
+    using namespace cv::cuda::device::bf_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
                              const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance,
@@ -451,7 +451,7 @@ void cv::cuda::BFMatcher_GPU::knnMatchSingle(const GpuMat& query, const GpuMat& 
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_knnmatch;
+    using namespace cv::cuda::device::bf_knnmatch;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, int k, const PtrStepSzb& mask,
                              const PtrStepSzb& trainIdx, const PtrStepSzb& distance, const PtrStepSzf& allDist,
@@ -577,7 +577,7 @@ void cv::cuda::BFMatcher_GPU::knnMatch2Collection(const GpuMat& query, const Gpu
     if (query.empty() || trainCollection.empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_knnmatch;
+    using namespace cv::cuda::device::bf_knnmatch;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& trains, const PtrStepSz<PtrStepb>& masks,
                              const PtrStepSzb& trainIdx, const PtrStepSzb& imgIdx, const PtrStepSzb& distance,
@@ -755,7 +755,7 @@ void cv::cuda::BFMatcher_GPU::radiusMatchSingle(const GpuMat& query, const GpuMa
     if (query.empty() || train.empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_radius_match;
+    using namespace cv::cuda::device::bf_radius_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb& train, float maxDistance, const PtrStepSzb& mask,
                              const PtrStepSzi& trainIdx, const PtrStepSzf& distance, const PtrStepSz<unsigned int>& nMatches,
@@ -881,7 +881,7 @@ void cv::cuda::BFMatcher_GPU::radiusMatchCollection(const GpuMat& query, GpuMat&
     if (query.empty() || empty())
         return;
 
-    using namespace cv::cuda::cudev::bf_radius_match;
+    using namespace cv::cuda::device::bf_radius_match;
 
     typedef void (*caller_t)(const PtrStepSzb& query, const PtrStepSzb* trains, int n, float maxDistance, const PtrStepSzb* masks,
                              const PtrStepSzi& trainIdx, const PtrStepSzi& imgIdx, const PtrStepSzf& distance, const PtrStepSz<unsigned int>& nMatches,

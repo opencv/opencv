@@ -47,7 +47,7 @@
 #include <float.h>
 #include "common.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
 
 template <class T> struct numeric_limits;

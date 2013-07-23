@@ -55,7 +55,7 @@ void cv::cuda::meanShiftProc(InputArray, OutputArray, OutputArray, int, int, Ter
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -65,7 +65,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::cuda::cudev::imgproc;
+    using namespace ::cv::cuda::device::imgproc;
 
     GpuMat src = _src.getGpuMat();
 
@@ -90,7 +90,7 @@ void cv::cuda::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -100,7 +100,7 @@ namespace cv { namespace cuda { namespace cudev
 
 void cv::cuda::meanShiftProc(InputArray _src, OutputArray _dstr, OutputArray _dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::cuda::cudev::imgproc;
+    using namespace ::cv::cuda::device::imgproc;
 
     GpuMat src = _src.getGpuMat();
 

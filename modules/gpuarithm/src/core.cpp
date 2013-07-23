@@ -66,7 +66,7 @@ void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, 
 ////////////////////////////////////////////////////////////////////////
 // merge/split
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace split_merge
     {
@@ -112,7 +112,7 @@ namespace
                 src_as_devmem[i] = src[i];
 
             PtrStepSzb dst_as_devmem(dst);
-            cv::cuda::cudev::split_merge::merge(src_as_devmem, dst_as_devmem, (int)n, CV_ELEM_SIZE(depth), StreamAccessor::getStream(stream));
+            cv::cuda::device::split_merge::merge(src_as_devmem, dst_as_devmem, (int)n, CV_ELEM_SIZE(depth), StreamAccessor::getStream(stream));
         }
     }
 
@@ -145,7 +145,7 @@ namespace
             dst_as_devmem[i] = dst[i];
 
         PtrStepSzb src_as_devmem(src);
-        cv::cuda::cudev::split_merge::split(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), StreamAccessor::getStream(stream));
+        cv::cuda::device::split_merge::split(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), StreamAccessor::getStream(stream));
     }
 }
 
@@ -503,7 +503,7 @@ Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -515,7 +515,7 @@ namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
-        using namespace ::cv::cuda::cudev::imgproc;
+        using namespace ::cv::cuda::device::imgproc;
 
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 

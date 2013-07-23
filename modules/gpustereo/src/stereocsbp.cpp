@@ -53,7 +53,7 @@ Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int, int,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace stereocsbp
     {
@@ -179,7 +179,7 @@ namespace
 
     void StereoCSBPImpl::compute(InputArray _left, InputArray _right, OutputArray disp, Stream& _stream)
     {
-        using namespace cv::cuda::cudev::stereocsbp;
+        using namespace cv::cuda::device::stereocsbp;
 
         CV_Assert( msg_type_ == CV_32F || msg_type_ == CV_16S );
         CV_Assert( 0 < ndisp_ && 0 < iters_ && 0 < levels_ && 0 < nr_plane_ && levels_ <= 8 );

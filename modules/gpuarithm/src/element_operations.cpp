@@ -3041,7 +3041,7 @@ void cv::cuda::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // Polar <-> Cart
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace mathfunc
     {
@@ -3054,7 +3054,7 @@ namespace
 {
     void cartToPolar_caller(const GpuMat& x, const GpuMat& y, GpuMat* mag, bool magSqr, GpuMat* angle, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::cuda::cudev::mathfunc;
+        using namespace ::cv::cuda::device::mathfunc;
 
         CV_Assert(x.size() == y.size() && x.type() == y.type());
         CV_Assert(x.depth() == CV_32F);
@@ -3069,7 +3069,7 @@ namespace
 
     void polarToCart_caller(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::cuda::cudev::mathfunc;
+        using namespace ::cv::cuda::device::mathfunc;
 
         CV_Assert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
         CV_Assert(mag.depth() == CV_32F);

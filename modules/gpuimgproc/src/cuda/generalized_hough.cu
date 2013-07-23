@@ -54,7 +54,7 @@
 
 #ifdef HAVE_OPENCV_GPUARITHM
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace ght
     {
@@ -538,7 +538,7 @@ namespace cv { namespace cuda { namespace cudev
             cudaSafeCall( cudaDeviceSynchronize() );
 
             thrust::device_ptr<int> sizesPtr(sizes);
-            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, cudev::bind2nd(cudev::minimum<int>(), maxSize));
+            thrust::transform(sizesPtr, sizesPtr + levels + 1, sizesPtr, device::bind2nd(device::minimum<int>(), maxSize));
         }
 
         void Guil_Full_buildTemplFeatureList_gpu(const unsigned int* coordList, const float* thetaList, int pointsCount,

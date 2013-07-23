@@ -297,7 +297,7 @@ void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray
 
 #ifdef HAVE_CUFFT
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
@@ -320,7 +320,7 @@ void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst
     (void) flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { cudev::mulSpectrums, cudev::mulSpectrums_CONJ };
+    static Caller callers[] = { device::mulSpectrums, device::mulSpectrums_CONJ };
 
     GpuMat src1 = _src1.getGpuMat();
     GpuMat src2 = _src2.getGpuMat();
@@ -341,7 +341,7 @@ void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst
 
 #ifdef HAVE_CUFFT
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
@@ -365,7 +365,7 @@ void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputAr
     (void)flags;
 
     typedef void (*Caller)(const PtrStep<cufftComplex>, const PtrStep<cufftComplex>, float scale, PtrStepSz<cufftComplex>, cudaStream_t stream);
-    static Caller callers[] = { cudev::mulAndScaleSpectrums, cudev::mulAndScaleSpectrums_CONJ };
+    static Caller callers[] = { device::mulAndScaleSpectrums, device::mulAndScaleSpectrums_CONJ };
 
     GpuMat src1 = _src1.getGpuMat();
     GpuMat src2 = _src2.getGpuMat();

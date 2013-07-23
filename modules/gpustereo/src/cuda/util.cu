@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     /////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
 

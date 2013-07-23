@@ -51,7 +51,7 @@ Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int, int,
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace gfft
     {
@@ -98,7 +98,7 @@ namespace
 
     void GoodFeaturesToTrackDetector::detect(InputArray _image, OutputArray _corners, InputArray _mask)
     {
-        using namespace cv::cuda::cudev::gfft;
+        using namespace cv::cuda::device::gfft;
 
         GpuMat image = _image.getGpuMat();
         GpuMat mask = _mask.getGpuMat();

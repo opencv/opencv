@@ -47,7 +47,7 @@
 #include "../vec_traits.hpp"
 #include "../functional.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace transform_detail
     {

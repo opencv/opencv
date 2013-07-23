@@ -49,7 +49,7 @@
 #include "type_traits.hpp"
 #include "device_functions.h"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     // Function Objects
     template<typename Argument, typename Result> struct unary_function : public std::unary_function<Argument, Result> {};

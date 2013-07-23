@@ -51,9 +51,9 @@
 #include "arithm_func_traits.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     template <typename T> struct TransformFunctorTraits< thresh_binary_func<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -82,7 +82,7 @@ namespace arithm
     void threshold_caller(PtrStepSz<T> src, PtrStepSz<T> dst, T thresh, T maxVal, cudaStream_t stream)
     {
         Op<T> op(thresh, maxVal);
-        cudev::transform(src, dst, op, WithOutMask(), stream);
+        device::transform(src, dst, op, WithOutMask(), stream);
     }
 
     template <typename T>

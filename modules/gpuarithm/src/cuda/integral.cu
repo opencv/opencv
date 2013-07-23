@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {

@@ -53,7 +53,7 @@
 #include "unroll_detail.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace sum
 {
@@ -130,7 +130,7 @@ namespace sum
             {
                 sum = tid < gridDim.x * gridDim.y ? result[tid] : VecTraits<result_type>::all(0);
 
-                cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
+                device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
                 if (tid == 0)
                 {
@@ -173,7 +173,7 @@ namespace sum
             }
         }
 
-        cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
+        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(sum), tid, detail::Unroll<cn>::op(plus<R>()));
 
         GlobalReduce<BLOCK_SIZE, R, cn>::run(sum, result, tid, bid, smem);
     }

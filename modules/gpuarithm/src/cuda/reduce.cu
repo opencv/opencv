@@ -53,7 +53,7 @@
 #include "unroll_detail.hpp"
 
 using namespace cv::cuda;
-using namespace cv::cuda::cudev;
+using namespace cv::cuda::device;
 
 namespace reduce
 {
@@ -191,7 +191,7 @@ namespace reduce
         volatile S* srow = smem + threadIdx.y * 16;
 
         myVal = srow[threadIdx.x];
-        cudev::reduce<16>(srow, myVal, threadIdx.x, op);
+        device::reduce<16>(srow, myVal, threadIdx.x, op);
 
         if (threadIdx.x == 0)
             srow[0] = myVal;
@@ -275,7 +275,7 @@ namespace reduce
         for (int x = threadIdx.x; x < src.cols; x += BLOCK_SIZE)
             myVal = op(myVal, saturate_cast<work_type>(srcRow[x]));
 
-        cudev::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
+        device::reduce<BLOCK_SIZE>(detail::Unroll<cn>::template smem_tuple<BLOCK_SIZE>(smem), detail::Unroll<cn>::tie(myVal), threadIdx.x, detail::Unroll<cn>::op(op));
 
         if (threadIdx.x == 0)
             dst[y] = saturate_cast<dst_type>(op.result(myVal, src.cols));

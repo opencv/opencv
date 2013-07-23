@@ -55,7 +55,7 @@
 #define BORDER_SIZE 5
 #define MAX_KSIZE_HALF 100
 
-namespace cv { namespace cuda { namespace cudev { namespace optflow_farneback
+namespace cv { namespace cuda { namespace device { namespace optflow_farneback
 {
     __constant__ float c_g[8];
     __constant__ float c_xg[8];

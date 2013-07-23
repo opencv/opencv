@@ -43,7 +43,7 @@
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/vec_traits.hpp"
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     __device__ __forceinline__ void rgb_to_y(const uchar b, const uchar g, const uchar r, uchar& y)
     {

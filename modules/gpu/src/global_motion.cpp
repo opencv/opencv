@@ -53,7 +53,7 @@ void cv::cuda::calcWobbleSuppressionMaps(
 
 #else
 
-namespace cv { namespace cuda { namespace cudev { namespace globmotion {
+namespace cv { namespace cuda { namespace device { namespace globmotion {
 
     int compactPoints(int N, float *points0, float *points1, const uchar *mask);
 
@@ -70,7 +70,7 @@ void cv::cuda::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mas
     CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
 
     int npoints = points0.cols;
-    int remaining = cv::cuda::cudev::globmotion::compactPoints(
+    int remaining = cv::cuda::device::globmotion::compactPoints(
             npoints, (float*)points0.data, (float*)points1.data, mask.data);
 
     points0 = points0.colRange(0, remaining);
@@ -88,7 +88,7 @@ void cv::cuda::calcWobbleSuppressionMaps(
     mapx.create(size, CV_32F);
     mapy.create(size, CV_32F);
 
-    cv::cuda::cudev::globmotion::calcWobbleSuppressionMaps(
+    cv::cuda::device::globmotion::calcWobbleSuppressionMaps(
                 left, idx, right, size.width, size.height,
                 ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
 }

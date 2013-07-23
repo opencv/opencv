@@ -751,7 +751,7 @@ void cv::cuda::normalize(InputArray _src, OutputArray dst, double a, double b, i
 ////////////////////////////////////////////////////////////////////////
 // integral
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace imgproc
     {
@@ -776,7 +776,7 @@ void cv::cuda::integral(InputArray _src, OutputArray _dst, GpuMat& buffer, Strea
     {
         ensureSizeIsEnough(((src.rows + 7) / 8) * 8, ((src.cols + 63) / 64) * 64, CV_32SC1, buffer);
 
-        cv::cuda::cudev::imgproc::shfl_integral_gpu(src, buffer, stream);
+        cv::cuda::device::imgproc::shfl_integral_gpu(src, buffer, stream);
 
         _dst.create(src.rows + 1, src.cols + 1, CV_32SC1);
         GpuMat dst = _dst.getGpuMat();

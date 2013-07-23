@@ -51,7 +51,7 @@ Ptr<cuda::BackgroundSubtractorMOG2> cv::cuda::createBackgroundSubtractorMOG2(int
 
 #else
 
-namespace cv { namespace cuda { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace mog2
     {
@@ -178,7 +178,7 @@ namespace
 
     void MOG2Impl::apply(InputArray _frame, OutputArray _fgmask, double learningRate, Stream& stream)
     {
-        using namespace cv::cuda::cudev::mog2;
+        using namespace cv::cuda::device::mog2;
 
         GpuMat frame = _frame.getGpuMat();
 
@@ -208,7 +208,7 @@ namespace
 
     void MOG2Impl::getBackgroundImage(OutputArray _backgroundImage, Stream& stream) const
     {
-        using namespace cv::cuda::cudev::mog2;
+        using namespace cv::cuda::device::mog2;
 
         _backgroundImage.create(frameSize_, frameType_);
         GpuMat backgroundImage = _backgroundImage.getGpuMat();
@@ -218,7 +218,7 @@ namespace
 
     void MOG2Impl::initialize(cv::Size frameSize, int frameType)
     {
-        using namespace cv::cuda::cudev::mog2;
+        using namespace cv::cuda::device::mog2;
 
         CV_Assert( frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4 );
 
