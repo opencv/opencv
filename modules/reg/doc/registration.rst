@@ -39,9 +39,9 @@ The classes derived from Mapper are
 If the motion between the images is not very small, the normal way of using these classes is to create a MapperGrad* object and use it as input to create a MapperPyramid, which in turn is called to perform the calculation. However, if the motion between the images is small enough, we can use directly the
 MapperGrad* classes. Another possibility is to use first a feature based method to perform a coarse registration and then do a refinement through MapperPyramid or directly a MapperGrad* object. The "calculate" method of the mappers accepts an initial estimation of the motion as input.
 
-When deciding which MapperGrad to use we must take into account that mappers with more parameters can handle more complex motions, but involve more calculations and are therefore slower. Also, if we are confident on the motion model that is followed by the sequence, increasing the number of parameters
-beyond what we need will decrease the accuracy: it is better to use the least number of degrees of freedom that we can.
+When deciding which MapperGrad to use we must take into account that mappers with more parameters can handle more complex motions, but involve more calculations and are therefore slower. Also, if we are confident on the motion model that is followed by the sequence, increasing the number of parameters beyond what we need will decrease the accuracy: it is better to use the least number of degrees of freedom that we can.
 
+In the module tests there are examples that show how to register a pair of images using any of the implemented mappers.
 
 reg::Map
 --------
