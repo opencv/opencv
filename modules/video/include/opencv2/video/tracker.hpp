@@ -378,7 +378,7 @@ protected:
 
 
 /**
- * \brief Class that represents the model of the target
+ * \brief Abstract class that represents the model of the target. It must be instantiated by specialized tracker
  * [AAM] Ak
  */
 class CV_EXPORTS_W TrackerModel
@@ -431,12 +431,6 @@ public:
 	 * \param lastTargetState the current estimated state
 	 */
 	void setLastTargetState( const Ptr<TrackerTargetState>& lastTargetState );
-
-	/**
-	 * \brief run the model estimation-update and run the state estimator
-	 * \param responses Features extracted
-	 */
-	void run( const std::vector<Mat>& responses );
 
 	/**
 	 * \brief Get the list of the confidence map

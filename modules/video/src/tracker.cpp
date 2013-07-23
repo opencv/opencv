@@ -56,16 +56,26 @@ Tracker::~Tracker()
 bool Tracker::init( const Mat& image, const Rect& boundingBox )
 {
 
+	if( initialized )
+	{
+		return false;
+	}
+
     if( image.empty() )
         return false;
 
-    //instantiates the TrackerFeatureSet
-    featureSet = new TrackerFeatureSet;
-
-    //instantiates the TrackerSampler
-    sampler = new TrackerSampler;
+    sampler = new TrackerSampler();
+    featureSet = new TrackerFeatureSet();
+    model = NULL;
 
     bool initTracker = initImpl( image, boundingBox );
+
+    //check if the model component is initialized
+    if( model == NULL )
+    {
+    	CV_Error(-1, "The model are not initialized");
+    	return false;
+    }
 
     if( initTracker )
     {

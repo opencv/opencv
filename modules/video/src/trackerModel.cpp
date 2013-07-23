@@ -109,18 +109,6 @@ void TrackerModel::setLastTargetState( const Ptr<TrackerTargetState>& lastTarget
 	trajectory.push_back(lastTargetState);
 }
 
-void TrackerModel::run( const std::vector<Mat>& responses )
-{
-	//model estimation
-	modelEstimation( responses );
-
-	//model update
-	modelUpdate();
-
-	//state estimation
-	runStateEstimator();
-}
-
 const std::vector<ConfidenceMap>& TrackerModel::getConfidenceMaps() const
 {
 	return confidenceMaps;
