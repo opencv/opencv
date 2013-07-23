@@ -82,14 +82,14 @@ public:
 
     // the key method. Takes image on input, vector of ERStat is output for the first stage, 
     // input/output - for the second one.
-    void run( cv::InputArray image, std::vector<ERStat>& regions );
+    void run( InputArray image, std::vector<ERStat>& regions );
 
 protected:
     int thresholdDelta;
     float maxArea; 
     float minArea;
 
-    cv::Ptr<ERFilter::Callback> classifier;
+    Ptr<ERFilter::Callback> classifier;
 
     // count of the rejected/accepted regions
     int num_rejected_regions;
@@ -98,7 +98,7 @@ protected:
 public:
 
     // set/get methods to set the algorithm properties,
-    void setCallback(const cv::Ptr<ERFilter::Callback>& cb);
+    void setCallback(const Ptr<ERFilter::Callback>& cb);
     void setThresholdDelta(int thresholdDelta);
     void setMinArea(float minArea);
     void setMaxArea(float maxArea);
@@ -111,10 +111,10 @@ private:
     // pointer to the input/output regions vector
     std::vector<ERStat> *regions;
     // image mask used for feature calculations
-    cv::Mat region_mask;
+    Mat region_mask;
 
     // extract the component tree and store all the ER regions
-    void er_tree_extract( cv::InputArray image );
+    void er_tree_extract( InputArray image );
     // accumulate a pixel into an ER
     void er_add_pixel( ERStat *parent, int x, int y, int non_boundary_neighbours, 
                        int non_boundary_neighbours_horiz, 
@@ -126,7 +126,7 @@ private:
     // copy extracted regions into the output vector
     ERStat* er_save( ERStat *er, ERStat *parent, ERStat *prev );
     // recursively walk the tree and filter (remove) regions using the callback classifier
-    ERStat* er_tree_filter( cv::InputArray image, ERStat *stat, ERStat *parent, ERStat *prev );
+    ERStat* er_tree_filter( InputArray image, ERStat *stat, ERStat *parent, ERStat *prev );
     // recursively walk the tree selecting only regions with local maxima probability
     ERStat* er_tree_nonmax_suppression( ERStat *er, ERStat *parent, ERStat *prev );
 };
@@ -184,7 +184,7 @@ ERFilterNM::ERFilterNM()
 
 // the key method. Takes image on input, vector of ERStat is output for the first stage, 
 // input/output for the second one.
-void ERFilterNM::run( cv::InputArray image, std::vector<ERStat>& _regions )
+void ERFilterNM::run( InputArray image, std::vector<ERStat>& _regions )
 {
 
     // assert correct image type
@@ -222,7 +222,7 @@ void ERFilterNM::run( cv::InputArray image, std::vector<ERStat>& _regions )
 // extract the component tree and store all the ER regions
 // uses the algorithm described in
 // Linear time maximally stable extremal regions, D Nistér, H Stewénius – ECCV 2008
-void ERFilterNM::er_tree_extract( cv::InputArray image )
+void ERFilterNM::er_tree_extract( InputArray image )
 {
 
     Mat src = image.getMat();
@@ -749,7 +749,7 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
 }
 
 // recursively walk the tree and filter (remove) regions using the callback classifier
-ERStat* ERFilterNM::er_tree_filter ( cv::InputArray image, ERStat * stat, ERStat *parent, ERStat *prev )
+ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *parent, ERStat *prev )
 {
     Mat src = image.getMat();
     // assert correct image type
@@ -820,7 +820,7 @@ ERStat* ERFilterNM::er_tree_filter ( cv::InputArray image, ERStat * stat, ERStat
     {
 
         vector<Point> hull;
-        cv::convexHull(contours[0], hull, false);
+        convexHull(contours[0], hull, false);
         hull_area = (int)contourArea(hull);
     }
 
@@ -1072,7 +1072,7 @@ double ERClassifierNM2::eval(const ERStat& stat)
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities  
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>& cb, int thresholdDelta, 
+Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int thresholdDelta, 
                                 float minArea, float maxArea, float minProbability, 
                                 bool nonMaxSuppression, float minProbabilityDiff)
 {
@@ -1111,7 +1111,7 @@ Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>& cb, int thres
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-Ptr<ERFilter> createERFilterNM2(const cv::Ptr<ERFilter::Callback>& cb, float minProbability)
+Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProbability)
 {
 
     CV_Assert( (minProbability >= 0.) && (minProbability <= 1.) );

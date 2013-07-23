@@ -119,7 +119,7 @@ public:
 
     Extracts the component tree (if needed) and filter the extremal regions (ER's) by using a given classifier.
 */
-class CV_EXPORTS ERFilter : public cv::Algorithm
+class CV_EXPORTS ERFilter : public Algorithm
 {
 public:
 
@@ -138,11 +138,11 @@ public:
         \param image   is the input image
         \param regions is output for the first stage, input/output for the second one.
     */
-    virtual void run( cv::InputArray image, std::vector<ERStat>& regions ) = 0;
+    virtual void run( InputArray image, std::vector<ERStat>& regions ) = 0;
 
 
     //! set/get methods to set the algorithm properties,
-    virtual void setCallback(const cv::Ptr<ERFilter::Callback>& cb) = 0;
+    virtual void setCallback(const Ptr<ERFilter::Callback>& cb) = 0;
     virtual void setThresholdDelta(int thresholdDelta) = 0;
     virtual void setMinArea(float minArea) = 0;
     virtual void setMaxArea(float maxArea) = 0;
@@ -176,7 +176,7 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities  
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-CV_EXPORTS cv::Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>& cb = NULL, 
+CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = NULL, 
                                                   int thresholdDelta = 1, float minArea = 0.000025, 
                                                   float maxArea = 0.13, float minProbability = 0.2, 
                                                   bool nonMaxSuppression = true, 
@@ -195,7 +195,7 @@ CV_EXPORTS cv::Ptr<ERFilter> createERFilterNM1(const cv::Ptr<ERFilter::Callback>
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-CV_EXPORTS cv::Ptr<ERFilter> createERFilterNM2(const cv::Ptr<ERFilter::Callback>& cb = NULL, 
+CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL, 
                                                   float minProbability = 0.85);
 
 }
