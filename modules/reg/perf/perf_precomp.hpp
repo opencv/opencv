@@ -52,7 +52,6 @@
 #define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpumat.hpp"
 #include "opencv2/ts.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
