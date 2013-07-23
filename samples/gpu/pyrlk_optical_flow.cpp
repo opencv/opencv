@@ -6,7 +6,8 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/video.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/gpuimgproc.hpp"
 
 using namespace std;
 using namespace cv;

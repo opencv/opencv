@@ -4,8 +4,9 @@
 #include <iomanip>
 #include <stdexcept>
 #include <opencv2/core/utility.hpp>
-#include "opencv2/gpu.hpp"
+#include "opencv2/gpustereo.hpp"
 #include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace cv;
 using namespace std;

@@ -4,11 +4,19 @@
 #include "opencv2/calib3d.hpp"
 #include "opencv2/video.hpp"
 #include "opencv2/gpu.hpp"
+#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuwarping.hpp"
+#include "opencv2/gpufeatures2d.hpp"
+#include "opencv2/gpufilters.hpp"
+#include "opencv2/gpuoptflow.hpp"
+#include "opencv2/gpubgsegm.hpp"
 
 #include "opencv2/legacy.hpp"
 #include "performance.h"
 
 #include "opencv2/opencv_modules.hpp"
+
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree/gpu.hpp"
 #include "opencv2/nonfree/nonfree.hpp"

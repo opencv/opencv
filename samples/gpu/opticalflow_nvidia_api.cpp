@@ -11,13 +11,10 @@
 #include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core/gpu.hpp"
+#include "opencv2/gpulegacy.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"
-
-#ifdef HAVE_CUDA
-#include "opencv2/gpulegacy.hpp"
-#endif
 
 #if !defined(HAVE_CUDA)
 int main( int, const char** )

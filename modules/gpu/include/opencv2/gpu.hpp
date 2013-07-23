@@ -49,46 +49,6 @@
 
 #include "opencv2/core/gpu.hpp"
 
-#if !defined(__OPENCV_BUILD) && !defined(OPENCV_GPU_SKIP_INCLUDE)
-    #include "opencv2/opencv_modules.hpp"
-
-    #ifdef HAVE_OPENCV_GPUARITHM
-        #include "opencv2/gpuarithm.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUWARPING
-        #include "opencv2/gpuwarping.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUFILTERS
-        #include "opencv2/gpufilters.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUIMGPROC
-        #include "opencv2/gpuimgproc.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUFEATURES2D
-        #include "opencv2/gpufeatures2d.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUOPTFLOW
-        #include "opencv2/gpuoptflow.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUBGSEGM
-        #include "opencv2/gpubgsegm.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUSTEREO
-        #include "opencv2/gpustereo.hpp"
-    #endif
-
-    #ifdef HAVE_OPENCV_GPUCODEC
-        #include "opencv2/gpucodec.hpp"
-    #endif
-#endif
-
 namespace cv { namespace cuda {
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////

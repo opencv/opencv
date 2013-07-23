@@ -6,14 +6,12 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
-
-#ifdef HAVE_CUDA
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/gpulegacy.hpp"
-#endif
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 using namespace std;
 using namespace cv;
