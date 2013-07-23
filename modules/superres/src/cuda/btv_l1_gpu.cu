@@ -42,7 +42,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING) && defined(HAVE_OPENCV_GPUFILTERS)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUWARPING) && defined(HAVE_OPENCV_GPUFILTERS)
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/transform.hpp"

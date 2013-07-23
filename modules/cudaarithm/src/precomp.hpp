@@ -40,26 +40,31 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
+
+#include <limits>
+
+#include "cvconfig.h"
+
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/core/utility.hpp"
+
+#include "opencv2/core/private.cuda.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_CUDALEGACY
+#  include "opencv2/cudalegacy.hpp"
+#  include "opencv2/cudalegacy/private.hpp"
 #endif
 
-#ifndef __OPENCV_PERF_PRECOMP_HPP__
-#define __OPENCV_PERF_PRECOMP_HPP__
-
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
-
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#ifdef HAVE_CUBLAS
+#  include <cublas.h>
 #endif
 
+#ifdef HAVE_CUFFT
+#  include <cufft.h>
 #endif
+
+#endif /* __OPENCV_PRECOMP_H__ */

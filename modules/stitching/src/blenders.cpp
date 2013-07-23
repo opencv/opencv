@@ -188,7 +188,7 @@ MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
 
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     can_use_gpu_ = try_gpu && cuda::getCudaEnabledDeviceCount();
 #else
     (void) try_gpu;
@@ -491,7 +491,7 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     pyr.resize(num_levels + 1);
 
     std::vector<cuda::GpuMat> gpu_pyr(num_levels + 1);
@@ -531,7 +531,7 @@ void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
 {
-#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
+#if defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     if (pyr.empty())
         return;
 

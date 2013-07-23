@@ -44,7 +44,7 @@
 #define __OPENCV_PRECOMP_H__
 
 #include "opencv2/gpu.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/objdetect.hpp"

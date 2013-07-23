@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUARITHM)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_CUDAARITHM)
 
 Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int, int, double, double, int, bool, double) { throw_no_cuda(); return Ptr<cuda::CornersDetector>(); }
 

@@ -52,7 +52,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
+#ifdef HAVE_OPENCV_CUDAARITHM
 
 namespace cv { namespace cuda { namespace device
 {
@@ -819,6 +819,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // HAVE_OPENCV_GPUARITHM
+#endif // HAVE_OPENCV_CUDAARITHM
 
 #endif /* CUDA_DISABLER */

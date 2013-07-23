@@ -9,7 +9,7 @@
 #include <iostream>
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 #ifdef HAVE_TBB
 #  include "tbb/tbb_stddef.h"

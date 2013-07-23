@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_CUDAARITHM)
 
 cv::cuda::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
 cv::cuda::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }

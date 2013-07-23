@@ -53,7 +53,7 @@ using namespace perf;
 //////////////////////////////////////////////////////////////////////
 // SURF
 
-#ifdef HAVE_OPENCV_GPUARITHM
+#ifdef HAVE_OPENCV_CUDAARITHM
 
 DEF_PARAM_TEST_1(Image, string);
 
@@ -98,6 +98,6 @@ PERF_TEST_P(Image, GPU_SURF,
     }
 }
 
-#endif // HAVE_OPENCV_GPUARITHM
+#endif // HAVE_OPENCV_CUDAARITHM
 
 #endif // HAVE_CUDA

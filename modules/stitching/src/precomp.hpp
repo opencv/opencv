@@ -68,8 +68,8 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/calib3d.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_GPUWARPING

@@ -46,7 +46,7 @@
 #include <limits>
 
 #include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/imgproc.hpp"
 
 #include "opencv2/core/private.cuda.hpp"

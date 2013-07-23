@@ -47,8 +47,8 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_GPUIMGPROC
@@ -58,7 +58,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_GPUARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
+#if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
 
 void cv::cuda::nonLocalMeans(const GpuMat&, GpuMat&, float, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::FastNonLocalMeansDenoising::simpleMethod(const GpuMat&, GpuMat&, float, int, int, Stream&) { throw_no_cuda(); }

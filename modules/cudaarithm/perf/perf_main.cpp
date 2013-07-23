@@ -40,31 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include <limits>
+using namespace perf;
 
-#include "cvconfig.h"
-
-#include "opencv2/gpuarithm.hpp"
-#include "opencv2/core/utility.hpp"
-
-#include "opencv2/core/private.cuda.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_CUDALEGACY
-#  include "opencv2/cudalegacy.hpp"
-#  include "opencv2/cudalegacy/private.hpp"
-#endif
-
-#ifdef HAVE_CUBLAS
-#  include <cublas.h>
-#endif
-
-#ifdef HAVE_CUFFT
-#  include <cufft.h>
-#endif
-
-#endif /* __OPENCV_PRECOMP_H__ */
+CV_PERF_TEST_CUDA_MAIN(cudaarithm)

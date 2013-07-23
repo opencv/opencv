@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM) || defined (CUDA_DISABLER)
+#if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_CUDAARITHM) || defined (CUDA_DISABLER)
 
 Ptr<cuda::TemplateMatching> cv::cuda::createTemplateMatching(int, int, Size) { throw_no_cuda(); return Ptr<cuda::TemplateMatching>(); }
 

@@ -7,7 +7,7 @@
 #include <opencv2/highgui.hpp>// Read images
 
 // GPU structures and methods
-#include <opencv2/gpuarithm.hpp>
+#include <opencv2/cudaarithm.hpp>
 #include <opencv2/gpufilters.hpp>
 
 using namespace std;

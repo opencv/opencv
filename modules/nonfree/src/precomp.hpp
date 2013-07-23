@@ -54,8 +54,8 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_OCL

@@ -202,7 +202,7 @@ namespace
         }
         else
         {
-#ifndef HAVE_OPENCV_GPUARITHM
+#ifndef HAVE_OPENCV_CUDAARITHM
             throw_no_cuda();
 #else
             cv::cuda::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);

@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUARITHM_HPP__
-#define __OPENCV_GPUARITHM_HPP__
+#ifndef __OPENCV_CUDAARITHM_HPP__
+#define __OPENCV_CUDAARITHM_HPP__
 
 #ifndef __cplusplus
-#  error gpuarithm.hpp header must be compiled as C++
+#  error cudaarithm.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -371,4 +371,4 @@ CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUARITHM_HPP__ */
+#endif /* __OPENCV_CUDAARITHM_HPP__ */

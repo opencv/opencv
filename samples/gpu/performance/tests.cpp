@@ -5,7 +5,7 @@
 #include "opencv2/video.hpp"
 #include "opencv2/gpu.hpp"
 #include "opencv2/gpuimgproc.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/gpufilters.hpp"

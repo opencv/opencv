@@ -48,7 +48,7 @@
 #include <iterator>
 
 #include "opencv2/gpufeatures2d.hpp"
-#include "opencv2/gpuarithm.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/features2d.hpp"
 

@@ -49,7 +49,7 @@ using namespace cvtest;
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // SURF
 
-#ifdef HAVE_OPENCV_GPUARITHM
+#ifdef HAVE_OPENCV_CUDAARITHM
 
 namespace
 {
@@ -193,6 +193,6 @@ INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
     testing::Values(SURF_Extended(false), SURF_Extended(true)),
     testing::Values(SURF_Upright(false), SURF_Upright(true))));
 
-#endif // HAVE_OPENCV_GPUARITHM
+#endif // HAVE_OPENCV_CUDAARITHM
 
 #endif // HAVE_CUDA
