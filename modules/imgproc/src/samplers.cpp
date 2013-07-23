@@ -557,6 +557,36 @@ cvGetRectSubPix( const void* srcarr, void* dstarr, CvPoint2D32f center )
     //if( dst_size.width > src_size.width || dst_size.height > src_size.height )
     //    CV_ERROR( CV_StsBadSize, "destination ROI must be smaller than source ROI" );
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+        IppStatus i2;
+        IppiPoint_32f point = { center.x, center.y };
+        IppiPoint min;
+        IppiPoint max;
+        IppiSize srcRoi, dstRoi;
+        srcRoi.width = src->cols;
+        srcRoi.height = src->rows;
+        dstRoi.width = dst->cols;
+        dstRoi.height = dst->rows;
+        if((CV_MAT_TYPE(src->type) == CV_MAKETYPE(CV_8U, 1)) && (CV_MAT_TYPE(dst->type) == CV_MAKETYPE(CV_8U, 1)))
+        {
+            i2 = ippiCopySubpixIntersect_8u_C1R ((const Ipp8u*)src->data.ptr, src->step, srcRoi,
+                (Ipp8u*)dst->data.ptr, dst->step, dstRoi, point, &min, &max );
+            return;
+        }
+        else if((CV_MAT_TYPE(src->type) == CV_MAKETYPE(CV_32F, 1)) && (CV_MAT_TYPE(dst->type) == CV_MAKETYPE(CV_32F, 1)))
+        {
+            i2 = ippiCopySubpixIntersect_32f_C1R ((const Ipp32f*)src->data.ptr, src->step, srcRoi,
+                (Ipp32f*)dst->data.ptr, dst->step, dstRoi, point, &min, &max );
+            return;
+        }
+        else if((CV_MAT_TYPE(src->type) == CV_MAKETYPE(CV_8U, 1)) && (CV_MAT_TYPE(dst->type) == CV_MAKETYPE(CV_32F, 1)))
+        {
+            i2 = ippiCopySubpixIntersect_8u32f_C1R ((const Ipp8u*)src->data.ptr, src->step, srcRoi,
+                (Ipp32f*)dst->data.ptr, dst->step, dstRoi, point, &min, &max );
+            return;
+        }
+#endif
+
     if( CV_ARE_DEPTHS_EQ( src, dst ))
     {
         func = (CvGetRectSubPixFunc)(gr_tab[cn != 1].fn_2d[CV_MAT_DEPTH(src->type)]);
