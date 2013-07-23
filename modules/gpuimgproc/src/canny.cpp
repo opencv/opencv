@@ -122,7 +122,7 @@ namespace
         GpuMat mag_;
         GpuMat map_;
         GpuMat st1_, st2_;
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         Ptr<Filter> filterDX_, filterDY_;
 #endif
         int old_apperture_size_;
@@ -154,7 +154,7 @@ namespace
         }
         else
         {
-#ifndef HAVE_OPENCV_GPUFILTERS
+#ifndef HAVE_OPENCV_CUDAFILTERS
             throw_no_cuda();
 #else
             filterDX_->apply(image, dx_);
@@ -197,7 +197,7 @@ namespace
         ensureSizeIsEnough(image_size, CV_32SC1, dx_);
         ensureSizeIsEnough(image_size, CV_32SC1, dy_);
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         if (apperture_size_ != 3 && apperture_size_ != old_apperture_size_)
         {
             filterDX_ = cuda::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);

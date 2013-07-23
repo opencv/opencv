@@ -40,23 +40,15 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef __OPENCV_PRECOMP_H__
+#define __OPENCV_PRECOMP_H__
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
+#include <limits>
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
-
-#include "opencv2/gpufilters.hpp"
+#include "opencv2/cudafilters.hpp"
+#include "opencv2/cudaarithm.hpp"
 #include "opencv2/imgproc.hpp"
 
-#include "cvconfig.h"
+#include "opencv2/core/private.cuda.hpp"
 
-#endif
+#endif /* __OPENCV_PRECOMP_H__ */

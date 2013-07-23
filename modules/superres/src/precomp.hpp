@@ -65,8 +65,8 @@
 #  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUFILTERS
-#  include "opencv2/gpufilters.hpp"
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#  include "opencv2/cudafilters.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_GPUIMGPROC

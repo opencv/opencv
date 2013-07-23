@@ -25,8 +25,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   if(HAVE_opencv_cudaarithm)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudaarithm/include")
   endif()
-  if(HAVE_opencv_gpufilters)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpufilters/include")
+  if(HAVE_opencv_cudafilters)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudafilters/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -53,7 +53,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CPP_SAMPLES_REQUIRED_DEPS})
 
     if("${srcs}" MATCHES "gpu/")
-      target_link_libraries(${the_target} opencv_cudaarithm opencv_gpufilters)
+      target_link_libraries(${the_target} opencv_cudaarithm opencv_cudafilters)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -79,7 +79,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples Qt_sample)
   endif()
 
-  if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_gpufilters)
+  if(NOT HAVE_opencv_cudaarithm OR NOT HAVE_opencv_cudafilters)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
 

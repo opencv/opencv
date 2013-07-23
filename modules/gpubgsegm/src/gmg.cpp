@@ -141,7 +141,7 @@ namespace
         GpuMat colors_;
         GpuMat weights_;
 
-#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
+#if defined(HAVE_OPENCV_CUDAFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
         Ptr<cuda::Filter> boxFilter_;
         GpuMat buf_;
 #endif
@@ -214,7 +214,7 @@ namespace
         funcs[frame.depth()][frame.channels() - 1](frame, fgmask, colors_, weights_, nfeatures_, frameNum_,
                                                    learningRate_, updateBackgroundModel_, StreamAccessor::getStream(stream));
 
-#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
+#if defined(HAVE_OPENCV_CUDAFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
         // medianBlur
         if (smoothingRadius_ > 0)
         {
@@ -259,7 +259,7 @@ namespace
 
         nfeatures_.setTo(Scalar::all(0));
 
-#if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
+#if defined(HAVE_OPENCV_CUDAFILTERS) && defined(HAVE_OPENCV_CUDAARITHM)
         if (smoothingRadius_ > 0)
             boxFilter_ = cuda::createBoxFilter(CV_8UC1, -1, Size(smoothingRadius_, smoothingRadius_));
 #endif

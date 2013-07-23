@@ -8,7 +8,7 @@
 
 // GPU structures and methods
 #include <opencv2/cudaarithm.hpp>
-#include <opencv2/gpufilters.hpp>
+#include <opencv2/cudafilters.hpp>
 
 using namespace std;
 using namespace cv;

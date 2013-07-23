@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUFILTERS_HPP__
-#define __OPENCV_GPUFILTERS_HPP__
+#ifndef __OPENCV_CUDAFILTERS_HPP__
+#define __OPENCV_CUDAFILTERS_HPP__
 
 #ifndef __cplusplus
-#  error gpufilters.hpp header must be compiled as C++
+#  error cudafilters.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -146,4 +146,4 @@ CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUFILTERS_HPP__ */
+#endif /* __OPENCV_CUDAFILTERS_HPP__ */

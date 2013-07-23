@@ -40,15 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "perf_precomp.hpp"
 
-#include <limits>
+using namespace perf;
 
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/cudaarithm.hpp"
-#include "opencv2/imgproc.hpp"
-
-#include "opencv2/core/private.cuda.hpp"
-
-#endif /* __OPENCV_PRECOMP_H__ */
+CV_PERF_TEST_CUDA_MAIN(cudafilters)

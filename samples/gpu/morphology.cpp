@@ -2,7 +2,7 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/gpufilters.hpp"
+#include "opencv2/cudafilters.hpp"
 #include "opencv2/gpuimgproc.hpp"
 
 using namespace std;

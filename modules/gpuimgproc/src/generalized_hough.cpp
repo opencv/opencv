@@ -140,14 +140,14 @@ namespace
         int posCount_;
 
     private:
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         void calcEdges(InputArray src, GpuMat& edges, GpuMat& dx, GpuMat& dy);
 #endif
 
         void filterMinDist();
         void convertTo(OutputArray positions, OutputArray votes);
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         Ptr<cuda::CannyEdgeDetector> canny_;
         Ptr<cuda::Filter> filterDx_;
         Ptr<cuda::Filter> filterDy_;
@@ -169,14 +169,14 @@ namespace
 
         maxBufferSize_ = 10000;
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         canny_ = cuda::createCannyEdgeDetector(cannyLowThresh_, cannyHighThresh_);
         filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
         filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
 #endif
     }
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
     void GeneralizedHoughBase::calcEdges(InputArray _src, GpuMat& edges, GpuMat& dx, GpuMat& dy)
     {
         GpuMat src = _src.getGpuMat();
@@ -200,7 +200,7 @@ namespace
 
     void GeneralizedHoughBase::setTemplateImpl(InputArray templ, Point templCenter)
     {
-#ifndef HAVE_OPENCV_GPUFILTERS
+#ifndef HAVE_OPENCV_CUDAFILTERS
         (void) templ;
         (void) templCenter;
         throw_no_cuda();
@@ -238,7 +238,7 @@ namespace
 
     void GeneralizedHoughBase::detectImpl(InputArray image, OutputArray positions, OutputArray votes)
     {
-#ifndef HAVE_OPENCV_GPUFILTERS
+#ifndef HAVE_OPENCV_CUDAFILTERS
         (void) templ;
         (void) templCenter;
         throw_no_cuda();

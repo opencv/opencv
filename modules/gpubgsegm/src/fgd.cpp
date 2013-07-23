@@ -309,7 +309,7 @@ namespace
 /////////////////////////////////////////////////////////////////////////
 // smoothForeground
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
 
 namespace
 {
@@ -610,7 +610,7 @@ namespace
         GpuMat buf_;
         GpuMat filterBrd_;
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         Ptr<cuda::Filter> dilateFilter_;
         Ptr<cuda::Filter> erodeFilter_;
 #endif
@@ -651,7 +651,7 @@ namespace
 
         int FG_pixels_count = bgfgClassification(prevFrame_, curFrame, Ftd_, Fbd_, foreground_, countBuf_, params_, 4);
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         if (params_.perform_morphing > 0)
             smoothForeground(foreground_, filterBrd_, buf_, erodeFilter_, dilateFilter_, params_);
 #endif
@@ -710,7 +710,7 @@ namespace
         stat_.create(firstFrame.size(), params_);
         fgd::setBGPixelStat(stat_);
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
         if (params_.perform_morphing > 0)
         {
             Mat kernel = getStructuringElement(MORPH_RECT, Size(1 + params_.perform_morphing * 2, 1 + params_.perform_morphing * 2));

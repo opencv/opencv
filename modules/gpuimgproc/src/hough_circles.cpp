@@ -45,7 +45,7 @@
 using namespace cv;
 using namespace cv::cuda;
 
-#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
+#if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_CUDAFILTERS)
 
 Ptr<cuda::HoughCirclesDetector> cv::cuda::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
 

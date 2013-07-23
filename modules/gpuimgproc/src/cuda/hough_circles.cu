@@ -48,7 +48,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUFILTERS
+#ifdef HAVE_OPENCV_CUDAFILTERS
 
 namespace cv { namespace cuda { namespace device
 {
@@ -255,6 +255,6 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // HAVE_OPENCV_GPUFILTERS
+#endif // HAVE_OPENCV_CUDAFILTERS
 
 #endif /* CUDA_DISABLER */

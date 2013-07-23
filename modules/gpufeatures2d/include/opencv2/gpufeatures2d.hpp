@@ -48,7 +48,7 @@
 #endif
 
 #include "opencv2/core/cuda.hpp"
-#include "opencv2/gpufilters.hpp"
+#include "opencv2/cudafilters.hpp"
 
 namespace cv { namespace cuda {
 

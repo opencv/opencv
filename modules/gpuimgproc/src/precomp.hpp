@@ -55,8 +55,8 @@
 #  include "opencv2/cudaarithm.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUFILTERS
-#  include "opencv2/gpufilters.hpp"
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#  include "opencv2/cudafilters.hpp"
 #endif
 
 #endif /* __OPENCV_PRECOMP_H__ */
