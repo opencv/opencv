@@ -44,7 +44,7 @@
 #define __OPENCV_CORE_GPU_TYPES_HPP__
 
 #ifndef __cplusplus
-#  error gpu_types.hpp header must be compiled as C++
+#  error cuda_types.hpp header must be compiled as C++
 #endif
 
 #ifdef __CUDACC__

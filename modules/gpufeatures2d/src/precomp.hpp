@@ -52,6 +52,6 @@
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/features2d.hpp"
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #endif /* __OPENCV_PRECOMP_H__ */

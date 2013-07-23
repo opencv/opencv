@@ -11,7 +11,7 @@
 #include "cvconfig.h"
 #include <iostream>
 #include <iomanip>
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/gpulegacy.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/highgui/highgui_c.h"

@@ -68,11 +68,11 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/gpulegacy.hpp"
 #include "opencv2/highgui.hpp"
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include "cvconfig.h"
 

@@ -45,11 +45,11 @@
 #define __OPENCV_CORE_GPU_HPP__
 
 #ifndef __cplusplus
-#  error gpu.hpp header must be compiled as C++
+#  error cuda.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpu_types.hpp"
+#include "opencv2/core/cuda_types.hpp"
 
 namespace cv { namespace cuda {
 
@@ -673,6 +673,6 @@ template <> CV_EXPORTS void Ptr<cv::cuda::Event::Impl>::delete_obj();
 
 }
 
-#include "opencv2/core/gpu.inl.hpp"
+#include "opencv2/core/cuda.inl.hpp"
 
 #endif /* __OPENCV_CORE_GPU_HPP__ */

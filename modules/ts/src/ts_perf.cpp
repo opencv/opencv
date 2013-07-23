@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_CUDA
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #endif
 
 #ifdef ANDROID

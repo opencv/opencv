@@ -51,7 +51,7 @@
 #include "opencv2/gpuimgproc.hpp"
 #include "opencv2/video.hpp"
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 

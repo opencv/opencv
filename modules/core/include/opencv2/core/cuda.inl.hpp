@@ -44,7 +44,7 @@
 #ifndef __OPENCV_CORE_GPUINL_HPP__
 #define __OPENCV_CORE_GPUINL_HPP__
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 
 namespace cv { namespace cuda {
 

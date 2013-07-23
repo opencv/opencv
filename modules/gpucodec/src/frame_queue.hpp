@@ -45,7 +45,7 @@
 #define __FRAME_QUEUE_HPP__
 
 #include "opencv2/core/utility.hpp"
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include <nvcuvid.h>
 

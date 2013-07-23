@@ -45,7 +45,7 @@
 
 #include "opencv2/gpuwarping.hpp"
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 

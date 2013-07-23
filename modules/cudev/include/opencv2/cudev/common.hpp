@@ -47,8 +47,8 @@
 #define __OPENCV_CUDEV_COMMON_HPP__
 
 #include <cuda_runtime.h>
-#include "opencv2/core/gpu.hpp"
-#include "opencv2/core/gpu_stream_accessor.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/core/cuda_stream_accessor.hpp"
 
 namespace cv { namespace cudev {
 

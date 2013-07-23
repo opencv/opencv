@@ -44,7 +44,7 @@
 #ifndef __GPUCODEC_VIDEO_SOURCE_H__
 #define __GPUCODEC_VIDEO_SOURCE_H__
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 #include "opencv2/gpucodec.hpp"
 #include "thread.hpp"
 

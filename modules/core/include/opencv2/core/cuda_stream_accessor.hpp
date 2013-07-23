@@ -44,7 +44,7 @@
 #define __OPENCV_CORE_GPU_STREAM_ACCESSOR_HPP__
 
 #ifndef __cplusplus
-#  error gpu_stream_accessor.hpp header must be compiled as C++
+#  error cuda_stream_accessor.hpp header must be compiled as C++
 #endif
 
 // This is only header file that depends on Cuda. All other headers are independent.

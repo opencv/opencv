@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 
 
 #ifdef HAVE_CUDA

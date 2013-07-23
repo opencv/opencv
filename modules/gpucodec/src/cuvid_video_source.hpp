@@ -46,7 +46,7 @@
 
 #include <nvcuvid.h>
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 #include "opencv2/gpucodec.hpp"
 #include "video_source.hpp"
 

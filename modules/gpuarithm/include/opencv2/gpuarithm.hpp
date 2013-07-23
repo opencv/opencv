@@ -47,7 +47,7 @@
 #  error gpuarithm.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 
 namespace cv { namespace cuda {
 

@@ -44,10 +44,10 @@
 #define __OPENCV_GPU_HPP__
 
 #ifndef __cplusplus
-#  error gpu.hpp header must be compiled as C++
+#  error cuda.hpp header must be compiled as C++
 #endif
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 
 namespace cv { namespace cuda {
 

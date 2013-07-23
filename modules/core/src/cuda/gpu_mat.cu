@@ -48,7 +48,7 @@
 
 #else
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
 
 using namespace cv;
