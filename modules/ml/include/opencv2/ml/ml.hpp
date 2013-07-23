@@ -2107,40 +2107,40 @@ protected:
 *                                 Neural Gas                                             *
 \****************************************************************************************/
 
-struct CV_EXPORTS CvGasNode {
+struct CV_EXPORTS GasNode {
      unsigned long int id;
      long int rank; // just to make more verbose the algorithm
-     CvScalar ref_vector;
+     Scalar ref_vector;
      float distance;
 };
  
  
-class CV_EXPORTS CvNeuralGas : public CvStatModel {
+class CV_EXPORTS NeuralGas : public CvStatModel {
  
 public:
-     CvNeuralGas();
-     virtual ~CvNeuralGas();
+     NeuralGas();
+     virtual ~NeuralGas();
  
-     CvNeuralGas( CvMat* _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
+     NeuralGas( Mat* _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
      bool init();
  
-     virtual bool train( CvScalar* _input = NULL );
+     virtual bool train( Scalar* _input = NULL );
      virtual bool train_auto();
      virtual void clear();
  
 #ifndef SWIG
-     CvNeuralGas( const cv::Mat& _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
+     NeuralGas( const Mat& _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float lambdaT, float _epsilon0, float _epsilonT );
  
-     virtual bool train( cv::Scalar& _input );
+     virtual bool train( Scalar& _input );
 #endif
      
-     std::vector<CvGasNode*>* get_nodes() const;
+     vector<GasNode*>* get_nodes() const;
      unsigned int get_iteration() const;
      unsigned int get_max_iterations() const;
-     CvGasNode* get_bmu() const;
-     CvGasNode* get_smu() const;
-     CvGasNode* get_wmu() const;
-     CvScalar* get_input() const;
+     GasNode* get_bmu() const;
+     GasNode* get_smu() const;
+     GasNode* get_wmu() const;
+     Scalar* get_input() const;
      unsigned int get_total_nodes() const;
  
      // The network`s settings are public so that be changed
@@ -2151,21 +2151,21 @@ public:
      float epsilonT;
  
 protected:
-     std::vector<CvGasNode *>* nodes;
-     CvGasNode* bmu;
-     CvGasNode* smu;
-     CvGasNode* wmu;
+     vector<GasNode *>* nodes;
+     GasNode* bmu;
+     GasNode* smu;
+     GasNode* wmu;
      unsigned int total_nodes;
      unsigned int iteration, max_iterations;
  
-     CvScalar* input;
-     CvMat* distribution;
+     Scalar* input;
+     Mat* distribution;
  
-     cv::RNG rng;
+     RNG rng;
 
 private:
      // Static method used for sorting the nodes.
-     static bool Compare( const CvGasNode* node1, const CvGasNode* node2 ) {
+     static bool Compare( const GasNode* node1, const GasNode* node2 ) {
          return ( node1->distance < node2->distance );
      }
 };

@@ -40,11 +40,14 @@
 
 #include "_ml.h"
 
-CvNeuralGas::CvNeuralGas() {
+using namespace cv;
+using namespace std;
+
+NeuralGas::NeuralGas() {
 
 }
 
-CvNeuralGas::CvNeuralGas( CvMat* _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float _lambdaT, float _epsilon0, float _epsilonT ) {
+NeuralGas::NeuralGas( Mat* _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float _lambdaT, float _epsilon0, float _epsilonT ) {
 
     default_model_name = "neuralgas";
 
@@ -57,14 +60,14 @@ CvNeuralGas::CvNeuralGas( CvMat* _distr, unsigned int _total_nodes, unsigned int
     epsilon0 = _epsilon0;
     epsilonT = _epsilonT;
     input = NULL;
-    nodes = new std::vector<CvGasNode *>;
+    nodes = new vector<GasNode *>;
 }
 
-CvNeuralGas::CvNeuralGas( const cv::Mat& _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float _lambdaT, float _epsilon0, float _epsilonT ) {
+NeuralGas::NeuralGas( const Mat& _distr, unsigned int _total_nodes, unsigned int _max_iterations, float _lambda0, float _lambdaT, float _epsilon0, float _epsilonT ) {
 
     default_model_name = "neuralgas";
 
-    distribution = new CvMat(_distr);
+    distribution = new Mat(_distr);
     total_nodes = _total_nodes;
     max_iterations = _max_iterations;
     iteration = 0;
@@ -73,17 +76,17 @@ CvNeuralGas::CvNeuralGas( const cv::Mat& _distr, unsigned int _total_nodes, unsi
     epsilon0 = _epsilon0;
     epsilonT = _epsilonT;
     input = NULL;
-    nodes = new std::vector<CvGasNode *>;
+    nodes = new vector<GasNode *>;
 }
 
-CvNeuralGas::~CvNeuralGas() {
+NeuralGas::~NeuralGas() {
     clear( );
 }
 
-bool CvNeuralGas::init() {
+bool NeuralGas::init() {
     bool ok = true;
 
-    CV_FUNCNAME( "CvNeuralGas::init" );
+    CV_FUNCNAME( "NeuralGas::init" );
 
     __BEGIN__;
 
@@ -92,7 +95,7 @@ bool CvNeuralGas::init() {
 
     // Create nodes.
     for( unsigned int i=0; i<total_nodes; i++ ) {
-        CvGasNode* node = new CvGasNode();
+        GasNode* node = new GasNode();
 
         x = rng.next() % (distribution->width - 1);
         y = rng.next() % (distribution->height - 1);
@@ -111,9 +114,9 @@ bool CvNeuralGas::init() {
     return ok;
 }
 
-bool CvNeuralGas::train_auto() {
+bool NeuralGas::train_auto() {
 
-    CV_FUNCNAME( "CvNeuralGas::train_auto" );
+    CV_FUNCNAME( "NeuralGas::train_auto" );
     __BEGIN__;
 
     while( iteration < max_iterations ) {
@@ -125,14 +128,14 @@ bool CvNeuralGas::train_auto() {
     return true;
 }
 
-bool CvNeuralGas::train( cv::Scalar& _input ) {
-    CvScalar* input = new CvScalar( _input );
+bool NeuralGas::train( Scalar& _input ) {
+    Scalar* input = new Scalar( _input );
     return train( input );
 }
 
-bool CvNeuralGas::train( CvScalar* _input ) {
+bool NeuralGas::train( Scalar* _input ) {
 
-    CV_FUNCNAME( "CvNeuralGas::train" );
+    CV_FUNCNAME( "NeuralGas::train" );
     __BEGIN__;
 
     //if( input != NULL )
@@ -153,10 +156,10 @@ bool CvNeuralGas::train( CvScalar* _input ) {
     double temp = 0.0;
     double val = 0.0;
     for( unsigned long int i=0; i<total_nodes; i++ ) {
-        CvGasNode* curr = nodes->at( i );
+        GasNode* curr = nodes->at( i );
         curr->distance = 0.0;
 
-        CvScalar* ref_vector = &(curr->ref_vector);
+        Scalar* ref_vector = &(curr->ref_vector);
         for( int x=0; x<4; x++ ) {
             val = input->val[x] - ref_vector->val[x];
             temp += pow( val, 2.0 );
@@ -181,13 +184,13 @@ bool CvNeuralGas::train( CvScalar* _input ) {
     double sqr_sigma = lambda0 * pow( ( lambdaT / lambda0 ), (float)iteration/max_iterations );
 
     for( unsigned long int i=0; i<total_nodes; i++ ) {
-        CvGasNode* curr = nodes->at( i );
+        GasNode* curr = nodes->at( i );
         curr->rank = -i;
 
         double h = exp( ((double)curr->rank) / sqr_sigma );
 
-        CvScalar* ref_vector = &(curr->ref_vector);
-        CvScalar delta;
+        Scalar* ref_vector = &(curr->ref_vector);
+        Scalar delta;
 
         for(int x=0;x<4;x++){
             delta.val[x] = (input->val[x] - ref_vector->val[x]) * h * epsilon_t;
@@ -201,7 +204,7 @@ bool CvNeuralGas::train( CvScalar* _input ) {
     return true;
 }
 
-void CvNeuralGas::clear() {
+void NeuralGas::clear() {
     bmu = NULL;
     smu = NULL;
     wmu = NULL;
@@ -214,34 +217,34 @@ void CvNeuralGas::clear() {
     delete( distribution );
 }
 
-std::vector<CvGasNode*>* CvNeuralGas::get_nodes() const {
+vector<GasNode*>* NeuralGas::get_nodes() const {
     return nodes;
 }
 
-unsigned int CvNeuralGas::get_iteration() const {
+unsigned int NeuralGas::get_iteration() const {
     return iteration;
 }
 
-unsigned int CvNeuralGas::get_max_iterations() const {
+unsigned int NeuralGas::get_max_iterations() const {
     return max_iterations;
 }
 
-CvGasNode* CvNeuralGas::get_bmu() const {
+GasNode* NeuralGas::get_bmu() const {
     return bmu;
 }
 
-CvGasNode* CvNeuralGas::get_smu() const {
+GasNode* NeuralGas::get_smu() const {
     return smu;
 }
 
-CvGasNode* CvNeuralGas::get_wmu() const {
+GasNode* NeuralGas::get_wmu() const {
     return wmu;
 }
 
-CvScalar* CvNeuralGas::get_input() const {
+Scalar* NeuralGas::get_input() const {
     return input;
 }
 
-unsigned int CvNeuralGas::get_total_nodes() const {
+unsigned int NeuralGas::get_total_nodes() const {
     return total_nodes;
 }
