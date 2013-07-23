@@ -7,12 +7,11 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -41,31 +40,8 @@
 //
 //M*/
 
-#ifndef __FFMPEG_VIDEO_SOURCE_HPP__
-#define __FFMPEG_VIDEO_SOURCE_HPP__
+#include "perf_precomp.hpp"
 
-#include "opencv2/gpucodec.hpp"
+using namespace perf;
 
-struct InputMediaStream_FFMPEG;
-
-namespace cv { namespace cudacodec { namespace detail {
-
-class FFmpegVideoSource : public RawVideoSource
-{
-public:
-    FFmpegVideoSource(const String& fname);
-    ~FFmpegVideoSource();
-
-    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile);
-
-    FormatInfo format() const;
-
-private:
-    FormatInfo format_;
-
-    InputMediaStream_FFMPEG* stream_;
-};
-
-}}}
-
-#endif // __FFMPEG_VIDEO_SOURCE_HPP__
+CV_PERF_TEST_CUDA_MAIN(cudacodec)

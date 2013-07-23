@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,25 +41,72 @@
 //
 //M*/
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic ignored "-Wmissing-declarations"
-#  if defined __clang__ || defined __APPLE__
-#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
-#    pragma GCC diagnostic ignored "-Wextra"
-#  endif
-#endif
+#ifndef __VIDEO_DECODER_HPP__
+#define __VIDEO_DECODER_HPP__
 
-#ifndef __OPENCV_PERF_PRECOMP_HPP__
-#define __OPENCV_PERF_PRECOMP_HPP__
+#include <nvcuvid.h>
 
-#include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+#include "opencv2/core/private.cuda.hpp"
+#include "opencv2/cudacodec.hpp"
 
-#include "opencv2/gpucodec.hpp"
-#include "opencv2/highgui.hpp"
+namespace cv { namespace cudacodec { namespace detail
+{
 
-#ifdef GTEST_CREATE_SHARED_LIBRARY
-#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
-#endif
+class VideoDecoder
+{
+public:
+    VideoDecoder(const FormatInfo& videoFormat, CUvideoctxlock lock) : lock_(lock), decoder_(0)
+    {
+        create(videoFormat);
+    }
 
-#endif
+    ~VideoDecoder()
+    {
+        release();
+    }
+
+    void create(const FormatInfo& videoFormat);
+    void release();
+
+    // Get the code-type currently used.
+    cudaVideoCodec codec() const { return createInfo_.CodecType; }
+    unsigned long maxDecodeSurfaces() const { return createInfo_.ulNumDecodeSurfaces; }
+
+    unsigned long frameWidth() const { return createInfo_.ulWidth; }
+    unsigned long frameHeight() const { return createInfo_.ulHeight; }
+
+    unsigned long targetWidth() const { return createInfo_.ulTargetWidth; }
+    unsigned long targetHeight() const { return createInfo_.ulTargetHeight; }
+
+    cudaVideoChromaFormat chromaFormat() const { return createInfo_.ChromaFormat; }
+
+    bool decodePicture(CUVIDPICPARAMS* picParams)
+    {
+        return cuvidDecodePicture(decoder_, picParams) == CUDA_SUCCESS;
+    }
+
+    cuda::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
+    {
+        CUdeviceptr ptr;
+        unsigned int pitch;
+
+        cuSafeCall( cuvidMapVideoFrame(decoder_, picIdx, &ptr, &pitch, &videoProcParams) );
+
+        return cuda::GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
+    }
+
+    void unmapFrame(cuda::GpuMat& frame)
+    {
+        cuSafeCall( cuvidUnmapVideoFrame(decoder_, (CUdeviceptr) frame.data) );
+        frame.release();
+    }
+
+private:
+    CUvideoctxlock lock_;
+    CUVIDDECODECREATEINFO createInfo_;
+    CUvideodecoder        decoder_;
+};
+
+}}}
+
+#endif // __VIDEO_DECODER_HPP__

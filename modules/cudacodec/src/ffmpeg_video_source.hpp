@@ -41,47 +41,31 @@
 //
 //M*/
 
-#ifndef __CUVID_VIDEO_SOURCE_HPP__
-#define __CUVID_VIDEO_SOURCE_HPP__
+#ifndef __FFMPEG_VIDEO_SOURCE_HPP__
+#define __FFMPEG_VIDEO_SOURCE_HPP__
 
-#include <nvcuvid.h>
+#include "opencv2/cudacodec.hpp"
 
-#include "opencv2/core/private.cuda.hpp"
-#include "opencv2/gpucodec.hpp"
-#include "video_source.hpp"
+struct InputMediaStream_FFMPEG;
 
-namespace cv { namespace cudacodec { namespace detail
-{
+namespace cv { namespace cudacodec { namespace detail {
 
-class CuvidVideoSource : public VideoSource
+class FFmpegVideoSource : public RawVideoSource
 {
 public:
-    explicit CuvidVideoSource(const String& fname);
-    ~CuvidVideoSource();
+    FFmpegVideoSource(const String& fname);
+    ~FFmpegVideoSource();
+
+    bool getNextPacket(unsigned char** data, int* size, bool* endOfFile);
 
     FormatInfo format() const;
-    void start();
-    void stop();
-    bool isStarted() const;
-    bool hasError() const;
 
 private:
-    // Callback for handling packages of demuxed video data.
-    //
-    // Parameters:
-    //      pUserData - Pointer to user data. We must pass a pointer to a
-    //          VideoSourceData struct here, that contains a valid CUvideoparser
-    //          and FrameQueue.
-    //      pPacket - video-source data packet.
-    //
-    // NOTE: called from a different thread that doesn't not have a cuda context
-    //
-    static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
-
-    CUvideosource videoSource_;
     FormatInfo format_;
+
+    InputMediaStream_FFMPEG* stream_;
 };
 
 }}}
 
-#endif // __CUVID_VIDEO_SOURCE_HPP__
+#endif // __FFMPEG_VIDEO_SOURCE_HPP__

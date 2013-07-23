@@ -41,42 +41,23 @@
 //
 //M*/
 
-#ifndef __GPUCODEC_VIDEO_SOURCE_H__
-#define __GPUCODEC_VIDEO_SOURCE_H__
+#ifndef __CUVID_VIDEO_SOURCE_HPP__
+#define __CUVID_VIDEO_SOURCE_HPP__
+
+#include <nvcuvid.h>
 
 #include "opencv2/core/private.cuda.hpp"
-#include "opencv2/gpucodec.hpp"
-#include "thread.hpp"
+#include "opencv2/cudacodec.hpp"
+#include "video_source.hpp"
 
 namespace cv { namespace cudacodec { namespace detail
 {
 
-class VideoParser;
-
-class VideoSource
+class CuvidVideoSource : public VideoSource
 {
 public:
-    virtual ~VideoSource() {}
-
-    virtual FormatInfo format() const = 0;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual bool isStarted() const = 0;
-    virtual bool hasError() const = 0;
-
-    void setVideoParser(detail::VideoParser* videoParser) { videoParser_ = videoParser; }
-
-protected:
-    bool parseVideoData(const uchar* data, size_t size, bool endOfStream = false);
-
-private:
-    detail::VideoParser* videoParser_;
-};
-
-class RawVideoSourceWrapper : public VideoSource
-{
-public:
-    RawVideoSourceWrapper(const Ptr<RawVideoSource>& source);
+    explicit CuvidVideoSource(const String& fname);
+    ~CuvidVideoSource();
 
     FormatInfo format() const;
     void start();
@@ -85,15 +66,22 @@ public:
     bool hasError() const;
 
 private:
-    Ptr<RawVideoSource> source_;
+    // Callback for handling packages of demuxed video data.
+    //
+    // Parameters:
+    //      pUserData - Pointer to user data. We must pass a pointer to a
+    //          VideoSourceData struct here, that contains a valid CUvideoparser
+    //          and FrameQueue.
+    //      pPacket - video-source data packet.
+    //
+    // NOTE: called from a different thread that doesn't not have a cuda context
+    //
+    static int CUDAAPI HandleVideoData(void* pUserData, CUVIDSOURCEDATAPACKET* pPacket);
 
-    Ptr<Thread> thread_;
-    volatile bool stop_;
-    volatile bool hasError_;
-
-    static void readLoop(void* userData);
+    CUvideosource videoSource_;
+    FormatInfo format_;
 };
 
 }}}
 
-#endif // __GPUCODEC_VIDEO_SOURCE_H__
+#endif // __CUVID_VIDEO_SOURCE_HPP__

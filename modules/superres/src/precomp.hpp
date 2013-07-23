@@ -77,8 +77,8 @@
 #  include "opencv2/gpuoptflow.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
+#ifdef HAVE_OPENCV_CUDACODEC
+#  include "opencv2/cudacodec.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_OCL

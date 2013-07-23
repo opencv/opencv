@@ -41,11 +41,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUCODEC_HPP__
-#define __OPENCV_GPUCODEC_HPP__
+#ifndef __OPENCV_CUDACODEC_HPP__
+#define __OPENCV_CUDACODEC_HPP__
 
 #ifndef __cplusplus
-#  error gpucodec.hpp header must be compiled as C++
+#  error cudacodec.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -203,4 +203,4 @@ CV_EXPORTS Ptr<VideoReader> createVideoReader(const Ptr<RawVideoSource>& source)
 
 }} // namespace cv { namespace cudacodec {
 
-#endif /* __OPENCV_GPUCODEC_HPP__ */
+#endif /* __OPENCV_CUDACODEC_HPP__ */

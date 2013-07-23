@@ -2,7 +2,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPUCODEC)
+#if defined(HAVE_OPENCV_CUDACODEC)
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/opengl.hpp>
-#include <opencv2/gpucodec.hpp>
+#include <opencv2/cudacodec.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/contrib.hpp>
 
