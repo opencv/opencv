@@ -76,7 +76,7 @@ public:
     int area; 
     int perimeter;
     int euler;                 //!< euler number
-    int bbox[4];
+    Rect rect;
     double raw_moments[2];     //!< order 1 raw moments to derive the centroid
     double central_moments[3]; //!< order 2 central moments to construct the covariance matrix
     std::deque<int> *crossings;//!< horizontal crossings

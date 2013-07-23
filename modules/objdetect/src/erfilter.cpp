@@ -53,10 +53,7 @@ ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(i
                parent(0), child(0), next(0), prev(0), local_maxima(0), 
                max_probability_ancestor(0), min_probability_ancestor(0)
 {
-    bbox[0] = init_x;
-    bbox[1] = init_y;
-    bbox[2] = init_x;
-    bbox[3] = init_y;
+    rect = Rect(init_x,init_y,1,1);
     raw_moments[0] = 0.0;
     raw_moments[1] = 0.0;
     central_moments[0] = 0.0;
@@ -543,10 +540,10 @@ void ERFilterNM::er_add_pixel(ERStat *parent, int x, int y, int non_border_neigh
 
     if (parent->crossings->size()>0)
     {
-        if (y<parent->bbox[1]) parent->crossings->push_front(2);
-        else if (y>parent->bbox[3]) parent->crossings->push_back(2);
+        if (y<parent->rect.y) parent->crossings->push_front(2);
+        else if (y>parent->rect.br().y-1) parent->crossings->push_back(2);
         else {
-            parent->crossings->at(y - parent->bbox[1]) += 2-2*non_border_neighbours_horiz;
+            parent->crossings->at(y - parent->rect.y) += 2-2*non_border_neighbours_horiz;
         }
     } else {
         parent->crossings->push_back(2);
@@ -554,10 +551,14 @@ void ERFilterNM::er_add_pixel(ERStat *parent, int x, int y, int non_border_neigh
 
     parent->euler += (d_C1 - d_C2 + 2*d_C3) / 4;
 
-    parent->bbox[0] = min(parent->bbox[0],x);
-    parent->bbox[1] = min(parent->bbox[1],y);
-    parent->bbox[2] = max(parent->bbox[2],x);
-    parent->bbox[3] = max(parent->bbox[3],y);
+    int new_x1 = min(parent->rect.x,x);
+    int new_y1 = min(parent->rect.y,y);
+    int new_x2 = max(parent->rect.br().x-1,x);
+    int new_y2 = max(parent->rect.br().y-1,y);
+    parent->rect.x = new_x1;
+    parent->rect.y = new_y1;
+    parent->rect.width  = new_x2-new_x1+1;
+    parent->rect.height = new_y2-new_y1+1;
 
     parent->raw_moments[0] += x;
     parent->raw_moments[1] += y;
@@ -574,29 +575,34 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     parent->area += child->area;
 
     parent->perimeter += child->perimeter;
+    
 
-    for (int i=parent->bbox[1]; i<=min(parent->bbox[3],child->bbox[3]); i++)
-        if (i-child->bbox[1] >= 0)
-            parent->crossings->at(i-parent->bbox[1]) += child->crossings->at(i-child->bbox[1]);
+    for (int i=parent->rect.y; i<=min(parent->rect.br().y-1,child->rect.br().y-1); i++)
+        if (i-child->rect.y >= 0)
+            parent->crossings->at(i-parent->rect.y) += child->crossings->at(i-child->rect.y);
 
-    for (int i=parent->bbox[1]-1; i>=child->bbox[1]; i--)
-        if (i-child->bbox[1] < (int)child->crossings->size())
-            parent->crossings->push_front(child->crossings->at(i-child->bbox[1]));
+    for (int i=parent->rect.y-1; i>=child->rect.y; i--)
+        if (i-child->rect.y < (int)child->crossings->size())
+            parent->crossings->push_front(child->crossings->at(i-child->rect.y));
         else 
             parent->crossings->push_front(0);
 
-    for (int i=parent->bbox[3]+1; i<child->bbox[1]; i++)
+    for (int i=parent->rect.br().y; i<child->rect.y; i++)
         parent->crossings->push_back(0);
         
-    for (int i=max(parent->bbox[3]+1,child->bbox[1]); i<=child->bbox[3]; i++)
-        parent->crossings->push_back(child->crossings->at(i-child->bbox[1]));
+    for (int i=max(parent->rect.br().y,child->rect.y); i<=child->rect.br().y-1; i++)
+        parent->crossings->push_back(child->crossings->at(i-child->rect.y));
 
     parent->euler += child->euler;
 
-    parent->bbox[0] = min(parent->bbox[0],child->bbox[0]);
-    parent->bbox[1] = min(parent->bbox[1],child->bbox[1]);
-    parent->bbox[2] = max(parent->bbox[2],child->bbox[2]);
-    parent->bbox[3] = max(parent->bbox[3],child->bbox[3]);
+    int new_x1 = min(parent->rect.x,child->rect.x);
+    int new_y1 = min(parent->rect.y,child->rect.y);
+    int new_x2 = max(parent->rect.br().x-1,child->rect.br().x-1);
+    int new_y2 = max(parent->rect.br().y-1,child->rect.br().y-1);
+    parent->rect.x = new_x1;
+    parent->rect.y = new_y1;
+    parent->rect.width  = new_x2-new_x1+1;
+    parent->rect.height = new_y2-new_y1+1;
 
     parent->raw_moments[0] += child->raw_moments[0];
     parent->raw_moments[1] += child->raw_moments[1];
@@ -606,14 +612,14 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     parent->central_moments[2] += child->central_moments[2];
 
     // child region done, we can calculate 1st stage features from the incrementally computable descriptors
-    child->aspect_ratio = (float)(child->bbox[2]-child->bbox[0]+1)/(child->bbox[3]-child->bbox[1]+1);
+    child->aspect_ratio = (float)(child->rect.width)/(child->rect.height);
     child->compactness  = sqrt((float)(child->area))/child->perimeter;
     child->num_holes    = (float)(1-child->euler);
 
     vector<int> m_crossings;
-    m_crossings.push_back(child->crossings->at((int)(child->bbox[3]-child->bbox[1]+1)/6));
-    m_crossings.push_back(child->crossings->at((int)3*(child->bbox[3]-child->bbox[1]+1)/6));
-    m_crossings.push_back(child->crossings->at((int)5*(child->bbox[3]-child->bbox[1]+1)/6));
+    m_crossings.push_back(child->crossings->at((int)(child->rect.height)/6));
+    m_crossings.push_back(child->crossings->at((int)3*(child->rect.height)/6));
+    m_crossings.push_back(child->crossings->at((int)5*(child->rect.height)/6));
     std::sort(m_crossings.begin(), m_crossings.end());
     child->med_crossings = (float)m_crossings.at(1);
 
@@ -750,14 +756,14 @@ ERStat* ERFilterNM::er_tree_filter ( cv::InputArray image, ERStat * stat, ERStat
     CV_Assert( src.type() == CV_8UC1 );
     
     //Fill the region and calculate 2nd stage features
-    Mat region = region_mask(Rect(Point(stat->bbox[0],stat->bbox[1]),Point(stat->bbox[2]+3,stat->bbox[3]+3)));
+    Mat region = region_mask(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x+2,stat->rect.br().y+2)));
     region = Scalar(0);
     int newMaskVal = 255;
     int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
     Rect rect;
     
-    floodFill( src(Rect(Point(stat->bbox[0],stat->bbox[1]),Point(stat->bbox[2]+1,stat->bbox[3]+1))), 
-               region, Point(stat->pixel%src.cols - stat->bbox[0], stat->pixel/src.cols - stat->bbox[1]), 
+    floodFill( src(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))), 
+               region, Point(stat->pixel%src.cols - stat->rect.x, stat->pixel/src.cols - stat->rect.y), 
                Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
     rect.width += 2;
     rect.height += 2;
