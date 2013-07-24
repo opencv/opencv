@@ -11,7 +11,7 @@ if (WIN32 AND ARM)
   set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
   set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
   set(tbb_version_file "version_string.ver")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused-parameter)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
 else()
   # 4.1 update 2 - works fine
   set(tbb_ver "tbb41_20130116oss")
