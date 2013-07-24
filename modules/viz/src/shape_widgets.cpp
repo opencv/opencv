@@ -440,26 +440,35 @@ template<> cv::viz::PolyLineWidget cv::viz::Widget::cast<cv::viz::PolyLineWidget
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// grid widget implementation
 
+struct cv::viz::GridWidget::GridImpl
+{
+    static vtkSmartPointer<vtkPolyData> createGrid(const Vec2i &dimensions, const Vec2d &spacing)
+    {
+        // Create the grid using image data
+        vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
+        
+        // Add 1 to dimensions because in ImageData dimensions is the number of lines
+        // - however here it means number of cells
+        grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
+        grid->SetSpacing(spacing[0], spacing[1], 0.);
+        
+        // Set origin of the grid to be the middle of the grid
+        grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0);
+        
+        // Extract the edges so we have the grid
+        vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+        filter->SetInputConnection(grid->GetProducerPort());
+        filter->Update();
+        return filter->GetOutput();
+    }
+};
+
 cv::viz::GridWidget::GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
 {
-    // Create the grid using image data
-    vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
-    
-    // Add 1 to dimensions because in ImageData dimensions is the number of lines
-    // - however here it means number of cells
-    grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
-    grid->SetSpacing(spacing[0], spacing[1], 0.);
-    
-    // Set origin of the grid to be the middle of the grid
-    grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0);
-    
-    // Extract the edges so we have the grid
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(grid->GetProducerPort());
-    filter->Update();
+    vtkSmartPointer<vtkPolyData> grid = GridImpl::createGrid(dimensions, spacing);
     
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    mapper->SetInput(filter->GetOutput());
+    mapper->SetInputConnection(grid->GetProducerPort());
     
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);
@@ -470,21 +479,7 @@ cv::viz::GridWidget::GridWidget(const Vec2i &dimensions, const Vec2d &spacing, c
 
 cv::viz::GridWidget::GridWidget(const Vec4f &coefs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
 {
-    // Create the grid using image data
-    vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
-     
-    // Add 1 to dimensions because in ImageData dimensions is the number of lines
-    // - however here it means number of cells
-    grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
-    grid->SetSpacing(spacing[0], spacing[1], 0.);
-    
-    // Set origin of the grid to be the middle of the grid
-    grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0.0f);
-    
-    // Extract the edges so we have the grid
-    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
-    filter->SetInputConnection(grid->GetProducerPort());
-    filter->Update();
+    vtkSmartPointer<vtkPolyData> grid = GridImpl::createGrid(dimensions, spacing);
     
     // Estimate the transform to set the normal based on the coefficients
     Vec3f normal(coefs[0], coefs[1], coefs[2]);
@@ -518,11 +513,11 @@ cv::viz::GridWidget::GridWidget(const Vec4f &coefs, const Vec2i &dimensions, con
     
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transform_filter->SetTransform(transform);
-    transform_filter->SetInputConnection(filter->GetOutputPort());
+    transform_filter->SetInputConnection(grid->GetProducerPort());
     transform_filter->Update();
     
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
-    mapper->SetInput(transform_filter->GetOutput());
+    mapper->SetInputConnection(transform_filter->GetOutputPort());
     
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);

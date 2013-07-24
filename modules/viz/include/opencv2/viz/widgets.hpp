@@ -125,6 +125,9 @@ namespace cv
         public:
             GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            
+        private:
+            struct GridImpl;
         
         };
 
