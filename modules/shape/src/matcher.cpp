@@ -72,7 +72,7 @@ void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::ve
 /* Protected methods */
 void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors2,
                                  Mat& costMatrix, int flags) const
-{  
+{
     switch (flags)
     {
         case DistanceSCDFlags::DIST_CHI:
@@ -97,16 +97,18 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
     /* row normalization */
     for(int i=0; i<scd1.rows; i++)
     {
-        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+DBL_EPSILON);
+        Mat row = scd1.row(i);
+        scd1.row(i)/=(sum(row)[0]+FLT_EPSILON);
     }
     for(int i=0; i<scd2.rows; i++)
     {
-        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+DBL_EPSILON);
+        Mat row = scd2.row(i);
+        scd2.row(i)/=(sum(row)[0]+FLT_EPSILON);
     }   
 
     /* initializing costMatrix with oulier weight values */
     int costrows = std::max(scd1.rows, scd2.rows);
-    costMatrix = Mat::zeros(costrows, costrows, CV_32F);
+    costMatrix = Mat(costrows, costrows, CV_32F);
         
     /* Compute the Cost Matrix */
     for(int i=0; i<scd1.rows; i++)
@@ -116,15 +118,16 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
             float csum = 0;
             for(int k=0; k<scd2.cols; k++)
             {
-                csum += pow(scd1.at<float>(i,k)-scd2.at<float>(j,k),2)/
-                        (DBL_EPSILON+scd1.at<float>(i,k)+scd2.at<float>(j,k));
+                float resta=scd1.at<float>(i,k)-scd2.at<float>(j,k);
+                float suma=scd1.at<float>(i,k)+scd2.at<float>(j,k);
+                csum += resta*resta/(FLT_EPSILON+suma);
             }
             costMatrix.at<float>(i,j)=csum/2;
         }
     }
 
     /* normalizing cost */
-    normalize(costMatrix, costMatrix, 0,1, NORM_MINMAX);
+    //normalize(costMatrix, costMatrix, 0,1, NORM_MINMAX);
 
     /* settin ouliers weight */
     for(int i=scd1.rows; i<costrows; i++)
@@ -149,15 +152,15 @@ void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descripto
     /* row normalization */
     for(int i=0; i<scd1.rows; i++)
     {
-        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+DBL_EPSILON);
+        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+FLT_EPSILON);
     }
     for(int i=0; i<scd2.rows; i++)
     {
-        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+DBL_EPSILON);
+        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+FLT_EPSILON);
     }
 
     /* initializing costMatrix with oulier weight values */
-    int costrows = (scd1.rows>scd2.rows)?scd2.rows:scd1.rows;
+    int costrows = std::max(scd1.rows, scd2.rows);
     costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
 
     /* Compute the Cost Matrix */
@@ -168,7 +171,8 @@ void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descripto
             float csum = 0;
             for(int k=0; k<scd2.cols; k++)
             {
-                csum += pow(scd1.at<float>(i,k)-scd2.at<float>(j,k),2);
+                float num=scd1.at<float>(i,k)-scd2.at<float>(j,k);
+                csum += num*num;
             }
             costMatrix.at<float>(i,j)=std::sqrt(csum);
         }
@@ -412,19 +416,28 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
         }while (i != freerow);
     }
 
-    // calculate optimal cost.
-    minMatchCost = 0;
+    // calculate symmetric shape context cost
+    float leftcost = 0;
     for (i = 0; i<costMatrix.rows; i++)
     {
         j = rowsol[i];
-        minMatchCost+=costMatrix.at<float>(i,j);
+        leftcost+=costMatrix.at<float>(i,j);
     }
-    minMatchCost/=costMatrix.rows;
+    leftcost/=costMatrix.rows;
+    float rightcost = 0;
+    for (i = 0; i<costMatrix.cols; i++)
+    {
+        j = colsol[i];
+        rightcost+=costMatrix.at<float>(j,i);
+    }
+    rightcost/=costMatrix.cols;
+
+    minMatchCost = leftcost+rightcost;
 
     // Save in a DMatch vector
-    for (i=0;i<costMatrix.rows;i++)
+    for (i=0;i<costMatrix.cols;i++)
     {
-        DMatch singleMatch(i,rowsol[i],costMatrix.at<float>(colsol[i],i));
+        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));
         outMatches.push_back(singleMatch);
     }
 }

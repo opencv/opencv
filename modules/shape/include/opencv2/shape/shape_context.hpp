@@ -182,6 +182,7 @@ public:
 private:
     double beta;
     double distance(Point2f pt1, Point2f pt2) const;
+    Point2f _applyTransformation(const Mat& params, const cv::Mat &shape2, const cv::Point2f point) const;
 };
 
 /****************************************************************************************\

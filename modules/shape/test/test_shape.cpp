@@ -1,12 +1,55 @@
-/*
- * Test (Temporal, just "Hello World"-like tests) 
- */
- 
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                        Intel License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of Intel Corporation may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
 
 #include "test_precomp.hpp"
 
 using namespace cv;
 using namespace std;
+
+const int angularBins=12;
+const int radialBins=4;
+const float minRad=0.2;
+const float maxRad=4;
+const int NSN=20; //number of shapes per class
+const int NP=280; //number of points sympliying the contour
 
 class CV_ShapeTest : public cvtest::BaseTest
 {
@@ -197,13 +240,6 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
     listHeaders.push_back("watch");
 }
 
-const int angularBins=12;
-const int radialBins=4;
-const float minRad=0.2;
-const float maxRad=5;
-const int NSN=20; //number of shapes per code (car, butterfly, etc)
-const int NP=300; //number of points sympliying the contour
-
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
                                          vector <Point2f>& query3, vector <Point2f>& test, vector<DMatch>& matches)
 {
@@ -236,6 +272,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     // Iterative process with NC cycles //
     int NC=3;//number of cycles
     vector<float> scdistances(3), benergies(3);
+    benergies[0]=0;
+    benergies[1]=0;
+    benergies[2]=0;
 
     // Extract SCD descriptor of the testing shape //
     shapeDescriptorT.extractSCD(test, testingSCDMatrix);
@@ -262,27 +301,30 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
         }
         // updating distances values //
         scdistances[i] = scdmatchers[i].getMatchingCost();
-        benergies[i] = tpsTra[i].getTranformCost();
+        benergies[i] += tpsTra[i].getTranformCost();
     }
-    float distance1T=1*scdistances[1]+0.3*benergies[1];//+dist1;
-    float distance2T=1*scdistances[2]+0.3*benergies[2];//+dist2;
-    float distance3T=1*scdistances[3]+0.3*benergies[3];//+dist3;
+    float benergiesfactor=1;
+    float scfactor=0.5;
+    float distance1T=scfactor*scdistances[0]+benergiesfactor*benergies[0];//+dist1;
+    float distance2T=scfactor*scdistances[1]+benergiesfactor*benergies[1];//+dist2;
+    float distance3T=scfactor*scdistances[2]+benergiesfactor*benergies[2];//+dist3;
 
     if ( distance1T<=distance2T && distance1T<=distance3T )
     {
-        matches=matchesvec[1];
+        matches=matchesvec[0];
+        query1=query[0];
         return distance1T;
     }
     if ( distance2T<=distance1T && distance2T<=distance3T )
     {
-        matches=matchesvec[2];
-        query1=query2;
+        matches=matchesvec[1];
+        query1=query[1];
         return distance2T;
     }
     if ( distance3T<=distance1T && distance3T<=distance2T )
     {
-        matches=matchesvec[3];
-        query1=query[3];
+        matches=matchesvec[2];
+        query1=query[2];
         return distance3T;
     }
     matches=matchesvec[1];
@@ -344,7 +386,7 @@ void CV_ShapeTest::mpegTest()
             stringstream thepathandname;
             thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
             Mat currentQuery, auxQuery;
-            currentQuery=imread(thepathandname.str().c_str(), 0);
+            currentQuery=imread(thepathandname.str(), IMREAD_GRAYSCALE);
 
             /* compute border of the query and its flipped versions */
             vector<Point2f> origContour;
@@ -379,15 +421,15 @@ void CV_ShapeTest::mpegTest()
 
                     // compute shape distance //
                     std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
-                    std::cout<<"Computing shape distance between "<<thepathandname.str()<<
-                               " and "<<thetestpathandname.str()<<std::endl;
+                    std::cout<<"Computing shape distance between "<<namesHeaders[n]<<i<<
+                               " and "<<namesHeaders[nt]<<it<<": ";
                     vector<DMatch> matches; //for drawing purposes
                     distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
                             computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches);
-                    std::cout<<"The distance is: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
+                    std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
-                    /*// draw //
-                    Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+                    // draw //
+                    /*Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -416,7 +458,7 @@ void CV_ShapeTest::mpegTest()
     fs << "distanceMat" << distanceMat;
 }
 
-const int FIRST_MANY=140;
+const int FIRST_MANY=2*NSN;
 void CV_ShapeTest::displayMPEGResults()
 {
     string baseTestFolder="shape/mpeg_test/";

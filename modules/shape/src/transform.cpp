@@ -80,10 +80,10 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0) & (pts2.cols>=pts1.cols));
+    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
-    /* Use only valid matchings */
+    // Use only valid matchings //
     std::vector<DMatch> matches;
     for (size_t i=0; i<_matches.size(); i++)
     {
@@ -94,9 +94,9 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
         }
     }
 
-    /* Organizing the correspondent points in matrix style */
-    Mat shape1 = Mat::zeros(matches.size(),2,CV_32F); // transforming shape
-    Mat shape2 = Mat::zeros(matches.size(),2,CV_32F); // target shape
+    // Organizing the correspondent points in matrix style //
+    Mat shape1(matches.size(),2,CV_32F); // transforming shape
+    Mat shape2(matches.size(),2,CV_32F); // target shape
     for (size_t i=0; i<matches.size(); i++)
     {
         Point2f pt1=pts1.at<Point2f>(0,matches[i].queryIdx);
@@ -108,41 +108,30 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
         shape2.at<float>(i,1) = pt2.y;
     }
 
-    /* Building the matrices for solving the L*(w|a)=(v|0) problem
-     * with L={[K|P];[P'|0]}
-     */
-    //Building K
-    //K=d2*log(d2)
+    // Building the matrices for solving the L*(w|a)=(v|0) problem with L={[K|P];[P'|0]}
+
+    //Building K and P
     Mat matK(matches.size(),matches.size(),CV_32F);
-    for (int i=0; i<matK.rows; i++)
+    Mat matP(matches.size(),3,CV_32F);
+    for (size_t i=0; i<matches.size(); i++)
     {
-        for (int j=0; j<matK.cols; j++)
+        for (size_t j=0; j<matches.size(); j++)
         {
             if (i==j)
             {
-                matK.at<float>(i,j)=1;
-                continue;
+                matK.at<float>(i,j)=beta; //regularization
             }
-            matK.at<float>(i,j) = distance(Point2f(shape1.at<float>(i,0),shape1.at<float>(i,1)),
-                                           Point2f(shape1.at<float>(j,0),shape1.at<float>(j,1)));
+            else
+            {
+                matK.at<float>(i,j) = distance(Point2f(shape1.at<float>(i,0),shape1.at<float>(i,1)),
+                                               Point2f(shape1.at<float>(j,0),shape1.at<float>(j,1)));
+            }
         }
-    }
-
-    normalize(matK, matK,0,1, NORM_MINMAX);
-    Mat logMatK;
-    log(matK,logMatK);
-    matK = matK.mul(logMatK);
-    matK += Mat::eye(matK.rows, matK.cols, CV_32F)*beta; // Regularization
-
-    //Building P
-    //rowi = (1,xi,yi)
-    Mat matP(matches.size(),3,CV_32F);
-    for (int i=0; i<matP.rows; i++)
-    {
         matP.at<float>(i,0) = 1;
         matP.at<float>(i,1) = shape1.at<float>(i,0);
         matP.at<float>(i,2) = shape1.at<float>(i,1);
     }
+    //normalize(matK, matK,0,1, NORM_MINMAX);
 
     //Building B (v|0)
     Mat matB = Mat::zeros(matches.size()+3,2,CV_32F);
@@ -153,102 +142,26 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     }
 
     //Building L
-    Mat matL;
-    Mat up, down=Mat::zeros(3,matches.size()+3,CV_32F);
-    std::vector<Mat> matVec;
-    matVec.push_back(matK);
-    matVec.push_back(matP);
-    hconcat(matVec, up);
-    matVec.clear();
-
-    for (size_t i=0; i<matches.size(); i++)
-    {   //down = P'|0
-        down.at<float>(0,i) = 1;
-        down.at<float>(1,i) = shape1.at<float>(i,0);
-        down.at<float>(2,i) = shape1.at<float>(i,1);
-    }
-    matVec.push_back(up);
-    matVec.push_back(down);
-    vconcat(matVec, matL);
+    Mat matL=Mat::zeros(matches.size()+3,matches.size()+3,CV_32F);
+    Mat matLroi(matL, Rect(0,0,matches.size(),matches.size())); //roi for K
+    matK.copyTo(matLroi);
+    matLroi = Mat(matL,Rect(matches.size(),0,3,matches.size())); //roi for P
+    matP.copyTo(matLroi);
+    Mat matPt;
+    transpose(matP,matPt);
+    matLroi = Mat(matL,Rect(0,matches.size(),matches.size(),3)); //roi for P'
+    matPt.copyTo(matLroi);
 
     //Obtaining transformation params (w|a)
     Mat matX; //params for fx and fy respectively
     solve(matL, matB, matX, DECOMP_LU);
 
     //Apply transformation in the complete set of points
-    Mat complete_shape1 = Mat::zeros(pts1.cols,2,CV_32F); // transforming shape
+    outPts.clear();
     for (int i=0; i<pts1.cols; i++)
     {
-        Point2f pt1=pts1.at<Point2f>(0,i);
-        complete_shape1.at<float>(i,0) = pt1.x;
-        complete_shape1.at<float>(i,1) = pt1.y;
-    }
-
-    //Creating U=r^2*log(r^2)
-    Mat matU(complete_shape1.rows,complete_shape1.rows,CV_32F);
-    for (int i=0; i<matU.rows; i++)
-    {
-        for (int j=0; j<matU.cols; j++)
-        {
-            if (i==j)
-            {
-                matU.at<float>(i,j)=std::numeric_limits<float>::min();
-                continue;
-            }
-            matU.at<float>(i,j) = distance(Point2f(complete_shape1.at<float>(i,0),complete_shape1.at<float>(i,1)),
-                                           Point2f(complete_shape1.at<float>(j,0),complete_shape1.at<float>(j,1)));
-        }
-    }
-    normalize(matU, matU,0,1, NORM_MINMAX);
-    Mat logMatU;
-    log(matU,logMatU);
-    matU = matU.mul(logMatU);
-
-    //creating fxAffine
-    Mat afparam(1,3,CV_32F);
-    afparam.at<float>(0,0)=matX.at<float>(matX.rows-3,0);
-    afparam.at<float>(0,1)=matX.at<float>(matX.rows-2,0);
-    afparam.at<float>(0,2)=matX.at<float>(matX.rows-1,0);
-    Mat auxaf=Mat::ones(3,matU.rows,CV_32F);
-
-    for (int i=0; i<matU.cols; i++)
-    {
-        auxaf.at<float>(1,i)=complete_shape1.at<float>(i,0);
-        auxaf.at<float>(2,i)=complete_shape1.at<float>(i,1);
-    }
-
-    Mat fxAffine=afparam*auxaf;
-    //creating fxWarp
-    Mat warpaux(1,fxAffine.cols,CV_32F);
-    for (int i=0; i<warpaux.cols; i++)
-    {
-        warpaux.at<float>(0,i)=matX.at<float>(i,0);
-    }
-    Mat fxWarp=warpaux*matU;
-    //fx
-    Mat fx=fxWarp+fxAffine;
-
-    //Creating fyAffine
-    afparam.at<float>(0,0)=matX.at<float>(matX.rows-3,1);
-    afparam.at<float>(0,1)=matX.at<float>(matX.rows-2,1);
-    afparam.at<float>(0,2)=matX.at<float>(matX.rows-1,1);
-    Mat fyAffine=afparam*auxaf;
-
-    //creating fyWarp
-    for (int i=0; i<warpaux.cols; i++)
-    {
-        warpaux.at<float>(0,i)=matX.at<float>(i,1);
-    }
-    Mat fyWarp=warpaux*matU;
-
-    //fx
-    Mat fy=fyWarp+fyAffine;
-
-    //Ensambling output
-    outPts.clear();
-    for (int i=0; i<fy.cols; i++)
-    {
-        outPts.push_back(Point2f(fx.at<float>(0,i), fy.at<float>(0,i)));
+        Point2f pt=pts1.at<Point2f>(0,i);
+        outPts.push_back(_applyTransformation(matX, shape1, pt));
     }
 
     //Setting transform Cost
@@ -274,7 +187,41 @@ float ThinPlateSplineTransform::getTranformCost() const
 double ThinPlateSplineTransform::distance(Point2f p, Point2f q) const
 {
     Point2f diff = p - q;
-    return sqrt(diff.x*diff.x + diff.y*diff.y);
+    float norma = diff.x*diff.x + diff.y*diff.y;
+    if (norma!=0)
+    {
+        norma = norma*std::log(norma);
+    }
+    return norma;
+}
+
+Point2f ThinPlateSplineTransform::_applyTransformation(const Mat &params, const Mat &shape2, const Point2f point) const
+{
+    Point2f out;
+    for (int i=0; i<2; i++)
+    {
+        float a1=params.at<float>(params.rows-3,i);
+        float ax=params.at<float>(params.rows-2,i);
+        float ay=params.at<float>(params.rows-1,i);
+
+        float affine=a1+ax*point.x+ay*point.y;
+        float nonrigid=0;
+        for (int j=0; j<shape2.rows; j++)
+        {
+            nonrigid+=params.at<float>(j,i)*
+                    distance(Point2f(shape2.at<float>(j,0),shape2.at<float>(j,1)),
+                            point);
+        }
+        if (i==0)
+        {
+            out.x=affine+nonrigid;
+        }
+        if (i==1)
+        {
+            out.y=affine+nonrigid;
+        }
+    }
+    return out;
 }
 /****************************************************************************************\
 *                                  Affine Class                                          *
