@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUBGSEGM_HPP__
-#define __OPENCV_GPUBGSEGM_HPP__
+#ifndef __OPENCV_CUDABGSEGM_HPP__
+#define __OPENCV_CUDABGSEGM_HPP__
 
 #ifndef __cplusplus
-#  error gpubgsegm.hpp header must be compiled as C++
+#  error cudabgsegm.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -149,4 +149,4 @@ CV_EXPORTS Ptr<cuda::BackgroundSubtractorFGD>
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUBGSEGM_HPP__ */
+#endif /* __OPENCV_CUDABGSEGM_HPP__ */

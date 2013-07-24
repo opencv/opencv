@@ -10,7 +10,7 @@
 #include "opencv2/cudafeatures2d.hpp"
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/cudaoptflow.hpp"
-#include "opencv2/gpubgsegm.hpp"
+#include "opencv2/cudabgsegm.hpp"
 
 #include "opencv2/legacy.hpp"
 #include "performance.h"
