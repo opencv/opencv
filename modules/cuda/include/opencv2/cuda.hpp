@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_HPP__
-#define __OPENCV_GPU_HPP__
+#ifndef __OPENCV_CUDA_HPP__
+#define __OPENCV_CUDA_HPP__
 
 #ifndef __cplusplus
 #  error cuda.hpp header must be compiled as C++
@@ -217,4 +217,4 @@ CV_EXPORTS void calcWobbleSuppressionMaps(
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPU_HPP__ */
+#endif /* __OPENCV_CUDA_HPP__ */

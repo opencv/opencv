@@ -48,20 +48,18 @@
 #  endif
 #endif
 
-#ifndef __OPENCV_TEST_PRECOMP_HPP__
-#define __OPENCV_TEST_PRECOMP_HPP__
-
-#include <fstream>
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/gpu.hpp"
-#include "opencv2/core.hpp"
-#include "opencv2/core/opengl.hpp"
+#include "opencv2/cuda.hpp"
 #include "opencv2/calib3d.hpp"
 #include "opencv2/objdetect.hpp"
 
-#include "cvconfig.h"
+#ifdef GTEST_CREATE_SHARED_LIBRARY
+#error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
+#endif
 
 #endif

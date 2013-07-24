@@ -7,7 +7,7 @@
 #include <numeric>
 #include <string>
 #include <opencv2/core/utility.hpp>
-#include "opencv2/gpu.hpp"
+#include "opencv2/cuda.hpp"
 
 #define TAB "    "
 

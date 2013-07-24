@@ -43,7 +43,7 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#include "opencv2/gpu.hpp"
+#include "opencv2/cuda.hpp"
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/calib3d.hpp"

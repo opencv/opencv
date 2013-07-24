@@ -227,7 +227,7 @@ private:
 };
 
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
 class CV_EXPORTS GraphCutSeamFinderGpu : public GraphCutSeamFinderBase, public PairwiseSeamFinder
 {
 public:

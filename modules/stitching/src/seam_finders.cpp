@@ -1316,7 +1316,7 @@ void GraphCutSeamFinder::find(const std::vector<Mat> &src, const std::vector<Poi
 }
 
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
 void GraphCutSeamFinderGpu::find(const std::vector<Mat> &src, const std::vector<Point> &corners,
                                  std::vector<Mat> &masks)
 {

@@ -80,8 +80,8 @@
 #  include "opencv2/cudafeatures2d.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_CUDA
+#  include "opencv2/cuda.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_NONFREE

@@ -48,8 +48,8 @@
 #  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_CUDA
+#  include "opencv2/cuda.hpp"
 #endif
 
 
@@ -122,7 +122,7 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
 }
 
 
-#ifdef HAVE_OPENCV_CUDAWARPING
+#if defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAWARPING)
 void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result)
 {
     CV_Assert(motions_ && stabilizationMotions_);

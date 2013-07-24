@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <stdexcept>
 #include <opencv2/core/utility.hpp>
-#include "opencv2/gpu.hpp"
+#include "opencv2/cuda.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/objdetect.hpp"
 #include "opencv2/imgproc.hpp"

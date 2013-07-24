@@ -216,7 +216,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
@@ -257,7 +257,7 @@ public:
             outlierRejector = tblor;
         }
 
-#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_CUDAOPTFLOW)
+#if defined(HAVE_OPENCV_CUDAIMGPROC) && defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAOPTFLOW)
         if (gpu)
         {
             KeypointBasedMotionEstimatorGpu *kbest = new KeypointBasedMotionEstimatorGpu(est);
@@ -342,7 +342,7 @@ int main(int argc, const char **argv)
             return 0;
         }
 
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
         if (arg("gpu") == "yes")
         {
             cout << "initializing GPU..."; cout.flush();
@@ -420,7 +420,7 @@ int main(int argc, const char **argv)
             {
                 MoreAccurateMotionWobbleSuppressorBase *ws = new MoreAccurateMotionWobbleSuppressor();
                 if (arg("gpu") == "yes")
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
                     ws = new MoreAccurateMotionWobbleSuppressorGpu();
 #else
                     throw runtime_error("OpenCV is built without GPU support");

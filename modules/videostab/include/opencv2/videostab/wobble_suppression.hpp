@@ -116,7 +116,7 @@ private:
     Mat_<float> mapx_, mapy_;
 };
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAWARPING)
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMotionWobbleSuppressorBase
 {
 public:

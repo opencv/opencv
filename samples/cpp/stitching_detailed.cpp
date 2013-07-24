@@ -617,7 +617,7 @@ int main(int argc, char* argv[])
         seam_finder = new detail::VoronoiSeamFinder();
     else if (seam_find_type == "gc_color")
     {
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
         if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
         else
@@ -626,7 +626,7 @@ int main(int argc, char* argv[])
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#ifdef HAVE_OPENCV_GPU
+#ifdef HAVE_OPENCV_CUDA
         if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
