@@ -468,6 +468,69 @@ cv::viz::GridWidget::GridWidget(const Vec2i &dimensions, const Vec2d &spacing, c
     setColor(color);
 }
 
+cv::viz::GridWidget::GridWidget(const Vec4f &coefs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color)
+{
+    // Create the grid using image data
+    vtkSmartPointer<vtkImageData> grid = vtkSmartPointer<vtkImageData>::New();
+     
+    // Add 1 to dimensions because in ImageData dimensions is the number of lines
+    // - however here it means number of cells
+    grid->SetDimensions(dimensions[0]+1, dimensions[1]+1, 1);
+    grid->SetSpacing(spacing[0], spacing[1], 0.);
+    
+    // Set origin of the grid to be the middle of the grid
+    grid->SetOrigin(dimensions[0] * spacing[0] * (-0.5), dimensions[1] * spacing[1] * (-0.5), 0.0f);
+    
+    // Extract the edges so we have the grid
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInputConnection(grid->GetProducerPort());
+    filter->Update();
+    
+    // Estimate the transform to set the normal based on the coefficients
+    Vec3f normal(coefs[0], coefs[1], coefs[2]);
+    Vec3f up_vector(0.0f, 1.0f, 0.0f); // Just set as default
+    double push_distance = -coefs[3]/cv::norm(Vec3f(coefs.val));
+    Vec3f u,v,n;
+    n = normalize(normal);
+    u = normalize(up_vector.cross(n));
+    v = n.cross(u);
+    
+    vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+    mat_trans->SetElement(0,0,u[0]);
+    mat_trans->SetElement(0,1,u[1]);
+    mat_trans->SetElement(0,2,u[2]);
+    mat_trans->SetElement(1,0,v[0]);
+    mat_trans->SetElement(1,1,v[1]);
+    mat_trans->SetElement(1,2,v[2]);
+    mat_trans->SetElement(2,0,n[0]);
+    mat_trans->SetElement(2,1,n[1]);
+    mat_trans->SetElement(2,2,n[2]);
+    // Inverse rotation (orthogonal, so just take transpose)
+    mat_trans->Transpose();
+    mat_trans->SetElement(0,3,n[0] * push_distance);
+    mat_trans->SetElement(1,3,n[1] * push_distance);
+    mat_trans->SetElement(2,3,n[2] * push_distance);
+    mat_trans->SetElement(3,3,1);
+    
+    vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
+    transform->PreMultiply();
+    transform->SetMatrix(mat_trans);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    transform_filter->SetTransform(transform);
+    transform_filter->SetInputConnection(filter->GetOutputPort());
+    transform_filter->Update();
+    
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+    mapper->SetInput(transform_filter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
 template<> cv::viz::GridWidget cv::viz::Widget::cast<cv::viz::GridWidget>()
 {
     Widget3D widget = this->cast<Widget3D>();
