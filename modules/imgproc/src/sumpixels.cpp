@@ -41,6 +41,9 @@
 //M*/
 
 #include "precomp.hpp"
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+static IppStatus sts = ippInit();
+#endif
 
 namespace cv
 {
@@ -234,6 +237,53 @@ void cv::integral( InputArray _src, OutputArray _sum, OutputArray _sqsum, Output
     if( sdepth <= 0 )
         sdepth = depth == CV_8U ? CV_32S : CV_64F;
     sdepth = CV_MAT_DEPTH(sdepth);
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+	if( ( depth == CV_8U ) && ( !_tilted.needed() ) )
+	{
+		if( sdepth == CV_32F )
+		{
+			if( cn == 1 )
+			{
+				IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
+				_sum.create( isize, CV_MAKETYPE( sdepth, cn ) );
+				sum = _sum.getMat();
+				if( _sqsum.needed() )
+				{
+					_sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
+					sqsum = _sqsum.getMat();
+					ippiSqrIntegral_8u32f64f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32f*)sum.data, sum.step, (Ipp64f*)sqsum.data, sqsum.step, srcRoiSize, 0, 0 );
+				}
+				else
+				{
+					ippiIntegral_8u32f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32f*)sum.data, sum.step, srcRoiSize, 0 );
+				}
+				return;
+			}
+		}
+		if( sdepth == CV_32S )
+		{
+			if( cn == 1 )
+			{
+				IppiSize srcRoiSize = ippiSize( src.cols, src.rows );
+				_sum.create( isize, CV_MAKETYPE( sdepth, cn ) );
+				sum = _sum.getMat();
+				if( _sqsum.needed() )
+				{
+					_sqsum.create( isize, CV_MAKETYPE( CV_64F, cn ) );
+					sqsum = _sqsum.getMat();
+					ippiSqrIntegral_8u32s64f_C1R( (const Ipp8u*)src.data, src.step, (Ipp32s*)sum.data, sum.step, (Ipp64f*)sqsum.data, sqsum.step, srcRoiSize, 0, 0 );
+				}
+				else
+				{
+					ippiIntegral_8u32s_C1R( (const Ipp8u*)src.data, src.step, (Ipp32s*)sum.data, sum.step, srcRoiSize, 0 );
+				}
+				return;
+			}
+		}
+	}
+#endif
+
     _sum.create( isize, CV_MAKETYPE(sdepth, cn) );
     sum = _sum.getMat();
 
