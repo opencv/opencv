@@ -469,7 +469,7 @@ cv::Scalar cv::sum( InputArray _src )
 			Scalar sc;
 			for( int i = 0; i < cn; i++ )
 				sc[i] = res[i];
-			delete res;
+			delete []res;
 			return sc;
 		}
 	}
@@ -609,7 +609,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 				Scalar sc;
 				for( int i = 0; i < cn; i++ )
 					sc[i] = res[i];
-				delete res;
+				delete []res;
 				return sc;
 			}
 		}
