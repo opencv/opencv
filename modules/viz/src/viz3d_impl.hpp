@@ -410,6 +410,63 @@ namespace cv
 
         inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
         template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
+        
+        struct ConvertToVtkImage
+        {
+            struct Impl
+            {
+                static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+                {
+                    int i_chs = image.channels();
+            
+                    for (int i = 0; i < image.rows; ++i)
+                    {
+                        const unsigned char * irows = image.ptr<unsigned char>(i);
+                        for (int j = 0; j < image.cols; ++j, irows += i_chs)
+                        {
+                            unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                            memcpy(vrows, irows, i_chs);
+                            std::swap(vrows[0], vrows[2]); // BGR -> RGB
+                        }
+                    }
+                    output->Modified();
+                }
+                
+                static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
+                {
+                    for (int i = 0; i < image.rows; ++i)
+                    {
+                        const unsigned char * irows = image.ptr<unsigned char>(i);
+                        for (int j = 0; j < image.cols; ++j, ++irows)
+                        {
+                            unsigned char * vrows = static_cast<unsigned char *>(output->GetScalarPointer(j,i,0));
+                            *vrows = *irows;
+                        }
+                    }
+                    output->Modified();
+                }
+            };
+            
+            static void convert(const Mat &image, vtkSmartPointer<vtkImageData> output)
+            {
+                // Create the vtk image
+                output->SetDimensions(image.cols, image.rows, 1);
+                output->SetNumberOfScalarComponents(image.channels());
+                output->SetScalarTypeToUnsignedChar();
+                output->AllocateScalars();
+                
+                int i_chs = image.channels();
+                if (i_chs > 1)
+                {
+                    // Multi channel images are handled differently because of BGR <-> RGB
+                    Impl::copyImageMultiChannel(image, output);
+                }
+                else
+                {
+                    Impl::copyImageSingleChannel(image, output);
+                }
+            }
+        };
     }
 
 }

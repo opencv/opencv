@@ -155,9 +155,6 @@ namespace cv
             ImageOverlayWidget(const Mat &image, const Rect &rect);
             
             void setImage(const Mat &image);
-            
-        private:
-            struct CopyImpl;
         };
         
         class CV_EXPORTS Image3DWidget : public Widget3D
@@ -167,9 +164,6 @@ namespace cv
             Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
             
             void setImage(const Mat &image);
-        
-        private:
-            struct CopyImpl;
         };
         
         class CV_EXPORTS CameraPositionWidget : public Widget3D
@@ -181,8 +175,6 @@ namespace cv
             CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
             CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0);
             
-        private:
-            struct CopyImpl;
         };
         
         class CV_EXPORTS TrajectoryWidget : public Widget3D
