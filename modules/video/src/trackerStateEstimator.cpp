@@ -101,10 +101,11 @@ String TrackerStateEstimator::getClassName() const
 /**
  * TrackerStateEstimatorBoosting
  */
-TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( )
+TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( int numFeatures )
 {
 	className = "BOOSTING";
 	trained = false;
+	this->numFeatures = numFeatures;
 }
 
 TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
@@ -118,29 +119,55 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 	return confidenceMaps.back().back().first;
 }
 
+void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses )
+{
+	//initialize trainData and responses
+	trainData.create( confidenceMap.size() * numFeatures, 1, CV_32FC1 );
+	responses.create( confidenceMap.size() * numFeatures, 1, CV_32FC1 );
+
+	for( size_t i = 0; i < confidenceMap.size(); i++ )
+	{
+		Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at(i).first;
+		Mat stateFeatures = currentTargetState->getFeatures();
+
+		for ( int j = 0; j < stateFeatures.rows; j++ )
+		{
+			int posIndex = numFeatures * i + j;
+
+			//fill the trainData with the value of the feature j for sample i
+			trainData.at<float>( posIndex, 0 ) = stateFeatures.at<float>( j, 0 );
+
+			int classLabel = 0;
+			if( currentTargetState->isTargetFg() )
+				classLabel = 1;
+
+			//fill the responses (class background or class foreground)
+			responses.at<float>( posIndex, 0 ) = classLabel;
+		}
+	}
+
+}
+
 void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
 	ConfidenceMap lastConfidenceMap = confidenceMaps.back();
 
-
 	//prepare the trainData
-	for( size_t i = 0; i < lastConfidenceMap.size(); i++ )
-	{
-
-	}
-
+	Mat traindata;
+	Mat responses;
+	prepareData( lastConfidenceMap, traindata, responses );
 
 	//TODO update the scores of the confidence maps
 	if( !trained )
 	{
 		//this is the first time that the classifier is built
-		//boostModel.train();
+		boostModel.train( traindata, CV_ROW_SAMPLE, responses );
 		trained = true;
 	}
 	else
 	{
 		//the classifier is updated
-		//boostModel.train();
+		boostModel.train( traindata, CV_ROW_SAMPLE, responses, Mat(), Mat(), Mat(), Mat(), CvBoostParams(), true );
 	}
 
 }

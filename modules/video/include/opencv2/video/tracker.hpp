@@ -521,7 +521,7 @@ protected:
 class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
 {
 public:
-	TrackerStateEstimatorBoosting();
+	TrackerStateEstimatorBoosting( int numFeatures = 250 );
 	~TrackerStateEstimatorBoosting();
 
 protected:
@@ -529,8 +529,12 @@ protected:
 	void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
 
 private:
+
+	void prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses );
+
 	CvBoost boostModel;
 	bool trained;
+	int numFeatures;
 };
 
 /**

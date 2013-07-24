@@ -172,7 +172,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
 	//TODO train a boosted classified
 	model = new TrackerMILModel();
-	Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting();
+	Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting( params.featureSetNumFeatures );
 	model->setTrackerStateEstimator( stateEstimator );
 
 	//Run model estimation and update
