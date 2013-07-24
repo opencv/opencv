@@ -170,18 +170,18 @@ int main(int argc, const char* argv[])
     cout << endl;
 
     Mat frame0Gray;
-    cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame0, frame0Gray, COLOR_BGR2GRAY);
     Mat frame1Gray;
-    cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
+    cv::cvtColor(frame1, frame1Gray, COLOR_BGR2GRAY);
 
     // goodFeaturesToTrack
-
-    GoodFeaturesToTrackDetector_GPU detector(points, 0.01, minDist);
 
     GpuMat d_frame0Gray(frame0Gray);
     GpuMat d_prevPts;
 
-    detector(d_frame0Gray, d_prevPts);
+    Ptr<gpu::CornersDetector> detector = gpu::createGoodFeaturesToTrackDetector(d_frame0Gray.type(), points, 0.01, minDist);
+
+    detector->detect(d_frame0Gray, d_prevPts);
 
     // Sparse
 

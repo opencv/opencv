@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 //  WebP container demux.
@@ -27,7 +29,7 @@ extern "C" {
 
 #define DMUX_MAJ_VERSION 0
 #define DMUX_MIN_VERSION 1
-#define DMUX_REV_VERSION 0
+#define DMUX_REV_VERSION 1
 
 typedef struct {
   size_t start_;        // start location of the data
@@ -317,6 +319,7 @@ static ParseStatus ParseAnimationFrame(
   frame->duration_       = ReadLE24s(mem);
   frame->dispose_method_ = (WebPMuxAnimDispose)(ReadByte(mem) & 1);
   if (frame->width_ * (uint64_t)frame->height_ >= MAX_IMAGE_AREA) {
+    free(frame);
     return PARSE_ERROR;
   }
 

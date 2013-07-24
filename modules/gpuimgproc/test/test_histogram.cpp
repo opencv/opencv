@@ -72,11 +72,11 @@ GPU_TEST_P(HistEven, Accuracy)
     int hbins = 30;
     float hranges[] = {0.0f, 180.0f};
 
-    std::vector<cv::gpu::GpuMat> srcs;
-    cv::gpu::split(loadMat(hsv), srcs);
+    std::vector<cv::Mat> srcs;
+    cv::split(hsv, srcs);
 
     cv::gpu::GpuMat hist;
-    cv::gpu::histEven(srcs[0], hist, hbins, (int)hranges[0], (int)hranges[1]);
+    cv::gpu::histEven(loadMat(srcs[0]), hist, hbins, (int)hranges[0], (int)hranges[1]);
 
     cv::MatND histnd;
     int histSize[] = {hbins};

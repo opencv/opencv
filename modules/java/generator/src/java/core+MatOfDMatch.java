@@ -17,7 +17,7 @@ public class MatOfDMatch extends Mat {
     protected MatOfDMatch(long addr) {
         super(addr);
         if( !empty() && checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat: " + toString());
+            throw new IllegalArgumentException("Incompatible Mat: " + toString());
         //FIXME: do we need release() here?
     }
 
@@ -28,7 +28,7 @@ public class MatOfDMatch extends Mat {
     public MatOfDMatch(Mat m) {
         super(m, Range.all());
         if( !empty() && checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat: " + toString());
+            throw new IllegalArgumentException("Incompatible Mat: " + toString());
         //FIXME: do we need release() here?
     }
 

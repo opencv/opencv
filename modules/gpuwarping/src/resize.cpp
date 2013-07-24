@@ -44,7 +44,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::resize(InputArray, OutputArray, Size, double, double, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -58,30 +58,34 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& s)
+void cv::gpu::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, double fy, int interpolation, Stream& _stream)
 {
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR
-            || interpolation == INTER_CUBIC || interpolation == INTER_AREA);
-    CV_Assert(!(dsize == Size()) || (fx > 0 && fy > 0));
+    GpuMat src = _src.getGpuMat();
+
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_AREA );
+    CV_Assert( !(dsize == Size()) || (fx > 0 && fy > 0) );
 
     if (dsize == Size())
+    {
         dsize = Size(saturate_cast<int>(src.cols * fx), saturate_cast<int>(src.rows * fy));
+    }
     else
     {
         fx = static_cast<double>(dsize.width) / src.cols;
         fy = static_cast<double>(dsize.height) / src.rows;
     }
-    if (dsize != dst.size())
-        dst.create(dsize, src.type());
+
+    _dst.create(dsize, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     if (dsize == src.size())
     {
-        src.copyTo(dst, s);
+        src.copyTo(dst, _stream);
         return;
     }
 
-    cudaStream_t stream = StreamAccessor::getStream(s);
+    cudaStream_t stream = StreamAccessor::getStream(_stream);
 
     Size wholeSize;
     Point ofs;

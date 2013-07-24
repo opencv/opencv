@@ -82,8 +82,10 @@ GPU_TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+
     cv::gpu::GpuMat dst;
-    cv::gpu::matchTemplate(loadMat(image), loadMat(templ), dst, method);
+    alg->match(loadMat(image), loadMat(templ), dst);
 
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
@@ -128,8 +130,10 @@ GPU_TEST_P(MatchTemplate32F, Regression)
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn));
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+
     cv::gpu::GpuMat dst;
-    cv::gpu::matchTemplate(loadMat(image), loadMat(templ), dst, method);
+    alg->match(loadMat(image), loadMat(templ), dst);
 
     cv::Mat dst_gold;
     cv::matchTemplate(image, templ, dst_gold, method);
@@ -169,8 +173,10 @@ GPU_TEST_P(MatchTemplateBlackSource, Accuracy)
     cv::Mat pattern = readImage("matchtemplate/cat.png");
     ASSERT_FALSE(pattern.empty());
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+
     cv::gpu::GpuMat d_dst;
-    cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), d_dst, method);
+    alg->match(loadMat(image), loadMat(pattern), d_dst);
 
     cv::Mat dst(d_dst);
 
@@ -214,8 +220,10 @@ GPU_TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     cv::Mat pattern = readImage(patternName);
     ASSERT_FALSE(pattern.empty());
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), cv::TM_CCOEFF_NORMED);
+
     cv::gpu::GpuMat d_dst;
-    cv::gpu::matchTemplate(loadMat(image), loadMat(pattern), d_dst, cv::TM_CCOEFF_NORMED);
+    alg->match(loadMat(image), loadMat(pattern), d_dst);
 
     cv::Mat dst(d_dst);
 
@@ -263,8 +271,10 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
     cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(scene.type(), cv::TM_SQDIFF_NORMED);
+
     cv::gpu::GpuMat d_result;
-    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, cv::TM_SQDIFF_NORMED);
+    alg->match(loadMat(scene), loadMat(templ), d_result);
 
     cv::Mat result(d_result);
 
@@ -286,8 +296,10 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
     cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
+    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(scene.type(), cv::TM_SQDIFF);
+
     cv::gpu::GpuMat d_result;
-    cv::gpu::matchTemplate(loadMat(scene), loadMat(templ), d_result, cv::TM_SQDIFF);
+    alg->match(loadMat(scene), loadMat(templ), d_result);
 
     cv::Mat result(d_result);
 

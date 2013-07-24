@@ -105,6 +105,22 @@ namespace perf
     CV_EXPORTS void printCudaInfo();
 
     CV_EXPORTS void sortKeyPoints(std::vector<cv::KeyPoint>& keypoints, cv::InputOutputArray _descriptors = cv::noArray());
+
+#ifdef HAVE_CUDA
+    #define CV_PERF_TEST_CUDA_MAIN(modulename) \
+        int main(int argc, char **argv)\
+        {\
+            const char * impls[] = { "cuda", "plain" };\
+            CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, perf::printCudaInfo())\
+        }
+#else
+    #define CV_PERF_TEST_CUDA_MAIN(modulename) \
+        int main(int argc, char **argv)\
+        {\
+            const char * plain_only[] = { "plain" };\
+            CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only)\
+        }
+#endif
 }
 
 #endif // __OPENCV_GPU_PERF_UTILITY_HPP__

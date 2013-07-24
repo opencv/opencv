@@ -200,7 +200,7 @@ struct cv::softcascade::SCascade::Fields
             }
 
             fns = fns[SC_TREES];
-            if (fn.empty()) return false;
+            if (fn.empty()) return 0;
 
             // for each stage (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();

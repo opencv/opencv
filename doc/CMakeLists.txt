@@ -17,7 +17,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   set(OPTIONAL_DOC_LIST "")
 
 
-  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy)
+  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy bioinspired)
 
   # build lists of modules to be documented
   set(OPENCV2_MODULES "")

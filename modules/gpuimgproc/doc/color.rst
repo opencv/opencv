@@ -6,16 +6,16 @@ Color space processing
 
 
 gpu::cvtColor
------------------
+-------------
 Converts an image from one color space to another.
 
-.. ocv:function:: void gpu::cvtColor(const GpuMat& src, GpuMat& dst, int code, int dcn = 0, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null())
 
     :param src: Source image with  ``CV_8U`` , ``CV_16U`` , or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
-    :param dst: Destination image with the same size and depth as  ``src`` .
+    :param dst: Destination image.
 
-    :param code: Color space conversion code. For details, see  :ocv:func:`cvtColor` . Conversion to/from Luv and Bayer color spaces is not supported.
+    :param code: Color space conversion code. For details, see  :ocv:func:`cvtColor` .
 
     :param dcn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src`` and the  ``code`` .
 
@@ -27,11 +27,45 @@ Converts an image from one color space to another.
 
 
 
+gpu::demosaicing
+----------------
+Converts an image from Bayer pattern to RGB or grayscale.
+
+.. ocv:function:: void gpu::demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null())
+
+    :param src: Source image (8-bit or 16-bit single channel).
+
+    :param dst: Destination image.
+
+    :param code: Color space conversion code (see the description below).
+
+    :param dcn: Number of channels in the destination image. If the parameter is 0, the number of the channels is derived automatically from  ``src`` and the  ``code`` .
+
+    :param stream: Stream for the asynchronous version.
+
+The function can do the following transformations:
+
+* Demosaicing using bilinear interpolation
+
+    * ``COLOR_BayerBG2GRAY`` , ``COLOR_BayerGB2GRAY`` , ``COLOR_BayerRG2GRAY`` , ``COLOR_BayerGR2GRAY``
+
+    * ``COLOR_BayerBG2BGR`` , ``COLOR_BayerGB2BGR`` , ``COLOR_BayerRG2BGR`` , ``COLOR_BayerGR2BGR``
+
+* Demosaicing using Malvar-He-Cutler algorithm ([MHT2011]_)
+
+    * ``COLOR_BayerBG2GRAY_MHT`` , ``COLOR_BayerGB2GRAY_MHT`` , ``COLOR_BayerRG2GRAY_MHT`` , ``COLOR_BayerGR2GRAY_MHT``
+
+    * ``COLOR_BayerBG2BGR_MHT`` , ``COLOR_BayerGB2BGR_MHT`` , ``COLOR_BayerRG2BGR_MHT`` , ``COLOR_BayerGR2BGR_MHT``
+
+.. seealso:: :ocv:func:`cvtColor`
+
+
+
 gpu::swapChannels
 -----------------
 Exchanges the color channels of an image in-place.
 
-.. ocv:function:: void gpu::swapChannels(GpuMat& image, const int dstOrder[4], Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null())
 
     :param image: Source image. Supports only ``CV_8UC4`` type.
 
@@ -43,11 +77,27 @@ The methods support arbitrary permutations of the original channels, including r
 
 
 
+gpu::gammaCorrection
+--------------------
+Routines for correcting image color gamma.
+
+.. ocv:function:: void gpu::gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null())
+
+    :param src: Source image (3- or 4-channel 8 bit).
+
+    :param dst: Destination image.
+
+    :param forward: ``true`` for forward gamma correction or ``false`` for inverse gamma correction.
+
+    :param stream: Stream for the asynchronous version.
+
+
+
 gpu::alphaComp
--------------------
+--------------
 Composites two images using alpha opacity values contained in each image.
 
-.. ocv:function:: void gpu::alphaComp(const GpuMat& img1, const GpuMat& img2, GpuMat& dst, int alpha_op, Stream& stream = Stream::Null())
+.. ocv:function:: void gpu::alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null())
 
     :param img1: First image. Supports ``CV_8UC4`` , ``CV_16UC4`` , ``CV_32SC4`` and ``CV_32FC4`` types.
 
@@ -72,3 +122,7 @@ Composites two images using alpha opacity values contained in each image.
             * **ALPHA_PREMUL**
 
     :param stream: Stream for the asynchronous version.
+
+
+
+.. [MHT2011] Pascal Getreuer, Malvar-He-Cutler Linear Image Demosaicking, Image Processing On Line, 2011

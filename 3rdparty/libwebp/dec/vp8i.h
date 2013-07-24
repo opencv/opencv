@@ -1,8 +1,10 @@
 // Copyright 2010 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // VP8 decoder: internal header.
@@ -28,7 +30,7 @@ extern "C" {
 // version numbers
 #define DEC_MAJ_VERSION 0
 #define DEC_MIN_VERSION 3
-#define DEC_REV_VERSION 0
+#define DEC_REV_VERSION 1
 
 #define ONLY_KEYFRAME_CODE      // to remove any code related to P-Frames
 
@@ -276,6 +278,7 @@ struct VP8Decoder {
   // extensions
   const uint8_t* alpha_data_;   // compressed alpha data (if present)
   size_t alpha_data_size_;
+  int is_alpha_decoded_;  // true if alpha_data_ is decoded in alpha_plane_
   uint8_t* alpha_plane_;        // output. Persistent, contains the whole data.
 
   int layer_colorspace_;

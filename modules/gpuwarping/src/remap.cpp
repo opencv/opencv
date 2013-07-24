@@ -44,7 +44,7 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::remap(const GpuMat&, GpuMat&, const GpuMat&, const GpuMat&, int, int, Scalar, Stream&){ throw_no_cuda(); }
+void cv::gpu::remap(InputArray, OutputArray, InputArray, InputArray, int, int, Scalar, Stream&){ throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -58,13 +58,12 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap, int interpolation, int borderMode, Scalar borderValue, Stream& stream)
+void cv::gpu::remap(InputArray _src, OutputArray _dst, InputArray _xmap, InputArray _ymap, int interpolation, int borderMode, Scalar borderValue, Stream& stream)
 {
     using namespace cv::gpu::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, PtrStepSzf xmap, PtrStepSzf ymap, PtrStepSzb dst, int interpolation,
         int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
-
     static const func_t funcs[6][4] =
     {
         {remap_gpu<uchar>      , 0 /*remap_gpu<uchar2>*/ , remap_gpu<uchar3>     , remap_gpu<uchar4>     },
@@ -75,15 +74,21 @@ void cv::gpu::remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const Gp
         {remap_gpu<float>      , 0 /*remap_gpu<float2>*/ , remap_gpu<float3>     , remap_gpu<float4>     }
     };
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(xmap.type() == CV_32F && ymap.type() == CV_32F && xmap.size() == ymap.size());
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
-    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
+    GpuMat src = _src.getGpuMat();
+    GpuMat xmap = _xmap.getGpuMat();
+    GpuMat ymap = _ymap.getGpuMat();
+
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( xmap.type() == CV_32F && ymap.type() == CV_32F && xmap.size() == ymap.size() );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
+    CV_Assert( borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP );
 
     const func_t func = funcs[src.depth()][src.channels() - 1];
-    CV_Assert(func != 0);
+    if (!func)
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported input type");
 
-    dst.create(xmap.size(), src.type());
+    _dst.create(xmap.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     Scalar_<float> borderValueFloat;
     borderValueFloat = borderValue;

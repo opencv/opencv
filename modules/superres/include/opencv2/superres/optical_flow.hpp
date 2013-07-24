@@ -63,10 +63,12 @@ namespace cv
 
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1();
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1_GPU();
+        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_DualTVL1_OCL();
 
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_Brox_GPU();
 
         CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_GPU();
+        CV_EXPORTS Ptr<DenseOpticalFlowExt> createOptFlow_PyrLK_OCL();
     }
 }
 

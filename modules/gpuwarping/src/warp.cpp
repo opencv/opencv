@@ -47,17 +47,17 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::warpAffine(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpAffineMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::warpAffine(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpAffineMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::warpPerspective(const GpuMat&, GpuMat&, const Mat&, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpPerspectiveMaps(const Mat&, bool, Size, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::warpPerspective(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPerspectiveMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::buildWarpPlaneMaps(Size, Rect, const Mat&, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpCylindricalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpSphericalMaps(Size, Rect, const Mat&, const Mat&, float, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpPlaneMaps(Size, Rect, InputArray, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpCylindricalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::gpu::buildWarpSphericalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::rotate(const GpuMat&, GpuMat&, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::gpu::rotate(InputArray, OutputArray, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -79,14 +79,19 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream)
+void cv::gpu::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
     using namespace cv::gpu::cudev::imgproc;
 
-    CV_Assert(M.rows == 2 && M.cols == 3);
+    Mat M = _M.getMat();
 
-    xmap.create(dsize, CV_32FC1);
-    ymap.create(dsize, CV_32FC1);
+    CV_Assert( M.rows == 2 && M.cols == 3 );
+
+    _xmap.create(dsize, CV_32FC1);
+    _ymap.create(dsize, CV_32FC1);
+
+    GpuMat xmap = _xmap.getGpuMat();
+    GpuMat ymap = _ymap.getGpuMat();
 
     float coeffs[2 * 3];
     Mat coeffsMat(2, 3, CV_32F, (void*)coeffs);
@@ -103,14 +108,19 @@ void cv::gpu::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat
     buildWarpAffineMaps_gpu(coeffs, xmap, ymap, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::buildWarpPerspectiveMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream)
+void cv::gpu::buildWarpPerspectiveMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
     using namespace cv::gpu::cudev::imgproc;
 
-    CV_Assert(M.rows == 3 && M.cols == 3);
+    Mat M = _M.getMat();
 
-    xmap.create(dsize, CV_32FC1);
-    ymap.create(dsize, CV_32FC1);
+    CV_Assert( M.rows == 3 && M.cols == 3 );
+
+    _xmap.create(dsize, CV_32FC1);
+    _ymap.create(dsize, CV_32FC1);
+
+    GpuMat xmap = _xmap.getGpuMat();
+    GpuMat ymap = _ymap.getGpuMat();
 
     float coeffs[3 * 3];
     Mat coeffsMat(3, 3, CV_32F, (void*)coeffs);
@@ -174,17 +184,21 @@ namespace
     };
 }
 
-void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& s)
+void cv::gpu::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
 {
-    CV_Assert(M.rows == 2 && M.cols == 3);
+    GpuMat src = _src.getGpuMat();
+    Mat M = _M.getMat();
 
-    int interpolation = flags & INTER_MAX;
+    CV_Assert( M.rows == 2 && M.cols == 3 );
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
-    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
+    const int interpolation = flags & INTER_MAX;
 
-    dst.create(dsize, src.type());
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
+    CV_Assert( borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP );
+
+    _dst.create(dsize, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     Size wholeSize;
     Point ofs;
@@ -258,7 +272,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
             }
         };
 
-        dst.setTo(borderValue);
+        dst.setTo(borderValue, stream);
 
         double coeffs[2][3];
         Mat coeffsMat(2, 3, CV_64F, (void*)coeffs);
@@ -267,7 +281,7 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(s));
+        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(stream));
     }
     else
     {
@@ -305,21 +319,25 @@ void cv::gpu::warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsiz
         borderValueFloat = borderValue;
 
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
+            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(stream), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 
-void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& s)
+void cv::gpu::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
 {
-    CV_Assert(M.rows == 3 && M.cols == 3);
+    GpuMat src = _src.getGpuMat();
+    Mat M = _M.getMat();
 
-    int interpolation = flags & INTER_MAX;
+    CV_Assert( M.rows == 3 && M.cols == 3 );
 
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
-    CV_Assert(borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP);
+    const int interpolation = flags & INTER_MAX;
 
-    dst.create(dsize, src.type());
+    CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
+    CV_Assert( borderMode == BORDER_REFLECT101 || borderMode == BORDER_REPLICATE || borderMode == BORDER_CONSTANT || borderMode == BORDER_REFLECT || borderMode == BORDER_WRAP) ;
+
+    _dst.create(dsize, src.type());
+    GpuMat dst = _dst.getGpuMat();
 
     Size wholeSize;
     Point ofs;
@@ -393,7 +411,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
             }
         };
 
-        dst.setTo(borderValue);
+        dst.setTo(borderValue, stream);
 
         double coeffs[3][3];
         Mat coeffsMat(3, 3, CV_64F, (void*)coeffs);
@@ -402,7 +420,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         const func_t func = funcs[(flags & WARP_INVERSE_MAP) != 0][src.depth()][src.channels() - 1];
         CV_Assert(func != 0);
 
-        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(s));
+        func(src, dst, coeffs, interpolation, StreamAccessor::getStream(stream));
     }
     else
     {
@@ -440,7 +458,7 @@ void cv::gpu::warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size
         borderValueFloat = borderValue;
 
         func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y, coeffs,
-            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(s), deviceSupports(FEATURE_SET_COMPUTE_20));
+            dst, interpolation, borderMode, borderValueFloat.val, StreamAccessor::getStream(stream), deviceSupports(FEATURE_SET_COMPUTE_20));
     }
 }
 
@@ -457,23 +475,30 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T,
-                                 float scale, GpuMat& map_x, GpuMat& map_y, Stream& stream)
+void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, InputArray _T,
+                                 float scale, OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
-    (void)src_size;
-    using namespace ::cv::gpu::cudev::imgproc;
+    (void) src_size;
 
-    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
-    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
-    CV_Assert((T.size() == Size(3,1) || T.size() == Size(1,3)) && T.type() == CV_32F && T.isContinuous());
+    Mat K = _K.getMat();
+    Mat R = _R.getMat();
+    Mat T = _T.getMat();
+
+    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
+    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
+    CV_Assert( (T.size() == Size(3,1) || T.size() == Size(1,3)) && T.type() == CV_32FC1 && T.isContinuous() );
 
     Mat K_Rinv = K * R.t();
     Mat R_Kinv = R * K.inv();
-    CV_Assert(K_Rinv.isContinuous());
-    CV_Assert(R_Kinv.isContinuous());
+    CV_Assert( K_Rinv.isContinuous() );
+    CV_Assert( R_Kinv.isContinuous() );
 
-    map_x.create(dst_roi.size(), CV_32F);
-    map_y.create(dst_roi.size(), CV_32F);
+    _map_x.create(dst_roi.size(), CV_32FC1);
+    _map_y.create(dst_roi.size(), CV_32FC1);
+
+    GpuMat map_x = _map_x.getGpuMat();
+    GpuMat map_y = _map_y.getGpuMat();
+
     cudev::imgproc::buildWarpPlaneMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(),
                        T.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
@@ -491,22 +516,28 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                       GpuMat& map_x, GpuMat& map_y, Stream& stream)
+void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+                                       OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
-    (void)src_size;
-    using namespace ::cv::gpu::cudev::imgproc;
+    (void) src_size;
 
-    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
-    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
+    Mat K = _K.getMat();
+    Mat R = _R.getMat();
+
+    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
+    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
 
     Mat K_Rinv = K * R.t();
     Mat R_Kinv = R * K.inv();
-    CV_Assert(K_Rinv.isContinuous());
-    CV_Assert(R_Kinv.isContinuous());
+    CV_Assert( K_Rinv.isContinuous() );
+    CV_Assert( R_Kinv.isContinuous() );
 
-    map_x.create(dst_roi.size(), CV_32F);
-    map_y.create(dst_roi.size(), CV_32F);
+    _map_x.create(dst_roi.size(), CV_32FC1);
+    _map_y.create(dst_roi.size(), CV_32FC1);
+
+    GpuMat map_x = _map_x.getGpuMat();
+    GpuMat map_y = _map_y.getGpuMat();
+
     cudev::imgproc::buildWarpCylindricalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
@@ -524,22 +555,28 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                     GpuMat& map_x, GpuMat& map_y, Stream& stream)
+void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+                                     OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
-    (void)src_size;
-    using namespace ::cv::gpu::cudev::imgproc;
+    (void) src_size;
 
-    CV_Assert(K.size() == Size(3,3) && K.type() == CV_32F);
-    CV_Assert(R.size() == Size(3,3) && R.type() == CV_32F);
+    Mat K = _K.getMat();
+    Mat R = _R.getMat();
+
+    CV_Assert( K.size() == Size(3,3) && K.type() == CV_32FC1 );
+    CV_Assert( R.size() == Size(3,3) && R.type() == CV_32FC1 );
 
     Mat K_Rinv = K * R.t();
     Mat R_Kinv = R * K.inv();
-    CV_Assert(K_Rinv.isContinuous());
-    CV_Assert(R_Kinv.isContinuous());
+    CV_Assert( K_Rinv.isContinuous() );
+    CV_Assert( R_Kinv.isContinuous() );
 
-    map_x.create(dst_roi.size(), CV_32F);
-    map_y.create(dst_roi.size(), CV_32F);
+    _map_x.create(dst_roi.size(), CV_32FC1);
+    _map_y.create(dst_roi.size(), CV_32FC1);
+
+    GpuMat map_x = _map_x.getGpuMat();
+    GpuMat map_y = _map_y.getGpuMat();
+
     cudev::imgproc::buildWarpSphericalMaps(dst_roi.tl().x, dst_roi.tl().y, map_x, map_y, K_Rinv.ptr<float>(), R_Kinv.ptr<float>(), scale, StreamAccessor::getStream(stream));
 }
 
@@ -589,10 +626,9 @@ namespace
     };
 }
 
-void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& stream)
+void cv::gpu::rotate(InputArray _src, OutputArray _dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream);
-
     static const func_t funcs[6][4] =
     {
         {NppRotate<CV_8U, nppiRotate_8u_C1R>::call, 0, NppRotate<CV_8U, nppiRotate_8u_C3R>::call, NppRotate<CV_8U, nppiRotate_8u_C4R>::call},
@@ -603,12 +639,16 @@ void cv::gpu::rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, d
         {NppRotate<CV_32F, nppiRotate_32f_C1R>::call, 0, NppRotate<CV_32F, nppiRotate_32f_C3R>::call, NppRotate<CV_32F, nppiRotate_32f_C4R>::call}
     };
 
-    CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F);
-    CV_Assert(src.channels() == 1 || src.channels() == 3 || src.channels() == 4);
-    CV_Assert(interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC);
+    GpuMat src = _src.getGpuMat();
 
-    dst.create(dsize, src.type());
-    dst.setTo(Scalar::all(0));
+    CV_Assert( src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F );
+    CV_Assert( src.channels() == 1 || src.channels() == 3 || src.channels() == 4 );
+    CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC );
+
+    _dst.create(dsize, src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    dst.setTo(Scalar::all(0), stream);
 
     funcs[src.depth()][src.channels() - 1](src, dst, dsize, angle, xShift, yShift, interpolation, StreamAccessor::getStream(stream));
 }

@@ -103,9 +103,10 @@ PERF_TEST_P(Sz, HoughLines,
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughLines(d_src, d_lines, d_buf, rho, theta, threshold);
+        cv::Ptr<cv::gpu::HoughLinesDetector> hough = cv::gpu::createHoughLinesDetector(rho, theta, threshold);
+
+        TEST_CYCLE() hough->detect(d_src, d_lines);
 
         cv::Mat gpu_lines(d_lines.row(0));
         cv::Vec2f* begin = gpu_lines.ptr<cv::Vec2f>(0);
@@ -151,9 +152,10 @@ PERF_TEST_P(Image, HoughLinesP,
     {
         const cv::gpu::GpuMat d_mask(mask);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughLinesP(d_mask, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::gpu::HoughSegmentDetector> hough = cv::gpu::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+
+        TEST_CYCLE() hough->detect(d_mask, d_lines);
 
         cv::Mat gpu_lines(d_lines);
         cv::Vec4i* begin = gpu_lines.ptr<cv::Vec4i>();
@@ -201,9 +203,10 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
     {
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_circles;
-        cv::gpu::HoughCirclesBuf d_buf;
 
-        TEST_CYCLE() cv::gpu::HoughCircles(d_src, d_circles, d_buf, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        cv::Ptr<cv::gpu::HoughCirclesDetector> houghCircles = cv::gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
+        TEST_CYCLE() houghCircles->detect(d_src, d_circles);
 
         cv::Mat gpu_circles(d_circles);
         cv::Vec3f* begin = gpu_circles.ptr<cv::Vec3f>(0);
@@ -283,7 +286,7 @@ PERF_TEST_P(Method_Sz, GeneralizedHough,
         const cv::gpu::GpuMat d_dy(dy);
         cv::gpu::GpuMat posAndVotes;
 
-        cv::Ptr<cv::gpu::GeneralizedHough_GPU> d_hough = cv::gpu::GeneralizedHough_GPU::create(method);
+        cv::Ptr<cv::gpu::GeneralizedHough> d_hough = cv::gpu::GeneralizedHough::create(method);
         if (method & GHT_ROTATION)
         {
             d_hough->set("maxAngle", 90.0);

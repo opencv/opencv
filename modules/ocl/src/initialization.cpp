@@ -319,8 +319,7 @@ namespace cv
             char clVersion[256];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
-
-                cl_uint numsdev;
+                cl_uint numsdev = 0;
                 cl_int status = clGetDeviceIDs(platforms[i], devicetype, 0, NULL, &numsdev);
                 if(status != CL_DEVICE_NOT_FOUND)
                     openCLVerifyCall(status);
