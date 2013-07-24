@@ -105,3 +105,4 @@ protected:
 }}  // namespace cv::reg
 
 #endif  // MAPPER_H_
+

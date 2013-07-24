@@ -85,11 +85,11 @@ void MapAffine::inverseWarp(const Mat& img1, Mat& img2) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void MapAffine::inverseMap(Ptr<Map>& invMap) const
+Ptr<Map> MapAffine::inverseMap(void) const
 {
     Matx<double, 2, 2> invLinTr = linTr_.inv(DECOMP_LU);
     Vec<double, 2> invShift = -invLinTr*shift_;
-    invMap = new MapAffine(invLinTr, invShift);
+    return Ptr<Map>(new MapAffine(invLinTr, invShift));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

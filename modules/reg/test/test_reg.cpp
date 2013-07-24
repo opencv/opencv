@@ -95,8 +95,7 @@ void RegTest::testShift()
     cout << Mat(mapShift->getShift()) << endl;
 
     // Check accuracy
-    Ptr<Map> mapInv;
-    mapShift->inverseMap(mapInv);
+    Ptr<Map> mapInv(mapShift->inverseMap());
     mapTest.compose(*mapInv.obj);
     double shNorm = norm(mapTest.getShift());
     EXPECT_LE(shNorm, 0.1);
@@ -130,8 +129,7 @@ void RegTest::testEuclidean()
     cout << Mat(mapAff->getShift()) << endl;
 
     // Check accuracy
-    Ptr<Map> mapInv;
-    mapAff->inverseMap(mapInv);
+    Ptr<Map> mapInv(mapAff->inverseMap());
     mapTest.compose(*mapInv.obj);
     double shNorm = norm(mapTest.getShift());
     EXPECT_LE(shNorm, 0.1);
@@ -169,8 +167,7 @@ void RegTest::testSimilarity()
     cout << Mat(mapAff->getShift()) << endl;
 
     // Check accuracy
-    Ptr<Map> mapInv;
-    mapAff->inverseMap(mapInv);
+    Ptr<Map> mapInv(mapAff->inverseMap());
     mapTest.compose(*mapInv.obj);
     double shNorm = norm(mapTest.getShift());
     EXPECT_LE(shNorm, 0.1);
@@ -204,8 +201,7 @@ void RegTest::testAffine()
     cout << Mat(mapAff->getShift()) << endl;
 
     // Check accuracy
-    Ptr<Map> mapInv;
-    mapAff->inverseMap(mapInv);
+    Ptr<Map> mapInv(mapAff->inverseMap());
     mapTest.compose(*mapInv.obj);
     double shNorm = norm(mapTest.getShift());
     EXPECT_LE(shNorm, 0.1);
@@ -238,8 +234,7 @@ void RegTest::testProjective()
     cout << Mat(mapProj->getProjTr()) << endl;
 
     // Check accuracy
-    Ptr<Map> mapInv;
-    mapProj->inverseMap(mapInv);
+    Ptr<Map> mapInv(mapProj->inverseMap());
     mapTest.compose(*mapInv.obj);
     double projNorm = norm(mapTest.getProjTr());
     EXPECT_LE(projNorm, sqrt(3.) + 0.01);

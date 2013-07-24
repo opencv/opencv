@@ -84,10 +84,10 @@ void MapShift::inverseWarp(const Mat& img1, Mat& img2) const
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void MapShift::inverseMap(Ptr<Map>& invMap) const
+Ptr<Map> MapShift::inverseMap(void) const
 {
     Vec<double, 2> invShift = -shift_;
-    invMap = new MapShift(invShift);
+    return Ptr<Map>(new MapShift(invShift));
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

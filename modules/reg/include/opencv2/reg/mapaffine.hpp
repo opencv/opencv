@@ -69,7 +69,7 @@ public:
 
     void inverseWarp(const cv::Mat& img1, cv::Mat& img2) const;
 
-    void inverseMap(cv::Ptr<Map>& invMap) const;
+    cv::Ptr<Map> inverseMap(void) const;
 
     void compose(const Map& map);
 

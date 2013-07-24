@@ -75,9 +75,9 @@ public:
 
     /*!
      * Calculates the inverse map
-     * \param[out] invMap Inverse map
+     * \return Inverse map
      */
-    virtual void inverseMap(cv::Ptr<Map>& invMap) const = 0;
+    virtual cv::Ptr<Map> inverseMap(void) const = 0;
 
     /*!
      * Changes the map composing the current transformation with the one provided in the call.
