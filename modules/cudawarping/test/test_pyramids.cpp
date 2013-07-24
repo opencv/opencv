@@ -67,7 +67,7 @@ PARAM_TEST_CASE(PyrDown, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-GPU_TEST_P(PyrDown, Accuracy)
+CUDA_TEST_P(PyrDown, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -80,7 +80,7 @@ GPU_TEST_P(PyrDown, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, PyrDown, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, PyrDown, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
@@ -107,7 +107,7 @@ PARAM_TEST_CASE(PyrUp, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-GPU_TEST_P(PyrUp, Accuracy)
+CUDA_TEST_P(PyrUp, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -120,7 +120,7 @@ GPU_TEST_P(PyrUp, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-4 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, PyrUp, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, PyrUp, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),

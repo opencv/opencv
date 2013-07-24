@@ -49,9 +49,9 @@ TEST(matchTemplate)
         d_templ.upload(templ);
         alg->match(d_src, d_templ, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         alg->match(d_src, d_templ, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -76,9 +76,9 @@ TEST(minMaxLoc)
 
         d_src.upload(src);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::minMaxLoc(d_src, &min_val, &max_val, &min_loc, &max_loc);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -122,9 +122,9 @@ TEST(remap)
 
         cuda::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::remap(d_src, d_dst, d_xmap, d_ymap, interpolation, borderMode);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -150,9 +150,9 @@ TEST(dft)
 
         cuda::dft(d_src, d_dst, Size(size, size));
 
-        GPU_ON;
+        CUDA_ON;
         cuda::dft(d_src, d_dst, Size(size, size));
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -180,9 +180,9 @@ TEST(cornerHarris)
 
         harris->compute(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         harris->compute(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -208,9 +208,9 @@ TEST(integral)
 
         cuda::integralBuffered(d_src, d_sum, d_buf);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::integralBuffered(d_src, d_sum, d_buf);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -236,9 +236,9 @@ TEST(norm)
 
         cuda::norm(d_src, NORM_INF, d_buf);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::norm(d_src, NORM_INF, d_buf);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -268,9 +268,9 @@ TEST(meanShift)
 
         cuda::meanShiftFiltering(d_src, d_dst, sp, sr);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::meanShiftFiltering(d_src, d_dst, sp, sr);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -291,16 +291,16 @@ TEST(SURF)
     surf(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
-    cuda::SURF_GPU d_surf;
+    cuda::SURF_CUDA d_surf;
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
     cuda::GpuMat d_descriptors;
 
     d_surf(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
 
-    GPU_ON;
+    CUDA_ON;
     d_surf(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 #endif
@@ -319,15 +319,15 @@ TEST(FAST)
     FAST(src, keypoints, 20);
     CPU_OFF;
 
-    cuda::FAST_GPU d_FAST(20);
+    cuda::FAST_CUDA d_FAST(20);
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
 
     d_FAST(d_src, cuda::GpuMat(), d_keypoints);
 
-    GPU_ON;
+    CUDA_ON;
     d_FAST(d_src, cuda::GpuMat(), d_keypoints);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 
@@ -346,16 +346,16 @@ TEST(ORB)
     orb(src, Mat(), keypoints, descriptors);
     CPU_OFF;
 
-    cuda::ORB_GPU d_orb;
+    cuda::ORB_CUDA d_orb;
     cuda::GpuMat d_src(src);
     cuda::GpuMat d_keypoints;
     cuda::GpuMat d_descriptors;
 
     d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
 
-    GPU_ON;
+    CUDA_ON;
     d_orb(d_src, cuda::GpuMat(), d_keypoints, d_descriptors);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 
@@ -373,9 +373,9 @@ TEST(BruteForceMatcher)
     Mat train;
     gen(train, 3000, desc_len, CV_32F, 0, 1);
 
-    // Init GPU matcher
+    // Init CUDA matcher
 
-    cuda::BFMatcher_GPU d_matcher(NORM_L2);
+    cuda::BFMatcher_CUDA d_matcher(NORM_L2);
 
     cuda::GpuMat d_query(query);
     cuda::GpuMat d_train(train);
@@ -394,9 +394,9 @@ TEST(BruteForceMatcher)
 
     d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
 
-    GPU_ON;
+    CUDA_ON;
     d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-    GPU_OFF;
+    CUDA_OFF;
 
     SUBTEST << "knnMatch";
 
@@ -408,9 +408,9 @@ TEST(BruteForceMatcher)
 
     d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
 
-    GPU_ON;
+    CUDA_ON;
     d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
-    GPU_OFF;
+    CUDA_OFF;
 
     SUBTEST << "radiusMatch";
 
@@ -426,9 +426,9 @@ TEST(BruteForceMatcher)
 
     d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
 
-    GPU_ON;
+    CUDA_ON;
     d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 
@@ -455,9 +455,9 @@ TEST(magnitude)
 
         cuda::magnitude(d_x, d_y, d_mag);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::magnitude(d_x, d_y, d_mag);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -485,9 +485,9 @@ TEST(add)
 
         cuda::add(d_src1, d_src2, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::add(d_src1, d_src2, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -513,9 +513,9 @@ TEST(log)
 
         cuda::log(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::log(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -543,9 +543,9 @@ TEST(mulSpectrums)
 
         cuda::mulSpectrums(d_src1, d_src2, d_dst, 0, true);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::mulSpectrums(d_src1, d_src2, d_dst, 0, true);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -571,9 +571,9 @@ TEST(resize)
 
         cuda::resize(d_src, d_dst, Size(), 2.0, 2.0);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::resize(d_src, d_dst, Size(), 2.0, 2.0);
-        GPU_OFF;
+        CUDA_OFF;
     }
 
     for (int size = 1000; size <= 3000; size += 1000)
@@ -592,9 +592,9 @@ TEST(resize)
 
         cuda::resize(d_src, d_dst, Size(), 0.5, 0.5);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::resize(d_src, d_dst, Size(), 0.5, 0.5);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -617,9 +617,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_GRAY2BGRA, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_GRAY2BGRA, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -634,9 +634,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2YCrCb, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2YCrCb, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -651,9 +651,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_YCrCb2BGR, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_YCrCb2BGR, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -668,9 +668,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2XYZ, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2XYZ, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -685,9 +685,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_XYZ2BGR, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_XYZ2BGR, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -702,9 +702,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2HSV, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_BGR2HSV, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -719,9 +719,9 @@ TEST(cvtColor)
 
     cuda::cvtColor(d_src, d_dst, COLOR_HSV2BGR, 4);
 
-    GPU_ON;
+    CUDA_ON;
     cuda::cvtColor(d_src, d_dst, COLOR_HSV2BGR, 4);
-    GPU_OFF;
+    CUDA_OFF;
 
     cv::swap(src, dst);
     d_src.swap(d_dst);
@@ -752,9 +752,9 @@ TEST(erode)
 
         erode->apply(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         erode->apply(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -779,9 +779,9 @@ TEST(threshold)
 
         cuda::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::threshold(d_src, d_dst, 50.0, 0.0, THRESH_BINARY);
-        GPU_OFF;
+        CUDA_OFF;
     }
 
     for (int size = 2000; size <= 4000; size += 1000)
@@ -800,9 +800,9 @@ TEST(threshold)
 
         cuda::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::threshold(d_src, d_dst, 50.0, 0.0, THRESH_TRUNC);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -827,9 +827,9 @@ TEST(pow)
 
         cuda::pow(d_src, -2.0, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::pow(d_src, -2.0, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -864,9 +864,9 @@ TEST(projectPoints)
 
         cuda::projectPoints(d_src, rvec, tvec, camera_mat, Mat(), d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::projectPoints(d_src, rvec, tvec, camera_mat, Mat(), d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -906,10 +906,10 @@ TEST(solvePnPRansac)
                        max_dist, int(num_points * 0.05), inliers_cpu);
         CPU_OFF;
 
-        GPU_ON;
+        CUDA_ON;
         cuda::solvePnPRansac(object, image, camera_mat, Mat::zeros(1, 8, CV_32F), rvec, tvec, false, num_iters,
                             max_dist, int(num_points * 0.05), &inliers_gpu);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -937,9 +937,9 @@ TEST(GaussianBlur)
 
         gauss->apply(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         gauss->apply(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -970,9 +970,9 @@ TEST(filter2D)
             Ptr<cuda::Filter> filter2D = cuda::createLinearFilter(d_src.type(), -1, kernel);
             filter2D->apply(d_src, d_dst);
 
-            GPU_ON;
+            CUDA_ON;
             filter2D->apply(d_src, d_dst);
-            GPU_OFF;
+            CUDA_OFF;
         }
     }
 }
@@ -997,9 +997,9 @@ TEST(pyrDown)
 
         cuda::pyrDown(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::pyrDown(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1024,9 +1024,9 @@ TEST(pyrUp)
 
         cuda::pyrUp(d_src, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::pyrUp(d_src, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1053,9 +1053,9 @@ TEST(equalizeHist)
 
         cuda::equalizeHist(d_src, d_dst, d_buf);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::equalizeHist(d_src, d_dst, d_buf);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1079,9 +1079,9 @@ TEST(Canny)
 
     canny->detect(d_img, d_edges);
 
-    GPU_ON;
+    CUDA_ON;
     canny->detect(d_img, d_edges);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 
@@ -1109,9 +1109,9 @@ TEST(reduce)
 
         cuda::reduce(d_src, d_dst0, 0, REDUCE_MIN);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::reduce(d_src, d_dst0, 0, REDUCE_MIN);
-        GPU_OFF;
+        CUDA_OFF;
 
         SUBTEST << size << 'x' << size << ", dim = 1";
 
@@ -1123,9 +1123,9 @@ TEST(reduce)
 
         cuda::reduce(d_src, d_dst1, 1, REDUCE_MIN);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::reduce(d_src, d_dst1, 1, REDUCE_MIN);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1155,9 +1155,9 @@ TEST(gemm)
 
         cuda::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
 
-        GPU_ON;
+        CUDA_ON;
         cuda::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1181,9 +1181,9 @@ TEST(GoodFeaturesToTrack)
 
     detector->detect(d_src, d_pts);
 
-    GPU_ON;
+    CUDA_ON;
     detector->detect(d_src, d_pts);
-    GPU_OFF;
+    CUDA_OFF;
 }
 
 TEST(PyrLKOpticalFlow)
@@ -1230,9 +1230,9 @@ TEST(PyrLKOpticalFlow)
 
         d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
 
-        GPU_ON;
+        CUDA_ON;
         d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
-        GPU_OFF;
+        CUDA_OFF;
     }
 }
 
@@ -1255,9 +1255,9 @@ TEST(FarnebackOpticalFlow)
     calc.flags |= useGaussianBlur ? OPTFLOW_FARNEBACK_GAUSSIAN : 0;
 
     cuda::GpuMat d_frame0(frame0), d_frame1(frame1), d_flowx, d_flowy;
-    GPU_ON;
+    CUDA_ON;
     calc(d_frame0, d_frame1, d_flowx, d_flowy);
-    GPU_OFF;
+    CUDA_OFF;
 
     Mat flow;
     CPU_ON;

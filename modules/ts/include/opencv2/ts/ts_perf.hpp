@@ -210,7 +210,7 @@ public:
   static bool targetDevice();
 };
 
-#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#define PERF_RUN_CUDA()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *

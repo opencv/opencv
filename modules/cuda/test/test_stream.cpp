@@ -84,7 +84,7 @@ void checkMemSet(int status, void* userData)
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
 
-GPU_TEST_P(Async, MemSet)
+CUDA_TEST_P(Async, MemSet)
 {
     cv::cuda::Stream stream;
 
@@ -114,7 +114,7 @@ void checkConvert(int status, void* userData)
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
 
-GPU_TEST_P(Async, Convert)
+CUDA_TEST_P(Async, Convert)
 {
     cv::cuda::Stream stream;
 
@@ -128,7 +128,7 @@ GPU_TEST_P(Async, Convert)
     stream.waitForCompletion();
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Stream, Async, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Stream, Async, ALL_DEVICES);
 
 #endif // CUDART_VERSION >= 5000
 

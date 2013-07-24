@@ -167,7 +167,7 @@ struct Labeling : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
+CUDA_TEST_P(Labeling, DISABLED_ConnectedComponents)
 {
     cv::Mat image;
     cvtColor(loat_image(), image, cv::COLOR_BGR2GRAY);
@@ -192,6 +192,6 @@ GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
     host.checkCorrectness(cv::Mat(components));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ConnectedComponents, Labeling, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_ConnectedComponents, Labeling, ALL_DEVICES);
 
 #endif // HAVE_CUDA

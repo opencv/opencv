@@ -53,8 +53,6 @@ PARAM_TEST_CASE(HistEven, cv::cuda::DeviceInfo, cv::Size)
 {
     cv::cuda::DeviceInfo devInfo;
 
-    cv::Size size;
-
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
@@ -64,7 +62,7 @@ PARAM_TEST_CASE(HistEven, cv::cuda::DeviceInfo, cv::Size)
     }
 };
 
-GPU_TEST_P(HistEven, Accuracy)
+CUDA_TEST_P(HistEven, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
@@ -87,7 +85,7 @@ GPU_TEST_P(HistEven, Accuracy)
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HistEven, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, HistEven, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
@@ -109,7 +107,7 @@ PARAM_TEST_CASE(CalcHist, cv::cuda::DeviceInfo, cv::Size)
     }
 };
 
-GPU_TEST_P(CalcHist, Accuracy)
+CUDA_TEST_P(CalcHist, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
@@ -131,7 +129,7 @@ GPU_TEST_P(CalcHist, Accuracy)
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CalcHist, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CalcHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
@@ -152,7 +150,7 @@ PARAM_TEST_CASE(EqualizeHist, cv::cuda::DeviceInfo, cv::Size)
     }
 };
 
-GPU_TEST_P(EqualizeHist, Accuracy)
+CUDA_TEST_P(EqualizeHist, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
@@ -165,7 +163,7 @@ GPU_TEST_P(EqualizeHist, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 3.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, EqualizeHist, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, EqualizeHist, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES));
 
@@ -193,7 +191,7 @@ PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
     }
 };
 
-GPU_TEST_P(CLAHE, Accuracy)
+CUDA_TEST_P(CLAHE, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
@@ -208,7 +206,7 @@ GPU_TEST_P(CLAHE, Accuracy)
     ASSERT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CLAHE, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CLAHE, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(0.0, 40.0)));

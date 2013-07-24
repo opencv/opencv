@@ -170,7 +170,7 @@ int main(int argc, const char* argv[])
     BroxOpticalFlow brox(0.197f, 50.0f, 0.8f, 10, 77, 10);
     PyrLKOpticalFlow lk; lk.winSize = Size(7, 7);
     FarnebackOpticalFlow farn;
-    OpticalFlowDual_TVL1_GPU tvl1;
+    OpticalFlowDual_TVL1_CUDA tvl1;
     FastOpticalFlowBM fastBM;
 
     {

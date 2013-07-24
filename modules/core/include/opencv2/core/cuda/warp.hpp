@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_DEVICE_WARP_HPP__
-#define __OPENCV_GPU_DEVICE_WARP_HPP__
+#ifndef __OPENCV_CUDA_DEVICE_WARP_HPP__
+#define __OPENCV_CUDA_DEVICE_WARP_HPP__
 
 namespace cv { namespace cuda { namespace device
 {
@@ -128,4 +128,4 @@ namespace cv { namespace cuda { namespace device
     };
 }}} // namespace cv { namespace cuda { namespace cudev
 
-#endif /* __OPENCV_GPU_DEVICE_WARP_HPP__ */
+#endif /* __OPENCV_CUDA_DEVICE_WARP_HPP__ */

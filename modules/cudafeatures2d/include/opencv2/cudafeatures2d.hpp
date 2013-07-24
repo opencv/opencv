@@ -52,10 +52,10 @@
 
 namespace cv { namespace cuda {
 
-class CV_EXPORTS BFMatcher_GPU
+class CV_EXPORTS BFMatcher_CUDA
 {
 public:
-    explicit BFMatcher_GPU(int norm = cv::NORM_L2);
+    explicit BFMatcher_CUDA(int norm = cv::NORM_L2);
 
     // Add descriptors to train descriptor collection
     void add(const std::vector<GpuMat>& descCollection);
@@ -203,7 +203,7 @@ private:
     std::vector<GpuMat> trainDescCollection;
 };
 
-class CV_EXPORTS FAST_GPU
+class CV_EXPORTS FAST_CUDA
 {
 public:
     enum
@@ -216,7 +216,7 @@ public:
     // all features have same size
     static const int FEATURE_SIZE = 7;
 
-    explicit FAST_GPU(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
+    explicit FAST_CUDA(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05);
 
     //! finds the keypoints using FAST detector
     //! supports only CV_8UC1 images
@@ -257,7 +257,7 @@ private:
     GpuMat d_keypoints_;
 };
 
-class CV_EXPORTS ORB_GPU
+class CV_EXPORTS ORB_CUDA
 {
 public:
     enum
@@ -277,7 +277,7 @@ public:
     };
 
     //! Constructor
-    explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
+    explicit ORB_CUDA(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31,
                      int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31);
 
     //! Compute the ORB features on an image
@@ -349,7 +349,7 @@ private:
     std::vector<GpuMat> keyPointsPyr_;
     std::vector<int> keyPointsCount_;
 
-    FAST_GPU fastDetector_;
+    FAST_CUDA fastDetector_;
 
     Ptr<cuda::Filter> blurFilter;
 

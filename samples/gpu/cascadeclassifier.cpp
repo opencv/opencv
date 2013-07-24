@@ -130,7 +130,7 @@ int main(int argc, const char *argv[])
 
     if (getCudaEnabledDeviceCount() == 0)
     {
-        return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
+        return cerr << "No GPU found or the library is compiled without CUDA support" << endl, -1;
     }
 
     cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
@@ -172,7 +172,7 @@ int main(int argc, const char *argv[])
         }
     }
 
-    CascadeClassifier_GPU cascade_gpu;
+    CascadeClassifier_CUDA cascade_gpu;
     if (!cascade_gpu.load(cascadeName))
     {
         return cerr << "ERROR: Could not load cascade classifier \"" << cascadeName << "\"" << endl, help(), -1;

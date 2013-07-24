@@ -52,7 +52,7 @@ using namespace cv::superres::detail;
 
 #if !defined(HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAWARPING) || !defined(HAVE_OPENCV_CUDAFILTERS)
 
-Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
+Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_CUDA()
 {
     CV_Error(Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<SuperResolution>();
@@ -207,10 +207,10 @@ namespace
         funcs[src.channels()](src, dst, ksize);
     }
 
-    class BTVL1_GPU_Base
+    class BTVL1_CUDA_Base
     {
     public:
-        BTVL1_GPU_Base();
+        BTVL1_CUDA_Base();
 
         void process(const std::vector<GpuMat>& src, GpuMat& dst,
                      const std::vector<std::pair<GpuMat, GpuMat> >& forwardMotions, const std::vector<std::pair<GpuMat, GpuMat> >& backwardMotions,
@@ -256,7 +256,7 @@ namespace
         GpuMat regTerm_;
     };
 
-    BTVL1_GPU_Base::BTVL1_GPU_Base()
+    BTVL1_CUDA_Base::BTVL1_CUDA_Base()
     {
         scale_ = 4;
         iterations_ = 180;
@@ -268,7 +268,7 @@ namespace
         blurSigma_ = 0.0;
 
 #ifdef HAVE_OPENCV_CUDAOPTFLOW
-        opticalFlow_ = createOptFlow_Farneback_GPU();
+        opticalFlow_ = createOptFlow_Farneback_CUDA();
 #else
         opticalFlow_ = createOptFlow_Farneback();
 #endif
@@ -281,7 +281,7 @@ namespace
         curAlpha_ = -1.0;
     }
 
-    void BTVL1_GPU_Base::process(const std::vector<GpuMat>& src, GpuMat& dst,
+    void BTVL1_CUDA_Base::process(const std::vector<GpuMat>& src, GpuMat& dst,
                                  const std::vector<std::pair<GpuMat, GpuMat> >& forwardMotions, const std::vector<std::pair<GpuMat, GpuMat> >& backwardMotions,
                                  int baseIdx)
     {
@@ -377,7 +377,7 @@ namespace
         highRes_(inner).copyTo(dst);
     }
 
-    void BTVL1_GPU_Base::collectGarbage()
+    void BTVL1_CUDA_Base::collectGarbage()
     {
         filters_.clear();
 
@@ -401,12 +401,12 @@ namespace
 
 ////////////////////////////////////////////////////////////
 
-    class BTVL1_GPU : public SuperResolution, private BTVL1_GPU_Base
+    class BTVL1_CUDA : public SuperResolution, private BTVL1_CUDA_Base
     {
     public:
         AlgorithmInfo* info() const;
 
-        BTVL1_GPU();
+        BTVL1_CUDA();
 
         void collectGarbage();
 
@@ -438,7 +438,7 @@ namespace
         GpuMat finalOutput_;
     };
 
-    CV_INIT_ALGORITHM(BTVL1_GPU, "SuperResolution.BTVL1_GPU",
+    CV_INIT_ALGORITHM(BTVL1_CUDA, "SuperResolution.BTVL1_CUDA",
                       obj.info()->addParam(obj, "scale", obj.scale_, false, 0, 0, "Scale factor.");
                       obj.info()->addParam(obj, "iterations", obj.iterations_, false, 0, 0, "Iteration count.");
                       obj.info()->addParam(obj, "tau", obj.tau_, false, 0, 0, "Asymptotic value of steepest descent method.");
@@ -450,12 +450,12 @@ namespace
                       obj.info()->addParam(obj, "temporalAreaRadius", obj.temporalAreaRadius_, false, 0, 0, "Radius of the temporal search area.");
                       obj.info()->addParam<DenseOpticalFlowExt>(obj, "opticalFlow", obj.opticalFlow_, false, 0, 0, "Dense optical flow algorithm."));
 
-    BTVL1_GPU::BTVL1_GPU()
+    BTVL1_CUDA::BTVL1_CUDA()
     {
         temporalAreaRadius_ = 4;
     }
 
-    void BTVL1_GPU::collectGarbage()
+    void BTVL1_CUDA::collectGarbage()
     {
         curFrame_.release();
         prevFrame_.release();
@@ -471,10 +471,10 @@ namespace
         finalOutput_.release();
 
         SuperResolution::collectGarbage();
-        BTVL1_GPU_Base::collectGarbage();
+        BTVL1_CUDA_Base::collectGarbage();
     }
 
-    void BTVL1_GPU::initImpl(Ptr<FrameSource>& frameSource)
+    void BTVL1_CUDA::initImpl(Ptr<FrameSource>& frameSource)
     {
         const int cacheSize = 2 * temporalAreaRadius_ + 1;
 
@@ -495,7 +495,7 @@ namespace
         outPos_ = -1;
     }
 
-    void BTVL1_GPU::processImpl(Ptr<FrameSource>& frameSource, OutputArray _output)
+    void BTVL1_CUDA::processImpl(Ptr<FrameSource>& frameSource, OutputArray _output)
     {
         if (outPos_ >= storePos_)
         {
@@ -523,7 +523,7 @@ namespace
         }
     }
 
-    void BTVL1_GPU::readNextFrame(Ptr<FrameSource>& frameSource)
+    void BTVL1_CUDA::readNextFrame(Ptr<FrameSource>& frameSource)
     {
         frameSource->nextFrame(curFrame_);
 
@@ -545,7 +545,7 @@ namespace
         curFrame_.copyTo(prevFrame_);
     }
 
-    void BTVL1_GPU::processFrame(int idx)
+    void BTVL1_CUDA::processFrame(int idx)
     {
         const int startIdx = std::max(idx - temporalAreaRadius_, 0);
         const int procIdx = idx;
@@ -576,9 +576,9 @@ namespace
     }
 }
 
-Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
+Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_CUDA()
 {
-    return new BTVL1_GPU;
+    return new BTVL1_CUDA;
 }
 
 #endif // HAVE_CUDA

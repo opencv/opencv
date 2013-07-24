@@ -16,7 +16,7 @@ using namespace cv::cuda;
 
 static void help()
 {
-    cout << "\nThis program demonstrates using SURF_GPU features detector, descriptor extractor and BruteForceMatcher_GPU" << endl;
+    cout << "\nThis program demonstrates using SURF_CUDA features detector, descriptor extractor and BruteForceMatcher_CUDA" << endl;
     cout << "\nUsage:\n\tmatcher_simple_gpu --left <image1> --right <image2>" << endl;
 }
 
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 
     cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
-    SURF_GPU surf;
+    SURF_CUDA surf;
 
     // detecting keypoints & computing descriptors
     GpuMat keypoints1GPU, keypoints2GPU;
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     cout << "FOUND " << keypoints2GPU.cols << " keypoints on second image" << endl;
 
     // matching descriptors
-    BFMatcher_GPU matcher(NORM_L2);
+    BFMatcher_CUDA matcher(NORM_L2);
     GpuMat trainIdx, distance;
     matcher.matchSingle(descriptors1GPU, descriptors2GPU, trainIdx, distance);
 
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     surf.downloadKeypoints(keypoints2GPU, keypoints2);
     surf.downloadDescriptors(descriptors1GPU, descriptors1);
     surf.downloadDescriptors(descriptors2GPU, descriptors2);
-    BFMatcher_GPU::matchDownload(trainIdx, distance, matches);
+    BFMatcher_CUDA::matchDownload(trainIdx, distance, matches);
 
     // drawing the results
     Mat img_matches;

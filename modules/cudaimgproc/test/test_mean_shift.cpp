@@ -72,7 +72,7 @@ struct MeanShift : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(MeanShift, Filtering)
+CUDA_TEST_P(MeanShift, Filtering)
 {
     cv::Mat img_template;
     if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
@@ -94,7 +94,7 @@ GPU_TEST_P(MeanShift, Filtering)
     EXPECT_MAT_NEAR(img_template, result, 0.0);
 }
 
-GPU_TEST_P(MeanShift, Proc)
+CUDA_TEST_P(MeanShift, Proc)
 {
     cv::FileStorage fs;
     if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
@@ -120,7 +120,7 @@ GPU_TEST_P(MeanShift, Proc)
     EXPECT_MAT_NEAR(spmap_template, spmap, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MeanShift, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MeanShift, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////////////////////////////
 // MeanShiftSegmentation
@@ -144,7 +144,7 @@ PARAM_TEST_CASE(MeanShiftSegmentation, cv::cuda::DeviceInfo, MinSize)
     }
 };
 
-GPU_TEST_P(MeanShiftSegmentation, Regression)
+CUDA_TEST_P(MeanShiftSegmentation, Regression)
 {
     cv::Mat img = readImageType("meanshift/cones.png", CV_8UC4);
     ASSERT_FALSE(img.empty());
@@ -167,7 +167,7 @@ GPU_TEST_P(MeanShiftSegmentation, Regression)
     EXPECT_MAT_SIMILAR(dst_gold, dst_rgb, 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MeanShiftSegmentation, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, MeanShiftSegmentation, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinSize(0), MinSize(4), MinSize(20), MinSize(84), MinSize(340), MinSize(1364))));
 

@@ -46,9 +46,9 @@
 
 #define S(x) StreamAccessor::getStream(x)
 
-// GPU resize() is fast, but it differs from the CPU analog. Disabling this flag
+// CUDA resize() is fast, but it differs from the CPU analog. Disabling this flag
 // leads to an inefficient code. It's for debug purposes only.
-#define ENABLE_GPU_RESIZE 1
+#define ENABLE_CUDA_RESIZE 1
 
 using namespace cv;
 using namespace cv::cuda;

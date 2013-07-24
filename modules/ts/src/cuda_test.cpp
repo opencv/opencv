@@ -166,7 +166,7 @@ namespace cvtest
 
         if (!info.isCompatible())
         {
-            msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
+            msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current CUDA module build";
             throw std::runtime_error(msg.str());
         }
 

@@ -66,7 +66,7 @@ int main(int argc, const char* argv[])
 
         if (d_writer.empty())
         {
-            std::cout << "Open GPU Writer" << std::endl;
+            std::cout << "Open CUDA Writer" << std::endl;
 
             d_writer = cv::cudacodec::createVideoWriter("output_gpu.avi", frame.size(), FPS);
         }
@@ -104,7 +104,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without GPU Video encoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video encoding support\n" << std::endl;
     return 0;
 }
 

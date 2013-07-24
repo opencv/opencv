@@ -134,7 +134,7 @@ namespace cv { namespace cuda { namespace device
 
     template <typename T> struct TextureAccessor;
 
-    #define OPENCV_GPU_IMPLEMENT_RESIZE_TEX(type) \
+    #define OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(type) \
         texture<type, cudaTextureType2D, cudaReadModeElementType> tex_resize_##type (0, cudaFilterModePoint, cudaAddressModeClamp); \
         template <> struct TextureAccessor<type> \
         { \
@@ -152,19 +152,19 @@ namespace cv { namespace cuda { namespace device
             } \
         };
 
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(uchar)
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(uchar4)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(uchar)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(uchar4)
 
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(ushort)
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(ushort4)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(ushort)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(ushort4)
 
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(short)
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(short4)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(short)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(short4)
 
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(float)
-    OPENCV_GPU_IMPLEMENT_RESIZE_TEX(float4)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(float)
+    OPENCV_CUDA_IMPLEMENT_RESIZE_TEX(float4)
 
-    #undef OPENCV_GPU_IMPLEMENT_RESIZE_TEX
+    #undef OPENCV_CUDA_IMPLEMENT_RESIZE_TEX
 
     template <typename T>
     TextureAccessor<T> texAccessor(const PtrStepSz<T>& mat, int yoff, int xoff)

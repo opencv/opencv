@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_PRIVATE_GPU_HPP__
-#define __OPENCV_CORE_PRIVATE_GPU_HPP__
+#ifndef __OPENCV_CORE_PRIVATE_CUDA_HPP__
+#define __OPENCV_CORE_PRIVATE_CUDA_HPP__
 
 #ifndef __OPENCV_BUILD
 #  error this is a private header which should not be used from outside of the OpenCV library
@@ -71,7 +71,7 @@
 #  endif
 
 #  if defined(CUDA_ARCH_BIN_OR_PTX_10)
-#    error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
+#    error "OpenCV CUDA module doesn't support NVIDIA compute capability 1.0"
 #  endif
 #endif
 
@@ -82,7 +82,7 @@ namespace cv { namespace cuda {
 
 #ifndef HAVE_CUDA
 
-static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without GPU support"); }
+static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
 
 #else // HAVE_CUDA
 
@@ -140,4 +140,4 @@ namespace cv { namespace cuda
 
 #endif // HAVE_CUDA
 
-#endif // __OPENCV_CORE_GPU_PRIVATE_HPP__
+#endif // __OPENCV_CORE_CUDA_PRIVATE_HPP__

@@ -80,7 +80,7 @@ PARAM_TEST_CASE(HoughLines, cv::cuda::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-GPU_TEST_P(HoughLines, Accuracy)
+CUDA_TEST_P(HoughLines, Accuracy)
 {
     const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
     cv::cuda::setDevice(devInfo.deviceID());
@@ -108,7 +108,7 @@ GPU_TEST_P(HoughLines, Accuracy)
     ASSERT_MAT_NEAR(src, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughLines, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, HoughLines, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -127,7 +127,7 @@ PARAM_TEST_CASE(HoughCircles, cv::cuda::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-GPU_TEST_P(HoughCircles, Accuracy)
+CUDA_TEST_P(HoughCircles, Accuracy)
 {
     const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
     cv::cuda::setDevice(devInfo.deviceID());
@@ -181,7 +181,7 @@ GPU_TEST_P(HoughCircles, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HoughCircles, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, HoughCircles, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -193,7 +193,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::cuda::DeviceInfo, UseRoi)
 {
 };
 
-GPU_TEST_P(GeneralizedHough, Ballard)
+CUDA_TEST_P(GeneralizedHough, Ballard)
 {
     const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
     cv::cuda::setDevice(devInfo.deviceID());
@@ -252,7 +252,7 @@ GPU_TEST_P(GeneralizedHough, Ballard)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GeneralizedHough, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, GeneralizedHough, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
 

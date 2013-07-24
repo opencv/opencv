@@ -64,7 +64,7 @@ struct BroxOpticalFlow : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(BroxOpticalFlow, Regression)
+CUDA_TEST_P(BroxOpticalFlow, Regression)
 {
     cv::Mat frame0 = readImageType("opticalflow/frame0.png", CV_32FC1);
     ASSERT_FALSE(frame0.empty());
@@ -122,7 +122,7 @@ GPU_TEST_P(BroxOpticalFlow, Regression)
 #endif
 }
 
-GPU_TEST_P(BroxOpticalFlow, OpticalFlowNan)
+CUDA_TEST_P(BroxOpticalFlow, OpticalFlowNan)
 {
     cv::Mat frame0 = readImageType("opticalflow/frame0.png", CV_32FC1);
     ASSERT_FALSE(frame0.empty());
@@ -149,7 +149,7 @@ GPU_TEST_P(BroxOpticalFlow, OpticalFlowNan)
     EXPECT_TRUE(cv::checkRange(h_v));
 };
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, BroxOpticalFlow, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, BroxOpticalFlow, ALL_DEVICES);
 
 //////////////////////////////////////////////////////
 // PyrLKOpticalFlow
@@ -173,7 +173,7 @@ PARAM_TEST_CASE(PyrLKOpticalFlow, cv::cuda::DeviceInfo, UseGray)
     }
 };
 
-GPU_TEST_P(PyrLKOpticalFlow, Sparse)
+CUDA_TEST_P(PyrLKOpticalFlow, Sparse)
 {
     cv::Mat frame0 = readImage("opticalflow/frame0.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
@@ -241,7 +241,7 @@ GPU_TEST_P(PyrLKOpticalFlow, Sparse)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, PyrLKOpticalFlow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, PyrLKOpticalFlow, testing::Combine(
     ALL_DEVICES,
     testing::Values(UseGray(true), UseGray(false))));
 
@@ -276,7 +276,7 @@ PARAM_TEST_CASE(FarnebackOpticalFlow, cv::cuda::DeviceInfo, PyrScale, PolyN, Far
     }
 };
 
-GPU_TEST_P(FarnebackOpticalFlow, Accuracy)
+CUDA_TEST_P(FarnebackOpticalFlow, Accuracy)
 {
     cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -316,7 +316,7 @@ GPU_TEST_P(FarnebackOpticalFlow, Accuracy)
     EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, FarnebackOpticalFlow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FarnebackOpticalFlow, testing::Combine(
     ALL_DEVICES,
     testing::Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
     testing::Values(PolyN(5), PolyN(7)),
@@ -340,7 +340,7 @@ PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, UseRoi)
     }
 };
 
-GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
+CUDA_TEST_P(OpticalFlowDual_TVL1, Accuracy)
 {
     cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -348,7 +348,7 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::cuda::OpticalFlowDual_TVL1_GPU d_alg;
+    cv::cuda::OpticalFlowDual_TVL1_CUDA d_alg;
     cv::cuda::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
     cv::cuda::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
     d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
@@ -366,7 +366,7 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 4e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowDual_TVL1, testing::Combine(
     ALL_DEVICES,
     WHOLE_SUBMAT));
 
@@ -398,7 +398,7 @@ struct OpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
 };
 
-GPU_TEST_P(OpticalFlowBM, Accuracy)
+CUDA_TEST_P(OpticalFlowBM, Accuracy)
 {
     cv::cuda::DeviceInfo devInfo = GetParam();
     cv::cuda::setDevice(devInfo.deviceID());
@@ -425,7 +425,7 @@ GPU_TEST_P(OpticalFlowBM, Accuracy)
     EXPECT_MAT_NEAR(vely, d_vely, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, OpticalFlowBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, OpticalFlowBM, ALL_DEVICES);
 
 //////////////////////////////////////////////////////
 // FastOpticalFlowBM
@@ -501,7 +501,7 @@ struct FastOpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
 };
 
-GPU_TEST_P(FastOpticalFlowBM, Accuracy)
+CUDA_TEST_P(FastOpticalFlowBM, Accuracy)
 {
     const double MAX_RMSE = 0.6;
 
@@ -543,6 +543,6 @@ GPU_TEST_P(FastOpticalFlowBM, Accuracy)
     EXPECT_LE(err, MAX_RMSE);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_OptFlow, FastOpticalFlowBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_OptFlow, FastOpticalFlowBM, ALL_DEVICES);
 
 #endif // HAVE_CUDA

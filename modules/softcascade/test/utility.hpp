@@ -72,4 +72,4 @@ private:
 # define ALL_DEVICES testing::ValuesIn(std::vector<cv::cuda::DeviceInfo>())
 #endif
 
-#endif // __OPENCV_GPU_TEST_UTILITY_HPP__
+#endif // __OPENCV_CUDA_TEST_UTILITY_HPP__

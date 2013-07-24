@@ -218,7 +218,7 @@ public:
 
 CV_EXPORTS bool initModule_softcascade(void);
 
-// ======================== GPU version for soft cascade ===================== //
+// ======================== CUDA version for soft cascade ===================== //
 
 class CV_EXPORTS ChannelsProcessor
 {

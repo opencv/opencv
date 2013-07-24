@@ -67,7 +67,7 @@ PARAM_TEST_CASE(SetTo, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-GPU_TEST_P(SetTo, Zero)
+CUDA_TEST_P(SetTo, Zero)
 {
     cv::Scalar zero = cv::Scalar::all(0);
 
@@ -77,7 +77,7 @@ GPU_TEST_P(SetTo, Zero)
     EXPECT_MAT_NEAR(cv::Mat::zeros(size, type), mat, 0.0);
 }
 
-GPU_TEST_P(SetTo, SameVal)
+CUDA_TEST_P(SetTo, SameVal)
 {
     cv::Scalar val = cv::Scalar::all(randomDouble(0.0, 255.0));
 
@@ -102,7 +102,7 @@ GPU_TEST_P(SetTo, SameVal)
     }
 }
 
-GPU_TEST_P(SetTo, DifferentVal)
+CUDA_TEST_P(SetTo, DifferentVal)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
 
@@ -127,7 +127,7 @@ GPU_TEST_P(SetTo, DifferentVal)
     }
 }
 
-GPU_TEST_P(SetTo, Masked)
+CUDA_TEST_P(SetTo, Masked)
 {
     cv::Scalar val = randomScalar(0.0, 255.0);
     cv::Mat mat_gold = randomMat(size, type);
@@ -156,7 +156,7 @@ GPU_TEST_P(SetTo, Masked)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_GpuMat, SetTo, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_GpuMat, SetTo, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_TYPES,
@@ -184,7 +184,7 @@ PARAM_TEST_CASE(CopyTo, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-GPU_TEST_P(CopyTo, WithOutMask)
+CUDA_TEST_P(CopyTo, WithOutMask)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -195,7 +195,7 @@ GPU_TEST_P(CopyTo, WithOutMask)
     EXPECT_MAT_NEAR(src, dst, 0.0);
 }
 
-GPU_TEST_P(CopyTo, Masked)
+CUDA_TEST_P(CopyTo, Masked)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
@@ -226,7 +226,7 @@ GPU_TEST_P(CopyTo, Masked)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_GpuMat, CopyTo, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_GpuMat, CopyTo, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_TYPES,
@@ -255,7 +255,7 @@ PARAM_TEST_CASE(ConvertTo, cv::cuda::DeviceInfo, cv::Size, MatDepth, MatDepth, U
     }
 };
 
-GPU_TEST_P(ConvertTo, WithOutScaling)
+CUDA_TEST_P(ConvertTo, WithOutScaling)
 {
     cv::Mat src = randomMat(size, depth1);
 
@@ -285,7 +285,7 @@ GPU_TEST_P(ConvertTo, WithOutScaling)
     }
 }
 
-GPU_TEST_P(ConvertTo, WithScaling)
+CUDA_TEST_P(ConvertTo, WithScaling)
 {
     cv::Mat src = randomMat(size, depth1);
     double a = randomDouble(0.0, 1.0);
@@ -317,7 +317,7 @@ GPU_TEST_P(ConvertTo, WithScaling)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_GpuMat, ConvertTo, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_GpuMat, ConvertTo, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -336,7 +336,7 @@ struct EnsureSizeIsEnough : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(EnsureSizeIsEnough, BufferReuse)
+CUDA_TEST_P(EnsureSizeIsEnough, BufferReuse)
 {
     cv::cuda::GpuMat buffer(100, 100, CV_8U);
     cv::cuda::GpuMat old = buffer;
@@ -356,6 +356,6 @@ GPU_TEST_P(EnsureSizeIsEnough, BufferReuse)
     EXPECT_EQ(reinterpret_cast<intptr_t>(old.data), reinterpret_cast<intptr_t>(buffer.data));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_GpuMat, EnsureSizeIsEnough, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_GpuMat, EnsureSizeIsEnough, ALL_DEVICES);
 
 #endif // HAVE_CUDA

@@ -94,7 +94,7 @@ PARAM_TEST_CASE(Blur, cv::cuda::DeviceInfo, cv::Size, MatType, KSize, Anchor, Bo
     }
 };
 
-GPU_TEST_P(Blur, Accuracy)
+CUDA_TEST_P(Blur, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -109,7 +109,7 @@ GPU_TEST_P(Blur, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Blur, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Blur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
@@ -145,7 +145,7 @@ PARAM_TEST_CASE(Filter2D, cv::cuda::DeviceInfo, cv::Size, MatType, KSize, Anchor
     }
 };
 
-GPU_TEST_P(Filter2D, Accuracy)
+CUDA_TEST_P(Filter2D, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
@@ -161,7 +161,7 @@ GPU_TEST_P(Filter2D, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, CV_MAT_DEPTH(type) == CV_32F ? 1e-1 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Filter2D, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Filter2D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC4)),
@@ -193,7 +193,7 @@ PARAM_TEST_CASE(Laplacian, cv::cuda::DeviceInfo, cv::Size, MatType, KSize, UseRo
     }
 };
 
-GPU_TEST_P(Laplacian, Accuracy)
+CUDA_TEST_P(Laplacian, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -208,7 +208,7 @@ GPU_TEST_P(Laplacian, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 0.0 : 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Laplacian, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Laplacian, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4), MatType(CV_32FC1)),
@@ -248,7 +248,7 @@ PARAM_TEST_CASE(SeparableLinearFilter, cv::cuda::DeviceInfo, cv::Size, MatDepth,
     }
 };
 
-GPU_TEST_P(SeparableLinearFilter, Accuracy)
+CUDA_TEST_P(SeparableLinearFilter, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat rowKernel = randomMat(Size(ksize.width, 1), CV_32FC1, 0.0, 1.0);
@@ -265,7 +265,7 @@ GPU_TEST_P(SeparableLinearFilter, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 1.0 : 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, SeparableLinearFilter, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, SeparableLinearFilter, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -319,7 +319,7 @@ PARAM_TEST_CASE(Sobel, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, KSize
     }
 };
 
-GPU_TEST_P(Sobel, Accuracy)
+CUDA_TEST_P(Sobel, Accuracy)
 {
     if (dx == 0 && dy == 0)
         return;
@@ -337,7 +337,7 @@ GPU_TEST_P(Sobel, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 0.0 : 0.1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Sobel, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Sobel, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -384,7 +384,7 @@ PARAM_TEST_CASE(Scharr, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, Deri
     }
 };
 
-GPU_TEST_P(Scharr, Accuracy)
+CUDA_TEST_P(Scharr, Accuracy)
 {
     if (dx + dy != 1)
         return;
@@ -402,7 +402,7 @@ GPU_TEST_P(Scharr, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 0.0 : 0.1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Scharr, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Scharr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -446,7 +446,7 @@ PARAM_TEST_CASE(GaussianBlur, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels
     }
 };
 
-GPU_TEST_P(GaussianBlur, Accuracy)
+CUDA_TEST_P(GaussianBlur, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     double sigma1 = randomDouble(0.1, 1.0);
@@ -463,7 +463,7 @@ GPU_TEST_P(GaussianBlur, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() < CV_32F ? 4.0 : 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, GaussianBlur, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, GaussianBlur, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -514,7 +514,7 @@ PARAM_TEST_CASE(Erode, cv::cuda::DeviceInfo, cv::Size, MatType, Anchor, Iteratio
     }
 };
 
-GPU_TEST_P(Erode, Accuracy)
+CUDA_TEST_P(Erode, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -532,7 +532,7 @@ GPU_TEST_P(Erode, Accuracy)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Erode, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Erode, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
@@ -565,7 +565,7 @@ PARAM_TEST_CASE(Dilate, cv::cuda::DeviceInfo, cv::Size, MatType, Anchor, Iterati
     }
 };
 
-GPU_TEST_P(Dilate, Accuracy)
+CUDA_TEST_P(Dilate, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -583,7 +583,7 @@ GPU_TEST_P(Dilate, Accuracy)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, ksize), getInnerROI(dst, ksize), 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, Dilate, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, Dilate, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),
@@ -620,7 +620,7 @@ PARAM_TEST_CASE(MorphEx, cv::cuda::DeviceInfo, cv::Size, MatType, MorphOp, Ancho
     }
 };
 
-GPU_TEST_P(MorphEx, Accuracy)
+CUDA_TEST_P(MorphEx, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat kernel = cv::Mat::ones(3, 3, CV_8U);
@@ -638,7 +638,7 @@ GPU_TEST_P(MorphEx, Accuracy)
     EXPECT_MAT_NEAR(getInnerROI(dst_gold, border), getInnerROI(dst, border), 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Filters, MorphEx, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Filters, MorphEx, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC4)),

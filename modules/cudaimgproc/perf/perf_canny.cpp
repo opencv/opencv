@@ -66,7 +66,7 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
     const double low_thresh = 50.0;
     const double high_thresh = 100.0;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_image(image);
         cv::cuda::GpuMat dst;
@@ -75,7 +75,7 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
 
         TEST_CYCLE() canny->detect(d_image, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

@@ -93,7 +93,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
-            fs << "name" << "Canny_GPU"
+            fs << "name" << "Canny_CUDA"
             << "low_thresh" << low_thresh_
             << "high_thresh" << high_thresh_
             << "apperture_size" << apperture_size_
@@ -102,7 +102,7 @@ namespace
 
         void read(const FileNode& fn)
         {
-            CV_Assert( String(fn["name"]) == "Canny_GPU" );
+            CV_Assert( String(fn["name"]) == "Canny_CUDA" );
             low_thresh_ = (double)fn["low_thresh"];
             high_thresh_ = (double)fn["high_thresh"];
             apperture_size_ = (int)fn["apperture_size"];

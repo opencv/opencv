@@ -126,7 +126,7 @@ void printHelp()
             "  --mosaic-stdev=<float_number>\n"
             "      Consistent mosaicing stdev threshold. The default is 10.0.\n\n"
             "  -mi, --motion-inpaint=(yes|no)\n"
-            "      Do motion inpainting (requires GPU support). The default is no.\n"
+            "      Do motion inpainting (requires CUDA support). The default is no.\n"
             "  --mi-dist-thresh=<float_number>\n"
             "      Estimated flow distance threshold for motion inpainting. The default is 5.0.\n\n"
             "  -ci, --color-inpaint=(no|average|ns|telea)\n"
@@ -160,7 +160,7 @@ void printHelp()
             "  -lm2, --load-motions2=(<file_path>|no)\n"
             "      Load motions for wobble suppression from file. The default is no.\n\n"
             "  -gpu=(yes|no)\n"
-            "      Use GPU optimization whenever possible. The default is no.\n\n"
+            "      Use CUDA optimization whenever possible. The default is no.\n\n"
             "  -o, --output=(no|<file_path>)\n"
             "      Set output file path explicitely. The default is stabilized.avi.\n"
             "  --fps=(<float_number>|auto)\n"
@@ -423,7 +423,7 @@ int main(int argc, const char **argv)
 #ifdef HAVE_OPENCV_CUDA
                     ws = new MoreAccurateMotionWobbleSuppressorGpu();
 #else
-                    throw runtime_error("OpenCV is built without GPU support");
+                    throw runtime_error("OpenCV is built without CUDA support");
 #endif
 
                 ws->setMotionEstimator(wsMotionEstBuilder->build());

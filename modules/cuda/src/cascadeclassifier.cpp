@@ -48,19 +48,19 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no_cuda(); }
-cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_no_cuda(); }
-cv::cuda::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_no_cuda(); }
-bool cv::cuda::CascadeClassifier_GPU::empty() const                    { throw_no_cuda(); return true; }
-bool cv::cuda::CascadeClassifier_GPU::load(const String&)              { throw_no_cuda(); return true; }
-Size cv::cuda::CascadeClassifier_GPU::getClassifierSize() const        { throw_no_cuda(); return Size();}
-void cv::cuda::CascadeClassifier_GPU::release()                        { throw_no_cuda(); }
-int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
-int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
+cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA()               { throw_no_cuda(); }
+cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA(const String&)  { throw_no_cuda(); }
+cv::cuda::CascadeClassifier_CUDA::~CascadeClassifier_CUDA()              { throw_no_cuda(); }
+bool cv::cuda::CascadeClassifier_CUDA::empty() const                    { throw_no_cuda(); return true; }
+bool cv::cuda::CascadeClassifier_CUDA::load(const String&)              { throw_no_cuda(); return true; }
+Size cv::cuda::CascadeClassifier_CUDA::getClassifierSize() const        { throw_no_cuda(); return Size();}
+void cv::cuda::CascadeClassifier_CUDA::release()                        { throw_no_cuda(); }
+int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
+int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
 
 #else
 
-struct cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
 {
 public:
     CascadeClassifierImpl(){}
@@ -75,7 +75,7 @@ public:
 
 #ifndef HAVE_OPENCV_CUDALEGACY
 
-struct cv::cuda::CascadeClassifier_GPU::HaarCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_CUDA::HaarCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
 {
 public:
     HaarCascade()
@@ -104,7 +104,7 @@ public:
 
 #else
 
-struct cv::cuda::CascadeClassifier_GPU::HaarCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_CUDA::HaarCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
 {
 public:
     HaarCascade() : lastAllocatedFrameSize(-1, -1)
@@ -398,7 +398,7 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-struct cv::cuda::CascadeClassifier_GPU::LbpCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_CUDA::LbpCascade : cv::cuda::CascadeClassifier_CUDA::CascadeClassifierImpl
 {
 public:
     struct Stage
@@ -528,48 +528,48 @@ private:
 
     bool read(const FileNode &root)
     {
-        const char *GPU_CC_STAGE_TYPE       = "stageType";
-        const char *GPU_CC_FEATURE_TYPE     = "featureType";
-        const char *GPU_CC_BOOST            = "BOOST";
-        const char *GPU_CC_LBP              = "LBP";
-        const char *GPU_CC_MAX_CAT_COUNT    = "maxCatCount";
-        const char *GPU_CC_HEIGHT           = "height";
-        const char *GPU_CC_WIDTH            = "width";
-        const char *GPU_CC_STAGE_PARAMS     = "stageParams";
-        const char *GPU_CC_MAX_DEPTH        = "maxDepth";
-        const char *GPU_CC_FEATURE_PARAMS   = "featureParams";
-        const char *GPU_CC_STAGES           = "stages";
-        const char *GPU_CC_STAGE_THRESHOLD  = "stageThreshold";
-        const float GPU_THRESHOLD_EPS       = 1e-5f;
-        const char *GPU_CC_WEAK_CLASSIFIERS = "weakClassifiers";
-        const char *GPU_CC_INTERNAL_NODES   = "internalNodes";
-        const char *GPU_CC_LEAF_VALUES      = "leafValues";
-        const char *GPU_CC_FEATURES         = "features";
-        const char *GPU_CC_RECT             = "rect";
+        const char *CUDA_CC_STAGE_TYPE       = "stageType";
+        const char *CUDA_CC_FEATURE_TYPE     = "featureType";
+        const char *CUDA_CC_BOOST            = "BOOST";
+        const char *CUDA_CC_LBP              = "LBP";
+        const char *CUDA_CC_MAX_CAT_COUNT    = "maxCatCount";
+        const char *CUDA_CC_HEIGHT           = "height";
+        const char *CUDA_CC_WIDTH            = "width";
+        const char *CUDA_CC_STAGE_PARAMS     = "stageParams";
+        const char *CUDA_CC_MAX_DEPTH        = "maxDepth";
+        const char *CUDA_CC_FEATURE_PARAMS   = "featureParams";
+        const char *CUDA_CC_STAGES           = "stages";
+        const char *CUDA_CC_STAGE_THRESHOLD  = "stageThreshold";
+        const float CUDA_THRESHOLD_EPS       = 1e-5f;
+        const char *CUDA_CC_WEAK_CLASSIFIERS = "weakClassifiers";
+        const char *CUDA_CC_INTERNAL_NODES   = "internalNodes";
+        const char *CUDA_CC_LEAF_VALUES      = "leafValues";
+        const char *CUDA_CC_FEATURES         = "features";
+        const char *CUDA_CC_RECT             = "rect";
 
-        String stageTypeStr = (String)root[GPU_CC_STAGE_TYPE];
-        CV_Assert(stageTypeStr == GPU_CC_BOOST);
+        String stageTypeStr = (String)root[CUDA_CC_STAGE_TYPE];
+        CV_Assert(stageTypeStr == CUDA_CC_BOOST);
 
-        String featureTypeStr = (String)root[GPU_CC_FEATURE_TYPE];
-        CV_Assert(featureTypeStr == GPU_CC_LBP);
+        String featureTypeStr = (String)root[CUDA_CC_FEATURE_TYPE];
+        CV_Assert(featureTypeStr == CUDA_CC_LBP);
 
-        NxM.width =  (int)root[GPU_CC_WIDTH];
-        NxM.height = (int)root[GPU_CC_HEIGHT];
+        NxM.width =  (int)root[CUDA_CC_WIDTH];
+        NxM.height = (int)root[CUDA_CC_HEIGHT];
         CV_Assert( NxM.height > 0 && NxM.width > 0 );
 
-        isStumps = ((int)(root[GPU_CC_STAGE_PARAMS][GPU_CC_MAX_DEPTH]) == 1) ? true : false;
+        isStumps = ((int)(root[CUDA_CC_STAGE_PARAMS][CUDA_CC_MAX_DEPTH]) == 1) ? true : false;
         CV_Assert(isStumps);
 
-        FileNode fn = root[GPU_CC_FEATURE_PARAMS];
+        FileNode fn = root[CUDA_CC_FEATURE_PARAMS];
         if (fn.empty())
             return false;
 
-        ncategories = fn[GPU_CC_MAX_CAT_COUNT];
+        ncategories = fn[CUDA_CC_MAX_CAT_COUNT];
 
         subsetSize = (ncategories + 31) / 32;
         nodeStep = 3 + ( ncategories > 0 ? subsetSize : 1 );
 
-        fn = root[GPU_CC_STAGES];
+        fn = root[CUDA_CC_STAGES];
         if (fn.empty())
             return false;
 
@@ -586,9 +586,9 @@ private:
         {
             FileNode fns = *it;
             Stage st;
-            st.threshold = (float)fns[GPU_CC_STAGE_THRESHOLD] - GPU_THRESHOLD_EPS;
+            st.threshold = (float)fns[CUDA_CC_STAGE_THRESHOLD] - CUDA_THRESHOLD_EPS;
 
-            fns = fns[GPU_CC_WEAK_CLASSIFIERS];
+            fns = fns[CUDA_CC_WEAK_CLASSIFIERS];
             if (fns.empty())
                 return false;
 
@@ -605,8 +605,8 @@ private:
             {
                 FileNode fnw = *it1;
 
-                FileNode internalNodes = fnw[GPU_CC_INTERNAL_NODES];
-                FileNode leafValues = fnw[GPU_CC_LEAF_VALUES];
+                FileNode internalNodes = fnw[CUDA_CC_INTERNAL_NODES];
+                FileNode leafValues = fnw[CUDA_CC_LEAF_VALUES];
                 if ( internalNodes.empty() || leafValues.empty() )
                     return false;
 
@@ -640,7 +640,7 @@ private:
             }
         }
 
-        fn = root[GPU_CC_FEATURES];
+        fn = root[CUDA_CC_FEATURES];
         if( fn.empty() )
             return false;
         std::vector<uchar> features;
@@ -648,7 +648,7 @@ private:
         FileNodeIterator f_it = fn.begin(), f_end = fn.end();
         for (; f_it != f_end; ++f_it)
         {
-            FileNode rect = (*f_it)[GPU_CC_RECT];
+            FileNode rect = (*f_it)[CUDA_CC_RECT];
             FileNodeIterator r_it = rect.begin();
             features.push_back(saturate_cast<uchar>((int)*(r_it++)));
             features.push_back(saturate_cast<uchar>((int)*(r_it++)));
@@ -694,36 +694,36 @@ private:
     static const int integralFactor = 4;
 };
 
-cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU()
+cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA()
 : findLargestObject(false), visualizeInPlace(false), impl(0) {}
 
-cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
+cv::cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA(const String& filename)
 : findLargestObject(false), visualizeInPlace(false), impl(0) { load(filename); }
 
-cv::cuda::CascadeClassifier_GPU::~CascadeClassifier_GPU() { release(); }
+cv::cuda::CascadeClassifier_CUDA::~CascadeClassifier_CUDA() { release(); }
 
-void cv::cuda::CascadeClassifier_GPU::release() { if (impl) { delete impl; impl = 0; } }
+void cv::cuda::CascadeClassifier_CUDA::release() { if (impl) { delete impl; impl = 0; } }
 
-bool cv::cuda::CascadeClassifier_GPU::empty() const { return impl == 0; }
+bool cv::cuda::CascadeClassifier_CUDA::empty() const { return impl == 0; }
 
-Size cv::cuda::CascadeClassifier_GPU::getClassifierSize() const
+Size cv::cuda::CascadeClassifier_CUDA::getClassifierSize() const
 {
     return this->empty() ? Size() : impl->getClassifierCvSize();
 }
 
-int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
+int cv::cuda::CascadeClassifier_CUDA::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
 {
     CV_Assert( !this->empty());
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, cv::Size());
 }
 
-int cv::cuda::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
+int cv::cuda::CascadeClassifier_CUDA::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
 {
     CV_Assert( !this->empty());
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
 }
 
-bool cv::cuda::CascadeClassifier_GPU::load(const String& filename)
+bool cv::cuda::CascadeClassifier_CUDA::load(const String& filename)
 {
     release();
 
@@ -744,9 +744,9 @@ bool cv::cuda::CascadeClassifier_GPU::load(const String& filename)
         return impl->read(filename);
     }
 
-    const char *GPU_CC_LBP = "LBP";
+    const char *CUDA_CC_LBP = "LBP";
     String featureTypeStr = (String)fs.getFirstTopLevelNode()["featureType"];
-    if (featureTypeStr == GPU_CC_LBP)
+    if (featureTypeStr == CUDA_CC_LBP)
         impl = new LbpCascade();
     else
         impl = new HaarCascade();

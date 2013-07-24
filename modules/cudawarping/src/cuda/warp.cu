@@ -180,7 +180,7 @@ namespace cv { namespace cuda { namespace device
             }
         };
 
-        #define OPENCV_GPU_IMPLEMENT_WARP_TEX(type) \
+        #define OPENCV_CUDA_IMPLEMENT_WARP_TEX(type) \
             texture< type , cudaTextureType2D > tex_warp_ ## type (0, cudaFilterModePoint, cudaAddressModeClamp); \
             struct tex_warp_ ## type ## _reader \
             { \
@@ -235,31 +235,31 @@ namespace cv { namespace cuda { namespace device
                 } \
             };
 
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(uchar)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(uchar2)
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(uchar4)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(uchar)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(uchar2)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(uchar4)
 
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(schar)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(char2)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(char4)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(schar)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(char2)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(char4)
 
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(ushort)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(ushort2)
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(ushort4)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(ushort)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(ushort2)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(ushort4)
 
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(short)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(short2)
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(short4)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(short)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(short2)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(short4)
 
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(int)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(int2)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(int4)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(int)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(int2)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(int4)
 
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(float)
-        //OPENCV_GPU_IMPLEMENT_WARP_TEX(float2)
-        OPENCV_GPU_IMPLEMENT_WARP_TEX(float4)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(float)
+        //OPENCV_CUDA_IMPLEMENT_WARP_TEX(float2)
+        OPENCV_CUDA_IMPLEMENT_WARP_TEX(float4)
 
-        #undef OPENCV_GPU_IMPLEMENT_WARP_TEX
+        #undef OPENCV_CUDA_IMPLEMENT_WARP_TEX
 
         template <class Transform, template <typename> class Filter, template <typename> class B, typename T> struct WarpDispatcher
         {

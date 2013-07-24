@@ -177,7 +177,7 @@ struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescript
 };
 
 // desabled while resize does not fixed
-GPU_TEST_P(HOG, Detect)
+CUDA_TEST_P(HOG, Detect)
 {
     cv::Mat img_rgb = readImage("hog/road.png");
     ASSERT_FALSE(img_rgb.empty());
@@ -202,7 +202,7 @@ GPU_TEST_P(HOG, Detect)
     f.close();
 }
 
-GPU_TEST_P(HOG, GetDescriptors)
+CUDA_TEST_P(HOG, GetDescriptors)
 {
     // Load image (e.g. train data, composed from windows)
     cv::Mat img_rgb = readImage("hog/train_data.png");
@@ -286,7 +286,7 @@ GPU_TEST_P(HOG, GetDescriptors)
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, HOG, ALL_DEVICES);
 
 //============== caltech hog tests =====================//
 
@@ -305,7 +305,7 @@ struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::Devic
     }
 };
 
-GPU_TEST_P(CalTech, HOG)
+CUDA_TEST_P(CalTech, HOG)
 {
     cv::cuda::GpuMat d_img(img);
     cv::Mat markedImage(img.clone());
@@ -352,14 +352,14 @@ PARAM_TEST_CASE(LBP_Read_classifier, cv::cuda::DeviceInfo, int)
     }
 };
 
-GPU_TEST_P(LBP_Read_classifier, Accuracy)
+CUDA_TEST_P(LBP_Read_classifier, Accuracy)
 {
-    cv::cuda::CascadeClassifier_GPU classifier;
+    cv::cuda::CascadeClassifier_CUDA classifier;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
     ASSERT_TRUE(classifier.load(classifierXmlPath));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier,
+INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_Read_classifier,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 
@@ -374,7 +374,7 @@ PARAM_TEST_CASE(LBP_classify, cv::cuda::DeviceInfo, int)
     }
 };
 
-GPU_TEST_P(LBP_classify, Accuracy)
+CUDA_TEST_P(LBP_classify, Accuracy)
 {
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
     std::string imagePath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/er.png";
@@ -396,7 +396,7 @@ GPU_TEST_P(LBP_classify, Accuracy)
     for (; it != rects.end(); ++it)
         cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0));
 
-    cv::cuda::CascadeClassifier_GPU gpuClassifier;
+    cv::cuda::CascadeClassifier_CUDA gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
 
     cv::cuda::GpuMat gpu_rects;
@@ -421,7 +421,7 @@ GPU_TEST_P(LBP_classify, Accuracy)
     (void)count;
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_classify,
+INSTANTIATE_TEST_CASE_P(CUDA_ObjDetect, LBP_classify,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 #endif // HAVE_CUDA

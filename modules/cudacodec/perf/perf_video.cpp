@@ -73,7 +73,7 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 
     const string inputFile = perf::TestBase::getDataPath(GetParam());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::cudacodec::VideoReader> d_reader = cv::cudacodec::createVideoReader(inputFile);
 
@@ -81,7 +81,7 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
 
         TEST_CYCLE_N(10) d_reader->nextFrame(frame);
 
-        GPU_SANITY_CHECK(frame);
+        CUDA_SANITY_CHECK(frame);
     }
     else
     {
@@ -117,7 +117,7 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
 
     cv::Mat frame;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 

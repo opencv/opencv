@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_WARP_SHUFFLE_HPP__
-#define __OPENCV_GPU_WARP_SHUFFLE_HPP__
+#ifndef __OPENCV_CUDA_WARP_SHUFFLE_HPP__
+#define __OPENCV_CUDA_WARP_SHUFFLE_HPP__
 
 namespace cv { namespace cuda { namespace device
 {
@@ -142,4 +142,4 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_GPU_WARP_SHUFFLE_HPP__
+#endif // __OPENCV_CUDA_WARP_SHUFFLE_HPP__

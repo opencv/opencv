@@ -61,7 +61,7 @@ int main()
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {
-            std::cout << "GPU module isn't built for GPU #" << i << " ("
+            std::cout << "CUDA module isn't built for GPU #" << i << " ("
                  << dev_info.name() << ", CC " << dev_info.majorVersion()
                  << dev_info.minorVersion() << "\n";
             return -1;

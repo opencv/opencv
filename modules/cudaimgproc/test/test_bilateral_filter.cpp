@@ -72,7 +72,7 @@ PARAM_TEST_CASE(BilateralFilter, cv::cuda::DeviceInfo, cv::Size, MatType)
     }
 };
 
-GPU_TEST_P(BilateralFilter, Accuracy)
+CUDA_TEST_P(BilateralFilter, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -87,7 +87,7 @@ GPU_TEST_P(BilateralFilter, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, BilateralFilter, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, BilateralFilter, testing::Combine(
     ALL_DEVICES,
     testing::Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(639, 481)),
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_32FC1), MatType(CV_32FC3))

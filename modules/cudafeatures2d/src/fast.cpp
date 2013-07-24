@@ -47,23 +47,23 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::cuda::FAST_GPU::FAST_GPU(int, bool, double) { throw_no_cuda(); }
-void cv::cuda::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::cuda::FAST_GPU::operator ()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_GPU::convertKeypoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::cuda::FAST_GPU::release() { throw_no_cuda(); }
-int cv::cuda::FAST_GPU::calcKeyPointsLocation(const GpuMat&, const GpuMat&) { throw_no_cuda(); return 0; }
-int cv::cuda::FAST_GPU::getKeyPoints(GpuMat&) { throw_no_cuda(); return 0; }
+cv::cuda::FAST_CUDA::FAST_CUDA(int, bool, double) { throw_no_cuda(); }
+void cv::cuda::FAST_CUDA::operator ()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::FAST_CUDA::operator ()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::FAST_CUDA::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::FAST_CUDA::convertKeypoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::FAST_CUDA::release() { throw_no_cuda(); }
+int cv::cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat&, const GpuMat&) { throw_no_cuda(); return 0; }
+int cv::cuda::FAST_CUDA::getKeyPoints(GpuMat&) { throw_no_cuda(); return 0; }
 
 #else /* !defined (HAVE_CUDA) */
 
-cv::cuda::FAST_GPU::FAST_GPU(int _threshold, bool _nonmaxSupression, double _keypointsRatio) :
+cv::cuda::FAST_CUDA::FAST_CUDA(int _threshold, bool _nonmaxSupression, double _keypointsRatio) :
     nonmaxSupression(_nonmaxSupression), threshold(_threshold), keypointsRatio(_keypointsRatio), count_(0)
 {
 }
 
-void cv::cuda::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+void cv::cuda::FAST_CUDA::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 {
     if (image.empty())
         return;
@@ -72,7 +72,7 @@ void cv::cuda::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, st
     downloadKeypoints(d_keypoints_, keypoints);
 }
 
-void cv::cuda::FAST_GPU::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::cuda::FAST_CUDA::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
         return;
@@ -81,7 +81,7 @@ void cv::cuda::FAST_GPU::downloadKeypoints(const GpuMat& d_keypoints, std::vecto
     convertKeypoints(h_keypoints, keypoints);
 }
 
-void cv::cuda::FAST_GPU::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::cuda::FAST_CUDA::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (h_keypoints.empty())
         return;
@@ -102,7 +102,7 @@ void cv::cuda::FAST_GPU::convertKeypoints(const Mat& h_keypoints, std::vector<Ke
     }
 }
 
-void cv::cuda::FAST_GPU::operator ()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
+void cv::cuda::FAST_CUDA::operator ()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
 {
     calcKeyPointsLocation(img, mask);
     keypoints.cols = getKeyPoints(keypoints);
@@ -117,7 +117,7 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-int cv::cuda::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& mask)
+int cv::cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat& img, const GpuMat& mask)
 {
     using namespace cv::cuda::device::fast;
 
@@ -140,7 +140,7 @@ int cv::cuda::FAST_GPU::calcKeyPointsLocation(const GpuMat& img, const GpuMat& m
     return count_;
 }
 
-int cv::cuda::FAST_GPU::getKeyPoints(GpuMat& keypoints)
+int cv::cuda::FAST_CUDA::getKeyPoints(GpuMat& keypoints)
 {
     using namespace cv::cuda::device::fast;
 
@@ -159,7 +159,7 @@ int cv::cuda::FAST_GPU::getKeyPoints(GpuMat& keypoints)
     return count_;
 }
 
-void cv::cuda::FAST_GPU::release()
+void cv::cuda::FAST_CUDA::release()
 {
     kpLoc_.release();
     score_.release();

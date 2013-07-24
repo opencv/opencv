@@ -13,12 +13,12 @@ using std::tr1::get;
     };\
     TEST_P(fixture##_##name, name /*perf*/){ RunPerfTestBody(); }\
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
-    void fixture##_##name::PerfTestBody() { if (PERF_RUN_GPU()) __gpu(); else __cpu(); }
+    void fixture##_##name::PerfTestBody() { if (PERF_RUN_CUDA()) __gpu(); else __cpu(); }
 
 #define RUN_CPU(fixture, name)\
     void fixture##_##name::__cpu()
 
-#define RUN_GPU(fixture, name)\
+#define RUN_CUDA(fixture, name)\
     void fixture##_##name::__gpu()
 
 #define NO_CPU(fixture, name)\
@@ -60,7 +60,7 @@ SC_PERF_TEST_P(SCascadeTest, detect,
                         std::string("cv/cascadeandhog/cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 
-RUN_GPU(SCascadeTest, detect)
+RUN_CUDA(SCascadeTest, detect)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));;
     ASSERT_FALSE(cpu.empty());
@@ -118,7 +118,7 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectInRoi,
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png")),
         testing::Range(0, 5)))
 
-RUN_GPU(SCascadeTestRoi, detectInRoi)
+RUN_CUDA(SCascadeTestRoi, detectInRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
@@ -163,7 +163,7 @@ SC_PERF_TEST_P(SCascadeTestRoi, detectEachRoi,
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png")),
         testing::Range(0, 10)))
 
-RUN_GPU(SCascadeTestRoi, detectEachRoi)
+RUN_CUDA(SCascadeTestRoi, detectEachRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
@@ -202,7 +202,7 @@ SC_PERF_TEST_P(SCascadeTest, detectStream,
                         std::string("cv/cascadeandhog/cascades/sc_cvpr_2012_to_opencv_new_format.xml")),
         testing::Values(std::string("cv/cascadeandhog/images/image_00000000_0.png"))))
 
-RUN_GPU(SCascadeTest, detectStream)
+RUN_CUDA(SCascadeTest, detectStream)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());

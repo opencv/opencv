@@ -73,7 +73,7 @@ PERF_TEST_P(Sz_Type_Flags, GEMM,
     cv::Mat src3(size, type);
     declare.in(src3, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         declare.time(5.0);
 
@@ -84,7 +84,7 @@ PERF_TEST_P(Sz_Type_Flags, GEMM,
 
         TEST_CYCLE() cv::cuda::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, dst, flags);
 
-        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -106,7 +106,7 @@ CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMP
 DEF_PARAM_TEST(Sz_Flags, cv::Size, DftFlags);
 
 PERF_TEST_P(Sz_Flags, MulSpectrums,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(0, DftFlags(cv::DFT_ROWS))))
 {
     const cv::Size size = GET_PARAM(0);
@@ -116,7 +116,7 @@ PERF_TEST_P(Sz_Flags, MulSpectrums,
     cv::Mat b(size, CV_32FC2);
     declare.in(a, b, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_a(a);
         const cv::cuda::GpuMat d_b(b);
@@ -124,7 +124,7 @@ PERF_TEST_P(Sz_Flags, MulSpectrums,
 
         TEST_CYCLE() cv::cuda::mulSpectrums(d_a, d_b, dst, flag);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -140,7 +140,7 @@ PERF_TEST_P(Sz_Flags, MulSpectrums,
 // MulAndScaleSpectrums
 
 PERF_TEST_P(Sz, MulAndScaleSpectrums,
-            GPU_TYPICAL_MAT_SIZES)
+            CUDA_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
 
@@ -150,7 +150,7 @@ PERF_TEST_P(Sz, MulAndScaleSpectrums,
     cv::Mat src2(size, CV_32FC2);
     declare.in(src1,src2, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src1(src1);
         const cv::cuda::GpuMat d_src2(src2);
@@ -158,7 +158,7 @@ PERF_TEST_P(Sz, MulAndScaleSpectrums,
 
         TEST_CYCLE() cv::cuda::mulAndScaleSpectrums(d_src1, d_src2, dst, cv::DFT_ROWS, scale, false);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -170,7 +170,7 @@ PERF_TEST_P(Sz, MulAndScaleSpectrums,
 // Dft
 
 PERF_TEST_P(Sz_Flags, Dft,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(0, DftFlags(cv::DFT_ROWS), DftFlags(cv::DFT_INVERSE))))
 {
     declare.time(10.0);
@@ -181,14 +181,14 @@ PERF_TEST_P(Sz_Flags, Dft,
     cv::Mat src(size, CV_32FC2);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::dft(d_src, dst, size, flag);
 
-        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -206,7 +206,7 @@ PERF_TEST_P(Sz_Flags, Dft,
 DEF_PARAM_TEST(Sz_KernelSz_Ccorr, cv::Size, int, bool);
 
 PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(17, 27, 32, 64),
                     Bool()))
 {
@@ -220,7 +220,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
     const cv::Mat templ(templ_size, templ_size, CV_32FC1);
     declare.in(image, templ, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::GpuMat d_image = cv::cuda::createContinuous(size, CV_32FC1);
         d_image.upload(image);
@@ -234,7 +234,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
 
         TEST_CYCLE() convolution->convolve(d_image, d_templ, dst, ccorr);
 
-        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -253,14 +253,14 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
 // Integral
 
 PERF_TEST_P(Sz, Integral,
-            GPU_TYPICAL_MAT_SIZES)
+            CUDA_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
 
     cv::Mat src(size, CV_8UC1);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -268,7 +268,7 @@ PERF_TEST_P(Sz, Integral,
 
         TEST_CYCLE() cv::cuda::integral(d_src, dst, d_buf);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -284,21 +284,21 @@ PERF_TEST_P(Sz, Integral,
 // IntegralSqr
 
 PERF_TEST_P(Sz, IntegralSqr,
-            GPU_TYPICAL_MAT_SIZES)
+            CUDA_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
 
     cv::Mat src(size, CV_8UC1);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst, buf;
 
         TEST_CYCLE() cv::cuda::sqrIntegral(d_src, dst, buf);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

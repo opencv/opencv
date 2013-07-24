@@ -272,7 +272,7 @@ namespace perf
         printf("[----------]\n"), fflush(stdout);
 
         printf("[----------]\n"), fflush(stdout);
-        printf("[ GPU INFO ] \tGPU module was compiled for the following GPU archs.\n"), fflush(stdout);
+        printf("[ GPU INFO ] \tCUDA module was compiled for the following GPU archs.\n"), fflush(stdout);
         printf("[      BIN ] \t%s.\n", CUDA_ARCH_BIN), fflush(stdout);
         printf("[      PTX ] \t%s.\n", CUDA_ARCH_PTX), fflush(stdout);
         printf("[----------]\n"), fflush(stdout);
@@ -293,7 +293,7 @@ namespace perf
             printf("[          ] \tTotal memory: %d Mb\n", static_cast<int>(static_cast<int>(info.totalMemory() / 1024.0) / 1024.0)), fflush(stdout);
             printf("[          ] \tFree  memory: %d Mb\n", static_cast<int>(static_cast<int>(info.freeMemory()  / 1024.0) / 1024.0)), fflush(stdout);
             if (!info.isCompatible())
-                printf("[ GPU INFO ] \tThis device is NOT compatible with current GPU module build\n");
+                printf("[ GPU INFO ] \tThis device is NOT compatible with current CUDA module build\n");
             printf("[----------]\n"), fflush(stdout);
         }
 

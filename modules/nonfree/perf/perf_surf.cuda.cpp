@@ -57,7 +57,7 @@ using namespace perf;
 
 DEF_PARAM_TEST_1(Image, string);
 
-PERF_TEST_P(Image, GPU_SURF,
+PERF_TEST_P(Image, CUDA_SURF,
             Values<std::string>("gpu/perf/aloe.png"))
 {
     declare.time(50.0);
@@ -65,9 +65,9 @@ PERF_TEST_P(Image, GPU_SURF,
     const cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::SURF_GPU d_surf;
+        cv::cuda::SURF_CUDA d_surf;
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat d_keypoints, d_descriptors;

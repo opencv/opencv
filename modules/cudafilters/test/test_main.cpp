@@ -42,4 +42,4 @@
 
 #include "test_precomp.hpp"
 
-CV_GPU_TEST_MAIN("gpu")
+CV_CUDA_TEST_MAIN("gpu")

@@ -63,14 +63,14 @@ PERF_TEST_P(Count, Calib3D_ProjectPoints,
     const cv::Mat tvec = cv::Mat::ones(1, 3, CV_32FC1);
     const cv::Mat camera_mat = cv::Mat::ones(3, 3, CV_32FC1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -118,12 +118,12 @@ PERF_TEST_P(Count, Calib3D_SolvePnPRansac,
     cv::Mat rvec;
     cv::Mat tvec;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         TEST_CYCLE() cv::cuda::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
 
-        GPU_SANITY_CHECK(rvec, 1e-3);
-        GPU_SANITY_CHECK(tvec, 1e-3);
+        CUDA_SANITY_CHECK(rvec, 1e-3);
+        CUDA_SANITY_CHECK(tvec, 1e-3);
     }
     else
     {

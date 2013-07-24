@@ -78,12 +78,12 @@ PARAM_TEST_CASE(SURF, SURF_HessianThreshold, SURF_Octaves, SURF_OctaveLayers, SU
     }
 };
 
-GPU_TEST_P(SURF, Detector)
+CUDA_TEST_P(SURF, Detector)
 {
     cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::cuda::SURF_GPU surf;
+    cv::cuda::SURF_CUDA surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -111,7 +111,7 @@ GPU_TEST_P(SURF, Detector)
     EXPECT_GT(matchedRatio, 0.95);
 }
 
-GPU_TEST_P(SURF, Detector_Masked)
+CUDA_TEST_P(SURF, Detector_Masked)
 {
     cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -119,7 +119,7 @@ GPU_TEST_P(SURF, Detector_Masked)
     cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
     mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
 
-    cv::cuda::SURF_GPU surf;
+    cv::cuda::SURF_CUDA surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -147,12 +147,12 @@ GPU_TEST_P(SURF, Detector_Masked)
     EXPECT_GT(matchedRatio, 0.95);
 }
 
-GPU_TEST_P(SURF, Descriptor)
+CUDA_TEST_P(SURF, Descriptor)
 {
     cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::cuda::SURF_GPU surf;
+    cv::cuda::SURF_CUDA surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -186,7 +186,7 @@ GPU_TEST_P(SURF, Descriptor)
     EXPECT_GT(matchedRatio, 0.6);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Features2D, SURF, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Features2D, SURF, testing::Combine(
     testing::Values(SURF_HessianThreshold(100.0), SURF_HessianThreshold(500.0), SURF_HessianThreshold(1000.0)),
     testing::Values(SURF_Octaves(3), SURF_Octaves(4)),
     testing::Values(SURF_OctaveLayers(2), SURF_OctaveLayers(3)),

@@ -52,9 +52,9 @@ using namespace perf;
 DEF_PARAM_TEST(Sz_Depth_Cn_KernelSz, cv::Size, MatDepth, MatCn, int);
 
 PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
-                    GPU_CHANNELS_1_3,
+                    CUDA_CHANNELS_1_3,
                     Values(3, 5, 9)))
 {
     declare.time(60.0);
@@ -73,14 +73,14 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::bilateralFilter(d_src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

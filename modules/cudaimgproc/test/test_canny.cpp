@@ -73,7 +73,7 @@ PARAM_TEST_CASE(Canny, cv::cuda::DeviceInfo, AppertureSize, L2gradient, UseRoi)
     }
 };
 
-GPU_TEST_P(Canny, Accuracy)
+CUDA_TEST_P(Canny, Accuracy)
 {
     cv::Mat img = readImage("stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
@@ -92,7 +92,7 @@ GPU_TEST_P(Canny, Accuracy)
     EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, Canny, testing::Combine(
     ALL_DEVICES,
     testing::Values(AppertureSize(3), AppertureSize(5)),
     testing::Values(L2gradient(false), L2gradient(true)),

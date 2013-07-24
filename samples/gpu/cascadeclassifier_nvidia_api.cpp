@@ -160,7 +160,7 @@ int main(int argc, const char** argv)
     cout << "Syntax: exename <cascade_file> <image_or_video_or_cameraid>" << endl;
     cout << "=========================================" << endl;
 
-    ncvAssertPrintReturn(cv::cuda::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without GPU support", -1);
+    ncvAssertPrintReturn(cv::cuda::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without CUDA support", -1);
     ncvAssertPrintReturn(argc == 3, "Invalid number of arguments", -1);
 
     cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());

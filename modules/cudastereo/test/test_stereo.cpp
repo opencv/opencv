@@ -61,7 +61,7 @@ struct StereoBM : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(StereoBM, Regression)
+CUDA_TEST_P(StereoBM, Regression)
 {
     cv::Mat left_image  = readImage("stereobm/aloe-L.png", cv::IMREAD_GRAYSCALE);
     cv::Mat right_image = readImage("stereobm/aloe-R.png", cv::IMREAD_GRAYSCALE);
@@ -79,7 +79,7 @@ GPU_TEST_P(StereoBM, Regression)
     EXPECT_MAT_NEAR(disp_gold, disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBM, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Stereo, StereoBM, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
@@ -96,7 +96,7 @@ struct StereoBeliefPropagation : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(StereoBeliefPropagation, Regression)
+CUDA_TEST_P(StereoBeliefPropagation, Regression)
 {
     cv::Mat left_image  = readImage("stereobp/aloe-L.png");
     cv::Mat right_image = readImage("stereobp/aloe-R.png");
@@ -122,7 +122,7 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     EXPECT_MAT_NEAR(disp_gold, h_disp, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBeliefPropagation, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Stereo, StereoBeliefPropagation, ALL_DEVICES);
 
 //////////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
@@ -139,7 +139,7 @@ struct StereoConstantSpaceBP : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(StereoConstantSpaceBP, Regression)
+CUDA_TEST_P(StereoConstantSpaceBP, Regression)
 {
     cv::Mat left_image  = readImage("csstereobp/aloe-L.png");
     cv::Mat right_image = readImage("csstereobp/aloe-R.png");
@@ -166,7 +166,7 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     EXPECT_MAT_NEAR(disp_gold, h_disp, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoConstantSpaceBP, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Stereo, StereoConstantSpaceBP, ALL_DEVICES);
 
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
@@ -189,7 +189,7 @@ PARAM_TEST_CASE(ReprojectImageTo3D, cv::cuda::DeviceInfo, cv::Size, MatDepth, Us
     }
 };
 
-GPU_TEST_P(ReprojectImageTo3D, Accuracy)
+CUDA_TEST_P(ReprojectImageTo3D, Accuracy)
 {
     cv::Mat disp = randomMat(size, depth, 5.0, 30.0);
     cv::Mat Q = randomMat(cv::Size(4, 4), CV_32FC1, 0.1, 1.0);
@@ -203,7 +203,7 @@ GPU_TEST_P(ReprojectImageTo3D, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Stereo, ReprojectImageTo3D, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Stereo, ReprojectImageTo3D, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16S)),

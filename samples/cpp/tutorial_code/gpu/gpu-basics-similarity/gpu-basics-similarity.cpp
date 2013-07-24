@@ -6,7 +6,7 @@
 #include <opencv2/imgproc.hpp>// Image processing methods for the CPU
 #include <opencv2/highgui.hpp>// Read images
 
-// GPU structures and methods
+// CUDA structures and methods
 #include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudafilters.hpp>
 
@@ -16,19 +16,19 @@ using namespace cv;
 double getPSNR(const Mat& I1, const Mat& I2);      // CPU versions
 Scalar getMSSIM( const Mat& I1, const Mat& I2);
 
-double getPSNR_GPU(const Mat& I1, const Mat& I2);  // Basic GPU versions
-Scalar getMSSIM_GPU( const Mat& I1, const Mat& I2);
+double getPSNR_CUDA(const Mat& I1, const Mat& I2);  // Basic CUDA versions
+Scalar getMSSIM_CUDA( const Mat& I1, const Mat& I2);
 
-struct BufferPSNR                                     // Optimized GPU versions
-{   // Data allocations are very expensive on GPU. Use a buffer to solve: allocate once reuse later.
+struct BufferPSNR                                     // Optimized CUDA versions
+{   // Data allocations are very expensive on CUDA. Use a buffer to solve: allocate once reuse later.
     cuda::GpuMat gI1, gI2, gs, t1,t2;
 
     cuda::GpuMat buf;
 };
-double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b);
+double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b);
 
-struct BufferMSSIM                                     // Optimized GPU versions
-{   // Data allocations are very expensive on GPU. Use a buffer to solve: allocate once reuse later.
+struct BufferMSSIM                                     // Optimized CUDA versions
+{   // Data allocations are very expensive on CUDA. Use a buffer to solve: allocate once reuse later.
     cuda::GpuMat gI1, gI2, gs, t1,t2;
 
     cuda::GpuMat I1_2, I2_2, I1_I2;
@@ -44,13 +44,13 @@ struct BufferMSSIM                                     // Optimized GPU versions
 
     cuda::GpuMat buf;
 };
-Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b);
+Scalar getMSSIM_CUDA_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b);
 
 static void help()
 {
     cout
         << "\n--------------------------------------------------------------------------" << endl
-        << "This program shows how to port your CPU code to GPU or write that from scratch." << endl
+        << "This program shows how to port your CPU code to CUDA or write that from scratch." << endl
         << "You can see the performance improvement for the similarity check methods (PSNR and SSIM)."  << endl
         << "Usage:"                                                               << endl
         << "./gpu-basics-similarity referenceImage comparedImage numberOfTimesToRunTest(like 10)." << endl
@@ -90,33 +90,33 @@ int main(int, char *argv[])
     cout << "Time of PSNR CPU (averaged for " << TIMES << " runs): " << time << " milliseconds."
         << " With result of: " << result << endl;
 
-    //------------------------------- PSNR GPU ----------------------------------------------------
+    //------------------------------- PSNR CUDA ----------------------------------------------------
     time = (double)getTickCount();
 
     for (int i = 0; i < TIMES; ++i)
-        result = getPSNR_GPU(I1,I2);
+        result = getPSNR_CUDA(I1,I2);
 
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
     time /= TIMES;
 
-    cout << "Time of PSNR GPU (averaged for " << TIMES << " runs): " << time << " milliseconds."
+    cout << "Time of PSNR CUDA (averaged for " << TIMES << " runs): " << time << " milliseconds."
         << " With result of: " <<  result << endl;
 
-    //------------------------------- PSNR GPU Optimized--------------------------------------------
+    //------------------------------- PSNR CUDA Optimized--------------------------------------------
     time = (double)getTickCount();                                  // Initial call
-    result = getPSNR_GPU_optimized(I1, I2, bufferPSNR);
+    result = getPSNR_CUDA_optimized(I1, I2, bufferPSNR);
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
-    cout << "Initial call GPU optimized:              " << time  <<" milliseconds."
+    cout << "Initial call CUDA optimized:              " << time  <<" milliseconds."
         << " With result of: " << result << endl;
 
     time = (double)getTickCount();
     for (int i = 0; i < TIMES; ++i)
-        result = getPSNR_GPU_optimized(I1, I2, bufferPSNR);
+        result = getPSNR_CUDA_optimized(I1, I2, bufferPSNR);
 
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
     time /= TIMES;
 
-    cout << "Time of PSNR GPU OPTIMIZED ( / " << TIMES << " runs): " << time
+    cout << "Time of PSNR CUDA OPTIMIZED ( / " << TIMES << " runs): " << time
         << " milliseconds." << " With result of: " <<  result << endl << endl;
 
 
@@ -133,34 +133,34 @@ int main(int, char *argv[])
     cout << "Time of MSSIM CPU (averaged for " << TIMES << " runs): " << time << " milliseconds."
         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl;
 
-    //------------------------------- SSIM GPU -----------------------------------------------------
+    //------------------------------- SSIM CUDA -----------------------------------------------------
     time = (double)getTickCount();
 
     for (int i = 0; i < TIMES; ++i)
-        x = getMSSIM_GPU(I1,I2);
+        x = getMSSIM_CUDA(I1,I2);
 
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
     time /= TIMES;
 
-    cout << "Time of MSSIM GPU (averaged for " << TIMES << " runs): " << time << " milliseconds."
+    cout << "Time of MSSIM CUDA (averaged for " << TIMES << " runs): " << time << " milliseconds."
         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl;
 
-    //------------------------------- SSIM GPU Optimized--------------------------------------------
+    //------------------------------- SSIM CUDA Optimized--------------------------------------------
     time = (double)getTickCount();
-    x = getMSSIM_GPU_optimized(I1,I2, bufferMSSIM);
+    x = getMSSIM_CUDA_optimized(I1,I2, bufferMSSIM);
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
-    cout << "Time of MSSIM GPU Initial Call            " << time << " milliseconds."
+    cout << "Time of MSSIM CUDA Initial Call            " << time << " milliseconds."
         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl;
 
     time = (double)getTickCount();
 
     for (int i = 0; i < TIMES; ++i)
-        x = getMSSIM_GPU_optimized(I1,I2, bufferMSSIM);
+        x = getMSSIM_CUDA_optimized(I1,I2, bufferMSSIM);
 
     time = 1000*((double)getTickCount() - time)/getTickFrequency();
     time /= TIMES;
 
-    cout << "Time of MSSIM GPU OPTIMIZED ( / " << TIMES << " runs): " << time << " milliseconds."
+    cout << "Time of MSSIM CUDA OPTIMIZED ( / " << TIMES << " runs): " << time << " milliseconds."
         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl << endl;
     return 0;
 }
@@ -189,7 +189,7 @@ double getPSNR(const Mat& I1, const Mat& I2)
 
 
 
-double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
+double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
 {
     b.gI1.upload(I1);
     b.gI2.upload(I2);
@@ -212,7 +212,7 @@ double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
     }
 }
 
-double getPSNR_GPU(const Mat& I1, const Mat& I2)
+double getPSNR_CUDA(const Mat& I1, const Mat& I2)
 {
     cuda::GpuMat gI1, gI2, gs, t1,t2;
 
@@ -291,7 +291,7 @@ Scalar getMSSIM( const Mat& i1, const Mat& i2)
     return mssim;
 }
 
-Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
+Scalar getMSSIM_CUDA( const Mat& i1, const Mat& i2)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
     /***************************** INITS **********************************/
@@ -360,7 +360,7 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
     return mssim;
 }
 
-Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
+Scalar getMSSIM_CUDA_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
     /***************************** INITS **********************************/

@@ -52,7 +52,7 @@ using namespace perf;
 DEF_PARAM_TEST(Sz_Depth_Code, cv::Size, MatDepth, CvtColorInfo);
 
 PERF_TEST_P(Sz_Depth_Code, CvtColor,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
                     Values(CvtColorInfo(4, 4, cv::COLOR_RGBA2BGRA),
                            CvtColorInfo(4, 1, cv::COLOR_BGRA2GRAY),
@@ -83,14 +83,14 @@ PERF_TEST_P(Sz_Depth_Code, CvtColor,
     cv::Mat src(size, CV_MAKETYPE(depth, info.scn));
     cv::randu(src, 0, depth == CV_8U ? 255.0 : 1.0);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::cvtColor(d_src, dst, info.code, info.dcn);
 
-        GPU_SANITY_CHECK(dst, 1e-4);
+        CUDA_SANITY_CHECK(dst, 1e-4);
     }
     else
     {
@@ -103,7 +103,7 @@ PERF_TEST_P(Sz_Depth_Code, CvtColor,
 }
 
 PERF_TEST_P(Sz_Depth_Code, CvtColorBayer,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U),
                     Values(CvtColorInfo(1, 3, cv::COLOR_BayerBG2BGR),
                            CvtColorInfo(1, 3, cv::COLOR_BayerGB2BGR),
@@ -122,14 +122,14 @@ PERF_TEST_P(Sz_Depth_Code, CvtColorBayer,
     cv::Mat src(size, CV_MAKETYPE(depth, info.scn));
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::cvtColor(d_src, dst, info.code, info.dcn);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -153,7 +153,7 @@ CV_ENUM(DemosaicingCode,
 DEF_PARAM_TEST(Sz_Code, cv::Size, DemosaicingCode);
 
 PERF_TEST_P(Sz_Code, Demosaicing,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     DemosaicingCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
@@ -162,14 +162,14 @@ PERF_TEST_P(Sz_Code, Demosaicing,
     cv::Mat src(size, CV_8UC1);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::demosaicing(d_src, dst, code);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -192,7 +192,7 @@ PERF_TEST_P(Sz_Code, Demosaicing,
 // SwapChannels
 
 PERF_TEST_P(Sz, SwapChannels,
-            GPU_TYPICAL_MAT_SIZES)
+            CUDA_TYPICAL_MAT_SIZES)
 {
     const cv::Size size = GetParam();
 
@@ -201,13 +201,13 @@ PERF_TEST_P(Sz, SwapChannels,
 
     const int dstOrder[] = {2, 1, 0, 3};
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::GpuMat dst(src);
 
         TEST_CYCLE() cv::cuda::swapChannels(dst, dstOrder);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -223,7 +223,7 @@ CV_ENUM(AlphaOp, cv::cuda::ALPHA_OVER, cv::cuda::ALPHA_IN, cv::cuda::ALPHA_OUT, 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
 PERF_TEST_P(Sz_Type_Op, AlphaComp,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8UC4, CV_16UC4, CV_32SC4, CV_32FC4),
                     AlphaOp::all()))
 {
@@ -235,7 +235,7 @@ PERF_TEST_P(Sz_Type_Op, AlphaComp,
     cv::Mat img2(size, type);
     declare.in(img1, img2, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_img1(img1);
         const cv::cuda::GpuMat d_img2(img2);
@@ -243,7 +243,7 @@ PERF_TEST_P(Sz_Type_Op, AlphaComp,
 
         TEST_CYCLE() cv::cuda::alphaComp(d_img1, d_img2, dst, alpha_op);
 
-        GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
     else
     {

@@ -66,7 +66,7 @@ PERF_TEST_P(Image, ObjDetect_HOG,
     const cv::Mat img = readImage(GetParam(), cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_img(img);
         std::vector<cv::Rect> gpu_found_locations;
@@ -103,9 +103,9 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
     const cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::CascadeClassifier_GPU d_cascade;
+        cv::cuda::CascadeClassifier_CUDA d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
         const cv::cuda::GpuMat d_img(img);
@@ -142,9 +142,9 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
     const cv::Mat img = readImage(GetParam().first, cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::CascadeClassifier_GPU d_cascade;
+        cv::cuda::CascadeClassifier_CUDA d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
         const cv::cuda::GpuMat d_img(img);

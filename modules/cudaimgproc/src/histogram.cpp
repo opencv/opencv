@@ -167,7 +167,7 @@ namespace
     {
     }
 
-    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_GPU",
+    CV_INIT_ALGORITHM(CLAHE_Impl, "CLAHE_CUDA",
         obj.info()->addParam(obj, "clipLimit", obj.clipLimit_);
         obj.info()->addParam(obj, "tilesX", obj.tilesX_);
         obj.info()->addParam(obj, "tilesY", obj.tilesY_))

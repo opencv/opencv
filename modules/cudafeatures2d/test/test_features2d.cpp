@@ -71,12 +71,12 @@ PARAM_TEST_CASE(FAST, cv::cuda::DeviceInfo, FAST_Threshold, FAST_NonmaxSupressio
     }
 };
 
-GPU_TEST_P(FAST, Accuracy)
+CUDA_TEST_P(FAST, Accuracy)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::cuda::FAST_GPU fast(threshold);
+    cv::cuda::FAST_CUDA fast(threshold);
     fast.nonmaxSupression = nonmaxSupression;
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
@@ -103,7 +103,7 @@ GPU_TEST_P(FAST, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Features2D, FAST, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Features2D, FAST, testing::Combine(
     ALL_DEVICES,
     testing::Values(FAST_Threshold(25), FAST_Threshold(50)),
     testing::Values(FAST_NonmaxSupression(false), FAST_NonmaxSupression(true))));
@@ -155,7 +155,7 @@ PARAM_TEST_CASE(ORB, cv::cuda::DeviceInfo, ORB_FeaturesCount, ORB_ScaleFactor, O
     }
 };
 
-GPU_TEST_P(ORB, Accuracy)
+CUDA_TEST_P(ORB, Accuracy)
 {
     cv::Mat image = readImage("features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -163,7 +163,7 @@ GPU_TEST_P(ORB, Accuracy)
     cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
     mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
 
-    cv::cuda::ORB_GPU orb(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
+    cv::cuda::ORB_CUDA orb(nFeatures, scaleFactor, nLevels, edgeThreshold, firstLevel, WTA_K, scoreType, patchSize);
     orb.blurForDescriptor = blurForDescriptor;
 
     if (!supportFeature(devInfo, cv::cuda::GLOBAL_ATOMICS))
@@ -202,7 +202,7 @@ GPU_TEST_P(ORB, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Features2D, ORB,  testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Features2D, ORB,  testing::Combine(
     ALL_DEVICES,
     testing::Values(ORB_FeaturesCount(1000)),
     testing::Values(ORB_ScaleFactor(1.2f)),
@@ -283,9 +283,9 @@ PARAM_TEST_CASE(BruteForceMatcher, cv::cuda::DeviceInfo, NormCode, DescriptorSiz
     }
 };
 
-GPU_TEST_P(BruteForceMatcher, Match_Single)
+CUDA_TEST_P(BruteForceMatcher, Match_Single)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     cv::cuda::GpuMat mask;
     if (useMask)
@@ -310,9 +310,9 @@ GPU_TEST_P(BruteForceMatcher, Match_Single)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, Match_Collection)
+CUDA_TEST_P(BruteForceMatcher, Match_Collection)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     cv::cuda::GpuMat d_train(train);
 
@@ -364,9 +364,9 @@ GPU_TEST_P(BruteForceMatcher, Match_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
+CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const int knn = 2;
 
@@ -403,9 +403,9 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Single)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
+CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const int knn = 3;
 
@@ -442,9 +442,9 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Single)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
+CUDA_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const int knn = 2;
 
@@ -504,9 +504,9 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_2_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
+CUDA_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const int knn = 3;
 
@@ -566,9 +566,9 @@ GPU_TEST_P(BruteForceMatcher, KnnMatch_3_Collection)
     ASSERT_EQ(0, badCount);
 }
 
-GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
+CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Single)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const float radius = 1.f / countFactor;
 
@@ -615,9 +615,9 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Single)
     }
 }
 
-GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
+CUDA_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
 {
-    cv::cuda::BFMatcher_GPU matcher(normCode);
+    cv::cuda::BFMatcher_CUDA matcher(normCode);
 
     const int n = 3;
     const float radius = 1.f / countFactor * n;
@@ -694,7 +694,7 @@ GPU_TEST_P(BruteForceMatcher, RadiusMatch_Collection)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Features2D, BruteForceMatcher, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Features2D, BruteForceMatcher, testing::Combine(
     ALL_DEVICES,
     testing::Values(NormCode(cv::NORM_L1), NormCode(cv::NORM_L2)),
     testing::Values(DescriptorSize(57), DescriptorSize(64), DescriptorSize(83), DescriptorSize(128), DescriptorSize(179), DescriptorSize(256), DescriptorSize(304)),

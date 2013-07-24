@@ -78,7 +78,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without GPU Video decoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video decoding support\n" << std::endl;
     return 0;
 }
 

@@ -647,7 +647,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_max_deviation          |1.0      |}"
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
-        "{   perf_cuda_device            |0        |run GPU test suite onto specific CUDA capable device}"
+        "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
         "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
     ;
@@ -715,7 +715,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         cv::cuda::DeviceInfo info(param_cuda_device);
         if (!info.isCompatible())
         {
-            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name()), fflush(stdout);
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current CUDA module build.\n[----------]\n", info.name()), fflush(stdout);
             exit(-1);
         }
 

@@ -54,9 +54,9 @@ CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, 
 DEF_PARAM_TEST(Sz_TemplateSz_Cn_Method, cv::Size, cv::Size, MatCn, TemplateMethod);
 
 PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     TemplateMethod::all()))
 {
     declare.time(300.0);
@@ -70,7 +70,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
     cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_8U, cn));
     declare.in(image, templ, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_image(image);
         const cv::cuda::GpuMat d_templ(templ);
@@ -80,7 +80,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
 
         TEST_CYCLE() alg->match(d_image, d_templ, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
     }
     else
     {
@@ -96,9 +96,9 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
 // MatchTemplate32F
 
 PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(cv::Size(5, 5), cv::Size(16, 16), cv::Size(30, 30)),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     Values(TemplateMethod(cv::TM_SQDIFF), TemplateMethod(cv::TM_CCORR))))
 {
     declare.time(300.0);
@@ -112,7 +112,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
     cv::Mat templ(templ_size, CV_MAKE_TYPE(CV_32F, cn));
     declare.in(image, templ, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_image(image);
         const cv::cuda::GpuMat d_templ(templ);
@@ -122,7 +122,7 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
 
         TEST_CYCLE() alg->match(d_image, d_templ, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {

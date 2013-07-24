@@ -53,17 +53,17 @@ using namespace std;
 using namespace testing;
 using namespace perf;
 
-#define GPU_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::sz720p)
+#define CUDA_DENOISING_IMAGE_SIZES testing::Values(perf::szVGA, perf::sz720p)
 
 //////////////////////////////////////////////////////////////////////
 // nonLocalMeans
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_NonLocalMeans,
-            Combine(GPU_DENOISING_IMAGE_SIZES,
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_NonLocalMeans,
+            Combine(CUDA_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
-                    GPU_CHANNELS_1_3,
+                    CUDA_CHANNELS_1_3,
                     Values(21),
                     Values(5)))
 {
@@ -83,14 +83,14 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_NonLocalMeans,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::nonLocalMeans(d_src, dst, h, search_widow_size, block_size, borderMode);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -104,10 +104,10 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_NonLocalMeans,
 
 DEF_PARAM_TEST(Sz_Depth_Cn_WinSz_BlockSz, cv::Size, MatDepth, MatCn, int, int);
 
-PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_FastNonLocalMeans,
-            Combine(GPU_DENOISING_IMAGE_SIZES,
+PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, CUDA_FastNonLocalMeans,
+            Combine(CUDA_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
-                    GPU_CHANNELS_1_3,
+                    CUDA_CHANNELS_1_3,
                     Values(21),
                     Values(7)))
 {
@@ -124,7 +124,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_FastNonLocalMeans,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::FastNonLocalMeansDenoising fnlmd;
 
@@ -133,7 +133,7 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_FastNonLocalMeans,
 
         TEST_CYCLE() fnlmd.simpleMethod(d_src, dst, h, search_widow_size, block_size);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -150,8 +150,8 @@ PERF_TEST_P(Sz_Depth_Cn_WinSz_BlockSz, GPU_FastNonLocalMeans,
 
 DEF_PARAM_TEST(Sz_Depth_WinSz_BlockSz, cv::Size, MatDepth, int, int);
 
-PERF_TEST_P(Sz_Depth_WinSz_BlockSz, GPU_FastNonLocalMeansColored,
-            Combine(GPU_DENOISING_IMAGE_SIZES,
+PERF_TEST_P(Sz_Depth_WinSz_BlockSz, CUDA_FastNonLocalMeansColored,
+            Combine(CUDA_DENOISING_IMAGE_SIZES,
                     Values<MatDepth>(CV_8U),
                     Values(21),
                     Values(7)))
@@ -169,7 +169,7 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, GPU_FastNonLocalMeansColored,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::FastNonLocalMeansDenoising fnlmd;
 
@@ -178,7 +178,7 @@ PERF_TEST_P(Sz_Depth_WinSz_BlockSz, GPU_FastNonLocalMeansColored,
 
         TEST_CYCLE() fnlmd.labMethod(d_src, dst, h, h, search_widow_size, block_size);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

@@ -146,12 +146,12 @@ protected:
 //////////////////////////// CascadeClassifier ////////////////////////////
 
 // The cascade classifier class for object detection: supports old haar and new lbp xlm formats and nvbin for haar cascades olny.
-class CV_EXPORTS CascadeClassifier_GPU
+class CV_EXPORTS CascadeClassifier_CUDA
 {
 public:
-    CascadeClassifier_GPU();
-    CascadeClassifier_GPU(const String& filename);
-    ~CascadeClassifier_GPU();
+    CascadeClassifier_CUDA();
+    CascadeClassifier_CUDA(const String& filename);
+    ~CascadeClassifier_CUDA();
 
     bool empty() const;
     bool load(const String& filename);
@@ -171,7 +171,7 @@ private:
     CascadeClassifierImpl* impl;
     struct HaarCascade;
     struct LbpCascade;
-    friend class CascadeClassifier_GPU_LBP;
+    friend class CascadeClassifier_CUDA_LBP;
 };
 
 //////////////////////////// Labeling ////////////////////////////

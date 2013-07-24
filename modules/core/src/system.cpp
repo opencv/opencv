@@ -634,7 +634,7 @@ CV_IMPL const char* cvErrorStr( int status )
     case CV_StsNotImplemented :      return "The function/feature is not implemented";
     case CV_StsBadMemBlock :         return "Memory block has been corrupted";
     case CV_StsAssert :              return "Assertion failed";
-    case CV_GpuNotSupported :        return "No GPU support";
+    case CV_GpuNotSupported :        return "No CUDA support";
     case CV_GpuApiCallError :        return "Gpu API call";
     case CV_OpenGlNotSupported :     return "No OpenGL support";
     case CV_OpenGlApiCallError :     return "OpenGL API call";

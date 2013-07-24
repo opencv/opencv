@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_COMMON_HPP__
-#define __OPENCV_GPU_COMMON_HPP__
+#ifndef __OPENCV_CUDA_COMMON_HPP__
+#define __OPENCV_CUDA_COMMON_HPP__
 
 #include <cuda_runtime.h>
 #include "opencv2/core/cuda_types.hpp"
@@ -104,4 +104,4 @@ namespace cv { namespace cuda
 
 
 
-#endif // __OPENCV_GPU_COMMON_HPP__
+#endif // __OPENCV_CUDA_COMMON_HPP__

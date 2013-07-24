@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_PRED_VAL_REDUCE_DETAIL_HPP__
-#define __OPENCV_GPU_PRED_VAL_REDUCE_DETAIL_HPP__
+#ifndef __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__
+#define __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__
 
 #include <thrust/tuple.h>
 #include "../warp.hpp"
@@ -495,4 +495,4 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_GPU_PRED_VAL_REDUCE_DETAIL_HPP__
+#endif // __OPENCV_CUDA_PRED_VAL_REDUCE_DETAIL_HPP__

@@ -139,7 +139,7 @@ PARAM_TEST_CASE(Resize, cv::cuda::DeviceInfo, cv::Size, MatType, double, Interpo
     }
 };
 
-GPU_TEST_P(Resize, Accuracy)
+CUDA_TEST_P(Resize, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -152,7 +152,7 @@ GPU_TEST_P(Resize, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, Resize, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, Resize, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
@@ -185,7 +185,7 @@ PARAM_TEST_CASE(ResizeSameAsHost, cv::cuda::DeviceInfo, cv::Size, MatType, doubl
 };
 
 // downscaling only: used for classifiers
-GPU_TEST_P(ResizeSameAsHost, Accuracy)
+CUDA_TEST_P(ResizeSameAsHost, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
@@ -198,7 +198,7 @@ GPU_TEST_P(ResizeSameAsHost, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-2 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, ResizeSameAsHost, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, ResizeSameAsHost, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),

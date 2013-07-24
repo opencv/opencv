@@ -52,7 +52,7 @@ using namespace perf;
 DEF_PARAM_TEST(Sz_Type_KernelSz, cv::Size, MatType, int);
 
 PERF_TEST_P(Sz_Type_KernelSz, Blur,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC4),
                     Values(3, 5, 7)))
 {
@@ -65,7 +65,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -74,7 +74,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
 
         TEST_CYCLE() blurFilter->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst, 1);
+        CUDA_SANITY_CHECK(dst, 1);
     }
     else
     {
@@ -89,7 +89,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
 //////////////////////////////////////////////////////////////////////
 // Filter2D
 
-PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 
@@ -103,7 +103,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
     cv::Mat kernel(ksize, ksize, CV_32FC1);
     declare.in(kernel, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -112,7 +112,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
 
         TEST_CYCLE() filter2D->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -127,7 +127,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
 //////////////////////////////////////////////////////////////////////
 // Laplacian
 
-PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
+PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), Values(1, 3)))
 {
     declare.time(20.0);
 
@@ -138,7 +138,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -147,7 +147,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
 
         TEST_CYCLE() laplacian->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -162,7 +162,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
 //////////////////////////////////////////////////////////////////////
 // Sobel
 
-PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 
@@ -173,7 +173,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -182,7 +182,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 
         TEST_CYCLE() sobel->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -197,7 +197,7 @@ PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 //////////////////////////////////////////////////////////////////////
 // Scharr
 
-PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1)))
+PERF_TEST_P(Sz_Type, Scharr, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1)))
 {
     declare.time(20.0);
 
@@ -207,7 +207,7 @@ PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -216,7 +216,7 @@ PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 
         TEST_CYCLE() scharr->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -231,7 +231,7 @@ PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 //////////////////////////////////////////////////////////////////////
 // GaussianBlur
 
-PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
+PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4, CV_32FC1), Values(3, 5, 7, 9, 11, 13, 15)))
 {
     declare.time(20.0);
 
@@ -242,7 +242,7 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -251,7 +251,7 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
 
         TEST_CYCLE() gauss->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -266,7 +266,7 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
 //////////////////////////////////////////////////////////////////////
 // Erode
 
-PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
+PERF_TEST_P(Sz_Type, Erode, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
 {
     declare.time(20.0);
 
@@ -278,7 +278,7 @@ PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8U
 
     const cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -287,7 +287,7 @@ PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8U
 
         TEST_CYCLE() erode->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -302,7 +302,7 @@ PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8U
 //////////////////////////////////////////////////////////////////////
 // Dilate
 
-PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
+PERF_TEST_P(Sz_Type, Dilate, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4)))
 {
     declare.time(20.0);
 
@@ -314,7 +314,7 @@ PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 
     const cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -323,7 +323,7 @@ PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 
         TEST_CYCLE() dilate->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -342,7 +342,7 @@ CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BL
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, MorphOp);
 
-PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), MorphOp::all()))
+PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(CUDA_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8UC4), MorphOp::all()))
 {
     declare.time(20.0);
 
@@ -355,7 +355,7 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
     const cv::Mat ker = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
@@ -364,7 +364,7 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
         TEST_CYCLE() morph->apply(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

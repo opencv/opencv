@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_SATURATE_CAST_HPP__
-#define __OPENCV_GPU_SATURATE_CAST_HPP__
+#ifndef __OPENCV_CUDA_SATURATE_CAST_HPP__
+#define __OPENCV_CUDA_SATURATE_CAST_HPP__
 
 #include "common.hpp"
 
@@ -281,4 +281,4 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif /* __OPENCV_GPU_SATURATE_CAST_HPP__ */
+#endif /* __OPENCV_CUDA_SATURATE_CAST_HPP__ */

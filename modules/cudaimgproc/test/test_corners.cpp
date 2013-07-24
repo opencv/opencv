@@ -75,7 +75,7 @@ PARAM_TEST_CASE(CornerHarris, cv::cuda::DeviceInfo, MatType, BorderType, BlockSi
     }
 };
 
-GPU_TEST_P(CornerHarris, Accuracy)
+CUDA_TEST_P(CornerHarris, Accuracy)
 {
     cv::Mat src = readImageType("stereobm/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
@@ -93,7 +93,7 @@ GPU_TEST_P(CornerHarris, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.02);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerHarris, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CornerHarris, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_REFLECT)),
@@ -123,7 +123,7 @@ PARAM_TEST_CASE(CornerMinEigen, cv::cuda::DeviceInfo, MatType, BorderType, Block
     }
 };
 
-GPU_TEST_P(CornerMinEigen, Accuracy)
+CUDA_TEST_P(CornerMinEigen, Accuracy)
 {
     cv::Mat src = readImageType("stereobm/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
@@ -139,7 +139,7 @@ GPU_TEST_P(CornerMinEigen, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.02);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerMinEigen, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, CornerMinEigen, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_32FC1)),
     testing::Values(BorderType(cv::BORDER_REFLECT101), BorderType(cv::BORDER_REPLICATE), BorderType(cv::BORDER_REFLECT)),

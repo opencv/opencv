@@ -75,7 +75,7 @@ PARAM_TEST_CASE(Add_Array, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDepth, M
     }
 };
 
-GPU_TEST_P(Add_Array, Accuracy)
+CUDA_TEST_P(Add_Array, Accuracy)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -105,7 +105,7 @@ GPU_TEST_P(Add_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Add_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -136,7 +136,7 @@ PARAM_TEST_CASE(Add_Array_Mask, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDep
     }
 };
 
-GPU_TEST_P(Add_Array_Mask, Accuracy)
+CUDA_TEST_P(Add_Array_Mask, Accuracy)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -167,7 +167,7 @@ GPU_TEST_P(Add_Array_Mask, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Array_Mask, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Add_Array_Mask, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -194,7 +194,7 @@ PARAM_TEST_CASE(Add_Scalar, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDepth, 
     }
 };
 
-GPU_TEST_P(Add_Scalar, WithOutMask)
+CUDA_TEST_P(Add_Scalar, WithOutMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -224,7 +224,7 @@ GPU_TEST_P(Add_Scalar, WithOutMask)
     }
 }
 
-GPU_TEST_P(Add_Scalar, WithMask)
+CUDA_TEST_P(Add_Scalar, WithMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -255,7 +255,7 @@ GPU_TEST_P(Add_Scalar, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Add_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -282,7 +282,7 @@ PARAM_TEST_CASE(Add_Scalar_First, cv::cuda::DeviceInfo, cv::Size, std::pair<MatD
     }
 };
 
-GPU_TEST_P(Add_Scalar_First, WithOutMask)
+CUDA_TEST_P(Add_Scalar_First, WithOutMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -312,7 +312,7 @@ GPU_TEST_P(Add_Scalar_First, WithOutMask)
     }
 }
 
-GPU_TEST_P(Add_Scalar_First, WithMask)
+CUDA_TEST_P(Add_Scalar_First, WithMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -343,7 +343,7 @@ GPU_TEST_P(Add_Scalar_First, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Add_Scalar_First, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Add_Scalar_First, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -378,7 +378,7 @@ PARAM_TEST_CASE(Subtract_Array, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDep
     }
 };
 
-GPU_TEST_P(Subtract_Array, Accuracy)
+CUDA_TEST_P(Subtract_Array, Accuracy)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -408,7 +408,7 @@ GPU_TEST_P(Subtract_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Subtract_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -439,7 +439,7 @@ PARAM_TEST_CASE(Subtract_Array_Mask, cv::cuda::DeviceInfo, cv::Size, std::pair<M
     }
 };
 
-GPU_TEST_P(Subtract_Array_Mask, Accuracy)
+CUDA_TEST_P(Subtract_Array_Mask, Accuracy)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -470,7 +470,7 @@ GPU_TEST_P(Subtract_Array_Mask, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Array_Mask, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Subtract_Array_Mask, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -497,7 +497,7 @@ PARAM_TEST_CASE(Subtract_Scalar, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDe
     }
 };
 
-GPU_TEST_P(Subtract_Scalar, WithOutMask)
+CUDA_TEST_P(Subtract_Scalar, WithOutMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -527,7 +527,7 @@ GPU_TEST_P(Subtract_Scalar, WithOutMask)
     }
 }
 
-GPU_TEST_P(Subtract_Scalar, WithMask)
+CUDA_TEST_P(Subtract_Scalar, WithMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -558,7 +558,7 @@ GPU_TEST_P(Subtract_Scalar, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Subtract_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -585,7 +585,7 @@ PARAM_TEST_CASE(Subtract_Scalar_First, cv::cuda::DeviceInfo, cv::Size, std::pair
     }
 };
 
-GPU_TEST_P(Subtract_Scalar_First, WithOutMask)
+CUDA_TEST_P(Subtract_Scalar_First, WithOutMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -615,7 +615,7 @@ GPU_TEST_P(Subtract_Scalar_First, WithOutMask)
     }
 }
 
-GPU_TEST_P(Subtract_Scalar_First, WithMask)
+CUDA_TEST_P(Subtract_Scalar_First, WithMask)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -646,7 +646,7 @@ GPU_TEST_P(Subtract_Scalar_First, WithMask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Subtract_Scalar_First, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Subtract_Scalar_First, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -681,7 +681,7 @@ PARAM_TEST_CASE(Multiply_Array, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDep
     }
 };
 
-GPU_TEST_P(Multiply_Array, WithOutScale)
+CUDA_TEST_P(Multiply_Array, WithOutScale)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -710,7 +710,7 @@ GPU_TEST_P(Multiply_Array, WithOutScale)
     }
 }
 
-GPU_TEST_P(Multiply_Array, WithScale)
+CUDA_TEST_P(Multiply_Array, WithScale)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype);
@@ -740,7 +740,7 @@ GPU_TEST_P(Multiply_Array, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Multiply_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -766,7 +766,7 @@ PARAM_TEST_CASE(Multiply_Array_Special, cv::cuda::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-GPU_TEST_P(Multiply_Array_Special, Case_8UC4x_32FC1)
+CUDA_TEST_P(Multiply_Array_Special, Case_8UC4x_32FC1)
 {
     cv::Mat mat1 = randomMat(size, CV_8UC4);
     cv::Mat mat2 = randomMat(size, CV_32FC1);
@@ -803,7 +803,7 @@ GPU_TEST_P(Multiply_Array_Special, Case_8UC4x_32FC1)
     }
 }
 
-GPU_TEST_P(Multiply_Array_Special, Case_16SC4x_32FC1)
+CUDA_TEST_P(Multiply_Array_Special, Case_16SC4x_32FC1)
 {
     cv::Mat mat1 = randomMat(size, CV_16SC4);
     cv::Mat mat2 = randomMat(size, CV_32FC1);
@@ -840,7 +840,7 @@ GPU_TEST_P(Multiply_Array_Special, Case_16SC4x_32FC1)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Array_Special, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Multiply_Array_Special, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -866,7 +866,7 @@ PARAM_TEST_CASE(Multiply_Scalar, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDe
     }
 };
 
-GPU_TEST_P(Multiply_Scalar, WithOutScale)
+CUDA_TEST_P(Multiply_Scalar, WithOutScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -896,7 +896,7 @@ GPU_TEST_P(Multiply_Scalar, WithOutScale)
 }
 
 
-GPU_TEST_P(Multiply_Scalar, WithScale)
+CUDA_TEST_P(Multiply_Scalar, WithScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -926,7 +926,7 @@ GPU_TEST_P(Multiply_Scalar, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Multiply_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -953,7 +953,7 @@ PARAM_TEST_CASE(Multiply_Scalar_First, cv::cuda::DeviceInfo, cv::Size, std::pair
     }
 };
 
-GPU_TEST_P(Multiply_Scalar_First, WithOutScale)
+CUDA_TEST_P(Multiply_Scalar_First, WithOutScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -983,7 +983,7 @@ GPU_TEST_P(Multiply_Scalar_First, WithOutScale)
 }
 
 
-GPU_TEST_P(Multiply_Scalar_First, WithScale)
+CUDA_TEST_P(Multiply_Scalar_First, WithScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(0, 255);
@@ -1013,7 +1013,7 @@ GPU_TEST_P(Multiply_Scalar_First, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Multiply_Scalar_First, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Multiply_Scalar_First, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1048,7 +1048,7 @@ PARAM_TEST_CASE(Divide_Array, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDepth
     }
 };
 
-GPU_TEST_P(Divide_Array, WithOutScale)
+CUDA_TEST_P(Divide_Array, WithOutScale)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype, 1.0, 255.0);
@@ -1077,7 +1077,7 @@ GPU_TEST_P(Divide_Array, WithOutScale)
     }
 }
 
-GPU_TEST_P(Divide_Array, WithScale)
+CUDA_TEST_P(Divide_Array, WithScale)
 {
     cv::Mat mat1 = randomMat(size, stype);
     cv::Mat mat2 = randomMat(size, stype, 1.0, 255.0);
@@ -1107,7 +1107,7 @@ GPU_TEST_P(Divide_Array, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Divide_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1133,7 +1133,7 @@ PARAM_TEST_CASE(Divide_Array_Special, cv::cuda::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-GPU_TEST_P(Divide_Array_Special, Case_8UC4x_32FC1)
+CUDA_TEST_P(Divide_Array_Special, Case_8UC4x_32FC1)
 {
     cv::Mat mat1 = randomMat(size, CV_8UC4);
     cv::Mat mat2 = randomMat(size, CV_32FC1, 1.0, 255.0);
@@ -1170,7 +1170,7 @@ GPU_TEST_P(Divide_Array_Special, Case_8UC4x_32FC1)
     }
 }
 
-GPU_TEST_P(Divide_Array_Special, Case_16SC4x_32FC1)
+CUDA_TEST_P(Divide_Array_Special, Case_16SC4x_32FC1)
 {
     cv::Mat mat1 = randomMat(size, CV_16SC4);
     cv::Mat mat2 = randomMat(size, CV_32FC1, 1.0, 255.0);
@@ -1207,7 +1207,7 @@ GPU_TEST_P(Divide_Array_Special, Case_16SC4x_32FC1)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Array_Special, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Divide_Array_Special, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -1233,7 +1233,7 @@ PARAM_TEST_CASE(Divide_Scalar, cv::cuda::DeviceInfo, cv::Size, std::pair<MatDept
     }
 };
 
-GPU_TEST_P(Divide_Scalar, WithOutScale)
+CUDA_TEST_P(Divide_Scalar, WithOutScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(1.0, 255.0);
@@ -1262,7 +1262,7 @@ GPU_TEST_P(Divide_Scalar, WithOutScale)
     }
 }
 
-GPU_TEST_P(Divide_Scalar, WithScale)
+CUDA_TEST_P(Divide_Scalar, WithScale)
 {
     cv::Mat mat = randomMat(size, depth.first);
     cv::Scalar val = randomScalar(1.0, 255.0);
@@ -1292,7 +1292,7 @@ GPU_TEST_P(Divide_Scalar, WithScale)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Divide_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1319,7 +1319,7 @@ PARAM_TEST_CASE(Divide_Scalar_First, cv::cuda::DeviceInfo, cv::Size, std::pair<M
     }
 };
 
-GPU_TEST_P(Divide_Scalar_First, Accuracy)
+CUDA_TEST_P(Divide_Scalar_First, Accuracy)
 {
     double scale = randomDouble(0.0, 255.0);
     cv::Mat mat = randomMat(size, depth.first, 1.0, 255.0);
@@ -1348,7 +1348,7 @@ GPU_TEST_P(Divide_Scalar_First, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Divide_Scalar_First, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Divide_Scalar_First, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DEPTH_PAIRS,
@@ -1375,7 +1375,7 @@ PARAM_TEST_CASE(AbsDiff, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(AbsDiff, Array)
+CUDA_TEST_P(AbsDiff, Array)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
@@ -1404,7 +1404,7 @@ GPU_TEST_P(AbsDiff, Array)
     }
 }
 
-GPU_TEST_P(AbsDiff, Scalar)
+CUDA_TEST_P(AbsDiff, Scalar)
 {
     cv::Mat src = randomMat(size, depth);
     cv::Scalar val = randomScalar(0.0, 255.0);
@@ -1433,7 +1433,7 @@ GPU_TEST_P(AbsDiff, Scalar)
     }
 }
 
-GPU_TEST_P(AbsDiff, Scalar_First)
+CUDA_TEST_P(AbsDiff, Scalar_First)
 {
     cv::Mat src = randomMat(size, depth);
     cv::Scalar val = randomScalar(0.0, 255.0);
@@ -1462,7 +1462,7 @@ GPU_TEST_P(AbsDiff, Scalar_First)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, AbsDiff, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, AbsDiff, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -1489,7 +1489,7 @@ PARAM_TEST_CASE(Abs, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Abs, Accuracy)
+CUDA_TEST_P(Abs, Accuracy)
 {
     cv::Mat src = randomMat(size, depth);
 
@@ -1501,7 +1501,7 @@ GPU_TEST_P(Abs, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Abs, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Abs, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_16S), MatDepth(CV_32F)),
@@ -1528,7 +1528,7 @@ PARAM_TEST_CASE(Sqr, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Sqr, Accuracy)
+CUDA_TEST_P(Sqr, Accuracy)
 {
     cv::Mat src = randomMat(size, depth, 0, depth == CV_8U ? 16 : 255);
 
@@ -1541,7 +1541,7 @@ GPU_TEST_P(Sqr, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sqr, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Sqr, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1598,7 +1598,7 @@ PARAM_TEST_CASE(Sqrt, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Sqrt, Accuracy)
+CUDA_TEST_P(Sqrt, Accuracy)
 {
     cv::Mat src = randomMat(size, depth);
 
@@ -1611,7 +1611,7 @@ GPU_TEST_P(Sqrt, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sqrt, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Sqrt, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1668,7 +1668,7 @@ PARAM_TEST_CASE(Log, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Log, Accuracy)
+CUDA_TEST_P(Log, Accuracy)
 {
     cv::Mat src = randomMat(size, depth, 1.0, 255.0);
 
@@ -1681,7 +1681,7 @@ GPU_TEST_P(Log, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-6);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Log, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Log, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1748,7 +1748,7 @@ PARAM_TEST_CASE(Exp, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Exp, Accuracy)
+CUDA_TEST_P(Exp, Accuracy)
 {
     cv::Mat src = randomMat(size, depth, 0.0, 10.0);
 
@@ -1761,7 +1761,7 @@ GPU_TEST_P(Exp, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, depth < CV_32F ? 1.0 : 1e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Exp, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Exp, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -1791,7 +1791,7 @@ PARAM_TEST_CASE(Pow, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Pow, Accuracy)
+CUDA_TEST_P(Pow, Accuracy)
 {
     cv::Mat src = randomMat(size, depth, 0.0, 10.0);
     double power = randomDouble(2.0, 4.0);
@@ -1823,7 +1823,7 @@ GPU_TEST_P(Pow, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Pow, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Pow, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -1855,7 +1855,7 @@ PARAM_TEST_CASE(Compare_Array, cv::cuda::DeviceInfo, cv::Size, MatDepth, CmpCode
     }
 };
 
-GPU_TEST_P(Compare_Array, Accuracy)
+CUDA_TEST_P(Compare_Array, Accuracy)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
@@ -1884,7 +1884,7 @@ GPU_TEST_P(Compare_Array, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Compare_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Compare_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -1957,7 +1957,7 @@ PARAM_TEST_CASE(Compare_Scalar, cv::cuda::DeviceInfo, cv::Size, MatType, CmpCode
     }
 };
 
-GPU_TEST_P(Compare_Scalar, Accuracy)
+CUDA_TEST_P(Compare_Scalar, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Scalar sc = randomScalar(0.0, 255.0);
@@ -1995,7 +1995,7 @@ GPU_TEST_P(Compare_Scalar, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Compare_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Compare_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     TYPES(CV_8U, CV_64F, 1, 4),
@@ -2027,7 +2027,7 @@ PARAM_TEST_CASE(Bitwise_Array, cv::cuda::DeviceInfo, cv::Size, MatType)
     }
 };
 
-GPU_TEST_P(Bitwise_Array, Not)
+CUDA_TEST_P(Bitwise_Array, Not)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_not(loadMat(src1), dst);
@@ -2037,7 +2037,7 @@ GPU_TEST_P(Bitwise_Array, Not)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-GPU_TEST_P(Bitwise_Array, Or)
+CUDA_TEST_P(Bitwise_Array, Or)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_or(loadMat(src1), loadMat(src2), dst);
@@ -2047,7 +2047,7 @@ GPU_TEST_P(Bitwise_Array, Or)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-GPU_TEST_P(Bitwise_Array, And)
+CUDA_TEST_P(Bitwise_Array, And)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_and(loadMat(src1), loadMat(src2), dst);
@@ -2057,7 +2057,7 @@ GPU_TEST_P(Bitwise_Array, And)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-GPU_TEST_P(Bitwise_Array, Xor)
+CUDA_TEST_P(Bitwise_Array, Xor)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_xor(loadMat(src1), loadMat(src2), dst);
@@ -2067,7 +2067,7 @@ GPU_TEST_P(Bitwise_Array, Xor)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Bitwise_Array, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Bitwise_Array, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     TYPES(CV_8U, CV_32S, 1, 4)));
@@ -2100,7 +2100,7 @@ PARAM_TEST_CASE(Bitwise_Scalar, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channe
     }
 };
 
-GPU_TEST_P(Bitwise_Scalar, Or)
+CUDA_TEST_P(Bitwise_Scalar, Or)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_or(loadMat(src), val, dst);
@@ -2111,7 +2111,7 @@ GPU_TEST_P(Bitwise_Scalar, Or)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-GPU_TEST_P(Bitwise_Scalar, And)
+CUDA_TEST_P(Bitwise_Scalar, And)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_and(loadMat(src), val, dst);
@@ -2122,7 +2122,7 @@ GPU_TEST_P(Bitwise_Scalar, And)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-GPU_TEST_P(Bitwise_Scalar, Xor)
+CUDA_TEST_P(Bitwise_Scalar, Xor)
 {
     cv::cuda::GpuMat dst;
     cv::cuda::bitwise_xor(loadMat(src), val, dst);
@@ -2133,7 +2133,7 @@ GPU_TEST_P(Bitwise_Scalar, Xor)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Bitwise_Scalar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Bitwise_Scalar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
@@ -2193,7 +2193,7 @@ PARAM_TEST_CASE(RShift, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseR
     }
 };
 
-GPU_TEST_P(RShift, Accuracy)
+CUDA_TEST_P(RShift, Accuracy)
 {
     int type = CV_MAKE_TYPE(depth, channels);
     cv::Mat src = randomMat(size, type);
@@ -2208,7 +2208,7 @@ GPU_TEST_P(RShift, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, RShift, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, RShift, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U),
@@ -2273,7 +2273,7 @@ PARAM_TEST_CASE(LShift, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseR
     }
 };
 
-GPU_TEST_P(LShift, Accuracy)
+CUDA_TEST_P(LShift, Accuracy)
 {
     int type = CV_MAKE_TYPE(depth, channels);
     cv::Mat src = randomMat(size, type);
@@ -2288,7 +2288,7 @@ GPU_TEST_P(LShift, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, LShift, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, LShift, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32S)),
@@ -2316,7 +2316,7 @@ PARAM_TEST_CASE(Min, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Min, Array)
+CUDA_TEST_P(Min, Array)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
@@ -2344,7 +2344,7 @@ GPU_TEST_P(Min, Array)
     }
 }
 
-GPU_TEST_P(Min, Scalar)
+CUDA_TEST_P(Min, Scalar)
 {
     cv::Mat src = randomMat(size, depth);
     double val = randomDouble(0.0, 255.0);
@@ -2372,7 +2372,7 @@ GPU_TEST_P(Min, Scalar)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Min, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Min, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2399,7 +2399,7 @@ PARAM_TEST_CASE(Max, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
     }
 };
 
-GPU_TEST_P(Max, Array)
+CUDA_TEST_P(Max, Array)
 {
     cv::Mat src1 = randomMat(size, depth);
     cv::Mat src2 = randomMat(size, depth);
@@ -2427,7 +2427,7 @@ GPU_TEST_P(Max, Array)
     }
 }
 
-GPU_TEST_P(Max, Scalar)
+CUDA_TEST_P(Max, Scalar)
 {
     cv::Mat src = randomMat(size, depth);
     double val = randomDouble(0.0, 255.0);
@@ -2455,7 +2455,7 @@ GPU_TEST_P(Max, Scalar)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Max, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Max, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2486,7 +2486,7 @@ PARAM_TEST_CASE(AddWeighted, cv::cuda::DeviceInfo, cv::Size, MatDepth, MatDepth,
     }
 };
 
-GPU_TEST_P(AddWeighted, Accuracy)
+CUDA_TEST_P(AddWeighted, Accuracy)
 {
     cv::Mat src1 = randomMat(size, depth1);
     cv::Mat src2 = randomMat(size, depth2);
@@ -2518,7 +2518,7 @@ GPU_TEST_P(AddWeighted, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, AddWeighted, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, AddWeighted, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     ALL_DEPTH,
@@ -2552,7 +2552,7 @@ PARAM_TEST_CASE(Threshold, cv::cuda::DeviceInfo, cv::Size, MatType, ThreshOp, Us
     }
 };
 
-GPU_TEST_P(Threshold, Accuracy)
+CUDA_TEST_P(Threshold, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     double maxVal = randomDouble(20.0, 127.0);
@@ -2567,7 +2567,7 @@ GPU_TEST_P(Threshold, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Threshold, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Threshold, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_16SC1), MatType(CV_32FC1)),
@@ -2593,7 +2593,7 @@ PARAM_TEST_CASE(Magnitude, cv::cuda::DeviceInfo, cv::Size, UseRoi)
     }
 };
 
-GPU_TEST_P(Magnitude, NPP)
+CUDA_TEST_P(Magnitude, NPP)
 {
     cv::Mat src = randomMat(size, CV_32FC2);
 
@@ -2608,7 +2608,7 @@ GPU_TEST_P(Magnitude, NPP)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
 }
 
-GPU_TEST_P(Magnitude, Sqr_NPP)
+CUDA_TEST_P(Magnitude, Sqr_NPP)
 {
     cv::Mat src = randomMat(size, CV_32FC2);
 
@@ -2624,7 +2624,7 @@ GPU_TEST_P(Magnitude, Sqr_NPP)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
 }
 
-GPU_TEST_P(Magnitude, Accuracy)
+CUDA_TEST_P(Magnitude, Accuracy)
 {
     cv::Mat x = randomMat(size, CV_32FC1);
     cv::Mat y = randomMat(size, CV_32FC1);
@@ -2638,7 +2638,7 @@ GPU_TEST_P(Magnitude, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-4);
 }
 
-GPU_TEST_P(Magnitude, Sqr_Accuracy)
+CUDA_TEST_P(Magnitude, Sqr_Accuracy)
 {
     cv::Mat x = randomMat(size, CV_32FC1);
     cv::Mat y = randomMat(size, CV_32FC1);
@@ -2653,7 +2653,7 @@ GPU_TEST_P(Magnitude, Sqr_Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 1e-1);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Magnitude, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Magnitude, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
@@ -2684,7 +2684,7 @@ PARAM_TEST_CASE(Phase, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, UseRoi)
     }
 };
 
-GPU_TEST_P(Phase, Accuracy)
+CUDA_TEST_P(Phase, Accuracy)
 {
     cv::Mat x = randomMat(size, CV_32FC1);
     cv::Mat y = randomMat(size, CV_32FC1);
@@ -2698,7 +2698,7 @@ GPU_TEST_P(Phase, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, angleInDegrees ? 1e-2 : 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, Phase, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Phase, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
@@ -2725,7 +2725,7 @@ PARAM_TEST_CASE(CartToPolar, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
     }
 };
 
-GPU_TEST_P(CartToPolar, Accuracy)
+CUDA_TEST_P(CartToPolar, Accuracy)
 {
     cv::Mat x = randomMat(size, CV_32FC1);
     cv::Mat y = randomMat(size, CV_32FC1);
@@ -2742,7 +2742,7 @@ GPU_TEST_P(CartToPolar, Accuracy)
     EXPECT_MAT_NEAR(angle_gold, angle, angleInDegrees ? 1e-2 : 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, CartToPolar, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, CartToPolar, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),
@@ -2769,7 +2769,7 @@ PARAM_TEST_CASE(PolarToCart, cv::cuda::DeviceInfo, cv::Size, AngleInDegrees, Use
     }
 };
 
-GPU_TEST_P(PolarToCart, Accuracy)
+CUDA_TEST_P(PolarToCart, Accuracy)
 {
     cv::Mat magnitude = randomMat(size, CV_32FC1);
     cv::Mat angle = randomMat(size, CV_32FC1);
@@ -2786,7 +2786,7 @@ GPU_TEST_P(PolarToCart, Accuracy)
     EXPECT_MAT_NEAR(y_gold, y, 1e-4);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Arithm, PolarToCart, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, PolarToCart, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(AngleInDegrees(false), AngleInDegrees(true)),

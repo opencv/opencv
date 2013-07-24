@@ -90,7 +90,7 @@ PARAM_TEST_CASE(FGDStatModel, cv::cuda::DeviceInfo, std::string)
     }
 };
 
-GPU_TEST_P(FGDStatModel, Update)
+CUDA_TEST_P(FGDStatModel, Update)
 {
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -131,7 +131,7 @@ GPU_TEST_P(FGDStatModel, Update)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_BgSegm, FGDStatModel, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, FGDStatModel, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"))));
 
@@ -171,7 +171,7 @@ PARAM_TEST_CASE(MOG, cv::cuda::DeviceInfo, std::string, UseGray, LearningRate, U
     }
 };
 
-GPU_TEST_P(MOG, Update)
+CUDA_TEST_P(MOG, Update)
 {
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -206,7 +206,7 @@ GPU_TEST_P(MOG, Update)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_BgSegm, MOG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
@@ -245,7 +245,7 @@ PARAM_TEST_CASE(MOG2, cv::cuda::DeviceInfo, std::string, UseGray, DetectShadow, 
     }
 };
 
-GPU_TEST_P(MOG2, Update)
+CUDA_TEST_P(MOG2, Update)
 {
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
@@ -289,7 +289,7 @@ GPU_TEST_P(MOG2, Update)
     }
 }
 
-GPU_TEST_P(MOG2, getBackgroundImage)
+CUDA_TEST_P(MOG2, getBackgroundImage)
 {
     if (useGray)
         return;
@@ -326,7 +326,7 @@ GPU_TEST_P(MOG2, getBackgroundImage)
     ASSERT_MAT_NEAR(background_gold, background, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_BgSegm, MOG2, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, MOG2, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi")),
     testing::Values(UseGray(true), UseGray(false)),
@@ -342,7 +342,7 @@ PARAM_TEST_CASE(GMG, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
 };
 
-GPU_TEST_P(GMG, Accuracy)
+CUDA_TEST_P(GMG, Accuracy)
 {
     const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
     cv::cuda::setDevice(devInfo.deviceID());
@@ -381,7 +381,7 @@ GPU_TEST_P(GMG, Accuracy)
     ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_BgSegm, GMG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_BgSegm, GMG, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8U), MatType(CV_16U), MatType(CV_32F)),

@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_DYNAMIC_SMEM_HPP__
-#define __OPENCV_GPU_DYNAMIC_SMEM_HPP__
+#ifndef __OPENCV_CUDA_DYNAMIC_SMEM_HPP__
+#define __OPENCV_CUDA_DYNAMIC_SMEM_HPP__
 
 namespace cv { namespace cuda { namespace device
 {
@@ -77,4 +77,4 @@ namespace cv { namespace cuda { namespace device
     };
 }}}
 
-#endif // __OPENCV_GPU_DYNAMIC_SMEM_HPP__
+#endif // __OPENCV_CUDA_DYNAMIC_SMEM_HPP__

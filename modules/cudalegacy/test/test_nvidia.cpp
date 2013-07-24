@@ -68,84 +68,84 @@ struct NVidiaTest : TestWithParam<cv::cuda::DeviceInfo>
 struct NPPST : NVidiaTest {};
 struct NCV : NVidiaTest {};
 
-GPU_TEST_P(NPPST, Integral)
+CUDA_TEST_P(NPPST, Integral)
 {
     bool res = nvidia_NPPST_Integral_Image(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NPPST, SquaredIntegral)
+CUDA_TEST_P(NPPST, SquaredIntegral)
 {
     bool res = nvidia_NPPST_Squared_Integral_Image(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NPPST, RectStdDev)
+CUDA_TEST_P(NPPST, RectStdDev)
 {
     bool res = nvidia_NPPST_RectStdDev(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NPPST, Resize)
+CUDA_TEST_P(NPPST, Resize)
 {
     bool res = nvidia_NPPST_Resize(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NPPST, VectorOperations)
+CUDA_TEST_P(NPPST, VectorOperations)
 {
     bool res = nvidia_NPPST_Vector_Operations(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NPPST, Transpose)
+CUDA_TEST_P(NPPST, Transpose)
 {
     bool res = nvidia_NPPST_Transpose(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NCV, VectorOperations)
+CUDA_TEST_P(NCV, VectorOperations)
 {
     bool res = nvidia_NCV_Vector_Operations(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NCV, HaarCascadeLoader)
+CUDA_TEST_P(NCV, HaarCascadeLoader)
 {
     bool res = nvidia_NCV_Haar_Cascade_Loader(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NCV, HaarCascadeApplication)
+CUDA_TEST_P(NCV, HaarCascadeApplication)
 {
     bool res = nvidia_NCV_Haar_Cascade_Application(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NCV, HypothesesFiltration)
+CUDA_TEST_P(NCV, HypothesesFiltration)
 {
     bool res = nvidia_NCV_Hypotheses_Filtration(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-GPU_TEST_P(NCV, Visualization)
+CUDA_TEST_P(NCV, Visualization)
 {
     bool res = nvidia_NCV_Visualization(_path, nvidiaTestOutputLevel);
 
     ASSERT_TRUE(res);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Legacy, NPPST, ALL_DEVICES);
-INSTANTIATE_TEST_CASE_P(GPU_Legacy, NCV, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Legacy, NPPST, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Legacy, NCV, ALL_DEVICES);
 
 #endif // HAVE_CUDA

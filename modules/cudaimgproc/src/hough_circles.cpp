@@ -99,7 +99,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
-            fs << "name" << "HoughCirclesDetector_GPU"
+            fs << "name" << "HoughCirclesDetector_CUDA"
             << "dp" << dp_
             << "minDist" << minDist_
             << "cannyThreshold" << cannyThreshold_
@@ -111,7 +111,7 @@ namespace
 
         void read(const FileNode& fn)
         {
-            CV_Assert( String(fn["name"]) == "HoughCirclesDetector_GPU" );
+            CV_Assert( String(fn["name"]) == "HoughCirclesDetector_CUDA" );
             dp_ = (float)fn["dp"];
             minDist_ = (float)fn["minDist"];
             cannyThreshold_ = (int)fn["cannyThreshold"];

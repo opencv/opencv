@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_SCAN_HPP__
-#define __OPENCV_GPU_SCAN_HPP__
+#ifndef __OPENCV_CUDA_SCAN_HPP__
+#define __OPENCV_CUDA_SCAN_HPP__
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/utility.hpp"
@@ -178,7 +178,7 @@ namespace cv { namespace cuda { namespace device
 
         // scan on shuffl functions
         #pragma unroll
-        for (int i = 1; i <= (OPENCV_GPU_WARP_SIZE / 2); i *= 2)
+        for (int i = 1; i <= (OPENCV_CUDA_WARP_SIZE / 2); i *= 2)
         {
             const T n = cv::cuda::device::shfl_up(idata, i);
             if (laneId >= i)
@@ -187,9 +187,9 @@ namespace cv { namespace cuda { namespace device
 
         return idata;
     #else
-        unsigned int pos = 2 * tid - (tid & (OPENCV_GPU_WARP_SIZE - 1));
+        unsigned int pos = 2 * tid - (tid & (OPENCV_CUDA_WARP_SIZE - 1));
         s_Data[pos] = 0;
-        pos += OPENCV_GPU_WARP_SIZE;
+        pos += OPENCV_CUDA_WARP_SIZE;
         s_Data[pos] = idata;
 
         s_Data[pos] += s_Data[pos - 1];
@@ -211,7 +211,7 @@ namespace cv { namespace cuda { namespace device
     template <int tiNumScanThreads, typename T>
     __device__ T blockScanInclusive(T idata, volatile T* s_Data, unsigned int tid)
     {
-        if (tiNumScanThreads > OPENCV_GPU_WARP_SIZE)
+        if (tiNumScanThreads > OPENCV_CUDA_WARP_SIZE)
         {
             //Bottom-level inclusive warp scan
             T warpResult = warpScanInclusive(idata, s_Data, tid);
@@ -219,15 +219,15 @@ namespace cv { namespace cuda { namespace device
             //Save top elements of each warp for exclusive warp scan
             //sync to wait for warp scans to complete (because s_Data is being overwritten)
             __syncthreads();
-            if ((tid & (OPENCV_GPU_WARP_SIZE - 1)) == (OPENCV_GPU_WARP_SIZE - 1))
+            if ((tid & (OPENCV_CUDA_WARP_SIZE - 1)) == (OPENCV_CUDA_WARP_SIZE - 1))
             {
-                s_Data[tid >> OPENCV_GPU_LOG_WARP_SIZE] = warpResult;
+                s_Data[tid >> OPENCV_CUDA_LOG_WARP_SIZE] = warpResult;
             }
 
             //wait for warp scans to complete
             __syncthreads();
 
-            if (tid < (tiNumScanThreads / OPENCV_GPU_WARP_SIZE) )
+            if (tid < (tiNumScanThreads / OPENCV_CUDA_WARP_SIZE) )
             {
                 //grab top warp elements
                 T val = s_Data[tid];
@@ -238,7 +238,7 @@ namespace cv { namespace cuda { namespace device
             //return updated warp scans with exclusive scan results
             __syncthreads();
 
-            return warpResult + s_Data[tid >> OPENCV_GPU_LOG_WARP_SIZE];
+            return warpResult + s_Data[tid >> OPENCV_CUDA_LOG_WARP_SIZE];
         }
         else
         {
@@ -247,4 +247,4 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_GPU_SCAN_HPP__
+#endif // __OPENCV_CUDA_SCAN_HPP__

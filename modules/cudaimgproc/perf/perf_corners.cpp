@@ -71,7 +71,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerHarris,
 
     const double k = 0.5;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat dst;
@@ -80,7 +80,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerHarris,
 
         TEST_CYCLE() harris->compute(d_img, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-4);
+        CUDA_SANITY_CHECK(dst, 1e-4);
     }
     else
     {
@@ -113,7 +113,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerMinEigenVal,
 
     img.convertTo(img, type, type == CV_32F ? 1.0 / 255.0 : 1.0);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat dst;
@@ -122,7 +122,7 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerMinEigenVal,
 
         TEST_CYCLE() minEigenVal->compute(d_img, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-4);
+        CUDA_SANITY_CHECK(dst, 1e-4);
     }
     else
     {

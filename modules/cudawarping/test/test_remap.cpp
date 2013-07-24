@@ -155,7 +155,7 @@ PARAM_TEST_CASE(Remap, cv::cuda::DeviceInfo, cv::Size, MatType, Interpolation, B
     }
 };
 
-GPU_TEST_P(Remap, Accuracy)
+CUDA_TEST_P(Remap, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Scalar val = randomScalar(0.0, 255.0);
@@ -169,7 +169,7 @@ GPU_TEST_P(Remap, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-3 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, Remap, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, Remap, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),

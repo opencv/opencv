@@ -100,7 +100,7 @@ PERF_TEST_P(Video, FGDStatModel,
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::GpuMat d_frame(frame), foreground;
 
@@ -119,13 +119,13 @@ PERF_TEST_P(Video, FGDStatModel,
             stopTimer();
         }
 
-        GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
 
 #ifdef HAVE_OPENCV_CUDAIMGPROC
         cv::cuda::GpuMat background3, background;
         d_fgd->getBackgroundImage(background3);
         cv::cuda::cvtColor(background3, background, cv::COLOR_BGR2BGRA);
-        GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
+        CUDA_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
 #endif
     }
     else
@@ -168,7 +168,7 @@ DEF_PARAM_TEST(Video_Cn_LearningRate, string, MatCn, double);
 
 PERF_TEST_P(Video_Cn_LearningRate, MOG,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     Values(0.0, 0.01)))
 {
     const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
@@ -193,7 +193,7 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
         cv::swap(temp, frame);
     }
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::BackgroundSubtractor> d_mog = cv::cuda::createBackgroundSubtractorMOG();
 
@@ -224,7 +224,7 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
             stopTimer();
         }
 
-        GPU_SANITY_CHECK(foreground);
+        CUDA_SANITY_CHECK(foreground);
     }
     else
     {
@@ -268,7 +268,7 @@ DEF_PARAM_TEST(Video_Cn, string, int);
 
 PERF_TEST_P(Video_Cn, MOG2,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-                    GPU_CHANNELS_1_3_4))
+                    CUDA_CHANNELS_1_3_4))
 {
     const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     const int cn = GET_PARAM(1);
@@ -291,7 +291,7 @@ PERF_TEST_P(Video_Cn, MOG2,
         cv::swap(temp, frame);
     }
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::BackgroundSubtractorMOG2> d_mog2 = cv::cuda::createBackgroundSubtractorMOG2();
         d_mog2->setDetectShadows(false);
@@ -323,7 +323,7 @@ PERF_TEST_P(Video_Cn, MOG2,
             stopTimer();
         }
 
-        GPU_SANITY_CHECK(foreground);
+        CUDA_SANITY_CHECK(foreground);
     }
     else
     {
@@ -367,7 +367,7 @@ PERF_TEST_P(Video_Cn, MOG2,
 
 PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
             Combine(Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-                    GPU_CHANNELS_1_3_4))
+                    CUDA_CHANNELS_1_3_4))
 {
     const string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
     const int cn = GET_PARAM(1);
@@ -377,7 +377,7 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
     cv::Mat frame;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::BackgroundSubtractor> d_mog2 = cv::cuda::createBackgroundSubtractorMOG2();
 
@@ -408,7 +408,7 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
         TEST_CYCLE() d_mog2->getBackgroundImage(background);
 
-        GPU_SANITY_CHECK(background, 1);
+        CUDA_SANITY_CHECK(background, 1);
     }
     else
     {
@@ -452,7 +452,7 @@ DEF_PARAM_TEST(Video_Cn_MaxFeatures, string, MatCn, int);
 
 PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
             Combine(Values(string("gpu/video/768x576.avi")),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     Values(20, 40, 60)))
 {
     const std::string inputFile = perf::TestBase::getDataPath(GET_PARAM(0));
@@ -476,7 +476,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::swap(temp, frame);
     }
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::cuda::GpuMat d_frame(frame);
         cv::cuda::GpuMat foreground;
@@ -513,7 +513,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
             stopTimer();
         }
 
-        GPU_SANITY_CHECK(foreground);
+        CUDA_SANITY_CHECK(foreground);
     }
     else
     {

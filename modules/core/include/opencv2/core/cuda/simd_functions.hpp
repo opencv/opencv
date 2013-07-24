@@ -70,16 +70,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
-#define __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
+#ifndef __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__
+#define __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__
 
 #include "common.hpp"
 
 /*
   This header file contains inline functions that implement intra-word SIMD
-  operations, that are hardware accelerated on sm_3x (Kepler) GPUs. Efficient
+  operations, that are hardware accelerated on sm_3x (Kepler) CUDAs. Efficient
   emulation code paths are provided for earlier architectures (sm_1x, sm_2x)
-  to make the code portable across all GPUs supported by CUDA. The following
+  to make the code portable across all CUDAs supported by CUDA. The following
   functions are currently implemented:
 
   vadd2(a,b)      per-halfword unsigned addition, with wrap-around: a + b
@@ -906,4 +906,4 @@ namespace cv { namespace cuda { namespace device
     }
 }}}
 
-#endif // __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
+#endif // __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__

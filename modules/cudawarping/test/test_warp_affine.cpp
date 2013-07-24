@@ -78,7 +78,7 @@ PARAM_TEST_CASE(BuildWarpAffineMaps, cv::cuda::DeviceInfo, cv::Size, Inverse)
     }
 };
 
-GPU_TEST_P(BuildWarpAffineMaps, Accuracy)
+CUDA_TEST_P(BuildWarpAffineMaps, Accuracy)
 {
     cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
     cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
@@ -101,7 +101,7 @@ GPU_TEST_P(BuildWarpAffineMaps, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, BuildWarpAffineMaps, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, BuildWarpAffineMaps, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     DIRECT_INVERSE));
@@ -204,7 +204,7 @@ PARAM_TEST_CASE(WarpAffine, cv::cuda::DeviceInfo, cv::Size, MatType, Inverse, In
     }
 };
 
-GPU_TEST_P(WarpAffine, Accuracy)
+CUDA_TEST_P(WarpAffine, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
     cv::Mat M = createTransfomMatrix(size, CV_PI / 3);
@@ -222,7 +222,7 @@ GPU_TEST_P(WarpAffine, Accuracy)
     EXPECT_MAT_NEAR(dst_gold, dst, src.depth() == CV_32F ? 1e-1 : 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, WarpAffine, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, WarpAffine, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_16UC1), MatType(CV_16UC3), MatType(CV_16UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
@@ -252,7 +252,7 @@ PARAM_TEST_CASE(WarpAffineNPP, cv::cuda::DeviceInfo, MatType, Inverse, Interpola
     }
 };
 
-GPU_TEST_P(WarpAffineNPP, Accuracy)
+CUDA_TEST_P(WarpAffineNPP, Accuracy)
 {
     cv::Mat src = readImageType("stereobp/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
@@ -271,7 +271,7 @@ GPU_TEST_P(WarpAffineNPP, Accuracy)
     EXPECT_MAT_SIMILAR(dst_gold, dst, 2e-2);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Warping, WarpAffineNPP, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Warping, WarpAffineNPP, testing::Combine(
     ALL_DEVICES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),
     DIRECT_INVERSE,

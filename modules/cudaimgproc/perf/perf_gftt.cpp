@@ -64,7 +64,7 @@ PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
     const int maxCorners = 8000;
     const double qualityLevel = 0.01;
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::cuda::CornersDetector> d_detector = cv::cuda::createGoodFeaturesToTrackDetector(image.type(), maxCorners, qualityLevel, minDistance);
 
@@ -73,7 +73,7 @@ PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
 
         TEST_CYCLE() d_detector->detect(d_image, pts);
 
-        GPU_SANITY_CHECK(pts);
+        CUDA_SANITY_CHECK(pts);
     }
     else
     {

@@ -52,7 +52,7 @@ using namespace perf;
 // Merge
 
 PERF_TEST_P(Sz_Depth_Cn, Merge,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     Values(2, 3, 4)))
 {
@@ -67,7 +67,7 @@ PERF_TEST_P(Sz_Depth_Cn, Merge,
         declare.in(src[i], WARMUP_RNG);
     }
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         std::vector<cv::cuda::GpuMat> d_src(channels);
         for (int i = 0; i < channels; ++i)
@@ -77,7 +77,7 @@ PERF_TEST_P(Sz_Depth_Cn, Merge,
 
         TEST_CYCLE() cv::cuda::merge(d_src, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-10);
+        CUDA_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -93,7 +93,7 @@ PERF_TEST_P(Sz_Depth_Cn, Merge,
 // Split
 
 PERF_TEST_P(Sz_Depth_Cn, Split,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     ARITHM_MAT_DEPTH,
                     Values(2, 3, 4)))
 {
@@ -104,7 +104,7 @@ PERF_TEST_P(Sz_Depth_Cn, Split,
     cv::Mat src(size, CV_MAKE_TYPE(depth, channels));
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         std::vector<cv::cuda::GpuMat> dst;
@@ -114,8 +114,8 @@ PERF_TEST_P(Sz_Depth_Cn, Split,
         const cv::cuda::GpuMat& dst0 = dst[0];
         const cv::cuda::GpuMat& dst1 = dst[1];
 
-        GPU_SANITY_CHECK(dst0, 1e-10);
-        GPU_SANITY_CHECK(dst1, 1e-10);
+        CUDA_SANITY_CHECK(dst0, 1e-10);
+        CUDA_SANITY_CHECK(dst1, 1e-10);
     }
     else
     {
@@ -135,7 +135,7 @@ PERF_TEST_P(Sz_Depth_Cn, Split,
 // Transpose
 
 PERF_TEST_P(Sz_Type, Transpose,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC4, CV_16UC2, CV_16SC2, CV_32SC1, CV_32SC2, CV_64FC1)))
 {
     const cv::Size size = GET_PARAM(0);
@@ -144,14 +144,14 @@ PERF_TEST_P(Sz_Type, Transpose,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::transpose(d_src, dst);
 
-        GPU_SANITY_CHECK(dst, 1e-10);
+        CUDA_SANITY_CHECK(dst, 1e-10);
     }
     else
     {
@@ -172,9 +172,9 @@ CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 DEF_PARAM_TEST(Sz_Depth_Cn_Code, cv::Size, MatDepth, MatCn, FlipCode);
 
 PERF_TEST_P(Sz_Depth_Cn_Code, Flip,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     FlipCode::all()))
 {
     const cv::Size size = GET_PARAM(0);
@@ -187,14 +187,14 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Flip,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::flip(d_src, dst, flipCode);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -210,7 +210,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Flip,
 // LutOneChannel
 
 PERF_TEST_P(Sz_Type, LutOneChannel,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8UC1, CV_8UC3)))
 {
     const cv::Size size = GET_PARAM(0);
@@ -222,7 +222,7 @@ PERF_TEST_P(Sz_Type, LutOneChannel,
     cv::Mat lut(1, 256, CV_8UC1);
     declare.in(lut, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
@@ -231,7 +231,7 @@ PERF_TEST_P(Sz_Type, LutOneChannel,
 
         TEST_CYCLE() lutAlg->transform(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -247,7 +247,7 @@ PERF_TEST_P(Sz_Type, LutOneChannel,
 // LutMultiChannel
 
 PERF_TEST_P(Sz_Type, LutMultiChannel,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values<MatType>(CV_8UC3)))
 {
     const cv::Size size = GET_PARAM(0);
@@ -259,7 +259,7 @@ PERF_TEST_P(Sz_Type, LutMultiChannel,
     cv::Mat lut(1, 256, CV_MAKE_TYPE(CV_8U, src.channels()));
     declare.in(lut, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
@@ -268,7 +268,7 @@ PERF_TEST_P(Sz_Type, LutMultiChannel,
 
         TEST_CYCLE() lutAlg->transform(d_src, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {
@@ -286,9 +286,9 @@ PERF_TEST_P(Sz_Type, LutMultiChannel,
 DEF_PARAM_TEST(Sz_Depth_Cn_Border, cv::Size, MatDepth, MatCn, BorderMode);
 
 PERF_TEST_P(Sz_Depth_Cn_Border, CopyMakeBorder,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_16U, CV_32F),
-                    GPU_CHANNELS_1_3_4,
+                    CUDA_CHANNELS_1_3_4,
                     ALL_BORDER_MODES))
 {
     const cv::Size size = GET_PARAM(0);
@@ -301,14 +301,14 @@ PERF_TEST_P(Sz_Depth_Cn_Border, CopyMakeBorder,
     cv::Mat src(size, type);
     declare.in(src, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
         TEST_CYCLE() cv::cuda::copyMakeBorder(d_src, dst, 5, 5, 5, 5, borderMode);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

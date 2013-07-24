@@ -44,17 +44,17 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::cuda::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_no_cuda(); }
-void cv::cuda::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::cuda::OpticalFlowDual_TVL1_GPU::collectGarbage() {}
-void cv::cuda::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+cv::cuda::OpticalFlowDual_TVL1_CUDA::OpticalFlowDual_TVL1_CUDA() { throw_no_cuda(); }
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage() {}
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
 using namespace cv;
 using namespace cv::cuda;
 
-cv::cuda::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
+cv::cuda::OpticalFlowDual_TVL1_CUDA::OpticalFlowDual_TVL1_CUDA()
 {
     tau            = 0.25;
     lambda         = 0.15;
@@ -67,7 +67,7 @@ cv::cuda::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
     useInitialFlow = false;
 }
 
-void cv::cuda::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy)
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy)
 {
     CV_Assert( I0.type() == CV_8UC1 || I0.type() == CV_32FC1 );
     CV_Assert( I0.size() == I1.size() );
@@ -177,7 +177,7 @@ namespace tvl1flow
     void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, float taut);
 }
 
-void cv::cuda::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2)
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2)
 {
     using namespace tvl1flow;
 
@@ -230,7 +230,7 @@ void cv::cuda::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gp
     }
 }
 
-void cv::cuda::OpticalFlowDual_TVL1_GPU::collectGarbage()
+void cv::cuda::OpticalFlowDual_TVL1_CUDA::collectGarbage()
 {
     I0s.clear();
     I1s.clear();

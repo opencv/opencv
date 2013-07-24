@@ -95,7 +95,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
-            fs << "name" << "HoughLinesDetector_GPU"
+            fs << "name" << "HoughLinesDetector_CUDA"
             << "rho" << rho_
             << "theta" << theta_
             << "threshold" << threshold_
@@ -105,7 +105,7 @@ namespace
 
         void read(const FileNode& fn)
         {
-            CV_Assert( String(fn["name"]) == "HoughLinesDetector_GPU" );
+            CV_Assert( String(fn["name"]) == "HoughLinesDetector_CUDA" );
             rho_ = (float)fn["rho"];
             theta_ = (float)fn["theta"];
             threshold_ = (int)fn["threshold"];

@@ -98,7 +98,7 @@ namespace
 
         void write(FileStorage& fs) const
         {
-            fs << "name" << "PHoughLinesDetector_GPU"
+            fs << "name" << "PHoughLinesDetector_CUDA"
             << "rho" << rho_
             << "theta" << theta_
             << "minLineLength" << minLineLength_
@@ -108,7 +108,7 @@ namespace
 
         void read(const FileNode& fn)
         {
-            CV_Assert( String(fn["name"]) == "PHoughLinesDetector_GPU" );
+            CV_Assert( String(fn["name"]) == "PHoughLinesDetector_CUDA" );
             rho_ = (float)fn["rho"];
             theta_ = (float)fn["theta"];
             minLineLength_ = (int)fn["minLineLength"];

@@ -50,9 +50,9 @@ using namespace perf;
 // BlendLinear
 
 PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(CV_8U, CV_32F),
-                    GPU_CHANNELS_1_3_4))
+                    CUDA_CHANNELS_1_3_4))
 {
     const cv::Size size = GET_PARAM(0);
     const int depth = GET_PARAM(1);
@@ -67,7 +67,7 @@ PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
     const cv::Mat weights1(size, CV_32FC1, cv::Scalar::all(0.5));
     const cv::Mat weights2(size, CV_32FC1, cv::Scalar::all(0.5));
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_img1(img1);
         const cv::cuda::GpuMat d_img2(img2);
@@ -77,7 +77,7 @@ PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
 
         TEST_CYCLE() cv::cuda::blendLinear(d_img1, d_img2, d_weights1, d_weights2, dst);
 
-        GPU_SANITY_CHECK(dst);
+        CUDA_SANITY_CHECK(dst);
     }
     else
     {

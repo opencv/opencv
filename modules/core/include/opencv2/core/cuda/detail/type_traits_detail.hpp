@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_TYPE_TRAITS_DETAIL_HPP__
-#define __OPENCV_GPU_TYPE_TRAITS_DETAIL_HPP__
+#ifndef __OPENCV_CUDA_TYPE_TRAITS_DETAIL_HPP__
+#define __OPENCV_CUDA_TYPE_TRAITS_DETAIL_HPP__
 
 #include "../common.hpp"
 #include "../vec_traits.hpp"
@@ -184,4 +184,4 @@ namespace cv { namespace cuda { namespace device
     } // namespace type_traits_detail
 }}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_GPU_TYPE_TRAITS_DETAIL_HPP__
+#endif // __OPENCV_CUDA_TYPE_TRAITS_DETAIL_HPP__

@@ -61,8 +61,8 @@ namespace perf
     enum { Gray = 1, TwoChannel = 2, BGR = 3, BGRA = 4 };
     CV_ENUM(MatCn, Gray, TwoChannel, BGR, BGRA)
 
-    #define GPU_CHANNELS_1_3_4 testing::Values(MatCn(Gray), MatCn(BGR), MatCn(BGRA))
-    #define GPU_CHANNELS_1_3 testing::Values(MatCn(Gray), MatCn(BGR))
+    #define CUDA_CHANNELS_1_3_4 testing::Values(MatCn(Gray), MatCn(BGR), MatCn(BGRA))
+    #define CUDA_CHANNELS_1_3 testing::Values(MatCn(Gray), MatCn(BGR))
 
     #define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
@@ -74,11 +74,11 @@ namespace perf
     DEF_PARAM_TEST(Sz_Depth, cv::Size, perf::MatDepth);
     DEF_PARAM_TEST(Sz_Depth_Cn, cv::Size, perf::MatDepth, MatCn);
 
-    #define GPU_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
+    #define CUDA_TYPICAL_MAT_SIZES testing::Values(perf::sz720p, perf::szSXGA, perf::sz1080p)
 
     #define FAIL_NO_CPU() FAIL() << "No such CPU implementation analogy"
 
-    #define GPU_SANITY_CHECK(mat, ...) \
+    #define CUDA_SANITY_CHECK(mat, ...) \
         do{ \
             cv::Mat gpu_##mat(mat); \
             SANITY_CHECK(gpu_##mat, ## __VA_ARGS__); \

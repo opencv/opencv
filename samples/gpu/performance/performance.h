@@ -1,5 +1,5 @@
-#ifndef OPENCV_GPU_SAMPLE_PERFORMANCE_H_
-#define OPENCV_GPU_SAMPLE_PERFORMANCE_H_
+#ifndef OPENCV_CUDA_SAMPLE_PERFORMANCE_H_
+#define OPENCV_CUDA_SAMPLE_PERFORMANCE_H_
 
 #include <iostream>
 #include <cstdio>
@@ -172,10 +172,10 @@ private:
         TestSystem::instance().cpuOff(); \
     } TestSystem::instance().cpuComplete()
 
-#define GPU_ON \
+#define CUDA_ON \
     while (!TestSystem::instance().stop()) { \
         TestSystem::instance().gpuOn()
-#define GPU_OFF \
+#define CUDA_OFF \
         TestSystem::instance().gpuOff(); \
     } TestSystem::instance().gpuComplete()
 
@@ -186,4 +186,4 @@ void gen(cv::Mat& mat, int rows, int cols, int type, cv::Scalar low,
 // Returns abs path taking into account test system working dir
 std::string abspath(const std::string& relpath);
 
-#endif // OPENCV_GPU_SAMPLE_PERFORMANCE_H_
+#endif // OPENCV_CUDA_SAMPLE_PERFORMANCE_H_

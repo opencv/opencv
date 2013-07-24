@@ -94,7 +94,7 @@ PARAM_TEST_CASE(Blend, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
     }
 };
 
-GPU_TEST_P(Blend, Accuracy)
+CUDA_TEST_P(Blend, Accuracy)
 {
     int depth = CV_MAT_DEPTH(type);
 
@@ -115,7 +115,7 @@ GPU_TEST_P(Blend, Accuracy)
     EXPECT_MAT_NEAR(result_gold, result, CV_MAT_DEPTH(type) == CV_8U ? 1.0 : 1e-5);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, Blend, testing::Combine(
     ALL_DEVICES,
     DIFFERENT_SIZES,
     testing::Values(MatType(CV_8UC1), MatType(CV_8UC3), MatType(CV_8UC4), MatType(CV_32FC1), MatType(CV_32FC3), MatType(CV_32FC4)),

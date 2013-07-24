@@ -55,7 +55,7 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////
 // Brute Force Non local means
 
-TEST(GPU_BruteForceNonLocalMeans, Regression)
+TEST(CUDA_BruteForceNonLocalMeans, Regression)
 {
     using cv::cuda::GpuMat;
 
@@ -85,7 +85,7 @@ TEST(GPU_BruteForceNonLocalMeans, Regression)
 ////////////////////////////////////////////////////////
 // Fast Force Non local means
 
-TEST(GPU_FastNonLocalMeans, Regression)
+TEST(CUDA_FastNonLocalMeans, Regression)
 {
     using cv::cuda::GpuMat;
 

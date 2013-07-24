@@ -81,7 +81,7 @@ namespace
 }
 
 PERF_TEST_P(Sz, HoughLines,
-            GPU_TYPICAL_MAT_SIZES)
+            CUDA_TYPICAL_MAT_SIZES)
 {
     declare.time(30.0);
 
@@ -99,7 +99,7 @@ PERF_TEST_P(Sz, HoughLines,
     cv::line(src, cv::Point(200, 0), cv::Point(200, src.rows), cv::Scalar::all(255), 1);
     cv::line(src, cv::Point(400, 0), cv::Point(400, src.rows), cv::Scalar::all(255), 1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat d_lines;
@@ -148,7 +148,7 @@ PERF_TEST_P(Image, HoughLinesP,
     cv::Mat mask;
     cv::Canny(image, mask, 50, 100);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_mask(mask);
         cv::cuda::GpuMat d_lines;
@@ -179,7 +179,7 @@ PERF_TEST_P(Image, HoughLinesP,
 DEF_PARAM_TEST(Sz_Dp_MinDist, cv::Size, float, float);
 
 PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
-            Combine(GPU_TYPICAL_MAT_SIZES,
+            Combine(CUDA_TYPICAL_MAT_SIZES,
                     Values(1.0f, 2.0f, 4.0f),
                     Values(1.0f)))
 {
@@ -199,7 +199,7 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
     cv::circle(src, cv::Point(200, 200), 25, cv::Scalar::all(255), -1);
     cv::circle(src, cv::Point(200, 100), 25, cv::Scalar::all(255), -1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat d_circles;
@@ -227,7 +227,7 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
 //////////////////////////////////////////////////////////////////////
 // GeneralizedHough
 
-PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, GeneralizedHoughBallard, CUDA_TYPICAL_MAT_SIZES)
 {
     declare.time(10);
 
@@ -246,7 +246,7 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
     cv::Sobel(image, dx, CV_32F, 1, 0);
     cv::Sobel(image, dy, CV_32F, 0, 1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::cuda::createGeneralizedHoughBallard();
 
@@ -259,7 +259,7 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
 
         TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
 
-        GPU_SANITY_CHECK(positions);
+        CUDA_SANITY_CHECK(positions);
     }
     else
     {
@@ -275,7 +275,7 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
     }
 }
 
-PERF_TEST_P(Sz, GeneralizedHoughGuil, GPU_TYPICAL_MAT_SIZES)
+PERF_TEST_P(Sz, GeneralizedHoughGuil, CUDA_TYPICAL_MAT_SIZES)
 {
     declare.time(10);
 
@@ -315,7 +315,7 @@ PERF_TEST_P(Sz, GeneralizedHoughGuil, GPU_TYPICAL_MAT_SIZES)
     cv::Sobel(image, dx, CV_32F, 1, 0);
     cv::Sobel(image, dy, CV_32F, 0, 1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
         cv::Ptr<cv::GeneralizedHoughGuil> alg = cv::cuda::createGeneralizedHoughGuil();
         alg->setMaxAngle(90.0);
@@ -330,7 +330,7 @@ PERF_TEST_P(Sz, GeneralizedHoughGuil, GPU_TYPICAL_MAT_SIZES)
 
         TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
 
-        GPU_SANITY_CHECK(positions);
+        CUDA_SANITY_CHECK(positions);
     }
     else
     {

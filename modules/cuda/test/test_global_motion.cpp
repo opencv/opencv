@@ -52,7 +52,7 @@ struct CompactPoints : testing::TestWithParam<cuda::DeviceInfo>
     virtual void SetUp() { cuda::setDevice(GetParam().deviceID()); }
 };
 
-GPU_TEST_P(CompactPoints, CanCompactizeSmallInput)
+CUDA_TEST_P(CompactPoints, CanCompactizeSmallInput)
 {
     Mat src0(1, 3, CV_32FC2);
     src0.at<Point2f>(0,0) = Point2f(0,0);
@@ -85,6 +85,6 @@ GPU_TEST_P(CompactPoints, CanCompactizeSmallInput)
     ASSERT_TRUE(src1.at<Point2f>(0,1) == Point2f(1,2));
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_GlobalMotion, CompactPoints, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_GlobalMotion, CompactPoints, ALL_DEVICES);
 
 #endif // HAVE_CUDA

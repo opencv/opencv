@@ -68,7 +68,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, cv::cuda::DeviceInfo, MinDistance)
     }
 };
 
-GPU_TEST_P(GoodFeaturesToTrack, Accuracy)
+CUDA_TEST_P(GoodFeaturesToTrack, Accuracy)
 {
     cv::Mat image = readImage("opticalflow/frame0.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
@@ -109,7 +109,7 @@ GPU_TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_LE(bad_ratio, 0.01);
 }
 
-GPU_TEST_P(GoodFeaturesToTrack, EmptyCorners)
+CUDA_TEST_P(GoodFeaturesToTrack, EmptyCorners)
 {
     int maxCorners = 1000;
     double qualityLevel = 0.01;
@@ -124,7 +124,7 @@ GPU_TEST_P(GoodFeaturesToTrack, EmptyCorners)
     ASSERT_TRUE(corners.empty());
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, GoodFeaturesToTrack, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_ImgProc, GoodFeaturesToTrack, testing::Combine(
     ALL_DEVICES,
     testing::Values(MinDistance(0.0), MinDistance(3.0))));
 

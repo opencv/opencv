@@ -61,7 +61,7 @@ struct TransformPoints : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(TransformPoints, Accuracy)
+CUDA_TEST_P(TransformPoints, Accuracy)
 {
     cv::Mat src = randomMat(cv::Size(1000, 1), CV_32FC3, 0, 10);
     cv::Mat rvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
@@ -92,7 +92,7 @@ GPU_TEST_P(TransformPoints, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, TransformPoints, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Calib3D, TransformPoints, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProjectPoints
@@ -109,7 +109,7 @@ struct ProjectPoints : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(ProjectPoints, Accuracy)
+CUDA_TEST_P(ProjectPoints, Accuracy)
 {
     cv::Mat src = randomMat(cv::Size(1000, 1), CV_32FC3, 0, 10);
     cv::Mat rvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
@@ -142,7 +142,7 @@ GPU_TEST_P(ProjectPoints, Accuracy)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ProjectPoints, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Calib3D, ProjectPoints, ALL_DEVICES);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // SolvePnPRansac
@@ -159,7 +159,7 @@ struct SolvePnPRansac : testing::TestWithParam<cv::cuda::DeviceInfo>
     }
 };
 
-GPU_TEST_P(SolvePnPRansac, Accuracy)
+CUDA_TEST_P(SolvePnPRansac, Accuracy)
 {
     cv::Mat object = randomMat(cv::Size(5000, 1), CV_32FC3, 0, 100);
     cv::Mat camera_mat = randomMat(cv::Size(3, 3), CV_32F, 0.5, 1);
@@ -185,6 +185,6 @@ GPU_TEST_P(SolvePnPRansac, Accuracy)
     ASSERT_LE(cv::norm(tvec - tvec_gold), 1e-3);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_Calib3D, SolvePnPRansac, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(CUDA_Calib3D, SolvePnPRansac, ALL_DEVICES);
 
 #endif // HAVE_CUDA

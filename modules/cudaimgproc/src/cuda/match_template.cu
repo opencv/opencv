@@ -262,7 +262,7 @@ namespace cv { namespace cuda { namespace device
         //////////////////////////////////////////////////////////////////////
         // Prepared_SQDIFF_NORMED
 
-        // normAcc* are accurate normalization routines which make GPU matchTemplate
+        // normAcc* are accurate normalization routines which make CUDA matchTemplate
         // consistent with CPU one
 
         __device__ float normAcc(float num, float denum)

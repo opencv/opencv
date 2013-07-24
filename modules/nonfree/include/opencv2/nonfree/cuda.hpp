@@ -47,7 +47,7 @@
 
 namespace cv { namespace cuda {
 
-class CV_EXPORTS SURF_GPU
+class CV_EXPORTS SURF_CUDA
 {
 public:
     enum KeypointLayout
@@ -63,9 +63,9 @@ public:
     };
 
     //! the default constructor
-    SURF_GPU();
+    SURF_CUDA();
     //! the full constructor taking all the necessary parameters
-    explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
+    explicit SURF_CUDA(double _hessianThreshold, int _nOctaves=4,
          int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f, bool _upright = false);
 
     //! returns the descriptor size in float's (64 or 128)

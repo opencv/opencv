@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_DEVICE_LBP_HPP_
-#define __OPENCV_GPU_DEVICE_LBP_HPP_
+#ifndef __OPENCV_CUDA_DEVICE_LBP_HPP_
+#define __OPENCV_CUDA_DEVICE_LBP_HPP_
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/emulation.hpp"

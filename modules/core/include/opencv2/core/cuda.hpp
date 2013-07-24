@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_CORE_GPU_HPP__
-#define __OPENCV_CORE_GPU_HPP__
+#ifndef __OPENCV_CORE_CUDA_HPP__
+#define __OPENCV_CORE_CUDA_HPP__
 
 #ifndef __cplusplus
 #  error cuda.hpp header must be compiled as C++
@@ -453,7 +453,7 @@ enum FeatureSet
 //! checks whether current device supports the given feature
 CV_EXPORTS bool deviceSupports(FeatureSet feature_set);
 
-//! information about what GPU archs this OpenCV GPU module was compiled for
+//! information about what GPU archs this OpenCV CUDA module was compiled for
 class CV_EXPORTS TargetArchs
 {
 public:
@@ -654,7 +654,7 @@ public:
     //! checks whether device supports the given feature
     bool supports(FeatureSet feature_set) const;
 
-    //! checks whether the GPU module can be run on the given device
+    //! checks whether the CUDA module can be run on the given device
     bool isCompatible() const;
 
 private:
@@ -675,4 +675,4 @@ template <> CV_EXPORTS void Ptr<cv::cuda::Event::Impl>::delete_obj();
 
 #include "opencv2/core/cuda.inl.hpp"
 
-#endif /* __OPENCV_CORE_GPU_HPP__ */
+#endif /* __OPENCV_CORE_CUDA_HPP__ */

@@ -51,7 +51,7 @@ PARAM_TEST_CASE(Video, cv::cuda::DeviceInfo, std::string)
 //////////////////////////////////////////////////////
 // VideoReader
 
-GPU_TEST_P(Video, Reader)
+CUDA_TEST_P(Video, Reader)
 {
     cv::cuda::setDevice(GET_PARAM(0).deviceID());
 
@@ -73,7 +73,7 @@ GPU_TEST_P(Video, Reader)
 
 #ifdef WIN32
 
-GPU_TEST_P(Video, Writer)
+CUDA_TEST_P(Video, Writer)
 {
     cv::cuda::setDevice(GET_PARAM(0).deviceID());
 
@@ -118,7 +118,7 @@ GPU_TEST_P(Video, Writer)
 
 #endif // WIN32
 
-INSTANTIATE_TEST_CASE_P(GPU_Codec, Video, testing::Combine(
+INSTANTIATE_TEST_CASE_P(CUDA_Codec, Video, testing::Combine(
     ALL_DEVICES,
     testing::Values(std::string("768x576.avi"), std::string("1920x1080.avi"))));
 

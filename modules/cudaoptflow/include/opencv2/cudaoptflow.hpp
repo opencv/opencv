@@ -182,10 +182,10 @@ private:
 // see reference:
 //   [1] C. Zach, T. Pock and H. Bischof, "A Duality Based Approach for Realtime TV-L1 Optical Flow".
 //   [2] Javier Sanchez, Enric Meinhardt-Llopis and Gabriele Facciolo. "TV-L1 Optical Flow Estimation".
-class CV_EXPORTS OpticalFlowDual_TVL1_GPU
+class CV_EXPORTS OpticalFlowDual_TVL1_CUDA
 {
 public:
-    OpticalFlowDual_TVL1_GPU();
+    OpticalFlowDual_TVL1_CUDA();
 
     void operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy);
 

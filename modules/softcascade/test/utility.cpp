@@ -82,7 +82,7 @@ void DeviceManager::load(int i)
 
     if (!info.isCompatible())
     {
-        msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current GPU module build";
+        msg << "Device " << i << " [" << info.name() << "] is NOT compatible with current CUDA module build";
         CV_Error(cv::Error::StsBadArg, msg.str());
     }
 

@@ -118,7 +118,7 @@ private:
 
     cuda::GpuMat image_;
     cuda::GpuMat gray_image_;
-    cuda::SURF_GPU surf_;
+    cuda::SURF_CUDA surf_;
     cuda::GpuMat keypoints_;
     cuda::GpuMat descriptors_;
     int num_octaves_, num_layers_;

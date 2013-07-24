@@ -62,9 +62,9 @@ PERF_TEST_P(Image_Threshold_NonMaxSupression, FAST,
     const int threshold = GET_PARAM(1);
     const bool nonMaxSuppersion = GET_PARAM(2);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::FAST_GPU d_fast(threshold, nonMaxSuppersion, 0.5);
+        cv::cuda::FAST_CUDA d_fast(threshold, nonMaxSuppersion, 0.5);
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat d_keypoints;
@@ -104,9 +104,9 @@ PERF_TEST_P(Image_NFeatures, ORB,
 
     const int nFeatures = GET_PARAM(1);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::ORB_GPU d_orb(nFeatures);
+        cv::cuda::ORB_CUDA d_orb(nFeatures);
 
         const cv::cuda::GpuMat d_img(img);
         cv::cuda::GpuMat d_keypoints, d_descriptors;
@@ -162,9 +162,9 @@ PERF_TEST_P(DescSize_Norm, BFMatch,
     cv::Mat train(3000, desc_size, type);
     declare.in(train, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_CUDA d_matcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);
@@ -221,9 +221,9 @@ PERF_TEST_P(DescSize_K_Norm, BFKnnMatch,
     cv::Mat train(3000, desc_size, type);
     declare.in(train, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_CUDA d_matcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);
@@ -275,9 +275,9 @@ PERF_TEST_P(DescSize_Norm, BFRadiusMatch,
     cv::Mat train(3000, desc_size, type);
     declare.in(train, WARMUP_RNG);
 
-    if (PERF_RUN_GPU())
+    if (PERF_RUN_CUDA())
     {
-        cv::cuda::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_CUDA d_matcher(normType);
 
         const cv::cuda::GpuMat d_query(query);
         const cv::cuda::GpuMat d_train(train);

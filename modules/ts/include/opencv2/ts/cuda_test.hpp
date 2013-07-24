@@ -168,7 +168,7 @@ namespace cvtest
     //////////////////////////////////////////////////////////////////////
     // Helper structs for value-parameterized tests
 
-    #define GPU_TEST_P(test_case_name, test_name) \
+    #define CUDA_TEST_P(test_case_name, test_name) \
       class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) \
           : public test_case_name { \
        public: \
@@ -349,7 +349,7 @@ namespace cv { namespace cuda
 
 #ifdef HAVE_CUDA
 
-#define CV_GPU_TEST_MAIN(resourcesubdir) \
+#define CV_CUDA_TEST_MAIN(resourcesubdir) \
     int main(int argc, char* argv[]) \
     { \
         try \
@@ -400,7 +400,7 @@ namespace cv { namespace cuda
 
 #else // HAVE_CUDA
 
-#define CV_GPU_TEST_MAIN(resourcesubdir) \
+#define CV_CUDA_TEST_MAIN(resourcesubdir) \
     int main() \
     { \
         printf("OpenCV was built without CUDA support\n"); \

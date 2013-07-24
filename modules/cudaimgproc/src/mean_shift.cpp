@@ -88,7 +88,7 @@ void cv::cuda::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int
 }
 
 ////////////////////////////////////////////////////////////////////////
-// meanShiftProc_GPU
+// meanShiftProc_CUDA
 
 namespace cv { namespace cuda { namespace device
 {

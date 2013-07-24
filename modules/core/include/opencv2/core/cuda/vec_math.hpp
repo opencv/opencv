@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_VECMATH_HPP__
-#define __OPENCV_GPU_VECMATH_HPP__
+#ifndef __OPENCV_CUDA_VECMATH_HPP__
+#define __OPENCV_CUDA_VECMATH_HPP__
 
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
@@ -919,4 +919,4 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 
 }}} // namespace cv { namespace cuda { namespace device
 
-#endif // __OPENCV_GPU_VECMATH_HPP__
+#endif // __OPENCV_CUDA_VECMATH_HPP__
