@@ -52,7 +52,7 @@
 #define __OPENCV_TEST_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/imgproc.hpp"

@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#include "opencv2/photo/gpu.hpp"
+#include "opencv2/photo/cuda.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"

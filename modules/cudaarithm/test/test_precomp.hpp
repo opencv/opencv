@@ -54,7 +54,7 @@
 #include <functional>
 
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/cudaarithm.hpp"
 #include "opencv2/core.hpp"

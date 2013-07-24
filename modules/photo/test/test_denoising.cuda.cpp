@@ -42,8 +42,8 @@
 
 #include "test_precomp.hpp"
 
-#include "opencv2/photo/gpu.hpp"
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/photo/cuda.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 #include "cvconfig.h"

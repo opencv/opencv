@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_PHOTO_GPU_HPP__
-#define __OPENCV_PHOTO_GPU_HPP__
+#ifndef __OPENCV_PHOTO_CUDA_HPP__
+#define __OPENCV_PHOTO_CUDA_HPP__
 
 #include "opencv2/core/cuda.hpp"
 
@@ -68,4 +68,4 @@ private:
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_PHOTO_GPU_HPP__ */
+#endif /* __OPENCV_PHOTO_CUDA_HPP__ */

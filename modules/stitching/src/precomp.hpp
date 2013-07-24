@@ -85,7 +85,7 @@
 #endif
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 #include "../../imgproc/src/gcgraph.hpp"

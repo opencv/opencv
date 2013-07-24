@@ -44,7 +44,7 @@
 
 #ifdef HAVE_CUDA
 
-#include "opencv2/ts/gpu_perf.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
 using namespace std;
 using namespace testing;

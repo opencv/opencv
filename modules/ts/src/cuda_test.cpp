@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "opencv2/ts/gpu_test.hpp"
+#include "opencv2/ts/cuda_test.hpp"
 #include <stdexcept>
 
 using namespace cv;

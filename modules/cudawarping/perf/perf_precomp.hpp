@@ -52,7 +52,7 @@
 #define __OPENCV_PERF_PRECOMP_HPP__
 
 #include "opencv2/ts.hpp"
-#include "opencv2/ts/gpu_perf.hpp"
+#include "opencv2/ts/cuda_perf.hpp"
 
 #include "opencv2/cudawarping.hpp"
 #include "opencv2/imgproc.hpp"

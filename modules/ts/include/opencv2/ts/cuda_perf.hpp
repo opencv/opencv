@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_PERF_UTILITY_HPP__
-#define __OPENCV_GPU_PERF_UTILITY_HPP__
+#ifndef __OPENCV_CUDA_PERF_UTILITY_HPP__
+#define __OPENCV_CUDA_PERF_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
 #include "opencv2/highgui.hpp"
@@ -124,4 +124,4 @@ namespace perf
 #endif
 }
 
-#endif // __OPENCV_GPU_PERF_UTILITY_HPP__
+#endif // __OPENCV_CUDA_PERF_UTILITY_HPP__

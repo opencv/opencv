@@ -49,7 +49,7 @@
 #include "opencv2/opencv_modules.hpp"
 
 #ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
+#  include "opencv2/nonfree/cuda.hpp"
 #endif
 
 namespace cv {

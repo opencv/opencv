@@ -49,7 +49,7 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
-#include "opencv2/nonfree/gpu.hpp"
+#include "opencv2/nonfree/cuda.hpp"
 #include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"

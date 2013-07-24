@@ -8,7 +8,7 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/cudafeatures2d.hpp"
-#include "opencv2/nonfree/gpu.hpp"
+#include "opencv2/nonfree/cuda.hpp"
 
 using namespace std;
 using namespace cv;
