@@ -45,4 +45,6 @@
 
 #include "opencv2/optim.hpp"
 
+#define _SWAP(type,a,b) {type tmp=(a);(a)=(b);(b)=tmp;}
+
 #endif

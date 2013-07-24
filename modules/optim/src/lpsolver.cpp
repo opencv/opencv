@@ -2,41 +2,31 @@
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
-
-#define ALEX_DEBUG
+#include <debug.hpp>
 
 namespace cv{namespace optim{
 using std::vector;
-using namespace std;
-
 #ifdef ALEX_DEBUG
-#define dprintf(x) printf x
-static void print_matrix(const Mat& x){
-    print(x);
-    printf("\n");
-}
-static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
-    printf("\tprint simplex state\n");
-    
-    printf("v=%g\n",v);
-    
-    printf("here c goes\n");
-    print_matrix(c);
-    
-    printf("non-basic: ");
-    print(Mat(N));
-    printf("\n");
-    
-    printf("here b goes\n");
-    print_matrix(b);
-    printf("basic: ");
-    
-    print(Mat(B));
-    printf("\n");
-}
+    static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
+        printf("\tprint simplex state\n");
+        
+        printf("v=%g\n",v);
+        
+        printf("here c goes\n");
+        print_matrix(c);
+        
+        printf("non-basic: ");
+        print(Mat(N));
+        printf("\n");
+        
+        printf("here b goes\n");
+        print_matrix(b);
+        printf("basic: ");
+        
+        print(Mat(B));
+        printf("\n");
+    }
 #else
-#define dprintf(x)
-#define print_matrix(x)
 #define print_simplex_state(c,b,v,N,B)
 #endif
 
