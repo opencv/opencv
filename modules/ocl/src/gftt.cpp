@@ -123,7 +123,7 @@ struct Sorter<BITONIC>
         }
         const int argc = 5;
         std::vector< std::pair<size_t, const void *> > args(argc);
-        std::string kernelname = "sortCorners_bitonicSort";
+        String kernelname = "sortCorners_bitonicSort";
         args[0] = std::make_pair(sizeof(cl_mem), (void *)&eig_tex);
         args[1] = std::make_pair(sizeof(cl_mem), (void *)&corners.data);
         args[2] = std::make_pair(sizeof(cl_int), (void *)&count);
@@ -147,13 +147,13 @@ struct Sorter<SELECTION>
     static void sortCorners_caller(const EigType& eig_tex, oclMat& corners, const int count)
     {
         Context * cxt = Context::getContext();
-        
+
         size_t globalThreads[3] = {count, 1, 1};
         size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
 
         std::vector< std::pair<size_t, const void *> > args;
         //local
-        std::string kernelname = "sortCorners_selectionSortLocal";
+        String kernelname = "sortCorners_selectionSortLocal";
         int lds_size = GROUP_SIZE * sizeof(cl_float2);
         args.push_back( std::make_pair( sizeof(cl_mem), (void*)&eig_tex) );
         args.push_back( std::make_pair( sizeof(cl_mem), (void*)&corners.data) );
@@ -170,7 +170,7 @@ struct Sorter<SELECTION>
 };
 
 int findCorners_caller(
-    const TextureCL& eig, 
+    const TextureCL& eig,
     const float threshold,
     const oclMat& mask,
     oclMat& corners,
@@ -180,22 +180,22 @@ int findCorners_caller(
     Context * cxt = Context::getContext();
 
     std::vector< std::pair<size_t, const void*> > args;
-    std::string kernelname = "findCorners";
+    String kernelname = "findCorners";
 
     const int mask_strip = mask.step / mask.elemSize1();
 
     oclMat g_counter(1, 1, CV_32SC1);
     g_counter.setTo(0);
 
-    args.push_back(make_pair( sizeof(cl_mem),   (void*)&eig  ));
-    args.push_back(make_pair( sizeof(cl_mem),   (void*)&mask.data ));
-    args.push_back(make_pair( sizeof(cl_mem),   (void*)&corners.data ));
-    args.push_back(make_pair( sizeof(cl_int),   (void*)&mask_strip));
-    args.push_back(make_pair( sizeof(cl_float), (void*)&threshold ));
-    args.push_back(make_pair( sizeof(cl_int), (void*)&eig.rows ));
-    args.push_back(make_pair( sizeof(cl_int), (void*)&eig.cols ));
-    args.push_back(make_pair( sizeof(cl_int), (void*)&max_count ));
-    args.push_back(make_pair( sizeof(cl_mem), (void*)&g_counter.data ));
+    args.push_back(std::make_pair( sizeof(cl_mem),   (void*)&eig  ));
+    args.push_back(std::make_pair( sizeof(cl_mem),   (void*)&mask.data ));
+    args.push_back(std::make_pair( sizeof(cl_mem),   (void*)&corners.data ));
+    args.push_back(std::make_pair( sizeof(cl_int),   (void*)&mask_strip));
+    args.push_back(std::make_pair( sizeof(cl_float), (void*)&threshold ));
+    args.push_back(std::make_pair( sizeof(cl_int), (void*)&eig.rows ));
+    args.push_back(std::make_pair( sizeof(cl_int), (void*)&eig.cols ));
+    args.push_back(std::make_pair( sizeof(cl_int), (void*)&max_count ));
+    args.push_back(std::make_pair( sizeof(cl_mem), (void*)&g_counter.data ));
 
     size_t globalThreads[3] = {eig.cols, eig.rows, 1};
     size_t localThreads[3]  = {16, 16, 1};
@@ -254,7 +254,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
             Sorter<SELECTION>::sortCorners_caller(*eig_tex, tmpCorners_, total);
         }
     }
-    
+
     if (minDistance < 1)
     {
         Rect roi_range(0, 0, maxCorners > 0 ? std::min(maxCorners, total) : total, 1);
@@ -262,10 +262,10 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
     }
     else
     {
-        vector<Point2f> tmp(total);
+        std::vector<Point2f> tmp(total);
         downloadPoints(tmpCorners_, tmp);
 
-        vector<Point2f> tmp2;
+        std::vector<Point2f> tmp2;
         tmp2.reserve(total);
 
         const int cell_size = cvRound(minDistance);
@@ -298,7 +298,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
             {
                 for (int xx = x1; xx <= x2; xx++)
                 {
-                    vector<Point2f>& m = grid[yy * grid_width + xx];
+                    std::vector<Point2f>& m = grid[yy * grid_width + xx];
 
                     if (!m.empty())
                     {
@@ -333,20 +333,18 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
         corners.upload(Mat(1, static_cast<int>(tmp2.size()), CV_32FC2, &tmp2[0]));
     }
 }
-void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &points, vector<Point2f> &points_v)
+void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &points, std::vector<Point2f> &points_v)
 {
     CV_DbgAssert(points.type() == CV_32FC2);
     points_v.resize(points.cols);
     openCLSafeCall(clEnqueueReadBuffer(
-        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()), 
-        reinterpret_cast<cl_mem>(points.data), 
-        CL_TRUE,                                    
-        0, 
-        points.cols * sizeof(Point2f), 
-        &points_v[0], 
-        0, 
-        NULL, 
+        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()),
+        reinterpret_cast<cl_mem>(points.data),
+        CL_TRUE,
+        0,
+        points.cols * sizeof(Point2f),
+        &points_v[0],
+        0,
+        NULL,
         NULL));
 }
-
-

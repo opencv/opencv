@@ -30,14 +30,14 @@ All the OpenCV classes and functions are placed into the ``cv`` namespace. There
 
 .. code-block:: c
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     ...
     cv::Mat H = cv::findHomography(points1, points2, CV_RANSAC, 5);
     ...
 
 or ::
 
-    #include "opencv2/core/core.hpp"
+    #include "opencv2/core.hpp"
     using namespace cv;
     ...
     Mat H = findHomography(points1, points2, CV_RANSAC, 5 );
@@ -91,8 +91,8 @@ you can use::
 
    Ptr<T> ptr = new T(...);
 
-That is, ``Ptr<T> ptr`` encapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the 
-:ocv:class:`Ptr` 
+That is, ``Ptr<T> ptr`` encapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the
+:ocv:class:`Ptr`
 description for details.
 
 .. _AutomaticAllocation:
@@ -104,8 +104,8 @@ OpenCV deallocates the memory automatically, as well as automatically allocates 
 
 Example: ::
 
-    #include "cv.h"
-    #include "highgui.h"
+    #include "opencv2/imgproc.hpp"
+    #include "opencv2/highgui.hpp"
 
     using namespace cv;
 
@@ -119,7 +119,7 @@ Example: ::
         for(;;)
         {
             cap >> frame;
-            cvtColor(frame, edges, CV_BGR2GRAY);
+            cvtColor(frame, edges, COLOR_BGR2GRAY);
             GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
             Canny(edges, edges, 0, 30, 3);
             imshow("edges", edges);
@@ -128,7 +128,7 @@ Example: ::
         return 0;
     }
 
-The array ``frame`` is automatically allocated by the ``>>`` operator since the video frame resolution and the bit-depth is known to the video capturing module. The array ``edges`` is automatically allocated by the ``cvtColor`` function. It has the same size and the bit-depth as the input array. The number of channels is 1 because the color conversion code ``CV_BGR2GRAY`` is passed, which means a color to grayscale conversion. Note that ``frame`` and ``edges`` are allocated only once during the first execution of the loop body since all the next video frames have the same resolution. If you somehow change the video resolution, the arrays are automatically reallocated.
+The array ``frame`` is automatically allocated by the ``>>`` operator since the video frame resolution and the bit-depth is known to the video capturing module. The array ``edges`` is automatically allocated by the ``cvtColor`` function. It has the same size and the bit-depth as the input array. The number of channels is 1 because the color conversion code ``COLOR_BGR2GRAY`` is passed, which means a color to grayscale conversion. Note that ``frame`` and ``edges`` are allocated only once during the first execution of the loop body since all the next video frames have the same resolution. If you somehow change the video resolution, the arrays are automatically reallocated.
 
 The key component of this technology is the ``Mat::create`` method. It takes the desired array size and type. If the array already has the specified size and type, the method does nothing. Otherwise, it releases the previously allocated data, if any (this part involves decrementing the reference counter and comparing it with zero), and then allocates a new buffer of the required size. Most functions call the ``Mat::create`` method for each output array, and so the automatic output data allocation is implemented.
 

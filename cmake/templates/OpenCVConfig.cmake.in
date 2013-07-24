@@ -81,7 +81,6 @@ set(OpenCV_HAVE_ANDROID_CAMERA @HAVE_opencv_androidcamera@)
 
 # Provide the include directories to the caller
 set(OpenCV_INCLUDE_DIRS @OpenCV_INCLUDE_DIRS_CONFIGCMAKE@)
-include_directories(${OpenCV_INCLUDE_DIRS})
 
 # ======================================================
 # Link directories to add to the user project:

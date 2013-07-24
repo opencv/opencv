@@ -43,7 +43,7 @@
 
 #ifdef HAVE_ANDROID_NATIVE_CAMERA
 
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/imgproc.hpp>
 #include <pthread.h>
 #include <android/log.h>
 #include <camera_activity.hpp>

@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
 '''
-This module contais some common routines used by other samples.
+This module contains some common routines used by other samples.
 '''
 
 import numpy as np
 import cv2
+
+# built-in modules
 import os
-from contextlib import contextmanager
 import itertools as it
+from contextlib import contextmanager
 
 image_extensions = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.pbm', '.pgm', '.ppm']
 
@@ -69,8 +71,8 @@ def mtx2rvec(R):
     return axis * np.arctan2(s, c)
 
 def draw_str(dst, (x, y), s):
-    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.CV_AA)
-    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.CV_AA)
+    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 class Sketcher:
     def __init__(self, windowname, dests, colors_func):

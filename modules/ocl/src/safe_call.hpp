@@ -65,13 +65,12 @@ namespace cv
 {
     namespace ocl
     {
-        void error( const char *error_string, const char *file, const int line, const char *func = "");
         const char *getOpenCLErrorString( int err );
 
         static inline void ___openCLSafeCall(int err, const char *file, const int line, const char *func = "")
         {
             if( CL_SUCCESS != err)
-                cv::ocl::error(getOpenCLErrorString(err), file, line, func);
+                cv::error(Error::OpenCLApiCallError, getOpenCLErrorString(err), func, file, line);
         }
     }
 }

@@ -46,13 +46,13 @@
 #ifndef __OPENCV_OCL_PRIVATE_UTIL__
 #define __OPENCV_OCL_PRIVATE_UTIL__
 
-#include "opencv2/ocl/ocl.hpp"
-
 #if defined __APPLE__
 #include <OpenCL/opencl.h>
 #else
 #include <CL/opencl.h>
 #endif
+
+#include "opencv2/ocl.hpp"
 
 namespace cv
 {
@@ -65,10 +65,11 @@ namespace cv
             clMemcpyDeviceToDevice
         };
         ///////////////////////////OpenCL call wrappers////////////////////////////
+        //void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
+        //                                  size_t widthInBytes, size_t height);
         void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                          size_t widthInBytes, size_t height);
-        void CV_EXPORTS openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                            size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
+                                            size_t widthInBytes, size_t height,
+                                            DevMemRW rw_type, DevMemType mem_type, void* hptr = 0);
         void CV_EXPORTS openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
                                        const void *src, size_t spitch,
                                        size_t width, size_t height, openCLMemcpyKind kind, int channels = -1);
@@ -79,18 +80,18 @@ namespace cv
         cl_mem CV_EXPORTS openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
         void CV_EXPORTS openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
         cl_kernel CV_EXPORTS openCLGetKernelFromSource(const Context *clCxt,
-                                                       const char **source, std::string kernelName);
+                                                       const char **source, String kernelName);
         cl_kernel CV_EXPORTS openCLGetKernelFromSource(const Context *clCxt,
-                                                       const char **source, std::string kernelName, const char *build_options);
+                                                       const char **source, String kernelName, const char *build_options);
         void CV_EXPORTS openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
-        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, std::vector< std::pair<size_t, const void *> > &args,
+        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, String kernelName, std::vector< std::pair<size_t, const void *> > &args,
                                  int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
-        void CV_EXPORTS openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName,
+        void CV_EXPORTS openCLExecuteKernel_(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
-        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth);
-        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                  int depth, const char *build_options);
 
@@ -108,11 +109,11 @@ namespace cv
             DISABLE
         };
 
-        void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
-        void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                   size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                                  int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+                                  int depth, const char *build_options, FLUSH_MODE finish_mode = DISABLE);
         // bind oclMat to OpenCL image textures
         // note:
         //   1. there is no memory management. User need to explicitly release the resource
@@ -151,7 +152,6 @@ namespace cv
         bool CV_EXPORTS support_image2d(Context *clCxt = Context::getContext());
 
         // the enums are used to query device information
-        // currently only support wavefront size queries
         enum DEVICE_INFO
         {
             WAVEFRONT_SIZE,             //in AMD speak
@@ -167,6 +167,13 @@ namespace cv
         template<>
         bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
 
+        //only these three specializations are implemented at the moment
+        template<>
+        int CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, int>(cl_kernel kernel);
+        template<>
+        size_t CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel);
+        template<>
+        bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
     }//namespace ocl
 
 }//namespace cv

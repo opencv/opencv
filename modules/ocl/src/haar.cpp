@@ -50,12 +50,11 @@
 
 #include "precomp.hpp"
 #include <stdio.h>
-#include <string>
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
+#if 0
 
 namespace cv
 {
@@ -735,7 +734,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
     if( CV_MAT_CN(gimg.type()) > 1 )
     {
         oclMat gtemp;
-        cvtColor( gimg, gtemp, CV_BGR2GRAY );
+        cvtColor( gimg, gtemp, COLOR_BGR2GRAY );
         gimg = gtemp;
     }
 
@@ -752,14 +751,14 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         int totalheight = 0;
         int indexy = 0;
         CvSize sz;
-        vector<CvSize> sizev;
-        vector<float> scalev;
+        std::vector<CvSize> sizev;
+        std::vector<float> scalev;
         for(factor = 1.f;; factor *= scaleFactor)
         {
-            CvSize winSize = { cvRound(winSize0.width * factor), cvRound(winSize0.height * factor) };
+            CvSize winSize( cvRound(winSize0.width * factor), cvRound(winSize0.height * factor) );
             sz.width     = cvRound( gimg.cols / factor ) + 1;
             sz.height    = cvRound( gimg.rows / factor ) + 1;
-            CvSize sz1     = { sz.width - winSize0.width - 1,      sz.height - winSize0.height - 1 };
+            CvSize sz1( sz.width - winSize0.width - 1,      sz.height - winSize0.height - 1 );
 
             if( sz1.width <= 0 || sz1.height <= 0 )
                 break;
@@ -861,23 +860,23 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         pq.s[3] = gcascade->pq3;
         float correction = gcascade->inv_window_area;
 
-        vector<pair<size_t, const void *> > args;
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&stagebuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&scaleinfobuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&nodebuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&gsum.data ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&gsqsum.data ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&candidatebuffer ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&pixelstep ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&loopcount ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&startstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&splitstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&endstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&startnode ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&splitnode ));
-        args.push_back ( make_pair(sizeof(cl_int4) , (void *)&p ));
-        args.push_back ( make_pair(sizeof(cl_int4) , (void *)&pq ));
-        args.push_back ( make_pair(sizeof(cl_float) , (void *)&correction ));
+        std::vector<std::pair<size_t, const void *> > args;
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&stagebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&scaleinfobuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&nodebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&gsum.data ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&gsqsum.data ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&candidatebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&pixelstep ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&loopcount ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&startstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&splitstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&endstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&startnode ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&splitnode ));
+        args.push_back ( std::make_pair(sizeof(cl_int4) , (void *)&p ));
+        args.push_back ( std::make_pair(sizeof(cl_int4) , (void *)&pq ));
+        args.push_back ( std::make_pair(sizeof(cl_float) , (void *)&correction ));
 
         const char * build_options = gcascade->is_stump_based ? "-D STUMP_BASED=1" : "-D STUMP_BASED=0";
 
@@ -906,8 +905,8 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         oclMat gsqsum;
         cv::ocl::integral(gimg, gsum, gsqsum);
         CvSize sz;
-        vector<CvSize> sizev;
-        vector<float> scalev;
+        std::vector<CvSize> sizev;
+        std::vector<float> scalev;
         gpuSetHaarClassifierCascade(cascade);
         gcascade   = (GpuHidHaarClassifierCascade *)cascade->hid_cascade;
         stage      = (GpuHidHaarStageClassifier *)(gcascade + 1);
@@ -924,9 +923,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
                 cvRound(factor * winsize0.height) < gimg.rows - 10;
                 n_factors++, factor *= scaleFactor )
         {
-            CvSize winSize = { cvRound( winsize0.width * factor ),
-                               cvRound( winsize0.height * factor )
-                             };
+            CvSize winSize( cvRound( winsize0.width * factor ), cvRound( winsize0.height * factor ) );
             if( winSize.width < minSize.width || winSize.height < minSize.height )
             {
                 continue;
@@ -940,7 +937,7 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             loopcount = 1;
             n_factors = 1;
             sizev.push_back(minSize);
-            scalev.push_back( min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
+            scalev.push_back( std::min(cvRound(minSize.width / winsize0.width), cvRound(minSize.height / winsize0.height)) );
 
         }
         detect_piramid_info *scaleinfo = (detect_piramid_info *)malloc(sizeof(detect_piramid_info) * loopcount);
@@ -989,12 +986,12 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
             int startnodenum = nodenum * i;
             float factor2 = (float)factor;
 
-            vector<pair<size_t, const void *> > args1;
-            args1.push_back ( make_pair(sizeof(cl_mem) , (void *)&nodebuffer ));
-            args1.push_back ( make_pair(sizeof(cl_mem) , (void *)&newnodebuffer ));
-            args1.push_back ( make_pair(sizeof(cl_float) , (void *)&factor2 ));
-            args1.push_back ( make_pair(sizeof(cl_float) , (void *)&correction[i] ));
-            args1.push_back ( make_pair(sizeof(cl_int) , (void *)&startnodenum ));
+            std::vector<std::pair<size_t, const void *> > args1;
+            args1.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&nodebuffer ));
+            args1.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&newnodebuffer ));
+            args1.push_back ( std::make_pair(sizeof(cl_float) , (void *)&factor2 ));
+            args1.push_back ( std::make_pair(sizeof(cl_float) , (void *)&correction[i] ));
+            args1.push_back ( std::make_pair(sizeof(cl_int) , (void *)&startnodenum ));
 
             size_t globalThreads2[3] = {nodenum, 1, 1};
             openCLExecuteKernel(gsum.clCxt, &haarobjectdetect_scaled2, "gpuscaleclassifier", globalThreads2, NULL/*localThreads2*/, args1, -1, -1);
@@ -1013,25 +1010,25 @@ CvSeq *cv::ocl::OclCascadeClassifier::oclHaarDetectObjects( oclMat &gimg, CvMemS
         correctionbuffer = openCLCreateBuffer(gsum.clCxt, CL_MEM_READ_ONLY, sizeof(cl_float) * loopcount);
         openCLSafeCall(clEnqueueWriteBuffer(qu, correctionbuffer, 1, 0, sizeof(cl_float)*loopcount, correction, 0, NULL, NULL));
 
-        vector<pair<size_t, const void *> > args;
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&stagebuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&scaleinfobuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&newnodebuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&gsum.data ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&gsqsum.data ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&candidatebuffer ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&gsum.rows ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&gsum.cols ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&step ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&loopcount ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&startstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&splitstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&endstage ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&startnode ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&pbuffer ));
-        args.push_back ( make_pair(sizeof(cl_mem) , (void *)&correctionbuffer ));
-        args.push_back ( make_pair(sizeof(cl_int) , (void *)&nodenum ));
-        const char * build_options = gcascade->is_stump_based ? "-D STUMP_BASED=1" : "-D STUMP_BASED=0";
+        std::vector<std::pair<size_t, const void *> > args;
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&stagebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&scaleinfobuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&newnodebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&gsum.data ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&gsqsum.data ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&candidatebuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&gsum.rows ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&gsum.cols ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&step ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&loopcount ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&startstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&splitstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&endstage ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&startnode ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&pbuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_mem) , (void *)&correctionbuffer ));
+        args.push_back ( std::make_pair(sizeof(cl_int) , (void *)&nodenum ));
+
         openCLExecuteKernel(gsum.clCxt, &haarobjectdetect_scaled2, "gpuRunHaarClassifierCascade_scaled2", globalThreads, localThreads, args, -1, -1, build_options);
 
         candidate = (int *)clEnqueueMapBuffer(qu, candidatebuffer, 1, CL_MAP_READ, 0, 4 * sizeof(int) * outputsz, 0, 0, 0, &status);
@@ -1458,7 +1455,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             gimg1.release();
             gsum.release();
             gsqsum.release();
-        } 
+        }
         else if (!(m_flags & CV_HAAR_SCALE_IMAGE) && (flags & CV_HAAR_SCALE_IMAGE))
         {
             openCLSafeCall(clReleaseMemObject(((OclBuffers *)buffers)->newnodebuffer));
@@ -1476,7 +1473,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             {
                 return;
             }
-        } 
+        }
         else
         {
             if (fabs(m_scaleFactor - scaleFactor) < 1e-6
@@ -1624,7 +1621,7 @@ void cv::ocl::OclCascadeClassifierBuf::GenResult(CV_OUT std::vector<cv::Rect>& f
 
     if( findBiggestObject && rectList.size() )
     {
-        CvAvgComp result_comp = {{0, 0, 0, 0}, 0};
+        CvAvgComp result_comp = {CvRect(), 0};
 
         for( size_t i = 0; i < rectList.size(); i++ )
         {
@@ -1682,4 +1679,6 @@ void cv::ocl::OclCascadeClassifierBuf::release()
 
 #ifndef _MAX_PATH
 #define _MAX_PATH 1024
+#endif
+
 #endif

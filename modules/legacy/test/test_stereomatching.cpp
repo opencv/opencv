@@ -593,10 +593,10 @@ int CV_StereoMatchingTest::readDatasetsParams( FileStorage& fs )
     assert(fn.isSeq());
     for( int i = 0; i < (int)fn.size(); i+=3 )
     {
-        string nm = fn[i];
+        String nm = fn[i];
         DatasetParams params;
-        string sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
-        string uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
+        String sf = fn[i+1]; params.dispScaleFactor = atoi(sf.c_str());
+        String uv = fn[i+2]; params.dispUnknVal = atoi(uv.c_str());
         datasetsParams[nm] = params;
     }
     return cvtest::TS::OK;
@@ -684,10 +684,10 @@ protected:
         assert(fn.isSeq());
         for( int i = 0; i < (int)fn.size(); i+=4 )
         {
-            string caseName = fn[i], datasetName = fn[i+1];
+            String caseName = fn[i], datasetName = fn[i+1];
             RunParams params;
-            string ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
-            string iterCount = fn[i+3]; params.iterCount = atoi(iterCount.c_str());
+            String ndisp = fn[i+2]; params.ndisp = atoi(ndisp.c_str());
+            String iterCount = fn[i+3]; params.iterCount = atoi(iterCount.c_str());
             caseNames.push_back( caseName );
             caseDatasets.push_back( datasetName );
             caseRunParams.push_back( params );

@@ -1,11 +1,12 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <cctype>
 
-#include "cvconfig.h"
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -18,24 +19,23 @@ int main(int argc, const char* argv[])
     try
     {
         const char* keys =
-           "{ h  | help      | false | print help message }"
-           "{ l  | left      |       | specify left image }"
-           "{ r  | right     |       | specify right image }"
-           "{ s  | scale     | 0.8   | set pyramid scale factor }"
-           "{ a  | alpha     | 0.197 | set alpha }"
-           "{ g  | gamma     | 50.0  | set gamma }"
-           "{ i  | inner     | 10    | set number of inner iterations }"
-           "{ o  | outer     | 77    | set number of outer iterations }"
-           "{ si | solver    | 10    | set number of basic solver iterations }"
-           "{ t  | time_step | 0.1   | set frame interpolation time step }";
+           "{ h   help      |       | print help message }"
+           "{ l   left      |       | specify left image }"
+           "{ r   right     |       | specify right image }"
+           "{ s   scale     | 0.8   | set pyramid scale factor }"
+           "{ a   alpha     | 0.197 | set alpha }"
+           "{ g   gamma     | 50.0  | set gamma }"
+           "{ i   inner     | 10    | set number of inner iterations }"
+           "{ o   outer     | 77    | set number of outer iterations }"
+           "{ si  solver    | 10    | set number of basic solver iterations }"
+           "{ t   time_step | 0.1   | set frame interpolation time step }";
 
         CommandLineParser cmd(argc, argv, keys);
 
-        if (cmd.get<bool>("help"))
+        if (cmd.has("help") || !cmd.check())
         {
-            cout << "Usage: brox_optical_flow [options]" << endl;
-            cout << "Avaible options:" << endl;
-            cmd.printParams();
+            cmd.printMessage();
+            cmd.printErrors();
             return 0;
         }
 
@@ -85,8 +85,8 @@ int main(int argc, const char* argv[])
 
         Mat frame0Gray, frame1Gray;
 
-        cvtColor(frame0Color, frame0Gray, COLOR_BGR2GRAY);
-        cvtColor(frame1Color, frame1Gray, COLOR_BGR2GRAY);
+        cv::cvtColor(frame0Color, frame0Gray, COLOR_BGR2GRAY);
+        cv::cvtColor(frame1Color, frame1Gray, COLOR_BGR2GRAY);
 
         GpuMat d_frame0(frame0Gray);
         GpuMat d_frame1(frame1Gray);

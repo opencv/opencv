@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iomanip>
 #include <stdexcept>
+
+#include "opencv2/core/utility.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
@@ -83,7 +85,7 @@ int main(int argc, char** argv)
     if (cmd.get<bool>("help"))
     {
         cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
     try
@@ -145,8 +147,8 @@ void App::run()
     if (left_src.empty()) throw runtime_error("can't open file \"" + l_img + "\"");
     if (right_src.empty()) throw runtime_error("can't open file \"" + r_img + "\"");
 
-    cvtColor(left_src, left, CV_BGR2GRAY);
-    cvtColor(right_src, right, CV_BGR2GRAY);
+    cvtColor(left_src, left, COLOR_BGR2GRAY);
+    cvtColor(right_src, right, COLOR_BGR2GRAY);
 
     d_left.upload(left);
     d_right.upload(right);
@@ -175,8 +177,8 @@ void App::run()
             if (d_left.channels() > 1 || d_right.channels() > 1)
             {
                 cout << "BM doesn't support color images\n";
-                cvtColor(left_src, left, CV_BGR2GRAY);
-                cvtColor(right_src, right, CV_BGR2GRAY);
+                cvtColor(left_src, left, COLOR_BGR2GRAY);
+                cvtColor(right_src, right, COLOR_BGR2GRAY);
                 cout << "image_channels: " << left.channels() << endl;
                 d_left.upload(left);
                 d_right.upload(right);
@@ -259,8 +261,8 @@ void App::handleKey(char key)
         }
         else
         {
-            cvtColor(left_src, left, CV_BGR2GRAY);
-            cvtColor(right_src, right, CV_BGR2GRAY);
+            cvtColor(left_src, left, COLOR_BGR2GRAY);
+            cvtColor(right_src, right, COLOR_BGR2GRAY);
         }
         d_left.upload(left);
         d_right.upload(right);
@@ -386,5 +388,3 @@ void App::handleKey(char key)
         break;
     }
 }
-
-

@@ -52,9 +52,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-using std::cout;
-using std::endl;
 
 //#define PRINT_KERNEL_RUN_TIME
 #define RUN_TIMES 100
@@ -73,7 +70,7 @@ namespace cv
          * Strictly, this is not a cache because we do not implement evictions right now.
          * We shall add such features to trade-off memory consumption and performance when necessary.
          */
-        auto_ptr<ProgramCache> ProgramCache::programCache;
+        std::auto_ptr<ProgramCache> ProgramCache::programCache;
         ProgramCache *programCache = NULL;
         DevMemType gDeviceMemType = DEVICE_MEM_DEFAULT;
         DevMemRW gDeviceMemRW = DEVICE_MEM_R_W;
@@ -95,9 +92,9 @@ namespace cv
             releaseProgram();
         }
 
-        cl_program ProgramCache::progLookup(string srcsign)
+        cl_program ProgramCache::progLookup(String srcsign)
         {
-            map<string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             iter = codeCache.find(srcsign);
             if(iter != codeCache.end())
                 return iter->second;
@@ -105,17 +102,17 @@ namespace cv
                 return NULL;
         }
 
-        void ProgramCache::addProgram(string srcsign , cl_program program)
+        void ProgramCache::addProgram(String srcsign , cl_program program)
         {
             if(!progLookup(srcsign))
             {
-                codeCache.insert(map<string, cl_program>::value_type(srcsign, program));
+                codeCache.insert(std::map<String, cl_program>::value_type(srcsign, program));
             }
         }
 
         void ProgramCache::releaseProgram()
         {
-            map<string, cl_program>::iterator iter;
+            std::map<String, cl_program>::iterator iter;
             for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
             {
                 openCLSafeCall(clReleaseProgram(iter->second));
@@ -127,8 +124,9 @@ namespace cv
         {
             cl_platform_id oclplatform;
             std::vector<cl_device_id> devices;
-            std::vector<std::string> devName;
-            std::string clVersion;
+            std::vector<String> devName;
+            String platName;
+            String clVersion;
 
             cl_context oclcontext;
             cl_command_queue clCmdQueue;
@@ -168,7 +166,7 @@ namespace cv
         };
 
         // global variables to hold binary cache properties
-        static int enable_disk_cache = 
+        static int enable_disk_cache =
 #ifdef _DEBUG
             false;
 #else
@@ -251,9 +249,9 @@ namespace cv
             size_t extends_size;
             openCLSafeCall(clGetDeviceInfo(devices[devnum], CL_DEVICE_EXTENSIONS, EXT_LEN, (void *)extends_set, &extends_size));
             extends_set[EXT_LEN - 1] = 0;
-            size_t fp64_khr = std::string(extends_set).find("cl_khr_fp64");
+            size_t fp64_khr = String(extends_set).find("cl_khr_fp64");
 
-            if(fp64_khr != std::string::npos)
+            if(fp64_khr != String::npos)
             {
                 sprintf(extra_options, "-D DOUBLE_SUPPORT");
                 double_support = 1;
@@ -275,9 +273,8 @@ namespace cv
 
         int setDevMemType(DevMemRW rw_type, DevMemType mem_type)
         {
-            if( (mem_type == DEVICE_MEM_PM && Context::getContext()->impl->unified_memory == 0) ||
-                 mem_type == DEVICE_MEM_UHP ||
-                 mem_type == DEVICE_MEM_CHP )
+            if( (mem_type == DEVICE_MEM_PM &&
+                 Context::getContext()->impl->unified_memory == 0) )
                 return -1;
             gDeviceMemRW = rw_type;
             gDeviceMemType = mem_type;
@@ -314,8 +311,11 @@ namespace cv
             std::vector<cl_platform_id> platforms(numPlatforms);
             openCLSafeCall(clGetPlatformIDs(numPlatforms, &platforms[0], 0));
 
-            char deviceName[256];
             int devcienums = 0;
+
+            const static int max_name_length = 256;
+            char deviceName[max_name_length];
+            char plfmName[max_name_length];
             char clVersion[256];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
@@ -331,6 +331,9 @@ namespace cv
                     openCLSafeCall(clGetDeviceIDs(platforms[i], devicetype, numsdev, &devices[0], 0));
 
                     Info ocltmpinfo;
+                    openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(plfmName), plfmName, NULL));
+                    ocltmpinfo.PlatformName = String(plfmName);
+                    ocltmpinfo.impl->platName = String(plfmName);
                     ocltmpinfo.impl->oclplatform = platforms[i];
                     openCLSafeCall(clGetPlatformInfo(platforms[i], CL_PLATFORM_VERSION, sizeof(clVersion), clVersion, NULL));
                     ocltmpinfo.impl->clVersion = clVersion;
@@ -434,17 +437,17 @@ namespace cv
         }
 
         void openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height)
-        {
-            openCLMallocPitchEx(clCxt, dev_ptr, pitch, widthInBytes, height, gDeviceMemRW, gDeviceMemType);
-        }
-
-        void openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                               size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type)
+                                 size_t widthInBytes, size_t height,
+                                 DevMemRW rw_type, DevMemType mem_type, void* hptr)
         {
             cl_int status;
-            *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
-                                      widthInBytes * height, 0, &status);
+            if(hptr && (mem_type==DEVICE_MEM_UHP || mem_type==DEVICE_MEM_CHP))
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext,
+                                          gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                                          widthInBytes * height, hptr, &status);
+            else
+                *dev_ptr = clCreateBuffer(clCxt->impl->oclcontext, gDevMemRWValueMap[rw_type]|gDevMemTypeValueMap[mem_type],
+                                          widthInBytes * height, 0, &status);
             openCLVerifyCall(status);
             *pitch = widthInBytes;
         }
@@ -500,7 +503,7 @@ namespace cv
         {
             openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
         }
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, string kernelName)
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName)
         {
             return openCLGetKernelFromSource(clCxt, source, kernelName, NULL);
         }
@@ -514,8 +517,8 @@ namespace cv
                 return;
             }
             update_disk_cache |= (mode & CACHE_UPDATE) == CACHE_UPDATE;
-            enable_disk_cache |= 
-#ifdef _DEBUG 
+            enable_disk_cache |=
+#ifdef _DEBUG
                 (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
                 (mode & CACHE_RELEASE) == CACHE_RELEASE;
@@ -541,7 +544,7 @@ namespace cv
             char* binary = (char*)malloc(binarySize);
             if(binary == NULL)
             {
-                CV_Error(CV_StsNoMem, "Failed to allocate host memory.");
+                CV_Error(Error::StsNoMem, "Failed to allocate host memory.");
             }
             openCLSafeCall(clGetProgramInfo(program,
                                     CL_PROGRAM_BINARIES,
@@ -559,15 +562,15 @@ namespace cv
             return 1;
         }
 
-        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, string kernelName,
+        cl_kernel openCLGetKernelFromSource(const Context *clCxt, const char **source, String kernelName,
                                             const char *build_options)
         {
             cl_kernel kernel;
             cl_program program ;
             cl_int status = 0;
-            stringstream src_sign;
-            string srcsign;
-            string filename;
+            std::stringstream src_sign;
+            String srcsign;
+            String filename;
             CV_Assert(programCache != NULL);
 
             if(NULL != build_options)
@@ -578,7 +581,7 @@ namespace cv
             {
                 src_sign << (int64)(*source) << clCxt->impl->oclcontext;
             }
-            srcsign = src_sign.str();
+            srcsign = src_sign.str().c_str();
 
             program = NULL;
             program = programCache->progLookup(srcsign);
@@ -648,14 +651,14 @@ namespace cv
                                                           clCxt->impl->devices[clCxt->impl->devnum], CL_PROGRAM_BUILD_LOG, buildLogSize,
                                                           buildLog, &buildLogSize);
                         if(logStatus != CL_SUCCESS)
-                            cout << "Failed to build the program and get the build info." << endl;
+                            std::cout << "Failed to build the program and get the build info." << std::endl;
                         buildLog = new char[buildLogSize];
                         CV_DbgAssert(!!buildLog);
                         memset(buildLog, 0, buildLogSize);
                         openCLSafeCall(clGetProgramBuildInfo(program, clCxt->impl->devices[clCxt->impl->devnum],
                                                              CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
-                        cout << "\n\t\t\tBUILD LOG\n";
-                        cout << buildLog << endl;
+                        std::cout << "\n\t\t\tBUILD LOG\n";
+                        std::cout << buildLog << std::endl;
                         delete [] buildLog;
                     }
                     openCLVerifyCall(status);
@@ -664,7 +667,7 @@ namespace cv
                 if( (programCache->cacheSize += 1) < programCache->MAX_PROG_CACHE_SIZE)
                     programCache->addProgram(srcsign, program);
                 else
-                    cout << "Warning: code cache has been full.\n";
+                    std::cout << "Warning: code cache has been full.\n";
             }
             kernel = clCreateKernel(program, kernelName.c_str(), &status);
             openCLVerifyCall(status);
@@ -687,19 +690,19 @@ namespace cv
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
 #endif
-        void openCLExecuteKernel_(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
-                                  size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
+        void openCLExecuteKernel_(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
+                                  size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
                                   int depth, const char *build_options)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
             //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
-            stringstream idxStr;
+            std::stringstream idxStr;
             if(channels != -1)
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -741,9 +744,9 @@ namespace cv
             execute_time = (double)(end_time - start_time) / (1000 * 1000);
             total_time = (double)(end_time - queue_time) / (1000 * 1000);
 
-            //	cout << setiosflags(ios::left) << setw(15) << execute_time;
-            //	cout << setiosflags(ios::left) << setw(15) << total_time - execute_time;
-            //	cout << setiosflags(ios::left) << setw(15) << total_time << endl;
+            //	std::cout << setiosflags(ios::left) << setw(15) << execute_time;
+            //	std::cout << setiosflags(ios::left) << setw(15) << total_time - execute_time;
+            //	std::cout << setiosflags(ios::left) << setw(15) << total_time << std::endl;
 
             total_execute_time += execute_time;
             total_kernel_time += total_time;
@@ -754,62 +757,62 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth)
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args,
                                 channels, depth, NULL);
         }
-        void openCLExecuteKernel(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
         {
 #ifndef PRINT_KERNEL_RUN_TIME
             openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                  build_options);
 #else
-            string data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
-            cout << endl;
-            cout << "Function Name: " << kernelName;
+            String data_type[] = { "uchar", "char", "ushort", "short", "int", "float", "double"};
+            std::cout << std::endl;
+            std::cout << "Function Name: " << kernelName;
             if(depth >= 0)
-                cout << " |data type: " << data_type[depth];
-            cout << " |channels: " << channels;
-            cout << " |Time Unit: " << "ms" << endl;
+                std::cout << " |data type: " << data_type[depth];
+            std::cout << " |channels: " << channels;
+            std::cout << " |Time Unit: " << "ms" << std::endl;
 
             total_execute_time = 0;
             total_kernel_time = 0;
-            cout << "-------------------------------------" << endl;
+            std::cout << "-------------------------------------" << std::endl;
 
-            cout << setiosflags(ios::left) << setw(15) << "excute time";
-            cout << setiosflags(ios::left) << setw(15) << "lauch time";
-            cout << setiosflags(ios::left) << setw(15) << "kernel time" << endl;
+            std::cout << setiosflags(ios::left) << setw(15) << "excute time";
+            std::cout << setiosflags(ios::left) << setw(15) << "lauch time";
+            std::cout << setiosflags(ios::left) << setw(15) << "kernel time" << std::endl;
             int i = 0;
             for(i = 0; i < RUN_TIMES; i++)
                 openCLExecuteKernel_(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                      build_options);
 
-            cout << "average kernel excute time: " << total_execute_time / RUN_TIMES << endl; // "ms" << endl;
-            cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << endl; // "ms" << endl;
+            std::cout << "average kernel excute time: " << total_execute_time / RUN_TIMES << std::endl; // "ms" << std::endl;
+            std::cout << "average kernel total time:  " << total_kernel_time / RUN_TIMES << std::endl; // "ms" << std::endl;
 #endif
         }
 
-       double openCLExecuteKernelInterop(Context *clCxt , const char **source, string kernelName,
+       double openCLExecuteKernelInterop(Context *clCxt , const char **source, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
             //for exmaple split_C2_D2, represent the split kernel with channels =2 and dataType Depth = 2(Data type is char)
-            stringstream idxStr;
+            std::stringstream idxStr;
             if(channels != -1)
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -871,7 +874,7 @@ namespace cv
         }
 
         // Converts the contents of a file into a string
-        static int convertToString(const char *filename, std::string& s)
+        static int convertToString(const char *filename, String& s)
         {
             size_t size;
             char*  str;
@@ -903,16 +906,16 @@ namespace cv
             return -1;
         }
 
-        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, string kernelName,
+        double openCLExecuteKernelInterop(Context *clCxt , const char **fileName, const int numFiles, String kernelName,
                                  size_t globalThreads[3], size_t localThreads[3],
-                                 vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
+                                 std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                                  bool finish, bool measureKernelTime, bool cleanUp)
 
         {
-            std::vector<std::string> fsource;
+            std::vector<String> fsource;
             for (int i = 0 ; i < numFiles ; i++)
             {
-                std::string str;
+                String str;
                 if (convertToString(fileName[i], str) >= 0)
                     fsource.push_back(str);
             }
@@ -926,7 +929,7 @@ namespace cv
             return kernelTime;
         }
 
-        cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
+       cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
                              const size_t size)
         {
             int status;
@@ -943,15 +946,15 @@ namespace cv
         }
 
         /////////////////////////////OpenCL initialization/////////////////
-        auto_ptr<Context> Context::clCxt;
+        std::auto_ptr<Context> Context::clCxt;
         int Context::val = 0;
         static Mutex cs;
         static volatile int context_tear_down = 0;
 
         bool initialized()
         {
-            return *((volatile int*)&Context::val) != 0 && 
-                Context::clCxt->impl->clCmdQueue != NULL&& 
+            return *((volatile int*)&Context::val) != 0 &&
+                Context::clCxt->impl->clCmdQueue != NULL&&
                 Context::clCxt->impl->oclcontext != NULL;
         }
 
@@ -965,15 +968,15 @@ namespace cv
                     if (context_tear_down)
                         return clCxt.get();
                     if( 0 == clCxt.get())
-                        clCxt.reset(new Context);
+                    clCxt.reset(new Context);
                     std::vector<Info> oclinfo;
                     CV_Assert(getDevice(oclinfo, CVCL_DEVICE_TYPE_ALL) > 0);
 
                     *((volatile int*)&val) = 1;
                 }
             }
-            return clCxt.get();
-        }
+                return clCxt.get();
+            }
 
         void Context::setContext(Info &oclinfo)
         {
@@ -1021,7 +1024,7 @@ namespace cv
             case CL_UNIFIED_MEM:
                 return impl->unified_memory == 1;
             case CL_VER_1_2:
-                return impl->clVersion.find("OpenCL 1.2") != string::npos;
+                return impl->clVersion.find("OpenCL 1.2") != String::npos;
             default:
                 return false;
             }
@@ -1030,6 +1033,11 @@ namespace cv
         size_t Context::computeUnits()
         {
             return impl->maxComputeUnits;
+        }
+
+        size_t Context::maxWorkGroupSize()
+        {
+            return impl->maxWorkGroupSize;
         }
 
         void* Context::oclContext()
@@ -1053,6 +1061,7 @@ namespace cv
             impl->release();
             impl = new Impl;
             DeviceName.clear();
+            PlatformName.clear();
         }
 
         Info::~Info()
@@ -1066,6 +1075,7 @@ namespace cv
             impl->release();
             impl = m.impl->copy();
             DeviceName = m.DeviceName;
+            PlatformName = m.PlatformName;
             return *this;
         }
 
@@ -1073,6 +1083,7 @@ namespace cv
         {
             impl = m.impl->copy();
             DeviceName = m.DeviceName;
+            PlatformName = m.PlatformName;
         }
     }//namespace ocl
 

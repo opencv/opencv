@@ -5,11 +5,8 @@
 #include <cstdarg>
 #include <sstream>
 
-#ifdef HAVE_CVCONFIG_H
-# include "cvconfig.h"
-#endif
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/internal.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 
 #include "opencv2/flann/miniflann.hpp"
 #include "opencv2/flann/dist.h"
@@ -22,6 +19,8 @@
 // index types
 #include "opencv2/flann/all_indices.h"
 #include "opencv2/flann/flann_base.hpp"
+
+#include "opencv2/core/private.hpp"
 
 #endif
 

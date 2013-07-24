@@ -42,8 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
-
 namespace cv {
 namespace detail {
 
@@ -102,10 +100,10 @@ void Graph::addEdge(int from, int to, float weight)
 
 bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 {
-    int x_tl = max(tl1.x, tl2.x);
-    int y_tl = max(tl1.y, tl2.y);
-    int x_br = min(tl1.x + sz1.width, tl2.x + sz2.width);
-    int y_br = min(tl1.y + sz1.height, tl2.y + sz2.height);
+    int x_tl = std::max(tl1.x, tl2.x);
+    int y_tl = std::max(tl1.y, tl2.y);
+    int x_br = std::min(tl1.x + sz1.width, tl2.x + sz2.width);
+    int y_br = std::min(tl1.y + sz1.height, tl2.y + sz2.height);
     if (x_tl < x_br && y_tl < y_br)
     {
         roi = Rect(x_tl, y_tl, x_br - x_tl, y_br - y_tl);
@@ -115,44 +113,44 @@ bool overlapRoi(Point tl1, Point tl2, Size sz1, Size sz2, Rect &roi)
 }
 
 
-Rect resultRoi(const vector<Point> &corners, const vector<Mat> &images)
+Rect resultRoi(const std::vector<Point> &corners, const std::vector<Mat> &images)
 {
-    vector<Size> sizes(images.size());
+    std::vector<Size> sizes(images.size());
     for (size_t i = 0; i < images.size(); ++i)
         sizes[i] = images[i].size();
     return resultRoi(corners, sizes);
 }
 
 
-Rect resultRoi(const vector<Point> &corners, const vector<Size> &sizes)
+Rect resultRoi(const std::vector<Point> &corners, const std::vector<Size> &sizes)
 {
     CV_Assert(sizes.size() == corners.size());
-    Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
-    Point br(numeric_limits<int>::min(), numeric_limits<int>::min());
+    Point tl(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
+    Point br(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
     for (size_t i = 0; i < corners.size(); ++i)
     {
-        tl.x = min(tl.x, corners[i].x);
-        tl.y = min(tl.y, corners[i].y);
-        br.x = max(br.x, corners[i].x + sizes[i].width);
-        br.y = max(br.y, corners[i].y + sizes[i].height);
+        tl.x = std::min(tl.x, corners[i].x);
+        tl.y = std::min(tl.y, corners[i].y);
+        br.x = std::max(br.x, corners[i].x + sizes[i].width);
+        br.y = std::max(br.y, corners[i].y + sizes[i].height);
     }
     return Rect(tl, br);
 }
 
 
-Point resultTl(const vector<Point> &corners)
+Point resultTl(const std::vector<Point> &corners)
 {
-    Point tl(numeric_limits<int>::max(), numeric_limits<int>::max());
+    Point tl(std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
     for (size_t i = 0; i < corners.size(); ++i)
     {
-        tl.x = min(tl.x, corners[i].x);
-        tl.y = min(tl.y, corners[i].y);
+        tl.x = std::min(tl.x, corners[i].x);
+        tl.y = std::min(tl.y, corners[i].y);
     }
     return tl;
 }
 
 
-void selectRandomSubset(int count, int size, vector<int> &subset)
+void selectRandomSubset(int count, int size, std::vector<int> &subset)
 {
     subset.clear();
     for (int i = 0; i < size; ++i)

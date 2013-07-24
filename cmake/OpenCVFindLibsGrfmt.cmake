@@ -86,6 +86,41 @@ endif()
 
 ocv_parse_header("${JPEG_INCLUDE_DIR}/jpeglib.h" JPEG_VERSION_LINES JPEG_LIB_VERSION)
 
+# --- libwebp (optional) ---
+
+if(WITH_WEBP)
+  if(BUILD_WEBP)
+    ocv_clear_vars(WEBP_FOUND WEBP_LIBRARY WEBP_LIBRARIES WEBP_INCLUDE_DIR)
+  else()
+    include(cmake/OpenCVFindWebP.cmake)
+  endif()
+endif()
+
+# --- Add libwebp to 3rdparty/libwebp and compile it if not available ---
+if(WITH_WEBP AND NOT WEBP_FOUND)
+
+  set(WEBP_LIBRARY libwebp)
+  set(WEBP_LIBRARIES ${WEBP_LIBRARY})
+
+  add_subdirectory("${OpenCV_SOURCE_DIR}/3rdparty/libwebp")
+  set(WEBP_INCLUDE_DIR "${${WEBP_LIBRARY}_SOURCE_DIR}")
+endif()
+
+if(NOT WEBP_VERSION AND WEBP_INCLUDE_DIR)
+  ocv_clear_vars(ENC_MAJ_VERSION ENC_MIN_VERSION ENC_REV_VERSION)
+  if(EXISTS "${WEBP_INCLUDE_DIR}/enc/vp8enci.h")
+    ocv_parse_header("${WEBP_INCLUDE_DIR}/enc/vp8enci.h" WEBP_VERSION_LINES ENC_MAJ_VERSION ENC_MIN_VERSION ENC_REV_VERSION)
+    set(WEBP_VERSION "${ENC_MAJ_VERSION}.${ENC_MIN_VERSION}.${ENC_REV_VERSION}")
+  elseif(EXISTS "${WEBP_INCLUDE_DIR}/webp/encode.h")
+    file(STRINGS "${WEBP_INCLUDE_DIR}/webp/encode.h" WEBP_ENCODER_ABI_VERSION REGEX "#define[ \t]+WEBP_ENCODER_ABI_VERSION[ \t]+([x0-9a-f]+)" )
+    if(WEBP_ENCODER_ABI_VERSION MATCHES "#define[ \t]+WEBP_ENCODER_ABI_VERSION[ \t]+([x0-9a-f]+)")
+        set(WEBP_ENCODER_ABI_VERSION "${CMAKE_MATCH_1}")
+        set(WEBP_VERSION "encoder: ${WEBP_ENCODER_ABI_VERSION}")
+    else()
+      unset(WEBP_ENCODER_ABI_VERSION)
+    endif()
+  endif()
+endif()
 
 # --- libjasper (optional, should be searched after libjpeg) ---
 if(WITH_JASPER)

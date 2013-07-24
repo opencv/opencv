@@ -349,7 +349,7 @@ public:
         int r = rgb[0];
         int g = rgb[1];
         int b = rgb[2];
-        
+
         uchar y = saturate_cast<uchar>((int)( 0.257f*r + 0.504f*g + 0.098f*b + 0.5f) + 16);
         uchar u = saturate_cast<uchar>((int)(-0.148f*r - 0.291f*g + 0.439f*b + 0.5f) + 128);
         uchar v = saturate_cast<uchar>((int)( 0.439f*r - 0.368f*g - 0.071f*b + 0.5f) + 128);

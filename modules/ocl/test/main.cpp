@@ -78,21 +78,21 @@ int main(int argc, char **argv)
     TS::ptr()->init(".");
     InitGoogleTest(&argc, argv);
     const char *keys =
-        "{ h | help     | false              | print help message }"
-        "{ t | type     | gpu                | set device type:cpu or gpu}"
-        "{ p | platform | 0                  | set platform id }"
-        "{ d | device   | 0                  | set device id }";
+        "{ h | false              | print help message }"
+        "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
+        "{ p | 0                  | set platform id i.e. -p=0}"
+        "{ d | 0                  | set device id i.e. -d=0}";
 
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.get<string>("h")=="true")
     {
         cout << "Avaible options besides goole test option:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
-    string type = cmd.get<string>("type");
-    unsigned int pid = cmd.get<unsigned int>("platform");
-    int device = cmd.get<int>("device");
+    string type = cmd.get<string>("t");
+    unsigned int pid = cmd.get<unsigned int>("p");
+    int device = cmd.get<int>("d");
 
     print_info();
     int flag = CVCL_DEVICE_TYPE_GPU;
@@ -114,9 +114,9 @@ int main(int argc, char **argv)
     }
 
     setDevice(oclinfo[pid], device);
-
     setBinaryDiskCache(CACHE_UPDATE);
 
+    cout << "Platform name:" << oclinfo[pid].PlatformName << endl;
     cout << "Device type:" << type << endl << "Device name:" << oclinfo[pid].DeviceName[device] << endl;
     return RUN_ALL_TESTS();
 }

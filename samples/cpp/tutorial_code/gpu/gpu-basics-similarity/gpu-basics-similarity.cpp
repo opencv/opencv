@@ -1,10 +1,14 @@
 #include <iostream>                   // Console I/O
 #include <sstream>                    // String to number conversion
 
-#include <opencv2/core/core.hpp>      // Basic OpenCV structures
-#include <opencv2/imgproc/imgproc.hpp>// Image processing methods for the CPU
-#include <opencv2/highgui/highgui.hpp>// Read images
-#include <opencv2/gpu/gpu.hpp>        // GPU structures and methods
+#include <opencv2/core.hpp>      // Basic OpenCV structures
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>// Image processing methods for the CPU
+#include <opencv2/highgui.hpp>// Read images
+
+// GPU structures and methods
+#include <opencv2/gpuarithm.hpp>
+#include <opencv2/gpufilters.hpp>
 
 using namespace std;
 using namespace cv;
@@ -304,6 +308,8 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
     gpu::split(tmp2, vI2);
     Scalar mssim;
 
+    Ptr<gpu::Filter> gauss = gpu::createGaussianFilter(vI2[0].type(), -1, Size(11, 11), 1.5);
+
     for( int i = 0; i < gI1.channels(); ++i )
     {
         gpu::GpuMat I2_2, I1_2, I1_I2;
@@ -314,8 +320,8 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
 
         /*************************** END INITS **********************************/
         gpu::GpuMat mu1, mu2;   // PRELIMINARY COMPUTING
-        gpu::GaussianBlur(vI1[i], mu1, Size(11, 11), 1.5);
-        gpu::GaussianBlur(vI2[i], mu2, Size(11, 11), 1.5);
+        gauss->apply(vI1[i], mu1);
+        gauss->apply(vI2[i], mu2);
 
         gpu::GpuMat mu1_2, mu2_2, mu1_mu2;
         gpu::multiply(mu1, mu1, mu1_2);
@@ -324,13 +330,13 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
 
         gpu::GpuMat sigma1_2, sigma2_2, sigma12;
 
-        gpu::GaussianBlur(I1_2, sigma1_2, Size(11, 11), 1.5);
+        gauss->apply(I1_2, sigma1_2);
         gpu::subtract(sigma1_2, mu1_2, sigma1_2); // sigma1_2 -= mu1_2;
 
-        gpu::GaussianBlur(I2_2, sigma2_2, Size(11, 11), 1.5);
+        gauss->apply(I2_2, sigma2_2);
         gpu::subtract(sigma2_2, mu2_2, sigma2_2); // sigma2_2 -= mu2_2;
 
-        gpu::GaussianBlur(I1_I2, sigma12, Size(11, 11), 1.5);
+        gauss->apply(I1_I2, sigma12);
         gpu::subtract(sigma12, mu1_mu2, sigma12); // sigma12 -= mu1_mu2;
 
         ///////////////////////////////// FORMULA ////////////////////////////////
@@ -364,37 +370,37 @@ Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
 
     gpu::Stream stream;
 
-    stream.enqueueConvert(b.gI1, b.t1, CV_32F);
-    stream.enqueueConvert(b.gI2, b.t2, CV_32F);
+    b.gI1.convertTo(b.t1, CV_32F, stream);
+    b.gI2.convertTo(b.t2, CV_32F, stream);
 
     gpu::split(b.t1, b.vI1, stream);
     gpu::split(b.t2, b.vI2, stream);
     Scalar mssim;
 
-    gpu::GpuMat buf;
+    Ptr<gpu::Filter> gauss = gpu::createGaussianFilter(b.vI1[0].type(), -1, Size(11, 11), 1.5);
 
     for( int i = 0; i < b.gI1.channels(); ++i )
     {
-        gpu::multiply(b.vI2[i], b.vI2[i], b.I2_2, stream);        // I2^2
-        gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, stream);        // I1^2
-        gpu::multiply(b.vI1[i], b.vI2[i], b.I1_I2, stream);       // I1 * I2
+        gpu::multiply(b.vI2[i], b.vI2[i], b.I2_2, 1, -1, stream);        // I2^2
+        gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, 1, -1, stream);        // I1^2
+        gpu::multiply(b.vI1[i], b.vI2[i], b.I1_I2, 1, -1, stream);       // I1 * I2
 
-        gpu::GaussianBlur(b.vI1[i], b.mu1, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
-        gpu::GaussianBlur(b.vI2[i], b.mu2, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
+        gauss->apply(b.vI1[i], b.mu1, stream);
+        gauss->apply(b.vI2[i], b.mu2, stream);
 
-        gpu::multiply(b.mu1, b.mu1, b.mu1_2, stream);
-        gpu::multiply(b.mu2, b.mu2, b.mu2_2, stream);
-        gpu::multiply(b.mu1, b.mu2, b.mu1_mu2, stream);
+        gpu::multiply(b.mu1, b.mu1, b.mu1_2, 1, -1, stream);
+        gpu::multiply(b.mu2, b.mu2, b.mu2_2, 1, -1, stream);
+        gpu::multiply(b.mu1, b.mu2, b.mu1_mu2, 1, -1, stream);
 
-        gpu::GaussianBlur(b.I1_2, b.sigma1_2, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
+        gauss->apply(b.I1_2, b.sigma1_2, stream);
         gpu::subtract(b.sigma1_2, b.mu1_2, b.sigma1_2, gpu::GpuMat(), -1, stream);
         //b.sigma1_2 -= b.mu1_2;  - This would result in an extra data transfer operation
 
-        gpu::GaussianBlur(b.I2_2, b.sigma2_2, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
+        gauss->apply(b.I2_2, b.sigma2_2, stream);
         gpu::subtract(b.sigma2_2, b.mu2_2, b.sigma2_2, gpu::GpuMat(), -1, stream);
         //b.sigma2_2 -= b.mu2_2;
 
-        gpu::GaussianBlur(b.I1_I2, b.sigma12, Size(11, 11), buf, 1.5, 0, BORDER_DEFAULT, -1, stream);
+        gauss->apply(b.I1_I2, b.sigma12, stream);
         gpu::subtract(b.sigma12, b.mu1_mu2, b.sigma12, gpu::GpuMat(), -1, stream);
         //b.sigma12 -= b.mu1_mu2;
 

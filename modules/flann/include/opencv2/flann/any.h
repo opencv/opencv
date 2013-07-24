@@ -47,10 +47,7 @@ struct base_any_policy
     virtual ::size_t get_size() = 0;
     virtual const std::type_info& type() = 0;
     virtual void print(std::ostream& out, void* const* src) = 0;
-
-#ifdef OPENCV_CAN_BREAK_BINARY_COMPATIBILITY
     virtual ~base_any_policy() {}
-#endif
 };
 
 template<typename T>
@@ -107,6 +104,11 @@ template<> inline void big_any_policy<flann_centers_init_t>::print(std::ostream&
 template<> inline void big_any_policy<flann_algorithm_t>::print(std::ostream& out, void* const* src)
 {
     out << int(*reinterpret_cast<flann_algorithm_t const*>(*src));
+}
+
+template<> inline void big_any_policy<cv::String>::print(std::ostream& out, void* const* src)
+{
+    out << (*reinterpret_cast<cv::String const*>(*src)).c_str();
 }
 
 template<typename T>

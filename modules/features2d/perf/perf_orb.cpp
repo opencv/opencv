@@ -14,7 +14,7 @@ typedef perf::TestBaseWithParam<std::string> orb;
 
 PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -33,7 +33,7 @@ PERF_TEST_P(orb, detect, testing::Values(ORB_IMAGES))
 
 PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -56,7 +56,7 @@ PERF_TEST_P(orb, extract, testing::Values(ORB_IMAGES))
 
 PERF_TEST_P(orb, full, testing::Values(ORB_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())

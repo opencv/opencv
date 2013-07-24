@@ -21,9 +21,9 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
      CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
      CGFloat cols = image.size.width;
      CGFloat rows = image.size.height;
-    
+
      cv::Mat cvMat(rows, cols, CV_8UC4); // 8 bits per component, 4 channels
-    
+
      CGContextRef contextRef = CGBitmapContextCreate(cvMat.data,                 // Pointer to  data
                                                     cols,                       // Width of bitmap
                                                     rows,                       // Height of bitmap
@@ -32,11 +32,11 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
                                                     colorSpace,                 // Colorspace
                                                     kCGImageAlphaNoneSkipLast |
                                                     kCGBitmapByteOrderDefault); // Bitmap info flags
-    
+
      CGContextDrawImage(contextRef, CGRectMake(0, 0, cols, rows), image.CGImage);
      CGContextRelease(contextRef);
      CGColorSpaceRelease(colorSpace);
-    
+
      return cvMat;
    }
 
@@ -47,9 +47,9 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
      CGColorSpaceRef colorSpace = CGImageGetColorSpace(image.CGImage);
      CGFloat cols = image.size.width;
      CGFloat rows = image.size.height;
-    
+
      cv::Mat cvMat(rows, cols, CV_8UC1); // 8 bits per component, 1 channels
-    
+
      CGContextRef contextRef = CGBitmapContextCreate(cvMat.data,                 // Pointer to data
                                                     cols,                       // Width of bitmap
                                                     rows,                       // Height of bitmap
@@ -58,11 +58,11 @@ In *OpenCV* all the image processing operations are done on *Mat*. iOS uses UIIm
                                                     colorSpace,                 // Colorspace
                                                     kCGImageAlphaNoneSkipLast |
                                                     kCGBitmapByteOrderDefault); // Bitmap info flags
-    
+
      CGContextDrawImage(contextRef, CGRectMake(0, 0, cols, rows), image.CGImage);
      CGContextRelease(contextRef);
      CGColorSpaceRelease(colorSpace);
-    
+
      return cvMat;
     }
 
@@ -81,15 +81,15 @@ After the processing we need to convert it back to UIImage.
    {
      NSData *data = [NSData dataWithBytes:cvMat.data length:cvMat.elemSize()*cvMat.total()];
      CGColorSpaceRef colorSpace;
-    
+
      if (cvMat.elemSize() == 1) {
          colorSpace = CGColorSpaceCreateDeviceGray();
      } else {
          colorSpace = CGColorSpaceCreateDeviceRGB();
      }
-    
+
      CGDataProviderRef provider = CGDataProviderCreateWithCFData((__bridge CFDataRef)data);
-    
+
      // Creating CGImage from cv::Mat
      CGImageRef imageRef = CGImageCreate(cvMat.cols,                                 //width
                                         cvMat.rows,                                 //height
@@ -103,15 +103,15 @@ After the processing we need to convert it back to UIImage.
                                         false,                                      //should interpolate
                                         kCGRenderingIntentDefault                   //intent
                                         );
-    
-    
+
+
      // Getting UIImage from CGImage
      UIImage *finalImage = [UIImage imageWithCGImage:imageRef];
      CGImageRelease(imageRef);
      CGDataProviderRelease(provider);
      CGColorSpaceRelease(colorSpace);
-    
-     return finalImage; 
+
+     return finalImage;
     }
 
 *Output*
@@ -119,9 +119,9 @@ After the processing we need to convert it back to UIImage.
 
 .. image:: images/output.jpg
      :alt: header
-     :align: center 
+     :align: center
 
-Check out an instance of running code with more Image Effects on `YouTube <http://www.youtube.com/watch?v=Ko3K_xdhJ1I>`_ . 
+Check out an instance of running code with more Image Effects on `YouTube <http://www.youtube.com/watch?v=Ko3K_xdhJ1I>`_ .
 
 .. raw:: html
 

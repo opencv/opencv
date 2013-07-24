@@ -14,7 +14,7 @@ typedef perf::TestBaseWithParam<std::string> surf;
 
 PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -32,7 +32,7 @@ PERF_TEST_P(surf, detect, testing::Values(SURF_IMAGES))
 
 PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())
@@ -53,7 +53,7 @@ PERF_TEST_P(surf, extract, testing::Values(SURF_IMAGES))
 
 PERF_TEST_P(surf, full, testing::Values(SURF_IMAGES))
 {
-    String filename = getDataPath(GetParam());
+    string filename = getDataPath(GetParam());
     Mat frame = imread(filename, IMREAD_GRAYSCALE);
 
     if (frame.empty())

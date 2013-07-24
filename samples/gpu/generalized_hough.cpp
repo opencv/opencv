@@ -2,15 +2,16 @@
 #include <iostream>
 #include <string>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/gpu.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/contrib.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using cv::gpu::GpuMat;
 
 static Mat loadImage(const string& name)
 {
@@ -26,41 +27,41 @@ static Mat loadImage(const string& name)
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ i | image          | pic1.png  | input image }"
-        "{ t | template       | templ.png | template image }"
-        "{ s | scale          |           | estimate scale }"
-        "{ r | rotation       |           | estimate rotation }"
-        "{   | gpu            |           | use gpu version }"
-        "{   | minDist        | 100       | minimum distance between the centers of the detected objects }"
-        "{   | levels         | 360       | R-Table levels }"
-        "{   | votesThreshold | 30        | the accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected }"
-        "{   | angleThresh    | 10000     | angle votes treshold }"
-        "{   | scaleThresh    | 1000      | scale votes treshold }"
-        "{   | posThresh      | 100       | position votes threshold }"
-        "{   | dp             | 2         | inverse ratio of the accumulator resolution to the image resolution }"
-        "{   | minScale       | 0.5       | minimal scale to detect }"
-        "{   | maxScale       | 2         | maximal scale to detect }"
-        "{   | scaleStep      | 0.05      | scale step }"
-        "{   | minAngle       | 0         | minimal rotation angle to detect in degrees }"
-        "{   | maxAngle       | 360       | maximal rotation angle to detect in degrees }"
-        "{   | angleStep      | 1         | angle step in degrees }"
-        "{   | maxSize        | 1000      | maximal size of inner buffers }"
-        "{ h | help           |           | print help message }"
+        "{ image i        | pic1.png  | input image }"
+        "{ template t     | templ.png | template image }"
+        "{ scale s        |           | estimate scale }"
+        "{ rotation r     |           | estimate rotation }"
+        "{ gpu            |           | use gpu version }"
+        "{ minDist        | 100       | minimum distance between the centers of the detected objects }"
+        "{ levels         | 360       | R-Table levels }"
+        "{ votesThreshold | 30        | the accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected }"
+        "{ angleThresh    | 10000     | angle votes treshold }"
+        "{ scaleThresh    | 1000      | scale votes treshold }"
+        "{ posThresh      | 100       | position votes threshold }"
+        "{ dp             | 2         | inverse ratio of the accumulator resolution to the image resolution }"
+        "{ minScale       | 0.5       | minimal scale to detect }"
+        "{ maxScale       | 2         | maximal scale to detect }"
+        "{ scaleStep      | 0.05      | scale step }"
+        "{ minAngle       | 0         | minimal rotation angle to detect in degrees }"
+        "{ maxAngle       | 360       | maximal rotation angle to detect in degrees }"
+        "{ angleStep      | 1         | angle step in degrees }"
+        "{ maxSize        | 1000      | maximal size of inner buffers }"
+        "{ help h ?       |           | print help message }"
     );
 
-    //cmd.about("This program demonstrates arbitary object finding with the Generalized Hough transform.");
+    cmd.about("This program demonstrates arbitary object finding with the Generalized Hough transform.");
 
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
     const string templName = cmd.get<string>("template");
     const string imageName = cmd.get<string>("image");
-    const bool estimateScale = cmd.get<bool>("scale");
-    const bool estimateRotation = cmd.get<bool>("rotation");
-    const bool useGpu = cmd.get<bool>("gpu");
+    const bool estimateScale = cmd.has("scale");
+    const bool estimateRotation = cmd.has("rotation");
+    const bool useGpu = cmd.has("gpu");
     const double minDist = cmd.get<double>("minDist");
     const int levels = cmd.get<int>("levels");
     const int votesThreshold = cmd.get<int>("votesThreshold");
@@ -76,14 +77,20 @@ int main(int argc, const char* argv[])
     const double angleStep = cmd.get<double>("angleStep");
     const int maxSize = cmd.get<int>("maxSize");
 
+    if (!cmd.check())
+    {
+        cmd.printErrors();
+        return -1;
+    }
+
     Mat templ = loadImage(templName);
     Mat image = loadImage(imageName);
 
-    int method = GHT_POSITION;
+    int method = cv::GeneralizedHough::GHT_POSITION;
     if (estimateScale)
-        method += GHT_SCALE;
+        method += cv::GeneralizedHough::GHT_SCALE;
     if (estimateRotation)
-        method += GHT_ROTATION;
+        method += cv::GeneralizedHough::GHT_ROTATION;
 
     vector<Vec4f> position;
     cv::TickMeter tm;
@@ -94,7 +101,7 @@ int main(int argc, const char* argv[])
         GpuMat d_image(image);
         GpuMat d_position;
 
-        Ptr<GeneralizedHough_GPU> d_hough = GeneralizedHough_GPU::create(method);
+        Ptr<gpu::GeneralizedHough> d_hough = gpu::GeneralizedHough::create(method);
         d_hough->set("minDist", minDist);
         d_hough->set("levels", levels);
         d_hough->set("dp", dp);
@@ -127,7 +134,7 @@ int main(int argc, const char* argv[])
         tm.start();
 
         d_hough->detect(d_image, d_position);
-        d_hough->download(d_position, position);
+        d_hough->downloadResults(d_position, position);
 
         tm.stop();
     }
@@ -174,7 +181,7 @@ int main(int argc, const char* argv[])
     cout << "Detection time : " << tm.getTimeMilli() << " ms" << endl;
 
     Mat out;
-    cvtColor(image, out, COLOR_GRAY2BGR);
+    cv::cvtColor(image, out, COLOR_GRAY2BGR);
 
     for (size_t i = 0; i < position.size(); ++i)
     {

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdio.h>
 #include "opencv2/core/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/nonfree/ocl.hpp"
@@ -30,7 +31,7 @@ void workEnd()
 }
 double getTime()
 {
-    return work_end /((double)cvGetTickFrequency() * 1000.);
+    return work_end /((double)getTickFrequency() * 1000.);
 }
 
 template<class KPDetector>
@@ -42,7 +43,7 @@ struct SURFDetector
     {
     }
     template<class T>
-    void operator()(const T& in, const T& mask, vector<cv::KeyPoint>& pts, T& descriptors, bool useProvided = false)
+    void operator()(const T& in, const T& mask, std::vector<cv::KeyPoint>& pts, T& descriptors, bool useProvided = false)
     {
         surf(in, mask, pts, descriptors, useProvided);
     }
@@ -53,7 +54,7 @@ struct SURFMatcher
 {
     KPMatcher matcher;
     template<class T>
-    void match(const T& in1, const T& in2, vector<cv::DMatch>& matches)
+    void match(const T& in1, const T& in2, std::vector<cv::DMatch>& matches)
     {
         matcher.match(in1, in2, matches);
     }
@@ -62,11 +63,11 @@ struct SURFMatcher
 Mat drawGoodMatches(
     const Mat& cpu_img1,
     const Mat& cpu_img2,
-    const vector<KeyPoint>& keypoints1,
-    const vector<KeyPoint>& keypoints2,
-    vector<DMatch>& matches,
-    vector<Point2f>& scene_corners_
-)
+    const std::vector<KeyPoint>& keypoints1,
+    const std::vector<KeyPoint>& keypoints2,
+    std::vector<DMatch>& matches,
+    std::vector<Point2f>& scene_corners_
+    )
 {
     //-- Sort matches and preserve top 10% matches
     std::sort(matches.begin(), matches.end());
@@ -88,7 +89,7 @@ Mat drawGoodMatches(
     Mat img_matches;
     drawMatches( cpu_img1, keypoints1, cpu_img2, keypoints2,
                  good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
+                 std::vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS  );
 
     //-- Localize the object
     std::vector<Point2f> obj;
@@ -102,13 +103,13 @@ Mat drawGoodMatches(
     }
     //-- Get the corners from the image_1 ( the object to be "detected" )
     std::vector<Point2f> obj_corners(4);
-    obj_corners[0] = cvPoint(0,0);
-    obj_corners[1] = cvPoint( cpu_img1.cols, 0 );
-    obj_corners[2] = cvPoint( cpu_img1.cols, cpu_img1.rows );
-    obj_corners[3] = cvPoint( 0, cpu_img1.rows );
+    obj_corners[0] = Point(0,0);
+    obj_corners[1] = Point( cpu_img1.cols, 0 );
+    obj_corners[2] = Point( cpu_img1.cols, cpu_img1.rows );
+    obj_corners[3] = Point( 0, cpu_img1.rows );
     std::vector<Point2f> scene_corners(4);
 
-    Mat H = findHomography( obj, scene, CV_RANSAC );
+    Mat H = findHomography( obj, scene, RANSAC );
     perspectiveTransform( obj_corners, scene_corners, H);
 
     scene_corners_ = scene_corners;
@@ -116,16 +117,16 @@ Mat drawGoodMatches(
     //-- Draw lines between the corners (the mapped object in the scene - image_2 )
     line( img_matches,
           scene_corners[0] + Point2f( (float)cpu_img1.cols, 0), scene_corners[1] + Point2f( (float)cpu_img1.cols, 0),
-          Scalar( 0, 255, 0), 2, CV_AA );
+          Scalar( 0, 255, 0), 2, LINE_AA );
     line( img_matches,
           scene_corners[1] + Point2f( (float)cpu_img1.cols, 0), scene_corners[2] + Point2f( (float)cpu_img1.cols, 0),
-          Scalar( 0, 255, 0), 2, CV_AA );
+          Scalar( 0, 255, 0), 2, LINE_AA );
     line( img_matches,
           scene_corners[2] + Point2f( (float)cpu_img1.cols, 0), scene_corners[3] + Point2f( (float)cpu_img1.cols, 0),
-          Scalar( 0, 255, 0), 2, CV_AA );
+          Scalar( 0, 255, 0), 2, LINE_AA );
     line( img_matches,
           scene_corners[3] + Point2f( (float)cpu_img1.cols, 0), scene_corners[0] + Point2f( (float)cpu_img1.cols, 0),
-          Scalar( 0, 255, 0), 2, CV_AA );
+          Scalar( 0, 255, 0), 2, LINE_AA );
     return img_matches;
 }
 
@@ -136,21 +137,21 @@ Mat drawGoodMatches(
 int main(int argc, char* argv[])
 {
     const char* keys =
-        "{ h | help     | false           | print help message  }"
-        "{ l | left     |                 | specify left image  }"
-        "{ r | right    |                 | specify right image }"
-        "{ o | output   | SURF_output.jpg | specify output save path (only works in CPU or GPU only mode) }"
-        "{ c | use_cpu  | false           | use CPU algorithms  }"
-        "{ a | use_all  | false           | use both CPU and GPU algorithms}";
+        "{ help h    | false           | print help message  }"
+        "{ left l    |                 | specify left image  }"
+        "{ right r   |                 | specify right image }"
+        "{ output o  | SURF_output.jpg | specify output save path (only works in CPU or GPU only mode) }"
+        "{ use_cpu c | false           | use CPU algorithms  }"
+        "{ use_all a | false           | use both CPU and GPU algorithms}";
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
         std::cout << "Avaible options:" << std::endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
-    vector<cv::ocl::Info> info;
+    std::vector<cv::ocl::Info> info;
     if(cv::ocl::getDevice(info) == 0)
     {
         std::cout << "Error: Did not find a valid OpenCL device!" << std::endl;
@@ -164,16 +165,16 @@ int main(int argc, char* argv[])
     bool useGPU = false;
     bool useALL = cmd.get<bool>("a");
 
-    string outpath = cmd.get<std::string>("o");
+    std::string outpath = cmd.get<std::string>("o");
 
     cpu_img1 = imread(cmd.get<std::string>("l"));
     CV_Assert(!cpu_img1.empty());
-    cvtColor(cpu_img1, cpu_img1_grey, CV_BGR2GRAY);
+    cvtColor(cpu_img1, cpu_img1_grey, COLOR_BGR2GRAY);
     img1 = cpu_img1_grey;
 
     cpu_img2 = imread(cmd.get<std::string>("r"));
     CV_Assert(!cpu_img2.empty());
-    cvtColor(cpu_img2, cpu_img2_grey, CV_BGR2GRAY);
+    cvtColor(cpu_img2, cpu_img2_grey, COLOR_BGR2GRAY);
     img2 = cpu_img2_grey;
 
     if(useALL)
@@ -196,12 +197,12 @@ int main(int argc, char* argv[])
     double surf_time = 0.;
 
     //declare input/output
-    vector<KeyPoint> keypoints1, keypoints2;
-    vector<DMatch> matches;
+    std::vector<KeyPoint> keypoints1, keypoints2;
+    std::vector<DMatch> matches;
 
-    vector<KeyPoint> gpu_keypoints1;
-    vector<KeyPoint> gpu_keypoints2;
-    vector<DMatch> gpu_matches;
+    std::vector<KeyPoint> gpu_keypoints1;
+    std::vector<KeyPoint> gpu_keypoints2;
+    std::vector<DMatch> gpu_matches;
 
     Mat descriptors1CPU, descriptors2CPU;
 

@@ -223,7 +223,8 @@ enum
     CV_IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY =2,
     CV_IMWRITE_PNG_STRATEGY_RLE =3,
     CV_IMWRITE_PNG_STRATEGY_FIXED =4,
-    CV_IMWRITE_PXM_BINARY =32
+    CV_IMWRITE_PXM_BINARY =32,
+    CV_IMWRITE_WEBP_QUALITY =64
 };
 
 /* save image to file */
@@ -572,9 +573,6 @@ CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 CVAPI(CvVideoWriter*) cvCreateVideoWriter( const char* filename, int fourcc,
                                            double fps, CvSize frame_size,
                                            int is_color CV_DEFAULT(1));
-
-//CVAPI(CvVideoWriter*) cvCreateImageSequenceWriter( const char* filename,
-//                                                   int is_color CV_DEFAULT(1));
 
 /* write frame to video file */
 CVAPI(int) cvWriteFrame( CvVideoWriter* writer, const IplImage* image );

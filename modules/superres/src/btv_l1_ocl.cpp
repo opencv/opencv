@@ -51,7 +51,7 @@
 
 cv::Ptr<cv::superres::SuperResolution> cv::superres::createSuperResolution_BTVL1_OCL()
 {
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<SuperResolution>();
 }
 

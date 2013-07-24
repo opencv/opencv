@@ -31,14 +31,14 @@ int main( int, char** argv )
     }
 
   /// Convert to grayscale
-  cvtColor( src, src, CV_BGR2GRAY );
+  cvtColor( src, src, COLOR_BGR2GRAY );
 
   /// Apply Histogram Equalization
   equalizeHist( src, dst );
 
   /// Display results
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
-  namedWindow( equalized_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
+  namedWindow( equalized_window, WINDOW_AUTOSIZE );
 
   imshow( source_window, src );
   imshow( equalized_window, dst );

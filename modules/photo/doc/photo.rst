@@ -7,5 +7,5 @@ photo. Computational Photography
 .. toctree::
     :maxdepth: 2
 
-    inpainting 
+    inpainting
     denoising

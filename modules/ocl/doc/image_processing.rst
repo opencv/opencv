@@ -329,3 +329,38 @@ Interpolate frames (images) using provided optical flow (displacement field).
     :param newFrame: Output image.
 
     :param buf: Temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 oclMat: occlusion masks for first frame, occlusion masks for second, interpolated forward horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow, interpolated backward vertical flow.
+
+
+ocl::HoughCircles
+-----------------
+Finds circles in a grayscale image using the Hough transform.
+
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+
+    :param src: 8-bit, single-channel grayscale input image.
+
+    :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
+
+    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
+
+    :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
+
+    :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
+
+    :param cannyThreshold: The higher threshold of the two passed to  the :ocv:func:`ocl::Canny`  edge detector (the lower one is twice smaller).
+
+    :param votesThreshold: The accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected.
+
+    :param minRadius: Minimum circle radius.
+
+    :param maxRadius: Maximum circle radius.
+
+    :param maxCircles: Maximum number of output circles.
+
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
+
+.. note:: Currently only non-ROI oclMat is supported for src.
+.. seealso:: :ocv:func:`HoughCircles`
+

@@ -20,6 +20,12 @@ if(WITH_JPEG)
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
+if(WITH_WEBP)
+  add_definitions(-DHAVE_WEBP)
+  ocv_include_directories(${WEBP_INCLUDE_DIR})
+  list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
+endif()
+
 if(WITH_PNG)
   add_definitions(-DHAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
@@ -68,7 +74,7 @@ set(highgui_srcs
     src/window.cpp
     )
 
-file(GLOB highgui_ext_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
 if(HAVE_QT5)
   set(CMAKE_AUTOMOC ON)
@@ -210,13 +216,6 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(WITH_IMAGEIO)
-  add_definitions(-DHAVE_IMAGEIO=1)
-  if(IOS)
-    list(APPEND HIGHGUI_LIBRARIES "-framework ImageIO")
-  endif()
-endif(WITH_IMAGEIO)
-
 if(WITH_AVFOUNDATION)
   add_definitions(-DHAVE_AVFOUNDATION=1)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
@@ -241,6 +240,7 @@ endif()
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)

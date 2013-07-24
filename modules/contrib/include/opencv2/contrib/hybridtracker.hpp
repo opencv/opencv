@@ -43,12 +43,11 @@
 #ifndef __OPENCV_HYBRIDTRACKER_H_
 #define __OPENCV_HYBRIDTRACKER_H_
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/operations.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/features2d.hpp"
 #include "opencv2/video/tracking.hpp"
-#include "opencv2/ml/ml.hpp"
+#include "opencv2/ml.hpp"
 
 #ifdef __cplusplus
 
@@ -76,9 +75,9 @@ struct CV_EXPORTS CvMeanShiftTrackerParams
             CvTermCriteria term_crit = CvTermCriteria());
 
     int tracking_type;
-    vector<float> h_range;
-    vector<float> s_range;
-    vector<float> v_range;
+    std::vector<float> h_range;
+    std::vector<float> s_range;
+    std::vector<float> v_range;
     CvTermCriteria term_crit;
 };
 
@@ -145,7 +144,7 @@ class CV_EXPORTS CvFeatureTracker
 private:
     Ptr<Feature2D> dd;
     Ptr<DescriptorMatcher> matcher;
-    vector<DMatch> matches;
+    std::vector<DMatch> matches;
 
     Mat prev_image;
     Mat prev_image_bw;
@@ -153,7 +152,7 @@ private:
     Point2d prev_center;
 
     int ittr;
-    vector<Point2f> features[2];
+    std::vector<Point2f> features[2];
 
 public:
     Mat disp_matches;

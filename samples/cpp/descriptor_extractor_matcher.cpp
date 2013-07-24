@@ -45,7 +45,7 @@ static int getMatcherFilterType( const string& str )
         return NONE_FILTER;
     if( str == "CrossCheckFilter" )
         return CROSS_CHECK_FILTER;
-    CV_Error(CV_StsBadArg, "Invalid filter name");
+    CV_Error(Error::StsBadArg, "Invalid filter name");
     return -1;
 }
 
@@ -109,12 +109,12 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                   Ptr<DescriptorMatcher>& descriptorMatcher, int matcherFilter, bool eval,
                   double ransacReprojThreshold, RNG& rng )
 {
-    assert( !img1.empty() );
+    CV_Assert( !img1.empty() );
     Mat H12;
     if( isWarpPerspective )
         warpPerspectiveRand(img1, img2, H12, rng );
     else
-        assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
+        CV_Assert( !img2.empty()/* && img2.cols==img1.cols && img2.rows==img1.rows*/ );
 
     cout << endl << "< Extracting keypoints from second image..." << endl;
     vector<KeyPoint> keypoints2;
@@ -189,7 +189,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         cout << "< Computing homography (RANSAC)..." << endl;
         vector<Point2f> points1; KeyPoint::convert(keypoints1, points1, queryIdxs);
         vector<Point2f> points2; KeyPoint::convert(keypoints2, points2, trainIdxs);
-        H12 = findHomography( Mat(points1), Mat(points2), CV_RANSAC, ransacReprojThreshold );
+        H12 = findHomography( Mat(points1), Mat(points2), RANSAC, ransacReprojThreshold );
         cout << ">" << endl;
     }
 
@@ -208,7 +208,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
                 matchesMask[i1] = 1;
         }
         // draw inliers
-        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, CV_RGB(0, 255, 0), CV_RGB(0, 0, 255), matchesMask
+        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(0, 255, 0), Scalar(0, 0, 255), matchesMask
 #if DRAW_RICH_KEYPOINTS_MODE
                      , DrawMatchesFlags::DRAW_RICH_KEYPOINTS
 #endif
@@ -218,7 +218,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
         // draw outliers
         for( size_t i1 = 0; i1 < matchesMask.size(); i1++ )
             matchesMask[i1] = !matchesMask[i1];
-        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, CV_RGB(0, 0, 255), CV_RGB(255, 0, 0), matchesMask,
+        drawMatches( img1, keypoints1, img2, keypoints2, filteredMatches, drawImg, Scalar(0, 0, 255), Scalar(255, 0, 0), matchesMask,
                      DrawMatchesFlags::DRAW_OVER_OUTIMG | DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
 #endif
 

@@ -330,7 +330,7 @@ namespace cvtest
     double checkSimilarity(InputArray m1, InputArray m2)
     {
         Mat diff;
-        matchTemplate(getMat(m1), getMat(m2), diff, CV_TM_CCORR_NORMED);
+        matchTemplate(getMat(m1), getMat(m2), diff, TM_CCORR_NORMED);
         return std::abs(diff.at<float>(0, 0) - 1.f);
     }
 

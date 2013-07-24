@@ -44,7 +44,7 @@
 #ifndef __OPENCV_NONFREE_OCL_HPP__
 #define __OPENCV_NONFREE_OCL_HPP__
 
-#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/ocl.hpp"
 
 namespace cv
 {
@@ -77,11 +77,11 @@ namespace cv
             //! returns the descriptor size in float's (64 or 128)
             int descriptorSize() const;
             //! upload host keypoints to device memory
-            void uploadKeypoints(const vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
+            void uploadKeypoints(const std::vector<cv::KeyPoint> &keypoints, oclMat &keypointsocl);
             //! download keypoints from device to host memory
-            void downloadKeypoints(const oclMat &keypointsocl, vector<KeyPoint> &keypoints);
+            void downloadKeypoints(const oclMat &keypointsocl, std::vector<KeyPoint> &keypoints);
             //! download descriptors from device to host memory
-            void downloadDescriptors(const oclMat &descriptorsocl, vector<float> &descriptors);
+            void downloadDescriptors(const oclMat &descriptorsocl, std::vector<float> &descriptors);
             //! finds the keypoints using fast hessian detector used in SURF
             //! supports CV_8UC1 images
             //! keypoints will have nFeature cols and 6 rows

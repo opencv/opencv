@@ -8,7 +8,7 @@ using std::tr1::get;
 
 CV_ENUM(BorderType, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_REFLECT_101)
 
-typedef std::tr1::tuple<String, int, int, double, BorderType> Img_BlockSize_ApertureSize_k_BorderType_t;
+typedef std::tr1::tuple<string, int, int, double, BorderType> Img_BlockSize_ApertureSize_k_BorderType_t;
 typedef perf::TestBaseWithParam<Img_BlockSize_ApertureSize_k_BorderType_t> Img_BlockSize_ApertureSize_k_BorderType;
 
 PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
@@ -21,7 +21,7 @@ PERF_TEST_P(Img_BlockSize_ApertureSize_k_BorderType, cornerHarris,
                 )
           )
 {
-    String filename = getDataPath(get<0>(GetParam()));
+    string filename = getDataPath(get<0>(GetParam()));
     int blockSize = get<1>(GetParam());
     int apertureSize = get<2>(GetParam());
     double k = get<3>(GetParam());

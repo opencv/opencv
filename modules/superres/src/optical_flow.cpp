@@ -42,7 +42,6 @@
 
 #include "precomp.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::gpu;
 using namespace cv::superres;
@@ -344,33 +343,33 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
 ///////////////////////////////////////////////////////////////////
 // GpuOpticalFlow
 
-#ifndef HAVE_OPENCV_GPU
+#ifndef HAVE_OPENCV_GPUOPTFLOW
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_GPU()
 {
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<DenseOpticalFlowExt>();
 }
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_GPU()
 {
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<DenseOpticalFlowExt>();
 }
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Brox_GPU()
 {
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<DenseOpticalFlowExt>();
 }
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_GPU()
 {
-    CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform");
+    CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform");
     return Ptr<DenseOpticalFlowExt>();
 }
 
-#else // HAVE_OPENCV_GPU
+#else // HAVE_OPENCV_GPUOPTFLOW
 
 namespace
 {
@@ -718,7 +717,7 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_GPU()
     return new DualTVL1_GPU;
 }
 
-#endif // HAVE_OPENCV_GPU
+#endif // HAVE_OPENCV_GPUOPTFLOW
 #ifdef HAVE_OPENCV_OCL
 
 namespace

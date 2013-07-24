@@ -151,7 +151,7 @@ __kernel void compute_hists_lut_kernel(
 // 12 threads for a cell, 12x4 threads per block
 __kernel void compute_hists_kernel(
     const int cblock_stride_x, const int cblock_stride_y,
-    const int cnbins, const int cblock_hist_size, const int img_block_width, 
+    const int cnbins, const int cblock_hist_size, const int img_block_width,
     const int blocks_in_group, const int blocks_total,
     const int grad_quadstep, const int qangle_step,
     __global const float* grad, __global const uchar* qangle,
@@ -170,20 +170,20 @@ __kernel void compute_hists_kernel(
     const int cell_y = lidY;
     const int cell_thread_x = lidX - cell_x * 12;
 
-    __local float* hists = smem + lp * cnbins * (CELLS_PER_BLOCK_X * 
+    __local float* hists = smem + lp * cnbins * (CELLS_PER_BLOCK_X *
         CELLS_PER_BLOCK_Y * 12 + CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y);
-    __local float* final_hist = hists + cnbins * 
+    __local float* final_hist = hists + cnbins *
         (CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12);
 
     const int offset_x = gidX * cblock_stride_x + (cell_x << 2) + cell_thread_x;
     const int offset_y = gidY * cblock_stride_y + (cell_y << 2);
 
-    __global const float* grad_ptr = (gid < blocks_total) ? 
+    __global const float* grad_ptr = (gid < blocks_total) ?
         grad + offset_y * grad_quadstep + (offset_x << 1) : grad;
     __global const uchar* qangle_ptr = (gid < blocks_total) ?
         qangle + offset_y * qangle_step + (offset_x << 1) : qangle;
 
-    __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) + 
+    __local float* hist = hists + 12 * (cell_y * CELLS_PER_BLOCK_Y + cell_x) +
         cell_thread_x;
     for (int bin_id = 0; bin_id < cnbins; ++bin_id)
         hist[bin_id * 48] = 0.f;
@@ -202,9 +202,9 @@ __kernel void compute_hists_kernel(
 
         int dist_center_y = dist_y - 4 * (1 - 2 * cell_y);
 
-        float gaussian = exp(-(dist_center_y * dist_center_y + dist_center_x * 
+        float gaussian = exp(-(dist_center_y * dist_center_y + dist_center_x *
             dist_center_x) * scale);
-        float interp_weight = (8.f - fabs(dist_y + 0.5f)) * 
+        float interp_weight = (8.f - fabs(dist_y + 0.5f)) *
             (8.f - fabs(dist_x + 0.5f)) / 64.f;
 
         hist[bin.x * 48] += gaussian * interp_weight * vote.x;
@@ -224,7 +224,7 @@ __kernel void compute_hists_kernel(
         barrier(CLK_LOCAL_MEM_FENCE);
 #endif
         if (cell_thread_x == 0)
-            final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] = 
+            final_hist[(cell_x * 2 + cell_y) * cnbins + bin_id] =
                 hist_[0] + hist_[1] + hist_[2];
     }
 #ifdef CPU
@@ -233,7 +233,7 @@ __kernel void compute_hists_kernel(
     int tid = (cell_y * CELLS_PER_BLOCK_Y + cell_x) * 12 + cell_thread_x;
     if ((tid < cblock_hist_size) && (gid < blocks_total))
     {
-        __global float* block_hist = block_hists + 
+        __global float* block_hist = block_hists +
             (gidY * img_block_width + gidX) * cblock_hist_size;
         block_hist[tid] = final_hist[tid];
     }

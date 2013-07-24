@@ -1,11 +1,12 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/contrib/contrib.hpp"
-#include "opencv2/superres/superres.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/contrib.hpp"
+#include "opencv2/superres.hpp"
 #include "opencv2/superres/optical_flow.hpp"
 
 using namespace std;
@@ -46,27 +47,27 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     else
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
-        exit(-1);
     }
+    return 0;
 }
 
 int main(int argc, const char* argv[])
 {
     CommandLineParser cmd(argc, argv,
-        "{ v   | video      |           | Input video }"
-        "{ o   | output     |           | Output video }"
-        "{ s   | scale      | 4         | Scale factor }"
-        "{ i   | iterations | 180       | Iteration count }"
-        "{ t   | temporal   | 4         | Radius of the temporal search area }"
-        "{ f   | flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
-        "{ gpu | gpu        | false     | Use GPU }"
-        "{ h   | help       | false     | Print help message }"
+        "{ v video      |           | Input video }"
+        "{ o output     |           | Output video }"
+        "{ s scale      | 4         | Scale factor }"
+        "{ i iterations | 180       | Iteration count }"
+        "{ t temporal   | 4         | Radius of the temporal search area }"
+        "{ f flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
+        "{ gpu          | false     | Use GPU }"
+        "{ h help       | false     | Print help message }"
     );
 
     if (cmd.get<bool>("help"))
     {
         cout << "This sample demonstrates Super Resolution algorithms for video sequence" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -87,7 +88,11 @@ int main(int argc, const char* argv[])
     superRes->set("scale", scale);
     superRes->set("iterations", iterations);
     superRes->set("temporalAreaRadius", temporalAreaRadius);
-    superRes->set("opticalFlow", createOptFlow(optFlow, useGpu));
+
+    Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useGpu);
+    if (of.empty())
+        exit(-1);
+    superRes->set("opticalFlow", of);
 
     Ptr<FrameSource> frameSource;
     if (useGpu)
@@ -141,7 +146,7 @@ int main(int argc, const char* argv[])
         if (!outputVideoName.empty())
         {
             if (!writer.isOpened())
-                writer.open(outputVideoName, CV_FOURCC('X', 'V', 'I', 'D'), 25.0, result.size());
+                writer.open(outputVideoName, VideoWriter::fourcc('X', 'V', 'I', 'D'), 25.0, result.size());
             writer << result;
         }
     }

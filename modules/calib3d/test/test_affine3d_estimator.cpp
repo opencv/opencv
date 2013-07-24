@@ -163,6 +163,8 @@ bool CV_Affine3D_EstTest::testNPoints()
     const double thres = 1e-4;
     if (norm(aff_est, aff, NORM_INF) > thres)
     {
+        cout << "aff est: " << aff_est << endl;
+        cout << "aff ref: " << aff << endl;
         ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
         return false;
     }

@@ -9,11 +9,9 @@ Finds centers of clusters and groups input samples around the clusters.
 
 .. ocv:function:: double kmeans( InputArray data, int K, InputOutputArray bestLabels, TermCriteria criteria, int attempts, int flags, OutputArray centers=noArray() )
 
-.. ocv:pyfunction:: cv2.kmeans(data, K, criteria, attempts, flags[, bestLabels[, centers]]) -> retval, bestLabels, centers
+.. ocv:pyfunction:: cv2.kmeans(data, K, bestLabels, criteria, attempts, flags[, centers]) -> retval, bestLabels, centers
 
 .. ocv:cfunction:: int cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels, CvTermCriteria termcrit, int attempts=1, CvRNG* rng=0, int flags=0, CvArr* _centers=0, double* compactness=0 )
-
-.. ocv:pyoldfunction:: cv.KMeans2(samples, nclusters, labels, termcrit, attempts=1, flags=0, centers=None) -> float
 
     :param samples: Floating-point matrix of input samples, one row per sample.
 
@@ -74,8 +72,8 @@ Splits an element set into equivalency classes.
 
     :param vec: Set of elements stored as a vector.
 
-    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
-    
+    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .
+
     :param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
 
 The generic function ``partition`` implements an

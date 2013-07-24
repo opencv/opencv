@@ -4,6 +4,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/utility.hpp>
 
 using namespace cv;  // The new C++ interface API is inside this namespace. Import it.
 using namespace std;
@@ -21,6 +22,10 @@ static void help( char* progName)
 // comment out the define to use only the latest C++ API
 #define DEMO_MIXED_API_USE
 
+#ifdef DEMO_MIXED_API_USE
+#  include <opencv2/highgui/highgui_c.h>
+#endif
+
 int main( int argc, char** argv )
 {
     help(argv[0]);
@@ -33,7 +38,7 @@ int main( int argc, char** argv )
         cerr << "Can not load image " <<  imagename << endl;
         return -1;
     }
-    Mat I(IplI); // Convert to the new style container. Only header created. Image not copied.
+    Mat I = cv::cvarrToMat(IplI); // Convert to the new style container. Only header created. Image not copied.
 #else
     Mat I = imread(imagename);        // the newer cvLoadImage alternative, MATLAB-style function
     if( I.empty() )                   // same as if( !I.data )
@@ -45,7 +50,7 @@ int main( int argc, char** argv )
 
     // convert image to YUV color space. The output image will be created automatically.
     Mat I_YUV;
-    cvtColor(I, I_YUV, CV_BGR2YCrCb);
+    cvtColor(I, I_YUV, COLOR_BGR2YCrCb);
 
     vector<Mat> planes;    // Use the STL's vector structure to store multiple Mat objects
     split(I_YUV, planes);  // split the image into separate color planes (Y U V)
@@ -114,10 +119,10 @@ int main( int argc, char** argv )
 
 
     merge(planes, I_YUV);                // now merge the results back
-    cvtColor(I_YUV, I, CV_YCrCb2BGR);  // and produce the output RGB image
+    cvtColor(I_YUV, I, COLOR_YCrCb2BGR);  // and produce the output RGB image
 
 
-    namedWindow("image with grain", CV_WINDOW_AUTOSIZE);   // use this to create images
+    namedWindow("image with grain", WINDOW_AUTOSIZE);   // use this to create images
 
 #ifdef DEMO_MIXED_API_USE
     // this is to demonstrate that I and IplI really share the data - the result of the above

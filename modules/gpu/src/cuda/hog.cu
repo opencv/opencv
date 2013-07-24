@@ -42,12 +42,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/warp_shuffle.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     // Other values are not supported
     #define CELL_WIDTH 8
@@ -316,7 +316,7 @@ namespace cv { namespace gpu { namespace device
             else if (nthreads == 512)
                 normalize_hists_kernel_many_blocks<512, nblocks><<<grid, threads>>>(block_hist_size, img_block_width, block_hists, threshold);
             else
-                cv::gpu::error("normalize_hists: histogram's size is too big, try to decrease number of bins", __FILE__, __LINE__, "normalize_hists");
+                CV_Error(cv::Error::StsBadArg, "normalize_hists: histogram's size is too big, try to decrease number of bins");
 
             cudaSafeCall( cudaGetLastError() );
 
@@ -808,7 +808,7 @@ namespace cv { namespace gpu { namespace device
         void resize_8UC1(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar> (src, dst, resize8UC1_tex); }
         void resize_8UC4(const PtrStepSzb& src, PtrStepSzb dst) { resize_for_hog<uchar4>(src, dst, resize8UC4_tex); }
     } // namespace hog
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

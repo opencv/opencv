@@ -50,8 +50,6 @@
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
 
 namespace cv
 {
@@ -74,7 +72,7 @@ namespace stereoBM
 ////////////////////////////////////////////////////////////////////////
 static void prefilter_xsobel(const oclMat &input, oclMat &output, int prefilterCap)
 {
-    string kernelName = "prefilter_xsobel";
+    String kernelName = "prefilter_xsobel";
 
     size_t blockSize = 1;
     size_t globalThreads[3] = { input.cols, input.rows, 1 };
@@ -108,7 +106,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 {
     int winsz2 = winSize >> 1;
 
-    string kernelName = "stereoKernel";
+    String kernelName = "stereoKernel";
 
     disp.setTo(Scalar_<unsigned char>::all(0));
     minSSD_buf.setTo(Scalar_<unsigned int>::all(0xFFFFFFFF));
@@ -147,7 +145,7 @@ static void stereo_bm(const oclMat &left, const oclMat &right,  oclMat &disp,
 static void postfilter_textureness(oclMat &left, int winSize,
                             float avergeTexThreshold, oclMat &disparity)
 {
-    string kernelName = "textureness_kernel";
+    String kernelName = "textureness_kernel";
 
     size_t blockSize = 1;
     size_t localThreads[]  = { BLOCK_W, blockSize ,1};
@@ -238,4 +236,3 @@ void cv::ocl::StereoBM_OCL::operator() ( const oclMat &left, const oclMat &right
 {
     cv::ocl::stereoBM::operator_(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity);
 }
-

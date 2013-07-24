@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 // cvCorrectMatches function is Copyright (C) 2009, Jostein Austvik Jacobsen.
 // cvTriangulatePoints function is derived from icvReconstructPointsFor3View, originally by Valery Mosyagin.

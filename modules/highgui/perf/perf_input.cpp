@@ -9,7 +9,7 @@ using std::tr1::make_tuple;
 using std::tr1::get;
 
 
-typedef perf::TestBaseWithParam<String> VideoCapture_Reading;
+typedef perf::TestBaseWithParam<std::string> VideoCapture_Reading;
 
 #if defined(HAVE_MSMF)
 // MPEG2 is not supported by Media Foundation yet

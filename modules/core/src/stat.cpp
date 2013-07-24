@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include <climits>
+#include <limits>
 
 namespace cv
 {
@@ -999,22 +1000,23 @@ static int normHamming(const uchar* a, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    uint32x4_t bits = vmovq_n_u32(0);
-    for (; i <= n - 16; i += 16) {
-        uint8x16_t A_vec = vld1q_u8 (a + i);
-        uint8x16_t bitsSet = vcntq_u8 (A_vec);
-        uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-        uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-        bits = vaddq_u32(bits, bitSet4);
+    {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t bitsSet = vcntq_u8 (A_vec);
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            bits = vaddq_u32(bits, bitSet4);
+        }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-    result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-    result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-#else
-    for( ; i <= n - 4; i += 4 )
+#endif
+        for( ; i <= n - 4; i += 4 )
             result += popCountTable[a[i]] + popCountTable[a[i+1]] +
             popCountTable[a[i+2]] + popCountTable[a[i+3]];
-#endif
     for( ; i < n; i++ )
         result += popCountTable[a[i]];
     return result;
@@ -1024,24 +1026,25 @@ int normHamming(const uchar* a, const uchar* b, int n)
 {
     int i = 0, result = 0;
 #if CV_NEON
-    uint32x4_t bits = vmovq_n_u32(0);
-    for (; i <= n - 16; i += 16) {
-        uint8x16_t A_vec = vld1q_u8 (a + i);
-        uint8x16_t B_vec = vld1q_u8 (b + i);
-        uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
-        uint8x16_t bitsSet = vcntq_u8 (AxorB);
-        uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
-        uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
-        bits = vaddq_u32(bits, bitSet4);
+    {
+        uint32x4_t bits = vmovq_n_u32(0);
+        for (; i <= n - 16; i += 16) {
+            uint8x16_t A_vec = vld1q_u8 (a + i);
+            uint8x16_t B_vec = vld1q_u8 (b + i);
+            uint8x16_t AxorB = veorq_u8 (A_vec, B_vec);
+            uint8x16_t bitsSet = vcntq_u8 (AxorB);
+            uint16x8_t bitSet8 = vpaddlq_u8 (bitsSet);
+            uint32x4_t bitSet4 = vpaddlq_u16 (bitSet8);
+            bits = vaddq_u32(bits, bitSet4);
+        }
+        uint64x2_t bitSet2 = vpaddlq_u32 (bits);
+        result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
+        result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
     }
-    uint64x2_t bitSet2 = vpaddlq_u32 (bits);
-    result = vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),0);
-    result += vgetq_lane_s32 (vreinterpretq_s32_u64(bitSet2),2);
-#else
-    for( ; i <= n - 4; i += 4 )
-        result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
-                popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
 #endif
+        for( ; i <= n - 4; i += 4 )
+            result += popCountTable[a[i] ^ b[i]] + popCountTable[a[i+1] ^ b[i+1]] +
+                    popCountTable[a[i+2] ^ b[i+2]] + popCountTable[a[i+3] ^ b[i+3]];
     for( ; i < n; i++ )
         result += popCountTable[a[i] ^ b[i]];
     return result;
@@ -1105,7 +1108,7 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result = std::max(result, ST(fast_abs(src[k])));
+                    result = std::max(result, ST(std::abs(src[k])));
             }
     }
     *_result = result;
@@ -1126,7 +1129,7 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
             if( mask[i] )
             {
                 for( int k = 0; k < cn; k++ )
-                    result += fast_abs(src[k]);
+                    result += std::abs(src[k]);
             }
     }
     *_result = result;
@@ -1917,6 +1920,14 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
             if( bin_ptr[j] )
                 *idx_ptr++ = Point(j, i);
     }
+}
+
+double cv::PSNR(InputArray _src1, InputArray _src2)
+{
+    Mat src1 = _src1.getMat(), src2 = _src2.getMat();
+    CV_Assert( src1.depth() == CV_8U );
+    double diff = std::sqrt(norm(src1, src2, NORM_L2SQR)/(src1.total()*src1.channels()));
+    return 20*log10(255./(diff+DBL_EPSILON));
 }
 
 

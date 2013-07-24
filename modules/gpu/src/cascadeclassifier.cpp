@@ -41,24 +41,22 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
-#include <iostream>
+#include "opencv2/objdetect/objdetect_c.h"
 
 using namespace cv;
 using namespace cv::gpu;
-using namespace std;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string&)  { throw_nogpu(); }
-cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_nogpu(); }
-bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_nogpu(); return true; }
-bool cv::gpu::CascadeClassifier_GPU::load(const string&)              { throw_nogpu(); return true; }
-Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_nogpu(); return Size();}
-void cv::gpu::CascadeClassifier_GPU::release()                        { throw_nogpu(); }
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_nogpu(); return -1;}
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_nogpu(); return -1;}
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no_cuda(); }
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_no_cuda(); }
+cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_no_cuda(); }
+bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_no_cuda(); return true; }
+bool cv::gpu::CascadeClassifier_GPU::load(const String&)              { throw_no_cuda(); return true; }
+Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_no_cuda(); return Size();}
+void cv::gpu::CascadeClassifier_GPU::release()                        { throw_no_cuda(); }
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
+int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
 
 #else
 
@@ -72,8 +70,39 @@ public:
                       bool findLargestObject, bool visualizeInPlace, cv::Size ncvMinSize, cv::Size maxObjectSize) = 0;
 
     virtual cv::Size getClassifierCvSize() const = 0;
-    virtual bool read(const string& classifierAsXml) = 0;
+    virtual bool read(const String& classifierAsXml) = 0;
 };
+
+#ifndef HAVE_OPENCV_GPULEGACY
+
+struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
+{
+public:
+    HaarCascade()
+    {
+        throw_no_cuda();
+    }
+
+    unsigned int process(const GpuMat&, GpuMat&, float, int, bool, bool, cv::Size, cv::Size)
+    {
+        throw_no_cuda();
+        return 0;
+    }
+
+    cv::Size getClassifierCvSize() const
+    {
+        throw_no_cuda();
+        return cv::Size();
+    }
+
+    bool read(const String&)
+    {
+        throw_no_cuda();
+        return false;
+    }
+};
+
+#else
 
 struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
 {
@@ -83,7 +112,7 @@ public:
         ncvSetDebugOutputHandler(NCVDebugOutputHandler);
     }
 
-    bool read(const string& filename)
+    bool read(const String& filename)
     {
         ncvSafeCall( load(filename) );
         return true;
@@ -170,9 +199,9 @@ public:
     cv::Size getClassifierCvSize() const { return cv::Size(haar.ClassifierSize.width, haar.ClassifierSize.height); }
 
 private:
-    static void NCVDebugOutputHandler(const std::string &msg) { CV_Error(CV_GpuApiCallError, msg.c_str()); }
+    static void NCVDebugOutputHandler(const String &msg) { CV_Error(cv::Error::GpuApiCallError, msg.c_str()); }
 
-    NCVStatus load(const string& classifierFile)
+    NCVStatus load(const String& classifierFile)
     {
         int devId = cv::gpu::getDevice();
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
@@ -284,6 +313,8 @@ private:
     virtual ~HaarCascade(){}
 };
 
+#endif
+
 cv::Size operator -(const cv::Size& a, const cv::Size& b)
 {
     return cv::Size(a.width - b.width, a.height - b.height);
@@ -341,7 +372,7 @@ struct PyrLavel
     cv::Size sWindow;
 };
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace lbp
     {
@@ -426,8 +457,8 @@ public:
                 GpuMat buff = integralBuffer;
 
                 // generate integral for scale
-                gpu::resize(image, src, level.sFrame, 0, 0, CV_INTER_LINEAR);
-                gpu::integralBuffered(src, sint, buff);
+                gpu::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
+                gpu::integral(src, sint, buff);
 
                 // calculate job
                 int totalWidth = level.workArea.width / step;
@@ -442,7 +473,7 @@ public:
                 acc += level.sFrame.width + 1;
             }
 
-            device::lbp::classifyPyramid(image.cols, image.rows, NxM.width - 1, NxM.height - 1, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
+            cudev::lbp::classifyPyramid(image.cols, image.rows, NxM.width - 1, NxM.height - 1, iniScale, scaleFactor, total, stage_mat, stage_mat.cols / sizeof(Stage), nodes_mat,
                 leaves_mat, subsets_mat, features_mat, subsetSize, candidates, dclassified.ptr<unsigned int>(), integral);
         }
 
@@ -450,7 +481,7 @@ public:
             return 0;
 
         cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
-        device::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
+        cudev::lbp::connectedConmonents(candidates, classified, objects, groupThreshold, grouping_eps, dclassified.ptr<unsigned int>());
 
         cudaSafeCall( cudaMemcpy(&classified, dclassified.ptr(), sizeof(int), cudaMemcpyDeviceToHost) );
         cudaSafeCall( cudaDeviceSynchronize() );
@@ -459,7 +490,7 @@ public:
 
     virtual cv::Size getClassifierCvSize() const { return NxM; }
 
-    bool read(const string& classifierAsXml)
+    bool read(const String& classifierAsXml)
     {
         FileStorage fs(classifierAsXml, FileStorage::READ);
         return fs.isOpened() ? read(fs.getFirstTopLevelNode()) : false;
@@ -477,6 +508,8 @@ private:
             resuzeBuffer.create(frame, CV_8UC1);
 
             integral.create(frame.height + 1, integralFactor * (frame.width + 1), CV_32SC1);
+
+#ifdef HAVE_OPENCV_GPULEGACY
             NcvSize32u roiSize;
             roiSize.width = frame.width;
             roiSize.height = frame.height;
@@ -487,6 +520,7 @@ private:
             Ncv32u bufSize;
             ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
             integralBuffer.create(1, bufSize, CV_8UC1);
+#endif
 
             candidates.create(1 , frame.width >> 1, CV_32SC4);
         }
@@ -513,10 +547,10 @@ private:
         const char *GPU_CC_FEATURES         = "features";
         const char *GPU_CC_RECT             = "rect";
 
-        std::string stageTypeStr = (string)root[GPU_CC_STAGE_TYPE];
+        String stageTypeStr = (String)root[GPU_CC_STAGE_TYPE];
         CV_Assert(stageTypeStr == GPU_CC_BOOST);
 
-        string featureTypeStr = (string)root[GPU_CC_FEATURE_TYPE];
+        String featureTypeStr = (String)root[GPU_CC_FEATURE_TYPE];
         CV_Assert(featureTypeStr == GPU_CC_LBP);
 
         NxM.width =  (int)root[GPU_CC_WIDTH];
@@ -663,7 +697,7 @@ private:
 cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()
 : findLargestObject(false), visualizeInPlace(false), impl(0) {}
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string& filename)
+cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
 : findLargestObject(false), visualizeInPlace(false), impl(0) { load(filename); }
 
 cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU() { release(); }
@@ -689,12 +723,12 @@ int cv::gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
 }
 
-bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
+bool cv::gpu::CascadeClassifier_GPU::load(const String& filename)
 {
     release();
 
-    std::string fext = filename.substr(filename.find_last_of(".") + 1);
-    std::transform(fext.begin(), fext.end(), fext.begin(), ::tolower);
+    String fext = filename.substr(filename.find_last_of(".") + 1);
+    fext = fext.toLowerCase();
 
     if (fext == "nvbin")
     {
@@ -711,7 +745,7 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
     }
 
     const char *GPU_CC_LBP = "LBP";
-    string featureTypeStr = (string)fs.getFirstTopLevelNode()["featureType"];
+    String featureTypeStr = (String)fs.getFirstTopLevelNode()["featureType"];
     if (featureTypeStr == GPU_CC_LBP)
         impl = new LbpCascade();
     else
@@ -722,240 +756,3 @@ bool cv::gpu::CascadeClassifier_GPU::load(const string& filename)
 }
 
 #endif
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#if defined (HAVE_CUDA)
-
-struct RectConvert
-{
-    Rect operator()(const NcvRect32u& nr) const { return Rect(nr.x, nr.y, nr.width, nr.height); }
-    NcvRect32u operator()(const Rect& nr) const
-    {
-        NcvRect32u rect;
-        rect.x = nr.x;
-        rect.y = nr.y;
-        rect.width = nr.width;
-        rect.height = nr.height;
-        return rect;
-    }
-};
-
-void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
-{
-    vector<Rect> rects(hypotheses.size());
-    std::transform(hypotheses.begin(), hypotheses.end(), rects.begin(), RectConvert());
-
-    if (weights)
-    {
-        vector<int> weights_int;
-        weights_int.assign(weights->begin(), weights->end());
-        cv::groupRectangles(rects, weights_int, groupThreshold, eps);
-    }
-    else
-    {
-        cv::groupRectangles(rects, groupThreshold, eps);
-    }
-    std::transform(rects.begin(), rects.end(), hypotheses.begin(), RectConvert());
-    hypotheses.resize(rects.size());
-}
-
-NCVStatus loadFromXML(const std::string &filename,
-                      HaarClassifierCascadeDescriptor &haar,
-                      std::vector<HaarStage64> &haarStages,
-                      std::vector<HaarClassifierNode128> &haarClassifierNodes,
-                      std::vector<HaarFeature64> &haarFeatures)
-{
-    NCVStatus ncvStat;
-
-    haar.NumStages = 0;
-    haar.NumClassifierRootNodes = 0;
-    haar.NumClassifierTotalNodes = 0;
-    haar.NumFeatures = 0;
-    haar.ClassifierSize.width = 0;
-    haar.ClassifierSize.height = 0;
-    haar.bHasStumpsOnly = true;
-    haar.bNeedsTiltedII = false;
-    Ncv32u curMaxTreeDepth;
-
-    std::vector<char> xmlFileCont;
-
-    std::vector<HaarClassifierNode128> h_TmpClassifierNotRootNodes;
-    haarStages.resize(0);
-    haarClassifierNodes.resize(0);
-    haarFeatures.resize(0);
-
-    Ptr<CvHaarClassifierCascade> oldCascade = (CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0);
-    if (oldCascade.empty())
-    {
-        return NCV_HAAR_XML_LOADING_EXCEPTION;
-    }
-
-    haar.ClassifierSize.width = oldCascade->orig_window_size.width;
-    haar.ClassifierSize.height = oldCascade->orig_window_size.height;
-
-    int stagesCound = oldCascade->count;
-    for(int s = 0; s < stagesCound; ++s) // by stages
-    {
-        HaarStage64 curStage;
-        curStage.setStartClassifierRootNodeOffset(static_cast<Ncv32u>(haarClassifierNodes.size()));
-
-        curStage.setStageThreshold(oldCascade->stage_classifier[s].threshold);
-
-        int treesCount = oldCascade->stage_classifier[s].count;
-        for(int t = 0; t < treesCount; ++t) // by trees
-        {
-            Ncv32u nodeId = 0;
-            CvHaarClassifier* tree = &oldCascade->stage_classifier[s].classifier[t];
-
-            int nodesCount = tree->count;
-            for(int n = 0; n < nodesCount; ++n)  //by features
-            {
-                CvHaarFeature* feature = &tree->haar_feature[n];
-
-                HaarClassifierNode128 curNode;
-                curNode.setThreshold(tree->threshold[n]);
-
-                NcvBool bIsLeftNodeLeaf = false;
-                NcvBool bIsRightNodeLeaf = false;
-
-                HaarClassifierNodeDescriptor32 nodeLeft;
-                if ( tree->left[n] <= 0 )
-                {
-                    Ncv32f leftVal = tree->alpha[-tree->left[n]];
-                    ncvStat = nodeLeft.create(leftVal);
-                    ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
-                    bIsLeftNodeLeaf = true;
-                }
-                else
-                {
-                    Ncv32u leftNodeOffset = tree->left[n];
-                    nodeLeft.create((Ncv32u)(h_TmpClassifierNotRootNodes.size() + leftNodeOffset - 1));
-                    haar.bHasStumpsOnly = false;
-                }
-                curNode.setLeftNodeDesc(nodeLeft);
-
-                HaarClassifierNodeDescriptor32 nodeRight;
-                if ( tree->right[n] <= 0 )
-                {
-                    Ncv32f rightVal = tree->alpha[-tree->right[n]];
-                    ncvStat = nodeRight.create(rightVal);
-                    ncvAssertReturn(ncvStat == NCV_SUCCESS, ncvStat);
-                    bIsRightNodeLeaf = true;
-                }
-                else
-                {
-                    Ncv32u rightNodeOffset = tree->right[n];
-                    nodeRight.create((Ncv32u)(h_TmpClassifierNotRootNodes.size() + rightNodeOffset - 1));
-                    haar.bHasStumpsOnly = false;
-                }
-                curNode.setRightNodeDesc(nodeRight);
-
-                Ncv32u tiltedVal = feature->tilted;
-                haar.bNeedsTiltedII = (tiltedVal != 0);
-
-                Ncv32u featureId = 0;
-                for(int l = 0; l < CV_HAAR_FEATURE_MAX; ++l) //by rects
-                {
-                    Ncv32u rectX = feature->rect[l].r.x;
-                    Ncv32u rectY = feature->rect[l].r.y;
-                    Ncv32u rectWidth = feature->rect[l].r.width;
-                    Ncv32u rectHeight = feature->rect[l].r.height;
-
-                    Ncv32f rectWeight = feature->rect[l].weight;
-
-                    if (rectWeight == 0/* && rectX == 0 &&rectY == 0 && rectWidth == 0 && rectHeight == 0*/)
-                        break;
-
-                    HaarFeature64 curFeature;
-                    ncvStat = curFeature.setRect(rectX, rectY, rectWidth, rectHeight, haar.ClassifierSize.width, haar.ClassifierSize.height);
-                    curFeature.setWeight(rectWeight);
-                    ncvAssertReturn(NCV_SUCCESS == ncvStat, ncvStat);
-                    haarFeatures.push_back(curFeature);
-
-                    featureId++;
-                }
-
-                HaarFeatureDescriptor32 tmpFeatureDesc;
-                ncvStat = tmpFeatureDesc.create(haar.bNeedsTiltedII, bIsLeftNodeLeaf, bIsRightNodeLeaf,
-                    featureId, static_cast<Ncv32u>(haarFeatures.size()) - featureId);
-                ncvAssertReturn(NCV_SUCCESS == ncvStat, ncvStat);
-                curNode.setFeatureDesc(tmpFeatureDesc);
-
-                if (!nodeId)
-                {
-                    //root node
-                    haarClassifierNodes.push_back(curNode);
-                    curMaxTreeDepth = 1;
-                }
-                else
-                {
-                    //other node
-                    h_TmpClassifierNotRootNodes.push_back(curNode);
-                    curMaxTreeDepth++;
-                }
-
-                nodeId++;
-            }
-        }
-
-        curStage.setNumClassifierRootNodes(treesCount);
-        haarStages.push_back(curStage);
-    }
-
-    //fill in cascade stats
-    haar.NumStages = static_cast<Ncv32u>(haarStages.size());
-    haar.NumClassifierRootNodes = static_cast<Ncv32u>(haarClassifierNodes.size());
-    haar.NumClassifierTotalNodes = static_cast<Ncv32u>(haar.NumClassifierRootNodes + h_TmpClassifierNotRootNodes.size());
-    haar.NumFeatures = static_cast<Ncv32u>(haarFeatures.size());
-
-    //merge root and leaf nodes in one classifiers array
-    Ncv32u offsetRoot = static_cast<Ncv32u>(haarClassifierNodes.size());
-    for (Ncv32u i=0; i<haarClassifierNodes.size(); i++)
-    {
-        HaarFeatureDescriptor32 featureDesc = haarClassifierNodes[i].getFeatureDesc();
-
-        HaarClassifierNodeDescriptor32 nodeLeft = haarClassifierNodes[i].getLeftNodeDesc();
-        if (!featureDesc.isLeftNodeLeaf())
-        {
-            Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
-            nodeLeft.create(newOffset);
-        }
-        haarClassifierNodes[i].setLeftNodeDesc(nodeLeft);
-
-        HaarClassifierNodeDescriptor32 nodeRight = haarClassifierNodes[i].getRightNodeDesc();
-        if (!featureDesc.isRightNodeLeaf())
-        {
-            Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
-            nodeRight.create(newOffset);
-        }
-        haarClassifierNodes[i].setRightNodeDesc(nodeRight);
-    }
-
-    for (Ncv32u i=0; i<h_TmpClassifierNotRootNodes.size(); i++)
-    {
-        HaarFeatureDescriptor32 featureDesc = h_TmpClassifierNotRootNodes[i].getFeatureDesc();
-
-        HaarClassifierNodeDescriptor32 nodeLeft = h_TmpClassifierNotRootNodes[i].getLeftNodeDesc();
-        if (!featureDesc.isLeftNodeLeaf())
-        {
-            Ncv32u newOffset = nodeLeft.getNextNodeOffset() + offsetRoot;
-            nodeLeft.create(newOffset);
-        }
-        h_TmpClassifierNotRootNodes[i].setLeftNodeDesc(nodeLeft);
-
-        HaarClassifierNodeDescriptor32 nodeRight = h_TmpClassifierNotRootNodes[i].getRightNodeDesc();
-        if (!featureDesc.isRightNodeLeaf())
-        {
-            Ncv32u newOffset = nodeRight.getNextNodeOffset() + offsetRoot;
-            nodeRight.create(newOffset);
-        }
-        h_TmpClassifierNotRootNodes[i].setRightNodeDesc(nodeRight);
-
-        haarClassifierNodes.push_back(h_TmpClassifierNotRootNodes[i]);
-    }
-
-    return NCV_SUCCESS;
-}
-
-#endif /* HAVE_CUDA */

@@ -48,6 +48,12 @@
 
 #include "precomp.hpp"
 
+#define  CV_ORIGIN_TL  0
+#define  CV_ORIGIN_BL  1
+
+/* default image row align (in bytes) */
+#define  CV_DEFAULT_IMAGE_ROW_ALIGN  4
+
 
 static struct
 {
@@ -305,7 +311,8 @@ cvCloneMatND( const CvMatND* src )
     if( src->data.ptr )
     {
         cvCreateData( dst );
-        cv::Mat _src(src), _dst(dst);
+        cv::Mat _src = cv::cvarrToMat(src);
+        cv::Mat _dst = cv::cvarrToMat(dst);
         uchar* data0 = dst->data.ptr;
         _src.copyTo(_dst);
         CV_Assert(_dst.data == data0);
@@ -1210,7 +1217,7 @@ cvGetDimSize( const CvArr* arr, int index )
 CV_IMPL CvSize
 cvGetSize( const CvArr* arr )
 {
-    CvSize size = { 0, 0 };
+    CvSize size;
 
     if( CV_IS_MAT_HDR_Z( arr ))
     {
@@ -1463,28 +1470,28 @@ cvScalarToRawData( const CvScalar* scalar, void* data, int type, int extend_to_1
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((uchar*)data)[cn] = CV_CAST_8U(t);
+            ((uchar*)data)[cn] = cv::saturate_cast<uchar>(t);
         }
         break;
     case CV_8SC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((char*)data)[cn] = CV_CAST_8S(t);
+            ((char*)data)[cn] = cv::saturate_cast<schar>(t);
         }
         break;
     case CV_16UC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((ushort*)data)[cn] = CV_CAST_16U(t);
+            ((ushort*)data)[cn] = cv::saturate_cast<ushort>(t);
         }
         break;
     case CV_16SC1:
         while( cn-- )
         {
             int t = cvRound( scalar->val[cn] );
-            ((short*)data)[cn] = CV_CAST_16S(t);
+            ((short*)data)[cn] = cv::saturate_cast<short>(t);
         }
         break;
     case CV_32SC1:
@@ -1601,19 +1608,19 @@ static void icvSetReal( double value, const void* data, int type )
         switch( type )
         {
         case CV_8U:
-            *(uchar*)data = CV_CAST_8U(ivalue);
+            *(uchar*)data = cv::saturate_cast<uchar>(ivalue);
             break;
         case CV_8S:
-            *(char*)data = CV_CAST_8S(ivalue);
+            *(schar*)data = cv::saturate_cast<schar>(ivalue);
             break;
         case CV_16U:
-            *(ushort*)data = CV_CAST_16U(ivalue);
+            *(ushort*)data = cv::saturate_cast<ushort>(ivalue);
             break;
         case CV_16S:
-            *(short*)data = CV_CAST_16S(ivalue);
+            *(short*)data = cv::saturate_cast<short>(ivalue);
             break;
         case CV_32S:
-            *(int*)data = CV_CAST_32S(ivalue);
+            *(int*)data = cv::saturate_cast<int>(ivalue);
             break;
         }
     }
@@ -1910,7 +1917,7 @@ cvPtrND( const CvArr* arr, const int* idx, int* _type,
 CV_IMPL  CvScalar
 cvGet1D( const CvArr* arr, int idx )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -1945,7 +1952,7 @@ cvGet1D( const CvArr* arr, int idx )
 CV_IMPL  CvScalar
 cvGet2D( const CvArr* arr, int y, int x )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -1979,7 +1986,7 @@ cvGet2D( const CvArr* arr, int y, int x )
 CV_IMPL  CvScalar
 cvGet3D( const CvArr* arr, int z, int y, int x )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -2001,7 +2008,7 @@ cvGet3D( const CvArr* arr, int z, int y, int x )
 CV_IMPL  CvScalar
 cvGetND( const CvArr* arr, const int* idx )
 {
-    CvScalar scalar = {{0,0,0,0}};
+    CvScalar scalar(0);
     int type = 0;
     uchar* ptr;
 
@@ -3052,7 +3059,7 @@ cvResetImageROI( IplImage* image )
 CV_IMPL CvRect
 cvGetImageROI( const IplImage* img )
 {
-    CvRect rect = { 0, 0, 0, 0 };
+    CvRect rect;
     if( !img )
         CV_Error( CV_StsNullPtr, "Null pointer to image" );
 

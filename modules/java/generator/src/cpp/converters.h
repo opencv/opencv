@@ -1,5 +1,5 @@
 #include "opencv2/opencv_modules.hpp"
-#include "opencv2/core/core.hpp"
+#include "opencv2/core.hpp"
 #include "features2d_manual.hpp"
 
 void Mat_to_vector_int(cv::Mat& mat, std::vector<int>& v_int);

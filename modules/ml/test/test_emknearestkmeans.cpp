@@ -597,7 +597,7 @@ protected:
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
         }
 
-        Mat values = data.get_values();
+        Mat values = cv::cvarrToMat(data.get_values());
         CV_Assert(values.cols == 58);
         int responseIndex = 57;
 

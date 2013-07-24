@@ -43,10 +43,10 @@
 #ifndef __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
 #define __OPENCV_SUPERRES_INPUT_ARRAY_UTILITY_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/gpu.hpp"
 #ifdef HAVE_OPENCV_OCL
-#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/ocl.hpp"
 #endif
 
 namespace cv

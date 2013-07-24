@@ -71,7 +71,6 @@ CV_IMPL int cvWaitKey (int maxWait) {return 0;}
 #import <Cocoa/Cocoa.h>
 
 #include <iostream>
-using namespace std;
 
 const int TOP_BORDER  = 7;
 const int MIN_SLIDER_WIDTH=200;

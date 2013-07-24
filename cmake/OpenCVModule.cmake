@@ -427,9 +427,9 @@ endmacro()
 # Usage:
 # ocv_glob_module_sources(<extra sources&headers in the same format as used in ocv_set_module_sources>)
 macro(ocv_glob_module_sources)
-  file(GLOB_RECURSE lib_srcs "src/*.cpp")
-  file(GLOB_RECURSE lib_int_hdrs "src/*.hpp" "src/*.h")
-  file(GLOB lib_hdrs "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
+  file(GLOB lib_srcs     "src/*.cpp")
+  file(GLOB lib_int_hdrs "src/*.hpp" "src/*.h")
+  file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
   file(GLOB lib_cuda_srcs "src/cuda/*.cu")
@@ -456,12 +456,12 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
   endif()
 
+  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
+
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
-
-  ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 endmacro()
 
 # creates OpenCV module in current folder
@@ -472,6 +472,9 @@ endmacro()
 macro(ocv_create_module)
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
     "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
+  if(NOT the_module STREQUAL opencv_ts)
+    set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+  endif()
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
@@ -533,7 +536,7 @@ macro(ocv_create_module)
   if(OPENCV_MODULE_${the_module}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${the_module};")
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
       string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-      if(hdr2 MATCHES "^(opencv2/.*)/[^/]+.h(..)?$")
+      if(NOT hdr2 MATCHES "opencv2/${the_module}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
         install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT main)
       endif()
     endforeach()

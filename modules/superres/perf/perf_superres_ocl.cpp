@@ -44,7 +44,7 @@
 
 #ifdef HAVE_OPENCL
 
-#include "opencv2/ocl/ocl.hpp"
+#include "opencv2/ocl.hpp"
 using namespace std;
 using namespace std::tr1;
 using namespace testing;

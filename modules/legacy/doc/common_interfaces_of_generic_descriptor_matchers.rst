@@ -26,7 +26,7 @@ and finding the nearest closest descriptor to an input feature. ::
                             const char* pca_hr_config = 0, const char* pca_desc_config = 0, int pyr_levels = 1,
                             int pca_dim_high = 100, int pca_dim_low = 100);
 
-        OneWayDescriptorBase(CvSize patch_size, int pose_count, const string &pca_filename, const string &train_path = string(), const string &images_list = string(),
+        OneWayDescriptorBase(CvSize patch_size, int pose_count, const String &pca_filename, const String &train_path = String(), const String &images_list = String(),
                             float _scale_min = 0.7f, float _scale_max=1.5f, float _scale_step=1.2f, int pyr_levels = 1,
                             int pca_dim_high = 100, int pca_dim_low = 100);
 
@@ -160,7 +160,7 @@ and finding the nearest closest descriptor to an input feature. ::
         void ConvertDescriptorsArrayToTree(); // Converting pca_descriptors array to KD tree
 
         // GetPCAFilename: get default PCA filename
-        static string GetPCAFilename () { return "pca.yml"; }
+        static String GetPCAFilename () { return "pca.yml"; }
 
         virtual bool empty() const { return m_train_feature_count <= 0 ? true : false; }
 
@@ -190,16 +190,16 @@ Wrapping class for computing, matching, and classifying descriptors using the
 
             Params( int poseCount = POSE_COUNT,
                     Size patchSize = Size(PATCH_WIDTH, PATCH_HEIGHT),
-                    string pcaFilename = string(),
-                    string trainPath = string(), string trainImagesList = string(),
+                    String pcaFilename = String(),
+                    String trainPath = String(), String trainImagesList = String(),
                     float minScale = GET_MIN_SCALE(), float maxScale = GET_MAX_SCALE(),
                     float stepScale = GET_STEP_SCALE() );
 
             int poseCount;
             Size patchSize;
-            string pcaFilename;
-            string trainPath;
-            string trainImagesList;
+            String pcaFilename;
+            String trainPath;
+            String trainImagesList;
 
             float minScale, maxScale, stepScale;
         };
@@ -330,7 +330,7 @@ Wrapping class for computing, matching, and classifying descriptors using the
                     int compressionMethod=FernClassifier::COMPRESSION_NONE,
                     const PatchGenerator& patchGenerator=PatchGenerator() );
 
-            Params( const string& filename );
+            Params( const String& filename );
 
             int nclasses;
             int patchSize;
@@ -341,7 +341,7 @@ Wrapping class for computing, matching, and classifying descriptors using the
             int compressionMethod;
             PatchGenerator patchGenerator;
 
-            string filename;
+            String filename;
         };
 
         FernDescriptorMatcher( const Params& params=Params() );

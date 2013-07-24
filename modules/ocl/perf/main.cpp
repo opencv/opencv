@@ -42,27 +42,35 @@
 
 #include "precomp.hpp"
 
+static int cvErrorCallback(int /*status*/, const char * /*func_name*/,
+    const char *err_msg, const char * /*file_name*/,
+    int /*line*/, void * /*userdata*/)
+{
+    TestSystem::instance().printError(err_msg);
+    return 0;
+}
+
 int main(int argc, const char *argv[])
 {
     const char *keys =
-        "{ h | help    | false | print help message }"
-        "{ f | filter  |       | filter for test }"
-        "{ w | workdir |       | set working directory }"
-        "{ l | list    | false | show all tests }"
-        "{ d | device  | 0     | device id }"
-        "{ c | cpu_ocl | false | use cpu as ocl device}"
-        "{ i | iters   | 10    | iteration count }"
-        "{ m | warmup  | 1     | gpu warm up iteration count}"
-        "{ t | xtop    | 1.1   | xfactor top boundary}"
-        "{ b | xbottom | 0.9   | xfactor bottom boundary}"
-        "{ v | verify  | false | only run gpu once to verify if problems occur}";
+        "{ h help    | false | print help message }"
+        "{ f filter  |       | filter for test }"
+        "{ w workdir |       | set working directory }"
+        "{ l list    | false | show all tests }"
+        "{ d device  | 0     | device id }"
+        "{ c cpu_ocl | false | use cpu as ocl device}"
+        "{ i iters   | 10    | iteration count }"
+        "{ m warmup  | 1     | gpu warm up iteration count}"
+        "{ t xtop    | 1.1	 | xfactor top boundary}"
+        "{ b xbottom | 0.9	 | xfactor bottom boundary}"
+        "{ v verify  | false | only run gpu once to verify if problems occur}";
 
     redirectError(cvErrorCallback);
     CommandLineParser cmd(argc, argv, keys);
-    if (cmd.get<bool>("help"))
+    if (cmd.has("help"))
     {
         cout << "Avaible options:" << endl;
-        cmd.printParams();
+        cmd.printMessage();
         return 0;
     }
 
@@ -99,7 +107,7 @@ int main(int argc, const char *argv[])
 
     // set this to overwrite binary cache every time the test starts
     ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
-    
+
     if (cmd.get<bool>("verify"))
     {
         TestSystem::instance().setNumIters(1);
@@ -126,7 +134,7 @@ END_DEV:
 
     string filter = cmd.get<string>("filter");
     string workdir = cmd.get<string>("workdir");
-    bool list = cmd.get<bool>("list");
+    bool list = cmd.has("list");
     int iters = cmd.get<int>("iters");
     int wu_iters = cmd.get<int>("warmup");
     double x_top = cmd.get<double>("xtop");

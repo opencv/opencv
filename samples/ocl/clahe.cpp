@@ -1,5 +1,6 @@
 #include <iostream>
 #include "opencv2/core/core.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/ocl/ocl.hpp"
@@ -28,17 +29,17 @@ static void Clip_Callback(int)
 int main(int argc, char** argv)
 {
     const char* keys =
-        "{ i | input   |                    | specify input image }"
-        "{ c | camera  |    0               | specify camera id   }"
-        "{ s | use_cpu |    false           | use cpu algorithm   }"
-        "{ o | output  | clahe_output.jpg   | specify output save path}";
+        "{ i input   |                    | specify input image }"
+        "{ c camera  |    0               | specify camera id   }"
+        "{ s use_cpu |    false           | use cpu algorithm   }"
+        "{ o output  | clahe_output.jpg   | specify output save path}";
 
     CommandLineParser cmd(argc, argv, keys);
     string infile = cmd.get<string>("i");
     outfile = cmd.get<string>("o");
     int camid = cmd.get<int>("c");
     bool use_cpu = cmd.get<bool>("s");
-    CvCapture* capture = 0;
+    VideoCapture capture;
     bool running = true;
 
     namedWindow("CLAHE");
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
     createTrackbar("Clip Limit", "CLAHE", &cliplimit, 20, (TrackbarCallback)Clip_Callback);
     Mat frame, outframe;
     ocl::oclMat d_outframe;
-    
+
     int cur_clip;
     Size cur_tilesize;
     if(use_cpu)
@@ -72,15 +73,15 @@ int main(int argc, char** argv)
     }
     else
     {
-        capture = cvCaptureFromCAM(camid);
+        capture.open(camid);
     }
     cout << "\nControls:\n"
          << "\to - save output image\n"
          << "\tESC - exit\n";
     while(running)
     {
-        if(capture)
-            frame = cvQueryFrame(capture);
+        if(capture.isOpened())
+            capture.read(frame);
         else
             frame = imread(infile);
         if(frame.empty())
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
             d_outframe.download(outframe);
         }
         imshow("CLAHE", outframe);
-        char key = (char)cvWaitKey(3);
+        char key = (char)waitKey(3);
         if(key == 'o') imwrite(outfile, outframe);
         else if(key == 27) running = false;
     }

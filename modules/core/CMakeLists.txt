@@ -3,7 +3,6 @@ ocv_add_module(core ${ZLIB_LIBRARIES})
 ocv_module_include_directories(${ZLIB_INCLUDE_DIR})
 
 if(HAVE_CUDA)
-  ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpu/include")
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef)
 endif()
 

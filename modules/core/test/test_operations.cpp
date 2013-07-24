@@ -75,6 +75,7 @@ protected:
     bool TestSparseMat();
     bool TestVec();
     bool TestMatxMultiplication();
+    bool TestMatxElementwiseDivison();
     bool TestSubMatAccess();
     bool TestExp();
     bool TestSVD();
@@ -891,6 +892,28 @@ bool CV_OperationsTest::TestMatxMultiplication()
     return true;
 }
 
+bool CV_OperationsTest::TestMatxElementwiseDivison()
+{
+    try
+    {
+        Matx22f mat(2, 4, 6, 8);
+        Matx22f mat2(2, 2, 2, 2);
+
+        Matx22f res = mat.div(mat2);
+
+        if(res(0, 0) != 1.0) throw test_excep();
+        if(res(0, 1) != 2.0) throw test_excep();
+        if(res(1, 0) != 3.0) throw test_excep();
+        if(res(1, 1) != 4.0) throw test_excep();
+    }
+    catch(const test_excep&)
+    {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+    return true;
+}
+
 
 bool CV_OperationsTest::TestVec()
 {
@@ -1107,6 +1130,9 @@ void CV_OperationsTest::run( int /* start_from */)
         return;
 
     if (!TestMatxMultiplication())
+        return;
+
+    if (!TestMatxElementwiseDivison())
         return;
 
     if (!TestSubMatAccess())

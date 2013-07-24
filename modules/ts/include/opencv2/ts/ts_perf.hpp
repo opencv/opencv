@@ -1,14 +1,16 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "ts_gtest.h"
+#include "cvconfig.h"
 
-#ifdef HAVE_TBB
-#include "tbb/task_scheduler_init.h"
+#ifndef GTEST_CREATE_SHARED_LIBRARY
+#  ifdef BUILD_SHARED_LIBS
+#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
+#  endif
 #endif
+
+#include "opencv2/core.hpp"
+#include "ts_gtest.h"
 
 #if !(defined(LOGD) || defined(LOGI) || defined(LOGW) || defined(LOGE))
 # if defined(ANDROID) && defined(USE_ANDROID_LOGGING)

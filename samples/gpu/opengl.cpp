@@ -24,8 +24,8 @@ int main()
 #endif
 
 #include "opencv2/core/core.hpp"
-#include "opencv2/core/opengl_interop.hpp"
-#include "opencv2/core/gpumat.hpp"
+#include "opencv2/core/opengl.hpp"
+#include "opencv2/core/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 using namespace std;

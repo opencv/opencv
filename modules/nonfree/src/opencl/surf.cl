@@ -1204,7 +1204,7 @@ __kernel
     barrier(CLK_LOCAL_MEM_FENCE);
 
         reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
- 
+
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 25)
     {
@@ -1333,14 +1333,14 @@ void reduce_sum128(volatile __local  float* smem, int tid)
 #if WAVE_SIZE < 64
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 32) 
+    if (tid < 32)
     {
 #endif
         smem[tid] += smem[tid + 32];
 #if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) 
+    if (tid < 16)
     {
 #endif
         smem[tid] += smem[tid + 16];
@@ -1385,7 +1385,7 @@ void reduce_sum64(volatile __local  float* smem, int tid)
 #if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) 
+    if (tid < 16)
     {
 #endif
         smem[tid] += smem[tid + 16];

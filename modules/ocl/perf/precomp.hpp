@@ -40,6 +40,14 @@
 //
 //M*/
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
+
 #include <iomanip>
 #include <stdexcept>
 #include <string>
@@ -47,18 +55,19 @@
 #include <cstdio>
 #include <vector>
 #include <numeric>
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
-#include "opencv2/features2d/features2d.hpp"
-#include "opencv2/ocl/ocl.hpp"
-#include "opencv2/ts/ts.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/objdetect.hpp"
+#include "opencv2/features2d.hpp"
+#include "opencv2/ocl.hpp"
+#include "opencv2/ts.hpp"
 #include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/ts/ts_gtest.h"
 
+#include "opencv2/core/utility.hpp"
 
 #define Min_Size 1000
 #define Max_Size 4000
@@ -72,7 +81,7 @@ void gen(Mat &mat, int rows, int cols, int type, Scalar low, Scalar high);
 void gen(Mat &mat, int rows, int cols, int type, int low, int high, int n);
 
 string abspath(const string &relpath);
-int CV_CDECL cvErrorCallback(int, const char *, const char *, const char *, int, void *);
+
 typedef struct
 {
     short x;
@@ -99,7 +108,7 @@ int EeceptDoubleEQ(T1 expected, T1 actual)
     testing::internal::Double lhs(expected);
     testing::internal::Double rhs(actual);
 
-    if (lhs.AlmostEquals(rhs)) 
+    if (lhs.AlmostEquals(rhs))
     {
         return 1;
     }
@@ -352,7 +361,7 @@ public:
         if(accurate_diff_ <= eps)
             is_accurate_ = 1;
         else
-            is_accurate_ = 0;    
+            is_accurate_ = 0;
     }
 
     std::stringstream &getCurSubtestDescription()
@@ -369,7 +378,7 @@ private:
         speedup_full_faster_count_(0), speedup_full_slower_count_(0), speedup_full_equal_count_(0), is_list_mode_(false),
         num_iters_(10), cpu_num_iters_(2),
         gpu_warmup_iters_(1), cur_iter_idx_(0), cur_warmup_idx_(0),
-        record_(0), recordname_("performance"), itname_changed_(true), 
+        record_(0), recordname_("performance"), itname_changed_(true),
         is_accurate_(-1), accurate_diff_(0.)
     {
         cpu_times_.reserve(num_iters_);
@@ -440,10 +449,10 @@ private:
     double bottom_;
 
     int num_iters_;
-    int cpu_num_iters_;		//there's no need to set cpu running same times with gpu
-    int gpu_warmup_iters_;	//gpu warm up times, default is 1
+    int cpu_num_iters_;     //there's no need to set cpu running same times with gpu
+    int gpu_warmup_iters_;  //gpu warm up times, default is 1
     int cur_iter_idx_;
-    int cur_warmup_idx_;	//current gpu warm up times
+    int cur_warmup_idx_;    //current gpu warm up times
     std::vector<int64> cpu_times_;
     std::vector<int64> gpu_times_;
     std::vector<int64> gpu_full_times_;
@@ -460,49 +469,49 @@ private:
 
 #define GLOBAL_INIT(name) \
 struct name##_init: Runnable { \
-	name##_init(): Runnable(#name) { \
-	TestSystem::instance().addInit(this); \
+    name##_init(): Runnable(#name) { \
+    TestSystem::instance().addInit(this); \
 } \
-	void run(); \
+    void run(); \
 } name##_init_instance; \
-	void name##_init::run()
+    void name##_init::run()
 
 
 #define PERFTEST(name) \
 struct name##_test: Runnable { \
-	name##_test(): Runnable(#name) { \
-	TestSystem::instance().addTest(this); \
+    name##_test(): Runnable(#name) { \
+    TestSystem::instance().addTest(this); \
 } \
-	void run(); \
+    void run(); \
 } name##_test_instance; \
-	void name##_test::run()
+    void name##_test::run()
 
 #define SUBTEST TestSystem::instance().startNewSubtest()
 
 #define CPU_ON \
-	while (!TestSystem::instance().cpu_stop()) { \
-	TestSystem::instance().cpuOn()
+    while (!TestSystem::instance().cpu_stop()) { \
+    TestSystem::instance().cpuOn()
 #define CPU_OFF \
-	TestSystem::instance().cpuOff(); \
-	} TestSystem::instance().cpuComplete()
+    TestSystem::instance().cpuOff(); \
+    } TestSystem::instance().cpuComplete()
 
 #define GPU_ON \
-	while (!TestSystem::instance().stop()) { \
-	TestSystem::instance().gpuOn()
+    while (!TestSystem::instance().stop()) { \
+    TestSystem::instance().gpuOn()
 #define GPU_OFF \
-	ocl::finish();\
-	TestSystem::instance().gpuOff(); \
-	} TestSystem::instance().gpuComplete()
+    ocl::finish(); \
+    TestSystem::instance().gpuOff(); \
+    } TestSystem::instance().gpuComplete()
 
 #define GPU_FULL_ON \
-	while (!TestSystem::instance().stop()) { \
-	TestSystem::instance().gpufullOn()
+    while (!TestSystem::instance().stop()) { \
+    TestSystem::instance().gpufullOn()
 #define GPU_FULL_OFF \
-	TestSystem::instance().gpufullOff(); \
-	} TestSystem::instance().gpufullComplete()
+    TestSystem::instance().gpufullOff(); \
+    } TestSystem::instance().gpufullComplete()
 
 #define WARMUP_ON \
-	while (!TestSystem::instance().warmupStop()) {
+    while (!TestSystem::instance().warmupStop()) {
 #define WARMUP_OFF \
-	ocl::finish();\
-	} TestSystem::instance().warmupComplete()
+        ocl::finish(); \
+    } TestSystem::instance().warmupComplete()

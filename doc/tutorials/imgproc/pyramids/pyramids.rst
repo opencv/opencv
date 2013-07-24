@@ -84,8 +84,8 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
 .. code-block:: cpp
 
-   #include "opencv2/imgproc/imgproc.hpp"
-   #include "opencv2/highgui/highgui.hpp"
+   #include "opencv2/imgproc.hpp"
+   #include "opencv2/highgui.hpp"
    #include <math.h>
    #include <stdlib.h>
    #include <stdio.h>
@@ -129,7 +129,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
        c = waitKey(10);
 
        if( (char)c == 27 )
-       	 { break; }
+         { break; }
        if( (char)c == 'u' )
          { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
            printf( "** Zoom In: Image x 2 \n" );
@@ -188,7 +188,7 @@ Explanation
           c = waitKey(10);
 
           if( (char)c == 27 )
-       	    { break; }
+            { break; }
           if( (char)c == 'u' )
             { pyrUp( tmp, dst, Size( tmp.cols*2, tmp.rows*2 ) );
               printf( "** Zoom In: Image x 2 \n" );

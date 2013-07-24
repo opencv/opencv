@@ -90,7 +90,7 @@ __kernel void arithm_mul_D0 (__global uchar *src1, int src1_step, int src1_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -138,7 +138,7 @@ __kernel void arithm_mul_D2 (__global ushort *src1, int src1_step, int src1_offs
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -177,7 +177,7 @@ __kernel void arithm_mul_D3 (__global short *src1, int src1_step, int src1_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

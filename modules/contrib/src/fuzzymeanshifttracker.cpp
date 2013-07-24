@@ -35,6 +35,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/contrib/compat.hpp"
 
 CvFuzzyPoint::CvFuzzyPoint(double _x, double _y)
 {

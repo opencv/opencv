@@ -45,6 +45,8 @@
 //M*/
 #include "precomp.hpp"
 
+#if 0
+
 ///////////// Haar ////////////////////////
 namespace cv
 {
@@ -85,7 +87,7 @@ public:
 }
 PERFTEST(Haar)
 {
-    Mat img = imread(abspath("basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img = imread(abspath("basketball1.png"), IMREAD_GRAYSCALE);
 
     if (img.empty())
     {
@@ -141,3 +143,5 @@ PERFTEST(Haar)
                                  1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
     GPU_FULL_OFF;
 }
+
+#endif

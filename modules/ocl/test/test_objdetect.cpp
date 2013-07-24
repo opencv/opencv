@@ -44,11 +44,14 @@
 //M*/
 
 #include "precomp.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
 
+#include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
+
+using namespace std;
 using namespace cv;
 using namespace testing;
+
 #ifdef HAVE_OPENCL
 
 extern string workdir;
@@ -75,11 +78,11 @@ TEST_P(HOG, GetDescriptors)
     switch (type)
     {
     case CV_8UC1:
-        cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cvtColor(img_rgb, img, COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cvtColor(img_rgb, img, COLOR_BGR2BGRA);
         break;
     }
     ocl::oclMat d_img(img);
@@ -121,11 +124,11 @@ TEST_P(HOG, Detect)
     switch (type)
     {
     case CV_8UC1:
-        cvtColor(img_rgb, img, CV_BGR2GRAY);
+        cvtColor(img_rgb, img, COLOR_BGR2GRAY);
         break;
     case CV_8UC4:
     default:
-        cvtColor(img_rgb, img, CV_BGR2BGRA);
+        cvtColor(img_rgb, img, COLOR_BGR2BGRA);
         break;
     }
     ocl::oclMat d_img(img);
@@ -182,6 +185,7 @@ INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, HOG, testing::Combine(
                             testing::Values(Size(64, 128), Size(48, 96)),
                             testing::Values(MatType(CV_8UC1), MatType(CV_8UC4))));
 
+#if 0
 ///////////////////////////// Haar //////////////////////////////
 IMPLEMENT_PARAM_CLASS(CascadeName, std::string);
 CascadeName cascade_frontalface_alt(std::string("haarcascade_frontalface_alt.xml"));
@@ -222,13 +226,13 @@ TEST_P(Haar, FaceDetect)
 {
     MemStorage storage(cvCreateMemStorage(0));
     CvSeq *_objects;
-    _objects = cascade.oclHaarDetectObjects(d_img, storage, 1.1, 3, 
+    _objects = cascade.oclHaarDetectObjects(d_img, storage, 1.1, 3,
                                             flags, Size(30, 30), Size(0, 0));
     vector<CvAvgComp> vecAvgComp;
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     oclfaces.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), oclfaces.begin(), getRect());
-    
+
     cpucascade.detectMultiScale(img, faces,  1.1, 3,
                                 flags,
                                 Size(30, 30), Size(0, 0));
@@ -261,7 +265,8 @@ TEST_P(Haar, FaceDetectUseBuf)
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, Haar,
-    Combine(Values(CV_HAAR_SCALE_IMAGE, 0), 
+    Combine(Values(CV_HAAR_SCALE_IMAGE, 0),
             Values(cascade_frontalface_alt/*, cascade_frontalface_alt2*/)));
+#endif
 
 #endif //HAVE_OPENCL

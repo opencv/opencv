@@ -65,7 +65,7 @@ __kernel void arithm_compare_eq_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -120,7 +120,7 @@ __kernel void arithm_compare_ne_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -174,7 +174,7 @@ __kernel void arithm_compare_eq_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -380,7 +380,7 @@ __kernel void arithm_compare_gt_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -434,7 +434,7 @@ __kernel void arithm_compare_gt_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -490,7 +490,7 @@ __kernel void arithm_compare_gt_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -700,7 +700,7 @@ __kernel void arithm_compare_ge_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -757,7 +757,7 @@ __kernel void arithm_compare_ge_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -815,7 +815,7 @@ __kernel void arithm_compare_ge_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -869,7 +869,7 @@ __kernel void arithm_compare_ge_D4 (__global int *src1, int src1_step, int src1_
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -921,7 +921,7 @@ __kernel void arithm_compare_ge_D5 (__global float *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -975,7 +975,7 @@ __kernel void arithm_compare_ge_D6 (__global double *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -1014,4 +1014,3 @@ __kernel void arithm_compare_ge_D6 (__global double *src1, int src1_step, int sr
     }
 }
 #endif
-

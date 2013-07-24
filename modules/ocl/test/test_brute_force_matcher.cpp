@@ -189,20 +189,20 @@ namespace
         ASSERT_EQ(0, badCount);
     }
 
-    INSTANTIATE_TEST_CASE_P(OCL_Features2D, BruteForceMatcher, 
+    INSTANTIATE_TEST_CASE_P(OCL_Features2D, BruteForceMatcher,
         testing::Combine(
         testing::Values(
             DistType(cv::ocl::BruteForceMatcher_OCL_base::L1Dist),
-            DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)/*, 
+            DistType(cv::ocl::BruteForceMatcher_OCL_base::L2Dist)/*,
             DistType(cv::ocl::BruteForceMatcher_OCL_base::HammingDist)*/
         ),
         testing::Values(
-            DescriptorSize(57), 
-            DescriptorSize(64), 
-            DescriptorSize(83), 
-            DescriptorSize(128), 
-            DescriptorSize(179), 
-            DescriptorSize(256), 
+            DescriptorSize(57),
+            DescriptorSize(64),
+            DescriptorSize(83),
+            DescriptorSize(128),
+            DescriptorSize(179),
+            DescriptorSize(256),
             DescriptorSize(304))
         )
     );

@@ -94,11 +94,16 @@ size_t TiffDecoder::signatureLength() const
     return 4;
 }
 
-bool TiffDecoder::checkSignature( const string& signature ) const
+bool TiffDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 4 &&
         (memcmp(signature.c_str(), fmtSignTiffII, 4) == 0 ||
         memcmp(signature.c_str(), fmtSignTiffMM, 4) == 0);
+}
+
+int TiffDecoder::normalizeChannelsNumber(int channels) const
+{
+    return channels > 4 ? 4 : channels;
 }
 
 ImageDecoder TiffDecoder::newDecoder() const
@@ -133,10 +138,11 @@ bool TiffDecoder::readHeader()
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
+            int wanted_channels = normalizeChannelsNumber(ncn);
             switch(bpp)
             {
                 case 8:
-                    m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? 3 : 1);
+                    m_type = CV_MAKETYPE(CV_8U, photometric > 1 ? wanted_channels : 1);
                     break;
                 case 16:
                     m_type = CV_MAKETYPE(CV_16U, photometric > 1 ? 3 : 1);
@@ -185,6 +191,7 @@ bool  TiffDecoder::readData( Mat& img )
         TIFFGetField( tif, TIFFTAG_SAMPLESPERPIXEL, &ncn );
         const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
+        int wanted_channels = normalizeChannelsNumber(img.channels());
 
         if(dst_bpp == 8)
         {
@@ -248,9 +255,20 @@ bool  TiffDecoder::readData( Mat& img )
 
                             for( i = 0; i < tile_height; i++ )
                                 if( color )
-                                    icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
+                                {
+                                    if (wanted_channels == 4)
+                                    {
+                                        icvCvt_BGRA2RGBA_8u_C4R( buffer + i*tile_width*4, 0,
+                                                             data + x*4 + img.step*(tile_height - i - 1), 0,
+                                                             cvSize(tile_width,1) );
+                                    }
+                                    else
+                                    {
+                                        icvCvt_BGRA2BGR_8u_C4C3R( buffer + i*tile_width*4, 0,
                                                              data + x*3 + img.step*(tile_height - i - 1), 0,
                                                              cvSize(tile_width,1), 2 );
+                                    }
+                                }
                                 else
                                     icvCvt_BGRA2Gray_8u_C4C1R( buffer + i*tile_width*4, 0,
                                                               data + x + img.step*(tile_height - i - 1), 0,
@@ -402,7 +420,7 @@ void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
 
 #ifdef HAVE_TIFF
 
-static void readParam(const vector<int>& params, int key, int& value)
+static void readParam(const std::vector<int>& params, int key, int& value)
 {
     for(size_t i = 0; i + 1 < params.size(); i += 2)
         if(params[i] == key)
@@ -412,7 +430,7 @@ static void readParam(const vector<int>& params, int key, int& value)
         }
 }
 
-bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
+bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
 {
     int channels = img.channels();
     int width = img.cols, height = img.rows;
@@ -542,9 +560,9 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const vector<int>& params)
 #endif
 
 #ifdef HAVE_TIFF
-bool  TiffEncoder::write( const Mat& img, const vector<int>& params)
+bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 #else
-bool  TiffEncoder::write( const Mat& img, const vector<int>& /*params*/)
+bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
 #endif
 {
     int channels = img.channels();

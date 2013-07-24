@@ -40,159 +40,122 @@
 //M*/
 #include "precomp.hpp"
 
-/*F///////////////////////////////////////////////////////////////////////////////////////
-//    Name: cvMatchContours
-//    Purpose:
-//      Calculates matching of the two contours
-//    Context:
-//    Parameters:
-//      contour_1 - pointer to the first input contour object.
-//      contour_2 - pointer to the second input contour object.
-//      method - method for the matching calculation
-//      (now CV_IPPI_CONTOURS_MATCH_I1, CV_CONTOURS_MATCH_I2 or
-//      CV_CONTOURS_MATCH_I3 only  )
-//      rezult - output calculated measure
-//
-//F*/
-CV_IMPL  double
-cvMatchShapes( const void* contour1, const void* contour2,
-               int method, double /*parameter*/ )
+
+double cv::matchShapes(InputArray contour1, InputArray contour2, int method, double)
 {
-    CvMoments moments;
-    CvHuMoments huMoments;
     double ma[7], mb[7];
     int i, sma, smb;
     double eps = 1.e-5;
     double mmm;
     double result = 0;
 
-    if( !contour1 || !contour2 )
-        CV_Error( CV_StsNullPtr, "" );
-
-    // calculate moments of the first shape
-    cvMoments( contour1, &moments );
-    cvGetHuMoments( &moments, &huMoments );
-
-    ma[0] = huMoments.hu1;
-    ma[1] = huMoments.hu2;
-    ma[2] = huMoments.hu3;
-    ma[3] = huMoments.hu4;
-    ma[4] = huMoments.hu5;
-    ma[5] = huMoments.hu6;
-    ma[6] = huMoments.hu7;
-
-
-    // calculate moments of the second shape
-    cvMoments( contour2, &moments );
-    cvGetHuMoments( &moments, &huMoments );
-
-    mb[0] = huMoments.hu1;
-    mb[1] = huMoments.hu2;
-    mb[2] = huMoments.hu3;
-    mb[3] = huMoments.hu4;
-    mb[4] = huMoments.hu5;
-    mb[5] = huMoments.hu6;
-    mb[6] = huMoments.hu7;
+    HuMoments( moments(contour1), ma );
+    HuMoments( moments(contour2), mb );
 
     switch (method)
     {
     case 1:
+        for( i = 0; i < 7; i++ )
         {
-            for( i = 0; i < 7; i++ )
+            double ama = fabs( ma[i] );
+            double amb = fabs( mb[i] );
+
+            if( ma[i] > 0 )
+                sma = 1;
+            else if( ma[i] < 0 )
+                sma = -1;
+            else
+                sma = 0;
+            if( mb[i] > 0 )
+                smb = 1;
+            else if( mb[i] < 0 )
+                smb = -1;
+            else
+                smb = 0;
+
+            if( ama > eps && amb > eps )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
-
-                if( ma[i] > 0 )
-                    sma = 1;
-                else if( ma[i] < 0 )
-                    sma = -1;
-                else
-                    sma = 0;
-                if( mb[i] > 0 )
-                    smb = 1;
-                else if( mb[i] < 0 )
-                    smb = -1;
-                else
-                    smb = 0;
-
-                if( ama > eps && amb > eps )
-                {
-                    ama = 1. / (sma * log10( ama ));
-                    amb = 1. / (smb * log10( amb ));
-                    result += fabs( -ama + amb );
-                }
+                ama = 1. / (sma * log10( ama ));
+                amb = 1. / (smb * log10( amb ));
+                result += fabs( -ama + amb );
             }
-            break;
         }
+        break;
 
     case 2:
+        for( i = 0; i < 7; i++ )
         {
-            for( i = 0; i < 7; i++ )
+            double ama = fabs( ma[i] );
+            double amb = fabs( mb[i] );
+
+            if( ma[i] > 0 )
+                sma = 1;
+            else if( ma[i] < 0 )
+                sma = -1;
+            else
+                sma = 0;
+            if( mb[i] > 0 )
+                smb = 1;
+            else if( mb[i] < 0 )
+                smb = -1;
+            else
+                smb = 0;
+
+            if( ama > eps && amb > eps )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
-
-                if( ma[i] > 0 )
-                    sma = 1;
-                else if( ma[i] < 0 )
-                    sma = -1;
-                else
-                    sma = 0;
-                if( mb[i] > 0 )
-                    smb = 1;
-                else if( mb[i] < 0 )
-                    smb = -1;
-                else
-                    smb = 0;
-
-                if( ama > eps && amb > eps )
-                {
-                    ama = sma * log10( ama );
-                    amb = smb * log10( amb );
-                    result += fabs( -ama + amb );
-                }
+                ama = sma * log10( ama );
+                amb = smb * log10( amb );
+                result += fabs( -ama + amb );
             }
-            break;
         }
+        break;
 
     case 3:
+        for( i = 0; i < 7; i++ )
         {
-            for( i = 0; i < 7; i++ )
+            double ama = fabs( ma[i] );
+            double amb = fabs( mb[i] );
+
+            if( ma[i] > 0 )
+                sma = 1;
+            else if( ma[i] < 0 )
+                sma = -1;
+            else
+                sma = 0;
+            if( mb[i] > 0 )
+                smb = 1;
+            else if( mb[i] < 0 )
+                smb = -1;
+            else
+                smb = 0;
+
+            if( ama > eps && amb > eps )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
-
-                if( ma[i] > 0 )
-                    sma = 1;
-                else if( ma[i] < 0 )
-                    sma = -1;
-                else
-                    sma = 0;
-                if( mb[i] > 0 )
-                    smb = 1;
-                else if( mb[i] < 0 )
-                    smb = -1;
-                else
-                    smb = 0;
-
-                if( ama > eps && amb > eps )
-                {
-                    ama = sma * log10( ama );
-                    amb = smb * log10( amb );
-                    mmm = fabs( (ama - amb) / ama );
-                    if( result < mmm )
-                        result = mmm;
-                }
+                ama = sma * log10( ama );
+                amb = smb * log10( amb );
+                mmm = fabs( (ama - amb) / ama );
+                if( result < mmm )
+                    result = mmm;
             }
-            break;
         }
+        break;
     default:
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
-
+    
     return result;
 }
 
+
+CV_IMPL  double
+cvMatchShapes( const void* _contour1, const void* _contour2,
+               int method, double parameter )
+{
+    cv::AutoBuffer<double> abuf1, abuf2;
+    cv::Mat contour1 = cv::cvarrToMat(_contour1, false, false, 0, &abuf1);
+    cv::Mat contour2 = cv::cvarrToMat(_contour2, false, false, 0, &abuf2);
+
+    return cv::matchShapes(contour1, contour2, method, parameter);
+}
 
 /* End of file. */

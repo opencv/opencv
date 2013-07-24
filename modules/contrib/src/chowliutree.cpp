@@ -73,7 +73,7 @@ void ChowLiuTree::add(const Mat& imgDescriptor) {
 
 }
 
-void ChowLiuTree::add(const vector<Mat>& _imgDescriptors) {
+void ChowLiuTree::add(const std::vector<Mat>& _imgDescriptors) {
     for (size_t i = 0; i < _imgDescriptors.size(); i++) {
         add(_imgDescriptors[i]);
     }
@@ -164,10 +164,10 @@ cv::Mat ChowLiuTree::buildTree(int root_word, std::list<info> &edges) {
     //independence from a parent node.
 
     //find all children and do the same
-    vector<int> nextqs = extractChildren(edges, q);
+    std::vector<int> nextqs = extractChildren(edges, q);
 
     int pq = q;
-    vector<int>::iterator nextq;
+    std::vector<int>::iterator nextq;
     for(nextq = nextqs.begin(); nextq != nextqs.end(); nextq++) {
         recAddToTree(cltree, *nextq, pq, edges);
     }
@@ -186,16 +186,16 @@ void ChowLiuTree::recAddToTree(cv::Mat &cltree, int q, int pq,
     cltree.at<double>(3, q) = CP(q, true, pq, false);
 
     //find all children and do the same
-    vector<int> nextqs = extractChildren(remaining_edges, q);
+    std::vector<int> nextqs = extractChildren(remaining_edges, q);
 
     pq = q;
-    vector<int>::iterator nextq;
+    std::vector<int>::iterator nextq;
     for(nextq = nextqs.begin(); nextq != nextqs.end(); nextq++) {
         recAddToTree(cltree, *nextq, pq, remaining_edges);
     }
 }
 
-vector<int> ChowLiuTree::extractChildren(std::list<info> &remaining_edges, int q) {
+std::vector<int> ChowLiuTree::extractChildren(std::list<info> &remaining_edges, int q) {
 
     std::vector<int> children;
     std::list<info>::iterator edge = remaining_edges.begin();
@@ -225,16 +225,16 @@ double ChowLiuTree::calcMutInfo(int word1, int word2) {
     double accumulation = 0;
 
     double P00 = JP(word1, false, word2, false);
-    if(P00) accumulation += P00 * log(P00 / (P(word1, false)*P(word2, false)));
+    if(P00) accumulation += P00 * std::log(P00 / (P(word1, false)*P(word2, false)));
 
     double P01 = JP(word1, false, word2, true);
-    if(P01) accumulation += P01 * log(P01 / (P(word1, false)*P(word2, true)));
+    if(P01) accumulation += P01 * std::log(P01 / (P(word1, false)*P(word2, true)));
 
     double P10 = JP(word1, true, word2, false);
-    if(P10) accumulation += P10 * log(P10 / (P(word1, true)*P(word2, false)));
+    if(P10) accumulation += P10 * std::log(P10 / (P(word1, true)*P(word2, false)));
 
     double P11 = JP(word1, true, word2, true);
-    if(P11) accumulation += P11 * log(P11 / (P(word1, true)*P(word2, true)));
+    if(P11) accumulation += P11 * std::log(P11 / (P(word1, true)*P(word2, true)));
 
     return accumulation;
 }

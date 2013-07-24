@@ -301,8 +301,8 @@ static const char* GetAnsiColorCode(GTestColor color) {
 
 static void printMetricsUti(double cpu_time, double gpu_time, double gpu_full_time, double speedup, double fullspeedup, std::stringstream& stream, std::stringstream& cur_subtest_description)
 {
-    //cout <<TAB<< setw(7) << stream.str(); 
-    cout <<TAB; 
+    //cout <<TAB<< setw(7) << stream.str();
+    cout <<TAB;
 
     stream.str("");
     stream << cpu_time;
@@ -334,9 +334,9 @@ void TestSystem::printMetrics(int is_accurate, double cpu_time, double gpu_time,
     stringstream stream;
 
     std::stringstream &cur_subtest_description = getCurSubtestDescription();
-   
+
 #if GTEST_OS_WINDOWS&&!GTEST_OS_WINDOWS_MOBILE
-    
+
     WORD color;
     const HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
     // Gets the current text color.
@@ -401,10 +401,10 @@ void TestSystem::writeMetrics(double cpu_time, double gpu_time, double gpu_full_
         exit(-1);
     }
 
-    fprintf(record_, "%s,%s,%s,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n", 
+    fprintf(record_, "%s,%s,%s,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n",
         itname_changed_ ? itname_.c_str() : "",
         cur_subtest_description_.str().c_str(),
-        _is_accurate_.c_str(), 
+        _is_accurate_.c_str(),
         accurate_diff_,
         cpu_time, gpu_time, speedup, gpu_full_time, fullspeedup,
         gpu_min, gpu_max, std_dev);
@@ -465,15 +465,6 @@ string abspath(const string &relpath)
     return TestSystem::instance().workingDir() + relpath;
 }
 
-
-int CV_CDECL cvErrorCallback(int /*status*/, const char * /*func_name*/,
-    const char *err_msg, const char * /*file_name*/,
-    int /*line*/, void * /*userdata*/)
-{
-    TestSystem::instance().printError(err_msg);
-    return 0;
-}
-
 double checkNorm(const Mat &m)
 {
     return norm(m, NORM_INF);
@@ -487,10 +478,6 @@ double checkNorm(const Mat &m1, const Mat &m2)
 double checkSimilarity(const Mat &m1, const Mat &m2)
 {
     Mat diff;
-    matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
+    matchTemplate(m1, m2, diff, TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
-
-
-
-

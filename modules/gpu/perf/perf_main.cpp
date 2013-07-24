@@ -44,11 +44,4 @@
 
 using namespace perf;
 
-static const char * impls[] = {
-#ifdef HAVE_CUDA
-    "cuda",
-#endif
-    "plain"
-};
-
-CV_PERF_TEST_MAIN_WITH_IMPLS(gpu, impls, printCudaInfo())
+CV_PERF_TEST_CUDA_MAIN(gpu)

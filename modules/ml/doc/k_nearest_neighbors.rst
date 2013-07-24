@@ -9,7 +9,7 @@ CvKNearest
 ----------
 .. ocv:class:: CvKNearest : public CvStatModel
 
-The class implements K-Nearest Neighbors model as described in the beginning of this section. 
+The class implements K-Nearest Neighbors model as described in the beginning of this section.
 
 CvKNearest::CvKNearest
 ----------------------
@@ -39,7 +39,7 @@ Trains the model.
 
     :param updateBase: Specifies whether the model is trained from scratch (``update_base=false``), or it is updated using the new training data (``update_base=true``). In the latter case, the parameter ``maxK`` must not be larger than the original value.
 
-The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations: 
+The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations:
 
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.

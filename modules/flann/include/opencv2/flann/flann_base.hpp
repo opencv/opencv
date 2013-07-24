@@ -32,7 +32,6 @@
 #define OPENCV_FLANN_BASE_HPP_
 
 #include <vector>
-#include <string>
 #include <cassert>
 #include <cstdio>
 
@@ -62,7 +61,7 @@ inline void log_verbosity(int level)
  */
 struct SavedIndexParams : public IndexParams
 {
-    SavedIndexParams(std::string filename)
+    SavedIndexParams(cv::String filename)
     {
         (* this)["algorithm"] = FLANN_INDEX_SAVED;
         (*this)["filename"] = filename;
@@ -71,7 +70,7 @@ struct SavedIndexParams : public IndexParams
 
 
 template<typename Distance>
-NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>& dataset, const std::string& filename, Distance distance)
+NNIndex<Distance>* load_saved_index(const Matrix<typename Distance::ElementType>& dataset, const cv::String& filename, Distance distance)
 {
     typedef typename Distance::ElementType ElementType;
 
@@ -111,7 +110,7 @@ public:
         loaded_ = false;
 
         if (index_type == FLANN_INDEX_SAVED) {
-            nnIndex_ = load_saved_index<Distance>(features, get_param<std::string>(params,"filename"), distance);
+            nnIndex_ = load_saved_index<Distance>(features, get_param<cv::String>(params,"filename"), distance);
             loaded_ = true;
         }
         else {
@@ -134,7 +133,7 @@ public:
         }
     }
 
-    void save(std::string filename)
+    void save(cv::String filename)
     {
         FILE* fout = fopen(filename.c_str(), "wb");
         if (fout == NULL) {
