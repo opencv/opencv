@@ -98,8 +98,8 @@ namespace
         int getPreFilterCap() const { return preFilterCap_; }
         void setPreFilterCap(int preFilterCap) { preFilterCap_ = preFilterCap; }
 
-        int getTextureThreshold() const { return avergeTexThreshold_; }
-        void setTextureThreshold(int textureThreshold) { avergeTexThreshold_ = textureThreshold; }
+        int getTextureThreshold() const { return static_cast<int>(avergeTexThreshold_); }
+        void setTextureThreshold(int textureThreshold) { avergeTexThreshold_ = static_cast<float>(textureThreshold); }
 
         int getUniquenessRatio() const { return 0; }
         void setUniquenessRatio(int /*uniquenessRatio*/) {}

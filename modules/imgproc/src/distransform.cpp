@@ -744,6 +744,16 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
 
         if( labelType == CV_DIST_LABEL_CCOMP )
         {
+        #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+            if( maskSize == CV_DIST_MASK_5 )
+            {
+                IppiSize roi = { src->cols, src->rows };
+                if( ippiDistanceTransform_5x5_8u32f_C1R(
+                        src->data.ptr, src->step,
+                        dst->data.fl, dst->step, roi, _mask) >= 0 )
+                    return;
+            }
+        #endif
             Mat zpix = src == 0;
             connectedComponents(zpix, labels, 8, CV_32S);
         }

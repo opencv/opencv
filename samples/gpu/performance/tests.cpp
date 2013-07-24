@@ -17,23 +17,15 @@
 using namespace std;
 using namespace cv;
 
-static void InitMatchTemplate()
-{
-    Mat src; gen(src, 500, 500, CV_32F, 0, 1);
-    Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
-    gpu::GpuMat d_src(src), d_templ(templ), d_dst;
-    gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
-}
-
 
 TEST(matchTemplate)
 {
-    InitMatchTemplate();
-
     Mat src, templ, dst;
     gen(src, 3000, 3000, CV_32F, 0, 1);
 
     gpu::GpuMat d_src(src), d_templ, d_dst;
+
+    Ptr<gpu::TemplateMatching> alg = gpu::createTemplateMatching(src.type(), TM_CCORR);
 
     for (int templ_size = 5; templ_size < 200; templ_size *= 5)
     {
@@ -47,10 +39,10 @@ TEST(matchTemplate)
         CPU_OFF;
 
         d_templ.upload(templ);
-        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
+        alg->match(d_src, d_templ, d_dst);
 
         GPU_ON;
-        gpu::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
+        alg->match(d_src, d_templ, d_dst);
         GPU_OFF;
     }
 }
@@ -176,10 +168,12 @@ TEST(cornerHarris)
 
         d_src.upload(src);
 
-        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT101);
+        Ptr<gpu::CornernessCriteria> harris = gpu::createHarrisCorner(src.type(), 5, 7, 0.1, BORDER_REFLECT101);
+
+        harris->compute(d_src, d_dst);
 
         GPU_ON;
-        gpu::cornerHarris(d_src, d_dst, 5, 7, 0.1, BORDER_REFLECT101);
+        harris->compute(d_src, d_dst);
         GPU_OFF;
     }
 }
@@ -1047,13 +1041,12 @@ TEST(equalizeHist)
 
         gpu::GpuMat d_src(src);
         gpu::GpuMat d_dst;
-        gpu::GpuMat d_hist;
         gpu::GpuMat d_buf;
 
-        gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
+        gpu::equalizeHist(d_src, d_dst, d_buf);
 
         GPU_ON;
-        gpu::equalizeHist(d_src, d_dst, d_hist, d_buf);
+        gpu::equalizeHist(d_src, d_dst, d_buf);
         GPU_OFF;
     }
 }
@@ -1073,12 +1066,13 @@ TEST(Canny)
 
     gpu::GpuMat d_img(img);
     gpu::GpuMat d_edges;
-    gpu::CannyBuf d_buf;
 
-    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    Ptr<gpu::CannyEdgeDetector> canny = gpu::createCannyEdgeDetector(50.0, 100.0);
+
+    canny->detect(d_img, d_edges);
 
     GPU_ON;
-    gpu::Canny(d_img, d_buf, d_edges, 50.0, 100.0);
+    canny->detect(d_img, d_edges);
     GPU_OFF;
 }
 
@@ -1172,15 +1166,15 @@ TEST(GoodFeaturesToTrack)
     goodFeaturesToTrack(src, pts, 8000, 0.01, 0.0);
     CPU_OFF;
 
-    gpu::GoodFeaturesToTrackDetector_GPU detector(8000, 0.01, 0.0);
+    Ptr<gpu::CornersDetector> detector = gpu::createGoodFeaturesToTrackDetector(src.type(), 8000, 0.01, 0.0);
 
     gpu::GpuMat d_src(src);
     gpu::GpuMat d_pts;
 
-    detector(d_src, d_pts);
+    detector->detect(d_src, d_pts);
 
     GPU_ON;
-    detector(d_src, d_pts);
+    detector->detect(d_src, d_pts);
     GPU_OFF;
 }
 

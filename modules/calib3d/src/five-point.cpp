@@ -529,15 +529,24 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     mask4 = (Q.row(2) > 0) & mask4;
     mask4 = (Q.row(2) < dist) & mask4;
 
+    mask1 = mask1.t(); 
+    mask2 = mask2.t(); 
+    mask3 = mask3.t(); 
+    mask4 = mask4.t(); 
+
     // If _mask is given, then use it to filter outliers.
-    if (_mask.needed())
+    if (!_mask.empty())
     {
-        _mask.create(1, npoints, CV_8U, -1, true);
         Mat mask = _mask.getMat();
+        CV_Assert(mask.size() == mask1.size()); 
         bitwise_and(mask, mask1, mask1);
         bitwise_and(mask, mask2, mask2);
         bitwise_and(mask, mask3, mask3);
         bitwise_and(mask, mask4, mask4);
+    }
+    if (_mask.empty() && _mask.needed())
+    {
+        _mask.create(mask1.size(), CV_8U); 
     }
 
     CV_Assert(_R.needed() && _t.needed());
@@ -548,6 +557,7 @@ int cv::recoverPose( InputArray E, InputArray _points1, InputArray _points2, Out
     int good2 = countNonZero(mask2);
     int good3 = countNonZero(mask3);
     int good4 = countNonZero(mask4);
+
     if (good1 >= good2 && good1 >= good3 && good1 >= good4)
     {
         R1.copyTo(_R);

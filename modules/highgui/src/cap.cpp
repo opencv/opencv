@@ -220,8 +220,8 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
             break;
 #endif
-#ifdef HAVE_VFW
         case CV_CAP_VFW:
+#ifdef HAVE_VFW
             capture = cvCreateCameraCapture_VFW (index);
             if (capture)
                 return capture;
@@ -490,14 +490,14 @@ VideoCapture::~VideoCapture()
 
 bool VideoCapture::open(const String& filename)
 {
-    if (!isOpened())
+    if (isOpened()) release();
     cap = cvCreateFileCapture(filename.c_str());
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
-    if (!isOpened())
+    if (isOpened()) release();
     cap = cvCreateCameraCapture(device);
     return isOpened();
 }

@@ -94,7 +94,7 @@ void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMa
 
     CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
 
-    cvtColor(colors, colors, COLOR_HSV2RGB);
+    gpu::cvtColor(colors, colors, COLOR_HSV2RGB);
 }
 
 #endif /* HAVE_CUDA */

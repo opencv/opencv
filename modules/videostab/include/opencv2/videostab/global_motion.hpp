@@ -217,7 +217,7 @@ public:
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
-    gpu::GoodFeaturesToTrackDetector_GPU detector_;
+    Ptr<gpu::CornersDetector> detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
     Ptr<IOutlierRejector> outlierRejector_;
 

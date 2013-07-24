@@ -44,6 +44,8 @@ Detects keypoints in an image (first variant) or image set (second variant).
 
 .. ocv:function:: void FeatureDetector::detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const
 
+.. ocv:pyfunction:: cv2.FeatureDetector_create.detect(image[, mask]) -> keypoints
+
     :param image: Image.
 
     :param images: Image set.
@@ -59,6 +61,8 @@ FeatureDetector::create
 Creates a feature detector by its name.
 
 .. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
+
+.. ocv:pyfunction:: cv2.FeatureDetector_create(detectorType) -> retval
 
     :param detectorType: Feature detector type.
 

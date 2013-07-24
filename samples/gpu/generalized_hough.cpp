@@ -11,7 +11,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using cv::gpu::GpuMat;
 
 static Mat loadImage(const string& name)
 {
@@ -101,7 +101,7 @@ int main(int argc, const char* argv[])
         GpuMat d_image(image);
         GpuMat d_position;
 
-        Ptr<GeneralizedHough_GPU> d_hough = GeneralizedHough_GPU::create(method);
+        Ptr<gpu::GeneralizedHough> d_hough = gpu::GeneralizedHough::create(method);
         d_hough->set("minDist", minDist);
         d_hough->set("levels", levels);
         d_hough->set("dp", dp);
@@ -134,7 +134,7 @@ int main(int argc, const char* argv[])
         tm.start();
 
         d_hough->detect(d_image, d_position);
-        d_hough->download(d_position, position);
+        d_hough->downloadResults(d_position, position);
 
         tm.stop();
     }
@@ -181,7 +181,7 @@ int main(int argc, const char* argv[])
     cout << "Detection time : " << tm.getTimeMilli() << " ms" << endl;
 
     Mat out;
-    cvtColor(image, out, COLOR_GRAY2BGR);
+    cv::cvtColor(image, out, COLOR_GRAY2BGR);
 
     for (size_t i = 0; i < position.size(); ++i)
     {

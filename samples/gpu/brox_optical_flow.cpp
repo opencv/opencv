@@ -85,8 +85,8 @@ int main(int argc, const char* argv[])
 
         Mat frame0Gray, frame1Gray;
 
-        cvtColor(frame0Color, frame0Gray, COLOR_BGR2GRAY);
-        cvtColor(frame1Color, frame1Gray, COLOR_BGR2GRAY);
+        cv::cvtColor(frame0Color, frame0Gray, COLOR_BGR2GRAY);
+        cv::cvtColor(frame1Color, frame1Gray, COLOR_BGR2GRAY);
 
         GpuMat d_frame0(frame0Gray);
         GpuMat d_frame1(frame1Gray);

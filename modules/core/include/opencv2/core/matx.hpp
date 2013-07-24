@@ -163,6 +163,9 @@ public:
     //! multiply two matrices element-wise
     Matx<_Tp, m, n> mul(const Matx<_Tp, m, n>& a) const;
 
+    //! divide two matrices element-wise
+    Matx<_Tp, m, n> div(const Matx<_Tp, m, n>& a) const;
+
     //! element access
     const _Tp& operator ()(int i, int j) const;
     _Tp& operator ()(int i, int j);
@@ -783,6 +786,12 @@ Matx<_Tp, m, n> Matx<_Tp, m, n>::mul(const Matx<_Tp, m, n>& a) const
 }
 
 template<typename _Tp, int m, int n> inline
+Matx<_Tp, m, n> Matx<_Tp, m, n>::div(const Matx<_Tp, m, n>& a) const
+{
+    return Matx<_Tp, m, n>(*this, a, Matx_DivOp());
+}
+
+template<typename _Tp, int m, int n> inline
 Matx<_Tp, n, m> Matx<_Tp, m, n>::t() const
 {
     return Matx<_Tp, n, m>(*this, Matx_TOp());
@@ -1169,12 +1178,6 @@ Vec<_Tp, m> operator * (const Matx<_Tp, m, n>& a, const Vec<_Tp, n>& b)
 {
     Matx<_Tp, m, 1> c(a, b, Matx_MatMulOp());
     return (const Vec<_Tp, m>&)(c);
-}
-
-template<typename _Tp, int m, int n> static inline
-Matx<_Tp, m, n> operator / (const Matx<_Tp, m, n>& a, const Matx<_Tp, m, n>& b)
-{
-    return Matx<_Tp, m, n>(a, b, Matx_DivOp());
 }
 
 template<typename _Tp, int m, int n> static inline

@@ -52,16 +52,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-int main(int argc, char* argv[])
-{
-    perf::printCudaInfo();
-
-    perf::Regression::Init("gpu_perf4au");
-    perf::TestBase::Init(argc, argv);
-    testing::InitGoogleTest(&argc, argv);
-
-    return RUN_ALL_TESTS();
-}
+CV_PERF_TEST_CUDA_MAIN(gpu_perf4au)
 
 //////////////////////////////////////////////////////////
 // HoughLinesP
@@ -86,13 +77,14 @@ PERF_TEST_P(Image, HoughLinesP, testing::Values(std::string("im1_1280x800.jpg"))
     {
         cv::gpu::GpuMat d_image(image);
         cv::gpu::GpuMat d_lines;
-        cv::gpu::HoughLinesBuf d_buf;
 
-        cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::gpu::HoughSegmentDetector> hough = cv::gpu::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+
+        hough->detect(d_image, d_lines);
 
         TEST_CYCLE()
         {
-            cv::gpu::HoughLinesP(d_image, d_lines, d_buf, rho, theta, minLineLenght, maxLineGap);
+            hough->detect(d_image, d_lines);
         }
     }
     else
@@ -147,17 +139,17 @@ PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GoodFeaturesToTrackDetector_GPU d_detector(maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+        cv::Ptr<cv::gpu::CornersDetector> detector = cv::gpu::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
 
         cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat d_mask(mask);
         cv::gpu::GpuMat d_pts;
 
-        d_detector(d_src, d_pts, d_mask);
+        detector->detect(d_src, d_pts, d_mask);
 
         TEST_CYCLE()
         {
-            d_detector(d_src, d_pts, d_mask);
+            detector->detect(d_src, d_pts, d_mask);
         }
     }
     else

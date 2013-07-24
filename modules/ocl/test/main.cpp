@@ -73,14 +73,12 @@ void print_info()
 #endif
 
 }
-std::string workdir;
 int main(int argc, char **argv)
 {
-    TS::ptr()->init("ocl");
+    TS::ptr()->init(".");
     InitGoogleTest(&argc, argv);
     const char *keys =
         "{ h | false              | print help message }"
-		"{ w | ../../../samples/c/| set working directory i.e. -w=C:\\}"
         "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
         "{ p | 0                  | set platform id i.e. -p=0}"
         "{ d | 0                  | set device id i.e. -d=0}";
@@ -92,7 +90,6 @@ int main(int argc, char **argv)
         cmd.printMessage();
         return 0;
     }
-    workdir = cmd.get<string>("w");
     string type = cmd.get<string>("t");
     unsigned int pid = cmd.get<unsigned int>("p");
     int device = cmd.get<int>("d");
