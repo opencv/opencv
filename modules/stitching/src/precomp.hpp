@@ -76,8 +76,8 @@
 #  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
-#  include "opencv2/gpufeatures2d.hpp"
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
+#  include "opencv2/cudafeatures2d.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_GPU

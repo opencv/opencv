@@ -125,7 +125,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -200,7 +200,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -531,7 +531,7 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 {
     (void)try_use_gpu;
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
     {
         impl_ = new GpuMatcher(match_conf);

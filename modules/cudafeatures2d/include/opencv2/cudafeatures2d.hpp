@@ -40,11 +40,11 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPUFEATURES2D_HPP__
-#define __OPENCV_GPUFEATURES2D_HPP__
+#ifndef __OPENCV_CUDAFEATURES2D_HPP__
+#define __OPENCV_CUDAFEATURES2D_HPP__
 
 #ifndef __cplusplus
-#  error gpufeatures2d.hpp header must be compiled as C++
+#  error cudafeatures2d.hpp header must be compiled as C++
 #endif
 
 #include "opencv2/core/cuda.hpp"
@@ -358,4 +358,4 @@ private:
 
 }} // namespace cv { namespace cuda {
 
-#endif /* __OPENCV_GPUFEATURES2D_HPP__ */
+#endif /* __OPENCV_CUDAFEATURES2D_HPP__ */

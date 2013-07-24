@@ -54,7 +54,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-#include "opencv2/gpufeatures2d.hpp"
+#include "opencv2/cudafeatures2d.hpp"
 #include "opencv2/features2d.hpp"
 
 #ifdef GTEST_CREATE_SHARED_LIBRARY
