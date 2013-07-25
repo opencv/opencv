@@ -33,7 +33,7 @@ PERF_TEST_P(Size_MatType, mean, TYPICAL_MATS)
 
     TEST_CYCLE() s = mean(src);
 
-    SANITY_CHECK(s, 1e-6);
+    SANITY_CHECK(s, 1e-5);
 }
 
 PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
@@ -49,7 +49,7 @@ PERF_TEST_P(Size_MatType, mean_mask, TYPICAL_MATS)
 
     TEST_CYCLE() s = mean(src, mask);
 
-    SANITY_CHECK(s, 1e-6);
+    SANITY_CHECK(s, 5e-5);
 }
 
 PERF_TEST_P(Size_MatType, meanStdDev, TYPICAL_MATS)
