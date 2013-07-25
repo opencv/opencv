@@ -180,7 +180,9 @@ namespace cv
         class CV_EXPORTS TrajectoryWidget : public Widget3D
         {
         public:
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Color &color = Color::white(), bool show_frames = false, double scale = 1.0);
+            enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
+            
+            TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
             TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             
         private:
