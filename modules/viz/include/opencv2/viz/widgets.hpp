@@ -184,6 +184,7 @@ namespace cv
             
             TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
             TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             
         private:
             struct ApplyPath;

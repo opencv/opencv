@@ -1248,8 +1248,6 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
 
 cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale, const Color &color)
 {   
-    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-    
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
     float f_x = K(0,0);
     float f_y = K(1,1);
@@ -1279,6 +1277,47 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
     filter->SetInput(frustumSource->GetOutput());
     filter->Update();
     
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+    ApplyPath::applyPath(filter->GetOutput(), appendFilter, path);
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInput(appendFilter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+    setColor(color);
+}
+
+cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale, const Color &color)
+{
+    vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
+    
+    camera->SetViewAngle(fov[1] * 180 / CV_PI); // Vertical field of view
+    camera->SetPosition(0.0,0.0,0.0);
+    camera->SetViewUp(0.0,1.0,0.0);
+    camera->SetFocalPoint(0.0,0.0,1.0);
+    camera->SetClippingRange(0.01, scale);
+    
+    double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
+    
+    double planesArray[24];
+    camera->GetFrustumPlanes(aspect_ratio, planesArray);
+    
+    vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
+    planes->SetFrustumPlanes(planesArray);
+    
+    vtkSmartPointer<vtkFrustumSource> frustumSource = vtkSmartPointer<vtkFrustumSource>::New();
+    frustumSource->SetPlanes(planes);
+    frustumSource->Update();
+
+    // Extract the edges
+    vtkSmartPointer<vtkExtractEdges> filter = vtkSmartPointer<vtkExtractEdges>::New();
+    filter->SetInput(frustumSource->GetOutput());
+    filter->Update();
+    
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
     ApplyPath::applyPath(filter->GetOutput(), appendFilter, path);
     
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
