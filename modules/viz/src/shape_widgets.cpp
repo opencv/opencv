@@ -1166,7 +1166,8 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
     
-    if (display_mode & TrajectoryWidget::DISPLAY_PATH)
+    // Bitwise and with 3 in order to limit the domain to 2 bits
+    if ((~display_mode & 3) ^ TrajectoryWidget::DISPLAY_PATH)
     {
         // Create a poly line along the path
         vtkIdType nr_points = path.size();    
@@ -1207,7 +1208,7 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
         appendFilter->AddInputConnection(polyData->GetProducerPort());
     }
     
-    if (display_mode & TrajectoryWidget::DISPLAY_FRAMES)
+    if ((~display_mode & 3) ^ TrajectoryWidget::DISPLAY_FRAMES)
     {
         // Create frames and transform along the path
         vtkSmartPointer<vtkAxes> axes = vtkSmartPointer<vtkAxes>::New();
