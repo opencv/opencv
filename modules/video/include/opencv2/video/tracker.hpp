@@ -433,6 +433,12 @@ public:
 	void setLastTargetState( const Ptr<TrackerTargetState>& lastTargetState );
 
 	/**
+	 * \brief Get the last target state
+	 * \return The last target state
+	 */
+	Ptr<TrackerTargetState> getLastTargetState() const;
+
+	/**
 	 * \brief Get the list of the confidence map
 	 * \return The list of the confidence map
 	 */
@@ -445,7 +451,6 @@ public:
 	const ConfidenceMap& getLastConfidenceMap() const;
 
 private:
-	Trajectory trajectory;
 
 	void clearCurrentConfidenceMap();
 
@@ -453,6 +458,7 @@ protected:
 	std::vector<ConfidenceMap> confidenceMaps;
 	Ptr<TrackerStateEstimator> stateEstimator;
 	ConfidenceMap currentConfidenceMap;
+	Trajectory trajectory;
 
 	virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
 	virtual void modelUpdateImpl() = 0;

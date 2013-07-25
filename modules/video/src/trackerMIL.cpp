@@ -170,8 +170,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	std::vector<Mat> negResponse = featureSet->getResponses();
 
 
-	//TODO train a boosted classified
-	model = new TrackerMILModel();
+	model = new TrackerMILModel( boundingBox );
 	Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting( params.featureSetNumFeatures );
 	model->setTrackerStateEstimator( stateEstimator );
 
@@ -187,6 +186,31 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 
 bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 {
+	//get the last location [AAM] X(k-1)
+	Ptr<TrackerMILTargetState> lastLocation = model->getLastTargetState();
+	Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y,
+			lastLocation->getWidth(), lastLocation->getHeight() );
+
+	//sampling new frame based on last location
+	((Ptr<TrackerSamplerCSC>) sampler->getSamplers().at(0).second)->setMode( TrackerSamplerCSC::MODE_DETECT );
+	sampler->sampling( image, lastBoundingBox );
+	std::vector<Mat> detectSamples = sampler->getSamples();
+
+	//extract features from new samples
+	featureSet->extraction( detectSamples );
+	std::vector<Mat> response = featureSet->getResponses();
+
+	//TODO predict new location
+	model->runStateEstimator();
+
+	//TODO sampling new frame based on new location
+
+	//TODO extract features
+
+	//TODO model estimate
+
+	//TODO model update
+
 	return true;
 }
 

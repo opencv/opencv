@@ -109,6 +109,11 @@ void TrackerModel::setLastTargetState( const Ptr<TrackerTargetState>& lastTarget
 	trajectory.push_back(lastTargetState);
 }
 
+Ptr<TrackerTargetState> TrackerModel::getLastTargetState() const
+{
+	return trajectory.back();
+}
+
 const std::vector<ConfidenceMap>& TrackerModel::getConfidenceMaps() const
 {
 	return confidenceMaps;

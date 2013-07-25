@@ -113,8 +113,9 @@ public:
 
 	/**
 	 * \brief Constructor
+	 * \param boundingBox The first boundingBox
 	 */
-	TrackerMILModel();
+	TrackerMILModel( const Rect& boundingBox );
 
 	/**
 	 * \brief Destructor

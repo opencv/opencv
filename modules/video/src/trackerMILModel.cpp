@@ -6,10 +6,14 @@
 namespace cv
 {
 
-TrackerMILModel::TrackerMILModel()
+TrackerMILModel::TrackerMILModel( const Rect& boundingBox )
 {
 	currentSample.clear();
 	mode = MODE_POSITIVE;
+
+	Ptr<TrackerMILTargetState> initState = new TrackerMILTargetState( Point2f( boundingBox.x, boundingBox.y ),
+		boundingBox.width, boundingBox.height, true, Mat() );
+	trajectory.push_back( initState );
 }
 
 void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
