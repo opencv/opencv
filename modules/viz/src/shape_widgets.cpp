@@ -1003,9 +1003,10 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double sca
     camera->SetFocalPoint(0.0,0.0,1.0);
     camera->SetClippingRange(0.01, scale);
     
+    double aspect_ratio = tan(fov[0] * 0.5) / tan(fov[1] * 0.5);
+    
     double planesArray[24];
-    // Default aspect ratio = 1.0? fovx/fovy?
-    camera->GetFrustumPlanes(1.0, planesArray);
+    camera->GetFrustumPlanes(aspect_ratio, planesArray);
     
     vtkSmartPointer<vtkPlanes> planes = vtkSmartPointer<vtkPlanes>::New();
     planes->SetFrustumPlanes(planesArray);
@@ -1120,6 +1121,12 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat 
     actor->SetTexture(texture);
      
     WidgetAccessor::setProp(*this, actor);
+}
+
+template<> cv::viz::CameraPositionWidget cv::viz::Widget::cast<cv::viz::CameraPositionWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<CameraPositionWidget&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1278,4 +1285,10 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, c
     
     WidgetAccessor::setProp(*this, actor);
     setColor(color);
+}
+
+template<> cv::viz::TrajectoryWidget cv::viz::Widget::cast<cv::viz::TrajectoryWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<TrajectoryWidget&>(widget);
 }

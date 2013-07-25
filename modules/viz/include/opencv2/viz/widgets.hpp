@@ -231,6 +231,8 @@ namespace cv
         template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
         template<> CV_EXPORTS ImageOverlayWidget Widget::cast<ImageOverlayWidget>();
         template<> CV_EXPORTS Image3DWidget Widget::cast<Image3DWidget>();
+        template<> CV_EXPORTS CameraPositionWidget Widget::cast<CameraPositionWidget>();
+        template<> CV_EXPORTS TrajectoryWidget Widget::cast<TrajectoryWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
         template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();
