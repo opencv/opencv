@@ -91,7 +91,6 @@ int solveLP(const Mat& Func, const Mat& Constr, Mat& z){
     z.create(c.cols,1,CV_64FC1);
     MatIterator_<double> it=z.begin<double>();
     for(int i=1;i<=c.cols;i++,it++){
-        std::vector<int>::iterator pos=B.begin();
         if(indexToRow[i]<N.size()){
             *it=0;
         }else{
