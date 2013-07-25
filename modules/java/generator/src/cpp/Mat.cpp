@@ -8,7 +8,6 @@
 using namespace cv;
 
 /// throw java exception
-static void throwJavaException(JNIEnv *env, const std::exception *e, const char *method);
 static void throwJavaException(JNIEnv *env, const std::exception *e, const char *method) {
   std::string what = "unknown exception";
   jclass je = 0;
