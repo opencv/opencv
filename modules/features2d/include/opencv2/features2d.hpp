@@ -961,7 +961,7 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
-template<int cellsize> struct CV_EXPORTS HammingMultilevel
+template<int cellsize> struct HammingMultilevel
 {
     enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
