@@ -81,7 +81,6 @@
 
 #ifdef HAVE_WINRT
 #include <wrl/client.h>
-#pragma comment(lib, "MinCore_Downlevel")
 
 std::wstring GetTempPathWinRT()
 {

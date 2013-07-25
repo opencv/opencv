@@ -1,5 +1,6 @@
 
 #include "opencv2/contrib/contrib.hpp"
+#include <cvconfig.h>
 
 #if defined(WIN32) || defined(_WIN32)
     #include <windows.h>
@@ -16,7 +17,7 @@ namespace cv
         list.clear();
         std::string path_f = path + "/" + exten;
         #ifdef WIN32
-        #if HAVE_WINRT
+        #ifdef HAVE_WINRT
             WIN32_FIND_DATAW FindFileData;
         #else
             WIN32_FIND_DATA FindFileData;
@@ -28,7 +29,7 @@ namespace cv
             wchar_t* wpath = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
             wpath[size] = 0;
             mbstowcs(wpath, path_f.c_str(), path_f.size());
-            hFind = FindFirstFileW(wpath, &FindFileData);
+            hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
             free(wpath);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
@@ -50,7 +51,7 @@ namespace cv
                         char* fname;
                     #ifdef HAVE_WINRT
                         size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        char* fname = (char*)malloc((asize+1)*sizeof(char));
+                        fname = (char*)malloc((asize+1)*sizeof(char));
                         fname[asize] = 0;
                         wcstombs(fname, FindFileData.cFileName, asize);
                     #else
@@ -104,7 +105,7 @@ namespace cv
         std::string path_f = path + "/" + exten;
         list.clear();
         #ifdef WIN32
-        #if HAVE_WINRT
+        #ifdef HAVE_WINRT
             WIN32_FIND_DATAW FindFileData;
         #else
             WIN32_FIND_DATA FindFileData;
@@ -116,7 +117,7 @@ namespace cv
             wchar_t* wpath = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
             wpath[size] = 0;
             mbstowcs(wpath, path_f.c_str(), path_f.size());
-            hFind = FindFirstFileW(wpath, &FindFileData);
+            hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
             free(wpath);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
@@ -130,13 +131,13 @@ namespace cv
                 do
                 {
                     if (FindFileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY &&
-                        strcmp(FindFileData.cFileName, ".") != 0 &&
-                        strcmp(FindFileData.cFileName, "..") != 0)
+                        wcscmp(FindFileData.cFileName, L".") != 0 &&
+                        wcscmp(FindFileData.cFileName, L"..") != 0)
                     {
                     char* fname;
                     #ifdef HAVE_WINRT
                         size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        char* fname = (char*)malloc((asize+1)*sizeof(char));
+                        fname = (char*)malloc((asize+1)*sizeof(char));
                         fname[asize] = 0;
                         wcstombs(fname, FindFileData.cFileName, asize);
                     #else
