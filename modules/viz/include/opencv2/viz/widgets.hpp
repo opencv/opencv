@@ -173,7 +173,7 @@ namespace cv
             CameraPositionWidget(const Vec3f &position, const Vec3f &look_at, const Vec3f &up_vector, double scale = 1.0);
             CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
             CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
-            CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0);
+            CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
             
         };
         

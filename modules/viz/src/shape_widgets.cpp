@@ -1031,7 +1031,7 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Vec2f &fov, double sca
     setColor(color);
 }
 
-cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat &image, double scale)
+cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat &image, double scale, const Color &color)
 {
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
@@ -1048,6 +1048,11 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat 
     // Create the vtk image
     vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
     ConvertToVtkImage::convert(image, vtk_image);
+    
+    // Adjust a pixel of the vtk_image
+    vtk_image->SetScalarComponentFromDouble(0, image.rows-1, 0, 0, color[2]);
+    vtk_image->SetScalarComponentFromDouble(0, image.rows-1, 0, 1, color[1]);
+    vtk_image->SetScalarComponentFromDouble(0, image.rows-1, 0, 2, color[0]);
     
     // Need to flip the image as the coordinates are different in OpenCV and VTK
     vtkSmartPointer<vtkImageFlip> flipFilter = vtkSmartPointer<vtkImageFlip>::New();
