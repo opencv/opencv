@@ -333,7 +333,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
     if (cameraNum >= 0) {
         NSUInteger nCameras = [devices count];
-        if( cameraNum < 0 || cameraNum >= nCameras ) {
+        if( (NSUInteger)cameraNum >= nCameras ) {
             [localpool drain];
             return 0;
         }
