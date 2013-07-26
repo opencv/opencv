@@ -55,7 +55,8 @@
 using namespace cvtest;
 using namespace testing;
 using namespace std;
-
+#define ONE_TYPE(type)  testing::ValuesIn(typeVector(type))
+extern vector<MatType> typeVector(MatType type);
 
 PARAM_TEST_CASE(FilterTestBase, 
                 MatType, 
@@ -355,6 +356,36 @@ TEST_P(Bilateral, Mat)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// AdaptiveBilateral
+struct AdaptiveBilateral : FilterTestBase
+{
+    int type;
+    cv::Size ksize;
+    int bordertype;
+    Point anchor;
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        bordertype = GET_PARAM(3);
+        Init(type);
+        anchor = Point(-1,-1);
+    }
+};
+
+TEST_P(AdaptiveBilateral, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::adaptiveBilateralFilter(mat1_roi, dst_roi, ksize, anchor, bordertype);
+        cv::ocl::adaptiveBilateralFilter(gmat1, gdst, ksize, anchor, bordertype);
+        Near(1);
+    }
+
+}
+
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
                         Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7)),
@@ -401,4 +432,10 @@ INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE, 
                                (MatType)cv::BORDER_REFLECT, (MatType)cv::BORDER_WRAP, (MatType)cv::BORDER_REFLECT_101)));
 
+INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
+                        ONE_TYPE(CV_8UC3),
+                        Values(Size(5, 5), Size(9, 9)),
+                        Values(Size(0, 0)), //not use
+                        Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE, 
+                               (MatType)cv::BORDER_REFLECT,  (MatType)cv::BORDER_REFLECT_101)));
 #endif // HAVE_OPENCL
