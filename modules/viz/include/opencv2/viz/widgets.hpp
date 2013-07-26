@@ -183,6 +183,8 @@ namespace cv
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
             
             TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+            TrajectoryWidget(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius,
+                             double sphere_radius, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
             TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             
