@@ -49,7 +49,9 @@ const int radialBins=4;
 const float minRad=0.2;
 const float maxRad=4;
 const int NSN=20; //number of shapes per class
-const int NP=280; //number of points sympliying the contour
+const int NP=250; //number of points sympliying the contour
+const float outlierWeight=0.5;
+const int numOutliers=28;
 
 class CV_ShapeTest : public cvtest::BaseTest
 {
@@ -62,7 +64,7 @@ private:
     void testSCD();
     void mpegTest();
     void listShapeNames(vector<string> &listHeaders);
-    vector<Point2f> convertContourType( Mat&, int n=0 );
+    vector<Point2f> convertContourType(const Mat &, int n=0 );
     float computeShapeDistance(vector <Point2f>& queryNormal,
                                vector <Point2f>& queryFlipped1,
                                vector <Point2f>& queryFlipped2,
@@ -113,17 +115,19 @@ void CV_ShapeTest::testSCD()
 
     SCDMatcher sMatcher(0.01, DistanceSCDFlags::DEFAULT);
 
+    vector<int> inliers;
     while(1)
     {
         Mat scdesc1, scdesc2;
         int abins=9, rbins=5;
         SCD shapeDescriptor(abins,rbins,0.1,2);
 
-        shapeDescriptor.extractSCD(contours1, scdesc1);
-        shapeDescriptor.extractSCD(contours2, scdesc2);
+        shapeDescriptor.extractSCD(contours1, scdesc1, inliers);
+        shapeDescriptor.extractSCD(contours2, scdesc2, inliers);
 
         vector<DMatch> matches;
-        sMatcher.matchDescriptors(scdesc1, scdesc2, matches);
+
+        sMatcher.matchDescriptors(scdesc1, scdesc2, matches, inliers);
 
         char key = (char)waitKey();
         if(key == 27 || key == 'q' || key == 'Q') // 'ESC'
@@ -132,7 +136,7 @@ void CV_ShapeTest::testSCD()
 
 }
 
-vector <Point2f> CV_ShapeTest::convertContourType(Mat& currentQuery, int n)
+vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n)
 {
     vector<vector<Point> > _contoursQuery;
     vector <Point2f> contoursQuery;
@@ -168,76 +172,76 @@ vector <Point2f> CV_ShapeTest::convertContourType(Mat& currentQuery, int n)
 
 void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 {
-    listHeaders.push_back("apple");
+    listHeaders.push_back("apple"); //ok
     listHeaders.push_back("bat");
     listHeaders.push_back("beetle");
-    listHeaders.push_back("bell");
+    listHeaders.push_back("bell"); // ~ok
     listHeaders.push_back("bird");
-    listHeaders.push_back("Bone");
-    listHeaders.push_back("bottle");
-    listHeaders.push_back("brick");
+    listHeaders.push_back("Bone"); // ok
+    listHeaders.push_back("bottle"); // ok
+    listHeaders.push_back("brick"); // ok
     listHeaders.push_back("butterfly");
     listHeaders.push_back("camel");
-    listHeaders.push_back("car");
-    listHeaders.push_back("carriage");
+    listHeaders.push_back("car"); // ok
+    listHeaders.push_back("carriage"); // ok
     listHeaders.push_back("cattle");
     listHeaders.push_back("cellular_phone");
     listHeaders.push_back("chicken");
-    listHeaders.push_back("children");
-    listHeaders.push_back("chopper");
-    listHeaders.push_back("classic");
-    listHeaders.push_back("Comma");
+    listHeaders.push_back("children"); // ok
+    listHeaders.push_back("chopper"); // ok
+    listHeaders.push_back("classic"); // ~
+    listHeaders.push_back("Comma"); // ~ok
     listHeaders.push_back("crown");
-    listHeaders.push_back("cup");
+    listHeaders.push_back("cup"); // ~ok
     listHeaders.push_back("deer");
-    listHeaders.push_back("device0");
+    listHeaders.push_back("device0"); // ~ok
     listHeaders.push_back("device1");
     listHeaders.push_back("device2");
     listHeaders.push_back("device3");
     listHeaders.push_back("device4");
-    listHeaders.push_back("device5");
+    listHeaders.push_back("device5"); // ~ok
     listHeaders.push_back("device6");
-    listHeaders.push_back("device7");
+    listHeaders.push_back("device7"); // ok
     listHeaders.push_back("device8");
     listHeaders.push_back("device9");
     listHeaders.push_back("dog");
     listHeaders.push_back("elephant");
-    listHeaders.push_back("face");
-    listHeaders.push_back("fish");
-    listHeaders.push_back("flatfish");
-    listHeaders.push_back("fly");
-    listHeaders.push_back("fork");
-    listHeaders.push_back("fountain");
+    listHeaders.push_back("face"); // ok
+    listHeaders.push_back("fish"); // ok
+    listHeaders.push_back("flatfish"); // ok
+    listHeaders.push_back("fly"); //~
+    listHeaders.push_back("fork"); // ~ok
+    listHeaders.push_back("fountain"); //ok
     listHeaders.push_back("frog");
-    listHeaders.push_back("Glas");
+    listHeaders.push_back("Glas"); // ~ok
     listHeaders.push_back("guitar");
     listHeaders.push_back("hammer");
     listHeaders.push_back("hat");
-    listHeaders.push_back("HCircle");
-    listHeaders.push_back("Heart");
+    listHeaders.push_back("HCircle"); // ok
+    listHeaders.push_back("Heart"); // ok
     listHeaders.push_back("horse");
-    listHeaders.push_back("horseshoe");
+    listHeaders.push_back("horseshoe"); // ~ok
     listHeaders.push_back("jar");
-    listHeaders.push_back("key");
+    listHeaders.push_back("key"); // ok
     listHeaders.push_back("lizzard");
-    listHeaders.push_back("lmfish");
-    listHeaders.push_back("Misk");
+    listHeaders.push_back("lmfish"); //~
+    listHeaders.push_back("Misk"); // ~ok
     listHeaders.push_back("octopus");
-    listHeaders.push_back("pencil");
-    listHeaders.push_back("personal_car");
+    listHeaders.push_back("pencil"); // ~
+    listHeaders.push_back("personal_car"); // ~ok
     listHeaders.push_back("pocket");
-    listHeaders.push_back("rat");
+    listHeaders.push_back("rat"); // ok
     listHeaders.push_back("ray");
     listHeaders.push_back("sea_snake");
-    listHeaders.push_back("shoe");
+    listHeaders.push_back("shoe"); // ~ok
     listHeaders.push_back("spoon");
     listHeaders.push_back("spring");
-    listHeaders.push_back("stef");
-    listHeaders.push_back("teddy");
-    listHeaders.push_back("tree");
-    listHeaders.push_back("truck");
+    listHeaders.push_back("stef"); // ~ok
+    listHeaders.push_back("teddy"); // ok
+    listHeaders.push_back("tree"); //~ok
+    listHeaders.push_back("truck"); // ok
     listHeaders.push_back("turtle");
-    listHeaders.push_back("watch");
+    listHeaders.push_back("watch"); // ok
 }
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
@@ -255,9 +259,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     vector<SCDMatcher> scdmatchers;
-    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
-    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
-    scdmatchers.push_back(SCDMatcher(2.0, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
     vector<ThinPlateSplineTransform> tpsTra(3);
 
     // SCD descriptors //
@@ -276,6 +280,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     benergies[1]=0;
     benergies[2]=0;
 
+    // outliers vectors
+    vector< vector<int> > outliersvec(3);
+
     // Extract SCD descriptor of the testing shape //
     shapeDescriptorT.extractSCD(test, testingSCDMatrix);
 
@@ -285,25 +292,29 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
         for (int j=0; j<NC; j++)
         {
             // compute SCD //
-            shapeDescriptors[i].extractSCD(query[i], querySCD[i]);
+            if (j==0)
+                shapeDescriptors[i].extractSCD(query[i], querySCD[i]);
+            else
+                shapeDescriptors[i].extractSCD(query[i], querySCD[i], outliersvec[i]);
 
             // regularization parameter with annealing rate annRate //
             beta=pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j+1);
 
             // match //
-            scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i]);
-
+            scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], outliersvec[i]);
             // apply TPS transform //
             vector<Point2f> transformed_shape;
             tpsTra[i].setRegularizationParam(beta);
             tpsTra[i].applyTransformation(query[i], test, matchesvec[i], transformed_shape);
             query[i]=transformed_shape;
+
+            // updating distances values //
+            benergies[i] += tpsTra[i].getTranformCost();
         }
         // updating distances values //
         scdistances[i] = scdmatchers[i].getMatchingCost();
-        benergies[i] += tpsTra[i].getTranformCost();
     }
-    float benergiesfactor=1;
+    float benergiesfactor=0.5;
     float scfactor=0.5;
     float distance1T=scfactor*scdistances[0]+benergiesfactor*benergies[0];//+dist1;
     float distance2T=scfactor*scdistances[1]+benergiesfactor*benergies[1];//+dist2;
@@ -387,7 +398,6 @@ void CV_ShapeTest::mpegTest()
             thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
             Mat currentQuery, auxQuery;
             currentQuery=imread(thepathandname.str(), IMREAD_GRAYSCALE);
-
             /* compute border of the query and its flipped versions */
             vector<Point2f> origContour;
             contoursQuery1=convertContourType(currentQuery, NP);
@@ -438,8 +448,11 @@ void CV_ShapeTest::mpegTest()
                     }
                     for (size_t l=0; l<matches.size(); l++)
                     {
-                        line(queryImage, contoursTesting[matches[l].trainIdx],
-                             contoursQuery1[matches[l].queryIdx], Scalar(160,230,189));
+                        if (matches[l].trainIdx<(int)contoursTesting.size() && matches[l].queryIdx<(int)contoursQuery1.size())
+                        {
+                            line(queryImage, contoursTesting[matches[l].trainIdx],
+                                 contoursQuery1[matches[l].queryIdx], Scalar(160,230,189));
+                        }
                     }
                     stringstream text;
                     text<<"Shape distance: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1);
@@ -490,7 +503,6 @@ void CV_ShapeTest::displayMPEGResults()
         }
         for (int col=divi-NSN; col<divi; col++)
         {
-            if (row==col) continue;
             int nsmall=0;
             for (int i=0; i<distanceMat.cols; i++)
             {

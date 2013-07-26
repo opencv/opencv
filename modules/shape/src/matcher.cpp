@@ -49,14 +49,15 @@
 namespace cv
 {
 /* Constructors */
-SCDMatcher::SCDMatcher(float _outlierWeight, int _configFlags)
+SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFlags)
 {
     outlierWeight=_outlierWeight;
     configFlags=_configFlags;
+    numExtraDummies=_numExtraDummies;
 }
 
 /* Public methods */
-void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches)
+void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches, std::vector<int>& inliers)
 {
     CV_Assert(!descriptors1.empty() && !descriptors2.empty());
     matches.clear();
@@ -66,7 +67,7 @@ void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::ve
     buildCostMatrix(descriptors1, descriptors2, costMat, configFlags);
     
     /* Solve the matching problem using the hungarian method */
-    hungarian(costMat, matches);
+    hungarian(costMat, matches, inliers, descriptors1.rows, descriptors2.rows);
 }
 
 /* Protected methods */
@@ -90,11 +91,13 @@ void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors
 void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2,
                                     Mat& costMatrix) const
 {
-    /* Obtain copies of the descriptors */
-    Mat scd1 = descriptors1.clone();
-    Mat scd2 = descriptors2.clone();
-    
-    /* row normalization */
+    // size of the costMatrix with dummies //
+    int costrows = std::max(descriptors1.rows, descriptors2.rows)+numExtraDummies;
+    // Obtain copies of the descriptors //
+    Mat scd1=descriptors1.clone();
+    Mat scd2=descriptors2.clone();
+
+    // row normalization //
     for(int i=0; i<scd1.rows; i++)
     {
         Mat row = scd1.row(i);
@@ -106,11 +109,10 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
         scd2.row(i)/=(sum(row)[0]+FLT_EPSILON);
     }   
 
-    /* initializing costMatrix with oulier weight values */
-    int costrows = std::max(scd1.rows, scd2.rows);
-    costMatrix = Mat(costrows, costrows, CV_32F);
+    // filling costMatrix //
+    costMatrix = Mat(costrows, costrows, CV_32F, Scalar(outlierWeight));
         
-    /* Compute the Cost Matrix */
+    // Compute the Cost Matrix //
     for(int i=0; i<scd1.rows; i++)
     {
         for(int j=0; j<scd2.rows; j++)
@@ -125,22 +127,29 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
             costMatrix.at<float>(i,j)=csum/2;
         }
     }
-
-    /* normalizing cost */
+    // normalizing cost //
     //normalize(costMatrix, costMatrix, 0,1, NORM_MINMAX);
-
-    /* settin ouliers weight */
-    for(int i=scd1.rows; i<costrows; i++)
-    {
-        for(int j=scd2.rows; j<costrows; j++)
-        {
-            costMatrix.at<float>(i,j)=outlierWeight;
-        }
-    }
 }
 
 void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
 {
+    // Obtain copies of the descriptors //
+    Mat scd1 = descriptors1.clone();
+    Mat scd2 = descriptors2.clone();
+
+    // row normalization //
+    for(int i=0; i<scd1.rows; i++)
+    {
+        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+FLT_EPSILON);
+    }
+    for(int i=0; i<scd2.rows; i++)
+    {
+        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+FLT_EPSILON);
+    }
+
+    // initializing costMatrix with oulier weight values //
+    int costrows = std::max(scd1.rows, scd2.rows);
+    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
 }
 
 void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
@@ -179,13 +188,13 @@ void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descripto
     }
 }
 
-void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
+void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std::vector<int> &inliers, int sizeScd1, int sizeScd2)
 {
     std::vector<int> free(costMatrix.rows, 0), collist(costMatrix.rows, 0);
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
     std::vector<float> d(costMatrix.rows), pred(costMatrix.rows), v(costMatrix.rows);
 
-    const float LOWV=1e-7;
+    const float LOWV=1e-8;
     bool unassignedfound;
     int  i=0, imin=0, numfree=0, prvnumfree=0, f=0, i0=0, k=0, freerow=0;
     int  j=0, j1=0, j2=0, endofpath=0, last=0, low=0, up=0;
@@ -416,28 +425,47 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
         }while (i != freerow);
     }
 
+
+
     // calculate symmetric shape context cost
     float leftcost = 0;
     for (i = 0; i<costMatrix.rows; i++)
     {
-        j = rowsol[i];
-        leftcost+=costMatrix.at<float>(i,j);
+        if (rowsol[i]<sizeScd1) // if a real match
+        {
+            j = rowsol[i];
+            leftcost+=costMatrix.at<float>(i,j);
+        }
     }
+
     leftcost/=costMatrix.rows;
     float rightcost = 0;
     for (i = 0; i<costMatrix.cols; i++)
     {
-        j = colsol[i];
-        rightcost+=costMatrix.at<float>(j,i);
+        if (colsol[i]<sizeScd2) // if a real match
+        {
+            j = colsol[i];
+            rightcost+=costMatrix.at<float>(j,i);
+        }
     }
     rightcost/=costMatrix.cols;
 
     minMatchCost = leftcost+rightcost;
 
+    // Update outliers
+    inliers.reserve(sizeScd1);
+    for (size_t kc = 0; kc<inliers.size(); kc++)
+    {
+        if (rowsol[kc]<sizeScd1) // if a real match
+            inliers[kc]=1;
+        else
+            inliers[kc]=0;
+    }
+
     // Save in a DMatch vector
     for (i=0;i<costMatrix.cols;i++)
     {
-        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));
+        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));//queryIdx,trainIdx,distance
         outMatches.push_back(singleMatch);
     }
 }
@@ -446,6 +474,17 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches)
 float SCDMatcher::getMatchingCost()
 {
     return minMatchCost;
+}
+
+int SCDMatcher::getNumDummies()
+{
+    return numExtraDummies;
+}
+
+/* Setters */
+void SCDMatcher::setNumDummies(int _numExtraDummies)
+{
+    numExtraDummies=_numExtraDummies;
 }
 
 }//cv

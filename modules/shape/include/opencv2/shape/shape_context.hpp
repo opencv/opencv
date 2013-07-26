@@ -70,7 +70,7 @@ public:
     CV_WRAP int descriptorSize() const;
 
     //! Compute keypoints descriptors. 
-    CV_WRAP void extractSCD(InputArray contour, Mat& descriptors);
+    CV_WRAP void extractSCD(InputArray contour, Mat& descriptors, const std::vector<int>& queryInliers=std::vector<int>());
 
     //! Setters
     void setAngularBins(int angularBins);
@@ -98,8 +98,8 @@ private:
 protected:
     CV_WRAP void logarithmicSpaces(std::vector<double>& vecSpaces) const;
     CV_WRAP void angularSpaces(std::vector<double>& vecSpaces) const;                              
-    CV_WRAP void buildNormalizedDistanceMatrix(InputArray contour, 
-                              Mat& disMatrix);
+    CV_WRAP void buildNormalizedDistanceMatrix(InputArray contour,
+                              Mat& disMatrix, const std::vector<int> &queryInliers);
     CV_WRAP void buildAngleMatrix(InputArray contour, 
                               Mat& angleMatrix) const;
     CV_WRAP double distance(Point2f pt1, Point2f pt2) const;
@@ -125,21 +125,24 @@ class CV_EXPORTS_W SCDMatcher
 {
 public:
     //! the full constructor
-    CV_WRAP SCDMatcher(float outlierWeight=0.1, int flags=DistanceSCDFlags::DEFAULT);
+    CV_WRAP SCDMatcher(float outlierWeight=0.1, int numExtraDummies=20, int flags=DistanceSCDFlags::DEFAULT);
     //! the matcher function using Hungarian method
-    CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches);
+    CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches, std::vector<int>& inliers);
     //! *etters
+    CV_WRAP void setNumDummies(int numExtraDummies);
+    CV_WRAP int getNumDummies();
     CV_WRAP float getMatchingCost();
 private:
     CV_PROP_RW float outlierWeight;
     CV_PROP_RW int configFlags;
     CV_PROP_RW float minMatchCost;
+    CV_PROP_RW int numExtraDummies;
 protected:
     CV_WRAP void buildCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildEMDCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildL2CostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
-    CV_WRAP void hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches);
+    CV_WRAP void hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std::vector<int> &inliers, int sizeScd1=0, int sizeScd2=0);
 };
 
 typedef SCDMatcher ShapeContextDescriptorMatcher;

@@ -64,8 +64,9 @@ int SCD::descriptorSize() const
     return nAngularBins*nRadialBins; 
 }
 
-void SCD::extractSCD(InputArray contour /* Vector of points */, 
-                      Mat& descriptors /* Mat containing the descriptor */)
+void SCD::extractSCD(InputArray contour /* Vector of points */,
+                     Mat& descriptors /* Mat containing the descriptor */,
+                     const std::vector<int> &queryInliers /* used to avoid outliers */)
 {
     Mat contourMat = contour.getMat();
     CV_Assert((contourMat.channels()==2) & (contourMat.cols>0));
@@ -77,7 +78,7 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
     logarithmicSpaces(logspaces);
     angularSpaces(angspaces);
     
-    buildNormalizedDistanceMatrix(contourMat, disMatrix);
+    buildNormalizedDistanceMatrix(contourMat, disMatrix, queryInliers);
     buildAngleMatrix(contourMat, angleMatrix);
     
     /* Now, build the descriptor matrix (each row is a point descriptor) 
@@ -89,7 +90,11 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
         for (int cmp=0; cmp<contourMat.cols; cmp++)
         {
             if (ptidx==cmp) continue;
-            
+            if ((int)queryInliers.size()>0)
+            {
+                if (queryInliers[ptidx]==0 || queryInliers[cmp]==0) continue; //avoid outliers
+            }
+
             int angidx=0, radidx=0;
             for (int i=0; i<nRadialBins; i++)
             {
@@ -151,31 +156,35 @@ void SCD::buildAngleMatrix(InputArray contour,
 }
 
 void SCD::buildNormalizedDistanceMatrix(InputArray contour, 
-                      Mat& disMatrix)
+                      Mat& disMatrix, const std::vector<int> &queryInliers)
 {
     Mat contourMat = contour.getMat();
-    
+    Mat mask(disMatrix.rows, disMatrix.cols, CV_8U);
+
     for (int i=0; i<contourMat.cols; i++)
     {
         for (int j=0; j<contourMat.cols; j++)
         {
             disMatrix.at<float>(i,j) = distance(contourMat.at<Point2f>(0,i),
                                                  contourMat.at<Point2f>(0,j));
+            if (queryInliers.size()>0)
+            {
+                mask.at<char>(i,j)=char(queryInliers[j] & queryInliers[i]);
+            }
+            else
+            {
+                mask.at<char>(i,j)=1;
+            }
         }
     }
-    
-    /* Now normalizing according to the mean for scale invariance.
-     * However, the paper recommends to avoid using outliers in the 
-     * mean computation. Short term future work.*/
-    float _meanDistance=mean(disMatrix)[0];
-    //normalize(disMatrix, disMatrix,0,1, NORM_MINMAX);
-    sqrt(disMatrix, disMatrix);
-    float _normMeanDistance=mean(disMatrix)[0];
-    if (_meanDistance!=0)
+
+    meanDistance=mean(disMatrix, mask)[0];
+
+    //sqrt(disMatrix, disMatrix);
+    if (meanDistance!=0)
     {
-        disMatrix=disMatrix/_normMeanDistance;
+        disMatrix/=meanDistance;
     }
-    meanDistance=_meanDistance;
 }
 
 void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
