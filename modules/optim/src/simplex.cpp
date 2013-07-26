@@ -1,6 +1,6 @@
-#include <precomp.hpp>
+#include "precomp.hpp"
 #define ALEX_DEBUG
-#include <debug.hpp>
+#include "debug.hpp"
 
 namespace cv{namespace optim{
     static double _cvDownhillSimplex_( 
@@ -14,13 +14,26 @@ namespace cv{namespace optim{
         int nmax
         );
 
-    double DownhillSolver::minimize(InputOutputArray x){
+    class DownhillSolverImpl : public DownhillSolver
+    {
+    public:
+        void getInitStep(OutputArray step) const;
+        void setInitStep(InputArray step);
+        Ptr<Function> getFunction() const;
+        void setFunction(const Ptr<Function>& f);
+        TermCriteria getTermCriteria() const;
+        DownhillSolverImpl();
+        void setTermCriteria(const TermCriteria& termcrit);
+        double minimize(InputOutputArray x);
+    protected:
+        Ptr<Solver::Function> _Function;
+        TermCriteria _termcrit;
+        Mat _step;
+    };
+
+    double DownhillSolverImpl::minimize(InputOutputArray x){
         dprintf(("hi from minimize\n"));
-        if(_F.empty()){
-            dprintf(("F is empty\n"));
-        }else{
-            dprintf(("F is not empty\n"));
-        }
+        CV_Assert(_Function.empty()==false);
         dprintf(("termcrit:\n\ttype: %d\n\tmaxCount: %d\n\tEPS: %g\n",_termcrit.type,_termcrit.maxCount,_termcrit.epsilon));
         dprintf(("step\n"));
         print_matrix(_step);
@@ -41,49 +54,45 @@ namespace cv{namespace optim{
             raw_x=(double*)x_mat.data;
         }
 
-        double res=_cvDownhillSimplex_(raw_x,(double*)_step.data,_step.cols,_termcrit.epsilon,_termcrit.epsilon,&count,_F,_termcrit.maxCount);
+        double res=_cvDownhillSimplex_(raw_x,(double*)_step.data,_step.cols,_termcrit.epsilon,_termcrit.epsilon,&count,_Function,_termcrit.maxCount);
         dprintf(("%d iterations done\n",count));
 
         if(x_mat.rows>1){
-            for(Mat_<double>::iterator it1=x_mat.begin<double>(),it2=proxy_x.begin<double>();it1<x_mat.end<double>();it1++,it2++){
-                *it1=*it2;
-            }
+            Mat(x_mat.rows, 1, CV_64F, raw_x).copyTo(x_mat);
         }
         return res;
     }
-    DownhillSolver::DownhillSolver(){
-        _F=Ptr<Function>();
-        _termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001);
+    DownhillSolverImpl::DownhillSolverImpl(){
+        _Function=Ptr<Function>();
         _step=Mat_<double>();
     }
-    Ptr<Solver::Function> DownhillSolver::getFunction()const{
-        return _F;
+    Ptr<Solver::Function> DownhillSolverImpl::getFunction()const{
+        return _Function;
     }
-    void DownhillSolver::setFunction(const Ptr<Function>& f){
-        _F=f;
+    void DownhillSolverImpl::setFunction(const Ptr<Function>& f){
+        _Function=f;
     }
-    TermCriteria DownhillSolver::getTermCriteria()const{
+    TermCriteria DownhillSolverImpl::getTermCriteria()const{
         return _termcrit;
     }
-    void DownhillSolver::setTermCriteria(const TermCriteria& termcrit){
-        if(termcrit.type==(TermCriteria::MAX_ITER+TermCriteria::EPS) && termcrit.epsilon>0 && termcrit.maxCount>0){
-            _termcrit=termcrit;
-        }
+    void DownhillSolverImpl::setTermCriteria(const TermCriteria& termcrit){
+        CV_Assert(termcrit.type==(TermCriteria::MAX_ITER+TermCriteria::EPS) && termcrit.epsilon>0 && termcrit.maxCount>0);
+        _termcrit=termcrit;
     }
     // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
     Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f, InputArray initStep, TermCriteria termcrit){
-        DownhillSolver *DS=new DownhillSolver();
+        DownhillSolver *DS=new DownhillSolverImpl();
         DS->setFunction(f);
         cv::Mat step=initStep.getMat();
         DS->setInitStep(initStep);
         DS->setTermCriteria(termcrit);
         return Ptr<DownhillSolver>(DS);
     }
-    void DownhillSolver::getInitStep(OutputArray step)const{
+    void DownhillSolverImpl::getInitStep(OutputArray step)const{
         step.create(1,_step.cols,CV_64FC1);
         _step.copyTo(step);
     }
-    void DownhillSolver::setInitStep(InputArray step){
+    void DownhillSolverImpl::setInitStep(InputArray step){
         //set dimensionality and make a deep copy of step
         Mat m=step.getMat();
         if(MIN(m.cols,m.rows)==1 && m.type()==CV_64FC1){
@@ -123,8 +132,6 @@ namespace cv{namespace optim{
         );
     //A small number
 #define TINY 1.0e-10 
-    //Maximum allowed number of function evaluations. 
-//#define NMAX 5000 
 #define BUF_SIZE 32
     static double _cvDHSTry(    
         double** p, 
@@ -138,10 +145,13 @@ namespace cv{namespace optim{
         int j;
         double  buf[BUF_SIZE];
         double fac1,fac2,ytry,*ptry;
+        Mat_<double> matbuf;
         
         if(ndim>BUF_SIZE)
         {
     ////        ptry=(double*)cvAlloc(ndim*sizeof(double));
+            matbuf.create(1,ndim);
+            ptry=(double*)matbuf.data;
         }
         else
         {
@@ -165,10 +175,10 @@ namespace cv{namespace optim{
             }
         }
         
-        if(ndim>BUF_SIZE)
+        /*if(ndim>BUF_SIZE)
         {
     ////        cvFree((void**)&ptry);   
-        }
+        }*/
         
         return ytry;
     }
@@ -203,6 +213,7 @@ namespace cv{namespace optim{
         double error, range,sum,ysave,ytry,*psum;
         double buf[BUF_SIZE];
         double buf2[BUF_SIZE];
+        Mat_<double> matbuf,matbuf2;
 
         double* y;
 
@@ -211,6 +222,8 @@ namespace cv{namespace optim{
         if(ndim+1 > BUF_SIZE)
         {
     ////        y = (double*)cvAlloc((ndim+1) * sizeof(double));;
+            matbuf.create(1,ndim+1);
+            y=(double*) matbuf.data;
         }
         else
         {
@@ -226,6 +239,8 @@ namespace cv{namespace optim{
         if(ndim+1 > BUF_SIZE)
         {
     ////        psum = (double*)cvAlloc((ndim+1) * sizeof(double));
+            matbuf2.create(1,ndim+1);
+            psum=(double*)matbuf2.data;
         }
         else
         {
@@ -275,10 +290,10 @@ namespace cv{namespace optim{
             /* Compute the fractional range from highest to lowest and return if satisfactory. */
             if(range <= MinRange || error <= MinError) 
             { /* If returning, put best point and value in slot 1. */
-                _SWAP(double,y[0],y[ilo])
+                std::swap(y[0],y[ilo]);
                 for (i=0;i<ndim;i++) 
                 {
-                    _SWAP(double,p[0][i],p[ilo][i])
+                    std::swap(p[0][i],p[ilo][i]);
                 }
                 break;
             }
@@ -322,11 +337,11 @@ namespace cv{namespace optim{
         } /* Go back for the test of doneness and the next iteration. */
         res = y[0];
         
-        if(ndim+1 > BUF_SIZE)
+        /*if(ndim+1 > BUF_SIZE)
         {
     ////        cvFree((void**)&psum);
     ////        cvFree((void**)&y);
-        }
+        }*/
 
         return res;
     } /* DownhillSimplex*/
@@ -359,8 +374,7 @@ namespace cv{namespace optim{
         double  pbuf[(MAXDIM+1)*MAXDIM];
         int     i;    
 
-    ////    assert(ndim<MAXDIM);
-        if(ndim>=MAXDIM) return 0;
+        CV_Assert(ndim<MAXDIM);
 
         for(i=0;i<MAXDIM+1;++i)
         {/* init parameters */
@@ -390,4 +404,3 @@ namespace cv{namespace optim{
                         ::Error,
                         (void*)&points_str);*/
 }}
-//WORKFLOW: eval->2tests->memory_alloc->API_tests

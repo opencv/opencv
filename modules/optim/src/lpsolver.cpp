@@ -2,7 +2,7 @@
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
-#include <debug.hpp>
+#include "debug.hpp"
 
 namespace cv{namespace optim{
 using std::vector;

@@ -47,10 +47,10 @@
 
 namespace cv{namespace optim
 {
-class Solver : public Algorithm
+class CV_EXPORTS Solver : public Algorithm
 {
 public:
-    class Function
+    class CV_EXPORTS Function
     {
     public:
        virtual ~Function() {}
@@ -68,43 +68,22 @@ public:
     // after getMat() will return) row-vector or column-vector. *It's size  and should
     // be consisted with previous dimensionality data given, if any (otherwise, it determines dimensionality)*
     virtual double minimize(InputOutputArray x) = 0;
-protected:
-    Ptr<Function> _F;
-    TermCriteria _termcrit;
 };
 
 //! downhill simplex class
-class DownhillSolver : public Solver
+class CV_EXPORTS DownhillSolver : public Solver
 {
 public:
     //! returns row-vector, even if the column-vector was given
-    virtual void getInitStep(OutputArray step) const;
+    virtual void getInitStep(OutputArray step) const=0;
     //!This should be called at least once before the first call to minimize() and step is assumed to be (something that
     //! after getMat() will return) row-vector or column-vector. *It's dimensionality determines the dimensionality of a problem.*
-    virtual void setInitStep(InputArray step);
-    DownhillSolver();
-    virtual Ptr<Function> getFunction() const;
-    virtual void setFunction(const Ptr<Function>& f);
-    virtual TermCriteria getTermCriteria() const;
-    virtual void setTermCriteria(const TermCriteria& termcrit);
-    virtual double minimize(InputOutputArray x);
-protected:
-    Mat _step;
+    virtual void setInitStep(InputArray step)=0;
 };
 
 // both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
 CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
-        InputArray initStep=Mat(), TermCriteria termcrit=TermCriteria(0,0,0.0));
-
-/*CV_EXPORTS_W double DownhillSimplex(
-    double*    x,//оптимизируемый вектор параметров - it seems, that it's starting value is used in procedure
-    double*    step,//double*    step, - рекомендуемый первый шаг вдоль координатных осей 
-    int        ndim, 
-    double     (*func)(void* UserData, double *x),
-    void*       UserData,
-    double     MinRange=TOL,//минимальная невязка вектора x между итерациями
-    double     MinError=TOL//минимальная ошибка функции между итерациями
-    );*/
+        InputArray initStep=Mat(), TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
 //!the return codes for solveLP() function
 enum

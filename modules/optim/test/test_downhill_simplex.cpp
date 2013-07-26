@@ -5,7 +5,11 @@
 static void mytest(cv::Ptr<cv::optim::DownhillSolver> solver,cv::Ptr<cv::optim::Solver::Function> ptr_F,cv::Mat& x,cv::Mat& step, 
         cv::Mat& etalon_x,double etalon_res){
     solver->setFunction(ptr_F);
+    int ndim=MAX(step.cols,step.rows);
     solver->setInitStep(step);
+    solver->getInitStep(step);
+    ASSERT_TRUE(step.rows==1 && step.cols==ndim);
+    std::cout<<"step setted:\n\t"<<step<<std::endl;
     double res=solver->minimize(x);
     std::cout<<"res:\n\t"<<res<<std::endl;
     std::cout<<"x:\n\t"<<x<<std::endl;
@@ -33,15 +37,18 @@ class RosenbrockF:public cv::optim::Solver::Function{
 
 TEST(Optim_Downhill, regression_basic){
     cv::Ptr<cv::optim::DownhillSolver> solver=cv::optim::createDownhillSolver();
-    if(true){
+#if 1
+    {
         cv::Ptr<cv::optim::Solver::Function> ptr_F(new SphereF());
-        cv::Mat x=(cv::Mat_<double>(2,1)<<1.0,1.0),
+        cv::Mat x=(cv::Mat_<double>(1,2)<<1.0,1.0),
             step=(cv::Mat_<double>(2,1)<<-0.5,-0.5),
-            etalon_x=(cv::Mat_<double>(2,1)<<-0.0,0.0);
+            etalon_x=(cv::Mat_<double>(1,2)<<-0.0,0.0);
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,step,etalon_x,etalon_res);
     }
-    if(true){
+#endif
+#if 1
+    {
         cv::Ptr<cv::optim::Solver::Function> ptr_F(new RosenbrockF());
         cv::Mat x=(cv::Mat_<double>(2,1)<<0.0,0.0),
             step=(cv::Mat_<double>(2,1)<<0.5,+0.5),
@@ -49,4 +56,5 @@ TEST(Optim_Downhill, regression_basic){
         double etalon_res=0.0;
         mytest(solver,ptr_F,x,step,etalon_x,etalon_res);
     }
+#endif
 }
