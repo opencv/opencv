@@ -1,6 +1,7 @@
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+#include <opencv2/highgui.hpp>
 #include "math.h"
 #include <vector>
 #include <limits>
@@ -10,11 +11,11 @@
 using namespace std;
 using namespace cv;
 
-int rounding(double a);
+double norm(double);
 
-int rounding(double a)
+double norm(double E)
 {
-	return int(a + 0.5);
+        return (sqrt(pow(E,2)));
 }
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
@@ -37,33 +38,20 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 		return;
 	}
 
-	float sigma = .02;
-	int maxIter = 8;
+	int maxIter = 15;
 	int iterCount = 0;
-
-	int h = I.size().height;
-	int w = I.size().width;
+    float tol = .0001;
+    double E = 0;
+    double pre_E = std::numeric_limits<double>::infinity();
 
 	Decolor obj;
 
 	Mat img;
-	
-	double sizefactor;
 
-	if((h + w) > 900)
-	{
-		sizefactor = (double)900/(h+w);
-		resize(I,I,Size(rounding(h*sizefactor),rounding(w*sizefactor)));
-		img = Mat(I.size(),CV_32FC3);
-		I.convertTo(img,CV_32FC3,1.0/255.0);
-	}
-	else
-	{
-		img = Mat(I.size(),CV_32FC3);
-		I.convertTo(img,CV_32FC3,1.0/255.0);
-	}
+    img = Mat(I.size(),CV_32FC3);
+    I.convertTo(img,CV_32FC3,1.0/255.0);
 
-	obj.init();
+    obj.init();
 
 	vector <double> Cg;
 	vector < vector <double> > polyGrad;
@@ -83,9 +71,10 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 
 	//////////////////////////////// main loop starting ////////////////////////////////////////
 
-	while (iterCount < maxIter)
+	while(norm(E-pre_E) > tol)
 	{
 		iterCount +=1;
+        pre_E = E;
 
 		vector <double> G_pos;
 		vector <double> G_neg;
@@ -149,6 +138,11 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 
 		for(unsigned int i =0;i<wei.size();i++)
 			wei[i] = wei1[i];
+
+        E = obj.energyCalcu(Cg,polyGrad,wei);
+
+        if(iterCount > maxIter)
+            break;
 
 		G_pos.clear();
 		G_neg.clear();
