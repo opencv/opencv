@@ -2231,23 +2231,92 @@ public:
     {
         int cn = dest->channels();
         int anX = anchor.x;
-        float var_b, var_g, var_r;
-        int currVal_b, currVal_g, currVal_r;
-        int sumVal_b= 0, sumVal_g= 0, sumVal_r= 0;
-        int sumValSqr_b= 0, sumValSqr_g= 0, sumValSqr_r= 0;
-        int currValCenter_b= 0, currValCenter_g= 0, currValCenter_r= 0;
-        int currWRTCenter_b, currWRTCenter_g, currWRTCenter_r;
-        float weight_b, weight_g, weight_r;
-        float totalWeight_b= 0., totalWeight_g= 0., totalWeight_r= 0.;
-        float tmpSum_b = 0., tmpSum_g= 0., tmpSum_r = 0.;
 
         const uchar *tptr;
 
         for(int i = range.start;i < range.end; i++)
         {
-            if(cn == 3)
+            int startY = (1 + EXTRA) * i;
+            if(cn == 1)
             {
-                int startY = (1 + EXTRA) * i;
+                float var;
+                int currVal;
+                int sumVal = 0;
+                int sumValSqr = 0;
+                int currValCenter;
+                int currWRTCenter;
+                float weight;
+                float totalWeight = 0.;
+                float tmpSum = 0.;
+
+                for(int j = 0;j < dest->cols *cn; j+=cn)
+                {
+                    sumVal = 0;
+                    sumValSqr= 0;
+
+                    // Top row: don't sum the very last element	
+                    int startLMJ = 0;
+                    int endLMJ  = ksize.width + EXTRA - 1;
+                    int howManyAll = (anX *2 +1)*(ksize.width + EXTRA);
+#if CALCVAR
+                    for(int x = startLMJ; x< endLMJ; x++)
+                    {
+                        tptr = temp->ptr(startY + x) +j;
+                        for(int y=-anX; y<=anX; y++)
+                        {
+                            currVal = tptr[cn*(y+anX)];
+                            sumVal += currVal;
+                            sumValSqr += (currVal *currVal);
+                        }
+                    }
+                    var = ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
+#else 
+                    var = 900.0;
+#endif
+                    for(int extraCnt = 0; extraCnt <= EXTRA; extraCnt++)
+                    {
+                        tmpSum = 0.;
+                        totalWeight = 0.;
+                        startLMJ = extraCnt;
+                        endLMJ = ksize.width + extraCnt;
+                        tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2);
+                        currValCenter =tptr[j+cn*anX];
+                        for(int x = startLMJ; x< endLMJ; x++)
+                        { 
+                            tptr = temp->ptr(startY + x) +j;
+                            for(int y=-anX; y<=anX; y++)
+                            {
+#if FIXED_WEIGHT
+                                weight = 1.0;
+#else
+                                currVal = tptr[cn*(y+anX)];
+                                currWRTCenter = currVal - currValCenter;
+
+                                weight = var / ( var + (currWRTCenter * currWRTCenter) );
+#endif
+                                tmpSum += ((float)tptr[cn*(y+anX)] * weight);
+                                totalWeight += weight;
+                            }
+                        }
+                        tmpSum /= totalWeight;
+
+                        dest->at<uchar>(startY + extraCnt,j)= static_cast<uchar>(tmpSum);
+                    }
+                }
+            }
+            else
+            {
+                assert(cn == 3);
+                float var_b, var_g, var_r;
+                int currVal_b, currVal_g, currVal_r;
+                int sumVal_b= 0, sumVal_g= 0, sumVal_r= 0;
+                int sumValSqr_b= 0, sumValSqr_g= 0, sumValSqr_r= 0;
+                int currValCenter_b= 0, currValCenter_g= 0, currValCenter_r= 0;
+                int currWRTCenter_b, currWRTCenter_g, currWRTCenter_r;
+                float weight_b, weight_g, weight_r;
+                float totalWeight_b= 0., totalWeight_g= 0., totalWeight_r= 0.;
+                float tmpSum_b = 0., tmpSum_g= 0., tmpSum_r = 0.;
+
                 for(int j = 0;j < dest->cols *cn; j+=cn)
                 {
                     sumVal_b= 0, sumVal_g= 0, sumVal_r= 0;
@@ -2284,8 +2353,8 @@ public:
                         totalWeight_b = 0., totalWeight_g = 0., totalWeight_r = 0.;
                         startLMJ = extraCnt;
                         endLMJ = ksize.width + extraCnt;
-                        tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2);
-                        currValCenter_b =tptr[j+cn*anX], currValCenter_g =tptr[j+cn*anX+1], currValCenter_r =tptr[j+cn*anX+2];
+                        tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2) + j;
+                        currValCenter_b =tptr[cn*anX], currValCenter_g =tptr[cn*anX+1], currValCenter_r =tptr[cn*anX+2];
                         for(int x = startLMJ; x< endLMJ; x++)
                         { 
                             tptr = temp->ptr(startY + x) +j;
@@ -2353,14 +2422,14 @@ void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
 
-    CV_Assert(src.type() == CV_8UC3);
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);
 
     anchor = normalizeAnchor(anchor,ksize);
     if( src.depth() == CV_8U )
         adaptiveBilateralFilter_8u( src, dst, ksize, anchor, borderType );
     else 
         CV_Error( CV_StsUnsupportedFormat,
-        "Bilateral filtering is only implemented for 8u and 32f images" );
+        "Adaptive Bilateral filtering is only implemented for 8u images" );
 }
 
 

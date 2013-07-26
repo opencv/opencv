@@ -97,7 +97,7 @@
 #endif
 
 __kernel void 
-    edgeEnhancingFilter(
+    edgeEnhancingFilter_C3_D0(
     __global const uchar4 * restrict src, 
     __global uchar4 *dst, 
     float alpha,                  
@@ -280,6 +280,171 @@ __kernel void
 #else
             totalWeight = 0;
 #endif
+        }																
+    }																		
+}		
+
+
+__kernel void 
+    edgeEnhancingFilter_C1_D0(
+    __global const uchar * restrict src, 
+    __global uchar *dst, 
+    float alpha,                  
+    int src_offset, 
+    int src_whole_rows, 
+    int src_whole_cols, 
+    int src_step,                
+    int dst_offset, 
+    int dst_rows, 
+    int dst_cols, 
+    int dst_step)
+{																			
+    int col = get_local_id(0);												
+    const int gX = get_group_id(0);											
+    const int gY = get_group_id(1);											
+
+    int src_x_off = (src_offset % src_step);							
+    int src_y_off = src_offset / src_step;									
+    int dst_x_off = (dst_offset % dst_step);							
+    int dst_y_off = dst_offset / dst_step;									
+
+    int startX = gX * (THREADS-ksX+1) - anX + src_x_off;					
+    int startY = (gY * (1+EXTRA)) - anY + src_y_off;
+
+    int dst_startX = gX * (THREADS-ksX+1) + dst_x_off;						
+    int dst_startY = (gY * (1+EXTRA)) + dst_y_off;									
+
+    int posX = dst_startX - dst_x_off + col;								
+    int posY = (gY * (1+EXTRA))	;											
+
+#if LDATATYPESIZE == 1														
+    __local uchar data[ksY+EXTRA][THREADS];									
+#elif	LDATATYPESIZE == 4													
+    __local uint data[ksY+EXTRA][THREADS];									
+#endif																		
+
+    float tmp_sum[1+EXTRA];
+    for(int tmpint = 0; tmpint < 1+EXTRA; tmpint++)
+    {
+        tmp_sum[tmpint] = (float)(0);
+    }
+
+#ifdef BORDER_CONSTANT														
+    bool con;															
+    uchar ss;															
+    for(int j = 0;	j < ksY+EXTRA; j++)															
+    {																	
+        con = (startX+col >= 0 && startX+col < src_whole_cols && startY+j >= 0 && startY+j < src_whole_rows);
+
+        int cur_col = clamp(startX + col, 0, src_whole_cols);			
+        if(con)															
+        {
+#if LDATATYPESIZE ==4														
+            ss = (uint)(src[(startY+j)*(src_step) + cur_col]);
+#elif 	LDATATYPESIZE==1													
+            ss = src[(startY+j)*(src_step) + cur_col];				
+#endif																		
+        }
+
+        data[j][col] = con ? ss : 0;							
+    }																	
+#else																		
+    for(int j= 0; j < ksY+EXTRA; j++)														
+    {																	
+        int selected_row;												
+        int selected_col;												
+        selected_row = ADDR_H(startY+j, 0, src_whole_rows);				
+        selected_row = ADDR_B(startY+j, src_whole_rows, selected_row);	
+
+        selected_col = ADDR_L(startX+col, 0, src_whole_cols);			
+        selected_col = ADDR_R(startX+col, src_whole_cols, selected_col);
+
+#if LDATATYPESIZE ==4														
+        data[j][col] = (uint)(src[selected_row * (src_step) + selected_col]);	
+#elif 	LDATATYPESIZE==1													
+        data[j][col] = src[selected_row * (src_step) + selected_col];
+#endif																		
+    }																	
+#endif																		
+
+    barrier(CLK_LOCAL_MEM_FENCE);	
+
+    float var;	
+
+    float weight;
+    float totalWeight = 0;
+
+    int currValCenter;
+    int currWRTCenter;
+
+    int sumVal = 0;
+    int sumValSqr = 0;
+
+    if(col < (THREADS-(ksX-1)))											
+    {		
+        int currVal;															
+
+        int howManyAll = (2*anX+1)*(ksY+EXTRA);
+
+        //find variance of all data	
+        int startLMj = 0;																				
+        int endLMj =  ksY+EXTRA-1;
+#if CALCVAR
+        // Top row: don't sum the very last element						
+        for(int j = startLMj; j < endLMj; j++)							
+        {																																	
+            for(int i=-anX; i<=anX; i++)								
+            {				
+                currVal	= (uint)(data[j][col+anX+i])	;
+
+                sumVal += currVal;		
+                sumValSqr += mul24(currVal, currVal);	
+            }															
+        }															
+        var = (float)( ( (sumValSqr * howManyAll)- mul24(sumVal , sumVal) ) ) /  ( (float)(howManyAll*howManyAll) ) ;
+#else
+        var = (float)(900.0);
+#endif
+
+        for(int extraCnt = 0; extraCnt <= EXTRA; extraCnt++)
+        {
+
+            // top row: include the very first element, even on first time	
+            startLMj = extraCnt;										
+            // go all the way, unless this is the last local mem chunk,     
+            // then stay within limits - 1										
+            endLMj =  extraCnt + ksY;
+
+            // Top row: don't sum the very last element		
+            currValCenter = (int)( data[ (startLMj + endLMj)/2][col+anX] );
+
+            for(int j = startLMj; j < endLMj; j++)							
+            {																
+
+                for(int i=-anX; i<=anX; i++)								
+                {				
+#if FIXED_WEIGHT
+                    weight = 1.0f;
+#else
+                    currVal	= (int)(data[j][col+anX+i])	;
+                    currWRTCenter = currVal-currValCenter;
+
+                    weight = var / ( var + (float) mul24(currWRTCenter , currWRTCenter) ) ;
+#endif 
+                    tmp_sum[extraCnt] += (float)(data[j][col+anX+i] * weight);
+                    totalWeight += weight;
+                }															
+            }	
+
+            tmp_sum[extraCnt] /= totalWeight;
+
+
+            if(posX >= 0 && posX < dst_cols && (posY+extraCnt) >= 0 && (posY+extraCnt) < dst_rows)
+            {										
+                dst[(dst_startY+extraCnt) * (dst_step)+ dst_startX + col] = (uchar)(tmp_sum[extraCnt]);
+            }	
+
+            totalWeight = 0;
         }																
     }																		
 }		

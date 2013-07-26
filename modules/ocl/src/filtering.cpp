@@ -1597,7 +1597,9 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
 void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, Point anchor, int borderType)
 {
     CV_Assert((ksize.width & 1) && (ksize.height & 1));  // ksize must be odd
-    CV_Assert(src.type() == CV_8UC3);  // source must be 8bit RGB image
+    CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);  // source must be 8bit RGB image
+    int depth = src.depth();
+    int cn = src.channels();
 
     normalizeAnchor(anchor, ksize);
     const static String kernelName = "edgeEnhancingFilter";
@@ -1615,6 +1617,9 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
         break;
     case BORDER_REFLECT:
         sprintf(btype, "BORDER_REFLECT");
+        break;
+    case BORDER_WRAP:
+        sprintf(btype, "BORDER_WRAP");
         break;
     case BORDER_REFLECT101:
         sprintf(btype, "BORDER_REFLECT_101");
@@ -1664,5 +1669,5 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
     openCLExecuteKernel(Context::getContext(), &filtering_adaptive_bilateral, kernelName, 
-        globalThreads, localThreads, args, -1, -1, build_options);
+        globalThreads, localThreads, args, cn, depth, build_options);
 }

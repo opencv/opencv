@@ -55,8 +55,6 @@
 using namespace cvtest;
 using namespace testing;
 using namespace std;
-#define ONE_TYPE(type)  testing::ValuesIn(typeVector(type))
-extern vector<MatType> typeVector(MatType type);
 
 PARAM_TEST_CASE(FilterTestBase, 
                 MatType, 
@@ -433,7 +431,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
                                (MatType)cv::BORDER_REFLECT, (MatType)cv::BORDER_WRAP, (MatType)cv::BORDER_REFLECT_101)));
 
 INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
-                        ONE_TYPE(CV_8UC3),
+                        Values(CV_8UC1, CV_8UC3),
                         Values(Size(5, 5), Size(9, 9)),
                         Values(Size(0, 0)), //not use
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE, 
