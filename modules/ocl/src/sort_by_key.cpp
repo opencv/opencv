@@ -69,13 +69,13 @@ const char * depth_strings[] =
     "double"   //CV_64F
 };
 
-void genSortBuildOption(const oclMat& keys, const oclMat& vals, bool isGreaterThan, char * build_opt_buf)
+void static genSortBuildOption(const oclMat& keys, const oclMat& vals, bool isGreaterThan, char * build_opt_buf)
 {
     sprintf(build_opt_buf, "-D IS_GT=%d -D K_T=%s -D V_T=%s",
             isGreaterThan?1:0, depth_strings[keys.depth()], depth_strings[vals.depth()]);
     if(vals.oclchannels() > 1)
     {
-        sprintf( build_opt_buf + strlen(build_opt_buf), "%d", vals.oclchannels(), 10);
+        sprintf( build_opt_buf + strlen(build_opt_buf), "%d", vals.oclchannels());
     }
 }
 inline bool isSizePowerOf2(size_t size)
@@ -176,7 +176,7 @@ namespace radix_sort
 //    openCLExecuteKernel(cxt, &kernel_radix_sort_by_key, kernelname, globalThreads, localThreads, args, -1, -1);
 //}
 
-void naive_scan_addition_cpu(oclMat& input, oclMat& output)
+void static naive_scan_addition_cpu(oclMat& input, oclMat& output)
 {
     Mat m_input = input, m_output(output.size(), output.type());
     MatIterator_<int> i_mit = m_input.begin<int>();
@@ -277,7 +277,7 @@ static void sort_by_key(oclMat& keys, oclMat& vals, size_t origVecSize, bool isG
     String kernelnames[2] = {String("histogramRadixN"), String("permuteRadixN")};
 
     int swap = 0;
-    for(int bits = 0; bits < (keys.elemSize() * 8); bits += RADIX)
+    for(int bits = 0; bits < (static_cast<int>(keys.elemSize()) * 8); bits += RADIX)
     {
         args.clear();
         //Do a histogram pass locally
