@@ -35,7 +35,7 @@ PERF_TEST_P(Size_Source, calcHist1d,
 
     declare.in(source);
 
-    TEST_CYCLE()
+    TEST_CYCLE_MULTIRUN(3)
     {
         calcHist(&source, numberOfImages, channels, Mat(), hist, dims, histSize, ranges);
     }
