@@ -1204,10 +1204,10 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
         // Set the color for polyData
         vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
         colors->SetNumberOfComponents(3);
-        
-        // TODO Make this more efficient
-        for (int i = 0; i < nr_points; ++i)
-            colors->InsertNextTuple3(color[2], color[1], color[0]);
+        colors->SetNumberOfTuples(nr_points);
+        colors->FillComponent(0, color[2]);
+        colors->FillComponent(1, color[1]);
+        colors->FillComponent(2, color[0]);
         
         polyData->GetPointData()->SetScalars(colors);
         appendFilter->AddInputConnection(polyData->GetProducerPort());

@@ -202,6 +202,18 @@ namespace cv
             struct CreateCloudWidget;
         };
 
+        class CV_EXPORTS CloudCollectionWidget : public Widget3D
+        {
+        public:
+            CloudCollectionWidget();
+            
+            void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
+            
+        private:
+            struct CreateCloudWidget;
+        };
+        
         class CV_EXPORTS CloudNormalsWidget : public Widget3D
         {
         public:
@@ -239,6 +251,7 @@ namespace cv
         template<> CV_EXPORTS CameraPositionWidget Widget::cast<CameraPositionWidget>();
         template<> CV_EXPORTS TrajectoryWidget Widget::cast<TrajectoryWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
+        template<> CV_EXPORTS CloudCollectionWidget Widget::cast<CloudCollectionWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
         template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();
 
