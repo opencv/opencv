@@ -47,7 +47,7 @@
 namespace cv
 {
 
-bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
+int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
 {
     const float samePointEps = 0.00001; // used to test if two points are the same, due to numerical error
 
@@ -58,6 +58,8 @@ bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& 
 
     rect1.points(pts1);
     rect2.points(pts2);
+
+    int ret = INTERSECT_FULL;
 
     // Line vector
     // A line from p1 to p2 is: p1 + (p2-p1)*t, t=[0,1]
@@ -91,7 +93,7 @@ bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& 
             float t2 = (vx1*y21 - vy1*x21) / det;
 
             // This takes care of parallel lines
-            if( !std::isnormal(t1) || !std::isnormal(t2) )
+            if( !std::isfinite(t1) || !std::isfinite(t2) )
             {
                 continue;
             }
@@ -104,6 +106,11 @@ bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& 
                 intersection.push_back(Point2f(xi,yi));
             }
         }
+    }
+
+    if( !intersection.empty() )
+    {
+        ret = INTERSECT_PARTIAL;
     }
 
     // Check for vertices from rect1 inside recct2
@@ -203,23 +210,12 @@ bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& 
 
     if( intersection.empty() )
     {
-        return false;
+        return INTERSECT_NONE ;
     }
-
-    //intersectingRegion.create(intersection.size(), 2, CV_32F);
-
-  //  Mat ret = intersectingRegion.getMat();
 
     Mat(intersection).copyTo(intersectingRegion);
 
-//    size_t step = !m.isContinuous() ? m.step[0] : sizeof(Point2f);
-
-//    for( size_t i = 0; i < intersection.size(); i++ )
-//    {
-//        *(Point2f*)(m.data + i*step) = intersection[i];
-//    }
-
-    return true;
+    return ret;
 }
 
 }
