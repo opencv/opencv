@@ -206,16 +206,18 @@ bool rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& 
         return false;
     }
 
-    intersectingRegion.create(intersection.size(), 1, CV_MAKETYPE(intersectingRegion.depth(), 2) );
+    //intersectingRegion.create(intersection.size(), 2, CV_32F);
 
-    Mat m = intersectingRegion.getMat();
+  //  Mat ret = intersectingRegion.getMat();
 
-    size_t step = !m.isContinuous() ? m.step[0] : sizeof(Point2f);
+    Mat(intersection).copyTo(intersectingRegion);
 
-    for( size_t i = 0; i < intersection.size(); i++ )
-    {
-        *(Point2f*)(m.data + i*step) = intersection[i];
-    }
+//    size_t step = !m.isContinuous() ? m.step[0] : sizeof(Point2f);
+
+//    for( size_t i = 0; i < intersection.size(); i++ )
+//    {
+//        *(Point2f*)(m.data + i*step) = intersection[i];
+//    }
 
     return true;
 }
