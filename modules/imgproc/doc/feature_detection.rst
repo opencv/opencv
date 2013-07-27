@@ -85,7 +85,7 @@ The output of the function can be used for robust edge or corner detection.
 
 cornerHarris
 ------------
-Harris edge detector.
+Harris corner detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int ksize, double k, int borderType=BORDER_DEFAULT )
 
@@ -105,7 +105,7 @@ Harris edge detector.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-The function runs the Harris edge detector on the image. Similarly to
+The function runs the Harris corner detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
 :ocv:func:`cornerEigenValsAndVecs` , for each pixel
 :math:`(x, y)` it calculates a
