@@ -1,4 +1,4 @@
-OpenCV: open source computer vision library
+OpenCV: Open Source Computer Vision Library
 
 Homepage:    http://opencv.org
 Online docs: http://docs.opencv.org
