@@ -49,7 +49,7 @@ namespace cv
 
 int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion )
 {
-    const float samePointEps = 0.00001; // used to test if two points are the same, due to numerical error
+    const float samePointEps = 0.00001; // used to test if two points are the same
 
     Point2f vec1[4], vec2[4];
     Point2f pts1[4], pts2[4];
@@ -213,9 +213,28 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
         return INTERSECT_NONE ;
     }
 
+    // If this check fails then it means we're getting dupes, increase samePointEps
+    CV_Assert( intersection.size() <= 8 );
+
     Mat(intersection).copyTo(intersectingRegion);
 
     return ret;
 }
 
+} // end namespace
+
+int cvRotatedRectangleIntersection( const CvBox2D* rect1, const CvBox2D* rect2, CvPoint2D32f intersectingRegion[8], int* pointCount )
+{
+    std::vector <cv::Point2f> pts;
+
+    int ret = cv::rotatedRectangleIntersection( *rect1, *rect2, pts );
+
+    for( size_t i=0; i < pts.size(); i++ )
+    {
+        intersectingRegion[i] = pts[i];
+    }
+
+    *pointCount = (int)pts.size();
+
+    return ret;
 }
