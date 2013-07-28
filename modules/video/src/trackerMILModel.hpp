@@ -107,8 +107,9 @@ class TrackerMILModel : public TrackerModel
 public:
 	enum
 	{
-		MODE_POSITIVE    = 1,  // mode for positive features
-		MODE_NEGATIVE    = 2   // mode for negative features
+		MODE_POSITIVE    = 1,  	// mode for positive features
+		MODE_NEGATIVE    = 2,  	// mode for negative features
+		MODE_ESTIMATON	 = 3	// mode for estimation step
 	};
 
 	/**
@@ -127,6 +128,13 @@ public:
 	 */
 	void setMode( int trainingMode, const std::vector<Mat>& samples );
 
+	/**
+	 * \brief Create the ConfidenceMap from a list of responses
+	 * \param responses The list of the responses
+	 * \param confidenceMap The output
+	 */
+	void responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap );
+
 protected:
 	void modelEstimationImpl( const std::vector<Mat>& responses );
 	void modelUpdateImpl();
@@ -134,6 +142,9 @@ protected:
 private:
 	int mode;
 	std::vector<Mat> currentSample;
+
+	int width;	//initial width of the boundingBox
+	int height;	//initial height of the boundingBox
 };
 
 

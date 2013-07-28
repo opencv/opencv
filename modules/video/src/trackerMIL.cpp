@@ -156,6 +156,9 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> negSamples = sampler->getSamples();
 
+	if( posSamples.size() == 0 || negSamples.size() == 0 )
+		return false;
+
 	//compute HAAR features
 	TrackerFeatureHAAR::Params HAARparameters;
 	HAARparameters.numFeatures = params.featureSetNumFeatures;
@@ -195,12 +198,18 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	((Ptr<TrackerSamplerCSC>) sampler->getSamplers().at(0).second)->setMode( TrackerSamplerCSC::MODE_DETECT );
 	sampler->sampling( image, lastBoundingBox );
 	std::vector<Mat> detectSamples = sampler->getSamples();
+	if( detectSamples.size() == 0 )
+		return false;
 
 	//extract features from new samples
 	featureSet->extraction( detectSamples );
 	std::vector<Mat> response = featureSet->getResponses();
 
 	//TODO predict new location
+	ConfidenceMap cmap;
+	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_ESTIMATON, detectSamples );
+	((Ptr<TrackerMILModel>) model)->responseToConfidenceMap( response, cmap );
+	((Ptr<TrackerStateEstimatorBoosting>) model->getTrackerStateEstimator())->setCurrentConfidenceMap( cmap );
 	model->runStateEstimator();
 
 	//TODO sampling new frame based on new location

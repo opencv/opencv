@@ -10,13 +10,15 @@ TrackerMILModel::TrackerMILModel( const Rect& boundingBox )
 {
 	currentSample.clear();
 	mode = MODE_POSITIVE;
+	width = boundingBox.width;
+	height = boundingBox.height;
 
 	Ptr<TrackerMILTargetState> initState = new TrackerMILTargetState( Point2f( boundingBox.x, boundingBox.y ),
 		boundingBox.width, boundingBox.height, true, Mat() );
 	trajectory.push_back( initState );
 }
 
-void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
+void TrackerMILModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
 {
 	if( currentSample.size() == 0)
 	{
@@ -36,11 +38,11 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 			Point currentOfs;
 			currentSample.at(j).locateROI( currentSize, currentOfs );
 			bool foreground;
-			if( mode == MODE_POSITIVE )
+			if( mode == MODE_POSITIVE || mode == MODE_ESTIMATON )
 			{
 				foreground = true;
 			}
-			else
+			else if( mode == MODE_NEGATIVE )
 			{
 				foreground = false;
 			}
@@ -50,17 +52,22 @@ void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
 
 			//create the state
 			Ptr<TrackerMILTargetState> currentState = new TrackerMILTargetState( currentOfs,
-					currentSize.width,
-					currentSize.height,
+					width,
+					height,
 					foreground,
 					singleResponse);
 
-			currentConfidenceMap.push_back( std::make_pair(currentState, 0) );
+			confidenceMap.push_back( std::make_pair(currentState, 0) );
 
 		}
 
 
 	}
+}
+
+void TrackerMILModel:: modelEstimationImpl( const std::vector<Mat>& responses )
+{
+	responseToConfidenceMap( responses, currentConfidenceMap );
 
 }
 

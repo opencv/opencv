@@ -450,6 +450,12 @@ public:
 	 */
 	const ConfidenceMap& getLastConfidenceMap() const;
 
+	/**
+	 * \brief Get the tracker state estimator
+	 * \return The tracker state estimator
+	 */
+	Ptr<TrackerStateEstimator> getTrackerStateEstimator() const;
+
 private:
 
 	void clearCurrentConfidenceMap();
@@ -530,6 +536,8 @@ public:
 	TrackerStateEstimatorBoosting( int numFeatures = 250 );
 	~TrackerStateEstimatorBoosting();
 
+	void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
+
 protected:
 	Ptr<TrackerTargetState> estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps );
 	void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
@@ -541,6 +549,8 @@ private:
 	CvBoost boostModel;
 	bool trained;
 	int numFeatures;
+
+	ConfidenceMap currentConfidenceMap;
 };
 
 /**

@@ -113,9 +113,29 @@ TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
 
 }
 
+void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+{
+	currentConfidenceMap.clear();
+	currentConfidenceMap = confidenceMap;
+}
+
 Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
 	//TODO run cvBoost predict in order to compute next location
+	if( currentConfidenceMap.size() == 0 )
+		return NULL;
+
+	Mat data;
+	Mat responses;
+
+	prepareData(currentConfidenceMap, data, responses );
+
+	//TODO get the boundingbox with the highest vote
+	for( size_t i = 0; i < data.rows; i++)
+	{
+		float ret = boostModel.predict( data.row(i), Mat(), Range::all(), false, true );
+	}
+
 	return confidenceMaps.back().back().first;
 }
 

@@ -74,7 +74,7 @@ void TrackerSampler::sampling( const Mat& image, Rect boundingBox )
 	for( size_t i = 0; i < samplers.size(); i++ )
 	{
 		std::vector<Mat> current_samples;
-		samplers.at(i).second->sampling(image, boundingBox, current_samples);
+		samplers.at(i).second->sampling( image, boundingBox, current_samples );
 
 		//push in samples all current_samples
 		for( size_t j = 0; j < current_samples.size(); j++ )

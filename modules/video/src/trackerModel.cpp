@@ -71,6 +71,11 @@ bool TrackerModel::setTrackerStateEstimator( Ptr<TrackerStateEstimator> trackerS
 	return true;
 }
 
+Ptr<TrackerStateEstimator> TrackerModel::getTrackerStateEstimator() const
+{
+	return stateEstimator;
+}
+
 void TrackerModel::modelEstimation( const std::vector<Mat>& responses )
 {
 	modelEstimationImpl( responses );
