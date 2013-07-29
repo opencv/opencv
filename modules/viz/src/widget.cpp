@@ -142,10 +142,6 @@ void cv::viz::Widget3D::setColor(const Color &color)
     actor->GetMapper ()->ScalarVisibilityOff ();
     actor->GetProperty ()->SetColor (c.val);
     actor->GetProperty ()->SetEdgeColor (c.val);
-    actor->GetProperty ()->SetAmbient (0.8);
-    actor->GetProperty ()->SetDiffuse (0.8);
-    actor->GetProperty ()->SetSpecular (0.8);
-    actor->GetProperty ()->SetLighting (0);
     actor->Modified ();
 }
 
