@@ -216,7 +216,7 @@ namespace
     template <typename T>
     void copyWithMask(const GpuMat& src, const GpuMat& dst, const GpuMat& mask, Stream& stream)
     {
-        gridTransform_< CopyToPolicy<sizeof(typename VecTraits<T>::elem_type)> >(globPtr<T>(src), globPtr<T>(dst), identity<T>(), globPtr<uchar>(mask), stream);
+        gridTransformUnary_< CopyToPolicy<sizeof(typename VecTraits<T>::elem_type)> >(globPtr<T>(src), globPtr<T>(dst), identity<T>(), globPtr<uchar>(mask), stream);
     }
 }
 
@@ -268,14 +268,14 @@ namespace
     void setToWithOutMask(const GpuMat& mat, Scalar _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
-        gridTransform(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), stream);
+        gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), stream);
     }
 
     template <typename T>
     void setToWithMask(const GpuMat& mat, const GpuMat& mask, Scalar _scalar, Stream& stream)
     {
         Scalar_<typename VecTraits<T>::elem_type> scalar = _scalar;
-        gridTransform(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), globPtr<uchar>(mask), stream);
+        gridTransformUnary(constantPtr(VecTraits<T>::make(scalar.val), mat.rows, mat.cols), globPtr<T>(mat), identity<T>(), globPtr<uchar>(mask), stream);
     }
 }
 
@@ -382,7 +382,7 @@ namespace
         typedef typename LargerType<src_elem_type, float>::type larger_elem_type;
         typedef typename LargerType<float, dst_elem_type>::type scalar_type;
 
-        gridTransform_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
+        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), saturate_cast_func<T, D>(), stream);
     }
 
     template <typename T, typename D, typename S> struct Convertor : unary_function<T, D>
@@ -408,7 +408,7 @@ namespace
         op.alpha = cv::saturate_cast<scalar_type>(alpha);
         op.beta = cv::saturate_cast<scalar_type>(beta);
 
-        gridTransform_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
+        gridTransformUnary_< ConvertToPolicy<scalar_type> >(globPtr<T>(src), globPtr<D>(dst), op, stream);
     }
 }
 
