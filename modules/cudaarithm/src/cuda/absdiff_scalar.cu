@@ -102,7 +102,7 @@ void absDiffScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const G
 
     const int depth = src.depth();
 
-    CV_DbgAssert( depth < 7 );
+    CV_DbgAssert( depth <= CV_64F );
 
     funcs[depth](src, val[0], dst, stream);
 }

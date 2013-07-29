@@ -236,7 +236,7 @@ void divScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const G
     const int ddepth = dst.depth();
     const int cn = src.channels();
 
-    CV_DbgAssert( sdepth < 7 && ddepth < 7 && cn <= 4 );
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F && cn <= 4 );
 
     if (inv)
     {

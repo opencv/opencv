@@ -148,7 +148,7 @@ void absDiffMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMa
 
     const int depth = src1.depth();
 
-    CV_DbgAssert( depth < 7 );
+    CV_DbgAssert( depth <= CV_64F );
 
     GpuMat src1_ = src1.reshape(1);
     GpuMat src2_ = src2.reshape(1);

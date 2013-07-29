@@ -190,7 +190,7 @@ void divMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, 
     const int sdepth = src1.depth();
     const int ddepth = dst.depth();
 
-    CV_DbgAssert( sdepth < 7 && ddepth < 7 );
+    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
 
     GpuMat src1_ = src1.reshape(1);
     GpuMat src2_ = src2.reshape(1);
