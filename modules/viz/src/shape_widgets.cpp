@@ -1140,10 +1140,7 @@ template<> cv::viz::CameraPositionWidget cv::viz::Widget::cast<cv::viz::CameraPo
 struct cv::viz::TrajectoryWidget::ApplyPath
 {
     static void applyPath(vtkSmartPointer<vtkPolyData> poly_data, vtkSmartPointer<vtkAppendPolyData> append_filter, const std::vector<Affine3f> &path)
-    {
-        vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
-        mat_trans->Identity();
-        
+    {   
         vtkIdType nr_points = path.size();
         
         for (vtkIdType i = 0; i < nr_points; ++i)
@@ -1154,7 +1151,8 @@ struct cv::viz::TrajectoryWidget::ApplyPath
             // Transform the default coordinate frame
             vtkSmartPointer<vtkTransform> transform = vtkSmartPointer<vtkTransform>::New();
             transform->PreMultiply();
-            vtkMatrix4x4::Multiply4x4(convertToVtkMatrix(path[i].matrix), mat_trans, mat_trans);        
+            vtkSmartPointer<vtkMatrix4x4> mat_trans = vtkSmartPointer<vtkMatrix4x4>::New();
+            mat_trans = convertToVtkMatrix(path[i].matrix);
             transform->SetMatrix(mat_trans);
             
             vtkSmartPointer<vtkTransformPolyDataFilter> filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
@@ -1185,13 +1183,12 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
         points->SetNumberOfPoints(nr_points);
         polyLine->GetPointIds()->SetNumberOfIds(nr_points);
         
-        Vec3f last_pos(0.0f,0.0f,0.0f);
         Vec3f *data_beg = vtkpoints_data<float>(points);
         
         for (vtkIdType i = 0; i < nr_points; ++i)
         {
-            last_pos = path[i] * last_pos;
-            *data_beg++ = last_pos;
+            Vec3f cam_pose = path[i].translation();
+            *data_beg++ = cam_pose;
             polyLine->GetPointIds()->SetId(i,i);
         }
         
@@ -1257,7 +1254,6 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, f
 {
     vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
     vtkIdType nr_poses = path.size();
-    Point3f last_pos(0.0f,0.0f,0.0f);
     
     // Create color arrays
     vtkSmartPointer<vtkUnsignedCharArray> line_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
@@ -1290,7 +1286,7 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, f
         
     for (vtkIdType i = 0; i < nr_poses; ++i)
     {
-        Point3f new_pos = path[i] * last_pos;
+        Point3f new_pos = path[i].translation();
         
         vtkSmartPointer<vtkSphereSource> sphere_source = vtkSmartPointer<vtkSphereSource>::New();
         sphere_source->SetCenter (new_pos.x, new_pos.y, new_pos.z);
@@ -1300,7 +1296,6 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, f
             sphere_source->Update();
             sphere_source->GetOutput()->GetCellData()->SetScalars(sphere_scalars_init);
             appendFilter->AddInputConnection(sphere_source->GetOutputPort());
-            last_pos = new_pos;
             continue;
         }
         else
@@ -1311,7 +1306,9 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, f
             appendFilter->AddInputConnection(sphere_source->GetOutputPort());
         }
         
-        Vec3f v = last_pos - new_pos;
+        
+        Affine3f relativeAffine = path[i].inv() * path[i-1];
+        Vec3f v = path[i].rotation() * relativeAffine.translation();
         v = normalize(v) * line_length;
         
         vtkSmartPointer<vtkLineSource> line_source = vtkSmartPointer<vtkLineSource>::New();
@@ -1321,7 +1318,6 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, f
         line_source->GetOutput()->GetCellData()->SetScalars(line_scalars);
         
         appendFilter->AddInputConnection(line_source->GetOutputPort());
-        last_pos = new_pos;
     }
     
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
