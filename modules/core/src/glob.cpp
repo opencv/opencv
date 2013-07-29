@@ -68,7 +68,7 @@ namespace
         ~DIR()
         {
             if (ent.d_name)
-                free((void*)ent.d_name);
+                delete[] ent.d_name;
         }
 #endif
     };
@@ -80,12 +80,11 @@ namespace
 #ifdef HAVE_WINRT
         cv::String full_path = cv::String(path) + "\\*";
         size_t size = mbstowcs(NULL, full_path.c_str(), full_path.size());
-        wchar_t* wfull_path = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
+        cv::Ptr<wchar_t> wfull_path = new wchar_t[size+1];
         wfull_path[size] = 0;
         mbstowcs(wfull_path, full_path.c_str(), full_path.size());
         dir->handle = ::FindFirstFileExW(wfull_path, FindExInfoStandard,
                         &dir->data, FindExSearchNameMatch, NULL, 0);
-        free(wfull_path);
 #else
         dir->handle = ::FindFirstFileExA((cv::String(path) + "\\*").c_str(),
             FindExInfoStandard, &dir->data, FindExSearchNameMatch, NULL, 0);
@@ -107,7 +106,7 @@ namespace
                 return 0;
         }
         size_t asize = wcstombs(NULL, dir->data.cFileName, 0);
-        char* aname = (char*)malloc((asize+1)*sizeof(char));
+        char* aname = new char[asize+1];
         aname[asize] = 0;
         wcstombs(aname, dir->data.cFileName, asize);
         dir->ent.d_name = aname;
@@ -148,11 +147,10 @@ static bool isDir(const cv::String& path, DIR* dir)
         WIN32_FILE_ATTRIBUTE_DATA all_attrs;
 #ifdef HAVE_WINRT
         size_t size = mbstowcs(NULL, path.c_str(), path.size());
-        wchar_t* wpath = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
+        cv::Ptr<wchar_t> wpath = new wchar_t[size+1];
         wpath[size] = 0;
         mbstowcs(wpath, path.c_str(), path.size());
         ::GetFileAttributesExW(wpath, GetFileExInfoStandard, &all_attrs);
-        free(wpath);
 #else
         ::GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &all_attrs);
 #endif

@@ -89,15 +89,14 @@ std::wstring GetTempPathWinRT()
 
 std::wstring GetTempFileNameWinRT(std::wstring prefix)
 {
-    wchar_t guidStr[120];
-    GUID* g = 0x00;
-    g = new GUID;
-    CoCreateGuid(g);
+    wchar_t guidStr[40];
+    GUID g;
+    CoCreateGuid(&g);
     wchar_t* mask = L"%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
-    swprintf(&guidStr[0],mask, 120, g->Data1,g->Data2,g->Data3,UINT(g->Data4[0]),
-             UINT(g->Data4[1]),UINT(g->Data4[2]),UINT(g->Data4[3]),UINT(g->Data4[4]),
-             UINT(g->Data4[5]),UINT(g->Data4[6]),UINT(g->Data4[7]));
-    delete g;
+    swprintf(&guidStr[0], sizeof(guidStr)/sizeof(wchar_t), mask,
+             g.Data1, g.Data2, g.Data3, UINT(g.Data4[0]), UINT(g.Data4[1]),
+             UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
+             UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
 
     return prefix + std::wstring(guidStr);
 }
@@ -389,7 +388,7 @@ string tempfile( const char* suffix )
 {
 #ifdef HAVE_WINRT
     std::wstring temp_dir = L"";
-    wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
+    const wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
     if (opencv_temp_dir)
         temp_dir = std::wstring(opencv_temp_dir);
 #else
@@ -413,11 +412,10 @@ string tempfile( const char* suffix )
     DeleteFileW(temp_file.c_str());
 
     size_t asize = wcstombs(NULL, temp_file.c_str(), 0);
-    char* aname = (char*)malloc((asize+1)*sizeof(char));
+    Ptr<char> aname = new char[asize+1];
     aname[asize] = 0;
     wcstombs(aname, temp_file.c_str(), asize);
     fname = std::string(aname);
-    free(aname);
     RoUninitialize();
 #else
     char temp_dir2[MAX_PATH + 1] = { 0 };
@@ -804,6 +802,10 @@ cvGetModuleInfo( const char* name, const char **version, const char **plugin_lis
 }
 
 #if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+#endif
+
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
 
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )

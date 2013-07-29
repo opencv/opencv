@@ -20,17 +20,16 @@ namespace cv
         #ifdef HAVE_WINRT
             WIN32_FIND_DATAW FindFileData;
         #else
-            WIN32_FIND_DATA FindFileData;
+            WIN32_FIND_DATAA FindFileData;
         #endif
         HANDLE hFind;
 
         #ifdef HAVE_WINRT
             size_t size = mbstowcs(NULL, path_f.c_str(), path_f.size());
-            wchar_t* wpath = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
+            Ptr<wchar_t> wpath = new wchar_t[size+1];
             wpath[size] = 0;
             mbstowcs(wpath, path_f.c_str(), path_f.size());
             hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
-            free(wpath);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
         #endif
@@ -48,22 +47,19 @@ namespace cv
                         FindFileData.dwFileAttributes == FILE_ATTRIBUTE_SYSTEM  ||
                         FindFileData.dwFileAttributes == FILE_ATTRIBUTE_READONLY)
                     {
-                        char* fname;
+                        cv::Ptr<char> fname;
                     #ifdef HAVE_WINRT
                         size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        fname = (char*)malloc((asize+1)*sizeof(char));
+                        fname = new char[asize+1];
                         fname[asize] = 0;
                         wcstombs(fname, FindFileData.cFileName, asize);
                     #else
                         fname = FindFileData.cFileName;
                     #endif
                         if (addPath)
-                            list.push_back(path + "/" + fname);
+                            list.push_back(path + "/" + std::string(fname));
                         else
-                            list.push_back(fname);
-                    #ifdef HAVE_WINRT
-                        free(fname);
-                    #endif
+                            list.push_back(std::string(fname));
                     }
                 }
             #ifdef HAVE_WINRT
@@ -108,17 +104,16 @@ namespace cv
         #ifdef HAVE_WINRT
             WIN32_FIND_DATAW FindFileData;
         #else
-            WIN32_FIND_DATA FindFileData;
+            WIN32_FIND_DATAA FindFileData;
         #endif
             HANDLE hFind;
 
         #ifdef HAVE_WINRT
             size_t size = mbstowcs(NULL, path_f.c_str(), path_f.size());
-            wchar_t* wpath = (wchar_t*)malloc((size+1)*sizeof(wchar_t));
+            Ptr<wchar_t> wpath = new wchar_t[size+1];
             wpath[size] = 0;
             mbstowcs(wpath, path_f.c_str(), path_f.size());
             hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
-            free(wpath);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
         #endif
@@ -130,14 +125,20 @@ namespace cv
             {
                 do
                 {
+#ifdef HAVE_WINRT
                     if (FindFileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY &&
                         wcscmp(FindFileData.cFileName, L".") != 0 &&
                         wcscmp(FindFileData.cFileName, L"..") != 0)
+#else
+                    if (FindFileData.dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY &&
+                        strcmp(FindFileData.cFileName, ".") != 0 &&
+                        strcmp(FindFileData.cFileName, "..") != 0)
+#endif
                     {
-                    char* fname;
+                        cv::Ptr<char> fname;
                     #ifdef HAVE_WINRT
                         size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        fname = (char*)malloc((asize+1)*sizeof(char));
+                        fname = new char[asize+1];
                         fname[asize] = 0;
                         wcstombs(fname, FindFileData.cFileName, asize);
                     #else
@@ -145,9 +146,9 @@ namespace cv
                     #endif
 
                         if (addPath)
-                            list.push_back(path + "/" + fname);
+                            list.push_back(path + "/" + std::string(fname));
                         else
-                            list.push_back(fname);
+                            list.push_back(std::string(fname));
                     }
                 }
             #ifdef HAVE_WINRT
