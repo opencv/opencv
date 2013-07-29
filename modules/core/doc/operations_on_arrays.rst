@@ -532,7 +532,7 @@ Performs the per-element comparison of two arrays or an array and scalar value.
 
     :param value: scalar value.
 
-    :param dst: output array that has the same size as the input arrays and type= ``CV_8UC1`` .
+    :param dst: output array that has the same size and type as the input arrays.
 
     :param cmpop: a flag, that specifies correspondence between the arrays:
 
