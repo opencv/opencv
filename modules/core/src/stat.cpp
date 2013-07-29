@@ -464,20 +464,15 @@ cv::Scalar cv::sum( InputArray _src )
 			0;
 		if( ippFunc )
 		{
-			Ipp64f *res = new Ipp64f[cn];
-			if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) == ippStsNoErr )
+			Ipp64f res[4];
+			if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
 			{
 				Scalar sc;
 				for( int i = 0; i < cn; i++ )
 				{
 					sc[i] = res[i];
 				}
-				delete []res;
 				return sc;
-			}
-			else
-			{
-				delete []res;
 			}
 		}
 	}
@@ -575,7 +570,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 			if( ippFuncC1 )
 			{
 				Ipp64f res;
-				if( ippFuncC1(src.data, src.step[0], mask.data, mask.step[0], sz, &res) == ippStsNoErr )
+				if( ippFuncC1(src.data, src.step[0], mask.data, mask.step[0], sz, &res) >= 0 )
 				{
 					return Scalar(res);
 				}
@@ -589,9 +584,9 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 			if( ippFuncC3 )
 			{
 				Ipp64f res1, res2, res3;
-				if( ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 1, &res1) == ippStsNoErr &&
-					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 2, &res2) == ippStsNoErr &&
-					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 3, &res3) == ippStsNoErr )
+				if( ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 1, &res1) >= 0 &&
+					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 2, &res2) >= 0 &&
+					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 3, &res3) >= 0 )
 				{
 					return Scalar(res1, res2, res3);
 				}
@@ -616,20 +611,15 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 				0;
 			if( ippFunc )
 			{
-				Ipp64f *res = new Ipp64f[cn];
-				if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) == ippStsNoErr )
+				Ipp64f res[4];
+				if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
 				{
 					Scalar sc;
 					for( int i = 0; i < cn; i++ )
 					{
 						sc[i] = res[i];
 					}
-					delete []res;
 					return sc;
-				}
-				else
-				{
-					delete []res;
 				}
 			}
 		}
