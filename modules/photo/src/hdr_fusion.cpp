@@ -161,7 +161,6 @@ void makeHDR(InputArrayOfArrays _images, const std::vector<float>& _exp_times, O
 			res_ptr[channel] = exp(sum[channel] / weight_sum);
 		}
 	}
-	tonemap(result, result, 0);
 }
 
 void exposureFusion(InputArrayOfArrays _images, OutputArray _dst, float wc, float ws, float we)

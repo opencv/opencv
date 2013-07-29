@@ -59,20 +59,6 @@ enum
     INPAINT_TELEA = 1 // A. Telea algorithm
 };
 
-//! the tonemapping algorithm
-enum
-{
-	TONEMAP_LINEAR,
-
-    TONEMAP_DRAGO,    // Adaptive Logarithmic Mapping For 
-				   	  // Displaying High Contrast Scenes
-	TONEMAP_REINHARD, // Dynamic Range Reduction Inspired 
-					  // by Photoreceptor Physiology
-    TONEMAP_DURAND,   // Fast Bilateral Filtering for the 
-					  // Display of High-Dynamic-Range Images
-	TONEMAP_COUNT 
-};
-
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
@@ -96,9 +82,6 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
 
 CV_EXPORTS_W void makeHDR(InputArrayOfArrays srcImgs, const std::vector<float>& exp_times, OutputArray dst, Mat response = Mat());
 
-CV_EXPORTS_W void tonemap(InputArray src, OutputArray dst, int algorithm,
-	                      const std::vector<float>& params = std::vector<float>());
-
 CV_EXPORTS_W void exposureFusion(InputArrayOfArrays srcImgs, OutputArray dst, float wc = 1.0f, float ws = 1.0f, float we = 0.0f);
 
 CV_EXPORTS_W void shiftMat(InputArray src, Point shift, OutputArray dst);
@@ -108,6 +91,66 @@ CV_EXPORTS_W Point getExpShift(InputArray img0, InputArray img1, int max_bits = 
 CV_EXPORTS_W void estimateResponse(InputArrayOfArrays srcImgs, const std::vector<float>& exp_times, OutputArray dst, int samples = 50, float lambda = 10);
 
 CV_EXPORTS_W void alignImages(InputArrayOfArrays src, std::vector<Mat>& dst);
+
+class CV_EXPORTS_W Tonemap : public Algorithm
+{
+public:
+	Tonemap(float gamma);
+	virtual ~Tonemap();
+	void process(InputArray src, OutputArray dst);
+	static Ptr<Tonemap> create(const String& name);
+protected:
+	float gamma;
+	Mat img;
+	void linearMap();
+	void gammaCorrection();
+
+	virtual void tonemap() = 0;
+};
+
+class CV_EXPORTS_W TonemapLinear : public Tonemap
+{
+public:
+	TonemapLinear(float gamma = 2.2f);
+	AlgorithmInfo* info() const;
+protected:
+	void tonemap();
+};
+
+class CV_EXPORTS_W TonemapDrago : public Tonemap
+{
+public:
+	TonemapDrago(float gamma = 2.2f, float bias = 0.85f);
+	AlgorithmInfo* info() const;
+protected:
+	float bias;
+	void tonemap();
+};
+
+class CV_EXPORTS_W TonemapDurand : public Tonemap
+{
+public:
+	TonemapDurand(float gamma = 2.2f, float contrast = 4.0f, float sigma_color = 2.0f, float sigma_space = 2.0f);
+	AlgorithmInfo* info() const;
+protected:
+	float contrast;
+    float sigma_color;
+    float sigma_space;
+	void tonemap();
+};
+
+class CV_EXPORTS_W TonemapReinhardDevlin : public Tonemap
+{
+public:
+	TonemapReinhardDevlin(float gamma = 2.2f, float intensity = 0.0f, float color_adapt = 0.0f, float light_adapt = 1.0f);
+	AlgorithmInfo* info() const;
+protected:
+	float intensity;
+    float color_adapt;
+    float light_adapt;
+	void tonemap();
+};
+
 } // cv
 
 #endif
