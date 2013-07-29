@@ -131,19 +131,26 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 	prepareData(currentConfidenceMap, data, responses );
 
 	//TODO get the boundingbox with the highest vote
+	std::vector<float> votes;
 	for( size_t i = 0; i < data.rows; i++)
 	{
-		float ret = boostModel.predict( data.row(i), Mat(), Range::all(), false, true );
+		float vote = boostModel.predict( data.row(i), Mat(), Range::all(), false, true );
+		votes.push_back( vote );
 	}
 
-	return confidenceMaps.back().back().first;
+	std::vector<float>::iterator maxElem = std::max_element( votes.begin(), votes.end() );
+	int maxIdx = ( std::distance( votes.begin(), maxElem ) );
+
+	return currentConfidenceMap.at( maxIdx ).first;
 }
 
 void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses )
 {
+	//TODO change with mat fast access
 	//initialize trainData and responses
-	trainData.create( confidenceMap.size() * numFeatures, 1, CV_32FC1 );
-	responses.create( confidenceMap.size() * numFeatures, 1, CV_32FC1 );
+	trainData.create( confidenceMap.size(), numFeatures, CV_32FC1 );
+	responses.create( confidenceMap.size(), 1, CV_32FC1 );
+
 
 	for( size_t i = 0; i < confidenceMap.size(); i++ )
 	{
@@ -155,21 +162,32 @@ void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidence
 			int posIndex = numFeatures * i + j;
 
 			//fill the trainData with the value of the feature j for sample i
-			trainData.at<float>( posIndex, 0 ) = stateFeatures.at<float>( j, 0 );
-
-			int classLabel = 0;
-			if( currentTargetState->isTargetFg() )
-				classLabel = 1;
-
-			//fill the responses (class background or class foreground)
-			responses.at<float>( posIndex, 0 ) = classLabel;
+			trainData.at<float>( i, j ) = stateFeatures.at<float>( j, 0 );
 		}
-	}
 
+		int classLabel = 0;
+		if( currentTargetState->isTargetFg() )
+			classLabel = 1;
+
+		//fill the responses (class background or class foreground)
+		responses.at<float>( i, 0 ) = classLabel;
+
+	}
 }
 
 void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
+
+
+
+	/*CvBoostParams  params( CvBoost::REAL, // boost_type
+	                           100, // weak_count
+	                           0.95, // weight_trim_rate
+	                           2, // max_depth
+	                           false, //use_surrogates
+	                           0 // priors
+	                         );
+ */
 	ConfidenceMap lastConfidenceMap = confidenceMaps.back();
 
 	//prepare the trainData
@@ -187,7 +205,7 @@ void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& conf
 	else
 	{
 		//the classifier is updated
-		boostModel.train( traindata, CV_ROW_SAMPLE, responses, Mat(), Mat(), Mat(), Mat(), CvBoostParams(), true );
+		boostModel.train( traindata, CV_ROW_SAMPLE, responses/*, Mat(), Mat(), Mat(), Mat(), CvBoostParams(), true*/);
 	}
 
 }

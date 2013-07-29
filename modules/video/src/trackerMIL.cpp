@@ -201,6 +201,20 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	if( detectSamples.size() == 0 )
 		return false;
 
+
+	/*//TODO debug samples
+	Mat f;
+	image.copyTo(f);
+
+	for( size_t i = 0; i < detectSamples.size(); i=i+10 )
+	{
+		Size sz;
+		Point off;
+		detectSamples.at(i).locateROI(sz, off);
+		rectangle(f, Rect(off.x,off.y,detectSamples.at(i).cols,detectSamples.at(i).rows), Scalar(255,0,0), 1);
+	}*/
+
+
 	//extract features from new samples
 	featureSet->extraction( detectSamples );
 	std::vector<Mat> response = featureSet->getResponses();
@@ -211,14 +225,47 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	((Ptr<TrackerMILModel>) model)->responseToConfidenceMap( response, cmap );
 	((Ptr<TrackerStateEstimatorBoosting>) model->getTrackerStateEstimator())->setCurrentConfidenceMap( cmap );
 	model->runStateEstimator();
+	Ptr<TrackerMILTargetState> currentState = model->getLastTargetState();
+	boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y,
+		currentState->getWidth(), currentState->getHeight() );
+
+	/*//TODO debug
+	rectangle(f, lastBoundingBox, Scalar(0,255,0), 1);
+	rectangle(f, boundingBox, Scalar(0,0,255), 1);
+	imshow("f", f);
+	waitKey( 0 );*/
+
 
 	//TODO sampling new frame based on new location
+	//Positive sampling
+	((Ptr<TrackerSamplerCSC>) sampler->getSamplers().at(0).second)->setMode( TrackerSamplerCSC::MODE_INIT_POS );
+	sampler->sampling( image, boundingBox );
+	std::vector<Mat> posSamples = sampler->getSamples();
+
+	//Negative sampling
+	((Ptr<TrackerSamplerCSC>) sampler->getSamplers().at(0).second)->setMode( TrackerSamplerCSC::MODE_INIT_NEG );
+	sampler->sampling( image, boundingBox );
+	std::vector<Mat> negSamples = sampler->getSamples();
+
+	if( posSamples.size() == 0 || negSamples.size() == 0 )
+		return false;
+
 
 	//TODO extract features
+	featureSet->extraction( posSamples );
+	std::vector<Mat> posResponse = featureSet->getResponses();
+
+	featureSet->extraction( negSamples );
+	std::vector<Mat> negResponse = featureSet->getResponses();
 
 	//TODO model estimate
+	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_POSITIVE, posSamples );
+	model->modelEstimation( posResponse );
+	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_NEGATIVE, negSamples );
+	model->modelEstimation( negResponse );
 
 	//TODO model update
+	model->modelUpdate();
 
 	return true;
 }

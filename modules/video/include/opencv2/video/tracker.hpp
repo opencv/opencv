@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include "feature.hpp"
 #include "opencv2/ml.hpp"
+#include "opencv2/highgui.hpp"
 #include <iostream>
 
 /*
