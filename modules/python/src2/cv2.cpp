@@ -511,13 +511,6 @@ PyObject* pyopencv_from(const cvflann_flann_distance_t& value)
 }
 
 template<>
-bool pyopencv_to(PyObject*, cv::flann::SearchParams &, const char *)
-{
-    CV_Assert(!"not implemented");
-    return false;
-}
-
-template<>
 bool pyopencv_to(PyObject* obj, int& value, const char* name)
 {
     (void)name;
@@ -1053,6 +1046,12 @@ bool pyopencv_to(PyObject *o, cv::flann::IndexParams& p, const char *name)
     Py_XDECREF(keys);
     Py_XDECREF(values);
     return ok;
+}
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const char * name)
+{
+    return pyopencv_to<cv::flann::IndexParams>(obj, value, name);
 }
 
 template <typename T>
