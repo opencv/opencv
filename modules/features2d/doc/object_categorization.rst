@@ -5,6 +5,8 @@ Object Categorization
 
 This section describes approaches based on local 2D features and used to categorize objects.
 
+.. Sample code:: A complete Bag-Of-Words sample can be found at opencv_source_code/samples/cpp/bagofwords_classification.cpp
+
 BOWTrainer
 ----------
 .. ocv:class:: BOWTrainer

@@ -997,6 +997,9 @@ All of the above improvements have been implemented in :ocv:func:`matchTemplate`
 
 .. seealso:: :ocv:func:`dct` , :ocv:func:`getOptimalDFTSize` , :ocv:func:`mulSpectrums`, :ocv:func:`filter2D` , :ocv:func:`matchTemplate` , :ocv:func:`flip` , :ocv:func:`cartToPolar` , :ocv:func:`magnitude` , :ocv:func:`phase`
 
+.. Sample code::
+
+   * : An example using the discrete fourier transform can be found at opencv_source_code/samples/cpp/dft.cpp
 
 
 divide
@@ -2262,7 +2265,9 @@ The sample below is the function that takes two matrices. The first function sto
     :ocv:func:`dft`,
     :ocv:func:`dct`
 
+.. Sample code::
 
+   * : An example using PCA for dimensionality reduction while maintaining an amount of variance can be found at opencv_source_code/samples/cpp/pca.cpp
 
 PCA::PCA
 --------

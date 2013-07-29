@@ -62,7 +62,9 @@ The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detec
 
 Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
+.. Sample code::
 
+   * : An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/cpp/peopledetect.cpp
 
 gpu::HOGDescriptor::HOGDescriptor
 -------------------------------------
