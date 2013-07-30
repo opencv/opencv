@@ -8,9 +8,6 @@
 #include <iostream>
 #include <stdio.h>
 
-int main( int, const char** ) { return 0; }
-
-#if 0
 
 using namespace std;
 using namespace cv;
@@ -46,7 +43,7 @@ static double getTime()
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime);
 
 
@@ -66,20 +63,19 @@ double checkRectSimilarity(Size sz, vector<Rect>& cpu_rst, vector<Rect>& gpu_rst
 int main( int argc, const char** argv )
 {
     const char* keys =
-        "{ h | help       | false       | print help message }"
-        "{ i | input      |             | specify input image }"
-        "{ t | template   | haarcascade_frontalface_alt.xml |"
+        "{ h  help       | false       | print help message }"
+        "{ i  input      |             | specify input image }"
+        "{ t  template   | haarcascade_frontalface_alt.xml |"
         " specify template file path }"
-        "{ c | scale      |   1.0       | scale image }"
-        "{ s | use_cpu    | false       | use cpu or gpu to process the image }"
-        "{ o | output     | facedetect_output.jpg  |"
+        "{ c  scale      |   1.0       | scale image }"
+        "{ s  use_cpu    | false       | use cpu or gpu to process the image }"
+        "{ o  output     | facedetect_output.jpg  |"
         " specify output image save path(only works when input is images) }";
 
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
         cout << "Avaible options:" << endl;
-        cmd.printParams();
         return 0;
     }
     CvCapture* capture = 0;
@@ -90,7 +86,7 @@ int main( int argc, const char** argv )
     outputName = cmd.get<string>("o");
     string cascadeName = cmd.get<string>("t");
     double scale = cmd.get<double>("c");
-    ocl::OclCascadeClassifierBuf cascade;
+    ocl::OclCascadeClassifier cascade;
     CascadeClassifier  cpu_cascade;
 
     if( !cascade.load( cascadeName ) || !cpu_cascade.load(cascadeName) )
@@ -211,7 +207,7 @@ _cleanup_:
 }
 
 void detect( Mat& img, vector<Rect>& faces,
-             ocl::OclCascadeClassifierBuf& cascade,
+             ocl::OclCascadeClassifier& cascade,
              double scale, bool calTime)
 {
     ocl::oclMat image(img);
@@ -223,7 +219,7 @@ void detect( Mat& img, vector<Rect>& faces,
 
     cascade.detectMultiScale( smallImg, faces, 1.1,
                               3, 0
-                              |CV_HAAR_SCALE_IMAGE
+                              |CASCADE_SCALE_IMAGE
                               , Size(30,30), Size(0, 0) );
     if(calTime) workEnd();
 }
@@ -234,11 +230,11 @@ void detectCPU( Mat& img, vector<Rect>& faces,
 {
     if(calTime) workBegin();
     Mat cpu_gray, cpu_smallImg( cvRound (img.rows/scale), cvRound(img.cols/scale), CV_8UC1 );
-    cvtColor(img, cpu_gray, CV_BGR2GRAY);
+    cvtColor(img, cpu_gray, COLOR_BGR2GRAY);
     resize(cpu_gray, cpu_smallImg, cpu_smallImg.size(), 0, 0, INTER_LINEAR);
     equalizeHist(cpu_smallImg, cpu_smallImg);
     cascade.detectMultiScale(cpu_smallImg, faces, 1.1,
-                             3, 0 | CV_HAAR_SCALE_IMAGE,
+                             3, 0 | CASCADE_SCALE_IMAGE,
                              Size(30, 30), Size(0, 0));
     if(calTime) workEnd();
 }
@@ -312,4 +308,3 @@ double checkRectSimilarity(Size sz, vector<Rect>& ob1, vector<Rect>& ob2)
     }
     return final_test_result;
 }
-#endif

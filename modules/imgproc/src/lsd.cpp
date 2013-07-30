@@ -205,7 +205,7 @@ public:
  *                              * 1 corresponds to 0.1 mean false alarms
  *                          This vector will be calculated _only_ when the objects type is REFINE_ADV
  */
-    void detect(const InputArray _image, OutputArray _lines,
+    void detect(InputArray _image, OutputArray _lines,
                 OutputArray width = noArray(), OutputArray prec = noArray(),
                 OutputArray nfa = noArray());
 
@@ -216,7 +216,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    void drawSegments(InputOutputArray image, const InputArray lines);
+    void drawSegments(InputOutputArray image, InputArray lines);
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
@@ -227,7 +227,7 @@ public:
  * @param lines2    The second lines that need to be drawn. Color - Red.
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* image = 0);
+    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, Mat* image = 0);
 
 private:
     Mat image;

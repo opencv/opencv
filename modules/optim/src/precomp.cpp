@@ -7,17 +7,11 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Guoping Long, longguoping@gmail.com
-//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -27,9 +21,9 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -45,48 +39,6 @@
 //
 //M*/
 
-#ifndef __OPENCV_PRECOMP_H__
-#define __OPENCV_PRECOMP_H__
+#include "precomp.hpp"
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-#pragma warning( disable: 4267 4324 4244 4251 4710 4711 4514 4996 )
-#endif
-
-#include <map>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <stdio.h>
-
-#undef OPENCV_NOSTL
-
-#include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect/objdetect_c.h"
-#include "opencv2/ocl.hpp"
-
-#include "opencv2/core/utility.hpp"
-#include "opencv2/core/private.hpp"
-
-//#include "opencv2/highgui.hpp"
-
-#define __ATI__
-
-#if defined (HAVE_OPENCL)
-
-#define CL_USE_DEPRECATED_OPENCL_1_1_APIS
-#include "opencv2/ocl/private/util.hpp"
-#include "safe_call.hpp"
-
-#else /* defined(HAVE_OPENCL) */
-
-static inline void throw_nogpu()
-{
-    CV_Error(CV_GpuNotSupported, "The library is compilled without OpenCL support.\n");
-}
-
-#endif /* defined(HAVE_OPENCL) */
-
-#endif /* __OPENCV_PRECOMP_H__ */
+/* End of file. */
