@@ -64,6 +64,33 @@ classdef OpenCVTest < matlab.unittest.TestCase
       testcase.verifyLessThan(norm(mt1 - mt2), 1e-8, 'Too much precision lost in tranposition');
     end
 
+    % multiple return
+    function multipleReturn(testcase)
+      A = randn(10);
+      A = A'*A;
+      [V1, D1] = eig(A); D1 = diag(D1);
+      [~, D2, V2] = cv.eigen(A);
+      testcase.verifyLessThan(norm(V1 - V2), 1e-6, 'Too much precision lost in eigenvectors');
+      testcase.verifyLessThan(norm(D1 - D2), 1e-6, 'Too much precision lost in eigenvalues');
+    end
+
+    % complex output from SVD
+    function complexOutputSVD(testcase)
+      A = randn(10);
+      [V1, D1] = eig(A);
+      [~, D2, V2] = cv.eigen(A);
+      testcase.verifyTrue(~isreal(V2) && size(V2,3) == 1, 'Output should be complex');
+      testcase.verifyLessThan(norm(V1 - V2), 1e-6, 'Too much precision lost in eigenvectors');
+    end
+
+    % complex output from Fourier Transform
+    function complexOutputFFT(testcase)
+      A = randn(10);
+      F1 = fft2(A);
+      F2 = cv.dft(A, cv.DFT_COMPLEX_OUTPUT);
+      testcase.verifyTrue(~isreal(F2) && size(F2,3) == 1, 'Output should be complex');
+      testcase.verifyLessThan(norm(F1 - F2), 1e-6, 'Too much precision lost in eigenvectors');
+    end
 
     % -------------------------------------------------------------------------
     % TYPE CASTS

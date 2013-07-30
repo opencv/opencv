@@ -67,6 +67,8 @@ endif()
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_subdirectory(io)
 
 # ----------------------------------------------------------------------------
 #  Configure time components
@@ -83,6 +85,9 @@ foreach(opencv_module ${MATLAB_DEPS})
         endif()
     endif()
 endforeach()
+
+# add extra headers by hand
+list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
 
 # Configure checks
 # Check to see whether the generator and the mex compiler are working.

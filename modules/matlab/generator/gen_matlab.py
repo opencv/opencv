@@ -9,8 +9,12 @@ class MatlabWrapperGenerator(object):
         ns = {}
         for file in input_files:
             # get the file name
-            name = os.path.splitext(os.path.basename(file))[0]
-            ns[name] = parser.parse(file)
+            name = re.findall('include/opencv2/([^./]+)', file)[0]
+            #name = os.path.splitext(os.path.basename(file))[0]
+            try:
+              ns[name] = ns[name] + parser.parse(file)
+            except KeyError:
+              ns[name] = parser.parse(file)
 
         # cleanify the parser output
         parse_tree = ParseTree()
