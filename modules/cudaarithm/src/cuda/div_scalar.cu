@@ -56,18 +56,16 @@ void divScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const G
 
 namespace
 {
-    template <int cn> struct SafeDiv;
-    template <> struct SafeDiv<1>
+    template <typename T, int cn> struct SafeDiv;
+    template <typename T> struct SafeDiv<T, 1>
     {
-        template <typename T>
         __device__ __forceinline__ static T op(T a, T b)
         {
             return b != 0 ? a / b : 0;
         }
     };
-    template <> struct SafeDiv<2>
+    template <typename T> struct SafeDiv<T, 2>
     {
-        template <typename T>
         __device__ __forceinline__ static T op(const T& a, const T& b)
         {
             T res;
@@ -78,9 +76,8 @@ namespace
             return res;
         }
     };
-    template <> struct SafeDiv<3>
+    template <typename T> struct SafeDiv<T, 3>
     {
-        template <typename T>
         __device__ __forceinline__ static T op(const T& a, const T& b)
         {
             T res;
@@ -92,9 +89,8 @@ namespace
             return res;
         }
     };
-    template <> struct SafeDiv<4>
+    template <typename T> struct SafeDiv<T, 4>
     {
-        template <typename T>
         __device__ __forceinline__ static T op(const T& a, const T& b)
         {
             T res;
@@ -114,7 +110,7 @@ namespace
 
         __device__ __forceinline__ DstType operator ()(SrcType a) const
         {
-            return saturate_cast<DstType>(SafeDiv<VecTraits<ScalarType>::cn>::op(saturate_cast<ScalarType>(a), val));
+            return saturate_cast<DstType>(SafeDiv<ScalarType, VecTraits<ScalarType>::cn>::op(saturate_cast<ScalarType>(a), val));
         }
     };
 
@@ -124,7 +120,7 @@ namespace
 
         __device__ __forceinline__ DstType operator ()(SrcType a) const
         {
-            return saturate_cast<DstType>(SafeDiv<VecTraits<ScalarType>::cn>::op(val, saturate_cast<ScalarType>(a)));
+            return saturate_cast<DstType>(SafeDiv<ScalarType, VecTraits<ScalarType>::cn>::op(val, saturate_cast<ScalarType>(a)));
         }
     };
 
