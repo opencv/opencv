@@ -59,7 +59,6 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
 {
     if (name == "farneback")
     {
-<<<<<<< HEAD
         return createOptFlow_Farneback_OCL();
     }
     else if (name == "simple")
@@ -67,27 +66,13 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
         useOclChanged = true;
         std::cout<<"simple on OpenCL has not been implemented. Use CPU instead!\n";
         return createOptFlow_Simple();
-=======
-        printf("farneback has not been implemented!\n");
-        return NULL;
-        //return createOptFlow_Farneback_GPU();
-    }
-    else if (name == "simple")
-    {
-        printf("simple has not been implemented!\n");
-        return NULL;
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
         //return createOptFlow_Simple();
     }
     else if (name == "tvl1")
         return createOptFlow_DualTVL1_OCL();
     else if (name == "brox")
     {
-<<<<<<< HEAD
         std::cout<<"brox has not been implemented!\n";
-=======
-        printf("simple has not been implemented!\n");
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
         return NULL;
         //return createOptFlow_Brox_OCL();
     }
@@ -112,7 +97,6 @@ int main(int argc, const char* argv[])
         "{ f   | flow       | farneback | Optical flow algorithm (farneback, simple, tvl1, brox, pyrlk) }"
         "{ g   | gpu        |           | CPU as default device, cuda for CUDA and ocl for OpenCL }"
         "{ h   | help       | false     | Print help message }"
-        "{ ocl | ocl        | false     | Use OCL }"
     );
 
     if (cmd.get<bool>("help"))
@@ -128,7 +112,6 @@ int main(int argc, const char* argv[])
     const int iterations = cmd.get<int>("iterations");
     const int temporalAreaRadius = cmd.get<int>("temporal");
     const string optFlow = cmd.get<string>("flow");
-<<<<<<< HEAD
     string gpuOption = cmd.get<string>("gpu");
 
     std::transform(gpuOption.begin(), gpuOption.end(), gpuOption.begin(), ::tolower);
@@ -141,11 +124,6 @@ int main(int argc, const char* argv[])
     else if(gpuOption.compare("cuda") == 0)
         useCuda = true;
 
-=======
-    const bool useGpu = cmd.get<bool>("gpu");
-    const bool useOcl = cmd.get<bool>("ocl");
-
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
 #ifndef HAVE_OPENCV_OCL
     if(useOcl)
     {
@@ -157,11 +135,7 @@ int main(int argc, const char* argv[])
 #endif
 #if defined(HAVE_OPENCV_OCL)
     std::vector<cv::ocl::Info>info;
-<<<<<<< HEAD
     if(useCuda)
-=======
-    if(useGpu)
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
     {
         CV_Assert(!useOcl);
         info.clear();
@@ -169,16 +143,11 @@ int main(int argc, const char* argv[])
     
     if(useOcl)
     {
-<<<<<<< HEAD
         CV_Assert(!useCuda);
-=======
-        CV_Assert(!useGpu);
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
         cv::ocl::getDevice(info);
     }
 #endif
     Ptr<SuperResolution> superRes;
-<<<<<<< HEAD
 
 
 #if defined(HAVE_OPENCV_OCL)
@@ -195,14 +164,6 @@ int main(int argc, const char* argv[])
             superRes = createSuperResolution_BTVL1_OCL();
         superRes->set("opticalFlow", of);
     }
-=======
-    if (useGpu)
-        superRes = createSuperResolution_BTVL1_GPU();
-#if defined(HAVE_OPENCV_OCL)
-    else if(useOcl)
-        superRes = createSuperResolution_BTVL1_OCL();
-#endif
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
     else
 #endif
     {
@@ -221,28 +182,6 @@ int main(int argc, const char* argv[])
     superRes->set("scale", scale);
     superRes->set("iterations", iterations);
     superRes->set("temporalAreaRadius", temporalAreaRadius);
-<<<<<<< HEAD
-=======
-
-#if defined(HAVE_OPENCV_OCL)
-    if(useOcl)
-    {
-        Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow);
-        if (of.empty())
-            exit(-1);
-        
-        superRes->set("opticalFlow", of);
-    }
-    else
-#endif
-    {
-        Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useGpu);
-        
-        if (of.empty())
-            exit(-1);
-        superRes->set("opticalFlow", of);
-    }
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
 
     Ptr<FrameSource> frameSource;
     if (useCuda)
@@ -272,15 +211,9 @@ int main(int argc, const char* argv[])
         cout << "Temporal radius : " << temporalAreaRadius << endl;
         cout << "Optical Flow    : " << optFlow << endl;
 #if defined(HAVE_OPENCV_OCL)
-<<<<<<< HEAD
         cout << "Mode            : " << (useCuda ? "CUDA" : useOcl? "OpenCL" : "CPU") << endl;
 #else
         cout << "Mode            : " << (useGpu ? "CUDA" : "CPU") << endl;
-=======
-        cout << "Mode            : " << (useGpu ? "GPU" : useOcl? "OCL" : "CPU") << endl;
-#else
-        cout << "Mode            : " << (useGpu ? "GPU" : "CPU") << endl;
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
 #endif
     }
 
@@ -311,10 +244,6 @@ int main(int argc, const char* argv[])
         {
             if(!result_.empty())
             {
-<<<<<<< HEAD
-=======
-                Mat temp_res;
->>>>>>> 5c039eb303c17c7afd126971130ccc7a1ac7cf53
                 result_.download(result);
             }
         }
