@@ -28,8 +28,8 @@ PERF_TEST_P(Size_Source, calcHist1d,
     int dims = 1;
     int numberOfImages = 1;
 
-    const float r[] = {rangeLow, rangeHight};
-    const float* ranges[] = {r};
+    const float range[] = {rangeLow, rangeHight};
+    const float* ranges[] = {range};
 
     randu(source, rangeLow, rangeHight);
 
