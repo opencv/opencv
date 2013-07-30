@@ -75,6 +75,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
+This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image.
 
 namedWindow
 ---------------
