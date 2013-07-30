@@ -487,7 +487,7 @@ ocl::sortByKey
 ------------------
 Returns void
 
-.. ocv:function:: void ocl::transpose(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false)
+.. ocv:function:: void ocl::sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false)
 
     :param keys:   The keys to be used as sorting indices.
 
