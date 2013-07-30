@@ -47,9 +47,7 @@
     #pragma warning( disable: 4251 4710 4711 4514 4996 )
 #endif
 
-#ifdef HAVE_CVCONFIG_H
     #include "cvconfig.h"
-#endif
 
 #include <cstring>
 #include <iostream>

@@ -228,3 +228,13 @@ if(WIN32)
     list(APPEND HIGHGUI_LIBRARIES winmm)
   endif()
 endif(WIN32)
+
+# --- Apple AV Foundation ---
+if(WITH_AVFOUNDATION)
+  set(HAVE_AVFOUNDATION YES)
+endif()
+
+# --- QuickTime ---
+if(WITH_QUICKTIME)
+  set(HAVE_QUICKTIME YES)
+endif()

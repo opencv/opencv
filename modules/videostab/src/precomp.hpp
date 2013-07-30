@@ -43,9 +43,7 @@
 #ifndef __OPENCV_PRECOMP_HPP__
 #define __OPENCV_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
-#endif
 
 #include <stdexcept>
 #include <iostream>
