@@ -66,7 +66,8 @@ int SCD::descriptorSize() const
 
 void SCD::extractSCD(InputArray contour /* Vector of points */,
                      Mat& descriptors /* Mat containing the descriptor */,
-                     const std::vector<int> &queryInliers /* used to avoid outliers */)
+                     const std::vector<int> &queryInliers /* used to avoid outliers */,
+                     const float _meanDistance)
 {
     Mat contourMat = contour.getMat();
     CV_Assert((contourMat.channels()==2) & (contourMat.cols>0));
@@ -78,12 +79,12 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
     logarithmicSpaces(logspaces);
     angularSpaces(angspaces);
     
-    buildNormalizedDistanceMatrix(contourMat, disMatrix, queryInliers);
+    buildNormalizedDistanceMatrix(contourMat, disMatrix, queryInliers, _meanDistance);
     buildAngleMatrix(contourMat, angleMatrix);
     
     /* Now, build the descriptor matrix (each row is a point descriptor) 
      * ask if the correspondent points belong to a given bin.*/
-    descriptors = Mat::zeros(contourMat.cols, descriptorSize(), CV_32F);
+    descriptors = Mat::ones(contourMat.cols, descriptorSize(), CV_32F);
        
     for (int ptidx=0; ptidx<contourMat.cols; ptidx++)
     {
@@ -130,7 +131,7 @@ void SCD::buildAngleMatrix(InputArray contour,
     {
         for (int i=0; i<contourMat.cols; i++)
         {
-            massCenter=massCenter+contourMat.at<Point2f>(0,i);
+            massCenter+=contourMat.at<Point2f>(0,i);
         }
         massCenter.x=massCenter.x/(float)contourMat.cols;
         massCenter.y=massCenter.y/(float)contourMat.cols;
@@ -155,8 +156,8 @@ void SCD::buildAngleMatrix(InputArray contour,
     }
 }
 
-void SCD::buildNormalizedDistanceMatrix(InputArray contour, 
-                      Mat& disMatrix, const std::vector<int> &queryInliers)
+void SCD::buildNormalizedDistanceMatrix(InputArray contour,
+                      Mat& disMatrix, const std::vector<int> &queryInliers, const float _meanDistance)
 {
     Mat contourMat = contour.getMat();
     Mat mask(disMatrix.rows, disMatrix.cols, CV_8U);
@@ -167,24 +168,29 @@ void SCD::buildNormalizedDistanceMatrix(InputArray contour,
         {
             disMatrix.at<float>(i,j) = distance(contourMat.at<Point2f>(0,i),
                                                  contourMat.at<Point2f>(0,j));
-            if (queryInliers.size()>0)
+            if (_meanDistance<0)
             {
-                mask.at<char>(i,j)=char(queryInliers[j] & queryInliers[i]);
-            }
-            else
-            {
-                mask.at<char>(i,j)=1;
+                if (queryInliers.size()>0)
+                {
+                    mask.at<char>(i,j)=char(queryInliers[j] & queryInliers[i]);
+                }
+                else
+                {
+                    mask.at<char>(i,j)=1;
+                }
             }
         }
     }
 
-    meanDistance=mean(disMatrix, mask)[0];
-
-    //sqrt(disMatrix, disMatrix);
-    if (meanDistance!=0)
+    if (_meanDistance<0)
     {
-        disMatrix/=meanDistance;
+        meanDistance=mean(disMatrix, mask)[0];
     }
+    else
+    {
+        meanDistance=_meanDistance;
+    }
+    disMatrix/=meanDistance+FLT_EPSILON;
 }
 
 void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
@@ -217,7 +223,10 @@ void SCD::angularSpaces(std::vector<double>& vecSpaces) const
 double SCD::distance(Point2f p, Point2f q) const
 {
     Point2f diff = p - q;
-    return (diff.x*diff.x + diff.y*diff.y)/2;
+    double d = diff.x*diff.x + diff.y*diff.y;// - 2*diff.x*diff.y;
+    if (d<0) d=0;
+    d = std::sqrt(d);
+    return d;
 }
 
 /* Setters and Getters*/

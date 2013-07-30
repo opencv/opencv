@@ -48,7 +48,7 @@
  */
 namespace cv
 {
-/* Constructors */
+// Constructors //
 SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFlags)
 {
     outlierWeight=_outlierWeight;
@@ -56,21 +56,21 @@ SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFl
     numExtraDummies=_numExtraDummies;
 }
 
-/* Public methods */
-void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches, std::vector<int>& inliers)
+// Public methods //
+void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches, std::vector<int>& inliers1, std::vector<int> &inliers2)
 {
     CV_Assert(!descriptors1.empty() && !descriptors2.empty());
     matches.clear();
 
-    /* Build the cost Matrix between descriptors*/
+    // Build the cost Matrix between descriptors //
     Mat costMat;
     buildCostMatrix(descriptors1, descriptors2, costMat, configFlags);
     
-    /* Solve the matching problem using the hungarian method */
-    hungarian(costMat, matches, inliers, descriptors1.rows, descriptors2.rows);
+    // Solve the matching problem using the hungarian method //
+    hungarian(costMat, matches, inliers1, inliers2, descriptors1.rows, descriptors2.rows);
 }
 
-/* Protected methods */
+// Protected methods //
 void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors2,
                                  Mat& costMatrix, int flags) const
 {
@@ -188,7 +188,7 @@ void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descripto
     }
 }
 
-void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std::vector<int> &inliers, int sizeScd1, int sizeScd2)
+void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std::vector<int> &inliers1, std::vector<int> &inliers2, int sizeScd1, int sizeScd2)
 {
     std::vector<int> free(costMatrix.rows, 0), collist(costMatrix.rows, 0);
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
@@ -425,48 +425,51 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std
         }while (i != freerow);
     }
 
-
-
     // calculate symmetric shape context cost
+    Mat trueCostMatrix(costMatrix, Rect(0,0,sizeScd1, sizeScd2));
     float leftcost = 0;
-    for (i = 0; i<costMatrix.rows; i++)
+    for (int nrow=0; nrow<trueCostMatrix.rows; nrow++)
     {
-        if (rowsol[i]<sizeScd1) // if a real match
-        {
-            j = rowsol[i];
-            leftcost+=costMatrix.at<float>(i,j);
-        }
+        double minval;
+        minMaxIdx(trueCostMatrix.row(nrow), &minval);
+        leftcost+=minval;
     }
+    leftcost /= trueCostMatrix.rows;
 
-    leftcost/=costMatrix.rows;
     float rightcost = 0;
-    for (i = 0; i<costMatrix.cols; i++)
+    for (int ncol=0; ncol<trueCostMatrix.cols; ncol++)
     {
-        if (colsol[i]<sizeScd2) // if a real match
-        {
-            j = colsol[i];
-            rightcost+=costMatrix.at<float>(j,i);
-        }
+        double minval;
+        minMaxIdx(trueCostMatrix.col(ncol), &minval);
+        rightcost+=minval;
     }
-    rightcost/=costMatrix.cols;
+    rightcost /= trueCostMatrix.cols;
 
-    minMatchCost = leftcost+rightcost;
-
-    // Update outliers
-    inliers.reserve(sizeScd1);
-    for (size_t kc = 0; kc<inliers.size(); kc++)
-    {
-        if (rowsol[kc]<sizeScd1) // if a real match
-            inliers[kc]=1;
-        else
-            inliers[kc]=0;
-    }
+    minMatchCost = std::max(leftcost,rightcost);
 
     // Save in a DMatch vector
-    for (i=0;i<costMatrix.cols;i++)
+    for (i=0;i<costMatrix.rows;i++)
     {
-        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));//queryIdx,trainIdx,distance
+        DMatch singleMatch(i,rowsol[i],costMatrix.at<float>(i,rowsol[i]));//queryIdx,trainIdx,distance
         outMatches.push_back(singleMatch);
+    }
+
+    // Update inliers
+    inliers1.reserve(sizeScd1);
+    for (size_t kc = 0; kc<inliers1.size(); kc++)
+    {
+        if (rowsol[kc]<sizeScd1) // if a real match
+            inliers1[kc]=1;
+        else
+            inliers1[kc]=0;
+    }
+    inliers2.reserve(sizeScd2);
+    for (size_t kc = 0; kc<inliers2.size(); kc++)
+    {
+        if (colsol[kc]<sizeScd2) // if a real match
+            inliers2[kc]=1;
+        else
+            inliers2[kc]=0;
     }
 }
 

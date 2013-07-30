@@ -47,11 +47,11 @@ using namespace std;
 const int angularBins=12;
 const int radialBins=4;
 const float minRad=0.2;
-const float maxRad=4;
+const float maxRad=2;
 const int NSN=20; //number of shapes per class
-const int NP=250; //number of points sympliying the contour
-const float outlierWeight=0.5;
-const int numOutliers=28;
+const int NP=300; //number of points sympliying the contour
+const float outlierWeight=0.15;
+const int numOutliers=25;
 
 class CV_ShapeTest : public cvtest::BaseTest
 {
@@ -83,52 +83,82 @@ CV_ShapeTest::~CV_ShapeTest()
 
 void CV_ShapeTest::testSCD()
 {
-    Mat shape1 = Mat::zeros(250, 250, CV_8UC1);
-    Mat shape2 = Mat::zeros(250, 250, CV_8UC1);
-    //Draw an Ellipse
-    ellipse(shape1, Point(125, 125), Size(100,70), 0, 0, 360,
-             Scalar(255,255,255), -1, 8, 0);
-    circle(shape2, Point(125, 125), 100, Scalar(255,255,255), -1, 8, 0);
-    imshow("image 1", shape1);
-    imshow("image 2", shape2);
+    // vars //
+    Mat shape1, shape2, shapeBuf1, shapeBuf2;
+    string baseTestFolder="shape/mpeg_test/";
+    string path = cvtest::TS::ptr()->get_data_path() + baseTestFolder;
+    vector<string> namesHeaders;
+    listShapeNames(namesHeaders);
+    stringstream thepathandname1;
+    stringstream thepathandname2;
 
-    //Extract the Contours
-    vector<vector<Point> > _contours1, _contours2;
-    findContours(shape1, _contours1, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    findContours(shape2, _contours2, RETR_EXTERNAL, CHAIN_APPROX_NONE);
-    cout<<"1. Number of points in the contour before simplification: "<<_contours1[0].size()<<std::endl;
-    cout<<"2. Number of points in the contour before simplification: "<<_contours2[0].size()<<std::endl;
+    // read //
+    thepathandname1<<path+namesHeaders[64]<<"-"<<1<<".png";
+    thepathandname2<<path+namesHeaders[64]<<"-"<<5<<".png";
+    shape1=imread(thepathandname1.str(), IMREAD_GRAYSCALE);
+    shape2=imread(thepathandname2.str(), IMREAD_GRAYSCALE);
+    shapeBuf1=shape1.clone();
+    shapeBuf2=shape2.clone();
 
-    approxPolyDP(Mat(_contours1[0]), _contours1[0], 0.5, true);
-    approxPolyDP(Mat(_contours2[0]), _contours2[0], 0.5, true);
+    // contours //
+    vector<Point2f> origcontours, contours1, contours2;
+    contours1=convertContourType(shape1, NP);
+    contours2=convertContourType(shape2, NP);
+    origcontours=contours1;
 
-    cout<<"1. Number of points in the contour after simplification: "<<_contours1[0].size()<<std::endl;
-    cout<<"2. Number of points in the contour after simplification: "<<_contours2[0].size()<<std::endl;
+    SCDMatcher scdmatcher(outlierWeight, numOutliers, DistanceSCDFlags::DEFAULT);
+    ThinPlateSplineTransform tpsTra;
+    vector<int> inliers1;
+    vector<int> inliers2;
 
-    vector<Point2f> contours1, contours2;
+    Mat scdesc1, scdesc2;
+    SCD shapeDescriptor1(angularBins, radialBins, minRad, maxRad, false);
+    SCD shapeDescriptor2(angularBins, radialBins, minRad, maxRad, false);
+    vector<DMatch> matches;
+    float beta, annRate=2;
 
-    Mat(_contours1[0]).convertTo(contours1, Mat(contours1).type());
-    Mat(_contours2[0]).convertTo(contours2, Mat(contours2).type());
+    // start loop //
+    for (int j=0; j<1; j++)
+    {
+        // compute SCD //
+        shapeDescriptor1.extractSCD(contours1, scdesc1, inliers1);
+        shapeDescriptor2.extractSCD(contours2, scdesc2, inliers2, shapeDescriptor1.getMeanDistance());
 
-    std::cout<<"test x: "<<contours1[0].x<<std::endl;
-    std::cout<<"test y: "<<contours1[0].y<<std::endl;
+        // regularization parameter with annealing rate annRate //
+        beta=pow(shapeDescriptor1.getMeanDistance(),2)*pow(annRate, j+1);
 
-    SCDMatcher sMatcher(0.01, DistanceSCDFlags::DEFAULT);
+        // match //
+        scdmatcher.matchDescriptors(scdesc1, scdesc2, matches, inliers1, inliers2);
+        // apply TPS transform //
+        tpsTra.setRegularizationParam(beta);
+        tpsTra.applyTransformation(contours1, contours2, matches, contours1);
+    }
 
-    vector<int> inliers;
     while(1)
     {
-        Mat scdesc1, scdesc2;
-        int abins=9, rbins=5;
-        SCD shapeDescriptor(abins,rbins,0.1,2);
+        Mat imageTrans;
+        tpsTra.warpImage(shapeBuf2, imageTrans);
 
-        shapeDescriptor.extractSCD(contours1, scdesc1, inliers);
-        shapeDescriptor.extractSCD(contours2, scdesc2, inliers);
-
-        vector<DMatch> matches;
-
-        sMatcher.matchDescriptors(scdesc1, scdesc2, matches, inliers);
-
+        // show //
+        Mat proc=Mat::zeros(shape1.rows, shape1.cols, CV_8UC3);
+        for (size_t p=0; p<contours1.size(); p++)
+        {
+            circle(proc, origcontours[p], 4, Scalar(255,0,0), 1); //blue: query
+            circle(proc, contours1[p], 3, Scalar(0,255,0), 1); //green: modified query
+            circle(proc, contours2[p], 2, Scalar(0,0,255), 1); //red: target
+        }
+        for (size_t l=0; l<matches.size(); l++)
+        {
+            if (matches[l].trainIdx<(int)contours2.size() && matches[l].queryIdx<(int)contours1.size())
+            {
+                line(proc, contours2[matches[l].trainIdx],
+                     contours1[matches[l].queryIdx], Scalar(160,230,189));
+            }
+        }
+        imshow("proc", proc);
+        imshow("image 1", shapeBuf1);
+        imshow("image 2", shapeBuf2);
+        imshow("warped image",imageTrans);
         char key = (char)waitKey();
         if(key == 27 || key == 'q' || key == 'Q') // 'ESC'
             break;
@@ -137,7 +167,7 @@ void CV_ShapeTest::testSCD()
 }
 
 vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n)
-{
+{    
     vector<vector<Point> > _contoursQuery;
     vector <Point2f> contoursQuery;
     findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
@@ -149,25 +179,75 @@ vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n
                                             (float)_contoursQuery[border][p].y));
         }
     }
-    //std::cout<<"Size Before simplification: "<<contoursQuery.size()<<std::endl;
-    for (int add=contoursQuery.size(); add<=n; add++)
+
+    // In case actual number of points is less than 300
+    for (int add=contoursQuery.size()-1; add<n; add++)
     {
-        contoursQuery.push_back(Point2f(0,0)); //adding dummy values
+        contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
     }
-    if (n<=1)
+
+    // Uniformly sampling
+    random_shuffle(contoursQuery.begin(), contoursQuery.end());
+    int nStart=n;
+    /*nStart=std::min(3*n,(int)contoursQuery.size());
+    Mat disMatrix(contoursQuery.size(),contoursQuery.size(),CV_32F);
+    Mat disMask=Mat::ones(contoursQuery.size(),contoursQuery.size(),CV_8U);
+    for (size_t i=0; i<contoursQuery.size(); i++)
     {
-        return contoursQuery;
-    }
-    else
-    {
-        random_shuffle(contoursQuery.begin(), contoursQuery.end());
-        vector<Point2f> cont;
-        for (int i=0; i<n; i++)
+        for (size_t j=0; j<contoursQuery.size(); j++)
         {
-            cont.push_back(contoursQuery[i]);
+            if (i==j)
+            {
+                disMatrix.at<float>(i,j)=std::numeric_limits<float>::max();
+            }
+            else
+            {
+                disMatrix.at<float>(i,j) = distance(contoursQuery[i],contoursQuery[j]);
+            }
         }
-        return cont;
+    }*/
+    vector<Point2f> cont;
+    //vector<int> indexDelete;
+    for (int i=0; i<nStart; i++)
+    {
+        cont.push_back(contoursQuery[i]);
+        //indexDelete.push_back(0);
     }
+    /*
+    // Use Jitendra's sampling method (too slow)
+    int dels=0;
+    while (1)
+    {
+        if ((int)cont.size()-dels>n)
+        {
+            break;
+        }
+        dels++;
+        Point pt;
+        // find minimum
+        minMaxLoc(disMatrix,0,0,&pt,0,disMask);
+        // mark one point to erase
+        indexDelete[pt.x]=1;
+        // mark in the mask
+        for (int i=0; i<disMask.rows; i++)
+        {
+            disMask.at<unsigned char>(i,pt.x)=0;
+        }
+        for (int i=0; i<disMask.cols; i++)
+        {
+            disMask.at<unsigned char>(pt.x,i)=0;
+        }
+
+    }
+
+    vector<Point2f> cont2;
+    for (size_t i=0; i<cont.size(); i++)
+    {
+        if (indexDelete[i]==0)
+            cont2.push_back(contoursQuery[i]);
+    }
+    return cont2;*/
+    return cont;
 }
 
 void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
@@ -271,7 +351,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
 
     // Regularization params //
     float beta;
-    float annRate=0.5;
+    float annRate=1;
 
     // Iterative process with NC cycles //
     int NC=3;//number of cycles
@@ -281,10 +361,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     benergies[2]=0;
 
     // outliers vectors
-    vector< vector<int> > outliersvec(3);
-
-    // Extract SCD descriptor of the testing shape //
-    shapeDescriptorT.extractSCD(test, testingSCDMatrix);
+    vector< vector<int> > inliers1(3), inliers2(3);
 
     // start loop //
     for (int i=0; i<3; i++)
@@ -295,27 +372,29 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
             if (j==0)
                 shapeDescriptors[i].extractSCD(query[i], querySCD[i]);
             else
-                shapeDescriptors[i].extractSCD(query[i], querySCD[i], outliersvec[i]);
+                shapeDescriptors[i].extractSCD(query[i], querySCD[i], inliers1[i]);
+
+            // Extract SCD descriptor of the testing shape //
+            shapeDescriptorT.extractSCD(test, testingSCDMatrix, inliers2[i], shapeDescriptors[i].getMeanDistance());
 
             // regularization parameter with annealing rate annRate //
-            beta=pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j+1);
+            beta=pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j);
 
             // match //
-            scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], outliersvec[i]);
+            scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], inliers1[i], inliers2[i]);
             // apply TPS transform //
-            vector<Point2f> transformed_shape;
             tpsTra[i].setRegularizationParam(beta);
-            tpsTra[i].applyTransformation(query[i], test, matchesvec[i], transformed_shape);
-            query[i]=transformed_shape;
+            tpsTra[i].applyTransformation(query[i], test, matchesvec[i], query[i]);
 
             // updating distances values //
             benergies[i] += tpsTra[i].getTranformCost();
         }
-        // updating distances values //
+        // updating distances values //;
         scdistances[i] = scdmatchers[i].getMatchingCost();
     }
-    float benergiesfactor=0.5;
-    float scfactor=0.5;
+
+    float benergiesfactor=1;
+    float scfactor=1;//-benergiesfactor;
     float distance1T=scfactor*scdistances[0]+benergiesfactor*benergies[0];//+dist1;
     float distance2T=scfactor*scdistances[1]+benergiesfactor*benergies[1];//+dist2;
     float distance3T=scfactor*scdistances[2]+benergiesfactor*benergies[2];//+dist3;
@@ -370,7 +449,7 @@ float CV_ShapeTest::point2PointEuclideanDistance(vector <Point2f>& _query, vecto
 float CV_ShapeTest::distance(Point2f p, Point2f q)
 {
     Point2f diff = p - q;
-    return (diff.x*diff.x + diff.y*diff.y)/2;
+    return (diff.x*diff.x + diff.y*diff.y);
 }
 
 void CV_ShapeTest::mpegTest()
@@ -396,16 +475,16 @@ void CV_ShapeTest::mpegTest()
             /* read current image */
             stringstream thepathandname;
             thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
-            Mat currentQuery, auxQuery;
+            Mat currentQuery, flippedHQuery, flippedVQuery;
             currentQuery=imread(thepathandname.str(), IMREAD_GRAYSCALE);
+            flip(currentQuery, flippedHQuery, 0);
+            flip(currentQuery, flippedVQuery, 1);
             /* compute border of the query and its flipped versions */
             vector<Point2f> origContour;
             contoursQuery1=convertContourType(currentQuery, NP);
             origContour=contoursQuery1;
-            flip(currentQuery, auxQuery, 0);
-            contoursQuery2=convertContourType(auxQuery, NP);
-            flip(currentQuery, auxQuery, 1);
-            contoursQuery3=convertContourType(auxQuery, NP);
+            contoursQuery2=convertContourType(flippedHQuery, NP);
+            contoursQuery3=convertContourType(flippedVQuery, NP);
 
             /* compare with all the rest of the images: testing */
             for (size_t nt=0; nt<namesHeaders.size(); nt++)
@@ -439,7 +518,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
-                    /*Mat queryImage=Mat::zeros(currentQuery.rows, currentQuery.cols, CV_8UC3);
+                    Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -458,10 +537,8 @@ void CV_ShapeTest::mpegTest()
                     text<<"Shape distance: "<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1);
                     putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
-                    std::cout<<"Size of the contour and matches: "<<contoursQuery1.size()<<", matches: "<<
-                            matches.size()<<std::endl;
                     char key=(char)waitKey();
-                    if (key == ' ') continue;*/
+                    if (key == ' ') continue;
                 }
             }
         }
@@ -471,7 +548,7 @@ void CV_ShapeTest::mpegTest()
     fs << "distanceMat" << distanceMat;
 }
 
-const int FIRST_MANY=2*NSN;
+const int FIRST_MANY=20*NSN;
 void CV_ShapeTest::displayMPEGResults()
 {
     string baseTestFolder="shape/mpeg_test/";
@@ -482,16 +559,10 @@ void CV_ShapeTest::displayMPEGResults()
 
     /* Read generated MAT */
     fs["distanceMat"]>>distanceMat;
-    /*Mat draw;
-    resize(distanceMat, draw,Size(700,700));
-    imshow("test",draw);
-    while(1)
-    {
-        if ((char)waitKey()==' ')
-        {
-            break;
-        }
-    }*/
+    Mat draw;
+    normalize(distanceMat, draw, 0, 255, NORM_MINMAX);
+    draw.convertTo(draw, CV_8U);
+    imwrite("distanceMat.jpg",draw);
 
     int corrects=0;
     int divi=0;
@@ -506,7 +577,7 @@ void CV_ShapeTest::displayMPEGResults()
             int nsmall=0;
             for (int i=0; i<distanceMat.cols; i++)
             {
-                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i) )
+                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i))
                 {
                     nsmall++;
                 }
@@ -518,8 +589,7 @@ void CV_ShapeTest::displayMPEGResults()
         }
     }
 
-    std::cout<<"number of correct matches in the first "<<FIRST_MANY<<" matches: "<<corrects<<std::endl;
-    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*distanceMat.rows-distanceMat.rows)<<std::endl;
+    std::cout<<"% porcentage of succes: "<<100*float(corrects)/(NSN*distanceMat.rows)<<std::endl;
 }
 
 void CV_ShapeTest::run( int /*start_from*/ )
