@@ -235,7 +235,7 @@ TEST_P(SortByKey, Accuracy)
     ocl::oclMat oclmat_key(mat_key);
     ocl::oclMat oclmat_val(mat_val);
 
-    ocl::sort_by_key(oclmat_key, oclmat_val, method, is_gt);
+    ocl::sortByKey(oclmat_key, oclmat_val, method, is_gt);
     SortByKey_STL::sort(mat_key, mat_val, is_gt);
 
     EXPECT_MAT_NEAR(mat_key, oclmat_key, 0.0);

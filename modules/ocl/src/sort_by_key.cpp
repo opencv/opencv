@@ -55,6 +55,8 @@ extern const char * kernel_sort_by_key;
 extern const char * kernel_stablesort_by_key;
 extern const char * kernel_radix_sort_by_key;
 
+void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, int method, bool isGreaterThan);
+
 //TODO(pengx17): change this value depending on device other than a constant
 const static unsigned int GROUP_SIZE = 256;
 
@@ -85,7 +87,7 @@ inline bool isSizePowerOf2(size_t size)
 
 namespace bitonic_sort
 {
-static void sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
+static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
 {
     CV_Assert(isSizePowerOf2(vecSize));
 
@@ -125,7 +127,7 @@ namespace selection_sort
 {
 // FIXME:
 // This function cannot sort arrays with duplicated keys
-static void sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
+static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
 {
     CV_Error(-1, "This function is incorrect at the moment.");
     Context * cxt = Context::getContext();
@@ -193,7 +195,7 @@ void static naive_scan_addition_cpu(oclMat& input, oclMat& output)
 
 
 //radix sort ported from Bolt
-static void sort_by_key(oclMat& keys, oclMat& vals, size_t origVecSize, bool isGreaterThan)
+static void sortByKey(oclMat& keys, oclMat& vals, size_t origVecSize, bool isGreaterThan)
 {
     CV_Assert(keys.depth() == CV_32S || keys.depth() == CV_32F); // we assume keys are 4 bytes
 
@@ -336,7 +338,7 @@ static void sort_by_key(oclMat& keys, oclMat& vals, size_t origVecSize, bool isG
 
 namespace merge_sort
 {
-static void sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
+static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreaterThan)
 {
     Context * cxt = Context::getContext();
 
@@ -421,7 +423,7 @@ static void sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreat
 } /* namespace cv { namespace ocl */
 
 
-void cv::ocl::sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, int method, bool isGreaterThan)
+void cv::ocl::sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, int method, bool isGreaterThan)
 {
     CV_Assert( keys.rows == 1 ); // we only allow one dimensional input
     CV_Assert( keys.channels() == 1 ); // we only allow one channel keys
@@ -429,25 +431,24 @@ void cv::ocl::sort_by_key(oclMat& keys, oclMat& vals, size_t vecSize, int method
     switch(method)
     {
     case SORT_BITONIC:
-        bitonic_sort::sort_by_key(keys, vals, vecSize, isGreaterThan);
+        bitonic_sort::sortByKey(keys, vals, vecSize, isGreaterThan);
         break;
     case SORT_SELECTION:
-        selection_sort::sort_by_key(keys, vals, vecSize, isGreaterThan);
+        selection_sort::sortByKey(keys, vals, vecSize, isGreaterThan);
         break;
     case SORT_RADIX:
-        radix_sort::sort_by_key(keys, vals, vecSize, isGreaterThan);
+        radix_sort::sortByKey(keys, vals, vecSize, isGreaterThan);
         break;
     case SORT_MERGE:
-        merge_sort::sort_by_key(keys, vals, vecSize, isGreaterThan);
+        merge_sort::sortByKey(keys, vals, vecSize, isGreaterThan);
         break;
     }
 }
 
-
-void cv::ocl::sort_by_key(oclMat& keys, oclMat& vals, int method, bool isGreaterThan)
+void cv::ocl::sortByKey(oclMat& keys, oclMat& vals, int method, bool isGreaterThan)
 {
     CV_Assert( keys.size() == vals.size() );
     CV_Assert( keys.rows == 1 ); // we only allow one dimensional input
     size_t vecSize = static_cast<size_t>(keys.cols);
-    sort_by_key(keys, vals, vecSize, method, isGreaterThan);
+    sortByKey(keys, vals, vecSize, method, isGreaterThan);
 }

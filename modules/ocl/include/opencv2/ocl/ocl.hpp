@@ -1679,7 +1679,7 @@ namespace cv
             SORT_BITONIC,   // only support power-of-2 buffer size
             SORT_SELECTION, // cannot sort duplicate keys
             SORT_MERGE,
-            SORT_RADIX      // only support signed int/float keys 
+            SORT_RADIX      // only support signed int/float keys(CV_32S/CV_32F)
         };
         //! Returns the sorted result of all the elements in input based on equivalent keys.
         //
@@ -1688,18 +1688,16 @@ namespace cv
         //  matrix dimension.
         //  both keys and values will be sorted inplace
         //  Key needs to be single channel oclMat.
-        //  TODO(pengx): add supported types for values
         //
         //  Example:
         //  input -
         //    keys   = {2,    3,   1}   (CV_8UC1)
         //    values = {10,5, 4,3, 6,2} (CV_8UC2)
-        //  sort_by_key(keys, values, SORT_SELECTION, false);
+        //  sortByKey(keys, values, SORT_SELECTION, false);
         //  output -
         //    keys   = {1,    2,   3}   (CV_8UC1)
         //    values = {6,2, 10,5, 4,3} (CV_8UC2)
-        void CV_EXPORTS sort_by_key(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
-        void CV_EXPORTS sort_by_key(oclMat& keys, oclMat& values, size_t vecSize, int method, bool isGreaterThan = false);
+        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
