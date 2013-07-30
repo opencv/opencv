@@ -6,3 +6,4 @@ OpenCV4Tegra/
 .sw[a-z]
 .*.swp
 tags
+build/
