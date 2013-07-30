@@ -81,6 +81,10 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
 endif()
 
+if(MSVC)
+    add_definitions(-DCVAPI_EXPORTS)
+endif()
+
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 endif()
