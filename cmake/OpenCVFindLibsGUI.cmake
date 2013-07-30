@@ -65,3 +65,12 @@ if(WITH_OPENGL)
     endif()
   endif()
 endif(WITH_OPENGL)
+
+# --- Carbon & Cocoa ---
+if(APPLE)
+  if(WITH_CARBON)
+    set(HAVE_CARBON YES)
+  elif(NOT IOS)
+    set(HAVE_COCOA YES)
+  endif()
+endif()

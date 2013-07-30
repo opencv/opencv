@@ -296,7 +296,6 @@ endif()
 #  Path for build/platform -specific headers
 # ----------------------------------------------------------------------------
 set(OPENCV_CONFIG_FILE_INCLUDE_DIR "${CMAKE_BINARY_DIR}/" CACHE PATH "Where to create the platform-dependant cvconfig.h")
-add_definitions(-DHAVE_CVCONFIG_H)
 ocv_include_directories(${OPENCV_CONFIG_FILE_INCLUDE_DIR})
 
 # ----------------------------------------------------------------------------
@@ -370,9 +369,6 @@ if(UNIX)
   include(CheckIncludeFile)
 
   if(NOT APPLE)
-    CHECK_INCLUDE_FILE(alloca.h HAVE_ALLOCA_H)
-    CHECK_FUNCTION_EXISTS(alloca HAVE_ALLOCA)
-    CHECK_INCLUDE_FILE(unistd.h HAVE_UNISTD_H)
     CHECK_INCLUDE_FILE(pthread.h HAVE_LIBPTHREAD)
     if(ANDROID)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m log)
@@ -382,7 +378,7 @@ if(UNIX)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} dl m pthread rt)
     endif()
   else()
-    add_definitions(-DHAVE_ALLOCA -DHAVE_ALLOCA_H -DHAVE_LIBPTHREAD -DHAVE_UNISTD_H)
+    set(HAVE_LIBPTHREAD YES)
   endif()
 endif()
 
