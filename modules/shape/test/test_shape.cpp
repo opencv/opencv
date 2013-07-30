@@ -518,7 +518,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
-                    Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
+                    /*Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -538,7 +538,7 @@ void CV_ShapeTest::mpegTest()
                     putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
                     char key=(char)waitKey();
-                    if (key == ' ') continue;
+                    if (key == ' ') continue;*/
                 }
             }
         }
@@ -562,7 +562,7 @@ void CV_ShapeTest::displayMPEGResults()
     Mat draw;
     normalize(distanceMat, draw, 0, 255, NORM_MINMAX);
     draw.convertTo(draw, CV_8U);
-    imwrite("distanceMat.jpg",draw);
+    //imwrite("distanceMat.jpg",draw);
 
     int corrects=0;
     int divi=0;
