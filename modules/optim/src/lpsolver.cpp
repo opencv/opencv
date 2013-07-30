@@ -208,7 +208,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
 
 static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,vector<unsigned int>& indexToRow){
     int count=0;
-    while(1){
+    for(;;){
         dprintf(("iteration #%d\n",count));
         count++;
 
