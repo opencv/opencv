@@ -755,7 +755,7 @@ Dilates an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
+    :param kernel: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`
 
     :param anchor: position of the anchor within the element; default value ``(-1, -1)`` means that the anchor is at the element center.
 
@@ -778,7 +778,8 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
     :ocv:func:`erode`,
     :ocv:func:`morphologyEx`,
     :ocv:func:`createMorphologyFilter`
-
+    :ocv:func:`getStructuringElement`
+    
 
 erode
 -----
@@ -794,7 +795,7 @@ Erodes an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
+    :param kernel: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`.
 
     :param anchor: position of the anchor within the element; default value  ``(-1, -1)``  means that the anchor is at the element center.
 
@@ -816,7 +817,8 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
 
     :ocv:func:`dilate`,
     :ocv:func:`morphologyEx`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
 
 
@@ -1116,7 +1118,9 @@ Performs advanced morphological transformations.
 
     :param dst: Destination image of the same size and type as  ``src`` .
 
-    :param element: Structuring element.
+    :param kernel: Structuring element. It can be created using :ocv:func:`getStructuringElement`.
+    
+    :param anchor: Anchor position with the kernel. Negative values mean that the anchor is at the kernel center.
 
     :param op: Type of a morphological operation that can be one of the following:
 
@@ -1174,7 +1178,8 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 
     :ocv:func:`dilate`,
     :ocv:func:`erode`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
 
 Laplacian
