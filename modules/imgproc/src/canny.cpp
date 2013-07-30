@@ -40,6 +40,37 @@
 //M*/
 
 #include "precomp.hpp"
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+bool ipp_canny(const cv::Mat& _src, cv::Mat& _dst, float low,  float high)
+{
+    int size, size1;
+    IppiSize roi;
+    roi.height = _src.rows; roi.width = _src.cols;
+
+    ippiFilterSobelNegVertGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size);
+    ippiFilterSobelHorizGetBufferSize_8u16s_C1R(roi, ippMskSize3x3, &size1);
+    if (size<size1) size=size1;
+    ippiCannyGetSize(roi, &size1);
+    if (size<size1) size=size1;
+    Ipp8u* buffer = ippsMalloc_8u(size);
+
+    cv::Mat _dx(_src.rows, _src.cols, CV_16S);
+    ippiFilterSobelNegVertBorder_8u16s_C1R (_src.data, _src.step, (Ipp16s *)_dx.data, _dx.step, roi,
+        ippMskSize3x3, ippBorderRepl, 0, buffer);
+
+    cv::Mat _dy(_src.rows, _src.cols, CV_16S);
+    ippiFilterSobelHorizBorder_8u16s_C1R(_src.data, _src.step, (Ipp16s *)_dy.data, _dy.step, roi,
+        ippMskSize3x3, ippBorderRepl, 0, buffer);
+
+    IppStatus sts = ippiCanny_16s8u_C1R((Ipp16s *)_dx.data, _dx.step, (Ipp16s *)_dy.data, _dy.step,
+        _dst.data, _dst.step, roi, low, high, buffer);
+
+    ippsFree(buffer);
+    if (sts >= 0)
+        return true;
+    return false;
+}
+#endif
 
 void cv::Canny( InputArray _src, OutputArray _dst,
                 double low_thresh, double high_thresh,
@@ -64,6 +95,18 @@ void cv::Canny( InputArray _src, OutputArray _dst,
 #ifdef HAVE_TEGRA_OPTIMIZATION
     if (tegra::canny(src, dst, low_thresh, high_thresh, aperture_size, L2gradient))
         return;
+#endif
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    if (low_thresh > high_thresh)
+        std::swap(low_thresh, high_thresh);
+
+    if(aperture_size == 3 && !L2gradient) {
+        bool res = ipp_canny(src, dst, low_thresh, high_thresh);
+        if (res)
+        {
+            return;
+        }
+    }
 #endif
 
     const int cn = src.channels();
