@@ -779,7 +779,7 @@ cvGetModuleInfo( const char* name, const char **version, const char **plugin_lis
         *plugin_list = plugin_list_buf;
 }
 
-#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
 
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
