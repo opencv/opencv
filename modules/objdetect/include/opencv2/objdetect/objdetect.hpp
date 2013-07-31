@@ -192,12 +192,12 @@ typedef struct CvLSVMFilterObject{
 
 // data type: STRUCT CvLatentSvmDetector
 // structure contains internal representation of trained Latent SVM detector
-// num_filters			- total number of filters (root plus part) in model
-// num_components		- number of components in model
-// num_part_filters		- array containing number of part filters for each component
-// filters				- root and part filters for all model components
-// b					- biases for all model components
-// score_threshold		- confidence level threshold
+// num_filters          - total number of filters (root plus part) in model
+// num_components       - number of components in model
+// num_part_filters     - array containing number of part filters for each component
+// filters              - root and part filters for all model components
+// b                    - biases for all model components
+// score_threshold      - confidence level threshold
 typedef struct CvLatentSvmDetector
 {
     int num_filters;
@@ -211,8 +211,8 @@ CvLatentSvmDetector;
 
 // data type: STRUCT CvObjectDetection
 // structure contains the bounding box and confidence level for detected object
-// rect					- bounding box for a detected object
-// score				- confidence level
+// rect                 - bounding box for a detected object
+// score                - confidence level
 typedef struct CvObjectDetection
 {
     CvRect rect;
@@ -228,7 +228,7 @@ typedef struct CvObjectDetection
 // API
 // CvLatentSvmDetector* cvLoadLatentSvmDetector(const char* filename);
 // INPUT
-// filename				- path to the file containing the parameters of
+// filename             - path to the file containing the parameters of
                         - trained Latent SVM detector
 // OUTPUT
 // trained Latent SVM detector in internal representation
@@ -241,7 +241,7 @@ CVAPI(CvLatentSvmDetector*) cvLoadLatentSvmDetector(const char* filename);
 // API
 // void cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 // INPUT
-// detector				- CvLatentSvmDetector structure to be released
+// detector             - CvLatentSvmDetector structure to be released
 // OUTPUT
 */
 CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
@@ -252,16 +252,16 @@ CVAPI(void) cvReleaseLatentSvmDetector(CvLatentSvmDetector** detector);
 //
 // API
 // CvSeq* cvLatentSvmDetectObjects(const IplImage* image,
-//									CvLatentSvmDetector* detector,
-//									CvMemStorage* storage,
-//									float overlap_threshold = 0.5f,
+//                                  CvLatentSvmDetector* detector,
+//                                  CvMemStorage* storage,
+//                                  float overlap_threshold = 0.5f,
 //                                  int numThreads = -1);
 // INPUT
-// image				- image to detect objects in
-// detector				- Latent SVM detector in internal representation
-// storage				- memory storage to store the resultant sequence
-//							of the object candidate rectangles
-// overlap_threshold	- threshold for the non-maximum suppression algorithm
+// image                - image to detect objects in
+// detector             - Latent SVM detector in internal representation
+// storage              - memory storage to store the resultant sequence
+//                          of the object candidate rectangles
+// overlap_threshold    - threshold for the non-maximum suppression algorithm
                            = 0.5f [here will be the reference to original paper]
 // OUTPUT
 // sequence of detected objects (bounding boxes and confidence levels stored in CvObjectDetection structures)
@@ -325,6 +325,23 @@ public:
 private:
     vector<CvLatentSvmDetector*> detectors;
     vector<string> classNames;
+};
+
+// class for grouping object candidates, detected by Cascade Classifier, HOG etc.
+// instance of the class is to be passed to cv::partition (see cxoperations.hpp)
+class CV_EXPORTS SimilarRects
+{
+public:
+    SimilarRects(double _eps) : eps(_eps) {}
+    inline bool operator()(const Rect& r1, const Rect& r2) const
+    {
+        double delta = eps*(std::min(r1.width, r2.width) + std::min(r1.height, r2.height))*0.5;
+        return std::abs(r1.x - r2.x) <= delta &&
+            std::abs(r1.y - r2.y) <= delta &&
+            std::abs(r1.x + r1.width - r2.x - r2.width) <= delta &&
+            std::abs(r1.y + r1.height - r2.y - r2.height) <= delta;
+    }
+    double eps;
 };
 
 CV_EXPORTS void groupRectangles(CV_OUT CV_IN_OUT vector<Rect>& rectList, int groupThreshold, double eps=0.2);
@@ -611,6 +628,7 @@ public:
 
    // read/parse Dalal's alt model file
    void readALTModel(std::string modelfile);
+   void groupRectangles(vector<cv::Rect>& rectList, vector<double>& weights, int groupThreshold, double eps) const;
 };
 
 
