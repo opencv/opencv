@@ -60,10 +60,6 @@ prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
 prepend("-l" MEX_LIBS opencv_core)
 set(MEX_OPTS -largeArrayDims)
 
-if (ENABLE_SOLUTION_FOLDERS)
-    set_target_properties(${the_module} PROPERTIES FOLDER "Matlab bindings")
-endif()
-
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif()
@@ -181,6 +177,10 @@ add_custom_command(
 add_custom_target(${the_module}_sources ALL DEPENDS ${GENERATE_PROXY})
 add_custom_target(${the_module} ALL DEPENDS ${COMPILE_PROXY})
 add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS})
+
+if (ENABLE_SOLUTION_FOLDERS)
+    set_target_properties(${the_module} PROPERTIES FOLDER "modules")
+endif()
 
 # ----------------------------------------------------------------------------
 #  Install time components
