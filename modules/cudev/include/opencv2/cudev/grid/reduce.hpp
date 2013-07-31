@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_GLOB_REDUCE_HPP__
-#define __OPENCV_CUDEV_GRID_GLOB_REDUCE_HPP__
+#ifndef __OPENCV_CUDEV_GRID_REDUCE_HPP__
+#define __OPENCV_CUDEV_GRID_REDUCE_HPP__
 
 #include <limits>
 #include "../common.hpp"
@@ -52,7 +52,7 @@
 #include "../ptr2d/gpumat.hpp"
 #include "../ptr2d/mask.hpp"
 #include "../ptr2d/transform.hpp"
-#include "detail/glob_reduce.hpp"
+#include "detail/reduce.hpp"
 
 namespace cv { namespace cudev {
 
@@ -67,11 +67,11 @@ __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskP
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    grid_glob_reduce_detail::sum<Policy>(shrinkPtr(src),
-                                         dst[0],
-                                         shrinkPtr(mask),
-                                         rows, cols,
-                                         StreamAccessor::getStream(stream));
+    grid_reduce_detail::sum<Policy>(shrinkPtr(src),
+                                    dst[0],
+                                    shrinkPtr(mask),
+                                    rows, cols,
+                                    StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType>
@@ -83,11 +83,11 @@ __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& str
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    grid_glob_reduce_detail::sum<Policy>(shrinkPtr(src),
-                                         dst[0],
-                                         WithOutMask(),
-                                         rows, cols,
-                                         StreamAccessor::getStream(stream));
+    grid_reduce_detail::sum<Policy>(shrinkPtr(src),
+                                    dst[0],
+                                    WithOutMask(),
+                                    rows, cols,
+                                    StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
@@ -101,11 +101,11 @@ __host__ void gridFindMinVal_(const SrcPtr& src, GpuMat_<ResType>& dst, const Ma
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    grid_glob_reduce_detail::minVal<Policy>(shrinkPtr(src),
-                                            dst[0],
-                                            shrinkPtr(mask),
-                                            rows, cols,
-                                            StreamAccessor::getStream(stream));
+    grid_reduce_detail::minVal<Policy>(shrinkPtr(src),
+                                       dst[0],
+                                       shrinkPtr(mask),
+                                       rows, cols,
+                                       StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType>
@@ -117,11 +117,11 @@ __host__ void gridFindMinVal_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& 
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    grid_glob_reduce_detail::minVal<Policy>(shrinkPtr(src),
-                                            dst[0],
-                                            WithOutMask(),
-                                            rows, cols,
-                                            StreamAccessor::getStream(stream));
+    grid_reduce_detail::minVal<Policy>(shrinkPtr(src),
+                                       dst[0],
+                                       WithOutMask(),
+                                       rows, cols,
+                                       StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
@@ -135,11 +135,11 @@ __host__ void gridFindMaxVal_(const SrcPtr& src, GpuMat_<ResType>& dst, const Ma
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    grid_glob_reduce_detail::maxVal<Policy>(shrinkPtr(src),
-                                            dst[0],
-                                            shrinkPtr(mask),
-                                            rows, cols,
-                                            StreamAccessor::getStream(stream));
+    grid_reduce_detail::maxVal<Policy>(shrinkPtr(src),
+                                       dst[0],
+                                       shrinkPtr(mask),
+                                       rows, cols,
+                                       StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType>
@@ -151,11 +151,11 @@ __host__ void gridFindMaxVal_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& 
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    grid_glob_reduce_detail::maxVal<Policy>(shrinkPtr(src),
-                                            dst[0],
-                                            WithOutMask(),
-                                            rows, cols,
-                                            StreamAccessor::getStream(stream));
+    grid_reduce_detail::maxVal<Policy>(shrinkPtr(src),
+                                       dst[0],
+                                       WithOutMask(),
+                                       rows, cols,
+                                       StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
@@ -170,11 +170,11 @@ __host__ void gridFindMinMaxVal_(const SrcPtr& src, GpuMat_<ResType>& dst, const
 
     CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
 
-    grid_glob_reduce_detail::minMaxVal<Policy>(shrinkPtr(src),
-                                               dst[0],
-                                               shrinkPtr(mask),
-                                               rows, cols,
-                                               StreamAccessor::getStream(stream));
+    grid_reduce_detail::minMaxVal<Policy>(shrinkPtr(src),
+                                          dst[0],
+                                          shrinkPtr(mask),
+                                          rows, cols,
+                                          StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType>
@@ -187,11 +187,11 @@ __host__ void gridFindMinMaxVal_(const SrcPtr& src, GpuMat_<ResType>& dst, Strea
     const int rows = getRows(src);
     const int cols = getCols(src);
 
-    grid_glob_reduce_detail::minMaxVal<Policy>(shrinkPtr(src),
-                                               dst[0],
-                                               WithOutMask(),
-                                               rows, cols,
-                                               StreamAccessor::getStream(stream));
+    grid_reduce_detail::minMaxVal<Policy>(shrinkPtr(src),
+                                          dst[0],
+                                          WithOutMask(),
+                                          rows, cols,
+                                          StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
@@ -209,11 +209,11 @@ __host__ void gridCountNonZero_(const SrcPtr& src, GpuMat_<ResType>& dst, const 
     not_equal_to<src_type> ne_op;
     const src_type zero = VecTraits<src_type>::all(0);
 
-    grid_glob_reduce_detail::sum<Policy>(shrinkPtr(transformPtr(src, bind2nd(ne_op, zero))),
-                                         dst[0],
-                                         shrinkPtr(mask),
-                                         rows, cols,
-                                         StreamAccessor::getStream(stream));
+    grid_reduce_detail::sum<Policy>(shrinkPtr(transformPtr(src, bind2nd(ne_op, zero))),
+                                    dst[0],
+                                    shrinkPtr(mask),
+                                    rows, cols,
+                                    StreamAccessor::getStream(stream));
 }
 
 template <class Policy, class SrcPtr, typename ResType>
@@ -229,11 +229,11 @@ __host__ void gridCountNonZero_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream
     not_equal_to<src_type> ne_op;
     const src_type zero = VecTraits<src_type>::all(0);
 
-    grid_glob_reduce_detail::sum<Policy>(shrinkPtr(transformPtr(src, bind2nd(ne_op, zero))),
-                                         dst[0],
-                                         WithOutMask(),
-                                         rows, cols,
-                                         StreamAccessor::getStream(stream));
+    grid_reduce_detail::sum<Policy>(shrinkPtr(transformPtr(src, bind2nd(ne_op, zero))),
+                                    dst[0],
+                                    WithOutMask(),
+                                    rows, cols,
+                                    StreamAccessor::getStream(stream));
 }
 
 // default policy

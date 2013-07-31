@@ -43,8 +43,8 @@
 
 #pragma once
 
-#ifndef __OPENCV_CUDEV_GRID_GLOB_REDUCE_DETAIL_HPP__
-#define __OPENCV_CUDEV_GRID_GLOB_REDUCE_DETAIL_HPP__
+#ifndef __OPENCV_CUDEV_GRID_REDUCE_DETAIL_HPP__
+#define __OPENCV_CUDEV_GRID_REDUCE_DETAIL_HPP__
 
 #include "../../common.hpp"
 #include "../../util/tuple.hpp"
@@ -59,7 +59,7 @@
 
 namespace cv { namespace cudev {
 
-namespace grid_glob_reduce_detail
+namespace grid_reduce_detail
 {
     // Unroll
 
