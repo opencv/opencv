@@ -409,7 +409,7 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
 
 TEST(Highgui_Hdr, regression)
 {
-	string folder = string(cvtest::TS::ptr()->get_data_path()) + "../cv/hdr/";
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "../cv/hdr/format/";
 	string name_rle = folder + "rle.hdr";
 	string name_no_rle = folder + "no_rle.hdr";
 	Mat img_rle = imread(name_rle, -1);

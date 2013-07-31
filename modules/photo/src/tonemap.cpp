@@ -132,7 +132,7 @@ public:
 		Mat map;
 		log(gray_img + 1.0f, map);
 		Mat div;
-		pow(gray_img / (float)max, logf(bias) / logf(0.5f), div);
+		pow(gray_img / static_cast<float>(max), logf(bias) / logf(0.5f), div);
 		log(2.0f + 8.0f * div, div);
 		map = map.mul(1.0f / div);
 		map = map.mul(1.0f / gray_img);
@@ -210,7 +210,7 @@ public:
         
 		double min, max;
 		minMaxLoc(map_img, &min, &max);
-		float scale = contrast / (float)(max - min);
+		float scale = contrast / static_cast<float>(max - min);
 
 		exp(map_img * (scale - 1.0f) + log_img, map_img);
 		log_img.release();
@@ -294,22 +294,22 @@ public:
 		Mat log_img;
 		log(gray_img, log_img);
 
-		float log_mean = (float)sum(log_img)[0] / log_img.total();
+		float log_mean = static_cast<float>(sum(log_img)[0] / log_img.total());
 		double log_min, log_max;
 		minMaxLoc(log_img, &log_min, &log_max);
 		log_img.release();
 
-		double key = (float)((log_max - log_mean) / (log_max - log_min));
-		float map_key = 0.3f + 0.7f * pow((float)key, 1.4f);
+		double key = static_cast<float>((log_max - log_mean) / (log_max - log_min));
+		float map_key = 0.3f + 0.7f * pow(static_cast<float>(key), 1.4f);
 		intensity = exp(-intensity);
 		Scalar chan_mean = mean(img);
-		float gray_mean = (float)mean(gray_img)[0];
+		float gray_mean = static_cast<float>(mean(gray_img)[0]);
 
 		std::vector<Mat> channels(3);
 		split(img, channels);
 
 		for(int i = 0; i < 3; i++) {
-			float global = color_adapt * (float)chan_mean[i] + (1.0f - color_adapt) * gray_mean;
+			float global = color_adapt * static_cast<float>(chan_mean[i]) + (1.0f - color_adapt) * gray_mean;
 			Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
 			adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
 			pow(intensity * adapt, map_key, adapt);

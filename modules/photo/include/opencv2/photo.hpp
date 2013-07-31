@@ -138,6 +138,88 @@ public:
 CV_EXPORTS_W Ptr<TonemapReinhardDevlin> 
 createTonemapReinhardDevlin(float gamma = 1.0f, float intensity = 0.0f, float light_adapt = 1.0f, float color_adapt = 0.0f);
 
+class CV_EXPORTS_W ExposureAlign : public Algorithm
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+								 const std::vector<float>& times, InputArray response) = 0;
+};
+
+class CV_EXPORTS_W AlignMTB : public ExposureAlign
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+								 const std::vector<float>& times, InputArray response) = 0;
+
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst) = 0;
+
+	CV_WRAP virtual void calculateShift(InputArray img0, InputArray img1, Point& shift) = 0;
+	CV_WRAP virtual void shiftMat(InputArray src, OutputArray dst, const Point shift) = 0;
+
+	CV_WRAP virtual int getMaxBits() const = 0;
+	CV_WRAP virtual void setMaxBits(int max_bits) = 0;
+
+	CV_WRAP virtual int getExcludeRange() const = 0;
+	CV_WRAP virtual void setExcludeRange(int exclude_range) = 0;
+};
+
+CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4);
+
+class CV_EXPORTS_W ExposureCalibrate : public Algorithm
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times) = 0;
+};
+
+class CV_EXPORTS_W CalibrateDebevec : public ExposureCalibrate
+{
+public:
+	CV_WRAP virtual float getLambda() const = 0;
+    CV_WRAP virtual void setLambda(float lambda) = 0;
+	
+	CV_WRAP virtual int getSamples() const = 0;
+	CV_WRAP virtual void setSamples(int samples) = 0;
+};
+
+CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);
+
+class CV_EXPORTS_W ExposureMerge : public Algorithm
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+								 const std::vector<float>& times, InputArray response) = 0;
+};
+
+class CV_EXPORTS_W MergeDebevec : public ExposureMerge
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+								 const std::vector<float>& times, InputArray response) = 0;
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
+};
+
+CV_EXPORTS_W Ptr<MergeDebevec> createMergeDebevec();
+
+class CV_EXPORTS_W MergeMertens : public ExposureMerge
+{
+public:
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+								 const std::vector<float>& times, InputArray response) = 0;
+	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
+
+	CV_WRAP virtual float getContrastWeight() const = 0;
+	CV_WRAP virtual void setContrastWeight(float contrast_weiht) = 0;
+
+	CV_WRAP virtual float getSaturationWeight() const = 0;
+	CV_WRAP virtual void setSaturationWeight(float saturation_weight) = 0;
+
+	CV_WRAP virtual float getExposureWeight() const = 0;
+	CV_WRAP virtual void setExposureWeight(float exposure_weight) = 0;
+};
+
+CV_EXPORTS_W Ptr<MergeMertens> 
+createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f);
+
 } // cv
 
 #endif

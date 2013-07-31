@@ -58,7 +58,35 @@ void checkEqual(Mat img0, Mat img1, double threshold)
 {
 	double max = 1.0;
 	minMaxLoc(abs(img0 - img1), NULL, &max);
-	ASSERT_FALSE(max > threshold);
+	ASSERT_FALSE(max > threshold) << max;
+}
+
+void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = vector<float>())
+{
+	ifstream list_file(path + "list.txt");
+	ASSERT_TRUE(list_file.is_open());
+	string name; 
+	float val;
+	while(list_file >> name >> val) {
+		Mat img = imread(path + name);
+		ASSERT_FALSE(img.empty()) << "Could not load input image " << path + name;
+		images.push_back(img);
+		times.push_back(1 / val);
+	}
+	list_file.close();
+}
+
+void loadResponseCSV(String path, Mat& response)
+{
+	response = Mat(256, 3, CV_32F);
+	ifstream resp_file(path);
+	for(int i = 0; i < 256; i++) {
+		for(int channel = 0; channel < 3; channel++) {
+			resp_file >> response.at<float>(i, channel);
+			resp_file.ignore(1);
+		}
+	}
+	resp_file.close();
 }
 
 TEST(Photo_Tonemap, regression)
@@ -90,130 +118,85 @@ TEST(Photo_Tonemap, regression)
 
 	Ptr<TonemapReinhardDevlin> reinhard_devlin = createTonemapReinhardDevlin(gamma);
 	reinhard_devlin->process(img, result);
-	loadImage(test_path + "reinhard_devlin.png", expected);
+	loadImage(test_path + "reinharddevlin.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
 	checkEqual(result, expected, 0);
 }
 
+TEST(Photo_AlignMTB, regression)
+{
+	const int TESTS_COUNT = 100;
+	string folder = string(cvtest::TS::ptr()->get_data_path()) + "shared/";
+	
+	string file_name = folder + "lena.png";
+	Mat img;
+	loadImage(file_name, img);
+	cvtColor(img, img, COLOR_RGB2GRAY);
 
+	int max_bits = 5;
+	int max_shift = 32;
+	srand(static_cast<unsigned>(time(0)));
+	int errors = 0;
 
-//void loadExposureSeq(String fuse_path, vector<Mat>& images, vector<float>& times = vector<float>())
-//{
-//	ifstream list_file(fuse_path + "list.txt");
-//	ASSERT_TRUE(list_file.is_open());
-//	string name; 
-//	float val;
-//	while(list_file >> name >> val) {
-//		Mat img = imread(fuse_path + name);
-//		ASSERT_FALSE(img.empty()) << "Could not load input image " << fuse_path + name;
-//		images.push_back(img);
-//		times.push_back(1 / val);
-//	}
-//	list_file.close();
-//}
-////
-////TEST(Photo_MergeMertens, regression)
-////{
-////	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
-////	string fuse_path = test_path + "fusion/";
-////
-////	vector<Mat> images;
-////	loadExposureSeq(fuse_path, images);
-////
-////	MergeMertens merge;
-////
-////	Mat result, expected;
-////	loadImage(test_path + "exp_fusion.png", expected);
-////	merge.process(images, result);
-////	result.convertTo(result, CV_8UC3, 255);
-////	checkEqual(expected, result, 0);
-////}
-//
-//TEST(Photo_Debevec, regression)
-//{
-//	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
-//	string fuse_path = test_path + "fusion/";
-//	
-//	vector<float> times;
-//	vector<Mat> images;
-//
-//	loadExposureSeq(fuse_path, images, times);
-//
-//	Mat response, expected(256, 3, CV_32F);
-//	ifstream resp_file(test_path + "response.csv");
-//	for(int i = 0; i < 256; i++) {
-//		for(int channel = 0; channel < 3; channel++) {
-//			resp_file >> expected.at<float>(i, channel);
-//			resp_file.ignore(1);
-//		}
-//	}
-//	resp_file.close();
-//
-//	CalibrateDebevec calib;
-//	MergeDebevec merge;
-//
-//	//calib.process(images, response, times);
-//	//checkEqual(expected, response, 0.001);
-//	//
-//	Mat result;
-//	loadImage(test_path + "no_calibration.hdr", expected);
-//	merge.process(images, result, times);
-//	checkEqual(expected, result, 0.01);
-//
-//	//loadImage(test_path + "rle.hdr", expected);
-//	//merge.process(images, result, times, response);
-//	//checkEqual(expected, result, 0.01);
-//}
-//
-//TEST(Photo_Tonemap, regression)
-//{
-//	initModule_photo();
-//	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
-//	Mat img;
-//	loadImage(test_path + "../rle.hdr", img);
-//
-//	vector<String> algorithms;
-//	Algorithm::getList(algorithms);
-//	for(size_t i = 0; i < algorithms.size(); i++) {
-//		String str = algorithms[i];
-//		size_t dot = str.find('.');
-//		if(dot != String::npos && str.substr(0, dot).compare("Tonemap") == 0) {
-//			String algo_name = str.substr(dot + 1, str.size());
-//		    Mat expected;
-//			loadImage(test_path + algo_name.toLowerCase() + ".png", expected);
-//			Ptr<Tonemap> mapper = Tonemap::create(algo_name);	
-//	    	ASSERT_FALSE(mapper.empty()) << algo_name;
-//			Mat result;
-//			mapper->process(img, result);
-//			result.convertTo(result, CV_8UC3, 255);
-//			checkEqual(expected, result, 0);
-//		}
-//	}
-////}
-////
-////TEST(Photo_AlignMTB, regression)
-////{
-////	const int TESTS_COUNT = 100;
-////	string folder = string(cvtest::TS::ptr()->get_data_path()) + "shared/";
-////	
-////	string file_name = folder + "lena.png";
-////	Mat img = imread(file_name);
-////	ASSERT_FALSE(img.empty()) << "Could not load input image " << file_name;
-////	cvtColor(img, img, COLOR_RGB2GRAY);
-////
-////	int max_bits = 5;
-////	int max_shift = 32;
-////	srand(static_cast<unsigned>(time(0)));
-////	int errors = 0;
-////
-////	AlignMTB align(max_bits);
-////
-////	for(int i = 0; i < TESTS_COUNT; i++) {
-////		Point shift(rand() % max_shift, rand() % max_shift);
-////		Mat res;
-////		align.shiftMat(img, shift, res);
-////		Point calc = align.getExpShift(img, res);
-////		errors += (calc != -shift);
-////	}
-////	ASSERT_TRUE(errors < 5);
-////}
+	Ptr<AlignMTB> align = createAlignMTB(max_bits);
+
+	for(int i = 0; i < TESTS_COUNT; i++) {
+		Point shift(rand() % max_shift, rand() % max_shift);
+		Mat res;
+		align->shiftMat(img, res, shift);
+		Point calc;
+		align->calculateShift(img, res, calc);
+		errors += (calc != -shift);
+	}
+	ASSERT_TRUE(errors < 5) << errors << " errors";
+}
+
+TEST(Photo_MergeMertens, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	loadExposureSeq(test_path + "exposures/", images);
+
+	Ptr<MergeMertens> merge = createMergeMertens();
+
+	Mat result, expected;
+	loadImage(test_path + "merge/mertens.png", expected);
+	merge->process(images, result);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(expected, result, 0);
+}
+
+TEST(Photo_MergeDebevec, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	Mat response;
+	loadExposureSeq(test_path + "exposures/", images, times);
+	loadResponseCSV(test_path + "exposures/response.csv", response);
+
+	Ptr<MergeDebevec> merge = createMergeDebevec();
+
+	Mat result, expected;
+	loadImage(test_path + "merge/debevec.exr", expected);
+	merge->process(images, result, times, response);
+	checkEqual(expected, result, 1e-3f);
+}
+
+TEST(Photo_CalibrateDebevec, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	Mat expected, response;
+	loadExposureSeq(test_path + "exposures/", images, times);
+	loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
+
+	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
+	srand(1);
+	calibrate->process(images, response, times);
+	checkEqual(expected, response, 1e-3f);
+}
