@@ -64,7 +64,7 @@ namespace cv
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
         //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation
-        CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& up_vector);
+        CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir);
 
 
         //! checks float value for Nan

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <opencv2/viz/types.hpp>
+#include <common.h>
 
 
 namespace cv
@@ -70,6 +71,8 @@ namespace cv
         public:
             PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
             PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+        private:
+            struct SetSizeImpl;
         };
 
         class CV_EXPORTS SphereWidget : public Widget3D
@@ -81,7 +84,7 @@ namespace cv
         class CV_EXPORTS ArrowWidget : public Widget3D
         {
         public:
-            ArrowWidget(const Point3f& pt1, const Point3f& pt2, const Color &color = Color::white());
+            ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
         };
 
         class CV_EXPORTS CircleWidget : public Widget3D
@@ -120,7 +123,12 @@ namespace cv
         class CV_EXPORTS GridWidget : public Widget3D
         {
         public:
-            GridWidget(Vec2i dimensions, Vec2d spacing, const Color &color = Color::white());
+            GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            
+        private:
+            struct GridImpl;
+        
         };
 
         class CV_EXPORTS Text3DWidget : public Widget3D
@@ -140,6 +148,48 @@ namespace cv
             void setText(const String &text);
             String getText() const;
         };
+        
+        class CV_EXPORTS ImageOverlayWidget : public Widget2D
+        {
+        public:
+            ImageOverlayWidget(const Mat &image, const Rect &rect);
+            
+            void setImage(const Mat &image);
+        };
+        
+        class CV_EXPORTS Image3DWidget : public Widget3D
+        {
+        public:
+            Image3DWidget(const Mat &image, const Size &size);
+            Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
+            
+            void setImage(const Mat &image);
+        };
+        
+        class CV_EXPORTS CameraPositionWidget : public Widget3D
+        {
+        public:
+            CameraPositionWidget(double scale = 1.0);
+            CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            
+        };
+        
+        class CV_EXPORTS TrajectoryWidget : public Widget3D
+        {
+        public:
+            enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
+            
+            TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+            TrajectoryWidget(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius,
+                             double sphere_radius, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
+            
+        private:
+            struct ApplyPath;
+        };
 
         class CV_EXPORTS CloudWidget : public Widget3D
         {
@@ -151,6 +201,18 @@ namespace cv
             struct CreateCloudWidget;
         };
 
+        class CV_EXPORTS CloudCollectionWidget : public Widget3D
+        {
+        public:
+            CloudCollectionWidget();
+            
+            void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+            void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
+            
+        private:
+            struct CreateCloudWidget;
+        };
+        
         class CV_EXPORTS CloudNormalsWidget : public Widget3D
         {
         public:
@@ -183,7 +245,12 @@ namespace cv
         template<> CV_EXPORTS GridWidget Widget::cast<GridWidget>();
         template<> CV_EXPORTS Text3DWidget Widget::cast<Text3DWidget>();
         template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
+        template<> CV_EXPORTS ImageOverlayWidget Widget::cast<ImageOverlayWidget>();
+        template<> CV_EXPORTS Image3DWidget Widget::cast<Image3DWidget>();
+        template<> CV_EXPORTS CameraPositionWidget Widget::cast<CameraPositionWidget>();
+        template<> CV_EXPORTS TrajectoryWidget Widget::cast<TrajectoryWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
+        template<> CV_EXPORTS CloudCollectionWidget Widget::cast<CloudCollectionWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
         template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();
 

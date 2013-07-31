@@ -847,7 +847,7 @@ bool cv::viz::Viz3d::VizImpl::addModelFromPLYFile (const std::string &filename, 
     return (true);
 }
 
-bool cv::viz::Viz3d::VizImpl::addPolylineFromPolygonMesh (const Mesh3d& mesh, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addPolylineFromPolygonMesh (const Mesh3d& /*mesh*/, const std::string &/*id*/)
 {
 //     CV_Assert(mesh.cloud.rows == 1 && mesh.cloud.type() == CV_32FC3);
 // 
@@ -1017,7 +1017,7 @@ void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize (int xw, int yw) { window_->SetSize (xw, yw); }
 
-bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& mesh, const Mat& mask, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& /*mesh*/, const Mat& /*mask*/, const std::string &/*id*/)
 {
 //     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
 //     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
@@ -1205,7 +1205,7 @@ return true;
 }
 
 
-bool cv::viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const std::string &id)
+bool cv::viz::Viz3d::VizImpl::updatePolygonMesh (const Mesh3d& /*mesh*/, const cv::Mat& /*mask*/, const std::string &/*id*/)
 {
 //     CV_Assert(mesh.cloud.type() == CV_32FC3 && mesh.cloud.rows == 1 && !mesh.polygons.empty ());
 //     CV_Assert(mesh.colors.empty() || (!mesh.colors.empty() && mesh.colors.size() == mesh.cloud.size() && mesh.colors.type() == CV_8UC3));
