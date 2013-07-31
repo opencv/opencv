@@ -3,6 +3,10 @@ FaceRecognizer
 
 .. highlight:: cpp
 
+.. Sample code::
+
+   * : An example using the FaceRecognizer class can be found at opencv_source_code/samples/cpp/facerec_demo.cpp
+
 FaceRecognizer
 --------------
 

@@ -166,6 +166,12 @@ The function retrieves contours from the binary image using the algorithm
 
 .. note:: If you use the new Python interface then the ``CV_`` prefix has to be omitted in contour retrieval mode and contour approximation method parameters (for example, use ``cv2.RETR_LIST`` and ``cv2.CHAIN_APPROX_NONE`` parameters). If you use the old Python interface then these parameters have the ``CV_`` prefix (for example, use ``cv.CV_RETR_LIST`` and ``cv.CV_CHAIN_APPROX_NONE``).
 
+.. Sample code::
+
+   * : An example using the findContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
+   * : An example using findContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
+
+
 drawContours
 ----------------
 Draws contours outlines or filled contours.
@@ -246,7 +252,10 @@ The function draws contour outlines in the image if
         waitKey(0);
     }
 
+.. Sample code::
 
+   * : An example using the drawContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
+   * : An example using drawContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
 
 approxPolyDP
 ----------------
@@ -417,6 +426,10 @@ The functions find the convex hull of a 2D point set using the Sklansky's algori
 that has
 *O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
 
+.. Sample code::
+
+   * : An example using the convexHull functionality can be found at opencv_source_code/samples/cpp/convexhull.cpp
+
 
 convexityDefects
 ----------------
@@ -472,6 +485,10 @@ Fits an ellipse around a set of 2D points.
         * Nx2 numpy array (Python interface)
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
+
+.. Sample code::
+
+   * : An example using the fitEllipse technique can be found at opencv_source_code/samples/cpp/fitellipse.cpp
 
 fitLine
 -----------

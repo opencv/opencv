@@ -99,7 +99,9 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
         waitKey();
     }
 
+.. Sample code::
 
+   * : An example for creating histograms of an image can be found at opencv_source_code/samples/cpp/demhist.cpp
 
 
 calcBackProject

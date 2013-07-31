@@ -32,7 +32,9 @@ Finds edges in an image using the [Canny86]_ algorithm.
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
+.. Sample code::
 
+   * : An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
 
 cornerEigenValsAndVecs
 ----------------------
@@ -356,6 +358,9 @@ Example: ::
     :ocv:func:`fitEllipse`,
     :ocv:func:`minEnclosingCircle`
 
+.. Sample code::
+
+   * : An example using the Hough circle detector can be found at opencv_source_code/samples/cpp/houghcircles.cpp
 
 HoughLines
 ----------
@@ -411,6 +416,10 @@ Finds lines in a binary image using the standard Hough transform.
 
 The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
 See also the example in :ocv:func:`HoughLinesP` description.
+
+.. Sample code::
+
+   * : An example using the Hough line detector can be found at opencv_source_code/samples/cpp/houghlines.cpp
 
 HoughLinesP
 -----------
