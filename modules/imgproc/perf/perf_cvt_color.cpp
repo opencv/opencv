@@ -258,7 +258,7 @@ PERF_TEST_P(Size_CvtMode, cvtColor8u,
     declare.time(100);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    int runs = sz.width <= 320 ? 70 : 5;
+    int runs = sz.width <= 320 ? 100 : 5;
     TEST_CYCLE_MULTIRUN(runs) cvtColor(src, dst, mode, ch.dcn);
 
     SANITY_CHECK(dst, 1);
