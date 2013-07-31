@@ -61,6 +61,34 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
 
     int ret = INTERSECT_FULL;
 
+    // Specical case of rect1 == rect2
+    {
+        bool same = true;
+
+        for( int i = 0; i < 4; i++ )
+        {
+            if( fabs(pts1[i].x - pts2[i].x) > samePointEps || (fabs(pts1[i].y - pts2[i].y) > samePointEps) )
+            {
+                same = false;
+                break;
+            }
+        }
+
+        if(same)
+        {
+            intersection.resize(4);
+
+            for( int i = 0; i < 4; i++ )
+            {
+                intersection[i] = pts1[i];
+            }
+
+            Mat(intersection).copyTo(intersectingRegion);
+
+            return INTERSECT_FULL;
+        }
+    }
+
     // Line vector
     // A line from p1 to p2 is: p1 + (p2-p1)*t, t=[0,1]
     for( int i = 0; i < 4; i++ )
