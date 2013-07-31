@@ -9,8 +9,13 @@ class MatlabWrapperGenerator(object):
         ns = {}
         for file in input_files:
             # get the file name
-            name = re.findall('include/opencv2/([^./]+)', file)[0]
-            #name = os.path.splitext(os.path.basename(file))[0]
+            # TODO: Is there a cleaner way to do this?
+            try:
+              name = re.findall('include/opencv2/([^./]+)', file)[0]
+            except:
+              name = os.path.splitext(os.path.basename(file))[0]
+
+            # add the file to the namespace
             try:
               ns[name] = ns[name] + parser.parse(file)
             except KeyError:

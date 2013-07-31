@@ -24,7 +24,18 @@
 #
 #   cmake -DMATLAB_ROOT_DIR='/PATH/TO/ROOT_DIR' ..
 
+
+
 # ----- set_library_presuffix -----
+#
+# Matlab tends to use some non-standard prefixes and suffixes on its libraries.
+# For example, libmx.dll on Windows (Windows does not add prefixes) and
+# mkl.dylib on OS X (OS X uses "lib" prefixes). 
+# On some versions of Windows the .dll suffix also appears to not be checked.
+#
+# This function modifies the library prefixes and suffixes used by 
+# find_library when finding Matlab libraries. It does not affect scopes
+# outside of this file.
 function(set_libarch_prefix_suffix)
 	if (UNIX AND NOT APPLE)
 		set(CMAKE_FIND_LIBRARY_PREFIXES "lib" PARENT_SCOPE)
@@ -37,6 +48,8 @@ function(set_libarch_prefix_suffix)
 		set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll" PARENT_SCOPE)
 	endif()
 endfunction()
+
+
 
 # ----- locate_matlab_root -----
 #
@@ -79,55 +92,39 @@ function(locate_matlab_root)
   elseif (WIN32)
 		# search the path to see if Matlab exists there
 		# fingers crossed it is, otherwise we have to start hunting through the registry :/
-		string(REGEX REPLACE ".*[;=](.*MATLAB[^;]*)\\\\bin.*" "\\1" MATLAB_ROOT_DIR_ "$ENV{PATH}")
-		if (MATLAB_ROOT_DIR_)
-			set(MATLAB_ROOT_DIR ${MATLAB_ROOT_DIR_} PARENT_SCOPE)
-			return()
-		endif()
+		string(REGEX REPLACE ".*[;=](.*[Mm][Aa][Tt][Ll][Aa][Bb][^;]*)\\\\bin.*" "\\1" MATLAB_ROOT_DIR_ "$ENV{PATH}")
 		
-		
-    # determine the Matlab version
+	  # registry-hacking	
+    # determine the available Matlab versions
 		set(REG_EXTENSION_ "SOFTWARE\\Mathworks\\MATLAB")
     set(REG_ROOTS_ "HKEY_LOCAL_MACHINE" "HKEY_CURRENT_USER")
     foreach(REG_ROOT_ ${REG_ROOTS_})
-			execute_process(COMMAND reg query "${REG_ROOT_}\\${REG_EXTENSION_}"
-											OUTPUT_VARIABLE QUERY_RESPONSE_
-			)
-			if (QUERY_RESPONSE)
+			execute_process(COMMAND reg query "${REG_ROOT_}\\${REG_EXTENSION_}" OUTPUT_VARIABLE QUERY_RESPONSE_)
+			if (QUERY_RESPONSE_)
+        string(REGEX MATCHALL "[0-9]\\.[0-9]" VERSION_STRINGS_ ${QUERY_RESPONSE_})
+        list(APPEND VERSIONS_ ${VERSION_STRINGS_})
 			endif()
 		endforeach()
-	  set(QUERY_PATH_ ${REG_ROOT_}\\SOFTWARE)
-	  set(QUERY_PATH_REGEX_ "${REG_ROOT_}\\\\SOFTWARE\\\\Mathworks\\\\MATLAB\\\\([\\.0-9]+)")
-	  message(${QUERY_PATH_})
-      execute_process(COMMAND reg query ${QUERY_PATH_} OUTPUT_VARIABLE QUERY_RESPONSE_
-													   ERROR_VARIABLE ERROR_VAR_)
-	  message("Error: ${ERROR_VAR_}")
-	  message("Response: ${QUERY_RESPONSE_}")
-      if (QUERY_RESPONSE_)
-		string(REGEX MATCHALL ${QUERY_PATH_REGEX_} QUERY_MATCHES_ ${QUERY_RESPONSE_})
-		foreach(QUERY_MATCH_ ${QUERY_MATCHES_})
-			string(REGEX REPLACE ${QUERY_PATH_REGEX_} "\\1" QUERY_MATCH_ ${QUERY_MATCH_})
-			list(APPEND VERSIONS_ ${QUERY_MATCH_})
+		
+		# select the highest version
+		list(APPEND VERSIONS_ "0.0")
+		list(SORT VERSIONS_)
+		list(REVERSE VERSIONS_)
+		list(GET VERSIONS_ 0 VERSION_)
+		
+		# request the MATLABROOT from the registry
+		foreach(REG_ROOT_ ${REG_ROOTS_})
+			get_filename_component(QUERY_RESPONSE_ [${REG_ROOT_}\\${REG_EXTENSION_}\\${VERSION_};MATLABROOT] ABSOLUTE)
+			if (NOT ${MATLAB_ROOT_DIR_} AND NOT ${QUERY_RESPONSE_} MATCHES "registry$")
+				set(MATLAB_ROOT_DIR_ ${QUERY_RESPONSE_})
+			endif()
 		endforeach()
-		message(${VERSIONS_})
-        # sort in order from highest to lowest
-        list(SORT VERSIONS_)
-        list(REVERSE VERSIONS_)
-        list(GET VERSIONS_ 0 VERSION_)
-        get_filename_component(MATLAB_ROOT_DIR_ [HKEY_LOCAL_MACHINE\\SOFTWARE\\Mathworks\\MATLAB] ABSOLUTE CACHE)
-				message(${MATLAB_ROOT_DIR_})
-        if (MATLAB_ROOT_DIR_)
-          #break()
-        endif()
-      endif()
-    endforeach()
-  endif()
-  
-  # export output into parent scope
+	endif()
+
+  # export the root into the parent scope
   if (MATLAB_ROOT_DIR_)
     set(MATLAB_ROOT_DIR ${MATLAB_ROOT_DIR_} PARENT_SCOPE)
   endif()
-  return()
 endfunction()
 
 
@@ -191,6 +188,7 @@ function(locate_matlab_components MATLAB_ROOT_DIR)
 endfunction()
 
 
+
 # ----------------------------------------------------------------------------
 # FIND MATLAB COMPONENTS
 # ----------------------------------------------------------------------------
@@ -211,9 +209,4 @@ if (NOT MATLAB_FOUND)
   find_package_handle_standard_args(Matlab DEFAULT_MSG MATLAB_MEX_SCRIPT MATLAB_INCLUDE_DIR 
                                            MATLAB_ROOT_DIR MATLAB_LIBS   MATLAB_LIBRARY_DIR 
                                            MATLAB_MEXEXT MATLAB_ARCH MATLAB_BIN)
-
-  # if Matlab was not found, unset the local variables
-  if (NOT MATLAB_FOUND)
-    unset (MATLAB_ROOT_DIR)
-  endif()
 endif()

@@ -99,7 +99,6 @@ if (NOT MEX_WORKS)
     # attempt to generate a gateway for a function
     message(STATUS "Trying to generate Matlab code")
     execute_process(
-        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_SOURCE_DIR}/test/trigger.cpp
         COMMAND ${PYTHON_EXECUTABLE} 
                 ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
                 ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
