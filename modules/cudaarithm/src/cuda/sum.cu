@@ -61,8 +61,8 @@ namespace
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
-        GpuMat_<src_type> src(_src);
-        GpuMat_<res_type> buf(_buf);
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
 
         if (mask.empty())
             gridCalcSum(src, buf);
@@ -82,8 +82,8 @@ namespace
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
-        GpuMat_<src_type> src(_src);
-        GpuMat_<res_type> buf(_buf);
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
 
         if (mask.empty())
             gridCalcSum(abs_(cvt_<res_type>(src)), buf);
@@ -103,8 +103,8 @@ namespace
         typedef typename MakeVec<T, cn>::type src_type;
         typedef typename MakeVec<R, cn>::type res_type;
 
-        GpuMat_<src_type> src(_src);
-        GpuMat_<res_type> buf(_buf);
+        const GpuMat_<src_type>& src = (const GpuMat_<src_type>&) _src;
+        GpuMat_<res_type>& buf = (GpuMat_<res_type>&) _buf;
 
         if (mask.empty())
             gridCalcSum(sqr_(cvt_<res_type>(src)), buf);
@@ -138,9 +138,6 @@ cv::Scalar cv::cuda::sum(InputArray _src, InputArray _mask, GpuMat& buf)
 
     CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    const int res_depth = std::max(src.depth(), CV_32F);
-    cv::cuda::ensureSizeIsEnough(1, 1, CV_MAKE_TYPE(res_depth, src.channels()), buf);
-
     const func_t func = funcs[src.depth()][src.channels() - 1];
 
     return func(src, mask, buf);
@@ -165,9 +162,6 @@ cv::Scalar cv::cuda::absSum(InputArray _src, InputArray _mask, GpuMat& buf)
 
     CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
 
-    const int res_depth = std::max(src.depth(), CV_32F);
-    cv::cuda::ensureSizeIsEnough(1, 1, CV_MAKE_TYPE(res_depth, src.channels()), buf);
-
     const func_t func = funcs[src.depth()][src.channels() - 1];
 
     return func(src, mask, buf);
@@ -191,9 +185,6 @@ cv::Scalar cv::cuda::sqrSum(InputArray _src, InputArray _mask, GpuMat& buf)
     GpuMat mask = _mask.getGpuMat();
 
     CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
-
-    const int res_depth = CV_64F;
-    cv::cuda::ensureSizeIsEnough(1, 1, CV_MAKE_TYPE(res_depth, src.channels()), buf);
 
     const func_t func = funcs[src.depth()][src.channels() - 1];
 

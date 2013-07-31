@@ -64,8 +64,8 @@ namespace
                 typename SelectIf<TypesEquals<T, float>::value, float, int>::type
                 >::type work_type;
 
-        GpuMat_<T> src(_src);
-        GpuMat_<work_type> buf(_buf);
+        const GpuMat_<T>& src = (const GpuMat_<T>&) _src;
+        GpuMat_<work_type>& buf = (GpuMat_<work_type>&) _buf;
 
         if (mask.empty())
             gridFindMinMaxVal(src, buf);
@@ -102,11 +102,6 @@ void cv::cuda::minMax(InputArray _src, double* minVal, double* maxVal, InputArra
 
     CV_Assert( src.channels() == 1 );
     CV_DbgAssert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
-
-    const int depth = src.depth();
-
-    const int work_type = depth == CV_64F ? CV_64F : depth == CV_32F ? CV_32F : CV_32S;
-    ensureSizeIsEnough(1, 2, work_type, buf);
 
     const func_t func = funcs[src.depth()];
 
