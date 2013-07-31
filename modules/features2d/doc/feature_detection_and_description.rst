@@ -3,6 +3,10 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
+.. Sample code::
+
+   * : An example explaining keypoint detection and description can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+
 FAST
 ----
 Detects corners using the FAST algorithm
@@ -157,6 +161,10 @@ FREAK
 Class implementing the FREAK (*Fast Retina Keypoint*) keypoint descriptor, described in [AOV12]_. The algorithm propose a novel keypoint descriptor inspired by the human visual system and more precisely the retina, coined Fast Retina Key- point (FREAK). A cascade of binary strings is computed by efficiently comparing image intensities over a retinal sampling pattern. FREAKs are in general faster to compute with lower memory load and also more robust than SIFT, SURF or BRISK. They are competitive alternatives to existing keypoints in particular for embedded applications.
 
 .. [AOV12] A. Alahi, R. Ortiz, and P. Vandergheynst. FREAK: Fast Retina Keypoint. In IEEE Conference on Computer Vision and Pattern Recognition, 2012. CVPR 2012 Open Source Award Winner.
+
+.. Sample code::
+
+   * : An example on how to use the FREAK descriptor can be found at opencv_source_code/samples/cpp/freak_demo.cpp
 
 FREAK::FREAK
 ------------

@@ -5,6 +5,10 @@ This section describes obsolete ``C`` interface of EM algorithm. Details of the 
 
 .. highlight:: cpp
 
+.. Sample code::
+
+   * : An example on using the Expectation Maximalization algorithm can be found at opencv_source_code/samples/cpp/em.cpp
+
 
 CvEMParams
 ----------

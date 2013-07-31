@@ -75,6 +75,10 @@ SURF
 
 .. [Bay06] Bay, H. and Tuytelaars, T. and Van Gool, L. "SURF: Speeded Up Robust Features", 9th European Conference on Computer Vision, 2006
 
+.. Sample code::
+
+   * : An example using the SURF feature detector can be found at opencv_source_code/samples/cpp/generic_descriptor_match.cpp
+   * : Another example using the SURF feature detector, extractor and matcher can be found at opencv_source_code/samples/cpp/matcher_simple.cpp
 
 SURF::SURF
 ----------
