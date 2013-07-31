@@ -61,98 +61,159 @@ void checkEqual(Mat img0, Mat img1, double threshold)
 	ASSERT_FALSE(max > threshold);
 }
 
-TEST(Photo_HdrFusion, regression)
-{
-	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
-	string fuse_path = test_path + "fusion/";
-	
-	vector<float> times;
-	vector<Mat> images;
-
-	ifstream list_file(fuse_path + "list.txt");
-	ASSERT_TRUE(list_file.is_open());
-	string name; 
-	float val;
-	while(list_file >> name >> val) {
-		Mat img = imread(fuse_path + name);
-		ASSERT_FALSE(img.empty()) << "Could not load input image " << fuse_path + name;
-		images.push_back(img);
-		times.push_back(1 / val);
-	}
-	list_file.close();
-
-	Mat response, expected(256, 3, CV_32F);
-	ifstream resp_file(test_path + "response.csv");
-	for(int i = 0; i < 256; i++) {
-		for(int channel = 0; channel < 3; channel++) {
-			resp_file >> expected.at<float>(i, channel);
-			resp_file.ignore(1);
-		}
-	}
-	resp_file.close();
-
-	estimateResponse(images, times, response);
-	checkEqual(expected, response, 0.001);
-
-	Mat result;
-	loadImage(test_path + "no_calibration.hdr", expected);
-	makeHDR(images, times, result);
-	checkEqual(expected, result, 0.01);
-
-	loadImage(test_path + "rle.hdr", expected);
-	makeHDR(images, times, result, response);
-	checkEqual(expected, result, 0.01);
-
-	loadImage(test_path + "exp_fusion.png", expected);
-	exposureFusion(images, result);
-	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(expected, result, 0);
-}
-
 TEST(Photo_Tonemap, regression)
 {
-	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
-
-	Mat img;
-	loadImage(test_path + "../rle.hdr", img);
-	ifstream list_file(test_path + "list.txt");
-	ASSERT_TRUE(list_file.is_open());
-
-	string name; 
-	while(list_file >> name) {
-		Mat expected = imread(test_path + name + ".png");
-		ASSERT_FALSE(img.empty()) << "Could not load input image " << test_path + name + ".png";
-		Ptr<Tonemap> mapper = Tonemap::create(name);	
-		ASSERT_FALSE(mapper.empty()) << "Could not find mapper " << name;
-		Mat result;
-		mapper->process(img, result);
-		result.convertTo(result, CV_8UC3, 255);
-		checkEqual(expected, result, 0);
-	}
-	list_file.close();
-}
-
-TEST(Photo_Align, regression)
-{
-	const int TESTS_COUNT = 100;
-	string folder = string(cvtest::TS::ptr()->get_data_path()) + "shared/";
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
 	
-	string file_name = folder + "lena.png";
-	Mat img = imread(file_name);
-	ASSERT_FALSE(img.empty()) << "Could not load input image " << file_name;
-	cvtColor(img, img, COLOR_RGB2GRAY);
+	Mat img, expected, result;
+	loadImage(test_path + "rle.hdr", img);
+	float gamma = 2.2f;
+	test_path += "tonemap/";
+	
+	Ptr<TonemapLinear> linear = createTonemapLinear(gamma);
+	linear->process(img, result);
+	loadImage(test_path + "linear.png", expected);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(result, expected, 0);
 
-	int max_bits = 5;
-	int max_shift = 32;
-	srand(static_cast<unsigned>(time(0)));
-	int errors = 0;
+	Ptr<TonemapDrago> drago = createTonemapDrago(gamma);
+	drago->process(img, result);
+	loadImage(test_path + "drago.png", expected);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(result, expected, 0);
 
-	for(int i = 0; i < TESTS_COUNT; i++) {
-		Point shift(rand() % max_shift, rand() % max_shift);
-		Mat res;
-		shiftMat(img, shift, res);
-		Point calc = getExpShift(img, res, max_bits);
-		errors += (calc != -shift);
-	}
-	ASSERT_TRUE(errors < 5);
+	Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
+	durand->process(img, result);
+	loadImage(test_path + "durand.png", expected);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(result, expected, 0);
+
+	Ptr<TonemapReinhardDevlin> reinhard_devlin = createTonemapReinhardDevlin(gamma);
+	reinhard_devlin->process(img, result);
+	loadImage(test_path + "reinhard_devlin.png", expected);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(result, expected, 0);
 }
+
+
+
+//void loadExposureSeq(String fuse_path, vector<Mat>& images, vector<float>& times = vector<float>())
+//{
+//	ifstream list_file(fuse_path + "list.txt");
+//	ASSERT_TRUE(list_file.is_open());
+//	string name; 
+//	float val;
+//	while(list_file >> name >> val) {
+//		Mat img = imread(fuse_path + name);
+//		ASSERT_FALSE(img.empty()) << "Could not load input image " << fuse_path + name;
+//		images.push_back(img);
+//		times.push_back(1 / val);
+//	}
+//	list_file.close();
+//}
+////
+////TEST(Photo_MergeMertens, regression)
+////{
+////	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+////	string fuse_path = test_path + "fusion/";
+////
+////	vector<Mat> images;
+////	loadExposureSeq(fuse_path, images);
+////
+////	MergeMertens merge;
+////
+////	Mat result, expected;
+////	loadImage(test_path + "exp_fusion.png", expected);
+////	merge.process(images, result);
+////	result.convertTo(result, CV_8UC3, 255);
+////	checkEqual(expected, result, 0);
+////}
+//
+//TEST(Photo_Debevec, regression)
+//{
+//	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+//	string fuse_path = test_path + "fusion/";
+//	
+//	vector<float> times;
+//	vector<Mat> images;
+//
+//	loadExposureSeq(fuse_path, images, times);
+//
+//	Mat response, expected(256, 3, CV_32F);
+//	ifstream resp_file(test_path + "response.csv");
+//	for(int i = 0; i < 256; i++) {
+//		for(int channel = 0; channel < 3; channel++) {
+//			resp_file >> expected.at<float>(i, channel);
+//			resp_file.ignore(1);
+//		}
+//	}
+//	resp_file.close();
+//
+//	CalibrateDebevec calib;
+//	MergeDebevec merge;
+//
+//	//calib.process(images, response, times);
+//	//checkEqual(expected, response, 0.001);
+//	//
+//	Mat result;
+//	loadImage(test_path + "no_calibration.hdr", expected);
+//	merge.process(images, result, times);
+//	checkEqual(expected, result, 0.01);
+//
+//	//loadImage(test_path + "rle.hdr", expected);
+//	//merge.process(images, result, times, response);
+//	//checkEqual(expected, result, 0.01);
+//}
+//
+//TEST(Photo_Tonemap, regression)
+//{
+//	initModule_photo();
+//	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
+//	Mat img;
+//	loadImage(test_path + "../rle.hdr", img);
+//
+//	vector<String> algorithms;
+//	Algorithm::getList(algorithms);
+//	for(size_t i = 0; i < algorithms.size(); i++) {
+//		String str = algorithms[i];
+//		size_t dot = str.find('.');
+//		if(dot != String::npos && str.substr(0, dot).compare("Tonemap") == 0) {
+//			String algo_name = str.substr(dot + 1, str.size());
+//		    Mat expected;
+//			loadImage(test_path + algo_name.toLowerCase() + ".png", expected);
+//			Ptr<Tonemap> mapper = Tonemap::create(algo_name);	
+//	    	ASSERT_FALSE(mapper.empty()) << algo_name;
+//			Mat result;
+//			mapper->process(img, result);
+//			result.convertTo(result, CV_8UC3, 255);
+//			checkEqual(expected, result, 0);
+//		}
+//	}
+////}
+////
+////TEST(Photo_AlignMTB, regression)
+////{
+////	const int TESTS_COUNT = 100;
+////	string folder = string(cvtest::TS::ptr()->get_data_path()) + "shared/";
+////	
+////	string file_name = folder + "lena.png";
+////	Mat img = imread(file_name);
+////	ASSERT_FALSE(img.empty()) << "Could not load input image " << file_name;
+////	cvtColor(img, img, COLOR_RGB2GRAY);
+////
+////	int max_bits = 5;
+////	int max_shift = 32;
+////	srand(static_cast<unsigned>(time(0)));
+////	int errors = 0;
+////
+////	AlignMTB align(max_bits);
+////
+////	for(int i = 0; i < TESTS_COUNT; i++) {
+////		Point shift(rand() % max_shift, rand() % max_shift);
+////		Mat res;
+////		align.shiftMat(img, shift, res);
+////		Point calc = align.getExpShift(img, res);
+////		errors += (calc != -shift);
+////	}
+////	ASSERT_TRUE(errors < 5);
+////}

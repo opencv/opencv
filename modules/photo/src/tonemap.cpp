@@ -47,183 +47,320 @@
 namespace cv
 {
 
-Tonemap::Tonemap(float gamma) : gamma(gamma)
+class TonemapLinearImpl : public TonemapLinear
 {
-}
+public:
+	TonemapLinearImpl(float gamma) : gamma(gamma), name("TonemapLinear")
+	{
+	}
 
-Tonemap::~Tonemap()
-{
-}
+	void process(InputArray _src, OutputArray _dst) 
+	{
+		Mat src = _src.getMat();
+		CV_Assert(!src.empty());
+		_dst.create(src.size(), CV_32FC3);
+		Mat dst = _dst.getMat();
+		
+		double min, max;
+		minMaxLoc(src, &min, &max);
+		if(max - min > DBL_EPSILON) {
+			dst = (src - min) / (max - min);
+		} else {
+			src.copyTo(dst);
+		}
 
-void Tonemap::process(InputArray src, OutputArray dst)
-{
-	Mat srcMat = src.getMat();
-    CV_Assert(!srcMat.empty());
-    dst.create(srcMat.size(), CV_32FC3);
-    img = dst.getMat();
-	srcMat.copyTo(img);
-	linearMap();
-	tonemap();
-	gammaCorrection();
-}
+		pow(dst, 1.0f / gamma, dst);
+	}
 
-void Tonemap::linearMap()
-{
-	double min, max;
-    minMaxLoc(img, &min, &max);
-    if(max - min > DBL_EPSILON) {
-        img = (img - min) / (max - min);
+	float getGamma() const { return gamma; }
+	void setGamma(float val) { gamma = val; }
+
+	void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "gamma" << gamma;
     }
-}
 
-void Tonemap::gammaCorrection()
-{
-	pow(img, 1.0f / gamma, img);
-}
-
-void TonemapLinear::tonemap()
-{
-}
-
-TonemapLinear::TonemapLinear(float gamma) : Tonemap(gamma)
-{
-}
-
-TonemapDrago::TonemapDrago(float gamma, float bias) :
-    Tonemap(gamma),
-	bias(bias)
-{
-}
-
-void TonemapDrago::tonemap() 
-{
-    Mat gray_img;
-    cvtColor(img, gray_img, COLOR_RGB2GRAY);
-    Mat log_img;
-    log(gray_img, log_img);
-    float mean = expf(static_cast<float>(sum(log_img)[0]) / log_img.total());
-    gray_img /= mean;
-    log_img.release();
-
-    double max;
-    minMaxLoc(gray_img, NULL, &max);
-
-    Mat map;
-    log(gray_img + 1.0f, map);
-    Mat div;
-    pow(gray_img / (float)max, logf(bias) / logf(0.5f), div);
-    log(2.0f + 8.0f * div, div);
-    map = map.mul(1.0f / div);
-    map = map.mul(1.0f / gray_img);
-    div.release();
-    gray_img.release();
-
-    std::vector<Mat> channels(3);
-    split(img, channels);
-    for(int i = 0; i < 3; i++) {
-        channels[i] = channels[i].mul(map);
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        gamma = fn["gamma"];
     }
-    map.release();
-    merge(channels, img);
-	linearMap();
+
+protected:
+	String name;
+	float gamma;
+};
+
+Ptr<TonemapLinear> createTonemapLinear(float gamma)
+{
+	return new TonemapLinearImpl(gamma);
 }
 
-TonemapDurand::TonemapDurand(float gamma, float contrast, float sigma_color, float sigma_space) : 
-    Tonemap(gamma),			
-	contrast(contrast),
-	sigma_color(sigma_color),
-	sigma_space(sigma_space)
+class TonemapDragoImpl : public TonemapDrago
 {
-}
+public:
+	TonemapDragoImpl(float gamma, float bias) : 
+	    gamma(gamma), 
+        bias(bias),
+		name("TonemapLinear")
+	{
+	}
 
-void TonemapDurand::tonemap()
+	void process(InputArray _src, OutputArray _dst) 
+	{
+		Mat src = _src.getMat();
+		CV_Assert(!src.empty());
+		_dst.create(src.size(), CV_32FC3);
+		Mat img = _dst.getMat();
+		
+		Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+		linear->process(src, img);
+
+		Mat gray_img;
+		cvtColor(img, gray_img, COLOR_RGB2GRAY);
+		Mat log_img;
+		log(gray_img, log_img);
+		float mean = expf(static_cast<float>(sum(log_img)[0]) / log_img.total());
+		gray_img /= mean;
+		log_img.release();
+
+		double max;
+		minMaxLoc(gray_img, NULL, &max);
+
+		Mat map;
+		log(gray_img + 1.0f, map);
+		Mat div;
+		pow(gray_img / (float)max, logf(bias) / logf(0.5f), div);
+		log(2.0f + 8.0f * div, div);
+		map = map.mul(1.0f / div);
+		map = map.mul(1.0f / gray_img);
+		div.release();
+		gray_img.release();
+
+		std::vector<Mat> channels(3);
+		split(img, channels);
+		for(int i = 0; i < 3; i++) {
+			channels[i] = channels[i].mul(map);
+		}
+		map.release();
+		merge(channels, img);
+		
+		linear->setGamma(gamma);
+		linear->process(img, img);
+	}
+
+	float getGamma() const { return gamma; }
+	void setGamma(float val) { gamma = val; }
+
+	float getBias() const { return bias; }
+	void setBias(float val) { bias = val; }
+
+	void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "gamma" << gamma
+		   << "bias" << bias;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        gamma = fn["gamma"];
+		bias = fn["bias"];
+    }
+
+protected:
+	String name;
+	float gamma, bias;
+};
+
+Ptr<TonemapDrago> createTonemapDrago(float gamma, float bias)
 {
-	Mat gray_img;
-    cvtColor(img, gray_img, COLOR_RGB2GRAY);
-    Mat log_img;
-    log(gray_img, log_img);
-    Mat map_img;
-    bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
+	return new TonemapDragoImpl(gamma, bias);
+}
+ 
+class TonemapDurandImpl : public TonemapDurand
+{
+public:
+	TonemapDurandImpl(float gamma, float contrast, float sigma_color, float sigma_space) : 
+	    gamma(gamma), 
+        contrast(contrast),
+		sigma_color(sigma_color),
+		sigma_space(sigma_space),
+		name("TonemapDurand")
+	{
+	}
+
+	void process(InputArray _src, OutputArray _dst) 
+	{
+		Mat src = _src.getMat();
+		CV_Assert(!src.empty());
+		_dst.create(src.size(), CV_32FC3);
+		Mat dst = _dst.getMat();
+		
+		Mat gray_img;
+		cvtColor(src, gray_img, COLOR_RGB2GRAY);
+		Mat log_img;
+		log(gray_img, log_img);
+		Mat map_img;
+		bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
         
-    double min, max;
-    minMaxLoc(map_img, &min, &max);
-    float scale = contrast / (float)(max - min);
+		double min, max;
+		minMaxLoc(map_img, &min, &max);
+		float scale = contrast / (float)(max - min);
 
-    exp(map_img * (scale - 1.0f) + log_img, map_img);
-    log_img.release();
-    map_img = map_img.mul(1.0f / gray_img);
-    gray_img.release();
+		exp(map_img * (scale - 1.0f) + log_img, map_img);
+		log_img.release();
+		map_img = map_img.mul(1.0f / gray_img);
+		gray_img.release();
 
-    std::vector<Mat> channels(3);
-    split(img, channels);
-    for(int i = 0; i < 3; i++) {
-        channels[i] = channels[i].mul(map_img);
+		std::vector<Mat> channels(3);
+		split(src, channels);
+		for(int i = 0; i < 3; i++) {
+			channels[i] = channels[i].mul(map_img);
+		}
+		merge(channels, dst);
+		pow(dst, 1.0f / gamma, dst);
+	}
+
+	float getGamma() const { return gamma; }
+	void setGamma(float val) { gamma = val; }
+
+	float getContrast() const { return contrast; }
+	void setContrast(float val) { contrast = val; }
+
+	float getSigmaColor() const { return sigma_color; }
+	void setSigmaColor(float val) { sigma_color = val; }
+
+	float getSigmaSpace() const { return sigma_space; }
+	void setSigmaSpace(float val) { sigma_space = val; }
+
+	void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "gamma" << gamma
+		   << "contrast" << contrast 
+		   << "sigma_color" << sigma_color 
+		   << "sigma_space" << sigma_space;
     }
-    merge(channels, img);
-}
 
-TonemapReinhardDevlin::TonemapReinhardDevlin(float gamma, float intensity, float color_adapt, float light_adapt) : 
-    Tonemap(gamma),			
-	intensity(intensity),
-	color_adapt(color_adapt),
-	light_adapt(light_adapt)
-{
-}
-
-void TonemapReinhardDevlin::tonemap()
-{
-	Mat gray_img;
-    cvtColor(img, gray_img, COLOR_RGB2GRAY);
-    Mat log_img;
-    log(gray_img, log_img);
-
-    float log_mean = (float)sum(log_img)[0] / log_img.total();
-    double log_min, log_max;
-    minMaxLoc(log_img, &log_min, &log_max);
-    log_img.release();
-
-    double key = (float)((log_max - log_mean) / (log_max - log_min));
-    float map_key = 0.3f + 0.7f * pow((float)key, 1.4f);
-    intensity = exp(-intensity);
-    Scalar chan_mean = mean(img);
-    float gray_mean = (float)mean(gray_img)[0];
-
-    std::vector<Mat> channels(3);
-    split(img, channels);
-
-    for(int i = 0; i < 3; i++) {
-        float global = color_adapt * (float)chan_mean[i] + (1.0f - color_adapt) * gray_mean;
-        Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
-        adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
-        pow(intensity * adapt, map_key, adapt);
-        channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));		
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        gamma = fn["gamma"];
+		contrast = fn["contrast"];
+		sigma_color = fn["sigma_color"];
+		sigma_space = fn["sigma_space"];
     }
-    gray_img.release();
-    merge(channels, img);
-	linearMap();
-}
 
-Ptr<Tonemap> Tonemap::create(const String& TonemapType)
+protected:
+	String name;
+	float gamma, contrast, sigma_color, sigma_space;
+};
+
+Ptr<TonemapDurand> createTonemapDurand(float gamma, float contrast, float sigma_color, float sigma_space)
 {
-    return Algorithm::create<Tonemap>("Tonemap." + TonemapType);
+	return new TonemapDurandImpl(gamma, contrast, sigma_color, sigma_space);
 }
 
-CV_INIT_ALGORITHM(TonemapLinear, "Tonemap.Linear",
-				  obj.info()->addParam(obj, "gamma", obj.gamma));
+class TonemapReinhardDevlinImpl : public TonemapReinhardDevlin
+{
+public:
+	TonemapReinhardDevlinImpl(float gamma, float intensity, float light_adapt, float color_adapt) : 
+	    gamma(gamma), 
+        intensity(intensity),
+		light_adapt(light_adapt),
+		color_adapt(color_adapt),
+		name("TonemapReinhardDevlin")
+	{
+	}
 
-CV_INIT_ALGORITHM(TonemapDrago, "Tonemap.Drago",
-                  obj.info()->addParam(obj, "gamma", obj.gamma);
-                  obj.info()->addParam(obj, "bias", obj.bias));
+	void process(InputArray _src, OutputArray _dst)
+	{
+		Mat src = _src.getMat();
+		CV_Assert(!src.empty());
+		_dst.create(src.size(), CV_32FC3);
+		Mat img = _dst.getMat();
+		
+		Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+		linear->process(src, img);
+		
+		Mat gray_img;
+		cvtColor(img, gray_img, COLOR_RGB2GRAY);
+		Mat log_img;
+		log(gray_img, log_img);
 
-CV_INIT_ALGORITHM(TonemapDurand, "Tonemap.Durand",
-				  obj.info()->addParam(obj, "gamma", obj.gamma);
-                  obj.info()->addParam(obj, "contrast", obj.contrast);
-				  obj.info()->addParam(obj, "sigma_color", obj.sigma_color);
-                  obj.info()->addParam(obj, "sigma_space", obj.sigma_space));
+		float log_mean = (float)sum(log_img)[0] / log_img.total();
+		double log_min, log_max;
+		minMaxLoc(log_img, &log_min, &log_max);
+		log_img.release();
 
-CV_INIT_ALGORITHM(TonemapReinhardDevlin, "Tonemap.ReinhardDevlin",
-				  obj.info()->addParam(obj, "gamma", obj.gamma);
-                  obj.info()->addParam(obj, "intensity", obj.intensity);
-				  obj.info()->addParam(obj, "color_adapt", obj.color_adapt);
-                  obj.info()->addParam(obj, "light_adapt", obj.light_adapt));
+		double key = (float)((log_max - log_mean) / (log_max - log_min));
+		float map_key = 0.3f + 0.7f * pow((float)key, 1.4f);
+		intensity = exp(-intensity);
+		Scalar chan_mean = mean(img);
+		float gray_mean = (float)mean(gray_img)[0];
+
+		std::vector<Mat> channels(3);
+		split(img, channels);
+
+		for(int i = 0; i < 3; i++) {
+			float global = color_adapt * (float)chan_mean[i] + (1.0f - color_adapt) * gray_mean;
+			Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
+			adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
+			pow(intensity * adapt, map_key, adapt);
+			channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));		
+		}
+		gray_img.release();
+		merge(channels, img);
+		
+		linear->setGamma(gamma);
+		linear->process(img, img);
+	}
+
+	float getGamma() const { return gamma; }
+	void setGamma(float val) { gamma = val; }
+
+	float getIntensity() const { return intensity; }
+	void setIntensity(float val) { intensity = val; }
+
+	float getLightAdaptation() const { return light_adapt; }
+	void setLightAdaptation(float val) { light_adapt = val; }
+
+	float getColorAdaptation() const { return color_adapt; }
+	void setColorAdaptation(float val) { color_adapt = val; }
+
+	void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "gamma" << gamma
+		   << "intensity" << intensity 
+		   << "light_adapt" << light_adapt 
+		   << "color_adapt" << color_adapt;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        gamma = fn["gamma"];
+		intensity = fn["intensity"];
+		light_adapt = fn["light_adapt"];
+		color_adapt = fn["color_adapt"];
+    }
+
+protected:
+	String name;
+	float gamma, intensity, light_adapt, color_adapt;
+};
+
+Ptr<TonemapReinhardDevlin> createTonemapReinhardDevlin(float gamma, float contrast, float sigma_color, float sigma_space)
+{
+	return new TonemapReinhardDevlinImpl(gamma, contrast, sigma_color, sigma_space);
+}
+
 }
