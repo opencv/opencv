@@ -53,6 +53,7 @@
 #include "../ptr2d/mask.hpp"
 #include "../ptr2d/transform.hpp"
 #include "detail/reduce.hpp"
+#include "detail/minmaxloc.hpp"
 
 namespace cv { namespace cudev {
 
@@ -203,6 +204,46 @@ __host__ void gridFindMinMaxVal_(const SrcPtr& src, GpuMat_<ResType>& dst, Strea
 }
 
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
+__host__ void gridMinMaxLoc_(const SrcPtr& src, GpuMat_<ResType>& valBuf, GpuMat_<int>& locBuf, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    dim3 grid, block;
+    grid_minmaxloc_detail::getLaunchCfg<Policy>(rows, cols, block, grid);
+
+    valBuf.create(2, grid.x * grid.y);
+    locBuf.create(2, grid.x * grid.y);
+
+    grid_minmaxloc_detail::minMaxLoc<Policy>(shrinkPtr(src),
+                                             valBuf[0], valBuf[1], locBuf[0], locBuf[1],
+                                             shrinkPtr(mask),
+                                             rows, cols,
+                                             StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename ResType>
+__host__ void gridMinMaxLoc_(const SrcPtr& src, GpuMat_<ResType>& valBuf, GpuMat_<int>& locBuf, Stream& stream = Stream::Null())
+{
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    dim3 grid, block;
+    grid_minmaxloc_detail::getLaunchCfg<Policy>(rows, cols, block, grid);
+
+    valBuf.create(2, grid.x * grid.y);
+    locBuf.create(2, grid.x * grid.y);
+
+    grid_minmaxloc_detail::minMaxLoc<Policy>(shrinkPtr(src),
+                                             valBuf[0], valBuf[1], locBuf[0], locBuf[1],
+                                             WithOutMask(),
+                                             rows, cols,
+                                             StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
 __host__ void gridCountNonZero_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
 {
     dst.create(1, 1);
@@ -303,6 +344,18 @@ template <class SrcPtr, typename ResType>
 __host__ void gridFindMinMaxVal(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& stream = Stream::Null())
 {
     gridFindMinMaxVal_<DefaultGlobReducePolicy>(src, dst, stream);
+}
+
+template <class SrcPtr, typename ResType, class MaskPtr>
+__host__ void gridMinMaxLoc(const SrcPtr& src, GpuMat_<ResType>& valBuf, GpuMat_<int>& locBuf, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridMinMaxLoc_<DefaultGlobReducePolicy>(src, valBuf, locBuf, mask, stream);
+}
+
+template <class SrcPtr, typename ResType>
+__host__ void gridMinMaxLoc(const SrcPtr& src, GpuMat_<ResType>& valBuf, GpuMat_<int>& locBuf, Stream& stream = Stream::Null())
+{
+    gridMinMaxLoc_<DefaultGlobReducePolicy>(src, valBuf, locBuf, stream);
 }
 
 template <class SrcPtr, typename ResType, class MaskPtr>
