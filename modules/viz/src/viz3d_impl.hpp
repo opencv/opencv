@@ -140,6 +140,7 @@ public:
     void getCameras (Camera& camera);
 
     //to implement Viz3d set/getViewerPose()
+    void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();
 
 

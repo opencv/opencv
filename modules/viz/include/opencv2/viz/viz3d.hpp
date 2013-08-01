@@ -38,6 +38,9 @@ namespace cv
             void setWidgetPose(const String &id, const Affine3f &pose);
             void updateWidgetPose(const String &id, const Affine3f &pose);
             Affine3f getWidgetPose(const String &id) const;
+            
+            Affine3f getViewerPose();
+            void setViewerPose(const Affine3f &pose);
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);

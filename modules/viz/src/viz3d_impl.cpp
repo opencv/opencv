@@ -592,6 +592,28 @@ void cv::viz::Viz3d::VizImpl::getCameras (cv::viz::Camera& camera)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
+{
+    vtkCamera& camera = *renderer_->GetActiveCamera ();
+        
+    // Position = extrinsic translation
+    cv::Vec3f pos_vec = pose.translation();
+
+    // Rotate the view vector
+    cv::Matx33f rotation = pose.rotation();
+    cv::Vec3f y_axis (0.f, 1.f, 0.f);
+    cv::Vec3f up_vec (rotation * y_axis);
+
+    // Compute the new focal point
+    cv::Vec3f z_axis (0.f, 0.f, 1.f);
+    cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
+    
+    camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
+    camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
+    camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose ()
 {
     vtkCamera& camera = *renderer_->GetActiveCamera ();
