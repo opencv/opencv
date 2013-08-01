@@ -133,24 +133,6 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HistEven, ALL_DEVICES);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CalcHist
 
-namespace
-{
-    void calcHistGold(const cv::Mat& src, cv::Mat& hist)
-    {
-        hist.create(1, 256, CV_32SC1);
-        hist.setTo(cv::Scalar::all(0));
-
-        int* hist_row = hist.ptr<int>();
-        for (int y = 0; y < src.rows; ++y)
-        {
-            const uchar* src_row = src.ptr(y);
-
-            for (int x = 0; x < src.cols; ++x)
-                ++hist_row[src_row[x]];
-        }
-    }
-}
-
 PARAM_TEST_CASE(CalcHist, cv::gpu::DeviceInfo, cv::Size)
 {
     cv::gpu::DeviceInfo devInfo;
@@ -174,7 +156,16 @@ GPU_TEST_P(CalcHist, Accuracy)
     cv::gpu::calcHist(loadMat(src), hist);
 
     cv::Mat hist_gold;
-    calcHistGold(src, hist_gold);
+
+    const int hbins = 256;
+    const float hranges[] = {0.0f, 256.0f};
+    const int histSize[] = {hbins};
+    const float* ranges[] = {hranges};
+    const int channels[] = {0};
+
+    cv::calcHist(&src, 1, channels, cv::Mat(), hist_gold, 1, histSize, ranges);
+    hist_gold = hist_gold.reshape(1, 1);
+    hist_gold.convertTo(hist_gold, CV_32S);
 
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
