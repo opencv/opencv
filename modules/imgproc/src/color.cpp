@@ -93,6 +93,13 @@
 #include <limits>
 #include <iostream>
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#define MAX_IPP8u	255
+#define MAX_IPP16u	65535
+#define MAX_IPP32f	1.0
+static IppStatus sts = ippInit();
+#endif
+
 namespace cv
 {
 
@@ -189,6 +196,286 @@ void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
 {
     parallel_for_(Range(0, src.rows), CvtColorLoop_Invoker<Cvt>(src, dst, cvt), src.total()/(double)(1<<16) );
 }
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(func, src, dst ) \
+	if( depth == CV_8U ) { \
+	CV_DEF_IPP_PARALLEL_FOR(func##_8u, src, dst); } \
+	else if( depth == CV_16U ) { \
+	CV_DEF_IPP_PARALLEL_FOR(func##_16u, src, dst); } \
+	else { CV_DEF_IPP_PARALLEL_FOR(func##_32f, src, dst); }
+
+#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(func, src, dst ) \
+	if( depth == CV_8U ) { \
+	CV_DEF_IPP_PARALLEL_FOR(func##_8u, src, dst); } \
+	else if( depth == CV_16U ){ \
+	CV_DEF_IPP_PARALLEL_FOR(func##_16u, src, dst); } 
+
+#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(func, src, dst ) \
+	Mat temp; Mat &source = src; \
+	if( src.data == dst.data ) { \
+	src.copyTo(temp); source = temp; } \
+	CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(func, source, dst)
+
+#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(func, src, dst ) \
+	Mat temp; Mat &source = src; \
+	if( src.data == dst.data ) { \
+	src.copyTo(temp); source = temp; } \
+	CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(func, source, dst)
+
+#define CV_DEF_IPP_PARALLEL_FOR(Functor, src, dst) \
+	bool ok; \
+	Functor invoker(src, dst, &ok); \
+	parallel_for_(Range(0, src.rows), invoker, src.total()/(double)(1<<16) ); \
+	if( ok ) { return; }
+
+#define CV_DEF_IPP_COLORLOOP_BODY(mode, type, funcbody) \
+class IPPColorLoop_Invoker_##mode##_##type## : public ParallelLoopBody { \
+public: IPPColorLoop_Invoker_##mode##_##type##(const Mat& _src, Mat& _dst, bool *_ok) : \
+	ParallelLoopBody(), src(_src), dst(_dst), ok(_ok) \
+{ *ok = true; } \
+	virtual void operator()(const Range& range) const \
+{ funcbody(type) } \
+private: const Mat& src; \
+	Mat& dst; bool *ok; \
+const IPPColorLoop_Invoker_##mode##_##type##& operator= (const IPPColorLoop_Invoker_##mode##_##type##&); };
+
+#define CV_DEF_IPP_FUNCPROC(func) \
+	if( func < 0 ) { *ok = false; return; }
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C3C4(order1, order2, order3, order4, type) \
+	int order[4] = { order1, order2, order3, order4 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C3C4_0123(type) \
+	CV_DEF_IPP_SWAP_CHANNELS_C3C4(0, 1, 2, 3, type)
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C3C4_2103(type) \
+	CV_DEF_IPP_SWAP_CHANNELS_C3C4(2, 1, 0, 3, type)
+
+#define CV_DEF_IPP_COPY_AC4C3(type) \
+	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_AC4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C4C3(order1, order2, order3, type) \
+	int order[3] = { order1, order2, order3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C4C3_210(type) \
+	CV_DEF_IPP_SWAP_CHANNELS_C4C3(2, 1, 0, type)
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C3(order1, order2, order3, type) \
+	int order[3] = { order1, order2, order3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C3_210(type) \
+	CV_DEF_IPP_SWAP_CHANNELS_C3(2, 1, 0, type)
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C4(order1, order2, order3, type) \
+	int order[3] = { order1, order2, order3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_AC4R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_SWAP_CHANNELS_C4_2103(type) \
+	CV_DEF_IPP_SWAP_CHANNELS_C4(2, 1, 0, type)
+
+#define CV_DEF_IPP_BGR2GRAY(type) \
+	Ipp32f coeff[3] = { 0.114f, 0.587f, 0.299f }; \
+	CV_DEF_IPP_FUNCPROC(ippiColorToGray_##type##_C3C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), coeff ))
+
+#define CV_DEF_IPP_RGB2GRAY(type) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToGray_##type##_C3C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+
+#define CV_DEF_IPP_BGRA2GRAY(type) \
+	Ipp32f coeff[3] = { 0.114f, 0.587f, 0.299f }; \
+	CV_DEF_IPP_FUNCPROC(ippiColorToGray_##type##_AC4C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), coeff ))
+
+#define CV_DEF_IPP_RGBA2GRAY(type) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToGray_##type##_AC4C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+
+#define CV_DEF_IPP_Copy_P3C3(type) \
+	Ipp##type *pointer = (Ipp##type *)src.ptr(range.start); \
+	Ipp##type* srcarray[3] = { pointer, pointer, pointer }; \
+	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_P3C3R( srcarray, (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+
+#define CV_DEF_IPP_GRAY2BGRA(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	Ipp##type *pointer = (Ipp##type *)src.ptr(range.start); \
+	Ipp##type* srcarray[3] = { pointer, pointer, pointer }; \
+	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_P3C3R( srcarray, (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ))) \
+	int order[4] = { 0, 1, 2, 3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+
+#define CV_DEF_IPP_BGR2XYZ(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_BGRA2XYZ(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGB2XYZ(type) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGBA2XYZ(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 0, 1, 2 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_XYZ2BGR(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_XYZ2BGRA_FAMILY(order1, order2, order3, type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[4] = { order1, order2, order3, 3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+
+#define CV_DEF_IPP_XYZ2BGRA(type) \
+	CV_DEF_IPP_XYZ2BGRA_FAMILY(2, 1, 0, type)
+
+#define CV_DEF_IPP_XYZ2RGB(type) \
+	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_XYZ2RGBA(type) \
+	CV_DEF_IPP_XYZ2BGRA_FAMILY(0, 1, 2, type)
+
+#define CV_DEF_IPP_BGR2HSV_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_BGRA2HSV_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGB2HSV_FULL(type) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGBA2HSV_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 0, 1, 2 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_BGR2HLS_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_BGRA2HLS_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGB2HLS_FULL(type) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_RGBA2HLS_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	int order[3] = { 0, 1, 2 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
+	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+
+#define CV_DEF_IPP_HSV2BGR_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(order1, order2, order3, type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[4] = { order1, order2, order3, 3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+
+#define CV_DEF_IPP_HSV2BGRA_FULL(type) \
+	CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(2, 1, 0, type) \
+
+#define CV_DEF_IPP_HSV2RGB_FULL(type) \
+	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) )) 
+
+#define CV_DEF_IPP_HSV2RGBA_FULL(type) \
+	CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(0, 1, 2, type) \
+
+#define CV_DEF_IPP_HLS2BGR_FULL(type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[3] = { 2, 1, 0 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+
+#define CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(order1, order2, order3, type) \
+	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
+	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
+	int order[4] = { order1, order2, order3, 3 }; \
+	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+
+#define CV_DEF_IPP_HLS2BGRA_FULL(type) \
+	CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(2, 1, 0, type) \
+
+#define CV_DEF_IPP_HLS2RGB_FULL(type) \
+	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) )) 
+
+#define CV_DEF_IPP_HLS2RGBA_FULL(type) \
+	CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(0, 1, 2, type) \
+
+#define CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(mode, funcbody) \
+	CV_DEF_IPP_COLORLOOP_BODY(mode, 8u, funcbody) \
+	CV_DEF_IPP_COLORLOOP_BODY(mode, 16u, funcbody) \
+	CV_DEF_IPP_COLORLOOP_BODY(mode, 32f, funcbody)
+
+#define CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(mode, funcbody) \
+	CV_DEF_IPP_COLORLOOP_BODY(mode, 8u, funcbody) \
+	CV_DEF_IPP_COLORLOOP_BODY(mode, 16u, funcbody)
+
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2BGRA, CV_DEF_IPP_SWAP_CHANNELS_C3C4_0123)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2BGR, CV_DEF_IPP_COPY_AC4C3)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2RGBA, CV_DEF_IPP_SWAP_CHANNELS_C3C4_2103)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2BGR, CV_DEF_IPP_SWAP_CHANNELS_C4C3_210)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2BGR, CV_DEF_IPP_SWAP_CHANNELS_C3_210)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2BGRA, CV_DEF_IPP_SWAP_CHANNELS_C4_2103)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2GRAY, CV_DEF_IPP_BGR2GRAY)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2GRAY, CV_DEF_IPP_RGB2GRAY)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2GRAY, CV_DEF_IPP_BGRA2GRAY)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2GRAY, CV_DEF_IPP_RGBA2GRAY)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(GRAY2BGR, CV_DEF_IPP_Copy_P3C3)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(GRAY2BGRA, CV_DEF_IPP_GRAY2BGRA)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2XYZ, CV_DEF_IPP_BGR2XYZ)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2XYZ, CV_DEF_IPP_BGRA2XYZ)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2XYZ, CV_DEF_IPP_RGB2XYZ)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2XYZ, CV_DEF_IPP_RGBA2XYZ)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2BGR, CV_DEF_IPP_XYZ2BGR)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2BGRA, CV_DEF_IPP_XYZ2BGRA)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2RGB, CV_DEF_IPP_XYZ2RGB)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2RGBA, CV_DEF_IPP_XYZ2RGBA)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGR2HSV_FULL, CV_DEF_IPP_BGR2HSV_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGRA2HSV_FULL, CV_DEF_IPP_BGRA2HSV_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGB2HSV_FULL, CV_DEF_IPP_RGB2HSV_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGBA2HSV_FULL, CV_DEF_IPP_RGBA2HSV_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGR2HLS_FULL, CV_DEF_IPP_BGR2HLS_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGRA2HLS_FULL, CV_DEF_IPP_BGRA2HLS_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGB2HLS_FULL, CV_DEF_IPP_RGB2HLS_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGBA2HLS_FULL, CV_DEF_IPP_RGBA2HLS_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2BGR_FULL, CV_DEF_IPP_HSV2BGR_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2BGRA_FULL, CV_DEF_IPP_HSV2BGRA_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2RGB_FULL, CV_DEF_IPP_HSV2RGB_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2RGBA_FULL, CV_DEF_IPP_HSV2RGBA_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2BGR_FULL, CV_DEF_IPP_HLS2BGR_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2BGRA_FULL, CV_DEF_IPP_HLS2BGRA_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2RGB_FULL, CV_DEF_IPP_HLS2RGB_FULL)
+CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2RGBA_FULL, CV_DEF_IPP_HLS2RGBA_FULL)
+#endif
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
 
@@ -3349,6 +3636,33 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_BGR2BGRA || code == CV_RGB2RGBA)
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2BGRA, src, dst)
+			}
+			else if( code == CV_BGRA2BGR )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2BGR, src, dst)
+			}
+			else if( code == CV_BGR2RGBA )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2RGBA, src, dst)
+			}
+			else if( code == CV_RGBA2BGR )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2BGR, src, dst)
+			}
+			else if( code == CV_RGB2BGR )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGB2BGR, src, dst)
+			}
+			else if( code == CV_RGBA2BGRA )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGBA2BGRA, src, dst)
+			}
+#endif
 
             if( depth == CV_8U )
             {
@@ -3402,6 +3716,25 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_BGR2GRAY )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2GRAY, src, dst)
+			}
+			else if( code == CV_RGB2GRAY )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGB2GRAY, src, dst)
+			}
+			else if( code == CV_BGRA2GRAY )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2GRAY, src, dst)
+			}
+			else if( code == CV_RGBA2GRAY )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2GRAY, src, dst)
+			}
+#endif
 
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
 
@@ -3431,6 +3764,17 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_GRAY2BGR )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_GRAY2BGR, src, dst)
+			} 
+			else if( code == CV_GRAY2BGRA )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_GRAY2BGRA, src, dst)
+			}
+#endif
 
             if( depth == CV_8U )
             {
@@ -3510,6 +3854,25 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_BGR2XYZ && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_BGR2XYZ, src, dst)
+			}
+			else if( code == CV_BGR2XYZ && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2XYZ, src, dst)
+			}
+			else if( code == CV_RGB2XYZ && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGB2XYZ, src, dst)
+			} 
+			else if( code == CV_RGB2XYZ && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2XYZ, src, dst)
+			}
+#endif
 
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, RGB2XYZ_i<uchar>(scn, bidx, 0));
@@ -3526,6 +3889,25 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_XYZ2BGR && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_XYZ2BGR, src, dst)
+			}
+			else if( code == CV_XYZ2BGR && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_XYZ2BGRA, src, dst)
+			}
+			else if( code == CV_XYZ2RGB && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_XYZ2RGB, src, dst)
+			}
+			else if( code == CV_XYZ2RGB && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_XYZ2RGBA, src, dst)
+			}
+#endif
 
             if( depth == CV_8U )
                 CvtColorLoop(src, dst, XYZ2RGB_i<uchar>(dcn, bidx, 0));
@@ -3546,6 +3928,41 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_BGR2HSV_FULL && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_BGR2HSV_FULL, src, dst)
+			}
+			else if( code == CV_BGR2HSV_FULL && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_BGRA2HSV_FULL, src, dst)
+			}
+			else if( code == CV_RGB2HSV_FULL && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_RGB2HSV_FULL, src, dst)
+			} 
+			else if( code == CV_RGB2HSV_FULL && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_RGBA2HSV_FULL, src, dst)
+			} 
+			else if( code == CV_BGR2HLS_FULL && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_BGR2HLS_FULL, src, dst)
+			}
+			else if( code == CV_BGR2HLS_FULL && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_BGRA2HLS_FULL, src, dst)
+			}
+			else if( code == CV_RGB2HLS_FULL && scn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_RGB2HLS_FULL, src, dst)
+			} 
+			else if( code == CV_RGB2HLS_FULL && scn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_RGBA2HLS_FULL, src, dst)
+			}
+#endif
 
             if( code == CV_BGR2HSV || code == CV_RGB2HSV ||
                 code == CV_BGR2HSV_FULL || code == CV_RGB2HSV_FULL )
@@ -3581,6 +3998,41 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
+			
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+			if( code == CV_HSV2BGR_FULL && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HSV2BGR_FULL, src, dst)
+			}
+			else if( code == CV_HSV2BGR_FULL && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HSV2BGRA_FULL, src, dst)
+			}
+			else if( code == CV_HSV2RGB_FULL && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HSV2RGB_FULL, src, dst)
+			} 
+			else if( code == CV_HSV2RGB_FULL && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HSV2RGBA_FULL, src, dst)
+			} 
+			else if( code == CV_HLS2BGR_FULL && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HLS2BGR_FULL, src, dst)
+			}
+			else if( code == CV_HLS2BGR_FULL && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HLS2BGRA_FULL, src, dst)
+			}
+			else if( code == CV_HLS2RGB_FULL && dcn == 3 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HLS2RGB_FULL, src, dst)
+			} 
+			else if( code == CV_HLS2RGB_FULL && dcn == 4 )
+			{
+				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HLS2RGBA_FULL, src, dst)
+			}
+#endif
 
             if( code == CV_HSV2BGR || code == CV_HSV2RGB ||
                 code == CV_HSV2BGR_FULL || code == CV_HSV2RGB_FULL )
