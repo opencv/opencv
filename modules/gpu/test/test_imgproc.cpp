@@ -105,8 +105,8 @@ GPU_TEST_P(HistEven, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    int hbins = 256;
-    float hranges[] = {0.0f, 256.0f};
+    int hbins = 30;
+    float hranges[] = {50.0f, 200.0f};
 
     cv::gpu::GpuMat hist;
     cv::gpu::histEven(loadMat(src), hist, hbins, (int) hranges[0], (int) hranges[1]);
