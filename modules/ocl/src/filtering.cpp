@@ -1599,7 +1599,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     CV_Assert((ksize.width & 1) && (ksize.height & 1));  // ksize must be odd
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);  // source must be 8bit RGB image
     int depth = src.depth();
-    int cn = src.channels();
+    int cn = src.oclchannels();
 
     normalizeAnchor(anchor, ksize);
     const static String kernelName = "edgeEnhancingFilter";
@@ -1652,7 +1652,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     //LDATATYPESIZE is sizeof local data store. This is to exemplify effect of LDS on kernel performance
     sprintf(build_options, 
         "-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d"
-        " -D LDATATYPESIZE=1 -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s", 
+        " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s", 
         static_cast<int>(EXTRA), static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
 
     std::vector<pair<size_t , const void *> > args;

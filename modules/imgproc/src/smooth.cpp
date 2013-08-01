@@ -2223,8 +2223,8 @@ class adaptiveBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
 public:
-    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, Point _anchor, int _EXTRA) :
-        temp(&_temp), dest(&_dest), ksize(_ksize),anchor(_anchor), EXTRA(_EXTRA) 
+    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, Point _anchor) :
+        temp(&_temp), dest(&_dest), ksize(_ksize),anchor(_anchor)
     {
     }
     virtual void operator()(const Range& range) const
@@ -2236,7 +2236,7 @@ public:
 
         for(int i = range.start;i < range.end; i++)
         {
-            int startY = (1 + EXTRA) * i;
+            int startY = i;
             if(cn == 1)
             {
                 float var;
@@ -2253,11 +2253,13 @@ public:
                 {
                     sumVal = 0;
                     sumValSqr= 0;
+                    totalWeight = 0.;
+                    tmpSum = 0.;
 
                     // Top row: don't sum the very last element	
                     int startLMJ = 0;
-                    int endLMJ  = ksize.width + EXTRA - 1;
-                    int howManyAll = (anX *2 +1)*(ksize.width + EXTRA);
+                    int endLMJ  = ksize.width  - 1;
+                    int howManyAll = (anX *2 +1)*(ksize.width );
 #if CALCVAR
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
@@ -2273,35 +2275,30 @@ public:
 #else 
                     var = 900.0;
 #endif
-                    for(int extraCnt = 0; extraCnt <= EXTRA; extraCnt++)
-                    {
-                        tmpSum = 0.;
-                        totalWeight = 0.;
-                        startLMJ = extraCnt;
-                        endLMJ = ksize.width + extraCnt;
-                        tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2);
-                        currValCenter =tptr[j+cn*anX];
-                        for(int x = startLMJ; x< endLMJ; x++)
-                        { 
-                            tptr = temp->ptr(startY + x) +j;
-                            for(int y=-anX; y<=anX; y++)
-                            {
+                    startLMJ = 0;
+                    endLMJ = ksize.width;
+                    tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2);
+                    currValCenter =tptr[j+cn*anX];
+                    for(int x = startLMJ; x< endLMJ; x++)
+                    { 
+                        tptr = temp->ptr(startY + x) +j;
+                        for(int y=-anX; y<=anX; y++)
+                        {
 #if FIXED_WEIGHT
-                                weight = 1.0;
+                            weight = 1.0;
 #else
-                                currVal = tptr[cn*(y+anX)];
-                                currWRTCenter = currVal - currValCenter;
+                            currVal = tptr[cn*(y+anX)];
+                            currWRTCenter = currVal - currValCenter;
 
-                                weight = var / ( var + (currWRTCenter * currWRTCenter) );
+                            weight = var / ( var + (currWRTCenter * currWRTCenter) );
 #endif
-                                tmpSum += ((float)tptr[cn*(y+anX)] * weight);
-                                totalWeight += weight;
-                            }
+                            tmpSum += ((float)tptr[cn*(y+anX)] * weight);
+                            totalWeight += weight;
                         }
-                        tmpSum /= totalWeight;
-
-                        dest->at<uchar>(startY + extraCnt,j)= static_cast<uchar>(tmpSum);
                     }
+                    tmpSum /= totalWeight;
+
+                   dest->at<uchar>(startY ,j)= static_cast<uchar>(tmpSum);
                 }
             }
             else
@@ -2321,11 +2318,13 @@ public:
                 {
                     sumVal_b= 0, sumVal_g= 0, sumVal_r= 0;
                     sumValSqr_b= 0, sumValSqr_g= 0, sumValSqr_r= 0;
+                    totalWeight_b= 0., totalWeight_g= 0., totalWeight_r= 0.;
+                    tmpSum_b = 0., tmpSum_g= 0., tmpSum_r = 0.;
 
                     // Top row: don't sum the very last element	
                     int startLMJ = 0;
-                    int endLMJ  = ksize.width + EXTRA - 1;
-                    int howManyAll = (anX *2 +1)*(ksize.width + EXTRA);
+                    int endLMJ  = ksize.width - 1;
+                    int howManyAll = (anX *2 +1)*(ksize.width);
 #if CALCVAR
                     for(int x = startLMJ; x< endLMJ; x++)
                     {
@@ -2347,47 +2346,42 @@ public:
 #else 
                     var_b = 900.0; var_g = 900.0;var_r = 900.0;
 #endif
-                    for(int extraCnt = 0; extraCnt <= EXTRA; extraCnt++)
-                    {
-                        tmpSum_b = 0., tmpSum_g = 0., tmpSum_r = 0.;
-                        totalWeight_b = 0., totalWeight_g = 0., totalWeight_r = 0.;
-                        startLMJ = extraCnt;
-                        endLMJ = ksize.width + extraCnt;
-                        tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2) + j;
-                        currValCenter_b =tptr[cn*anX], currValCenter_g =tptr[cn*anX+1], currValCenter_r =tptr[cn*anX+2];
-                        for(int x = startLMJ; x< endLMJ; x++)
-                        { 
-                            tptr = temp->ptr(startY + x) +j;
-                            for(int y=-anX; y<=anX; y++)
-                            {
+                    startLMJ = 0;
+                    endLMJ = ksize.width;
+                    tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2) + j;
+                    currValCenter_b =tptr[cn*anX], currValCenter_g =tptr[cn*anX+1], currValCenter_r =tptr[cn*anX+2];
+                    for(int x = startLMJ; x< endLMJ; x++)
+                    { 
+                        tptr = temp->ptr(startY + x) +j;
+                        for(int y=-anX; y<=anX; y++)
+                        {
 #if FIXED_WEIGHT
-                                weight_b = 1.0;
-                                weight_g = 1.0;
-                                weight_r = 1.0;
+                            weight_b = 1.0;
+                            weight_g = 1.0;
+                            weight_r = 1.0;
 #else
-                                currVal_b = tptr[cn*(y+anX)];currVal_g=tptr[cn*(y+anX)+1];currVal_r=tptr[cn*(y+anX)+2];
-                                currWRTCenter_b = currVal_b - currValCenter_b;
-                                currWRTCenter_g = currVal_g - currValCenter_g;
-                                currWRTCenter_r = currVal_r - currValCenter_r;
+                            currVal_b = tptr[cn*(y+anX)];currVal_g=tptr[cn*(y+anX)+1];currVal_r=tptr[cn*(y+anX)+2];
+                            currWRTCenter_b = currVal_b - currValCenter_b;
+                            currWRTCenter_g = currVal_g - currValCenter_g;
+                            currWRTCenter_r = currVal_r - currValCenter_r;
 
-                                weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) );
-                                weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) );
-                                weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );                                
+                            weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) );
+                            weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) );
+                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );                                
 #endif
-                                tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
-                                tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
-                                tmpSum_r += ((float)tptr[cn*(y+anX)+2] * weight_r);
-                                totalWeight_b += weight_b, totalWeight_g += weight_g, totalWeight_r += weight_r;
-                            }
+                            tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
+                            tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
+                            tmpSum_r += ((float)tptr[cn*(y+anX)+2] * weight_r);
+                            totalWeight_b += weight_b, totalWeight_g += weight_g, totalWeight_r += weight_r;
                         }
-                        tmpSum_b /= totalWeight_b;
-                        tmpSum_g /= totalWeight_g;
-                        tmpSum_r /= totalWeight_r;
-
-                        dest->at<uchar>(startY + extraCnt,j  )= static_cast<uchar>(tmpSum_b);
-                        dest->at<uchar>(startY + extraCnt,j+1)= static_cast<uchar>(tmpSum_g);
-                        dest->at<uchar>(startY + extraCnt,j+2)= static_cast<uchar>(tmpSum_r);
                     }
+                    tmpSum_b /= totalWeight_b;
+                    tmpSum_g /= totalWeight_g;
+                    tmpSum_r /= totalWeight_r;
+
+                    dest->at<uchar>(startY,j  )= static_cast<uchar>(tmpSum_b);
+                    dest->at<uchar>(startY,j+1)= static_cast<uchar>(tmpSum_g);
+                    dest->at<uchar>(startY,j+2)= static_cast<uchar>(tmpSum_r);
                 }
             }
         }
@@ -2397,12 +2391,10 @@ private:
     Mat *dest;
     Size ksize;
     Point anchor;
-    int EXTRA;
 };
 static void adaptiveBilateralFilter_8u(const Mat& src, Mat& dst, Size ksize, Point anchor, int borderType )
 {
     Size size = src.size();
-    int EXTRA = 1;
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
               src.type() == dst.type() && src.size() == dst.size() &&
@@ -2410,8 +2402,8 @@ static void adaptiveBilateralFilter_8u(const Mat& src, Mat& dst, Size ksize, Poi
     Mat temp;
     copyMakeBorder(src, temp, anchor.x, anchor.y, anchor.x, anchor.y, borderType);
 
-    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, anchor, EXTRA);
-    parallel_for_(Range(0, (size.height+EXTRA)/(1+EXTRA)), body, dst.total()/(double)(1<<16));
+    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, anchor);
+    parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
