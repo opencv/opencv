@@ -69,6 +69,8 @@ int main(int argc, const char** argv)
         cerr << "can not open camera or video file" << endl;
         return -1;
     }
+    std::vector<cv::ocl::Info>info;
+    cv::ocl::getDevice(info);
 
     Mat frame;
     cap >> frame;
