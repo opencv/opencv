@@ -53,8 +53,8 @@ int main(int argc, const char** argv)
 
     if(method == "fgd" || method == "gmg")
     {
-        printf("required method has not been supported!\n");
-        return 0;
+        cerr << "required method has not been supported!" << endl;
+        return -1;
     }
 
     VideoCapture cap;
