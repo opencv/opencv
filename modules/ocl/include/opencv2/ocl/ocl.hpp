@@ -587,7 +587,7 @@ namespace cv
 
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
-        CV_EXPORTS void setIdentity(oclMat& src, double scalar);
+        CV_EXPORTS void setIdentity(oclMat& src, double val);
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
@@ -1674,7 +1674,7 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
-        /*!***************Kalman Filter*************£¡*/
+        /*!***************Kalman Filter*************!*/
         class CV_EXPORTS KalmanFilter
         {
         public:

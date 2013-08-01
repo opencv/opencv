@@ -44,22 +44,16 @@
 //M*/
 #include "precomp.hpp"
 
-///////////// tvl1flow////////////////////////
-
-int kF_OCL(int iteration, int dim, cv::ocl::oclMat sample_, cv::ocl::oclMat& output, const double max_noise);
-
-int kF_OCL(int iteration, int dim, cv::ocl::oclMat sample_, cv::ocl::oclMat& output, const double max_noise)
+///////////// Kalman Filter////////////////////////
+static int kfOcl(int iteration, int dim, cv::ocl::oclMat sample_, cv::ocl::oclMat& output, const double max_noise)
 {
     cv::ocl::KalmanFilter kalman_filter;
 
-    const int Dim = dim;
-    const int Steps = iteration;
-
     const double EPSILON = 1.000;
 
-    cv::ocl::oclMat Temp(Dim, 1, CV_32F);
+    cv::ocl::oclMat Temp(dim, 1, CV_32F);
 
-    kalman_filter.init(Dim, Dim);
+    kalman_filter.init(dim, dim);
 
     cv::ocl::setIdentity(kalman_filter.errorCovPre, 1);
     cv::ocl::setIdentity(kalman_filter.measurementMatrix, 1);
@@ -71,7 +65,7 @@ int kF_OCL(int iteration, int dim, cv::ocl::oclMat sample_, cv::ocl::oclMat& out
 
     kalman_filter.correct(sample_);
 
-    for(int i = 0; i<Steps; i++)
+    for(int i = 0; i<iteration; i++)
     {
         kalman_filter.predict();
         
@@ -101,20 +95,15 @@ int kF_OCL(int iteration, int dim, cv::ocl::oclMat sample_, cv::ocl::oclMat& out
     return code;
 }
 
-int KF_CPU(int iteration, int dim, Mat sample_, Mat& output, const double max_noise);
-
-int KF_CPU(int iteration, int dim, Mat sample_, Mat& output, const double max_noise)
+static int kfCpu(int iteration, int dim, Mat sample_, Mat& output, const double max_noise)
 {
     cv::KalmanFilter kalman_filter;
 
-    const int Dim = dim;
-    const int Steps = iteration;
-
     const double EPSILON = 1.000;
 
-    Mat Temp(Dim, 1, CV_32F);
+    Mat Temp(dim, 1, CV_32F);
 
-    kalman_filter.init(Dim, Dim);
+    kalman_filter.init(dim, dim);
 
     cv::setIdentity(kalman_filter.errorCovPre, 1);
     cv::setIdentity(kalman_filter.measurementMatrix, 1);
@@ -126,7 +115,7 @@ int KF_CPU(int iteration, int dim, Mat sample_, Mat& output, const double max_no
 
     kalman_filter.correct(sample_);
     
-    for(int i = 0; i<Steps; i++)
+    for(int i = 0; i<iteration; i++)
     {
         kalman_filter.predict();
 
@@ -170,10 +159,10 @@ PERFTEST(KalmanFilter)
 
     int cpu_code= 10, ocl_code = 10;
 
-    KF_CPU(iteration, dim, sample_, op_cpu, max_noise);
+    kfCpu(iteration, dim, sample_, op_cpu, max_noise);
 
     CPU_ON;
-    cpu_code = KF_CPU(iteration, dim, sample_, op_cpu, max_noise);
+    cpu_code = kfCpu(iteration, dim, sample_, op_cpu, max_noise);
     CPU_OFF;
 
     cv::ocl::oclMat sample;
@@ -181,11 +170,11 @@ PERFTEST(KalmanFilter)
     cv::ocl::oclMat op_;
     
     WARMUP_ON;
-    kF_OCL(iteration, dim, sample, op_, max_noise);
+    kfOcl(iteration, dim, sample, op_, max_noise);
     WARMUP_OFF;
 
     GPU_ON;
-    ocl_code = kF_OCL(iteration, dim, sample, op_, max_noise);
+    ocl_code = kfOcl(iteration, dim, sample, op_, max_noise);
     GPU_OFF;
 
     if((cpu_code >= 0) && (ocl_code >= 0))
@@ -194,6 +183,6 @@ PERFTEST(KalmanFilter)
         TestSystem::instance().setAccurate(0, std::abs(cpu_code - ocl_code));
 
     GPU_FULL_ON;
-    kF_OCL(iteration, dim, sample, op_, max_noise);
+    kfOcl(iteration, dim, sample, op_, max_noise);
     GPU_FULL_OFF;
 }
