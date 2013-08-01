@@ -37,7 +37,7 @@ TonemapDrago
 --------
 .. ocv:class:: TonemapDrago : public Tonemap
 
-"Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al.
+"Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al., 2003
 
 createTonemapDrago
 ------------------

@@ -97,6 +97,8 @@ class CV_EXPORTS_W TonemapLinear : public Tonemap
 
 CV_EXPORTS_W Ptr<TonemapLinear> createTonemapLinear(float gamma = 1.0f);
 
+// "Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al., 2003
+
 class CV_EXPORTS_W TonemapDrago : public Tonemap
 {
 public:
@@ -105,6 +107,8 @@ public:
 };
 
 CV_EXPORTS_W Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float bias = 0.85f);
+
+// "Fast Bilateral Filtering for the Display of High-Dynamic-Range Images", Durand, Dorsey, 2002
 
 class CV_EXPORTS_W TonemapDurand : public Tonemap
 {
@@ -121,6 +125,8 @@ public:
 
 CV_EXPORTS_W Ptr<TonemapDurand> 
 createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
+
+// "Dynamic Range Reduction Inspired by Photoreceptor Physiology", Reinhard, Devlin, 2005
 
 class CV_EXPORTS_W TonemapReinhardDevlin : public Tonemap
 {
@@ -163,6 +169,8 @@ public:
 	CV_WRAP virtual void setExcludeRange(int exclude_range) = 0;
 };
 
+// "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Ward, 2003
+
 CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4);
 
 class CV_EXPORTS_W ExposureCalibrate : public Algorithm
@@ -170,6 +178,8 @@ class CV_EXPORTS_W ExposureCalibrate : public Algorithm
 public:
 	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times) = 0;
 };
+
+// "Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
 
 class CV_EXPORTS_W CalibrateDebevec : public ExposureCalibrate
 {
@@ -190,6 +200,8 @@ public:
 								 const std::vector<float>& times, InputArray response) = 0;
 };
 
+// "Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
+
 class CV_EXPORTS_W MergeDebevec : public ExposureMerge
 {
 public:
@@ -199,6 +211,8 @@ public:
 };
 
 CV_EXPORTS_W Ptr<MergeDebevec> createMergeDebevec();
+
+// "Exposure Fusion", Mertens et al., 2007
 
 class CV_EXPORTS_W MergeMertens : public ExposureMerge
 {
