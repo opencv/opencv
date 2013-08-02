@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -39,11 +38,11 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 // Authors:
-//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //  * Ozan Tonkal
+//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
-//  During implementation of OpenCV Viz module, similar module
-//  from PCL (www.pointclouds.org) was used as reference implementation.
+//  OpenCV Viz module is complete rewrite of
+//  PCL visualization module (www.pointclouds.org)
 //
 //M*/
 
