@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -61,9 +60,10 @@ void checkEqual(Mat img0, Mat img1, double threshold)
 	ASSERT_FALSE(max > threshold) << max;
 }
 
-void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = vector<float>())
+static vector<float> DEFAULT_VECTOR;
+void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DEFAULT_VECTOR)
 {
-	ifstream list_file(path + "list.txt");
+    ifstream list_file((path + "list.txt").c_str());
 	ASSERT_TRUE(list_file.is_open());
 	string name; 
 	float val;
@@ -79,7 +79,7 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = ve
 void loadResponseCSV(String path, Mat& response)
 {
 	response = Mat(256, 3, CV_32F);
-	ifstream resp_file(path);
+    ifstream resp_file(path.c_str());
 	for(int i = 0; i < 256; i++) {
 		for(int channel = 0; channel < 3; channel++) {
 			resp_file >> response.at<float>(i, channel);
@@ -98,7 +98,7 @@ TEST(Photo_Tonemap, regression)
 	float gamma = 2.2f;
 	test_path += "tonemap/";
 	
-	Ptr<TonemapLinear> linear = createTonemapLinear(gamma);
+    Ptr<Tonemap> linear = createTonemapLinear(gamma);
 	linear->process(img, result);
 	loadImage(test_path + "linear.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
@@ -156,7 +156,7 @@ TEST(Photo_MergeMertens, regression)
 	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
 
 	vector<Mat> images;
-	loadExposureSeq(test_path + "exposures/", images);
+    loadExposureSeq((test_path + "exposures/").c_str() , images);
 
 	Ptr<MergeMertens> merge = createMergeMertens();
 

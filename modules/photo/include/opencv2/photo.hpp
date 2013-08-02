@@ -59,8 +59,6 @@ enum
     INPAINT_TELEA = 1 // A. Telea algorithm
 };
 
-CV_EXPORTS_W bool initModule_photo();
-
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
@@ -91,11 +89,7 @@ public:
 	CV_WRAP virtual void setGamma(float gamma) = 0;
 };
 
-class CV_EXPORTS_W TonemapLinear : public Tonemap
-{
-};
-
-CV_EXPORTS_W Ptr<TonemapLinear> createTonemapLinear(float gamma = 1.0f);
+CV_EXPORTS_W Ptr<Tonemap> createTonemapLinear(float gamma = 1.0f);
 
 // "Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al., 2003
 
@@ -154,10 +148,10 @@ public:
 class CV_EXPORTS_W AlignMTB : public ExposureAlign
 {
 public:
-	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
-								 const std::vector<float>& times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+                                 const std::vector<float>& times, InputArray response) = 0;
 
-	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst) = 0;
 
 	CV_WRAP virtual void calculateShift(InputArray img0, InputArray img1, Point& shift) = 0;
 	CV_WRAP virtual void shiftMat(InputArray src, OutputArray dst, const Point shift) = 0;
@@ -197,7 +191,7 @@ class CV_EXPORTS_W ExposureMerge : public Algorithm
 {
 public:
 	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-								 const std::vector<float>& times, InputArray response) = 0;
+                                 const std::vector<float>& times, InputArray response) = 0;
 };
 
 // "Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
@@ -205,8 +199,8 @@ public:
 class CV_EXPORTS_W MergeDebevec : public ExposureMerge
 {
 public:
-	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-								 const std::vector<float>& times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+                                 const std::vector<float>& times, InputArray response) = 0;
 	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
 };
 
@@ -217,8 +211,8 @@ CV_EXPORTS_W Ptr<MergeDebevec> createMergeDebevec();
 class CV_EXPORTS_W MergeMertens : public ExposureMerge
 {
 public:
-	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-								 const std::vector<float>& times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+                                 const std::vector<float>& times, InputArray response) = 0;
 	CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
 
 	CV_WRAP virtual float getContrastWeight() const = 0;
