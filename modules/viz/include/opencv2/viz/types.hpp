@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <boost/concept_check.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
 
@@ -92,6 +93,30 @@ namespace cv
             MouseButton button;
             Point pointer;
             unsigned int key_state;
+        };
+        
+        class CV_EXPORTS Camera2
+        {
+        public:
+            Camera2(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
+            Camera2(const Vec2f &fov, const Size &window_size);
+            Camera2(const cv::Mat &K, const Size &window_size);
+            
+            inline const Vec2d & getClip() const { return clip_; }
+            inline void setClip(const Vec2d &clip) { clip_ = clip; }
+            
+            inline const Size & getWindowSize() const { return window_size_; }
+            void setWindowSize(const Size &window_size);
+            
+            inline const Vec2f & getFov() const { return fov_; }
+            inline void setFov(const Vec2f & fov) { fov_ = fov; }
+            
+        private:
+            Vec2d clip_;
+            Vec2f fov_;
+            Size window_size_;
+            Vec2f principal_point_;
+            Vec2f focal_;
         };
 
     } /* namespace viz */

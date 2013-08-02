@@ -142,3 +142,57 @@ cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 {
     return loadMeshImpl::loadMesh(file);
 }
+
+////////////////////////////////////////////////////////////////////
+/// Camera implementation
+
+cv::viz::Camera2::Camera2(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    setClip(Vec2d(0.01, 1000.01));// Default clipping
+    
+    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x)) * 180 / CV_PI;
+    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y)) * 180 / CV_PI;
+    
+    principal_point_[0] = c_x;
+    principal_point_[1] = c_y;
+    
+    focal_[0] = f_x;
+    focal_[1] = f_y;
+}
+
+cv::viz::Camera2::Camera2(const Vec2f &fov, const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    setClip(Vec2d(0.01, 1000.01)); // Default clipping
+    window_size_ = window_size;
+    fov_ = fov;
+    principal_point_ = Vec2f(-1.0f, -1.0f); // Symmetric lens
+    focal_ = Vec2f(-1.0f, -1.0f);
+}
+
+cv::viz::Camera2::Camera2(const cv::Mat & K, const Size &window_size)
+{
+    CV_Assert(K.rows == 3 && K.cols == 3);
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    
+    float f_x = K.at<float>(0,0);
+    float f_y = K.at<float>(1,1);
+    float c_x = K.at<float>(0,2);
+    float c_y = K.at<float>(1,2);
+    Camera2(f_x, f_y, c_x, c_y, window_size);
+}
+
+void cv::viz::Camera2::setWindowSize(const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    
+    // Vertical field of view is fixed! 
+    // Horizontal field of view is expandable based on the aspect ratio
+    float aspect_ratio_new = window_size.width / window_size.height;
+    
+    if (principal_point_[0] < 0.0f)
+        fov_[0] = 2 * atan2(tan(fov_[0] * 0.5), aspect_ratio_new); // This assumes that the lens is symmetric!
+    else
+        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])) * 180 / CV_PI;
+}
