@@ -212,7 +212,7 @@ OCV_OPTION(ENABLE_SSE42               "Enable SSE4.2 instructions"              
 OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                                  OFF  IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
-
+OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
 
 # uncategorized options
 # ===================================================
@@ -602,6 +602,16 @@ if(ANDROID)
   status("    Google Play package:" BUILD_ANDROID_PACKAGE                                         THEN YES ELSE NO)
   status("    Android examples:"    BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS         THEN YES ELSE NO)
 endif()
+
+# ================== Windows RT features ==================
+if(WIN32)
+status("")
+    status("  Windows RT support:" HAVE_WINRT THEN YES ELSE NO)
+    if (ENABLE_WINRT_MODE)
+      status("    Windows SDK v8.0:" ${WINDOWS_SDK_PATH})
+      status("    Visual Studio 2012:" ${VISUAL_STUDIO_PATH})
+    endif()
+endif(WIN32)
 
 # ========================== GUI ==========================
 status("")
