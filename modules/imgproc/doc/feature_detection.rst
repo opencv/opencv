@@ -36,6 +36,8 @@ http://en.wikipedia.org/wiki/Canny_edge_detector
 
    * : An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
 
+   * : PYTHON : An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
+
 cornerEigenValsAndVecs
 ----------------------
 Calculates eigenvalues and eigenvectors of image blocks for corner detection.
@@ -87,7 +89,9 @@ The output of the function can be used for robust edge or corner detection.
     :ocv:func:`cornerHarris`,
     :ocv:func:`preCornerDetect`
 
+.. Sample code::
 
+   * : PYTHON : An example on how to use eigenvectors and eigenvalues to estimate image texture flow direction can be found at opencv_source_code/samples/python2/texture_flow.py
 
 cornerHarris
 ------------

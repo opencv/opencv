@@ -1001,6 +1001,9 @@ All of the above improvements have been implemented in :ocv:func:`matchTemplate`
 
    * : An example using the discrete fourier transform can be found at opencv_source_code/samples/cpp/dft.cpp
 
+   * : PYTHON : An example using the dft functionality to perform Wiener deconvolution can be found at opencv_source/samples/python2/deconvolution.py
+   * : PYTHON : An example rearranging the quadrants of a Fourier image can be found at opencv_source/samples/python2/dft.py
+
 
 divide
 ------

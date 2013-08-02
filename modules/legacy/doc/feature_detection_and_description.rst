@@ -75,7 +75,9 @@ Class containing a base structure for ``RTreeClassifier``. ::
             void estimateQuantPercForPosteriors(float perc[2]);
     };
 
+.. Sample code::
 
+   * : PYTHON : An example using Randomized Tree training for letter recognition can be found at opencv_source_code/samples/python2/letter_recog.py
 
 RandomizedTree::train
 -------------------------
