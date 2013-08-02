@@ -896,7 +896,7 @@ namespace hist
 
 namespace
 {
-    void histEven8u(const GpuMat& src, GpuMat& hist, GpuMat&, int histSize, int lowerLevel, int upperLevel, cudaStream_t stream)
+    void histEven8u(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, cudaStream_t stream)
     {
         hist.create(1, histSize, CV_32S);
         cudaSafeCall( cudaMemsetAsync(hist.data, 0, histSize * sizeof(int), stream) );
@@ -911,11 +911,17 @@ void cv::gpu::histEven(const GpuMat& src, GpuMat& hist, GpuMat& buf, int histSiz
     typedef void (*hist_t)(const GpuMat& src, GpuMat& hist, GpuMat& buf, int levels, int lowerLevel, int upperLevel, cudaStream_t stream);
     static const hist_t hist_callers[] =
     {
-        histEven8u,
+        NppHistogramEvenC1<CV_8U , nppiHistogramEven_8u_C1R , nppiHistogramEvenGetBufferSize_8u_C1R >::hist,
         0,
         NppHistogramEvenC1<CV_16U, nppiHistogramEven_16u_C1R, nppiHistogramEvenGetBufferSize_16u_C1R>::hist,
         NppHistogramEvenC1<CV_16S, nppiHistogramEven_16s_C1R, nppiHistogramEvenGetBufferSize_16s_C1R>::hist
     };
+
+    if (src.depth() == CV_8U && deviceSupports(FEATURE_SET_COMPUTE_30))
+    {
+        histEven8u(src, hist, histSize, lowerLevel, upperLevel, StreamAccessor::getStream(stream));
+        return;
+    }
 
     hist_callers[src.depth()](src, hist, buf, histSize, lowerLevel, upperLevel, StreamAccessor::getStream(stream));
 }

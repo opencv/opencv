@@ -120,7 +120,7 @@ namespace hist
         }
     }
 
-    __global__ void histEven8u(const uchar* src, const size_t step, const int rows, const int cols, 
+    __global__ void histEven8u(const uchar* src, const size_t step, const int rows, const int cols,
                                int* hist, const int binCount, const int binSize, const int lowerLevel, const int upperLevel)
     {
         extern __shared__ int shist[];
