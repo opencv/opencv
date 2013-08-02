@@ -98,9 +98,9 @@ TrackerSamplerCSC::Params::Params()
 	initInRad = 3;
 	initMaxNegNum = 65;
 	searchWinSize = 25;
-	trackInPosRad = 37.5;
-	trackMaxNegNum = 100000;
-	trackMaxPosNum = 65;
+	trackInPosRad = 4;
+	trackMaxNegNum = 65;
+	trackMaxPosNum = 100000;
 
 }
 

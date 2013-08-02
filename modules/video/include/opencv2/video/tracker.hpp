@@ -424,8 +424,9 @@ public:
 
 	/**
 	 * \brief Run the TrackerStateEstimator
+	 * \return true if is possible to estimate a new state, false otherwise
 	 */
-	void runStateEstimator();
+	bool runStateEstimator();
 
 	/**
 	 * \brief Set the current estimated state

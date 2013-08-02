@@ -58,11 +58,11 @@ RNG TrackerMIL::rng;
 TrackerMIL::Params::Params()
 {
 	samplerInitInRadius = 3;
-	samplerTrackInRadius = 37.5;
+	samplerTrackInRadius = 4;
 	samplerSearchWinSize = 25;
 	samplerInitMaxNegNum = 65;
-	samplerTrackMaxPosNum = 65;
-	samplerTrackMaxNegNum = 100000;
+	samplerTrackMaxPosNum = 100000;
+	samplerTrackMaxNegNum = 65;
 	featureSetNumFeatures = 250;
 }
 
@@ -224,7 +224,12 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	((Ptr<TrackerMILModel>) model)->setMode( TrackerMILModel::MODE_ESTIMATON, detectSamples );
 	((Ptr<TrackerMILModel>) model)->responseToConfidenceMap( response, cmap );
 	((Ptr<TrackerStateEstimatorBoosting>) model->getTrackerStateEstimator())->setCurrentConfidenceMap( cmap );
-	model->runStateEstimator();
+
+	if( !model->runStateEstimator() )
+	{
+		return false;
+	}
+
 	Ptr<TrackerMILTargetState> currentState = model->getLastTargetState();
 	boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y,
 		currentState->getWidth(), currentState->getHeight() );
@@ -233,7 +238,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	rectangle(f, lastBoundingBox, Scalar(0,255,0), 1);
 	rectangle(f, boundingBox, Scalar(0,0,255), 1);
 	imshow("f", f);
-	waitKey( 0 );*/
+	//waitKey( 0 );*/
 
 
 	//TODO sampling new frame based on new location
