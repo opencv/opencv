@@ -234,6 +234,9 @@ The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers 
 
 .. seealso:: :ocv:class:`SURF`
 
+.. Sample code::
+
+   * : An example for using the SURF keypoint matcher on GPU can be found at opencv_source_code/samples/gpu/surf_keypoint_matcher.cpp
 
 ocl::SURF_OCL
 -------------
@@ -332,3 +335,7 @@ The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descripto
 The class ``SURF_OCL`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
 
 .. seealso:: :ocv:class:`SURF`
+
+.. Sample code::
+
+   * : OCL : An example of the SURF detector can be found at opencv_source_code/samples/ocl/surf_matcher.cpp

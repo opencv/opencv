@@ -70,6 +70,8 @@ attempts to 1, initialize labels each time using a custom algorithm, pass them w
 
    * : An example on K-means clustering can be found at opencv_source_code/samples/cpp/kmeans.cpp
 
+   * : PYTHON : An example on K-means clustering can be found at opencv_source_code/samples/python2/kmeans.py
+
 partition
 -------------
 Splits an element set into equivalency classes.

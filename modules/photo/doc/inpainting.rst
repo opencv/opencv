@@ -35,3 +35,5 @@ for more details.
 .. Sample code::
 
    * : An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
+
+   * : PYTHON : An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py
