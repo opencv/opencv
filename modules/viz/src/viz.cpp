@@ -22,13 +22,11 @@ cv::Affine3f cv::viz::makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& ax
 cv::Affine3f cv::viz::makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
 {
     // Compute the transformation matrix for drawing the camera frame in a scene
-    Vec3f u,v,n;
-    n = normalize(focal_point - position);
-    u = normalize(y_dir.cross(n));
-    v = n.cross(u);
+    Vec3f n = normalize(focal_point - position);
+    Vec3f u = normalize(y_dir.cross(n));
+    Vec3f v = n.cross(u);
     
-    Matx44f pose_mat;
-    pose_mat.zeros();
+    Matx44f pose_mat = Matx44f::zeros();
     pose_mat(0,0) = u[0];
     pose_mat(0,1) = u[1];
     pose_mat(0,2) = u[2];
