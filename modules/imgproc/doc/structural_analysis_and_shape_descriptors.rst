@@ -171,6 +171,8 @@ The function retrieves contours from the binary image using the algorithm
    * : An example using the findContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
    * : An example using findContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
 
+   * : PYTHON : An example using the findContour functionality can be found at opencv_source/samples/python2/contours.py
+   * : PYTHON : An example of detecting squares in an image can be found at opencv_source/samples/python2/squares.py
 
 drawContours
 ----------------
@@ -256,6 +258,8 @@ The function draws contour outlines in the image if
 
    * : An example using the drawContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
    * : An example using drawContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
+
+   * : PYTHON : An example using the drawContour functionality can be found at opencv_source/samples/python2/contours.py
 
 approxPolyDP
 ----------------
@@ -562,7 +566,9 @@ http://en.wikipedia.org/wiki/M-estimator
 :math:`w_i` are adjusted to be inversely proportional to
 :math:`\rho(r_i)` .
 
+.. Sample code:
 
+   * : PYTHON : An example of robust line fitting can be found at opencv_source_code/samples/python2/fitline.py
 
 isContourConvex
 -------------------

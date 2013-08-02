@@ -46,6 +46,9 @@ The function implements a sparse iterative version of the Lucas-Kanade optical f
 
    * : An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/cpp/lkdemo.cpp
 
+   * : PYTHON : An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/python2/lk_track.py
+   * : PYTHON : An example using the Lucas-Kanade tracker for homography matching can be found at opencv_source_code/samples/python2/lk_homography.py
+
 buildOpticalFlowPyramid
 -----------------------
 Constructs the image pyramid which can be passed to :ocv:func:`calcOpticalFlowPyrLK`.
@@ -116,6 +119,8 @@ The function finds an optical flow for each ``prev`` pixel using the [Farneback2
 .. Sample code::
 
    * : An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/cpp/fback.cpp
+
+   * : PYTHON : An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/python2/opt_flow.py
 
 estimateRigidTransform
 --------------------------
@@ -234,7 +239,9 @@ In fact,
 :ocv:func:`fastAtan2` and
 :ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
+.. Sample code::
 
+   * : PYTHON : An example on how to perform a motion template technique can be found at opencv_source_code/samples/python2/motempl.py
 
 calcGlobalOrientation
 -------------------------
@@ -320,7 +327,9 @@ First, it finds an object center using
 
 See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
+.. Sample code::
 
+   * : PYTHON : A sample explaining the camshift tracking algorithm can be found at opencv_source_code/samples/python2/camshift.py
 
 meanShift
 ---------

@@ -114,6 +114,8 @@ The functions below use the above model to do the following:
    * : A calibration example on stereo calibration can be found at opencv_source_code/samples/cpp/stereo_calib.cpp
    * : A calibration example on stereo matching can be found at opencv_source_code/samples/cpp/stereo_match.cpp
 
+   * : PYTHON : A camera calibration sample can be found at opencv_source_code/samples/python2/calibrate.py
+
 calibrateCamera
 ---------------
 Finds the camera intrinsic and extrinsic parameters from several views of a calibration pattern.
@@ -586,7 +588,9 @@ Finds an object pose from 3D-2D point correspondences.
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients.
 
+.. Sample code::
 
+   * : An example of how to use solvePNP for planar augmented reality can be found at opencv_source_code/samples/python2/plane_ar.py
 
 solvePnPRansac
 ------------------
@@ -1082,6 +1086,9 @@ Class for computing stereo correspondence using the block matching algorithm. ::
 The class is a C++ wrapper for the associated functions. In particular, :ocv:funcx:`StereoBM::operator()` is the wrapper for
 :ocv:cfunc:`cvFindStereoCorrespondenceBM`.
 
+.. Sample code:
+
+   * : OCL : An example for using the stereoBM matching algorithm can be found at opencv_source_code/samples/ocl/stereo_match.cpp   
 
 StereoBM::StereoBM
 ------------------
@@ -1181,7 +1188,9 @@ The class implements the modified H. Hirschmuller algorithm [HH08]_ that differs
 
  * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
+.. Sample code::
 
+   * : PYTHON : An example illustrating the use of the StereoSGBM matching algorithm can be found at opencv_source_code/samples/python2/stereo_match.py
 
 StereoSGBM::StereoSGBM
 --------------------------

@@ -55,6 +55,10 @@ Maximally stable extremal region extractor. ::
 The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://code.opencv.org/projects/opencv/wiki/MSER for useful comments and parameters description.
 
+.. Sample code::
+
+   * : PYTHON : A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
+
 
 ORB
 ---

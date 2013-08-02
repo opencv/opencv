@@ -9,7 +9,13 @@ CvKNearest
 ----------
 .. ocv:class:: CvKNearest : public CvStatModel
 
-The class implements K-Nearest Neighbors model as described in the beginning of this section. 
+The class implements K-Nearest Neighbors model as described in the beginning of this section.
+
+.. Sample code::
+
+   * : PYTHON : An example of digit recognition using KNearest can be found at opencv_source/samples/python2/digits.py
+   * : PYTHON : An example of grid search digit recognition using KNearest can be found at opencv_source/samples/python2/digits_adjust.py
+   * : PYTHON : An example of video digit recognition using KNearest can be found at opencv_source/samples/python2/digits_video.py   
 
 CvKNearest::CvKNearest
 ----------------------

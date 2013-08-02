@@ -22,6 +22,10 @@ OpenCV enables you to specify the extrapolation method. For details, see the fun
     * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
     */
 
+.. Sample code::
+
+   * : PYTHON : A complete example illustrating different morphological operations like erode/dilate, open/close, blackhat/tophat ... can be found at opencv_source_code/samples/python2/morphology.py
+
 BaseColumnFilter
 ----------------
 .. ocv:class:: BaseColumnFilter
@@ -1360,6 +1364,10 @@ Upsamples an image and then blurs it.
 
 The function performs the upsampling step of the Gaussian pyramid construction, though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
 :ocv:func:`pyrDown`  multiplied by 4.
+
+.. Sample code::
+
+   * : PYTHON : An example of Laplacian Pyramid construction and merging can be found at opencv_source_code/samples/python2/lappyr.py
 
 
 pyrMeanShiftFiltering
