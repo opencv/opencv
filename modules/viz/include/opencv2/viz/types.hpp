@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <boost/concept_check.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/affine.hpp>
 
