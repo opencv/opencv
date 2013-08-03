@@ -167,7 +167,7 @@ cv::viz::Camera2::Camera2(const Vec2f &fov, const Size &window_size)
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
     window_size_ = window_size;
     fov_ = fov;
-    principal_point_ = Vec2f(-1.0f, -1.0f); // Symmetric lens
+    principal_point_ = Vec2f(-1.0f, -1.0f); // Default symmetric lens
     focal_ = Vec2f(-1.0f, -1.0f);
 }
 
