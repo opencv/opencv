@@ -263,7 +263,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     Mat learnt_mat1, learnt_mat2;
     Mat pred_result1, comp_learnt_mats;
 
-    int errorCount = 0;
+    float errorCount = 0.0;
 
     CvLR_TrainParams params1 = CvLR_TrainParams();
     CvLR_TrainParams params2 = CvLR_TrainParams();
@@ -317,15 +317,15 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // compare difference in prediction outputs before and after loading from disk
     pred_result1 = (responses1 == responses2)/255;
 
-
     // compare difference in learnt matrices before and after loading from disk
     comp_learnt_mats = (learnt_mat1 == learnt_mat2);
     comp_learnt_mats = comp_learnt_mats.reshape(1, comp_learnt_mats.rows*comp_learnt_mats.cols);
     comp_learnt_mats.convertTo(comp_learnt_mats, CV_32S);
     comp_learnt_mats = comp_learnt_mats/255;
 
-    // compare difference in prediction outputs
-    // error = 1 - accuracy
+    // compare difference in prediction outputs and stored inputs
+    // check if there is any difference between computed learnt mat and retreived mat
+
     errorCount += 1 - (float)cv::sum(pred_result1)[0]/pred_result1.rows;
     errorCount += 1 - cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
 
