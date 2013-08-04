@@ -520,7 +520,7 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
 
         ///////////////////////////////////////////////////
         // if(this->params.debug == true && i%(this->params.term_crit.max_iter/2)==0)
-        // {    
+        // {
         //     cout<<"iter: "<<i<<endl;
         //     cout<<"cost: "<<ccost<<endl;
         //     cout<<"alpha"<<this->params.alpha<<endl;
@@ -620,7 +620,7 @@ bool CvLR::set_label_map(const cv::Mat& _labels_i)
     for(int i = 0;i<labels.rows;i++)
     {
         this->forward_mapper[labels.at<int>(i)] += 1;
-    }	
+    }
 
     for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
     {
