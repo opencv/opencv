@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////
-// sample_logistic_regression.cpp 
+// sample_logistic_regression.cpp
 // IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 
 //  By downloading, copying, installing or using the software you agree to this license.
@@ -10,7 +10,7 @@
 
 // AUTHOR:
 // Rahul Kavi rahulkavi[at]live[at]com
-// 
+//
 
 #include <iostream>
 
@@ -21,14 +21,14 @@ using namespace std;
 using namespace cv;
 
 
-int main(int argc, char** argv)
+int main()
 {
     Mat data_temp, labels_temp;
     Mat data, labels;
     Mat responses, result;
 
     FileStorage f;
- 
+
     cout<<"*****************************************************************************************"<<endl;
     cout<<"\"data01.xml\" contains digits 0 and 1 of 20 samples each, collected on an Android device"<<endl;
     cout<<"Each of the collected images are of size 28 x 28 re-arranged to 1 x 784 matrix"<<endl;
