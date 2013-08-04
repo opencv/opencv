@@ -326,7 +326,7 @@ double CvLR::compute_cost(const cv::Mat& _data, const cv::Mat& _labels, const cv
 
     if(this->params.regularized == true)
     {
-        llambda = 1.0;
+        llambda = 1;
     }
 
     if(this->params.norm == CvLR::REG_L1)
@@ -374,7 +374,7 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
 
     int llambda = 0;
     ///////////////////////////////////////////////////
-    long double ccost;
+    double ccost;
     ///////////////////////////////////////////////////
     int m, n;
 
@@ -513,7 +513,7 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
         ccost = compute_cost(data_d, labels_l, theta_p);
 
 
-        if( cvIsNaN( ccost ) )
+        if( cvIsNaN( ccost ) == 1)
         {
             cv::error(Error::StsBadArg, "compute_mini_batch_gradient: check training parameters. Invalid training classifier","cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
         }
@@ -688,14 +688,14 @@ void CvLR::read( CvFileStorage* fs, CvFileNode* node )
 
     this->params.alpha = cvReadRealByName(fs, node,"alpha", 1.0);
     this->params.num_iters = cvReadIntByName(fs, node,"iterations", 1000);
-    this->params.norm = (bool)cvReadIntByName(fs, node,"norm", 1.0);
-    // this->params.debug = (bool)cvReadIntByName(fs, node,"debug", 1.0);
-    this->params.regularized = cvReadIntByName(fs, node,"regularized", 1.0);
-    this->params.train_method = cvReadIntByName(fs, node,"train_method", 0.0);
+    this->params.norm = (bool)cvReadIntByName(fs, node,"norm", 1);
+    // this->params.debug = (bool)cvReadIntByName(fs, node,"debug", 1);
+    this->params.regularized = cvReadIntByName(fs, node,"regularized", 1);
+    this->params.train_method = cvReadIntByName(fs, node,"train_method", 0);
 
     if(this->params.train_method == CvLR::MINI_BATCH)
     {
-        this->params.minibatchsize = cvReadIntByName(fs, node,"mini_batch_size", 0.0);
+        this->params.minibatchsize = cvReadIntByName(fs, node,"mini_batch_size", 1);
     }
 
     newData = (CvMat*)cvReadByName( fs, node, "learnt_thetas" );
