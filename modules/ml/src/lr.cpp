@@ -104,7 +104,7 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
 
     // check the number of colums
     CV_Assert( _labels_i.cols == 1);
-    
+
     if(_labels_i.cols != 1)
     {
         cv::error(Error::StsBadArg, "_labels_i should be a column matrix", "cv::ml::CvLR::train", __FILE__, __LINE__);
@@ -124,12 +124,10 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
     //CvLR::set_label_map(_labels_i);
     set_label_map(_labels_i);
     int num_classes = this->forward_mapper.size();
-    
+
     // add a column of ones
     cv::Mat data_t = cv::Mat::zeros(_data_i.rows, _data_i.cols+1, CV_32F);
-    
     vconcat(cv::Mat(_data_i.rows, 1, _data_i.type(), Scalar::all(1.0)), data_t.col(0));
-
     for (int i=1;i<data_t.cols;i++)
     {
         vconcat(_data_i.col(i-1), data_t.col(i));
@@ -171,7 +169,7 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
         as in multi class class scenario, we will have n thetas for n classes */
         ii = 0;
 
-        for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it) 
+        for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
         {
             new_local_labels = (labels_l == it->second)/255;
             // cout<<"processing class "<<it->second<<endl;
@@ -189,7 +187,6 @@ bool CvLR::train(const cv::Mat& _data_i, const cv::Mat& _labels_i)
     }
 
     this->learnt_thetas = thetas.clone();
-    
     if( cvIsNaN( (double)cv::sum(this->learnt_thetas)[0] ) )
     {
         cv::error(Error::StsBadArg, "train: check training parameters. Invalid training classifier","cv::ml::CvLR::train", __FILE__, __LINE__);
@@ -226,12 +223,10 @@ float CvLR::predict(const cv::Mat& _data, cv::Mat& _pred_labs)
     {
         cv::error(Error::StsBadArg, "predict: classifier should be trained first", "cv::ml::CvLR::predict", __FILE__, __LINE__);
     }
-    
     if(_data.type() != CV_32F)
     {
         cv::error(Error::StsBadArg, "predict: _data must be of floating type","cv::ml::CvLR::predict",__FILE__, __LINE__);
     }
-    
 
     // add a column of ones
     cv::Mat data_t = cv::Mat::zeros(_data.rows, _data.cols+1, CV_32F);
@@ -402,7 +397,6 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
 
     for(int i = 0;i<this->params.num_iters;i++)
     {
-        
         ccost = compute_cost(_data, _labels, theta_p);
 
         if( cvIsNaN( ccost ) )
@@ -412,8 +406,8 @@ cv::Mat CvLR::compute_batch_gradient(const cv::Mat& _data, const cv::Mat& _label
 
         ///////////////////////////////////////////////////
         // cout<<"calculated cost: "<<ccost<<endl;
-        // if(this->params.debug == true && i%(this->params.num_iters/2)==0)
-        // {  
+        // if(this->params.debug == true && i%(this->params.num_iters/2)==0) //
+        // {
         //     cout<<"iter: "<<i<<endl;
         //     cout<<"cost: "<<ccost<<endl;
         //     cout<<"alpha"<<this->params.alpha<<endl;
@@ -526,7 +520,7 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
 
         ///////////////////////////////////////////////////
         // if(this->params.debug == true && i%(this->params.term_crit.max_iter/2)==0)
-        // {	
+        // {    
         //     cout<<"iter: "<<i<<endl;
         //     cout<<"cost: "<<ccost<<endl;
         //     cout<<"alpha"<<this->params.alpha<<endl;
@@ -595,13 +589,13 @@ std::map<int, int> CvLR::get_label_map(const cv::Mat& _labels_i)
         this->forward_mapper[labels.at<int>(i)] += 1;
     }
 
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it) 
+    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
     {
         this->forward_mapper[it->first] = ii;
         ii += 1;
     }
 
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it) 
+    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
     {
         this->reverse_mapper[it->second] = it->first;
     }
@@ -628,7 +622,7 @@ bool CvLR::set_label_map(const cv::Mat& _labels_i)
         this->forward_mapper[labels.at<int>(i)] += 1;
     }	
 
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it) 
+    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
     {
         this->forward_mapper[it->first] = ii;
         this->labels_o.push_back(it->first);
@@ -636,7 +630,7 @@ bool CvLR::set_label_map(const cv::Mat& _labels_i)
         ii += 1;
     }
 
-    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it) 
+    for(map<int,int>::iterator it = this->forward_mapper.begin(); it != this->forward_mapper.end(); ++it)
     {
         this->reverse_mapper[it->second] = it->first;
     }
@@ -680,7 +674,7 @@ bool CvLR::set_default_params()
 }
 
 void CvLR::clear()
-{    
+{
     this->learnt_thetas.release();
     this->labels_o.release();
     this->labels_n.release();
@@ -715,7 +709,7 @@ void CvLR::read( CvFileStorage* fs, CvFileNode* node )
     for(int ii =0;ii<labels_o.rows;ii++)
     {
         this->forward_mapper[labels_o.at<int>(ii,0)] = labels_n.at<int>(ii,0);
-        this->reverse_mapper[labels_n.at<int>(ii,0)] = labels_o.at<int>(ii,0);  
+        this->reverse_mapper[labels_n.at<int>(ii,0)] = labels_o.at<int>(ii,0);
     }
 
 }
