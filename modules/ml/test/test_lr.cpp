@@ -327,7 +327,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     // check if there is any difference between computed learnt mat and retreived mat
 
     errorCount += 1 - (float)cv::sum(pred_result1)[0]/pred_result1.rows;
-    errorCount += 1 - cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
+    errorCount += 1 - (float)cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
 
     if(errorCount>0)
     {
