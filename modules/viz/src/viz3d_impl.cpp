@@ -604,6 +604,16 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera2 &camera)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::getCamera(viz::Camera2 &camera)
+{
+    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    camera.setFov(Vec2f(0.0, active_camera.GetViewAngle() * CV_PI / 180.0f));
+    camera.setClip(Vec2d(active_camera.GetClippingRange()));
+    camera.setWindowSize(Size(renderer_->GetRenderWindow()->GetSize()[0],
+                              renderer_->GetRenderWindow()->GetSize()[1]));
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
 {
     vtkCamera& camera = *renderer_->GetActiveCamera ();

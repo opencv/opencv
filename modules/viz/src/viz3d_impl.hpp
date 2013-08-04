@@ -111,6 +111,7 @@ public:
     // and 'Camera' class itself with various constructors/fields
     
     void setCamera(const Camera2 &camera);
+    void getCamera(Camera2 &camera);
 
     void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
     bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/
