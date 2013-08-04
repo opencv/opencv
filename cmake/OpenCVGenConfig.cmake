@@ -84,7 +84,7 @@ macro(ocv_generate_dependencies_map_configcmake suffix configuration)
 
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_LIBNAME_${suffix} \"${__libname}\")\n")
     set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_DEPS_${suffix} ${__mod_deps})\n")
-    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_EXTRA_DEPS_${suffix} ${__ext_deps})\n")
+    set(OPENCV_DEPENDENCIES_MAP_${suffix} "${OPENCV_DEPENDENCIES_MAP_${suffix}}set(OpenCV_${__ocv_lib}_EXTRA_DEPS_${suffix} \"${__ext_deps}\")\n")
 
     list(APPEND OPENCV_PROCESSED_LIBS ${__ocv_lib})
     list(APPEND OPENCV_LIBS_TO_PROCESS ${${__ocv_lib}_MODULE_DEPS_${suffix}})
