@@ -3,40 +3,40 @@ Logistic Regression
 
 .. highlight:: cpp
 
-ML implements logistic regression, which is a probabilistic classification technique. Logistic Regression is a binary classification algorithm which is closely related to Support Vector Machines (SVM). 
-Like SVM, Logistic Regression can be extended to work on multi-class classification problems like digit recognition (i.e. recognizing digitis like 0,1 2, 3,... from the given images). 
-This version of Logistic Regression supports both binary and multi-class classifications (for multi-class it creates a multiple 2-class classifiers). 
-In order to train the logistic regression classifier, Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see [BatchDesWiki]_). 
+ML implements logistic regression, which is a probabilistic classification technique. Logistic Regression is a binary classification algorithm which is closely related to Support Vector Machines (SVM).
+Like SVM, Logistic Regression can be extended to work on multi-class classification problems like digit recognition (i.e. recognizing digitis like 0,1 2, 3,... from the given images).
+This version of Logistic Regression supports both binary and multi-class classifications (for multi-class it creates a multiple 2-class classifiers).
+In order to train the logistic regression classifier, Batch Gradient Descent and Mini-Batch Gradient Descent algorithms are used (see [BatchDesWiki]_).
 Logistic Regression is a discriminative classifier (see [LogRegTomMitch]_ for more details). Logistic Regression is implemented as a C++ class in ``CvLR``.
 
 
-In Logistic Regression, we try to optimize the training paramater 
-:math:`\theta` 
+In Logistic Regression, we try to optimize the training paramater
+:math:`\theta`
 such that the hypothesis
 :math:`0 \leq h_\theta(x) \leq 1` is acheived.
 We have
-:math:`h_\theta(x) = g(h_\theta(x))` 
-and 
+:math:`h_\theta(x) = g(h_\theta(x))`
+and
 :math:`g(z) = \frac{1}{1+e^{-z}}`
-as the logistic or sigmoid function. 
+as the logistic or sigmoid function.
 The term "Logistic" in Logistic Regression refers to this function.
-For given data of a binary classification problem of classes 0 and 1, 
-one can determine that the given data instance belongs to class 1 if 
+For given data of a binary classification problem of classes 0 and 1,
+one can determine that the given data instance belongs to class 1 if
 :math:`h_\theta(x) \geq 0.5`
 or class 0 if
 :math:`h_\theta(x) < 0.5`
 .
 
-In Logistic Regression, choosing the right parameters is of utmost importance for reducing the training error and ensuring high training accuracy. 
-``CvLR_TrainParams`` is the structure that defines parameters that are required to train a Logistic Regression classifier. 
-The learning rate is determined by ``CvLR_TrainParams.alpha``. It determines how faster we approach the solution. 
-It is a positive real number. Optimization algorithms like Batch Gradient Descent and Mini-Batch Gradient Descent are supported in ``CvLR``. 
-It is important that we mention the number of iterations these optimization algorithms have to run. 
-The number of iterations are mentioned by ``CvLR_TrainParams.num_iters``. 
+In Logistic Regression, choosing the right parameters is of utmost importance for reducing the training error and ensuring high training accuracy.
+``CvLR_TrainParams`` is the structure that defines parameters that are required to train a Logistic Regression classifier.
+The learning rate is determined by ``CvLR_TrainParams.alpha``. It determines how faster we approach the solution.
+It is a positive real number. Optimization algorithms like Batch Gradient Descent and Mini-Batch Gradient Descent are supported in ``CvLR``.
+It is important that we mention the number of iterations these optimization algorithms have to run.
+The number of iterations are mentioned by ``CvLR_TrainParams.num_iters``.
 The number of iterations can be thought as number of steps taken and learning rate specifies if it is a long step or a short step. These two parameters define how fast we arrive at a possible solution.
-In order to compensate for overfitting regularization is performed, which can be enabled by setting ``CvLR_TrainParams.regularized`` to true. 
-One can specify what kind of regularization has to be performed by setting ``CvLR_TrainParams.norm`` to ``CvLR::REG_L1`` or ``CvLR::REG_L2`` values. 
-``CvLR`` provides a choice of 2 training methods with Batch Gradient Descent or the Mini-Batch Gradient Descent. To specify this, set ``CvLR_TrainParams.train_method`` to either ``CvLR::BATCH`` or ``CvLR::MINI_BATCH``. 
+In order to compensate for overfitting regularization is performed, which can be enabled by setting ``CvLR_TrainParams.regularized`` to true.
+One can specify what kind of regularization has to be performed by setting ``CvLR_TrainParams.norm`` to ``CvLR::REG_L1`` or ``CvLR::REG_L2`` values.
+``CvLR`` provides a choice of 2 training methods with Batch Gradient Descent or the Mini-Batch Gradient Descent. To specify this, set ``CvLR_TrainParams.train_method`` to either ``CvLR::BATCH`` or ``CvLR::MINI_BATCH``.
 If ``CvLR_TrainParams`` is set to ``CvLR::MINI_BATCH``, the size of the mini batch has to be to a postive integer using ``CvLR_TrainParams.minibatchsize``.
 
 A sample set of training parameters for the Logistic Regression classifier can be initialized as follows:
@@ -57,10 +57,10 @@ A sample set of training parameters for the Logistic Regression classifier can b
 .. [BatchDesWiki] http://en.wikipedia.org/wiki/Gradient_descent_optimization. Wikipedia article about Gradient Descent based optimization.
 
 CvLR_TrainParams
----------------------
+----------------
 .. ocv:struct:: CvLR_TrainParams
 
-  Parameters of the Logistic Regression training algorithm. You can initialize the structure using a constructor or declaring the variable and initializing the the individual parameters. 
+  Parameters of the Logistic Regression training algorithm. You can initialize the structure using a constructor or declaring the variable and initializing the the individual parameters.
 
   The training parameters for Logistic Regression:
 
@@ -90,7 +90,7 @@ CvLR_TrainParams
 
 
 CvLR_TrainParams::CvLR_TrainParams
---------------------------------------------
+----------------------------------
 The constructors.
 
 .. ocv:function:: CvLR_TrainParams::CvLR_TrainParams()
@@ -131,7 +131,7 @@ The constructors.
 
     :param params: The training parameters for the classifier of type ``CVLR_TrainParams``.
 
-The constructor with parameters allows to create a Logistic Regression object intialized with given data and trains it. 
+The constructor with parameters allows to create a Logistic Regression object intialized with given data and trains it.
 
 CvLR::train
 -----------
