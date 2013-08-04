@@ -1,5 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -9,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -185,7 +185,7 @@ public:
         double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
 /**
- * Detect lines in the input image with the specified ROI.
+ * Detect lines in the input image.
  *
  * @param _image    A grayscale(CV_8UC1) input image.
  *                  If only a roi needs to be selected, use
@@ -194,8 +194,6 @@ public:
  * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
  *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
- * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning
- *                          lines coordinates are image wise.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
  * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%.

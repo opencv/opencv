@@ -839,7 +839,7 @@ class LineSegmentDetector : public Algorithm
 {
 public:
 /**
- * Detect lines in the input image with the specified ROI.
+ * Detect lines in the input image.
  *
  * @param _image    A grayscale(CV_8UC1) input image.
  *                  If only a roi needs to be selected, use
@@ -848,8 +848,6 @@ public:
  * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
  *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
- * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning
- *                          lines coordinates are image wise.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
  * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%.
@@ -875,10 +873,11 @@ public:
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
  *
- * @param image     The image, where lines will be drawn.
- *                  Should have the size of the image, where the lines were found
+ * @param size      The size of the image, where lines were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
+ * @param image     Optional image, where lines will be drawn.
+ *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
     virtual int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* image = 0) = 0;
