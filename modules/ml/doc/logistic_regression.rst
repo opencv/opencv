@@ -138,7 +138,7 @@ CvLR::train
 Trains the Logistic Regression classifier and returns true if successful.
 
 .. ocv:function:: bool train(const cv::Mat& data_i, const cv::Mat& labels_i)
-  
+
     :param data: The data variable of type ``CV_32F``. Each data instance has to be arranged per across different rows.
 
     :param labels: The data variable of type ``CV_32F``. Each label instance has to be arranged across differnet rows.
