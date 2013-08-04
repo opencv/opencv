@@ -65,6 +65,7 @@ if (BUILD_TESTS)
 endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+
 # ----------------------------------------------------------------------------
 #  Configure time components
 # ----------------------------------------------------------------------------
@@ -83,6 +84,10 @@ endforeach()
 
 # add extra headers by hand
 list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
+
+# pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
+# remove the visibility modifiers, so the mex gateway is visible
+string(REGEX REPLACE "[^\ ]*visibility[^\ ]*" "" MEX_CXX_FLAGS "${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
 
 # Configure checks
 # Check to see whether the generator and the mex compiler are working.
@@ -113,8 +118,8 @@ if (NOT MEX_WORKS)
     # attempt to compile a gateway using mex
     message(STATUS "Trying to compile mex file")
     execute_process(
-        COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} ${MEX_INCLUDE_DIRS} 
-                ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
+        COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} "CXXFLAGS=\$CXXFLAGS ${MEX_CXXFLAGS}"
+                ${MEX_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE MEX_ERROR
         OUTPUT_QUIET
@@ -133,6 +138,7 @@ endif()
 set_property(GLOBAL PROPERTY MEX_WORKS TRUE)
 set(MEX_WORKS True CACHE BOOL ADVANCED)
 
+
 # ----------------------------------------------------------------------------
 #  Build time components
 # ----------------------------------------------------------------------------
@@ -142,6 +148,7 @@ set(MEX_WORKS True CACHE BOOL ADVANCED)
 # (which do the real work) only when they're outdated
 set(GENERATE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/generate.proxy)
 set(COMPILE_PROXY ${CMAKE_CURRENT_BINARY_DIR}/compile.proxy)
+# TODO: Remove following line before merging with master
 file(REMOVE ${GENERATE_PROXY} ${COMPILE_PROXY})
 
 # generate
@@ -164,6 +171,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -DMATLAB_MEX_SCRIPT=${MATLAB_MEX_SCRIPT}
                              -DMATLAB_MEXEXT=${MATLAB_MEXEXT}
                              -DMEX_OPTS=${MEX_OPTS}
+                             -DMEX_CXXFLAGS=${MEX_CXXFLAGS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
                              -DMEX_LIB_DIR=${MEX_LIB_DIR}
                              -DMEX_LIBS="${MEX_LIBS}"
@@ -181,6 +189,7 @@ add_dependencies(${the_module} ${the_module}_sources ${${the_module}_ACTUAL_DEPS
 if (ENABLE_SOLUTION_FOLDERS)
     set_target_properties(${the_module} PROPERTIES FOLDER "modules")
 endif()
+
 
 # ----------------------------------------------------------------------------
 #  Install time components

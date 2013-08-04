@@ -1,11 +1,12 @@
 #ifndef OPENCV_MXARRAY_HPP_
 #define OPENCV_MXARRAY_HPP_
 
+#include <stdint.h>
+#include <string>
+#include <vector>
+#include <opencv2/core.hpp>
 #include "mex.h"
 #include "transpose.hpp"
-#include <vector>
-#include <string>
-#include <opencv2/core.hpp>
 
 /*
  * All recent versions of Matlab ship with the MKL library which contains
@@ -34,7 +35,7 @@ extern "C" {
  * expression fails, an error is raised and the mex function returns
  * to Matlab, otherwise this function does nothing
  */
-void conditionalError(bool expr, const std::string& str) {
+static void conditionalError(bool expr, const std::string& str) {
   if (!expr) mexErrMsgTxt(std::string("condition failed: ").append(str).c_str());
 }
 
@@ -43,7 +44,7 @@ void conditionalError(bool expr, const std::string& str) {
  *
  * This function is a wrapper around mexErrMsgTxt
  */
-void error(const std::string& str) {
+static void error(const std::string& str) {
   mexErrMsgTxt(str.c_str());
 }
 
