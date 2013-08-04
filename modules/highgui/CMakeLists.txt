@@ -203,6 +203,7 @@ endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
   add_definitions(-DHAVE_PVAPI)
+  add_definitions(${PVAPI_DEFINITIONS})
   ocv_include_directories(${PVAPI_INCLUDE_PATH})
   set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
   list(APPEND HIGHGUI_LIBRARIES ${PVAPI_LIBRARY})
