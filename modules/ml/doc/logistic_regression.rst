@@ -123,7 +123,7 @@ The constructors.
 
 .. ocv:function:: CvLR::CvLR()
 
-.. ocv:function:: CvLR(const cv::Mat& data, const cv::Mat& labels, const CvLR_TrainParams& params)
+.. ocv:function:: CvLR::CvLR(const cv::Mat& data, const cv::Mat& labels, const CvLR_TrainParams& params)
 
     :param data: The data variable of type ``CV_32F``. Each data instance has to be arranged per across different rows.
 
@@ -137,7 +137,7 @@ CvLR::train
 -----------
 Trains the Logistic Regression classifier and returns true if successful.
 
-.. ocv:function:: bool train(const cv::Mat& data_i, const cv::Mat& labels_i)
+.. ocv:function:: bool CvLR::train(const cv::Mat& data, const cv::Mat& labels)
 
     :param data: The data variable of type ``CV_32F``. Each data instance has to be arranged per across different rows.
 
@@ -165,6 +165,6 @@ CvLR::get_learnt_mat()
 ----------------------
 This function returns the trained paramters arranged across rows. For a two class classifcation problem, it returns a row matrix.
 
-.. ocv:function:: cv::Mat get_learnt_mat()
+.. ocv:function:: cv::Mat CvLR::get_learnt_mat()
 
 It returns learnt paramters of the Logistic Regression as a matrix of type ``CV_32F``.
