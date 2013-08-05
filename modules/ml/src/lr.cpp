@@ -685,12 +685,15 @@ void CvLR::read( CvFileStorage* fs, CvFileNode* node )
     CvMat *newData;
     CvMat *o_labels;
     CvMat *n_labels;
+    int i;
 
     this->params.alpha = cvReadRealByName(fs, node,"alpha", 1.0);
     this->params.num_iters = cvReadIntByName(fs, node,"iterations", 1000);
     this->params.norm = cvReadIntByName(fs, node,"norm", 1);
     // this->params.debug = (bool)cvReadIntByName(fs, node,"debug", 1);
-    this->params.regularized = (bool)cvReadIntByName(fs, node,"regularized", 1);
+    i = cvReadIntByName(fs, node,"regularized", 1);
+    CV_Assert(i == 0 || i == 1);
+    this->params.regularized = (bool)i;
     this->params.train_method = cvReadIntByName(fs, node,"train_method", 0);
 
     if(this->params.train_method == CvLR::MINI_BATCH)
