@@ -217,6 +217,7 @@ float CvLR::predict(const cv::Mat& _data, cv::Mat& _pred_labs)
 {
     /* returns a class of the predicted class
     class names can be 1,2,3,4, .... etc */
+    cv::Mat thetas;
 
     // check if learnt_mats array is populated
     if(this->learnt_thetas.total()<=0)
@@ -240,7 +241,6 @@ float CvLR::predict(const cv::Mat& _data, cv::Mat& _pred_labs)
         vconcat(_data.col(i-1), data_t.col(i));
     }
 
-    cv::Mat thetas;
     this->learnt_thetas.convertTo(thetas, CV_32F);
 
     CV_Assert(thetas.rows > 0);
