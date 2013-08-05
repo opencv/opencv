@@ -3,7 +3,12 @@ macro(listify OUT_LIST IN_STRING)
 endmacro()
 
 listify(MEX_INCLUDE_DIRS_LIST ${MEX_INCLUDE_DIRS})
-listify(MEX_LIBS_LIST ${MEX_LIBS})
+if (${CONFIGURATION} MATCHES "Debug")
+    listify(MEX_LIBS_LIST ${MEX_DEBUG_LIBS})
+else()
+    listify(MEX_LIBS_LIST ${MEX_LIBS})
+endif()
+
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
     # strip out the filename

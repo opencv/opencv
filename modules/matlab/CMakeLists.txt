@@ -57,7 +57,6 @@ set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$(Configuration))
-prepend("-l" MEX_LIBS opencv_core)
 set(MEX_OPTS -largeArrayDims)
 
 if (BUILD_TESTS)
@@ -76,9 +75,8 @@ foreach(opencv_module ${MATLAB_DEPS})
         list(APPEND opencv_hdrs "${OPENCV_MODULE_${opencv_module}_LOCATION}/include/opencv2/${module}.hpp")
         list(APPEND ${the_module}_ACTUAL_DEPS ${opencv_module})
         prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_${opencv_module}_LOCATION}/include")
-        if (NOT ${module} STREQUAL "core")
-            prepend("-l" MEX_LIBS ${opencv_module})
-        endif()
+        prepend("-l" MEX_LIBS ${opencv_module}${OPENCV_DLLVERSION})
+        prepend("-l" MEX_DEBUG_LIBS ${opencv_module}${OPENCV_DLLVERSION}${OPENCV_DEBUG_POSTFIX})
     endif()
 endforeach()
 
@@ -174,7 +172,9 @@ add_custom_command(
                              -DMEX_CXXFLAGS=${MEX_CXXFLAGS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
                              -DMEX_LIB_DIR=${MEX_LIB_DIR}
+                             -DCONFIGURATION="$(Configuration)"
                              -DMEX_LIBS="${MEX_LIBS}"
+                             -DMEX_DEBUG_LIBS="${MEX_DEBUG_LIBS}"
                              -P ${CMAKE_CURRENT_SOURCE_DIR}/compile.cmake
     COMMAND ${CMAKE_COMMAND} -E touch ${COMPILE_PROXY}
     COMMENT "Compiling Matlab source files. This could take a while..."
