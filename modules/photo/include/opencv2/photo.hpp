@@ -126,7 +126,7 @@ public:
 };
 
 CV_EXPORTS_W Ptr<TonemapDurand> 
-createTonemapDurand(float gamma = 1.0f, float saturation = 1.0f, float contrast = 4.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
+createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
 
 // "Dynamic Range Reduction Inspired by Photoreceptor Physiology", Reinhard, Devlin, 2005
 
@@ -145,6 +145,8 @@ public:
 
 CV_EXPORTS_W Ptr<TonemapReinhardDevlin> 
 createTonemapReinhardDevlin(float gamma = 1.0f, float intensity = 0.0f, float light_adapt = 1.0f, float color_adapt = 0.0f);
+
+// "Perceptual Framework for Contrast Processing of High Dynamic Range Images", Mantiuk et al., 2006
 
 class CV_EXPORTS_W TonemapMantiuk : public Tonemap
 {
@@ -166,6 +168,8 @@ public:
                                  const std::vector<float>& times, InputArray response) = 0;
 };
 
+// "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Ward, 2003
+
 class CV_EXPORTS_W AlignMTB : public ExposureAlign
 {
 public:
@@ -183,8 +187,6 @@ public:
     CV_WRAP virtual int getExcludeRange() const = 0;
     CV_WRAP virtual void setExcludeRange(int exclude_range) = 0;
 };
-
-// "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Ward, 2003
 
 CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4);
 

@@ -19,17 +19,11 @@ Tonemaps image
     :param src: source image - 32-bit 3-channel Mat
     :param dst: destination image - 32-bit 3-channel Mat with values in [0, 1] range
 
-TonemapLinear
---------
-.. ocv:class:: TonemapLinear : public Tonemap
-
-Simple linear mapper with gamma correction.
-
-createTonemapLinear
+createTonemap
 ------------------
-Creates TonemapLinear object
+Creates simple linear mapper with gamma correction
 
-.. ocv:function:: Ptr<TonemapLinear> createTonemapLinear(float gamma = 1.0f);
+.. ocv:function:: Ptr<Tonemap> createTonemap(float gamma = 1.0f);
 
     :param gamma: gamma value for gamma correction
     
@@ -47,6 +41,8 @@ Creates TonemapDrago object
 
     :param gamma: gamma value for gamma correction
     
+    :param saturation:  saturation enhancement value
+    
     :param bias: value for bias function in [0, 1] range
     
 TonemapDurand
@@ -61,15 +57,17 @@ createTonemapDurand
 ------------------
 Creates TonemapDurand object
 
-.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
+.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
 
     :param gamma: gamma value for gamma correction
     
     :param contrast: resulting contrast on logarithmic scale
     
-    :param sigma_space: filter sigma in the color space
+    :param saturation:  saturation enhancement value
     
-    :param sigma_color: filter sigma in the coordinate space
+    :param sigma_space: filter sigma in color space
+    
+    :param sigma_color: filter sigma in coordinate space
     
 TonemapReinhardDevlin
 --------
@@ -90,6 +88,24 @@ Creates TonemapReinhardDevlin object
     :param light_adapt:  light adaptation in [0, 1] range. If 1 adaptation is based on pixel value, if 0 it's global
     
     :param color_adapt: chromatic adaptation in [0, 1] range. If 1 channels are treated independently, if 0 adaptation level is the same for each channel
+    
+TonemapMantiuk
+--------
+.. ocv:class:: TonemapMantiuk : public Tonemap
+
+"Perceptual Framework for Contrast Processing of High Dynamic Range Images", Mantiuk et al., 2006
+
+createTonemapMantiuk
+------------------
+Creates TonemapMantiuk object
+
+.. ocv:function:: CV_EXPORTS_W Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f);
+
+    :param gamma: gamma value for gamma correction
+    
+    :param scale: contrast scale factor
+    
+    :param saturation:  saturation enhancement value
     
 ExposureAlign
 -------------

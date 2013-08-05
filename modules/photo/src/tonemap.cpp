@@ -183,10 +183,10 @@ Ptr<TonemapDrago> createTonemapDrago(float gamma, float saturation, float bias)
 class TonemapDurandImpl : public TonemapDurand
 {
 public:
-    TonemapDurandImpl(float gamma, float saturation, float contrast, float sigma_color, float sigma_space) : 
+    TonemapDurandImpl(float gamma, float contrast, float saturation,  float sigma_color, float sigma_space) : 
         gamma(gamma), 
+		contrast(contrast),
         saturation(saturation),
-        contrast(contrast),
         sigma_color(sigma_color),
         sigma_space(sigma_space),
         name("TonemapDurand")
@@ -260,9 +260,9 @@ protected:
     float gamma, saturation, contrast, sigma_color, sigma_space;
 };
 
-Ptr<TonemapDurand> createTonemapDurand(float gamma, float saturation, float contrast, float sigma_color, float sigma_space)
+Ptr<TonemapDurand> createTonemapDurand(float gamma, float contrast, float saturation, float sigma_color, float sigma_space)
 {
-    return new TonemapDurandImpl(gamma, saturation, contrast, sigma_color, sigma_space);
+    return new TonemapDurandImpl(gamma, contrast, saturation, sigma_color, sigma_space);
 }
 
 class TonemapReinhardDevlinImpl : public TonemapReinhardDevlin

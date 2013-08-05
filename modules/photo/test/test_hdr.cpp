@@ -97,7 +97,7 @@ TEST(Photo_Tonemap, regression)
 	loadImage(test_path + "image.hdr", img);
 	float gamma = 2.2f;
 	
-    Ptr<Tonemap> linear = createTonemapLinear(gamma);
+    Ptr<Tonemap> linear = createTonemap(gamma);
 	linear->process(img, result);
 	loadImage(test_path + "linear.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
