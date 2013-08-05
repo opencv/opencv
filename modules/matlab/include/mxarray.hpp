@@ -144,19 +144,13 @@ namespace Matlab {
     static const mxClassID ScalarType = mxDOUBLE_CLASS;
     static std::string ToString()  { return "double"; }
   };
-  // size_t
-  template<> class Traits<size_t> {
-  public:
-    static const mxClassID ScalarType = (sizeof(size_t) == 4) ? mxUINT32_CLASS : mxUINT64_CLASS;
-    static std::string ToString()  { return "size_t"; }
-  };
   // char
   template<> class Traits<char> {
   public:
     static const mxClassID ScalarType = mxCHAR_CLASS;
     static std::string ToString()  { return "char"; }
   };
-  // char
+  // inherited type
   template<> class Traits<Matlab::InheritType> {
   public:
     static std::string ToString()  { return "Inherited type"; }

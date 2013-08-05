@@ -56,7 +56,7 @@ set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
-prepend("-L" MEX_LIB_DIR  ${CMAKE_BINARY_DIR}/lib)
+prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$(Configuration))
 prepend("-l" MEX_LIBS opencv_core)
 set(MEX_OPTS -largeArrayDims)
 

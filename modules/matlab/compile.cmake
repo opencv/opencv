@@ -3,6 +3,7 @@ macro(listify OUT_LIST IN_STRING)
 endmacro()
 
 listify(MEX_INCLUDE_DIRS_LIST ${MEX_INCLUDE_DIRS})
+listify(MEX_LIBS_LIST ${MEX_LIBS})
 file(GLOB SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/src/*.cpp")
 foreach(SOURCE_FILE ${SOURCE_FILES})
     # strip out the filename
@@ -11,7 +12,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/+cv/${FILENAME}.${MATLAB_MEXEXT})
         execute_process(
             COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} "CXXFLAGS=\$CXXFLAGS ${MEX_CXXFLAGS}" ${MEX_INCLUDE_DIRS_LIST} 
-                    ${MEX_LIB_DIR} ${MEX_LIBS} ${SOURCE_FILE}
+                    ${MEX_LIB_DIR} ${MEX_LIBS_LIST} ${SOURCE_FILE}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/+cv
             OUTPUT_QUIET
             ERROR_VARIABLE FAILED
