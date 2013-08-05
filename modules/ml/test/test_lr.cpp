@@ -329,6 +329,7 @@ void CV_LRTest_SaveLoad::run( int /*start_from*/ )
     errorCount += 1 - (float)cv::sum(pred_result1)[0]/pred_result1.rows;
     errorCount += 1 - (float)cv::sum(comp_learnt_mats)[0]/comp_learnt_mats.rows;
 
+
     if(errorCount>0)
     {
         ts->printf( cvtest::TS::LOG, "Different prediction results before writing and after reading (errorCount=%d).\n", errorCount );
