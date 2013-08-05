@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/limits.hpp"
 
 namespace cv { namespace gpu { namespace cudev {
-    namespace bgfg_gmg
+    namespace gmg
     {
         __constant__ int   c_width;
         __constant__ int   c_height;
