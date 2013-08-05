@@ -57,7 +57,7 @@ TrackerFeature::~TrackerFeature()
 
 void TrackerFeature::compute( const std::vector<Mat>& images, Mat& response )
 {
-	if( images.size() == 0 )
+	if( images.empty() )
 		return;
 
 	computeImpl( images, response );
@@ -180,7 +180,7 @@ TrackerFeatureHAAR::~TrackerFeatureHAAR()
 
 bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& response )
 {
-	if( images.size() == 0 )
+	if( images.empty() )
 	{
 		return false;
 	}

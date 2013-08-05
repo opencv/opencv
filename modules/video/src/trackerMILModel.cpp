@@ -20,7 +20,7 @@ TrackerMILModel::TrackerMILModel( const Rect& boundingBox )
 
 void TrackerMILModel::responseToConfidenceMap( const std::vector<Mat>& responses, ConfidenceMap& confidenceMap )
 {
-	if( currentSample.size() == 0)
+	if( currentSample.empty() )
 	{
 		CV_Error(-1, "The samples in Model estimation are empty");
 		return;

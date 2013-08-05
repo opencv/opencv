@@ -156,7 +156,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> negSamples = sampler->getSamples();
 
-	if( posSamples.size() == 0 || negSamples.size() == 0 )
+	if( posSamples.empty() || negSamples.empty() )
 		return false;
 
 	//compute HAAR features
@@ -198,7 +198,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	((Ptr<TrackerSamplerCSC>) sampler->getSamplers().at(0).second)->setMode( TrackerSamplerCSC::MODE_DETECT );
 	sampler->sampling( image, lastBoundingBox );
 	std::vector<Mat> detectSamples = sampler->getSamples();
-	if( detectSamples.size() == 0 )
+	if( detectSamples.empty() )
 		return false;
 
 
@@ -252,7 +252,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 	sampler->sampling( image, boundingBox );
 	std::vector<Mat> negSamples = sampler->getSamples();
 
-	if( posSamples.size() == 0 || negSamples.size() == 0 )
+	if( posSamples.empty() || negSamples.empty() )
 		return false;
 
 

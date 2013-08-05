@@ -58,7 +58,7 @@ TrackerStateEstimator::~TrackerStateEstimator()
 
 Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<ConfidenceMap>& confidenceMaps )
 {
-	if( confidenceMaps.size() == 0 )
+	if( confidenceMaps.empty() )
 		return NULL;
 
 	return estimateImpl( confidenceMaps );
@@ -67,7 +67,7 @@ Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<Confi
 
 void TrackerStateEstimator::update( std::vector<ConfidenceMap>& confidenceMaps )
 {
-	if( confidenceMaps.size() == 0 )
+	if( confidenceMaps.empty() )
 		return;
 
 	return updateImpl( confidenceMaps );
@@ -122,7 +122,7 @@ void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& conf
 Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
 	//TODO run cvBoost predict in order to compute next location
-	if( currentConfidenceMap.size() == 0 )
+	if( currentConfidenceMap.empty() )
 		return NULL;
 
 	Mat data;
