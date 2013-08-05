@@ -59,8 +59,6 @@ enum
     INPAINT_TELEA = 1 // A. Telea algorithm
 };
 
-CV_EXPORTS_W bool initModule_photo();
-
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
@@ -91,11 +89,7 @@ public:
     CV_WRAP virtual void setGamma(float gamma) = 0;
 };
 
-class CV_EXPORTS_W TonemapLinear : public Tonemap
-{
-};
-
-CV_EXPORTS_W Ptr<TonemapLinear> createTonemapLinear(float gamma = 1.0f);
+CV_EXPORTS_W Ptr<Tonemap> createTonemap(float gamma = 1.0f);
 
 // "Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al., 2003
 

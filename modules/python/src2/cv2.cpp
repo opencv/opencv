@@ -131,6 +131,15 @@ typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
 typedef Ptr<StereoBM> Ptr_StereoBM;
 typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
 
+typedef Ptr<Tonemap> Ptr_Tonemap;
+typedef Ptr<TonemapDrago> Ptr_TonemapDrago;
+typedef Ptr<TonemapReinhardDevlin> Ptr_TonemapReinhardDevlin;
+typedef Ptr<TonemapDurand> Ptr_TonemapDurand;
+typedef Ptr<AlignMTB> Ptr_AlignMTB;
+typedef Ptr<CalibrateDebevec> Ptr_CalibrateDebevec;
+typedef Ptr<MergeDebevec> Ptr_MergeDebevec;
+typedef Ptr<MergeMertens> Ptr_MergeMertens;
+
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;

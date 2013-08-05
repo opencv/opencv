@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -48,10 +47,10 @@
 namespace cv
 {
 
-class TonemapLinearImpl : public TonemapLinear
+class TonemapImpl : public Tonemap
 {
 public:
-    TonemapLinearImpl(float gamma) : gamma(gamma), name("TonemapLinear")
+    TonemapImpl(float gamma) : gamma(gamma), name("Tonemap")
     {
     }
 
@@ -94,9 +93,9 @@ protected:
     float gamma;
 };
 
-Ptr<TonemapLinear> createTonemapLinear(float gamma)
+Ptr<Tonemap> createTonemap(float gamma)
 {
-    return new TonemapLinearImpl(gamma);
+    return new TonemapImpl(gamma);
 }
 
 class TonemapDragoImpl : public TonemapDrago
@@ -117,7 +116,7 @@ public:
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
         
-        Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+        Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
 
         Mat gray_img;
@@ -200,7 +199,7 @@ public:
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
-        Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+        Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
 
         Mat gray_img;
@@ -284,7 +283,7 @@ public:
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
-        Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+        Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
         
         Mat gray_img;
@@ -378,7 +377,7 @@ public:
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
-        Ptr<TonemapLinear> linear = createTonemapLinear(1.0f);
+        Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
 
         Mat gray_img;
@@ -426,7 +425,7 @@ public:
         exp(x, x);
         mapLuminance(img, img, gray_img, x, saturation);
 
-        linear = createTonemapLinear(gamma);
+        linear = createTonemap(gamma);
         linear->process(img, img);
     }
 
