@@ -33,7 +33,7 @@ __version__ = '2.8-dev'
 from jinja2.environment import Environment, Template
 
 # loaders
-from jinja2.loaders import BaseLoader, FileSystemLoader, PackageLoader, \
+from jinja2.loaders import BaseLoader, FileSystemLoader, \
      DictLoader, FunctionLoader, PrefixLoader, ChoiceLoader, \
      ModuleLoader
 
@@ -58,7 +58,7 @@ from jinja2.utils import Markup, escape, clear_caches, \
 
 __all__ = [
     'Environment', 'Template', 'BaseLoader', 'FileSystemLoader',
-    'PackageLoader', 'DictLoader', 'FunctionLoader', 'PrefixLoader',
+    'DictLoader', 'FunctionLoader', 'PrefixLoader',
     'ChoiceLoader', 'BytecodeCache', 'FileSystemBytecodeCache',
     'MemcachedBytecodeCache', 'Undefined', 'DebugUndefined',
     'StrictUndefined', 'TemplateError', 'UndefinedError', 'TemplateNotFound',

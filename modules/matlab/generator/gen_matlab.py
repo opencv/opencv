@@ -26,7 +26,8 @@ class MatlabWrapperGenerator(object):
         parse_tree.build(ns)
        
         # setup the template engine
-        jtemplate = Environment(loader=PackageLoader('templates', ''), trim_blocks=True, lstrip_blocks=True)
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        jtemplate    = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True, lstrip_blocks=True)
 
         # add the custom filters
         jtemplate.filters['formatMatlabConstant'] = formatMatlabConstant
@@ -99,7 +100,7 @@ if __name__ == "__main__":
     from hdr_parser import CppHeaderParser
     from parse_tree import ParseTree, todict, constants
     from filters import *
-    from jinja2 import Environment, PackageLoader
+    from jinja2 import Environment, FileSystemLoader
 
     # get the IO from the command line arguments
     input_files = sys.argv[2:-1]
