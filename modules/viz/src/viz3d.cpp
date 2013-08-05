@@ -51,5 +51,5 @@ cv::viz::Camera cv::viz::Viz3d::getCamera() const { return impl_->getCamera(); }
 void cv::viz::Viz3d::setViewerPose(const Affine3f &pose) { impl_->setViewerPose(pose); }
 cv::Affine3f cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
 
-void cv::viz::Viz3d::convertToWindowCoordinates(const Point3f &pt, Point3f &window_coord) { impl_->convertToWindowCoordinates(pt, window_coord); }
-void cv::viz::Viz3d::converTo3DRay(const Point3f &window_coord, Point3f &origin, Vec3f &direction) { impl_->converTo3DRay(window_coord, origin, direction); }
+void cv::viz::Viz3d::convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord) { impl_->convertToWindowCoordinates(pt, window_coord); }
+void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction) { impl_->converTo3DRay(window_coord, origin, direction); }

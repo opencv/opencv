@@ -642,32 +642,24 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::convertToWindowCoordinates(const Point3f &pt, Point3f &window_coord)
+void cv::viz::Viz3d::VizImpl::convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord)
 {
-    // Use the built in function of renderer
-    double point_wcs[3] = {pt.x, pt.y, pt.z};
-    renderer_->WorldToView(point_wcs[0], point_wcs[1], point_wcs[2]);
-    window_coord.x = point_wcs[0];
-    window_coord.y = point_wcs[1];
-    window_coord.z = point_wcs[2];
+    Vec3d window_pt;
+    vtkInteractorObserver::ComputeWorldToDisplay(renderer_, pt.x, pt.y, pt.z, window_pt.val);
+    window_coord = window_pt;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3f &window_coord, Point3f &origin, Vec3f &direction)
-{
-    // Use the built in function of renderer
-    double point_view[3] = {window_coord.x, window_coord.y, window_coord.z};
-    renderer_->ViewToWorld(point_view[0], point_view[1], point_view[2]);
-    
+void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction)
+{    
+    Vec4d world_pt;
+    vtkInteractorObserver::ComputeDisplayToWorld(renderer_, window_coord.x, window_coord.y, window_coord.z, world_pt.val);
+     
     vtkCamera &active_camera = *renderer_->GetActiveCamera();
-    double *cam_pos = active_camera.GetPosition();
-    origin.x = cam_pos[0];
-    origin.y = cam_pos[1];
-    origin.z = cam_pos[2];
-    direction[0] = point_view[0] - cam_pos[0];
-    direction[1] = point_view[1] - cam_pos[1];
-    direction[2] = point_view[2] - cam_pos[2];
-    normalize(direction);
+    Vec3d cam_pos;
+    active_camera.GetPosition(cam_pos.val);
+    origin = cam_pos;
+    direction = normalize(Vec3d(world_pt.val) - cam_pos);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
