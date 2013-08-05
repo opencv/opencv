@@ -19,3 +19,4 @@ Most of the classification and regression algorithms are implemented as C++ clas
     expectation_maximization
     neural_networks
     mldata
+    logistic_regression
