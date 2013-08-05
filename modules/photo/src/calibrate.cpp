@@ -47,73 +47,73 @@
 
 namespace cv
 {
-	
+    
 class CalibrateDebevecImpl : public CalibrateDebevec
 {
 public:
-	CalibrateDebevecImpl(int samples, float lambda) :
-		samples(samples),
-		lambda(lambda),
-		name("CalibrateDebevec"),
-		w(tringleWeights())
-	{
-	}
-	
-	void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
-	{
-		std::vector<Mat> images;
-		src.getMatVector(images);
-		dst.create(256, images[0].channels(), CV_32F);
-		Mat response = dst.getMat();
+    CalibrateDebevecImpl(int samples, float lambda) :
+        samples(samples),
+        lambda(lambda),
+        name("CalibrateDebevec"),
+        w(tringleWeights())
+    {
+    }
+    
+    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
+    {
+        std::vector<Mat> images;
+        src.getMatVector(images);
+        dst.create(256, images[0].channels(), CV_32F);
+        Mat response = dst.getMat();
 
-		CV_Assert(!images.empty() && images.size() == times.size());
-		CV_Assert(images[0].depth() == CV_8U);
-		checkImageDimensions(images);
+        CV_Assert(!images.empty() && images.size() == times.size());
+        CV_Assert(images[0].depth() == CV_8U);
+        checkImageDimensions(images);
 
-		for(int channel = 0; channel < images[0].channels(); channel++) {
-			Mat A = Mat::zeros(samples * images.size() + 257, 256 + samples, CV_32F);
-			Mat B = Mat::zeros(A.rows, 1, CV_32F);
+        for(int channel = 0; channel < images[0].channels(); channel++) {
+            Mat A = Mat::zeros(samples * images.size() + 257, 256 + samples, CV_32F);
+            Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
-			int eq = 0;
-			for(int i = 0; i < samples; i++) {
+            int eq = 0;
+            for(int i = 0; i < samples; i++) {
 
-				int pos = 3 * (rand() % images[0].total()) + channel;
-				for(size_t j = 0; j < images.size(); j++) {
+                int pos = 3 * (rand() % images[0].total()) + channel;
+                for(size_t j = 0; j < images.size(); j++) {
 
-					int val = (images[j].ptr() + pos)[0];
-					A.at<float>(eq, val) = w.at<float>(val);
-					A.at<float>(eq, 256 + i) = -w.at<float>(val);
-					B.at<float>(eq, 0) = w.at<float>(val) * log(times[j]);		
-					eq++;
-				}
-			}
-			A.at<float>(eq, 128) = 1;
-			eq++;
+                    int val = (images[j].ptr() + pos)[0];
+                    A.at<float>(eq, val) = w.at<float>(val);
+                    A.at<float>(eq, 256 + i) = -w.at<float>(val);
+                    B.at<float>(eq, 0) = w.at<float>(val) * log(times[j]);        
+                    eq++;
+                }
+            }
+            A.at<float>(eq, 128) = 1;
+            eq++;
 
-			for(int i = 0; i < 254; i++) {
-				A.at<float>(eq, i) = lambda * w.at<float>(i + 1);
-				A.at<float>(eq, i + 1) = -2 * lambda * w.at<float>(i + 1);
-				A.at<float>(eq, i + 2) = lambda * w.at<float>(i + 1);
-				eq++;
-			}
-			Mat solution;
-			solve(A, B, solution, DECOMP_SVD);
-			solution.rowRange(0, 256).copyTo(response.col(channel));
-		}
-		exp(response, response);
-	}
+            for(int i = 0; i < 254; i++) {
+                A.at<float>(eq, i) = lambda * w.at<float>(i + 1);
+                A.at<float>(eq, i + 1) = -2 * lambda * w.at<float>(i + 1);
+                A.at<float>(eq, i + 2) = lambda * w.at<float>(i + 1);
+                eq++;
+            }
+            Mat solution;
+            solve(A, B, solution, DECOMP_SVD);
+            solution.rowRange(0, 256).copyTo(response.col(channel));
+        }
+        exp(response, response);
+    }
 
-	int getSamples() const { return samples; }
-	void setSamples(int val) { samples = val; }
+    int getSamples() const { return samples; }
+    void setSamples(int val) { samples = val; }
 
-	float getLambda() const { return lambda; }
-	void setLambda(float val) { lambda = val; }
+    float getLambda() const { return lambda; }
+    void setLambda(float val) { lambda = val; }
 
-	void write(FileStorage& fs) const
+    void write(FileStorage& fs) const
     {
         fs << "name" << name
-		   << "samples" << samples
-		   << "lambda" << lambda;
+           << "samples" << samples
+           << "lambda" << lambda;
     }
 
     void read(const FileNode& fn)
@@ -121,19 +121,19 @@ public:
         FileNode n = fn["name"];
         CV_Assert(n.isString() && String(n) == name);
         samples = fn["samples"];
-		lambda = fn["lambda"];
+        lambda = fn["lambda"];
     }
 
 protected:
-	String name;
-	int samples;
-	float lambda;
-	Mat w;
+    String name;
+    int samples;
+    float lambda;
+    Mat w;
 };
 
 Ptr<CalibrateDebevec> createCalibrateDebevec(int samples, float lambda)
 {
-	return new CalibrateDebevecImpl(samples, lambda);
+    return new CalibrateDebevecImpl(samples, lambda);
 }
 
 }

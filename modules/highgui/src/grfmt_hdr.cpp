@@ -123,10 +123,9 @@ HdrEncoder::~HdrEncoder()
 
 bool HdrEncoder::write( const Mat& _img, const std::vector<int>& params )
 {
+	CV_Assert(_img.channels() == 3);
 	Mat img;
-	if(_img.depth() == CV_32F) {
-		_img.convertTo(img, CV_32FC3);
-	} else {
+	if(_img.depth() != CV_32F) {
 		_img.convertTo(img, CV_32FC3, 1/255.0f);
 	}
 	CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);

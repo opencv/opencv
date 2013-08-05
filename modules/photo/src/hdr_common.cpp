@@ -49,26 +49,38 @@ namespace cv
 
 void checkImageDimensions(const std::vector<Mat>& images)
 {
-	CV_Assert(!images.empty());
-	int width = images[0].cols;
-	int height = images[0].rows;
-	int type = images[0].type();
+    CV_Assert(!images.empty());
+    int width = images[0].cols;
+    int height = images[0].rows;
+    int type = images[0].type();
 
-	for(size_t i = 0; i < images.size(); i++) {
-		CV_Assert(images[i].cols == width && images[i].rows == height);
-		CV_Assert(images[i].type() == type);
-	}
+    for(size_t i = 0; i < images.size(); i++) {
+        CV_Assert(images[i].cols == width && images[i].rows == height);
+        CV_Assert(images[i].type() == type);
+    }
 }
 
 Mat tringleWeights()
 {
-	Mat w(256, 3, CV_32F);
-	for(int i = 0; i < 256; i++) {
-		for(int j = 0; j < 3; j++) {
-			w.at<float>(i, j) = i < 128 ? i + 1.0f : 256.0f - i;
-		}
-	}
-	return w;
+    Mat w(256, 3, CV_32F);
+    for(int i = 0; i < 256; i++) {
+        for(int j = 0; j < 3; j++) {
+            w.at<float>(i, j) = i < 128 ? i + 1.0f : 256.0f - i;
+        }
+    }
+    return w;
+}
+
+void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
+{
+    std::vector<Mat> channels(3);
+    split(src, channels);
+    for(int i = 0; i < 3; i++) {
+        channels[i] = channels[i].mul(1.0f / lum);
+        pow(channels[i], saturation, channels[i]);
+        channels[i] = channels[i].mul(new_lum);
+    }
+    merge(channels, dst);
 }
 
 };

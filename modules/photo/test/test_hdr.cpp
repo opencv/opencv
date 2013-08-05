@@ -91,12 +91,11 @@ void loadResponseCSV(String path, Mat& response)
 
 TEST(Photo_Tonemap, regression)
 {
-	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/tonemap/";
 	
 	Mat img, expected, result;
-	loadImage(test_path + "rle.hdr", img);
+	loadImage(test_path + "image.hdr", img);
 	float gamma = 2.2f;
-	test_path += "tonemap/";
 	
 	Ptr<TonemapLinear> linear = createTonemapLinear(gamma);
 	linear->process(img, result);
@@ -119,6 +118,12 @@ TEST(Photo_Tonemap, regression)
 	Ptr<TonemapReinhardDevlin> reinhard_devlin = createTonemapReinhardDevlin(gamma);
 	reinhard_devlin->process(img, result);
 	loadImage(test_path + "reinharddevlin.png", expected);
+	result.convertTo(result, CV_8UC3, 255);
+	checkEqual(result, expected, 0);
+
+	Ptr<TonemapMantiuk> mantiuk = createTonemapMantiuk(gamma);
+	mantiuk->process(img, result);
+	loadImage(test_path + "mantiuk.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
 	checkEqual(result, expected, 0);
 }

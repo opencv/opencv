@@ -53,6 +53,8 @@ void checkImageDimensions(const std::vector<Mat>& images);
 
 Mat tringleWeights();
 
+void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation);
+
 };
 
 #endif
