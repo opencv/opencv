@@ -49,3 +49,6 @@ cv::Affine3f cv::viz::Viz3d::getWidgetPose(const String &id) const { return impl
 void cv::viz::Viz3d::setCamera(const Camera2 &camera) { impl_->setCamera(camera); }
 void cv::viz::Viz3d::setViewerPose(const Affine3f &pose) { impl_->setViewerPose(pose); }
 cv::Affine3f cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
+
+void cv::viz::Viz3d::convertToWindowCoordinates(const Point3f &pt, Point3f &window_coord) { impl_->convertToWindowCoordinates(pt, window_coord); }
+void cv::viz::Viz3d::converTo3DRay(const Point3f &window_coord, Point3f &origin, Vec3f &direction) { impl_->converTo3DRay(window_coord, origin, direction); }

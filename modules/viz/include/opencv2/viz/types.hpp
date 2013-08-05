@@ -110,6 +110,8 @@ namespace cv
             inline const Vec2f & getFov() const { return fov_; }
             inline void setFov(const Vec2f & fov) { fov_ = fov; }
             
+            void computeProjectionMatrix(Matx44f &proj) const;
+            
         private:
             Vec2d clip_;
             Vec2f fov_;

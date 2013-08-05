@@ -111,7 +111,7 @@ public:
     // and 'Camera' class itself with various constructors/fields
     
     void setCamera(const Camera2 &camera);
-    void getCamera(Camera2 &camera);
+    Camera2 getCamera() const;
 
     void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
     bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/
@@ -146,8 +146,8 @@ public:
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();
 
-
-
+    void convertToWindowCoordinates(const Point3f &pt, Point3f &window_coord);
+    void converTo3DRay(const Point3f &window_coord, Point3f &origin, Vec3f &direction);
 
 
 

@@ -196,3 +196,26 @@ void cv::viz::Camera2::setWindowSize(const Size &window_size)
     else
         fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])) * 180 / CV_PI;
 }
+
+void cv::viz::Camera2::computeProjectionMatrix(Matx44f &proj) const
+{
+    double top    = clip_[0] * tan (0.5 * fov_[1]);
+    double left   = -(top * window_size_.width) / window_size_.height;
+    double right  = -left;
+    double bottom = -top;
+
+    double temp1 = 2.0 * clip_[0];
+    double temp2 = 1.0 / (right - left);
+    double temp3 = 1.0 / (top - bottom);
+    double temp4 = 1.0 / clip_[1] - clip_[0];
+
+    proj = Matx44d::zeros();
+
+    proj(0,0) = temp1 * temp2;
+    proj(1,1) = temp1 * temp3;
+    proj(0,2) = (right + left) * temp2;
+    proj(1,2) = (top + bottom) * temp3;
+    proj(2,2) = (-clip_[1] - clip_[0]) * temp4;
+    proj(3,2) = -1.0;
+    proj(2,3) = (-temp1 * clip_[1]) * temp4;
+}

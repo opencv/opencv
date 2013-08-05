@@ -42,6 +42,9 @@ namespace cv
             void setCamera(const Camera2 &camera);
             Affine3f getViewerPose();
             void setViewerPose(const Affine3f &pose);
+            
+            void convertToWindowCoordinates(const Point3f &pt, Point3f &window_coord);
+            void converTo3DRay(const Point3f &window_coord, Point3f &origin, Vec3f &direction);
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
