@@ -99,7 +99,7 @@ namespace cv
         public:
             Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
             Camera(const Vec2f &fov, const Size &window_size);
-            Camera(const cv::Mat &K, const Size &window_size);
+            Camera(const cv::Matx33f &K, const Size &window_size);
             
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }
@@ -112,7 +112,11 @@ namespace cv
             
             void computeProjectionMatrix(Matx44f &proj) const;
             
+            static Camera KinectCamera(const Size &window_size);
+            
         private:
+            void init(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
+            
             Vec2d clip_;
             Vec2f fov_;
             Size window_size_;

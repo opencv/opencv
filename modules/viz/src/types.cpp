@@ -148,17 +148,7 @@ cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 
 cv::viz::Camera::Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
 {
-    CV_Assert(window_size.width > 0 && window_size.height > 0);
-    setClip(Vec2d(0.01, 1000.01));// Default clipping
-    
-    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x)) * 180 / CV_PI;
-    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y)) * 180 / CV_PI;
-    
-    principal_point_[0] = c_x;
-    principal_point_[1] = c_y;
-    
-    focal_[0] = f_x;
-    focal_[1] = f_y;
+    init(f_x, f_y, c_x, c_y, window_size);
 }
 
 cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
@@ -171,16 +161,30 @@ cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
     setWindowSize(window_size);
 }
 
-cv::viz::Camera::Camera(const cv::Mat & K, const Size &window_size)
+cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
 {
-    CV_Assert(K.rows == 3 && K.cols == 3);
+    float f_x = K(0,0);
+    float f_y = K(1,1);
+    float c_x = K(0,2);
+    float c_y = K(1,2);
+    init(f_x, f_y, c_x, c_y, window_size);
+}
+
+void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+{
     CV_Assert(window_size.width > 0 && window_size.height > 0);
+    setClip(Vec2d(0.01, 1000.01));// Default clipping
     
-    float f_x = K.at<float>(0,0);
-    float f_y = K.at<float>(1,1);
-    float c_x = K.at<float>(0,2);
-    float c_y = K.at<float>(1,2);
-    Camera(f_x, f_y, c_x, c_y, window_size);
+    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x)) * 180 / CV_PI;
+    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y)) * 180 / CV_PI;
+    
+    principal_point_[0] = c_x;
+    principal_point_[1] = c_y;
+    
+    focal_[0] = f_x;
+    focal_[1] = f_y;
+    
+    setWindowSize(window_size);
 }
 
 void cv::viz::Camera::setWindowSize(const Size &window_size)
@@ -220,4 +224,16 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
     proj(2,2) = (-clip_[1] - clip_[0]) * temp4;
     proj(3,2) = -1.0;
     proj(2,3) = (-temp1 * clip_[1]) * temp4;
+}
+
+cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
+{
+    // Without distortion
+    Matx33f K = Matx33f::zeros();    
+    K(0,0) = 5.2921508098293293e+02;
+    K(0,2) = 3.2894272028759258e+02;
+    K(1,1) = 5.2556393630057437e+02;
+    K(1,2) = 2.6748068171871557e+02;
+    K(2,2) = 1.0f;
+    return Camera(K, window_size);
 }
