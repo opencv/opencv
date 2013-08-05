@@ -175,8 +175,8 @@ void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Siz
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
     
-    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x)) * 180 / CV_PI;
-    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y)) * 180 / CV_PI;
+    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x));
+    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y));
     
     principal_point_[0] = c_x;
     principal_point_[1] = c_y;
@@ -198,7 +198,7 @@ void cv::viz::Camera::setWindowSize(const Size &window_size)
     if (principal_point_[0] < 0.0f)
         fov_[0] = 2.f * atan(tan(fov_[1] * 0.5) * aspect_ratio_new); // This assumes that the lens is symmetric!
     else
-        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])) * 180 / CV_PI;
+        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])); // TODO I need to check this
     
     window_size_ = window_size;
 }
@@ -228,7 +228,8 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
-    // Without distortion
+    // Without distortion, RGB Camera
+    // Received from http://nicolas.burrus.name/index.php/Research/KinectCalibration
     Matx33f K = Matx33f::zeros();    
     K(0,0) = 5.2921508098293293e+02;
     K(0,2) = 3.2894272028759258e+02;
