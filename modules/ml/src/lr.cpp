@@ -459,17 +459,17 @@ cv::Mat CvLR::compute_mini_batch_gradient(const cv::Mat& _data, const cv::Mat& _
     // implements batch gradient descent
 
     int lambda_l = 0;
-    long double ccost;
+    double ccost;
 
     int m, n;
 
     int j = 0;
-    int size_b = CvLR::MINI_BATCH;
+    int size_b = this->params.minibatchsize;
 
-    if(CvLR::MINI_BATCH == 0)
-    {
-        cv::error(Error::StsDivByZero, "compute_mini_batch_gradient: set CvLR::MINI_BATCH value to a non-zero number (and less than number of samples in a given class) ", "cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
-    }
+    // if(this->minibatchsize == 0)
+    // {
+    //     cv::error(Error::StsDivByZero, "compute_mini_batch_gradient: set CvLR::MINI_BATCH value to a non-zero number (and less than number of samples in a given class) ", "cv::ml::CvLR::compute_mini_batch_gradient", __FILE__, __LINE__);
+    // }
 
     if(this->params.minibatchsize <= 0 || this->params.alpha == 0)
     {
