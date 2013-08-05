@@ -48,7 +48,7 @@
 
 namespace cv
 {
-/* Constructors */
+// Constructors //
 SCD::SCD(int _nAngularBins, int _nRadialBins, double _innerRadius, double _outerRadius, bool _rotationInvariant)
 {
     setAngularBins(_nAngularBins);
@@ -58,7 +58,7 @@ SCD::SCD(int _nAngularBins, int _nRadialBins, double _innerRadius, double _outer
     setRotationInvariant(_rotationInvariant);
 }
 
-/* Public methods */
+// Public methods //
 int SCD::descriptorSize() const 
 { 
     return nAngularBins*nRadialBins; 
@@ -81,10 +81,9 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
     
     buildNormalizedDistanceMatrix(contourMat, disMatrix, queryInliers, _meanDistance);
     buildAngleMatrix(contourMat, angleMatrix);
-    
-    /* Now, build the descriptor matrix (each row is a point descriptor) 
-     * ask if the correspondent points belong to a given bin.*/
-    descriptors = Mat::ones(contourMat.cols, descriptorSize(), CV_32F);
+
+    // Now, build the descriptor matrix (each row is a point) //
+    descriptors = Mat::zeros(contourMat.cols, descriptorSize(), CV_32F);
        
     for (int ptidx=0; ptidx<contourMat.cols; ptidx++)
     {
@@ -96,7 +95,7 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
                 if (queryInliers[ptidx]==0 || queryInliers[cmp]==0) continue; //avoid outliers
             }
 
-            int angidx=0, radidx=0;
+            int angidx=-1, radidx=-1;
             for (int i=0; i<nRadialBins; i++)
             {
                 if (disMatrix.at<float>(ptidx, cmp)<=logspaces[i])
@@ -113,19 +112,22 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
                     break;
                 }
             }
-            int idx = angidx+radidx*nAngularBins;
-            descriptors.at<float>(ptidx, idx)+=1; 
+            if (angidx!=-1 && radidx!=-1)
+            {
+                int idx = angidx+radidx*nAngularBins;
+                descriptors.at<float>(ptidx, idx)++;
+            }
         }        
     }
 }
 
-/* Protected methods */
+// Protected methods //
 void SCD::buildAngleMatrix(InputArray contour, 
                       Mat& angleMatrix) const
 {
     Mat contourMat = contour.getMat();
     
-    /* if descriptor is rotationInvariant compute massCenter */
+    // if descriptor is rotationInvariant compute massCenter //
     Point2f massCenter(0,0);
     if (rotationInvariant)
     {
@@ -142,7 +144,7 @@ void SCD::buildAngleMatrix(InputArray contour,
     {
         for (int j=0; j<contourMat.cols; j++)
         {
-            if (i==j) angleMatrix.at<float>(i,j)=-CV_PI;
+            if (i==j) angleMatrix.at<float>(i,j)=0;
             Point2f dif = contourMat.at<Point2f>(0,i) - contourMat.at<Point2f>(0,j);
             angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
 
@@ -152,6 +154,8 @@ void SCD::buildAngleMatrix(InputArray contour,
                 float refAngle = atan2(refPt.y, refPt.x);
                 angleMatrix.at<float>(i,j) -= refAngle;
             }
+            angleMatrix.at<float>(i,j) = fmod(fmod(angleMatrix.at<float>(i,j)+FLT_EPSILON,2*CV_PI)+2*CV_PI,2*CV_PI);
+            angleMatrix.at<float>(i,j) = floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
         }
     }
 }
@@ -211,7 +215,7 @@ void SCD::logarithmicSpaces(std::vector<double>& vecSpaces) const
 void SCD::angularSpaces(std::vector<double>& vecSpaces) const
 {
    double delta=2*CV_PI/nAngularBins;
-   double val=-CV_PI;
+   double val=0;
    
    for (int i=0; i<nAngularBins; i++)
    {

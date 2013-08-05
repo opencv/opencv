@@ -80,8 +80,10 @@ void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors
             buildChiCostMatrix(descriptors1,  descriptors2, costMatrix);
             break;
         case DistanceSCDFlags::DIST_EMD:
+            buildEMDCostMatrix(descriptors1, descriptors2, costMatrix);
             break;
         case DistanceSCDFlags::DIST_L2:
+            buildL2CostMatrix(descriptors1, descriptors2, costMatrix);
             break;
         default:
             CV_Error(-206, "The available flags are: DIST_CHI, DIST_EMD, and DIST_EUCLIDEAN");
@@ -107,7 +109,7 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
     {
         Mat row = scd2.row(i);
         scd2.row(i)/=(sum(row)[0]+FLT_EPSILON);
-    }   
+    }
 
     // filling costMatrix //
     costMatrix = Mat(costrows, costrows, CV_32F, Scalar(outlierWeight));
@@ -133,6 +135,32 @@ void SCDMatcher::buildChiCostMatrix(const Mat& descriptors1,  const Mat& descrip
 
 void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
 {
+    // size of the costMatrix with dummies //
+    int costrows = std::max(descriptors1.rows, descriptors2.rows)+numExtraDummies;
+    // Obtain copies of the descriptors //
+    Mat scd1=descriptors1.clone();
+    Mat scd2=descriptors2.clone();
+
+    // row normalization //
+    for(int i=0; i<scd1.rows; i++)
+    {
+        Mat row = scd1.row(i);
+        scd1.row(i)/=(sum(row)[0]+FLT_EPSILON);
+    }
+    for(int i=0; i<scd2.rows; i++)
+    {
+        Mat row = scd2.row(i);
+        scd2.row(i)/=(sum(row)[0]+FLT_EPSILON);
+    }
+
+    // filling costMatrix //
+    costMatrix = Mat(costrows, costrows, CV_32F, Scalar(outlierWeight));
+}
+
+void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
+{
+    // size of the costMatrix with dummies //
+    int costrows = std::max(descriptors1.rows, descriptors2.rows)+numExtraDummies;
     // Obtain copies of the descriptors //
     Mat scd1 = descriptors1.clone();
     Mat scd2 = descriptors2.clone();
@@ -147,32 +175,10 @@ void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descript
         scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+FLT_EPSILON);
     }
 
-    // initializing costMatrix with oulier weight values //
-    int costrows = std::max(scd1.rows, scd2.rows);
-    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
-}
+    // filling costMatrix //
+    costMatrix = Mat(costrows, costrows, CV_32F, Scalar(outlierWeight));
 
-void SCDMatcher::buildL2CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
-{
-    /* Obtain copies of the descriptors */
-    Mat scd1 = descriptors1.clone();
-    Mat scd2 = descriptors2.clone();
-
-    /* row normalization */
-    for(int i=0; i<scd1.rows; i++)
-    {
-        scd1.row(i)=scd1.row(i)*1/(sum(scd1.row(i))[0]+FLT_EPSILON);
-    }
-    for(int i=0; i<scd2.rows; i++)
-    {
-        scd2.row(i)=scd2.row(i)*1/(sum(scd2.row(i))[0]+FLT_EPSILON);
-    }
-
-    /* initializing costMatrix with oulier weight values */
-    int costrows = std::max(scd1.rows, scd2.rows);
-    costMatrix = Mat::zeros(costrows, costrows, CV_32F)+outlierWeight;
-
-    /* Compute the Cost Matrix */
+    // Compute the Cost Matrix //
     for(int i=0; i<scd1.rows; i++)
     {
         for(int j=0; j<scd2.rows; j++)
@@ -194,7 +200,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std
     std::vector<int> matches(costMatrix.rows, 0), colsol(costMatrix.rows), rowsol(costMatrix.rows);
     std::vector<float> d(costMatrix.rows), pred(costMatrix.rows), v(costMatrix.rows);
 
-    const float LOWV=1e-8;
+    const float LOWV=1e-10;
     bool unassignedfound;
     int  i=0, imin=0, numfree=0, prvnumfree=0, f=0, i0=0, k=0, freerow=0;
     int  j=0, j1=0, j2=0, endofpath=0, last=0, low=0, up=0;
@@ -448,9 +454,9 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std
     minMatchCost = std::max(leftcost,rightcost);
 
     // Save in a DMatch vector
-    for (i=0;i<costMatrix.rows;i++)
+    for (i=0;i<costMatrix.cols;i++)
     {
-        DMatch singleMatch(i,rowsol[i],costMatrix.at<float>(i,rowsol[i]));//queryIdx,trainIdx,distance
+        DMatch singleMatch(colsol[i],i,costMatrix.at<float>(colsol[i],i));//queryIdx,trainIdx,distance
         outMatches.push_back(singleMatch);
     }
 

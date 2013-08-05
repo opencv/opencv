@@ -169,14 +169,8 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     }
 
     //Setting transform Cost and Shape reference
-    Mat wt(2,tpsParameters.rows-3,CV_32F);
-    Mat w;
-    for (int i=0; i<wt.cols; i++)
-    {
-        wt.at<float>(0,i)=tpsParameters.at<float>(i,0);
-        wt.at<float>(1,i)=tpsParameters.at<float>(i,1);
-    }
-    transpose(wt,w);
+    Mat w(tpsParameters, Rect(0,0,2,tpsParameters.rows-3)), wt;
+    transpose(w,wt);
     Mat Q=wt*matK*w;
     transformCost=mean(Q.diag(0))[0];
     shapeReference=shape1;

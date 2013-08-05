@@ -118,7 +118,7 @@ struct CV_EXPORTS DistanceSCDFlags
         DEFAULT = 0, // CHI Squared Distance
         DIST_CHI = 0,
         DIST_EMD = 1, // Earth Mover's Distance (Not defined yet)
-        DIST_L2 = 2 // L2 Distance (Not defined yet)
+        DIST_L2 = 2 // L2 Distance
     };
 };
 
@@ -164,7 +164,7 @@ public:
     //! getters
     CV_WRAP virtual float getTranformCost() const=0;
 protected:
-    CV_PROP_RW float transformCost;
+    CV_PROP_RW double transformCost;
 };
 
 /****************************************************************************************\
