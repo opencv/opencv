@@ -469,7 +469,11 @@ int main(int argc, char* argv[])
 
     HomographyBasedEstimator estimator;
     vector<CameraParams> cameras;
-    estimator(features, pairwise_matches, cameras);
+    if (!estimator(features, pairwise_matches, cameras))
+    {
+        cout << "Homography estimation failed.\n";
+        return -1;
+    }
 
     for (size_t i = 0; i < cameras.size(); ++i)
     {
@@ -495,7 +499,11 @@ int main(int argc, char* argv[])
     if (ba_refine_mask[3] == 'x') refine_mask(1,1) = 1;
     if (ba_refine_mask[4] == 'x') refine_mask(1,2) = 1;
     adjuster->setRefinementMask(refine_mask);
-    (*adjuster)(features, pairwise_matches, cameras);
+    if (!(*adjuster)(features, pairwise_matches, cameras))
+    {
+        cout << "Camera parameters adjusting failed.\n";
+        return -1;
+    }
 
     // Find median focal length
 
