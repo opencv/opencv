@@ -45,7 +45,7 @@
 
 #include "opencv2/core/gpu_types.hpp"
 
-namespace bgfg
+namespace fgd
 {
     struct BGPixelStat
     {

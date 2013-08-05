@@ -42,19 +42,12 @@
 
 #include "precomp.hpp"
 
+using namespace cv;
+using namespace cv::gpu;
+
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::MOG_GPU::MOG_GPU(int) { throw_no_cuda(); }
-void cv::gpu::MOG_GPU::initialize(cv::Size, int) { throw_no_cuda(); }
-void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat&, cv::gpu::GpuMat&, float, Stream&) { throw_no_cuda(); }
-void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_no_cuda(); }
-void cv::gpu::MOG_GPU::release() {}
-
-cv::gpu::MOG2_GPU::MOG2_GPU(int) { throw_no_cuda(); }
-void cv::gpu::MOG2_GPU::initialize(cv::Size, int) { throw_no_cuda(); }
-void cv::gpu::MOG2_GPU::operator()(const GpuMat&, GpuMat&, float, Stream&) { throw_no_cuda(); }
-void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat&, Stream&) const { throw_no_cuda(); }
-void cv::gpu::MOG2_GPU::release() {}
+Ptr<gpu::BackgroundSubtractorMOG> cv::gpu::createBackgroundSubtractorMOG(int, int, double, double)  { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorMOG>(); }
 
 #else
 
@@ -66,14 +59,10 @@ namespace cv { namespace gpu { namespace cudev
                      int nmixtures, float varThreshold, float learningRate, float backgroundRatio, float noiseSigma,
                      cudaStream_t stream);
         void getBackgroundImage_gpu(int cn, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, int nmixtures, float backgroundRatio, cudaStream_t stream);
-
-        void loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal);
-        void mog2_gpu(PtrStepSzb frame, int cn, PtrStepSzb fgmask, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzf variance, PtrStepSzb mean, float alphaT, float prune, bool detectShadows, cudaStream_t stream);
-        void getBackgroundImage2_gpu(int cn, PtrStepSzb modesUsed, PtrStepSzf weight, PtrStepSzb mean, PtrStepSzb dst, cudaStream_t stream);
     }
 }}}
 
-namespace mog
+namespace
 {
     const int defaultNMixtures = 5;
     const int defaultHistory = 200;
@@ -81,199 +70,140 @@ namespace mog
     const float defaultVarThreshold = 2.5f * 2.5f;
     const float defaultNoiseSigma = 30.0f * 0.5f;
     const float defaultInitialWeight = 0.05f;
+
+    class MOGImpl : public gpu::BackgroundSubtractorMOG
+    {
+    public:
+        MOGImpl(int history, int nmixtures, double backgroundRatio, double noiseSigma);
+
+        void apply(InputArray image, OutputArray fgmask, double learningRate=-1);
+        void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream);
+
+        void getBackgroundImage(OutputArray backgroundImage) const;
+        void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const;
+
+        int getHistory() const { return history_; }
+        void setHistory(int nframes) { history_ = nframes; }
+
+        int getNMixtures() const { return nmixtures_; }
+        void setNMixtures(int nmix) { nmixtures_ = nmix; }
+
+        double getBackgroundRatio() const { return backgroundRatio_; }
+        void setBackgroundRatio(double backgroundRatio) { backgroundRatio_ = (float) backgroundRatio; }
+
+        double getNoiseSigma() const { return noiseSigma_; }
+        void setNoiseSigma(double noiseSigma) { noiseSigma_ = (float) noiseSigma; }
+
+    private:
+        //! re-initiaization method
+        void initialize(Size frameSize, int frameType);
+
+        int history_;
+        int nmixtures_;
+        float backgroundRatio_;
+        float noiseSigma_;
+
+        float varThreshold_;
+
+        Size frameSize_;
+        int frameType_;
+        int nframes_;
+
+        GpuMat weight_;
+        GpuMat sortKey_;
+        GpuMat mean_;
+        GpuMat var_;
+    };
+
+    MOGImpl::MOGImpl(int history, int nmixtures, double backgroundRatio, double noiseSigma) :
+        frameSize_(0, 0), frameType_(0), nframes_(0)
+    {
+        history_ = history > 0 ? history : defaultHistory;
+        nmixtures_ = std::min(nmixtures > 0 ? nmixtures : defaultNMixtures, 8);
+        backgroundRatio_ = backgroundRatio > 0 ? (float) backgroundRatio : defaultBackgroundRatio;
+        noiseSigma_ = noiseSigma > 0 ? (float) noiseSigma : defaultNoiseSigma;
+
+        varThreshold_ = defaultVarThreshold;
+    }
+
+    void MOGImpl::apply(InputArray image, OutputArray fgmask, double learningRate)
+    {
+        apply(image, fgmask, learningRate, Stream::Null());
+    }
+
+    void MOGImpl::apply(InputArray _frame, OutputArray _fgmask, double learningRate, Stream& stream)
+    {
+        using namespace cv::gpu::cudev::mog;
+
+        GpuMat frame = _frame.getGpuMat();
+
+        CV_Assert( frame.depth() == CV_8U );
+
+        int ch = frame.channels();
+        int work_ch = ch;
+
+        if (nframes_ == 0 || learningRate >= 1.0 || frame.size() != frameSize_ || work_ch != mean_.channels())
+            initialize(frame.size(), frame.type());
+
+        _fgmask.create(frameSize_, CV_8UC1);
+        GpuMat fgmask = _fgmask.getGpuMat();
+
+        ++nframes_;
+        learningRate = learningRate >= 0 && nframes_ > 1 ? learningRate : 1.0 / std::min(nframes_, history_);
+        CV_Assert( learningRate >= 0 );
+
+        mog_gpu(frame, ch, fgmask, weight_, sortKey_, mean_, var_, nmixtures_,
+                varThreshold_, (float) learningRate, backgroundRatio_, noiseSigma_,
+                StreamAccessor::getStream(stream));
+    }
+
+    void MOGImpl::getBackgroundImage(OutputArray backgroundImage) const
+    {
+        getBackgroundImage(backgroundImage, Stream::Null());
+    }
+
+    void MOGImpl::getBackgroundImage(OutputArray _backgroundImage, Stream& stream) const
+    {
+        using namespace cv::gpu::cudev::mog;
+
+        _backgroundImage.create(frameSize_, frameType_);
+        GpuMat backgroundImage = _backgroundImage.getGpuMat();
+
+        getBackgroundImage_gpu(backgroundImage.channels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio_, StreamAccessor::getStream(stream));
+    }
+
+    void MOGImpl::initialize(Size frameSize, int frameType)
+    {
+        CV_Assert( frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4 );
+
+        frameSize_ = frameSize;
+        frameType_ = frameType;
+
+        int ch = CV_MAT_CN(frameType);
+        int work_ch = ch;
+
+        // for each gaussian mixture of each pixel bg model we store
+        // the mixture sort key (w/sum_of_variances), the mixture weight (w),
+        // the mean (nchannels values) and
+        // the diagonal covariance matrix (another nchannels values)
+
+        weight_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
+        sortKey_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
+        mean_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC(work_ch));
+        var_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC(work_ch));
+
+        weight_.setTo(cv::Scalar::all(0));
+        sortKey_.setTo(cv::Scalar::all(0));
+        mean_.setTo(cv::Scalar::all(0));
+        var_.setTo(cv::Scalar::all(0));
+
+        nframes_ = 0;
+    }
 }
 
-cv::gpu::MOG_GPU::MOG_GPU(int nmixtures) :
-    frameSize_(0, 0), frameType_(0), nframes_(0)
+Ptr<gpu::BackgroundSubtractorMOG> cv::gpu::createBackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma)
 {
-    nmixtures_ = std::min(nmixtures > 0 ? nmixtures : mog::defaultNMixtures, 8);
-    history = mog::defaultHistory;
-    varThreshold = mog::defaultVarThreshold;
-    backgroundRatio = mog::defaultBackgroundRatio;
-    noiseSigma = mog::defaultNoiseSigma;
-}
-
-void cv::gpu::MOG_GPU::initialize(cv::Size frameSize, int frameType)
-{
-    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
-
-    frameSize_ = frameSize;
-    frameType_ = frameType;
-
-    int ch = CV_MAT_CN(frameType);
-    int work_ch = ch;
-
-    // for each gaussian mixture of each pixel bg model we store
-    // the mixture sort key (w/sum_of_variances), the mixture weight (w),
-    // the mean (nchannels values) and
-    // the diagonal covariance matrix (another nchannels values)
-
-    weight_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
-    sortKey_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
-    mean_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC(work_ch));
-    var_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC(work_ch));
-
-    weight_.setTo(cv::Scalar::all(0));
-    sortKey_.setTo(cv::Scalar::all(0));
-    mean_.setTo(cv::Scalar::all(0));
-    var_.setTo(cv::Scalar::all(0));
-
-    nframes_ = 0;
-}
-
-void cv::gpu::MOG_GPU::operator()(const cv::gpu::GpuMat& frame, cv::gpu::GpuMat& fgmask, float learningRate, Stream& stream)
-{
-    using namespace cv::gpu::cudev::mog;
-
-    CV_Assert(frame.depth() == CV_8U);
-
-    int ch = frame.channels();
-    int work_ch = ch;
-
-    if (nframes_ == 0 || learningRate >= 1.0 || frame.size() != frameSize_ || work_ch != mean_.channels())
-        initialize(frame.size(), frame.type());
-
-    fgmask.create(frameSize_, CV_8UC1);
-
-    ++nframes_;
-    learningRate = learningRate >= 0.0f && nframes_ > 1 ? learningRate : 1.0f / std::min(nframes_, history);
-    CV_Assert(learningRate >= 0.0f);
-
-    mog_gpu(frame, ch, fgmask, weight_, sortKey_, mean_, var_, nmixtures_,
-            varThreshold, learningRate, backgroundRatio, noiseSigma,
-            StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::MOG_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const
-{
-    using namespace cv::gpu::cudev::mog;
-
-    backgroundImage.create(frameSize_, frameType_);
-
-    getBackgroundImage_gpu(backgroundImage.channels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::MOG_GPU::release()
-{
-    frameSize_ = Size(0, 0);
-    frameType_ = 0;
-    nframes_ = 0;
-
-    weight_.release();
-    sortKey_.release();
-    mean_.release();
-    var_.release();
-}
-
-/////////////////////////////////////////////////////////////////
-// MOG2
-
-namespace mog2
-{
-    // default parameters of gaussian background detection algorithm
-    const int defaultHistory = 500; // Learning rate; alpha = 1/defaultHistory2
-    const float defaultVarThreshold = 4.0f * 4.0f;
-    const int defaultNMixtures = 5; // maximal number of Gaussians in mixture
-    const float defaultBackgroundRatio = 0.9f; // threshold sum of weights for background test
-    const float defaultVarThresholdGen = 3.0f * 3.0f;
-    const float defaultVarInit = 15.0f; // initial variance for new components
-    const float defaultVarMax = 5.0f * defaultVarInit;
-    const float defaultVarMin = 4.0f;
-
-    // additional parameters
-    const float defaultfCT = 0.05f; // complexity reduction prior constant 0 - no reduction of number of components
-    const unsigned char defaultnShadowDetection = 127; // value to use in the segmentation mask for shadows, set 0 not to do shadow detection
-    const float defaultfTau = 0.5f; // Tau - shadow threshold, see the paper for explanation
-}
-
-cv::gpu::MOG2_GPU::MOG2_GPU(int nmixtures) :
-    frameSize_(0, 0), frameType_(0), nframes_(0)
-{
-    nmixtures_ = nmixtures > 0 ? nmixtures : mog2::defaultNMixtures;
-
-    history = mog2::defaultHistory;
-    varThreshold = mog2::defaultVarThreshold;
-    bShadowDetection = true;
-
-    backgroundRatio = mog2::defaultBackgroundRatio;
-    fVarInit = mog2::defaultVarInit;
-    fVarMax  = mog2::defaultVarMax;
-    fVarMin = mog2::defaultVarMin;
-
-    varThresholdGen = mog2::defaultVarThresholdGen;
-    fCT = mog2::defaultfCT;
-    nShadowDetection =  mog2::defaultnShadowDetection;
-    fTau = mog2::defaultfTau;
-}
-
-void cv::gpu::MOG2_GPU::initialize(cv::Size frameSize, int frameType)
-{
-    using namespace cv::gpu::cudev::mog;
-
-    CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
-
-    frameSize_ = frameSize;
-    frameType_ = frameType;
-    nframes_ = 0;
-
-    int ch = CV_MAT_CN(frameType);
-    int work_ch = ch;
-
-    // for each gaussian mixture of each pixel bg model we store ...
-    // the mixture weight (w),
-    // the mean (nchannels values) and
-    // the covariance
-    weight_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
-    variance_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
-    mean_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC(work_ch));
-
-    //make the array for keeping track of the used modes per pixel - all zeros at start
-    bgmodelUsedModes_.create(frameSize_, CV_8UC1);
-    bgmodelUsedModes_.setTo(cv::Scalar::all(0));
-
-    loadConstants(nmixtures_, varThreshold, backgroundRatio, varThresholdGen, fVarInit, fVarMin, fVarMax, fTau, nShadowDetection);
-}
-
-void cv::gpu::MOG2_GPU::operator()(const GpuMat& frame, GpuMat& fgmask, float learningRate, Stream& stream)
-{
-    using namespace cv::gpu::cudev::mog;
-
-    int ch = frame.channels();
-    int work_ch = ch;
-
-    if (nframes_ == 0 || learningRate >= 1.0f || frame.size() != frameSize_ || work_ch != mean_.channels())
-        initialize(frame.size(), frame.type());
-
-    fgmask.create(frameSize_, CV_8UC1);
-    fgmask.setTo(cv::Scalar::all(0));
-
-    ++nframes_;
-    learningRate = learningRate >= 0.0f && nframes_ > 1 ? learningRate : 1.0f / std::min(2 * nframes_, history);
-    CV_Assert(learningRate >= 0.0f);
-
-    mog2_gpu(frame, frame.channels(), fgmask, bgmodelUsedModes_, weight_, variance_, mean_, learningRate, -learningRate * fCT, bShadowDetection, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::MOG2_GPU::getBackgroundImage(GpuMat& backgroundImage, Stream& stream) const
-{
-    using namespace cv::gpu::cudev::mog;
-
-    backgroundImage.create(frameSize_, frameType_);
-
-    getBackgroundImage2_gpu(backgroundImage.channels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, StreamAccessor::getStream(stream));
-}
-
-void cv::gpu::MOG2_GPU::release()
-{
-    frameSize_ = Size(0, 0);
-    frameType_ = 0;
-    nframes_ = 0;
-
-    weight_.release();
-    variance_.release();
-    mean_.release();
-
-    bgmodelUsedModes_.release();
+    return new MOGImpl(history, nmixtures, backgroundRatio, noiseSigma);
 }
 
 #endif
