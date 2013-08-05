@@ -132,12 +132,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 	std::vector<float> votes;
 	for( size_t i = 0; i < data.rows; i++)
 	{
-		Mat_<float> datarow(1, data.cols);
-		for( int d = 0; d < data.cols; d++ )
-		{
-			datarow.at<float>(0,d) = data.at<float>(i, d);
-		}
-		float vote = boostModel.predict( datarow, Mat(), Range::all(), false, true );
+		float vote = boostModel.predict( data.row(i), Mat(), Range::all(), false, true );
 		votes.push_back( vote );
 	}
 

@@ -165,10 +165,10 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 	featureSet->addTrackerFeature( trackerFeature );
 
 	featureSet->extraction( posSamples );
-	std::vector<Mat> posResponse = featureSet->getResponses();
+	const std::vector<Mat> posResponse = featureSet->getResponses();
 
 	featureSet->extraction( negSamples );
-	std::vector<Mat> negResponse = featureSet->getResponses();
+	const std::vector<Mat> negResponse = featureSet->getResponses();
 
 
 	model = new TrackerMILModel( boundingBox );

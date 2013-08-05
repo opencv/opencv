@@ -68,12 +68,13 @@ void TrackerFeatureSet::extraction( const std::vector<Mat>& images )
 {
 
 	clearResponses();
+	responses.resize( features.size() );
 
 	for( size_t i = 0; i < features.size(); i++ )
 	{
 		Mat response;
-		features.at(i).second->compute(images, response);
-		responses.push_back(response);
+		features[i].second->compute( images, response );
+		responses[i] = response;
 	}
 
 	if( !blockAddTrackerFeature )

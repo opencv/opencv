@@ -195,7 +195,7 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
 		for( int j = 0; j < numFeatures; j++ )
 		{
 			float sum = featureEvaluator->operator ()(j, 0);
-			response.at<float>( j, i ) = sum;
+			( Mat_<float>( response ) )( j, i ) = sum;
 		}
 	}
 

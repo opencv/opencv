@@ -188,8 +188,8 @@ std::vector<Mat> TrackerSamplerCSC::sampleImage( const Mat& img, int x, int y, i
 
 	float prob = ( (float) (maxnum) ) / samples.size();
 
-	for ( int r = minrow; r <= (int) maxrow; r++ )
-		for ( int c = mincol; c <= (int) maxcol; c++ )
+	for ( int r = minrow; r <= int( maxrow ); r++ )
+		for ( int c = mincol; c <= int( maxcol ); c++ )
 		{
 			dist = ( y - r ) * ( y - r ) + ( x - c ) * ( x - c );
 			if ( TrackerMIL::getRandFloat() < prob && dist < inradsq && dist >= outradsq )
