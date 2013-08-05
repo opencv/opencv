@@ -110,8 +110,8 @@ public:
     // All camera methods to refactor into set/getViewwerPose, setCamera()
     // and 'Camera' class itself with various constructors/fields
     
-    void setCamera(const Camera2 &camera);
-    Camera2 getCamera() const;
+    void setCamera(const Camera &camera);
+    Camera getCamera() const;
 
     void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
     bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/

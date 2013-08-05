@@ -39,7 +39,8 @@ namespace cv
             void updateWidgetPose(const String &id, const Affine3f &pose);
             Affine3f getWidgetPose(const String &id) const;
             
-            void setCamera(const Camera2 &camera);
+            void setCamera(const Camera &camera);
+            Camera getCamera() const;
             Affine3f getViewerPose();
             void setViewerPose(const Affine3f &pose);
             

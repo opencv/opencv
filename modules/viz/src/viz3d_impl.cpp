@@ -545,7 +545,7 @@ void cv::viz::Viz3d::VizImpl::initCameraParameters ()
     Vec2i window_size(window_->GetScreenSize());
     window_size /= 2;
     
-    Camera2 camera_temp(Vec2f(0.0,0.8575), Size(window_size[0], window_size[1]));
+    Camera camera_temp(Vec2f(0.0,0.8575), Size(window_size[0], window_size[1]));
     setCamera(camera_temp);
     setViewerPose(makeCameraPose(Vec3f(0.0f,0.0f,0.0f), Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f)));
 }
@@ -564,22 +564,7 @@ void cv::viz::Viz3d::VizImpl::updateCamera ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-// void cv::viz::Viz3d::VizImpl::getCameras (cv::viz::Camera& camera)
-// {
-//     vtkCamera* active_camera = renderer_->GetActiveCamera ();
-// 
-//     camera.pos = cv::Vec3d(active_camera->GetPosition());
-//     camera.focal = cv::Vec3d(active_camera->GetFocalPoint());
-//     camera.clip = cv::Vec2d(active_camera->GetClippingRange());
-//     camera.view_up = cv::Vec3d(active_camera->GetViewUp());
-// 
-//     camera.fovy = active_camera->GetViewAngle()/ 180.0 * CV_PI;
-//     camera.window_size = cv::Vec2i(renderer_->GetRenderWindow()->GetSize());
-//     camera.window_pos = cv::Vec2d::all(0);
-// }
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCamera(const Camera2 &camera)
+void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
     
@@ -591,7 +576,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera2 &camera)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Camera2 cv::viz::Viz3d::VizImpl::getCamera() const
+cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
     
@@ -600,7 +585,7 @@ cv::viz::Camera2 cv::viz::Viz3d::VizImpl::getCamera() const
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
     
-    Camera2 camera(fov, window_size);
+    Camera camera(fov, window_size);
     camera.setClip(clip);
     return camera;
 }

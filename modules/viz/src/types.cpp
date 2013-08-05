@@ -146,7 +146,7 @@ cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 ////////////////////////////////////////////////////////////////////
 /// Camera implementation
 
-cv::viz::Camera2::Camera2(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+cv::viz::Camera::Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
@@ -161,7 +161,7 @@ cv::viz::Camera2::Camera2(float f_x, float f_y, float c_x, float c_y, const Size
     focal_[1] = f_y;
 }
 
-cv::viz::Camera2::Camera2(const Vec2f &fov, const Size &window_size)
+cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
@@ -171,7 +171,7 @@ cv::viz::Camera2::Camera2(const Vec2f &fov, const Size &window_size)
     setWindowSize(window_size);
 }
 
-cv::viz::Camera2::Camera2(const cv::Mat & K, const Size &window_size)
+cv::viz::Camera::Camera(const cv::Mat & K, const Size &window_size)
 {
     CV_Assert(K.rows == 3 && K.cols == 3);
     CV_Assert(window_size.width > 0 && window_size.height > 0);
@@ -180,10 +180,10 @@ cv::viz::Camera2::Camera2(const cv::Mat & K, const Size &window_size)
     float f_y = K.at<float>(1,1);
     float c_x = K.at<float>(0,2);
     float c_y = K.at<float>(1,2);
-    Camera2(f_x, f_y, c_x, c_y, window_size);
+    Camera(f_x, f_y, c_x, c_y, window_size);
 }
 
-void cv::viz::Camera2::setWindowSize(const Size &window_size)
+void cv::viz::Camera::setWindowSize(const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     
@@ -199,7 +199,7 @@ void cv::viz::Camera2::setWindowSize(const Size &window_size)
     window_size_ = window_size;
 }
 
-void cv::viz::Camera2::computeProjectionMatrix(Matx44f &proj) const
+void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 {
     double top    = clip_[0] * tan (0.5 * fov_[1]);
     double left   = -(top * window_size_.width) / window_size_.height;

@@ -46,7 +46,8 @@ void cv::viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose) { imp
 void cv::viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose) { impl_->updateWidgetPose(id, pose); }
 cv::Affine3f cv::viz::Viz3d::getWidgetPose(const String &id) const { return impl_->getWidgetPose(id); }
 
-void cv::viz::Viz3d::setCamera(const Camera2 &camera) { impl_->setCamera(camera); }
+void cv::viz::Viz3d::setCamera(const Camera &camera) { impl_->setCamera(camera); }
+cv::viz::Camera cv::viz::Viz3d::getCamera() const { return impl_->getCamera(); }
 void cv::viz::Viz3d::setViewerPose(const Affine3f &pose) { impl_->setViewerPose(pose); }
 cv::Affine3f cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
 
