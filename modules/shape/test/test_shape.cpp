@@ -382,9 +382,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     vector<SCDMatcher> scdmatchers;
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_L2));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_L2));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_L2));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
     vector<ThinPlateSplineTransform> tpsTra(3);
 
     // SCD descriptors //
