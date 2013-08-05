@@ -121,27 +121,7 @@ public:
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
       * \param[in] id the point cloud object id (default: cloud) */
     void resetCameraViewpoint (const String& id = "cloud");
-    /** \brief Set the camera pose given by position, viewpoint and up vector
-      * \param[in] pos camera location
-      * \param[in] view the view point of the camera
-      * \param[in] up the view up direction of the camera */
-    void setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up);
-
-    /** \brief Set the camera location and viewup according to the given arguments
-      * \param[in] pos_x,y,z the x,y,z coordinate of the camera location
-      * \param[in] up_x,y,z the x,y,z component of the view up direction of the camera */
-    void setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z);
-
-    /** \brief Set the camera parameters via an intrinsics and and extrinsics matrix
-      * \note This assumes that the pixels are square and that the center of the image is at the center of the sensor.
-      * \param[in] intrinsics the intrinsics that will be used to compute the VTK camera parameters
-      * \param[in] extrinsics the extrinsics that will be used to compute the VTK camera parameters */
-    void setCameraParameters (const cv::Matx33f& intrinsics, const Affine3f& extrinsics);
-    void setCameraParameters (const Camera &camera);
-    void setCameraClipDistances (double near, double far);
-    void setCameraFieldOfView (double fovy);
-    void getCameras (Camera& camera);
-
+    
     //to implement Viz3d set/getViewerPose()
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();

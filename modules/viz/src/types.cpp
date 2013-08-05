@@ -165,10 +165,10 @@ cv::viz::Camera2::Camera2(const Vec2f &fov, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
-    window_size_ = window_size;
-    fov_ = fov;
     principal_point_ = Vec2f(-1.0f, -1.0f); // Default symmetric lens
     focal_ = Vec2f(-1.0f, -1.0f);
+    setFov(fov);
+    setWindowSize(window_size);
 }
 
 cv::viz::Camera2::Camera2(const cv::Mat & K, const Size &window_size)
@@ -195,6 +195,8 @@ void cv::viz::Camera2::setWindowSize(const Size &window_size)
         fov_[0] = 2 * atan2(tan(fov_[1] * 0.5), aspect_ratio_new); // This assumes that the lens is symmetric!
     else
         fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])) * 180 / CV_PI;
+    
+    window_size_ = window_size;
 }
 
 void cv::viz::Camera2::computeProjectionMatrix(Matx44f &proj) const
