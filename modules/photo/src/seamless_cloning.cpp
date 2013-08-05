@@ -1,3 +1,45 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+//M*/
+
+
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
@@ -11,364 +53,161 @@
 using namespace std;
 using namespace cv;
 
-Mat img0, img1, img2, res, res1, final, final1, blend;
-
-Point point;
-int drag = 0;
-int destx, desty;
-
-int numpts = 100;
-Point* pts = new Point[100];
-Point* pts1 = new Point[100];
-Point* pts2 = new Point[100];
-
-
-int var = 0;
-int flag = 0;
-int flag1 = 0;
-
-int minx,miny,maxx,maxy,lenx,leny;
-int minxd,minyd,maxxd,maxyd,lenxd,lenyd;
-
-int channel,num;
-
-float alpha,beta;
-
-float red, green, blue;
-void mouseHandler(int , int , int , int, void*);
-void mouseHandler1(int , int , int , int, void*);
-void mouseHandler(int event, int x, int y, int, void*)
-{
-
-	if (event == EVENT_LBUTTONDOWN && !drag)
-	{
-		if(flag1 == 0)
-		{
-			if(var==0)
-				img1 = img0.clone();
-			point = Point(x, y);
-			circle(img1,point,2,Scalar(0, 0, 255),-1, 8, 0);
-			pts[var] = point;
-			var++;
-			drag  = 1;
-			if(var>1)
-				line(img1,pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
-
-			imshow("Source", img1);
-		}
-	}
-
-
-	if (event == EVENT_LBUTTONUP && drag)
-	{
-		imshow("Source", img1);
-
-		drag = 0;
-	}
-	if (event == EVENT_RBUTTONDOWN)
-	{
-		flag1 = 1;
-		img1 = img0.clone();
-		for(int i = var; i < numpts ; i++)
-			pts[i] = point;
-
-		if(var!=0)
-		{
-			const Point* pts3[1] = {&pts[0]};
-			polylines( img1, pts3, &numpts,1, 1, Scalar(0,0,0), 2, 8, 0);
-		}
-
-		for(int i=0;i<var;i++)
-		{
-			minx = min(minx,pts[i].x);
-			maxx = max(maxx,pts[i].x);
-			miny = min(miny,pts[i].y);
-			maxy = max(maxy,pts[i].y);
-		}
-		lenx = maxx - minx;
-		leny = maxy - miny;
-
-		imshow("Source", img1);
-	}
-
-	if (event == EVENT_RBUTTONUP)
-	{
-		flag = var;
-
-		final = Mat::zeros(img0.size(),CV_8UC3);
-		res1 = Mat::zeros(img0.size(),CV_8UC1);
-		const Point* pts4[1] = {&pts[0]};
-
-		fillPoly(res1, pts4,&numpts, 1, Scalar(255, 255, 255), 8, 0);
-
-		bitwise_and(img0, img0, final,res1);
-
-		imshow("Source", img1);
-		if(num == 4)
-		{
-			Cloning obj;
-			obj.local_color_change(img0,final,res1,blend,num,red,green,blue);
-
-			namedWindow("Color Change Image");
-			imshow("Color Change Image", blend);
-			waitKey(0);
-
-		}
-		else if(num == 5)
-		{
-			Cloning obj;
-			Mat img3 = Mat(img0.size(),CV_8UC1); 
-			Mat img4 = Mat(img0.size(),CV_8UC3); 
-			cvtColor(img0,img3,COLOR_BGR2GRAY);
-
-			for(int i=0;i<img0.size().height;i++)
-				for(int j=0;j<img0.size().width;j++)
-				{
-					img4.at<uchar>(i,j*3+0) = img3.at<uchar>(i,j);
-					img4.at<uchar>(i,j*3+1) = img3.at<uchar>(i,j);
-					img4.at<uchar>(i,j*3+2) = img3.at<uchar>(i,j);
-				}
-
-			obj.local_color_change(img4,final,res1,blend,num);
-
-			namedWindow("Background Decolor Image");
-			imshow("Background Decolor Image", blend);
-			waitKey(0);
-		}
-		else if(num == 6)
-		{
-			Cloning obj;
-			obj.illum_change(img0,final,res1,blend,alpha,beta);
-
-			namedWindow("Illum Change Image");
-			imshow("Illum Change Image", blend);
-			waitKey(0);
-
-		}
-
-	}
-	if (event == EVENT_MBUTTONDOWN)
-	{
-		for(int i = 0; i < numpts ; i++)
-		{
-			pts[i].x=0;
-			pts[i].y=0;
-		}
-		var = 0;
-		flag1 = 0;
-		minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
-		imshow("Source", img0);
-		drag = 0;
-	}
-}
-
-
-void mouseHandler1(int event, int x, int y, int, void*)
-{
-
-
-	Mat im1;
-	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
-	im1 = img2.clone();
-	if (event == EVENT_LBUTTONDOWN)
-	{
-		if(flag1 == 1)
-		{
-			point = Point(x, y);
-
-			for(int i =0; i < numpts;i++)
-				pts1[i] = pts[i];
-
-			int tempx;
-			int tempy;
-			for(int i =0; i < flag; i++)
-			{
-				tempx = pts1[i+1].x - pts1[i].x;
-				tempy = pts1[i+1].y - pts1[i].y;
-				if(i==0)
-				{
-					pts2[i+1].x = point.x + tempx;
-					pts2[i+1].y = point.y + tempy;
-				}
-				else if(i>0)
-				{
-					pts2[i+1].x = pts2[i].x + tempx;
-					pts2[i+1].y = pts2[i].y + tempy;
-				}
-
-			}	
-
-			for(int i=flag;i<numpts;i++)
-				pts2[i] = pts2[flag-1]; 
-
-			pts2[0] = point;
-
-			const Point* pts5[1] = {&pts2[0]};
-			polylines( im1, pts5, &numpts,1, 1, Scalar(0,0,255), 2, 8, 0);
-
-			destx = x;
-			desty = y;
-
-			imshow("Destination", im1);
-		}
-	}
-	if (event == EVENT_RBUTTONUP)
-	{
-		for(int i=0;i<flag;i++)
-		{
-			minxd = min(minxd,pts2[i].x);
-			maxxd = max(maxxd,pts2[i].x);
-			minyd = min(minyd,pts2[i].y);
-			maxyd = max(maxyd,pts2[i].y);
-		}
-
-		if(maxxd > im1.size().width || maxyd > im1.size().height || minxd < 0 || minyd < 0)
-		{
-			cout << "Index out of range" << endl;
-			exit(0);
-		}
-
-		final1 = Mat::zeros(img2.size(),CV_8UC3);
-		res = Mat::zeros(img2.size(),CV_8UC1);
-		for(int i=miny, k=minyd;i<(miny+leny);i++,k++)
-			for(int j=minx,l=minxd ;j<(minx+lenx);j++,l++)
-			{
-				for(int c=0;c<channel;c++)
-				{
-					final1.at<uchar>(k,l*channel+c) = final.at<uchar>(i,j*channel+c);
-
-				}
-			}
-
-
-		const Point* pts6[1] = {&pts2[0]};
-		fillPoly(res, pts6, &numpts, 1, Scalar(255, 255, 255), 8, 0);
-
-		if(num == 1 || num == 2 || num == 3)
-		{
-			Cloning obj;
-			obj.normal_clone(img2,final1,res,blend,num);
-			namedWindow("Cloned Image");
-			imshow("Cloned Image", blend);
-			waitKey(0);
-		}
-
-		for(int i = 0; i < flag ; i++)
-		{
-			pts2[i].x=0;
-			pts2[i].y=0;
-		}
-
-		minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
-	}
-
-	im1.release();
-}
-
-void cv::seamlessClone(InputArray _src, InputArray _dst, OutputArray _blend, int flags)
+void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
 	Mat src  = _src.getMat();
 	Mat dest = _dst.getMat();
+	Mat mask = _mask.getMat();
 	_blend.create(dest.size(), CV_8UC3);
-	blend = _blend.getMat();
+	Mat blend = _blend.getMat();
 
-	num = flags;
+    int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
+    int h = mask.size().height;
+    int w = mask.size().width;
 
-	minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
+    Mat gray = Mat(mask.size(),CV_8UC1);
+    Mat dst_mask = Mat::zeros(dest.size(),CV_8UC1);
+    Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
+    Mat cd_mask = Mat::zeros(dest.size(),CV_8UC3);
 
-	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+    if(mask.channels() == 3)
+        cvtColor(mask, gray, COLOR_BGR2GRAY );
+    else
+        gray = mask;
 
-	img0 = src;
-	img2 = dest;
+    for(int i=0;i<h;i++)
+    {
+        for(int j=0;j<w;j++)
+        {
+            if(gray.at<uchar>(i,j) == 255)
+            {
+                minx = std::min(minx,i);
+                maxx = std::max(maxx,i);
+                miny = std::min(miny,j);
+                maxy = std::max(maxy,j);
+            }
+        }
+    }
 
-	channel = img0.channels();
+    int lenx = maxx - minx;
+    int leny = maxy - miny;
 
-	res = Mat::zeros(img2.size(),CV_8UC1);
-	res1 = Mat::zeros(img0.size(),CV_8UC1);
-	final = Mat::zeros(img0.size(),CV_8UC3);
-	final1 = Mat::zeros(img2.size(),CV_8UC3);
-	//////////// source image ///////////////////
+    int minxd = p.y - lenx/2;
+    int maxxd = p.y + lenx/2;
+    int minyd = p.x - leny/2;
+    int maxyd = p.x + leny/2;
 
-	namedWindow("Source", 1);
-	setMouseCallback("Source", mouseHandler, NULL);
-	imshow("Source", img0);
+    if(minxd < 0 || minyd < 0 || maxxd > dest.size().height || maxyd > dest.size().width)
+    {
+        cout << "Index out of range" << endl;
+        exit(0);
+    }
 
-	/////////// destination image ///////////////
+    for(int i=minx, k=minxd;i<(minx+lenx);i++,k++)
+        for(int j=miny,l=minyd ;j<(miny+leny);j++,l++)
+        {
+            dst_mask.at<uchar>(k,l) = gray.at<uchar>(i,j);
+        }
 
-	namedWindow("Destination", 1);
-	setMouseCallback("Destination", mouseHandler1, NULL);
-	imshow("Destination",img2);
-	waitKey(0);
+    int channel = 3;
 
-	img0.release();
-	img1.release();
-	img2.release();
+    for(int i=minx;i<(minx+lenx);i++)
+        for(int j=miny;j<(miny+leny);j++)
+        {
+            for(int c=0;c<3;c++)
+            {
+                if(gray.at<uchar>(i,j) == 255)
+                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
+            }
+        }
+
+    for(int i=minx, k=minxd;i<(minx+lenx);i++,k++)
+        for(int j=miny,l=minyd ;j<(miny+leny);j++,l++)
+        {
+            for(int c=0;c<channel;c++)
+                cd_mask.at<uchar>(k,l*channel+c) = cs_mask.at<uchar>(i,j*channel+c);
+        }
+
+    Cloning obj;
+    obj.normal_clone(dest,cd_mask,dst_mask,blend,flags);
 }
 
-void cv::colorChange(InputArray _src, OutputArray _dst, int flags, float r, float g, float b)
+void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
 {
 	Mat src  = _src.getMat();
+	Mat mask  = _mask.getMat();
 	_dst.create(src.size(), src.type());
-	blend = _dst.getMat();
+	Mat blend = _dst.getMat();
 	
-	minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
+	float red = r;
+	float green = g;
+	float blue = b;
 
-	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+    Mat gray = Mat::zeros(mask.size(),CV_8UC1);
+    cvtColor(mask, gray, COLOR_BGR2GRAY);
 
-	num = flags;
-	red = r;
-	green = g;
-	blue = b;
+    Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
-	img0 = src;
-	res1 = Mat::zeros(img0.size(),CV_8UC1);
-	final = Mat::zeros(img0.size(),CV_8UC3);
+    int channel = 3;
+    for(int i=0;i<mask.size().height;i++)
+        for(int j=0;j<mask.size().width;j++)
+        {
+            if(gray.at<uchar>(i,j) == 255)
+            {
+                for(int c=0;c<channel;c++)
+                {
+                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
+                }
+            }
 
-	namedWindow("Source");
-	setMouseCallback("Source", mouseHandler, NULL);
-	imshow("Source", img0);
+        }
 
-	waitKey(0);
-
-	img0.release();
+    Cloning obj;
+    obj.local_color_change(src,cs_mask,gray,blend,red,green,blue);
 }
 
 
-void cv::illuminationChange(InputArray _src, OutputArray _dst, float a, float b)
+void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {
 
 	Mat src  = _src.getMat();
+	Mat mask  = _mask.getMat();
 	_dst.create(src.size(), src.type());
-	blend = _dst.getMat();
-	num = 6;
-	alpha = a;
-	beta = b;
+	Mat blend = _dst.getMat();
+	float alpha = a;
+	float beta = b;
 
-	img0 = src;
+    Mat gray = Mat::zeros(mask.size(),CV_8UC1);
+    cvtColor(mask, gray, COLOR_BGR2GRAY);
 
-	res1 = Mat::zeros(img0.size(),CV_8UC1);
-	final = Mat::zeros(img0.size(),CV_8UC3);
+    Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
-	namedWindow("Source");
-	setMouseCallback("Source", mouseHandler, NULL);
-	imshow("Source", img0);
+    int channel = 3;
+    for(int i=0;i<mask.size().height;i++)
+        for(int j=0;j<mask.size().width;j++)
+        {
+            if(gray.at<uchar>(i,j) == 255)
+            {
+                for(int c=0;c<channel;c++)
+                {
+                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
+                }
+            }
 
-	waitKey(0);
+        }
+    
+    Cloning obj;
+    obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
+
 }
 void cv::textureFlattening(InputArray _src, OutputArray _dst)
 {
 
 	Mat src  = _src.getMat();
 	_dst.create(src.size(), src.type());
-	blend = _dst.getMat();
-	img0 = src;
+	Mat blend = _dst.getMat();
 
 	Cloning obj;
-	obj.texture_flatten(img0,blend);
-
-	namedWindow("Texture Flattened Image");
-	imshow("Texture Flattened Image", blend);
-	waitKey(0);
-
+	obj.texture_flatten(src,blend);
 }
 
