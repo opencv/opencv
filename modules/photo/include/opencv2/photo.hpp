@@ -66,12 +66,6 @@ enum
 	FEATURE_EXCHANGE = 3
 };
 
-enum
-{
-	FOREGROUND_COLOR_CHANGE = 4,
-	BACKGROUND_DECOLOR = 5
-};
-
 //! restores the damaged image areas using one of the available intpainting algorithms
 CV_EXPORTS_W void inpaint( InputArray src, InputArray inpaintMask,
                            OutputArray dst, double inpaintRadius, int flags );
@@ -303,13 +297,13 @@ CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
 CV_EXPORTS_W void decolor(InputArray src, OutputArray grayscale, OutputArray color_boost);
 
-CV_EXPORTS_W void seamlessClone(InputArray src, InputArray dst, OutputArray blend, int flags = 1); 
+CV_EXPORTS_W void seamlessClone(InputArray src, InputArray dst, InputArray mask, Point p, OutputArray _blend, int flags);
 
-CV_EXPORTS_W void colorChange(InputArray src, OutputArray dst, int flags = 4, float red = 1.0, float green = 1.0, float blue = 1.0); 
+CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, float red = 1.0, float green = 1.0, float blue = 1.0); 
 
-CV_EXPORTS_W void illuminationChange(InputArray _src, OutputArray _dst, float alpha = 0.2, float beta = 0.4);
+CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2, float beta = 0.4);
 
-CV_EXPORTS_W void textureFlattening(InputArray _src, OutputArray _dst);
+CV_EXPORTS_W void textureFlattening(InputArray src, OutputArray dst);
 
 } // cv
 
