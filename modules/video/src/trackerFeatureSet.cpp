@@ -100,7 +100,7 @@ bool TrackerFeatureSet::addTrackerFeature( String trackerFeatureType ){
 	}
 	Ptr<TrackerFeature> feature = TrackerFeature::create( trackerFeatureType );
 
-	if( feature == NULL )
+	if( feature == 0 )
 	{
 		return false;
 	}

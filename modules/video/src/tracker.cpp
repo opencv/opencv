@@ -64,12 +64,12 @@ bool Tracker::init( const Mat& image, const Rect& boundingBox )
 
     sampler = new TrackerSampler();
     featureSet = new TrackerFeatureSet();
-    model = NULL;
+    model = 0;
 
     bool initTracker = initImpl( image, boundingBox );
 
     //check if the model component is initialized
-    if( model == NULL )
+    if( model == 0 )
     {
     	CV_Error(-1, "The model are not initialized");
     	return false;

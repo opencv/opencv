@@ -91,7 +91,7 @@ Ptr<TrackerFeature> TrackerFeature::create( const String& trackerFeatureType )
 	}
 
 	CV_Error(-1, "Tracker feature type not supported");
-	return NULL;
+	return 0;
 }
 
 String TrackerFeature::getClassName() const

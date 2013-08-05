@@ -50,7 +50,7 @@ namespace cv
 
 TrackerModel::TrackerModel()
 {
-	stateEstimator = NULL;
+	stateEstimator = 0;
 }
 
 TrackerModel::~TrackerModel()
@@ -60,7 +60,7 @@ TrackerModel::~TrackerModel()
 
 bool TrackerModel::setTrackerStateEstimator( Ptr<TrackerStateEstimator> trackerStateEstimator )
 {
-	if( stateEstimator != NULL )
+	if( stateEstimator != 0 )
 	{
 		return false;
 	}
@@ -98,13 +98,13 @@ void TrackerModel::modelUpdate()
 
 bool TrackerModel::runStateEstimator()
 {
-	if( stateEstimator == NULL )
+	if( stateEstimator == 0 )
 	{
 		CV_Error(-1, "Tracker state estimator is not setted");
 		return false;
 	}
 	Ptr<TrackerTargetState> targetState = stateEstimator->estimate(confidenceMaps);
-	if( targetState == NULL )
+	if( targetState == 0 )
 		return false;
 
 	setLastTargetState(targetState);

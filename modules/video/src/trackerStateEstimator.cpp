@@ -57,7 +57,7 @@ TrackerStateEstimator::~TrackerStateEstimator()
 Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<ConfidenceMap>& confidenceMaps )
 {
 	if( confidenceMaps.empty() )
-		return NULL;
+		return 0;
 
 	return estimateImpl( confidenceMaps );
 
@@ -88,7 +88,7 @@ Ptr<TrackerStateEstimator> TrackerStateEstimator::create( const String& trackeSt
 
 
 	CV_Error(-1, "Tracker state estimator type not supported");
-	return NULL;
+	return 0;
 }
 
 String TrackerStateEstimator::getClassName() const
@@ -121,7 +121,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 {
 	//TODO run cvBoost predict in order to compute next location
 	if( currentConfidenceMap.empty() )
-		return NULL;
+		return 0;
 
 	Mat data;
 	Mat responses;
@@ -141,7 +141,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 	int maxIdx = ( std::distance( votes.begin(), maxElem ) );
 
 	if( *maxElem < 0 )
-		return NULL;
+		return 0;
 
 	int minx = INT_MAX;
 	int maxx = 0;

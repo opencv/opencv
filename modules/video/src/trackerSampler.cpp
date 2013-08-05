@@ -95,7 +95,7 @@ bool TrackerSampler::addTrackerSamplerAlgorithm( String trackerSamplerAlgorithmT
 	}
 	Ptr<TrackerSamplerAlgorithm> sampler = TrackerSamplerAlgorithm::create( trackerSamplerAlgorithmType );
 
-	if( sampler == NULL )
+	if( sampler == 0 )
 	{
 		return false;
 	}
@@ -112,7 +112,7 @@ bool TrackerSampler::addTrackerSamplerAlgorithm( Ptr<TrackerSamplerAlgorithm>& s
 		return false;
 	}
 
-	if( sampler == NULL )
+	if( sampler == 0 )
 	{
 		return false;
 	}

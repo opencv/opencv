@@ -75,7 +75,7 @@ Ptr<TrackerSamplerAlgorithm> TrackerSamplerAlgorithm::create( const String& trac
 	}
 
 	CV_Error(-1, "Tracker sampler algorithm type not supported");
-	return NULL;
+	return 0;
 }
 
 String TrackerSamplerAlgorithm::getClassName() const
