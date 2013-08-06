@@ -272,7 +272,7 @@ createMergeDebevec
 ---------------------------
 Creates MergeDebevec object
 
-.. ocv:function:: Ptr<MergeDebevec> createMergeDebevec();
+.. ocv:function:: Ptr<MergeDebevec> createMergeDebevec()
 
 MergeMertens
 ---------------------------
