@@ -122,8 +122,11 @@ if (NOT MEX_WORKS)
     message(STATUS "Trying to generate Matlab code")
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE} 
-                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
-                ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp ${CMAKE_BINARY_DIR}/junk
+                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
+                --hdrparser ${HDR_PARSER_PATH}
+                --rstparser ${RST_PARSER_PATH}
+                --headers   ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp 
+                --outdir    ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE GEN_ERROR
         OUTPUT_QUIET 
     )
@@ -179,8 +182,11 @@ file(REMOVE ${GENERATE_PROXY} ${COMPILE_PROXY})
 add_custom_command(
     OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE} 
-            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py ${HDR_PARSER_PATH}
-            ${opencv_hdrs} ${CMAKE_CURRENT_BINARY_DIR}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
+            --hdrparser ${HDR_PARSER_PATH}
+            --rstparser ${RST_PARSER_PATH}
+            --headers   ${opencv_hdrs} 
+            --outdir    ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
     COMMENT "Generating Matlab source files"
 )

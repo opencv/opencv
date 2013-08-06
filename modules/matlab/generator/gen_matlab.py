@@ -95,20 +95,27 @@ class MatlabWrapperGenerator(object):
 
 
 if __name__ == "__main__":
-    
-    # add the hdr_parser to the path
+   
+    # parse the input options
     import sys, re, os, time
-    sys.path.append(sys.argv[1])
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument('--hdrparser')
+    parser.add_argument('--rstparser')
+    parser.add_argument('--headers', nargs='+')
+    parser.add_argument('--outdir')
+    args = parser.parse_args()
+
+    # add the hdr_parser and rst_parser modules to the path
+    sys.path.append(args.hdrparser)
+    sys.path.append(args.rstparser)
+
     from string import Template
     from hdr_parser import CppHeaderParser
     from parse_tree import ParseTree, todict, constants
     from filters import *
     from jinja2 import Environment, FileSystemLoader
 
-    # get the IO from the command line arguments
-    input_files = sys.argv[2:-1]
-    output_dir  = sys.argv[-1]
-
     # create the generator
     mwg = MatlabWrapperGenerator()
-    mwg.gen(input_files, output_dir)
+    mwg.gen(args.headers, args.outdir)
