@@ -1,13 +1,6 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
-#include "cvconfig.h"
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#ifdef BUILD_SHARED_LIBS
-#define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#endif
-#endif
-
 #include <stdarg.h> // for va_list
 
 #ifdef HAVE_WINRT
