@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -7,13 +7,17 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Copyright (C) 2012, AMD Inc, all rights reserved.
+// Copyright (C) 2010-2013, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
+//
+// @Authors
+//    Harris Gasparakis, harris.gasparakis@amd.com
+//    Xiaopeng Fu, fuxiaopeng2222@163.com
+//    Yao Wang, bitwangyaoyao@gmail.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -23,7 +27,7 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
+//     and/or other oclMaterials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
@@ -39,28 +43,7 @@
 // or tort (including negligence or otherwise) arising in any way out of
 // the use of this software, even if advised of the possibility of such damage.
 //
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Author:  Harris Gasparakis
-//
-// Description:
-//
-// This sample program demonstrates how to easily use custom openCL together with
-// openCL accelerated openCV (available as of openCV version 2.4.3).
-//
-// While typically opencl programs can include extensive plumbing code to initialize
-// opencl context, queues, memory buffers, and the like, this demo inherits
-// all the plumbing from cv::ocl.  It also inherits all the video feed plumbing
-// from opencv. With just a few lines of code, the stage is set to call
-// a custom opencl kernel, which is implemented in-place in this file.
-//
-// This executable links with opencv binaries, so you need to have opencv
-// built, of course with OpenCL enabled in cmake.
-//
-
-#ifndef DEMO_OCL_OPENCVCL_CL
-#define DEMO_OCL_OPENCVCL_CL
+//M*/
 
 
 #ifdef BORDER_REPLICATE
@@ -437,6 +420,4 @@ edgeEnhancingFilter_C1_D0(
         }
     }
 }
-
-#endif
 
