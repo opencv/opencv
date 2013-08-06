@@ -61,62 +61,87 @@ public:
     {
         std::vector<Mat> images;
         src.getMatVector(images);
-        dst.create(images[0].size(), CV_MAKETYPE(CV_32F, images[0].channels()));
-        Mat result = dst.getMat();
 
         CV_Assert(images.size() == times.size());
-        CV_Assert(images[0].depth() == CV_8U);
         checkImageDimensions(images);
+        CV_Assert(images[0].depth() == CV_8U);
+
+        int channels = images[0].channels();
+        Size size = images[0].size();
+        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        dst.create(images[0].size(), CV_32FCC);
+        Mat result = dst.getMat();
 
         Mat response = input_response.getMat();
-        CV_Assert(response.rows == 256 && response.cols >= images[0].channels());
-        Mat log_response;
-        log(response, log_response);
-        
-        std::vector<float> exp_times(times.size());
-        for(size_t i = 0; i < exp_times.size(); i++) {
-            exp_times[i] = logf(times[i]);
+
+        if(response.empty()) {
+            response = linearResponse(channels);
         }
+        log(response, response);
+        CV_Assert(response.rows == 256 && response.cols == 1 && 
+                  response.channels() == channels);
+
+        Mat exp_values(times);
+        log(exp_values, exp_values);
     
-        int channels = images[0].channels();
-        float *res_ptr = result.ptr<float>();
-        for(size_t pos = 0; pos < result.total(); pos++, res_ptr += channels) {
+        result = Mat::zeros(size, CV_32FCC);
+        std::vector<Mat> result_split;
+        split(result, result_split);
+        Mat weight_sum = Mat::zeros(size, CV_32F);
 
-            std::vector<float> sum(channels, 0);
-            float weight_sum = 0;
-            for(size_t im = 0; im < images.size(); im++) {
+        for(size_t i = 0; i < images.size(); i++) {
+            std::vector<Mat> splitted;
+            split(images[i], splitted);
 
-                uchar *img_ptr = images[im].ptr() + channels * pos;
-                float w = 0;
-                for(int channel = 0; channel < channels; channel++) {
-                    w += weights.at<float>(img_ptr[channel]);
-                }
-                w /= channels; 
-                weight_sum += w;
-                for(int channel = 0; channel < channels; channel++) {
-                    sum[channel] += w * (log_response.at<float>(img_ptr[channel], channel) - exp_times[im]);
-                }
+            Mat w = Mat::zeros(size, CV_32F);
+            for(int c = 0; c < channels; c++) {
+                LUT(splitted[c], weights, splitted[c]);
+                w += splitted[c];
             }
-            for(int channel = 0; channel < channels; channel++) {
-                res_ptr[channel] = exp(sum[channel] / weight_sum);
+            w /= channels;
+
+            Mat response_img;
+            LUT(images[i], response, response_img);
+            split(response_img, splitted);
+            for(int c = 0; c < channels; c++) {
+                result_split[c] += w.mul(splitted[c] - exp_values.at<float>(i));
             }
+            weight_sum += w;
         }
+        weight_sum = 1.0f / weight_sum;
+        for(int c = 0; c < channels; c++) {
+            result_split[c] = result_split[c].mul(weight_sum);
+        }
+        merge(result_split, result);
+        exp(result, result);
     }
 
     void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times)
     {
-        Mat response(256, 3, CV_32F);
-        for(int i = 0; i < 256; i++) {
-            for(int j = 0; j < 3; j++) {
-                response.at<float>(i, j) = static_cast<float>(max(i, 1));
-            }
-        }
-        process(src, dst, times, response);
+        process(src, dst, times, Mat());
     }
 
 protected:
     String name;
     Mat weights;
+
+    Mat linearResponse(int channels)
+    {
+        Mat single_response = Mat(256, 1, CV_32F);
+        for(int i = 1; i < 256; i++) {
+            single_response.at<float>(i) = static_cast<float>(i);
+        }
+        single_response.at<float>(0) = static_cast<float>(1);
+
+        std::vector<Mat> splitted(channels);
+        for(int c = 0; c < channels; c++) {
+            splitted[c] = single_response;
+        }
+        Mat result;
+        merge(splitted, result);
+        return result;
+    }
 };
 
 Ptr<MergeDebevec> createMergeDebevec()
@@ -146,33 +171,48 @@ public:
         src.getMatVector(images);
         checkImageDimensions(images);
 
-        std::vector<Mat> weights(images.size());
-        Mat weight_sum = Mat::zeros(images[0].size(), CV_32FC1);
-        for(size_t im = 0; im < images.size(); im++) {
-            Mat img, gray, contrast, saturation, wellexp;
-            std::vector<Mat> channels(3);
+        int channels = images[0].channels();
+        CV_Assert(channels == 1 || channels == 3);
+        Size size = images[0].size();
+        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
-            images[im].convertTo(img, CV_32FC3, 1.0/255.0);
-            cvtColor(img, gray, COLOR_RGB2GRAY);
-            split(img, channels);
+        std::vector<Mat> weights(images.size());
+        Mat weight_sum = Mat::zeros(size, CV_32F);
+
+        for(size_t i = 0; i < images.size(); i++) {
+            Mat img, gray, contrast, saturation, wellexp;
+            std::vector<Mat> splitted(channels);
+
+            images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+            if(channels == 3) {
+                cvtColor(img, gray, COLOR_RGB2GRAY);
+            } else {
+                img.copyTo(gray);
+            }
+            split(img, splitted);
 
             Laplacian(gray, contrast, CV_32F);
             contrast = abs(contrast);
 
-            Mat mean = (channels[0] + channels[1] + channels[2]) / 3.0f;
-            saturation = Mat::zeros(channels[0].size(), CV_32FC1);
-            for(int i = 0; i < 3;  i++) {
-                Mat deviation = channels[i] - mean;
-                pow(deviation, 2.0, deviation);
+            Mat mean = Mat::zeros(size, CV_32F);
+            for(int c = 0; c < channels; c++) {
+                mean += splitted[c];
+            }
+            mean /= channels;
+
+            saturation = Mat::zeros(size, CV_32F);
+            for(int c = 0; c < channels;  c++) {
+                Mat deviation = splitted[c] - mean;
+                pow(deviation, 2.0f, deviation);
                 saturation += deviation;
             }
             sqrt(saturation, saturation);
 
-            wellexp = Mat::ones(gray.size(), CV_32FC1);
-            for(int i = 0; i < 3; i++) {
-                Mat exp = channels[i] - 0.5f;
-                pow(exp, 2, exp);
-                exp = -exp / 0.08;
+            wellexp = Mat::ones(size, CV_32F);
+            for(int c = 0; c < channels; c++) {
+                Mat exp = splitted[c] - 0.5f;
+                pow(exp, 2.0f, exp);
+                exp = -exp / 0.08f;
                 wellexp = wellexp.mul(exp);
             }
 
@@ -180,33 +220,37 @@ public:
             pow(saturation, wsat, saturation);
             pow(wellexp, wexp, wellexp);
 
-            weights[im] = contrast;
-            weights[im] = weights[im].mul(saturation);
-            weights[im] = weights[im].mul(wellexp);
-            weight_sum += weights[im];
+            weights[i] = contrast;
+            if(channels == 3) {
+                weights[i] = weights[i].mul(saturation);
+            }
+            weights[i] = weights[i].mul(wellexp);
+            weight_sum += weights[i];
         }
-        int maxlevel = static_cast<int>(logf(static_cast<float>(max(images[0].rows, images[0].cols))) / logf(2.0)) - 1;
+        int maxlevel = static_cast<int>(logf(static_cast<float>(min(size.width, size.height))) / logf(2.0f));
         std::vector<Mat> res_pyr(maxlevel + 1);
 
-        for(size_t im = 0; im < images.size(); im++) {
-            weights[im] /= weight_sum;
+        for(size_t i = 0; i < images.size(); i++) {
+            weights[i] /= weight_sum;
             Mat img;
-            images[im].convertTo(img, CV_32FC3, 1/255.0);
+            images[i].convertTo(img, CV_32F, 1.0f/255.0f);
+            
             std::vector<Mat> img_pyr, weight_pyr;
             buildPyramid(img, img_pyr, maxlevel);
-            buildPyramid(weights[im], weight_pyr, maxlevel);
+            buildPyramid(weights[i], weight_pyr, maxlevel);
+
             for(int lvl = 0; lvl < maxlevel; lvl++) {
                 Mat up;
                 pyrUp(img_pyr[lvl + 1], up, img_pyr[lvl].size());
                 img_pyr[lvl] -= up;
             }
             for(int lvl = 0; lvl <= maxlevel; lvl++) {
-                std::vector<Mat> channels(3);
-                split(img_pyr[lvl], channels);
-                for(int i = 0; i < 3; i++) {
-                    channels[i] = channels[i].mul(weight_pyr[lvl]);
+                std::vector<Mat> splitted(channels);
+                split(img_pyr[lvl], splitted);
+                for(int c = 0; c < channels; c++) {
+                    splitted[c] = splitted[c].mul(weight_pyr[lvl]);
                 }
-                merge(channels, img_pyr[lvl]);
+                merge(splitted, img_pyr[lvl]);
                 if(res_pyr[lvl].empty()) {
                     res_pyr[lvl] = img_pyr[lvl];
                 } else {
@@ -219,7 +263,7 @@ public:
             pyrUp(res_pyr[lvl], up, res_pyr[lvl - 1].size());
             res_pyr[lvl - 1] += up;
         }
-        dst.create(images[0].size(), CV_32FC3);
+        dst.create(size, CV_32FCC);
         res_pyr[0].copyTo(dst.getMat());
     }
 

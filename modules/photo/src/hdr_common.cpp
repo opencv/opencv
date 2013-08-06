@@ -61,11 +61,9 @@ void checkImageDimensions(const std::vector<Mat>& images)
 
 Mat tringleWeights()
 {
-    Mat w(256, 3, CV_32F);
+    Mat w(256, 1, CV_32F);
     for(int i = 0; i < 256; i++) {
-        for(int j = 0; j < 3; j++) {
-            w.at<float>(i, j) = i < 128 ? i + 1.0f : 256.0f - i;
-        }
+        w.at<float>(i) = i < 128 ? i + 1.0f : 256.0f - i;
     }
     return w;
 }

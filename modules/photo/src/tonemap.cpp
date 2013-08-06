@@ -185,7 +185,7 @@ class TonemapDurandImpl : public TonemapDurand
 public:
     TonemapDurandImpl(float gamma, float contrast, float saturation,  float sigma_color, float sigma_space) : 
         gamma(gamma), 
-		contrast(contrast),
+        contrast(contrast),
         saturation(saturation),
         sigma_color(sigma_color),
         sigma_space(sigma_space),
@@ -462,8 +462,8 @@ protected:
     void signedPow(Mat src, float power, Mat& dst)
     {
         Mat sign = (src > 0);
-        sign.convertTo(sign, CV_32F, 1/255.0f);
-        sign = sign * 2 - 1;
+        sign.convertTo(sign, CV_32F, 1.0f/255.0f);
+        sign = sign * 2.0f - 1.0f;
         pow(abs(src), power, dst);
         dst = dst.mul(sign);
     }

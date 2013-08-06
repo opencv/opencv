@@ -78,11 +78,11 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DE
 
 void loadResponseCSV(String path, Mat& response)
 {
-	response = Mat(256, 3, CV_32F);
+	response = Mat(256, 1, CV_32FC3);
     ifstream resp_file(path.c_str());
 	for(int i = 0; i < 256; i++) {
-		for(int channel = 0; channel < 3; channel++) {
-			resp_file >> response.at<float>(i, channel);
+		for(int c = 0; c < 3; c++) {
+			resp_file >> response.at<Vec3f>(i)[c];
 			resp_file.ignore(1);
 		}
 	}
@@ -187,6 +187,7 @@ TEST(Photo_MergeDebevec, regression)
 	Mat result, expected;
 	loadImage(test_path + "merge/debevec.exr", expected);
 	merge->process(images, result, times, response);
+	imwrite("test.exr", result);
 	checkEqual(expected, result, 1e-3f);
 }
 
@@ -199,9 +200,8 @@ TEST(Photo_CalibrateDebevec, regression)
 	Mat expected, response;
 	loadExposureSeq(test_path + "exposures/", images, times);
 	loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
-
 	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-	srand(1);
+	calibrate->setTest(true);
 	calibrate->process(images, response, times);
 	checkEqual(expected, response, 1e-3f);
 }

@@ -194,7 +194,7 @@ Recovers camera response.
 
     :param src: vector of input images
     
-    :param dst: matrix with calculated camera response, one column per channel
+    :param dst: matrix with calculated camera response
     
     :param times: vector of exposure time values for each image
     
@@ -232,7 +232,7 @@ Merges images.
     
     :param times: vector of exposure time values for each image
     
-    :param response: matrix with camera response, one column per channel
+    :param response: one-column matrix with camera response
     
 MergeDebevec
 --------
