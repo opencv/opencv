@@ -41,7 +41,6 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-
 #include "opencv2/core.hpp"
 #include "opencv2/ml.hpp"
 #include "opencv2/core/core_c.h"

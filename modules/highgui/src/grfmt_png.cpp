@@ -51,7 +51,6 @@
     and png2bmp sample from libpng distribution (Copyright (C) 1999-2001 MIYASAKA Masaru)
 \****************************************************************************************/
 
-#undef HAVE_UNISTD_H //to avoid redefinition
 #ifndef _LFS64_LARGEFILE
 #  define _LFS64_LARGEFILE 0
 #endif

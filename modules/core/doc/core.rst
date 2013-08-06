@@ -15,4 +15,5 @@ core. The Core Functionality
     old_xml_yaml_persistence
     clustering
     utility_and_system_functions_and_macros
+    opengl_interop
 

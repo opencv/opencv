@@ -46,7 +46,6 @@
 
 #include "opencv2/ocl.hpp"
 using namespace std;
-using namespace std::tr1;
 using namespace testing;
 using namespace perf;
 using namespace cv;
@@ -113,8 +112,8 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1_OCL,
 
     declare.time(5 * 60);
 
-    const Size size = get<0>(GetParam());
-    const int type = get<1>(GetParam());
+    const Size size = std::tr1::get<0>(GetParam());
+    const int type = std::tr1::get<1>(GetParam());
 
     Mat frame(size, type);
     declare.in(frame, WARMUP_RNG);
