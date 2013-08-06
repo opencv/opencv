@@ -51,13 +51,16 @@ namespace cv
 // Constructors //
 SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFlags)
 {
+    CV_Assert((_outlierWeight>=0) & (_numExtraDummies>=0));
     outlierWeight=_outlierWeight;
     configFlags=_configFlags;
     numExtraDummies=_numExtraDummies;
+    useAdditionalCostTerm=false;
 }
 
 // Public methods //
-void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches, std::vector<int>& inliers1, std::vector<int> &inliers2)
+void SCDMatcher::matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches,
+                                  std::vector<int>& inliers1, std::vector<int> &inliers2)
 {
     CV_Assert(!descriptors1.empty() && !descriptors2.empty());
     matches.clear();
@@ -86,7 +89,15 @@ void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors
             buildL2CostMatrix(descriptors1, descriptors2, costMatrix);
             break;
         default:
-            CV_Error(-206, "The available flags are: DIST_CHI, DIST_EMD, and DIST_EUCLIDEAN");
+            CV_Error(-206, "The available flags are: DIST_CHI, DIST_EMD, and DIST_L2");
+    }
+
+    if (useAdditionalCostTerm)
+    {
+        CV_Assert((additionalCostMatrix.rows==descriptors1.rows) & (additionalCostMatrix.cols==descriptors2.rows) &
+                  (additionalCostMatrix.type()==costMatrix.type()));
+        Mat roiCM(costMatrix, Rect(0,0,descriptors1.rows,descriptors2.rows));
+        addWeighted(roiCM,1-betaAdditional,additionalCostMatrix,betaAdditional,0,roiCM);
     }
 }
 
@@ -479,7 +490,7 @@ void SCDMatcher::hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std
     }
 }
 
-/* Getters */
+// Getters //
 float SCDMatcher::getMatchingCost()
 {
     return minMatchCost;
@@ -490,10 +501,18 @@ int SCDMatcher::getNumDummies()
     return numExtraDummies;
 }
 
-/* Setters */
+// Setters //
 void SCDMatcher::setNumDummies(int _numExtraDummies)
 {
     numExtraDummies=_numExtraDummies;
+}
+
+void SCDMatcher::setAdditionalCostTerm(const Mat &_additionalCostMatrix, bool _useAdditionalCostTerm, float _betaAdditional)
+{
+    CV_Assert((_betaAdditional<=1) & (_betaAdditional>=0));
+    useAdditionalCostTerm = _useAdditionalCostTerm;
+    additionalCostMatrix = _additionalCostMatrix;
+    betaAdditional = _betaAdditional;
 }
 
 }//cv

@@ -50,7 +50,7 @@ const float minRad=0.2;
 const float maxRad=2;
 const int NSN=20; //number of shapes per class
 const int NP=300; //number of points sympliying the contour
-const float outlierWeight=0.15;
+const float outlierWeight=0.1;
 const int numOutliers=25;
 
 class CV_ShapeTest : public cvtest::BaseTest
@@ -69,10 +69,12 @@ private:
     float computeShapeDistance(vector <Point2f>& queryNormal,
                                vector <Point2f>& queryFlipped1,
                                vector <Point2f>& queryFlipped2,
-                               vector<Point2f>& test, vector<DMatch> &);
-    float point2PointEuclideanDistance(vector <Point2f>& query, vector <Point2f>& test, vector<DMatch>& matches);
+                               vector<Point2f>& test, vector<DMatch> &,
+                               const Mat &im1, const Mat &im2, const Mat &im3, const Mat &imtest);
     float distance(Point2f p, Point2f q);
     void displayMPEGResults();
+    vector<float> getLocalTangentAngles(Mat image, vector<Point2f> pts);
+    Mat buildTangentAngleDissimilarity(vector<float> angles1,vector<float> angles2);
 };
 
 CV_ShapeTest::CV_ShapeTest()
@@ -232,64 +234,11 @@ vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n
     // Uniformly sampling
     random_shuffle(contoursQuery.begin(), contoursQuery.end());
     int nStart=n;
-    /*nStart=std::min(3*n,(int)contoursQuery.size());
-    Mat disMatrix(contoursQuery.size(),contoursQuery.size(),CV_32F);
-    Mat disMask=Mat::ones(contoursQuery.size(),contoursQuery.size(),CV_8U);
-    for (size_t i=0; i<contoursQuery.size(); i++)
-    {
-        for (size_t j=0; j<contoursQuery.size(); j++)
-        {
-            if (i==j)
-            {
-                disMatrix.at<float>(i,j)=std::numeric_limits<float>::max();
-            }
-            else
-            {
-                disMatrix.at<float>(i,j) = distance(contoursQuery[i],contoursQuery[j]);
-            }
-        }
-    }*/
     vector<Point2f> cont;
-    //vector<int> indexDelete;
     for (int i=0; i<nStart; i++)
     {
         cont.push_back(contoursQuery[i]);
-        //indexDelete.push_back(0);
     }
-    /*
-    // Use Jitendra's sampling method (too slow)
-    int dels=0;
-    while (1)
-    {
-        if ((int)cont.size()-dels>n)
-        {
-            break;
-        }
-        dels++;
-        Point pt;
-        // find minimum
-        minMaxLoc(disMatrix,0,0,&pt,0,disMask);
-        // mark one point to erase
-        indexDelete[pt.x]=1;
-        // mark in the mask
-        for (int i=0; i<disMask.rows; i++)
-        {
-            disMask.at<unsigned char>(i,pt.x)=0;
-        }
-        for (int i=0; i<disMask.cols; i++)
-        {
-            disMask.at<unsigned char>(pt.x,i)=0;
-        }
-
-    }
-
-    vector<Point2f> cont2;
-    for (size_t i=0; i<cont.size(); i++)
-    {
-        if (indexDelete[i]==0)
-            cont2.push_back(contoursQuery[i]);
-    }
-    return cont2;*/
     return cont;
 }
 
@@ -368,13 +317,22 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 }
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
-                                         vector <Point2f>& query3, vector <Point2f>& test, vector<DMatch>& matches)
+                                         vector <Point2f>& query3, vector <Point2f>& test,
+                                         vector<DMatch>& matches,
+                                         const Mat& im1, const Mat& im2, const Mat& im3,
+                                         const Mat &imtest)
 {
     // queries //
     vector< vector<Point2f> > query;
     query.push_back(query1);
     query.push_back(query2);
     query.push_back(query3);
+    // images //
+    vector<Mat> ims;
+    ims.push_back(im1);
+    ims.push_back(im2);
+    ims.push_back(im3);
+
     // executers //
     SCD shapeDescriptorT(angularBins,radialBins, minRad, maxRad,false);
     vector<SCD> shapeDescriptors;
@@ -406,9 +364,16 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     // outliers vectors
     vector< vector<int> > inliers1(3), inliers2(3);
     shapeDescriptorT.extractSCD(test, testingSCDMatrix);
+
+    // Tangent angle
+    Mat tanMat; //this is the additional cost mat
+    vector<float> testLTA = getLocalTangentAngles(imtest, test); // this is the tangent angle vector for test
+
     // start loop //
     for (int i=0; i<3; i++)
     {
+        tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
+        scdmatchers[i].setAdditionalCostTerm(tanMat);
         for (int j=0; j<NC; j++)
         {
             // compute SCD //
@@ -425,6 +390,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
 
             // match //
             scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], inliers1[i], inliers2[i]);
+
             // apply TPS transform //
             tpsTra[i].setRegularizationParam(beta);
             tpsTra[i].applyTransformation(query[i], test, matchesvec[i], query[i]);
@@ -464,29 +430,33 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     return 0.0;
 }
 
-float CV_ShapeTest::point2PointEuclideanDistance(vector <Point2f>& _query, vector <Point2f>& _test, vector<DMatch>& _matches)
+vector<float> CV_ShapeTest::getLocalTangentAngles(Mat image, vector<Point2f> pts)
 {
-    /* Use only valid matchings */
-    std::vector<DMatch> matches;
-    for (size_t i=0; i<_matches.size(); i++)
+    Mat G1, G2;
+    Sobel(image, G1, image.depth(), 1,0);
+    Sobel(image, G2, image.depth(), 0,1);
+
+    vector<float> output(pts.size());
+    for (size_t i=0; i<pts.size(); i++)
     {
-        if (_matches[i].queryIdx<(int)_query.size() &&
-            _matches[i].trainIdx<(int)_test.size())
+        int x=floor(pts[i].x+0.5);
+        int y=floor(pts[i].y+0.5);
+        output[i]=atan2(G2.at<float>(y,x), G1.at<float>(y,x))+CV_PI/2;
+    }
+    return output;
+}
+
+Mat CV_ShapeTest::buildTangentAngleDissimilarity(vector<float> angles1, vector<float> angles2)
+{
+    Mat output = Mat::zeros(angles1.size(), angles2.size(), CV_32F);
+    for (int i=0; i<output.rows; i++)
+    {
+        for (int j=0; j<output.cols; j++)
         {
-            matches.push_back(_matches[i]);
+            output.at<float>(i,j)=0.5*(1-cos(angles1[i]-angles2[j]));
         }
     }
-
-    /* Organizing the correspondent points in vector style */
-    float dist=0.0;
-    for (size_t i=0; i<matches.size(); i++)
-    {
-        Point2f pt1=_query[matches[i].queryIdx];
-        Point2f pt2=_test[matches[i].trainIdx];
-        dist+=distance(pt1,pt2);
-    }
-
-    return dist/matches.size();
+    return output;
 }
 
 float CV_ShapeTest::distance(Point2f p, Point2f q)
@@ -557,7 +527,8 @@ void CV_ShapeTest::mpegTest()
                                " and "<<namesHeaders[nt]<<it<<": ";
                     vector<DMatch> matches; //for drawing purposes
                     distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
-                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches);
+                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches,
+                                                 currentQuery, flippedHQuery, flippedVQuery, currentTest);
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
@@ -638,7 +609,6 @@ void CV_ShapeTest::displayMPEGResults()
 void CV_ShapeTest::run( int /*start_from*/ )
 {
     //tempTests();
-    //testSCD();
     mpegTest();
     //displayMPEGResults();
     ts->set_failed_test_info(cvtest::TS::OK);

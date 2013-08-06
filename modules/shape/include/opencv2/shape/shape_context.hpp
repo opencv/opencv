@@ -134,11 +134,15 @@ public:
     CV_WRAP void setNumDummies(int numExtraDummies);
     CV_WRAP int getNumDummies();
     CV_WRAP float getMatchingCost();
+    CV_WRAP void setAdditionalCostTerm(const Mat& additionalCostMatrix, bool useAdditionalCostTerm=true, float betaAdditional=0.1);
 private:
     CV_PROP_RW float outlierWeight;
     CV_PROP_RW int configFlags;
     CV_PROP_RW float minMatchCost;
     CV_PROP_RW int numExtraDummies;
+    CV_PROP_RW bool useAdditionalCostTerm;
+    CV_PROP_RW Mat additionalCostMatrix;
+    CV_PROP_RW float betaAdditional;
 protected:
     CV_WRAP void buildCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
