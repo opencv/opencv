@@ -6,115 +6,135 @@ HDR imaging
 This section describes high dynamic range imaging algorithms, namely tonemapping, exposure alignment, camera calibration with multiple exposures and exposure fusion.
 
 Tonemap
--------------
+---------------------------
 .. ocv:class:: Tonemap : public Algorithm
 
-The base class for tonemapping algorithms - tools, that are used to map HDR image to 8-bit range.
+Base class for tonemapping algorithms - tools, that are used to map HDR image to 8-bit range.
 
 Tonemap::process
------------------------
+---------------------------
 Tonemaps image
 
 .. ocv:function:: void Tonemap::process(InputArray src, OutputArray dst)
+
     :param src: source image - 32-bit 3-channel Mat
     :param dst: destination image - 32-bit 3-channel Mat with values in [0, 1] range
 
 createTonemap
-------------------
+---------------------------
 Creates simple linear mapper with gamma correction
 
-.. ocv:function:: Ptr<Tonemap> createTonemap(float gamma = 1.0f);
+.. ocv:function:: Ptr<Tonemap> createTonemap(float gamma = 1.0f)
 
-    :param gamma: gamma value for gamma correction
+    :param gamma: positive value for gamma correction. Gamma value of 1.0 implies no correction, gamma equal to 2.2f is suitable for most displays.
+    
+                  Generally gamma > 1 brightens the image and gamma < 1 darkens it.
     
 TonemapDrago
---------
+---------------------------
 .. ocv:class:: TonemapDrago : public Tonemap
 
-"Adaptive Logarithmic Mapping For Displaying HighContrast Scenes", Drago et al., 2003
+Adaptive logarithmic mapping is a fast global tonemapping algorithm that scales the image in logarithmic domain. 
+
+Since it's a global operator the same function is applied to all the pixels, it is controlled by the bias parameter.
+
+Optional saturation enhancement is possible as described in [FL02]_.
+
+For more information see [DM03]_.
 
 createTonemapDrago
-------------------
+---------------------------
 Creates TonemapDrago object
 
-.. ocv:function:: Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float bias = 0.85f);
+.. ocv:function:: Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float bias = 0.85f)
 
-    :param gamma: gamma value for gamma correction
+    :param gamma: gamma value for gamma correction. See :ocv:func:`createTonemap`
     
-    :param saturation:  saturation enhancement value
+    :param saturation: positive saturation enhancement value. 1.0 preserves saturation, values greater than 1 increase saturation and values less than 1 decrease it.
     
-    :param bias: value for bias function in [0, 1] range
+    :param bias: value for bias function in [0, 1] range. Values from 0.7 to 0.9 usually give best results, default value is 0.85.
     
 TonemapDurand
---------
+---------------------------
 .. ocv:class:: TonemapDurand : public Tonemap
 
-"Fast Bilateral Filtering for the Display of High-Dynamic-Range Images", Durand, Dorsey, 2002
+This algorithm decomposes image into two layers: base layer and detail layer using bilateral filter and compresses contrast of the base layer thus preserving all the details. 
 
 This implementation uses regular bilateral filter from opencv.
 
+Saturation enhancement is possible as in ocv:class:`TonemapDrago`.
+
+For more information see [DD02]_.
+
 createTonemapDurand
-------------------
+---------------------------
 Creates TonemapDurand object
 
-.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
+.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f)
 
-    :param gamma: gamma value for gamma correction
+    :param gamma: gamma value for gamma correction. See :ocv:func:`createTonemap`
     
-    :param contrast: resulting contrast on logarithmic scale
+    :param contrast: resulting contrast on logarithmic scale, i. e. log(max / min), where max and min are maximum and minimum luminance values of the resulting image.
     
-    :param saturation:  saturation enhancement value
+    :param saturation:  saturation enhancement value. See :ocv:func:`createTonemapDrago`
     
-    :param sigma_space: filter sigma in color space
+    :param sigma_space: bilateral filter sigma in color space
     
-    :param sigma_color: filter sigma in coordinate space
+    :param sigma_color: bilateral filter sigma in coordinate space
     
 TonemapReinhardDevlin
---------
+---------------------------
 .. ocv:class:: TonemapReinhardDevlin : public Tonemap
 
-"Dynamic Range Reduction Inspired by Photoreceptor Physiology", Reinhard, Devlin, 2005
+This is a global tonemapping operator that models human visual system. 
+
+Mapping function is controlled by adaptation parameter, that is computed using light adaptation and color adaptation.
+
+For more information see [RD05]_.
 
 createTonemapReinhardDevlin
-------------------
+---------------------------
 Creates TonemapReinhardDevlin object
 
 .. ocv:function:: Ptr<TonemapReinhardDevlin> createTonemapReinhardDevlin(float gamma = 1.0f, float intensity = 0.0f, float light_adapt = 1.0f, float color_adapt = 0.0f)
 
-    :param gamma: gamma value for gamma correction
+    :param gamma: gamma value for gamma correction. See :ocv:func:`createTonemap`
     
-    :param intensity: result intensity. Range in [-8, 8] range
+    :param intensity: result intensity in [-8, 8] range. Greater intensity produces brighter results.
     
-    :param light_adapt:  light adaptation in [0, 1] range. If 1 adaptation is based on pixel value, if 0 it's global
+    :param light_adapt:  light adaptation in [0, 1] range. If 1 adaptation is based only on pixel value, if 0 it's global, otherwise it's a weighted mean of this two cases.
     
-    :param color_adapt: chromatic adaptation in [0, 1] range. If 1 channels are treated independently, if 0 adaptation level is the same for each channel
+    :param color_adapt: chromatic adaptation in [0, 1] range. If 1 channels are treated independently, if 0 adaptation level is the same for each channel.
     
 TonemapMantiuk
---------
+---------------------------
 .. ocv:class:: TonemapMantiuk : public Tonemap
 
-"Perceptual Framework for Contrast Processing of High Dynamic Range Images", Mantiuk et al., 2006
+This algorithm transforms image to contrast using gradients on all levels of gaussian pyramid, transforms contrast values to HVS response and scales the response.
+After this the image is reconstructed from new contrast values.
+
+For more information see [MM06]_.
 
 createTonemapMantiuk
-------------------
+---------------------------
 Creates TonemapMantiuk object
 
-.. ocv:function:: CV_EXPORTS_W Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f);
+.. ocv:function:: Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f)
 
-    :param gamma: gamma value for gamma correction
+    :param gamma: gamma value for gamma correction. See :ocv:func:`createTonemap`
     
-    :param scale: contrast scale factor
+    :param scale: contrast scale factor. HVS response is multiplied by this parameter, thus compressing dynamic range. Values from 0.6 to 0.9 produce best results.
     
-    :param saturation:  saturation enhancement value
+    :param saturation: saturation enhancement value. See :ocv:func:`createTonemapDrago`
     
 ExposureAlign
--------------
+---------------------------
 .. ocv:class:: ExposureAlign : public Algorithm
 
 The base class for algorithms that align images of the same scene with different exposures
 
 ExposureAlign::process
------------------------
+---------------------------
 Aligns images
 
 .. ocv:function:: void ExposureAlign::process(InputArrayOfArrays src, OutputArrayOfArrays dst, const std::vector<float>& times, InputArray response)
@@ -128,15 +148,19 @@ Aligns images
     :param response: matrix with camera response, one column per channel
     
 AlignMTB
---------
+---------------------------
 .. ocv:class:: AlignMTB : public ExposureAlign
 
-"Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Ward, 2003
+This algorithm converts images to median threshold bitmaps (1 for pixels brighter than median luminance and 0 otherwise) and than aligns the resulting bitmaps using bit operations.
 
-This algorithm does not use exposure values and camera response, new image regions are filled with zeros.
+It is invariant to exposure, so exposure values and camera response are not necessary.
+
+In this implementation new image regions are filled with zeros.
+
+For more information see [GW03]_.
 
 AlignMTB::process
------------------------
+---------------------------
 Short version of process, that doesn't take extra arguments.
 
 .. ocv:function:: void AlignMTB::process(InputArrayOfArrays src, OutputArrayOfArrays dst)
@@ -146,8 +170,8 @@ Short version of process, that doesn't take extra arguments.
     :param dst: vector of aligned images
 
 AlignMTB::calculateShift
------------------------
-Calculates shift between two images.
+---------------------------
+Calculates shift between two images, i. e. how to shift the second image to correspond it with the first.
 
 .. ocv:function:: void AlignMTB::calculateShift(InputArray img0, InputArray img1, Point& shift)
 
@@ -155,11 +179,11 @@ Calculates shift between two images.
     
     :param img1: second image
     
-    :param shift: how to shift the second image to correspond it with the first
+    :param shift: calculated shift
 
 AlignMTB::shiftMat
------------------------
-Gelper function, that shift Mat filling new regions with zeros.
+---------------------------
+Helper function, that shift Mat filling new regions with zeros.
     
 .. ocv:function:: void AlignMTB::shiftMat(InputArray src, OutputArray dst, const Point shift)
 
@@ -170,23 +194,23 @@ Gelper function, that shift Mat filling new regions with zeros.
     :param shift: shift value
     
 createAlignMTB
-------------------
+---------------------------
 Creates AlignMTB object
 
 .. ocv:function:: Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4)
     
-    :param max_bits: logarithm to the base 2 of maximal shift in each dimension
+    :param max_bits: logarithm to the base 2 of maximal shift in each dimension. Values of 5 and 6 are usually good enough (31 and 63 pixels shift respectively).
     
-    :param exclude_range: range for exclusion bitmap
+    :param exclude_range: range for exclusion bitmap that is constructed to suppress noise around the median value.
     
 ExposureCalibrate
--------------
+---------------------------
 .. ocv:class:: ExposureCalibrate : public Algorithm
 
 The base class for camera response calibration algorithms.
 
 ExposureCalibrate::process
------------------------
+---------------------------
 Recovers camera response.
 
 .. ocv:function:: void ExposureCalibrate::process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
@@ -198,29 +222,32 @@ Recovers camera response.
     :param times: vector of exposure time values for each image
     
 CalibrateDebevec
---------
+---------------------------
 .. ocv:class:: CalibrateDebevec : public ExposureCalibrate
 
-"Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
+Inverse camera response function is extracted for each brightness value by minimizing an objective function as linear system.
+Objective function is constructed using pixel values on the same position in all images, extra term is added to make the result smoother.
+
+For more information see [DM97]_.
 
 createCalibrateDebevec
-------------------
+---------------------------
 Creates CalibrateDebevec object
 
 .. ocv:function:: Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f)
 
     :param samples: number of pixel locations to use
     
-    :param lambda: smoothness term weight
+    :param lambda: smoothness term weight. Greater values produce smoother results, but can alter the response.
     
 ExposureMerge
--------------
+---------------------------
 .. ocv:class:: ExposureMerge : public Algorithm
 
 The base class algorithms that can merge exposure sequence to a single image.
 
 ExposureMerge::process
------------------------
+---------------------------
 Merges images.
 
 .. ocv:function:: void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times, InputArray response)
@@ -234,27 +261,31 @@ Merges images.
     :param response: one-column matrix with camera response
     
 MergeDebevec
---------
+---------------------------
 .. ocv:class:: MergeDebevec : public ExposureMerge
 
-"Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
+The resulting HDR image is calculated as weighted average of he exposures considering exposure values and camera response.
+
+For more information see [DM97]_.
 
 createMergeDebevec
-------------------
+---------------------------
 Creates MergeDebevec object
 
 .. ocv:function:: Ptr<MergeDebevec> createMergeDebevec();
 
 MergeMertens
---------
+---------------------------
 .. ocv:class:: MergeMertens : public ExposureMerge
 
-"Exposure Fusion", Mertens et al., 2007
+Pixels are weighted using contrast, saturation and well-exposedness measures, than images are combined using laplacian pyramids.
 
-The resulting image doesn't require tonemapping and can be converted to 8-bit image by multiplying by 255.
+The resulting image doesn't require tonemapping and can be converted to 8-bit image by multiplying by 255, but it's recommended to apply gamma correction and/or linear tonemapping.
+
+For more information see [MK07]_.
 
 MergeMertens::process
------------------------
+---------------------------
 Short version of process, that doesn't take extra arguments.
 
 .. ocv:function:: void MergeMertens::process(InputArrayOfArrays src, OutputArray dst)
@@ -265,7 +296,7 @@ Short version of process, that doesn't take extra arguments.
 
 
 createMergeMertens
-------------------
+---------------------------
 Creates MergeMertens object
 
 .. ocv:function:: Ptr<MergeMertens> createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f)
@@ -275,3 +306,22 @@ Creates MergeMertens object
     :param saturation_weight: saturation factor weight
     
     :param exposure_weight: well-exposedness factor weight
+    
+References
+==========
+
+.. [DM03] F. Drago, K. Myszkowski, T. Annen, N. Chiba, "Adaptive Logarithmic Mapping For Displaying High Contrast Scenes", 2003.
+
+.. [FL02] R. Fattal, D. Lischinski, M. Werman, "Gradient Domain High Dynamic Range Compression", 2002.
+
+.. [DD02] F. Durand and Julie Dorsey, "Fast Bilateral Filtering for the Display of High-Dynamic-Range Images",2002.
+
+.. [RD05] E. Reinhard, K. Devlin, "Dynamic Range Reduction Inspired by Photoreceptor Physiology", 2005.
+
+.. [MM06] R. Mantiuk, K. Myszkowski, H.-P. Seidel, "Perceptual Framework for Contrast Processing of High Dynamic Range Images", 2006.
+
+.. [GW03] G. Ward, "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", 2003.
+
+.. [DM97] P. Debevec, J. Malik, "Recovering High Dynamic Range Radiance Maps from Photographs", 1997.
+
+.. [MK07] T. Mertens, J. Kautz, F. Van Reeth, "Exposure Fusion", 2007.
