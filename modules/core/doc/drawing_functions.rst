@@ -26,6 +26,10 @@ If a drawn figure is partially or completely outside the image, the drawing func
 
 .. note:: The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
 
+.. Sample code::
+
+   * : An example on using variate drawing functions like line, rectangle, ... can be found at opencv_source_code/samples/cpp/drawing.cpp
+
 circle
 ----------
 Draws a circle.
@@ -555,6 +559,12 @@ The function draws contour outlines in the image if
         waitKey(0);
     }
 
+.. Sample code::
+
+   * : An example using the drawContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
+   * : An example using drawContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
+
+   * : PYTHON : An example using the drawContour functionality can be found at opencv_source/samples/python2/contours.py
 
 
 putText
@@ -592,4 +602,3 @@ The function ``putText`` renders the specified text string in the image.
 Symbols that cannot be rendered using the specified font are
 replaced by question marks. See
 :ocv:func:`getTextSize` for a text rendering code example.
-

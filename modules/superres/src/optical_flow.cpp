@@ -909,4 +909,78 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_OCL()
     return new DualTVL1_OCL;
 }
 
+///////////////////////////////////////////////////////////////////
+// FarneBack
+
+namespace
+{
+    class FarneBack_OCL : public oclOpticalFlow
+    {
+    public:
+        AlgorithmInfo* info() const;
+
+        FarneBack_OCL();
+
+        void collectGarbage();
+
+    protected:
+        void impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2);
+
+    private:
+        double pyrScale_;
+        int numLevels_;
+        int winSize_;
+        int numIters_;
+        int polyN_;
+        double polySigma_;
+        int flags_;
+
+        ocl::FarnebackOpticalFlow alg_;
+    };
+
+    CV_INIT_ALGORITHM(FarneBack_OCL, "DenseOpticalFlowExt.FarneBack_OCL",
+        obj.info()->addParam(obj, "pyrScale", obj.pyrScale_);
+    obj.info()->addParam(obj, "numLevels", obj.numLevels_);
+    obj.info()->addParam(obj, "winSize", obj.winSize_);
+    obj.info()->addParam(obj, "numIters", obj.numIters_);
+    obj.info()->addParam(obj, "polyN", obj.polyN_);
+    obj.info()->addParam(obj, "polySigma", obj.polySigma_);
+    obj.info()->addParam(obj, "flags", obj.flags_));
+
+    FarneBack_OCL::FarneBack_OCL() : oclOpticalFlow(CV_8UC1)
+    {
+        pyrScale_ = alg_.pyrScale;
+        numLevels_ = alg_.numLevels;
+        winSize_ = alg_.winSize;
+        numIters_ = alg_.numIters;
+        polyN_ = alg_.polyN;
+        polySigma_ = alg_.polySigma;
+        flags_ = alg_.flags;
+    }
+
+    void FarneBack_OCL::impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2)
+    {
+        alg_.pyrScale = pyrScale_;
+        alg_.numLevels = numLevels_;
+        alg_.winSize = winSize_;
+        alg_.numIters = numIters_;
+        alg_.polyN = polyN_;
+        alg_.polySigma = polySigma_;
+        alg_.flags = flags_;
+
+        alg_(input0, input1, dst1, dst2);
+    }
+
+    void FarneBack_OCL::collectGarbage()
+    {
+        alg_.releaseMemory();
+        oclOpticalFlow::collectGarbage();
+    }
+}
+
+Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_OCL()
+{
+    return new FarneBack_OCL;
+}
+
 #endif

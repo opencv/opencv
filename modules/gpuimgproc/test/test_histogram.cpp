@@ -49,13 +49,16 @@ using namespace cvtest;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
 
-struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
+PARAM_TEST_CASE(HistEven, cv::gpu::DeviceInfo, cv::Size)
 {
     cv::gpu::DeviceInfo devInfo;
 
+    cv::Size size;
+
     virtual void SetUp()
     {
-        devInfo = GetParam();
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
 
         cv::gpu::setDevice(devInfo.deviceID());
     }
@@ -63,56 +66,33 @@ struct HistEven : testing::TestWithParam<cv::gpu::DeviceInfo>
 
 GPU_TEST_P(HistEven, Accuracy)
 {
-    cv::Mat img = readImage("stereobm/aloe-L.png");
-    ASSERT_FALSE(img.empty());
-
-    cv::Mat hsv;
-    cv::cvtColor(img, hsv, cv::COLOR_BGR2HSV);
+    cv::Mat src = randomMat(size, CV_8UC1);
 
     int hbins = 30;
-    float hranges[] = {0.0f, 180.0f};
-
-    std::vector<cv::Mat> srcs;
-    cv::split(hsv, srcs);
+    float hranges[] = {50.0f, 200.0f};
 
     cv::gpu::GpuMat hist;
-    cv::gpu::histEven(loadMat(srcs[0]), hist, hbins, (int)hranges[0], (int)hranges[1]);
+    cv::gpu::histEven(loadMat(src), hist, hbins, (int) hranges[0], (int) hranges[1]);
 
-    cv::MatND histnd;
+    cv::Mat hist_gold;
+
     int histSize[] = {hbins};
     const float* ranges[] = {hranges};
     int channels[] = {0};
-    cv::calcHist(&hsv, 1, channels, cv::Mat(), histnd, 1, histSize, ranges);
+    cv::calcHist(&src, 1, channels, cv::Mat(), hist_gold, 1, histSize, ranges);
 
-    cv::Mat hist_gold = histnd;
     hist_gold = hist_gold.t();
     hist_gold.convertTo(hist_gold, CV_32S);
 
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HistEven, ALL_DEVICES);
+INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HistEven, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES));
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CalcHist
-
-namespace
-{
-    void calcHistGold(const cv::Mat& src, cv::Mat& hist)
-    {
-        hist.create(1, 256, CV_32SC1);
-        hist.setTo(cv::Scalar::all(0));
-
-        int* hist_row = hist.ptr<int>();
-        for (int y = 0; y < src.rows; ++y)
-        {
-            const uchar* src_row = src.ptr(y);
-
-            for (int x = 0; x < src.cols; ++x)
-                ++hist_row[src_row[x]];
-        }
-    }
-}
 
 PARAM_TEST_CASE(CalcHist, cv::gpu::DeviceInfo, cv::Size)
 {
@@ -137,7 +117,16 @@ GPU_TEST_P(CalcHist, Accuracy)
     cv::gpu::calcHist(loadMat(src), hist);
 
     cv::Mat hist_gold;
-    calcHistGold(src, hist_gold);
+
+    const int hbins = 256;
+    const float hranges[] = {0.0f, 256.0f};
+    const int histSize[] = {hbins};
+    const float* ranges[] = {hranges};
+    const int channels[] = {0};
+
+    cv::calcHist(&src, 1, channels, cv::Mat(), hist_gold, 1, histSize, ranges);
+    hist_gold = hist_gold.reshape(1, 1);
+    hist_gold.convertTo(hist_gold, CV_32S);
 
     EXPECT_MAT_NEAR(hist_gold, hist, 0.0);
 }

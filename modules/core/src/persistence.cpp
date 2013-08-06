@@ -58,7 +58,6 @@
 #endif
 
 #if USE_ZLIB
-#  undef HAVE_UNISTD_H //to avoid redefinition
 #  ifndef _LFS64_LARGEFILE
 #    define _LFS64_LARGEFILE 0
 #  endif

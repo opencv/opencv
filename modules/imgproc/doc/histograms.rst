@@ -98,7 +98,12 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
         waitKey();
     }
 
+.. Sample code::
 
+   * : An example for creating histograms of an image can be found at opencv_source_code/samples/cpp/demhist.cpp
+
+   * : PYTHON : An example for creating color histograms can be found at opencv_source/samples/python2/color_histogram.py
+   * : PYTHON : An example illustrating RGB and grayscale histogram plotting can be found at opencv_source/samples/python2/hist.py
 
 
 calcBackProject

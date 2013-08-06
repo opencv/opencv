@@ -1,20 +1,20 @@
-/* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
-   systems. This function is required for `alloca.c' support on those systems.
-   */
-#cmakedefine  CRAY_STACKSEG_END
+/* OpenCV compiled as static or dynamic libs */
+#cmakedefine BUILD_SHARED_LIBS
 
-/* Define to 1 if using `alloca.c'. */
-#cmakedefine C_ALLOCA
+/* Compile for 'real' NVIDIA GPU architectures */
+#define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
 
-/* Define to 1 if you have `alloca', as a function or macro. */
-#cmakedefine HAVE_ALLOCA 1
+/* Create PTX or BIN for 1.0 compute capability */
+#cmakedefine CUDA_ARCH_BIN_OR_PTX_10
 
-/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
-   */
-#cmakedefine HAVE_ALLOCA_H 1
+/* NVIDIA GPU features are used */
+#define CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES}"
 
-/* Video for Windows support */
-#cmakedefine HAVE_VFW
+/* Compile for 'virtual' NVIDIA PTX architectures */
+#define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
+
+/* AVFoundation video libraries */
+#cmakedefine HAVE_AVFOUNDATION
 
 /* V4L capturing support */
 #cmakedefine HAVE_CAMV4L
@@ -22,14 +22,32 @@
 /* V4L2 capturing support */
 #cmakedefine HAVE_CAMV4L2
 
-/* V4L2 capturing support in videoio.h */
-#cmakedefine HAVE_VIDEOIO
-
-/* V4L/V4L2 capturing support via libv4l */
-#cmakedefine HAVE_LIBV4L
-
 /* Carbon windowing environment */
 #cmakedefine HAVE_CARBON
+
+/* AMD's Basic Linear Algebra Subprograms Library*/
+#cmakedefine HAVE_CLAMDBLAS
+
+/* AMD's OpenCL Fast Fourier Transform Library*/
+#cmakedefine HAVE_CLAMDFFT
+
+/* Clp support */
+#cmakedefine HAVE_CLP
+
+/* Cocoa API */
+#cmakedefine HAVE_COCOA
+
+/* C= */
+#cmakedefine HAVE_CSTRIPES
+
+/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
+#cmakedefine HAVE_CUBLAS
+
+/* NVidia Cuda Runtime API*/
+#cmakedefine HAVE_CUDA
+
+/* NVidia Cuda Fast Fourier Transform (FFT) API*/
+#cmakedefine HAVE_CUFFT
 
 /* IEEE1394 capturing support */
 #cmakedefine HAVE_DC1394
@@ -40,194 +58,105 @@
 /* IEEE1394 capturing support - libdc1394 v2.x */
 #cmakedefine HAVE_DC1394_2
 
+/* DirectShow Video Capture library */
+#cmakedefine HAVE_DSHOW
+
+/* Eigen Matrix & Linear Algebra Library */
+#cmakedefine HAVE_EIGEN
+
+/* FFMpeg video library */
+#cmakedefine HAVE_FFMPEG
+
+/* ffmpeg's libswscale */
+#cmakedefine HAVE_FFMPEG_SWSCALE
+
 /* ffmpeg in Gentoo */
 #cmakedefine HAVE_GENTOO_FFMPEG
 
-/* FFMpeg video library */
-#cmakedefine  HAVE_FFMPEG
-
-/* FFMpeg version flag */
-#cmakedefine  NEW_FFMPEG
-
-/* ffmpeg's libswscale */
-#cmakedefine  HAVE_FFMPEG_SWSCALE
-
 /* GStreamer multimedia framework */
-#cmakedefine  HAVE_GSTREAMER
+#cmakedefine HAVE_GSTREAMER
 
 /* GTK+ 2.0 Thread support */
-#cmakedefine  HAVE_GTHREAD
-
-/* Win32 UI */
-#cmakedefine HAVE_WIN32UI
+#cmakedefine HAVE_GTHREAD
 
 /* GTK+ 2.x toolkit */
-#cmakedefine  HAVE_GTK
-
-/* OpenEXR codec */
-#cmakedefine  HAVE_ILMIMF
+#cmakedefine HAVE_GTK
 
 /* Define to 1 if you have the <inttypes.h> header file. */
-#cmakedefine  HAVE_INTTYPES_H 1
-
-/* JPEG-2000 codec */
-#cmakedefine  HAVE_JASPER
-
-/* IJG JPEG codec */
-#cmakedefine  HAVE_JPEG
-
-/* Define to 1 if you have the `dl' library (-ldl). */
-#cmakedefine  HAVE_LIBDL 1
-
-/* Define to 1 if you have the `gomp' library (-lgomp). */
-#cmakedefine  HAVE_LIBGOMP 1
-
-/* Define to 1 if you have the `m' library (-lm). */
-#cmakedefine  HAVE_LIBM 1
-
-/* libpng/png.h needs to be included */
-#cmakedefine  HAVE_LIBPNG_PNG_H
-
-/* Define to 1 if you have the `pthread' library (-lpthread). */
-#cmakedefine  HAVE_LIBPTHREAD 1
-
-/* Define to 1 if you have the `lrint' function. */
-#cmakedefine  HAVE_LRINT 1
-
-/* PNG codec */
-#cmakedefine  HAVE_PNG
-
-/* Define to 1 if you have the `png_get_valid' function. */
-#cmakedefine  HAVE_PNG_GET_VALID 1
-
-/* png.h needs to be included */
-#cmakedefine  HAVE_PNG_H
-
-/* Define to 1 if you have the `png_set_tRNS_to_alpha' function. */
-#cmakedefine  HAVE_PNG_SET_TRNS_TO_ALPHA 1
-
-/* QuickTime video libraries */
-#cmakedefine  HAVE_QUICKTIME
-
-/* AVFoundation video libraries */
-#cmakedefine  HAVE_AVFOUNDATION
-
-/* TIFF codec */
-#cmakedefine  HAVE_TIFF
-
-/* Unicap video capture library */
-#cmakedefine  HAVE_UNICAP
-
-/* Define to 1 if you have the <unistd.h> header file. */
-#cmakedefine  HAVE_UNISTD_H 1
-
-/* Xine video library */
-#cmakedefine  HAVE_XINE
-
-/* OpenNI library */
-#cmakedefine  HAVE_OPENNI
-
-/* LZ77 compression/decompression library (used for PNG) */
-#cmakedefine  HAVE_ZLIB
+#cmakedefine HAVE_INTTYPES_H 1
 
 /* Intel Integrated Performance Primitives */
-#cmakedefine  HAVE_IPP
+#cmakedefine HAVE_IPP
 
-/* OpenCV compiled as static or dynamic libs */
-#cmakedefine  BUILD_SHARED_LIBS
+/* JPEG-2000 codec */
+#cmakedefine HAVE_JASPER
 
-/* Name of package */
-#define  PACKAGE "${PACKAGE}"
+/* IJG JPEG codec */
+#cmakedefine HAVE_JPEG
 
-/* Define to the address where bug reports for this package should be sent. */
-#define  PACKAGE_BUGREPORT "${PACKAGE_BUGREPORT}"
+/* libpng/png.h needs to be included */
+#cmakedefine HAVE_LIBPNG_PNG_H
 
-/* Define to the full name of this package. */
-#define  PACKAGE_NAME "${PACKAGE_NAME}"
-
-/* Define to the full name and version of this package. */
-#define  PACKAGE_STRING "${PACKAGE_STRING}"
-
-/* Define to the one symbol short name of this package. */
-#define  PACKAGE_TARNAME "${PACKAGE_TARNAME}"
-
-/* Define to the version of this package. */
-#define  PACKAGE_VERSION "${PACKAGE_VERSION}"
-
-/* If using the C implementation of alloca, define if you know the
-   direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
-    STACK_DIRECTION > 0 => grows toward higher addresses
-    STACK_DIRECTION < 0 => grows toward lower addresses
-    STACK_DIRECTION = 0 => direction of growth unknown */
-#cmakedefine  STACK_DIRECTION
-
-/* Version number of package */
-#define  VERSION "${PACKAGE_VERSION}"
-
-/* Define to 1 if your processor stores words with the most significant byte
-   first (like Motorola and SPARC, unlike Intel and VAX). */
-#cmakedefine  WORDS_BIGENDIAN
-
-/* Intel Threading Building Blocks */
-#cmakedefine  HAVE_TBB
-
-/* C= */
-#cmakedefine  HAVE_CSTRIPES
-
-/* Eigen Matrix & Linear Algebra Library */
-#cmakedefine  HAVE_EIGEN
-
-/* NVidia Cuda Runtime API*/
-#cmakedefine HAVE_CUDA
-
-/* NVidia Cuda Fast Fourier Transform (FFT) API*/
-#cmakedefine HAVE_CUFFT
-
-/* NVidia Cuda Basic Linear Algebra Subprograms (BLAS) API*/
-#cmakedefine HAVE_CUBLAS
-
-/* NVidia Video Decoding API*/
-#cmakedefine HAVE_NVCUVID
-
-/* Compile for 'real' NVIDIA GPU architectures */
-#define CUDA_ARCH_BIN "${OPENCV_CUDA_ARCH_BIN}"
-
-/* Compile for 'virtual' NVIDIA PTX architectures */
-#define CUDA_ARCH_PTX "${OPENCV_CUDA_ARCH_PTX}"
-
-/* NVIDIA GPU features are used */
-#define CUDA_ARCH_FEATURES "${OPENCV_CUDA_ARCH_FEATURES}"
-
-/* Create PTX or BIN for 1.0 compute capability */
-#cmakedefine CUDA_ARCH_BIN_OR_PTX_10
-
-/* OpenCL Support */
-#cmakedefine HAVE_OPENCL
-
-/* AMD's OpenCL Fast Fourier Transform Library*/
-#cmakedefine HAVE_CLAMDFFT
-
-/* AMD's Basic Linear Algebra Subprograms Library*/
-#cmakedefine HAVE_CLAMDBLAS
-
-/* DirectShow Video Capture library */
-#cmakedefine HAVE_DSHOW
+/* V4L/V4L2 capturing support via libv4l */
+#cmakedefine HAVE_LIBV4L
 
 /* Microsoft Media Foundation Capture library */
 #cmakedefine HAVE_MSMF
 
-/* XIMEA camera support */
-#cmakedefine HAVE_XIMEA
+/* NVidia Video Decoding API*/
+#cmakedefine HAVE_NVCUVID
+
+/* OpenCL Support */
+#cmakedefine HAVE_OPENCL
+
+/* OpenEXR codec */
+#cmakedefine HAVE_OPENEXR
 
 /* OpenGL support*/
 #cmakedefine HAVE_OPENGL
 
-/* Clp support */
-#cmakedefine HAVE_CLP
+/* OpenNI library */
+#cmakedefine HAVE_OPENNI
+
+/* PNG codec */
+#cmakedefine HAVE_PNG
 
 /* Qt support */
 #cmakedefine HAVE_QT
 
 /* Qt OpenGL support */
 #cmakedefine HAVE_QT_OPENGL
+
+/* QuickTime video libraries */
+#cmakedefine HAVE_QUICKTIME
+
+/* Intel Threading Building Blocks */
+#cmakedefine HAVE_TBB
+
+/* TIFF codec */
+#cmakedefine HAVE_TIFF
+
+/* Unicap video capture library */
+#cmakedefine HAVE_UNICAP
+
+/* Video for Windows support */
+#cmakedefine HAVE_VFW
+
+/* V4L2 capturing support in videoio.h */
+#cmakedefine HAVE_VIDEOIO
+
+/* Win32 UI */
+#cmakedefine HAVE_WIN32UI
+
+/* Windows Runtime support */
+#cmakedefine HAVE_WINRT
+
+/* XIMEA camera support */
+#cmakedefine HAVE_XIMEA
+
+/* Xine video library */
+#cmakedefine HAVE_XINE
+
+/* Define to 1 if your processor stores words with the most significant byte
+   first (like Motorola and SPARC, unlike Intel and VAX). */
+#cmakedefine WORDS_BIGENDIAN

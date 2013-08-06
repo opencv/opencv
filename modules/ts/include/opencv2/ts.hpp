@@ -12,6 +12,10 @@
 #endif
 #endif
 
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+#endif
+
 #ifdef _MSC_VER
 #pragma warning( disable: 4127 )
 #endif

@@ -15,6 +15,9 @@ The class discriminates between foreground and background pixels by building and
 
 .. seealso:: :ocv:class:`BackgroundSubtractorMOG`
 
+.. Sample code::
+
+   * : An example on gaussian mixture based background/foreground segmantation can be found at opencv_source_code/samples/gpu/bgfg_segm.cpp
 
 
 gpu::createBackgroundSubtractorMOG

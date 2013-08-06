@@ -512,7 +512,7 @@ Performs the per-element comparison of two arrays or an array and scalar value.
 
     :param value: scalar value.
 
-    :param dst: output array that has the same size as the input arrays and type= ``CV_8UC1`` .
+    :param dst: output array that has the same size and type as the input arrays.
 
     :param cmpop: a flag, that specifies correspondence between the arrays:
 
@@ -971,6 +971,12 @@ All of the above improvements have been implemented in :ocv:func:`matchTemplate`
 
 .. seealso:: :ocv:func:`dct` , :ocv:func:`getOptimalDFTSize` , :ocv:func:`mulSpectrums`, :ocv:func:`filter2D` , :ocv:func:`matchTemplate` , :ocv:func:`flip` , :ocv:func:`cartToPolar` , :ocv:func:`magnitude` , :ocv:func:`phase`
 
+.. Sample code::
+
+   * : An example using the discrete fourier transform can be found at opencv_source_code/samples/cpp/dft.cpp
+
+   * : PYTHON : An example using the dft functionality to perform Wiener deconvolution can be found at opencv_source/samples/python2/deconvolution.py
+   * : PYTHON : An example rearranging the quadrants of a Fourier image can be found at opencv_source/samples/python2/dft.py
 
 
 divide
@@ -2161,7 +2167,9 @@ The sample below is the function that takes two matrices. The first function sto
     :ocv:func:`dft`,
     :ocv:func:`dct`
 
+.. Sample code::
 
+   * : An example using PCA for dimensionality reduction while maintaining an amount of variance can be found at opencv_source_code/samples/cpp/pca.cpp
 
 PCA::PCA
 --------

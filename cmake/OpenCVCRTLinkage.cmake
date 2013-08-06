@@ -2,6 +2,40 @@ if(NOT MSVC)
   message(FATAL_ERROR "CRT options are available only for MSVC")
 endif()
 
+#INCLUDE (CheckIncludeFiles)
+
+if (ENABLE_WINRT_MODE)
+  set(HAVE_WINRT True)
+
+  # search Windows Platform SDK
+  message(STATUS "Checking for Windows Platfrom SDK")
+  GET_FILENAME_COMPONENT(WINDOWS_SDK_PATH  "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Microsoft SDKs\\Windows\\v8.0;InstallationFolder]" ABSOLUTE CACHE)
+  if (WINDOWS_SDK_PATH STREQUAL "")
+    message(ERROR "Windows Platform SDK 8.0 was not found!")
+    set(HAVE_WINRT False)
+  endif()
+
+  #search for Visual Studio 11.0 install directory
+  message(STATUS "Checking for Visual Studio 2012")
+  GET_FILENAME_COMPONENT(VISUAL_STUDIO_PATH [HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\VisualStudio\\11.0\\Setup\\VS;ProductDir] REALPATH CACHE)
+  if (VISUAL_STUDIO_PATH STREQUAL "")
+    message(ERROR "Visual Studio 2012 was not found!")
+    set(HAVE_WINRT False)
+  endif()
+
+  if (HAVE_WINRT)
+    TRY_COMPILE(HAVE_WINRT
+      "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+      "${OpenCV_SOURCE_DIR}/cmake/checks/winrttest.cpp"
+      CMAKE_FLAGS "\"kernel.lib\" \"user32.lib\""
+      OUTPUT_VARIABLE OUTPUT)
+  endif()
+
+  if (HAVE_WINRT)
+    add_definitions(/DWINVER=0x0602 /DNTDDI_VERSION=NTDDI_WIN8 /D_WIN32_WINNT=0x0602)
+  endif()
+endif(ENABLE_WINRT_MODE)
+
 if(NOT BUILD_SHARED_LIBS AND BUILD_WITH_STATIC_CRT)
   foreach(flag_var
           CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
