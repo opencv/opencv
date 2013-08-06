@@ -1184,7 +1184,7 @@ Class for computing stereo correspondence using the block matching algorithm, in
 
 .. Sample code:
 
-   * : OCL : An example for using the stereoBM matching algorithm can be found at opencv_source_code/samples/ocl/stereo_match.cpp   
+   * : OCL : An example for using the stereoBM matching algorithm can be found at opencv_source_code/samples/ocl/stereo_match.cpp
 
 createStereoBM
 ------------------

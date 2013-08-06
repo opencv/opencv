@@ -138,7 +138,7 @@ void CvCaptureCAM_XIMEA::close()
 {
     if(frame)
         cvReleaseImage(&frame);
-    
+
     if(hmv)
     {
         xiStopAcquisition(hmv);
@@ -176,11 +176,11 @@ IplImage* CvCaptureCAM_XIMEA::retrieveFrame(int)
 {
     // update cvImage after format has changed
     resetCvImage();
-    
+
     // copy pixel data
     switch( image.frm)
     {
-    case XI_MONO8       : 
+    case XI_MONO8       :
     case XI_RAW8        : memcpy( frame->imageData, image.bp, image.width*image.height); break;
     case XI_MONO16      :
     case XI_RAW16       : memcpy( frame->imageData, image.bp, image.width*image.height*sizeof(WORD)); break;
@@ -210,9 +210,9 @@ void CvCaptureCAM_XIMEA::resetCvImage()
         {
         case XI_MONO8       :
         case XI_RAW8        : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 1); break;
-        case XI_MONO16      : 
+        case XI_MONO16      :
         case XI_RAW16       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_16U, 1); break;
-        case XI_RGB24       : 
+        case XI_RGB24       :
         case XI_RGB_PLANAR  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 3); break;
         case XI_RGB32       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 4); break;
         default :
@@ -338,9 +338,9 @@ int  CvCaptureCAM_XIMEA::getBpp()
     {
     case XI_MONO8       :
     case XI_RAW8        : return 1;
-    case XI_MONO16      : 
+    case XI_MONO16      :
     case XI_RAW16       : return 2;
-    case XI_RGB24       : 
+    case XI_RGB24       :
     case XI_RGB_PLANAR  : return 3;
     case XI_RGB32       : return 4;
     default :

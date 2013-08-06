@@ -145,6 +145,6 @@ Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
         ...
     };
 
-.. Sample code:: 
+.. Sample code::
 
    * : A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp
