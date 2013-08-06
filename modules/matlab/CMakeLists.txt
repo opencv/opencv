@@ -34,8 +34,30 @@ macro(PREPEND TOKEN OUT IN)
     endforeach()
 endmacro()
 
+# WARN_MIXED_PRECISION
+# Formats a warning message if the compiler and Matlab bitness is different
+macro(WARN_MIXED_PRECISION COMPILER_BITNESS MATLAB_BITNESS)
+    set(MSG "Your compiler is ${COMPILER_BITNESS}-bit")
+    set(MSG "${MSG} but your version of Matlab is ${MATLAB_BITNESS}-bit.")
+    set(MSG "${MSG} Mixed preicision pointers are not supported. Disabling Matlab bindings...")
+    message(WARNING ${MSG})
+endmacro()
+
 # make sure we're on a supported architecture with Matlab and python installed
 if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
+    ocv_module_disable(matlab)
+    return()
+endif()
+
+# If the user built OpenCV as X-bit, but they have a Y-bit version of Matlab,
+# attempting to link to OpenCV during binding generation will fail, since
+# mixed precision pointers are not allowed. Disable the bindings.
+if (${CMAKE_SIZEOF_VOID_P} EQUAL 4 AND ${MATLAB_ARCH} MATCHES "64")
+    warn_mixed_precision("32" "64")
+    ocv_module_disable(matlab)
+    return()
+elseif (${CMAKE_SIZEOF_VOID_P} EQUAL 8 AND NOT ${MATLAB_ARCH} MATCHES "64")
+    warn_mixed_precision("64" "32")
     ocv_module_disable(matlab)
     return()
 endif()
@@ -108,6 +130,7 @@ if (NOT MEX_WORKS)
     if (GEN_ERROR)
         message(${GEN_ERROR})
         message(STATUS "Error generating Matlab code. Disabling Matlab bindings...")
+        ocv_module_disable(matlab)
         return()
     else()
         message(STATUS "Trying to generate Matlab code - OK")
@@ -126,6 +149,7 @@ if (NOT MEX_WORKS)
     if (MEX_ERROR)
         message(${MEX_ERROR})
         message(STATUS "Error compiling mex file. Disabling Matlab bindings...")
+        ocv_module_disable(matlab)
         return()
     else()
         message(STATUS "Trying to compile mex file - OK")
