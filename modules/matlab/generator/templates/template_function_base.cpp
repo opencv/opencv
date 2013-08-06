@@ -50,7 +50,7 @@ void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% end
 
   {% if fun|noutputs %}
   // push the outputs back to matlab
-  for (size_t n = 0; n < static_cast<size_t>(nlhs); ++n) {
+  for (size_t n = 0; n < static_cast<size_t>(std::max(nlhs,1)); ++n) {
     plhs[n] = outputs[n].toMxArray().releaseOwnership();
   }
   {% endif %}

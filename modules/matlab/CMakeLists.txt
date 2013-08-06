@@ -73,8 +73,9 @@ ocv_add_module(matlab   BINDINGS
                                  opencv_nonfree
 )
 
-# set the path to the C++ header parser
-set(HDR_PARSER_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../python/src2)
+# set the path to the C++ header and doc parser
+set(HDR_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/python/src2)
+set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
