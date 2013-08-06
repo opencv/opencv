@@ -1,25 +1,57 @@
-% CV
-% This class enumerates all OpenCV constants, stripping them
-% out of classes where necessary. The constants can then be 
-% used in OpenCV functions by prefixing the class name
-% e.g.
-%   cv.dft(x, xf, cv.DFT_FORWARD);
+% ------------------------------------------------------------------------
+%                              OpenCV Toolbox
+%                  Matlab bindings for the OpenCV library
+% ------------------------------------------------------------------------
 %
-% The properties are all declared Constant, so they cannot be
-% changed, however they can be accidentally aliased if you 
-% declare a variable of the same name first. If you're 
-% particularly afraid of aliasing, you can call cv() before
-% calling constants to parse the variable 'cv' as this class
+% The OpenCV Toolbox allows you to make calls to native OpenCV methods
+% and classes directly from within Matlab. 
 %
-% Note that calls to this class and calls to methods contained
-% in the namespace cv can happily coexist
+% PATHS
+% To call OpenCV methods from anywhere in your workspace, add the
+% directory containing this file to the path: 
 %
-% Users also have the option of calling the constants as strings
-% e.g.
-%   cv.dft(x, xf, "DFT_FORWARD");
-% 
-% This tends to be faster as it is hashed in C++, but the
-% values of the constants cannot be introspected
+%     addpath(fileparts(which('cv')));
+%
+% The OpenCV Toolbox contains two important locations:
+%     cv.m - This file, containing OpenCV enums
+%     +cv/ - The directory containing the OpenCV methods and classes
+%
+% CALLING SYNTAX
+% To call an OpenCV method, class or enum, it must be prefixed with the
+% 'cv' qualifier. For example:
+%
+%     % perform a Fourier transform
+%     Xf = cv.dft(X, cv.DFT_COMPLEX_OUTPUT);
+%
+%     % create a VideoCapture object, and open a file
+%     camera = cv.VideoCapture();
+%     camera.open('/path/to/file');
+%
+% HELP
+% Each method has its own help file containing information about the
+% arguments, return values, and what operation the method performs. 
+% You can access this help information by typing:
+%   
+%     help cv.methodName
+%
+% The full list of methods can be found by inspecting the +cv/ 
+% directory. Note that the methods available to you will depend
+% on which modules you configured OpenCV to build.
+%
+% DIAGNOSTICS
+% If you are having problems with the OpenCV Toolbox and need to send a 
+% bug report to the OpenCV team, you can get a printout of diagnostic 
+% information to submit along with your report by typing:
+%
+%     cv.buildInformation();
+%
+% OTHER RESOURCES
+% OpenCV documentation online: http://docs.opencv.org
+% OpenCV issue tracker: http://code.opencv.org
+% OpenCV Q&A: http://answers.opencv.org
+%
+% Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
+%
 classdef cv
     properties (Constant = true)
     {% for key, val in constants.items() %}

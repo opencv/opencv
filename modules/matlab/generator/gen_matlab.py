@@ -88,7 +88,7 @@ class MatlabWrapperGenerator(object):
 
         # create a global constants lookup table
         const = dict(constants(todict(parse_tree.namespaces)))
-        populated = tconst.render(constants=const)
+        populated = tconst.render(constants=const, time=time)
         with open(output_dir+'/cv.m', 'wb') as f:
             f.write(populated)
 
