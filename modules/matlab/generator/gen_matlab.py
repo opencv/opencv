@@ -72,6 +72,9 @@ class MatlabWrapperGenerator(object):
                 populated = tfunction.render(fun=method, time=time, includes=namespace.name)
                 with open(output_source_dir+'/'+method.name+'.cpp', 'wb') as f:
                     f.write(populated)
+                populated = tdoc.render(fun=method, time=time)
+                with open(output_class_dir+'/'+method.name+'.m', 'wb') as f:
+                    f.write(populated)
             # classes
             for clss in namespace.classes:
                 # cpp converter

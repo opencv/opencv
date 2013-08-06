@@ -27,6 +27,36 @@
 {%- endmacro %}
 
 
+/* 
+ * composeMatlab
+ * compose a Matlab function call
+ * This macro takes as input a Method object and composes
+ * a Matlab function call by inspecting the types and argument names
+ */
+{% macro composeMatlab(fun) %}
+  {# ----------- Return type ------------- #}
+  {%- if fun|noutputs > 1 -%}[{% endif -%}
+  {%- if not fun.rtp|void -%}LVALUE{% endif -%}
+  {%- if not fun.rtp|void and fun|noutputs > 1 -%},{% endif -%}
+  {# ------------- Outputs ------------- -#}
+  {%- for arg in fun.req|outputs + fun.opt|outputs -%}
+    {{arg.name}}
+    {%- if arg.I -%}_out{%- endif -%}
+    {%- if not loop.last %}, {% endif %}
+  {% endfor %}
+  {%- if fun|noutputs > 1 -%}]{% endif -%}
+  {%- if fun|noutputs %} = {% endif -%}
+  cv.{{fun.name}}(
+  {#- ------------ Inputs -------------- -#}
+  {%- for arg in fun.req|inputs + fun.opt|inputs -%}
+    {{arg.name}}
+    {%- if arg.O -%}_in{%- endif -%}
+    {%- if not loop.last %}, {% endif -%}
+  {% endfor -%}
+  );
+{%- endmacro %}
+
+
 /*
  * composeWithExceptionHandler
  * compose a function call wrapped in exception traps
