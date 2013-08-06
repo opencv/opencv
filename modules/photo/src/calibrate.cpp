@@ -55,7 +55,8 @@ public:
         samples(samples),
         lambda(lambda),
         name("CalibrateDebevec"),
-        w(tringleWeights())
+        w(tringleWeights()),
+        test(false)
     {
     }
     
@@ -63,14 +64,19 @@ public:
     {
         std::vector<Mat> images;
         src.getMatVector(images);
-        dst.create(256, images[0].channels(), CV_32F);
-        Mat response = dst.getMat();
 
-        CV_Assert(!images.empty() && images.size() == times.size());
-        CV_Assert(images[0].depth() == CV_8U);
+        CV_Assert(images.size() == times.size());
         checkImageDimensions(images);
+        CV_Assert(images[0].depth() == CV_8U);
 
-        for(int channel = 0; channel < images[0].channels(); channel++) {
+        int channels = images[0].channels();
+        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        dst.create(256, 1, CV_32FCC);
+        Mat result = dst.getMat();
+        
+        std::vector<Mat> result_split(channels);
+        for(int channel = 0; channel < channels; channel++) {
             Mat A = Mat::zeros(samples * images.size() + 257, 256 + samples, CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
@@ -78,6 +84,9 @@ public:
             for(int i = 0; i < samples; i++) {
 
                 int pos = 3 * (rand() % images[0].total()) + channel;
+                if(test) {
+                    pos = 3 * i + channel;
+                }
                 for(size_t j = 0; j < images.size(); j++) {
 
                     int val = (images[j].ptr() + pos)[0];
@@ -98,10 +107,14 @@ public:
             }
             Mat solution;
             solve(A, B, solution, DECOMP_SVD);
-            solution.rowRange(0, 256).copyTo(response.col(channel));
+            solution.rowRange(0, 256).copyTo(result_split[channel]);
         }
-        exp(response, response);
+        merge(result_split, result);
+        exp(result, result);
     }
+
+    bool getTest() const { return test; }
+    void setTest(bool val) { test = val; }
 
     int getSamples() const { return samples; }
     void setSamples(int val) { samples = val; }
@@ -128,6 +141,7 @@ protected:
     String name;
     int samples;
     float lambda;
+    bool test;
     Mat w;
 };
 
