@@ -16,6 +16,7 @@ Tonemap::process
 Tonemaps image
 
 .. ocv:function:: void Tonemap::process(InputArray src, OutputArray dst)
+
     :param src: source image - 32-bit 3-channel Mat
     :param dst: destination image - 32-bit 3-channel Mat with values in [0, 1] range
 
@@ -23,7 +24,7 @@ createTonemap
 ------------------
 Creates simple linear mapper with gamma correction
 
-.. ocv:function:: Ptr<Tonemap> createTonemap(float gamma = 1.0f);
+.. ocv:function:: Ptr<Tonemap> createTonemap(float gamma = 1.0f)
 
     :param gamma: gamma value for gamma correction
     
@@ -37,7 +38,7 @@ createTonemapDrago
 ------------------
 Creates TonemapDrago object
 
-.. ocv:function:: Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float bias = 0.85f);
+.. ocv:function:: Ptr<TonemapDrago> createTonemapDrago(float gamma = 1.0f, float bias = 0.85f)
 
     :param gamma: gamma value for gamma correction
     
@@ -57,7 +58,7 @@ createTonemapDurand
 ------------------
 Creates TonemapDurand object
 
-.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
+.. ocv:function:: Ptr<TonemapDurand> createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f)
 
     :param gamma: gamma value for gamma correction
     
@@ -99,7 +100,7 @@ createTonemapMantiuk
 ------------------
 Creates TonemapMantiuk object
 
-.. ocv:function:: CV_EXPORTS_W Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f);
+.. ocv:function:: Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f)
 
     :param gamma: gamma value for gamma correction
     
@@ -243,7 +244,7 @@ createMergeDebevec
 ------------------
 Creates MergeDebevec object
 
-.. ocv:function:: Ptr<MergeDebevec> createMergeDebevec();
+.. ocv:function:: Ptr<MergeDebevec> createMergeDebevec()
 
 MergeMertens
 --------
