@@ -266,7 +266,7 @@ setOpenGlContext
 ----------------
 Sets the specified window as current OpenGL context.
 
-.. ocv:function:: void setOpenGlContext(const string& winname)
+.. ocv:function:: void setOpenGlContext(const String& winname)
 
     :param winname: Window name
 
@@ -274,6 +274,6 @@ updateWindow
 ------------
 Force window to redraw its context and call draw callback ( :ocv:func:`setOpenGlDrawCallback` ).
 
-.. ocv:function:: void updateWindow(const string& winname)
+.. ocv:function:: void updateWindow(const String& winname)
 
     :param winname: Window name

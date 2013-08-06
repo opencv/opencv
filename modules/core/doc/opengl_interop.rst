@@ -158,13 +158,9 @@ ogl::Buffer::copyTo
 -------------------
 Copies from OpenGL buffer to host/device memory or another OpenGL buffer object.
 
-.. ocv:function:: void ogl::Buffer::copyTo(OutputArray arr, Target target = ARRAY_BUFFER, bool autoRelease = false) const
+.. ocv:function:: void ogl::Buffer::copyTo(OutputArray arr) const
 
     :param arr: Destination array (host or device memory, can be :ocv:class:`Mat` , :ocv:class:`gpu::GpuMat` , ``std::vector`` or ``ogl::Buffer`` ).
-
-    :param target: Buffer usage for destination buffer (if ``arr`` is OpenGL buffer).
-
-    :param autoRelease: Auto release mode for destination buffer (if ``arr`` is OpenGL buffer).
 
 
 
