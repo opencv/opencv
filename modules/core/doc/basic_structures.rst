@@ -884,6 +884,9 @@ Finally, there are STL-style iterators that are smart enough to skip gaps betwee
 
 The matrix iterators are random-access iterators, so they can be passed to any STL algorithm, including ``std::sort()`` .
 
+.. Sample code::
+
+   * : An example demonstrating the serial out capabilities of cv::Mat can be found at opencv_source_code/samples/cpp/cout_mat.cpp
 
 .. _MatrixExpressions:
 

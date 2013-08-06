@@ -478,6 +478,21 @@ void cv::gpu::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int u
         _levels.getGpuMatRef().upload(host_levels);
 }
 
+namespace hist
+{
+    void histEven8u(PtrStepSzb src, int* hist, int binCount, int lowerLevel, int upperLevel, cudaStream_t stream);
+}
+
+namespace
+{
+    void histEven8u(const GpuMat& src, GpuMat& hist, int histSize, int lowerLevel, int upperLevel, cudaStream_t stream)
+    {
+        hist.create(1, histSize, CV_32S);
+        cudaSafeCall( cudaMemsetAsync(hist.data, 0, histSize * sizeof(int), stream) );
+        hist::histEven8u(src, hist.ptr<int>(), histSize, lowerLevel, upperLevel, stream);
+    }
+}
+
 void cv::gpu::histEven(InputArray _src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream)
 {
     typedef void (*hist_t)(const GpuMat& src, OutputArray hist, InputOutputArray buf, int levels, int lowerLevel, int upperLevel, cudaStream_t stream);
@@ -490,6 +505,12 @@ void cv::gpu::histEven(InputArray _src, OutputArray hist, InputOutputArray buf, 
     };
 
     GpuMat src = _src.getGpuMat();
+
+    if (src.depth() == CV_8U && deviceSupports(FEATURE_SET_COMPUTE_30))
+    {
+        histEven8u(src, hist.getGpuMatRef(), histSize, lowerLevel, upperLevel, StreamAccessor::getStream(stream));
+        return;
+    }
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_16UC1 || src.type() == CV_16SC1 );
 

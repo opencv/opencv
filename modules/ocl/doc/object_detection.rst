@@ -17,6 +17,10 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
                                               Size minSize = Size(), Size maxSize = Size());
     };
 
+.. Sample code::
+
+   * : OCL : A face detection example using cascade classifiers can be found at opencv_source_code/samples/ocl/facedetect.cpp
+
 ocl::OclCascadeClassifier::oclHaarDetectObjects
 ------------------------------------------------------
 Detects objects of different sizes in the input image.

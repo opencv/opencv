@@ -52,7 +52,12 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
 
-CV_PERF_TEST_CUDA_MAIN(gpu_perf4au)
+static const char * impls[] = {
+    "cuda",
+    "plain"
+};
+
+CV_PERF_TEST_MAIN_WITH_IMPLS(gpu_perf4au, impls, perf::printCudaInfo())
 
 //////////////////////////////////////////////////////////
 // HoughLinesP

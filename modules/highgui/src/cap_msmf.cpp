@@ -2124,7 +2124,7 @@ long videoDevices::initDevices(IMFAttributes *pAttributes)
     return hr;
 }
 
-size_t videoDevices::getCount()
+unsigned int videoDevices::getCount()
 {
     return vds_Devices.size();
 }

@@ -25,7 +25,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeUpLinear,
     cvtest::fillGradient(src);
     declare.in(src).out(dst);
 
-    TEST_CYCLE() resize(src, dst, to);
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
 
 #ifdef ANDROID
     SANITY_CHECK(dst, 5);
@@ -52,7 +52,7 @@ PERF_TEST_P(MatInfo_Size_Size, resizeDownLinear,
     cvtest::fillGradient(src);
     declare.in(src).out(dst);
 
-    TEST_CYCLE() resize(src, dst, to);
+    TEST_CYCLE_MULTIRUN(10) resize(src, dst, to);
 
 #ifdef ANDROID
     SANITY_CHECK(dst, 5);

@@ -223,6 +223,15 @@ The class provides C++ API for capturing video from cameras or for reading video
 
 .. note:: In C API the black-box structure ``CvCapture`` is used instead of ``VideoCapture``.
 
+.. Sample code::
+
+   * : A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/cpp/starter_video.cpp
+   * : Another basic video processing sample can be found at opencv_source_code/samples/cpp/video_dmtx.cpp
+
+   * : PYTHON : A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/python2/video.py
+   * : PYTHON : basic video processing sample can be found at opencv_source_code/samples/python2/video_dmtx.py
+   * : PYTHON : A multi threaded video processing sample can be found at opencv_source_code/samples/python2/video_threaded.py
+
 
 VideoCapture::VideoCapture
 ------------------------------
