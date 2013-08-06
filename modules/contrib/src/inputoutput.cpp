@@ -56,9 +56,9 @@ namespace cv
                         fname = FindFileData.cFileName;
                     #endif
                         if (addPath)
-                            list.push_back(path + "/" + std::string(fname));
+                            list.push_back(path + "/" + String(fname));
                         else
-                            list.push_back(std::string(fname));
+                            list.push_back(String(fname));
                     }
                 }
             #ifdef HAVE_WINRT
@@ -145,9 +145,9 @@ namespace cv
                     #endif
 
                         if (addPath)
-                            list.push_back(path + "/" + std::string(fname));
+                            list.push_back(path + "/" + String(fname));
                         else
-                            list.push_back(std::string(fname));
+                            list.push_back(String(fname));
                     }
                 }
             #ifdef HAVE_WINRT
