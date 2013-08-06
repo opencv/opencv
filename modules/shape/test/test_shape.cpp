@@ -372,8 +372,6 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     // start loop //
     for (int i=0; i<3; i++)
     {
-        tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
-        scdmatchers[i].setAdditionalCostTerm(tanMat);
         for (int j=0; j<NC; j++)
         {
             // compute SCD //
@@ -389,6 +387,8 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
             beta=BETA*pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j);
 
             // match //
+            tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
+            scdmatchers[i].setAdditionalCostTerm(tanMat);
             scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], inliers1[i], inliers2[i]);
 
             // apply TPS transform //

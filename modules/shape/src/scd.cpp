@@ -155,7 +155,7 @@ void SCD::buildAngleMatrix(InputArray contour,
                 angleMatrix.at<float>(i,j) -= refAngle;
             }
             angleMatrix.at<float>(i,j) = fmod(fmod(angleMatrix.at<float>(i,j)+FLT_EPSILON,2*CV_PI)+2*CV_PI,2*CV_PI);
-            angleMatrix.at<float>(i,j) = floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
+            //angleMatrix.at<float>(i,j) = floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
         }
     }
 }
