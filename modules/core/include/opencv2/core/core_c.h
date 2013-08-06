@@ -1496,6 +1496,33 @@ CVAPI(int) cvKMeans2( const CvArr* samples, int cluster_count, CvArr* labels,
 /* Loads optimized functions from IPP, MKL etc. or switches back to pure C code */
 CVAPI(int)  cvUseOptimized( int on_off );
 
+typedef void* (CV_CDECL *CvAllocFunc)(size_t size, void* userdata);
+typedef int (CV_CDECL *CvFreeFunc)(void* pptr, void* userdata);
+
+/*
+  Use a memory pool to allocate and deallocate objects.
+  If an object is larger than blockSize bytes, it will be allocated/deallocated by system malloc/free.
+  Otherwise, the memory pool will handle the allocation/deallocation request.
+  Currently calling this function with different blockSizes is not supported. i.e.
+  Once this function is called, it can only be called again with the same blockSize.
+  blockSize must be larger than 128 bytes.
+*/
+CVAPI(void) cvTurnOnMemoryPool(size_t blockSize CV_DEFAULT(16256));
+
+/* Use system malloc/free to allocate and deallocate objects. */
+CVAPI(void) cvTurnOffMemoryPool(void);
+
+/*
+  Set user-defined memory management functions (substitutors for malloc and free) that
+  will be called by cvAlloc, cvFree and higher-level functions (e.g. cvCreateImage).
+*/
+CVAPI(void) cvSetMemoryManager(CvAllocFunc alloc_func CV_DEFAULT(NULL),
+                               CvFreeFunc free_func CV_DEFAULT(NULL),
+                               void* userdata CV_DEFAULT(NULL));
+
+/* Use system malloc/free to allocate and deallocate objects. */
+CVAPI(void) cvRemoveMemoryManager(void);
+
 typedef IplImage* (CV_STDCALL* Cv_iplCreateImageHeader)
                             (int,int,int,char*,char*,int,int,int,int,int,
                             IplROI*,IplImage*,void*,IplTileInfo*);

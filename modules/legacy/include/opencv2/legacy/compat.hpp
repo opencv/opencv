@@ -184,9 +184,6 @@ CV_EXPORTS double cvPseudoInverse( const CvArr* src, CvArr* dst );
 #define cvMinMaxLocMask(img, mask, min_val, max_val, min_loc, max_loc) \
         cvMinMaxLoc(img, min_val, max_val, min_loc, max_loc, mask)
 
-#define cvRemoveMemoryManager  CV_NOOP
-#define cvSetMemoryManager     CV_NOOP
-
 #define cvmSetZero( mat )               cvSetZero( mat )
 #define cvmSetIdentity( mat )           cvSetIdentity( mat )
 #define cvmAdd( src1, src2, dst )       cvAdd( src1, src2, dst, 0 )

@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 
-#define CV_USE_SYSTEM_MALLOC 1
+//#define CV_USE_SYSTEM_MALLOC 1
 
 namespace cv
 {
@@ -53,47 +53,25 @@ static void* OutOfMemoryError(size_t size)
     return 0;
 }
 
-#if CV_USE_SYSTEM_MALLOC
-
 #if defined WIN32 || defined _WIN32
-void deleteThreadAllocData() {}
-#endif
+static void (*disposeThreadData)() = NULL;
 
-void* fastMalloc( size_t size )
+void deleteThreadAllocData()
 {
-    uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
-    if(!udata)
-        return OutOfMemoryError(size);
-    uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
-    adata[-1] = udata;
-    return adata;
+    if (disposeThreadData != NULL)
+        disposeThreadData();
 }
 
-void fastFree(void* ptr)
+inline void registerThreadDataDisposer(void (*_disposeThreadData)())
 {
-    if(ptr)
-    {
-        uchar* udata = ((uchar**)ptr)[-1];
-        CV_DbgAssert(udata < (uchar*)ptr &&
-               ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
-        free(udata);
-    }
+    disposeThreadData = _disposeThreadData;
 }
-
-#else //CV_USE_SYSTEM_MALLOC
-
-#if 0
-#define SANITY_CHECK(block) \
-    CV_Assert(((size_t)(block) & (MEM_BLOCK_SIZE-1)) == 0 && \
-        (unsigned)(block)->binIdx <= (unsigned)MAX_BIN && \
-        (block)->signature == MEM_BLOCK_SIGNATURE)
-#else
-#define SANITY_CHECK(block)
 #endif
-
-#define STAT(stmt)
 
 #ifdef WIN32
+
+#include <windows.h>
+
 struct CriticalSection
 {
     CriticalSection() { InitializeCriticalSection(&cs); }
@@ -105,17 +83,18 @@ struct CriticalSection
     CRITICAL_SECTION cs;
 };
 
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
     void* ptr = malloc(size);
     return ptr ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t)
+static void SystemFree(void* ptr, size_t)
 {
     free(ptr);
 }
-#else //WIN32
+
+#else
 
 #include <sys/mman.h>
 
@@ -130,67 +109,59 @@ struct CriticalSection
     pthread_mutex_t mutex;
 };
 
-void* SystemAlloc(size_t size)
+static void* SystemAlloc(size_t size)
 {
-    #ifndef MAP_ANONYMOUS
-    #define MAP_ANONYMOUS MAP_ANON
-    #endif
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
     void* ptr = 0;
     ptr = mmap(ptr, size, (PROT_READ | PROT_WRITE), MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
     return ptr != MAP_FAILED ? ptr : OutOfMemoryError(size);
 }
 
-void SystemFree(void* ptr, size_t size)
+static void SystemFree(void* ptr, size_t size)
 {
     munmap(ptr, size);
 }
-#endif //WIN32
 
-struct AutoLock
+#endif
+
+struct FastLock
 {
-    AutoLock(CriticalSection& _cs) : cs(&_cs) { cs->lock(); }
-    ~AutoLock() { cs->unlock(); }
+    FastLock(CriticalSection& _cs) : cs(&_cs) { cs->lock(); }
+    ~FastLock() { cs->unlock(); }
     CriticalSection* cs;
 };
 
-const size_t MEM_BLOCK_SIGNATURE = 0x01234567;
-const int MEM_BLOCK_SHIFT = 14;
-const size_t MEM_BLOCK_SIZE = 1 << MEM_BLOCK_SHIFT;
-const size_t HDR_SIZE = 128;
-const size_t MAX_BLOCK_SIZE = MEM_BLOCK_SIZE - HDR_SIZE;
-const int MAX_BIN = 28;
+///////////////////////////////// System Alloc/Free /////////////////////////////////
 
-static const int binSizeTab[MAX_BIN+1] =
-{ 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 128, 160, 192, 256, 320, 384, 480, 544, 672, 768,
-896, 1056, 1328, 1600, 2688, 4048, 5408, 8128, 16256 };
-
-struct MallocTables
+struct NaiveAllocator
 {
-    void initBinTab()
+    static void* allocate(size_t size, void* = NULL)
     {
-        int i, j = 0, n;
-        for( i = 0; i <= MAX_BIN; i++ )
+        uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
+        if(!udata)
+            return OutOfMemoryError(size);
+        uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
+        adata[-1] = udata;
+        return adata;
+    }
+
+    static int deallocate(void* ptr, void* = NULL)
+    {
+        if (ptr)
         {
-            n = binSizeTab[i]>>3;
-            for( ; j <= n; j++ )
-                binIdx[j] = (uchar)i;
+            uchar* udata = ((uchar**)ptr)[-1];
+            CV_DbgAssert(udata < (uchar*)ptr &&
+                ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*) + CV_MALLOC_ALIGN));
+            free(udata);
         }
-    }
-    int bin(size_t size)
-    {
-        assert( size <= MAX_BLOCK_SIZE );
-        return binIdx[(size + 7)>>3];
-    }
 
-    MallocTables()
-    {
-        initBinTab();
+        return 0;
     }
-
-    uchar binIdx[MAX_BLOCK_SIZE/8+1];
 };
 
-MallocTables mallocTables;
+//////////////////////////////////// Memory Pool ////////////////////////////////////
 
 struct Node
 {
@@ -208,35 +179,37 @@ struct Block
         next = _next;
         privateFreeList = publicFreeList = 0;
         bumpPtr = endPtr = 0;
-        objSize = 0;
-        threadData = 0;
         data = (uchar*)this + HDR_SIZE;
+        threadData = 0;
+        objSize = binIdx = allocated = 0;
     }
 
-    ~Block() {}
-
-    void init(Block* _prev, Block* _next, int _objSize, ThreadData* _threadData)
+    void init(Block* _prev, Block* _next, size_t _objSize, ThreadData* _threadData)
     {
         prev = _prev;
-        if(prev)
+        if (prev)
             prev->next = this;
         next = _next;
-        if(next)
+        if (next)
             next->prev = this;
-        objSize = _objSize;
-        binIdx = mallocTables.bin(objSize);
-        threadData = _threadData;
         privateFreeList = publicFreeList = 0;
         bumpPtr = data;
-        int nobjects = MAX_BLOCK_SIZE/objSize;
-        endPtr = bumpPtr + nobjects*objSize;
-        almostEmptyThreshold = (nobjects + 1)/2;
+        int nObjects = maxBlockSize / _objSize;
+        endPtr = bumpPtr + nObjects * _objSize;
+        threadData = _threadData;
+        objSize = _objSize;
+        binIdx = getBinIdx(objSize);
         allocated = 0;
+        almostEmptyThreshold = (nObjects + 1) / 2;
     }
 
-    bool isFilled() const { return allocated > almostEmptyThreshold; }
+    bool isFilled() const
+    {
+        return allocated > almostEmptyThreshold;
+    }
 
-    size_t signature;
+    // Do not change the order of the following members!
+    // Otherwise sizeof(Block) may change.
     Block* prev;
     Block* next;
     Node* privateFreeList;
@@ -245,137 +218,269 @@ struct Block
     uchar* endPtr;
     uchar* data;
     ThreadData* threadData;
-    int objSize;
+    size_t objSize;
+    unsigned int signature;
     int binIdx;
     int allocated;
     int almostEmptyThreshold;
     CriticalSection cs;
+
+    ////////////////////////// Static Members and Methods //////////////////////////
+
+    static void initBlockSize(size_t blockSize)
+    {
+        // make sure blockSize can be represented as 2^n and larger than HDR_SIZE * 2
+        assert(!(blockSize & (blockSize - 1)) && blockSize > HDR_SIZE * 2);
+
+        memBlockSize = blockSize;
+        maxBlockSize = memBlockSize - HDR_SIZE;
+        const int shift = 5;
+
+        maxBin = 0;
+        while (blockSize)
+        {
+            maxBin++;
+            blockSize >>= 1;
+        }
+        maxBin -= shift;
+
+        delete[] binSizeTable;
+        binSizeTable = new int[maxBin];
+        for (int i = maxBin - 2; i >= 0; i--)
+        {
+            binSizeTable[i] = 1 << (i + shift);
+        }
+        binSizeTable[maxBin - 1] = maxBlockSize;
+
+        delete[] binIdxTable;
+        binIdxTable = new int[(maxBlockSize >> shift) + 1];
+        int j = 0;
+        for (int i = 0; i < maxBin; i++)
+        {
+            int n = binSizeTable[i] >> shift;
+            for (; j <= n; j++)
+                binIdxTable[j] = i;
+        }
+    }
+
+    static int getBinIdx(size_t size)
+    {
+        assert(size <= maxBlockSize);
+        return binIdxTable[(size + 31) >> 5];
+    }
+
+    static const unsigned int MEM_BLOCK_SIGNATURE = 0x01234567;
+    static const size_t HDR_SIZE;
+    static size_t memBlockSize;
+    static size_t maxBlockSize;
+    static int maxBin;
+    static int* binSizeTable;
+    static int* binIdxTable;
 };
+const size_t Block::HDR_SIZE = sizeof(Block);
+size_t Block::memBlockSize = 0;
+size_t Block::maxBlockSize = 0;
+int Block::maxBin = 0;
+int* Block::binSizeTable = 0;
+int* Block::binIdxTable = 0;
 
 struct BigBlock
 {
-    BigBlock(int bigBlockSize, BigBlock* _next)
+    BigBlock(BigBlock* _next)
     {
-        first = alignPtr((Block*)(this+1), MEM_BLOCK_SIZE);
+        first = alignPtr((Block*)(this + 1), Block::memBlockSize);
         next = _next;
-        nblocks = (int)(((char*)this + bigBlockSize - (char*)first)/MEM_BLOCK_SIZE);
+        nBlocks = (int)(((char*)this + bigBlockSize - (char*)first) / Block::memBlockSize);
         Block* p = 0;
-        for( int i = nblocks-1; i >= 0; i-- )
-            p = ::new((uchar*)first + i*MEM_BLOCK_SIZE) Block(p);
+        for (int i = nBlocks - 1; i >= 0; i--)
+            p = ::new((uchar*)first + i * Block::memBlockSize) Block(p);
     }
 
     ~BigBlock()
     {
-        for( int i = nblocks-1; i >= 0; i-- )
-            ((Block*)((uchar*)first+i*MEM_BLOCK_SIZE))->~Block();
+        for (int i = nBlocks - 1; i >= 0; i--)
+            ((Block*)((uchar*)first + i * Block::memBlockSize))->~Block();
     }
 
     BigBlock* next;
     Block* first;
-    int nblocks;
+    int nBlocks;
+
+    ////////////////////////// Static Members and Methods //////////////////////////
+
+    static size_t bigBlockSize;
 };
+size_t BigBlock::bigBlockSize = 0;
+
+#if 0
+#define SANITY_CHECK(block) \
+    CV_Assert(((size_t)(block) & (Block::memBlockSize - 1)) == 0 && \
+    (unsigned)(block)->binIdx < (unsigned)Block::maxBin && \
+    (block)->signature == Block::MEM_BLOCK_SIGNATURE)
+#else
+#define SANITY_CHECK(block)
+#endif
+
+#define STAT(stmt)
 
 struct BlockPool
 {
-    BlockPool(int _bigBlockSize=1<<20) : pool(0), bigBlockSize(_bigBlockSize)
+    BlockPool() : pool(0)
     {
     }
 
     ~BlockPool()
     {
-        AutoLock lock(cs);
-        while( pool )
+        clear();
+    }
+
+    void clear()
+    {
+        FastLock lock(cs);
+
+        while (pool)
         {
             BigBlock* nextBlock = pool->next;
             pool->~BigBlock();
-            SystemFree(pool, bigBlockSize);
+            SystemFree(pool, BigBlock::bigBlockSize);
             pool = nextBlock;
         }
     }
 
     Block* alloc()
     {
-        AutoLock lock(cs);
-        Block* block;
-        if( !freeBlocks )
+        FastLock lock(cs);
+
+        if (!freeBlocks)
         {
-            BigBlock* bblock = ::new(SystemAlloc(bigBlockSize)) BigBlock(bigBlockSize, pool);
-            assert( bblock != 0 );
+            BigBlock* bblock = ::new(SystemAlloc(BigBlock::bigBlockSize)) BigBlock(pool);
+            assert(bblock != 0);
             freeBlocks = bblock->first;
             pool = bblock;
         }
-        block = freeBlocks;
+
+        Block* block = freeBlocks;
         freeBlocks = freeBlocks->next;
-        if( freeBlocks )
+        if (freeBlocks)
             freeBlocks->prev = 0;
-        STAT(stat.bruttoBytes += MEM_BLOCK_SIZE);
+        STAT(stat.bruttoBytes += Block::memBlockSize);
         return block;
     }
 
     void free(Block* block)
     {
-        AutoLock lock(cs);
+        FastLock lock(cs);
+
         block->prev = 0;
         block->next = freeBlocks;
         freeBlocks = block;
-        STAT(stat.bruttoBytes -= MEM_BLOCK_SIZE);
+        STAT(stat.bruttoBytes -= Block::memBlockSize);
     }
 
     CriticalSection cs;
     Block* freeBlocks;
     BigBlock* pool;
-    int bigBlockSize;
-    int blocksPerBigBlock;
 };
 
-BlockPool mallocPool;
-
-enum { START=0, FREE=1, GC=2 };
+enum { START = 0, FREE = 1, GC = 2 };
 
 struct ThreadData
 {
-    ThreadData() { for(int i = 0; i <= MAX_BIN; i++) bins[i][START] = bins[i][FREE] = bins[i][GC] = 0; }
+    ThreadData(BlockPool* _blockPool)
+    {
+        bins = new Block**[Block::maxBin];
+        for (int i = Block::maxBin - 1; i >= 0; i--)
+            bins[i] = new Block*[3];
+
+        for (int i = 0; i < Block::maxBin; i++)
+            bins[i][START] = bins[i][FREE] = bins[i][GC] = 0;
+
+        blockPool = _blockPool;
+    }
+
+    ThreadData(const ThreadData& other)
+    {
+        bins = new Block**[Block::maxBin];
+        for (int i = Block::maxBin - 1; i >= 0; i--)
+            bins[i] = new Block*[3];
+
+        for (int i = 0; i < Block::maxBin; i++)
+        {
+            bins[i][START] = other.bins[i][START];
+            bins[i][FREE] = other.bins[i][FREE];
+            bins[i][GC] = other.bins[i][GC];
+        }
+
+        blockPool = other.blockPool;
+    }
+
+    ThreadData& operator=(const ThreadData& other)
+    {
+        if (this == &other)
+            return *this;
+
+        for (int i = 0; i < Block::maxBin; i++)
+        {
+            bins[i][START] = other.bins[i][START];
+            bins[i][FREE] = other.bins[i][FREE];
+            bins[i][GC] = other.bins[i][GC];
+        }
+
+        blockPool = other.blockPool;
+
+        return *this;
+    }
+
     ~ThreadData()
     {
         // mark all the thread blocks as abandoned or even release them
-        for( int i = 0; i <= MAX_BIN; i++ )
+        for (int i = 0; i < Block::maxBin; i++)
         {
             Block *bin = bins[i][START], *block = bin;
             bins[i][START] = bins[i][FREE] = bins[i][GC] = 0;
-            if( block )
+
+            if (block)
             {
                 do
                 {
                     Block* next = block->next;
                     int allocated = block->allocated;
+
                     {
-                    AutoLock lock(block->cs);
-                    block->next = block->prev = 0;
-                    block->threadData = 0;
-                    Node *node = block->publicFreeList;
-                    for( ; node != 0; node = node->next )
-                        allocated--;
+                        FastLock lock(block->cs);
+
+                        block->next = block->prev = 0;
+                        block->threadData = 0;
+                        Node *node = block->publicFreeList;
+                        for (; node != 0; node = node->next)
+                            allocated--;
                     }
-                    if( allocated == 0 )
-                        mallocPool.free(block);
+
+                    if (allocated == 0)
+                        blockPool->free(block);
                     block = next;
                 }
-                while( block != bin );
+                while (block != bin);
             }
         }
+
+        for (int i = 0; i < Block::maxBin; i++)
+            delete[] bins[i];
+        delete[] bins;
     }
 
-    void moveBlockToFreeList( Block* block )
+    void moveBlockToFreeList(Block* block)
     {
-        int i = block->binIdx;
-        Block*& freePtr = bins[i][FREE];
-        CV_DbgAssert( block->next->prev == block && block->prev->next == block );
-        if( block != freePtr )
+        int idx = block->binIdx;
+        Block*& freePtr = bins[idx][FREE];
+        CV_DbgAssert(block->next->prev == block && block->prev->next == block);
+
+        if (block != freePtr)
         {
-            Block*& gcPtr = bins[i][GC];
-            if( gcPtr == block )
+            Block*& gcPtr = bins[idx][GC];
+            if (gcPtr == block)
                 gcPtr = block->next;
-            if( block->next != block )
+            if (block->next != block)
             {
                 block->prev->next = block->next;
                 block->next->prev = block->prev;
@@ -386,70 +491,88 @@ struct ThreadData
         }
     }
 
-    Block* bins[MAX_BIN+1][3];
+    Block*** bins;
+    BlockPool* blockPool;
+
+    ////////////////////////// Static Members and Methods //////////////////////////
 
 #ifdef WIN32
-#ifdef WINCE
-#   define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
-#endif //WINCE
+
+#ifndef TLS_OUT_OF_INDEXES
+#define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
+#endif
 
     static DWORD tlsKey;
-    static ThreadData* get()
+
+    static void deleteData()
+    {
+        if (tlsKey != TLS_OUT_OF_INDEXES)
+            delete (ThreadData*)TlsGetValue(tlsKey);
+    }
+
+    friend struct StaticConstructor;
+    struct StaticConstructor
+    {
+        StaticConstructor()
+        {
+            registerThreadDataDisposer(deleteData);
+        }
+    };
+    static StaticConstructor staticConstructor;
+
+    static ThreadData* get(BlockPool* _blockPool)
     {
         ThreadData* data;
-        if( tlsKey == TLS_OUT_OF_INDEXES )
+        if (tlsKey == TLS_OUT_OF_INDEXES)
             tlsKey = TlsAlloc();
         data = (ThreadData*)TlsGetValue(tlsKey);
-        if( !data )
+        if (!data)
         {
-            data = new ThreadData;
+            data = new ThreadData(_blockPool);
             TlsSetValue(tlsKey, data);
         }
         return data;
     }
+
 #else //WIN32
+
+    static pthread_key_t tlsKey;
+
     static void deleteData(void* data)
     {
         delete (ThreadData*)data;
     }
 
-    static pthread_key_t tlsKey;
-    static ThreadData* get()
+    static ThreadData* get(BlockPool* _blockPool)
     {
         ThreadData* data;
-        if( !tlsKey )
+        if (!tlsKey)
             pthread_key_create(&tlsKey, deleteData);
         data = (ThreadData*)pthread_getspecific(tlsKey);
-        if( !data )
+        if (!data)
         {
-            data = new ThreadData;
+            data = new ThreadData(_blockPool);
             pthread_setspecific(tlsKey, data);
         }
         return data;
     }
-#endif //WIN32
-};
 
+#endif
+};
 #ifdef WIN32
 DWORD ThreadData::tlsKey = TLS_OUT_OF_INDEXES;
-
-void deleteThreadAllocData()
-{
-    if( ThreadData::tlsKey != TLS_OUT_OF_INDEXES )
-        delete (ThreadData*)TlsGetValue( ThreadData::tlsKey );
-}
-
-#else //WIN32
+ThreadData::StaticConstructor ThreadData::staticConstructor;
+#else
 pthread_key_t ThreadData::tlsKey = 0;
-#endif //WIN32
+#endif
 
 #if 0
 static void checkList(ThreadData* tls, int idx)
 {
     Block* block = tls->bins[idx][START];
-    if( !block )
+    if (!block)
     {
-        CV_DbgAssert( tls->bins[idx][FREE] == 0 && tls->bins[idx][GC] == 0 );
+        CV_DbgAssert(tls->bins[idx][FREE] == 0 && tls->bins[idx][GC] == 0);
     }
     else
     {
@@ -457,241 +580,403 @@ static void checkList(ThreadData* tls, int idx)
         bool freeInside = false;
         do
         {
-            if( tls->bins[idx][FREE] == block )
+            if (tls->bins[idx][FREE] == block)
                 freeInside = true;
-            if( tls->bins[idx][GC] == block )
+            if (tls->bins[idx][GC] == block)
                 gcInside = true;
             block = block->next;
         }
-        while( block != tls->bins[idx][START] );
-        CV_DbgAssert( gcInside && freeInside );
+        while (block != tls->bins[idx][START]);
+        CV_DbgAssert(gcInside && freeInside);
     }
 }
 #else
 #define checkList(tls, idx)
 #endif
 
-void* fastMalloc( size_t size )
+struct MemPoolAllocator
 {
-    if( size > MAX_BLOCK_SIZE )
+    static size_t align(size_t num)
     {
-        size_t size1 = size + sizeof(uchar*)*2 + MEM_BLOCK_SIZE;
-        uchar* udata = (uchar*)SystemAlloc(size1);
-        uchar** adata = alignPtr((uchar**)udata + 2, MEM_BLOCK_SIZE);
-        adata[-1] = udata;
-        adata[-2] = (uchar*)size1;
-        return adata;
+        size_t result = 1;
+
+        while (result < num)
+        {
+            result <<= 1;
+        }
+
+        return result;
     }
 
+    static void init(size_t blockSize = 16256)
     {
-    ThreadData* tls = ThreadData::get();
-    int idx = mallocTables.bin(size);
-    Block*& startPtr = tls->bins[idx][START];
-    Block*& gcPtr = tls->bins[idx][GC];
-    Block*& freePtr = tls->bins[idx][FREE], *block = freePtr;
-    checkList(tls, idx);
-    size = binSizeTab[idx];
-    STAT(
-        stat.nettoBytes += size;
-        stat.mallocCalls++;
-        );
-    uchar* data = 0;
-
-    for(;;)
-    {
-        if( block )
+        if (blockSize <= Block::HDR_SIZE)
         {
-            // try to find non-full block
-            for(;;)
+            CV_Error(-1, "BlockSize is too small.");
+            return;
+        }
+
+        userDefinedBlockSize = blockSize;
+        blockPool.clear();
+        size_t memBlockSize = align(blockSize + Block::HDR_SIZE);
+        Block::initBlockSize(memBlockSize);
+        BigBlock::bigBlockSize = memBlockSize << 2;
+    };
+
+    static size_t userDefinedBlockSize;
+    static BlockPool blockPool;
+
+    static void* allocate(size_t size, void* = NULL)
+    {
+        if (size > Block::maxBlockSize)
+        {
+            size_t actualSize = size + sizeof(uchar*) * 2 + Block::memBlockSize;
+            uchar* udata = (uchar*)SystemAlloc(actualSize);
+            uchar** adata = alignPtr((uchar**)udata + 2, Block::memBlockSize);
+            adata[-1] = udata;
+            adata[-2] = (uchar*)actualSize;
+            return adata;
+        }
+
+        {
+            ThreadData* tls = ThreadData::get(&blockPool);
+            int idx = Block::getBinIdx(size);
+            Block*& startPtr = tls->bins[idx][START];
+            Block*& gcPtr = tls->bins[idx][GC];
+            Block*& freePtr = tls->bins[idx][FREE], *block = freePtr;
+            checkList(tls, idx);
+            size = Block::binSizeTable[idx];
+            STAT(
+                stat.nettoBytes += size;
+                stat.mallocCalls++;
+            );
+            uchar* data = 0;
+
+            for (;;)
             {
-                CV_DbgAssert( block->next->prev == block && block->prev->next == block );
-                if( block->bumpPtr )
+                if (block)
                 {
-                    data = block->bumpPtr;
-                    if( (block->bumpPtr += size) >= block->endPtr )
-                        block->bumpPtr = 0;
-                    break;
-                }
+                    // try to find non-full block
+                    for (;;)
+                    {
+                        CV_DbgAssert(block->next->prev == block && block->prev->next == block);
 
-                if( block->privateFreeList )
-                {
-                    data = (uchar*)block->privateFreeList;
-                    block->privateFreeList = block->privateFreeList->next;
-                    break;
-                }
+                        if (block->bumpPtr)
+                        {
+                            data = block->bumpPtr;
+                            if ((block->bumpPtr += size) >= block->endPtr)
+                                block->bumpPtr = 0;
+                            break;
+                        }
 
-                if( block == startPtr )
-                    break;
-                block = block->next;
-            }
+                        if (block->privateFreeList)
+                        {
+                            data = (uchar*)block->privateFreeList;
+                            block->privateFreeList = block->privateFreeList->next;
+                            break;
+                        }
+
+                        if (block == startPtr)
+                            break;
+                        block = block->next;
+                    }
+
 #if 0
-            avg_k += _k;
-            avg_nk++;
-            if( avg_nk == 1000 )
-            {
-                printf("avg search iters per 1e3 allocs = %g\n", (double)avg_k/avg_nk );
-                avg_k = avg_nk = 0;
-            }
+                    avg_k += _k;
+                    avg_nk++;
+                    if( avg_nk == 1000 )
+                    {
+                        printf("avg search iters per 1e3 allocs = %g\n", (double)avg_k / avg_nk );
+                        avg_k = avg_nk = 0;
+                    }
 #endif
 
-            freePtr = block;
-            if( !data )
-            {
-                block = gcPtr;
-                for( int k = 0; k < 2; k++ )
-                {
-                    SANITY_CHECK(block);
-                    CV_DbgAssert( block->next->prev == block && block->prev->next == block );
-                    if( block->publicFreeList )
+                    freePtr = block;
+                    if (!data)
                     {
+                        block = gcPtr;
+                        for (int k = 0; k < 2; k++)
                         {
-                        AutoLock lock(block->cs);
-                        block->privateFreeList = block->publicFreeList;
-                        block->publicFreeList = 0;
+                            SANITY_CHECK(block);
+                            CV_DbgAssert(block->next->prev == block && block->prev->next == block);
+
+                            if (block->publicFreeList)
+                            {
+                                {
+                                    FastLock lock(block->cs);
+
+                                    block->privateFreeList = block->publicFreeList;
+                                    block->publicFreeList = 0;
+                                }
+
+                                Node* node = block->privateFreeList;
+                                for (; node != 0; node = node->next)
+                                    --block->allocated;
+                                data = (uchar*)block->privateFreeList;
+                                block->privateFreeList = block->privateFreeList->next;
+                                gcPtr = block->next;
+                                if (block->allocated + 1 <= block->almostEmptyThreshold)
+                                    tls->moveBlockToFreeList(block);
+                                break;
+                            }
+                            block = block->next;
                         }
-                        Node* node = block->privateFreeList;
-                        for(;node != 0; node = node->next)
-                            --block->allocated;
-                        data = (uchar*)block->privateFreeList;
-                        block->privateFreeList = block->privateFreeList->next;
-                        gcPtr = block->next;
-                        if( block->allocated+1 <= block->almostEmptyThreshold )
-                            tls->moveBlockToFreeList(block);
-                        break;
+                        if (!data)
+                            gcPtr = block;
                     }
-                    block = block->next;
                 }
-                if( !data )
-                    gcPtr = block;
+
+                if (data)
+                    break;
+                block = blockPool.alloc();
+                block->init(startPtr ? startPtr->prev : block, startPtr ? startPtr : block, (int)size, tls);
+                if (!startPtr)
+                    startPtr = gcPtr = freePtr = block;
+
+                checkList(tls, block->binIdx);
+                SANITY_CHECK(block);
+            }
+
+            ++block->allocated;
+            return data;
+        }
+    }
+
+    static int deallocate(void* ptr, void* = NULL)
+    {
+        if (((size_t)ptr & (Block::memBlockSize - 1)) == 0)
+        {
+            if (ptr != 0)
+            {
+                void* origPtr = ((void**)ptr)[-1];
+                size_t sz = (size_t)((void**)ptr)[-2];
+                SystemFree(origPtr, sz);
+            }
+            return 0;
+        }
+
+        {
+            ThreadData* tls = ThreadData::get(&blockPool);
+            Node* node = (Node*)ptr;
+            Block* block = (Block*)((size_t)ptr & -(int)Block::memBlockSize);
+            assert(block->signature == Block::MEM_BLOCK_SIGNATURE);
+
+            if (block->threadData == tls)
+            {
+                STAT(
+                    stat.nettoBytes -= block->objSize;
+                    stat.freeCalls++;
+                    float ratio = (float)stat.nettoBytes / stat.bruttoBytes;
+                    if (stat.minUsageRatio > ratio)
+                        stat.minUsageRatio = ratio;
+                );
+                SANITY_CHECK(block);
+
+                bool prevFilled = block->isFilled();
+                --block->allocated;
+                if (!block->isFilled() && (block->allocated == 0 || prevFilled))
+                {
+                    if (block->allocated == 0)
+                    {
+                        int idx = block->binIdx;
+                        Block*& startPtr = tls->bins[idx][START];
+                        Block*& freePtr = tls->bins[idx][FREE];
+                        Block*& gcPtr = tls->bins[idx][GC];
+
+                        if (block == block->next)
+                        {
+                            CV_DbgAssert(startPtr == block && freePtr == block && gcPtr == block);
+                            startPtr = freePtr = gcPtr = 0;
+                        }
+                        else
+                        {
+                            if (freePtr == block)
+                                freePtr = block->next;
+                            if (gcPtr == block)
+                                gcPtr = block->next;
+                            if (startPtr == block)
+                                startPtr = block->next;
+                            block->prev->next = block->next;
+                            block->next->prev = block->prev;
+                        }
+                        blockPool.free(block);
+                        checkList(tls, idx);
+                        return 0;
+                    }
+                    tls->moveBlockToFreeList(block);
+                }
+                node->next = block->privateFreeList;
+                block->privateFreeList = node;
+            }
+            else
+            {
+                FastLock lock(block->cs);
+                SANITY_CHECK(block);
+
+                node->next = block->publicFreeList;
+                block->publicFreeList = node;
+                if (block->threadData == 0)
+                {
+                    // take ownership of the abandoned block.
+                    // note that it can happen at the same time as
+                    // ThreadData::deleteData() marks the blocks as abandoned,
+                    // so this part of the algorithm needs to be checked for data races
+                    int idx = block->binIdx;
+                    block->threadData = tls;
+                    Block*& startPtr = tls->bins[idx][START];
+
+                    if (startPtr)
+                    {
+                        block->next = startPtr;
+                        block->prev = startPtr->prev;
+                        block->next->prev = block->prev->next = block;
+                    }
+                    else
+                        startPtr = tls->bins[idx][FREE] = tls->bins[idx][GC] = block;
+                }
             }
         }
 
-        if( data )
-            break;
-        block = mallocPool.alloc();
-        block->init(startPtr ? startPtr->prev : block, startPtr ? startPtr : block, (int)size, tls);
-        if( !startPtr )
-            startPtr = gcPtr = freePtr = block;
-        checkList(tls, block->binIdx);
-        SANITY_CHECK(block);
+        return 0;
     }
+};
+size_t MemPoolAllocator::userDefinedBlockSize = 0;
+BlockPool MemPoolAllocator::blockPool;
 
-    ++block->allocated;
-    return data;
-    }
-}
+/////////////////////////// Alloc/Free Strategy Management ///////////////////////////
 
-void fastFree( void* ptr )
+#define TABLE_SIZE 1024
+static CvAllocFunc allocFuncTable[TABLE_SIZE] = { NaiveAllocator::allocate, MemPoolAllocator::allocate };
+static CvFreeFunc freeFuncTable[TABLE_SIZE] = { NaiveAllocator::deallocate, MemPoolAllocator::deallocate };
+static void* userDataTable[TABLE_SIZE] = { };
+
+static int currentSize = 2;
+static size_t currentIdx = 0;
+static bool hasSetMemoryPool = false;
+
+static CriticalSection cs;
+
+inline void addMemoryManager(CvAllocFunc allocFunc, CvFreeFunc freeFunc, void* userData)
 {
-    if( ((size_t)ptr & (MEM_BLOCK_SIZE-1)) == 0 )
+    if (allocFunc == NULL && freeFunc == NULL)
+        return;
+
+    if ((allocFunc == NULL && freeFunc != NULL) ||
+        (allocFunc != NULL && freeFunc == NULL))
     {
-        if( ptr != 0 )
-        {
-            void* origPtr = ((void**)ptr)[-1];
-            size_t sz = (size_t)((void**)ptr)[-2];
-            SystemFree( origPtr, sz );
-        }
+        CV_Error(-1, "You need to provide both the allocator and the dellocator.");
         return;
     }
 
     {
-    ThreadData* tls = ThreadData::get();
-    Node* node = (Node*)ptr;
-    Block* block = (Block*)((size_t)ptr & -(int)MEM_BLOCK_SIZE);
-    assert( block->signature == MEM_BLOCK_SIGNATURE );
+        FastLock lock(cs);
 
-    if( block->threadData == tls )
-    {
-        STAT(
-        stat.nettoBytes -= block->objSize;
-        stat.freeCalls++;
-        float ratio = (float)stat.nettoBytes/stat.bruttoBytes;
-        if( stat.minUsageRatio > ratio )
-            stat.minUsageRatio = ratio;
-        );
-
-        SANITY_CHECK(block);
-
-        bool prevFilled = block->isFilled();
-        --block->allocated;
-        if( !block->isFilled() && (block->allocated == 0 || prevFilled) )
+        for (int i = 2; i < currentSize; i++)
         {
-            if( block->allocated == 0 )
+            if (allocFuncTable[i] == allocFunc && freeFuncTable[i] == freeFunc &&
+                userDataTable[i] == userData)
             {
-                int idx = block->binIdx;
-                Block*& startPtr = tls->bins[idx][START];
-                Block*& freePtr = tls->bins[idx][FREE];
-                Block*& gcPtr = tls->bins[idx][GC];
-
-                if( block == block->next )
-                {
-                    CV_DbgAssert( startPtr == block && freePtr == block && gcPtr == block );
-                    startPtr = freePtr = gcPtr = 0;
-                }
-                else
-                {
-                    if( freePtr == block )
-                        freePtr = block->next;
-                    if( gcPtr == block )
-                        gcPtr = block->next;
-                    if( startPtr == block )
-                        startPtr = block->next;
-                    block->prev->next = block->next;
-                    block->next->prev = block->prev;
-                }
-                mallocPool.free(block);
-                checkList(tls, idx);
+                currentIdx = i;
                 return;
             }
-
-            tls->moveBlockToFreeList(block);
         }
-        node->next = block->privateFreeList;
-        block->privateFreeList = node;
-    }
-    else
-    {
-        AutoLock lock(block->cs);
-        SANITY_CHECK(block);
 
-        node->next = block->publicFreeList;
-        block->publicFreeList = node;
-        if( block->threadData == 0 )
+        if (currentSize >= TABLE_SIZE)
         {
-            // take ownership of the abandoned block.
-            // note that it can happen at the same time as
-            // ThreadData::deleteData() marks the blocks as abandoned,
-            // so this part of the algorithm needs to be checked for data races
-            int idx = block->binIdx;
-            block->threadData = tls;
-            Block*& startPtr = tls->bins[idx][START];
-
-            if( startPtr )
-            {
-                block->next = startPtr;
-                block->prev = startPtr->prev;
-                block->next->prev = block->prev->next = block;
-            }
-            else
-                startPtr = tls->bins[idx][FREE] = tls->bins[idx][GC] = block;
+            CV_Error(-1, "You have set user defined memory manager too many times!");
+        }
+        else
+        {
+            allocFuncTable[currentSize] = allocFunc;
+            freeFuncTable[currentSize] = freeFunc;
+            userDataTable[currentSize] = userData;
+            currentIdx = currentSize++;
         }
     }
+}
+
+inline void useNaiveAllocator()
+{
+    FastLock lock(cs);
+    currentIdx = 0;
+}
+
+inline void useMemoryPool(size_t blockSize)
+{
+    FastLock lock(cs);
+
+    if (blockSize > 0 && blockSize == MemPoolAllocator::userDefinedBlockSize)
+    {
+        currentIdx = 1;
+        return;
     }
+
+    if (hasSetMemoryPool)
+    {
+        CV_Error(-1, "Turning on the memory pool with different blockSizes is not supported.");
+        return;
+    }
+
+    hasSetMemoryPool = true;
+    MemPoolAllocator::init(blockSize);
+    currentIdx = 1;
 }
 
-#endif //CV_USE_SYSTEM_MALLOC
-
-}
-
-CV_IMPL void* cvAlloc( size_t size )
+void* fastMalloc(size_t size)
 {
-    return cv::fastMalloc( size );
+    // Don't use currentIdx directly since it may be changed by other threads.
+    volatile int idx = currentIdx;
+
+    void* mem = allocFuncTable[idx](size + 2 * sizeof(size_t) + CV_MALLOC_ALIGN,
+        userDataTable[idx]);
+
+    void** data = alignPtr((void**)mem + 2, CV_MALLOC_ALIGN);
+    ((size_t*)data)[-1] = idx;
+    data[-2] = mem;
+
+    return data;
 }
 
-CV_IMPL void cvFree_( void* ptr )
+void fastFree(void* ptr)
 {
-    cv::fastFree( ptr );
+    if (ptr == NULL)
+        return;
+
+    void* mem = ((void**)ptr)[-2];
+    size_t idx = ((size_t*)ptr)[-1];
+
+    freeFuncTable[idx](mem, userDataTable[idx]);
+}
 }
 
+CV_IMPL void* cvAlloc(size_t size)
+{
+    return cv::fastMalloc(size);
+}
+
+CV_IMPL void cvFree_(void* ptr)
+{
+    return cv::fastFree(ptr);
+}
+
+CV_IMPL void cvTurnOnMemoryPool(size_t blockSize)
+{
+    cv::useMemoryPool(blockSize);
+}
+
+CV_IMPL void cvTurnOffMemoryPool()
+{
+    cv::useNaiveAllocator();
+}
+
+CV_IMPL void cvSetMemoryManager(CvAllocFunc allocFunc, CvFreeFunc freeFunc, void* userData)
+{
+    cv::addMemoryManager(allocFunc, freeFunc, userData);
+}
+
+CV_IMPL void cvRemoveMemoryManager()
+{
+    cv::useNaiveAllocator();
+}
 
 /* End of file. */
