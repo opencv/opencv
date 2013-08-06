@@ -1,15 +1,15 @@
 HDR imaging
-==========
+=============
 
 .. highlight:: cpp
 
-This section describes high dynamic range imaging algorithms, namely tonemapping, exposure alignment, camera calibration with multiple exposures and exposure fusion.
+This section describes high dynamic range imaging algorithms namely tonemapping, exposure alignment, camera calibration with multiple exposures and exposure fusion.
 
 Tonemap
 ---------------------------
 .. ocv:class:: Tonemap : public Algorithm
 
-Base class for tonemapping algorithms - tools, that are used to map HDR image to 8-bit range.
+Base class for tonemapping algorithms - tools that are used to map HDR image to 8-bit range.
 
 Tonemap::process
 ---------------------------
@@ -280,6 +280,8 @@ MergeMertens
 
 Pixels are weighted using contrast, saturation and well-exposedness measures, than images are combined using laplacian pyramids.
 
+The resulting image weight is constructed as weighted average of contrast, saturation and well-exposedness measures.
+
 The resulting image doesn't require tonemapping and can be converted to 8-bit image by multiplying by 255, but it's recommended to apply gamma correction and/or linear tonemapping.
 
 For more information see [MK07]_.
@@ -301,27 +303,27 @@ Creates MergeMertens object
 
 .. ocv:function:: Ptr<MergeMertens> createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f)
 
-    :param contrast_weight: contrast factor weight
+    :param contrast_weight: contrast measure weight. See :ocv:class:`MergeMertens`.
     
-    :param saturation_weight: saturation factor weight
+    :param saturation_weight: saturation measure weight
     
-    :param exposure_weight: well-exposedness factor weight
+    :param exposure_weight: well-exposedness measure weight
     
 References
 ==========
 
-.. [DM03] F. Drago, K. Myszkowski, T. Annen, N. Chiba, "Adaptive Logarithmic Mapping For Displaying High Contrast Scenes", 2003.
+.. [DM03] F. Drago, K. Myszkowski, T. Annen, N. Chiba, "Adaptive Logarithmic Mapping For Displaying High Contrast Scenes", Computer Graphics Forum, 2003, 22, 419 - 426.
 
-.. [FL02] R. Fattal, D. Lischinski, M. Werman, "Gradient Domain High Dynamic Range Compression", 2002.
+.. [FL02] R. Fattal, D. Lischinski, M. Werman, "Gradient Domain High Dynamic Range Compression", Proceedings OF ACM SIGGRAPH, 2002, 249 - 256.
 
-.. [DD02] F. Durand and Julie Dorsey, "Fast Bilateral Filtering for the Display of High-Dynamic-Range Images",2002.
+.. [DD02] F. Durand and Julie Dorsey, "Fast Bilateral Filtering for the Display of High-Dynamic-Range Images", ACM Transactions on Graphics, 2002, 21, 3, 257 - 266.
 
-.. [RD05] E. Reinhard, K. Devlin, "Dynamic Range Reduction Inspired by Photoreceptor Physiology", 2005.
+.. [RD05] E. Reinhard, K. Devlin, "Dynamic Range Reduction Inspired by Photoreceptor Physiology", IEEE Transactions on Visualization and Computer Graphics, 2005, 11, 13 - 24.
 
-.. [MM06] R. Mantiuk, K. Myszkowski, H.-P. Seidel, "Perceptual Framework for Contrast Processing of High Dynamic Range Images", 2006.
+.. [MM06] R. Mantiuk, K. Myszkowski, H.-P. Seidel, "Perceptual Framework for Contrast Processing of High Dynamic Range Images", ACM Transactions on Applied Perception, 2006, 3, 3, 286 - 308.
 
-.. [GW03] G. Ward, "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", 2003.
+.. [GW03] G. Ward, "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Journal of Graphics Tools, 2003, 8, 17 - 30.
 
-.. [DM97] P. Debevec, J. Malik, "Recovering High Dynamic Range Radiance Maps from Photographs", 1997.
+.. [DM97] P. Debevec, J. Malik, "Recovering High Dynamic Range Radiance Maps from Photographs", Proceedings OF ACM SIGGRAPH, 1997, 369 - 378.
 
-.. [MK07] T. Mertens, J. Kautz, F. Van Reeth, "Exposure Fusion", 2007.
+.. [MK07] T. Mertens, J. Kautz, F. Van Reeth, "Exposure Fusion", Proceedings of the 15th Pacific Conference on Computer Graphics and Applications, 2007, 382 - 390.
