@@ -26,9 +26,9 @@ If a drawn figure is partially or completely outside the image, the drawing func
 
 .. note:: The functions do not support alpha-transparency when the target image is 4-channel. In this case, the ``color[3]`` is simply copied to the repainted pixels. Thus, if you want to paint semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main image.
 
-.. Sample code::
+.. note::
 
-   * : An example on using variate drawing functions like line, rectangle, ... can be found at opencv_source_code/samples/cpp/drawing.cpp
+   * An example on using variate drawing functions like line, rectangle, ... can be found at opencv_source_code/samples/cpp/drawing.cpp
 
 circle
 ----------
