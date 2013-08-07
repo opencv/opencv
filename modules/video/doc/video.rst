@@ -6,3 +6,4 @@ video. Video Analysis
     :maxdepth: 2
 
     motion_analysis_and_object_tracking
+    tracking_api
