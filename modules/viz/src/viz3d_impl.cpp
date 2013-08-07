@@ -572,7 +572,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     active_camera.SetUseHorizontalViewAngle (0); // Horizontal view angle is set based on the window size
     active_camera.SetViewAngle (camera.getFov()[1] * 180.0f / CV_PI);
     active_camera.SetClippingRange (camera.getClip()[0], camera.getClip()[1]);
-    window_->SetSize (static_cast<int> (camera.getWindowSize().width), static_cast<int> (camera.getWindowSize().height));
+    window_->SetSize (camera.getWindowSize().width, camera.getWindowSize().height);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

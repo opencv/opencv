@@ -195,35 +195,53 @@ void cv::viz::Camera::setWindowSize(const Size &window_size)
     // Horizontal field of view is expandable based on the aspect ratio
     float aspect_ratio_new = static_cast<float>(window_size.width) / static_cast<float>(window_size.height);
     
+    // Get the scale factor and update the principal points
+    if (window_size_.height != 0)
+    {
+        float aspect_ratio_old = window_size_.width / window_size_.height;
+        float expected_width = aspect_ratio_old * window_size.height;
+        float scale = window_size_.width / expected_width;
+        principal_point_[0] *= scale;
+        principal_point_[1] *= static_cast<float>(window_size.height) / static_cast<float>(window_size_.height);
+    }
+        
     if (principal_point_[0] < 0.0f)
         fov_[0] = 2.f * atan(tan(fov_[1] * 0.5f) * aspect_ratio_new); // This assumes that the lens is symmetric!
     else
-        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])); // TODO I need to check this
+        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
     
     window_size_ = window_size;
 }
 
 void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 {
+    // Symmetric case
     double top    = clip_[0] * tan (0.5 * fov_[1]);
     double left   = -(top * window_size_.width) / window_size_.height;
     double right  = -left;
     double bottom = -top;
-
+    // If principal point is defined
+    if (principal_point_[0] > 0.0f)
+    {
+        top = clip_[0] * principal_point_[1] / focal_[1];
+        left = -clip_[0] * principal_point_[0] / focal_[0];
+        right = clip_[0] * (window_size_.width - principal_point_[0]) / focal_[0];
+        bottom = -clip_[0] * (window_size_.height - principal_point_[1]) / focal_[1];
+    }
+    
     double temp1 = 2.0 * clip_[0];
     double temp2 = 1.0 / (right - left);
     double temp3 = 1.0 / (top - bottom);
-    double temp4 = 1.0 / clip_[1] - clip_[0];
+    double temp4 = 1.0 / (clip_[0] - clip_[1]);
 
     proj = Matx44d::zeros();
-
     proj(0,0) = temp1 * temp2;
     proj(1,1) = temp1 * temp3;
     proj(0,2) = (right + left) * temp2;
     proj(1,2) = (top + bottom) * temp3;
-    proj(2,2) = (-clip_[1] - clip_[0]) * temp4;
+    proj(2,2) = (clip_[1]+clip_[0]) * temp4;
     proj(3,2) = -1.0;
-    proj(2,3) = (-temp1 * clip_[1]) * temp4;
+    proj(2,3) = (temp1 * clip_[1]) * temp4;
 }
 
 cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
