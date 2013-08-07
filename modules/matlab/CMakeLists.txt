@@ -76,7 +76,7 @@ ocv_add_module(matlab   BINDINGS
 
 # get the commit information
 execute_process(COMMAND git log -1 --pretty=%H OUTPUT_VARIABLE GIT_COMMIT ERROR_QUIET)
-string(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT ${GIT_COMMIT})
+string(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT "${GIT_COMMIT}")
 
 # set the path to the C++ header and doc parser
 set(HDR_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/python/src2)
@@ -109,7 +109,7 @@ foreach(opencv_module ${MATLAB_DEPS})
 endforeach()
 
 # add extra headers by hand
-list(APPEND opencv_extra_hdrs "core:${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
+list(APPEND opencv_extra_hdrs "core=${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
 
 # pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
 # remove the visibility modifiers, so the mex gateway is visible
@@ -131,7 +131,7 @@ if (NOT MEX_WORKS)
                 ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
                 --hdrparser ${HDR_PARSER_PATH}
                 --rstparser ${RST_PARSER_PATH}
-                --extra     "test:${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp"
+                --extra     "test=${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp"
                 --outdir    ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE GEN_ERROR
         OUTPUT_QUIET 

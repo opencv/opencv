@@ -27,8 +27,8 @@ class MatlabWrapperGenerator(object):
             rst.definitions = {}
 
         for extra in extras:
-            module = extra.split(":")[0]
-            header = extra.split(":")[1]
+            module = extra.split("=")[0]
+            header = extra.split("=")[1]
             ns[module] = ns[module] + parser.parse(header) if module in ns else parser.parse(header)
 
         # cleanify the parser output
