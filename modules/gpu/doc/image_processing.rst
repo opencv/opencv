@@ -966,9 +966,9 @@ Composites two images using alpha opacity values contained in each image.
 
     :param stream: Stream for the asynchronous version.
 
-.. Sample code::
+.. note::
 
-   * : An example demonstrating the use of alphaComp can be found at opencv_source_code/samples/gpu/alpha_comp.cpp
+   * An example demonstrating the use of alphaComp can be found at opencv_source_code/samples/gpu/alpha_comp.cpp
 
 gpu::Canny
 -------------------
@@ -1030,9 +1030,9 @@ Finds lines in a binary image using the classical Hough transform.
 
 .. seealso:: :ocv:func:`HoughLines`
 
-.. Sample code::
+.. note::
 
-   * : An example using the Hough lines detector can be found at opencv_source_code/samples/gpu/houghlines.cpp
+   * An example using the Hough lines detector can be found at opencv_source_code/samples/gpu/houghlines.cpp
 
 gpu::HoughLinesDownload
 -----------------------

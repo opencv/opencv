@@ -105,16 +105,16 @@ The functions below use the above model to do the following:
 
  * Estimate the relative position and orientation of the stereo camera "heads" and compute the *rectification* transformation that makes the camera optical axes parallel.
 
-.. Sample code::
+.. note::
 
-   * : A calibration sample for 3 cameras in horizontal position can be found at opencv_source_code/samples/cpp/3calibration.cpp
-   * : A calibration sample based on a sequence of images can be found at opencv_source_code/samples/cpp/calibration.cpp
-   * : A calibration sample in order to do 3D reconstruction can be found at opencv_source_code/samples/cpp/build3dmodel.cpp
-   * : A calibration sample of an artificially generated camera and chessboard patterns can be found at opencv_source_code/samples/cpp/calibration_artificial.cpp
-   * : A calibration example on stereo calibration can be found at opencv_source_code/samples/cpp/stereo_calib.cpp
-   * : A calibration example on stereo matching can be found at opencv_source_code/samples/cpp/stereo_match.cpp
+   * A calibration sample for 3 cameras in horizontal position can be found at opencv_source_code/samples/cpp/3calibration.cpp
+   * A calibration sample based on a sequence of images can be found at opencv_source_code/samples/cpp/calibration.cpp
+   * A calibration sample in order to do 3D reconstruction can be found at opencv_source_code/samples/cpp/build3dmodel.cpp
+   * A calibration sample of an artificially generated camera and chessboard patterns can be found at opencv_source_code/samples/cpp/calibration_artificial.cpp
+   * A calibration example on stereo calibration can be found at opencv_source_code/samples/cpp/stereo_calib.cpp
+   * A calibration example on stereo matching can be found at opencv_source_code/samples/cpp/stereo_match.cpp
 
-   * : PYTHON : A camera calibration sample can be found at opencv_source_code/samples/python2/calibrate.py
+   * (Python) A camera calibration sample can be found at opencv_source_code/samples/python2/calibrate.py
 
 calibrateCamera
 ---------------
@@ -588,9 +588,9 @@ Finds an object pose from 3D-2D point correspondences.
 
 The function estimates the object pose given a set of object points, their corresponding image projections, as well as the camera matrix and the distortion coefficients.
 
-.. Sample code::
+.. note::
 
-   * : An example of how to use solvePNP for planar augmented reality can be found at opencv_source_code/samples/python2/plane_ar.py
+   * An example of how to use solvePNP for planar augmented reality can be found at opencv_source_code/samples/python2/plane_ar.py
 
 solvePnPRansac
 ------------------
@@ -777,9 +777,9 @@ Homography matrix is determined up to a scale. Thus, it is normalized so that
     :ocv:func:`warpPerspective`,
     :ocv:func:`perspectiveTransform`
 
-.. Sample code::
+.. note::
 
-   * : A example on calculating a homography for image matching can be found at opencv_source_code/samples/cpp/video_homography.cpp
+   * A example on calculating a homography for image matching can be found at opencv_source_code/samples/cpp/video_homography.cpp
 
 estimateAffine3D
 --------------------
@@ -1088,7 +1088,7 @@ The class is a C++ wrapper for the associated functions. In particular, :ocv:fun
 
 .. Sample code:
 
-   * : OCL : An example for using the stereoBM matching algorithm can be found at opencv_source_code/samples/ocl/stereo_match.cpp   
+   (Ocl) An example for using the stereoBM matching algorithm can be found at opencv_source_code/samples/ocl/stereo_match.cpp
 
 StereoBM::StereoBM
 ------------------
@@ -1188,9 +1188,9 @@ The class implements the modified H. Hirschmuller algorithm [HH08]_ that differs
 
  * Some pre- and post- processing steps from K. Konolige algorithm :ocv:funcx:`StereoBM::operator()`  are included, for example: pre-filtering (``CV_STEREO_BM_XSOBEL`` type) and post-filtering (uniqueness check, quadratic interpolation and speckle filtering).
 
-.. Sample code::
+.. note::
 
-   * : PYTHON : An example illustrating the use of the StereoSGBM matching algorithm can be found at opencv_source_code/samples/python2/stereo_match.py
+   * (Python) An example illustrating the use of the StereoSGBM matching algorithm can be found at opencv_source_code/samples/python2/stereo_match.py
 
 StereoSGBM::StereoSGBM
 --------------------------
