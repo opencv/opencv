@@ -45,6 +45,7 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
         jtemplate.filters['toUnderCase'] = toUnderCase
+        jtemplate.filters['matlabURL'] = matlabURL
         jtemplate.filters['stripTags'] = stripTags
         jtemplate.filters['filename'] = filename
         jtemplate.filters['comment']  = comment

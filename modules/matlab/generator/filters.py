@@ -1,6 +1,7 @@
 from textwrap import TextWrapper
 from string import split, join
 import re, os
+urlexpr = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE|re.UNICODE)
 
 def inputs(args):
     '''Keeps only the input arguments in a list of elements.
@@ -58,7 +59,6 @@ def binaryToDecimal(string):
         return string
 
 def formatMatlabConstant(string, table):
-    import re
     # split the string into expressions
     words = re.split('(\W+)', string)
     # add a 'cv' prefix if an expression is also a key in the lookup table
@@ -69,6 +69,11 @@ def formatMatlabConstant(string, table):
     shift = re.sub('[\(\) ]', '', words).split('<<')
     words = 'bitshift('+shift[0]+', '+shift[1]+')' if len(shift) == 2 else words
     return words
+
+def matlabURL(string):
+    """This filter is used to construct a Matlab specific URL that calls the
+    system browser instead of the (insanely bad) builtin Matlab browser"""
+    return re.sub(urlexpr, '<a href="matlab: web(\'\\1\', \'-browser\')">\\1</a>', string)
 
 def capitalizeFirst(text):
     return text[0].upper() + text[1:]

@@ -1,9 +1,9 @@
 {% import 'functional.cpp' as functional %}
-{{ ('CV.' + fun.name | upper + ' ' + doc.brief | stripTags) | comment(75, '%') }}
+{{ ('CV.' + fun.name | upper + ' ' + doc.brief | stripTags) | comment(75, '%') | matlabURL }}
 %
 %   {{ functional.composeMatlab(fun) | upper }}
 {% if doc.long %}
-{{ doc.long | stripTags | qualify(fun.name) | comment(75, '%   ') }}
+{{ doc.long | stripTags | qualify(fun.name) | comment(75, '%   ') | matlabURL }}
 {% endif %}
 %
 {# ----------------------- Returns --------------------- #}
@@ -57,6 +57,6 @@ cv.{{ item }}{% if not loop.last %}, {% endif %}
 {% endif %}
 {# ----------------------- Online ---------------------- #}
 {% set url = 'http://docs.opencv.org/modules/' + doc.module  + '/doc/' + (doc.file|filename) + '.html#' + (fun.name|slugify) %}
-%   Online docs: <a href="matlab: web('{{url}}', '-browser')">{{url}}</a>
+%   Online docs: {{ url | matlabURL }}
 %   Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
 %
