@@ -2,29 +2,39 @@
 
 class MatlabWrapperGenerator(object):
 
-    def gen(self, input_files, output_dir):
+    def gen(self, module_root, modules, extras, output_dir):
         # parse each of the files and store in a dictionary
         # as a separate "namespace"
         parser = CppHeaderParser()
-        ns = {}
-        for file in input_files:
-            # get the file name
-            # TODO: Is there a cleaner way to do this?
-            try:
-              name = re.findall('include/opencv2/([^./]+)', file)[0]
-            except:
-              name = os.path.splitext(os.path.basename(file))[0]
+        rst    = rst_parser.RstParser(parser)
+        rst_parser.verbose = False
+        rst_parser.show_warnings = False
+        rst_parser.show_errors = False
+        rst_parser.show_critical_errors = False
 
-            # add the file to the namespace
-            try:
-              ns[name] = ns[name] + parser.parse(file)
-            except KeyError:
-              ns[name] = parser.parse(file)
+        ns  = dict((key, []) for key in modules)
+        doc = dict((key, []) for key in modules)
+        path_template = Template('${module}/include/opencv2/${module}.hpp')
+
+        for module in modules:
+            # construct a header path from the module root and a path template
+            header = os.path.join(module_root, path_template.substitute(module=module))
+            # parse the definitions
+            ns[module] = parser.parse(header)
+            # parse the documentation
+            rst.parse(module, os.path.join(module_root, module))
+            doc[module] = rst.definitions
+            rst.definitions = {}
+
+        for extra in extras:
+            module = extra.split(":")[0]
+            header = extra.split(":")[1]
+            ns[module] = ns[module] + parser.parse(header) if module in ns else parser.parse(header)
 
         # cleanify the parser output
         parse_tree = ParseTree()
         parse_tree.build(ns)
-       
+
         # setup the template engine
         template_dir = os.path.join(os.path.dirname(__file__), 'templates')
         jtemplate    = Environment(loader=FileSystemLoader(template_dir), trim_blocks=True, lstrip_blocks=True)
@@ -35,11 +45,13 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['toUpperCamelCase'] = toUpperCamelCase
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
         jtemplate.filters['toUnderCase'] = toUnderCase
+        jtemplate.filters['stripTags'] = stripTags
         jtemplate.filters['comment']  = comment
         jtemplate.filters['inputs']   = inputs
         jtemplate.filters['ninputs'] = ninputs
         jtemplate.filters['outputs']  = outputs
         jtemplate.filters['noutputs'] = noutputs
+        jtemplate.filters['qualify'] = qualify
         jtemplate.filters['only'] = only
         jtemplate.filters['void'] = void 
         jtemplate.filters['not'] = flip
@@ -72,9 +84,10 @@ class MatlabWrapperGenerator(object):
                 populated = tfunction.render(fun=method, time=time, includes=namespace.name)
                 with open(output_source_dir+'/'+method.name+'.cpp', 'wb') as f:
                     f.write(populated)
-                populated = tdoc.render(fun=method, time=time)
-                with open(output_class_dir+'/'+method.name+'.m', 'wb') as f:
-                    f.write(populated)
+                if namespace.name in doc and method.name in doc[namespace.name]:
+                    populated = tdoc.render(fun=method, doc=doc[namespace.name][method.name], time=time)
+                    with open(output_class_dir+'/'+method.name+'.m', 'wb') as f:
+                        f.write(populated)
             # classes
             for clss in namespace.classes:
                 # cpp converter
@@ -102,7 +115,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument('--hdrparser')
     parser.add_argument('--rstparser')
-    parser.add_argument('--headers', nargs='+')
+    parser.add_argument('--moduleroot', default='', required=False)
+    parser.add_argument('--modules', nargs='*', default=[], required=False)
+    parser.add_argument('--extra', nargs='*', default=[], required=False) 
     parser.add_argument('--outdir')
     args = parser.parse_args()
 
@@ -112,10 +127,11 @@ if __name__ == "__main__":
 
     from string import Template
     from hdr_parser import CppHeaderParser
+    import rst_parser
     from parse_tree import ParseTree, todict, constants
     from filters import *
     from jinja2 import Environment, FileSystemLoader
 
     # create the generator
     mwg = MatlabWrapperGenerator()
-    mwg.gen(args.headers, args.outdir)
+    mwg.gen(args.moduleroot, args.modules, args.extra, args.outdir)

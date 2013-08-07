@@ -83,6 +83,15 @@ def toLowerCamelCase(text):
 def toUnderCase(text):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+def stripTags(text):
+    upper = lambda pattern: pattern.group(1).upper()
+    text = re.sub('<code>(.*?)</code>', upper, text)
+    text = re.sub('<(.*?)>', '', text)
+    return text
+
+def qualify(text, name):
+    return re.sub(name.upper(), 'CV.'+name.upper(), text)
     
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     '''comment filter

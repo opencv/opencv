@@ -95,7 +95,7 @@ set(MATLAB_DEPS ${OPENCV_MODULE_${the_module}_REQ_DEPS} ${OPENCV_MODULE_${the_mo
 foreach(opencv_module ${MATLAB_DEPS})
     if (HAVE_${opencv_module})
         string(REPLACE "opencv_" "" module ${opencv_module})
-        list(APPEND opencv_hdrs "${OPENCV_MODULE_${opencv_module}_LOCATION}/include/opencv2/${module}.hpp")
+        list(APPEND opencv_modules ${module})
         list(APPEND ${the_module}_ACTUAL_DEPS ${opencv_module})
         prepend("-I" MEX_INCLUDE_DIRS "${OPENCV_MODULE_${opencv_module}_LOCATION}/include")
         prepend("-l" MEX_LIBS ${opencv_module}${OPENCV_DLLVERSION})
@@ -104,7 +104,7 @@ foreach(opencv_module ${MATLAB_DEPS})
 endforeach()
 
 # add extra headers by hand
-list(APPEND opencv_hdrs "${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
+list(APPEND opencv_extra_hdrs "core:${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
 
 # pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
 # remove the visibility modifiers, so the mex gateway is visible
@@ -125,7 +125,7 @@ if (NOT MEX_WORKS)
                 ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
                 --hdrparser ${HDR_PARSER_PATH}
                 --rstparser ${RST_PARSER_PATH}
-                --headers   ${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp 
+                --extra     "test:${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp"
                 --outdir    ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE GEN_ERROR
         OUTPUT_QUIET 
@@ -183,10 +183,12 @@ add_custom_command(
     OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE} 
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
-            --hdrparser ${HDR_PARSER_PATH}
-            --rstparser ${RST_PARSER_PATH}
-            --headers   ${opencv_hdrs} 
-            --outdir    ${CMAKE_CURRENT_BINARY_DIR}
+            --hdrparser  ${HDR_PARSER_PATH}
+            --rstparser  ${RST_PARSER_PATH}
+            --moduleroot ${CMAKE_SOURCE_DIR}/modules
+            --modules    ${opencv_modules}
+            --extra      ${opencv_extra_hdrs} 
+            --outdir     ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
     COMMENT "Generating Matlab source files"
 )
