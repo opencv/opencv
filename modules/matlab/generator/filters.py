@@ -1,6 +1,6 @@
 from textwrap import TextWrapper
 from string import split, join
-import re
+import re, os
 
 def inputs(args):
     '''Keeps only the input arguments in a list of elements.
@@ -92,6 +92,12 @@ def stripTags(text):
 
 def qualify(text, name):
     return re.sub(name.upper(), 'CV.'+name.upper(), text)
+
+def slugify(text):
+    return text.lower().replace('_', '-')
+
+def filename(fullpath):
+    return os.path.splitext(os.path.basename(fullpath))[0]
     
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     '''comment filter

@@ -46,12 +46,14 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['toLowerCamelCase'] = toLowerCamelCase
         jtemplate.filters['toUnderCase'] = toUnderCase
         jtemplate.filters['stripTags'] = stripTags
+        jtemplate.filters['filename'] = filename
         jtemplate.filters['comment']  = comment
         jtemplate.filters['inputs']   = inputs
         jtemplate.filters['ninputs'] = ninputs
         jtemplate.filters['outputs']  = outputs
         jtemplate.filters['noutputs'] = noutputs
         jtemplate.filters['qualify'] = qualify
+        jtemplate.filters['slugify'] = slugify
         jtemplate.filters['only'] = only
         jtemplate.filters['void'] = void 
         jtemplate.filters['not'] = flip

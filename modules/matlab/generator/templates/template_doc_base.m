@@ -52,6 +52,7 @@ cv.{{ item }}{% if not loop.last %}, {% endif %}
 
 %
 {% endif %}
-%   Official documentation: http://docs.opencv.org
+{% set url = 'http://docs.opencv.org/modules/' + doc.module  + '/doc/' + (doc.file|filename) + '.html#' + (fun.name|slugify) %}
+%   Online docs: <a href="matlab: web('{{url}}', '-browser')">{{url}}</a>
 %   Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
 %
