@@ -425,6 +425,48 @@ macro(ocv_convert_to_full_paths VAR)
 endmacro()
 
 
+# add install command
+function(ocv_install_target)
+  install(TARGETS ${ARGN})
+
+  if(INSTALL_CREATE_DISTRIB)
+    if(MSVC AND NOT BUILD_SHARED_LIBS)
+      set(__target "${ARGV0}")
+
+      set(isArchive 0)
+      set(isDst 0)
+      foreach(e ${ARGN})
+        if(isDst EQUAL 1)
+          set(DST "${e}")
+          break()
+        endif()
+        if(isArchive EQUAL 1 AND e STREQUAL "DESTINATION")
+          set(isDst 1)
+        endif()
+        if(e STREQUAL "ARCHIVE")
+          set(isArchive 1)
+        else()
+          set(isArchive 0)
+        endif()
+      endforeach()
+
+#      message(STATUS "Process ${__target} dst=${DST}...")
+      if(NOT DEFINED DST)
+        set(DST "OPENCV_LIB_INSTALL_PATH")
+      endif()
+
+      get_target_property(fname ${__target} LOCATION_DEBUG)
+      string(REPLACE ".lib" ".pdb" fname "${fname}")
+      install(FILES ${fname} DESTINATION ${DST} CONFIGURATIONS Debug)
+
+      get_target_property(fname ${__target} LOCATION_RELEASE)
+      string(REPLACE ".lib" ".pdb" fname "${fname}")
+      install(FILES ${fname} DESTINATION ${DST} CONFIGURATIONS Release)
+    endif()
+  endif()
+endfunction()
+
+
 # read set of version defines from the header file
 macro(ocv_parse_header FILENAME FILE_VAR)
   set(vars_regex "")
