@@ -52,11 +52,12 @@ endif()
 # If the user built OpenCV as X-bit, but they have a Y-bit version of Matlab,
 # attempting to link to OpenCV during binding generation will fail, since
 # mixed precision pointers are not allowed. Disable the bindings.
-if (${CMAKE_SIZEOF_VOID_P} EQUAL 4 AND ${MATLAB_ARCH} MATCHES "64")
+math(EXPR ARCH "${CMAKE_SIZEOF_VOID_P} * 8")
+if (${ARCH} EQUAL 32 AND ${MATLAB_ARCH} MATCHES "64")
     warn_mixed_precision("32" "64")
     ocv_module_disable(matlab)
     return()
-elseif (${CMAKE_SIZEOF_VOID_P} EQUAL 8 AND NOT ${MATLAB_ARCH} MATCHES "64")
+elseif (${ARCH} EQUAL 64 AND NOT ${MATLAB_ARCH} MATCHES "64")
     warn_mixed_precision("64" "32")
     ocv_module_disable(matlab)
     return()
@@ -73,6 +74,10 @@ ocv_add_module(matlab   BINDINGS
                                  opencv_nonfree
 )
 
+# get the commit information
+execute_process(COMMAND git log -1 --pretty=%H OUTPUT_VARIABLE GIT_COMMIT ERROR_QUIET)
+string(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT ${GIT_COMMIT})
+
 # set the path to the C++ header and doc parser
 set(HDR_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/python/src2)
 set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
@@ -80,7 +85,7 @@ set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 # set mex compiler options
 prepend("-I" MEX_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/include)
 prepend("-L" MEX_LIB_DIR  ${LIBRARY_OUTPUT_PATH}/$(Configuration))
-set(MEX_OPTS -largeArrayDims)
+set(MEX_OPTS "-largeArrayDims")
 
 if (BUILD_TESTS)
     add_subdirectory(test)
@@ -108,7 +113,8 @@ list(APPEND opencv_extra_hdrs "core:${OPENCV_MODULE_opencv_core_LOCATION}/includ
 
 # pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
 # remove the visibility modifiers, so the mex gateway is visible
-string(REGEX REPLACE "[^\ ]*visibility[^\ ]*" "" MEX_CXX_FLAGS "${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
+# TODO: get mex working without warnings
+#string(REGEX REPLACE "[^\ ]*visibility[^\ ]*" "" MEX_CXXFLAGS "${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
 
 # Configure checks
 # Check to see whether the generator and the mex compiler are working.
@@ -189,6 +195,20 @@ add_custom_command(
             --modules    ${opencv_modules}
             --extra      ${opencv_extra_hdrs} 
             --outdir     ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/build_info.py
+            --os ${CMAKE_SYSTEM} 
+            --arch ${ARCH} ${CMAKE_SYSTEM_PROCESSOR}
+            --compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
+            --mex_arch ${MATLAB_ARCH}
+            --mex_script ${MATLAB_MEX_SCRIPT}
+            --cxx_flags ${MEX_CXXFLAGS}
+            --opencv_version ${OPENCV_VERSION} 
+            --commit ${GIT_COMMIT}
+            --modules ${opencv_modules}
+            --configuration "$(Configuration)" ${CMAKE_BUILD_TYPE}
+            --outdir ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/help.m ${CMAKE_CURRENT_BINARY_DIR}/+cv
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
     COMMENT "Generating Matlab source files"
 )

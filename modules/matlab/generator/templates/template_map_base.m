@@ -1,12 +1,12 @@
 % ------------------------------------------------------------------------
-%                              OpenCV Toolbox
+%                             <strong>OpenCV Toolbox</strong>
 %                  Matlab bindings for the OpenCV library
 % ------------------------------------------------------------------------
 %
 % The OpenCV Toolbox allows you to make calls to native OpenCV methods
 % and classes directly from within Matlab. 
 %
-% PATHS
+% <strong>PATHS</strong>
 % To call OpenCV methods from anywhere in your workspace, add the
 % directory containing this file to the path: 
 %
@@ -16,7 +16,7 @@
 %     cv.m - This file, containing OpenCV enums
 %     +cv/ - The directory containing the OpenCV methods and classes
 %
-% CALLING SYNTAX
+% <strong>CALLING SYNTAX</strong>
 % To call an OpenCV method, class or enum, it must be prefixed with the
 % 'cv' qualifier. For example:
 %
@@ -27,7 +27,7 @@
 %     camera = cv.VideoCapture();
 %     camera.open('/path/to/file');
 %
-% HELP
+% <strong>HELP</strong>
 % Each method has its own help file containing information about the
 % arguments, return values, and what operation the method performs. 
 % You can access this help information by typing:
@@ -38,17 +38,19 @@
 % directory. Note that the methods available to you will depend
 % on which modules you configured OpenCV to build.
 %
-% DIAGNOSTICS
+% <strong>DIAGNOSTICS</strong>
 % If you are having problems with the OpenCV Toolbox and need to send a 
 % bug report to the OpenCV team, you can get a printout of diagnostic 
 % information to submit along with your report by typing:
 %
 %     cv.buildInformation();
 %
-% OTHER RESOURCES
-% OpenCV documentation online: http://docs.opencv.org
-% OpenCV issue tracker: http://code.opencv.org
-% OpenCV Q&A: http://answers.opencv.org
+% <strong>OTHER RESOURCES</strong>
+% OpenCV documentation online: <a href="matlab: web('http://docs.opencv.org', '-browser')">http://docs.opencv.org</a>
+% OpenCV issue tracker: <a href="matlab: web('http://code.opencv.org', '-browser')">http://code.opencv.org</a>
+% OpenCV Q&A: <a href="matlab: web('http://answers.opencv.org', '-browser')">http://answers.opencv.org</a>
+%
+% See also: cv.help, cv.buildInformation
 %
 % Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
 %

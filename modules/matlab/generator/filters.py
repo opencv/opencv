@@ -98,6 +98,12 @@ def slugify(text):
 
 def filename(fullpath):
     return os.path.splitext(os.path.basename(fullpath))[0]
+
+def csv(items, sep=', '):
+    return sep.join(item for item in items)
+
+def stripExtraSpaces(text):
+    return ' '.join(text.split())
     
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     '''comment filter
