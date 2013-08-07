@@ -33,9 +33,9 @@ The function ``createTrackbar`` creates a trackbar (a slider or range control) w
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
 
-.. Sample code::
+.. note::
 
-   * : An example of using the trackbar functionality can be found at opencv_source_code/samples/cpp/connected_components.cpp
+   * An example of using the trackbar functionality can be found at opencv_source_code/samples/cpp/connected_components.cpp
 
 getTrackbarPos
 ------------------
