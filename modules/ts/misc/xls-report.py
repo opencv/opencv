@@ -259,7 +259,8 @@ def main():
         for (w, caption) in [
                 (2500, 'Module'),
                 (10000, 'Test'),
-                (2500, 'Image\nsize'),
+                (2000, 'Image\nwidth'),
+                (2000, 'Image\nheight'),
                 (2000, 'Data\ntype'),
                 (7500, 'Other parameters')]:
             sheet.col(col).width = w
@@ -311,17 +312,19 @@ def main():
 
                 image_size = next(ifilter(re_image_size.match, param_list), None)
                 if image_size is not None:
-                    sheet.write(row, 2, image_size)
+                    (image_width, image_height) = map(int, image_size.split('x', 1))
+                    sheet.write(row, 2, image_width)
+                    sheet.write(row, 3, image_height)
                     del param_list[param_list.index(image_size)]
 
                 data_type = next(ifilter(re_data_type.match, param_list), None)
                 if data_type is not None:
-                    sheet.write(row, 3, data_type)
+                    sheet.write(row, 4, data_type)
                     del param_list[param_list.index(data_type)]
 
-                sheet.row(row).write(4, ' | '.join(param_list))
+                sheet.row(row).write(5, ' | '.join(param_list))
 
-                col = 5
+                col = 6
 
                 for c in config_names:
                     if c in configs:
@@ -331,18 +334,13 @@ def main():
                     col += 1
                     if args.show_times_per_pixel:
                         sheet.write(row, col,
-                          xlwt.Formula(
-                            '''
-                              {0} * 1000000 / (
-                                VALUE(MID({1}; 1; SEARCH("x"; {1}) - 1))
-                                  * VALUE(MID({1}; SEARCH("x"; {1}) + 1; LEN({1})))
-                              )
-                            '''.replace('\n', '').replace(' ', '').format(
+                          xlwt.Formula('{0} * 1000000 / ({1} * {2})'.format(
                               xlwt.Utils.rowcol_to_cell(row, col - 1),
-                              xlwt.Utils.rowcol_to_cell(row, 2)
-                            )
-                          ),
-                          time_style)
+                              xlwt.Utils.rowcol_to_cell(row, 2),
+                              xlwt.Utils.rowcol_to_cell(row, 3)
+                          )),
+                          time_style
+                        )
                         col += 1
 
                 col += 1 # blank column
