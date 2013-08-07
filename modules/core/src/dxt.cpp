@@ -1458,6 +1458,10 @@ static void CCSIDFT_64f( const double* src, double* dst, int n, int nf, int* fac
 
 }
 
+#ifdef HAVE_IPP
+typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, int*, int*, int*);
+typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
+#endif
 
 void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 {
@@ -1483,7 +1487,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int factors[34];
     bool inplace_transform = false;
 #ifdef HAVE_IPP
-    void *spec_r = 0, *spec_c = 0;
+    AutoBuffer<uchar> ippbuf;
     int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
 #endif
 
@@ -1543,52 +1547,51 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
 
         spec = 0;
 #ifdef HAVE_IPP
-        if( len*count >= 64 ) // use IPP DFT if available
+        if(
+#if IPP_VERSION_MAJOR >= 7
+           depth == CV_32F && // IPP 7.x and 8.0 have bug somewhere in double-precision DFT
+#endif
+           len*count >= 64 ) // use IPP DFT if available
         {
-            int ipp_sz = 0;
+            int specsize=0, initsize=0, worksize=0;
+            IppDFTGetSizeFunc getSizeFunc = 0;
+            IppDFTInitFunc initFunc = 0;
 
             if( real_transform && stage == 0 )
             {
                 if( depth == CV_32F )
                 {
-                    if( spec_r )
-                        IPPI_CALL( ippsDFTFree_R_32f( (IppsDFTSpec_R_32f*)spec_r ));
-                    IPPI_CALL( ippsDFTInitAlloc_R_32f(
-                        (IppsDFTSpec_R_32f**)&spec_r, len, ipp_norm_flag, ippAlgHintNone ));
-                    IPPI_CALL( ippsDFTGetBufSize_R_32f( (IppsDFTSpec_R_32f*)spec_r, &ipp_sz ));
+                    getSizeFunc = ippsDFTGetSize_R_32f;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_32f;
                 }
                 else
                 {
-                    if( spec_r )
-                        IPPI_CALL( ippsDFTFree_R_64f( (IppsDFTSpec_R_64f*)spec_r ));
-                    IPPI_CALL( ippsDFTInitAlloc_R_64f(
-                        (IppsDFTSpec_R_64f**)&spec_r, len, ipp_norm_flag, ippAlgHintNone ));
-                    IPPI_CALL( ippsDFTGetBufSize_R_64f( (IppsDFTSpec_R_64f*)spec_r, &ipp_sz ));
+                    getSizeFunc = ippsDFTGetSize_R_64f;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_R_64f;
                 }
-                spec = spec_r;
             }
             else
             {
                 if( depth == CV_32F )
                 {
-                    if( spec_c )
-                        IPPI_CALL( ippsDFTFree_C_32fc( (IppsDFTSpec_C_32fc*)spec_c ));
-                    IPPI_CALL( ippsDFTInitAlloc_C_32fc(
-                        (IppsDFTSpec_C_32fc**)&spec_c, len, ipp_norm_flag, ippAlgHintNone ));
-                    IPPI_CALL( ippsDFTGetBufSize_C_32fc( (IppsDFTSpec_C_32fc*)spec_c, &ipp_sz ));
+                    getSizeFunc = ippsDFTGetSize_C_32fc;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_32fc;
                 }
                 else
                 {
-                    if( spec_c )
-                        IPPI_CALL( ippsDFTFree_C_64fc( (IppsDFTSpec_C_64fc*)spec_c ));
-                    IPPI_CALL( ippsDFTInitAlloc_C_64fc(
-                        (IppsDFTSpec_C_64fc**)&spec_c, len, ipp_norm_flag, ippAlgHintNone ));
-                    IPPI_CALL( ippsDFTGetBufSize_C_64fc( (IppsDFTSpec_C_64fc*)spec_c, &ipp_sz ));
+                    getSizeFunc = ippsDFTGetSize_C_64fc;
+                    initFunc = (IppDFTInitFunc)ippsDFTInit_C_64fc;
                 }
-                spec = spec_c;
             }
-
-            sz += ipp_sz;
+            if( getSizeFunc(len, ipp_norm_flag, ippAlgHintNone, &specsize, &initsize, &worksize) >= 0 )
+            {
+                ippbuf.allocate(specsize + initsize + 64);
+                spec = alignPtr(&ippbuf[0], 32);
+                uchar* initbuf = alignPtr((uchar*)spec + specsize, 32);
+                if( initFunc(len, ipp_norm_flag, ippAlgHintNone, spec, initbuf) < 0 )
+                    spec = 0;
+                sz += worksize;
+            }
         }
         else
 #endif
@@ -1862,24 +1865,6 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
             src = dst;
         }
     }
-
-#ifdef HAVE_IPP
-    if( spec_c )
-    {
-        if( depth == CV_32F )
-            ippsDFTFree_C_32fc( (IppsDFTSpec_C_32fc*)spec_c );
-        else
-            ippsDFTFree_C_64fc( (IppsDFTSpec_C_64fc*)spec_c );
-    }
-
-    if( spec_r )
-    {
-        if( depth == CV_32F )
-            ippsDFTFree_R_32f( (IppsDFTSpec_R_32f*)spec_r );
-        else
-            ippsDFTFree_R_64f( (IppsDFTSpec_R_64f*)spec_r );
-    }
-#endif
 }
 
 
