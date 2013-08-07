@@ -573,6 +573,16 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     active_camera.SetViewAngle (camera.getFov()[1] * 180.0f / CV_PI);
     active_camera.SetClippingRange (camera.getClip()[0], camera.getClip()[1]);
     window_->SetSize (camera.getWindowSize().width, camera.getWindowSize().height);
+    
+    // Use the intrinsic parameters of the camera to simulate more realistically
+    Matx44f proj_matrix;
+    camera.computeProjectionMatrix(proj_matrix);
+    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(((float)camera.getWindowSize().width) / camera.getWindowSize().height, -1.0f, 1.0f));
+    vtkTransform * transform = vtkTransform::New();
+    // This is a hack around not being able to set Projection Matrix
+    transform->SetMatrix(convertToVtkMatrix(proj_matrix * old_proj_matrix.inv())); 
+    active_camera.SetUserTransform(transform);
+    transform->Delete();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
