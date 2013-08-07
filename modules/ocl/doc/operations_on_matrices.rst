@@ -482,3 +482,39 @@ Performs generalized matrix multiplication.
             * **GEMM_2_T** transpose  ``src2``
 
 .. seealso:: :ocv:func:`gemm`
+
+ocl::sortByKey
+------------------
+Returns void
+
+.. ocv:function:: void ocl::sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false)
+
+    :param keys:   The keys to be used as sorting indices.
+
+    :param values: The array of values.
+
+    :param isGreaterThan: Determine sorting order.
+
+    :param method: supported sorting methods:
+            * **SORT_BITONIC**   bitonic sort, only support power-of-2 buffer size
+            * **SORT_SELECTION** selection sort, currently cannot sort duplicate keys
+            * **SORT_MERGE**     merge sort
+            * **SORT_RADIX**     radix sort, only support signed int/float keys(``CV_32S``/``CV_32F``)
+            
+Returns the sorted result of all the elements in values based on equivalent keys.
+
+The element unit in the values to be sorted is determined from the data type, 
+i.e., a ``CV_32FC2`` input ``{a1a2, b1b2}`` will be considered as two elements, regardless its matrix dimension.
+
+Both keys and values will be sorted inplace. 
+
+Keys needs to be a **single** channel `oclMat`.
+
+Example::
+    input -
+    keys   = {2,    3,   1}   (CV_8UC1)
+    values = {10,5, 4,3, 6,2} (CV_8UC2)
+    sortByKey(keys, values, SORT_SELECTION, false);
+    output -
+    keys   = {1,    2,   3}   (CV_8UC1)
+    values = {6,2, 10,5, 4,3} (CV_8UC2)
