@@ -145,7 +145,7 @@ Aligns images
     
     :param times: vector of exposure time values for each image
     
-    :param response: matrix with camera response, one column per channel
+    :param response: 256x1 matrix with inverse camera response function for each pixel value, it should have the same number of channels as images.
     
 AlignMTB
 ---------------------------
@@ -211,13 +211,13 @@ The base class for camera response calibration algorithms.
 
 ExposureCalibrate::process
 ---------------------------
-Recovers camera response.
+Recovers inverse camera response.
 
 .. ocv:function:: void ExposureCalibrate::process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
 
     :param src: vector of input images
     
-    :param dst: matrix with calculated camera response
+    :param dst: 256x1 matrix with inverse camera response function
     
     :param times: vector of exposure time values for each image
     
@@ -258,7 +258,7 @@ Merges images.
     
     :param times: vector of exposure time values for each image
     
-    :param response: one-column matrix with camera response
+    :param response: 256x1 matrix with inverse camera response function for each pixel value, it should have the same number of channels as images.
     
 MergeDebevec
 ---------------------------
