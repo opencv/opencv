@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
   <gpu_dst>
     <kind>65536</kind>
     <type>13</type>
@@ -18,8 +18,8 @@
       <x>616</x>
       <y>0</y>
       <cn>1</cn>
-      <val>-9.0677499771118164e-01</val></rng2></gpu_dst></GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
-<GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
+      <val>-9.0677499771118164e-01</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--5000>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
   <gpu_dst>
     <kind>65536</kind>
     <type>13</type>
@@ -37,8 +37,8 @@
     <rng2>
       <x>6221</x>
       <y>0</y>
-      <val>-1.2366657257080078e+00</val></rng2></gpu_dst></GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
-<GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
+      <val>-1.2366657257080078e+00</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--10000>
+<Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
   <gpu_dst>
     <kind>65536</kind>
     <type>13</type>
@@ -55,8 +55,8 @@
     <rng2>
       <x>4927</x>
       <y>0</y>
-      <val>1.4586313962936401e+00</val></rng2></gpu_dst></GPU_Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
-<GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
+      <val>1.4586313962936401e+00</val></rng2></gpu_dst></Count_Calib3D_ProjectPoints--Calib3D_ProjectPoints--20000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
   <gpu_rvec>
     <kind>65536</kind>
     <type>5</type>
@@ -74,8 +74,8 @@
       <cols>3</cols>
       <dt>f</dt>
       <data>
-        5.06799519e-02 1.65846586e-01 6.42464697e-01</data></val></gpu_tvec></GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
-<GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
+        5.06799519e-02 1.65846586e-01 6.42464697e-01</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--5000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
   <gpu_rvec>
     <kind>65536</kind>
     <type>5</type>
@@ -93,8 +93,8 @@
       <cols>3</cols>
       <dt>f</dt>
       <data>
-        5.30329764e-01 7.04620838e-01 8.19914341e-01</data></val></gpu_tvec></GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
-<GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
+        5.30329764e-01 7.04620838e-01 8.19914341e-01</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--10000>
+<Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
   <gpu_rvec>
     <kind>65536</kind>
     <type>5</type>
@@ -112,8 +112,8 @@
       <cols>3</cols>
       <dt>f</dt>
       <data>
-        6.73862040e-01 1.45766456e-02 1.89692695e-02</data></val></gpu_tvec></GPU_Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
+        6.73862040e-01 1.45766456e-02 1.89692695e-02</data></val></gpu_tvec></Count_Calib3D_SolvePnPRansac--Calib3D_SolvePnPRansac--20000>
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -122,8 +122,8 @@
       <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        232 190 73 145 620 153 100 200</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
+        232 190 73 145 620 153 100 200</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-hog-road-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -132,8 +132,8 @@
       <cols>3</cols>
       <dt>"4i"</dt>
       <data>
-        363 162 89 177 401 138 125 250 468 127 144 287</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
+        363 162 89 177 401 138 125 250 468 127 144 287</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000009_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -141,8 +141,8 @@
       <rows>0</rows>
       <cols>0</cols>
       <dt>u</dt>
-      <data></data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
+      <data></data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000032_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -151,8 +151,8 @@
       <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        38 183 70 140 560 176 68 137</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
+        38 183 70 140 560 176 68 137</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000165_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -161,8 +161,8 @@
       <cols>3</cols>
       <dt>"4i"</dt>
       <data>
-        238 149 127 254 309 102 147 293 0 131 126 251</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
+        238 149 127 254 309 102 147 293 0 131 126 251</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000261_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -171,8 +171,8 @@
       <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        343 178 76 152 373 139 122 244</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
+        343 178 76 152 373 139 122 244</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000469_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -181,8 +181,8 @@
       <cols>1</cols>
       <dt>"4i"</dt>
       <data>
-        293 167 71 142</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
-<GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
+        293 167 71 142</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000527_0-png->
+<Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
   <gpu_found_locations>
     <kind>196608</kind>
     <type>28</type>
@@ -191,8 +191,8 @@
       <cols>2</cols>
       <dt>"4i"</dt>
       <data>
-        42 137 129 257 343 131 97 195</data></val></gpu_found_locations></GPU_Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
-<GPU_ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
+        42 137 129 257 343 131 97 195</data></val></gpu_found_locations></Image_ObjDetect_HOG--ObjDetect_HOG---gpu-caltech-image_00000574_0-png->
+<ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
   <gpu_rects>
     <kind>196608</kind>
     <type>28</type>
@@ -200,8 +200,8 @@
       <rows>0</rows>
       <cols>0</cols>
       <dt>u</dt>
-      <data></data></val></gpu_rects></GPU_ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
-<GPU_ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
+      <data></data></val></gpu_rects></ImageAndCascade_ObjDetect_HaarClassifier--ObjDetect_HaarClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-perf-haarcascade_frontalface_alt-xml-->
+<ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
   <gpu_rects>
     <kind>196608</kind>
     <type>28</type>
@@ -209,8 +209,8 @@
       <rows>0</rows>
       <cols>0</cols>
       <dt>u</dt>
-      <data></data></val></gpu_rects></GPU_ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--Gray->
+      <data></data></val></gpu_rects></ImageAndCascade_ObjDetect_LBPClassifier--ObjDetect_LBPClassifier----gpu-haarcascade-group_1_640x480_VGA-pgm----gpu-lbpcascade-lbpcascade_frontalface-xml-->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -227,8 +227,8 @@
     <rng2>
       <x>521</x>
       <y>12</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -247,8 +247,8 @@
       <x>1136</x>
       <y>412</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -267,8 +267,8 @@
       <x>294</x>
       <y>146</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -285,8 +285,8 @@
     <rng2>
       <x>747</x>
       <y>219</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -305,8 +305,8 @@
       <x>344</x>
       <y>577</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -325,8 +325,8 @@
       <x>1213</x>
       <y>28</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -343,8 +343,8 @@
     <rng2>
       <x>1028</x>
       <y>638</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -362,8 +362,8 @@
       <x>413</x>
       <y>126</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -380,8 +380,8 @@
     <rng2>
       <x>871</x>
       <y>497</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -398,8 +398,8 @@
     <rng2>
       <x>1105</x>
       <y>645</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -417,8 +417,8 @@
       <x>105</x>
       <y>576</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -437,8 +437,8 @@
       <x>278</x>
       <y>416</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--Gray->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x720--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -455,8 +455,8 @@
     <rng2>
       <x>792</x>
       <y>250</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -475,8 +475,8 @@
       <x>735</x>
       <y>533</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGRA->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -493,8 +493,8 @@
     <rng2>
       <x>671</x>
       <y>212</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -511,8 +511,8 @@
     <rng2>
       <x>727</x>
       <y>742</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -530,8 +530,8 @@
     <rng2>
       <x>466</x>
       <y>668</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -550,8 +550,8 @@
       <x>217</x>
       <y>185</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -568,8 +568,8 @@
     <rng2>
       <x>433</x>
       <y>941</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -587,8 +587,8 @@
     <rng2>
       <x>942</x>
       <y>684</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -605,8 +605,8 @@
     <rng2>
       <x>165</x>
       <y>479</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -623,8 +623,8 @@
     <rng2>
       <x>651</x>
       <y>460</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -643,8 +643,8 @@
       <x>988</x>
       <y>467</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGRA->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -663,8 +663,8 @@
       <x>995</x>
       <y>822</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1280x1024--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -681,8 +681,8 @@
     <rng2>
       <x>675</x>
       <y>1</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -700,8 +700,8 @@
       <x>1418</x>
       <y>445</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGRA->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -719,8 +719,8 @@
     <rng2>
       <x>636</x>
       <y>190</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -737,8 +737,8 @@
     <rng2>
       <x>1602</x>
       <y>863</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -756,8 +756,8 @@
       <x>1401</x>
       <y>669</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -775,8 +775,8 @@
       <x>517</x>
       <y>381</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -793,8 +793,8 @@
     <rng2>
       <x>1106</x>
       <y>1001</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -812,8 +812,8 @@
       <x>181</x>
       <y>895</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -832,8 +832,8 @@
       <x>1320</x>
       <y>600</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -850,8 +850,8 @@
     <rng2>
       <x>604</x>
       <y>164</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -868,8 +868,8 @@
     <rng2>
       <x>122</x>
       <y>641</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -887,8 +887,8 @@
     <rng2>
       <x>1423</x>
       <y>547</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetTo--MatOp_SetTo---1920x1080--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -905,8 +905,8 @@
     <rng2>
       <x>309</x>
       <y>406</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -925,8 +925,8 @@
       <x>1119</x>
       <y>42</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -945,8 +945,8 @@
       <x>985</x>
       <y>66</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--Gray->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -963,8 +963,8 @@
     <rng2>
       <x>1225</x>
       <y>687</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -982,8 +982,8 @@
       <x>1205</x>
       <y>205</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -1002,8 +1002,8 @@
       <x>588</x>
       <y>373</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -1020,8 +1020,8 @@
     <rng2>
       <x>469</x>
       <y>501</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -1040,8 +1040,8 @@
       <x>806</x>
       <y>38</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGRA->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -1060,8 +1060,8 @@
       <x>676</x>
       <y>427</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -1078,8 +1078,8 @@
     <rng2>
       <x>280</x>
       <y>536</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -1097,8 +1097,8 @@
     <rng2>
       <x>863</x>
       <y>276</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -1116,8 +1116,8 @@
       <x>316</x>
       <y>391</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x720--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -1134,8 +1134,8 @@
     <rng2>
       <x>490</x>
       <y>378</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -1153,8 +1153,8 @@
     <rng2>
       <x>834</x>
       <y>831</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -1173,8 +1173,8 @@
       <x>96</x>
       <y>680</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -1191,8 +1191,8 @@
     <rng2>
       <x>894</x>
       <y>174</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -1210,8 +1210,8 @@
       <x>787</x>
       <y>145</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -1229,8 +1229,8 @@
     <rng2>
       <x>16</x>
       <y>292</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -1247,8 +1247,8 @@
     <rng2>
       <x>1083</x>
       <y>78</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -1265,8 +1265,8 @@
     <rng2>
       <x>904</x>
       <y>327</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -1283,8 +1283,8 @@
     <rng2>
       <x>725</x>
       <y>166</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -1301,8 +1301,8 @@
     <rng2>
       <x>1125</x>
       <y>119</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -1321,8 +1321,8 @@
       <x>419</x>
       <y>210</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -1341,8 +1341,8 @@
       <x>1249</x>
       <y>487</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1280x1024--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -1359,8 +1359,8 @@
     <rng2>
       <x>1085</x>
       <y>327</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -1378,8 +1378,8 @@
     <rng2>
       <x>1523</x>
       <y>605</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -1397,8 +1397,8 @@
       <x>705</x>
       <y>455</y>
       <cn>3</cn>
-      <val>4.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--Gray->
+      <val>4.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -1415,8 +1415,8 @@
     <rng2>
       <x>408</x>
       <y>812</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -1434,8 +1434,8 @@
       <x>129</x>
       <y>942</y>
       <cn>1</cn>
-      <val>2.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGRA->
+      <val>2.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -1453,8 +1453,8 @@
     <rng2>
       <x>930</x>
       <y>841</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--Gray->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -1471,8 +1471,8 @@
     <rng2>
       <x>1229</x>
       <y>416</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -1490,8 +1490,8 @@
     <rng2>
       <x>1434</x>
       <y>698</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -1510,8 +1510,8 @@
       <x>1915</x>
       <y>1015</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -1528,8 +1528,8 @@
     <rng2>
       <x>636</x>
       <y>418</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGR->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -1547,8 +1547,8 @@
     <rng2>
       <x>1894</x>
       <y>816</y>
-      <val>1.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGRA->
+      <val>1.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -1567,8 +1567,8 @@
       <x>210</x>
       <y>227</y>
       <cn>2</cn>
-      <val>3.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--Gray->
+      <val>3.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_SetToMasked--MatOp_SetToMasked---1920x1080--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -1585,8 +1585,8 @@
     <rng2>
       <x>563</x>
       <y>407</y>
-      <val>9.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGR->
+      <val>9.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -1605,8 +1605,8 @@
       <x>1247</x>
       <y>559</y>
       <cn>1</cn>
-      <val>240.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGRA->
+      <val>240.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -1623,8 +1623,8 @@
     <rng2>
       <x>30</x>
       <y>604</y>
-      <val>111.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--Gray->
+      <val>111.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -1641,8 +1641,8 @@
     <rng2>
       <x>136</x>
       <y>709</y>
-      <val>53140.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGR->
+      <val>53140.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -1661,8 +1661,8 @@
       <x>189</x>
       <y>436</y>
       <cn>1</cn>
-      <val>51295.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGRA->
+      <val>51295.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -1681,8 +1681,8 @@
       <x>722</x>
       <y>524</y>
       <cn>2</cn>
-      <val>47317.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--Gray->
+      <val>47317.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -1699,8 +1699,8 @@
     <rng2>
       <x>1272</x>
       <y>581</y>
-      <val>1.2700625000000000e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGR->
+      <val>1.2700625000000000e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -1718,8 +1718,8 @@
       <x>797</x>
       <y>162</y>
       <cn>2</cn>
-      <val>9.7729125976562500e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGRA->
+      <val>9.7729125976562500e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -1737,8 +1737,8 @@
       <x>502</x>
       <y>691</y>
       <cn>1</cn>
-      <val>3.5297708129882812e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--Gray->
+      <val>3.5297708129882812e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -1755,8 +1755,8 @@
     <rng2>
       <x>14</x>
       <y>45</y>
-      <val>-3.5975540087064614e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGR->
+      <val>-3.5975540087064614e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -1775,8 +1775,8 @@
       <x>576</x>
       <y>276</y>
       <cn>2</cn>
-      <val>-3.8984733847500765e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGRA->
+      <val>-3.8984733847500765e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -1795,8 +1795,8 @@
       <x>654</x>
       <y>216</y>
       <cn>2</cn>
-      <val>8.4229084756810994e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--Gray->
+      <val>8.4229084756810994e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x720--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -1813,8 +1813,8 @@
     <rng2>
       <x>922</x>
       <y>69</y>
-      <val>235.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGR->
+      <val>235.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -1832,8 +1832,8 @@
       <x>797</x>
       <y>330</y>
       <cn>2</cn>
-      <val>37.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGRA->
+      <val>37.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -1851,8 +1851,8 @@
       <x>840</x>
       <y>407</y>
       <cn>2</cn>
-      <val>36.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--Gray->
+      <val>36.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -1869,8 +1869,8 @@
     <rng2>
       <x>674</x>
       <y>823</y>
-      <val>14456.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGR->
+      <val>14456.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -1888,8 +1888,8 @@
       <x>1016</x>
       <y>982</y>
       <cn>2</cn>
-      <val>49894.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGRA->
+      <val>49894.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -1908,8 +1908,8 @@
       <x>569</x>
       <y>10</y>
       <cn>1</cn>
-      <val>31496.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--Gray->
+      <val>31496.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -1926,8 +1926,8 @@
     <rng2>
       <x>380</x>
       <y>674</y>
-      <val>7.2987548828125000e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGR->
+      <val>7.2987548828125000e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -1946,8 +1946,8 @@
       <x>932</x>
       <y>46</y>
       <cn>1</cn>
-      <val>-7.5998773193359375e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGRA->
+      <val>-7.5998773193359375e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -1966,8 +1966,8 @@
       <x>554</x>
       <y>354</y>
       <cn>3</cn>
-      <val>3.4309790039062500e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--Gray->
+      <val>3.4309790039062500e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -1984,8 +1984,8 @@
     <rng2>
       <x>881</x>
       <y>37</y>
-      <val>-6.7294903560820740e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGR->
+      <val>-6.7294903560820740e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -2004,8 +2004,8 @@
       <x>35</x>
       <y>723</y>
       <cn>2</cn>
-      <val>-1.1433955062951195e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGRA->
+      <val>-1.1433955062951195e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -2023,8 +2023,8 @@
       <x>967</x>
       <y>782</y>
       <cn>1</cn>
-      <val>0.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--Gray->
+      <val>0.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1280x1024--CV_64F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2041,8 +2041,8 @@
     <rng2>
       <x>1427</x>
       <y>748</y>
-      <val>227.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGR->
+      <val>227.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -2060,8 +2060,8 @@
     <rng2>
       <x>1106</x>
       <y>934</y>
-      <val>100.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGRA->
+      <val>100.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>24</type>
@@ -2079,8 +2079,8 @@
     <rng2>
       <x>540</x>
       <y>433</y>
-      <val>140.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--Gray->
+      <val>140.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_8U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2097,8 +2097,8 @@
     <rng2>
       <x>805</x>
       <y>705</y>
-      <val>4216.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGR->
+      <val>4216.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>18</type>
@@ -2115,8 +2115,8 @@
     <rng2>
       <x>1602</x>
       <y>993</y>
-      <val>45278.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGRA->
+      <val>45278.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>26</type>
@@ -2135,8 +2135,8 @@
       <x>373</x>
       <y>220</y>
       <cn>1</cn>
-      <val>3904.</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--Gray->
+      <val>3904.</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_16U--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2153,8 +2153,8 @@
     <rng2>
       <x>1603</x>
       <y>57</y>
-      <val>1.2502825164794922e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGR->
+      <val>1.2502825164794922e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>21</type>
@@ -2173,8 +2173,8 @@
       <x>875</x>
       <y>435</y>
       <cn>2</cn>
-      <val>-3.4829479980468750e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGRA->
+      <val>-3.4829479980468750e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>29</type>
@@ -2193,8 +2193,8 @@
       <x>815</x>
       <y>487</y>
       <cn>2</cn>
-      <val>2.5604433593750000e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGRA->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--Gray->
+      <val>2.5604433593750000e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_32F--BGRA->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--Gray->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2211,8 +2211,8 @@
     <rng2>
       <x>1308</x>
       <y>755</y>
-      <val>-1.1134212417759870e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--Gray->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGR->
+      <val>-1.1134212417759870e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--Gray->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGR->
   <gpu_dst>
     <kind>65536</kind>
     <type>22</type>
@@ -2231,8 +2231,8 @@
       <x>112</x>
       <y>66</y>
       <cn>1</cn>
-      <val>4.0345220105267106e+02</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGR->
-<GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGRA->
+      <val>4.0345220105267106e+02</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGR->
+<Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGRA->
   <gpu_dst>
     <kind>65536</kind>
     <type>30</type>
@@ -2251,8 +2251,8 @@
       <x>1811</x>
       <y>686</y>
       <cn>1</cn>
-      <val>-4.0250974461440610e+03</val></rng2></gpu_dst></GPU_Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGRA->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_8U->
+      <val>-4.0250974461440610e+03</val></rng2></gpu_dst></Sz_Depth_Cn_MatOp_CopyToMasked--MatOp_CopyToMasked---1920x1080--CV_64F--BGRA->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2269,8 +2269,8 @@
     <rng2>
       <x>1138</x>
       <y>564</y>
-      <val>40.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_16U->
+      <val>40.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2287,8 +2287,8 @@
     <rng2>
       <x>984</x>
       <y>395</y>
-      <val>51.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_32F->
+      <val>51.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2305,8 +2305,8 @@
     <rng2>
       <x>1236</x>
       <y>356</y>
-      <val>6.7500000000000000e+01</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_64F->
+      <val>6.7500000000000000e+01</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2323,8 +2323,8 @@
     <rng2>
       <x>846</x>
       <y>340</y>
-      <val>2.0500000000000000e+01</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_8U->
+      <val>2.0500000000000000e+01</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_8U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2341,8 +2341,8 @@
     <rng2>
       <x>993</x>
       <y>571</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2359,8 +2359,8 @@
     <rng2>
       <x>1017</x>
       <y>485</y>
-      <val>18315.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_32F->
+      <val>18315.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2377,8 +2377,8 @@
     <rng2>
       <x>321</x>
       <y>418</y>
-      <val>15969.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_64F->
+      <val>15969.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2395,8 +2395,8 @@
     <rng2>
       <x>534</x>
       <y>280</y>
-      <val>2900.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_8U->
+      <val>2900.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_16U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2413,8 +2413,8 @@
     <rng2>
       <x>582</x>
       <y>593</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2431,8 +2431,8 @@
     <rng2>
       <x>1217</x>
       <y>154</y>
-      <val>0.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_32F->
+      <val>0.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2449,8 +2449,8 @@
     <rng2>
       <x>527</x>
       <y>683</y>
-      <val>1.7749509277343750e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_64F->
+      <val>1.7749509277343750e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2467,8 +2467,8 @@
     <rng2>
       <x>161</x>
       <y>105</y>
-      <val>1.5728492431640625e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_8U->
+      <val>1.5728492431640625e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_32F--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2485,8 +2485,8 @@
     <rng2>
       <x>295</x>
       <y>0</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2503,8 +2503,8 @@
     <rng2>
       <x>337</x>
       <y>461</y>
-      <val>1307.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_32F->
+      <val>1307.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2521,8 +2521,8 @@
     <rng2>
       <x>1253</x>
       <y>365</y>
-      <val>-1.2807634277343750e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_64F->
+      <val>-1.2807634277343750e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2539,8 +2539,8 @@
     <rng2>
       <x>1145</x>
       <y>585</y>
-      <val>1.5199606985299476e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_8U->
+      <val>1.5199606985299476e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x720--CV_64F--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2557,8 +2557,8 @@
     <rng2>
       <x>1074</x>
       <y>240</y>
-      <val>42.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_16U->
+      <val>42.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2575,8 +2575,8 @@
     <rng2>
       <x>1101</x>
       <y>508</y>
-      <val>14.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_32F->
+      <val>14.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2593,8 +2593,8 @@
     <rng2>
       <x>1260</x>
       <y>538</y>
-      <val>2.2500000000000000e+01</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_64F->
+      <val>2.2500000000000000e+01</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2611,8 +2611,8 @@
     <rng2>
       <x>1054</x>
       <y>1015</y>
-      <val>88.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_8U->
+      <val>88.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_8U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2629,8 +2629,8 @@
     <rng2>
       <x>448</x>
       <y>112</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2647,8 +2647,8 @@
     <rng2>
       <x>525</x>
       <y>762</y>
-      <val>32310.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_32F->
+      <val>32310.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2665,8 +2665,8 @@
     <rng2>
       <x>901</x>
       <y>261</y>
-      <val>21097.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_64F->
+      <val>21097.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2683,8 +2683,8 @@
     <rng2>
       <x>197</x>
       <y>395</y>
-      <val>2.8555000000000000e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_8U->
+      <val>2.8555000000000000e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_16U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2701,8 +2701,8 @@
     <rng2>
       <x>1092</x>
       <y>793</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2719,8 +2719,8 @@
     <rng2>
       <x>86</x>
       <y>295</y>
-      <val>574.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_32F->
+      <val>574.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2737,8 +2737,8 @@
     <rng2>
       <x>627</x>
       <y>738</y>
-      <val>8.9571697998046875e+02</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_64F->
+      <val>8.9571697998046875e+02</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2755,8 +2755,8 @@
     <rng2>
       <x>1179</x>
       <y>347</y>
-      <val>1.7231569824218750e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_8U->
+      <val>1.7231569824218750e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_32F--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2773,8 +2773,8 @@
     <rng2>
       <x>409</x>
       <y>1001</y>
-      <val>0.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_16U->
+      <val>0.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2791,8 +2791,8 @@
     <rng2>
       <x>1105</x>
       <y>390</y>
-      <val>1788.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_32F->
+      <val>1788.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2809,8 +2809,8 @@
     <rng2>
       <x>59</x>
       <y>871</y>
-      <val>1.6232374267578125e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_64F->
+      <val>1.6232374267578125e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2827,8 +2827,8 @@
     <rng2>
       <x>984</x>
       <y>452</y>
-      <val>9.1752972245126000e+02</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_8U->
+      <val>9.1752972245126000e+02</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1280x1024--CV_64F--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2845,8 +2845,8 @@
     <rng2>
       <x>844</x>
       <y>916</y>
-      <val>58.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_16U->
+      <val>58.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2863,8 +2863,8 @@
     <rng2>
       <x>1151</x>
       <y>624</y>
-      <val>118.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_32F->
+      <val>118.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2881,8 +2881,8 @@
     <rng2>
       <x>1681</x>
       <y>388</y>
-      <val>107.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_64F->
+      <val>107.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2899,8 +2899,8 @@
     <rng2>
       <x>659</x>
       <y>876</y>
-      <val>1.1850000000000000e+02</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_8U->
+      <val>1.1850000000000000e+02</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_8U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2917,8 +2917,8 @@
     <rng2>
       <x>320</x>
       <y>801</y>
-      <val>255.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_16U->
+      <val>255.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -2935,8 +2935,8 @@
     <rng2>
       <x>200</x>
       <y>319</y>
-      <val>16260.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_32F->
+      <val>16260.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -2953,8 +2953,8 @@
     <rng2>
       <x>910</x>
       <y>735</y>
-      <val>5469.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_64F->
+      <val>5469.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -2971,8 +2971,8 @@
     <rng2>
       <x>912</x>
       <y>32</y>
-      <val>2.4413500000000000e+04</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_8U->
+      <val>2.4413500000000000e+04</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_16U--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -2989,8 +2989,8 @@
     <rng2>
       <x>14</x>
       <y>358</y>
-      <val>0.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_16U->
+      <val>0.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -3007,8 +3007,8 @@
     <rng2>
       <x>1621</x>
       <y>147</y>
-      <val>179.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_32F->
+      <val>179.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -3025,8 +3025,8 @@
     <rng2>
       <x>146</x>
       <y>69</y>
-      <val>1.5822075195312500e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_64F->
+      <val>1.5822075195312500e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -3043,8 +3043,8 @@
     <rng2>
       <x>814</x>
       <y>1071</y>
-      <val>1.9744577636718750e+03</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_64F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_8U->
+      <val>1.9744577636718750e+03</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_32F--CV_64F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_8U->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -3061,8 +3061,8 @@
     <rng2>
       <x>1051</x>
       <y>138</y>
-      <val>0.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_8U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_16U->
+      <val>0.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_8U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_16U->
   <gpu_dst>
     <kind>65536</kind>
     <type>2</type>
@@ -3079,8 +3079,8 @@
     <rng2>
       <x>1454</x>
       <y>693</y>
-      <val>1821.</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_16U->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_32F->
+      <val>1821.</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_16U->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_32F->
   <gpu_dst>
     <kind>65536</kind>
     <type>5</type>
@@ -3097,8 +3097,8 @@
     <rng2>
       <x>1861</x>
       <y>985</y>
-      <val>-7.4660998535156250e+02</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_32F->
-<GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_64F->
+      <val>-7.4660998535156250e+02</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_32F->
+<Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_64F->
   <gpu_dst>
     <kind>65536</kind>
     <type>6</type>
@@ -3115,5 +3115,5 @@
     <rng2>
       <x>717</x>
       <y>498</y>
-      <val>3.9231618646675099e+02</val></rng2></gpu_dst></GPU_Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_64F->
+      <val>3.9231618646675099e+02</val></rng2></gpu_dst></Sz_2Depth_MatOp_ConvertTo--MatOp_ConvertTo---1920x1080--CV_64F--CV_64F->
 </opencv_storage>
