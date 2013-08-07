@@ -1,5 +1,6 @@
 if(NOT HAVE_OPENCL)
   ocv_module_disable(ocl)
+  return()
 endif()
 
 set(the_description "OpenCL-accelerated Computer Vision")

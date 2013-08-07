@@ -96,6 +96,12 @@ if(CMAKE_VERSION VERSION_GREATER 2.6.2)
   unset(OpenCV_CONFIG_PATH CACHE)
 endif()
 
+if(NOT OpenCV_FIND_QUIETLY)
+  message(STATUS "OpenCV ARCH: ${OpenCV_ARCH}")
+  message(STATUS "OpenCV RUNTIME: ${OpenCV_RUNTIME}")
+  message(STATUS "OpenCV STATIC: ${OpenCV_STATIC}")
+endif()
+
 get_filename_component(OpenCV_CONFIG_PATH "${CMAKE_CURRENT_LIST_FILE}" PATH CACHE)
 if(OpenCV_RUNTIME AND OpenCV_ARCH)
   if(OpenCV_STATIC AND EXISTS "${OpenCV_CONFIG_PATH}/${OpenCV_ARCH}/${OpenCV_RUNTIME}/staticlib/OpenCVConfig.cmake")
@@ -150,9 +156,51 @@ if(OpenCV_LIB_PATH AND EXISTS "${OpenCV_LIB_PATH}/OpenCVConfig.cmake")
   endif()
 else()
   if(NOT OpenCV_FIND_QUIETLY)
+# TODO Fix message
     message(WARNING "Found OpenCV 2.4.3 Windows Super Pack but it has not binaries compatible with your configuration.
     You should manually point CMake variable OpenCV_DIR to your build of OpenCV library.")
   endif()
   set(OpenCV_FOUND FALSE CACHE BOOL "" FORCE)
   set(OPENCV_FOUND FALSE CACHE BOOL "" FORCE)
 endif()
+
+
+#
+# Some macroses for samples
+#
+macro(ocv_check_dependencies)
+  set(OCV_DEPENDENCIES_FOUND TRUE)
+  foreach(d ${ARGN})
+    if(NOT TARGET ${d})
+      set(OCV_DEPENDENCIES_FOUND FALSE)
+      break()
+    endif()
+  endforeach()
+endmacro()
+
+# adds include directories in such way that directories from the OpenCV source tree go first
+function(ocv_include_directories)
+  set(__add_before "")
+  foreach(dir ${ARGN})
+    get_filename_component(__abs_dir "${dir}" ABSOLUTE)
+    if("${__abs_dir}" MATCHES "^${OpenCV_DIR}")
+      list(APPEND __add_before "${dir}")
+    else()
+      include_directories(AFTER SYSTEM "${dir}")
+    endif()
+  endforeach()
+  include_directories(BEFORE ${__add_before})
+endfunction()
+
+macro(ocv_include_modules)
+  include_directories(BEFORE "${OpenCV_INCLUDE_DIRS}")
+endmacro()
+
+# remove all matching elements from the list
+macro(ocv_list_filterout lst regex)
+  foreach(item ${${lst}})
+    if(item MATCHES "${regex}")
+      list(REMOVE_ITEM ${lst} "${item}")
+    endif()
+  endforeach()
+endmacro()
