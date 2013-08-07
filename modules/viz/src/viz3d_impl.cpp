@@ -963,6 +963,7 @@ void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 
 void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize (int xw, int yw) { window_->SetSize (xw, yw); }
+cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }
 
 bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& /*mesh*/, const Mat& /*mask*/, const std::string &/*id*/)
 {

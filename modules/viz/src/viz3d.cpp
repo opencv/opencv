@@ -53,3 +53,6 @@ cv::Affine3f cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
 
 void cv::viz::Viz3d::convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord) { impl_->convertToWindowCoordinates(pt, window_coord); }
 void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction) { impl_->converTo3DRay(window_coord, origin, direction); }
+
+cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
+void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }

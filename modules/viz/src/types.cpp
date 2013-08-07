@@ -196,7 +196,7 @@ void cv::viz::Camera::setWindowSize(const Size &window_size)
     float aspect_ratio_new = static_cast<float>(window_size.width) / static_cast<float>(window_size.height);
     
     if (principal_point_[0] < 0.0f)
-        fov_[0] = 2.f * atan(tan(fov_[1] * 0.5) * aspect_ratio_new); // This assumes that the lens is symmetric!
+        fov_[0] = 2.f * atan(tan(fov_[1] * 0.5f) * aspect_ratio_new); // This assumes that the lens is symmetric!
     else
         fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0])); // TODO I need to check this
     

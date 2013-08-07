@@ -7,6 +7,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
+#include <boost/concept_check.hpp>
 
 namespace cv
 {
@@ -46,6 +47,9 @@ namespace cv
             
             void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
             void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
+            
+            Size getWindowSize() const;
+            void setWindowSize(const Size &window_size);
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);

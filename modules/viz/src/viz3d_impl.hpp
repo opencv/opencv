@@ -135,10 +135,10 @@ public:
 
 
 
-
     //to implemnt in Viz3d
     void saveScreenshot (const String &file);
     void setWindowPosition (int x, int y);
+    Size getWindowSize() const;
     void setWindowSize (int xw, int yw);
     void setFullScreen (bool mode);
     void setWindowName (const String &name);
