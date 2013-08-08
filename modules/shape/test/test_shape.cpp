@@ -447,7 +447,7 @@ vector<float> CV_ShapeTest::getLocalTangentAngles(Mat image, vector<Point2f> pts
         }
         else
         {
-            output[i]=100;
+            output[i]=2*CV_PI;
         }
     }
     return output;
