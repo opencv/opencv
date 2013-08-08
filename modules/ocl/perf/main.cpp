@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
 int main(int argc, const char *argv[])
 {
