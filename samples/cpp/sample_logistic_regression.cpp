@@ -16,6 +16,8 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/ml/ml.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
 
 using namespace std;
 using namespace cv;
@@ -25,6 +27,10 @@ int main()
 {
     Mat data_temp, labels_temp;
     Mat data, labels;
+    
+    Mat data_train, data_test;
+    Mat labels_train, labels_test;
+
     Mat responses, result;
 
     FileStorage f;
@@ -44,6 +50,32 @@ int main()
     data_temp.convertTo(data, CV_32F);
     labels_temp.convertTo(labels, CV_32F);
 
+    for(int i =0;i<data.rows;i++)
+    {
+        if(i%2 ==0)
+        {
+            data_train.push_back(data.row(i));
+            labels_train.push_back(labels.row(i));
+        }
+        else
+        {
+            data_test.push_back(data.row(i));
+            labels_test.push_back(labels.row(i));
+        }
+    }
+
+    cout<<"training samples per class: "<<data_train.rows/2<<endl;
+    cout<<"testing samples per class: "<<data_test.rows/2<<endl;
+    
+    // display sample image
+    Mat img_disp1 = data_train.row(2).reshape(0,28).t();
+    Mat img_disp2 = data_train.row(18).reshape(0,28).t();
+
+    imshow("digit 0", img_disp1);
+    imshow("digit 1", img_disp2);
+
+    
+
     cout<<"initializing Logisitc Regression Parameters\n"<<endl;
 
     CvLR_TrainParams params = CvLR_TrainParams();
@@ -56,22 +88,21 @@ int main()
 
     cout<<"training Logisitc Regression classifier\n"<<endl;
 
-    CvLR lr_(data, labels, params);
-
-    cout<<"predicting the trained dataset\n"<<endl;
-
-    lr_.predict(data, responses);
-
-    labels.convertTo(labels, CV_32S);
-
+    CvLR lr_(data_train, labels_train, params);
+    lr_.predict(data_test, responses);
+    labels_test.convertTo(labels_test, CV_32S);
+    
     cout<<"Original Label ::  Predicted Label"<<endl;
-    result = (labels == responses)/255;
-    for(int i=0;i<labels.rows;i++)
+    result = (labels_test == responses)/255;
+
+    for(int i=0;i<labels_test.rows;i++)
     {
-        cout<<labels.at<int>(i,0)<<" :: "<< responses.at<int>(i,0)<<endl;
+        cout<<labels_test.at<int>(i,0)<<" :: "<< responses.at<int>(i,0)<<endl;
     }
+    
     // calculate accuracy
     cout<<"accuracy: "<<((double)cv::sum(result)[0]/result.rows)*100<<"%\n";
+    cout<<"saving the classifier"<<endl;
 
     // save the classfier
     lr_.save("NewLR_Trained.xml");
@@ -87,11 +118,12 @@ int main()
     // predict using loaded classifier
     cout<<"predicting the dataset using the loaded classfier\n"<<endl;
 
-    lr2.predict(data, responses2);
+    lr2.predict(data_test, responses2);
 
     // calculate accuracy
-    result = (labels == responses2)/255;
+    result = (labels_test == responses2)/255;
     cout<<"accuracy using loaded classifier: "<<((double)cv::sum(result)[0]/result.rows)*100<<"%\n";
+    waitKey(0);
 
     return 0;
 }
