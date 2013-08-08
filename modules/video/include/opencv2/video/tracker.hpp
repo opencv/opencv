@@ -206,7 +206,7 @@ class CV_EXPORTS_W TrackerSamplerAlgorithm
    * \param image The image
    * \param boundingBox The bounding box from which regions can be calculated
    * \param sample The computed samples [AAM] Fig. 1 variable Sk
-   * \return true if samples is computed, false otherwise
+   * \return true if samples are computed, false otherwise
    */
   bool sampling( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
@@ -605,14 +605,14 @@ class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
 
   ~TrackerSamplerCSC();
 
+protected:
+
   bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
  private:
 
   Params params;
   int mode;
-
-  void computeIntegral( const Mat& image, std::vector<Mat_<float> >& ii_imgs );
 
   std::vector<Mat> sampleImage( const Mat& img, int x, int y, int w, int h, float inrad, float outrad = 0, int maxnum = 1000000 );
 };
