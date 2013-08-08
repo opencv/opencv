@@ -1137,7 +1137,7 @@ private:
 };
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-static bool IPPMorphReplicate(int &op, const Mat &src, Mat &dst, const Mat &kernel, const Point &anchor)
+static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kernel, const Point &anchor)
 {
 	int type = src.type();
 	const Mat* _src = &src;
@@ -1171,7 +1171,7 @@ static bool IPPMorphReplicate(int &op, const Mat &src, Mat &dst, const Mat &kern
 				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C3R :  
 				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C4R :  
 				0;
-		break;
+			break;
 		}
 	case MORPH_ERODE:
 		{
@@ -1183,7 +1183,7 @@ static bool IPPMorphReplicate(int &op, const Mat &src, Mat &dst, const Mat &kern
 				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C3R :  
 				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C4R :  
 				0;
-		break;
+			break;
 		}
 	}
 	if( ippFunc && ippInitAllocFunc)
@@ -1193,61 +1193,45 @@ static bool IPPMorphReplicate(int &op, const Mat &src, Mat &dst, const Mat &kern
 		IppiSize kernelSize = {kernel.cols, kernel.rows};
 		IppiPoint point = {anchor.x, anchor.y};
 		if( ippInitAllocFunc( roiSize.width, kernel.data, kernelSize, point, &pState ) < 0 )
-		{
 			return false;
-		}
-		if( ippFunc( _src->data, _src->step[0],  dst.data, dst.step[0], roiSize, ippBorderRepl, pState ) < 0 )
-		{
-			ippiMorphologyFree(pState);
-			return false;
-		}
+		bool is_ok = ippFunc( _src->data, _src->step[0],  dst.data, dst.step[0], roiSize, ippBorderRepl, pState ) >= 0;
 		ippiMorphologyFree(pState);
-		return true;
+		return is_ok;
 	}
 	return false;
 }
 
-static bool IPPMorphOp(int &op, InputArray &_src, OutputArray &_dst,
-	InputArray &_kernel,
-	const Point &anchor, int &iterations,
-	int &borderType, const Scalar &borderValue)
+static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
+	InputArray _kernel,
+	const Point &anchor, int iterations,
+	int borderType, const Scalar &borderValue)
 {
 	Mat src = _src.getMat(), kernel = _kernel.getMat();
 	if( !( src.depth() == CV_8U || src.depth() == CV_32F ) || ( iterations > 1 ) || 
 		!( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) ) 
 		|| !( op == MORPH_DILATE || op == MORPH_ERODE) )
-	{
 		return false;
-	}
 	if( borderType == cv::BORDER_CONSTANT )
 	{
 		int x, y;
 		for( y = 0; y < kernel.rows; y++ )
 		{
 			if( kernel.at<uchar>(y, anchor.x) != 0 )
-			{
 				continue;
-			}
 			for( x = 0; x < kernel.cols; x++ )
 			{
 				if( kernel.at<uchar>(y,x) != 0 )
-				{
 					return false;
-				}
 			}
 		}
 		for( x = 0; y < kernel.cols; x++ )
 		{
 			if( kernel.at<uchar>(anchor.y, x) != 0 )
-			{
 				continue;
-			}
 			for( y = 0; y < kernel.rows; y++ )
 			{
 				if( kernel.at<uchar>(y,x) != 0 )
-				{
 					return false;
-				}
 			}
 		}
 
@@ -1294,9 +1278,7 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 	if( IPPMorphOp(op, _src, _dst, _kernel, anchor, iterations, borderType, borderValue) )
-	{
 		return;
-	}
 #endif
 
     Mat src = _src.getMat(), kernel = _kernel.getMat();
