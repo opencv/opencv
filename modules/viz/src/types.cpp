@@ -170,6 +170,43 @@ cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
     init(f_x, f_y, c_x, c_y, window_size);
 }
 
+cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
+{   
+    double near = proj(2,3) / (proj(2,2) - 1.0);
+    double far = near * (proj(2,2) - 1.0) / (proj(2,2) + 1.0);
+    double left = near * (proj(0,2)-1) / proj(0,0);
+    double right = 2.0 * near / proj(0,0) + left;
+    double bottom = near * (proj(1,2)-1) / proj(1,1);
+    double top = 2.0 * near / proj(1,1) + bottom;
+    
+    if (fabs(left-right) < std::numeric_limits<double>::epsilon()) 
+    { 
+        principal_point_[0] = -1.0f; 
+        focal_[0] = -1.0f;
+    }
+    else 
+    { 
+        principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
+        focal_[0] = - near * principal_point_[0] / left;
+    }
+    
+    if (fabs(top-bottom) < std::numeric_limits<double>::epsilon()) 
+    { 
+        principal_point_[1] = -1.0f; 
+        focal_[1] = -1.0f;
+    }
+    else 
+    { 
+        principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
+        focal_[1] = near * principal_point_[1] / top;
+    }
+    
+    setClip(Vec2d(near, far));
+    // Set the vertical field of view
+    fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
+    setWindowSize(window_size);
+}
+
 void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
@@ -220,7 +257,7 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
     double left   = -(top * window_size_.width) / window_size_.height;
     double right  = -left;
     double bottom = -top;
-    // If principal point is defined
+    // If principal point is defined (i.e intrinsic parameters are known)
     if (principal_point_[0] > 0.0f)
     {
         top = clip_[0] * principal_point_[1] / focal_[1];
@@ -233,7 +270,7 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
     double temp2 = 1.0 / (right - left);
     double temp3 = 1.0 / (top - bottom);
     double temp4 = 1.0 / (clip_[0] - clip_[1]);
-
+    
     proj = Matx44d::zeros();
     proj(0,0) = temp1 * temp2;
     proj(1,1) = temp1 * temp3;

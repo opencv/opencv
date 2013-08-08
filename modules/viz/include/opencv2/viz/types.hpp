@@ -100,6 +100,7 @@ namespace cv
             Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
             Camera(const Vec2f &fov, const Size &window_size);
             Camera(const cv::Matx33f &K, const Size &window_size);
+            Camera(const cv::Matx44f &proj, const Size &window_size);
             
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }

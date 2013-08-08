@@ -577,7 +577,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     // Use the intrinsic parameters of the camera to simulate more realistically
     Matx44f proj_matrix;
     camera.computeProjectionMatrix(proj_matrix);
-    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(((float)camera.getWindowSize().width) / camera.getWindowSize().height, -1.0f, 1.0f));
+    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(static_cast<float>(camera.getWindowSize().width) / static_cast<float>(camera.getWindowSize().height), -1.0f, 1.0f));
     vtkTransform * transform = vtkTransform::New();
     // This is a hack around not being able to set Projection Matrix
     transform->SetMatrix(convertToVtkMatrix(proj_matrix * old_proj_matrix.inv())); 
@@ -594,9 +594,9 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
     Vec2d clip(active_camera.GetClippingRange());
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
-    
-    Camera camera(fov, window_size);
-    camera.setClip(clip);
+    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(((float)window_size.width) / window_size.height, -1.0f, 1.0f));
+    Camera camera(old_proj_matrix, window_size);
+//     camera.setClip(clip);
     return camera;
 }
 
