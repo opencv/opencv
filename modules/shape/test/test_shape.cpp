@@ -441,7 +441,14 @@ vector<float> CV_ShapeTest::getLocalTangentAngles(Mat image, vector<Point2f> pts
     {
         int x=floor(pts[i].x+0.5);
         int y=floor(pts[i].y+0.5);
-        output[i]=atan2(G2.at<float>(y,x), G1.at<float>(y,x))+CV_PI/2;
+        if (y<G1.rows && x<G1.cols)
+        {
+            output[i]=atan2(G2.at<float>(y,x), G1.at<float>(y,x))+CV_PI/2;
+        }
+        else
+        {
+            output[i]=100;
+        }
     }
     return output;
 }
