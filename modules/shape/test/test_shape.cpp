@@ -372,6 +372,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     // start loop //
     for (int i=0; i<3; i++)
     {
+        tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
+        scdmatchers[i].setAdditionalCostTerm(tanMat);
+
         for (int j=0; j<NC; j++)
         {
             // compute SCD //
@@ -387,8 +390,6 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
             beta=BETA*pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j);
 
             // match //
-            tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
-            scdmatchers[i].setAdditionalCostTerm(tanMat);
             scdmatchers[i].matchDescriptors(querySCD[i], testingSCDMatrix, matchesvec[i], inliers1[i], inliers2[i]);
 
             // apply TPS transform //
@@ -441,7 +442,7 @@ vector<float> CV_ShapeTest::getLocalTangentAngles(Mat image, vector<Point2f> pts
     {
         int x=floor(pts[i].x+0.5);
         int y=floor(pts[i].y+0.5);
-        if (y<G1.rows && x<G1.cols)
+        if (y<G1.rows && x<G1.cols && x>=0 && y>=0 )
         {
             output[i]=atan2(G2.at<float>(y,x), G1.at<float>(y,x))+CV_PI/2;
         }
