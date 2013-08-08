@@ -742,7 +742,7 @@ class CV_EXPORTS_W TrackerMIL : public Tracker
     int samplerTrackMaxPosNum;	// # positive samples to use during tracking
     int samplerTrackMaxNegNum;	// # negative samples to use during tracking
 
-    int featureSetNumFeatures;
+    int featureSetNumFeatures;  // #features
 
     void read( const FileNode& fn );
     void write( FileStorage& fs ) const;
