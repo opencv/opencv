@@ -72,8 +72,8 @@ class CV_EXPORTS_W TrackerFeature
   virtual ~TrackerFeature();
 
   /**
-   * \brief Compute the features in a image
-   * \param image s        The images.
+   * \brief Compute the features in the images collection
+   * \param images        The images.
    * \param response    	Computed features.
    */
   void compute( const std::vector<Mat>& images, Mat& response );
@@ -132,7 +132,7 @@ class CV_EXPORTS_W TrackerFeatureSet
   ~TrackerFeatureSet();
 
   /**
-   * \brief Extract features from the image
+   * \brief Extract features from the images collection
    * \param images The images
    */
   void extraction( const std::vector<Mat>& images );
@@ -605,7 +605,7 @@ class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
 
   ~TrackerSamplerCSC();
 
-protected:
+ protected:
 
   bool samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample );
 
@@ -650,9 +650,11 @@ class CV_EXPORTS_W TrackerFeatureFeature2d : public TrackerFeature
 
   ~TrackerFeatureFeature2d();
 
-  bool computeImpl( const std::vector<Mat>& images, Mat& response );
-
   void selection( Mat& response, int npoints );
+
+ protected:
+
+  bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
  private:
 
@@ -670,9 +672,11 @@ class CV_EXPORTS_W TrackerFeatureHOG : public TrackerFeature
 
   ~TrackerFeatureHOG();
 
-  bool computeImpl( const std::vector<Mat>& images, Mat& response );
-
   void selection( Mat& response, int npoints );
+
+ protected:
+
+  bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 };
 
@@ -685,8 +689,8 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
   struct CV_EXPORTS Params
   {
     Params();
-    int numFeatures;
-    Size rectSize;
+    int numFeatures;  // # of rects
+    Size rectSize;    // rect size
 
   };
 
@@ -694,9 +698,11 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
 
   ~TrackerFeatureHAAR();
 
-  bool computeImpl( const std::vector<Mat>& images, Mat& response );
-
   void selection( Mat& response, int npoints );
+
+ protected:
+
+  bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
  private:
 
@@ -715,9 +721,11 @@ class CV_EXPORTS_W TrackerFeatureLBP : public TrackerFeature
 
   ~TrackerFeatureLBP();
 
-  bool computeImpl( const std::vector<Mat>& images, Mat& response );
-
   void selection( Mat& response, int npoints );
+
+ protected:
+
+  bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 };
 

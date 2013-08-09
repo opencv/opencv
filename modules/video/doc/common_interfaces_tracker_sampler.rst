@@ -80,6 +80,29 @@ Return true if sampler is added, false otherwise
 
    :param sampler: The TrackerSamplerAlgorithm class
    
+
+The modes available now:
+
+* ``"CSC"`` -- Current State Center
+    
+The modes available soon:
+
+* ``"CS"`` -- Current State
+    
+Example ``TrackerSamplerAlgorithm::addTrackerSamplerAlgorithm`` : ::
+
+    //sample usage:
+    
+     TrackerSamplerCSC::Params CSCparameters;
+     Ptr<TrackerSamplerAlgorithm> CSCSampler = new TrackerSamplerCSC( CSCparameters );
+     
+     if( !sampler->addTrackerSamplerAlgorithm( CSCSampler ) )
+       return false;
+   
+     //or add CSC sampler with default parameters
+     //sampler->addTrackerSamplerAlgorithm( "CSC" );
+     
+   
 .. note:: If you use the second method, you must initialize the TrackerSamplerAlgorithm
 
 
@@ -113,19 +136,10 @@ Create TrackerSamplerAlgorithm by tracker sampler type.
    
    :param trackerSamplerType: The trackerSamplerType name
    
-Example ``TrackerSamplerAlgorithm::create`` : ::
+The modes available now:
 
-    //sample usage:
-    
-     TrackerSamplerCSC::Params CSCparameters;
-     Ptr<TrackerSamplerAlgorithm> CSCSampler = new TrackerSamplerCSC( CSCparameters );
-     
-     if( !sampler->addTrackerSamplerAlgorithm( CSCSampler ) )
-       return false;
-   
-     //or add CSC sampler with default parameters
-     //sampler->addTrackerSamplerAlgorithm( "CSC" );
-   
+* ``"CSC"`` -- Current State Center
+
 
 TrackerSamplerAlgorithm::sampling
 ---------------------------------
@@ -155,7 +169,7 @@ In [AAM]_ table I are described the most known sampling strategies. At moment on
 TrackerSamplerCSC
 -----------------
 
-TrackerSampler based on CSC (current state centered), used by MIL algorithm :ocv:class:`TrackerMIL`
+TrackerSampler based on CSC (current state centered), used by MIL [MIL]_ algorithm :ocv:class:`TrackerMIL`
 
 .. ocv:class:: TrackerSamplerCSC : public TrackerSamplerAlgorithm
 

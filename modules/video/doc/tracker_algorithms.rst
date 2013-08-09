@@ -3,11 +3,11 @@ Tracker Algorithms
 
 .. highlight:: cpp
 
-Two algorithms will be implemented soon, the first is MIL (Multiple Instance Learning) [1]_ and second is Online Boosting [2]_.
+Two algorithms will be implemented soon, the first is MIL (Multiple Instance Learning) [MIL]_ and second is Online Boosting [OLB]_.
 
-.. [1] B Babenko, M-H Yang, and S Belongie, Visual Tracking with Online Multiple Instance Learning, In CVPR, 2009
+.. [MIL] B Babenko, M-H Yang, and S Belongie, Visual Tracking with Online Multiple Instance Learning, In CVPR, 2009
 
-.. [2] H Grabner, M Grabner, and H Bischof, Real-time tracking via on-line boosting, In Proc. BMVC, volume 1, pages 47– 56, 2006
+.. [OLB] H Grabner, M Grabner, and H Bischof, Real-time tracking via on-line boosting, In Proc. BMVC, volume 1, pages 47– 56, 2006
 
 TrackerMIL
 ----------
