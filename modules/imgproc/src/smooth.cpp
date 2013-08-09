@@ -2256,7 +2256,7 @@ public:
                     totalWeight = 0.;
                     tmpSum = 0.;
 
-                    // Top row: don't sum the very last element	
+                    // Top row: don't sum the very last element
                     int startLMJ = 0;
                     int endLMJ  = ksize.width  - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width );
@@ -2272,7 +2272,7 @@ public:
                         }
                     }
                     var = ( (sumValSqr * howManyAll)- sumVal * sumVal )  /  ( (float)(howManyAll*howManyAll));
-#else 
+#else
                     var = 900.0;
 #endif
                     startLMJ = 0;
@@ -2280,7 +2280,7 @@ public:
                     tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2);
                     currValCenter =tptr[j+cn*anX];
                     for(int x = startLMJ; x< endLMJ; x++)
-                    { 
+                    {
                         tptr = temp->ptr(startY + x) +j;
                         for(int y=-anX; y<=anX; y++)
                         {
@@ -2321,7 +2321,7 @@ public:
                     totalWeight_b= 0., totalWeight_g= 0., totalWeight_r= 0.;
                     tmpSum_b = 0., tmpSum_g= 0., tmpSum_r = 0.;
 
-                    // Top row: don't sum the very last element	
+                    // Top row: don't sum the very last element
                     int startLMJ = 0;
                     int endLMJ  = ksize.width - 1;
                     int howManyAll = (anX *2 +1)*(ksize.width);
@@ -2343,7 +2343,7 @@ public:
                     var_b = ( (sumValSqr_b * howManyAll)- sumVal_b * sumVal_b )  /  ( (float)(howManyAll*howManyAll));
                     var_g = ( (sumValSqr_g * howManyAll)- sumVal_g * sumVal_g )  /  ( (float)(howManyAll*howManyAll));
                     var_r = ( (sumValSqr_r * howManyAll)- sumVal_r * sumVal_r )  /  ( (float)(howManyAll*howManyAll));
-#else 
+#else
                     var_b = 900.0; var_g = 900.0;var_r = 900.0;
 #endif
                     startLMJ = 0;
@@ -2351,7 +2351,7 @@ public:
                     tptr = temp->ptr(startY + (startLMJ+ endLMJ)/2) + j;
                     currValCenter_b =tptr[cn*anX], currValCenter_g =tptr[cn*anX+1], currValCenter_r =tptr[cn*anX+2];
                     for(int x = startLMJ; x< endLMJ; x++)
-                    { 
+                    {
                         tptr = temp->ptr(startY + x) +j;
                         for(int y=-anX; y<=anX; y++)
                         {
@@ -2367,7 +2367,7 @@ public:
 
                             weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) );
                             weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) );
-                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );                                
+                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );                          
 #endif
                             tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
                             tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
@@ -2398,7 +2398,7 @@ static void adaptiveBilateralFilter_8u(const Mat& src, Mat& dst, Size ksize, Poi
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) &&
               src.type() == dst.type() && src.size() == dst.size() &&
-              src.data != dst.data ); 
+              src.data != dst.data );
     Mat temp;
     copyMakeBorder(src, temp, anchor.x, anchor.y, anchor.x, anchor.y, borderType);
 
@@ -2419,7 +2419,7 @@ void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
     anchor = normalizeAnchor(anchor,ksize);
     if( src.depth() == CV_8U )
         adaptiveBilateralFilter_8u( src, dst, ksize, anchor, borderType );
-    else 
+    else
         CV_Error( CV_StsUnsupportedFormat,
         "Adaptive Bilateral filtering is only implemented for 8u images" );
 }

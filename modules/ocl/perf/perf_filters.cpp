@@ -381,9 +381,9 @@ PERFTEST(bilateralFilter)
 {
     Mat src, dst, ocl_dst;
     ocl::oclMat d_src, d_dst;
-	double sigmacolor = 50.0;
-	int d = 7;
-	double sigmaspace = 50.0;
+    double sigmacolor = 50.0;
+    int d = 7;
+    double sigmaspace = 50.0;
 
     int all_type[] = {CV_8UC1, CV_8UC3};
     std::string type_name[] = {"CV_8UC1", "CV_8UC3"};
@@ -471,4 +471,3 @@ PERFTEST(adaptiveBilateralFilter)
         }
     }
 }
-

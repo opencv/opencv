@@ -420,4 +420,3 @@ edgeEnhancingFilter_C1_D0(
         }
     }
 }
-

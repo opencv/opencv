@@ -1636,12 +1636,12 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     const float alpha = ksize.height * ksize.width;
 
     const size_t gSize = blockSizeX - ksize.width / 2 * 2;
-    const size_t globalSizeX = (src.cols) % gSize == 0 ? 
+    const size_t globalSizeX = (src.cols) % gSize == 0 ?
         src.cols / gSize * blockSizeX :
         (src.cols / gSize + 1) * blockSizeX;
     const size_t rows_per_thread = 1 + EXTRA;
     const size_t globalSizeY = ((src.rows + rows_per_thread - 1) / rows_per_thread) % blockSizeY == 0 ?
-        ((src.rows + rows_per_thread - 1) / rows_per_thread) : 
+        ((src.rows + rows_per_thread - 1) / rows_per_thread) :
         (((src.rows + rows_per_thread - 1) / rows_per_thread) / blockSizeY + 1) * blockSizeY;
 
     size_t globalThreads[3] = { globalSizeX, globalSizeY, 1};
@@ -1650,9 +1650,9 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     char build_options[250];
 
     //LDATATYPESIZE is sizeof local data store. This is to exemplify effect of LDS on kernel performance
-    sprintf(build_options, 
+    sprintf(build_options,
         "-D VAR_PER_CHANNEL=1 -D CALCVAR=1 -D FIXED_WEIGHT=0 -D EXTRA=%d"
-        " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s", 
+        " -D THREADS=%d -D anX=%d -D anY=%d -D ksX=%d -D ksY=%d -D %s",
         static_cast<int>(EXTRA), static_cast<int>(blockSizeX), anchor.x, anchor.y, ksize.width, ksize.height, btype);
 
     std::vector<pair<size_t , const void *> > args;
@@ -1668,6 +1668,6 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
 
-    openCLExecuteKernel(Context::getContext(), &filtering_adaptive_bilateral, kernelName, 
+    openCLExecuteKernel(Context::getContext(), &filtering_adaptive_bilateral, kernelName,
         globalThreads, localThreads, args, cn, depth, build_options);
 }

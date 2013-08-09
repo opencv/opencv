@@ -525,7 +525,7 @@ namespace cv
         //! Applies an adaptive bilateral filter to the input image
         //  This is not truly a bilateral filter. Instead of using user provided fixed parameters,
         //  the function calculates a constant at each window based on local standard deviation,
-        //  and use this constant to do filtering. 
+        //  and use this constant to do filtering.
         //  supports 8UC1 8UC3
         CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
 
