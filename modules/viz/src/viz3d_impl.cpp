@@ -569,18 +569,16 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
     
     // Set the intrinsic parameters of the camera
-    active_camera.SetUseHorizontalViewAngle (0); // Horizontal view angle is set based on the window size
-    active_camera.SetViewAngle (camera.getFov()[1] * 180.0f / CV_PI);
-    active_camera.SetClippingRange (camera.getClip()[0], camera.getClip()[1]);
     window_->SetSize (camera.getWindowSize().width, camera.getWindowSize().height);
+    double aspect_ratio = static_cast<double>(camera.getWindowSize().width)/static_cast<double>(camera.getWindowSize().height);
     
+    Matx44f proj_mat;
+    camera.computeProjectionMatrix(proj_mat);
     // Use the intrinsic parameters of the camera to simulate more realistically
-    Matx44f proj_matrix;
-    camera.computeProjectionMatrix(proj_matrix);
-    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(static_cast<float>(camera.getWindowSize().width) / static_cast<float>(camera.getWindowSize().height), -1.0f, 1.0f));
-    vtkTransform * transform = vtkTransform::New();
+    Matx44f old_proj_mat = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0));
+    vtkTransform *transform = vtkTransform::New();
     // This is a hack around not being able to set Projection Matrix
-    transform->SetMatrix(convertToVtkMatrix(proj_matrix * old_proj_matrix.inv())); 
+    transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
     active_camera.SetUserTransform(transform);
     transform->Delete();
 }
@@ -590,13 +588,12 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
     
-    Vec2f fov(0.0, active_camera.GetViewAngle() * CV_PI / 180.0f);
-    Vec2d clip(active_camera.GetClippingRange());
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
-    Matx44f old_proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(((float)window_size.width) / window_size.height, -1.0f, 1.0f));
-    Camera camera(old_proj_matrix, window_size);
-//     camera.setClip(clip);
+    double aspect_ratio = static_cast<double>(window_size.width) / static_cast<double>(window_size.height);
+    
+    Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
+    Camera camera(proj_matrix, window_size);
     return camera;
 }
 

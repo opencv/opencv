@@ -155,10 +155,11 @@ cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01)); // Default clipping
-    principal_point_ = Vec2f(-1.0f, -1.0f); // Default symmetric lens
-    focal_ = Vec2f(-1.0f, -1.0f);
     setFov(fov);
-    setWindowSize(window_size);
+    window_size_ = window_size;
+    // Principal point at the center
+    principal_point_ = Vec2f(static_cast<float>(window_size.width)*0.5f, static_cast<float>(window_size.height)*0.5f);
+    focal_ = Vec2f(principal_point_[0] / tan(fov_[0]*0.5f), principal_point_[1] / tan(fov_[1]*0.5f));
 }
 
 cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
@@ -172,6 +173,8 @@ cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
 
 cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
 {   
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    
     double near = proj(2,3) / (proj(2,2) - 1.0);
     double far = near * (proj(2,2) - 1.0) / (proj(2,2) + 1.0);
     double left = near * (proj(0,2)-1) / proj(0,0);
@@ -179,32 +182,19 @@ cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
     double bottom = near * (proj(1,2)-1) / proj(1,1);
     double top = 2.0 * near / proj(1,1) + bottom;
     
-    if (fabs(left-right) < std::numeric_limits<double>::epsilon()) 
-    { 
-        principal_point_[0] = -1.0f; 
-        focal_[0] = -1.0f;
-    }
-    else 
-    { 
-        principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
-        focal_[0] = - near * principal_point_[0] / left;
-    }
+    if (fabs(left-right) < std::numeric_limits<double>::epsilon()) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
+    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
+    focal_[0] = -near * principal_point_[0] / left;
     
-    if (fabs(top-bottom) < std::numeric_limits<double>::epsilon()) 
-    { 
-        principal_point_[1] = -1.0f; 
-        focal_[1] = -1.0f;
-    }
-    else 
-    { 
-        principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
-        focal_[1] = near * principal_point_[1] / top;
-    }
+    if (fabs(top-bottom) < std::numeric_limits<double>::epsilon()) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f; 
+    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
+    focal_[1] = near * principal_point_[1] / top;
     
     setClip(Vec2d(near, far));
-    // Set the vertical field of view
+    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
     fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
-    setWindowSize(window_size);
+    
+    window_size_ = window_size;
 }
 
 void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
@@ -221,50 +211,32 @@ void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Siz
     focal_[0] = f_x;
     focal_[1] = f_y;
     
-    setWindowSize(window_size);
+    window_size_ = window_size;
 }
 
 void cv::viz::Camera::setWindowSize(const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     
-    // Vertical field of view is fixed! 
-    // Horizontal field of view is expandable based on the aspect ratio
-    float aspect_ratio_new = static_cast<float>(window_size.width) / static_cast<float>(window_size.height);
-    
     // Get the scale factor and update the principal points
-    if (window_size_.height != 0)
-    {
-        float aspect_ratio_old = window_size_.width / window_size_.height;
-        float expected_width = aspect_ratio_old * window_size.height;
-        float scale = window_size_.width / expected_width;
-        principal_point_[0] *= scale;
-        principal_point_[1] *= static_cast<float>(window_size.height) / static_cast<float>(window_size_.height);
-    }
-        
-    if (principal_point_[0] < 0.0f)
-        fov_[0] = 2.f * atan(tan(fov_[1] * 0.5f) * aspect_ratio_new); // This assumes that the lens is symmetric!
-    else
-        fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
+    float scalex = static_cast<float>(window_size.width) / static_cast<float>(window_size_.width);
+    float scaley = static_cast<float>(window_size.height) / static_cast<float>(window_size_.height);
+    
+    principal_point_[0] *= scalex;
+    principal_point_[1] *= scaley;
+    focal_ *= scaley;
+    // Vertical field of view is fixed!  Update horizontal field of view
+    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
     
     window_size_ = window_size;
 }
 
 void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
 {
-    // Symmetric case
-    double top    = clip_[0] * tan (0.5 * fov_[1]);
-    double left   = -(top * window_size_.width) / window_size_.height;
-    double right  = -left;
-    double bottom = -top;
-    // If principal point is defined (i.e intrinsic parameters are known)
-    if (principal_point_[0] > 0.0f)
-    {
-        top = clip_[0] * principal_point_[1] / focal_[1];
-        left = -clip_[0] * principal_point_[0] / focal_[0];
-        right = clip_[0] * (window_size_.width - principal_point_[0]) / focal_[0];
-        bottom = -clip_[0] * (window_size_.height - principal_point_[1]) / focal_[1];
-    }
+    double top = clip_[0] * principal_point_[1] / focal_[1];
+    double left = -clip_[0] * principal_point_[0] / focal_[0];
+    double right = clip_[0] * (window_size_.width - principal_point_[0]) / focal_[0];
+    double bottom = -clip_[0] * (window_size_.height - principal_point_[1]) / focal_[1];
     
     double temp1 = 2.0 * clip_[0];
     double temp2 = 1.0 / (right - left);
