@@ -3170,8 +3170,8 @@ bool CvCaptureCAM_DShow::open( int _index )
     devices = VI.listDevices(true);
     if (devices == 0)
         return false;
-	if (_index < 0 || index > devices-1)
-		return false;
+    if (_index < 0 || index > devices-1)
+        return false;
     VI.setupDevice(_index);
     if( !VI.isDeviceSetup(_index) )
         return false;
