@@ -92,7 +92,11 @@ def toUnderCase(text):
 def stripTags(text):
     upper = lambda pattern: pattern.group(1).upper()
     text = re.sub('<code>(.*?)</code>', upper, text)
-    text = re.sub('<(.*?)>', '', text)
+    text = re.sub('<([^=\s].*?)>', '', text)
+    text = re.sub('&lt', '<', text)
+    text = re.sub('&gt', '>', text)
+    text = re.sub('&le', '<=', text)
+    text = re.sub('&ge', '>=', text)
     return text
 
 def qualify(text, name):

@@ -43,14 +43,14 @@
 % bug report to the OpenCV team, you can get a printout of diagnostic 
 % information to submit along with your report by typing:
 %
-%     cv.buildInformation();
+%     <a href="matlab: cv.buildInformation()">cv.buildInformation();</a>
 %
 % <strong>OTHER RESOURCES</strong>
 % OpenCV documentation online: <a href="matlab: web('http://docs.opencv.org', '-browser')">http://docs.opencv.org</a>
 % OpenCV issue tracker: <a href="matlab: web('http://code.opencv.org', '-browser')">http://code.opencv.org</a>
 % OpenCV Q&A: <a href="matlab: web('http://answers.opencv.org', '-browser')">http://answers.opencv.org</a>
 %
-% See also: cv.help, cv.buildInformation
+% See also: cv.help, <a href="matlab: cv.buildInformation()">cv.buildInformation</a>
 %
 % Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
 %
