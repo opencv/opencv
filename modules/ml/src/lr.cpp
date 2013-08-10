@@ -685,7 +685,7 @@ void CvLR::read( CvFileStorage* fs, CvFileNode* node )
     CvMat *newData;
     CvMat *o_labels;
     CvMat *n_labels;
-    
+
 
     this->params.alpha = cvReadRealByName(fs, node,"alpha", 1.0);
     this->params.num_iters = cvReadIntByName(fs, node,"iterations", 1000);
