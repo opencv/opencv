@@ -173,6 +173,8 @@ Compares two histograms.
 
             * **CV_COMP_CHISQR**     Chi-Square
 
+            * **CV_COMP_CHISQR_ALT**     Alternative Chi-Square
+
             * **CV_COMP_INTERSECT**     Intersection
 
             * **CV_COMP_BHATTACHARYYA**     Bhattacharyya distance
@@ -201,6 +203,14 @@ The functions ``compareHist`` compare two dense or two sparse histograms using t
     .. math::
 
         d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}
+
+* Alternative Chi-Square (``method=CV_COMP_CHISQR_ALT``)
+
+    .. math::
+
+        d(H_1,H_2) =  2 * \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)+H_2(I)}
+
+    This alternative formula is regularly used for texture comparison. See e.g. [Puzicha1997]_.
 
 * Intersection (``method=CV_COMP_INTERSECT``)
 
@@ -493,3 +503,4 @@ The function clears histogram bins that are below the specified threshold.
 
 
 .. [RubnerSept98] Y. Rubner. C. Tomasi, L.J. Guibas. *The Earth Mover’s Distance as a Metric for Image Retrieval*. Technical Report STAN-CS-TN-98-86, Department of Computer Science, Stanford University, September 1998.
+.. [Puzicha1997] Puzicha, J., Hofmann, T., and Buhmann, J. *Non-parametric similarity measures for unsupervised texture segmentation and image retrieval.* In Proc. IEEE Conf. Computer Vision and Pattern Recognition, San Juan, Puerto Rico, pp. 267-272, 1997.
