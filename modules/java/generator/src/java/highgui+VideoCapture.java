@@ -43,7 +43,7 @@ public class VideoCapture {
     }
 
     // javadoc: VideoCapture::VideoCapture(String filename)
-    public VideoCapture(String)
+    public VideoCapture(String filename)
     {
 
         nativeObj = n_VideoCapture(filename);
