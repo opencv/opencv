@@ -27,7 +27,7 @@ int main()
 {
     Mat data_temp, labels_temp;
     Mat data, labels;
-    
+
     Mat data_train, data_test;
     Mat labels_train, labels_test;
 
@@ -66,15 +66,13 @@ int main()
 
     cout<<"training samples per class: "<<data_train.rows/2<<endl;
     cout<<"testing samples per class: "<<data_test.rows/2<<endl;
-    
+
     // display sample image
     Mat img_disp1 = data_train.row(2).reshape(0,28).t();
     Mat img_disp2 = data_train.row(18).reshape(0,28).t();
 
     imshow("digit 0", img_disp1);
     imshow("digit 1", img_disp2);
-
-    
 
     cout<<"initializing Logisitc Regression Parameters\n"<<endl;
 
@@ -91,7 +89,7 @@ int main()
     CvLR lr_(data_train, labels_train, params);
     lr_.predict(data_test, responses);
     labels_test.convertTo(labels_test, CV_32S);
-    
+
     cout<<"Original Label ::  Predicted Label"<<endl;
     result = (labels_test == responses)/255;
 
@@ -99,7 +97,7 @@ int main()
     {
         cout<<labels_test.at<int>(i,0)<<" :: "<< responses.at<int>(i,0)<<endl;
     }
-    
+
     // calculate accuracy
     cout<<"accuracy: "<<((double)cv::sum(result)[0]/result.rows)*100<<"%\n";
     cout<<"saving the classifier"<<endl;
