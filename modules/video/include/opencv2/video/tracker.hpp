@@ -224,7 +224,7 @@ class CV_EXPORTS_W TrackerSamplerAlgorithm
 
 /**
  * \brief Class that manages the sampler in order to select regions for the update the model of the tracker
- * [AMM] Sampling e Labeling. See table I and section III B
+ * [AAM] Sampling e Labeling. See table I and section III B
  */
 class CV_EXPORTS_W TrackerSampler
 {
@@ -295,7 +295,7 @@ class CV_EXPORTS_W TrackerSampler
 
 /**
  * \brief Abstract base class for TrackerTargetState that represents a possible state of the target
- * [AMM] x̄_i all state candidates
+ * [AAM] x̄_i all the states candidates
  * Inherits this with your Target state
  */
 class CV_EXPORTS_W TrackerTargetState
