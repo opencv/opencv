@@ -20,10 +20,14 @@ else(APPLE)
               DOC "OpenCL include directory"
               NO_DEFAULT_PATH)
 
-    if (X86_64)
+    if (X86_64 AND WIN32)
       set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win64 lib/x86_64 lib/x64)
-    elseif (X86)
+    elseif (X86 AND WIN32)
       set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win32 lib/x86)
+    elseif (X86_64 AND UNIX)
+      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib64 lib)
+    elseif (X86 AND UNIX)
+      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib32 lib)
     endif()
 
     find_library(OPENCL_LIBRARY
