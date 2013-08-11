@@ -2392,7 +2392,7 @@ private:
     Size ksize;
     Point anchor;
 };
-static void adaptiveBilateralFilter_8u(const Mat& src, Mat& dst, Size ksize, Point anchor, int borderType )
+static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, Point anchor, int borderType )
 {
     Size size = src.size();
 
@@ -2407,8 +2407,7 @@ static void adaptiveBilateralFilter_8u(const Mat& src, Mat& dst, Size ksize, Poi
 }
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
-                                   Point anchor,
-                                   int borderType )
+                                  Point anchor, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
