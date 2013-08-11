@@ -14,8 +14,8 @@ Install
 -------
 In order to use the bindings, you will need to add them to the Matlab path. The path to add is:
 
-1. ${CMAKE_BUILD_DIR}/modules/matlab if you are working from the build tree, or
-2. ${CMAKE_INSTALL_PREFIX}/matlab if you have installed OpenCV
+1. `${CMAKE_BUILD_DIR}/modules/matlab` if you are working from the build tree, or
+2. `${CMAKE_INSTALL_PREFIX}/matlab` if you have installed OpenCV
 
 In Matlab, simply run:
 
@@ -36,15 +36,15 @@ As you can see, both OpenCV methods and constants can be used with 'cv' qualific
 
     help cv.dft
 
-to get help on the purpose and call signature of a particular method. You can also call
+to get help on the purpose and call signature of a particular method, or
 
     help cv
 
-to get general help regarding the OpenCV bindings. If you ever run into issues with the bindings, you can call
+to get general help regarding the OpenCV bindings. If you ever run into issues with the bindings
 
 	cv.buildInformation();
 	
-to get a printout of diagnostic information pertaining to your particular build of OS, OpenCV and Matlab. It is useful to submit this information alongside a bug report to the OpenCV team.
+will produce a printout of diagnostic information pertaining to your particular build of OS, OpenCV and Matlab. It is useful to submit this information alongside a bug report to the OpenCV team.
 
 ------------------------------------------------------------------
 
@@ -58,28 +58,28 @@ The task of the generator is two-fold:
 1. To parse the OpenCV headers and build a semantic tree that can be fed to the template engine
 2. To define type conversions between C++/OpenCV and Matlab types
 
-Once a source file has been generated for each OpenCV definition, and type conversions have been written, compiling the files into mex gateways (shared objects) and linking to the OpenCV libraries is trivial.
+Once a source file has been generated for each OpenCV definition, and type conversions have been established, the mex compiler is invoked to produce the mex gateway (shared object) and link in the OpenCV libraries.
 
 
 File layout
 -----------
 opencv/modules/matlab (this module)  
 
-* CMakeLists.txt (main cmake configuration file)
-* README.md (this file)
-* compile.cmake (the cmake help script for compiling generated source code)
-* generator (the folder containing generator code)
-  * jinja2 (the binding templating engine)
-  * filters.py (template filters)
-  * gen_matlab.py (the binding generator control script)
-  * parse_tree.py (python class to refactor the hdr_parser.py output)
-  * templates (the raw templates for populating classes, constants, functions and docs)
-* include (C++ headers for the bindings)
-  * mxarray.hpp (C++ OOP-style interface for Matlab mxArray* class)
-  * bridge.hpp (type conversions)
-  * map.hpp (hash map interface for instance storage and method lookup)
-* io (FileStorage interface for .mat files)
-* test (generator, compiler and binding test scripts)
+* `CMakeLists.txt` (main cmake configuration file)
+* `README.md` (this file)
+* `compile.cmake` (the cmake help script for compiling generated source code)
+* `generator` (the folder containing generator code)
+  * `jinja2` (the binding templating engine)
+  * `filters.py` (template filters)
+  * `gen_matlab.py` (the binding generator control script)
+  * `parse_tree.py` (python class to refactor the hdr_parser.py output)
+  * `templates` (the raw templates for populating classes, constants, functions and docs)
+* `include` (C++ headers for the bindings)
+  * `mxarray.hpp` (C++ OOP-style interface for Matlab mxArray* class)
+  * `bridge.hpp` (type conversions)
+  * `map.hpp` (hash map interface for instance storage and method lookup)
+* `io` (FileStorage interface for .mat files)
+* `test` (generator, compiler and binding test scripts)
   
   
 Call Tree
@@ -112,7 +112,7 @@ The `ParseTree()` from `opencv/modules/matlab/generator/parse_tree.py` takes thi
 
 	[fill, void, ['/S'], [cv::Mat&, mat, '', ['/I', '/O']]]
 	
-The equivalent refactored output may look like:
+The equivalent refactored output will look like:
 
 	Function 
 		name   = 'fill'
@@ -127,7 +127,7 @@ The equivalent refactored output may look like:
 				O       = True
 				default = ''
 
-The added semantics (Namespace, Class, Function, Argument, name, etc) makes it much easier for the templating engine to parse, slice and populate definitions.
+The added semantics (Namespace, Class, Function, Argument, name, etc) make it easier for the templating engine to parse, slice and populate definitions.
 
 Once the definitions have been parsed, `gen_matlab.py` passes each definition to the template engine with the appropriate template (class, function, enum, doc) and the filled template gets written to the `${CMAKE_CURRENT_BUILD_DIR}/src` directory.
 
@@ -140,13 +140,15 @@ The flags used to compile the main OpenCV libraries are also forwarded to the me
 
 Importantly, the mex compiler includes the `mxarray.hpp`, `bridge.hpp` and `map.hpp` files from the `opencv/modules/matlab/include` directory. `mxarray.hpp` defines a `MxArray` class which wraps Matlab's `mxArray*` type in a more friendly OOP-syle interface. `bridge.hpp` defines a `Bridge` class which is able to perform type conversions between Matlab types and std/OpenCV types. It can be extended with new definitions using the plugin interface described in that file. 
 
+The compiler relies upon a proxy object called `compile.proxy` to determine when the generated sources are out of date and need to be re-compiled.
+
 **Install the files (install)**  
-At install time, the mex files are put into place and their linkages updated.
+At install time, the mex files are put into place at `${CMAKE_INSTALL_PREFIX}/matlab` and their linkages updated.
 
 
 Jinja2
 ------
-Jinja2 is a powerful templating engine, similar to python's builtin `string.Template` class but implementing the model-view-controller paradigm:
+Jinja2 is a powerful templating engine, similar to python's builtin `string.Template` class but implementing the model-view-controller paradigm. For example, a trivial view could be populated as follows:
 
 **view.py**
 
@@ -185,6 +187,8 @@ Jinja2 is a powerful templating engine, similar to python's builtin `string.Temp
 		# write to file
 		with open('users.html', 'wb') as f:
 			f.write(populated)
+			
+Thus the style and layout of the view is kept separate from the content (model). This modularity improves readability and maintainability of both the view and content and (for my own sanity) has helped significantly in debugging errors.
 
 File Reference
 --------------
@@ -231,7 +235,7 @@ To build a parse tree, first parse a set of headers, then invoke the parse tree 
 		for method in namespace.methods:
 			# do stuff
 
-**mxarray.hpp**
+**mxarray.hpp**  
 mxarray.hpp defines a class called `MxArray` which provides an OOP-style interface for Matlab's homogeneous `mxArray*` type. To create an `MxArray`, you can either inherit an existing array
 
 	MxArray mat(prhs[0]);
@@ -241,7 +245,7 @@ or create a new array
 	MxArray mat(5, 5, Matlab::Traits<double>::ScalarType);
 	MxArray mat = MxArray::Matrix<double>(5, 5);
 	
-The default constructor allocates a `0 x 0` array. Once you have encapculated an `mxArray` you can access its properties through member functions:
+The default constructor allocates a `0 x 0` array. Once you have encapculated an `mxArray*` you can access its properties through member functions:
 
 	mat.rows();
 	mat.cols();
@@ -261,7 +265,7 @@ The MxArray object uses scoped memory management. If you wish to pass an MxArray
 	plhs[0] = mat.releaseOwnership();
 
 **bridge.hpp**  
-The bridge interface provides a `Bridge` class which provides type conversion between std/OpenCV and Matlab types. A type conversion must provide the following:
+The bridge interface defines a `Bridge` class which provides type conversion between std/OpenCV and Matlab types. A type conversion must provide the following:
 
 	Bridge& operator=(const MyObject&);
 	MyObject toMyObject();
