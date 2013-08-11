@@ -64,21 +64,21 @@ Once a source file has been generated for each OpenCV definition, and type conve
 File layout
 -----------
 - matlab (this module)
-  - CMakeLists.txt (main cmake configuration file)
-  - README.md (this file)
-  - compile.cmake (the cmake help script for compiling generated source code)
-  - generator (the folder containing generator code)
+  * CMakeLists.txt (main cmake configuration file)
+  * README.md (this file)
+  * compile.cmake (the cmake help script for compiling generated source code)
+  * generator (the folder containing generator code)
   	- jinja2 (the binding templating engine)
   	- filters.py (template filters)
   	- gen_matlab.py (the binding generator control script)
   	- parse_tree.py (python class to refactor the hdr_parser.py output)
   	- templates (the raw templates for populating classes, constants, functions and docs)
-  - include (C++ headers for the bindings)
+  * include (C++ headers for the bindings)
   	- mxarray.hpp (C++ OOP-style interface for Matlab mxArray* class)
   	- bridge.hpp (type conversions)
   	- map.hpp (hash map interface for instance storage and method lookup)
-  - io (FileStorage interface for .mat files)
-  - test (generator, compiler and binding test scripts)
+  * io (FileStorage interface for .mat files)
+  * test (generator, compiler and binding test scripts)
   
   
 Call Tree
