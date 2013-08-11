@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 def substitute(build, output_dir):
 
@@ -18,12 +18,32 @@ def substitute(build, output_dir):
     if not os.path.isdir(output_dir):
       os.mkdir(output_dir)
 
-    # populate templates
+    # populate template
     populated = template.render(build=build)
     with open(os.path.join(output_dir, 'buildInformation.m'), 'wb') as f:
         f.write(populated)
 
 if __name__ == "__main__":
+    """
+    Usage: python build_info.py --os os_version_string
+                                --arch [bitness processor]
+                                --compiler [id version]
+                                --mex_arch arch_string
+                                --mex_script /path/to/mex/script
+                                --cxx_flags [-list -of -flags -to -passthrough]
+                                --opencv_version version_string
+                                --commit commit_hash_if_using_git
+                                --modules [core imgproc highgui etc]
+                                --configuration Debug/Release
+                                --outdir /path/to/write/build/info
+
+    build_info.py generates a Matlab function that can be invoked with a call to
+      >> cv.buildInformation();
+
+    This function prints a summary of the user's OS, OpenCV and Matlab build
+    given the information passed to this module. build_info.py invokes Jinja2
+    on the template_build_info.m template.
+    """
    
     # parse the input options
     import sys, re, os

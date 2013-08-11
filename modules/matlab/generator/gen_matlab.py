@@ -1,8 +1,27 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 class MatlabWrapperGenerator(object):
+    """
+    MatlabWrapperGenerator is a class for generating Matlab mex sources from
+    a set of C++ headers. MatlabWrapperGenerator objects can be default
+    constructed. Given an instance, the gen() method performs the translation.
+    """
 
     def gen(self, module_root, modules, extras, output_dir):
+        """
+        Generate a set of Matlab mex source files by parsing exported symbols
+        in a set of C++ headers. The headers can be input in one (or both) of
+        two methods:
+        1. specify module_root and modules
+           Given a path to the OpenCV module root and a list of module names,
+           the headers to parse are implicitly constructed.
+        2. specifiy header locations explicitly in extras
+           Each element in the list of extras must be of the form:
+           'namespace=/full/path/to/extra/header.hpp' where 'namespace' is
+           the namespace in which the definitions should be added.
+        The output_dir specifies the directory to write the generated sources
+        to.
+        """
         # parse each of the files and store in a dictionary
         # as a separate "namespace"
         parser = CppHeaderParser()
@@ -109,8 +128,41 @@ class MatlabWrapperGenerator(object):
             f.write(populated)
 
 
-
 if __name__ == "__main__":
+    """
+    Usage: python gen_matlab.py --hdrparser /path/to/hdr_parser/dir
+                                --rstparser /path/to/rst_parser/dir
+                                --moduleroot /path/to/opencv/modules
+                                --modules [core imgproc objdetect etc]
+                                --extra namespace=/path/to/extra/header.hpp
+                                --outdir /path/to/output/generated/srcs
+
+    gen_matlab.py is the main control script for generating matlab source
+    files from given set of headers. Internally, gen_matlab:
+      1. constructs the headers to parse from the module root and list of modules
+      2. parses the headers using CppHeaderParser
+      3. refactors the definitions using ParseTree
+      4. parses .rst docs using RstParser 
+      5. populates the templates for classes, function, enums and docs from the
+         definitions
+
+    gen_matlab.py requires the following inputs:
+    --hdrparser    the path to the header parser directory
+                   (opencv/modules/python/src2)
+    --rstparser    the path to the rst parser directory
+                   (opencv/modules/java/generator)
+    --moduleroot   (optional) path to the opencv directory containing the modules
+    --modules      (optional - required if --moduleroot specified) the modules
+                   to produce bindings for. The path to the include directories
+                   as well as the namespaces are constructed from the modules
+                   and the moduleroot
+    --extra        extra headers explicitly defined to parse. This must be in 
+                   the format "namepsace=/path/to/extra/header.hpp". For example,
+                   the core module requires the extra header:
+                   "core=/opencv/modules/core/include/opencv2/core/core/base.hpp"
+    --outdir       the output directory to put the generated matlab sources. In
+                   the OpenCV build this is "${CMAKE_CURRENT_BUILD_DIR}/src"
+    """
    
     # parse the input options
     import sys, re, os, time

@@ -1,6 +1,7 @@
 from textwrap import TextWrapper
 from string import split, join
 import re, os
+# precompile a URL matching regular expression
 urlexpr = re.compile(r"((https?):((//)|(\\\\))+[\w\d:#@%/;$()~_?\+-=\\\.&]*)", re.MULTILINE|re.UNICODE)
 
 def inputs(args):
@@ -35,9 +36,11 @@ def only(args):
     return d
 
 def void(arg):
+    '''Is the input 'void' '''
     return arg == 'void'
 
 def flip(arg):
+    '''flip the sign of the input'''
     return not arg
 
 def noutputs(fun):
@@ -45,6 +48,7 @@ def noutputs(fun):
     return int(not void(fun.rtp)) + len(outputs(fun.req)) + len(outputs(fun.opt))
 
 def convertibleToInt(string):
+    '''Can the input string be evaluated to an integer?'''
     salt = '1+'
     try:
         exec(salt+string)
@@ -53,12 +57,21 @@ def convertibleToInt(string):
         return False
 
 def binaryToDecimal(string):
+    '''Attempt to convert the input string to floating point representation'''
     try:
         return str(eval(string))
     except:
         return string
 
 def formatMatlabConstant(string, table):
+    '''
+    Given a string representing a Constant, and a table of all Constants, 
+    attempt to resolve the Constant into a valid Matlab expression
+    For example, the input
+      DEPENDENT_VALUE = 1 << FIXED_VALUE
+    needs to be converted to
+      DEPENDENT_VALUE = bitshift(1, cv.FIXED_VALUE);
+    '''
     # split the string into expressions
     words = re.split('(\W+)', string)
     # add a 'cv' prefix if an expression is also a key in the lookup table
@@ -76,20 +89,33 @@ def matlabURL(string):
     return re.sub(urlexpr, '<a href="matlab: web(\'\\1\', \'-browser\')">\\1</a>', string)
 
 def capitalizeFirst(text):
+    '''Capitalize only the first character of the text string'''
     return text[0].upper() + text[1:]
 
 def toUpperCamelCase(text):
+    '''variable_name --> VariableName'''
     return ''.join([capitalizeFirst(word) for word in text.split('_')])
 
 def toLowerCamelCase(text):
+    '''variable_name --> variableName'''
     upper_camel = toUpperCamelCase(test)
     return upper_camel[0].lower() + upper_camel[1:]
 
 def toUnderCase(text):
+    '''VariableName --> variable_name'''
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', text)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 def stripTags(text):
+    '''
+    strip or convert html tags from a text string
+    <code>content</code> --> content
+    <anything>           --> ''
+    &lt                  --> <
+    &gt                  --> >
+    &le                  --> <=
+    &ge                  --> >=
+    '''
     upper = lambda pattern: pattern.group(1).upper()
     text = re.sub('<code>(.*?)</code>', upper, text)
     text = re.sub('<([^=\s].*?)>', '', text)
@@ -100,18 +126,26 @@ def stripTags(text):
     return text
 
 def qualify(text, name):
+    '''Adds uppercase 'CV.' qualification to any occurrences of name in text'''
     return re.sub(name.upper(), 'CV.'+name.upper(), text)
 
 def slugify(text):
+    '''A_Function_name --> a-function-name'''
     return text.lower().replace('_', '-')
 
 def filename(fullpath):
+    '''Returns only the filename without an extension from a file path
+    eg. /path/to/file.txt --> file
+    '''
     return os.path.splitext(os.path.basename(fullpath))[0]
 
 def csv(items, sep=', '):
+    '''format a list with a separator (comma if not specified)'''
     return sep.join(item for item in items)
 
 def stripExtraSpaces(text):
+    '''Removes superfluous whitespace from a string, including the removal
+    of all leading and trailing whitespace'''
     return ' '.join(text.split())
     
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):

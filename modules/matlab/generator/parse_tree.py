@@ -3,6 +3,73 @@ from textwrap import fill
 from filters import *
 
 class ParseTree(object):
+    """
+    The ParseTree class produces a semantic tree of C++ definitions given 
+    the output of the CppHeaderParser (from opencv/modules/python/src2/hdr_parser.py)
+
+    The full hierarchy is as follows:
+
+      Namespaces
+        |
+        |- name
+        |- Classes
+            |
+            |- name
+            |- Methods
+            |- Constants
+        |- Methods
+            |
+            |- name
+            |- static (T/F)
+            |- return type
+            |- required Arguments
+                |
+                |- name
+                |- const (T/F)
+                |- reference ('&'/'*')
+                |- type
+                |- input
+                |- output (pass return by reference)
+                |- default value
+            |- optional Arguments
+        |- Constants
+            |
+            |- name
+            |- const (T/F)
+            |- reference ('&'/'*')
+            |- type
+            |- value
+
+    The semantic tree contains substantial information for easily introspecting
+    information about objects. How many methods does the 'core' namespace have?
+    Does the 'randn' method have any return by reference (output) arguments?
+    How many required and optional arguments does the 'add' method have? Is the
+    variable passed by reference or raw pointer?
+
+    Individual definitions from the parse tree (Classes, Functions, Constants)
+    are passed to the Jinja2 template engine where they are manipulated to
+    produce Matlab mex sources.
+
+    A common call tree for constructing and using a ParseTree object is:
+
+      # parse a set of definitions into a dictionary of namespaces
+      parser = CppHeaderParser()
+      ns['core'] = parser.parse('path/to/opencv/core.hpp')
+
+      # refactor into a semantic tree
+      parse_tree = ParseTree()
+      parse_tree.build(ns)
+
+      # iterate over the tree
+      for namespace in parse_tree.namespaces:
+        for clss in namespace.classes:
+          # do stuff
+        for method in namespace.methods:
+          # do stuff
+
+    Calling 'print' on a ParseTree object will reconstruct the definitions
+    to produce an output resembling the original C++ code.
+    """
     def __init__(self, namespaces=None):
         self.namespaces = namespaces if namespaces else []
 
@@ -48,6 +115,15 @@ class ParseTree(object):
 
 
 class Translator(object):
+    """
+    The Translator class does the heavy lifting of translating the nested 
+    list representation of the hdr_parser into individual definitions that
+    are inserted into the ParseTree.
+    Translator consists of a top-level method: translate()
+    along with a number of helper methods: translateClass(), translateMethod(),
+    translateArgument(), translateConstant(), translateName(), and
+    translateClassName()
+    """
     def translate(self, defn):
         # --- class ---
         # classes have 'class' prefixed on their name 
@@ -116,6 +192,14 @@ class Translator(object):
 
 
 class Namespace(object):
+    """
+    Namespace
+      |
+      |- name
+      |- Constants
+      |- Methods
+      |- Constants
+    """  
     def __init__(self, name='', constants=None, classes=None, methods=None):
         self.name = name
         self.constants = constants if constants else []
@@ -129,6 +213,13 @@ class Namespace(object):
           (join((o.__str__() for o in self.classes), '\n\n')        if self.classes   else '')+'\n};'
 
 class Class(object):
+    """
+    Class
+      |
+      |- name
+      |- Methods
+      |- Constants
+    """
     def __init__(self, name='', namespace='', constants=None, methods=None):
         self.name = name
         self.namespace = namespace
@@ -141,6 +232,21 @@ class Class(object):
           (join((f.__str__() for f in self.methods), '\n\t')          if self.methods else '')+'\n};'
 
 class Method(object):
+    """
+    Method
+    int VideoWriter::read( cv::Mat& frame, const cv::Mat& mask=cv::Mat() );
+    ---    -----     ----     --------           ----------------
+    rtp    class     name     required               optional
+
+    name      the method name
+    clss      the class the method belongs to ('' if free)
+    static    static?
+    namespace the namespace the method belongs to ('' if free)
+    rtp       the return type
+    const     const?
+    req       list of required arguments
+    opt       list of optional arguments
+    """
     def __init__(self, name='', clss='', static=False, namespace='', rtp='', const=False, req=None, opt=None):
         self.name  = name
         self.clss  = clss
@@ -158,6 +264,20 @@ class Method(object):
           ')'+(' const' if self.const else '')+';'
 
 class Argument(object):
+    """
+    Argument
+    const cv::Mat&  mask=cv::Mat()
+    -----  ---- --- ----  -------
+    const   tp  ref name  default
+
+    name    the argument name
+    tp      the argument type
+    const   const?
+    I       is the argument treated as an input?
+    O       is the argument treated as an output (return by reference)
+    ref     is the argument passed by reference? ('*'/'&')
+    default the default value of the argument ('' if required)
+    """
     def __init__(self, name='', tp='', const=False, I=True, O=False, ref='', default=''):
         self.name = name
         self.tp   = tp
@@ -172,6 +292,19 @@ class Argument(object):
                 ' '+self.name+('='+self.default if self.default else '')
 
 class Constant(object):
+    """
+    Constant
+    DFT_COMPLEX_OUTPUT = 12;
+         ----          -------
+         name          default
+
+    name    the name of the constant
+    clss    the class that the constant belongs to ('' if free)
+    tp      the type of the constant ('' if int)
+    const   const?
+    ref     is the constant a reference? ('*'/'&')
+    default default value, required for constants
+    """
     def __init__(self, name='', clss='', tp='', const=False, ref='', default=''):
         self.name = name
         self.clss = clss
@@ -185,6 +318,10 @@ class Constant(object):
                 ' '+self.name+('='+self.default if self.default else '')+';'
 
 def constants(tree):
+    """
+    recursive generator to strip all Constant objects from the ParseTree
+    and place them into a flat dictionary of { name, value (default) }
+    """
     if isinstance(tree, dict) and 'constants' in tree and isinstance(tree['constants'], list):
         for node in tree['constants']:
             yield (node['name'], node['default'])
@@ -198,6 +335,10 @@ def constants(tree):
                 yield gen
 
 def todict(obj, classkey=None):
+    """
+    Convert the ParseTree to a dictionary, stripping all objects of their
+    methods and converting class names to strings
+    """
     if isinstance(obj, dict):
         for k in obj.keys():
             obj[k] = todict(obj[k], classkey)
