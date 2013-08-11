@@ -6,9 +6,9 @@ Common Interfaces of TrackerModel
 ConfidenceMap
 -------------
 
-Represents the model of the target at frame k (all states and scores)
-
-[AAM]_ The set of the pair (x̄_k(i), C_k(i))
+Represents the model of the target at frame :math:`k` (all states and scores)
+    
+[AAM]_ The set of the pair  :math:`\langle \hat{x}^{i}_{k}, C^{i}_{k} \rangle`
 
 .. c:type:: ConfidenceMap
 
@@ -25,7 +25,7 @@ Trajectory
 
 Represents the estimate states for all frames
 
-[AAM]_ Xk is the trajectory of the target up to time k
+[AAM]_ :math:`x_{k}` is the trajectory of the target up to time :math:`k`
  
 .. c:type:: Trajectory
 
@@ -42,7 +42,7 @@ TrackerTargetState
 
 Abstract base class for TrackerTargetState that represents a possible state of the target.
 
-[AAM]_ x̄_i all the states candidates.
+[AAM]_ :math:`\hat{x}^{i}_{k}` all the states candidates.
 
 Inherits this class with your Target state
 
