@@ -406,13 +406,12 @@ public:
   const Scalar* imag() const { return static_cast<const Scalar *>(mxGetData(ptr_)); }
 
   template <typename Scalar>
-  Scalar scalar() const { return static_cast<double *>(mxGetData(ptr_))[0]; }
+  Scalar scalar() const { return static_cast<Scalar *>(mxGetData(ptr_))[0]; }
 
   std::string toString() const {
     conditionalError(isString(), "Attempted to convert non-string type to string");
     std::string str(size()+1, '\0');
     mxGetString(ptr_, const_cast<char *>(str.data()), str.size());
-    mexPrintf("string: %s\n", str.c_str());
     return str;
   }
 
