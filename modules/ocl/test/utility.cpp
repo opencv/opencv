@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #define VARNAME(A) #A
 using namespace std;
 using namespace cv;

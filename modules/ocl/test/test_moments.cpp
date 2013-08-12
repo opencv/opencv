@@ -1,4 +1,4 @@
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 #include "opencv2/imgproc/imgproc_c.h"
 

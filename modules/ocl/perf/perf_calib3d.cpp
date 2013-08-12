@@ -44,7 +44,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 ///////////// StereoMatchBM ////////////////////////
 PERFTEST(StereoMatchBM)
 {
