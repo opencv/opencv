@@ -204,6 +204,7 @@
 #  else
 #    include <stdint.h>
 #  endif
+   typedef uint32_t uint;
 #else
    typedef unsigned uint;
 #endif
