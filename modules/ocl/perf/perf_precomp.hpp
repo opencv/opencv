@@ -40,6 +40,9 @@
 //
 //M*/
 
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
+
 #include <iomanip>
 #include <stdexcept>
 #include <string>
@@ -99,7 +102,7 @@ int EeceptDoubleEQ(T1 expected, T1 actual)
     testing::internal::Double lhs(expected);
     testing::internal::Double rhs(actual);
 
-    if (lhs.AlmostEquals(rhs)) 
+    if (lhs.AlmostEquals(rhs))
     {
         return 1;
     }
@@ -352,7 +355,7 @@ public:
         if(accurate_diff_ <= eps)
             is_accurate_ = 1;
         else
-            is_accurate_ = 0;    
+            is_accurate_ = 0;
     }
 
     std::stringstream &getCurSubtestDescription()
@@ -369,7 +372,7 @@ private:
         speedup_full_faster_count_(0), speedup_full_slower_count_(0), speedup_full_equal_count_(0), is_list_mode_(false),
         num_iters_(10), cpu_num_iters_(2),
         gpu_warmup_iters_(1), cur_iter_idx_(0), cur_warmup_idx_(0),
-        record_(0), recordname_("performance"), itname_changed_(true), 
+        record_(0), recordname_("performance"), itname_changed_(true),
         is_accurate_(-1), accurate_diff_(0.)
     {
         cpu_times_.reserve(num_iters_);
@@ -506,3 +509,5 @@ struct name##_test: Runnable { \
 #define WARMUP_OFF \
 	ocl::finish();\
 	} TestSystem::instance().warmupComplete()
+
+#endif

@@ -58,7 +58,6 @@ set(highgui_srcs
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
     src/loadsave.cpp
-    src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
