@@ -138,6 +138,9 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_QUICKTIME
         CV_CAP_QT,
 #endif
+#ifdef HAVE_QTKIT
+        CV_CAP_QT,
+#endif
 #ifdef HAVE_UNICAP
         CV_CAP_UNICAP,
 #endif
@@ -185,6 +188,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_CMU1394)      || \
     defined(HAVE_MIL)          || \
     defined(HAVE_QUICKTIME)    || \
+	defined(HAVE_QTKIT)	       || \
     defined(HAVE_UNICAP)       || \
     defined(HAVE_PVAPI)        || \
     defined(HAVE_OPENNI)       || \
@@ -284,7 +288,15 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
                 return capture;
             break;
 #endif
-
+			
+#ifdef HAVE_QTKIT
+	        case CV_CAP_QT:
+	            capture = cvCreateCameraCapture_QT (index);
+	            if (capture)
+	                return capture;
+	            break;
+#endif
+				
 #ifdef HAVE_UNICAP
         case CV_CAP_UNICAP:
             capture = cvCreateCameraCapture_Unicap (index);
@@ -383,6 +395,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
     if (! result)
         result = cvCreateFileCapture_QT (filename);
 #endif
+	
+#ifdef HAVE_QTKIT
+    if (! result)
+        result = cvCreateFileCapture_QT (filename);
+#endif
 
 #ifdef HAVE_AVFOUNDATION
     if (! result)
@@ -441,7 +458,12 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
     if(!result)
         result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
 #endif
-
+	
+#ifdef HAVE_QTKIT
+    if(!result)
+        result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
+#endif
+	
 #ifdef HAVE_GSTREAMER
     if (! result)
         result = cvCreateVideoWriter_GStreamer(filename, fourcc, fps, frameSize, is_color);
