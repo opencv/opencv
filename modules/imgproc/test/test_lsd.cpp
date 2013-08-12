@@ -113,7 +113,7 @@ TEST_F(Imgproc_LSD_ADV, whiteNoise)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
         detector->detect(test_image, lines);
 
-        if(uint(40) >= lines.size()) ++passedtests;
+        if(40u >= lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -126,7 +126,7 @@ TEST_F(Imgproc_LSD_ADV, constColor)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
         detector->detect(test_image, lines);
 
-        if(uint(0) == lines.size()) ++passedtests;
+        if(0u == lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -153,7 +153,7 @@ TEST_F(Imgproc_LSD_ADV, rotatedRect)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_ADV);
         detector->detect(test_image, lines);
 
-        if(uint(2) <= lines.size())  ++passedtests;
+        if(2u <= lines.size())  ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -166,7 +166,7 @@ TEST_F(Imgproc_LSD_STD, whiteNoise)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
         detector->detect(test_image, lines);
 
-        if(uint(50) >= lines.size()) ++passedtests;
+        if(50u >= lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -179,7 +179,7 @@ TEST_F(Imgproc_LSD_STD, constColor)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
         detector->detect(test_image, lines);
 
-        if(uint(0) == lines.size()) ++passedtests;
+        if(0u == lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -206,7 +206,7 @@ TEST_F(Imgproc_LSD_STD, rotatedRect)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
         detector->detect(test_image, lines);
 
-        if(uint(4) <= lines.size()) ++passedtests;
+        if(4u <= lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -219,7 +219,7 @@ TEST_F(Imgproc_LSD_NONE, whiteNoise)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_STD);
         detector->detect(test_image, lines);
 
-        if(uint(50) >= lines.size()) ++passedtests;
+        if(50u >= lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -232,7 +232,7 @@ TEST_F(Imgproc_LSD_NONE, constColor)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
         detector->detect(test_image, lines);
 
-        if(uint(0) == lines.size()) ++passedtests;
+        if(0u == lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
@@ -259,7 +259,7 @@ TEST_F(Imgproc_LSD_NONE, rotatedRect)
         Ptr<LineSegmentDetector> detector = createLineSegmentDetectorPtr(LSD_REFINE_NONE);
         detector->detect(test_image, lines);
 
-        if(uint(8) <= lines.size()) ++passedtests;
+        if(8u <= lines.size()) ++passedtests;
     }
     ASSERT_EQ(EPOCHS, passedtests);
 }
