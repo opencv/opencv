@@ -410,7 +410,7 @@ This filter does not work inplace.
 
 
 adaptiveBilateralFilter
--------------------
+-----------------------
 Applies the adaptive bilateral filter to an image.
 
 .. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )

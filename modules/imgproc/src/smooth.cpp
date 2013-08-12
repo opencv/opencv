@@ -2367,7 +2367,7 @@ public:
 
                             weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) );
                             weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) );
-                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );                          
+                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );
 #endif
                             tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
                             tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
