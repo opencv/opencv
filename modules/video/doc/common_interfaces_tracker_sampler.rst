@@ -171,12 +171,12 @@ TrackerSamplerCSC
 
 TrackerSampler based on CSC (current state centered), used by MIL [MIL]_ algorithm :ocv:class:`TrackerMIL`
 
-.. ocv:class:: TrackerSamplerCSC : public TrackerSamplerAlgorithm
+.. ocv:class:: TrackerSamplerCSC
 
 TrackerSamplerCSC class::
 
  
-   class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
+   class CV_EXPORTS_W TrackerSamplerCSC
    {
     public:
     

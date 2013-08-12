@@ -84,5 +84,4 @@ Tracker classes:
     common_interfaces_tracker_sampler
     common_interfaces_tracker_feature_set
     common_interfaces_tracker_model
-    common_interfaces_tracker_state_estimator
     

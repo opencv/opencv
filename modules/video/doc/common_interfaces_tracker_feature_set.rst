@@ -231,7 +231,7 @@ TrackerFeatureHAAR
 
 TrackerFeature based on HAAR features, used by MIL [MIL]_ :ocv:class:`TrackerMIL` and many others algorithms
 
-.. ocv:class:: TrackerFeatureHAAR : public TrackerFeature
+.. ocv:class:: TrackerFeatureHAAR
 
 TrackerFeatureHAAR class::
 

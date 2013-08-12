@@ -244,3 +244,45 @@ Get the :ocv:class:`TrackerStateEstimator`
 
 .. ocv:function:: Ptr<TrackerStateEstimator> TrackerModel::getTrackerStateEstimator() const
 
+Common Interfaces of TrackerModel
+=================================
+
+In [AMVOT]_  Statistical modeling (Fig. 3), Table III (generative) - IV (discriminative) - V (hybrid) are described the most known statistical model.
+
+At moment only :ocv:class:`TrackerStateEstimatorBoosting` is implemented.
+
+TrackerStateEstimatorBoosting
+-----------------------------
+
+TrackerStateEstimator based on Boosting
+
+.. ocv:class:: TrackerStateEstimatorBoosting
+
+TrackerStateEstimatorBoosting class::
+
+   class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
+   {
+    public:
+     TrackerStateEstimatorBoosting( int numFeatures = 250 );
+     ~TrackerStateEstimatorBoosting();
+   
+     void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
+   };
+   
+TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting
+------------------------------------------------------------
+
+Constructor
+
+.. ocv:function::  TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( int numFeatures )
+
+    :param numFeatures: Number of features for each sample
+   
+TrackerStateEstimatorBoosting::setCurrentConfidenceMap
+------------------------------------------------------
+
+Set the current confidenceMap
+
+.. ocv:function::  void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+
+    :param confidenceMap: The current :c:type:`ConfidenceMap`
