@@ -111,6 +111,9 @@ namespace cv
             inline const Vec2f & getFov() const { return fov_; }
             inline void setFov(const Vec2f & fov) { fov_ = fov; }
             
+            inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
+            inline const Vec2f & getFocalLength() const { return focal_; }
+            
             void computeProjectionMatrix(Matx44f &proj) const;
             
             static Camera KinectCamera(const Size &window_size);
