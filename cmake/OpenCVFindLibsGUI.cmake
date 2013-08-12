@@ -15,7 +15,7 @@ endif(WITH_WIN32UI)
 # --- QT4 ---
 ocv_clear_vars(HAVE_QT HAVE_QT5)
 if(WITH_QT)
-  if(NOT CMAKE_VERSION VERSION_LESS 2.8.3 AND NOT WITH_QT EQUAL 4)
+  if(NOT WITH_QT EQUAL 4)
     find_package(Qt5Core)
     find_package(Qt5Gui)
     find_package(Qt5Widgets)

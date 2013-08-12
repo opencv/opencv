@@ -199,8 +199,3 @@ if(WITH_OPENEXR)
 
   set(HAVE_OPENEXR YES)
 endif()
-
-#cmake 2.8.2 bug - it fails to determine zlib version
-if(ZLIB_FOUND)
-  ocv_parse_header2(ZLIB "${ZLIB_INCLUDE_DIR}/zlib.h" ZLIB_VERSION)
-endif()
