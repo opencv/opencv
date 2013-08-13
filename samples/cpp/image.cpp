@@ -31,8 +31,8 @@ int main( int argc, char** argv )
     help();
     const char* imagename = argc > 1 ? argv[1] : "lena.jpg";
 #if DEMO_MIXED_API_USE
-    Ptr<IplImage> iplimg = cvLoadImage(imagename); // Ptr<T> is safe ref-conting pointer class
-    if(iplimg.empty())
+    Ptr<IplImage> iplimg(cvLoadImage(imagename)); // Ptr<T> is safe ref-counting pointer class
+    if(!iplimg)
     {
         fprintf(stderr, "Can not load image %s\n", imagename);
         return -1;
