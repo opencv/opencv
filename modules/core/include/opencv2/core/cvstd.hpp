@@ -158,69 +158,176 @@ public:
     size_type max_size() const { return cv::max(static_cast<_Tp>(-1)/sizeof(_Tp), 1); }
 };
 
-
-
-//////////////////// generic_type ref-counting pointer class for C/C++ objects ////////////////////////
-
-/*!
-  Smart pointer to dynamically allocated objects.
-
-  This is template pointer-wrapping class that stores the associated reference counter along with the
-  object pointer. The class is similar to std::smart_ptr<> from the recent addons to the C++ standard,
-  but is shorter to write :) and self-contained (i.e. does add any dependency on the compiler or an external library).
-
-  Basically, you can use "Ptr<MyObjectType> ptr" (or faster "const Ptr<MyObjectType>& ptr" for read-only access)
-  everywhere instead of "MyObjectType* ptr", where MyObjectType is some C structure or a C++ class.
-  To make it all work, you need to specialize Ptr<>::delete_obj(), like:
-
-  \code
-  template<> CV_EXPORTS void Ptr<MyObjectType>::delete_obj() { call_destructor_func(obj); }
-  \endcode
-
-  \note{if MyObjectType is a C++ class with a destructor, you do not need to specialize delete_obj(),
-  since the default implementation calls "delete obj;"}
-
-  \note{Another good property of the class is that the operations on the reference counter are atomic,
-  i.e. it is safe to use the class in multi-threaded applications}
-*/
-template<typename _Tp> class Ptr
+namespace detail
 {
-public:
-    //! empty constructor
-    Ptr();
-    //! take ownership of the pointer. The associated reference counter is allocated and set to 1
-    Ptr(_Tp* _obj);
-    //! calls release()
-    ~Ptr();
-    //! copy constructor. Copies the members and calls addref()
-    Ptr(const Ptr& ptr);
-    template<typename _Tp2> Ptr(const Ptr<_Tp2>& ptr);
-    //! copy operator. Calls ptr.addref() and release() before copying the members
-    Ptr& operator = (const Ptr& ptr);
-    //! increments the reference counter
-    void addref();
-    //! decrements the reference counter. If it reaches 0, delete_obj() is called
-    void release();
-    //! deletes the object. Override if needed
-    void delete_obj();
-    //! returns true iff obj==NULL
-    bool empty() const;
 
-    //! cast pointer to another type
-    template<typename _Tp2> Ptr<_Tp2> ptr();
-    template<typename _Tp2> const Ptr<_Tp2> ptr() const;
+// Metafunction to avoid taking a reference to void.
+template<typename T>
+struct RefOrVoid { typedef T& type; };
 
-    //! helper operators making "Ptr<T> ptr" use very similar to "T* ptr".
-    _Tp* operator -> ();
-    const _Tp* operator -> () const;
+template<>
+struct RefOrVoid<void>{ typedef void type; };
 
-    operator _Tp* ();
-    operator const _Tp*() const;
+template<>
+struct RefOrVoid<const void>{ typedef const void type; };
 
-    _Tp* obj; //< the object pointer.
-    int* refcount; //< the associated reference counter
+template<>
+struct RefOrVoid<volatile void>{ typedef volatile void type; };
+
+template<>
+struct RefOrVoid<const volatile void>{ typedef const volatile void type; };
+
+// This class would be private to Ptr, if it didn't have to be a non-template.
+struct PtrOwner;
+
+}
+
+template<typename Y>
+struct DefaultDeleter
+{
+    void operator () (Y* p) const;
 };
 
+/*
+  A smart shared pointer class with reference counting.
+
+  A Ptr<T> stores a pointer and owns a (potentially different) pointer.
+  The stored pointer has type T and is the one returned by get() et al,
+  while the owned pointer can have any type and is the one deleted
+  when there are no more Ptrs that own it. You can't directly obtain the
+  owned pointer.
+
+  The interface of this class is mostly a subset of that of C++11's
+  std::shared_ptr.
+*/
+template<typename T>
+struct Ptr
+{
+    /* Generic programming support. */
+    typedef T element_type;
+
+    /* Ptr that owns NULL and stores NULL. */
+    Ptr();
+
+    /* Ptr that owns p and stores p. The owned pointer will be deleted with
+       DefaultDeleter<Y>. Y must be a complete type and Y* must be
+       convertible to T*. */
+    template<typename Y>
+    explicit Ptr(Y* p);
+
+    /* Ptr that owns p and stores p. The owned pointer will be deleted by
+       calling d(p). Y* must be convertible to T*. */
+    template<typename Y, typename D>
+    Ptr(Y* p, D d);
+
+    /* Same as the constructor below; it exists to suppress the generation
+       of the implicit copy constructor. */
+    Ptr(const Ptr& o);
+
+    /* Ptr that owns the same pointer as o and stores the same pointer as o,
+       converted to T*. Naturally, Y* must be convertible to T*. */
+    template<typename Y>
+    Ptr(const Ptr<Y>& o);
+
+    /* Ptr that owns same pointer as o, and stores p. Useful for casts and
+       creating non-owning Ptrs. */
+    template<typename Y>
+    Ptr(const Ptr<Y>& o, T* p);
+
+    /* Equivalent to release(). */
+    ~Ptr();
+
+    /* Same as assignment below; exists to suppress the generation of the
+       implicit assignment operator. */
+    Ptr& operator = (const Ptr& o);
+
+    template<typename Y>
+    Ptr& operator = (const Ptr<Y>& o);
+
+    /* Resets both the owned and stored pointers to NULL. Deletes the owned
+       pointer with the associated deleter if it's not owned by any other
+       Ptr and is non-zero. It's called reset() in std::shared_ptr; here
+       it is release() for compatibility with old OpenCV versions. */
+    void release();
+
+    /* Equivalent to assigning from Ptr<T>(p). */
+    template<typename Y>
+    void reset(Y* p);
+
+    /* Equivalent to assigning from Ptr<T>(p, d). */
+    template<typename Y, typename D>
+    void reset(Y* p, D d);
+
+    /* Swaps the stored and owned pointers of this and o. */
+    void swap(Ptr& o);
+
+    /* Returns the stored pointer. */
+    T* get() const;
+
+    /* Ordinary pointer emulation. */
+    typename detail::RefOrVoid<T>::type operator * () const;
+    T* operator -> () const;
+
+    /* Equivalent to get(). */
+    operator T* () const;
+
+    /* Equivalent to !*this. */
+    bool empty() const;
+
+    /* Returns a Ptr that owns the same pointer as this, and stores the same
+       pointer as this, except converted via static_cast to Y*. */
+    template<typename Y>
+    Ptr<Y> staticCast() const;
+
+    /* Ditto for const_cast. */
+    template<typename Y>
+    Ptr<Y> constCast() const;
+
+    /* Ditto for dynamic_cast. */
+    template<typename Y>
+    Ptr<Y> dynamicCast() const;
+
+private:
+    detail::PtrOwner* owner;
+    T* stored;
+
+    template<typename Y>
+    friend struct Ptr; // have to do this for the cross-type copy constructor
+};
+
+/* Overload of the generic swap. */
+template<typename T>
+void swap(Ptr<T>& ptr1, Ptr<T>& ptr2);
+
+/* Obvious comparisons. */
+template<typename T>
+bool operator == (const Ptr<T>& ptr1, const Ptr<T>& ptr2);
+template<typename T>
+bool operator != (const Ptr<T>& ptr1, const Ptr<T>& ptr2);
+
+/* Convenience creation functions. In the far future, there may be variadic templates here. */
+template<typename T>
+Ptr<T> makePtr();
+template<typename T, typename A1>
+Ptr<T> makePtr(const A1& a1);
+template<typename T, typename A1, typename A2>
+Ptr<T> makePtr(const A1& a1, const A2& a2);
+template<typename T, typename A1, typename A2, typename A3>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3);
+template<typename T, typename A1, typename A2, typename A3, typename A4>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9);
+template<typename T, typename A1, typename A2, typename A3, typename A4, typename A5, typename A6, typename A7, typename A8, typename A9, typename A10>
+Ptr<T> makePtr(const A1& a1, const A2& a2, const A3& a3, const A4& a4, const A5& a5, const A6& a6, const A7& a7, const A8& a8, const A9& a9, const A10& a10);
 
 
 //////////////////////////////// string class ////////////////////////////////
@@ -322,176 +429,6 @@ private:
     char* allocate(size_t len); // len without trailing 0
     void deallocate();
 };
-
-
-
-/////////////////////////// cv::Ptr implementation ///////////////////////////
-
-template<typename _Tp> inline
-Ptr<_Tp>::Ptr()
-    : obj(0), refcount(0) {}
-
-template<typename _Tp> inline
-Ptr<_Tp>::Ptr(_Tp* _obj)
-    : obj(_obj)
-{
-    if(obj)
-    {
-        refcount = (int*)fastMalloc(sizeof(*refcount));
-        *refcount = 1;
-    }
-    else
-        refcount = 0;
-}
-
-template<typename _Tp> template<typename _Tp2>
-Ptr<_Tp>::Ptr(const Ptr<_Tp2>& p)
-    : obj(0), refcount(0)
-{
-    if (p.empty())
-        return;
-
-    _Tp* p_casted = dynamic_cast<_Tp*>(p.obj);
-    if (!p_casted)
-        return;
-
-    obj = p_casted;
-    refcount = p.refcount;
-    addref();
-}
-
-template<typename _Tp> inline
-Ptr<_Tp>::~Ptr()
-{
-    release();
-}
-
-template<typename _Tp> inline
-void Ptr<_Tp>::addref()
-{
-    if( refcount )
-        CV_XADD(refcount, 1);
-}
-
-template<typename _Tp> inline
-void Ptr<_Tp>::release()
-{
-    if( refcount && CV_XADD(refcount, -1) == 1 )
-    {
-        delete_obj();
-        fastFree(refcount);
-    }
-    refcount = 0;
-    obj = 0;
-}
-
-template<typename _Tp> inline
-void Ptr<_Tp>::delete_obj()
-{
-    if( obj )
-        delete obj;
-}
-
-template<typename _Tp> inline
-Ptr<_Tp>::Ptr(const Ptr<_Tp>& _ptr)
-{
-    obj = _ptr.obj;
-    refcount = _ptr.refcount;
-    addref();
-}
-
-template<typename _Tp> inline
-Ptr<_Tp>& Ptr<_Tp>::operator = (const Ptr<_Tp>& _ptr)
-{
-    int* _refcount = _ptr.refcount;
-    if( _refcount )
-        CV_XADD(_refcount, 1);
-    release();
-    obj = _ptr.obj;
-    refcount = _refcount;
-    return *this;
-}
-
-template<typename _Tp> inline
-_Tp* Ptr<_Tp>::operator -> ()
-{
-    return obj;
-}
-
-template<typename _Tp> inline
-const _Tp* Ptr<_Tp>::operator -> () const
-{
-    return obj;
-}
-
-template<typename _Tp> inline
-Ptr<_Tp>::operator _Tp* ()
-{
-    return obj;
-}
-
-template<typename _Tp> inline
-Ptr<_Tp>::operator const _Tp*() const
-{
-    return obj;
-}
-
-template<typename _Tp> inline
-bool Ptr<_Tp>::empty() const
-{
-    return obj == 0;
-}
-
-template<typename _Tp> template<typename _Tp2> inline
-Ptr<_Tp2> Ptr<_Tp>::ptr()
-{
-    Ptr<_Tp2> p;
-    if( !obj )
-        return p;
-
-    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
-    if (!obj_casted)
-        return p;
-
-    if( refcount )
-        CV_XADD(refcount, 1);
-
-    p.obj = obj_casted;
-    p.refcount = refcount;
-    return p;
-}
-
-template<typename _Tp> template<typename _Tp2> inline
-const Ptr<_Tp2> Ptr<_Tp>::ptr() const
-{
-    Ptr<_Tp2> p;
-    if( !obj )
-        return p;
-
-    _Tp2* obj_casted = dynamic_cast<_Tp2*>(obj);
-    if (!obj_casted)
-        return p;
-
-    if( refcount )
-        CV_XADD(refcount, 1);
-
-    p.obj = obj_casted;
-    p.refcount = refcount;
-    return p;
-}
-
-template<class _Tp, class _Tp2> static inline
-bool operator == (const Ptr<_Tp>& a, const Ptr<_Tp2>& b)
-{
-    return a.refcount == b.refcount;
-}
-
-template<class _Tp, class _Tp2> static inline
-bool operator != (const Ptr<_Tp>& a, const Ptr<_Tp2>& b)
-{
-    return a.refcount != b.refcount;
-}
-
 
 
 ////////////////////////// cv::String implementation /////////////////////////
@@ -939,5 +876,7 @@ namespace cv
         a.swap(b);
     }
 }
+
+#include "opencv2/core/ptr.inl.hpp"
 
 #endif //__OPENCV_CORE_CVSTD_HPP__
