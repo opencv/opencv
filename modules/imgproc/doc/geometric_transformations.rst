@@ -298,6 +298,9 @@ where
 
 The function emulates the human "foveal" vision and can be used for fast scale and rotation-invariant template matching, for object tracking and so forth. The function can not operate in-place.
 
+.. Sample code::
+
+   * : An example using the geometric logpolar operation in 4 applications can be found at opencv_source_code/samples/cpp/logpolar_bsm.cpp
 
 remap
 -----

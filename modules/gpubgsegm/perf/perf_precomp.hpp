@@ -57,6 +57,8 @@
 #include "opencv2/gpubgsegm.hpp"
 #include "opencv2/video.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
 #ifdef GTEST_CREATE_SHARED_LIBRARY
 #error no modules except ts should have GTEST_CREATE_SHARED_LIBRARY defined
 #endif

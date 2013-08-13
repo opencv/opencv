@@ -13,10 +13,17 @@ class TestInfo(object):
         self.name = xmlnode.getAttribute("name")
         self.value_param = xmlnode.getAttribute("value_param")
         self.type_param = xmlnode.getAttribute("type_param")
-        if xmlnode.getElementsByTagName("failure"):
+
+        custom_status = xmlnode.getAttribute("custom_status")
+        failures = xmlnode.getElementsByTagName("failure")
+
+        if len(custom_status) > 0:
+            self.status = custom_status
+        elif len(failures) > 0:
             self.status = "failed"
         else:
             self.status = xmlnode.getAttribute("status")
+
         if self.name.startswith("DISABLED_"):
             self.status = "disabled"
             self.fixture = self.fixture.replace("DISABLED_", "")

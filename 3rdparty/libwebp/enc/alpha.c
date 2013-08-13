@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Alpha-plane compression.
@@ -80,7 +82,7 @@ static int EncodeLossless(const uint8_t* const data, int width, int height,
   config.lossless = 1;
   config.method = effort_level;  // impact is very small
   // Set a moderate default quality setting for alpha.
-  config.quality = 5.f * effort_level;
+  config.quality = 10.f * effort_level;
   assert(config.quality >= 0 && config.quality <= 100.f);
 
   ok = VP8LBitWriterInit(&tmp_bw, (width * height) >> 3);
@@ -156,6 +158,25 @@ static void CopyPlane(const uint8_t* src, int src_stride,
   }
 }
 
+static int GetNumColors(const uint8_t* data, int width, int height,
+                        int stride) {
+  int j;
+  int colors = 0;
+  uint8_t color[256] = { 0 };
+
+  for (j = 0; j < height; ++j) {
+    int i;
+    const uint8_t* const p = data + j * stride;
+    for (i = 0; i < width; ++i) {
+      color[p[i]] = 1;
+    }
+  }
+  for (j = 0; j < 256; ++j) {
+    if (color[j] > 0) ++colors;
+  }
+  return colors;
+}
+
 static int EncodeAlpha(VP8Encoder* const enc,
                        int quality, int method, int filter,
                        int effort_level,
@@ -207,18 +228,32 @@ static int EncodeAlpha(VP8Encoder* const enc,
     VP8BitWriter bw;
     int test_filter;
     uint8_t* filtered_alpha = NULL;
+    int try_filter_none = (effort_level > 3);
 
-    // We always test WEBP_FILTER_NONE first.
-    ok = EncodeAlphaInternal(quant_alpha, width, height,
-                             method, WEBP_FILTER_NONE, reduce_levels,
-                             effort_level, NULL, &bw, pic->stats);
-    if (!ok) {
-      VP8BitWriterWipeOut(&bw);
-      goto End;
+    if (filter == WEBP_FILTER_FAST) {  // Quick estimate of the best candidate.
+      const int kMinColorsForFilterNone = 16;
+      const int kMaxColorsForFilterNone = 192;
+      const int num_colors = GetNumColors(quant_alpha, width, height, width);
+      // For low number of colors, NONE yeilds better compression.
+      filter = (num_colors <= kMinColorsForFilterNone) ? WEBP_FILTER_NONE :
+               EstimateBestFilter(quant_alpha, width, height, width);
+      // For large number of colors, try FILTER_NONE in addition to the best
+      // filter as well.
+      if (num_colors > kMaxColorsForFilterNone) {
+        try_filter_none = 1;
+      }
     }
 
-    if (filter == WEBP_FILTER_FAST) {  // Quick estimate of a second candidate?
-      filter = EstimateBestFilter(quant_alpha, width, height, width);
+    // Test for WEBP_FILTER_NONE for higher effort levels.
+    if (try_filter_none || filter == WEBP_FILTER_NONE) {
+      ok = EncodeAlphaInternal(quant_alpha, width, height,
+                               method, WEBP_FILTER_NONE, reduce_levels,
+                               effort_level, NULL, &bw, pic->stats);
+
+      if (!ok) {
+        VP8BitWriterWipeOut(&bw);
+        goto End;
+      }
     }
     // Stop?
     if (filter == WEBP_FILTER_NONE) {
@@ -234,11 +269,14 @@ static int EncodeAlpha(VP8Encoder* const enc,
     // Try the other mode(s).
     {
       WebPAuxStats best_stats;
-      size_t best_score = VP8BitWriterSize(&bw);
+      size_t best_score = try_filter_none ?
+                          VP8BitWriterSize(&bw) : (size_t)~0U;
+      int wipe_tmp_bw = try_filter_none;
 
       memset(&best_stats, 0, sizeof(best_stats));  // prevent spurious warning
       if (pic->stats != NULL) best_stats = *pic->stats;
-      for (test_filter = WEBP_FILTER_HORIZONTAL;
+      for (test_filter =
+           try_filter_none ? WEBP_FILTER_HORIZONTAL : WEBP_FILTER_NONE;
            ok && (test_filter <= WEBP_FILTER_GRADIENT);
            ++test_filter) {
         VP8BitWriter tmp_bw;
@@ -262,7 +300,10 @@ static int EncodeAlpha(VP8Encoder* const enc,
         } else {
           VP8BitWriterWipeOut(&bw);
         }
-        VP8BitWriterWipeOut(&tmp_bw);
+        if (wipe_tmp_bw) {
+          VP8BitWriterWipeOut(&tmp_bw);
+        }
+        wipe_tmp_bw = 1;  // For next filter trial for WEBP_FILTER_BEST.
       }
       if (pic->stats != NULL) *pic->stats = best_stats;
     }

@@ -81,28 +81,15 @@ GPU_TEST_P(Canny, Accuracy)
     double low_thresh = 50.0;
     double high_thresh = 100.0;
 
-    if (!supportFeature(devInfo, cv::gpu::SHARED_ATOMICS))
-    {
-        try
-        {
-        cv::gpu::GpuMat edges;
-        cv::gpu::Canny(loadMat(img), edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-        }
-        catch (const cv::Exception& e)
-        {
-            ASSERT_EQ(cv::Error::StsNotImplemented, e.code);
-        }
-    }
-    else
-    {
-        cv::gpu::GpuMat edges;
-        cv::gpu::Canny(loadMat(img, useRoi), edges, low_thresh, high_thresh, apperture_size, useL2gradient);
+    cv::Ptr<cv::gpu::CannyEdgeDetector> canny = cv::gpu::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
 
-        cv::Mat edges_gold;
-        cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
+    cv::gpu::GpuMat edges;
+    canny->detect(loadMat(img, useRoi), edges);
 
-        EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
-    }
+    cv::Mat edges_gold;
+    cv::Canny(img, edges_gold, low_thresh, high_thresh, apperture_size, useL2gradient);
+
+    EXPECT_MAT_SIMILAR(edges_gold, edges, 2e-2);
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny, testing::Combine(

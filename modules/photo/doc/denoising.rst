@@ -10,6 +10,8 @@ with several computational optimizations. Noise expected to be a gaussian white 
 
 .. ocv:function:: void fastNlMeansDenoising( InputArray src, OutputArray dst, float h=3, int templateWindowSize=7, int searchWindowSize=21 )
 
+.. ocv:pyfunction:: cv2.fastNlMeansDenoising(src[, dst[, h[, templateWindowSize[, searchWindowSize]]]]) -> dst
+
     :param src: Input 8-bit 1-channel, 2-channel or 3-channel image.
 
     :param dst: Output image with the same size and type as  ``src`` .
@@ -29,6 +31,8 @@ fastNlMeansDenoisingColored
 Modification of ``fastNlMeansDenoising`` function for colored images
 
 .. ocv:function:: void fastNlMeansDenoisingColored( InputArray src, OutputArray dst, float h=3, float hColor=3, int templateWindowSize=7, int searchWindowSize=21 )
+
+.. ocv:pyfunction:: cv2.fastNlMeansDenoisingColored(src[, dst[, h[, hColor[, templateWindowSize[, searchWindowSize]]]]]) -> dst
 
     :param src: Input 8-bit 3-channel image.
 
@@ -51,6 +55,8 @@ For more details see http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.131
 
 .. ocv:function:: void fastNlMeansDenoisingMulti( InputArrayOfArrays srcImgs, OutputArray dst, int imgToDenoiseIndex, int temporalWindowSize, float h=3, int templateWindowSize=7, int searchWindowSize=21 )
 
+.. ocv:pyfunction:: cv2.fastNlMeansDenoisingMulti(srcImgs, imgToDenoiseIndex, temporalWindowSize[, dst[, h[, templateWindowSize[, searchWindowSize]]]]) -> dst
+
     :param srcImgs: Input 8-bit 1-channel, 2-channel or 3-channel images sequence. All images should have the same type and size.
 
     :param imgToDenoiseIndex: Target image to denoise index in ``srcImgs`` sequence
@@ -70,6 +76,8 @@ fastNlMeansDenoisingColoredMulti
 Modification of ``fastNlMeansDenoisingMulti`` function for colored images sequences
 
 .. ocv:function:: void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, OutputArray dst, int imgToDenoiseIndex, int temporalWindowSize, float h=3, float hColor=3, int templateWindowSize=7, int searchWindowSize=21 )
+
+.. ocv:pyfunction:: cv2.fastNlMeansDenoisingColoredMulti(srcImgs, imgToDenoiseIndex, temporalWindowSize[, dst[, h[, hColor[, templateWindowSize[, searchWindowSize]]]]]) -> dst
 
     :param srcImgs: Input 8-bit 3-channel images sequence. All images should have the same type and size.
 

@@ -53,7 +53,7 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
-namespace bgfg
+namespace fgd
 {
     ////////////////////////////////////////////////////////////////////////////
     // calcDiffHistogram

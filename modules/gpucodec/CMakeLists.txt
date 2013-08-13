@@ -11,7 +11,7 @@ ocv_add_module(gpucodec opencv_highgui)
 ocv_module_include_directories()
 ocv_glob_module_sources()
 
-set(extra_libs ${HIGHGUI_LIBRARIES})
+set(extra_libs "")
 
 if(HAVE_NVCUVID)
   list(APPEND extra_libs ${CUDA_CUDA_LIBRARY} ${CUDA_nvcuvid_LIBRARY})

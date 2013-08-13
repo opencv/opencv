@@ -516,45 +516,6 @@ PERF_TEST_P(Sz_Depth_Cn, PyrUp,
 }
 
 //////////////////////////////////////////////////////////////////////
-// ImagePyramidBuild
-
-PERF_TEST_P(Sz_Depth_Cn, ImagePyramidBuild,
-            Combine(GPU_TYPICAL_MAT_SIZES,
-                    Values(CV_8U, CV_16U, CV_32F),
-                    GPU_CHANNELS_1_3_4))
-{
-    const cv::Size size = GET_PARAM(0);
-    const int depth = GET_PARAM(1);
-    const int channels = GET_PARAM(2);
-
-    const int type = CV_MAKE_TYPE(depth, channels);
-
-    cv::Mat src(size, type);
-    declare.in(src, WARMUP_RNG);
-
-    const int nLayers = 5;
-    const cv::Size dstSize(size.width / 2 + 10, size.height / 2 + 10);
-
-    if (PERF_RUN_GPU())
-    {
-        const cv::gpu::GpuMat d_src(src);
-
-        cv::gpu::ImagePyramid d_pyr;
-
-        TEST_CYCLE() d_pyr.build(d_src, nLayers);
-
-        cv::gpu::GpuMat dst;
-        d_pyr.getLayer(dst, dstSize);
-
-        GPU_SANITY_CHECK(dst);
-    }
-    else
-    {
-        FAIL_NO_CPU();
-    }
-}
-
-//////////////////////////////////////////////////////////////////////
 // ImagePyramidGetLayer
 
 PERF_TEST_P(Sz_Depth_Cn, ImagePyramidGetLayer,
@@ -579,9 +540,9 @@ PERF_TEST_P(Sz_Depth_Cn, ImagePyramidGetLayer,
         const cv::gpu::GpuMat d_src(src);
         cv::gpu::GpuMat dst;
 
-        cv::gpu::ImagePyramid d_pyr(d_src, nLayers);
+        cv::Ptr<cv::gpu::ImagePyramid> d_pyr = cv::gpu::createImagePyramid(d_src, nLayers);
 
-        TEST_CYCLE() d_pyr.getLayer(dst, dstSize);
+        TEST_CYCLE() d_pyr->getLayer(dst, dstSize);
 
         GPU_SANITY_CHECK(dst);
     }

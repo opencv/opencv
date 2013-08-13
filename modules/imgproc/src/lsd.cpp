@@ -203,7 +203,7 @@ public:
  *                              * 1 corresponds to 0.1 mean false alarms
  *                          This vector will be calculated _only_ when the objects type is REFINE_ADV
  */
-    void detect(const InputArray _image, OutputArray _lines,
+    void detect(InputArray _image, OutputArray _lines,
                 OutputArray width = noArray(), OutputArray prec = noArray(),
                 OutputArray nfa = noArray());
 
@@ -214,18 +214,19 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    void drawSegments(InputOutputArray image, const InputArray lines);
+    void drawSegments(InputOutputArray _image, const InputArray lines);
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
  *
- * @param image     The image, where lines will be drawn.
- *                  Should have the size of the image, where the lines were found
+ * @param size      The size of the image, where lines1 and lines2 were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
+ * @param image     An optional image, where lines will be drawn.
+ *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* image = 0);
+    int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, InputOutputArray _image = noArray());
 
 private:
     Mat image;
@@ -1184,10 +1185,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, const InputA
 }
 
 
-int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* _image)
+int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2,  InputOutputArray _image)
 {
     Size sz = size;
-    if (_image && _image->size() != size) sz = _image->size();
+    if (_image.needed() && _image.size() != size) sz = _image.size();
     CV_Assert(sz.area());
 
     Mat_<uchar> I1 = Mat_<uchar>::zeros(sz);
@@ -1217,14 +1218,14 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray 
     bitwise_xor(I1, I2, Ixor);
     int N = countNonZero(Ixor);
 
-    if (_image)
+    if (_image.needed())
     {
         Mat Ig;
-        if (_image->channels() == 1)
+        if (_image.channels() == 1)
         {
-            cvtColor(*_image, *_image, CV_GRAY2BGR);
+            cvtColor(_image, _image, CV_GRAY2BGR);
         }
-        CV_Assert(_image->isContinuous() && I1.isContinuous() && I2.isContinuous());
+        CV_Assert(_image.getMatRef().isContinuous() && I1.isContinuous() && I2.isContinuous());
 
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
@@ -1232,11 +1233,11 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray 
             uchar i2 = I2.data[i];
             if (i1 || i2)
             {
-                _image->data[3*i + 1] = 0;
-                if (i1) _image->data[3*i] = 255;
-                else _image->data[3*i] = 0;
-                if (i2) _image->data[3*i + 2] = 255;
-                else _image->data[3*i + 2] = 0;
+                _image.getMatRef().data[3*i + 1] = 0;
+                if (i1) _image.getMatRef().data[3*i] = 255;
+                else _image.getMatRef().data[3*i] = 0;
+                if (i2) _image.getMatRef().data[3*i + 2] = 255;
+                else _image.getMatRef().data[3*i + 2] = 0;
             }
         }
     }

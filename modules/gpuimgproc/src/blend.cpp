@@ -47,7 +47,7 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::blendLinear(const GpuMat&, const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::gpu::blendLinear(InputArray, InputArray, InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -67,21 +67,28 @@ namespace cv { namespace gpu { namespace cudev
 
 using namespace ::cv::gpu::cudev::blend;
 
-void cv::gpu::blendLinear(const GpuMat& img1, const GpuMat& img2, const GpuMat& weights1, const GpuMat& weights2,
-                          GpuMat& result, Stream& stream)
+void cv::gpu::blendLinear(InputArray _img1, InputArray _img2, InputArray _weights1, InputArray _weights2,
+                          OutputArray _result, Stream& stream)
 {
-    CV_Assert(img1.size() == img2.size());
-    CV_Assert(img1.type() == img2.type());
-    CV_Assert(weights1.size() == img1.size());
-    CV_Assert(weights2.size() == img2.size());
-    CV_Assert(weights1.type() == CV_32F);
-    CV_Assert(weights2.type() == CV_32F);
+    GpuMat img1 = _img1.getGpuMat();
+    GpuMat img2 = _img2.getGpuMat();
+
+    GpuMat weights1 = _weights1.getGpuMat();
+    GpuMat weights2 = _weights2.getGpuMat();
+
+    CV_Assert( img1.size() == img2.size() );
+    CV_Assert( img1.type() == img2.type() );
+    CV_Assert( weights1.size() == img1.size() );
+    CV_Assert( weights2.size() == img2.size() );
+    CV_Assert( weights1.type() == CV_32FC1 );
+    CV_Assert( weights2.type() == CV_32FC1 );
 
     const Size size = img1.size();
     const int depth = img1.depth();
     const int cn = img1.channels();
 
-    result.create(size, CV_MAKE_TYPE(depth, cn));
+    _result.create(size, CV_MAKE_TYPE(depth, cn));
+    GpuMat result = _result.getGpuMat();
 
     switch (depth)
     {

@@ -30,7 +30,11 @@ Finds edges in an image using the [Canny86]_ algorithm.
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
+.. Sample code::
 
+   * : An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
+
+   * : PYTHON : An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
 
 cornerEigenValsAndVecs
 ----------------------
@@ -81,11 +85,13 @@ The output of the function can be used for robust edge or corner detection.
     :ocv:func:`cornerHarris`,
     :ocv:func:`preCornerDetect`
 
+.. Sample code::
 
+   * : PYTHON : An example on how to use eigenvectors and eigenvalues to estimate image texture flow direction can be found at opencv_source_code/samples/python2/texture_flow.py
 
 cornerHarris
 ------------
-Harris edge detector.
+Harris corner detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int ksize, double k, int borderType=BORDER_DEFAULT )
 
@@ -105,7 +111,7 @@ Harris edge detector.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-The function runs the Harris edge detector on the image. Similarly to
+The function runs the Harris corner detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
 :ocv:func:`cornerEigenValsAndVecs` , for each pixel
 :math:`(x, y)` it calculates a
@@ -344,6 +350,9 @@ Example: ::
     :ocv:func:`fitEllipse`,
     :ocv:func:`minEnclosingCircle`
 
+.. Sample code::
+
+   * : An example using the Hough circle detector can be found at opencv_source_code/samples/cpp/houghcircles.cpp
 
 HoughLines
 ----------
@@ -397,6 +406,10 @@ Finds lines in a binary image using the standard Hough transform.
 
 The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
 See also the example in :ocv:func:`HoughLinesP` description.
+
+.. Sample code::
+
+   * : An example using the Hough line detector can be found at opencv_source_code/samples/cpp/houghlines.cpp
 
 HoughLinesP
 -----------
@@ -530,7 +543,7 @@ LineSegmentDetector::detect
 ---------------------------
 Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
-.. ocv:function:: void detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+.. ocv:function:: void LineSegmentDetector::detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
 
     :param _image A grayscale (CV_8UC1) input image.
         If only a roi needs to be selected, use ::
@@ -553,12 +566,16 @@ Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
 
     This vector will be calculated only when the objects type is LSD_REFINE_ADV.
 
+This is the output of the default parameters of the algorithm on the above shown image.
+
+.. image:: pics/building_lsd.png
+
 
 LineSegmentDetector::drawSegments
 ---------------------------------
 Draws the line segments on a given image.
 
-.. ocv:function:: void drawSegments(InputOutputArray image, const InputArray lines)
+.. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, const InputArray lines)
 
     :param image: The image, where the liens will be drawn. Should be bigger or equal to the image, where the lines were found.
 
@@ -569,9 +586,9 @@ LineSegmentDetector::compareSegments
 ------------------------------------
 Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
 
-.. ocv:function:: int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* image = 0)
+.. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, InputOutputArray _image = noArray())
 
-    :param size: The size of the image, where the lines were found.
+    :param size: The size of the image, where lines1 and lines2 were found.
 
     :param lines1: The first group of lines that needs to be drawn. It is visualized in blue color.
 

@@ -45,10 +45,6 @@
 
 #ifdef HAVE_NVCUVID
 
-#if defined(HAVE_FFMPEG) && defined(BUILD_SHARED_LIBS) && !defined(WIN32)
-    #include "../src/cap_ffmpeg_impl.hpp"
-#endif
-
 using namespace cv;
 using namespace cv::gpucodec;
 using namespace cv::gpucodec::detail;

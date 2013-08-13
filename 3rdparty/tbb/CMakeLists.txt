@@ -11,7 +11,7 @@ if (WIN32 AND ARM)
   set(tbb_url "http://threadingbuildingblocks.org/sites/default/files/software_releases/source/tbb41_20130613oss_src.tgz")
   set(tbb_md5 "108c8c1e481b0aaea61878289eb28b6a")
   set(tbb_version_file "version_string.ver")
-  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wshadow -Wunused-parameter)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)
 else()
   # 4.1 update 2 - works fine
   set(tbb_ver "tbb41_20130116oss")
@@ -82,24 +82,8 @@ endif()
 set(tbb_tarball "${CMAKE_CURRENT_SOURCE_DIR}/${tbb_ver}_src.tgz")
 set(tbb_src_dir "${CMAKE_CURRENT_BINARY_DIR}/${tbb_ver}")
 
-macro(getMD5 filename varname)
-  if(CMAKE_VERSION VERSION_GREATER 2.8.6)
-    file(MD5 "${filename}" ${varname})
-  else()
-    execute_process(COMMAND ${CMAKE_COMMAND} -E md5sum "${filename}"
-              RESULT_VARIABLE getMD5_RESULT
-              OUTPUT_VARIABLE getMD5_OUTPUT
-              OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(getMD5_RESULT EQUAL 0)
-      string(REGEX MATCH "^[a-z0-9]+" ${varname} "${getMD5_OUTPUT}")
-    else()
-      set(${varname} "invalid_md5")
-    endif()
-  endif()
-endmacro()
-
 if(EXISTS "${tbb_tarball}")
-  getMD5("${tbb_tarball}" tbb_local_md5)
+  file(MD5 "${tbb_tarball}" tbb_local_md5)
   if(NOT tbb_local_md5 STREQUAL tbb_md5)
     message(WARNING "Local copy of TBB source tarball has invalid MD5 hash: ${tbb_local_md5} (expected: ${tbb_md5})")
     file(REMOVE "${tbb_tarball}")
@@ -115,7 +99,7 @@ if(NOT EXISTS "${tbb_tarball}")
   if(NOT __statvar EQUAL 0)
     message(FATAL_ERROR "Failed to download TBB sources: ${tbb_url}")
   endif()
-  getMD5("${tbb_tarball}" tbb_local_md5)
+  file(MD5 "${tbb_tarball}" tbb_local_md5)
   if(NOT tbb_local_md5 STREQUAL tbb_md5)
     file(REMOVE "${tbb_tarball}")
     message(FATAL_ERROR "Downloaded TBB source tarball has invalid MD5 hash: ${tbb_local_md5} (expected: ${tbb_md5})")
@@ -230,9 +214,15 @@ endif()
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 string(REPLACE "-Werror=non-virtual-dtor" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
+if (WIN32)
+  set(tbb_debug_postfix "_debug") # to fit pragmas in _windef.h inside TBB
+else()
+  set(tbb_debug_postfix ${OPENCV_DEBUG_POSTFIX})
+endif()
+
 set_target_properties(tbb
   PROPERTIES OUTPUT_NAME tbb
-  DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}"
+  DEBUG_POSTFIX "${tbb_debug_postfix}"
   ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH}
   RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
   )

@@ -47,45 +47,9 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::Canny(const GpuMat&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, CannyBuf&, GpuMat&, double, double, int, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, GpuMat&, double, double, bool) { throw_no_cuda(); }
-void cv::gpu::Canny(const GpuMat&, const GpuMat&, CannyBuf&, GpuMat&, double, double, bool) { throw_no_cuda(); }
-void cv::gpu::CannyBuf::create(const Size&, int) { throw_no_cuda(); }
-void cv::gpu::CannyBuf::release() { throw_no_cuda(); }
+Ptr<CannyEdgeDetector> cv::gpu::createCannyEdgeDetector(double, double, int, bool) { throw_no_cuda(); return Ptr<CannyEdgeDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
-
-void cv::gpu::CannyBuf::create(const Size& image_size, int apperture_size)
-{
-    if (apperture_size > 0)
-    {
-        ensureSizeIsEnough(image_size, CV_32SC1, dx);
-        ensureSizeIsEnough(image_size, CV_32SC1, dy);
-
-        if (apperture_size != 3)
-        {
-            filterDX = createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size, false, 1, BORDER_REPLICATE);
-            filterDY = createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size, false, 1, BORDER_REPLICATE);
-        }
-    }
-
-    ensureSizeIsEnough(image_size, CV_32FC1, mag);
-    ensureSizeIsEnough(image_size, CV_32SC1, map);
-
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1);
-    ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2);
-}
-
-void cv::gpu::CannyBuf::release()
-{
-    dx.release();
-    dy.release();
-    mag.release();
-    map.release();
-    st1.release();
-    st2.release();
-}
 
 namespace canny
 {
@@ -103,84 +67,168 @@ namespace canny
 
 namespace
 {
-    void CannyCaller(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, float low_thresh, float high_thresh)
+    class CannyImpl : public CannyEdgeDetector
     {
-        using namespace canny;
+    public:
+        CannyImpl(double low_thresh, double high_thresh, int apperture_size, bool L2gradient) :
+            low_thresh_(low_thresh), high_thresh_(high_thresh), apperture_size_(apperture_size), L2gradient_(L2gradient)
+        {
+            old_apperture_size_ = -1;
+        }
 
-        buf.map.setTo(Scalar::all(0));
-        calcMap(dx, dy, buf.mag, buf.map, low_thresh, high_thresh);
+        void detect(InputArray image, OutputArray edges);
+        void detect(InputArray dx, InputArray dy, OutputArray edges);
 
-        edgesHysteresisLocal(buf.map, buf.st1.ptr<ushort2>());
+        void setLowThreshold(double low_thresh) { low_thresh_ = low_thresh; }
+        double getLowThreshold() const { return low_thresh_; }
 
-        edgesHysteresisGlobal(buf.map, buf.st1.ptr<ushort2>(), buf.st2.ptr<ushort2>());
+        void setHighThreshold(double high_thresh) { high_thresh_ = high_thresh; }
+        double getHighThreshold() const { return high_thresh_; }
 
-        getEdges(buf.map, dst);
+        void setAppertureSize(int apperture_size) { apperture_size_ = apperture_size; }
+        int getAppertureSize() const { return apperture_size_; }
+
+        void setL2Gradient(bool L2gradient) { L2gradient_ = L2gradient; }
+        bool getL2Gradient() const { return L2gradient_; }
+
+        void write(FileStorage& fs) const
+        {
+            fs << "name" << "Canny_GPU"
+            << "low_thresh" << low_thresh_
+            << "high_thresh" << high_thresh_
+            << "apperture_size" << apperture_size_
+            << "L2gradient" << L2gradient_;
+        }
+
+        void read(const FileNode& fn)
+        {
+            CV_Assert( String(fn["name"]) == "Canny_GPU" );
+            low_thresh_ = (double)fn["low_thresh"];
+            high_thresh_ = (double)fn["high_thresh"];
+            apperture_size_ = (int)fn["apperture_size"];
+            L2gradient_ = (int)fn["L2gradient"] != 0;
+        }
+
+    private:
+        void createBuf(Size image_size);
+        void CannyCaller(GpuMat& edges);
+
+        double low_thresh_;
+        double high_thresh_;
+        int apperture_size_;
+        bool L2gradient_;
+
+        GpuMat dx_, dy_;
+        GpuMat mag_;
+        GpuMat map_;
+        GpuMat st1_, st2_;
+#ifdef HAVE_OPENCV_GPUFILTERS
+        Ptr<Filter> filterDX_, filterDY_;
+#endif
+        int old_apperture_size_;
+    };
+
+    void CannyImpl::detect(InputArray _image, OutputArray _edges)
+    {
+        GpuMat image = _image.getGpuMat();
+
+        CV_Assert( image.type() == CV_8UC1 );
+        CV_Assert( deviceSupports(SHARED_ATOMICS) );
+
+        if (low_thresh_ > high_thresh_)
+            std::swap(low_thresh_, high_thresh_);
+
+        createBuf(image.size());
+
+        _edges.create(image.size(), CV_8UC1);
+        GpuMat edges = _edges.getGpuMat();
+
+        if (apperture_size_ == 3)
+        {
+            Size wholeSize;
+            Point ofs;
+            image.locateROI(wholeSize, ofs);
+            GpuMat srcWhole(wholeSize, image.type(), image.datastart, image.step);
+
+            canny::calcMagnitude(srcWhole, ofs.x, ofs.y, dx_, dy_, mag_, L2gradient_);
+        }
+        else
+        {
+#ifndef HAVE_OPENCV_GPUFILTERS
+            throw_no_cuda();
+#else
+            filterDX_->apply(image, dx_);
+            filterDY_->apply(image, dy_);
+
+            canny::calcMagnitude(dx_, dy_, mag_, L2gradient_);
+#endif
+        }
+
+        CannyCaller(edges);
+    }
+
+    void CannyImpl::detect(InputArray _dx, InputArray _dy, OutputArray _edges)
+    {
+        GpuMat dx = _dx.getGpuMat();
+        GpuMat dy = _dy.getGpuMat();
+
+        CV_Assert( dx.type() == CV_32SC1 );
+        CV_Assert( dy.type() == dx.type() && dy.size() == dx.size() );
+        CV_Assert( deviceSupports(SHARED_ATOMICS) );
+
+        dx.copyTo(dx_);
+        dy.copyTo(dy_);
+
+        if (low_thresh_ > high_thresh_)
+            std::swap(low_thresh_, high_thresh_);
+
+        createBuf(dx.size());
+
+        _edges.create(dx.size(), CV_8UC1);
+        GpuMat edges = _edges.getGpuMat();
+
+        canny::calcMagnitude(dx_, dy_, mag_, L2gradient_);
+
+        CannyCaller(edges);
+    }
+
+    void CannyImpl::createBuf(Size image_size)
+    {
+        ensureSizeIsEnough(image_size, CV_32SC1, dx_);
+        ensureSizeIsEnough(image_size, CV_32SC1, dy_);
+
+#ifdef HAVE_OPENCV_GPUFILTERS
+        if (apperture_size_ != 3 && apperture_size_ != old_apperture_size_)
+        {
+            filterDX_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
+            filterDY_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
+            old_apperture_size_ = apperture_size_;
+        }
+#endif
+
+        ensureSizeIsEnough(image_size, CV_32FC1, mag_);
+        ensureSizeIsEnough(image_size, CV_32SC1, map_);
+
+        ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st1_);
+        ensureSizeIsEnough(1, image_size.area(), CV_16UC2, st2_);
+    }
+
+    void CannyImpl::CannyCaller(GpuMat& edges)
+    {
+        map_.setTo(Scalar::all(0));
+        canny::calcMap(dx_, dy_, mag_, map_, static_cast<float>(low_thresh_), static_cast<float>(high_thresh_));
+
+        canny::edgesHysteresisLocal(map_, st1_.ptr<ushort2>());
+
+        canny::edgesHysteresisGlobal(map_, st1_.ptr<ushort2>(), st2_.ptr<ushort2>());
+
+        canny::getEdges(map_, edges);
     }
 }
 
-void cv::gpu::Canny(const GpuMat& src, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
+Ptr<CannyEdgeDetector> cv::gpu::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
-    CannyBuf buf;
-    Canny(src, buf, dst, low_thresh, high_thresh, apperture_size, L2gradient);
-}
-
-void cv::gpu::Canny(const GpuMat& src, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
-{
-    using namespace canny;
-
-    CV_Assert(src.type() == CV_8UC1);
-
-    if (!deviceSupports(SHARED_ATOMICS))
-        CV_Error(cv::Error::StsNotImplemented, "The device doesn't support shared atomics");
-
-    if( low_thresh > high_thresh )
-        std::swap( low_thresh, high_thresh);
-
-    dst.create(src.size(), CV_8U);
-    buf.create(src.size(), apperture_size);
-
-    if (apperture_size == 3)
-    {
-        Size wholeSize;
-        Point ofs;
-        src.locateROI(wholeSize, ofs);
-        GpuMat srcWhole(wholeSize, src.type(), src.datastart, src.step);
-
-        calcMagnitude(srcWhole, ofs.x, ofs.y, buf.dx, buf.dy, buf.mag, L2gradient);
-    }
-    else
-    {
-        buf.filterDX->apply(src, buf.dx);
-        buf.filterDY->apply(src, buf.dy);
-
-        calcMagnitude(buf.dx, buf.dy, buf.mag, L2gradient);
-    }
-
-    CannyCaller(buf.dx, buf.dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
-}
-
-void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
-{
-    CannyBuf buf;
-    Canny(dx, dy, buf, dst, low_thresh, high_thresh, L2gradient);
-}
-
-void cv::gpu::Canny(const GpuMat& dx, const GpuMat& dy, CannyBuf& buf, GpuMat& dst, double low_thresh, double high_thresh, bool L2gradient)
-{
-    using namespace canny;
-
-    CV_Assert(TargetArchs::builtWith(SHARED_ATOMICS) && DeviceInfo().supports(SHARED_ATOMICS));
-    CV_Assert(dx.type() == CV_32SC1 && dy.type() == CV_32SC1 && dx.size() == dy.size());
-
-    if( low_thresh > high_thresh )
-        std::swap( low_thresh, high_thresh);
-
-    dst.create(dx.size(), CV_8U);
-    buf.create(dx.size(), -1);
-
-    calcMagnitude(dx, dy, buf.mag, L2gradient);
-
-    CannyCaller(dx, dy, buf, dst, static_cast<float>(low_thresh), static_cast<float>(high_thresh));
+    return new CannyImpl(low_thresh, high_thresh, apperture_size, L2gradient);
 }
 
 #endif /* !defined (HAVE_CUDA) */

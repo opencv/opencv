@@ -718,3 +718,269 @@ Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_GPU()
 }
 
 #endif // HAVE_OPENCV_GPUOPTFLOW
+#ifdef HAVE_OPENCV_OCL
+
+namespace
+{
+    class oclOpticalFlow : public DenseOpticalFlowExt
+    {
+    public:
+        explicit oclOpticalFlow(int work_type);
+
+        void calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2);
+        void collectGarbage();
+
+    protected:
+        virtual void impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2) = 0;
+
+    private:
+        int work_type_;
+        cv::ocl::oclMat buf_[6];
+        cv::ocl::oclMat u_, v_, flow_;
+    };
+
+    oclOpticalFlow::oclOpticalFlow(int work_type) : work_type_(work_type)
+    {
+    }
+
+    void oclOpticalFlow::calc(InputArray frame0, InputArray frame1, OutputArray flow1, OutputArray flow2)
+    {
+        ocl::oclMat& _frame0 = ocl::getOclMatRef(frame0);
+        ocl::oclMat& _frame1 = ocl::getOclMatRef(frame1);
+        ocl::oclMat& _flow1  = ocl::getOclMatRef(flow1);
+        ocl::oclMat& _flow2  = ocl::getOclMatRef(flow2);
+
+        CV_Assert( _frame1.type() == _frame0.type() );
+        CV_Assert( _frame1.size() == _frame0.size() );
+
+        cv::ocl::oclMat input0_ = convertToType(_frame0, work_type_, buf_[2], buf_[3]);
+        cv::ocl::oclMat input1_ = convertToType(_frame1, work_type_, buf_[4], buf_[5]);
+
+        impl(input0_, input1_, u_, v_);//go to tvl1 algorithm
+
+        u_.copyTo(_flow1);
+        v_.copyTo(_flow2);
+    }
+
+    void oclOpticalFlow::collectGarbage()
+    {
+        for (int i = 0; i < 6; ++i)
+            buf_[i].release();
+        u_.release();
+        v_.release();
+        flow_.release();
+    }
+}
+///////////////////////////////////////////////////////////////////
+// PyrLK_OCL
+
+namespace
+{
+    class PyrLK_OCL : public oclOpticalFlow
+    {
+    public:
+        AlgorithmInfo* info() const;
+
+        PyrLK_OCL();
+
+        void collectGarbage();
+
+    protected:
+        void impl(const ocl::oclMat& input0, const ocl::oclMat& input1, ocl::oclMat& dst1, ocl::oclMat& dst2);
+
+    private:
+        int winSize_;
+        int maxLevel_;
+        int iterations_;
+
+        ocl::PyrLKOpticalFlow alg_;
+    };
+
+    CV_INIT_ALGORITHM(PyrLK_OCL, "DenseOpticalFlowExt.PyrLK_OCL",
+        obj.info()->addParam(obj, "winSize", obj.winSize_);
+    obj.info()->addParam(obj, "maxLevel", obj.maxLevel_);
+    obj.info()->addParam(obj, "iterations", obj.iterations_));
+
+    PyrLK_OCL::PyrLK_OCL() : oclOpticalFlow(CV_8UC1)
+    {
+        winSize_ = alg_.winSize.width;
+        maxLevel_ = alg_.maxLevel;
+        iterations_ = alg_.iters;
+    }
+
+    void PyrLK_OCL::impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2)
+    {
+        alg_.winSize.width = winSize_;
+        alg_.winSize.height = winSize_;
+        alg_.maxLevel = maxLevel_;
+        alg_.iters = iterations_;
+
+        alg_.dense(input0, input1, dst1, dst2);
+    }
+
+    void PyrLK_OCL::collectGarbage()
+    {
+        alg_.releaseMemory();
+        oclOpticalFlow::collectGarbage();
+    }
+}
+
+Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_OCL()
+{
+    return new PyrLK_OCL;
+}
+
+///////////////////////////////////////////////////////////////////
+// DualTVL1_OCL
+
+namespace
+{
+    class DualTVL1_OCL : public oclOpticalFlow
+    {
+    public:
+        AlgorithmInfo* info() const;
+
+        DualTVL1_OCL();
+
+        void collectGarbage();
+
+    protected:
+        void impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2);
+
+    private:
+        double tau_;
+        double lambda_;
+        double theta_;
+        int nscales_;
+        int warps_;
+        double epsilon_;
+        int iterations_;
+        bool useInitialFlow_;
+
+        ocl::OpticalFlowDual_TVL1_OCL alg_;
+    };
+
+    CV_INIT_ALGORITHM(DualTVL1_OCL, "DenseOpticalFlowExt.DualTVL1_OCL",
+    obj.info()->addParam(obj, "tau", obj.tau_);
+    obj.info()->addParam(obj, "lambda", obj.lambda_);
+    obj.info()->addParam(obj, "theta", obj.theta_);
+    obj.info()->addParam(obj, "nscales", obj.nscales_);
+    obj.info()->addParam(obj, "warps", obj.warps_);
+    obj.info()->addParam(obj, "epsilon", obj.epsilon_);
+    obj.info()->addParam(obj, "iterations", obj.iterations_);
+    obj.info()->addParam(obj, "useInitialFlow", obj.useInitialFlow_));
+
+    DualTVL1_OCL::DualTVL1_OCL() : oclOpticalFlow(CV_8UC1)
+    {
+        tau_ = alg_.tau;
+        lambda_ = alg_.lambda;
+        theta_ = alg_.theta;
+        nscales_ = alg_.nscales;
+        warps_ = alg_.warps;
+        epsilon_ = alg_.epsilon;
+        iterations_ = alg_.iterations;
+        useInitialFlow_ = alg_.useInitialFlow;
+    }
+
+    void DualTVL1_OCL::impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2)
+    {
+        alg_.tau = tau_;
+        alg_.lambda = lambda_;
+        alg_.theta = theta_;
+        alg_.nscales = nscales_;
+        alg_.warps = warps_;
+        alg_.epsilon = epsilon_;
+        alg_.iterations = iterations_;
+        alg_.useInitialFlow = useInitialFlow_;
+
+        alg_(input0, input1, dst1, dst2);
+
+    }
+
+    void DualTVL1_OCL::collectGarbage()
+    {
+        alg_.collectGarbage();
+        oclOpticalFlow::collectGarbage();
+    }
+}
+
+Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_OCL()
+{
+    return new DualTVL1_OCL;
+}
+
+///////////////////////////////////////////////////////////////////
+// FarneBack
+
+namespace
+{
+    class FarneBack_OCL : public oclOpticalFlow
+    {
+    public:
+        AlgorithmInfo* info() const;
+
+        FarneBack_OCL();
+
+        void collectGarbage();
+
+    protected:
+        void impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2);
+
+    private:
+        double pyrScale_;
+        int numLevels_;
+        int winSize_;
+        int numIters_;
+        int polyN_;
+        double polySigma_;
+        int flags_;
+
+        ocl::FarnebackOpticalFlow alg_;
+    };
+
+    CV_INIT_ALGORITHM(FarneBack_OCL, "DenseOpticalFlowExt.FarneBack_OCL",
+        obj.info()->addParam(obj, "pyrScale", obj.pyrScale_);
+    obj.info()->addParam(obj, "numLevels", obj.numLevels_);
+    obj.info()->addParam(obj, "winSize", obj.winSize_);
+    obj.info()->addParam(obj, "numIters", obj.numIters_);
+    obj.info()->addParam(obj, "polyN", obj.polyN_);
+    obj.info()->addParam(obj, "polySigma", obj.polySigma_);
+    obj.info()->addParam(obj, "flags", obj.flags_));
+
+    FarneBack_OCL::FarneBack_OCL() : oclOpticalFlow(CV_8UC1)
+    {
+        pyrScale_ = alg_.pyrScale;
+        numLevels_ = alg_.numLevels;
+        winSize_ = alg_.winSize;
+        numIters_ = alg_.numIters;
+        polyN_ = alg_.polyN;
+        polySigma_ = alg_.polySigma;
+        flags_ = alg_.flags;
+    }
+
+    void FarneBack_OCL::impl(const cv::ocl::oclMat& input0, const cv::ocl::oclMat& input1, cv::ocl::oclMat& dst1, cv::ocl::oclMat& dst2)
+    {
+        alg_.pyrScale = pyrScale_;
+        alg_.numLevels = numLevels_;
+        alg_.winSize = winSize_;
+        alg_.numIters = numIters_;
+        alg_.polyN = polyN_;
+        alg_.polySigma = polySigma_;
+        alg_.flags = flags_;
+
+        alg_(input0, input1, dst1, dst2);
+    }
+
+    void FarneBack_OCL::collectGarbage()
+    {
+        alg_.releaseMemory();
+        oclOpticalFlow::collectGarbage();
+    }
+}
+
+Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_OCL()
+{
+    return new FarneBack_OCL;
+}
+
+#endif

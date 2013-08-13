@@ -44,47 +44,8 @@
 //
 //M*/
 #include "precomp.hpp"
-
-#if 0
-
 ///////////// Haar ////////////////////////
-namespace cv
-{
-namespace ocl
-{
 
-struct getRect
-{
-    Rect operator()(const CvAvgComp &e) const
-    {
-        return e.rect;
-    }
-};
-
-class CascadeClassifier_GPU : public OclCascadeClassifier
-{
-public:
-    void detectMultiScale(oclMat &image,
-                          CV_OUT std::vector<cv::Rect>& faces,
-                          double scaleFactor = 1.1,
-                          int minNeighbors = 3, int flags = 0,
-                          Size minSize = Size(),
-                          Size maxSize = Size())
-    {
-        (void)maxSize;
-        MemStorage storage(cvCreateMemStorage(0));
-        //CvMat img=image;
-        CvSeq *objs = oclHaarDetectObjects(image, storage, scaleFactor, minNeighbors, flags, minSize);
-        vector<CvAvgComp> vecAvgComp;
-        Seq<CvAvgComp>(objs).copyTo(vecAvgComp);
-        faces.resize(vecAvgComp.size());
-        std::transform(vecAvgComp.begin(), vecAvgComp.end(), faces.begin(), getRect());
-    }
-
-};
-
-}
-}
 PERFTEST(Haar)
 {
     Mat img = imread(abspath("basketball1.png"), IMREAD_GRAYSCALE);
@@ -106,12 +67,12 @@ PERFTEST(Haar)
     SUBTEST << img.cols << "x" << img.rows << "; scale image";
     CPU_ON;
     faceCascadeCPU.detectMultiScale(img, faces,
-                                    1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+                                    1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     CPU_OFF;
 
 
     vector<Rect> oclfaces;
-    ocl::CascadeClassifier_GPU faceCascade;
+    ocl::OclCascadeClassifier faceCascade;
 
     if (!faceCascade.load(abspath("haarcascade_frontalface_alt.xml")))
     {
@@ -122,7 +83,7 @@ PERFTEST(Haar)
 
     WARMUP_ON;
     faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+                                 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     WARMUP_OFF;
 
     if(faces.size() == oclfaces.size())
@@ -134,14 +95,12 @@ PERFTEST(Haar)
 
     GPU_ON;
     faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+                                 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     GPU_OFF;
 
     GPU_FULL_ON;
     d_img.upload(img);
     faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+                                 1.1, 2, 0 | CASCADE_SCALE_IMAGE, Size(30, 30));
     GPU_FULL_OFF;
 }
-
-#endif

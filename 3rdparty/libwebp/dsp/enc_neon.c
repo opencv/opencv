@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // ARM NEON version of speed-critical encoding functions.
@@ -322,7 +324,7 @@ static void FTransform(const uint8_t* src, const uint8_t* ref,
     "vmlal.s16       q11, d6, d17             \n" // c1*2217 + d1*5352 + 12000
     "vmlsl.s16       q12, d6, d16             \n" // d1*2217 - c1*5352 + 51000
 
-    "vmvn.s16        d4, d4                   \n"
+    "vmvn            d4, d4                   \n" // !(d1 == 0)
     // op[4] = (c1*2217 + d1*5352 + 12000)>>16
     "vshrn.s32       d1, q11, #16             \n"
     // op[4] += (d1!=0)
@@ -363,19 +365,12 @@ static void FTransformWHT(const int16_t* in, int16_t* out) {
     "vld1.16         d2[3], [%[in]], %[kStep]   \n"
     "vld1.16         d3[3], [%[in]], %[kStep]   \n"
 
-    "vaddl.s16       q2, d0, d2                 \n"
-    "vshl.s32        q2, q2, #2                 \n" // a0=(in[0*16]+in[2*16])<<2
-    "vaddl.s16       q3, d1, d3                 \n"
-    "vshl.s32        q3, q3, #2                 \n" // a1=(in[1*16]+in[3*16])<<2
-    "vsubl.s16       q4, d1, d3                 \n"
-    "vshl.s32        q4, q4, #2                 \n" // a2=(in[1*16]-in[3*16])<<2
-    "vsubl.s16       q5, d0, d2                 \n"
-    "vshl.s32        q5, q5, #2                 \n" // a3=(in[0*16]-in[2*16])<<2
+    "vaddl.s16       q2, d0, d2                 \n" // a0=(in[0*16]+in[2*16])
+    "vaddl.s16       q3, d1, d3                 \n" // a1=(in[1*16]+in[3*16])
+    "vsubl.s16       q4, d1, d3                 \n" // a2=(in[1*16]-in[3*16])
+    "vsubl.s16       q5, d0, d2                 \n" // a3=(in[0*16]-in[2*16])
 
-    "vceq.s32        q10, q2, #0                \n"
-    "vmvn.s32        q10, q10                   \n" // (a0 != 0)
-    "vqadd.s32       q6, q2, q3                 \n" // (a0 + a1)
-    "vqsub.s32       q6, q6, q10                \n" // (a0 + a1) + (a0 != 0)
+    "vqadd.s32       q6, q2, q3                 \n" // a0 + a1
     "vqadd.s32       q7, q5, q4                 \n" // a3 + a2
     "vqsub.s32       q8, q5, q4                 \n" // a3 - a2
     "vqsub.s32       q9, q2, q3                 \n" // a0 - a1
@@ -398,27 +393,10 @@ static void FTransformWHT(const int16_t* in, int16_t* out) {
     "vqsub.s32       q6, q3, q2                 \n" // b2 = a3 - a2
     "vqsub.s32       q7, q0, q1                 \n" // b3 = a0 - a1
 
-    "vmov.s32         q0, #3                    \n" // q0 = 3
-
-    "vcgt.s32        q1, q4, #0                 \n" // (b0>0)
-    "vqsub.s32       q2, q4, q1                 \n" // (b0+(b0>0))
-    "vqadd.s32       q3, q2, q0                 \n" // (b0+(b0>0)+3)
-    "vshrn.s32       d18, q3, #3                \n" // (b0+(b0>0)+3) >> 3
-
-    "vcgt.s32        q1, q5, #0                 \n" // (b1>0)
-    "vqsub.s32       q2, q5, q1                 \n" // (b1+(b1>0))
-    "vqadd.s32       q3, q2, q0                 \n" // (b1+(b1>0)+3)
-    "vshrn.s32       d19, q3, #3                \n" // (b1+(b1>0)+3) >> 3
-
-    "vcgt.s32        q1, q6, #0                 \n" // (b2>0)
-    "vqsub.s32       q2, q6, q1                 \n" // (b2+(b2>0))
-    "vqadd.s32       q3, q2, q0                 \n" // (b2+(b2>0)+3)
-    "vshrn.s32       d20, q3, #3                \n" // (b2+(b2>0)+3) >> 3
-
-    "vcgt.s32        q1, q7, #0                 \n" // (b3>0)
-    "vqsub.s32       q2, q7, q1                 \n" // (b3+(b3>0))
-    "vqadd.s32       q3, q2, q0                 \n" // (b3+(b3>0)+3)
-    "vshrn.s32       d21, q3, #3                \n" // (b3+(b3>0)+3) >> 3
+    "vshrn.s32       d18, q4, #1                \n" // b0 >> 1
+    "vshrn.s32       d19, q5, #1                \n" // b1 >> 1
+    "vshrn.s32       d20, q6, #1                \n" // b2 >> 1
+    "vshrn.s32       d21, q7, #1                \n" // b3 >> 1
 
     "vst1.16         {q9, q10}, [%[out]]        \n"
 
