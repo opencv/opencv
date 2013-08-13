@@ -230,22 +230,22 @@ namespace
         switch (srcType)
         {
         case CV_8UC1:
-            func_ = cudev::filter2D<uchar, uchar>;
+            func_ = cv::gpu::cudev::filter2D<uchar, uchar>;
             break;
         case CV_8UC4:
-            func_ = cudev::filter2D<uchar4, uchar4>;
+            func_ = cv::gpu::cudev::filter2D<uchar4, uchar4>;
             break;
         case CV_16UC1:
-            func_ = cudev::filter2D<ushort, ushort>;
+            func_ = cv::gpu::cudev::filter2D<ushort, ushort>;
             break;
         case CV_16UC4:
-            func_ = cudev::filter2D<ushort4, ushort4>;
+            func_ = cv::gpu::cudev::filter2D<ushort4, ushort4>;
             break;
         case CV_32FC1:
-            func_ = cudev::filter2D<float, float>;
+            func_ = cv::gpu::cudev::filter2D<float, float>;
             break;
         case CV_32FC4:
-            func_ = cudev::filter2D<float4, float4>;
+            func_ = cv::gpu::cudev::filter2D<float4, float4>;
             break;
         }
     }

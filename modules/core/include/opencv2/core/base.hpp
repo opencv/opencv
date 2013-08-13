@@ -498,6 +498,11 @@ namespace gpu
     class CV_EXPORTS Event;
 }
 
+namespace cudev
+{
+    template <typename _Tp> class GpuMat_;
+}
+
 } // cv
 
 #endif //__OPENCV_CORE_BASE_HPP__

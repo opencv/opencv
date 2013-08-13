@@ -181,7 +181,7 @@ namespace
 
             const GpuMat& prevLayer = i == 0 ? layer0_ : pyramid_[i - 1];
 
-            cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
+            cv::gpu::cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
 
             szLastLayer = szCurLayer;
         }
@@ -222,7 +222,7 @@ namespace
             lastLayer = curLayer;
         }
 
-        cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
+        cv::gpu::cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
     }
 }
 
