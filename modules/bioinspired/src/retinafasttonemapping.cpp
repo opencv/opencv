@@ -114,9 +114,9 @@ public:
         _imageOutput.resize(nbPixels*3);
         _temp2.resize(nbPixels);
         // allocate the main filter with 2 setup sets properties (one for each low pass filter
-        _multiuseFilter = new BasicRetinaFilter(imageInput.height, imageInput.width, 2);
+        _multiuseFilter = makePtr<BasicRetinaFilter>(imageInput.height, imageInput.width, 2);
         // allocate the color manager (multiplexer/demultiplexer
-        _colorEngine = new RetinaColor(imageInput.height, imageInput.width);
+        _colorEngine = makePtr<RetinaColor>(imageInput.height, imageInput.width);
         // setup filter behaviors with default values
         setup();
     }
@@ -309,7 +309,7 @@ bool _convertCvMat2ValarrayBuffer(InputArray inputMat, std::valarray<float> &out
 
 CV_EXPORTS Ptr<RetinaFastToneMapping> createRetinaFastToneMapping(Size inputSize)
 {
-    return new RetinaFastToneMappingImpl(inputSize);
+    return makePtr<RetinaFastToneMappingImpl>(inputSize);
 }
 
 }// end of namespace bioinspired
