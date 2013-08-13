@@ -94,9 +94,9 @@
 #include <iostream>
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-#define MAX_IPP8u	255
-#define MAX_IPP16u	65535
-#define MAX_IPP32f	1.0
+#define MAX_IPP8u   255
+#define MAX_IPP16u  65535
+#define MAX_IPP32f  1.0
 static IppStatus sts = ippInit();
 #endif
 
@@ -198,283 +198,298 @@ void CvtColorLoop(const Mat& src, Mat& dst, const Cvt& cvt)
 }
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(func, src, dst ) \
-	if( depth == CV_8U ) { \
-	CV_DEF_IPP_PARALLEL_FOR(func##_8u, src, dst); } \
-	else if( depth == CV_16U ) { \
-	CV_DEF_IPP_PARALLEL_FOR(func##_16u, src, dst); } \
-	else { CV_DEF_IPP_PARALLEL_FOR(func##_32f, src, dst); }
+typedef IppStatus (CV_STDCALL* ippiReorderFunc)(const void *, int, void *, int, IppiSize, const int *);
+typedef IppStatus (CV_STDCALL* ippiGeneralFunc)(const void *, int, void *, int, IppiSize);
+typedef IppStatus (CV_STDCALL* ippiColor2GrayFunc)(const void *, int, void *, int, IppiSize, const Ipp32f *);
 
-#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(func, src, dst ) \
-	if( depth == CV_8U ) { \
-	CV_DEF_IPP_PARALLEL_FOR(func##_8u, src, dst); } \
-	else if( depth == CV_16U ){ \
-	CV_DEF_IPP_PARALLEL_FOR(func##_16u, src, dst); } 
+template <typename Cvt>
+class CvtColorIPPLoop_Invoker : public ParallelLoopBody
+{
+public:
 
-#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(func, src, dst ) \
-	Mat temp; Mat &source = src; \
-	if( src.data == dst.data ) { \
-	src.copyTo(temp); source = temp; } \
-	CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(func, source, dst)
+    CvtColorIPPLoop_Invoker(const Mat& _src, Mat& _dst, const Cvt& _cvt, bool *_ok) :
+        ParallelLoopBody(), src(_src), dst(_dst), cvt(_cvt), ok(_ok)
+    {
+        *ok = true;
+    }
 
-#define CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(func, src, dst ) \
-	Mat temp; Mat &source = src; \
-	if( src.data == dst.data ) { \
-	src.copyTo(temp); source = temp; } \
-	CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(func, source, dst)
+    virtual void operator()(const Range& range) const
+    {
+        const void *yS = src.ptr<uchar>(range.start);
+        void *yD = dst.ptr<uchar>(range.start);
+        if( cvt(yS, (int)src.step[0], yD, (int)dst.step[0], src.cols, range.end - range.start) < 0 )
+            *ok = false;
+    }
 
-#define CV_DEF_IPP_PARALLEL_FOR(Functor, src, dst) \
-	bool ok; \
-	Functor invoker(src, dst, &ok); \
-	parallel_for_(Range(0, src.rows), invoker, src.total()/(double)(1<<16) ); \
-	if( ok ) { return; }
+private:
+    const Mat& src;
+    Mat& dst;
+    const Cvt& cvt;
+    bool *ok;
 
-#define CV_DEF_IPP_COLORLOOP_BODY(mode, type, funcbody) \
-class IPPColorLoop_Invoker_##mode##_##type## : public ParallelLoopBody { \
-public: IPPColorLoop_Invoker_##mode##_##type##(const Mat& _src, Mat& _dst, bool *_ok) : \
-	ParallelLoopBody(), src(_src), dst(_dst), ok(_ok) \
-{ *ok = true; } \
-	virtual void operator()(const Range& range) const \
-{ funcbody(type) } \
-private: const Mat& src; \
-	Mat& dst; bool *ok; \
-const IPPColorLoop_Invoker_##mode##_##type##& operator= (const IPPColorLoop_Invoker_##mode##_##type##&); };
+    const CvtColorIPPLoop_Invoker& operator= (const CvtColorIPPLoop_Invoker&);
+};
 
-#define CV_DEF_IPP_FUNCPROC(func) \
-	if( func < 0 ) { *ok = false; return; }
+template <typename Cvt>
+bool CvtColorIPPLoop(const Mat& src, Mat& dst, const Cvt& cvt)
+{
+    bool ok;
+    parallel_for_(Range(0, src.rows), CvtColorIPPLoop_Invoker<Cvt>(src, dst, cvt, &ok), src.total()/(double)(1<<16) );
+    return ok;
+}
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C3C4(order1, order2, order3, order4, type) \
-	int order[4] = { order1, order2, order3, order4 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+template <typename Cvt>
+bool CvtColorIPPLoopCopy(Mat& src, Mat& dst, const Cvt& cvt)
+{
+    Mat temp;
+    Mat &source = src;
+    if( src.data == dst.data )
+    {
+        src.copyTo(temp);
+        source = temp;
+    }
+    bool ok;
+    parallel_for_(Range(0, source.rows), CvtColorIPPLoop_Invoker<Cvt>(source, dst, cvt, &ok), source.total()/(double)(1<<16) );
+    return ok;
+}
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C3C4_0123(type) \
-	CV_DEF_IPP_SWAP_CHANNELS_C3C4(0, 1, 2, 3, type)
+IppStatus __stdcall ippiSwapChannels_8u_C3C4Rf(const Ipp8u* pSrc, int srcStep, Ipp8u* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return ippiSwapChannels_8u_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP8u);
+}
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C3C4_2103(type) \
-	CV_DEF_IPP_SWAP_CHANNELS_C3C4(2, 1, 0, 3, type)
+IppStatus __stdcall ippiSwapChannels_16u_C3C4Rf(const Ipp16u* pSrc, int srcStep, Ipp16u* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return ippiSwapChannels_16u_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP16u);
+}
 
-#define CV_DEF_IPP_COPY_AC4C3(type) \
-	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_AC4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+IppStatus __stdcall ippiSwapChannels_32f_C3C4Rf(const Ipp32f* pSrc, int srcStep, Ipp32f* pDst, int dstStep,
+         IppiSize roiSize, const int *dstOrder)
+{
+    return ippiSwapChannels_32f_C3C4R(pSrc, srcStep, pDst, dstStep, roiSize, dstOrder, MAX_IPP32f);
+}
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C4C3(order1, order2, order3, type) \
-	int order[3] = { order1, order2, order3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+static ippiReorderFunc ippiSwapChannelsC3C4RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C3C4Rf, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3C4Rf, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C3C4Rf, 0, 0
+};
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C4C3_210(type) \
-	CV_DEF_IPP_SWAP_CHANNELS_C4C3(2, 1, 0, type)
+static ippiGeneralFunc ippiCopyAC4C3RTab[] =
+{
+    (ippiGeneralFunc)ippiCopy_8u_AC4C3R, 0, (ippiGeneralFunc)ippiCopy_16u_AC4C3R, 0,
+    0, (ippiGeneralFunc)ippiCopy_32f_AC4C3R, 0, 0
+};
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C3(order1, order2, order3, type) \
-	int order[3] = { order1, order2, order3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+static ippiReorderFunc ippiSwapChannelsC4C3RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C4C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C4C3R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C4C3R, 0, 0
+};
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C3_210(type) \
-	CV_DEF_IPP_SWAP_CHANNELS_C3(2, 1, 0, type)
+static ippiReorderFunc ippiSwapChannelsC3RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_C3R, 0, (ippiReorderFunc)ippiSwapChannels_16u_C3R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_C3R, 0, 0
+};
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C4(order1, order2, order3, type) \
-	int order[3] = { order1, order2, order3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_AC4R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+static ippiReorderFunc ippiSwapChannelsC4RTab[] =
+{
+    (ippiReorderFunc)ippiSwapChannels_8u_AC4R, 0, (ippiReorderFunc)ippiSwapChannels_16u_AC4R, 0,
+    0, (ippiReorderFunc)ippiSwapChannels_32f_AC4R, 0, 0
+};
 
-#define CV_DEF_IPP_SWAP_CHANNELS_C4_2103(type) \
-	CV_DEF_IPP_SWAP_CHANNELS_C4(2, 1, 0, type)
+static ippiColor2GrayFunc ippiColor2GrayC3Tab[] =
+{
+    (ippiColor2GrayFunc)ippiColorToGray_8u_C3C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_C3C1R, 0,
+    0, (ippiColor2GrayFunc)ippiColorToGray_32f_C3C1R, 0, 0
+};
 
-#define CV_DEF_IPP_BGR2GRAY(type) \
-	Ipp32f coeff[3] = { 0.114f, 0.587f, 0.299f }; \
-	CV_DEF_IPP_FUNCPROC(ippiColorToGray_##type##_C3C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), coeff ))
+static ippiColor2GrayFunc ippiColor2GrayC4Tab[] =
+{
+    (ippiColor2GrayFunc)ippiColorToGray_8u_AC4C1R, 0, (ippiColor2GrayFunc)ippiColorToGray_16u_AC4C1R, 0,
+    0, (ippiColor2GrayFunc)ippiColorToGray_32f_AC4C1R, 0, 0
+};
 
-#define CV_DEF_IPP_RGB2GRAY(type) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToGray_##type##_C3C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+static ippiGeneralFunc ippiRGB2GrayC3Tab[] =
+{
+    (ippiGeneralFunc)ippiRGBToGray_8u_C3C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_C3C1R, 0,
+    0, (ippiGeneralFunc)ippiRGBToGray_32f_C3C1R, 0, 0
+};
 
-#define CV_DEF_IPP_BGRA2GRAY(type) \
-	Ipp32f coeff[3] = { 0.114f, 0.587f, 0.299f }; \
-	CV_DEF_IPP_FUNCPROC(ippiColorToGray_##type##_AC4C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), coeff ))
+static ippiGeneralFunc ippiRGB2GrayC4Tab[] =
+{
+    (ippiGeneralFunc)ippiRGBToGray_8u_AC4C1R, 0, (ippiGeneralFunc)ippiRGBToGray_16u_AC4C1R, 0,
+    0, (ippiGeneralFunc)ippiRGBToGray_32f_AC4C1R, 0, 0
+};
 
-#define CV_DEF_IPP_RGBA2GRAY(type) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToGray_##type##_AC4C1R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+static ippiGeneralFunc ippiCopyP3C3RTab[] =
+{
+    (ippiGeneralFunc)ippiCopy_8u_P3C3R, 0, (ippiGeneralFunc)ippiCopy_16u_P3C3R, 0,
+    0, (ippiGeneralFunc)ippiCopy_32f_P3C3R, 0, 0
+};
 
-#define CV_DEF_IPP_Copy_P3C3(type) \
-	Ipp##type *pointer = (Ipp##type *)src.ptr(range.start); \
-	Ipp##type* srcarray[3] = { pointer, pointer, pointer }; \
-	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_P3C3R( srcarray, (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start )))
+static ippiGeneralFunc ippiRGB2XYZTab[] =
+{
+    (ippiGeneralFunc)ippiRGBToXYZ_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToXYZ_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiRGBToXYZ_32f_C3R, 0, 0
+};
 
-#define CV_DEF_IPP_GRAY2BGRA(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	Ipp##type *pointer = (Ipp##type *)src.ptr(range.start); \
-	Ipp##type* srcarray[3] = { pointer, pointer, pointer }; \
-	CV_DEF_IPP_FUNCPROC(ippiCopy_##type##_P3C3R( srcarray, (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ))) \
-	int order[4] = { 0, 1, 2, 3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+static ippiGeneralFunc ippiXYZ2RGBTab[] =
+{
+    (ippiGeneralFunc)ippiXYZToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiXYZToRGB_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiXYZToRGB_32f_C3R, 0, 0
+};
 
-#define CV_DEF_IPP_BGR2XYZ(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+static ippiGeneralFunc ippiRGB2HSVTab[] =
+{
+    (ippiGeneralFunc)ippiRGBToHSV_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHSV_16u_C3R, 0,
+    0, 0, 0, 0
+};
 
-#define CV_DEF_IPP_BGRA2XYZ(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+static ippiGeneralFunc ippiHSV2RGBTab[] =
+{
+    (ippiGeneralFunc)ippiHSVToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHSVToRGB_16u_C3R, 0,
+    0, 0, 0, 0
+};
 
-#define CV_DEF_IPP_RGB2XYZ(type) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+static ippiGeneralFunc ippiRGB2HLSTab[] =
+{
+    (ippiGeneralFunc)ippiRGBToHLS_8u_C3R, 0, (ippiGeneralFunc)ippiRGBToHLS_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiRGBToHLS_32f_C3R, 0, 0
+};
 
-#define CV_DEF_IPP_RGBA2XYZ(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 0, 1, 2 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToXYZ_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+static ippiGeneralFunc ippiHLS2RGBTab[] =
+{
+    (ippiGeneralFunc)ippiHLSToRGB_8u_C3R, 0, (ippiGeneralFunc)ippiHLSToRGB_16u_C3R, 0,
+    0, (ippiGeneralFunc)ippiHLSToRGB_32f_C3R, 0, 0
+};
 
-#define CV_DEF_IPP_XYZ2BGR(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
+struct IPPGeneralFunctor
+{
+    IPPGeneralFunctor(ippiGeneralFunc _func) : func(_func){}
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
+    }
+private:
+    ippiGeneralFunc func;
+};
 
-#define CV_DEF_IPP_XYZ2BGRA_FAMILY(order1, order2, order3, type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[4] = { order1, order2, order3, 3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
+struct IPPReorderFunctor
+{
+    IPPReorderFunctor(ippiReorderFunc _func, int _order0, int _order1, int _order2) : func(_func)
+    {
+        order[0] = _order0;
+        order[1] = _order1;
+        order[2] = _order2;
+        order[3] = 3;
+    }
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows), order) >= 0;
+    }
+private:
+    ippiReorderFunc func;
+    int order[4];
+};
 
-#define CV_DEF_IPP_XYZ2BGRA(type) \
-	CV_DEF_IPP_XYZ2BGRA_FAMILY(2, 1, 0, type)
+struct IPPColor2GrayFunctor
+{
+    IPPColor2GrayFunctor(ippiColor2GrayFunc _func) : func(_func) 
+    {
+        coeffs[0] = 0.114f;
+        coeffs[1] = 0.587f;
+        coeffs[2] = 0.299f;
+    }
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        return func(src, srcStep, dst, dstStep, ippiSize(cols, rows), coeffs) >= 0;
+    }
+private:
+    ippiColor2GrayFunc func;
+    Ipp32f coeffs[3];
+};
 
-#define CV_DEF_IPP_XYZ2RGB(type) \
-	CV_DEF_IPP_FUNCPROC(ippiXYZToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+struct IPPGray2BGRFunctor
+{
+    IPPGray2BGRFunctor(ippiGeneralFunc _func) : func(_func){}
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        const void* srcarray[3] = { src, src, src };
+        return func(srcarray, srcStep, dst, dstStep, ippiSize(cols, rows)) >= 0;
+    }
+private:
+    ippiGeneralFunc func;
+};
 
-#define CV_DEF_IPP_XYZ2RGBA(type) \
-	CV_DEF_IPP_XYZ2BGRA_FAMILY(0, 1, 2, type)
+struct IPPGray2BGRAFunctor
+{
+    IPPGray2BGRAFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _depth) : func1(_func1), func2(_func2), depth(_depth){}
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        const void* srcarray[3] = { src, src, src };
+        Mat temp(rows, cols, CV_MAKETYPE(depth, 3));
+        if(func1(srcarray, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+            return false;
+        int order[4] = {0, 1, 2, 3};
+        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+    }
+private:
+    ippiGeneralFunc func1;
+    ippiReorderFunc func2;
+    int depth;
+};
 
-#define CV_DEF_IPP_BGR2HSV_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
+struct IPPReorderGeneralFunctor
+{
+    IPPReorderGeneralFunctor(ippiReorderFunc _func1, ippiGeneralFunc _func2, int _order0, int _order1, int _order2, int _depth) : func1(_func1), func2(_func2), depth(_depth)
+    {
+        order[0] = _order0;
+        order[1] = _order1;
+        order[2] = _order2;
+        order[3] = 3;
+    }
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        Mat temp; 
+        temp.create(rows, cols, CV_MAKETYPE(depth, 3));
+        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows), order) < 0)
+            return false;
+        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows)) >= 0;
+    }
+private:
+    ippiReorderFunc func1;
+    ippiGeneralFunc func2;
+    int order[4];
+    int depth;
+};
 
-#define CV_DEF_IPP_BGRA2HSV_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_RGB2HSV_FULL(type) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_RGBA2HSV_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 0, 1, 2 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHSV_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_BGR2HLS_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_BGRA2HLS_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_RGB2HLS_FULL(type) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_RGBA2HLS_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	int order[3] = { 0, 1, 2 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C4C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ), order )) \
-	CV_DEF_IPP_FUNCPROC(ippiRGBToHLS_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) ))
-
-#define CV_DEF_IPP_HSV2BGR_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
-
-#define CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(order1, order2, order3, type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[4] = { order1, order2, order3, 3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
-
-#define CV_DEF_IPP_HSV2BGRA_FULL(type) \
-	CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(2, 1, 0, type) \
-
-#define CV_DEF_IPP_HSV2RGB_FULL(type) \
-	CV_DEF_IPP_FUNCPROC(ippiHSVToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) )) 
-
-#define CV_DEF_IPP_HSV2RGBA_FULL(type) \
-	CV_DEF_IPP_HSV2BGRA_FULL_FAMILY(0, 1, 2, type) \
-
-#define CV_DEF_IPP_HLS2BGR_FULL(type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[3] = { 2, 1, 0 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order ))
-
-#define CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(order1, order2, order3, type) \
-	Mat temp; temp.create(range.end - range.start, dst.cols, CV_MAKETYPE(src.depth(), 3)); \
-	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)temp.data, (int)temp.step[0], ippiSize( src.cols, range.end - range.start ) )) \
-	int order[4] = { order1, order2, order3, 3 }; \
-	CV_DEF_IPP_FUNCPROC(ippiSwapChannels_##type##_C3C4R( (const Ipp##type *)temp.data, (int)temp.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ), order, MAX_IPP##type ))
-
-#define CV_DEF_IPP_HLS2BGRA_FULL(type) \
-	CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(2, 1, 0, type) \
-
-#define CV_DEF_IPP_HLS2RGB_FULL(type) \
-	CV_DEF_IPP_FUNCPROC(ippiHLSToRGB_##type##_C3R( (const Ipp##type *)src.ptr(range.start), (int)src.step[0], (Ipp##type *)dst.ptr(range.start), (int)dst.step[0], ippiSize( src.cols, range.end - range.start ) )) 
-
-#define CV_DEF_IPP_HLS2RGBA_FULL(type) \
-	CV_DEF_IPP_HLS2BGRA_FULL_FAMILY(0, 1, 2, type) \
-
-#define CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(mode, funcbody) \
-	CV_DEF_IPP_COLORLOOP_BODY(mode, 8u, funcbody) \
-	CV_DEF_IPP_COLORLOOP_BODY(mode, 16u, funcbody) \
-	CV_DEF_IPP_COLORLOOP_BODY(mode, 32f, funcbody)
-
-#define CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(mode, funcbody) \
-	CV_DEF_IPP_COLORLOOP_BODY(mode, 8u, funcbody) \
-	CV_DEF_IPP_COLORLOOP_BODY(mode, 16u, funcbody)
-
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2BGRA, CV_DEF_IPP_SWAP_CHANNELS_C3C4_0123)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2BGR, CV_DEF_IPP_COPY_AC4C3)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2RGBA, CV_DEF_IPP_SWAP_CHANNELS_C3C4_2103)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2BGR, CV_DEF_IPP_SWAP_CHANNELS_C4C3_210)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2BGR, CV_DEF_IPP_SWAP_CHANNELS_C3_210)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2BGRA, CV_DEF_IPP_SWAP_CHANNELS_C4_2103)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2GRAY, CV_DEF_IPP_BGR2GRAY)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2GRAY, CV_DEF_IPP_RGB2GRAY)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2GRAY, CV_DEF_IPP_BGRA2GRAY)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2GRAY, CV_DEF_IPP_RGBA2GRAY)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(GRAY2BGR, CV_DEF_IPP_Copy_P3C3)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(GRAY2BGRA, CV_DEF_IPP_GRAY2BGRA)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGR2XYZ, CV_DEF_IPP_BGR2XYZ)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(BGRA2XYZ, CV_DEF_IPP_BGRA2XYZ)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGB2XYZ, CV_DEF_IPP_RGB2XYZ)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(RGBA2XYZ, CV_DEF_IPP_RGBA2XYZ)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2BGR, CV_DEF_IPP_XYZ2BGR)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2BGRA, CV_DEF_IPP_XYZ2BGRA)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2RGB, CV_DEF_IPP_XYZ2RGB)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U_32F(XYZ2RGBA, CV_DEF_IPP_XYZ2RGBA)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGR2HSV_FULL, CV_DEF_IPP_BGR2HSV_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGRA2HSV_FULL, CV_DEF_IPP_BGRA2HSV_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGB2HSV_FULL, CV_DEF_IPP_RGB2HSV_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGBA2HSV_FULL, CV_DEF_IPP_RGBA2HSV_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGR2HLS_FULL, CV_DEF_IPP_BGR2HLS_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(BGRA2HLS_FULL, CV_DEF_IPP_BGRA2HLS_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGB2HLS_FULL, CV_DEF_IPP_RGB2HLS_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(RGBA2HLS_FULL, CV_DEF_IPP_RGBA2HLS_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2BGR_FULL, CV_DEF_IPP_HSV2BGR_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2BGRA_FULL, CV_DEF_IPP_HSV2BGRA_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2RGB_FULL, CV_DEF_IPP_HSV2RGB_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HSV2RGBA_FULL, CV_DEF_IPP_HSV2RGBA_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2BGR_FULL, CV_DEF_IPP_HLS2BGR_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2BGRA_FULL, CV_DEF_IPP_HLS2BGRA_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2RGB_FULL, CV_DEF_IPP_HLS2RGB_FULL)
-CV_DEF_IPP_COLORLOOP_IMPL_8U_16U(HLS2RGBA_FULL, CV_DEF_IPP_HLS2RGBA_FULL)
+struct IPPGeneralReorderFunctor
+{
+    IPPGeneralReorderFunctor(ippiGeneralFunc _func1, ippiReorderFunc _func2, int _order0, int _order1, int _order2, int _depth) : func1(_func1), func2(_func2), depth(_depth)
+    {
+        order[0] = _order0;
+        order[1] = _order1;
+        order[2] = _order2;
+        order[3] = 3;
+    }
+    bool operator()(const void *src, int srcStep, void *dst, int dstStep, int cols, int rows) const
+    {
+        Mat temp; 
+        temp.create(rows, cols, CV_MAKETYPE(depth, 3));
+        if(func1(src, srcStep, temp.data, (int)temp.step[0], ippiSize(cols, rows)) < 0)
+            return false;
+        return func2(temp.data, (int)temp.step[0], dst, dstStep, ippiSize(cols, rows), order) >= 0;
+    }
+private:
+    ippiGeneralFunc func1;
+    ippiReorderFunc func2;
+    int order[4];
+    int depth;
+};
 #endif
 
 ////////////////// Various 3/4-channel to 3/4-channel RGB transformations /////////////////
@@ -3636,32 +3651,38 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create( sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-			
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_BGR2BGRA || code == CV_RGB2RGBA)
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2BGRA, src, dst)
-			}
-			else if( code == CV_BGRA2BGR )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2BGR, src, dst)
-			}
-			else if( code == CV_BGR2RGBA )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2RGBA, src, dst)
-			}
-			else if( code == CV_RGBA2BGR )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2BGR, src, dst)
-			}
-			else if( code == CV_RGB2BGR )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGB2BGR, src, dst)
-			}
-			else if( code == CV_RGBA2BGRA )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGBA2BGRA, src, dst)
-			}
+            
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)          
+            if( code == CV_BGR2BGRA || code == CV_RGB2RGBA)
+            {
+                if ( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 0, 1, 2)) )
+                    return;
+            }
+            else if( code == CV_BGRA2BGR )
+            {
+                if ( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiCopyAC4C3RTab[depth])) )
+                    return;
+            }
+            else if( code == CV_BGR2RGBA )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC3C4RTab[depth], 2, 1, 0)) )
+                    return;
+            }
+            else if( code == CV_RGBA2BGR )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPReorderFunctor(ippiSwapChannelsC4C3RTab[depth], 2, 1, 0)) )
+                    return;
+            }
+            else if( code == CV_RGB2BGR )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC3RTab[depth], 2, 1, 0)) )
+                    return;
+            }
+            else if( code == CV_RGBA2BGRA )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPReorderFunctor(ippiSwapChannelsC4RTab[depth], 2, 1, 0)) )
+                    return;
+            }
 #endif
 
             if( depth == CV_8U )
@@ -3716,24 +3737,28 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 3 || scn == 4 );
             _dst.create(sz, CV_MAKETYPE(depth, 1));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_BGR2GRAY )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGR2GRAY, src, dst)
-			}
-			else if( code == CV_RGB2GRAY )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGB2GRAY, src, dst)
-			}
-			else if( code == CV_BGRA2GRAY )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2GRAY, src, dst)
-			}
-			else if( code == CV_RGBA2GRAY )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2GRAY, src, dst)
-			}
+            if( code == CV_BGR2GRAY )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC3Tab[depth])) )
+                    return;
+            }
+            else if( code == CV_RGB2GRAY )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC3Tab[depth])) )
+                    return;
+            }
+            else if( code == CV_BGRA2GRAY )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPColor2GrayFunctor(ippiColor2GrayC4Tab[depth])) )
+                    return;
+            }
+            else if( code == CV_RGBA2GRAY )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGeneralFunctor(ippiRGB2GrayC4Tab[depth])) )
+                    return;
+            }
 #endif
 
             bidx = code == CV_BGR2GRAY || code == CV_BGRA2GRAY ? 0 : 2;
@@ -3764,17 +3789,20 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
             CV_Assert( scn == 1 && (dcn == 3 || dcn == 4));
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_GRAY2BGR )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_GRAY2BGR, src, dst)
-			} 
-			else if( code == CV_GRAY2BGRA )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_GRAY2BGRA, src, dst)
-			}
+            if( code == CV_GRAY2BGR )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGray2BGRFunctor(ippiCopyP3C3RTab[depth])) )
+                    return;
+            } 
+            else if( code == CV_GRAY2BGRA )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGray2BGRAFunctor(ippiCopyP3C3RTab[depth], ippiSwapChannelsC3C4RTab[depth], depth)) )
+                    return;
+            }
 #endif
+
 
             if( depth == CV_8U )
             {
@@ -3854,24 +3882,28 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_BGR2XYZ && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_BGR2XYZ, src, dst)
-			}
-			else if( code == CV_BGR2XYZ && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_BGRA2XYZ, src, dst)
-			}
-			else if( code == CV_RGB2XYZ && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_RGB2XYZ, src, dst)
-			} 
-			else if( code == CV_RGB2XYZ && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_RGBA2XYZ, src, dst)
-			}
+            if( code == CV_BGR2XYZ && scn == 3 )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if( code == CV_BGR2XYZ && scn == 4 )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if( code == CV_RGB2XYZ && scn == 3 )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2XYZTab[depth])) )
+                    return;
+            } 
+            else if( code == CV_RGB2XYZ && scn == 4 )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2XYZTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
 #endif
 
             if( depth == CV_8U )
@@ -3889,24 +3921,28 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_XYZ2BGR && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_XYZ2BGR, src, dst)
-			}
-			else if( code == CV_XYZ2BGR && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_XYZ2BGRA, src, dst)
-			}
-			else if( code == CV_XYZ2RGB && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F_COPY(IPPColorLoop_Invoker_XYZ2RGB, src, dst)
-			}
-			else if( code == CV_XYZ2RGB && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_32F(IPPColorLoop_Invoker_XYZ2RGBA, src, dst)
-			}
+            if( code == CV_XYZ2BGR && dcn == 3 )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            else if( code == CV_XYZ2BGR && dcn == 4 )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                    return;
+            }
+            if( code == CV_XYZ2RGB && dcn == 3 )
+            {
+                if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiXYZ2RGBTab[depth])) )
+                    return;
+            }
+            else if( code == CV_XYZ2RGB && dcn == 4 )
+            {
+                if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiXYZ2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                    return;
+            }
 #endif
 
             if( depth == CV_8U )
@@ -3928,40 +3964,51 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, 3));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_BGR2HSV_FULL && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_BGR2HSV_FULL, src, dst)
-			}
-			else if( code == CV_BGR2HSV_FULL && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_BGRA2HSV_FULL, src, dst)
-			}
-			else if( code == CV_RGB2HSV_FULL && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_RGB2HSV_FULL, src, dst)
-			} 
-			else if( code == CV_RGB2HSV_FULL && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_RGBA2HSV_FULL, src, dst)
-			} 
-			else if( code == CV_BGR2HLS_FULL && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_BGR2HLS_FULL, src, dst)
-			}
-			else if( code == CV_BGR2HLS_FULL && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_BGRA2HLS_FULL, src, dst)
-			}
-			else if( code == CV_RGB2HLS_FULL && scn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_RGB2HLS_FULL, src, dst)
-			} 
-			else if( code == CV_RGB2HLS_FULL && scn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_RGBA2HLS_FULL, src, dst)
-			}
+            if( depth == CV_8U || depth == CV_16U )
+            {
+                if( code == CV_BGR2HSV_FULL && scn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_BGR2HSV_FULL && scn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_RGB2HSV_FULL && scn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HSVTab[depth])) )
+                        return;
+                } 
+                else if( code == CV_RGB2HSV_FULL && scn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HSVTab[depth], 0, 1, 2, depth)) )
+                        return;
+                } 
+                else if( code == CV_BGR2HLS_FULL && scn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_BGR2HLS_FULL && scn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_RGB2HLS_FULL && scn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiRGB2HLSTab[depth])) )
+                        return;
+                } 
+                else if( code == CV_RGB2HLS_FULL && scn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPReorderGeneralFunctor(ippiSwapChannelsC4C3RTab[depth], ippiRGB2HLSTab[depth], 0, 1, 2, depth)) )
+                        return;
+                }
+            }
 #endif
 
             if( code == CV_BGR2HSV || code == CV_RGB2HSV ||
@@ -3998,40 +4045,51 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
 
             _dst.create(sz, CV_MAKETYPE(depth, dcn));
             dst = _dst.getMat();
-			
+            
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-			if( code == CV_HSV2BGR_FULL && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HSV2BGR_FULL, src, dst)
-			}
-			else if( code == CV_HSV2BGR_FULL && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HSV2BGRA_FULL, src, dst)
-			}
-			else if( code == CV_HSV2RGB_FULL && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HSV2RGB_FULL, src, dst)
-			} 
-			else if( code == CV_HSV2RGB_FULL && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HSV2RGBA_FULL, src, dst)
-			} 
-			else if( code == CV_HLS2BGR_FULL && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HLS2BGR_FULL, src, dst)
-			}
-			else if( code == CV_HLS2BGR_FULL && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HLS2BGRA_FULL, src, dst)
-			}
-			else if( code == CV_HLS2RGB_FULL && dcn == 3 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U_COPY(IPPColorLoop_Invoker_HLS2RGB_FULL, src, dst)
-			} 
-			else if( code == CV_HLS2RGB_FULL && dcn == 4 )
-			{
-				CV_DEF_IPP_PARALLEL_FOR_CALL_8U_16U(IPPColorLoop_Invoker_HLS2RGBA_FULL, src, dst)
-			}
+            if( depth == CV_8U || depth == CV_16U )
+            {
+                if( code == CV_HSV2BGR_FULL && dcn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_HSV2BGR_FULL && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_HSV2RGB_FULL && dcn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHSV2RGBTab[depth])) )
+                        return;
+                } 
+                else if( code == CV_HSV2RGB_FULL && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHSV2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                        return;
+                } 
+                else if( code == CV_HLS2BGR_FULL && dcn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3RTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_HLS2BGR_FULL && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 2, 1, 0, depth)) )
+                        return;
+                }
+                else if( code == CV_HLS2RGB_FULL && dcn == 3 )
+                {
+                    if( CvtColorIPPLoopCopy(src, dst, IPPGeneralFunctor(ippiHLS2RGBTab[depth])) )
+                        return;
+                } 
+                else if( code == CV_HLS2RGB_FULL && dcn == 4 )
+                {
+                    if( CvtColorIPPLoop(src, dst, IPPGeneralReorderFunctor(ippiHLS2RGBTab[depth], ippiSwapChannelsC3C4RTab[depth], 0, 1, 2, depth)) )
+                        return;
+                }
+            }
 #endif
 
             if( code == CV_HSV2BGR || code == CV_HSV2RGB ||
