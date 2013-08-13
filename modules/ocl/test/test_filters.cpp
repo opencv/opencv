@@ -56,7 +56,6 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-
 PARAM_TEST_CASE(FilterTestBase, 
                 MatType, 
                 cv::Size, // kernel size
@@ -322,7 +321,68 @@ TEST_P(GaussianBlur, Mat)
 
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Bilateral
+struct Bilateral : FilterTestBase
+{
+    int type;
+    cv::Size ksize;
+    int bordertype;
+    double sigmacolor, sigmaspace;
 
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        bordertype = GET_PARAM(3);
+        Init(type);
+        cv::RNG &rng = TS::ptr()->get_rng();
+        sigmacolor = rng.uniform(20, 100);
+        sigmaspace = rng.uniform(10, 40);
+    }
+};
+
+TEST_P(Bilateral, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::bilateralFilter(mat1_roi, dst_roi, ksize.width, sigmacolor, sigmaspace, bordertype);
+        cv::ocl::bilateralFilter(gmat1, gdst, ksize.width, sigmacolor, sigmaspace, bordertype);
+        Near(1);
+    }
+
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// AdaptiveBilateral
+struct AdaptiveBilateral : FilterTestBase
+{
+    int type;
+    cv::Size ksize;
+    int bordertype;
+    Point anchor;
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        bordertype = GET_PARAM(3);
+        Init(type);
+        anchor = Point(-1,-1);
+    }
+};
+
+TEST_P(AdaptiveBilateral, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::adaptiveBilateralFilter(mat1_roi, dst_roi, ksize, anchor, bordertype);
+        cv::ocl::adaptiveBilateralFilter(gmat1, gdst, ksize, anchor, bordertype);
+        Near(1);
+    }
+
+}
 
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
@@ -363,6 +423,17 @@ INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
                         Values(Size(0, 0)), //not use
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE)));
 
+INSTANTIATE_TEST_CASE_P(Filter, Bilateral, Combine(
+                        Values(CV_8UC1, CV_8UC3),
+                        Values(Size(5, 5), Size(9, 9)),
+                        Values(Size(0, 0)), //not use
+                        Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE,
+                               (MatType)cv::BORDER_REFLECT, (MatType)cv::BORDER_WRAP, (MatType)cv::BORDER_REFLECT_101)));
 
-
+INSTANTIATE_TEST_CASE_P(Filter, AdaptiveBilateral, Combine(
+                        Values(CV_8UC1, CV_8UC3),
+                        Values(Size(5, 5), Size(9, 9)),
+                        Values(Size(0, 0)), //not use
+                        Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE,
+                               (MatType)cv::BORDER_REFLECT,  (MatType)cv::BORDER_REFLECT_101)));
 #endif // HAVE_OPENCL

@@ -413,6 +413,26 @@ This filter does not work inplace.
 
 
 
+adaptiveBilateralFilter
+-----------------------
+Applies the adaptive bilateral filter to an image.
+
+.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
+
+.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize[, dst[, anchor[, borderType]]]) -> dst
+
+    :param src: Source 8-bit, 1-channel or 3-channel image.
+
+    :param dst: Destination image of the same size and type as  ``src`` .
+
+    :param ksize: filter kernel size.
+
+    :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center. Only default value is supported now.
+
+    :param borderType: border mode used to extrapolate pixels outside of the image.
+
+The function applies adaptive bilateral filtering to the input image. This filter is similar to ``bilateralFilter`` which reduce the noise while keeping the edges. It evaluates the weights based on both color intensity and color variance of the small region. So it produces more denoise on low frequency texture than high frequency texture.
+
 
 blur
 ----
