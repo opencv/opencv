@@ -130,6 +130,7 @@ typedef Ptr<BackgroundSubtractor> Ptr_BackgroundSubtractor;
 typedef Ptr<BackgroundSubtractorMOG> Ptr_BackgroundSubtractorMOG;
 typedef Ptr<BackgroundSubtractorMOG2> Ptr_BackgroundSubtractorMOG2;
 typedef Ptr<BackgroundSubtractorGMG> Ptr_BackgroundSubtractorGMG;
+typedef Ptr<CLAHE> Ptr_CLAHE;
 
 typedef Ptr<StereoMatcher> Ptr_StereoMatcher;
 typedef Ptr<StereoBM> Ptr_StereoBM;
