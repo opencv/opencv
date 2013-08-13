@@ -169,10 +169,9 @@ void ThinPlateSplineTransform::applyTransformation(InputArray _pts1, InputArray 
     }
 
     //Setting transform Cost and Shape reference
-    Mat w(tpsParameters, Rect(0,0,2,tpsParameters.rows-3)), wt;
-    transpose(w,wt);
-    Mat Q=wt*matK*w;
-    transformCost=mean(Q.diag(0))[0];
+    Mat w(tpsParameters, Rect(0,0,2,tpsParameters.rows-3));
+    Mat Q=w.t()*matK*w;
+    transformCost=fabs(Q.at<float>(0,0)*Q.at<float>(1,1));//fabs(mean(Q.diag(0))[0]);//std::max(Q.at<float>(0,0),Q.at<float>(1,1));
     shapeReference=shape1;
 
     //Adding affine cost to the total transformation cost
@@ -212,6 +211,7 @@ double ThinPlateSplineTransform::distance(Point2f p, Point2f q) const
     Point2f diff = p - q;
     float norma = diff.x*diff.x + diff.y*diff.y;// - 2*diff.x*diff.y;
     if (norma<0) norma=0;
+    //else norma = std::sqrt(norma);
     norma = norma*std::log(norma+FLT_EPSILON);
     return norma;
 }

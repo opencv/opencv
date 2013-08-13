@@ -78,7 +78,6 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
     std::vector<double> logspaces, angspaces;
     logarithmicSpaces(logspaces);
     angularSpaces(angspaces);
-    
     buildNormalizedDistanceMatrix(contourMat, disMatrix, queryInliers, _meanDistance);
     buildAngleMatrix(contourMat, angleMatrix);
 
@@ -98,7 +97,7 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
             int angidx=-1, radidx=-1;
             for (int i=0; i<nRadialBins; i++)
             {
-                if (disMatrix.at<float>(ptidx, cmp)<=logspaces[i])
+                if (disMatrix.at<float>(ptidx, cmp)<logspaces[i])
                 {
                     radidx=i;
                     break;
@@ -106,7 +105,7 @@ void SCD::extractSCD(InputArray contour /* Vector of points */,
             }
             for (int i=0; i<nAngularBins; i++)
             {
-                if (angleMatrix.at<float>(ptidx, cmp)<=angspaces[i])
+                if (angleMatrix.at<float>(ptidx, cmp)<angspaces[i])
                 {
                     angidx=i;
                     break;
@@ -144,18 +143,24 @@ void SCD::buildAngleMatrix(InputArray contour,
     {
         for (int j=0; j<contourMat.cols; j++)
         {
-            if (i==j) angleMatrix.at<float>(i,j)=0;
-            Point2f dif = contourMat.at<Point2f>(0,i) - contourMat.at<Point2f>(0,j);
-            angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
-
-            if (rotationInvariant)
+            if (i==j)
             {
-                Point2f refPt = contourMat.at<Point2f>(0,i) - massCenter;
-                float refAngle = atan2(refPt.y, refPt.x);
-                angleMatrix.at<float>(i,j) -= refAngle;
+                angleMatrix.at<float>(i,j)=0.0;
             }
-            angleMatrix.at<float>(i,j) = fmod(fmod(angleMatrix.at<float>(i,j)+FLT_EPSILON,2*CV_PI)+2*CV_PI,2*CV_PI);
-            //angleMatrix.at<float>(i,j) = floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
+            else
+            {
+                Point2f dif = contourMat.at<Point2f>(0,i) - contourMat.at<Point2f>(0,j);
+                angleMatrix.at<float>(i,j) = std::atan2(dif.y, dif.x);
+
+                if (rotationInvariant)
+                {
+                    Point2f refPt = contourMat.at<Point2f>(0,i) - massCenter;
+                    float refAngle = atan2(refPt.y, refPt.x);
+                    angleMatrix.at<float>(i,j) -= refAngle;
+                }
+                angleMatrix.at<float>(i,j) = fmod(angleMatrix.at<float>(i,j)+FLT_EPSILON,2*CV_PI)+CV_PI;
+                //angleMatrix.at<float>(i,j) = 1+floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
+            }
         }
     }
 }
@@ -229,7 +234,7 @@ double SCD::distance(Point2f p, Point2f q) const
     Point2f diff = p - q;
     double d = diff.x*diff.x + diff.y*diff.y;// - 2*diff.x*diff.y;
     if (d<0) d=0;
-    d = std::sqrt(d);
+    else d = std::sqrt(d);
     return d;
 }
 

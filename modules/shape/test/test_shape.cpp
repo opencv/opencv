@@ -98,7 +98,7 @@ void CV_ShapeTest::tempTests()
     cont1.push_back(Point2f(5,4));
     cont1.push_back(Point2f(5,5));
 
-    cont2.push_back(Point2f(1.1,1.1));
+    cont2.push_back(Point2f(5,5));
     cont2.push_back(Point2f(1,2));
     cont2.push_back(Point2f(1.1,3));
     cont2.push_back(Point2f(1,4.1));
@@ -107,7 +107,7 @@ void CV_ShapeTest::tempTests()
     cont2.push_back(Point2f(5,2.1));
     cont2.push_back(Point2f(5,3));
     cont2.push_back(Point2f(5.1,4));
-    cont2.push_back(Point2f(5,5));
+    cont2.push_back(Point2f(1.1,1.1));
 
     Mat scdesc1, scdesc2;
     SCD shapeDescriptor1(5, 3, 0.2, 2, false);
@@ -124,6 +124,28 @@ void CV_ShapeTest::tempTests()
         }
         std::cout<<std::endl;
     }
+    std::cout<<shapeDescriptor1.getMeanDistance()<<std::endl;
+    std::cout<<std::endl;
+    for (int i=0; i<scdesc2.rows; i++)
+    {
+        for (int j=0; j<scdesc2.cols; j++)
+        {
+            std::cout<<scdesc2.at<float>(i,j)<<"\t";
+        }
+        std::cout<<std::endl;
+    }
+    std::cout<<shapeDescriptor2.getMeanDistance()<<std::endl;
+    std::cout<<std::endl;
+    SCDMatcher matcher(0, 0, DistanceSCDFlags::DIST_CHI);
+    vector<DMatch> matches;
+    vector<int> inliers1, inliers2;
+    matcher.matchDescriptors(scdesc1, scdesc2, matches, inliers1, inliers2);
+
+    for (size_t i=0; i<matches.size(); i++)
+    {
+        std::cout<<"scdesc1["<<matches[i].queryIdx<<"]->scdesc2["<<matches[i].trainIdx<<"]"<<std::endl;
+    }
+    std::cout<<"Cost: "<<matcher.getMatchingCost()<<std::endl;
 }
 
 void CV_ShapeTest::testSCD()
@@ -225,7 +247,7 @@ vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n
         }
     }
 
-    // In case actual number of points is less than 300
+    // In case actual number of points is less than n
     for (int add=contoursQuery.size()-1; add<n; add++)
     {
         contoursQuery.push_back(contoursQuery[contoursQuery.size()-add+1]); //adding dummy values
@@ -320,7 +342,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
                                          vector <Point2f>& query3, vector <Point2f>& test,
                                          vector<DMatch>& matches,
                                          const Mat& im1, const Mat& im2, const Mat& im3,
-                                         const Mat &imtest)
+                                         const Mat & imtest)
 {
     // queries //
     vector< vector<Point2f> > query;
@@ -340,9 +362,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     vector<SCDMatcher> scdmatchers;
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_CHI));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
     vector<ThinPlateSplineTransform> tpsTra(3);
 
     // SCD descriptors //
@@ -355,7 +377,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     float annRate=1;
     const float BETA=1;
     // Iterative process with NC cycles //
-    int NC=3;//number of cycles
+    int NC=2;//number of cycles
     vector<float> scdistances(3), benergies(3);
     benergies[0]=0;
     benergies[1]=0;
@@ -366,14 +388,14 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     shapeDescriptorT.extractSCD(test, testingSCDMatrix);
 
     // Tangent angle
-    Mat tanMat; //this is the additional cost mat
-    vector<float> testLTA = getLocalTangentAngles(imtest, test); // this is the tangent angle vector for test
+    //Mat tanMat; //this is the additional cost mat
+    //vector<float> testLTA = getLocalTangentAngles(imtest, test); // this is the tangent angle vector for test
 
     // start loop //
     for (int i=0; i<3; i++)
     {
-        tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
-        scdmatchers[i].setAdditionalCostTerm(tanMat);
+        //tanMat=buildTangentAngleDissimilarity(getLocalTangentAngles(ims[i], query[i]), testLTA);
+        //scdmatchers[i].setAdditionalCostTerm(tanMat);
 
         for (int j=0; j<NC; j++)
         {
@@ -404,7 +426,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     }
 
     float benergiesfactor=1;
-    float scfactor=1;//-benergiesfactor;
+    float scfactor=1;//2-benergiesfactor;
     float distance1T=scfactor*scdistances[0]+benergiesfactor*benergies[0];//+dist1;
     float distance2T=scfactor*scdistances[1]+benergiesfactor*benergies[1];//+dist2;
     float distance3T=scfactor*scdistances[2]+benergiesfactor*benergies[2];//+dist3;
@@ -540,7 +562,7 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
-                    /*Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
+                    Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -560,7 +582,7 @@ void CV_ShapeTest::mpegTest()
                     putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
                     char key=(char)waitKey();
-                    if (key == ' ') continue;*/
+                    if (key == ' ') continue;
                 }
             }
         }
