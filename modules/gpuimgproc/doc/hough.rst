@@ -108,6 +108,9 @@ Base class for line segments detector algorithm. ::
         virtual int getMaxLines() const = 0;
     };
 
+.. Sample code::
+
+   * : An example using the Hough segment detector can be found at opencv_source_code/samples/gpu/houghlines.cpp
 
 
 gpu::HoughSegmentDetector::detect

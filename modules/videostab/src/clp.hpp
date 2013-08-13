@@ -44,14 +44,6 @@
 #define __OPENCV_VIDEOSTAB_CLP_HPP__
 
 #ifdef HAVE_CLP
-#  undef PACKAGE
-#  undef PACKAGE_BUGREPORT
-#  undef PACKAGE_NAME
-#  undef PACKAGE_STRING
-#  undef PACKAGE_TARNAME
-#  undef PACKAGE_VERSION
-#  undef VERSION
-
 #  define COIN_BIG_INDEX 0
 #  define DEBUG_COIN 0
 #  define PRESOLVE_DEBUG 0

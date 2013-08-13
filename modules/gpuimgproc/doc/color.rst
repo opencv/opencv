@@ -123,6 +123,9 @@ Composites two images using alpha opacity values contained in each image.
 
     :param stream: Stream for the asynchronous version.
 
+.. Sample code::
+
+   * : An example demonstrating the use of alphaComp can be found at opencv_source_code/samples/gpu/alpha_comp.cpp
 
 
 .. [MHT2011] Pascal Getreuer, Malvar-He-Cutler Linear Image Demosaicking, Image Processing On Line, 2011

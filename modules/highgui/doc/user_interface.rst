@@ -33,6 +33,10 @@ The function ``createTrackbar`` creates a trackbar (a slider or range control) w
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
 
+.. Sample code::
+
+   * : An example of using the trackbar functionality can be found at opencv_source_code/samples/cpp/connected_components.cpp
+
 getTrackbarPos
 ------------------
 Returns the trackbar position.
@@ -75,6 +79,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
+If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
 
 namedWindow
 ---------------
@@ -88,7 +93,13 @@ Creates a window.
 
     :param name: Name of the window in the window caption that may be used as a window identifier.
 
-    :param flags: Flags of the window. Currently the only supported flag is  ``CV_WINDOW_AUTOSIZE`` . If this is set, the window size is automatically adjusted to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
+    :param flags: Flags of the window. The supported flags are:
+
+        * **WINDOW_NORMAL** If this is set, the user can resize the window (no constraint).
+
+        * **WINDOW_AUTOSIZE** If this is set, the window size is automatically adjusted to fit the displayed image (see  :ocv:func:`imshow` ), and you cannot change the window size manually.
+
+        * **WINDOW_OPENGL** If this is set, the window will be created with OpenGL support.
 
 The function ``namedWindow`` creates a window that can be used as a placeholder for images and trackbars. Created windows are referred to by their names.
 
@@ -238,3 +249,31 @@ The function ``waitKey`` waits for a key event infinitely (when
 .. note::
 
     The function only works if there is at least one HighGUI window created and the window is active. If there are several HighGUI windows, any of them can be active.
+
+setOpenGlDrawCallback
+---------------------
+Set OpenGL render handler for the specified window.
+
+.. ocv:function:: void setOpenGlDrawCallback(const string& winname, OpenGlDrawCallback onOpenGlDraw, void* userdata = 0)
+
+    :param winname: Window name
+
+    :param onOpenGlDraw: Draw callback.
+
+    :param userdata: The optional parameter passed to the callback.
+
+setOpenGlContext
+----------------
+Sets the specified window as current OpenGL context.
+
+.. ocv:function:: void setOpenGlContext(const String& winname)
+
+    :param winname: Window name
+
+updateWindow
+------------
+Force window to redraw its context and call draw callback ( :ocv:func:`setOpenGlDrawCallback` ).
+
+.. ocv:function:: void updateWindow(const String& winname)
+
+    :param winname: Window name

@@ -18,10 +18,10 @@ using namespace cv::gpu;
 
 enum Method
 {
-    FGD_STAT,
     MOG,
     MOG2,
-    GMG
+    GMG,
+    FGD_STAT
 };
 
 int main(int argc, const char** argv)
@@ -29,7 +29,7 @@ int main(int argc, const char** argv)
     cv::CommandLineParser cmd(argc, argv,
         "{ c camera |             | use camera }"
         "{ f file   | 768x576.avi | input video file }"
-        "{ m method | mog         | method (fgd, mog, mog2, gmg) }"
+        "{ m method | mog         | method (mog, mog2, gmg, fgd) }"
         "{ h help   |             | print help message }");
 
     if (cmd.has("help") || !cmd.check())
@@ -43,18 +43,18 @@ int main(int argc, const char** argv)
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
-    if (method != "fgd"
-        && method != "mog"
+    if (method != "mog"
         && method != "mog2"
-        && method != "gmg")
+        && method != "gmg"
+        && method != "fgd")
     {
         cerr << "Incorrect method" << endl;
         return -1;
     }
 
-    Method m = method == "fgd" ? FGD_STAT :
-               method == "mog" ? MOG :
+    Method m = method == "mog" ? MOG :
                method == "mog2" ? MOG2 :
+               method == "fgd" ? FGD_STAT :
                                   GMG;
 
     VideoCapture cap;
@@ -75,11 +75,10 @@ int main(int argc, const char** argv)
 
     GpuMat d_frame(frame);
 
-    FGDStatModel fgd_stat;
-    MOG_GPU mog;
-    MOG2_GPU mog2;
-    GMG_GPU gmg;
-    gmg.numInitializationFrames = 40;
+    Ptr<BackgroundSubtractor> mog = gpu::createBackgroundSubtractorMOG();
+    Ptr<BackgroundSubtractor> mog2 = gpu::createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractor> gmg = gpu::createBackgroundSubtractorGMG(40);
+    Ptr<BackgroundSubtractor> fgd = gpu::createBackgroundSubtractorFGD();
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;
@@ -91,20 +90,20 @@ int main(int argc, const char** argv)
 
     switch (m)
     {
-    case FGD_STAT:
-        fgd_stat.create(d_frame);
-        break;
-
     case MOG:
-        mog(d_frame, d_fgmask, 0.01f);
+        mog->apply(d_frame, d_fgmask, 0.01);
         break;
 
     case MOG2:
-        mog2(d_frame, d_fgmask);
+        mog2->apply(d_frame, d_fgmask);
         break;
 
     case GMG:
-        gmg.initialize(d_frame.size());
+        gmg->apply(d_frame, d_fgmask);
+        break;
+
+    case FGD_STAT:
+        fgd->apply(d_frame, d_fgmask);
         break;
     }
 
@@ -128,24 +127,23 @@ int main(int argc, const char** argv)
         //update the model
         switch (m)
         {
-        case FGD_STAT:
-            fgd_stat.update(d_frame);
-            d_fgmask = fgd_stat.foreground;
-            d_bgimg = fgd_stat.background;
-            break;
-
         case MOG:
-            mog(d_frame, d_fgmask, 0.01f);
-            mog.getBackgroundImage(d_bgimg);
+            mog->apply(d_frame, d_fgmask, 0.01);
+            mog->getBackgroundImage(d_bgimg);
             break;
 
         case MOG2:
-            mog2(d_frame, d_fgmask);
-            mog2.getBackgroundImage(d_bgimg);
+            mog2->apply(d_frame, d_fgmask);
+            mog2->getBackgroundImage(d_bgimg);
             break;
 
         case GMG:
-            gmg(d_frame, d_fgmask);
+            gmg->apply(d_frame, d_fgmask);
+            break;
+
+        case FGD_STAT:
+            fgd->apply(d_frame, d_fgmask);
+            fgd->getBackgroundImage(d_bgimg);
             break;
         }
 

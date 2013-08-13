@@ -30,3 +30,9 @@ Restores the selected region in an image using the region neighborhood.
 The function reconstructs the selected image area from the pixel near the area boundary. The function may be used to remove dust and scratches from a scanned photo, or to remove undesirable objects from still images or video. See
 http://en.wikipedia.org/wiki/Inpainting
 for more details.
+
+.. Sample code::
+
+   * : An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
+
+   * : PYTHON : An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py

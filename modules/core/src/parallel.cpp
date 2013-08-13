@@ -453,7 +453,11 @@ int cv::getNumberOfCPUs(void)
 {
 #if defined WIN32 || defined _WIN32
     SYSTEM_INFO sysinfo;
+#if defined(_M_ARM) || defined(_M_X64) || defined(HAVE_WINRT)
+    GetNativeSystemInfo( &sysinfo );
+#else
     GetSystemInfo( &sysinfo );
+#endif
 
     return (int)sysinfo.dwNumberOfProcessors;
 #elif defined ANDROID

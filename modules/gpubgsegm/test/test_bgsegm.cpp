@@ -41,7 +41,10 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/legacy.hpp"
+
+#ifdef HAVE_OPENCV_LEGACY
+#  include "opencv2/legacy.hpp"
+#endif
 
 #ifdef HAVE_CUDA
 
@@ -62,7 +65,7 @@ using namespace cvtest;
 //////////////////////////////////////////////////////
 // FGDStatModel
 
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT && defined(HAVE_OPENCV_LEGACY)
 
 namespace cv
 {
@@ -72,11 +75,10 @@ namespace cv
     }
 }
 
-PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string, Channels)
+PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string)
 {
     cv::gpu::DeviceInfo devInfo;
     std::string inputFile;
-    int out_cn;
 
     virtual void SetUp()
     {
@@ -84,8 +86,6 @@ PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string, Channels)
         cv::gpu::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
-
-        out_cn = GET_PARAM(2);
     }
 };
 
@@ -102,15 +102,10 @@ GPU_TEST_P(FGDStatModel, Update)
     cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
     cv::gpu::GpuMat d_frame(frame);
-    cv::gpu::FGDStatModel d_model(out_cn);
-    d_model.create(d_frame);
-
-    cv::Mat h_background;
-    cv::Mat h_foreground;
-    cv::Mat h_background3;
-
-    cv::Mat backgroundDiff;
-    cv::Mat foregroundDiff;
+    cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
+    cv::gpu::GpuMat d_foreground, d_background;
+    std::vector< std::vector<cv::Point> > foreground_regions;
+    d_fgd->apply(d_frame, d_foreground);
 
     for (int i = 0; i < 5; ++i)
     {
@@ -121,32 +116,23 @@ GPU_TEST_P(FGDStatModel, Update)
         int gold_count = cvUpdateBGStatModel(&ipl_frame, model);
 
         d_frame.upload(frame);
-
-        int count = d_model.update(d_frame);
-
-        ASSERT_EQ(gold_count, count);
+        d_fgd->apply(d_frame, d_foreground);
+        d_fgd->getBackgroundImage(d_background);
+        d_fgd->getForegroundRegions(foreground_regions);
+        int count = (int) foreground_regions.size();
 
         cv::Mat gold_background = cv::cvarrToMat(model->background);
         cv::Mat gold_foreground = cv::cvarrToMat(model->foreground);
 
-        if (out_cn == 3)
-            d_model.background.download(h_background3);
-        else
-        {
-            d_model.background.download(h_background);
-            cv::cvtColor(h_background, h_background3, cv::COLOR_BGRA2BGR);
-        }
-        d_model.foreground.download(h_foreground);
-
-        ASSERT_MAT_NEAR(gold_background, h_background3, 1.0);
-        ASSERT_MAT_NEAR(gold_foreground, h_foreground, 0.0);
+        ASSERT_MAT_NEAR(gold_background, d_background, 1.0);
+        ASSERT_MAT_NEAR(gold_foreground, d_foreground, 0.0);
+        ASSERT_EQ(gold_count, count);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(GPU_BgSegm, FGDStatModel, testing::Combine(
     ALL_DEVICES,
-    testing::Values(std::string("768x576.avi")),
-    testing::Values(Channels(3), Channels(4))));
+    testing::Values(std::string("768x576.avi"))));
 
 #endif
 
@@ -193,7 +179,7 @@ GPU_TEST_P(MOG, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::gpu::MOG_GPU mog;
+    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::gpu::createBackgroundSubtractorMOG();
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG> mog_gold = cv::createBackgroundSubtractorMOG();
@@ -211,7 +197,7 @@ GPU_TEST_P(MOG, Update)
             cv::swap(temp, frame);
         }
 
-        mog(loadMat(frame, useRoi), foreground, (float)learningRate);
+        mog->apply(loadMat(frame, useRoi), foreground, learningRate);
 
         mog_gold->apply(frame, foreground_gold, learningRate);
 
@@ -267,8 +253,8 @@ GPU_TEST_P(MOG2, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::gpu::MOG2_GPU mog2;
-    mog2.bShadowDetection = detectShadow;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    mog2->setDetectShadows(detectShadow);
     cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
@@ -287,7 +273,7 @@ GPU_TEST_P(MOG2, Update)
             cv::swap(temp, frame);
         }
 
-        mog2(loadMat(frame, useRoi), foreground);
+        mog2->apply(loadMat(frame, useRoi), foreground);
 
         mog2_gold->apply(frame, foreground_gold);
 
@@ -312,8 +298,8 @@ GPU_TEST_P(MOG2, getBackgroundImage)
 
     cv::Mat frame;
 
-    cv::gpu::MOG2_GPU mog2;
-    mog2.bShadowDetection = detectShadow;
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    mog2->setDetectShadows(detectShadow);
     cv::gpu::GpuMat foreground;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
@@ -325,13 +311,13 @@ GPU_TEST_P(MOG2, getBackgroundImage)
         cap >> frame;
         ASSERT_FALSE(frame.empty());
 
-        mog2(loadMat(frame, useRoi), foreground);
+        mog2->apply(loadMat(frame, useRoi), foreground);
 
         mog2_gold->apply(frame, foreground_gold);
     }
 
     cv::gpu::GpuMat background = createMat(frame.size(), frame.type(), useRoi);
-    mog2.getBackgroundImage(background);
+    mog2->getBackgroundImage(background);
 
     cv::Mat background_gold;
     mog2_gold->getBackgroundImage(background_gold);
@@ -372,16 +358,15 @@ GPU_TEST_P(GMG, Accuracy)
     cv::Mat frame = randomMat(size, type, 0, 100);
     cv::gpu::GpuMat d_frame = loadMat(frame, useRoi);
 
-    cv::gpu::GMG_GPU gmg;
-    gmg.numInitializationFrames = 5;
-    gmg.smoothingRadius = 0;
-    gmg.initialize(d_frame.size(), 0, 255);
+    cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::gpu::createBackgroundSubtractorGMG();
+    gmg->setNumFrames(5);
+    gmg->setSmoothingRadius(0);
 
     cv::gpu::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
 
-    for (int i = 0; i < gmg.numInitializationFrames; ++i)
+    for (int i = 0; i < gmg->getNumFrames(); ++i)
     {
-        gmg(d_frame, d_fgmask);
+        gmg->apply(d_frame, d_fgmask);
 
         // fgmask should be entirely background during training
         ASSERT_MAT_NEAR(zeros, d_fgmask, 0);
@@ -389,7 +374,7 @@ GPU_TEST_P(GMG, Accuracy)
 
     frame = randomMat(size, type, 160, 255);
     d_frame = loadMat(frame, useRoi);
-    gmg(d_frame, d_fgmask);
+    gmg->apply(d_frame, d_fgmask);
 
     // now fgmask should be entirely foreground
     ASSERT_MAT_NEAR(fullfg, d_fgmask, 0);

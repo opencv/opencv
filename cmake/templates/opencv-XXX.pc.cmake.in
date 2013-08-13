@@ -8,6 +8,6 @@ includedir_new=@includedir@
 
 Name: OpenCV
 Description: Open Source Computer Vision Library
-Version: @VERSION@
+Version: @OPENCV_VERSION@
 Libs: @OpenCV_LIB_COMPONENTS@
 Cflags: -I${includedir_old} -I${includedir_new}

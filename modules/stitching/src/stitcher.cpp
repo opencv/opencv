@@ -102,7 +102,8 @@ Stitcher::Status Stitcher::estimateTransform(InputArray images, const std::vecto
     if ((status = matchImages()) != OK)
         return status;
 
-    estimateCameraParams();
+    if ((status = estimateCameraParams()) != OK)
+        return status;
 
     return OK;
 }
@@ -442,10 +443,11 @@ Stitcher::Status Stitcher::matchImages()
 }
 
 
-void Stitcher::estimateCameraParams()
+Stitcher::Status Stitcher::estimateCameraParams()
 {
     detail::HomographyBasedEstimator estimator;
-    estimator(features_, pairwise_matches_, cameras_);
+    if (!estimator(features_, pairwise_matches_, cameras_))
+        return ERR_HOMOGRAPHY_EST_FAIL;
 
     for (size_t i = 0; i < cameras_.size(); ++i)
     {
@@ -456,7 +458,8 @@ void Stitcher::estimateCameraParams()
     }
 
     bundle_adjuster_->setConfThresh(conf_thresh_);
-    (*bundle_adjuster_)(features_, pairwise_matches_, cameras_);
+    if (!(*bundle_adjuster_)(features_, pairwise_matches_, cameras_))
+        return ERR_CAMERA_PARAMS_ADJUST_FAIL;
 
     // Find median focal length and use it as final image scale
     std::vector<double> focals;
@@ -481,6 +484,8 @@ void Stitcher::estimateCameraParams()
         for (size_t i = 0; i < cameras_.size(); ++i)
             cameras_[i].R = rmats[i];
     }
+
+    return OK;
 }
 
 } // namespace cv

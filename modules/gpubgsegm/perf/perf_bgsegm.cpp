@@ -41,7 +41,14 @@
 //M*/
 
 #include "perf_precomp.hpp"
-#include "opencv2/legacy.hpp"
+
+#ifdef HAVE_OPENCV_LEGACY
+#  include "opencv2/legacy.hpp"
+#endif
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+#  include "opencv2/gpuimgproc.hpp"
+#endif
 
 using namespace std;
 using namespace testing;
@@ -59,6 +66,13 @@ using namespace perf;
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
 #endif
 
+//////////////////////////////////////////////////////
+// FGDStatModel
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
+#ifdef HAVE_OPENCV_LEGACY
+
 namespace cv
 {
     template<> void Ptr<CvBGStatModel>::delete_obj()
@@ -67,10 +81,7 @@ namespace cv
     }
 }
 
-//////////////////////////////////////////////////////
-// FGDStatModel
-
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+#endif
 
 DEF_PARAM_TEST_1(Video, string);
 
@@ -90,10 +101,10 @@ PERF_TEST_P(Video, FGDStatModel,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_frame(frame);
+        cv::gpu::GpuMat d_frame(frame), foreground;
 
-        cv::gpu::FGDStatModel d_model(4);
-        d_model.create(d_frame);
+        cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
+        d_fgd->apply(d_frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -103,18 +114,22 @@ PERF_TEST_P(Video, FGDStatModel,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_model.update(d_frame);
+            d_fgd->apply(d_frame, foreground);
             stopTimer();
         }
 
-        const cv::gpu::GpuMat background = d_model.background;
-        const cv::gpu::GpuMat foreground = d_model.foreground;
-
-        GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
         GPU_SANITY_CHECK(foreground, 1e-2, ERROR_RELATIVE);
+
+#ifdef HAVE_OPENCV_GPUIMGPROC
+        cv::gpu::GpuMat background3, background;
+        d_fgd->getBackgroundImage(background3);
+        cv::gpu::cvtColor(background3, background, cv::COLOR_BGR2BGRA);
+        GPU_SANITY_CHECK(background, 1e-2, ERROR_RELATIVE);
+#endif
     }
     else
     {
+#ifdef HAVE_OPENCV_LEGACY
         IplImage ipl_frame = frame;
         cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
@@ -135,6 +150,9 @@ PERF_TEST_P(Video, FGDStatModel,
 
         CPU_SANITY_CHECK(background);
         CPU_SANITY_CHECK(foreground);
+#else
+        FAIL_NO_CPU();
+#endif
     }
 }
 
@@ -176,11 +194,12 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::BackgroundSubtractor> d_mog = cv::gpu::createBackgroundSubtractorMOG();
+
         cv::gpu::GpuMat d_frame(frame);
-        cv::gpu::MOG_GPU d_mog;
         cv::gpu::GpuMat foreground;
 
-        d_mog(d_frame, foreground, learningRate);
+        d_mog->apply(d_frame, foreground, learningRate);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -200,7 +219,7 @@ PERF_TEST_P(Video_Cn_LearningRate, MOG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog(d_frame, foreground, learningRate);
+            d_mog->apply(d_frame, foreground, learningRate);
             stopTimer();
         }
 
@@ -273,13 +292,13 @@ PERF_TEST_P(Video_Cn, MOG2,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::MOG2_GPU d_mog2;
-        d_mog2.bShadowDetection = false;
+        cv::Ptr<cv::BackgroundSubtractorMOG2> d_mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+        d_mog2->setDetectShadows(false);
 
         cv::gpu::GpuMat d_frame(frame);
         cv::gpu::GpuMat foreground;
 
-        d_mog2(d_frame, foreground);
+        d_mog2->apply(d_frame, foreground);
 
         for (int i = 0; i < 10; ++i)
         {
@@ -299,7 +318,7 @@ PERF_TEST_P(Video_Cn, MOG2,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_mog2(d_frame, foreground);
+            d_mog2->apply(d_frame, foreground);
             stopTimer();
         }
 
@@ -307,8 +326,8 @@ PERF_TEST_P(Video_Cn, MOG2,
     }
     else
     {
-        cv::Ptr<cv::BackgroundSubtractor> mog2 = cv::createBackgroundSubtractorMOG2();
-        mog2->set("detectShadows", false);
+        cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::createBackgroundSubtractorMOG2();
+        mog2->setDetectShadows(false);
 
         cv::Mat foreground;
 
@@ -359,8 +378,9 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
     if (PERF_RUN_GPU())
     {
+        cv::Ptr<cv::BackgroundSubtractor> d_mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+
         cv::gpu::GpuMat d_frame;
-        cv::gpu::MOG2_GPU d_mog2;
         cv::gpu::GpuMat d_foreground;
 
         for (int i = 0; i < 10; ++i)
@@ -380,12 +400,12 @@ PERF_TEST_P(Video_Cn, MOG2GetBackgroundImage,
 
             d_frame.upload(frame);
 
-            d_mog2(d_frame, d_foreground);
+            d_mog2->apply(d_frame, d_foreground);
         }
 
         cv::gpu::GpuMat background;
 
-        TEST_CYCLE() d_mog2.getBackgroundImage(background);
+        TEST_CYCLE() d_mog2->getBackgroundImage(background);
 
         GPU_SANITY_CHECK(background, 1);
     }
@@ -460,10 +480,10 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::gpu::GpuMat d_frame(frame);
         cv::gpu::GpuMat foreground;
 
-        cv::gpu::GMG_GPU d_gmg;
-        d_gmg.maxFeatures = maxFeatures;
+        cv::Ptr<cv::BackgroundSubtractorGMG> d_gmg = cv::gpu::createBackgroundSubtractorGMG();
+        d_gmg->setMaxFeatures(maxFeatures);
 
-        d_gmg(d_frame, foreground);
+        d_gmg->apply(d_frame, foreground);
 
         for (int i = 0; i < 150; ++i)
         {
@@ -488,7 +508,7 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
             d_frame.upload(frame);
 
             startTimer(); next();
-            d_gmg(d_frame, foreground);
+            d_gmg->apply(d_frame, foreground);
             stopTimer();
         }
 
@@ -499,9 +519,8 @@ PERF_TEST_P(Video_Cn_MaxFeatures, GMG,
         cv::Mat foreground;
         cv::Mat zeros(frame.size(), CV_8UC1, cv::Scalar::all(0));
 
-        cv::Ptr<cv::BackgroundSubtractor> gmg = cv::createBackgroundSubtractorGMG();
-        gmg->set("maxFeatures", maxFeatures);
-        //gmg.initialize(frame.size(), 0.0, 255.0);
+        cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::createBackgroundSubtractorGMG();
+        gmg->setMaxFeatures(maxFeatures);
 
         gmg->apply(frame, foreground);
 
