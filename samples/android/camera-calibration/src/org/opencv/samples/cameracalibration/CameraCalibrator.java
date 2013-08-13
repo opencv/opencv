@@ -122,7 +122,7 @@ public class CameraCalibrator {
     }
 
     private void findPattern(Mat grayFrame) {
-        mPatternWasFound = Calib3d.findCirclesGridDefault(grayFrame, mPatternSize,
+        mPatternWasFound = Calib3d.findCirclesGrid(grayFrame, mPatternSize,
                 mCorners, Calib3d.CALIB_CB_ASYMMETRIC_GRID);
     }
 
