@@ -126,50 +126,53 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
 
   prepareData( currentConfidenceMap, data, responses );
 
-  //TODO get the boundingbox with the highest vote
-  std::vector<float> votes;
-  for ( size_t i = 0; i < data.rows; i++ )
-  {
-    float vote = boostModel.predict( data.row( i ), Mat(), Range::all(), false, true );
-    votes.push_back( vote );
-  }
+  std::vector<float> prob = boostMILModel.classify( Mat() );
 
-  std::vector<float>::iterator maxElem = std::max_element( votes.begin(), votes.end() );
-  int maxIdx = ( std::distance( votes.begin(), maxElem ) );
+  /*//TODO get the boundingbox with the highest vote
+   std::vector<float> votes;
+   for ( size_t i = 0; i < data.rows; i++ )
+   {
+   float vote = boostMILModel.predict( data.row( i ), Mat(), Range::all(), false, true );
+   votes.push_back( vote );
+   }
 
-  if( *maxElem < 0 )
-    return 0;
+   std::vector<float>::iterator maxElem = std::max_element( votes.begin(), votes.end() );
+   int maxIdx = ( std::distance( votes.begin(), maxElem ) );
 
-  int minx = INT_MAX;
-  int maxx = 0;
-  int miny = INT_MAX;
-  int maxy = 0;
-  int counter = 0;
-  for ( size_t i = 0; i < votes.size(); i++ )
-  {
-    if( votes.at( i ) == *maxElem )
-    {
-      int curx = currentConfidenceMap.at( i ).first->getTargetPosition().x;
-      int cury = currentConfidenceMap.at( i ).first->getTargetPosition().y;
-      if( curx > maxx )
-        maxx = curx;
-      if( cury > maxy )
-        maxy = cury;
+   if( *maxElem < 0 )
+   return 0;
 
-      if( curx < minx )
-        minx = curx;
-      if( cury < miny )
-        miny = cury;
-      counter++;
-    }
-  }
-  if( counter > 1 )
-  {
-    float x = minx + ( ( maxx - minx ) / 2 );
-    float y = miny + ( ( maxy - miny ) / 2 );
-    currentConfidenceMap.at( maxIdx ).first->setTargetPosition( Point2f( x, y ) );
-  }
-  return currentConfidenceMap.at( maxIdx ).first;
+   int minx = INT_MAX;
+   int maxx = 0;
+   int miny = INT_MAX;
+   int maxy = 0;
+   int counter = 0;
+   for ( size_t i = 0; i < votes.size(); i++ )
+   {
+   if( votes.at( i ) == *maxElem )
+   {
+   int curx = currentConfidenceMap.at( i ).first->getTargetPosition().x;
+   int cury = currentConfidenceMap.at( i ).first->getTargetPosition().y;
+   if( curx > maxx )
+   maxx = curx;
+   if( cury > maxy )
+   maxy = cury;
+
+   if( curx < minx )
+   minx = curx;
+   if( cury < miny )
+   miny = cury;
+   counter++;
+   }
+   }
+   if( counter > 1 )
+   {
+   float x = minx + ( ( maxx - minx ) / 2 );
+   float y = miny + ( ( maxy - miny ) / 2 );
+   currentConfidenceMap.at( maxIdx ).first->setTargetPosition( Point2f( x, y ) );
+   }*/
+  //TODO compute the max
+  return currentConfidenceMap.begin()->first;
 }
 
 void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses )
@@ -204,37 +207,37 @@ void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidence
 void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
 
-  CvBoostParams params( CvBoost::REAL,  // boost_type
-      250,  // weak_count
-      0.8,  // weight_trim_rate
-      1,  // max_depth
-      false,  //use_surrogates
-      0  // priors
-      );
+  /*CvBoostParams params( CvBoost::REAL,  // boost_type
+   250,  // weak_count
+   0.8,  // weight_trim_rate
+   1,  // max_depth
+   false,  //use_surrogates
+   0  // priors
+   );
 
-  params.use_1se_rule = true;
-  params.split_criteria = CvBoost::GINI;
-  ConfidenceMap lastConfidenceMap = confidenceMaps.back();
+   params.use_1se_rule = true;
+   params.split_criteria = CvBoost::GINI;
+   ConfidenceMap lastConfidenceMap = confidenceMaps.back();
 
-  //prepare the trainData
-  Mat traindata;
-  Mat responses;
-  prepareData( lastConfidenceMap, traindata, responses );
+   //prepare the trainData
+   Mat traindata;
+   Mat responses;
+   prepareData( lastConfidenceMap, traindata, responses );
 
-  Mat var_types( 1, traindata.cols + 1, CV_8UC1, Scalar( CV_VAR_ORDERED ) );
-  var_types.at<uchar>( traindata.cols ) = CV_VAR_CATEGORICAL;
+   Mat var_types( 1, traindata.cols + 1, CV_8UC1, Scalar( CV_VAR_ORDERED ) );
+   var_types.at<uchar>( traindata.cols ) = CV_VAR_CATEGORICAL;*/
 
   //TODO update the scores of the confidence maps
   if( !trained )
   {
     //this is the first time that the classifier is built
-    boostModel.train( traindata, CV_ROW_SAMPLE, responses, Mat(), Mat(), var_types, Mat(), params, false );
+    //TODO init MIL
+    boostMILModel.init();
     trained = true;
   }
-  else
-  {
-    boostModel.train( traindata, CV_ROW_SAMPLE, responses, Mat(), Mat(), var_types, Mat(), params, true );
-  }
+
+  //TODO update MIL
+  boostMILModel.update( Mat(), Mat() );
 
 }
 

@@ -44,7 +44,7 @@
 
 #include "opencv2/core.hpp"
 #include "feature.hpp"
-#include "opencv2/ml.hpp"
+#include "onlineMIL.hpp"
 #include "opencv2/highgui.hpp"
 #include <iostream>
 
@@ -547,7 +547,7 @@ class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
 
   void prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses );
 
-  CvBoost boostModel;
+  ClfMilBoost boostMILModel;
   bool trained;
   int numFeatures;
 
