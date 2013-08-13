@@ -179,7 +179,6 @@ ERFilterNM::ERFilterNM()
     minProbabilityDiff = 1.;
     num_accepted_regions = 0;
     num_rejected_regions = 0;
-    classifier = NULL;
 }
 
 // the key method. Takes image on input, vector of ERStat is output for the first stage,
@@ -1085,10 +1084,10 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     CV_Assert( (thresholdDelta >= 0) && (thresholdDelta <= 128) );
     CV_Assert( (minProbabilityDiff >= 0.) && (minProbabilityDiff <= 1.) );
 
-    Ptr<ERFilterNM> filter = new ERFilterNM();
+    Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
     if (cb == NULL)
-        filter->setCallback(new ERClassifierNM1());
+        filter->setCallback(makePtr<ERClassifierNM1>());
     else
         filter->setCallback(cb);
 
@@ -1119,11 +1118,11 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     CV_Assert( (minProbability >= 0.) && (minProbability <= 1.) );
 
-    Ptr<ERFilterNM> filter = new ERFilterNM();
+    Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
 
     if (cb == NULL)
-        filter->setCallback(new ERClassifierNM2());
+        filter->setCallback(makePtr<ERClassifierNM2>());
     else
         filter->setCallback(cb);
 

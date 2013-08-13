@@ -426,10 +426,10 @@ int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
                                                 int di, const Mat& img,
                                                 vector<Rect>& objects )
 {
-    Ptr<CvHaarClassifierCascade> c_cascade = cvLoadHaarClassifierCascade(filename.c_str(), cvSize(0,0));
-    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+    Ptr<CvHaarClassifierCascade> c_cascade(cvLoadHaarClassifierCascade(filename.c_str(), cvSize(0,0)));
+    Ptr<CvMemStorage> storage(cvCreateMemStorage());
 
-    if( c_cascade.empty() )
+    if( !c_cascade )
     {
         ts->printf( cvtest::TS::LOG, "cascade %s can not be opened");
         return cvtest::TS::FAIL_INVALID_TEST_DATA;
