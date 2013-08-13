@@ -231,7 +231,7 @@ void CV_FeatureDetectorTest::regressionTest()
 
 void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
-    if( fdetector.empty() )
+    if( !fdetector )
     {
         ts->printf( cvtest::TS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -464,7 +464,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( !dextractor )
         {
             ts->printf(cvtest::TS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -1101,7 +1101,7 @@ protected:
     void run(int)
     {
         Ptr<Feature2D> f = Algorithm::create<Feature2D>("Feature2D." + fname);
-        if(f.empty())
+        if(!f)
             return;
         string path = string(ts->get_data_path()) + "detectors_descriptors_evaluation/planar/";
         string imgname1 = path + "box.png";
@@ -1156,7 +1156,7 @@ public:
     FeatureDetectorUsingMaskTest(const Ptr<FeatureDetector>& featureDetector) :
         featureDetector_(featureDetector)
     {
-        CV_Assert(!featureDetector_.empty());
+        CV_Assert(featureDetector_);
     }
 
 protected:
