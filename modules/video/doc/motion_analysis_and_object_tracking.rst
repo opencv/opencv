@@ -170,6 +170,8 @@ Finds the geometric transform (warp) between two images in terms of the ECC crit
 
 .. ocv:function:: double findTransformECC( InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix, int motionType=MOTION_AFFINE, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001))
 
+.. ocv:pyfunction:: cv2.findTransformECC(templateImage, inputImage, warpMatrix[, motionType[, criteria]]) -> retval, warpMatrix
+
     :param templateImage: single-channel template image; ``CV_8U`` or ``CV_32F`` array.
 
     :param inputImage: single-channel input image which should be warped with the final ``warpMatrix`` in order to provide an image similar to ``templateImage``, same type as ``temlateImage``.
