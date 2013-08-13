@@ -142,3 +142,126 @@ cv::viz::Mesh3d cv::viz::Mesh3d::loadMesh(const String& file)
 {
     return loadMeshImpl::loadMesh(file);
 }
+
+////////////////////////////////////////////////////////////////////
+/// Camera implementation
+
+cv::viz::Camera::Camera(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+{
+    init(f_x, f_y, c_x, c_y, window_size);
+}
+
+cv::viz::Camera::Camera(const Vec2f &fov, const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    setClip(Vec2d(0.01, 1000.01)); // Default clipping
+    setFov(fov);
+    window_size_ = window_size;
+    // Principal point at the center
+    principal_point_ = Vec2f(static_cast<float>(window_size.width)*0.5f, static_cast<float>(window_size.height)*0.5f);
+    focal_ = Vec2f(principal_point_[0] / tan(fov_[0]*0.5f), principal_point_[1] / tan(fov_[1]*0.5f));
+}
+
+cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
+{
+    float f_x = K(0,0);
+    float f_y = K(1,1);
+    float c_x = K(0,2);
+    float c_y = K(1,2);
+    init(f_x, f_y, c_x, c_y, window_size);
+}
+
+cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
+{   
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    
+    double near = proj(2,3) / (proj(2,2) - 1.0);
+    double far = near * (proj(2,2) - 1.0) / (proj(2,2) + 1.0);
+    double left = near * (proj(0,2)-1) / proj(0,0);
+    double right = 2.0 * near / proj(0,0) + left;
+    double bottom = near * (proj(1,2)-1) / proj(1,1);
+    double top = 2.0 * near / proj(1,1) + bottom;
+    
+    if (fabs(left-right) < std::numeric_limits<double>::epsilon()) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
+    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
+    focal_[0] = -near * principal_point_[0] / left;
+    
+    if (fabs(top-bottom) < std::numeric_limits<double>::epsilon()) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f; 
+    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
+    focal_[1] = near * principal_point_[1] / top;
+    
+    setClip(Vec2d(near, far));
+    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
+    fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
+    
+    window_size_ = window_size;
+}
+
+void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    setClip(Vec2d(0.01, 1000.01));// Default clipping
+    
+    fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x));
+    fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y));
+    
+    principal_point_[0] = c_x;
+    principal_point_[1] = c_y;
+    
+    focal_[0] = f_x;
+    focal_[1] = f_y;
+    
+    window_size_ = window_size;
+}
+
+void cv::viz::Camera::setWindowSize(const Size &window_size)
+{
+    CV_Assert(window_size.width > 0 && window_size.height > 0);
+    
+    // Get the scale factor and update the principal points
+    float scalex = static_cast<float>(window_size.width) / static_cast<float>(window_size_.width);
+    float scaley = static_cast<float>(window_size.height) / static_cast<float>(window_size_.height);
+    
+    principal_point_[0] *= scalex;
+    principal_point_[1] *= scaley;
+    focal_ *= scaley;
+    // Vertical field of view is fixed!  Update horizontal field of view
+    fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
+    
+    window_size_ = window_size;
+}
+
+void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
+{
+    double top = clip_[0] * principal_point_[1] / focal_[1];
+    double left = -clip_[0] * principal_point_[0] / focal_[0];
+    double right = clip_[0] * (window_size_.width - principal_point_[0]) / focal_[0];
+    double bottom = -clip_[0] * (window_size_.height - principal_point_[1]) / focal_[1];
+    
+    double temp1 = 2.0 * clip_[0];
+    double temp2 = 1.0 / (right - left);
+    double temp3 = 1.0 / (top - bottom);
+    double temp4 = 1.0 / (clip_[0] - clip_[1]);
+    
+    proj = Matx44d::zeros();
+    proj(0,0) = temp1 * temp2;
+    proj(1,1) = temp1 * temp3;
+    proj(0,2) = (right + left) * temp2;
+    proj(1,2) = (top + bottom) * temp3;
+    proj(2,2) = (clip_[1]+clip_[0]) * temp4;
+    proj(3,2) = -1.0;
+    proj(2,3) = (temp1 * clip_[1]) * temp4;
+}
+
+cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
+{
+    // Without distortion, RGB Camera
+    // Received from http://nicolas.burrus.name/index.php/Research/KinectCalibration
+    Matx33f K = Matx33f::zeros();    
+    K(0,0) = 5.2921508098293293e+02;
+    K(0,2) = 3.2894272028759258e+02;
+    K(1,1) = 5.2556393630057437e+02;
+    K(1,2) = 2.6748068171871557e+02;
+    K(2,2) = 1.0f;
+    return Camera(K, window_size);
+}

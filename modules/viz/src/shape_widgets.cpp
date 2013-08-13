@@ -1181,87 +1181,6 @@ cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, i
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius,
-                                            double sphere_radius, const Color &line_color, const Color &sphere_color)
-{
-    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
-    vtkIdType nr_poses = path.size();
-    
-    // Create color arrays
-    vtkSmartPointer<vtkUnsignedCharArray> line_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    line_scalars->SetNumberOfComponents(3);
-    line_scalars->InsertNextTuple3(line_color[2], line_color[1], line_color[0]);
-    
-    // Create color array for sphere
-    vtkSphereSource * dummy_sphere = vtkSphereSource::New();
-    // Create the array for big sphere
-    dummy_sphere->SetRadius(init_sphere_radius);
-    dummy_sphere->Update();
-    vtkIdType nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
-    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars_init = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    sphere_scalars_init->SetNumberOfComponents(3);
-    sphere_scalars_init->SetNumberOfTuples(nr_points);
-    sphere_scalars_init->FillComponent(0, sphere_color[2]);
-    sphere_scalars_init->FillComponent(1, sphere_color[1]);
-    sphere_scalars_init->FillComponent(2, sphere_color[0]);
-    // Create the array for small sphere
-    dummy_sphere->SetRadius(sphere_radius);
-    dummy_sphere->Update();
-    nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
-    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    sphere_scalars->SetNumberOfComponents(3);
-    sphere_scalars->SetNumberOfTuples(nr_points);
-    sphere_scalars->FillComponent(0, sphere_color[2]);
-    sphere_scalars->FillComponent(1, sphere_color[1]);
-    sphere_scalars->FillComponent(2, sphere_color[0]);
-    dummy_sphere->Delete();    
-        
-    for (vtkIdType i = 0; i < nr_poses; ++i)
-    {
-        Point3f new_pos = path[i].translation();
-        
-        vtkSmartPointer<vtkSphereSource> sphere_source = vtkSmartPointer<vtkSphereSource>::New();
-        sphere_source->SetCenter (new_pos.x, new_pos.y, new_pos.z);
-        if (i == 0)
-        {
-            sphere_source->SetRadius(init_sphere_radius);
-            sphere_source->Update();
-            sphere_source->GetOutput()->GetCellData()->SetScalars(sphere_scalars_init);
-            appendFilter->AddInputConnection(sphere_source->GetOutputPort());
-            continue;
-        }
-        else
-        {
-            sphere_source->SetRadius(sphere_radius);
-            sphere_source->Update();
-            sphere_source->GetOutput()->GetCellData()->SetScalars(sphere_scalars);
-            appendFilter->AddInputConnection(sphere_source->GetOutputPort());
-        }
-        
-        
-        Affine3f relativeAffine = path[i].inv() * path[i-1];
-        Vec3f v = path[i].rotation() * relativeAffine.translation();
-        v = normalize(v) * line_length;
-        
-        vtkSmartPointer<vtkLineSource> line_source = vtkSmartPointer<vtkLineSource>::New();
-        line_source->SetPoint1(new_pos.x + v[0], new_pos.y + v[1], new_pos.z + v[2]);
-        line_source->SetPoint2(new_pos.x, new_pos.y, new_pos.z);
-        line_source->Update();
-        line_source->GetOutput()->GetCellData()->SetScalars(line_scalars);
-        
-        appendFilter->AddInputConnection(line_source->GetOutputPort());
-    }
-    
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetScalarModeToUseCellData();
-    mapper->SetInput(appendFilter->GetOutput());
-    
-    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
-    
-    WidgetAccessor::setProp(*this, actor);
-}
-
 cv::viz::TrajectoryWidget::TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale, const Color &color)
 {   
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
@@ -1350,4 +1269,94 @@ template<> cv::viz::TrajectoryWidget cv::viz::Widget::cast<cv::viz::TrajectoryWi
 {
     Widget3D widget = this->cast<Widget3D>();
     return static_cast<TrajectoryWidget&>(widget);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// spheres trajectory widget implementation
+
+cv::viz::SpheresTrajectoryWidget::SpheresTrajectoryWidget(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius, double sphere_radius, 
+                                                          const Color &line_color, const Color &sphere_color)
+{
+    vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+    vtkIdType nr_poses = path.size();
+    
+    // Create color arrays
+    vtkSmartPointer<vtkUnsignedCharArray> line_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    line_scalars->SetNumberOfComponents(3);
+    line_scalars->InsertNextTuple3(line_color[2], line_color[1], line_color[0]);
+    
+    // Create color array for sphere
+    vtkSphereSource * dummy_sphere = vtkSphereSource::New();
+    // Create the array for big sphere
+    dummy_sphere->SetRadius(init_sphere_radius);
+    dummy_sphere->Update();
+    vtkIdType nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
+    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars_init = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    sphere_scalars_init->SetNumberOfComponents(3);
+    sphere_scalars_init->SetNumberOfTuples(nr_points);
+    sphere_scalars_init->FillComponent(0, sphere_color[2]);
+    sphere_scalars_init->FillComponent(1, sphere_color[1]);
+    sphere_scalars_init->FillComponent(2, sphere_color[0]);
+    // Create the array for small sphere
+    dummy_sphere->SetRadius(sphere_radius);
+    dummy_sphere->Update();
+    nr_points = dummy_sphere->GetOutput()->GetNumberOfCells();
+    vtkSmartPointer<vtkUnsignedCharArray> sphere_scalars = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    sphere_scalars->SetNumberOfComponents(3);
+    sphere_scalars->SetNumberOfTuples(nr_points);
+    sphere_scalars->FillComponent(0, sphere_color[2]);
+    sphere_scalars->FillComponent(1, sphere_color[1]);
+    sphere_scalars->FillComponent(2, sphere_color[0]);
+    dummy_sphere->Delete();    
+        
+    for (vtkIdType i = 0; i < nr_poses; ++i)
+    {
+        Point3f new_pos = path[i].translation();
+        
+        vtkSmartPointer<vtkSphereSource> sphere_source = vtkSmartPointer<vtkSphereSource>::New();
+        sphere_source->SetCenter (new_pos.x, new_pos.y, new_pos.z);
+        if (i == 0)
+        {
+            sphere_source->SetRadius(init_sphere_radius);
+            sphere_source->Update();
+            sphere_source->GetOutput()->GetCellData()->SetScalars(sphere_scalars_init);
+            appendFilter->AddInputConnection(sphere_source->GetOutputPort());
+            continue;
+        }
+        else
+        {
+            sphere_source->SetRadius(sphere_radius);
+            sphere_source->Update();
+            sphere_source->GetOutput()->GetCellData()->SetScalars(sphere_scalars);
+            appendFilter->AddInputConnection(sphere_source->GetOutputPort());
+        }
+        
+        
+        Affine3f relativeAffine = path[i].inv() * path[i-1];
+        Vec3f v = path[i].rotation() * relativeAffine.translation();
+        v = normalize(v) * line_length;
+        
+        vtkSmartPointer<vtkLineSource> line_source = vtkSmartPointer<vtkLineSource>::New();
+        line_source->SetPoint1(new_pos.x + v[0], new_pos.y + v[1], new_pos.z + v[2]);
+        line_source->SetPoint2(new_pos.x, new_pos.y, new_pos.z);
+        line_source->Update();
+        line_source->GetOutput()->GetCellData()->SetScalars(line_scalars);
+        
+        appendFilter->AddInputConnection(line_source->GetOutputPort());
+    }
+    
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetScalarModeToUseCellData();
+    mapper->SetInput(appendFilter->GetOutput());
+    
+    vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
+    
+    WidgetAccessor::setProp(*this, actor);
+}
+
+template<> cv::viz::SpheresTrajectoryWidget cv::viz::Widget::cast<cv::viz::SpheresTrajectoryWidget>()
+{
+    Widget3D widget = this->cast<Widget3D>();
+    return static_cast<SpheresTrajectoryWidget&>(widget);
 }

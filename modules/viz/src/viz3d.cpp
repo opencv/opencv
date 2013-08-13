@@ -45,3 +45,14 @@ cv::viz::Widget cv::viz::Viz3d::getWidget(const String &id) const { return impl_
 void cv::viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose) { impl_->setWidgetPose(id, pose); }
 void cv::viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose) { impl_->updateWidgetPose(id, pose); }
 cv::Affine3f cv::viz::Viz3d::getWidgetPose(const String &id) const { return impl_->getWidgetPose(id); }
+
+void cv::viz::Viz3d::setCamera(const Camera &camera) { impl_->setCamera(camera); }
+cv::viz::Camera cv::viz::Viz3d::getCamera() const { return impl_->getCamera(); }
+void cv::viz::Viz3d::setViewerPose(const Affine3f &pose) { impl_->setViewerPose(pose); }
+cv::Affine3f cv::viz::Viz3d::getViewerPose() { return impl_->getViewerPose(); }
+
+void cv::viz::Viz3d::convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord) { impl_->convertToWindowCoordinates(pt, window_coord); }
+void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction) { impl_->converTo3DRay(window_coord, origin, direction); }
+
+cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
+void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }

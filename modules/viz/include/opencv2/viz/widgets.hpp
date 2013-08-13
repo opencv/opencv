@@ -182,13 +182,18 @@ namespace cv
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
             
             TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
-            TrajectoryWidget(const std::vector<Affine3f> &path, float line_length, double init_sphere_radius,
-                             double sphere_radius, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
             TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
             
         private:
             struct ApplyPath;
+        };
+        
+        class CV_EXPORTS SpheresTrajectoryWidget : public Widget3D
+        {
+        public:
+            SpheresTrajectoryWidget(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021,
+                                    double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
         class CV_EXPORTS CloudWidget : public Widget3D
@@ -249,6 +254,7 @@ namespace cv
         template<> CV_EXPORTS Image3DWidget Widget::cast<Image3DWidget>();
         template<> CV_EXPORTS CameraPositionWidget Widget::cast<CameraPositionWidget>();
         template<> CV_EXPORTS TrajectoryWidget Widget::cast<TrajectoryWidget>();
+        template<> CV_EXPORTS SpheresTrajectoryWidget Widget::cast<SpheresTrajectoryWidget>();
         template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
         template<> CV_EXPORTS CloudCollectionWidget Widget::cast<CloudCollectionWidget>();
         template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();

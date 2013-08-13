@@ -542,25 +542,12 @@ bool cv::viz::Viz3d::VizImpl::setShapeRenderingProperties (int property, double 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::initCameraParameters ()
 {
-    Camera camera_temp;
-    // Set default camera parameters to something meaningful
-    camera_temp.clip = Vec2d(0.01, 1000.01);
-
-    // Look straight along the z-axis
-    camera_temp.focal = Vec3d(0.0, 0.0, 1.0);
-
-    // Position the camera at the origin
-    camera_temp.pos = Vec3d(0.0, 0.0, 0.0);
-
-    // Set the up-vector of the camera to be the y-axis
-    camera_temp.view_up = Vec3d(0.0, 1.0, 0.0);
-
-    // Set the camera field of view to about
-    camera_temp.fovy = 0.8575;
-    camera_temp.window_size = Vec2i(window_->GetScreenSize()) / 2;
-    camera_temp.window_pos = Vec2i(0, 0);
-
-    setCameraParameters (camera_temp);
+    Vec2i window_size(window_->GetScreenSize());
+    window_size /= 2;
+    
+    Camera camera_temp(Vec2f(0.0,0.8575), Size(window_size[0], window_size[1]));
+    setCamera(camera_temp);
+    setViewerPose(makeCameraPose(Vec3f(0.0f,0.0f,0.0f), Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f)));
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -577,18 +564,59 @@ void cv::viz::Viz3d::VizImpl::updateCamera ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::getCameras (cv::viz::Camera& camera)
+void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
-    vtkCamera* active_camera = renderer_->GetActiveCamera ();
+    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    
+    // Set the intrinsic parameters of the camera
+    window_->SetSize (camera.getWindowSize().width, camera.getWindowSize().height);
+    double aspect_ratio = static_cast<double>(camera.getWindowSize().width)/static_cast<double>(camera.getWindowSize().height);
+    
+    Matx44f proj_mat;
+    camera.computeProjectionMatrix(proj_mat);
+    // Use the intrinsic parameters of the camera to simulate more realistically
+    Matx44f old_proj_mat = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0, 1.0));
+    vtkTransform *transform = vtkTransform::New();
+    // This is a hack around not being able to set Projection Matrix
+    transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
+    active_camera.SetUserTransform(transform);
+    transform->Delete();
+}
 
-    camera.pos = cv::Vec3d(active_camera->GetPosition());
-    camera.focal = cv::Vec3d(active_camera->GetFocalPoint());
-    camera.clip = cv::Vec2d(active_camera->GetClippingRange());
-    camera.view_up = cv::Vec3d(active_camera->GetViewUp());
+/////////////////////////////////////////////////////////////////////////////////////////////
+cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
+{
+    vtkCamera& active_camera = *renderer_->GetActiveCamera();
+    
+    Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
+                     renderer_->GetRenderWindow()->GetSize()[1]);
+    double aspect_ratio = static_cast<double>(window_size.width) / static_cast<double>(window_size.height);
+    
+    Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
+    Camera camera(proj_matrix, window_size);
+    return camera;
+}
 
-    camera.fovy = active_camera->GetViewAngle()/ 180.0 * CV_PI;
-    camera.window_size = cv::Vec2i(renderer_->GetRenderWindow()->GetSize());
-    camera.window_pos = cv::Vec2d::all(0);
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
+{
+    vtkCamera& camera = *renderer_->GetActiveCamera ();
+        
+    // Position = extrinsic translation
+    cv::Vec3f pos_vec = pose.translation();
+
+    // Rotate the view vector
+    cv::Matx33f rotation = pose.rotation();
+    cv::Vec3f y_axis (0.f, 1.f, 0.f);
+    cv::Vec3f up_vec (rotation * y_axis);
+
+    // Compute the new focal point
+    cv::Vec3f z_axis (0.f, 0.f, 1.f);
+    cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
+    
+    camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
+    camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
+    camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -621,110 +649,36 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getViewerPose ()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord)
+{
+    Vec3d window_pt;
+    vtkInteractorObserver::ComputeWorldToDisplay(renderer_, pt.x, pt.y, pt.z, window_pt.val);
+    window_coord = window_pt;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction)
+{    
+    Vec4d world_pt;
+    vtkInteractorObserver::ComputeDisplayToWorld(renderer_, window_coord.x, window_coord.y, window_coord.z, world_pt.val);
+     
+    vtkCamera &active_camera = *renderer_->GetActiveCamera();
+    Vec3d cam_pos;
+    active_camera.GetPosition(cam_pos.val);
+    origin = cam_pos;
+    direction = normalize(Vec3d(world_pt.val) - cam_pos);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::resetCamera ()
 {
     renderer_->ResetCamera ();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraPosition (const cv::Vec3d& pos, const cv::Vec3d& view, const cv::Vec3d& up)
-{
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetPosition (pos[0], pos[1], pos[2]);
-    cam->SetFocalPoint (view[0], view[1], view[2]);
-    cam->SetViewUp (up[0], up[1], up[2]);
-    renderer_->Render ();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraPosition (double pos_x, double pos_y, double pos_z, double up_x, double up_y, double up_z)
-{
-    //rens_->InitTraversal ();
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetPosition (pos_x, pos_y, pos_z);
-    cam->SetViewUp (up_x, up_y, up_z);
-    renderer_->Render ();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraParameters (const cv::Matx33f& intrinsics, const cv::Affine3f& extrinsics)
-{
-    // Position = extrinsic translation
-    cv::Vec3f pos_vec = extrinsics.translation();
-
-
-    // Rotate the view vector
-    cv::Matx33f rotation = extrinsics.rotation();
-    cv::Vec3f y_axis (0.f, 1.f, 0.f);
-    cv::Vec3f up_vec (rotation * y_axis);
-
-    // Compute the new focal point
-    cv::Vec3f z_axis (0.f, 0.f, 1.f);
-    cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
-
-    // Get the width and height of the image - assume the calibrated centers are at the center of the image
-    Eigen::Vector2i window_size;
-    window_size[0] = static_cast<int> (intrinsics(0, 2));
-    window_size[1] = static_cast<int> (intrinsics(1, 2));
-
-    // Compute the vertical field of view based on the focal length and image heigh
-    double fovy = 2 * atan (window_size[1] / (2. * intrinsics (1, 1))) * 180.0 / M_PI;
-
-    //rens_->InitTraversal ();
-
-
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetPosition (pos_vec[0], pos_vec[1], pos_vec[2]);
-    cam->SetFocalPoint (focal_vec[0], focal_vec[1], focal_vec[2]);
-    cam->SetViewUp (up_vec[0], up_vec[1], up_vec[2]);
-    cam->SetUseHorizontalViewAngle (0);
-    cam->SetViewAngle (fovy);
-    cam->SetClippingRange (0.01, 1000.01);
-    window_->SetSize (window_size[0], window_size[1]);
-
-    renderer_->Render ();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraParameters (const cv::viz::Camera &camera)
-{
-    //rens_->InitTraversal ();
-
-
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetPosition (camera.pos[0], camera.pos[1], camera.pos[2]);
-    cam->SetFocalPoint (camera.focal[0], camera.focal[1], camera.focal[2]);
-    cam->SetViewUp (camera.view_up[0], camera.view_up[1], camera.view_up[2]);
-    cam->SetClippingRange (camera.clip.val);
-    cam->SetUseHorizontalViewAngle (0);
-    cam->SetViewAngle (camera.fovy * 180.0 / M_PI);
-
-    window_->SetSize (static_cast<int> (camera.window_size[0]), static_cast<int> (camera.window_size[1]));
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraClipDistances (double near, double far)
-{
-    //rens_->InitTraversal ();
-
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetClippingRange (near, far);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setCameraFieldOfView (double fovy)
-{
-    //rens_->InitTraversal ();
-
-    vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
-    cam->SetUseHorizontalViewAngle (0);
-    cam->SetViewAngle (fovy * 180.0 / M_PI);
-
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
 {
+    // TODO Cloud actor is not used
     vtkSmartPointer<vtkMatrix4x4> camera_pose;
     static CloudActorMap::iterator it = cloud_actor_map_->find (id);
     if (it != cloud_actor_map_->end ())
@@ -1016,6 +970,7 @@ void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 
 void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize (int xw, int yw) { window_->SetSize (xw, yw); }
+cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }
 
 bool cv::viz::Viz3d::VizImpl::addPolygonMesh (const Mesh3d& /*mesh*/, const Mat& /*mask*/, const std::string &/*id*/)
 {
