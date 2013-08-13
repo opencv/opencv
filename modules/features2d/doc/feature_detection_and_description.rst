@@ -3,9 +3,9 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
-.. Sample code::
+.. note::
 
-   * : An example explaining keypoint detection and description can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example explaining keypoint detection and description can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
 
 FAST
 ----
@@ -62,9 +62,9 @@ Maximally stable extremal region extractor. ::
 The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://code.opencv.org/projects/opencv/wiki/MSER for useful comments and parameters description.
 
-.. Sample code::
+.. note::
 
-   * : PYTHON : A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
+   * (Python) A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
 
 
 ORB
@@ -190,9 +190,9 @@ Class implementing the FREAK (*Fast Retina Keypoint*) keypoint descriptor, descr
 
 .. [AOV12] A. Alahi, R. Ortiz, and P. Vandergheynst. FREAK: Fast Retina Keypoint. In IEEE Conference on Computer Vision and Pattern Recognition, 2012. CVPR 2012 Open Source Award Winner.
 
-.. Sample code::
+.. note::
 
-   * : An example on how to use the FREAK descriptor can be found at opencv_source_code/samples/cpp/freak_demo.cpp
+   * An example on how to use the FREAK descriptor can be found at opencv_source_code/samples/cpp/freak_demo.cpp
 
 FREAK::FREAK
 ------------

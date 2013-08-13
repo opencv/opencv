@@ -31,8 +31,8 @@ The function reconstructs the selected image area from the pixel near the area b
 http://en.wikipedia.org/wiki/Inpainting
 for more details.
 
-.. Sample code::
+.. note::
 
-   * : An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
+   * An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
 
-   * : PYTHON : An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py
+   * (Python) An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py

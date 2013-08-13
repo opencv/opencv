@@ -363,9 +363,9 @@ The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detec
 
 Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
-.. Sample code::
+.. note::
 
-   * : OCL : An example using the HOG descriptor can be found at opencv_source_code/samples/ocl/hog.cpp
+   (Ocl) An example using the HOG descriptor can be found at opencv_source_code/samples/ocl/hog.cpp
 
 ocl::HOGDescriptor::HOGDescriptor
 -------------------------------------

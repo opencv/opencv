@@ -1772,6 +1772,31 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
+        // current supported sorting methods
+        enum
+        {
+            SORT_BITONIC,   // only support power-of-2 buffer size
+            SORT_SELECTION, // cannot sort duplicate keys
+            SORT_MERGE,
+            SORT_RADIX      // only support signed int/float keys(CV_32S/CV_32F)
+        };
+        //! Returns the sorted result of all the elements in input based on equivalent keys.
+        //
+        //  The element unit in the values to be sorted is determined from the data type, 
+        //  i.e., a CV_32FC2 input {a1a2, b1b2} will be considered as two elements, regardless its
+        //  matrix dimension.
+        //  both keys and values will be sorted inplace
+        //  Key needs to be single channel oclMat.
+        //
+        //  Example:
+        //  input -
+        //    keys   = {2,    3,   1}   (CV_8UC1)
+        //    values = {10,5, 4,3, 6,2} (CV_8UC2)
+        //  sortByKey(keys, values, SORT_SELECTION, false);
+        //  output -
+        //    keys   = {1,    2,   3}   (CV_8UC1)
+        //    values = {6,2, 10,5, 4,3} (CV_8UC2)
+        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
