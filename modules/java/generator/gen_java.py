@@ -521,7 +521,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
     public java.util.List<org.opencv.core.Size> getSupportedPreviewSizes()
     {
         String[] sizes_str = getSupportedPreviewSizes_0(nativeObj).split(",");
-        java.util.List<org.opencv.core.Size> sizes = new java.util.LinkedList<org.opencv.core.Size>();
+        java.util.List<org.opencv.core.Size> sizes = new java.util.ArrayList<org.opencv.core.Size>(sizes_str.length);
 
         for (String str : sizes_str) {
             String[] wh = str.split("x");
