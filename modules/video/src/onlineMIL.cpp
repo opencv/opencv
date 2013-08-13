@@ -78,31 +78,104 @@ std::vector<float> ClfMilBoost::classify( const Mat& x, bool logR )
 
 ClfOnlineStump::ClfOnlineStump()
 {
-
+  _trained = false;
+  _ind = -1;
+  init();
 }
 
 ClfOnlineStump::ClfOnlineStump( int ind )
 {
-
+  _trained = false;
+  _ind = ind;
+  init();
 }
 void ClfOnlineStump::init()
 {
-
+  _mu0 = 0;
+  _mu1 = 0;
+  _sig0 = 1;
+  _sig1 = 1;
+  _lRate = 0.85f;
+  _trained = false;
 }
 
-void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const cv::Mat_<float> & posw, const cv::Mat_<float> & negw )
+void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float> & posw, const Mat_<float> & negw )
 {
+  float posmu = 0.0, negmu = 0.0;
+  if( posx.cols > 0 )
+    posmu = mean( posx.col( _ind ) )[0];
+  if( negx.cols > 0 )
+    negmu = mean( negx.col( _ind ) )[0];
 
+  if( _trained )
+  {
+    if( posx.cols > 0 )
+    {
+      _mu1 = ( _lRate * _mu1 + ( 1 - _lRate ) * posmu );
+      cv::Mat diff = posx.col( _ind ) - _mu1;
+      _sig1 = _lRate * _sig1 + ( 1 - _lRate ) * cv::mean( diff.mul( diff ) )[0];
+    }
+    if( negx.cols > 0 )
+    {
+      _mu0 = ( _lRate * _mu0 + ( 1 - _lRate ) * negmu );
+      cv::Mat diff = negx.col( _ind ) - _mu0;
+      _sig0 = _lRate * _sig0 + ( 1 - _lRate ) * cv::mean( diff.mul( diff ) )[0];
+    }
+
+    _q = ( _mu1 - _mu0 ) / 2;
+    _s = sign( _mu1 - _mu0 );
+    _log_n0 = std::log( float( 1.0f / pow( _sig0, 0.5f ) ) );
+    _log_n1 = std::log( float( 1.0f / pow( _sig1, 0.5f ) ) );
+    //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
+    //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
+    _e1 = -1.0f / ( 2.0f * _sig1 + std::numeric_limits<float>::min() );
+    _e0 = -1.0f / ( 2.0f * _sig0 + std::numeric_limits<float>::min() );
+
+  }
+  else
+  {
+    _trained = true;
+    if( posx.cols > 0 )
+    {
+      _mu1 = posmu;
+      cv::Scalar scal_mean, scal_std_dev;
+      cv::meanStdDev( posx.col( _ind ), scal_mean, scal_std_dev );
+      _sig1 = scal_std_dev[0] * scal_std_dev[0] + 1e-9f;
+    }
+
+    if( negx.cols > 0 )
+    {
+      _mu0 = negmu;
+      cv::Scalar scal_mean, scal_std_dev;
+      cv::meanStdDev( negx.col( _ind ), scal_mean, scal_std_dev );
+      _sig0 = scal_std_dev[0] * scal_std_dev[0] + 1e-9f;
+    }
+
+    _q = ( _mu1 - _mu0 ) / 2;
+    _s = sign( _mu1 - _mu0 );
+    _log_n0 = std::log( float( 1.0f / pow( _sig0, 0.5f ) ) );
+    _log_n1 = std::log( float( 1.0f / pow( _sig1, 0.5f ) ) );
+    //_e1 = -1.0f/(2.0f*_sig1+1e-99f);
+    //_e0 = -1.0f/(2.0f*_sig0+1e-99f);
+    _e1 = -1.0f / ( 2.0f * _sig1 + std::numeric_limits<float>::min() );
+    _e0 = -1.0f / ( 2.0f * _sig0 + std::numeric_limits<float>::min() );
+  }
 }
 
 bool ClfOnlineStump::classify( const Mat& x, int i )
 {
-  return 0;
+  float xx = x.at<float>( i, _ind );
+  double log_p0 = ( xx - _mu0 ) * ( xx - _mu0 ) * _e0 + _log_n0;
+  double log_p1 = ( xx - _mu1 ) * ( xx - _mu1 ) * _e1 + _log_n1;
+  return log_p1 > log_p0;
 }
 
 float ClfOnlineStump::classifyF( const Mat& x, int i )
 {
-  return 0;
+  float xx = x.at<float>( i, _ind );
+  double log_p0 = ( xx - _mu0 ) * ( xx - _mu0 ) * _e0 + _log_n0;
+  double log_p1 = ( xx - _mu1 ) * ( xx - _mu1 ) * _e1 + _log_n1;
+  return float( log_p1 - log_p0 );
 }
 
 } /* namespace cv */

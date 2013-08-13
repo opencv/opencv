@@ -49,6 +49,8 @@ namespace cv
 //TODO based on the original implementation
 //http://vision.ucsd.edu/~bbabenko/project_miltrack.shtml
 
+#define  sign(s)  ((s > 0 ) ? 1 : ((s<0) ? -1 : 0))
+
 class ClfMilBoost
 {
  public:
@@ -86,6 +88,10 @@ class ClfOnlineStump
   bool classify( const Mat& x, int i );
   float classifyF( const Mat& x, int i );
 
+ private:
+  bool _trained;
+  int _ind;
+  float _lRate;
 };
 
 } /* namespace cv */
