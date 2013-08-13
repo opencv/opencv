@@ -42,6 +42,15 @@ public class VideoCapture {
         return;
     }
 
+    // javadoc: VideoCapture::VideoCapture(String filename)
+    public VideoCapture(String filename)
+    {
+
+        nativeObj = n_VideoCapture(filename);
+
+        return;
+    }
+
     //
     // C++: double VideoCapture::get(int propId)
     //
@@ -114,6 +123,19 @@ public class VideoCapture {
     {
 
         boolean retVal = n_open(nativeObj, device);
+
+        return retVal;
+    }
+
+    //
+    // C++: bool VideoCapture::open(String filename)
+    //
+
+    // javadoc: VideoCapture::open(String filename)
+    public boolean open(String filename)
+    {
+
+        boolean retVal = n_open(nativeObj, filename);
 
         return retVal;
     }

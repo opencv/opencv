@@ -72,6 +72,39 @@ JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__I
 }
 
 
+//
+//   VideoCapture::VideoCapture(String & filename)
+//
+
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__Ljava_lang_String_2
+  (JNIEnv* env, jclass, jstring filename);
+
+JNIEXPORT jlong JNICALL Java_org_opencv_highgui_VideoCapture_n_1VideoCapture__Ljava_lang_String_2
+  (JNIEnv* env, jclass, jstring filename)
+{
+    try {
+        LOGD("highgui::VideoCapture_n_1VideoCapture__Ljava_lang_String()");
+
+        const char* utf_filename = env->GetStringUTFChars(filename, 0); 
+        String n_filename( utf_filename ? utf_filename : "" ); env->ReleaseStringUTFChars(filename, utf_filename); 
+        
+        VideoCapture* _retval_ = new VideoCapture( n_filename );
+        return (jlong) _retval_;
+    } catch(cv::Exception e) {
+        LOGD("highgui::VideoCapture_n_1VideoCapture__Ljava_lang_String() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("highgui::VideoCapture_n_1VideoCapture__Ljava_lang_String() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1VideoCapture__Ljava_lang_String()}");
+        return 0;
+    }
+}
+
+
 
 //
 //  double VideoCapture::get(int propId)
@@ -194,6 +227,41 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JI
         LOGD("highgui::VideoCapture_n_1open__JI() catched unknown exception (...)");
         jclass je = env->FindClass("java/lang/Exception");
         env->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1open__JI()}");
+        return 0;
+    }
+}
+
+
+//
+//  bool VideoCapture::open(String filename)
+//
+
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JLjava_lang_String_2
+  (JNIEnv* env, jclass, jlong self, jstring filename);
+
+JNIEXPORT jboolean JNICALL Java_org_opencv_highgui_VideoCapture_n_1open__JLjava_lang_String_2
+  (JNIEnv* env, jclass, jlong self, jstring filename)
+{
+    try {
+        LOGD("highgui::VideoCapture_n_1open__JLjava_lang_String()");
+        VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
+
+        const char* utf_filename = env->GetStringUTFChars(filename, 0); 
+        String n_filename( utf_filename ? utf_filename : "" ); env->ReleaseStringUTFChars(filename, utf_filename);
+
+        bool _retval_ = me->open( n_filename );
+
+        return _retval_;
+    } catch(cv::Exception e) {
+        LOGD("highgui::VideoCapture_n_1open__JLjava_lang_String_2() catched cv::Exception: %s", e.what());
+        jclass je = env->FindClass("org/opencv/core/CvException");
+        if(!je) je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, e.what());
+        return 0;
+    } catch (...) {
+        LOGD("highgui::VideoCapture_n_1open__JLjava_lang_String_2() catched unknown exception (...)");
+        jclass je = env->FindClass("java/lang/Exception");
+        env->ThrowNew(je, "Unknown exception in JNI code {highgui::VideoCapture_n_1open__JLjava_lang_String_2()}");
         return 0;
     }
 }
