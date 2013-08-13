@@ -49,10 +49,10 @@
 namespace cv
 {
 
-template<> void Ptr<CvCapture>::delete_obj()
+template<> void DefaultDeleter<CvCapture>::operator ()(CvCapture* obj) const
 { cvReleaseCapture(&obj); }
 
-template<> void Ptr<CvVideoWriter>::delete_obj()
+template<> void DefaultDeleter<CvVideoWriter>::operator ()(CvVideoWriter* obj) const
 { cvReleaseVideoWriter(&obj); }
 
 }
@@ -492,14 +492,14 @@ VideoCapture::~VideoCapture()
 bool VideoCapture::open(const String& filename)
 {
     if (isOpened()) release();
-    cap = cvCreateFileCapture(filename.c_str());
+    cap.reset(cvCreateFileCapture(filename.c_str()));
     return isOpened();
 }
 
 bool VideoCapture::open(int device)
 {
     if (isOpened()) release();
-    cap = cvCreateCameraCapture(device);
+    cap.reset(cvCreateCameraCapture(device));
     return isOpened();
 }
 
@@ -578,7 +578,7 @@ VideoWriter::~VideoWriter()
 
 bool VideoWriter::open(const String& filename, int _fourcc, double fps, Size frameSize, bool isColor)
 {
-    writer = cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor);
+    writer.reset(cvCreateVideoWriter(filename.c_str(), _fourcc, fps, frameSize, isColor));
     return isOpened();
 }
 

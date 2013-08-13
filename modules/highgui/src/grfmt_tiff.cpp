@@ -108,7 +108,7 @@ int TiffDecoder::normalizeChannelsNumber(int channels) const
 
 ImageDecoder TiffDecoder::newDecoder() const
 {
-    return new TiffDecoder;
+    return makePtr<TiffDecoder>();
 }
 
 bool TiffDecoder::readHeader()
@@ -400,7 +400,7 @@ TiffEncoder::~TiffEncoder()
 
 ImageEncoder TiffEncoder::newEncoder() const
 {
-    return new TiffEncoder;
+    return makePtr<TiffEncoder>();
 }
 
 bool TiffEncoder::isFormatSupported( int depth ) const

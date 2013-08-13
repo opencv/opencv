@@ -88,7 +88,7 @@ Jpeg2KDecoder::~Jpeg2KDecoder()
 
 ImageDecoder Jpeg2KDecoder::newDecoder() const
 {
-    return new Jpeg2KDecoder;
+    return makePtr<Jpeg2KDecoder>();
 }
 
 void  Jpeg2KDecoder::close()
@@ -403,7 +403,7 @@ Jpeg2KEncoder::~Jpeg2KEncoder()
 
 ImageEncoder Jpeg2KEncoder::newEncoder() const
 {
-    return new Jpeg2KEncoder;
+    return makePtr<Jpeg2KEncoder>();
 }
 
 bool  Jpeg2KEncoder::isFormatSupported( int depth ) const
