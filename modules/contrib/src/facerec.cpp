@@ -851,18 +851,18 @@ int LBPH::predict(InputArray _src) const {
 
 Ptr<FaceRecognizer> createEigenFaceRecognizer(int num_components, double threshold)
 {
-    return new Eigenfaces(num_components, threshold);
+    return makePtr<Eigenfaces>(num_components, threshold);
 }
 
 Ptr<FaceRecognizer> createFisherFaceRecognizer(int num_components, double threshold)
 {
-    return new Fisherfaces(num_components, threshold);
+    return makePtr<Fisherfaces>(num_components, threshold);
 }
 
 Ptr<FaceRecognizer> createLBPHFaceRecognizer(int radius, int neighbors,
                                              int grid_x, int grid_y, double threshold)
 {
-    return new LBPH(radius, neighbors, grid_x, grid_y, threshold);
+    return makePtr<LBPH>(radius, neighbors, grid_x, grid_y, threshold);
 }
 
 CV_INIT_ALGORITHM(Eigenfaces, "FaceRecognizer.Eigenfaces",
