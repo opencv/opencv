@@ -607,10 +607,10 @@ Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int srcType, int meth
         switch (method)
         {
         case TM_SQDIFF:
-            return new Match_SQDIFF_32F;
+            return makePtr<Match_SQDIFF_32F>();
 
         case TM_CCORR:
-            return new Match_CCORR_32F(user_block_size);
+            return makePtr<Match_CCORR_32F>(user_block_size);
 
         default:
             CV_Error( Error::StsBadFlag, "Unsopported method" );
@@ -622,22 +622,22 @@ Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int srcType, int meth
         switch (method)
         {
         case TM_SQDIFF:
-            return new Match_SQDIFF_8U(user_block_size);
+            return makePtr<Match_SQDIFF_8U>(user_block_size);
 
         case TM_SQDIFF_NORMED:
-            return new Match_SQDIFF_NORMED_8U(user_block_size);
+            return makePtr<Match_SQDIFF_NORMED_8U>(user_block_size);
 
         case TM_CCORR:
-            return new Match_CCORR_8U(user_block_size);
+            return makePtr<Match_CCORR_8U>(user_block_size);
 
         case TM_CCORR_NORMED:
-            return new Match_CCORR_NORMED_8U(user_block_size);
+            return makePtr<Match_CCORR_NORMED_8U>(user_block_size);
 
         case TM_CCOEFF:
-            return new Match_CCOEFF_8U(user_block_size);
+            return makePtr<Match_CCOEFF_8U>(user_block_size);
 
         case TM_CCOEFF_NORMED:
-            return new Match_CCOEFF_NORMED_8U(user_block_size);
+            return makePtr<Match_CCOEFF_NORMED_8U>(user_block_size);
 
         default:
             CV_Error( Error::StsBadFlag, "Unsopported method" );

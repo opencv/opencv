@@ -228,7 +228,7 @@ namespace
 
 Ptr<CannyEdgeDetector> cv::gpu::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
-    return new CannyImpl(low_thresh, high_thresh, apperture_size, L2gradient);
+    return makePtr<CannyImpl>(low_thresh, high_thresh, apperture_size, L2gradient);
 }
 
 #endif /* !defined (HAVE_CUDA) */

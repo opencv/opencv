@@ -291,7 +291,7 @@ namespace
 
 Ptr<HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
 {
-    return new HoughCirclesDetectorImpl(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
+    return makePtr<HoughCirclesDetectorImpl>(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
 }
 
 #endif /* !defined (HAVE_CUDA) */
