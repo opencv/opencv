@@ -497,7 +497,7 @@ namespace
 
 Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray lut)
 {
-    return new LookUpTableImpl(lut);
+    return makePtr<LookUpTableImpl>(lut);
 }
 
 ////////////////////////////////////////////////////////////////////////
