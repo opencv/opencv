@@ -207,8 +207,8 @@ private:
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
 
         // Load the classifier from file (assuming its size is about 1 mb) using a simple allocator
-        gpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeDevice, static_cast<int>(devProp.textureAlignment));
-        cpuCascadeAllocator = new NCVMemNativeAllocator(NCVMemoryTypeHostPinned, static_cast<int>(devProp.textureAlignment));
+        gpuCascadeAllocator = makePtr<NCVMemNativeAllocator>(NCVMemoryTypeDevice, static_cast<int>(devProp.textureAlignment));
+        cpuCascadeAllocator = makePtr<NCVMemNativeAllocator>(NCVMemoryTypeHostPinned, static_cast<int>(devProp.textureAlignment));
 
         ncvAssertPrintReturn(gpuCascadeAllocator->isInitialized(), "Error creating cascade GPU allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(cpuCascadeAllocator->isInitialized(), "Error creating cascade CPU allocator", NCV_CUDA_ERROR);
@@ -217,9 +217,9 @@ private:
         ncvStat = ncvHaarGetClassifierSize(classifierFile, haarNumStages, haarNumNodes, haarNumFeatures);
         ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "Error reading classifier size (check the file)", NCV_FILE_ERROR);
 
-        h_haarStages   = new NCVVectorAlloc<HaarStage64>(*cpuCascadeAllocator, haarNumStages);
-        h_haarNodes    = new NCVVectorAlloc<HaarClassifierNode128>(*cpuCascadeAllocator, haarNumNodes);
-        h_haarFeatures = new NCVVectorAlloc<HaarFeature64>(*cpuCascadeAllocator, haarNumFeatures);
+        h_haarStages.reset  (new NCVVectorAlloc<HaarStage64>(*cpuCascadeAllocator, haarNumStages));
+        h_haarNodes.reset   (new NCVVectorAlloc<HaarClassifierNode128>(*cpuCascadeAllocator, haarNumNodes));
+        h_haarFeatures.reset(new NCVVectorAlloc<HaarFeature64>(*cpuCascadeAllocator, haarNumFeatures));
 
         ncvAssertPrintReturn(h_haarStages->isMemAllocated(), "Error in cascade CPU allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(h_haarNodes->isMemAllocated(), "Error in cascade CPU allocator", NCV_CUDA_ERROR);
@@ -228,9 +228,9 @@ private:
         ncvStat = ncvHaarLoadFromFile_host(classifierFile, haar, *h_haarStages, *h_haarNodes, *h_haarFeatures);
         ncvAssertPrintReturn(ncvStat == NCV_SUCCESS, "Error loading classifier", NCV_FILE_ERROR);
 
-        d_haarStages   = new NCVVectorAlloc<HaarStage64>(*gpuCascadeAllocator, haarNumStages);
-        d_haarNodes    = new NCVVectorAlloc<HaarClassifierNode128>(*gpuCascadeAllocator, haarNumNodes);
-        d_haarFeatures = new NCVVectorAlloc<HaarFeature64>(*gpuCascadeAllocator, haarNumFeatures);
+        d_haarStages.reset  (new NCVVectorAlloc<HaarStage64>(*gpuCascadeAllocator, haarNumStages));
+        d_haarNodes.reset   (new NCVVectorAlloc<HaarClassifierNode128>(*gpuCascadeAllocator, haarNumNodes));
+        d_haarFeatures.reset(new NCVVectorAlloc<HaarFeature64>(*gpuCascadeAllocator, haarNumFeatures));
 
         ncvAssertPrintReturn(d_haarStages->isMemAllocated(), "Error in cascade GPU allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(d_haarNodes->isMemAllocated(), "Error in cascade GPU allocator", NCV_CUDA_ERROR);
@@ -279,8 +279,8 @@ private:
         ncvAssertReturnNcvStat(ncvStat);
         ncvAssertCUDAReturn(cudaStreamSynchronize(0), NCV_CUDA_ERROR);
 
-        gpuAllocator = new NCVMemStackAllocator(NCVMemoryTypeDevice, gpuCounter.maxSize(), static_cast<int>(devProp.textureAlignment));
-        cpuAllocator = new NCVMemStackAllocator(NCVMemoryTypeHostPinned, cpuCounter.maxSize(), static_cast<int>(devProp.textureAlignment));
+        gpuAllocator = makePtr<NCVMemStackAllocator>(NCVMemoryTypeDevice, gpuCounter.maxSize(), static_cast<int>(devProp.textureAlignment));
+        cpuAllocator = makePtr<NCVMemStackAllocator>(NCVMemoryTypeHostPinned, cpuCounter.maxSize(), static_cast<int>(devProp.textureAlignment));
 
         ncvAssertPrintReturn(gpuAllocator->isInitialized(), "Error creating GPU memory allocator", NCV_CUDA_ERROR);
         ncvAssertPrintReturn(cpuAllocator->isInitialized(), "Error creating CPU memory allocator", NCV_CUDA_ERROR);
