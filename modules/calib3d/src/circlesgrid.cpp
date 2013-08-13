@@ -40,6 +40,8 @@
  //
  //M*/
 
+#include <limits>
+
 #include "circlesgrid.hpp"
 #include <limits>
 //#define DEBUG_CIRCLES

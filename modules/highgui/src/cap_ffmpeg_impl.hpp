@@ -140,6 +140,9 @@ extern "C" {
     #include <stdio.h>
     #include <sys/types.h>
     #include <sys/sysctl.h>
+#if !defined ANDROID
+    #include <pthread.h>
+#endif
 #endif
 
 #ifndef MIN
