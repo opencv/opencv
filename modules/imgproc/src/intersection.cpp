@@ -121,12 +121,7 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
             float t2 = (vx1*y21 - vy1*x21) / det;
 
             // This takes care of parallel lines
-            // MSVC does not have std::infinite? 
-#ifdef _WIN32
-            if( !_finite(t1) || ! _finite(t2) )
-#else
-            if( !std::isfinite(t1) || !std::isfinite(t2) )
-#endif            
+            if( cvIsInf(t1) || cvIsInf(t2) || cvIsNaN(t1) || cvIsNaN(t2) )
             {
                 continue;
             }
