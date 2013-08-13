@@ -169,7 +169,7 @@ Ptr<Filter> cv::gpu::createBoxFilter(int srcType, int dstType, Size ksize, Point
 
     dstType = CV_MAKE_TYPE(CV_MAT_DEPTH(dstType), CV_MAT_CN(srcType));
 
-    return new NPPBoxFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
+    return makePtr<NPPBoxFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -277,7 +277,7 @@ Ptr<Filter> cv::gpu::createLinearFilter(int srcType, int dstType, InputArray ker
 
     dstType = CV_MAKE_TYPE(CV_MAT_DEPTH(dstType), CV_MAT_CN(srcType));
 
-    return new LinearFilter(srcType, dstType, kernel, anchor, borderMode, borderVal);
+    return makePtr<LinearFilter>(srcType, dstType, kernel, anchor, borderMode, borderVal);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -428,7 +428,7 @@ Ptr<Filter> cv::gpu::createSeparableLinearFilter(int srcType, int dstType, Input
     if (columnBorderMode < 0)
         columnBorderMode = rowBorderMode;
 
-    return new SeparableLinearFilter(srcType, dstType, rowKernel, columnKernel, anchor, rowBorderMode, columnBorderMode);
+    return makePtr<SeparableLinearFilter>(srcType, dstType, rowKernel, columnKernel, anchor, rowBorderMode, columnBorderMode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -748,27 +748,27 @@ Ptr<Filter> cv::gpu::createMorphologyFilter(int op, int srcType, InputArray kern
     {
     case MORPH_ERODE:
     case MORPH_DILATE:
-        return new MorphologyFilter(op, srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyFilter>(op, srcType, kernel, anchor, iterations);
         break;
 
     case MORPH_OPEN:
-        return new MorphologyOpenFilter(srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyOpenFilter>(srcType, kernel, anchor, iterations);
         break;
 
     case MORPH_CLOSE:
-        return new MorphologyCloseFilter(srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyCloseFilter>(srcType, kernel, anchor, iterations);
         break;
 
     case MORPH_GRADIENT:
-        return new MorphologyGradientFilter(srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyGradientFilter>(srcType, kernel, anchor, iterations);
         break;
 
     case MORPH_TOPHAT:
-        return new MorphologyTophatFilter(srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyTophatFilter>(srcType, kernel, anchor, iterations);
         break;
 
     case MORPH_BLACKHAT:
-        return new MorphologyBlackhatFilter(srcType, kernel, anchor, iterations);
+        return makePtr<MorphologyBlackhatFilter>(srcType, kernel, anchor, iterations);
         break;
 
     default:
@@ -782,7 +782,7 @@ Ptr<Filter> cv::gpu::createMorphologyFilter(int op, int srcType, InputArray kern
 
 namespace
 {
-    enum
+    enum RankType
     {
         RANK_MAX,
         RANK_MIN
@@ -862,12 +862,12 @@ namespace
 
 Ptr<Filter> cv::gpu::createBoxMaxFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
-    return new NPPRankFilter(RANK_MAX, srcType, ksize, anchor, borderMode, borderVal);
+    return makePtr<NPPRankFilter>(RANK_MAX, srcType, ksize, anchor, borderMode, borderVal);
 }
 
 Ptr<Filter> cv::gpu::createBoxMinFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
-    return new NPPRankFilter(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
+    return makePtr<NPPRankFilter>(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -931,7 +931,7 @@ namespace
 
 Ptr<Filter> cv::gpu::createRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
-    return new NppRowSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
+    return makePtr<NppRowSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
 
 namespace
@@ -992,7 +992,7 @@ namespace
 
 Ptr<Filter> cv::gpu::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
-    return new NppColumnSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
+    return makePtr<NppColumnSumFilter>(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
 
 #endif
