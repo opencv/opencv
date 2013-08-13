@@ -200,7 +200,7 @@ namespace
 
 Ptr<gpu::DisparityBilateralFilter> cv::gpu::createDisparityBilateralFilter(int ndisp, int radius, int iters)
 {
-    return new DispBilateralFilterImpl(ndisp, radius, iters);
+    return makePtr<DispBilateralFilterImpl>(ndisp, radius, iters);
 }
 
 #endif /* !defined (HAVE_CUDA) */
