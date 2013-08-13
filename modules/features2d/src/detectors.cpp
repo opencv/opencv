@@ -90,19 +90,19 @@ Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 {
     if( detectorType.find("Grid") == 0 )
     {
-        return new GridAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<GridAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Grid"))));
     }
 
     if( detectorType.find("Pyramid") == 0 )
     {
-        return new PyramidAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<PyramidAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Pyramid"))));
     }
 
     if( detectorType.find("Dynamic") == 0 )
     {
-        return new DynamicAdaptedFeatureDetector(AdjusterAdapter::create(
+        return makePtr<DynamicAdaptedFeatureDetector>(AdjusterAdapter::create(
                                 detectorType.substr(strlen("Dynamic"))));
     }
 
@@ -190,7 +190,7 @@ GridAdaptedFeatureDetector::GridAdaptedFeatureDetector( const Ptr<FeatureDetecto
 
 bool GridAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
 struct ResponseComparator
@@ -295,7 +295,7 @@ PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureD
 
 bool PyramidAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
 void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const

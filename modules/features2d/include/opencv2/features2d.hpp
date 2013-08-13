@@ -646,7 +646,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=0,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=Ptr<FeatureDetector>(),
                                         int maxTotalKeypoints=1000,
                                         int gridRows=4, int gridCols=4 );
 
@@ -1143,8 +1143,8 @@ protected:
 class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
-                       const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
+                       const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
     virtual void add( const std::vector<Mat>& descriptors );
     virtual void clear();
