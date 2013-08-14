@@ -572,7 +572,7 @@ void cv::ocl::morphologyEx(const oclMat &src, oclMat &dst, int op, const Mat &ke
 
 namespace
 {
-typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , oclMat & , Size &, const Point, const int);
+typedef void (*GPUFilter2D_t)(const oclMat & , oclMat & , const oclMat & , const Size &, const Point&, const int);
 
 class LinearFilter_GPU : public BaseFilter_GPU
 {
@@ -591,8 +591,8 @@ public:
 };
 }
 
-static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
-    Size &ksize, const Point anchor, const int borderType)
+static void GPUFilter2D(const oclMat &src, oclMat &dst, const oclMat &mat_kernel,
+    const Size &ksize, const Point& anchor, const int borderType)
 {
     CV_Assert(src.clCxt == dst.clCxt);
     CV_Assert((src.cols == dst.cols) &&
@@ -614,7 +614,7 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     size_t dst_offset_x = (dst.offset % dst.step) / dst.elemSize();
     size_t dst_offset_y = dst.offset / dst.step;
 
-    int paddingPixels = (int)(filterWidth/2)*2;
+    int paddingPixels = filterWidth & (-2);
 
     size_t localThreads[3]  = {ksize_3x3 ? 256 : 16, ksize_3x3 ? 1 : 16, 1};
     size_t globalThreads[3] = {src.wholecols, src.wholerows, 1};
@@ -626,6 +626,8 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
     int localWidth = localThreads[0] + paddingPixels;
     int localHeight = localThreads[1] + paddingPixels;
 
+    // 260 = divup((localThreads[0] + filterWidth * 2), 4) * 4
+    // 6   = (ROWS_PER_GROUP_WHICH_IS_4 + filterWidth * 2)
     size_t localMemSize = ksize_3x3 ? 260 * 6 * src.elemSize() : (localWidth * localHeight) * src.elemSize();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 4, 4, 4},
@@ -677,15 +679,16 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, oclMat &mat_kernel,
 }
 
 Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
-        Point anchor, int borderType)
+        const Point &anchor, int borderType)
 {
     static const GPUFilter2D_t GPUFilter2D_callers[] = {0, GPUFilter2D, 0, GPUFilter2D, GPUFilter2D};
 
     CV_Assert((srcType == CV_8UC1 || srcType == CV_8UC3 || srcType == CV_8UC4 || srcType == CV_32FC1 || srcType == CV_32FC3 || srcType == CV_32FC4) && dstType == srcType);
 
     oclMat gpu_krnl;
+    Point norm_archor = anchor;
     normalizeKernel(kernel, gpu_krnl, CV_32FC1);
-    normalizeAnchor(anchor, ksize);
+    normalizeAnchor(norm_archor, ksize);
 
     return Ptr<BaseFilter_GPU>(new LinearFilter_GPU(ksize, anchor, gpu_krnl, GPUFilter2D_callers[CV_MAT_CN(srcType)],
                                borderType));
