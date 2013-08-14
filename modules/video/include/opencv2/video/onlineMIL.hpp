@@ -62,6 +62,7 @@ class ClfMilBoost
     Params();
     int _numSel;
     int _numFeat;
+    float _lRate;
   };
 
   ClfMilBoost();
@@ -69,11 +70,17 @@ class ClfMilBoost
   void update( const Mat& posx, const Mat& negx );
   std::vector<float> classify( const Mat& x, bool logR = true );
 
+  inline float sigmoid( float x )
+  {
+    return 1.0f / ( 1.0f + exp( -x ) );
+  }
+
  private:
   uint _numsamples;
   ClfMilBoost::Params _myParams;
   std::vector<int> _selectors;
   std::vector<ClfOnlineStump*> _weakclf;
+  uint _counter;
 
 };
 
@@ -85,18 +92,20 @@ class ClfOnlineStump
   int _s;
   float _log_n1, _log_n0;
   float _e1, _e0;
+  float _lRate;
 
   ClfOnlineStump();
   ClfOnlineStump( int ind );
   void init();
-  void update( const Mat& posx, const Mat& negx, const cv::Mat_<float> & posw, const cv::Mat_<float> & negw );
+  void update( const Mat& posx, const Mat& negx, const cv::Mat_<float> & posw = cv::Mat_<float>(), const cv::Mat_<float> & negw = cv::Mat_<float>() );
   bool classify( const Mat& x, int i );
   float classifyF( const Mat& x, int i );
+  std::vector<float> classifySetF( const Mat& x );
 
  private:
   bool _trained;
   int _ind;
-  float _lRate;
+
 };
 
 } /* namespace cv */

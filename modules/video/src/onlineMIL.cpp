@@ -42,6 +42,54 @@
 #include "precomp.hpp"
 #include "opencv2/video/onlineMIL.hpp"
 
+template<class T> class SortableElementRev
+{
+ public:
+  T _val;
+  int _ind;
+  SortableElementRev() :
+      _ind( 0 )
+  {
+  }
+  SortableElementRev( T val, int ind )
+  {
+    _val = val;
+    _ind = ind;
+  }
+  bool operator<( SortableElementRev<T> &b )
+  {
+    return ( _val < b._val );
+  }
+  ;
+};
+
+static bool CompareSortableElementRev( const SortableElementRev<float>& i, const SortableElementRev<float>& j )
+{
+  return i._val < j._val;
+}
+
+template<class T> void sort_order_des( std::vector<T> &v, std::vector<int> &order )
+{
+  uint n = (uint) v.size();
+  std::vector<SortableElementRev<T> > v2;
+  v2.resize( n );
+  order.clear();
+  order.resize( n );
+  for ( uint i = 0; i < n; i++ )
+  {
+    v2[i]._ind = i;
+    v2[i]._val = v[i];
+  }
+  //std::sort( v2.begin(), v2.end() );
+  std::sort( v2.begin(), v2.end(), CompareSortableElementRev );
+  for ( uint i = 0; i < n; i++ )
+  {
+    order[i] = v2[i]._ind;
+    v[i] = v2[i]._val;
+  }
+}
+;
+
 namespace cv
 {
 
@@ -49,8 +97,9 @@ namespace cv
 
 ClfMilBoost::Params::Params()
 {
-  _numSel = 250;
+  _numSel = 50;
   _numFeat = 250;
+  _lRate = 0.85;
 }
 
 ClfMilBoost::ClfMilBoost()
@@ -62,16 +111,143 @@ ClfMilBoost::ClfMilBoost()
 void ClfMilBoost::init( const ClfMilBoost::Params &parameters )
 {
   _myParams = parameters;
+  _numsamples = 0;
+
+  //_ftrs = Ftr::generate( _myParams->_ftrParams, _myParams->_numFeat );
+  // if( params->_storeFtrHistory )
+  //  Ftr::toViz( _ftrs, "haarftrs" );
+  _weakclf.resize( _myParams._numFeat );
+  for ( int k = 0; k < _myParams._numFeat; k++ )
+  {
+    _weakclf[k] = new ClfOnlineStump( k );
+    _weakclf[k]->_lRate = _myParams._lRate;
+
+  }
+  _counter = 0;
 }
 
 void ClfMilBoost::update( const Mat& posx, const Mat& negx )
 {
+  int numneg = negx.rows;
+  int numpos = posx.rows;
+
+  // compute ftrs
+  //if( !posx.ftrsComputed() )
+  //  Ftr::compute( posx, _ftrs );
+  //if( !negx.ftrsComputed() )
+  //  Ftr::compute( negx, _ftrs );
+
+  // initialize H
+  static std::vector<float> Hpos, Hneg;
+  Hpos.clear();
+  Hneg.clear();
+  Hpos.resize( posx.rows, 0.0f ), Hneg.resize( negx.rows, 0.0f );
+
+  _selectors.clear();
+  std::vector<float> posw( posx.rows ), negw( negx.rows );
+  std::vector<std::vector<float> > pospred( _weakclf.size() ), negpred( _weakclf.size() );
+
+  // train all weak classifiers without weights
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for ( int m = 0; m < _myParams._numFeat; m++ )
+  {
+    _weakclf[m]->update( posx, negx );
+    pospred[m] = _weakclf[m]->classifySetF( posx );
+    negpred[m] = _weakclf[m]->classifySetF( negx );
+  }
+
+  // pick the best features
+  for ( int s = 0; s < _myParams._numSel; s++ )
+  {
+
+    // compute errors/likl for all weak clfs
+    std::vector<float> poslikl( _weakclf.size(), 1.0f ), neglikl( _weakclf.size() ), likl( _weakclf.size() );
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int w = 0; w < (int) _weakclf.size(); w++ )
+    {
+      float lll = 1.0f;
+      for ( int j = 0; j < numpos; j++ )
+        lll *= ( 1 - sigmoid( Hpos[j] + pospred[w][j] ) );
+      poslikl[w] = (float) -log( 1 - lll + 1e-5 );
+
+      lll = 0.0f;
+      for ( int j = 0; j < numneg; j++ )
+        lll += (float) -log( 1e-5f + 1 - sigmoid( Hneg[j] + negpred[w][j] ) );
+      neglikl[w] = lll;
+
+      likl[w] = poslikl[w] / numpos + neglikl[w] / numneg;
+    }
+
+    // pick best weak clf
+    std::vector<int> order;
+    sort_order_des( likl, order );
+
+    // find best weakclf that isn't already included
+    for ( uint k = 0; k < order.size(); k++ )
+      if( count( _selectors.begin(), _selectors.end(), order[k] ) == 0 )
+      {
+        _selectors.push_back( order[k] );
+        break;
+      }
+
+    // update H = H + h_m
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int k = 0; k < posx.rows; k++ )
+      Hpos[k] += pospred[_selectors[s]][k];
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int k = 0; k < negx.rows; k++ )
+      Hneg[k] += negpred[_selectors[s]][k];
+
+  }
+
+  //if( _myParams->_storeFtrHistory )
+  //for ( uint j = 0; j < _selectors.size(); j++ )
+  // _ftrHist( _selectors[j], _counter ) = 1.0f / ( j + 1 );
+
+  _counter++;
+  /* */
+  return;
 }
 
 std::vector<float> ClfMilBoost::classify( const Mat& x, bool logR )
 {
-  std::vector<float> prob;
-  return prob;
+  int numsamples = x.rows;
+  std::vector<float> res( numsamples );
+  std::vector<float> tr;
+
+  for ( uint w = 0; w < _selectors.size(); w++ )
+  {
+    tr = _weakclf[_selectors[w]]->classifySetF( x );
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int j = 0; j < numsamples; j++ )
+    {
+      res[j] += tr[j];
+    }
+  }
+
+  // return probabilities or log odds ratio
+  if( !logR )
+  {
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for ( int j = 0; j < (int) res.size(); j++ )
+    {
+      res[j] = sigmoid( res[j] );
+    }
+  }
+
+  return res;
 }
 
 //implementations for weak classifier
@@ -101,6 +277,7 @@ void ClfOnlineStump::init()
 
 void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float> & posw, const Mat_<float> & negw )
 {
+  //std::cout << " ClfOnlineStump::update" << _ind << std::endl;
   float posmu = 0.0, negmu = 0.0;
   if( posx.cols > 0 )
     posmu = mean( posx.col( _ind ) )[0];
@@ -176,6 +353,20 @@ float ClfOnlineStump::classifyF( const Mat& x, int i )
   double log_p0 = ( xx - _mu0 ) * ( xx - _mu0 ) * _e0 + _log_n0;
   double log_p1 = ( xx - _mu1 ) * ( xx - _mu1 ) * _e1 + _log_n1;
   return float( log_p1 - log_p0 );
+}
+
+inline std::vector<float> ClfOnlineStump::classifySetF( const Mat& x )
+{
+  std::vector<float> res( x.rows );
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for ( int k = 0; k < (int) res.size(); k++ )
+  {
+    res[k] = classifyF( x, k );
+  }
+  return res;
 }
 
 } /* namespace cv */

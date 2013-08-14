@@ -501,8 +501,8 @@ class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
   void updateImpl( std::vector<ConfidenceMap>& confidenceMaps );
 
  private:
-
-  void prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses );
+  uint max_idx( const std::vector<float> &v );
+  void prepareData( const ConfidenceMap& confidenceMap, Mat& positive, Mat& negative );
 
   ClfMilBoost boostMILModel;
   bool trained;

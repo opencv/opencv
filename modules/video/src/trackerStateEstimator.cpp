@@ -115,93 +115,86 @@ void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& conf
   currentConfidenceMap = confidenceMap;
 }
 
+uint TrackerStateEstimatorBoosting::max_idx( const std::vector<float> &v )
+{
+  const float* findPtr = & ( *std::max_element( v.begin(), v.end() ) );
+  const float* beginPtr = & ( *v.begin() );
+  return (uint) ( findPtr - beginPtr );
+}
+
 Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
   //TODO run cvBoost predict in order to compute next location
   if( currentConfidenceMap.empty() )
     return 0;
 
-  Mat data;
-  Mat responses;
+  Mat positiveStates;
+  Mat negativeStates;
 
-  prepareData( currentConfidenceMap, data, responses );
+  prepareData( currentConfidenceMap, positiveStates, negativeStates );
 
-  std::vector<float> prob = boostMILModel.classify( Mat() );
+  std::vector<float> prob = boostMILModel.classify( positiveStates );
 
-  /*//TODO get the boundingbox with the highest vote
-   std::vector<float> votes;
-   for ( size_t i = 0; i < data.rows; i++ )
-   {
-   float vote = boostMILModel.predict( data.row( i ), Mat(), Range::all(), false, true );
-   votes.push_back( vote );
-   }
+  //std::cout << positiveStates.rows << " " << negativeStates.rows << std::endl;
+  int bestind = max_idx( prob );
+  float resp = prob[bestind];
 
-   std::vector<float>::iterator maxElem = std::max_element( votes.begin(), votes.end() );
-   int maxIdx = ( std::distance( votes.begin(), maxElem ) );
+  //for(size_t i = 0; i < prob.size(); i++)
+  //std::cout << "prob " << prob.at(i) << std::endl;
+  //std::cout << "bestind " << bestind << std::endl;
+  //std::cout << "resp " << resp << std::endl;
 
-   if( *maxElem < 0 )
-   return 0;
-
-   int minx = INT_MAX;
-   int maxx = 0;
-   int miny = INT_MAX;
-   int maxy = 0;
-   int counter = 0;
-   for ( size_t i = 0; i < votes.size(); i++ )
-   {
-   if( votes.at( i ) == *maxElem )
-   {
-   int curx = currentConfidenceMap.at( i ).first->getTargetPosition().x;
-   int cury = currentConfidenceMap.at( i ).first->getTargetPosition().y;
-   if( curx > maxx )
-   maxx = curx;
-   if( cury > maxy )
-   maxy = cury;
-
-   if( curx < minx )
-   minx = curx;
-   if( cury < miny )
-   miny = cury;
-   counter++;
-   }
-   }
-   if( counter > 1 )
-   {
-   float x = minx + ( ( maxx - minx ) / 2 );
-   float y = miny + ( ( maxy - miny ) / 2 );
-   currentConfidenceMap.at( maxIdx ).first->setTargetPosition( Point2f( x, y ) );
-   }*/
-  //TODO compute the max
-  return currentConfidenceMap.begin()->first;
+  return currentConfidenceMap.at( bestind ).first;
 }
 
-void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& trainData, Mat& responses )
+void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& positive, Mat& negative )
 {
+
+  int posCounter = 0;
+  int negCounter = 0;
+
+  for ( size_t i = 0; i < confidenceMap.size(); i++ )
+  {
+    Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first;
+    if( currentTargetState->isTargetFg() )
+      posCounter++;
+    else
+      negCounter++;
+  }
+
+  positive.create( posCounter, numFeatures, CV_32FC1 );
+  negative.create( negCounter, numFeatures, CV_32FC1 );
+
   //TODO change with mat fast access
-  //initialize trainData and responses
-  trainData.create( confidenceMap.size(), numFeatures, CV_32FC1 );
+  //initialize trainData (positiove and negative)
 
-  std::vector<int> classes;
-
+  int pc = 0;
+  int nc = 0;
   for ( size_t i = 0; i < confidenceMap.size(); i++ )
   {
     Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first;
     Mat stateFeatures = currentTargetState->getFeatures();
 
-    for ( int j = 0; j < stateFeatures.rows; j++ )
+    if( currentTargetState->isTargetFg() )
     {
-      //fill the trainData with the value of the feature j for sample i
-      trainData.at<float>( i, j ) = stateFeatures.at<float>( j, 0 );
+      for ( int j = 0; j < stateFeatures.rows; j++ )
+      {
+        //fill the positive trainData with the value of the feature j for sample i
+        positive.at<float>( pc, j ) = stateFeatures.at<float>( j, 0 );
+      }
+      pc++;
+    }
+    else
+    {
+      for ( int j = 0; j < stateFeatures.rows; j++ )
+      {
+        //fill the negative trainData with the value of the feature j for sample i
+        negative.at<float>( nc, j ) = stateFeatures.at<float>( j, 0 );
+      }
+      nc++;
     }
 
-    int classLabel = 0;
-    if( currentTargetState->isTargetFg() )
-      classLabel = 1;
-
-    //fill the responses (class background or class foreground)
-    classes.push_back( classLabel );
   }
-  Mat( classes ).copyTo( responses );
 }
 
 void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
@@ -227,7 +220,7 @@ void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& conf
    Mat var_types( 1, traindata.cols + 1, CV_8UC1, Scalar( CV_VAR_ORDERED ) );
    var_types.at<uchar>( traindata.cols ) = CV_VAR_CATEGORICAL;*/
 
-  //TODO update the scores of the confidence maps
+//TODO update the scores of the confidence maps
   if( !trained )
   {
     //this is the first time that the classifier is built
@@ -236,8 +229,13 @@ void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& conf
     trained = true;
   }
 
-  //TODO update MIL
-  boostMILModel.update( Mat(), Mat() );
+  ConfidenceMap lastConfidenceMap = confidenceMaps.back();
+  Mat positiveStates;
+  Mat negativeStates;
+
+  prepareData( lastConfidenceMap, positiveStates, negativeStates );
+//TODO update MIL
+  boostMILModel.update( positiveStates, negativeStates );
 
 }
 
