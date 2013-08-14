@@ -111,21 +111,6 @@ class CV_EXPORTS_W TrackerFeature
 class CV_EXPORTS_W TrackerFeatureSet
 {
  public:
-  /**
-   * \enum Tracker features types
-   * \brief List of features types
-   */
-  enum
-  {
-    TRACKER_FEATURE_FEATURE2D = 1,   //!< TRACKER_FEATURE_FEATURE2D
-    TRACKER_FEATURE_HOG = 2,         //!< TRACKER_FEATURE_HOG
-    TRACKER_FEATURE_HAAR = 3,        //!< TRACKER_FEATURE_HAAR
-    TRACKER_FEATURE_LBP = 4,         //!< TRACKER_FEATURE_LBP
-    TRACKER_FEATURE_HISTOGRAM = 5,   //!< TRACKER_FEATURE_HISTOGRAM
-    TRACKER_FEATURE_TEMPLATE = 6,    //!< TRACKER_FEATURE_TEMPLATE
-    TRACKER_FEATURE_PIXEL = 7,       //!< TRACKER_FEATURE_PIXEL
-    TRACKER_FEATURE_CORNER = 8       //!< TRACKER_FEATURE_CORNER
-  };
 
   TrackerFeatureSet();
 
@@ -229,16 +214,6 @@ class CV_EXPORTS_W TrackerSamplerAlgorithm
 class CV_EXPORTS_W TrackerSampler
 {
  public:
-
-  /**
-   * \enum Tracker sampler types
-   * \brief List of sampler types
-   */
-  enum
-  {
-    TRACKER_SAMPLER_CS = 1,   //!< TRACKER_SAMPLER_CS
-    TRACKER_SAMPLER_CSC = 2    //!< TRACKER_SAMPLER_CSC
-  };
 
   /**
    * \brief Constructor
@@ -382,15 +357,6 @@ class CV_EXPORTS_W TrackerStateEstimator
 class CV_EXPORTS_W TrackerModel
 {
  public:
-  /**
-   * \enum TrackerStateEstimator types
-   * \brief List of state estimators
-   */
-  enum
-  {
-    TRACKER_STATE_ESTIMATOR_BOOSTING = 1,  //!< TRACKER_STATE_ESTIMATOR_BOOSTING
-    TRACKER_STATE_ESTIMATOR_SVM = 2	 //!< TRACKER_STATE_ESTIMATOR_SVM
-  };
 
   /**
    * \brief Constructor
@@ -480,15 +446,6 @@ class CV_EXPORTS_W TrackerModel
 class CV_EXPORTS_W Tracker : public virtual Algorithm
 {
  public:
-  /**
-   * \enum Tracker algorithms
-   * \brief List of tracker algorithms
-   */
-  enum
-  {
-    TRACKER_MIL = 1,    	//!< TRACKER_MIL
-    TRACKER_BOOSTING = 2	//!< TRACKER_BOOSTING
-  };
 
   virtual ~Tracker();
 

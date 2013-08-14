@@ -43,6 +43,7 @@
 #define __OPENCV_ONLINEMIL_HPP__
 
 #include "opencv2/core.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -50,6 +51,8 @@ namespace cv
 //http://vision.ucsd.edu/~bbabenko/project_miltrack.shtml
 
 #define  sign(s)  ((s > 0 ) ? 1 : ((s<0) ? -1 : 0))
+
+class ClfOnlineStump;
 
 class ClfMilBoost
 {
@@ -69,6 +72,8 @@ class ClfMilBoost
  private:
   uint _numsamples;
   ClfMilBoost::Params _myParams;
+  std::vector<int> _selectors;
+  std::vector<ClfOnlineStump*> _weakclf;
 
 };
 
