@@ -799,7 +799,6 @@ See the sample ``grabcut.cpp`` to learn how to use the function.
 
 .. [Meyer92] Meyer, F. *Color Image Segmentation*, ICIP92, 1992
 
-.. [Telea04] Alexandru Telea, *An Image Inpainting Technique Based on the Fast Marching Method*. Journal of Graphics, GPU, and Game Tools 9 1, pp 23-34 (2004)
 
 .. Sample code::
 
