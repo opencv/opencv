@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
@@ -75,7 +75,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
 
 TEST_P(GoodFeaturesToTrack, Accuracy)
 {
-    cv::Mat frame = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame.empty());
 
     int maxCorners = 1000;
@@ -146,10 +146,10 @@ PARAM_TEST_CASE(TVL1, bool)
 
 TEST_P(TVL1, Accuracy)
 {
-    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
@@ -188,10 +188,10 @@ PARAM_TEST_CASE(Sparse, bool, bool)
 
 TEST_P(Sparse, Mat)
 {
-    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -301,10 +301,10 @@ PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
 
 TEST_P(Farneback, Accuracy)
 {
-    cv::Mat frame0 = imread(workdir + "/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = imread(workdir + "/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     double polySigma = polyN <= 5 ? 1.1 : 1.5;

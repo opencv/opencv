@@ -11,7 +11,11 @@ Every descriptor with the
 :ocv:class:`VectorDescriptorMatcher` ).
 There are descriptors such as the One-way descriptor and Ferns that have the ``GenericDescriptorMatcher`` interface implemented but do not support ``DescriptorExtractor``.
 
+.. note::
 
+   * An example explaining keypoint description can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor matching evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
+   * An example on one to many image matching can be found at opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
 GenericDescriptorMatcher
 ------------------------

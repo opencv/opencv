@@ -59,6 +59,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         dd->set("nOctaveLayers", 5);
         dd->set("contrastThreshold", 0.04);
         dd->set("edgeThreshold", 10.7);
+        break;
     case CvFeatureTrackerParams::SURF:
         dd = Algorithm::create<Feature2D>("Feature2D.SURF");
         if( dd.empty() )
@@ -66,8 +67,10 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         dd->set("hessianThreshold", 400);
         dd->set("nOctaves", 3);
         dd->set("nOctaveLayers", 4);
+        break;
     default:
         CV_Error(CV_StsBadArg, "Unknown feature type");
+        break;
     }
 
     matcher = new BFMatcher(NORM_L2);

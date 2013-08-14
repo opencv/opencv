@@ -51,9 +51,7 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
-#endif
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core/core.hpp"

@@ -111,6 +111,86 @@ namespace hist
 
 namespace hist
 {
+    __device__ __forceinline__ void histEvenInc(int* shist, uint data, int binSize, int lowerLevel, int upperLevel)
+    {
+        if (data >= lowerLevel && data <= upperLevel)
+        {
+            const uint ind = (data - lowerLevel) / binSize;
+            Emulation::smem::atomicAdd(shist + ind, 1);
+        }
+    }
+
+    __global__ void histEven8u(const uchar* src, const size_t step, const int rows, const int cols,
+                               int* hist, const int binCount, const int binSize, const int lowerLevel, const int upperLevel)
+    {
+        extern __shared__ int shist[];
+
+        const int y = blockIdx.x * blockDim.y + threadIdx.y;
+        const int tid = threadIdx.y * blockDim.x + threadIdx.x;
+
+        if (tid < binCount)
+            shist[tid] = 0;
+
+        __syncthreads();
+
+        if (y < rows)
+        {
+            const uchar* rowPtr = src + y * step;
+            const uint* rowPtr4 = (uint*) rowPtr;
+
+            const int cols_4 = cols / 4;
+            for (int x = threadIdx.x; x < cols_4; x += blockDim.x)
+            {
+                const uint data = rowPtr4[x];
+
+                histEvenInc(shist, (data >>  0) & 0xFFU, binSize, lowerLevel, upperLevel);
+                histEvenInc(shist, (data >>  8) & 0xFFU, binSize, lowerLevel, upperLevel);
+                histEvenInc(shist, (data >> 16) & 0xFFU, binSize, lowerLevel, upperLevel);
+                histEvenInc(shist, (data >> 24) & 0xFFU, binSize, lowerLevel, upperLevel);
+            }
+
+            if (cols % 4 != 0 && threadIdx.x == 0)
+            {
+                for (int x = cols_4 * 4; x < cols; ++x)
+                {
+                    const uchar data = rowPtr[x];
+                    histEvenInc(shist, data, binSize, lowerLevel, upperLevel);
+                }
+            }
+        }
+
+        __syncthreads();
+
+        if (tid < binCount)
+        {
+            const int histVal = shist[tid];
+
+            if (histVal > 0)
+                ::atomicAdd(hist + tid, histVal);
+        }
+    }
+
+    void histEven8u(PtrStepSzb src, int* hist, int binCount, int lowerLevel, int upperLevel, cudaStream_t stream)
+    {
+        const dim3 block(32, 8);
+        const dim3 grid(divUp(src.rows, block.y));
+
+        const int binSize = divUp(upperLevel - lowerLevel, binCount);
+
+        const size_t smem_size = binCount * sizeof(int);
+
+        histEven8u<<<grid, block, smem_size, stream>>>(src.data, src.step, src.rows, src.cols, hist, binCount, binSize, lowerLevel, upperLevel);
+        cudaSafeCall( cudaGetLastError() );
+
+        if (stream == 0)
+            cudaSafeCall( cudaDeviceSynchronize() );
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+namespace hist
+{
     __constant__ int c_lut[256];
 
     struct EqualizeHist : unary_function<uchar, uchar>

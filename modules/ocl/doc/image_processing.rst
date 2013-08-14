@@ -257,7 +257,10 @@ The class can calculate an optical flow for a sparse feature set or dense optica
 
 .. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
 
+.. note::
 
+   (Ocl) An example the Lucas Kanade optical flow pyramid method can be found at opencv_source_code/samples/ocl/pyrlk_optical_flow.cpp
+   (Ocl) An example for square detection can be found at opencv_source_code/samples/ocl/squares.cpp
 
 ocl::PyrLKOpticalFlow::sparse
 -----------------------------

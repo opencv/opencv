@@ -63,6 +63,11 @@ The retina can be settled up with various parameters, by default, the retina can
     void activateContoursProcessing (const bool activate);
   };
 
+.. Sample code::
+
+   * An example on retina tone mapping can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
+   * An example on retina tone mapping on video input can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
+   * A complete example illustrating the retina interface can be found at opencv_source_code/samples/cpp/retinaDemo.cpp
 
 Description
 +++++++++++

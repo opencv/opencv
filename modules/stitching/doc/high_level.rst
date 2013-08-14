@@ -88,6 +88,11 @@ High level image stitcher. It's possible to use this class without being aware o
         /* hidden */
     };
 
+.. note::
+
+   * A basic example on image stitching can be found at opencv_source_code/samples/cpp/stitching.cpp
+   * A detailed example on image stitching can be found at opencv_source_code/samples/cpp/stitching_detailed.cpp
+
 Stitcher::createDefault
 -----------------------
 Creates a stitcher with the default parameters.

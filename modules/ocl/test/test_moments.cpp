@@ -1,4 +1,4 @@
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 #include "opencv2/imgproc/imgproc_c.h"
 
@@ -45,7 +45,7 @@ TEST_P(MomentsTest, Mat)
     {
         if(test_contours)
         {
-            Mat src = imread( workdir + "../cpp/pic3.png", IMREAD_GRAYSCALE );
+            Mat src = readImage( "cv/shared/pic3.png", IMREAD_GRAYSCALE );
             ASSERT_FALSE(src.empty());
             Mat canny_output;
             vector<vector<Point> > contours;

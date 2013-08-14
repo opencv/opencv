@@ -52,6 +52,8 @@ void CvCaptureCAM_XIMEA::init()
 {
     xiGetNumberDevices( &numDevices);
     hmv = NULL;
+    frame = NULL;
+    timeout = 0;
     memset(&image, 0, sizeof(XI_IMG));
 }
 
@@ -60,6 +62,8 @@ void CvCaptureCAM_XIMEA::init()
 // Initialize camera input
 bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
+#define HandleXiResult(res) if (res!=XI_OK)  goto error;
+
     int mvret = XI_OK;
 
     if(numDevices == 0)
@@ -73,26 +77,42 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 
     // always use auto exposure/gain
     mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
-    if(mvret != XI_OK) goto error;
-
-    // always use auto white ballance
-    mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
-    if(mvret != XI_OK) goto error;
-    
-    // default image format RGB24
-    mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
     int width = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
     int height = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
-    // allocate frame buffer for RGB24 image
-    frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
+    int isColor = 0;
+    mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor);
+    HandleXiResult(mvret);
+
+    if(isColor)	// for color cameras
+    {
+        // default image format RGB24
+        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
+        HandleXiResult(mvret);
+
+        // always use auto white ballance for color cameras
+        mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
+        HandleXiResult(mvret);
+
+        // allocate frame buffer for RGB24 image
+        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
+    }
+    else // for mono cameras
+    {
+        // default image format MONO8
+        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8);
+        HandleXiResult(mvret);
+
+        // allocate frame buffer for MONO8 image
+        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 1);
+    }
 
     //default capture timeout 10s
     timeout = 10000;
@@ -118,9 +138,12 @@ void CvCaptureCAM_XIMEA::close()
 {
     if(frame)
         cvReleaseImage(&frame);
-
-    xiStopAcquisition(hmv);
-    xiCloseDevice(hmv);
+    
+    if(hmv)
+    {
+        xiStopAcquisition(hmv);
+        xiCloseDevice(hmv);
+    }
     hmv = NULL;
 }
 
