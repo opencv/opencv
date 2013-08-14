@@ -133,6 +133,9 @@
 /* QuickTime video libraries */
 #cmakedefine HAVE_QUICKTIME
 
+/* QTKit video libraries */
+#cmakedefine HAVE_QTKIT
+
 /* Intel Threading Building Blocks */
 #cmakedefine HAVE_TBB
 

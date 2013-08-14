@@ -49,6 +49,7 @@ using namespace cvtest;
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
     defined(WIN32) /* assume that we have ffmpeg */
