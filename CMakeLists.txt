@@ -753,7 +753,7 @@ endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_QUICKTIME)
   status("    QuickTime:"      HAVE_QUICKTIME      THEN YES                                        ELSE NO)
-  status("    QTKit:"          HAVE_QTKIT      	   THEN YES                                        ELSE NO)
+  status("    QTKit:"          HAVE_QTKIT          THEN YES                                        ELSE NO)
 endif(DEFINED WITH_QUICKTIME)
 
 if(DEFINED WITH_UNICAP)
