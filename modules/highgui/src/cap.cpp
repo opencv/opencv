@@ -135,10 +135,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_MIL
         CV_CAP_MIL,
 #endif
-#ifdef HAVE_QUICKTIME
-        CV_CAP_QT,
-#endif
-#ifdef HAVE_QTKIT
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
         CV_CAP_QT,
 #endif
 #ifdef HAVE_UNICAP
@@ -188,7 +185,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
     defined(HAVE_CMU1394)      || \
     defined(HAVE_MIL)          || \
     defined(HAVE_QUICKTIME)    || \
-	defined(HAVE_QTKIT)	       || \
+    defined(HAVE_QTKIT)	       || \
     defined(HAVE_UNICAP)       || \
     defined(HAVE_PVAPI)        || \
     defined(HAVE_OPENNI)       || \
@@ -281,20 +278,12 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
             break;
 #endif
 
-#ifdef HAVE_QUICKTIME
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
         case CV_CAP_QT:
             capture = cvCreateCameraCapture_QT (index);
             if (capture)
                 return capture;
             break;
-#endif
-			
-#ifdef HAVE_QTKIT
-	        case CV_CAP_QT:
-	            capture = cvCreateCameraCapture_QT (index);
-	            if (capture)
-	                return capture;
-	            break;
 #endif
 				
 #ifdef HAVE_UNICAP
@@ -391,16 +380,11 @@ CV_IMPL CvCapture * cvCreateFileCapture (const char * filename)
         result = cvCreateCapture_GStreamer (CV_CAP_GSTREAMER_FILE, filename);
 #endif
 
-#ifdef HAVE_QUICKTIME
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
     if (! result)
         result = cvCreateFileCapture_QT (filename);
 #endif
 	
-#ifdef HAVE_QTKIT
-    if (! result)
-        result = cvCreateFileCapture_QT (filename);
-#endif
-
 #ifdef HAVE_AVFOUNDATION
     if (! result)
         result = cvCreateFileCapture_AVFoundation (filename);
@@ -454,12 +438,7 @@ CV_IMPL CvVideoWriter* cvCreateVideoWriter( const char* filename, int fourcc,
         result = cvCreateVideoWriter_AVFoundation(filename, fourcc, fps, frameSize, is_color);
 #endif
 
-#ifdef HAVE_QUICKTIME
-    if(!result)
-        result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
-#endif
-	
-#ifdef HAVE_QTKIT
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
     if(!result)
         result = cvCreateVideoWriter_QT(filename, fourcc, fps, frameSize, is_color);
 #endif
