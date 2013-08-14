@@ -12034,154 +12034,6 @@
       <y>0</y>
       <cn>1</cn>
       <val>98.</val></rng2></gpu_circles></Sz_Dp_MinDist_HoughCircles--HoughCircles---1920x1080--4--1->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1280x720->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1280x720->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1280x1024->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1280x1024->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1920x1080->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION--1920x1080->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1280x720->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1280x720->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1280x1024->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1280x1024->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1920x1080->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE--1920x1080->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1280x720->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1280x720->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1280x1024->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1280x1024->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1920x1080->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>"4f"</dt>
-      <data>
-        100. 115. 1. 0.</data></val></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_ROTATION--1920x1080->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1280x720->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <min>0.</min>
-    <max>1190.</max>
-    <last>
-      <x>31</x>
-      <y>0</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>14</x>
-      <y>0</y>
-      <val>98.</val></rng1>
-    <rng2>
-      <x>30</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>248.</val></rng2></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1280x720->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1280x1024->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <min>0.</min>
-    <max>1190.</max>
-    <last>
-      <x>44</x>
-      <y>0</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>33</x>
-      <y>0</y>
-      <cn>1</cn>
-      <val>235.</val></rng1>
-    <rng2>
-      <x>16</x>
-      <y>0</y>
-      <val>98.</val></rng2></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1280x1024->
-<Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1920x1080->
-  <gpu_positions>
-    <kind>65536</kind>
-    <type>29</type>
-    <min>0.</min>
-    <max>1699.</max>
-    <last>
-      <x>54</x>
-      <y>0</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>23</x>
-      <y>0</y>
-      <cn>3</cn>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>40</x>
-      <y>0</y>
-      <cn>2</cn>
-      <val>1.2500000000000000e+00</val></rng2></gpu_positions></Method_Sz_GeneralizedHough--GeneralizedHough---GHT_POSITION-GHT_SCALE-GHT_ROTATION--1920x1080->
 <Sz_Depth_Cn_KernelSz_BilateralFilter--BilateralFilter---1280x720--CV_8U--Gray--3->
   <gpu_dst>
     <kind>65536</kind>
@@ -16524,4 +16376,94 @@
       <x>1385</x>
       <y>420</y>
       <val>174.</val></rng2></gpu_dst></Sz_ClipLimit_CLAHE--CLAHE---1920x1080--40->
+ <!-- resumed -->
+
+<Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1280x720>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>"4f"</dt>
+      <data>
+        100. 115. 1. 0.</data></val></gpu_positions></Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1280x720>
+<Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1280x1024>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>"4f"</dt>
+      <data>
+        100. 115. 1. 0.</data></val></gpu_positions></Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1280x1024>
+<Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1920x1080>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>"4f"</dt>
+      <data>
+        100. 115. 1. 0.</data></val></gpu_positions></Sz_GeneralizedHoughBallard--GeneralizedHoughBallard--1920x1080>
+<Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1280x720>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>1190.</max>
+    <last>
+      <x>31</x>
+      <y>0</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>2</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>176.</val></rng1>
+    <rng2>
+      <x>14</x>
+      <y>0</y>
+      <cn>2</cn>
+      <val>1.0499999523162842e+00</val></rng2></gpu_positions></Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1280x720>
+<Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1280x1024>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>1190.</max>
+    <last>
+      <x>44</x>
+      <y>0</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>29</x>
+      <y>0</y>
+      <val>487.</val></rng1>
+    <rng2>
+      <x>41</x>
+      <y>0</y>
+      <cn>2</cn>
+      <val>1.3500000238418579e+00</val></rng2></gpu_positions></Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1280x1024>
+<Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1920x1080>
+  <gpu_positions>
+    <kind>65536</kind>
+    <type>29</type>
+    <min>0.</min>
+    <max>1699.</max>
+    <last>
+      <x>54</x>
+      <y>0</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>50</x>
+      <y>0</y>
+      <val>1689.</val></rng1>
+    <rng2>
+      <x>29</x>
+      <y>0</y>
+      <cn>1</cn>
+      <val>396.</val></rng2></gpu_positions></Sz_GeneralizedHoughGuil--GeneralizedHoughGuil--1920x1080>
 </opencv_storage>
