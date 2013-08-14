@@ -96,6 +96,7 @@ public:
     _InputArray(const gpu::GpuMat& d_mat);
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
@@ -144,6 +145,7 @@ public:
     _OutputArray(gpu::GpuMat& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -156,6 +158,7 @@ public:
     _OutputArray(const gpu::GpuMat& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);

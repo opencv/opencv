@@ -193,7 +193,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
 
-GPU_TEST_P(GeneralizedHough, POSITION)
+GPU_TEST_P(GeneralizedHough, Ballard)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -218,16 +218,16 @@ GPU_TEST_P(GeneralizedHough, POSITION)
         templ.copyTo(imageROI);
     }
 
-    cv::Ptr<cv::gpu::GeneralizedHough> hough = cv::gpu::GeneralizedHough::create(cv::GeneralizedHough::GHT_POSITION);
-    hough->set("votesThreshold", 200);
+    cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::gpu::createGeneralizedHoughBallard();
+    alg->setVotesThreshold(200);
 
-    hough->setTemplate(loadMat(templ, useRoi));
+    alg->setTemplate(loadMat(templ, useRoi));
 
     cv::gpu::GpuMat d_pos;
-    hough->detect(loadMat(image, useRoi), d_pos);
+    alg->detect(loadMat(image, useRoi), d_pos);
 
     std::vector<cv::Vec4f> pos;
-    hough->downloadResults(d_pos, pos);
+    d_pos.download(pos);
 
     ASSERT_EQ(gold_count, pos.size());
 

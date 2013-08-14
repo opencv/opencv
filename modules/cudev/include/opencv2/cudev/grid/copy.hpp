@@ -50,6 +50,7 @@
 #include "../util/tuple.hpp"
 #include "../ptr2d/traits.hpp"
 #include "../ptr2d/gpumat.hpp"
+#include "../ptr2d/glob.hpp"
 #include "../ptr2d/mask.hpp"
 #include "../ptr2d/zip.hpp"
 #include "detail/copy.hpp"
@@ -69,6 +70,18 @@ __host__ void gridCopy_(const SrcPtr& src, GpuMat_<DstType>& dst, const MaskPtr&
     grid_copy_detail::copy<Policy>(shrinkPtr(src), shrinkPtr(dst), shrinkPtr(mask), rows, cols, StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtr, typename DstType, class MaskPtr>
+__host__ void gridCopy_(const SrcPtr& src, const GlobPtrSz<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst) == rows && getCols(dst) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_copy_detail::copy<Policy>(shrinkPtr(src), shrinkPtr(dst), shrinkPtr(mask), rows, cols, StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtr, typename DstType>
 __host__ void gridCopy_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
 {
@@ -76,6 +89,17 @@ __host__ void gridCopy_(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream
     const int cols = getCols(src);
 
     dst.create(rows, cols);
+
+    grid_copy_detail::copy<Policy>(shrinkPtr(src), shrinkPtr(dst), WithOutMask(), rows, cols, StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtr, typename DstType>
+__host__ void gridCopy_(const SrcPtr& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
+{
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(dst) == rows && getCols(dst) == cols );
 
     grid_copy_detail::copy<Policy>(shrinkPtr(src), shrinkPtr(dst), WithOutMask(), rows, cols, StreamAccessor::getStream(stream));
 }
@@ -100,6 +124,25 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
                                          StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtrTuple, typename D0, typename D1, class MaskPtr>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 2, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst))),
+                                         shrinkPtr(mask),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtrTuple, typename D0, typename D1>
 __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>& >& dst, Stream& stream = Stream::Null())
 {
@@ -110,6 +153,24 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
 
     get<0>(dst).create(rows, cols);
     get<1>(dst).create(rows, cols);
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst))),
+                                         WithOutMask(),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtrTuple, typename D0, typename D1>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1> >& dst, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 2, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
 
     grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
                                          shrinkPtr(zipPtr(get<0>(dst), get<1>(dst))),
@@ -139,6 +200,26 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
                                          StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2, class MaskPtr>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 3, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
+    CV_Assert( getRows(get<2>(dst)) == rows && getCols(get<2>(dst)) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst))),
+                                         shrinkPtr(mask),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2>
 __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>&, GpuMat_<D2>& >& dst, Stream& stream = Stream::Null())
 {
@@ -150,6 +231,25 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
     get<0>(dst).create(rows, cols);
     get<1>(dst).create(rows, cols);
     get<2>(dst).create(rows, cols);
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst))),
+                                         WithOutMask(),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2> >& dst, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 3, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
+    CV_Assert( getRows(get<2>(dst)) == rows && getCols(get<2>(dst)) == cols );
 
     grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
                                          shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst))),
@@ -180,6 +280,27 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
                                          StreamAccessor::getStream(stream));
 }
 
+template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3, class MaskPtr>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2>, GlobPtrSz<D3> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 4, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
+    CV_Assert( getRows(get<2>(dst)) == rows && getCols(get<2>(dst)) == cols );
+    CV_Assert( getRows(get<3>(dst)) == rows && getCols(get<3>(dst)) == cols );
+    CV_Assert( getRows(mask) == rows && getCols(mask) == cols );
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst), get<3>(dst))),
+                                         shrinkPtr(mask),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
 template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3>
 __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>&, GpuMat_<D2>&, GpuMat_<D3>& >& dst, Stream& stream = Stream::Null())
 {
@@ -192,6 +313,26 @@ __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMa
     get<1>(dst).create(rows, cols);
     get<2>(dst).create(rows, cols);
     get<3>(dst).create(rows, cols);
+
+    grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
+                                         shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst), get<3>(dst))),
+                                         WithOutMask(),
+                                         rows, cols,
+                                         StreamAccessor::getStream(stream));
+}
+
+template <class Policy, class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2>, GlobPtrSz<D3> >& dst, Stream& stream = Stream::Null())
+{
+    CV_StaticAssert( tuple_size<SrcPtrTuple>::value == 4, "" );
+
+    const int rows = getRows(src);
+    const int cols = getCols(src);
+
+    CV_Assert( getRows(get<0>(dst)) == rows && getCols(get<0>(dst)) == cols );
+    CV_Assert( getRows(get<1>(dst)) == rows && getCols(get<1>(dst)) == cols );
+    CV_Assert( getRows(get<2>(dst)) == rows && getCols(get<2>(dst)) == cols );
+    CV_Assert( getRows(get<3>(dst)) == rows && getCols(get<3>(dst)) == cols );
 
     grid_copy_detail::copy_tuple<Policy>(shrinkPtr(src),
                                          shrinkPtr(zipPtr(get<0>(dst), get<1>(dst), get<2>(dst), get<3>(dst))),
@@ -216,8 +357,20 @@ __host__ void gridCopy(const SrcPtr& src, GpuMat_<DstType>& dst, const MaskPtr& 
     gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtr, typename DstType, class MaskPtr>
+__host__ void gridCopy(const SrcPtr& src, const GlobPtrSz<DstType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtr, typename DstType>
 __host__ void gridCopy(const SrcPtr& src, GpuMat_<DstType>& dst, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, stream);
+}
+
+template <class SrcPtr, typename DstType>
+__host__ void gridCopy(const SrcPtr& src, const GlobPtrSz<DstType>& dst, Stream& stream = Stream::Null())
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
@@ -228,8 +381,20 @@ __host__ void gridCopy(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat
     gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtrTuple, typename D0, typename D1, class MaskPtr>
+__host__ void gridCopy(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtrTuple, typename D0, typename D1>
 __host__ void gridCopy(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>& >& dst, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, stream);
+}
+
+template <class SrcPtrTuple, typename D0, typename D1>
+__host__ void gridCopy(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1> >& dst, Stream& stream = Stream::Null())
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
@@ -240,8 +405,20 @@ __host__ void gridCopy(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat
     gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtrTuple, typename D0, typename D1, typename D2, class MaskPtr>
+__host__ void gridCopy(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtrTuple, typename D0, typename D1, typename D2>
 __host__ void gridCopy(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>&, GpuMat_<D2>& >& dst, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, stream);
+}
+
+template <class SrcPtrTuple, typename D0, typename D1, typename D2>
+__host__ void gridCopy(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2> >& dst, Stream& stream = Stream::Null())
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
@@ -252,8 +429,20 @@ __host__ void gridCopy(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat
     gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
 }
 
+template <class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3, class MaskPtr>
+__host__ void gridCopy(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2>, GlobPtrSz<D3> >& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, mask, stream);
+}
+
 template <class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3>
 __host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GpuMat_<D0>&, GpuMat_<D1>&, GpuMat_<D2>&, GpuMat_<D3>& >& dst, Stream& stream = Stream::Null())
+{
+    gridCopy_<DefaultCopyPolicy>(src, dst, stream);
+}
+
+template <class SrcPtrTuple, typename D0, typename D1, typename D2, typename D3>
+__host__ void gridCopy_(const SrcPtrTuple& src, const tuple< GlobPtrSz<D0>, GlobPtrSz<D1>, GlobPtrSz<D2>, GlobPtrSz<D3> >& dst, Stream& stream = Stream::Null())
 {
     gridCopy_<DefaultCopyPolicy>(src, dst, stream);
 }
