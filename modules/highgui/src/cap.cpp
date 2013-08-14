@@ -135,7 +135,7 @@ CV_IMPL CvCapture * cvCreateCameraCapture (int index)
 #ifdef HAVE_MIL
         CV_CAP_MIL,
 #endif
-if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
+#if defined(HAVE_QUICKTIME) || defined(HAVE_QTKIT)
         CV_CAP_QT,
 #endif
 #ifdef HAVE_UNICAP
