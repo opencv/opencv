@@ -3026,7 +3026,7 @@ template<typename _Tp> static inline void read(const FileNode& node, Complex<_Tp
     value = temp.size() != 2 ? default_value : Complex<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]));
 }
 
-template<typename _Tp> static inline void read(const FileNode& node, Rect_<_Tp>& value, Rect_<_Tp>& default_value)
+template<typename _Tp> static inline void read(const FileNode& node, Rect_<_Tp>& value, const Rect_<_Tp>& default_value)
 {  
     vector<_Tp> temp; FileNodeIterator it = node.begin(); it >> temp;
     value = temp.size() != 4 ? default_value : Rect_<_Tp>(saturate_cast<_Tp>(temp[0]), saturate_cast<_Tp>(temp[1]), 
