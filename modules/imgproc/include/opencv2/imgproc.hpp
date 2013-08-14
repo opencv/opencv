@@ -694,39 +694,104 @@ public:
 
 
 //! finds arbitrary template in the grayscale image using Generalized Hough Transform
-//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
-//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
 class CV_EXPORTS GeneralizedHough : public Algorithm
 {
 public:
-    enum { GHT_POSITION = 0,
-           GHT_SCALE    = 1,
-           GHT_ROTATION = 2
-         };
-
-    static Ptr<GeneralizedHough> create(int method);
-
-    virtual ~GeneralizedHough();
-
     //! set template to search
-    void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1));
-    void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1));
+    virtual void setTemplate(InputArray templ, Point templCenter = Point(-1, -1)) = 0;
+    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
 
     //! find template on image
-    void detect(InputArray image, OutputArray positions, OutputArray votes = cv::noArray(), int cannyThreshold = 100);
-    void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = cv::noArray());
+    virtual void detect(InputArray image, OutputArray positions, OutputArray votes = noArray()) = 0;
+    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions, OutputArray votes = noArray()) = 0;
 
-    void release();
+    //! Canny low threshold.
+    virtual void setCannyLowThresh(int cannyLowThresh) = 0;
+    virtual int getCannyLowThresh() const = 0;
 
-protected:
-    virtual void setTemplateImpl(const Mat& edges, const Mat& dx, const Mat& dy, Point templCenter) = 0;
-    virtual void detectImpl(const Mat& edges, const Mat& dx, const Mat& dy, OutputArray positions, OutputArray votes) = 0;
-    virtual void releaseImpl() = 0;
+    //! Canny high threshold.
+    virtual void setCannyHighThresh(int cannyHighThresh) = 0;
+    virtual int getCannyHighThresh() const = 0;
 
-private:
-    Mat edges_;
-    Mat dx_;
-    Mat dy_;
+    //! Minimum distance between the centers of the detected objects.
+    virtual void setMinDist(double minDist) = 0;
+    virtual double getMinDist() const = 0;
+
+    //! Inverse ratio of the accumulator resolution to the image resolution.
+    virtual void setDp(double dp) = 0;
+    virtual double getDp() const = 0;
+
+    //! Maximal size of inner buffers.
+    virtual void setMaxBufferSize(int maxBufferSize) = 0;
+    virtual int getMaxBufferSize() const = 0;
+};
+
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Detects position only without traslation and rotation
+class CV_EXPORTS GeneralizedHoughBallard : public GeneralizedHough
+{
+public:
+    //! R-Table levels.
+    virtual void setLevels(int levels) = 0;
+    virtual int getLevels() const = 0;
+
+    //! The accumulator threshold for the template centers at the detection stage. The smaller it is, the more false positions may be detected.
+    virtual void setVotesThreshold(int votesThreshold) = 0;
+    virtual int getVotesThreshold() const = 0;
+};
+
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Detects position, traslation and rotation
+class CV_EXPORTS GeneralizedHoughGuil : public GeneralizedHough
+{
+public:
+    //! Angle difference in degrees between two points in feature.
+    virtual void setXi(double xi) = 0;
+    virtual double getXi() const = 0;
+
+    //! Feature table levels.
+    virtual void setLevels(int levels) = 0;
+    virtual int getLevels() const = 0;
+
+    //! Maximal difference between angles that treated as equal.
+    virtual void setAngleEpsilon(double angleEpsilon) = 0;
+    virtual double getAngleEpsilon() const = 0;
+
+    //! Minimal rotation angle to detect in degrees.
+    virtual void setMinAngle(double minAngle) = 0;
+    virtual double getMinAngle() const = 0;
+
+    //! Maximal rotation angle to detect in degrees.
+    virtual void setMaxAngle(double maxAngle) = 0;
+    virtual double getMaxAngle() const = 0;
+
+    //! Angle step in degrees.
+    virtual void setAngleStep(double angleStep) = 0;
+    virtual double getAngleStep() const = 0;
+
+    //! Angle votes threshold.
+    virtual void setAngleThresh(int angleThresh) = 0;
+    virtual int getAngleThresh() const = 0;
+
+    //! Minimal scale to detect.
+    virtual void setMinScale(double minScale) = 0;
+    virtual double getMinScale() const = 0;
+
+    //! Maximal scale to detect.
+    virtual void setMaxScale(double maxScale) = 0;
+    virtual double getMaxScale() const = 0;
+
+    //! Scale step.
+    virtual void setScaleStep(double scaleStep) = 0;
+    virtual double getScaleStep() const = 0;
+
+    //! Scale votes threshold.
+    virtual void setScaleThresh(int scaleThresh) = 0;
+    virtual int getScaleThresh() const = 0;
+
+    //! Position votes threshold.
+    virtual void setPosThresh(int posThresh) = 0;
+    virtual int getPosThresh() const = 0;
 };
 
 
@@ -1415,6 +1480,14 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
 
 CV_EXPORTS Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+
+//! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Detects position only without traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
+
+//! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
+//! Detects position, traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 } // cv
 
