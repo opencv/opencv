@@ -462,7 +462,11 @@ enum { COLOR_BGR2BGRA     = 0,
        COLOR_COLORCVT_MAX  = 139
 };
 
-
+//! types of intersection between rectangles
+enum { INTERSECT_NONE = 0,
+       INTERSECT_PARTIAL  = 1,
+       INTERSECT_FULL  = 2
+     };
 
 /*!
  The Base Class for 1D or Row-wise Filters
@@ -1478,6 +1482,9 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
+
+//! computes whether two rotated rectangles intersect and returns the vertices of the intersecting region
+CV_EXPORTS_W int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  );
 
 CV_EXPORTS Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 

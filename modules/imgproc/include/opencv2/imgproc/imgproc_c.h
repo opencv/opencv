@@ -615,6 +615,10 @@ CVAPI(CvSeq*) cvHoughCircles( CvArr* image, void* circle_storage,
 CVAPI(void)  cvFitLine( const CvArr* points, int dist_type, double param,
                         double reps, double aeps, float* line );
 
+/* Finds the intersecting region made by two rotated rectangles.
+   If there is an intersection the vertices of the region are returned. */
+CVAPI(int) cvRotatedRectangleIntersection( const CvBox2D* rect1, const CvBox2D* rect2, CvPoint2D32f intersectingRegion[8], int* pointCount );
+
 #ifdef __cplusplus
 }
 #endif
