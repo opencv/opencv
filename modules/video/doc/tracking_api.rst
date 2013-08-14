@@ -25,35 +25,35 @@ UML design:
 
 **General diagram**
 
-.. image:: http://renderist.herokuapp.com/99df182d5f8684052e2a/package.png
+.. image:: pics/package.png
    :width: 50%
    :alt: General diagram
    :align: center
    
 **Tracker diagram**
 
-.. image:: http://renderist.herokuapp.com/99df182d5f8684052e2a/Tracker.png
+.. image:: pics/Tracker.png
    :width: 80%
    :alt: Tracker diagram
    :align: center
    
 **TrackerSampler diagram**
 
-.. image:: http://renderist.herokuapp.com/99df182d5f8684052e2a/TrackerSampler.png
+.. image:: pics/TrackerSampler.png
    :width: 100%
    :alt: TrackerSampler diagram
    :align: center
    
 **TrackerFeatureSet diagram**
 
-.. image:: http://renderist.herokuapp.com/99df182d5f8684052e2a/TrackerFeature.png
+.. image:: pics/TrackerFeature.png
    :width: 100%
    :alt: TrackerFeatureSet diagram
    :align: center
    
 **TrackerModel diagram**
 
-.. image:: http://renderist.herokuapp.com/99df182d5f8684052e2a/TrackerModel.png
+.. image:: pics/TrackerModel.png
    :width: 100%
    :alt: TrackerModel diagram
    :align: center
