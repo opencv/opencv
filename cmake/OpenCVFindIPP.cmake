@@ -136,17 +136,17 @@ endfunction()
 
 # ------------------------------------------------------------------------
 # This is auxiliary function called from set_ipp_variables()
-# to set IPP_LIBRARIES variable in IPP 7.x style
+# to set IPP_LIBRARIES variable in IPP 7.x and 8.x style
 # ------------------------------------------------------------------------
 function(set_ipp_new_libraries _LATEST_VERSION)
     set(IPP_PREFIX "ipp")
     
     if(${_LATEST_VERSION} VERSION_LESS "8.0")
-        set(IPP_SUFFIX "_l")       # static not threaded libs suffix
+        set(IPP_SUFFIX "_l")       # static not threaded libs suffix IPP 7.x
+        set(IPP_THRD   "_t")       # static threaded libs suffix IPP 7.x
     else()
-        set(IPP_SUFFIX "")       # static not threaded libs suffix
+        set(IPP_SUFFIX "mt")       # static not threaded libs suffix IPP 8.x
     endif()
-    set(IPP_THRD   "_t")       # static threaded libs suffix
     set(IPPCORE    "core")     # core functionality
     set(IPPSP      "s")        # signal processing
     set(IPPIP      "i")        # image processing
@@ -218,7 +218,7 @@ function(set_ipp_variables _LATEST_VERSION)
             set(IPP_LIBRARY_DIRS ${IPP_ROOT_DIR}/lib/ia32 PARENT_SCOPE)
         endif()
 
-        # set IPP_LIBRARIES variable (7.x lib names)
+        # set IPP_LIBRARIES variable (7.x or 8.x lib names)
         set_ipp_new_libraries(${_LATEST_VERSION})
         set(IPP_LIBRARIES ${IPP_LIBRARIES} PARENT_SCOPE)
         message(STATUS "IPP libs: ${IPP_LIBRARIES}")
