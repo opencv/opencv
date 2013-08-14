@@ -5129,9 +5129,11 @@ FileStorage::FileStorage(const String& filename, int flags, const String& encodi
     open( filename, flags, encoding );
 }
 
-FileStorage::FileStorage(CvFileStorage* _fs)
+FileStorage::FileStorage(CvFileStorage* _fs, bool owning)
 {
-    fs = Ptr<CvFileStorage>(_fs);
+    if (owning) fs.reset(_fs);
+    else fs = Ptr<CvFileStorage>(Ptr<CvFileStorage>(), _fs);
+
     state = _fs ? NAME_EXPECTED + INSIDE_MAP : UNDEFINED;
 }
 

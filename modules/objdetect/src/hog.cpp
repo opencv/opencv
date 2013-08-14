@@ -1353,8 +1353,7 @@ public:
     {
         if(ptr && _fs)
         {
-            FileStorage fs(_fs);
-            fs.fs.addref();
+            FileStorage fs(_fs, false);
             ((const _ClsName*)ptr)->write(fs, String(name));
         }
     }

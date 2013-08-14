@@ -186,7 +186,7 @@ public:
     //! the full constructor that opens file storage for reading or writing
     CV_WRAP FileStorage(const String& source, int flags, const String& encoding=String());
     //! the constructor that takes pointer to the C FileStorage structure
-    FileStorage(CvFileStorage* fs);
+    FileStorage(CvFileStorage* fs, bool owning=true);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
