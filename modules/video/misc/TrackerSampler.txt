@@ -1,28 +1,25 @@
 @startuml
 package "TrackerSampler package" #DDDDDD {
 
-enum TrackerSamplerType{
-	TRACKER_SAMPLER_CSC
-	TRACKER_SAMPLER_CS
-}
-
 class TrackerSampler{
 	-vector<pair<String, Ptr<TrackerSamplerAlgorithm> > > samplers
 	-vector<Mat> samples;
 	...
 	TrackerSampler();
 	~TrackerSampler();
-	+sampling(const Mat& image, Point2f position);
-	+vector<pair<String, Ptr<TrackerSamplerAlgorithm> > > getSamples();
+	+sampling(const Mat& image, Rect boundingBox);
+	+const vector<pair<String, Ptr<TrackerSamplerAlgorithm> > >& getSamplers();
+	+const vector<Mat>& getSamples();
 	+bool addTrackerSamplerAlgorithm(String trackerSamplerAlgorithmType);
+	+bool addTrackerSamplerAlgorithm(Ptr<TrackerSamplerAlgorithm>& sampler);
 	---
 	-void clearSamples();
 }
 
 class TrackerSamplerAlgorithm{
 	~TrackerSamplerAlgorithm();
-	+Ptr<TrackerSamplerAlgorithm> create(String trackerSamplerType);
-	+bool sampling(const Mat& image, Point2f position, vector<Mat>& sample);
+	+static Ptr<TrackerSamplerAlgorithm> create(const String& trackerSamplerType);
+	+bool sampling(const Mat& image, Rect boundingBox, vector<Mat>& sample);
 }
 note bottom: A tracker could sample the target\nor it could sample the target and the background
 
@@ -30,12 +27,12 @@ note bottom: A tracker could sample the target\nor it could sample the target an
 class TrackerSamplerCS{
 	TrackerSamplerCS();
 	~TrackerSamplerCS();
-	+bool sampling(const Mat& image, Point2f position, vector<Mat>& sample);
+	+bool sampling(const Mat& image, Rect boundingBox, vector<Mat>& sample);
 }
 class TrackerSamplerCSC{
 	TrackerSamplerCSC();
 	~TrackerSamplerCSC();
-	+bool sampling(const Mat& image, Point2f position, vector<Mat>& sample);
+	+bool sampling(const Mat& image, Rect boundingBox, vector<Mat>& sample);
 }
 
 

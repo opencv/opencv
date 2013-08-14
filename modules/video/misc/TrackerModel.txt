@@ -1,11 +1,6 @@
 @startuml
 package "TrackerModel package" #DDDDDD {
 
-enum TrackerSamplerType{
-	TRACKER_STATE_ESTIMATOR_BOOSTING
-	TRACKER_STATE_ESTIMATOR_SVM
-}
-
 class Typedef << (T,#FF7700) >>{
 	ConfidenceMap
 	Trajectory
@@ -18,12 +13,15 @@ class TrackerModel{
 	...
 	TrackerModel();
 	~TrackerModel();
+	
 	+bool setTrackerStateEstimator(Ptr<TrackerStateEstimator> trackerStateEstimator);
-	+void modelEstimation(const vector<Mat>& responses, ConfidenceMap& confidenceMap);
-	+void modelUpdate(ConfidenceMap& confidenceMap);
-	+void setLastTargetState(const TrackerTargetState lastTargetState);
+	+Ptr<TrackerStateEstimator> getTrackerStateEstimator();
+	
+	+void modelEstimation(const vector<Mat>& responses);
+	+void modelUpdate();
+	+void setLastTargetState(const Ptr<TrackerTargetState> lastTargetState);
 	+void runStateEstimator();
-	+void run(const vector<Mat>& responses, ConfidenceMap& confidenceMap);
+	
 	+const vector<ConfidenceMap>& getConfidenceMaps();
 	+const ConfidenceMap& getLastConfidenceMap();
 }
@@ -38,19 +36,22 @@ note bottom: Each tracker can create own state
 
 class TrackerStateEstimator <<virtual>>{
 	~TrackerStateEstimator();
-	Ptr<TrackerStateEstimator> create(const String& trackeStateEstimatorType);
-	TrackerTargetState estimate(const vector<ConfidenceMap>& confidenceMaps);
+	static Ptr<TrackerStateEstimator> create(const String& trackeStateEstimatorType);
+	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+	void update(vector<ConfidenceMap>& confidenceMaps)
 }
 
 class TrackerStateEstimatorSVM{
 	TrackerStateEstimatorSVM()
 	~TrackerStateEstimatorSVM()
-	TrackerTargetState estimate(const vector<ConfidenceMap>& confidenceMaps);
+	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+	void update(vector<ConfidenceMap>& confidenceMaps)
 }
 class TrackerStateEstimatorBoosting{
 	TrackerStateEstimatorBoosting()
 	~TrackerStateEstimatorBoosting()
-	TrackerTargetState estimate(const vector<ConfidenceMap>& confidenceMaps);
+	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+	void update(vector<ConfidenceMap>& confidenceMaps)
 }
 
 TrackerModel -> TrackerStateEstimator: create

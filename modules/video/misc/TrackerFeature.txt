@@ -1,37 +1,26 @@
 @startuml
 package "TrackerFeature package" #DDDDDD {
 
-enum TrackerFeatureType{
-	TRACKER_FEATURE_FEATURE2D
-	TRACKER_FEATURE_HOG
-	TRACKER_FEATURE_HAAR
-	TRACKER_FEATURE_LBP
-	TRACKER_FEATURE_HISTOGRAM
-	TRACKER_FEATURE_TEMPLATE
-	TRACKER_FEATURE_PIXEL
-	TRACKER_FEATURE_CORNER
-}
-
 class TrackerFeatureSet{
-	-vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > features
+	-vector<pair<string, Ptr<TrackerFeature> > > features
 	-vector<Mat> responses
 	...
 	TrackerFeatureSet();
 	~TrackerFeatureSet();
 	--
-	+extraction(const Mat& image);
+	+extraction(const std::vector<Mat>& images);
 	+selection();
-	+remove_outliers();
-	+vector<Mat response> getResponses();
+	+removeOutliers();
+	+vector<Mat> response getResponses();
 	+vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > getTrackerFeatures();
 	+bool addTrackerFeature(string trackerFeatureType);
-	+bool addTrackerFeature(Ptr<TrackerFeature> feature);
+	+bool addTrackerFeature(Ptr<TrackerFeature>& feature);
 	-clearResponses();
 }
 
 class TrackerFeature <<virtual>>{
-	Ptr<TrackerFeature> = create(string trackerFeatureType);
-	compute(const Mat& image, Mat& response);
+	static Ptr<TrackerFeature> = create(const string& trackerFeatureType);
+	compute(const std::vector<Mat>& images, Mat& response);
 	selection(Mat& response, int npoints);
 }
 note bottom: Can be specialized as in table II\nA tracker can use more types of features
@@ -42,14 +31,14 @@ class TrackerFeatureFeature2D{
 	TrackerFeatureFeature2D(string detectorType, string descriptorType);
 	~TrackerFeatureFeature2D();
 	---
-	compute(const Mat& image, Mat& response);
+	compute(const std::vector<Mat>& images, Mat& response);
 	selection( Mat& response, int npoints);
 }
 class TrackerFeatureHOG{
 	TrackerFeatureHOG();
 	~TrackerFeatureHOG();
 	---
-	compute(const Mat& image, Mat& response);
+	compute(const std::vector<Mat>& images, Mat& response);
 	selection(Mat& response, int npoints);
 }
 

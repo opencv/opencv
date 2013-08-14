@@ -1,13 +1,7 @@
 @startuml
 package "Tracker package" #DDDDDD {
 
-enum TrackerType {
-  	TRACKER_MIL
-  	TRACKER_BOOSTING
-  	. . .
-}
-enum TrackerType
-note right: Algorithms
+
 
 
 class Algorithm {
@@ -17,7 +11,7 @@ class Tracker{
 	Ptr<TrackerSampler> sampler;
 	Ptr<TrackerModel> model;
 	---
-	+static Ptr<Tracker> create(string trackerType, TrackerParams p);
+	+static Ptr<Tracker> create(const string& trackerType);
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
 }
@@ -26,14 +20,14 @@ note right: Tracker is the general interface for each specialized trackers
 class TrackerMIL{
 	+Params
 	---
-	TrackerMIL(TrackerMIL::Params param);
+	TrackerMIL(TrackerMIL::Params parameters);
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
 }
 class TrackerBoosting{
 	+Params
 	---
-	TrackerBoosting(TrackerBoosting::Params param);
+	TrackerBoosting(TrackerBoosting::Params parameters);
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
 }
