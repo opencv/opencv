@@ -759,7 +759,7 @@ Dilates an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used.
+    :param kernel: structuring element used for dilation; if  ``element=Mat()`` , a  ``3 x 3`` rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`
 
     :param anchor: position of the anchor within the element; default value ``(-1, -1)`` means that the anchor is at the element center.
 
@@ -782,10 +782,15 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
     :ocv:func:`erode`,
     :ocv:func:`morphologyEx`,
     :ocv:func:`createMorphologyFilter`
+    :ocv:func:`getStructuringElement`
+
 
 .. Sample code::
 
    * : An example using the morphological dilate operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
+
+    
+
 
 erode
 -----
@@ -801,7 +806,7 @@ Erodes an image by using a specific structuring element.
 
     :param dst: output image of the same size and type as ``src``.
 
-    :param element: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used.
+    :param kernel: structuring element used for erosion; if  ``element=Mat()`` , a  ``3 x 3``  rectangular structuring element is used. Kernel can be created using :ocv:func:`getStructuringElement`.
 
     :param anchor: position of the anchor within the element; default value  ``(-1, -1)``  means that the anchor is at the element center.
 
@@ -823,7 +828,8 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
 
     :ocv:func:`dilate`,
     :ocv:func:`morphologyEx`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
 .. Sample code::
 
@@ -956,7 +962,7 @@ Returns Gaussian filter coefficients.
     :param ksize: Aperture size. It should be odd ( :math:`\texttt{ksize} \mod 2 = 1` ) and positive.
 
     :param sigma: Gaussian standard deviation. If it is non-positive, it is computed from  ``ksize``  as  \ ``sigma = 0.3*((ksize-1)*0.5 - 1) + 0.8`` .
-    :param ktype: Type of filter coefficients. It can be  ``CV_32f``  or  ``CV_64F`` .
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
 
 The function computes and returns the
 :math:`\texttt{ksize} \times 1` matrix of Gaussian filter coefficients:
@@ -982,6 +988,32 @@ Two of such generated kernels can be passed to
    :ocv:func:`getDerivKernels`,
    :ocv:func:`getStructuringElement`,
    :ocv:func:`GaussianBlur`
+
+
+
+getGaborKernel
+-----------------
+Returns Gabor filter coefficients.
+
+.. ocv:function:: Mat getGaborKernel( Size ksize, double sigma, double theta, double lambd, double gamma, double psi = CV_PI*0.5, int ktype = CV_64F )
+
+.. ocv:pyfunction:: cv2.getGaborKernel(ksize, sigma, theta, lambd, gamma[, psi[, ktype]]) -> retval
+
+    :param ksize: Size of the filter returned.
+    
+    :param sigma: Standard deviation of the gaussian envelope.
+    
+    :param theta: Orientation of the normal to the parallel stripes of a Gabor function.
+    
+    :param lambd: Wavelength of the sinusoidal factor.
+    
+    :param gamma: Spatial aspect ratio.
+    
+    :param psi: Phase offset.
+    
+    :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
+
+For more details about gabor filter equations and parameters, see: `Gabor Filter <http://en.wikipedia.org/wiki/Gabor_filter>`_.
 
 
 
@@ -1099,7 +1131,9 @@ Performs advanced morphological transformations.
 
     :param dst: Destination image of the same size and type as  ``src`` .
 
-    :param element: Structuring element.
+    :param kernel: Structuring element. It can be created using :ocv:func:`getStructuringElement`.
+    
+    :param anchor: Anchor position with the kernel. Negative values mean that the anchor is at the kernel center.
 
     :param op: Type of a morphological operation that can be one of the following:
 
@@ -1157,7 +1191,8 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
 
     :ocv:func:`dilate`,
     :ocv:func:`erode`,
-    :ocv:func:`createMorphologyFilter`
+    :ocv:func:`createMorphologyFilter`,
+    :ocv:func:`getStructuringElement`
 
 .. Sample code::
 
