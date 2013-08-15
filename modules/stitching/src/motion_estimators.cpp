@@ -48,6 +48,7 @@
   #define isnan(x) _isnan(x)
 #else
   #include <math.h>
+  using namespace std;
 #endif
 
 using namespace cv;
