@@ -127,7 +127,7 @@ class CV_EXPORTS_W SCDMatcher
 {
 public:
     //! the full constructor
-    CV_WRAP SCDMatcher(float outlierWeight=0.1, int numExtraDummies=20, int flags=DistanceSCDFlags::DEFAULT);
+    CV_WRAP SCDMatcher(float outlierWeight=0.1, int numExtraDummies=20, int flags=DistanceSCDFlags::DEFAULT, int dim=1);
     //! the matcher function using Hungarian method
     CV_WRAP void matchDescriptors(Mat& descriptors1,  Mat& descriptors2, std::vector<DMatch>& matches,
                                   std::vector<int>& inliers1, std::vector<int>& inliers2);
@@ -144,6 +144,7 @@ private:
     CV_PROP_RW bool useAdditionalCostTerm;
     CV_PROP_RW Mat additionalCostMatrix;
     CV_PROP_RW float betaAdditional;
+    CV_PROP_RW int nAngularBins;
 protected:
     CV_WRAP void buildCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;

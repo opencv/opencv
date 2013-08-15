@@ -49,13 +49,14 @@
 namespace cv
 {
 // Constructors //
-SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFlags)
+SCDMatcher::SCDMatcher(float _outlierWeight, int _numExtraDummies, int _configFlags, int dim)
 {
-    CV_Assert((_outlierWeight>=0) & (_numExtraDummies>=0));
+    CV_Assert((_outlierWeight>=0) & (_numExtraDummies>=0) & (dim>0));
     outlierWeight=_outlierWeight;
     configFlags=_configFlags;
     numExtraDummies=_numExtraDummies;
     useAdditionalCostTerm=false;
+    nAngularBins=dim;
 }
 
 // Public methods //
@@ -175,16 +176,24 @@ void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descript
     {
         for(int j=0; j<scd2.rows; j++)
         {
-            Mat sig1(scd1.cols,2,CV_32F), sig2(scd2.cols,2,CV_32F);
+            Mat sig1(scd1.cols,3,CV_32F), sig2(scd2.cols,3,CV_32F);
             sig1.col(0)=scd1.row(i).t();
             sig2.col(0)=scd2.row(j).t();
+            int ang=-1,rad=-1;
             for (int k=0; k<sig1.rows; k++)
             {
-                sig1.at<float>(k,1)=float(k);
+                ang=k%nAngularBins;
+                if (ang==0) rad++;
+                sig1.at<float>(k,1)=ang;
+                sig1.at<float>(k,2)=rad;
             }
+            ang=-1;rad=-1;
             for (int k=0; k<sig2.rows; k++)
             {
-                sig2.at<float>(k,1)=float(k);
+                ang=k%nAngularBins;
+                if (ang==0) rad++;
+                sig2.at<float>(k,1)=ang;
+                sig2.at<float>(k,2)=rad;
             }
 
             costMatrix.at<float>(i,j) = EMD(sig1, sig2, DIST_L1);

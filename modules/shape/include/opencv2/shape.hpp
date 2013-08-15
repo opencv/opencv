@@ -44,6 +44,7 @@
 #define __OPENCV_SHAPE_HPP__
 
 #include "opencv2/shape/shape_context.hpp"
+#include "opencv2/shape/emdL1.hpp"
 
 namespace cv
 {

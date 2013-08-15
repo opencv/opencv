@@ -69,8 +69,7 @@ private:
     float computeShapeDistance(vector <Point2f>& queryNormal,
                                vector <Point2f>& queryFlipped1,
                                vector <Point2f>& queryFlipped2,
-                               vector<Point2f>& test, vector<DMatch> &,
-                               const Mat &im1, const Mat &im2, const Mat &im3, const Mat &imtest);
+                               vector<Point2f>& test, vector<DMatch> &);
     float distance(Point2f p, Point2f q);
     void displayMPEGResults();
     vector<float> getLocalTangentAngles(Mat image, vector<Point2f> pts);
@@ -340,20 +339,13 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
                                          vector <Point2f>& query3, vector <Point2f>& test,
-                                         vector<DMatch>& matches,
-                                         const Mat& im1, const Mat& im2, const Mat& im3,
-                                         const Mat & imtest)
+                                         vector<DMatch>& matches)
 {
     // queries //
     vector< vector<Point2f> > query;
     query.push_back(query1);
     query.push_back(query2);
     query.push_back(query3);
-    // images //
-    vector<Mat> ims;
-    ims.push_back(im1);
-    ims.push_back(im2);
-    ims.push_back(im3);
 
     // executers //
     SCD shapeDescriptorT(angularBins,radialBins, minRad, maxRad,false);
@@ -557,12 +549,11 @@ void CV_ShapeTest::mpegTest()
                                " and "<<namesHeaders[nt]<<it<<": ";
                     vector<DMatch> matches; //for drawing purposes
                     distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
-                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches,
-                                                 currentQuery, flippedHQuery, flippedVQuery, currentTest);
+                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting, matches);
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
-                    Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
+                    /*Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -582,7 +573,7 @@ void CV_ShapeTest::mpegTest()
                     putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
                     char key=(char)waitKey();
-                    if (key == ' ') continue;
+                    if (key == ' ') continue;*/
                 }
             }
         }
