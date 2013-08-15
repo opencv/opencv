@@ -514,6 +514,8 @@ Scalar\_
 --------
 .. ocv:class:: Scalar_
 
+Template class for a 4-element vector derived from Vec.
+
 ::
 
     template<typename _Tp> class CV_EXPORTS Scalar_ : public Vec<_Tp, 4>
@@ -542,10 +544,6 @@ Scalar\_
         // returns true iff v1 == v2 == v3 == 0
         bool isReal() const;
     };
-
-Template class for a 4-element vector derived from Vec. ::
-
-    template<typename _Tp> class Scalar_ : public Vec<_Tp, 4> { ... };
 
     typedef Scalar_<double> Scalar;
 
