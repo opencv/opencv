@@ -283,24 +283,13 @@ CV_EXPORTS Ptr<HoughCirclesDetector> createHoughCirclesDetector(float dp, float 
 //////////////////////////////////////
 // GeneralizedHough
 
-//! finds arbitrary template in the grayscale image using Generalized Hough Transform
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
+//! Detects position only without traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughBallard> createGeneralizedHoughBallard();
+
 //! Guil, N., González-Linares, J.M. and Zapata, E.L. (1999). Bidimensional shape detection using an invariant approach. Pattern Recognition 32 (6): 1025-1038.
-class CV_EXPORTS GeneralizedHough : public Algorithm
-{
-public:
-    static Ptr<GeneralizedHough> create(int method);
-
-    //! set template to search
-    virtual void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1)) = 0;
-    virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
-
-    //! find template on image
-    virtual void detect(InputArray image, OutputArray positions, int cannyThreshold = 100) = 0;
-    virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions) = 0;
-
-    virtual void downloadResults(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray()) = 0;
-};
+//! Detects position, traslation and rotation
+CV_EXPORTS Ptr<GeneralizedHoughGuil> createGeneralizedHoughGuil();
 
 ////////////////////////// Corners Detection ///////////////////////////
 

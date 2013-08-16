@@ -335,4 +335,27 @@ __host__ GpuMat_<T>& GpuMat_<T>::assign(const Expr<Body>& expr, Stream& stream)
 
 }}
 
+// Input / Output Arrays
+
+namespace cv {
+
+template<typename _Tp>
+__host__ _InputArray::_InputArray(const cudev::GpuMat_<_Tp>& m)
+    : flags(FIXED_TYPE + GPU_MAT + DataType<_Tp>::type), obj((void*)&m)
+{}
+
+template<typename _Tp>
+__host__ _OutputArray::_OutputArray(cudev::GpuMat_<_Tp>& m)
+    : _InputArray(m)
+{}
+
+template<typename _Tp>
+__host__ _OutputArray::_OutputArray(const cudev::GpuMat_<_Tp>& m)
+    : _InputArray(m)
+{
+    flags |= FIXED_SIZE;
+}
+
+}
+
 #endif

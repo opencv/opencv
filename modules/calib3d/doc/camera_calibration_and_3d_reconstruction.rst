@@ -286,6 +286,8 @@ For points in an image of a stereo pair, computes the corresponding epilines in 
 
 .. ocv:cfunction:: void cvComputeCorrespondEpilines( const CvMat* points, int which_image, const CvMat* fundamental_matrix, CvMat* correspondent_lines )
 
+.. ocv:pyfunction:: cv2.computeCorrespondEpilines(points, whichImage, F[, lines]) -> lines
+
     :param points: Input points.  :math:`N \times 1`  or  :math:`1 \times N`  matrix of type  ``CV_32FC2``  or  ``vector<Point2f>`` .
 
     :param whichImage: Index of the image (1 or 2) that contains the  ``points`` .

@@ -216,98 +216,19 @@ Creates implementation for :ocv:class:`gpu::HoughCirclesDetector` .
 
 
 
-gpu::GeneralizedHough
----------------------
-.. ocv:class:: gpu::GeneralizedHough : public Algorithm
-
-Base class for generalized hough transform. ::
-
-    class CV_EXPORTS GeneralizedHough : public Algorithm
-    {
-    public:
-        static Ptr<GeneralizedHough> create(int method);
-
-        virtual void setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1)) = 0;
-        virtual void setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1)) = 0;
-
-        virtual void detect(InputArray image, OutputArray positions, int cannyThreshold = 100) = 0;
-        virtual void detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions) = 0;
-
-        virtual void downloadResults(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray()) = 0;
-    };
-
-
-Finds arbitrary template in the grayscale image using Generalized Hough Transform.
-
-
-
-gpu::GeneralizedHough::create
------------------------------
-Creates implementation for :ocv:class:`gpu::GeneralizedHough` .
-
-.. ocv:function:: Ptr<GeneralizedHough> gpu::GeneralizedHough::create(int method)
-
-    :param method: Combination of flags ( ``cv::GeneralizedHough::GHT_POSITION`` , ``cv::GeneralizedHough::GHT_SCALE`` , ``cv::GeneralizedHough::GHT_ROTATION`` ) specifying transformation to find.
-
-For full affine transformations (move + scale + rotation) [Guil1999]_ algorithm is used, otherwise [Ballard1981]_ algorithm is used.
-
-
-
-gpu::GeneralizedHough::setTemplate
+gpu::createGeneralizedHoughBallard
 ----------------------------------
-Set template to search.
+Creates implementation for generalized hough transform from [Ballard1981]_ .
 
-.. ocv:function:: void gpu::GeneralizedHough::setTemplate(InputArray templ, int cannyThreshold = 100, Point templCenter = Point(-1, -1))
-
-.. ocv:function:: void gpu::GeneralizedHough::setTemplate(InputArray edges, InputArray dx, InputArray dy, Point templCenter = Point(-1, -1))
-
-    :param templ: Template image. Canny edge detector will be applied to extract template edges.
-
-    :param cannyThreshold: Threshold value for Canny edge detector.
-
-    :param templCenter: Center for rotation. By default image center will be used.
-
-    :param edges: Edge map for template image.
-
-    :param dx: First derivative of template image in the vertical direction. Support only ``CV_32S`` type.
-
-    :param dy: First derivative of template image in the horizontal direction. Support only ``CV_32S`` type.
+.. ocv:function:: Ptr<GeneralizedHoughBallard> gpu::createGeneralizedHoughBallard()
 
 
 
-gpu::GeneralizedHough::detect
------------------------------
-Finds template (set by :ocv:func:`gpu::GeneralizedHough::setTemplate` ) in the grayscale image.
+gpu::createGeneralizedHoughGuil
+-------------------------------
+Creates implementation for generalized hough transform from [Guil1999]_ .
 
-.. ocv:function:: void gpu::GeneralizedHough::detect(InputArray image, OutputArray positions, int cannyThreshold = 100)
-
-.. ocv:function:: void gpu::GeneralizedHough::detect(InputArray edges, InputArray dx, InputArray dy, OutputArray positions)
-
-    :param templ: Input image. Canny edge detector will be applied to extract template edges.
-
-    :param positions: Output vector of found objects. Each vector is encoded as a 4-element floating-point vector  :math:`(x, y, scale, angle)` .
-
-    :param cannyThreshold: Threshold value for Canny edge detector.
-
-    :param edges: Edge map for input image.
-
-    :param dx: First derivative of input image in the vertical direction. Support only ``CV_32S`` type.
-
-    :param dy: First derivative of input image in the horizontal direction. Support only ``CV_32S`` type.
-
-
-
-gpu::GeneralizedHough::downloadResults
---------------------------------------
-Downloads results from :ocv:func:`gpu::GeneralizedHough::detect` to host memory.
-
-.. ocv:function:: void gpu::GeneralizedHough::downloadResult(InputArray d_positions, OutputArray h_positions, OutputArray h_votes = noArray())
-
-    :param d_lines: Result of :ocv:func:`gpu::GeneralizedHough::detect` .
-
-    :param h_lines: Output host array.
-
-    :param h_votes: Optional output array for votes. Each vector is encoded as a 3-element integer-point vector  :math:`(position_votes, scale_votes, angle_votes)` .
+.. ocv:function:: Ptr<GeneralizedHoughGuil> gpu::createGeneralizedHoughGuil()
 
 
 

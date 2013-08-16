@@ -96,6 +96,7 @@ public:
     _InputArray(const gpu::GpuMat& d_mat);
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
@@ -144,6 +145,7 @@ public:
     _OutputArray(gpu::GpuMat& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(std::vector<Mat_<_Tp> >& vec);
@@ -156,6 +158,7 @@ public:
     _OutputArray(const gpu::GpuMat& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const gpu::CudaMem& cuda_mem);
+    template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
     template<typename _Tp> _OutputArray(const std::vector<Mat_<_Tp> >& vec);
@@ -828,7 +831,7 @@ protected:
        img(i,j)[2] ^= (uchar)(i ^ j); // img(y,x)[c] accesses c-th channel of the pixel (x,y)
  \endcode
 */
-template<typename _Tp> class CV_EXPORTS Mat_ : public Mat
+template<typename _Tp> class Mat_ : public Mat
 {
 public:
     typedef _Tp value_type;
@@ -1355,7 +1358,7 @@ public:
  m_.ref(2) += m_(3); // equivalent to m.ref<int>(2) += m.value<int>(3);
  \endcode
 */
-template<typename _Tp> class CV_EXPORTS SparseMat_ : public SparseMat
+template<typename _Tp> class SparseMat_ : public SparseMat
 {
 public:
     typedef SparseMatIterator_<_Tp> iterator;
@@ -1727,7 +1730,7 @@ public:
  This is the derived from cv::SparseMatConstIterator_ class that
  introduces more convenient operator *() for accessing the current element.
 */
-template<typename _Tp> class CV_EXPORTS SparseMatIterator_ : public SparseMatConstIterator_<_Tp>
+template<typename _Tp> class SparseMatIterator_ : public SparseMatConstIterator_<_Tp>
 {
 public:
 

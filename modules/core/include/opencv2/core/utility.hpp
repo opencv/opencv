@@ -80,7 +80,7 @@ namespace cv
  }
  \endcode
 */
-template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer
+template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 {
 public:
     typedef _Tp value_type;

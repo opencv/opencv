@@ -42,13 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/calib3d/calib3d_c.h"
-
-#ifdef _MSC_VER
-  #include <float.h>
-  #define isnan(x) _isnan(x)
-#else
-  #include <math.h>
-#endif
+#include "opencv2/core/cvdef.h"
 
 using namespace cv;
 using namespace cv::detail;
@@ -259,7 +253,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     bool ok = true;
     for (int i = 0; i < cam_params_.rows; ++i)
     {
-        if (isnan(cam_params_.at<double>(i,0)))
+        if (cvIsNaN(cam_params_.at<double>(i,0)))
         {
             ok = false;
             break;

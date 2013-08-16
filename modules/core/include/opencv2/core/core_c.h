@@ -1906,7 +1906,7 @@ typedef Ptr<CvMemStorage> MemStorage;
     i.e. no constructors or destructors
     are called for the sequence elements.
 */
-template<typename _Tp> class CV_EXPORTS Seq
+template<typename _Tp> class Seq
 {
 public:
     typedef SeqIterator<_Tp> iterator;
@@ -1989,7 +1989,7 @@ public:
 /*!
  STL-style Sequence Iterator inherited from the CvSeqReader structure
 */
-template<typename _Tp> class CV_EXPORTS SeqIterator : public CvSeqReader
+template<typename _Tp> class SeqIterator : public CvSeqReader
 {
 public:
     //! the default constructor
