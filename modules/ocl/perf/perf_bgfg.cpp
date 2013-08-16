@@ -48,9 +48,9 @@ using namespace cv::ocl;
 
 void cvtFrameFmt(std::vector<Mat>& input, std::vector<Mat>& output, int output_cn)
 {
-    for(int i=0; i<input.size(); i++)
+    for(int i = 0; i< (int)(input.size()); i++)
     {
-        if(output_cn==1)
+        if(output_cn == 1)
             cvtColor(input[i], output[i], COLOR_RGB2GRAY);
         else
             cvtColor(input[i], output[i], COLOR_RGB2RGBA);
