@@ -106,7 +106,7 @@ if(PYTHON_EXECUTABLE)
                         OUTPUT_QUIET
                         ERROR_VARIABLE SPHINX_OUTPUT
                         OUTPUT_STRIP_TRAILING_WHITESPACE)
-        if(SPHINX_OUTPUT MATCHES "^Sphinx v([0-9][^ \n]*)")
+        if(SPHINX_OUTPUT MATCHES "Sphinx v([0-9][^ \n]*)")
           set(SPHINX_VERSION "${CMAKE_MATCH_1}")
           set(HAVE_SPHINX 1)
           message(STATUS "Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")

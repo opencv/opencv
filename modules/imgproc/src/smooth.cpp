@@ -856,6 +856,22 @@ void cv::GaussianBlur( InputArray _src, OutputArray _dst, Size ksize,
         return;
 #endif
 
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+    if(src.type() == CV_32FC1 && sigma1 == sigma2 && ksize.width == ksize.height && sigma1 != 0.0 )
+    {
+        IppiSize roi = {src.cols, src.rows};
+        int bufSize = 0;
+        ippiFilterGaussGetBufferSize_32f_C1R(roi, ksize.width, &bufSize);
+        AutoBuffer<uchar> buf(bufSize+128);
+        if( ippiFilterGaussBorder_32f_C1R((const Ipp32f *)src.data, (int)src.step,
+                                          (Ipp32f *)dst.data, (int)dst.step,
+                                          roi, ksize.width, (Ipp32f)sigma1,
+                                          (IppiBorderType)borderType, 0.0,
+                                          alignPtr(&buf[0],32)) >= 0 )
+            return;
+    }
+#endif
+
     Ptr<FilterEngine> f = createGaussianFilter( src.type(), ksize, sigma1, sigma2, borderType );
     f->apply( src, dst );
 }
@@ -1892,6 +1908,29 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     radius = MAX(radius, 1);
     d = radius*2 + 1;
 
+#if 0 && defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+    if(cn == 1)
+    {
+        IppiSize kernel = {d, d};
+        IppiSize roi={src.cols, src.rows};
+        int bufsize=0;
+        ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
+        AutoBuffer<uchar> buf(bufsize+128);
+        IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
+        ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, sigma_color*sigma_color, sigma_space*sigma_space, 1, pSpec );
+        Mat tsrc;
+        const Mat* psrc = &src;
+        if( src.data == dst.data )
+        {
+            src.copyTo(tsrc);
+            psrc = &tsrc;
+        }
+        if( ippiFilterBilateral_8u_C1R(psrc->data, (int)psrc->step[0],
+                                       dst.data, (int)dst.step[0],
+                                       roi, kernel, pSpec) >= 0 )
+            return;
+    }
+#endif
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
