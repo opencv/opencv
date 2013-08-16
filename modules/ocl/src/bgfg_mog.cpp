@@ -69,7 +69,7 @@ namespace cv
     }
 }
 
-#if _MSC_VER
+#if defined _MSC_VER
 #define snprintf sprintf_s
 #endif
 
