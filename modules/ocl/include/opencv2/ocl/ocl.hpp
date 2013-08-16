@@ -1673,6 +1673,7 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
+<<<<<<< HEAD
         // current supported sorting methods
         enum
         {
@@ -1698,6 +1699,8 @@ namespace cv
         //    keys   = {1,    2,   3}   (CV_8UC1)
         //    values = {6,2, 10,5, 4,3} (CV_8UC2)
         void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
+        
+        
         /*!Base class for MOG and MOG2!*/
         class CV_EXPORTS BackgroundSubtractor
         {
