@@ -1673,7 +1673,7 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
-<<<<<<< HEAD
+
         // current supported sorting methods
         enum
         {
