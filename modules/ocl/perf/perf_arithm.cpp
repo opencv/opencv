@@ -45,6 +45,8 @@
 //M*/
 
 #include "perf_precomp.hpp"
+using namespace perf;
+
 ///////////// Lut ////////////////////////
 PERFTEST(lut)
 {
@@ -92,6 +94,56 @@ PERFTEST(lut)
 
     }
 }
+
+// GTest
+
+typedef std::tr1::tuple<cv::Size, MatType> Sz_Type_t;
+typedef TestBaseWithParam<Sz_Type_t> Sz_Type;
+
+PERF_TEST_P(Sz_Type, LUT,
+            testing::Combine(
+                OCL_TYPICAL_MAT_SIZES,
+                testing::Values(CV_8UC1, CV_8UC3)))
+{
+    const Size size = std::tr1::get<0>(GetParam());
+    const int type = std::tr1::get<1>(GetParam());
+
+    Mat src(size, type), dst(size, type);
+    Mat lut(1, 256, CV_8UC1);
+    randu(lut, 0, 2);
+    declare.in(src, WARMUP_RNG);
+
+    std::string impl = getSelectedImpl();
+
+    if (impl == "plain")
+    {
+        TEST_CYCLE() cv::LUT(src, lut, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (impl == "ocl")
+    {
+        ocl::oclMat d_src, d_lut, d_dst;
+        d_src.upload(src);
+        d_lut.upload(lut);
+
+        TEST_CYCLE() ocl::LUT(d_src, d_lut, d_dst);
+
+        d_dst.download(dst);
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "cuda")
+    {
+        GTEST_FATAL_FAILURE_("No equivalent implementation.");
+    }
+#endif
+    else
+    {
+        GTEST_FATAL_FAILURE_("No equivalent implementation.");
+    }
+}
+
 
 ///////////// Exp ////////////////////////
 PERFTEST(Exp)

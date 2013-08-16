@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-int main(int argc, const char *argv[])
+int main_old(int argc, char **argv)
 {
     const char *keys =
         "{ h | help    | false | print help message }"
@@ -161,4 +161,41 @@ END_DEV:
     TestSystem::instance().run();
 
     return 0;
+}
+
+const char * impls[] = {
+  "ocl"
+, "plain"
+#ifdef HAVE_OPENCV_GPU
+, "cuda"
+#endif
+};
+
+int main(int argc, char **argv)
+{
+    // temp solution: if no '--gtest_' and '--perf_' args switch to old behavior
+    bool useGTest = false;
+    for(int i=1; i<argc; i++)
+    {
+        std::string arg( argv[i] );
+        if( arg.find("--gtest_")==0 || arg.find("--perf_")==0 )
+        {
+            useGTest = true;
+            break;
+        }
+    }
+
+    if( !useGTest ) return main_old(argc, argv);
+
+    const char * modulename = "ocl";
+    ::perf::Regression::Init(modulename);
+    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls), argc, argv);
+    ::testing::InitGoogleTest(&argc, argv);
+    cvtest::printVersionInfo();
+    ::testing::Test::RecordProperty("cv_module_name", modulename);
+    ::perf::TestBase::RecordRunParameters();
+    ::testing::Test::RecordProperty("cv_ocl_device", "tbd");
+    //TS::ptr()->init(".");
+    cout << "Test data path: " << cvtest::TS::ptr()->get_data_path() << endl;
+    return RUN_ALL_TESTS();
 }
