@@ -138,11 +138,11 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
   //std::cout << positiveStates.rows << " " << negativeStates.rows << std::endl;
   int bestind = max_idx( prob );
   float resp = prob[bestind];
-
-  //for(size_t i = 0; i < prob.size(); i++)
-  //std::cout << "prob " << prob.at(i) << std::endl;
-  //std::cout << "bestind " << bestind << std::endl;
-  //std::cout << "resp " << resp << std::endl;
+/*
+  for(size_t i = 0; i < prob.size(); i++)
+  std::cout << "prob " << prob.at(i) << std::endl;
+  std::cout << "bestind " << bestind << std::endl;
+  std::cout << "resp " << resp << std::endl;*/
 
   return currentConfidenceMap.at( bestind ).first;
 }
@@ -166,7 +166,7 @@ void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidence
   negative.create( negCounter, numFeatures, CV_32FC1 );
 
   //TODO change with mat fast access
-  //initialize trainData (positiove and negative)
+  //initialize trainData (positive and negative)
 
   int pc = 0;
   int nc = 0;

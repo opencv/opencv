@@ -245,7 +245,7 @@ TrackerFeatureHAAR class::
      void selection( Mat& response, int npoints );
    };
    
-.. note:: HAAR features implementation is copied from apps/traincascade 
+.. note:: HAAR features implementation is copied from apps/traincascade and modified according to MIL implementation
 
 TrackerFeatureHAAR::Params
 --------------------------

@@ -47,6 +47,7 @@ namespace cv
 
 /*
  * TODO This is a copy from apps/traincascade/
+ * TODO Changed CvHaarEvaluator based on MIL implementation
  */
 
 
@@ -236,6 +237,9 @@ void CvHaarEvaluator::setImage(const Mat& img, uchar clsLabel, int idx)
     Mat innSqSum;
     integral(img, innSum, innSqSum, innTilted);
     normfactor.ptr<float>(0)[idx] = calcNormFactor( innSum, innSqSum );
+    std::vector<Mat_<float> > ii_imgs;
+    compute_integral( img, ii_imgs );
+    _ii_img = ii_imgs[0];
 }
 
 void CvHaarEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) const

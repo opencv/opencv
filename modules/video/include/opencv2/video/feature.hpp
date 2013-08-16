@@ -48,6 +48,7 @@
 
 /*
  * TODO This is a copy from apps/traincascade/
+ * TODO Changed CvHaarEvaluator based on MIL implementation
  */
 
 
@@ -204,6 +205,17 @@ public:
     virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
     void writeFeature( FileStorage &fs, int fi ) const; // for old file fornat
 protected:
+    /* TODO Added from MIL implementation */
+    Mat _ii_img;
+    void
+    compute_integral(const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs)
+    {
+      cv::Mat ii_img;
+      cv::integral(img, ii_img, CV_32F);
+      cv::split(ii_img, ii_imgs);
+    }
+
+
     virtual void generateFeatures();
 
     /**
@@ -246,18 +258,37 @@ protected:
 
 inline float CvHaarEvaluator::operator()(int featureIdx, int sampleIdx) const
 {
-    float nf = normfactor.at<float>(0, sampleIdx);
-    return !nf ? 0.0f : (features[featureIdx].calc( sum, tilted, sampleIdx)/nf);
+  /* TODO Added from MIL implementation */
+   // float nf = normfactor.at<float>(0, sampleIdx);
+    //return !nf ? 0.0f : (features[featureIdx].calc( sum, tilted, sampleIdx)/nf);
+  return features[featureIdx].calc(_ii_img, Mat(), 0);
 }
 
 inline float CvHaarEvaluator::Feature::calc( const Mat &_sum, const Mat &_tilted, size_t y) const
 {
-    const int* img = tilted ? _tilted.ptr<int>((int)y) : _sum.ptr<int>((int)y);
+  /* TODO Added from MIL implementation */
+  Mat_<float> ii_img( _sum );
+  cv::Rect r;
+  float sum = 0.0f;
+
+  for (int k = 0; k < CV_HAAR_FEATURE_MAX; k++)
+  {
+    r = rect[k].r;
+    sum +=
+        rect[k].weight * (ii_img(r.y + r.height, r.x + r.width)
+            + ii_img(r.y, r.x)
+            - ii_img(r.y + r.height, r.x)
+            - ii_img(r.y, r.x + r.width)); ///_rsums[k];
+  }
+
+  return (float) (sum);
+  //return 0;
+   /* const int* img = tilted ? _tilted.ptr<int>((int)y) : _sum.ptr<int>((int)y);
     float ret = rect[0].weight * (img[fastRect[0].p0] - img[fastRect[0].p1] - img[fastRect[0].p2] + img[fastRect[0].p3] ) +
         rect[1].weight * (img[fastRect[1].p0] - img[fastRect[1].p1] - img[fastRect[1].p2] + img[fastRect[1].p3] );
     if( rect[2].weight != 0.0f )
         ret += rect[2].weight * (img[fastRect[2].p0] - img[fastRect[2].p1] - img[fastRect[2].p2] + img[fastRect[2].p3] );
-    return ret;
+    return ret;*/
 }
 
 
