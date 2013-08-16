@@ -46,7 +46,7 @@
 using namespace cv;
 using namespace cv::ocl;
 
-void cvtFrameFmt(std::vector<Mat>& input, std::vector<Mat>& output, int output_cn)
+static void cvtFrameFmt(std::vector<Mat>& input, std::vector<Mat>& output, int output_cn)
 {
     for(int i = 0; i< (int)(input.size()); i++)
     {
