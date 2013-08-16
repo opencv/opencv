@@ -29,6 +29,10 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 endif(MSVC)
 
+if (HAVE_WINRT)
+  add_definitions(-DHAVE_WINRT)
+endif()
+
 add_library(${PNG_LIBRARY} STATIC ${lib_srcs} ${lib_hdrs})
 target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARY})
 
