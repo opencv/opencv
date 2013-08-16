@@ -146,10 +146,10 @@ PARAM_TEST_CASE(TVL1, bool)
 
 TEST_P(TVL1, Accuracy)
 {
-    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0 = readImage("F:/mcw/opencv/opencv/samples/gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("../../../opencv/samples/gpu/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
@@ -168,7 +168,7 @@ TEST_P(TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
 }
-INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(true, false));
+INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(false, true));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

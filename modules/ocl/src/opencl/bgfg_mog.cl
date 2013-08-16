@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -43,36 +43,11 @@
 //
 //M*/
 
-#if defined (FRAME_C_1)
+#if defined (CN1)
 #define T_FRAME uchar
-#else
-#define T_FRAME uchar4
-#endif
-
-#if defined (MEAN_VAR_C_1)
 #define T_MEAN_VAR float
 #define CONVERT_TYPE convert_uchar_sat
 #define F_ZERO (0.0f)
-#else
-#define T_MEAN_VAR float4
-#define CONVERT_TYPE convert_uchar4_sat
-#define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
-#endif
-
-typedef struct
-{
-    int c_nmixtures;
-    float c_Tb;
-    float c_TB;
-    float c_Tg;
-    float c_varInit;
-    float c_varMin;
-    float c_varMax;
-    float c_tau;
-    uchar c_shadowVal;
-}con_srtuct_t;
-
-#if defined (FRAME_C_1)
 float cvt(uchar val)
 {
     return val;
@@ -93,6 +68,10 @@ float clamp1(float var, float learningRate, float diff, float minVar)
     return fmax(var + learningRate * (diff * diff - var), minVar);
 }
 #else
+#define T_FRAME uchar4
+#define T_MEAN_VAR float4
+#define CONVERT_TYPE convert_uchar4_sat
+#define F_ZERO (0.0f, 0.0f, 0.0f, 0.0f)
 float4 cvt(const uchar4 val)
 {
     float4 result;
@@ -125,6 +104,18 @@ float4 clamp1(const float4 var, float learningRate, const float4 diff, float min
 }
 #endif
 
+typedef struct
+{
+    float c_Tb;
+    float c_TB;
+    float c_Tg;
+    float c_varInit;
+    float c_varMin;
+    float c_varMax;
+    float c_tau;
+    uchar c_shadowVal;
+}con_srtuct_t;
+
 void swap(__global float* ptr, int x, int y, int k, int rows, int ptr_step)
 {
     float val = ptr[(k * rows + y) * ptr_step + x];
@@ -142,7 +133,7 @@ void swap4(__global float4* ptr, int x, int y, int k, int rows, int ptr_step)
 __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar* fgmask,
     __global float* weight, __global T_MEAN_VAR* mean, __global T_MEAN_VAR* var,
     int frame_row, int frame_col, int frame_step, int fgmask_step,
-    int weight_step, int mean_step, int var_step, int nmixtures,
+    int weight_step, int mean_step, int var_step,
     float varThreshold, float backgroundRatio, int fgmask_offset_x, 
     int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
@@ -157,7 +148,7 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
         int kHit = -1;
         int kForeground = -1;
 
-        for (int k = 0; k < nmixtures; ++k)
+        for (int k = 0; k < (NMIXTURES); ++k)
         {
             if (weight[(k * frame_row + y) * weight_step + x] < 1.192092896e-07f)
                 break;
@@ -177,7 +168,7 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
         if (kHit >= 0)
         {
             float wsum = 0.0f;
-            for (int k = 0; k < nmixtures; ++k)
+            for (int k = 0; k < (NMIXTURES); ++k)
             {
                 wsum += weight[(k * frame_row + y) * weight_step + x];
 
@@ -200,13 +191,13 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
 __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* fgmask,
     __global float* weight, __global float* sortKey, __global T_MEAN_VAR* mean, 
     __global T_MEAN_VAR* var, int frame_row, int frame_col, int frame_step, int fgmask_step,
-    int weight_step, int sortKey_step, int mean_step, int var_step, int nmixtures,
+    int weight_step, int sortKey_step, int mean_step, int var_step,
     float varThreshold, float backgroundRatio, float learningRate, float minVar, 
     int fgmask_offset_x, int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
     const float w0 = 0.05f;
-    const float sk0 = w0 / (30.0f * 0.5f * 2.0f);
-    const float var0 = 30.0f * 0.5f * 30.0f * 0.5f * 4.0f;
+    const float sk0 = w0 / 30.0f;
+    const float var0 = 900.f;
 
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -221,7 +212,7 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* f
 
         T_MEAN_VAR pix = cvt(frame[(y + frame_offset_y) * frame_step + (x + frame_offset_x)]);
     
-        for (; k < nmixtures; ++k)
+        for (; k < (NMIXTURES); ++k)
         {
             float w = weight[(k * frame_row + y) * weight_step + x];
             wsum += w;
@@ -297,13 +288,12 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* f
 
         if (kHit < 0)
         {
-            // no appropriate gaussian mixture found at all, remove the weakest mixture and create a new one
-            kHit = k = k < (nmixtures - 1) ? k : (nmixtures - 1);
+            kHit = k = k < ((NMIXTURES) - 1) ? k : ((NMIXTURES) - 1);
             wsum += w0 - weight[(k * frame_row + y) * weight_step + x];
 
             weight[(k * frame_row + y) * weight_step + x] = w0;
             mean[(k * frame_row + y) * mean_step + x] = pix;
-            #if defined (MEAN_VAR_C_1)
+            #if defined (CN1)
             var[(k * frame_row + y) * var_step + x] = (T_MEAN_VAR)(var0);
             #else
             var[(k * frame_row + y) * var_step + x] = (T_MEAN_VAR)(var0, var0, var0, var0);
@@ -312,13 +302,13 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* f
         }
         else
         {
-            for( ; k < nmixtures; k++)
+            for( ; k < (NMIXTURES); k++)
                 wsum += weight[(k * frame_row + y) * weight_step + x];
         }
 
         float wscale = 1.0f / wsum;
         wsum = 0;
-        for (k = 0; k < nmixtures; ++k)
+        for (k = 0; k < (NMIXTURES); ++k)
         {
             float w = weight[(k * frame_row + y) * weight_step + x];
             wsum += w *= wscale;
@@ -329,18 +319,16 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* f
             if (wsum > backgroundRatio && kForeground < 0)
                 kForeground = k + 1;
         }
-
         if(kHit >= kForeground)
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar)(-1);
         else
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar)(0);
-        
     }
 }
 
 __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_VAR* mean, __global T_FRAME* dst,
     int dst_row, int dst_col, int weight_step, int mean_step, int dst_step, 
-    int nmixtures, float backgroundRatio)
+    float backgroundRatio)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
@@ -350,7 +338,7 @@ __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_
         T_MEAN_VAR meanVal = (T_MEAN_VAR)F_ZERO;
         float totalWeight = 0.0f;
 
-        for (int mode = 0; mode < nmixtures; ++mode)
+        for (int mode = 0; mode < (NMIXTURES); ++mode)
         {
             float _weight = weight[(mode * dst_row + y) * weight_step + x];
 
@@ -362,9 +350,7 @@ __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_
             if(totalWeight > backgroundRatio)
                 break;
         }
-
         meanVal = meanVal * (1.f / totalWeight);
-
         dst[y * dst_step + x] = CONVERT_TYPE(meanVal);
     }
 }
@@ -381,12 +367,7 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
     {
         T_MEAN_VAR pix = cvt(frame[(y + frame_offset_y) * frame_step + x + frame_offset_x]);
 
-        //calculate distances to the modes (+ sort)
-        //here we need to go in descending order!!!
-
         bool background = false; // true - the pixel classified as background
-
-        //internal:
 
         bool fitsPDF = false; //if it remains zero a new GMM mode will be added
 
@@ -395,78 +376,48 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
 
         float totalWeight = 0.0f;
 
-        //go through all modes
-
         for (int mode = 0; mode < nmodes; ++mode)
         {
-            //need only weight if fit is found
             float _weight = alpha1 * weight[(mode * frame_row + y) * weight_step + x] + prune;
 
-            //fit not found yet
             if (!fitsPDF)
             {
-                //check if it belongs to some of the remaining modes
                 float var = variance[(mode * frame_row + y) * var_step + x];
 
                 T_MEAN_VAR _mean = mean[(mode * frame_row + y) * mean_step + x];
 
-                //calculate difference and distance
                 T_MEAN_VAR diff = _mean - pix;
                 float dist2 = sqr(diff);
 
-                //background? - Tb - usually larger than Tg
                 if (totalWeight < constants -> c_TB && dist2 < constants -> c_Tb * var)
                     background = true;
 
-                //check fit
                 if (dist2 < constants -> c_Tg * var)
                 {
-                    //belongs to the mode
                     fitsPDF = true;
-
-                    //update distribution
-
-                    //update weight
                     _weight += alphaT;
                     float k = alphaT / _weight;
-
-                    //update mean
                     mean[(mode * frame_row + y) * mean_step + x] = _mean - k * diff;
-
-                    //update variance
                     float varnew = var + k * (dist2 - var);
-
-                    //limit the variance
                     varnew = fmax(varnew, constants -> c_varMin);
                     varnew = fmin(varnew, constants -> c_varMax);
 
                     variance[(mode * frame_row + y) * var_step + x] = varnew;
-
-                    //sort
-                    //all other weights are at the same place and
-                    //only the matched (iModes) is higher -> just find the new place for it
-
                     for (int i = mode; i > 0; --i)
                     {
-                        //check one up
                         if (_weight < weight[((i - 1) * frame_row + y) * weight_step + x])
                             break;
-
-                        //swap one up
                         swap(weight, x, y, i - 1, frame_row, weight_step);
                         swap(variance, x, y, i - 1, frame_row, var_step);
-                        #if defined (MEAN_VAR_C_1)
+                        #if defined (CN1)
                         swap(mean, x, y, i - 1, frame_row, mean_step);
                         #else
                         swap4(mean, x, y, i - 1, frame_row, mean_step);
                         #endif
                     }
-
-                    //belongs to the mode - bFitsPDF becomes 1
                 }
             } // !fitsPDF
 
-            //check prune
             if (_weight < -prune)
             {
                 _weight = 0.0;
@@ -477,20 +428,15 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
             totalWeight += _weight;
         }
 
-        //renormalize weights
-
         totalWeight = 1.f / totalWeight;
         for (int mode = 0; mode < nmodes; ++mode)
             weight[(mode * frame_row + y) * weight_step + x] *= totalWeight;
 
         nmodes = nNewModes;
 
-        //make new mode if needed and exit
-
         if (!fitsPDF)
         {
-            // replace the weakest or add a new one
-            int mode = nmodes == constants -> c_nmixtures ? constants -> c_nmixtures - 1 : nmodes++;
+            int mode = nmodes == (NMIXTURES) ? (NMIXTURES) - 1 : nmodes++;
 
             if (nmodes == 1)
                 weight[(mode * frame_row + y) * weight_step + x] = 1.f;
@@ -498,19 +444,12 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
             {
                 weight[(mode * frame_row + y) * weight_step + x] = alphaT;
 
-                // renormalize all other weights
-
                 for (int i = 0; i < nmodes - 1; ++i)
                     weight[(i * frame_row + y) * weight_step + x] *= alpha1;
             }
 
-            // init
-
             mean[(mode * frame_row + y) * mean_step + x] = pix;
             variance[(mode * frame_row + y) * var_step + x] = constants -> c_varInit;
-
-            //sort
-            //find the new place for it
 
             for (int i = nmodes - 1; i > 0; --i)
             {
@@ -518,10 +457,9 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
                 if (alphaT < weight[((i - 1) * frame_row + y) * weight_step + x])
                     break;
 
-                //swap one up
                 swap(weight, x, y, i - 1, frame_row, weight_step);
                 swap(variance, x, y, i - 1, frame_row, var_step);
-                #if defined (MEAN_VAR_C_1)
+                #if defined (CN1)
                 swap(mean, x, y, i - 1, frame_row, mean_step);
                 #else
                 swap4(mean, x, y, i - 1, frame_row, mean_step);
@@ -529,7 +467,6 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
             }
         }
 
-        //set the number of modes
         modesUsed[y * modesUsed_step + x] = nmodes;
 
         bool isShadow = false;
@@ -537,7 +474,6 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
         {
             float tWeight = 0.0f;
 
-            // check all the components  marked as background:
             for (int mode = 0; mode < nmodes; ++mode)
             {
                 T_MEAN_VAR _mean = mean[(mode * frame_row + y) * mean_step + x];
@@ -547,11 +483,9 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __gl
                 float numerator = sum(pix_mean);
                 float denominator = sqr(_mean);
 
-                // no division by zero allowed
                 if (denominator == 0)
                     break;
 
-                // if tau < a < 1 then also check the color distortion
                 if (numerator <= denominator && numerator >= constants -> c_tau * denominator)
                 {
                     float a = numerator / denominator;

@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -42,6 +42,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "precomp.hpp"
 
 #ifdef HAVE_OPENCL
@@ -59,10 +60,10 @@ extern string workdir;
 namespace
 {
     IMPLEMENT_PARAM_CLASS(UseGray, bool)
-        IMPLEMENT_PARAM_CLASS(LearningRate, double)
+    IMPLEMENT_PARAM_CLASS(LearningRate, double)
 }
 
-PARAM_TEST_CASE(MOG, UseGray, LearningRate, bool)
+PARAM_TEST_CASE(mog, UseGray, LearningRate, bool)
 {
     bool useGray;
     double learningRate;
@@ -78,10 +79,9 @@ PARAM_TEST_CASE(MOG, UseGray, LearningRate, bool)
     }
 };
 
-TEST_P(MOG, Update)
+TEST_P(mog, Update)
 {
-    std::string inputFile = "../../../samples/gpu/768x576.avi";
-
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -89,7 +89,7 @@ TEST_P(MOG, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::ocl::MOG_OCL mog;
+    cv::ocl::MOG mog;
     cv::ocl::oclMat foreground = createMat_ocl(frame.size(), CV_8UC1, useRoi);
 
     cv::BackgroundSubtractorMOG mog_gold;
@@ -114,7 +114,7 @@ TEST_P(MOG, Update)
         EXPECT_MAT_NEAR(foreground_gold, foreground, 0.0);
     }
 }
-INSTANTIATE_TEST_CASE_P(OCL_Video, MOG, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_Video, mog, testing::Combine(
     testing::Values(UseGray(false), UseGray(true)),
     testing::Values(LearningRate(0.0), LearningRate(0.01)),
     Values(true, false)));
@@ -127,7 +127,7 @@ namespace
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
 }
 
-PARAM_TEST_CASE(MOG2, UseGray, DetectShadow, bool)
+PARAM_TEST_CASE(mog2, UseGray, DetectShadow, bool)
 {
     bool useGray;
     bool detectShadow;
@@ -140,9 +140,9 @@ PARAM_TEST_CASE(MOG2, UseGray, DetectShadow, bool)
     }
 };
 
-TEST_P(MOG2, Update)
+TEST_P(mog2, Update)
 {
-    std::string inputFile = "../../../samples/gpu/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -150,7 +150,7 @@ TEST_P(MOG2, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::ocl::MOG2_OCL mog2;
+    cv::ocl::MOG2 mog2;
     mog2.bShadowDetection = detectShadow;
     cv::ocl::oclMat foreground = createMat_ocl(frame.size(), CV_8UC1, useRoi);
 
@@ -186,18 +186,18 @@ TEST_P(MOG2, Update)
     }
 }
 
-TEST_P(MOG2, getBackgroundImage)
+TEST_P(mog2, getBackgroundImage)
 {
     if (useGray)
         return;
 
-    std::string inputFile = "../../../samples/gpu/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
     cv::Mat frame;
 
-    cv::ocl::MOG2_OCL mog2;
+    cv::ocl::MOG2 mog2;
     mog2.bShadowDetection = detectShadow;
     cv::ocl::oclMat foreground;
 
@@ -224,7 +224,7 @@ TEST_P(MOG2, getBackgroundImage)
     EXPECT_MAT_NEAR(background_gold, background, 1.0);
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, MOG2, testing::Combine(
+INSTANTIATE_TEST_CASE_P(OCL_Video, mog2, testing::Combine(
     testing::Values(UseGray(true), UseGray(false)),
     testing::Values(DetectShadow(true), DetectShadow(false)),
     Values(true, false)));

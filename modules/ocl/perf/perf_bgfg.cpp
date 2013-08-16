@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -43,34 +43,43 @@
 //
 //M*/
 #include "precomp.hpp"
+using namespace cv;
+using namespace cv::ocl;
 
-///////////// MOG////////////////////////
-PERFTEST(MOG)
+void cvtFrameFmt(std::vector<Mat>& input, std::vector<Mat>& output, int output_cn)
 {
-    const string inputFile[] = {"../../../samples/gpu/768x576.avi", "../../../samples/gpu/1920x1080.avi"};
+    for(int i=0; i<input.size(); i++)
+    {
+        if(output_cn==1)
+            cvtColor(input[i], output[i], COLOR_RGB2GRAY);
+        else
+            cvtColor(input[i], output[i], COLOR_RGB2RGBA);
+    }
+}
+///////////// MOG////////////////////////
+PERFTEST(mog)
+{
+    const string inputFile[] = {"768x576.avi", "1920x1080.avi"};
     int cn[] = {1, 3};
 
     float learningRate[] = {0.0f, 0.01f};
 
     for(unsigned int idx = 0; idx < sizeof(inputFile)/sizeof(string); idx++)
     {
-        cv::VideoCapture cap(inputFile[idx]);
+        VideoCapture cap(inputFile[idx]);
         ASSERT_TRUE(cap.isOpened());
 
-        cv::ocl::oclMat frame_ocl;
-        cv::Mat frame;
-        cv::Mat frame_init;
-        cap >> frame;
-        ASSERT_FALSE(frame.empty());
-        frame_init = frame;
-
+        Mat frame;
         int nframe = 5;
+        Mat foreground_cpu;
+        oclMat foreground_ocl;
         std::vector<cv::Mat> frame_buffer_init;
-        std::vector<cv::Mat> frame_buffer;
-        std::vector<cv::ocl::oclMat> frame_buffer_ocl;
-        std::vector<cv::Mat> foreground_buf_ocl;
-        std::vector<cv::Mat> foreground_buf_cpu;
-
+        std::vector<Mat> frame_buffer(nframe);
+        std::vector<oclMat> frame_buffer_ocl;
+        std::vector<Mat> foreground_buf_ocl;
+        std::vector<Mat> foreground_buf_cpu;
+        BackgroundSubtractorMOG mog_cpu;
+        cv::ocl::MOG d_mog;
         for(int i = 0; i < nframe; i++)
         {
             cap >> frame;
@@ -83,55 +92,13 @@ PERFTEST(MOG)
             for(unsigned int j = 0; j < sizeof(cn)/sizeof(int); j++)
             {
                 SUBTEST << frame.cols << 'x' << frame.rows << ".avi; "<<"channels: "<<cn[j]<<"; learningRate: "<<learningRate[i];
+                if(cn[j]==1)
+                    cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
+                else
+                    frame_buffer=frame_buffer_init;
 
-                frame_buffer = frame_buffer_init;
-                frame = frame_init;
-                cv::Mat temp;
-                if(cn[j] != 3)
-                {
-                    if(cn[j] == 1)
-                        cv::cvtColor(frame, temp, cv::COLOR_RGB2GRAY);
-                    else
-                        cv::cvtColor(frame, temp, cv::COLOR_RGB2RGBA);
-
-                    cv::swap(temp, frame);
-                }
-
-                cv::BackgroundSubtractorMOG mog_cpu;
-                cv::Mat foreground_cpu;
-
-                mog_cpu(frame, foreground_cpu, learningRate[i]);
-
-                foreground_cpu.release();
-
-                cv::ocl::oclMat d_frame(frame);
-                cv::ocl::MOG_OCL d_mog;
-                cv::ocl::oclMat foreground_ocl;
-
-                d_mog(d_frame, foreground_ocl, learningRate[i]);
-                foreground_ocl.release();
-                d_mog.release();
-
-                for(int iter = 0; iter < nframe; iter++)
-                {
-                    cv::Mat temp1;
-                    if(cn[j] != 3)
-                    {
-                        if(cn[j] == 1)
-                            cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2GRAY);
-                        else
-                            cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2RGBA);
-
-                        cv::swap(temp1, frame_buffer[iter]);
-                    }
-                    temp1.release();
-                    cv::ocl::oclMat temp2;
-                    temp2.upload(frame_buffer[iter]);
-                    frame_buffer_ocl.push_back(temp2);
-                }
-
-                CPU_ON;
                 foreground_buf_cpu.clear();
+                CPU_ON;
                 for(int iter = 0; iter < nframe; iter++)
                 {
                     mog_cpu(frame_buffer[iter], foreground_cpu, learningRate[i]);
@@ -139,62 +106,46 @@ PERFTEST(MOG)
                 }
                 CPU_OFF;
 
-
                 WARMUP_ON;
-                d_mog(d_frame, foreground_ocl, learningRate[i]);
-                d_mog.release();
+                d_mog(oclMat(frame_buffer[0]), foreground_ocl, learningRate[i]);
                 WARMUP_OFF;
 
-                foreground_ocl.release();
+                frame_buffer_ocl.clear();
+                for(int iter =0; iter < nframe; iter++)
+                    frame_buffer_ocl.push_back(oclMat(frame_buffer[iter]));
 
                 GPU_ON;
                 for(int iter = 0; iter < nframe; iter++)
                 {
                     d_mog(frame_buffer_ocl[iter], foreground_ocl, learningRate[i]);
                 }
-                d_mog.release();
                 GPU_OFF;
 
-                foreground_ocl.release();
-
-                frame_buffer_ocl.clear();
-
-                GPU_FULL_ON;
                 foreground_buf_ocl.clear();
-                frame_buffer_ocl.clear();
+                GPU_FULL_ON;
                 for(int iter = 0; iter < nframe; iter++)
                 {
-                    cv::ocl::oclMat temp;
-                    temp.upload(frame_buffer[iter]);
-                    frame_buffer_ocl.push_back(temp);
-
-                    d_mog(frame_buffer_ocl[iter], foreground_ocl, learningRate[i]);
-
-                    cv::Mat temp1;
-                    foreground_ocl.download(temp1);
-                    foreground_buf_ocl.push_back(temp1);
+                    d_mog(oclMat(frame_buffer[iter]), foreground_ocl, learningRate[i]);
+                    cv::Mat temp;
+                    foreground_ocl.download(temp);
+                    foreground_buf_ocl.push_back(temp);
                 }
-                d_mog.release();
                 GPU_FULL_OFF;
 
                 for(int iter = 0; iter < nframe; iter++)
                     TestSystem::instance().ExpectedMatNear(foreground_buf_ocl[iter], foreground_buf_cpu[iter], 0.0);
 
-                foreground_buf_ocl.clear();
-                foreground_buf_cpu.clear();
-                frame_buffer_ocl.clear();
-                frame_buffer.clear();
             }
         }
-
         cap.release();
+        d_mog.release();
     }
 }
 
 ///////////// MOG2////////////////////////
-PERFTEST(MOG2)
+PERFTEST(mog2)
 {
-    const string inputFile[] = {"../../../samples/gpu/768x576.avi", "../../../samples/gpu/1920x1080.avi"};
+    const string inputFile[] = {"768x576.avi", "1920x1080.avi"};
     int cn[] = {1, 3, 4};
 
     for(unsigned int idx = 0; idx < sizeof(inputFile)/sizeof(string); idx++)
@@ -202,19 +153,14 @@ PERFTEST(MOG2)
         cv::VideoCapture cap(inputFile[idx]);
         ASSERT_TRUE(cap.isOpened());
 
-        cv::ocl::oclMat frame_ocl;
         cv::Mat frame;
-        cv::Mat frame_init;
-        cap >> frame;
-        ASSERT_FALSE(frame.empty());
-        frame_init = frame;
-
         int nframe = 5;
         std::vector<cv::Mat> frame_buffer_init;
-        std::vector<cv::Mat> frame_buffer;
+        std::vector<cv::Mat> frame_buffer(nframe);
         std::vector<cv::ocl::oclMat> frame_buffer_ocl;
         std::vector<cv::Mat> foreground_buf_ocl;
         std::vector<cv::Mat> foreground_buf_cpu;
+        cv::ocl::oclMat foreground_ocl;
 
         for(int i = 0; i < nframe; i++)
         {
@@ -222,60 +168,23 @@ PERFTEST(MOG2)
             ASSERT_FALSE(frame.empty());
             frame_buffer_init.push_back(frame);
         }
+        cv::ocl::MOG2 d_mog;
 
         for(unsigned int j = 0; j < sizeof(cn)/sizeof(int); j++)
         {
             SUBTEST << frame.cols << 'x' << frame.rows << ".avi; "<<"channels: "<<cn[j];
 
-            frame_buffer = frame_buffer_init;
-            frame = frame_init;
-            cv::Mat temp;
-            if(cn[j] != 3)
-            {
-                if(cn[j] == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_RGB2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_RGB2RGBA);
-
-                cv::swap(temp, frame);
-            }
+            if(cn[j] == 1)
+                cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
+            else
+                frame_buffer=frame_buffer_init;
 
             cv::BackgroundSubtractorMOG2 mog_cpu;
             mog_cpu.set("detectShadows", false);
             cv::Mat foreground_cpu;
 
-            mog_cpu(frame, foreground_cpu);
-
-            foreground_cpu.release();
-
-            cv::ocl::oclMat d_frame(frame);
-            cv::ocl::MOG2_OCL d_mog;
-            cv::ocl::oclMat foreground_ocl;
-
-            d_mog(d_frame, foreground_ocl);
-            foreground_ocl.release();
-            d_mog.release();
-
-            for(int iter = 0; iter < nframe; iter++)
-            {
-                cv::Mat temp1;
-                if(cn[j] != 3)
-                {
-                    if(cn[j] == 1)
-                        cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2GRAY);
-                    else
-                        cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2RGBA);
-
-                    cv::swap(temp1, frame_buffer[iter]);
-                }
-                temp1.release();
-                cv::ocl::oclMat temp2;
-                temp2.upload(frame_buffer[iter]);
-                frame_buffer_ocl.push_back(temp2);
-            }
-
-            CPU_ON;
             foreground_buf_cpu.clear();
+            CPU_ON;
             for(int iter = 0; iter < nframe; iter++)
             {
                 mog_cpu(frame_buffer[iter], foreground_cpu);
@@ -283,82 +192,65 @@ PERFTEST(MOG2)
             }
             CPU_OFF;
 
-
             WARMUP_ON;
-            d_mog(d_frame, foreground_ocl);
-            d_mog.release();
+            d_mog(oclMat(frame_buffer[0]), foreground_ocl);
             WARMUP_OFF;
 
-            foreground_ocl.release();
+            frame_buffer_ocl.clear();
+
+            for(int iter =0; iter < nframe; iter++)
+                frame_buffer_ocl.push_back(oclMat(frame_buffer[iter]));
 
             GPU_ON;
             for(int iter = 0; iter < nframe; iter++)
             {
                 d_mog(frame_buffer_ocl[iter], foreground_ocl);
             }
-            d_mog.release();
             GPU_OFF;
 
-            foreground_ocl.release();
-
-            frame_buffer_ocl.clear();
+            foreground_buf_ocl.clear();
 
             GPU_FULL_ON;
-            foreground_buf_ocl.clear();
-            frame_buffer_ocl.clear();
             for(int iter = 0; iter < nframe; iter++)
             {
-                cv::ocl::oclMat temp;
-                temp.upload(frame_buffer[iter]);
-                frame_buffer_ocl.push_back(temp);
-
-                d_mog(frame_buffer_ocl[iter], foreground_ocl);
+                d_mog(oclMat(frame_buffer[iter]), foreground_ocl);
 
                 cv::Mat temp1;
                 foreground_ocl.download(temp1);
                 foreground_buf_ocl.push_back(temp1);
             }
-            d_mog.release();
             GPU_FULL_OFF;
 
             for(int iter = 0; iter < nframe; iter++)
                 TestSystem::instance().ExpectedMatNear(foreground_buf_ocl[iter], foreground_buf_cpu[iter], 0.0);
 
-            foreground_buf_ocl.clear();
-            foreground_buf_cpu.clear();
-            frame_buffer_ocl.clear();
-            frame_buffer.clear();
         }
         cap.release();
+        d_mog.release();
     }
 }
 
 ///////////// MOG2GetBackgroundImage////////////////////////
-PERFTEST(MOG2GetBackgroundImage)
+PERFTEST(mog2_GetBackgroundImage)
 {
-    const string inputFile[] = {"../../../samples/gpu/768x576.avi", "../../../samples/gpu/1920x1080.avi"};
+    const string inputFile[] = {"768x576.avi", "1920x1080.avi"};
     int cn[] = {3};
-    
+
     for(unsigned int idx = 0; idx < sizeof(inputFile)/sizeof(string); idx++)
     {
         cv::VideoCapture cap(inputFile[idx]);
         ASSERT_TRUE(cap.isOpened());
 
-        cv::ocl::oclMat frame_ocl;
         cv::Mat frame;
-        cv::Mat frame_init;
         cap >> frame;
         ASSERT_FALSE(frame.empty());
-        frame_init = frame;
 
         int nframe = 5;
         std::vector<cv::Mat> frame_buffer_init;
-        std::vector<cv::Mat> frame_buffer;
+        std::vector<cv::Mat> frame_buffer(nframe);
         std::vector<cv::ocl::oclMat> frame_buffer_ocl;
         std::vector<cv::Mat> foreground_buf_ocl;
-        std::vector<cv::Mat> background_buf_ocl;
         std::vector<cv::Mat> foreground_buf_cpu;
-        std::vector<cv::Mat> background_buf_cpu;
 
         for(int i = 0; i < nframe; i++)
         {
@@ -372,17 +264,12 @@ PERFTEST(MOG2GetBackgroundImage)
             SUBTEST << frame.cols << 'x' << frame.rows << ".avi; "<<"channels: "<<cn[j];
 
             frame_buffer = frame_buffer_init;
-            frame = frame_init;
             cv::Mat temp;
-            if(cn[j] != 3)
-            {
-                if(cn[j] == 1)
-                    cv::cvtColor(frame, temp, cv::COLOR_RGB2GRAY);
-                else
-                    cv::cvtColor(frame, temp, cv::COLOR_RGB2RGBA);
 
-                cv::swap(temp, frame);
-            }
+            if(cn[j] == 1)
+                cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
+            else
+                frame_buffer=frame_buffer_init;
 
             cv::BackgroundSubtractorMOG2 mog_cpu;
             cv::Mat foreground_cpu;
@@ -395,48 +282,24 @@ PERFTEST(MOG2GetBackgroundImage)
             background_cpu.release();
 
             cv::ocl::oclMat d_frame(frame);
-            cv::ocl::MOG2_OCL d_mog;
+            cv::ocl::MOG2 d_mog;
             cv::ocl::oclMat foreground_ocl;
             cv::ocl::oclMat background_ocl;
 
-            d_mog(d_frame, foreground_ocl);
-            d_mog.getBackgroundImage(background_ocl);
-            foreground_ocl.release();
-            background_ocl.release();
-
-            for(int iter = 0; iter < nframe; iter++)
-            {
-                cv::Mat temp1;
-                if(cn[j] != 3)
-                {
-                    if(cn[j] == 1)
-                        cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2GRAY);
-                    else
-                        cv::cvtColor(frame_buffer[iter], temp1, cv::COLOR_RGB2RGBA);
-
-                    cv::swap(temp1, frame_buffer[iter]);
-                }
-                temp1.release();
-                cv::ocl::oclMat temp2;
-                temp2.upload(frame_buffer[iter]);
-                frame_buffer_ocl.push_back(temp2);
-            }
+            for(int iter =0; iter < nframe; iter++)
+                frame_buffer_ocl.push_back(oclMat(frame_buffer[iter]));
 
             CPU_ON;
-            foreground_buf_cpu.clear();
-            background_buf_cpu.clear();
             for(int iter = 0; iter < nframe; iter++)
             {
                 mog_cpu(frame_buffer[iter], foreground_cpu);
                 foreground_buf_cpu.push_back(foreground_cpu);
             }
             mog_cpu.getBackgroundImage(background_cpu);
-            background_buf_cpu.push_back(background_cpu);
             CPU_OFF;
 
             WARMUP_ON;
             d_mog(d_frame, foreground_ocl);
-            d_mog.release();
             WARMUP_OFF;
 
             foreground_ocl.release();
@@ -447,43 +310,24 @@ PERFTEST(MOG2GetBackgroundImage)
                 d_mog(frame_buffer_ocl[iter], foreground_ocl);
             }
             d_mog.getBackgroundImage(background_ocl);
-            d_mog.release();
-            background_ocl.release();
             GPU_OFF;
 
-            foreground_ocl.release();
-
-            frame_buffer_ocl.clear();
-
-            GPU_FULL_ON;
-            background_buf_ocl.clear();
             foreground_buf_ocl.clear();
-            frame_buffer_ocl.clear();
+
+            cv::Mat temp1;
+            GPU_FULL_ON;
             for(int iter = 0; iter < nframe; iter++)
             {
-                cv::ocl::oclMat temp;
-                temp.upload(frame_buffer[iter]);
-                frame_buffer_ocl.push_back(temp);
+                d_mog(oclMat(frame_buffer[iter]), foreground_ocl);
 
-                d_mog(frame_buffer_ocl[iter], foreground_ocl);
-
-                cv::Mat temp1;
                 foreground_ocl.download(temp1);
                 foreground_buf_ocl.push_back(temp1);
             }
             d_mog.getBackgroundImage(background_ocl);
-            background_buf_ocl.push_back(cv::Mat(background_ocl));
-            d_mog.release();
-            background_ocl.release();
             GPU_FULL_OFF;
 
-            for(int iter = 0; iter < 1; iter++)
-                TestSystem::instance().ExpectedMatNear(background_buf_ocl[iter], background_buf_cpu[iter], 0.0);
-
-            foreground_buf_ocl.clear();
-            foreground_buf_cpu.clear();
-            frame_buffer_ocl.clear();
-            frame_buffer.clear();
+            background_ocl.download(temp1);
+            TestSystem::instance().ExpectedMatNear(temp1, background_cpu, 0.0);
         }
     }
 }
