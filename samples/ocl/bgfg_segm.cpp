@@ -9,20 +9,16 @@ using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-enum Method
-{
-    FGD_STAT,
-    MOG,
-    MOG2,
-    GMG
-};
+#define M_MOG  1
+#define M_MOG2 2
 
 int main(int argc, const char** argv)
 {
+
     cv::CommandLineParser cmd(argc, argv,
         "{ c | camera | false       | use camera }"
         "{ f | file   | 768x576.avi | input video file }"
-        "{ m | method | mog         | method (fgd, mog, mog2, gmg) }"
+        "{ m | method | mog         | method (mog, mog2) }"
         "{ h | help   | false       | print help message }");
 
     if (cmd.get<bool>("help"))
@@ -37,25 +33,13 @@ int main(int argc, const char** argv)
     string file = cmd.get<string>("file");
     string method = cmd.get<string>("method");
 
-    if (method != "fgd"
-        && method != "mog"
-        && method != "mog2"
-        && method != "gmg")
+    if (method != "mog" && method != "mog2")
     {
         cerr << "Incorrect method" << endl;
         return -1;
     }
 
-    Method m = method == "fgd" ? FGD_STAT :
-        method == "mog" ? MOG :
-        method == "mog2" ? MOG2 :
-        GMG;
-
-    if(method == "fgd" || method == "gmg")
-    {
-        cerr << "required method has not been supported!" << endl;
-        return -1;
-    }
+    int m = method == "mog" ? M_MOG : M_MOG2;
 
     VideoCapture cap;
 
@@ -69,6 +53,7 @@ int main(int argc, const char** argv)
         cerr << "can not open camera or video file" << endl;
         return -1;
     }
+
     std::vector<cv::ocl::Info>info;
     cv::ocl::getDevice(info);
 
@@ -77,11 +62,8 @@ int main(int argc, const char** argv)
 
     oclMat d_frame(frame);
 
-    //FGDStatModel fgd_stat;
-    MOG_OCL mog;
-    MOG2_OCL mog2;
-    //GMG_GPU gmg;
-    //gmg.numInitializationFrames = 40;
+    cv::ocl::MOG mog;
+    cv::ocl::MOG2 mog2;
 
     oclMat d_fgmask;
     oclMat d_fgimg;
@@ -95,29 +77,13 @@ int main(int argc, const char** argv)
 
     switch (m)
     {
-    case FGD_STAT:
-        //fgd_stat.create(d_frame);
-        break;
-
-    case MOG:
+    case M_MOG:
         mog(d_frame, d_fgmask, 0.01f);
         break;
 
-    case MOG2:
+    case M_MOG2:
         mog2(d_frame, d_fgmask);
         break;
-
-    case GMG:
-        //gmg.initialize(d_frame.size());
-        break;
-    }
-
-    namedWindow("image", WINDOW_NORMAL);
-    namedWindow("foreground mask", WINDOW_NORMAL);
-    namedWindow("foreground image", WINDOW_NORMAL);
-    if (m != GMG)
-    {
-        namedWindow("mean background image", WINDOW_NORMAL);
     }
 
     for(;;)
@@ -132,24 +98,14 @@ int main(int argc, const char** argv)
         //update the model
         switch (m)
         {
-        case FGD_STAT:
-            //fgd_stat.update(d_frame);
-            //d_fgmask = fgd_stat.foreground;
-            //d_bgimg = fgd_stat.background;
-            break;
-
-        case MOG:
+        case M_MOG:
             mog(d_frame, d_fgmask, 0.01f);
             mog.getBackgroundImage(d_bgimg);
             break;
 
-        case MOG2:
+        case M_MOG2:
             mog2(d_frame, d_fgmask);
             mog2.getBackgroundImage(d_bgimg);
-            break;
-
-        case GMG:
-            //gmg(d_frame, d_fgmask);
             break;
         }
 

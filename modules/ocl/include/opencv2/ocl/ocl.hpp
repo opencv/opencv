@@ -1673,6 +1673,18 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
+        /*!Base class for MOG and MOG2!*/
+        class CV_EXPORTS BackgroundSubtractor
+        {
+        public:
+            //! the virtual destructor
+            virtual ~BackgroundSubtractor();
+            //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
+            virtual void operator()(const oclMat& image, oclMat& fgmask, float learningRate);
+
+            //! computes a background image
+            virtual void getBackgroundImage(oclMat& backgroundImage) const = 0;
+        };
                 /*!
         Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
 
@@ -1682,17 +1694,17 @@ namespace cv
         Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
         http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
         */
-        class CV_EXPORTS MOG_OCL
+        class CV_EXPORTS MOG: public cv::ocl::BackgroundSubtractor
         {
         public:
             //! the default constructor
-            MOG_OCL(int nmixtures = -1);
+            MOG(int nmixtures = -1);
 
             //! re-initiaization method
             void initialize(Size frameSize, int frameType);
 
             //! the update operator
-            void operator()(const oclMat& frame, oclMat& fgmask, float learningRate = 0.0f);
+            void operator()(const oclMat& frame, oclMat& fgmask, float learningRate = 0.f);
 
             //! computes a background image which are the mean of all background gaussians
             void getBackgroundImage(oclMat& backgroundImage) const;
@@ -1725,11 +1737,11 @@ namespace cv
         International Conference Pattern Recognition, UK, August, 2004.
         http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
         */
-        class CV_EXPORTS MOG2_OCL
+        class CV_EXPORTS MOG2: public cv::ocl::BackgroundSubtractor
         {
         public:
             //! the default constructor
-            MOG2_OCL(int nmixtures = -1);
+            MOG2(int nmixtures = -1);
 
             //! re-initiaization method
             void initialize(Size frameSize, int frameType);

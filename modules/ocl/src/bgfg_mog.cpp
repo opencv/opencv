@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////////////////
+/*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -10,8 +10,8 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Multicoreware, Inc., all rights reserved.
+// Copyright (C) 2010-2013, Advanced Micro Devices, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -30,7 +30,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -44,7 +44,6 @@
 //M*/
 
 #include "precomp.hpp"
-
 using namespace cv;
 using namespace cv::ocl;
 namespace cv 
@@ -55,7 +54,6 @@ namespace cv
 
         typedef struct _contant_struct
         {
-            cl_int c_nmixtures;
             cl_float c_Tb;
             cl_float c_TB;
             cl_float c_Tg;
@@ -70,6 +68,11 @@ namespace cv
         float c_TB;
     }
 }
+
+#if _MSC_VER
+#define snprintf sprintf_s
+#endif
+
 namespace cv { namespace ocl { namespace device
 {
     namespace mog
@@ -79,13 +82,13 @@ namespace cv { namespace ocl { namespace device
 
         void getBackgroundImage_ocl(int cn, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures, float backgroundRatio);
 
-        void loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, 
+        void loadConstants(float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, 
                             unsigned char shadowVal);
 
         void mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& modesUsed, oclMat& weight, oclMat& variance, oclMat& mean, 
-                      float alphaT, float prune, bool detectShadows);
+                      float alphaT, float prune, bool detectShadows, int nmixtures);
 
-        void getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst);
+        void getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures);
     }
 }}}
 
@@ -98,8 +101,16 @@ namespace mog
     const float defaultNoiseSigma = 30.0f * 0.5f;
     const float defaultInitialWeight = 0.05f;
 }
+void cv::ocl::BackgroundSubtractor::operator()(const oclMat&, oclMat&, float)
+{
 
-cv::ocl::MOG_OCL::MOG_OCL(int nmixtures) :
+}
+cv::ocl::BackgroundSubtractor::~BackgroundSubtractor()
+{
+
+}
+
+cv::ocl::MOG::MOG(int nmixtures) :
 frameSize_(0, 0), frameType_(0), nframes_(0)
 {
     nmixtures_ = std::min(nmixtures > 0 ? nmixtures : mog::defaultNMixtures, 8);
@@ -109,7 +120,7 @@ frameSize_(0, 0), frameType_(0), nframes_(0)
     noiseSigma = mog::defaultNoiseSigma;
 }
 
-void cv::ocl::MOG_OCL::initialize(cv::Size frameSize, int frameType)
+void cv::ocl::MOG::initialize(cv::Size frameSize, int frameType)
 {
     CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
 
@@ -137,7 +148,7 @@ void cv::ocl::MOG_OCL::initialize(cv::Size frameSize, int frameType)
     nframes_ = 0;
 }
 
-void cv::ocl::MOG_OCL::operator()(const cv::ocl::oclMat& frame, cv::ocl::oclMat& fgmask, float learningRate)
+void cv::ocl::MOG::operator()(const cv::ocl::oclMat& frame, cv::ocl::oclMat& fgmask, float learningRate)
 {
     using namespace cv::ocl::device::mog;
 
@@ -159,7 +170,7 @@ void cv::ocl::MOG_OCL::operator()(const cv::ocl::oclMat& frame, cv::ocl::oclMat&
         varThreshold, learningRate, backgroundRatio, noiseSigma);
 }
 
-void cv::ocl::MOG_OCL::getBackgroundImage(oclMat& backgroundImage) const
+void cv::ocl::MOG::getBackgroundImage(oclMat& backgroundImage) const
 {
     using namespace cv::ocl::device::mog;
 
@@ -168,7 +179,7 @@ void cv::ocl::MOG_OCL::getBackgroundImage(oclMat& backgroundImage) const
     cv::ocl::device::mog::getBackgroundImage_ocl(backgroundImage.oclchannels(), weight_, mean_, backgroundImage, nmixtures_, backgroundRatio);
 }
 
-void cv::ocl::MOG_OCL::release()
+void cv::ocl::MOG::release()
 {
     frameSize_ = Size(0, 0);
     frameType_ = 0;
@@ -181,10 +192,7 @@ void cv::ocl::MOG_OCL::release()
     clReleaseMemObject(cl_constants);
 }
 
-void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& mean, oclMat& var,
-    int nmixtures, float varThreshold, float backgroundRatio);
-
-void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& mean, oclMat& var,
+static void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& mean, oclMat& var,
     int nmixtures, float varThreshold, float backgroundRatio)
 {
     Context* clCxt = Context::getContext();
@@ -207,7 +215,13 @@ void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& we
     frame_offset_x = frame_offset_x/(int)frame.elemSize();
 
     char build_option[50];
-    sprintf(build_option, "-D FRAME_C_%d -D MEAN_VAR_C_%d", cn, cn);
+    if(cn == 1)
+    {
+        snprintf(build_option, 50, "-D CN1 -D NMIXTURES=%d", nmixtures);
+    }else
+    {
+        snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
+    }
 
     String kernel_name = "mog_withoutLearning_kernel";
     vector< pair<size_t, const void*> > args;
@@ -227,7 +241,6 @@ void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& we
     args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
     args.push_back(make_pair(sizeof(cl_int), (void*)&var_step));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&nmixtures));
     args.push_back(make_pair(sizeof(cl_float), (void*)&varThreshold));
     args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
 
@@ -240,10 +253,8 @@ void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& we
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }
 
-void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
-    int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar);
 
-void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
+static void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
     int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar)
 {
     Context* clCxt = Context::getContext();
@@ -267,7 +278,13 @@ void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weigh
     frame_offset_x = frame_offset_x/(int)frame.elemSize();
 
     char build_option[50];
-    sprintf(build_option, "-D FRAME_C_%d -D MEAN_VAR_C_%d", cn, cn);
+    if(cn == 1)
+    {
+        snprintf(build_option, 50, "-D CN1 -D NMIXTURES=%d", nmixtures);
+    }else
+    {
+        snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
+    }
 
     String kernel_name = "mog_withLearning_kernel";
     vector< pair<size_t, const void*> > args;
@@ -289,7 +306,6 @@ void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weigh
     args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
     args.push_back(make_pair(sizeof(cl_int), (void*)&var_step));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&nmixtures));
     args.push_back(make_pair(sizeof(cl_float), (void*)&varThreshold));
     args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
     args.push_back(make_pair(sizeof(cl_float), (void*)&learningRate));
@@ -328,7 +344,13 @@ void cv::ocl::device::mog::getBackgroundImage_ocl(int cn, const oclMat& weight, 
     int dst_step = (int)(dst.step/dst.elemSize());
 
     char build_option[50];
-    sprintf(build_option, "-D FRAME_C_%d -D MEAN_VAR_C_%d", cn, cn);
+    if(cn == 1)
+    {
+        snprintf(build_option, 50, "-D CN1 -D NMIXTURES=%d", nmixtures);
+    }else
+    {
+        snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
+    }
 
     String kernel_name = "getBackgroundImage_kernel";
     vector< pair<size_t, const void*> > args;
@@ -344,13 +366,12 @@ void cv::ocl::device::mog::getBackgroundImage_ocl(int cn, const oclMat& weight, 
     args.push_back(make_pair(sizeof(cl_int), (void*)&mean_step));
     args.push_back(make_pair(sizeof(cl_int), (void*)&dst_step));
 
-    args.push_back(make_pair(sizeof(cl_int), (void*)&nmixtures));
     args.push_back(make_pair(sizeof(cl_float), (void*)&backgroundRatio));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }
 
-void cv::ocl::device::mog::loadConstants(int nmixtures, float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal)
+void cv::ocl::device::mog::loadConstants(float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, unsigned char shadowVal)
 {
     varMin = cv::min(varMin, varMax);
     varMax = cv::max(varMin, varMax);
@@ -358,7 +379,6 @@ void cv::ocl::device::mog::loadConstants(int nmixtures, float Tb, float TB, floa
     c_TB = TB;
 
     _contant_struct *constants = new _contant_struct;
-    constants->c_nmixtures = nmixtures;
     constants->c_Tb = Tb;
     constants->c_TB = TB;
     constants->c_Tg = Tg;
@@ -373,7 +393,7 @@ void cv::ocl::device::mog::loadConstants(int nmixtures, float Tb, float TB, floa
 }
 
 void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& modesUsed, oclMat& weight, oclMat& variance, 
-                                oclMat& mean, float alphaT, float prune, bool detectShadows)
+                                oclMat& mean, float alphaT, float prune, bool detectShadows, int nmixtures)
 {
     Context* clCxt = Context::getContext();
 
@@ -404,8 +424,14 @@ void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask,
     String kernel_name = "mog2_kernel";
     vector< pair<size_t, const void*> > args;
 
-    char build_option[64];
-    sprintf(build_option, "-D FRAME_C_%d -D MEAN_VAR_C_%d", cn, cn);
+    char build_option[50];
+    if(cn == 1)
+    {
+        snprintf(build_option, 50, "-D CN1 -D NMIXTURES=%d", nmixtures);
+    }else
+    {
+        snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
+    }
 
     args.push_back(make_pair(sizeof(cl_mem), (void*)&frame.data));
     args.push_back(make_pair(sizeof(cl_mem), (void*)&fgmask.data));
@@ -440,7 +466,7 @@ void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask,
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
 }
 
-void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst)
+void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures)
 {
     Context* clCxt = Context::getContext();
 
@@ -460,7 +486,13 @@ void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUs
     vector< pair<size_t, const void*> > args;
 
     char build_option[50];
-    sprintf(build_option, "-D FRAME_C_%d -D MEAN_VAR_C_%d", cn, cn);
+    if(cn == 1)
+    {
+        snprintf(build_option, 50, "-D CN1 -D NMIXTURES=%d", nmixtures);
+    }else
+    {
+        snprintf(build_option, 50, "-D NMIXTURES=%d", nmixtures);
+    }
 
     args.push_back(make_pair(sizeof(cl_mem), (void*)&modesUsed.data));
     args.push_back(make_pair(sizeof(cl_mem), (void*)&weight.data));
@@ -503,7 +535,7 @@ namespace mog2
     const float defaultfTau = 0.5f; // Tau - shadow threshold, see the paper for explanation
 }
 
-cv::ocl::MOG2_OCL::MOG2_OCL(int nmixtures) : frameSize_(0, 0), frameType_(0), nframes_(0)
+cv::ocl::MOG2::MOG2(int nmixtures) : frameSize_(0, 0), frameType_(0), nframes_(0)
 {
     nmixtures_ = nmixtures > 0 ? nmixtures : mog2::defaultNMixtures;
 
@@ -522,12 +554,9 @@ cv::ocl::MOG2_OCL::MOG2_OCL(int nmixtures) : frameSize_(0, 0), frameType_(0), nf
     fTau = mog2::defaultfTau;
 }
 
-void cv::ocl::MOG2_OCL::initialize(cv::Size frameSize, int frameType)
+void cv::ocl::MOG2::initialize(cv::Size frameSize, int frameType)
 {
     using namespace cv::ocl::device::mog;
-    //CV_8UC4 = 24;
-    //CV_8UC3 = 16;
-    //CV_8UC1 = 0;
     CV_Assert(frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4);
 
     frameSize_ = frameSize;
@@ -541,7 +570,6 @@ void cv::ocl::MOG2_OCL::initialize(cv::Size frameSize, int frameType)
     // the mixture weight (w),
     // the mean (nchannels values) and
     // the covariance
-    //CV_32FC(3) = 21;
     weight_.create(frameSize.height * nmixtures_, frameSize_.width, CV_32FC1);
     weight_.setTo(Scalar::all(0));
 
@@ -555,10 +583,10 @@ void cv::ocl::MOG2_OCL::initialize(cv::Size frameSize, int frameType)
     bgmodelUsedModes_.create(frameSize_, CV_8UC1);
     bgmodelUsedModes_.setTo(cv::Scalar::all(0));
 
-    loadConstants(nmixtures_, varThreshold, backgroundRatio, varThresholdGen, fVarInit, fVarMin, fVarMax, fTau, nShadowDetection);
+    loadConstants(varThreshold, backgroundRatio, varThresholdGen, fVarInit, fVarMin, fVarMax, fTau, nShadowDetection);
 }
 
-void cv::ocl::MOG2_OCL::operator()(const oclMat& frame, oclMat& fgmask, float learningRate)
+void cv::ocl::MOG2::operator()(const oclMat& frame, oclMat& fgmask, float learningRate)
 {
     using namespace cv::ocl::device::mog;
 
@@ -575,19 +603,19 @@ void cv::ocl::MOG2_OCL::operator()(const oclMat& frame, oclMat& fgmask, float le
     learningRate = learningRate >= 0.0f && nframes_ > 1 ? learningRate : 1.0f / std::min(2 * nframes_, history);
     CV_Assert(learningRate >= 0.0f);
 
-    mog2_ocl(frame, frame.oclchannels(), fgmask, bgmodelUsedModes_, weight_, variance_, mean_, learningRate, -learningRate * fCT, bShadowDetection);
+    mog2_ocl(frame, frame.oclchannels(), fgmask, bgmodelUsedModes_, weight_, variance_, mean_, learningRate, -learningRate * fCT, bShadowDetection, nmixtures_);
 }
 
-void cv::ocl::MOG2_OCL::getBackgroundImage(oclMat& backgroundImage) const
+void cv::ocl::MOG2::getBackgroundImage(oclMat& backgroundImage) const
 {
     using namespace cv::ocl::device::mog;
 
     backgroundImage.create(frameSize_, frameType_);
 
-    cv::ocl::device::mog::getBackgroundImage2_ocl(backgroundImage.oclchannels(), bgmodelUsedModes_, weight_, mean_, backgroundImage);
+    cv::ocl::device::mog::getBackgroundImage2_ocl(backgroundImage.oclchannels(), bgmodelUsedModes_, weight_, mean_, backgroundImage, nmixtures_);
 }
 
-void cv::ocl::MOG2_OCL::release()
+void cv::ocl::MOG2::release()
 {
     frameSize_ = Size(0, 0);
     frameType_ = 0;
