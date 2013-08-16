@@ -31,14 +31,13 @@ The function reconstructs the selected image area from the pixel near the area b
 http://en.wikipedia.org/wiki/Inpainting
 for more details.
 
-.. Sample code::
+.. note::
 
-   * : An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
+   * An example using the inpainting technique can be found at opencv_source_code/samples/cpp/inpaint.cpp
 
-   * : PYTHON : An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py
+   * (Python) An example using the inpainting technique can be found at opencv_source_code/samples/python2/inpaint.py
 
 
 .. [Telea04] Telea, Alexandru. "An image inpainting technique based on the fast marching method." Journal of graphics tools 9, no. 1 (2004): 23-34.
 
 .. [Navier01] Bertalmio, Marcelo, Andrea L. Bertozzi, and Guillermo Sapiro. "Navier-stokes, fluid dynamics, and image and video inpainting." In Computer Vision and Pattern Recognition, 2001. CVPR 2001. Proceedings of the 2001 IEEE Computer Society Conference on, vol. 1, pp. I-355. IEEE, 2001.
-

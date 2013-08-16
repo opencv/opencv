@@ -1,14 +1,6 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "cvconfig.h"
-
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#  ifdef BUILD_SHARED_LIBS
-#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#  endif
-#endif
-
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
 
@@ -477,9 +469,16 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
+#define CV_PERF_TEST_MAIN_INTERNALS_ARGS(...)	\
+    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/
+#else
+#define CV_PERF_TEST_MAIN_INTERNALS_ARGS(...)	\
+    __VA_ARGS__;
+#endif
 
-#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...) \
-    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+    CV_PERF_TEST_MAIN_INTERNALS_ARGS(__VA_ARGS__) \
     ::perf::Regression::Init(#modulename);\
     ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls),\
                            argc, argv);\

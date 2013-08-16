@@ -91,9 +91,9 @@ Several things can be noted by looking at the sample code and the output:
  *
    In YAML (but not XML), mappings and sequences can be written in a compact Python-like inline form. In the sample above matrix elements, as well as each feature, including its lbp value, is stored in such inline form. To store a mapping/sequence in a compact form, put ":" after the opening character, e.g. use **"{:"** instead of **"{"** and **"[:"** instead of **"["**. When the data is written to XML, those extra ":" are ignored.
 
-.. Sample code::
+.. note::
 
-   * : A complete example using the FileStorage interface can be found at opencv_source_code/samples/cpp/filestorage.cpp
+   * A complete example using the FileStorage interface can be found at opencv_source_code/samples/cpp/filestorage.cpp
 
 
 Reading data from a file storage.

@@ -84,10 +84,10 @@ SURF
 
 .. [Bay06] Bay, H. and Tuytelaars, T. and Van Gool, L. "SURF: Speeded Up Robust Features", 9th European Conference on Computer Vision, 2006
 
-.. Sample code::
+.. note::
 
-   * : An example using the SURF feature detector can be found at opencv_source_code/samples/cpp/generic_descriptor_match.cpp
-   * : Another example using the SURF feature detector, extractor and matcher can be found at opencv_source_code/samples/cpp/matcher_simple.cpp
+   * An example using the SURF feature detector can be found at opencv_source_code/samples/cpp/generic_descriptor_match.cpp
+   * Another example using the SURF feature detector, extractor and matcher can be found at opencv_source_code/samples/cpp/matcher_simple.cpp
 
 SURF::SURF
 ----------
@@ -243,9 +243,9 @@ The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers 
 
 .. seealso:: :ocv:class:`SURF`
 
-.. Sample code::
+.. note::
 
-   * : An example for using the SURF keypoint matcher on GPU can be found at opencv_source_code/samples/gpu/surf_keypoint_matcher.cpp
+   * An example for using the SURF keypoint matcher on GPU can be found at opencv_source_code/samples/gpu/surf_keypoint_matcher.cpp
 
 ocl::SURF_OCL
 -------------
@@ -345,6 +345,6 @@ The class ``SURF_OCL`` uses some buffers and provides access to it. All buffers 
 
 .. seealso:: :ocv:class:`SURF`
 
-.. Sample code::
+.. note::
 
-   * : OCL : An example of the SURF detector can be found at opencv_source_code/samples/ocl/surf_matcher.cpp
+   * OCL : An example of the SURF detector can be found at opencv_source_code/samples/ocl/surf_matcher.cpp
