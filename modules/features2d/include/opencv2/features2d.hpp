@@ -1519,6 +1519,41 @@ protected:
     Ptr<DescriptorMatcher> dmatcher;
 };
 
+/*
+ * Class to match image descriptors using bag of visual words.
+ */
+class CV_EXPORTS BOWImgDescriptorMatcher
+{
+public:
+    BOWImgDescriptorMatcher( const Ptr<DescriptorMatcher>& _dmatcher );
+    virtual ~BOWImgDescriptorMatcher();
+
+    /*
+     * Compute the matching of the current descriptor according to the vocabulary.
+     *
+     * vocDescriptor         the descriptors to match
+     * pointIdxsOfClusters   vector of matching
+     */
+    void compute( const Mat & descriptors, Mat& vocDescriptor, std::vector< std::vector< int > > * pointIdxsOfClusters = 0 );
+
+    /*
+     * Set the vocabulary
+     */
+    void setVocabulary( const Mat& vocabulary );
+    const Mat& getVocabulary() const;
+    
+    int descriptorSize() const;
+    int descriptorType() const;
+
+protected:
+    Mat vocabulary;
+    Ptr<DescriptorMatcher> dmatcher;
+
+private:
+    int _type;
+};
+
+
 } /* namespace cv */
 
 #endif
