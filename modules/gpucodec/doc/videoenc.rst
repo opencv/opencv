@@ -15,9 +15,9 @@ The implementation uses H264 video codec.
 
 .. note:: Currently only Windows platform is supported.
 
-.. Sample code::
+.. note::
 
-   * : An example on how to use the videoWriter class can be found at opencv_source_code/samples/gpu/video_writer.cpp
+   * An example on how to use the videoWriter class can be found at opencv_source_code/samples/gpu/video_writer.cpp
 
 
 gpucodec::VideoWriter::write

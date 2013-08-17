@@ -110,9 +110,9 @@ Here is an overview of the abstract Retina interface, allocate one instance with
 
 .. Sample code::
 
-   * : An example on retina tone mapping can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
-   * : An example on retina tone mapping on video input can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
-   * : A complete example illustrating the retina interface can be found at opencv_source_code/samples/cpp/retinaDemo.cpp
+   * An example on retina tone mapping can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
+   * An example on retina tone mapping on video input can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
+   * A complete example illustrating the retina interface can be found at opencv_source_code/samples/cpp/retinaDemo.cpp
 
 Description
 +++++++++++

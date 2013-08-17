@@ -22,9 +22,9 @@ OpenCV enables you to specify the extrapolation method. For details, see the fun
     * BORDER_CONSTANT:      iiiiii|abcdefgh|iiiiiii  with some specified 'i'
     */
 
-.. Sample code::
+.. note::
 
-   * : PYTHON : A complete example illustrating different morphological operations like erode/dilate, open/close, blackhat/tophat ... can be found at opencv_source_code/samples/python2/morphology.py
+   * (Python) A complete example illustrating different morphological operations like erode/dilate, open/close, blackhat/tophat ... can be found at opencv_source_code/samples/python2/morphology.py
 
 BaseColumnFilter
 ----------------
@@ -785,9 +785,9 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
     :ocv:func:`getStructuringElement`
 
 
-.. Sample code::
+.. note::
 
-   * : An example using the morphological dilate operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
+   * An example using the morphological dilate operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
     
 
@@ -831,9 +831,9 @@ The function supports the in-place mode. Erosion can be applied several ( ``iter
     :ocv:func:`createMorphologyFilter`,
     :ocv:func:`getStructuringElement`
 
-.. Sample code::
+.. note::
 
-   * : An example using the morphological erode operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
+   * An example using the morphological erode operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
 filter2D
 --------
@@ -1194,9 +1194,9 @@ Any of the operations can be done in-place. In case of multi-channel images, eac
     :ocv:func:`createMorphologyFilter`,
     :ocv:func:`getStructuringElement`
 
-.. Sample code::
+.. note::
 
-   * : An example using the morphologyEx function for the morphological opening and closing operations can be found at opencv_source_code/samples/cpp/morphology2.cpp
+   * An example using the morphologyEx function for the morphological opening and closing operations can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
 Laplacian
 ---------
@@ -1240,9 +1240,9 @@ This is done when ``ksize > 1`` . When ``ksize == 1`` , the Laplacian is compute
     :ocv:func:`Sobel`,
     :ocv:func:`Scharr`
 
-.. Sample code::
+.. note::
 
-   * : An example using the Laplace transformation for edge detection can be found at opencv_source_code/samples/cpp/laplace.cpp
+   * An example using the Laplace transformation for edge detection can be found at opencv_source_code/samples/cpp/laplace.cpp
 
 pyrDown
 -------
@@ -1299,9 +1299,9 @@ Upsamples an image and then blurs it.
 The function performs the upsampling step of the Gaussian pyramid construction, though it can actually be used to construct the Laplacian pyramid. First, it upsamples the source image by injecting even zero rows and columns and then convolves the result with the same kernel as in
 :ocv:func:`pyrDown`  multiplied by 4.
 
-.. Sample code::
+.. note::
 
-   * : PYTHON : An example of Laplacian Pyramid construction and merging can be found at opencv_source_code/samples/python2/lappyr.py
+   * (Python) An example of Laplacian Pyramid construction and merging can be found at opencv_source_code/samples/python2/lappyr.py
 
 
 pyrMeanShiftFiltering
@@ -1350,9 +1350,9 @@ After the iterations over, the color components of the initial pixel (that is, t
 
 When ``maxLevel > 0``, the gaussian pyramid of ``maxLevel+1`` levels is built, and the above procedure is run on the smallest layer first. After that, the results are propagated to the larger layer and the iterations are run again only on those pixels where the layer colors differ by more than ``sr`` from the lower-resolution layer of the pyramid. That makes boundaries of color regions sharper. Note that the results will be actually different from the ones obtained by running the meanshift procedure on the whole original image (i.e. when ``maxLevel==0``).
 
-.. Sample code::
+.. note::
 
-   * : An example using mean-shift image segmentation can be found at opencv_source_code/samples/cpp/meanshift_segmentation.cpp
+   * An example using mean-shift image segmentation can be found at opencv_source_code/samples/cpp/meanshift_segmentation.cpp
 
 sepFilter2D
 -----------

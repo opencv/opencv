@@ -476,11 +476,11 @@ In this mode, the complexity is still linear.
 That is, the function provides a very fast way to compute the Voronoi diagram for a binary image.
 Currently, the second variant can use only the approximate distance transform algorithm, i.e. ``maskSize=CV_DIST_MASK_PRECISE`` is not supported yet.
 
-.. Sample code::
+.. note::
 
-   * : An example on using the distance transform can be found at opencv_source_code/samples/cpp/distrans.cpp
+   * An example on using the distance transform can be found at opencv_source_code/samples/cpp/distrans.cpp
 
-   * : PYTHON : An example on using the distance transform can be found at opencv_source/samples/python2/distrans.py
+   * (Python) An example on using the distance transform can be found at opencv_source/samples/python2/distrans.py
 
 floodFill
 ---------
@@ -584,11 +584,11 @@ Use these functions to either mark a connected component with the specified colo
 
 .. seealso:: :ocv:func:`findContours`
 
-.. Sample code::
+.. note::
 
-   * : An example using the FloodFill technique can be found at opencv_source_code/samples/cpp/ffilldemo.cpp
+   * An example using the FloodFill technique can be found at opencv_source_code/samples/cpp/ffilldemo.cpp
 
-   * : PYTHON : An example using the FloodFill technique can be found at opencv_source_code/samples/python2/floodfill.cpp
+   * (Python) An example using the FloodFill technique can be found at opencv_source_code/samples/python2/floodfill.cpp
 
 integral
 --------
@@ -748,11 +748,11 @@ Visual demonstration and usage example of the function can be found in the OpenC
 
 .. seealso:: :ocv:func:`findContours`
 
-.. Sample code::
+.. note::
 
-   * : An example using the watershed algorithm can be found at opencv_source_code/samples/cpp/watershed.cpp
+   * An example using the watershed algorithm can be found at opencv_source_code/samples/cpp/watershed.cpp
 
-   * : PYTHON : An example using the watershed algorithm can be found at opencv_source_code/samples/python2/watershed.py
+   * (Python) An example using the watershed algorithm can be found at opencv_source_code/samples/python2/watershed.py
 
 grabCut
 -------
@@ -800,8 +800,8 @@ See the sample ``grabcut.cpp`` to learn how to use the function.
 .. [Meyer92] Meyer, F. *Color Image Segmentation*, ICIP92, 1992
 
 
-.. Sample code::
+.. note::
 
-   * : An example using the GrabCut algorithm can be found at opencv_source_code/samples/cpp/grabcut.cpp
+   * An example using the GrabCut algorithm can be found at opencv_source_code/samples/cpp/grabcut.cpp
 
-   * : PYTHON : An example using the GrabCut algorithm can be found at opencv_source_code/samples/python2/grabcut.py
+   * (Python) An example using the GrabCut algorithm can be found at opencv_source_code/samples/python2/grabcut.py

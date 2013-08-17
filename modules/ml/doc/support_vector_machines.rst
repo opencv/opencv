@@ -158,11 +158,11 @@ CvSVM
 
 Support Vector Machines.
 
-.. Sample code::
+.. note::
 
-   * : PYTHON : An example of digit recognition using SVM can be found at opencv_source/samples/python2/digits.py
-   * : PYTHON : An example of grid search digit recognition using SVM can be found at opencv_source/samples/python2/digits_adjust.py
-   * : PYTHON : An example of video digit recognition using SVM can be found at opencv_source/samples/python2/digits_video.py
+   * (Python) An example of digit recognition using SVM can be found at opencv_source/samples/python2/digits.py
+   * (Python) An example of grid search digit recognition using SVM can be found at opencv_source/samples/python2/digits_adjust.py
+   * (Python) An example of video digit recognition using SVM can be found at opencv_source/samples/python2/digits_video.py
 
 CvSVM::CvSVM
 ------------

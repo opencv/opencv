@@ -8,9 +8,9 @@ between different algorithms solving the same problem. All objects that implemen
 inherit the
 :ocv:class:`FeatureDetector` interface.
 
-.. Sample code::
+.. note::
 
-   * : An example explaining keypoint detection can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example explaining keypoint detection can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
 
 FeatureDetector
 ---------------

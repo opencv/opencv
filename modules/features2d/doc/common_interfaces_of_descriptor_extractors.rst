@@ -9,10 +9,10 @@ represented as vectors in a multidimensional space. All objects that implement t
 descriptor extractors inherit the
 :ocv:class:`DescriptorExtractor` interface.
 
-.. Sample code::
+.. note::
 
-   * : An example explaining keypoint extraction can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
-   * : An example on descriptor evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_evaluation.cpp
+   * An example explaining keypoint extraction can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_evaluation.cpp
 
 DescriptorExtractor
 -------------------
@@ -145,6 +145,6 @@ Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
         ...
     };
 
-.. Sample code::
+.. note::
 
-   * : A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp
+   * A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp
