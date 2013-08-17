@@ -124,7 +124,7 @@ uint TrackerStateEstimatorMILBoosting::max_idx( const std::vector<float> &v )
 
 Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
-  //TODO run cvBoost predict in order to compute next location
+  //run ClfMilBoost classify in order to compute next location
   if( currentConfidenceMap.empty() )
     return 0;
 
@@ -135,14 +135,8 @@ Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const st
 
   std::vector<float> prob = boostMILModel.classify( positiveStates );
 
-  //std::cout << positiveStates.rows << " " << negativeStates.rows << std::endl;
   int bestind = max_idx( prob );
   float resp = prob[bestind];
-/*
-  for(size_t i = 0; i < prob.size(); i++)
-  std::cout << "prob " << prob.at(i) << std::endl;
-  std::cout << "bestind " << bestind << std::endl;
-  std::cout << "resp " << resp << std::endl;*/
 
   return currentConfidenceMap.at( bestind ).first;
 }
@@ -200,31 +194,10 @@ void TrackerStateEstimatorMILBoosting::prepareData( const ConfidenceMap& confide
 void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
 
-  /*CvBoostParams params( CvBoost::REAL,  // boost_type
-   250,  // weak_count
-   0.8,  // weight_trim_rate
-   1,  // max_depth
-   false,  //use_surrogates
-   0  // priors
-   );
-
-   params.use_1se_rule = true;
-   params.split_criteria = CvBoost::GINI;
-   ConfidenceMap lastConfidenceMap = confidenceMaps.back();
-
-   //prepare the trainData
-   Mat traindata;
-   Mat responses;
-   prepareData( lastConfidenceMap, traindata, responses );
-
-   Mat var_types( 1, traindata.cols + 1, CV_8UC1, Scalar( CV_VAR_ORDERED ) );
-   var_types.at<uchar>( traindata.cols ) = CV_VAR_CATEGORICAL;*/
-
-//TODO update the scores of the confidence maps
   if( !trained )
   {
     //this is the first time that the classifier is built
-    //TODO init MIL
+    //init MIL
     boostMILModel.init();
     trained = true;
   }
@@ -234,7 +207,7 @@ void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& c
   Mat negativeStates;
 
   prepareData( lastConfidenceMap, positiveStates, negativeStates );
-//TODO update MIL
+  //update MIL
   boostMILModel.update( positiveStates, negativeStates );
 
 }
