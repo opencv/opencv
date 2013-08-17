@@ -31,9 +31,6 @@ Implementation of TrackerMIL from :ocv:class:`Tracker`::
      void read( const FileNode& fn );
      void write( FileStorage& fs ) const;
    
-     static int getRandInt( const int min, const int max );
-     static float getRandFloat( const float min = 0, const float max = 1 );
-   
    };
 
 TrackerMIL::Params
@@ -68,28 +65,6 @@ Constructor
 .. ocv:function:: bool TrackerMIL::TrackerMIL( const TrackerMIL::Params &parameters = TrackerMIL::Params() )
 
     :param parameters: MIL parameters :ocv:struct:`TrackerMIL::Params`
-
-TrackerMIL::getRandInt
-----------------------
-
-Get random integer number in a range
-
-.. ocv:function:: int TrackerMIL::getRandInt( const int min, const int max )
-
-    :param min: min value in the range
-    
-    :param max: max value in the range
-    
-TrackerMIL::getRandInt
-----------------------
-
-Get random float number in a range
-
-.. ocv:function:: float TrackerMIL::getRandFloat( const float min = 0, const float max = 1 )
-
-    :param min: min value in the range
-    
-    :param max: max value in the range
 
 
 TrackerBoosting

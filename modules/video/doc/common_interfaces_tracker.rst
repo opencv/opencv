@@ -200,27 +200,6 @@ And add it in your Tracker : ::
    }
 
 
-You should define your TrackerTargetState based on your implementation. :ocv:class:`TrackerTargetState` base class has only the position, you can
-enrich it adding scale factor, width, height and target rotation.
-
-Example of creating specialized TrackerTargetState ``TrackerMILTargetState`` : ::
-
-   class TrackerMILTargetState : public TrackerTargetState
-   {
-    public:
-     TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& HAARFeatures );
-     ~TrackerMILTargetState();
-     ...
-      
-    private:
-     int width;
-     int height;
-     bool isTarget;
-     Mat features;
-     ...
-     
-   };
-
 In the last step you should define the TrackerStateEstimator based on your implementation or you can use one of ready class as :ocv:class:`TrackerStateEstimatorMILBoosting`.
 It represent the statistical part of the model that estimates the most likely target state.  
 
@@ -228,6 +207,11 @@ Example of creating specialized TrackerStateEstimator ``TrackerStateEstimatorMIL
 
    class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
    {
+    class TrackerMILTargetState : public TrackerTargetState
+	{
+	...
+	};
+	
     public:
      TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
      ~TrackerStateEstimatorMILBoosting();
@@ -249,7 +233,28 @@ And add it in your TrackerModel : ::
 .. seealso::
 
    :ocv:class:`TrackerModel`, :ocv:class:`TrackerStateEstimatorMILBoosting`, :ocv:class:`TrackerTargetState`
-   
+
+
+During this step, you should define your TrackerTargetState based on your implementation. :ocv:class:`TrackerTargetState` base class has only the bounding box (upper-left position, width and height), you can
+enrich it adding scale factor, target rotation, etc.
+
+Example of creating specialized TrackerTargetState ``TrackerMILTargetState`` : ::
+
+   class TrackerMILTargetState : public TrackerTargetState
+   {
+    public:
+     TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& features );
+     ~TrackerMILTargetState();
+     ...
+      
+    private:
+     bool isTarget;
+     Mat targetFeatures;
+     ...
+     
+   };
+
+ 
 Try it
 ......
 

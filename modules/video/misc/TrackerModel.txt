@@ -32,7 +32,7 @@ class TrackerTargetState <<virtual>>{
 	void setTargetPosition(Point2f position);
 }
 class TrackerTargetState 
-note bottom: Each tracker can create own state
+note bottom: Each TrackerStateEstimator can create own state
 
 class TrackerStateEstimator <<virtual>>{
 	~TrackerStateEstimator();

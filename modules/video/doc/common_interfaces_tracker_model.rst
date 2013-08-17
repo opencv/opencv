@@ -57,6 +57,12 @@ TrackerTargetState class::
      
      Point2f getTargetPosition() const;
      void setTargetPosition( const Point2f& position );
+     
+     int getTargetWidth() const;
+     void setTargetWidth( int width );
+     
+     int getTargetHeight() const;
+     void setTargetHeight( int height );
    
    };
 
@@ -260,15 +266,72 @@ TrackerStateEstimator based on Boosting
 
 TrackerStateEstimatorMILBoosting class::
 
-   class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
-   {
-    public:
-     TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
-     ~TrackerStateEstimatorMILBoosting();
-   
-     void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
-   };
-   
+	class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
+	{
+	 public:
+	  class TrackerMILTargetState : public TrackerTargetState
+	  {
+	   ...
+	  };
+	  TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+	  ~TrackerStateEstimatorMILBoosting();
+
+	  void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
+	};
+
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState
+-------------------------------------------------------
+
+Implementation of the target state for TrackerStateEstimatorMILBoosting
+
+.. ocv:class:: TrackerStateEstimatorMILBoosting::TrackerMILTargetState
+
+TrackerMILTargetState class::
+
+     class TrackerMILTargetState : public TrackerTargetState
+     {
+      public:
+      TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& features );
+      ~TrackerMILTargetState(){};
+
+      void setTargetFg( bool foreground );
+      void setFeatures( const Mat& features );
+      bool isTargetFg() const;
+      Mat getFeatures() const;
+     };
+
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setTargetFg
+-------------------------------------------------------------------------------
+
+Set label: true for target foreground, false for background
+
+.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setTargetFg( bool foreground )
+
+    :param foreground: Label for background/foreground
+    
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures
+-------------------------------------------------------------------------------
+
+Set the features extracted from :ocv:class:`TrackerFeatureSet`
+
+.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures( const Mat& features )
+
+    :param features: The features extracted
+    
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::isTargetFg
+------------------------------------------------------------------------------
+
+Get the label. Return true for target foreground, false for background
+
+.. ocv:function:: bool TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::isTargetFg() const
+    
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::getFeatures
+-------------------------------------------------------------------------------
+
+Get the features extracted
+
+.. ocv:function:: Mat TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures() const
+    
 TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting
 ------------------------------------------------------------------
 
