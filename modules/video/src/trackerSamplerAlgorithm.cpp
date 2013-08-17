@@ -106,6 +106,7 @@ TrackerSamplerCSC::TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameter
 {
   className = "CSC";
   mode = MODE_INIT_POS;
+  rng = RNG( (int) time( 0 ) );
 }
 
 TrackerSamplerCSC::~TrackerSamplerCSC()
@@ -185,7 +186,7 @@ std::vector<Mat> TrackerSamplerCSC::sampleImage( const Mat& img, int x, int y, i
     for ( int c = mincol; c <= int( maxcol ); c++ )
     {
       dist = ( y - r ) * ( y - r ) + ( x - c ) * ( x - c );
-      if( TrackerMIL::getRandFloat() < prob && dist < inradsq && dist >= outradsq )
+      if( float( rng.uniform( 0.f, 1.f ) ) < prob && dist < inradsq && dist >= outradsq )
       {
         samples[i] = img( Rect( c, r, w, h ) );
         i++;

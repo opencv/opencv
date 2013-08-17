@@ -594,6 +594,7 @@ class CV_EXPORTS_W TrackerSamplerCSC : public TrackerSamplerAlgorithm
 
   Params params;
   int mode;
+  RNG rng;
 
   std::vector<Mat> sampleImage( const Mat& img, int x, int y, int w, int h, float inrad, float outrad = 0, int maxnum = 1000000 );
 };
@@ -748,9 +749,6 @@ class CV_EXPORTS_W TrackerMIL : public Tracker
   void read( const FileNode& fn );
   void write( FileStorage& fs ) const;
 
-  static int getRandInt( const int min, const int max );
-  static float getRandFloat( const float min = 0, const float max = 1 );
-
  protected:
 
   bool initImpl( const Mat& image, const Rect& boundingBox );
@@ -758,9 +756,6 @@ class CV_EXPORTS_W TrackerMIL : public Tracker
 
   Params params;
   AlgorithmInfo* info() const;
-
- private:
-  static RNG rng;
 
 };
 

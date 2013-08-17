@@ -261,26 +261,28 @@ void CvHaarEvaluator::generateFeatures( int numFeatures )
 	if( mode == CvHaarFeatureParams::ALL )
 		tilted = true;
 
+	RNG rng = RNG( (int) time( 0 ) );
+
 	for( int i = 0; i < numFeatures; i++ )
 	{
 		//generates new HAAR feature
-		 int x0  = TrackerMIL::getRandInt( 0, (uint) ( winSize.width - 3 ) );
-		 int y0  = TrackerMIL::getRandInt( 0, (uint) ( winSize.height - 3 ) );
-		 int w0  = TrackerMIL::getRandInt( 1, ( winSize.width - x0 - 2 ) );
-		 int h0  = TrackerMIL::getRandInt( 1, ( winSize.height - y0 - 2 ) );
-		 float wt0 = TrackerMIL::getRandFloat( -1.f, 1.f);
+		 int x0  = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
+		 int y0  = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
+		 int w0  = rng.uniform( 1, ( winSize.width - x0 - 2 ) );
+		 int h0  = rng.uniform( 1, ( winSize.height - y0 - 2 ) );
+		 float wt0 = rng.uniform( -1.f, 1.f);
 
-		 int x1  = TrackerMIL::getRandInt( 0, (uint) ( winSize.width - 3 ) );
-		 int y1  = TrackerMIL::getRandInt( 0, (uint) ( winSize.height - 3 ) );
-		 int w1  = TrackerMIL::getRandInt( 1, ( winSize.width - x1 - 2 ) );
-		 int h1  = TrackerMIL::getRandInt( 1, ( winSize.height - y1 - 2 ) );
-		 float wt1 = TrackerMIL::getRandFloat( -1, 1);
+		 int x1  = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
+		 int y1  = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
+		 int w1  = rng.uniform( 1, ( winSize.width - x1 - 2 ) );
+		 int h1  = rng.uniform( 1, ( winSize.height - y1 - 2 ) );
+		 float wt1 = rng.uniform( -1.f, 1.f);
 
-		 int x2  = TrackerMIL::getRandInt( 0, (uint) ( winSize.width - 3 ) );
-		 int y2  = TrackerMIL::getRandInt( 0, (uint) ( winSize.height - 3 ) );
-		 int w2  = TrackerMIL::getRandInt( 1, ( winSize.width - x2 - 2 ) );
-		 int h2  = TrackerMIL::getRandInt( 1, ( winSize.height - y2 - 2 ) );
-		 float wt2 = TrackerMIL::getRandFloat( -1, 1 );
+		 int x2  = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
+		 int y2  = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
+		 int w2  = rng.uniform( 1, ( winSize.width - x2 - 2 ) );
+		 int h2  = rng.uniform( 1, ( winSize.height - y2 - 2 ) );
+		 float wt2 = rng.uniform( -1.f, 1.f );
 
 		 features.push_back( Feature( offset, tilted,
 			 x0, y0, w0, h0, wt0,

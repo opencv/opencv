@@ -45,7 +45,6 @@
 namespace cv
 {
 
-RNG TrackerMIL::rng;
 /*
  *  TrackerMIL
  */
@@ -94,7 +93,6 @@ TrackerMIL::TrackerMIL( const TrackerMIL::Params &parameters ) :
     params( parameters )
 {
   initialized = false;
-  rng = RNG( (int) time( 0 ) );
 }
 
 /*
@@ -113,16 +111,6 @@ void TrackerMIL::read( const cv::FileNode& fn )
 void TrackerMIL::write( cv::FileStorage& fs ) const
 {
   params.write( fs );
-}
-
-int TrackerMIL::getRandInt( const int min, const int max )
-{
-  return rng.uniform( min, max );
-}
-
-float TrackerMIL::getRandFloat( const float min, const float max )
-{
-  return rng.uniform( min, max );
 }
 
 bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
