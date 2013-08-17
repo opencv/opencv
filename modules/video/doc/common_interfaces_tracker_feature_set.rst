@@ -20,18 +20,6 @@ TrackerFeatureSet class::
    {
     public:
    
-     enum
-     {
-       TRACKER_FEATURE_FEATURE2D = 1,   //!< TRACKER_FEATURE_FEATURE2D
-       TRACKER_FEATURE_HOG = 2,         //!< TRACKER_FEATURE_HOG
-       TRACKER_FEATURE_HAAR = 3,        //!< TRACKER_FEATURE_HAAR
-       TRACKER_FEATURE_LBP = 4,         //!< TRACKER_FEATURE_LBP
-       TRACKER_FEATURE_HISTOGRAM = 5,   //!< TRACKER_FEATURE_HISTOGRAM
-       TRACKER_FEATURE_TEMPLATE = 6,    //!< TRACKER_FEATURE_TEMPLATE
-       TRACKER_FEATURE_PIXEL = 7,       //!< TRACKER_FEATURE_PIXEL
-       TRACKER_FEATURE_CORNER = 8       //!< TRACKER_FEATURE_CORNER
-     };
-   
      TrackerFeatureSet();
      ~TrackerFeatureSet();
    

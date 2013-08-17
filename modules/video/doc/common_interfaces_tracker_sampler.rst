@@ -179,15 +179,6 @@ TrackerSamplerCSC class::
    class CV_EXPORTS_W TrackerSamplerCSC
    {
     public:
-    
-     enum
-     {
-       MODE_INIT_POS = 1,  // mode for init positive samples
-       MODE_INIT_NEG = 2,  // mode for init negative samples
-       MODE_TRACK_POS = 3,  // mode for update positive samples
-       MODE_TRACK_NEG = 4,  // mode for update negative samples
-       MODE_DETECT = 5   // mode for detect samples
-     };
      
      TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameters = TrackerSamplerCSC::Params() );
      void setMode( int samplingMode );
