@@ -43,13 +43,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
 ///////////// PyrLKOpticalFlow ////////////////////////
 PERFTEST(PyrLKOpticalFlow)
 {
-    std::string images1[] = {"rubberwhale1.png", "basketball1.png"};
-    std::string images2[] = {"rubberwhale2.png", "basketball2.png"};
+    std::string images1[] = {"rubberwhale1.png", "aloeL.jpg"};
+    std::string images2[] = {"rubberwhale2.png", "aloeR.jpg"};
 
     for (size_t i = 0; i < sizeof(images1) / sizeof(std::string); i++)
     {

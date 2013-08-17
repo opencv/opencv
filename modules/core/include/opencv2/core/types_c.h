@@ -137,7 +137,7 @@
 #ifndef CV_INLINE
 #  if defined __cplusplus
 #    define CV_INLINE inline
-#  elif (defined WIN32 || defined _WIN32 || defined WINCE) && !defined __GNUC__
+#  elif defined _MSC_VER
 #    define CV_INLINE __inline
 #  else
 #    define CV_INLINE static
@@ -317,7 +317,7 @@ CV_INLINE  int  cvRound( double value )
     return t;
 #elif defined _MSC_VER && defined _M_ARM && defined HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
-#elif defined HAVE_LRINT || defined CV_ICC || defined __GNUC__
+#elif defined CV_ICC || defined __GNUC__
 #  ifdef HAVE_TEGRA_OPTIMIZATION
     TEGRA_ROUND(value);
 #  else

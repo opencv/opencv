@@ -43,12 +43,11 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #ifdef HAVE_OPENCL
 
 ////////////////////////////////////////////////////////
 // Canny
-extern std::string workdir;
 IMPLEMENT_PARAM_CLASS(AppertureSize, int);
 IMPLEMENT_PARAM_CLASS(L2gradient, bool);
 
@@ -67,7 +66,7 @@ PARAM_TEST_CASE(Canny, AppertureSize, L2gradient)
 
 TEST_P(Canny, Accuracy)
 {
-    cv::Mat img = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
+    cv::Mat img = readImage("cv/shared/fruits.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
 
     double low_thresh = 50.0;

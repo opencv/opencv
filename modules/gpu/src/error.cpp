@@ -224,6 +224,7 @@ namespace
     //////////////////////////////////////////////////////////////////////////
     // CUFFT errors
 
+#ifdef HAVE_CUFFT
     const ErrorEntry cufft_errors[] =
     {
         error_entry( CUFFT_INVALID_PLAN ),
@@ -238,10 +239,12 @@ namespace
     };
 
     const int cufft_error_num = sizeof(cufft_errors) / sizeof(cufft_errors[0]);
+#endif
 
     //////////////////////////////////////////////////////////////////////////
     // CUBLAS errors
 
+#ifdef HAVE_CUBLAS
     const ErrorEntry cublas_errors[] =
     {
         error_entry( CUBLAS_STATUS_SUCCESS ),
@@ -255,6 +258,7 @@ namespace
     };
 
     const int cublas_error_num = sizeof(cublas_errors) / sizeof(cublas_errors[0]);
+#endif
 }
 
 namespace cv
@@ -273,17 +277,21 @@ namespace cv
             cv::gpu::error(msg.c_str(), file, line, func);
         }
 
+#ifdef HAVE_CUFFT
         void cufftError(int code, const char *file, const int line, const char *func)
         {
             string msg = getErrorString(code, cufft_errors, cufft_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
+#endif
 
+#ifdef HAVE_CUBLAS
         void cublasError(int code, const char *file, const int line, const char *func)
         {
             string msg = getErrorString(code, cublas_errors, cublas_error_num);
             cv::gpu::error(msg.c_str(), file, line, func);
         }
+#endif
     }
 }
 

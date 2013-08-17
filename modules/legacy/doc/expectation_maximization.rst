@@ -5,6 +5,12 @@ This section describes obsolete ``C`` interface of EM algorithm. Details of the 
 
 .. highlight:: cpp
 
+.. note::
+
+   * An example on using the Expectation Maximalization algorithm can be found at opencv_source_code/samples/cpp/em.cpp
+
+   * (Python) An example using Expectation Maximalization for Gaussian Mixing can be found at opencv_source_code/samples/python2/gaussian_mix.py
+
 
 CvEMParams
 ----------

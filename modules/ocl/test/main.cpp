@@ -39,7 +39,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -73,14 +73,12 @@ void print_info()
 #endif
 
 }
-std::string workdir;
 int main(int argc, char **argv)
 {
-    TS::ptr()->init("ocl");
+    TS::ptr()->init(".");
     InitGoogleTest(&argc, argv);
     const char *keys =
         "{ h | help     | false              | print help message }"
-        "{ w | workdir  | ../../../samples/c/| set working directory }"
         "{ t | type     | gpu                | set device type:cpu or gpu}"
         "{ p | platform | 0                  | set platform id }"
         "{ d | device   | 0                  | set device id }";
@@ -92,7 +90,6 @@ int main(int argc, char **argv)
         cmd.printParams();
         return 0;
     }
-    workdir = cmd.get<string>("workdir");
     string type = cmd.get<string>("type");
     unsigned int pid = cmd.get<unsigned int>("platform");
     int device = cmd.get<int>("device");

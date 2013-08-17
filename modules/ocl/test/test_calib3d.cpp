@@ -43,14 +43,13 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
 
 using namespace cv;
 
-extern std::string workdir;
 PARAM_TEST_CASE(StereoMatchBM, int, int)
 {
     int n_disp;
@@ -66,9 +65,9 @@ PARAM_TEST_CASE(StereoMatchBM, int, int)
 TEST_P(StereoMatchBM, Regression)
 {
 
-    Mat left_image  = readImage("stereobm/aloe-L.png", IMREAD_GRAYSCALE);
-    Mat right_image = readImage("stereobm/aloe-R.png", IMREAD_GRAYSCALE);
-    Mat disp_gold   = readImage("stereobm/aloe-disp.png", IMREAD_GRAYSCALE);
+    Mat left_image  = readImage("gpu/stereobm/aloe-L.png", IMREAD_GRAYSCALE);
+    Mat right_image = readImage("gpu/stereobm/aloe-R.png", IMREAD_GRAYSCALE);
+    Mat disp_gold   = readImage("gpu/stereobm/aloe-disp.png", IMREAD_GRAYSCALE);
     ocl::oclMat d_left, d_right;
     ocl::oclMat d_disp(left_image.size(), CV_8U);
     Mat  disp;
@@ -113,9 +112,9 @@ PARAM_TEST_CASE(StereoMatchBP, int, int, int, float, float, float, float)
 };
 TEST_P(StereoMatchBP, Regression)
 {
-    Mat left_image  = readImage("stereobp/aloe-L.png");
-    Mat right_image = readImage("stereobp/aloe-R.png");
-    Mat disp_gold   = readImage("stereobp/aloe-disp.png", IMREAD_GRAYSCALE);
+    Mat left_image  = readImage("gpu/stereobp/aloe-L.png");
+    Mat right_image = readImage("gpu/stereobp/aloe-R.png");
+    Mat disp_gold   = readImage("gpu/stereobp/aloe-disp.png", IMREAD_GRAYSCALE);
     ocl::oclMat d_left, d_right;
     ocl::oclMat d_disp;
     Mat  disp;
@@ -166,9 +165,9 @@ PARAM_TEST_CASE(StereoMatchConstSpaceBP, int, int, int, int, float, float, float
 };
 TEST_P(StereoMatchConstSpaceBP, Regression)
 {
-    Mat left_image  = readImage("csstereobp/aloe-L.png");
-    Mat right_image = readImage("csstereobp/aloe-R.png");
-    Mat disp_gold   = readImage("csstereobp/aloe-disp.png", IMREAD_GRAYSCALE);
+    Mat left_image  = readImage("gpu/csstereobp/aloe-L.png");
+    Mat right_image = readImage("gpu/csstereobp/aloe-R.png");
+    Mat disp_gold   = readImage("gpu/csstereobp/aloe-disp.png", IMREAD_GRAYSCALE);
 
     ocl::oclMat d_left, d_right;
     ocl::oclMat d_disp;

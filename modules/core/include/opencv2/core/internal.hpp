@@ -136,7 +136,13 @@ CV_INLINE IppiSize ippiSize(int width, int height)
 #  endif
 #endif
 
-#ifdef __ARM_NEON__
+
+#if (defined WIN32 || defined _WIN32) && defined(_M_ARM)
+# include <Intrin.h>
+# include "arm_neon.h"
+# define CV_NEON 1
+# define CPU_HAS_NEON_FEATURE (true)
+#elif defined(__ARM_NEON__)
 #  include <arm_neon.h>
 #  define CV_NEON 1
 #  define CPU_HAS_NEON_FEATURE (true)
@@ -340,36 +346,12 @@ namespace cv
 *                                  Common declarations                                   *
 \****************************************************************************************/
 
-/* get alloca declaration */
-#ifdef __GNUC__
-#  undef alloca
-#  define alloca __builtin_alloca
-#  define CV_HAVE_ALLOCA 1
-#elif defined WIN32 || defined _WIN32 || \
-      defined WINCE || defined _MSC_VER || defined __BORLANDC__
-#  include <malloc.h>
-#  define CV_HAVE_ALLOCA 1
-#elif defined HAVE_ALLOCA_H
-#  include <alloca.h>
-#  define CV_HAVE_ALLOCA 1
-#elif defined HAVE_ALLOCA
-#  include <stdlib.h>
-#  define CV_HAVE_ALLOCA 1
-#else
-#  undef CV_HAVE_ALLOCA
-#endif
-
 #ifdef __GNUC__
 #  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))
 #elif defined _MSC_VER
 #  define CV_DECL_ALIGNED(x) __declspec(align(x))
 #else
 #  define CV_DECL_ALIGNED(x)
-#endif
-
-#if CV_HAVE_ALLOCA
-/* ! DO NOT make it an inline function */
-#  define cvStackAlloc(size) cvAlignPtr( alloca((size) + CV_MALLOC_ALIGN), CV_MALLOC_ALIGN )
 #endif
 
 #ifndef CV_IMPL

@@ -43,7 +43,7 @@
 //M*/
 
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 using namespace std;
 #ifdef HAVE_CLAMDBLAS
 ////////////////////////////////////////////////////////////////////////////
