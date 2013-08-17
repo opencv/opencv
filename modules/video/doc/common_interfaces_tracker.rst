@@ -221,16 +221,16 @@ Example of creating specialized TrackerTargetState ``TrackerMILTargetState`` : :
      
    };
 
-In the last step you should define the TrackerStateEstimator based on your implementation or you can use one of ready class as :ocv:class:`TrackerStateEstimatorBoosting`.
+In the last step you should define the TrackerStateEstimator based on your implementation or you can use one of ready class as :ocv:class:`TrackerStateEstimatorMILBoosting`.
 It represent the statistical part of the model that estimates the most likely target state.  
 
-Example of creating specialized TrackerStateEstimator ``TrackerStateEstimatorBoosting`` : ::
+Example of creating specialized TrackerStateEstimator ``TrackerStateEstimatorMILBoosting`` : ::
 
-   class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
+   class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
    {
     public:
-     TrackerStateEstimatorBoosting( int numFeatures = 250 );
-     ~TrackerStateEstimatorBoosting();
+     TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+     ~TrackerStateEstimatorMILBoosting();
      ...
    
     protected:
@@ -243,12 +243,12 @@ Example of creating specialized TrackerStateEstimator ``TrackerStateEstimatorBoo
 And add it in your TrackerModel : ::
 
    //model is the TrackerModel of your Tracker
-   Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting( params.featureSetNumFeatures );
+   Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = new TrackerStateEstimatorMILBoosting( params.featureSetNumFeatures );
    model->setTrackerStateEstimator( stateEstimator );
    
 .. seealso::
 
-   :ocv:class:`TrackerModel`, :ocv:class:`TrackerStateEstimatorBoosting`, :ocv:class:`TrackerTargetState`
+   :ocv:class:`TrackerModel`, :ocv:class:`TrackerStateEstimatorMILBoosting`, :ocv:class:`TrackerTargetState`
    
 Try it
 ......

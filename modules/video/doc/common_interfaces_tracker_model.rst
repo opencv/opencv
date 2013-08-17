@@ -244,45 +244,45 @@ Get the :ocv:class:`TrackerStateEstimator`
 
 .. ocv:function:: Ptr<TrackerStateEstimator> TrackerModel::getTrackerStateEstimator() const
 
-Common Interfaces of TrackerModel
+Specialized TrackerStateEstimator
 =================================
 
 In [AMVOT]_  Statistical modeling (Fig. 3), Table III (generative) - IV (discriminative) - V (hybrid) are described the most known statistical model.
 
-At moment only :ocv:class:`TrackerStateEstimatorBoosting` is implemented.
+At moment only :ocv:class:`TrackerStateEstimatorMILBoosting` is implemented.
 
-TrackerStateEstimatorBoosting
------------------------------
+TrackerStateEstimatorMILBoosting
+--------------------------------
 
 TrackerStateEstimator based on Boosting
 
-.. ocv:class:: TrackerStateEstimatorBoosting
+.. ocv:class:: TrackerStateEstimatorMILBoosting
 
-TrackerStateEstimatorBoosting class::
+TrackerStateEstimatorMILBoosting class::
 
-   class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
+   class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
    {
     public:
-     TrackerStateEstimatorBoosting( int numFeatures = 250 );
-     ~TrackerStateEstimatorBoosting();
+     TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+     ~TrackerStateEstimatorMILBoosting();
    
      void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
    };
    
-TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting
-------------------------------------------------------------
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting
+------------------------------------------------------------------
 
 Constructor
 
-.. ocv:function::  TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( int numFeatures )
+.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures )
 
     :param numFeatures: Number of features for each sample
    
-TrackerStateEstimatorBoosting::setCurrentConfidenceMap
-------------------------------------------------------
+TrackerStateEstimatorMILBoosting::setCurrentConfidenceMap
+---------------------------------------------------------
 
 Set the current confidenceMap
 
-.. ocv:function::  void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+.. ocv:function::  void TrackerStateEstimatorMILBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
 
     :param confidenceMap: The current :c:type:`ConfidenceMap`

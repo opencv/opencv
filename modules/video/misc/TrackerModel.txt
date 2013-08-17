@@ -47,16 +47,16 @@ class TrackerStateEstimatorSVM{
 	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
 	void update(vector<ConfidenceMap>& confidenceMaps)
 }
-class TrackerStateEstimatorBoosting{
-	TrackerStateEstimatorBoosting()
-	~TrackerStateEstimatorBoosting()
+class TrackerStateEstimatorMILBoosting{
+	TrackerStateEstimatorMILBoosting()
+	~TrackerStateEstimatorMILBoosting()
 	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
 	void update(vector<ConfidenceMap>& confidenceMaps)
 }
 
 TrackerModel -> TrackerStateEstimator: create
 TrackerModel *-- TrackerTargetState
-TrackerStateEstimator <|-- TrackerStateEstimatorBoosting
+TrackerStateEstimator <|-- TrackerStateEstimatorMILBoosting
 TrackerStateEstimator <|-- TrackerStateEstimatorSVM
 }
 @enduml

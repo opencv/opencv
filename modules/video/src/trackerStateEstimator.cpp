@@ -82,7 +82,7 @@ Ptr<TrackerStateEstimator> TrackerStateEstimator::create( const String& trackeSt
 
   if( trackeStateEstimatorType.find( "BOOSTING" ) == 0 )
   {
-    return new TrackerStateEstimatorBoosting();
+    return new TrackerStateEstimatorMILBoosting();
   }
 
   CV_Error( -1, "Tracker state estimator type not supported" );
@@ -95,34 +95,34 @@ String TrackerStateEstimator::getClassName() const
 }
 
 /**
- * TrackerStateEstimatorBoosting
+ * TrackerStateEstimatorMILBoosting
  */
-TrackerStateEstimatorBoosting::TrackerStateEstimatorBoosting( int numFeatures )
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures )
 {
   className = "BOOSTING";
   trained = false;
   this->numFeatures = numFeatures;
 }
 
-TrackerStateEstimatorBoosting::~TrackerStateEstimatorBoosting()
+TrackerStateEstimatorMILBoosting::~TrackerStateEstimatorMILBoosting()
 {
 
 }
 
-void TrackerStateEstimatorBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
+void TrackerStateEstimatorMILBoosting::setCurrentConfidenceMap( ConfidenceMap& confidenceMap )
 {
   currentConfidenceMap.clear();
   currentConfidenceMap = confidenceMap;
 }
 
-uint TrackerStateEstimatorBoosting::max_idx( const std::vector<float> &v )
+uint TrackerStateEstimatorMILBoosting::max_idx( const std::vector<float> &v )
 {
   const float* findPtr = & ( *std::max_element( v.begin(), v.end() ) );
   const float* beginPtr = & ( *v.begin() );
   return (uint) ( findPtr - beginPtr );
 }
 
-Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
+Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
 {
   //TODO run cvBoost predict in order to compute next location
   if( currentConfidenceMap.empty() )
@@ -147,7 +147,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorBoosting::estimateImpl( const std::
   return currentConfidenceMap.at( bestind ).first;
 }
 
-void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& positive, Mat& negative )
+void TrackerStateEstimatorMILBoosting::prepareData( const ConfidenceMap& confidenceMap, Mat& positive, Mat& negative )
 {
 
   int posCounter = 0;
@@ -197,7 +197,7 @@ void TrackerStateEstimatorBoosting::prepareData( const ConfidenceMap& confidence
   }
 }
 
-void TrackerStateEstimatorBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
+void TrackerStateEstimatorMILBoosting::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
 {
 
   /*CvBoostParams params( CvBoost::REAL,  // boost_type

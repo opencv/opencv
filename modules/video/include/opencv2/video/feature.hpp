@@ -43,6 +43,7 @@
 #define __OPENCV_FEATURE_HPP__
 
 #include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
 #include <iostream>
 #include <string>
 
@@ -210,9 +211,9 @@ protected:
     void
     compute_integral(const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs)
     {
-      cv::Mat ii_img;
-      cv::integral(img, ii_img, CV_32F);
-      cv::split(ii_img, ii_imgs);
+      Mat ii_img;
+      integral(img, ii_img, CV_32F);
+      split(ii_img, ii_imgs);
     }
 
 

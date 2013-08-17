@@ -486,13 +486,13 @@ class CV_EXPORTS_W Tracker : public virtual Algorithm
 /************************************ Specific TrackerStateEstimator Classes ************************************/
 
 /**
- * \brief TrackerStateEstimator based on Boosting
+ * \brief TrackerStateEstimator based on MILBoosting
  */
-class CV_EXPORTS_W TrackerStateEstimatorBoosting : public TrackerStateEstimator
+class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
 {
  public:
-  TrackerStateEstimatorBoosting( int numFeatures = 250 );
-  ~TrackerStateEstimatorBoosting();
+  TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+  ~TrackerStateEstimatorMILBoosting();
 
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
 

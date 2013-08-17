@@ -169,7 +169,7 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
   const std::vector<Mat> negResponse = featureSet->getResponses();
 
   model = new TrackerMILModel( boundingBox );
-  Ptr<TrackerStateEstimatorBoosting> stateEstimator = new TrackerStateEstimatorBoosting( params.featureSetNumFeatures );
+  Ptr<TrackerStateEstimatorMILBoosting> stateEstimator = new TrackerStateEstimatorMILBoosting( params.featureSetNumFeatures );
   model->setTrackerStateEstimator( stateEstimator );
 
   //Run model estimation and update
@@ -216,7 +216,7 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
   ConfidenceMap cmap;
   ( (Ptr<TrackerMILModel> ) model )->setMode( TrackerMILModel::MODE_ESTIMATON, detectSamples );
   ( (Ptr<TrackerMILModel> ) model )->responseToConfidenceMap( response, cmap );
-  ( (Ptr<TrackerStateEstimatorBoosting> ) model->getTrackerStateEstimator() )->setCurrentConfidenceMap( cmap );
+  ( (Ptr<TrackerStateEstimatorMILBoosting> ) model->getTrackerStateEstimator() )->setCurrentConfidenceMap( cmap );
 
   if( !model->runStateEstimator() )
   {
