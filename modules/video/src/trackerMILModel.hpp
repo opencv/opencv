@@ -65,8 +65,8 @@ class TrackerMILTargetState : public TrackerTargetState
   TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& HAARFeatures )
   {
     setTargetPosition( position );
-    setWidth( targetWidth );
-    setHeight( targetHeight );
+    setTargetWidth( targetWidth );
+    setTargetHeight( targetHeight );
     setTargetFg( foreground );
     setFeatures( HAARFeatures );
   }
@@ -83,16 +83,6 @@ class TrackerMILTargetState : public TrackerTargetState
   /**
    * setters and getters
    */
-  inline void setWidth( int targetWidth )
-  {
-    width = targetWidth;
-  }
-  ;
-  inline void setHeight( int targetHeight )
-  {
-    height = targetHeight;
-  }
-  ;
   inline void setTargetFg( bool foreground )
   {
     isTarget = foreground;
@@ -102,17 +92,6 @@ class TrackerMILTargetState : public TrackerTargetState
   {
     features = HAARFeatures;
   }
-  ;
-  inline int getWidth() const
-  {
-    return width;
-  }
-  ;
-  inline int getHeight() const
-  {
-    return height;
-  }
-  ;
   inline bool isTargetFg() const
   {
     return isTarget;
@@ -125,8 +104,6 @@ class TrackerMILTargetState : public TrackerTargetState
   ;
 
  private:
-  int width;
-  int height;
   bool isTarget;
   Mat features;
 };

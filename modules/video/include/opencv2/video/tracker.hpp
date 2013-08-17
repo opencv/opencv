@@ -291,9 +291,33 @@ class CV_EXPORTS_W TrackerTargetState
    * \param position The position
    */
   void setTargetPosition( const Point2f& position );
+  /**
+   * \brief Get the width of the target
+   * \return The width of the target
+   */
+  int getTargetWidth() const;
+
+  /**
+   * \brief Set the width of the target
+   * \param width The width of the target
+   */
+  void setTargetWidth( int width );
+  /**
+   * \brief Get the height of the target
+   * \return The height of the target
+   */
+  int getTargetHeight() const;
+
+  /**
+   * \brief Set the height of the target
+   * \param height The height of the target
+   */
+  void setTargetHeight( int height );
 
  protected:
   Point2f targetPosition;
+  int targetWidth;
+  int targetHeight;
 
 };
 

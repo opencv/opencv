@@ -145,5 +145,24 @@ void TrackerTargetState::setTargetPosition( const Point2f& position )
   targetPosition = position;
 }
 
+int TrackerTargetState::getTargetWidth() const
+{
+  return targetWidth;
+}
+
+void TrackerTargetState::setTargetWidth( int width )
+{
+  targetWidth = width;
+}
+int TrackerTargetState::getTargetHeight() const
+{
+  return targetHeight;
+}
+
+void TrackerTargetState::setTargetHeight( int height )
+{
+  targetHeight = height;
+}
+
 } /* namespace cv */
 

@@ -185,9 +185,9 @@ bool TrackerMIL::initImpl( const Mat& image, const Rect& boundingBox )
 bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
 {
   //get the last location [AAM] X(k-1)
-  Ptr<TrackerMILTargetState> lastLocation = model->getLastTargetState();
-  Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y, lastLocation->getWidth(),
-                        lastLocation->getHeight() );
+  Ptr<TrackerTargetState> lastLocation = model->getLastTargetState();
+  Rect lastBoundingBox( lastLocation->getTargetPosition().x, lastLocation->getTargetPosition().y, lastLocation->getTargetWidth(),
+                        lastLocation->getTargetHeight() );
 
   //sampling new frame based on last location
   ( (Ptr<TrackerSamplerCSC> ) sampler->getSamplers().at( 0 ).second )->setMode( TrackerSamplerCSC::MODE_DETECT );
@@ -223,8 +223,9 @@ bool TrackerMIL::updateImpl( const Mat& image, Rect& boundingBox )
     return false;
   }
 
-  Ptr<TrackerMILTargetState> currentState = model->getLastTargetState();
-  boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y, currentState->getWidth(), currentState->getHeight() );
+  Ptr<TrackerTargetState> currentState = model->getLastTargetState();
+  boundingBox = Rect( currentState->getTargetPosition().x, currentState->getTargetPosition().y, currentState->getTargetWidth(),
+                      currentState->getTargetHeight() );
 
   /*//TODO debug
    rectangle(f, lastBoundingBox, Scalar(0,255,0), 1);
