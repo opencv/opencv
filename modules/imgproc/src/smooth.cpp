@@ -1875,6 +1875,41 @@ private:
     float *space_weight, *color_weight;
 };
 
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+class IPPBilateralFilter_8u_Invoker :
+    public ParallelLoopBody
+{
+public:
+    IPPBilateralFilter_8u_Invoker(Mat &_src, Mat &_dst, double _sigma_color, double _sigma_space, int _radius, bool *_ok) :
+      ParallelLoopBody(), src(_src), dst(_dst), sigma_color(_sigma_color), sigma_space(_sigma_space), radius(_radius), ok(_ok)
+      {
+          *ok = true;
+      }
+
+      virtual void operator() (const Range& range) const
+      {
+          int d = radius * 2 + 1;
+          IppiSize kernel = {d, d};
+          IppiSize roi={dst.cols, range.end - range.start};
+          int bufsize=0;
+          ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
+          AutoBuffer<uchar> buf(bufsize);
+          IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
+          ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, (Ipp32f)sigma_color, (Ipp32f)sigma_space, 1, pSpec );
+          if( ippiFilterBilateral_8u_C1R( src.ptr<uchar>(range.start) + radius * ((int)src.step[0] + 1), (int)src.step[0], dst.ptr<uchar>(range.start), (int)dst.step[0], roi, kernel, pSpec ) < 0)
+              *ok = false;
+      }
+private:
+    Mat &src;
+    Mat &dst;
+    double sigma_color;
+    double sigma_space;
+    int radius;
+    bool *ok;
+    const IPPBilateralFilter_8u_Invoker& operator= (const IPPBilateralFilter_8u_Invoker&);
+};
+#endif
+
 static void
 bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     double sigma_color, double sigma_space,
@@ -1904,32 +1939,19 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     radius = MAX(radius, 1);
     d = radius*2 + 1;
 
-#if 0 && defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
-    if(cn == 1)
-    {
-        IppiSize kernel = {d, d};
-        IppiSize roi={src.cols, src.rows};
-        int bufsize=0;
-        ippiFilterBilateralGetBufSize_8u_C1R( ippiFilterBilateralGauss, roi, kernel, &bufsize);
-        AutoBuffer<uchar> buf(bufsize+128);
-        IppiFilterBilateralSpec *pSpec = (IppiFilterBilateralSpec *)alignPtr(&buf[0], 32);
-        ippiFilterBilateralInit_8u_C1R( ippiFilterBilateralGauss, kernel, sigma_color*sigma_color, sigma_space*sigma_space, 1, pSpec );
-        Mat tsrc;
-        const Mat* psrc = &src;
-        if( src.data == dst.data )
-        {
-            src.copyTo(tsrc);
-            psrc = &tsrc;
-        }
-        if( ippiFilterBilateral_8u_C1R(psrc->data, (int)psrc->step[0],
-                                       dst.data, (int)dst.step[0],
-                                       roi, kernel, pSpec) >= 0 )
-            return;
-    }
-#endif
     Mat temp;
     copyMakeBorder( src, temp, radius, radius, radius, radius, borderType );
 
+#if defined HAVE_IPP && (IPP_VERSION_MAJOR >= 7)
+    if( cn == 1 )
+    {
+        bool ok;
+        IPPBilateralFilter_8u_Invoker body(temp, dst, sigma_color * sigma_color, sigma_space * sigma_space, radius, &ok );
+        parallel_for_(Range(0, dst.rows), body, dst.total()/(double)(1<<16));
+        if( ok ) return;
+    }
+#endif
+    
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
