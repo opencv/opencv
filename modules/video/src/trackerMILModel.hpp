@@ -48,67 +48,6 @@ namespace cv
 {
 
 /**
- * Implementation of the target state for MIL algorithm
- */
-class TrackerMILTargetState : public TrackerTargetState
-{
-
- public:
-  /**
-   * \brief Constructor
-   * \param position Top left corner of the bounding box
-   * \param width Width of the bounding box
-   * \param height Height of the bounding box
-   * \param foreground label for target or background
-   * \param HAARFeatures features extracted
-   */
-  TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& HAARFeatures )
-  {
-    setTargetPosition( position );
-    setTargetWidth( targetWidth );
-    setTargetHeight( targetHeight );
-    setTargetFg( foreground );
-    setFeatures( HAARFeatures );
-  }
-  ;
-
-  /**
-   * \brief Destructor
-   */
-  ~TrackerMILTargetState()
-  {
-  }
-  ;
-
-  /**
-   * setters and getters
-   */
-  inline void setTargetFg( bool foreground )
-  {
-    isTarget = foreground;
-  }
-  ;
-  inline void setFeatures( const Mat& HAARFeatures )
-  {
-    features = HAARFeatures;
-  }
-  inline bool isTargetFg() const
-  {
-    return isTarget;
-  }
-  ;
-  inline Mat getFeatures() const
-  {
-    return features;
-  }
-  ;
-
- private:
-  bool isTarget;
-  Mat features;
-};
-
-/**
  * \brief Implementation of TrackerModel for MIL algorithm
  */
 class TrackerMILModel : public TrackerModel

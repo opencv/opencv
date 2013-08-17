@@ -95,8 +95,38 @@ String TrackerStateEstimator::getClassName() const
 }
 
 /**
- * TrackerStateEstimatorMILBoosting
+ * TrackerStateEstimatorMILBoosting::TrackerMILTargetState
  */
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight,
+                                                                                bool foreground, const Mat& features )
+{
+  setTargetPosition( position );
+  setTargetWidth( targetWidth );
+  setTargetHeight( targetHeight );
+  setTargetFg( foreground );
+  setFeatures( features );
+}
+
+void TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setTargetFg( bool foreground )
+{
+  isTarget = foreground;
+}
+
+void TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setFeatures( const Mat& features )
+{
+  targetFeatures = features;
+}
+
+bool TrackerStateEstimatorMILBoosting::TrackerMILTargetState::isTargetFg() const
+{
+  return isTarget;
+}
+
+Mat TrackerStateEstimatorMILBoosting::TrackerMILTargetState::getFeatures() const
+{
+  return targetFeatures;
+}
+
 TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures )
 {
   className = "BOOSTING";

@@ -515,6 +515,42 @@ class CV_EXPORTS_W Tracker : public virtual Algorithm
 class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimator
 {
  public:
+
+  /**
+   * Implementation of the target state for TrackerStateEstimatorMILBoosting
+   */
+  class TrackerMILTargetState : public TrackerTargetState
+  {
+
+   public:
+    /**
+     * \brief Constructor
+     * \param position Top left corner of the bounding box
+     * \param width Width of the bounding box
+     * \param height Height of the bounding box
+     * \param foreground label for target or background
+     * \param features features extracted
+     */
+    TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& features );
+
+    /**
+     * \brief Destructor
+     */
+    ~TrackerMILTargetState(){};
+
+    /**
+     * setters and getters
+     */
+    void setTargetFg( bool foreground );
+    void setFeatures( const Mat& features );
+    bool isTargetFg() const;
+    Mat getFeatures() const;
+
+   private:
+    bool isTarget;
+    Mat targetFeatures;
+  };
+
   TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
   ~TrackerStateEstimatorMILBoosting();
 
