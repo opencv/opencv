@@ -74,15 +74,22 @@ EmdL1::~EmdL1()
 }
 
 // Public methods //
-double EmdL1::getEMDL1(double *H1, double *H2, int n1, int n2, int n3)
+float EmdL1::getEMDL1(Mat &sig1, Mat &sig2)
 {
     // Initialization
-    CV_Assert((n1>=0) & (n2>=0) & (n3>=0));
-    if(!initMemory(n1, n2, n3))
-    {
+    CV_Assert((sig1.rows==sig2.rows) & (sig1.cols==sig2.cols) & (!sig1.empty()) & (!sig2.empty()));
+    if(!initBaseTrees(sig1.rows, 1))
         return -1;
+
+    float *H1=new float[sig1.rows], *H2 = new float[sig2.rows];
+    for (int ii=0; ii<sig1.rows; ii++)
+    {
+        H1[ii]=sig1.at<float>(ii,0);
+        H2[ii]=sig2.at<float>(ii,0);
     }
-    initialize(H1,H2); // Initialize histgrams
+
+
+    fillBaseTrees(H1,H2); // Initialize histograms
     greedySolution(); // Construct an initial Basic Feasible solution
     initBVTree(); // Initialize BVTree
 
@@ -103,13 +110,14 @@ double EmdL1::getEMDL1(double *H1, double *H2, int n1, int n2, int n3)
             findNewSolution();
         ++m_nItr;
     }
-
+    delete [] H1;
+    delete [] H2;
     // Output the total flow
     return compuTotalFlow();
 }
 
 // Private methods //
-bool EmdL1::initMemory(int n1, int n2, int n3)
+bool EmdL1::initBaseTrees(int n1, int n2, int n3)
 {
     if(m_n1==n1 && m_n2==n2 && m_n3==n3)
         return true;
@@ -166,13 +174,13 @@ bool EmdL1::initMemory(int n1, int n2, int n3)
     return true;
 }
 
-bool EmdL1::initialize(double *H1, double *H2)
+bool EmdL1::fillBaseTrees(float *H1, float *H2)
 {
     //- Set global counters
     m_pRoot	= NULL;
     // Graph initialization
-    double *p1 = H1;
-    double *p2 = H2;
+    float *p1 = H1;
+    float *p2 = H2;
     if(m_nDim==2)
     {
         for(int c=0; c<m_n2; c++)
@@ -265,7 +273,7 @@ bool EmdL1::greedySolution2()
         for(c=0; c<m_n2; c++) D[r][c] = m_Nodes[r][c].d;
     }
     // compute integrated values along each dimension
-    std::vector<double>	d2s(m_n2);
+    std::vector<float>	d2s(m_n2);
     d2s[0] = 0;
     for(c=0; c<m_n2-1; c++)
     {
@@ -273,7 +281,7 @@ bool EmdL1::greedySolution2()
         for(r=0; r<m_n1; r++) d2s[c+1]-= D[r][c];
     }
 
-    std::vector<double>	d1s(m_n1);
+    std::vector<float>	d1s(m_n1);
     d1s[0] = 0;
     for(r=0; r<m_n1-1; r++)
     {
@@ -283,7 +291,7 @@ bool EmdL1::greedySolution2()
 
     //- Greedy algorithm for initial solution
     PEmdEdge pBV;
-    double dFlow;
+    float dFlow;
     bool bUpward = false;
     m_nNBV = 0; // number of NON-BV edges
 
@@ -349,7 +357,7 @@ bool EmdL1::greedySolution3()
     }
 
     // compute integrated values along each dimension
-    std::vector<double>	d1s(m_n1);
+    std::vector<float>	d1s(m_n1);
     d1s[0]	= 0;
     for(i1=0; i1<m_n1-1; i1++)
     {
@@ -361,7 +369,7 @@ bool EmdL1::greedySolution3()
         }
     }
 
-    std::vector<double>	d2s(m_n2);
+    std::vector<float>	d2s(m_n2);
     d2s[0] = 0;
     for(i2=0; i2<m_n2-1; i2++)
     {
@@ -373,7 +381,7 @@ bool EmdL1::greedySolution3()
         }
     }
 
-    std::vector<double>	d3s(m_n3);
+    std::vector<float>	d3s(m_n3);
     d3s[0] = 0;
     for(i3=0; i3<m_n3-1; i3++)
     {
@@ -387,7 +395,7 @@ bool EmdL1::greedySolution3()
 
     //- Greedy algorithm for initial solution
     PEmdEdge pBV;
-    double dFlow, f1,f2,f3;
+    float dFlow, f1,f2,f3;
     m_nNBV = 0; // number of NON-BV edges
     for(i3=0; i3<m_n3; i3++)
     {
@@ -489,25 +497,25 @@ void EmdL1::initBVTree()
             }
             else if(m_nDim==3)
             {
-                if(k==0 && c>0) pNxtN = &(m_3dNodes[r][c-1][z]);		// left
-                else if(k==1 && c<m_n2-1) pNxtN	= &(m_3dNodes[r][c+1][z]);		// right
-                else if(k==2 && r>0) pNxtN	= &(m_3dNodes[r-1][c][z]);		// down
-                else if(k==3 && r<m_n1-1) pNxtN	= &(m_3dNodes[r+1][c][z]);		// up
-                else if(k==4 && z>0) pNxtN = &(m_3dNodes[r][c][z-1]);		// shallow
-                else if(k==5 && z<m_n3-1) pNxtN	= &(m_3dNodes[r][c][z+1]);		// deep
+                if(k==0 && c>0) pNxtN = &(m_3dNodes[r][c-1][z]); // left
+                else if(k==1 && c<m_n2-1) pNxtN	= &(m_3dNodes[r][c+1][z]); // right
+                else if(k==2 && r>0) pNxtN	= &(m_3dNodes[r-1][c][z]); // down
+                else if(k==3 && r<m_n1-1) pNxtN	= &(m_3dNodes[r+1][c][z]); // up
+                else if(k==4 && z>0) pNxtN = &(m_3dNodes[r][c][z-1]); // shallow
+                else if(k==5 && z<m_n3-1) pNxtN	= &(m_3dNodes[r][c][z+1]); // deep
                 else continue;
             }
             if(pNxtN != pCurN->pParent)
             {
                 pNxtE = pNxtN->pChild;
-                if(pNxtE && pNxtE->pChild==pCurN)		// has connection
+                if(pNxtE && pNxtE->pChild==pCurN) // has connection
                 {
                     pNxtN->pParent = pCurN;
                     pNxtN->pPEdge = pNxtE;
                     pNxtN->pChild = NULL;
                     m_auxQueue[nQueue++] = pNxtN;
 
-                    pNxtE->pParent = pCurN;			// reverse direction
+                    pNxtE->pParent = pCurN; // reverse direction
                     pNxtE->pChild = pNxtN;
                     pNxtE->iDir = !pNxtE->iDir;
 
@@ -597,7 +605,7 @@ void EmdL1::findNewSolution()
     findLoopFromEnterBV();
     // Modify flow values along the loop
     PEmdEdge pE = NULL;
-    double	minFlow = m_pLeave->flow;
+    float	minFlow = m_pLeave->flow;
     int k;
     for(k=0; k<m_iFrom; k++)
     {
@@ -684,7 +692,7 @@ void EmdL1::findNewSolution()
 void EmdL1::findLoopFromEnterBV()
 {
     // Initialize Leaving-BV edge
-    double minFlow	= VHIGH;
+    float minFlow	= VHIGH;
     PEmdEdge pE = NULL;
     int iLFlag = 0;	// 0: in the FROM list, 1: in the TO list
 
@@ -756,9 +764,9 @@ void EmdL1::findLoopFromEnterBV()
     }
 }
 
-double EmdL1::compuTotalFlow()
+float EmdL1::compuTotalFlow()
 {
-    double	f = 0;
+    float	f = 0;
 
     // Initialize auxiliary queue
     m_auxQueue[0] = m_pRoot;
@@ -783,6 +791,17 @@ double EmdL1::compuTotalFlow()
         }
     }
     return f;
+}
+
+/****************************************************************************************\
+*                                   EMDL1 Function                                      *
+\****************************************************************************************/
+
+float EMDL1(InputArray _signature1, InputArray _signature2)
+{
+    Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
+    EmdL1 emdl1;
+    return emdl1.getEMDL1(signature1, signature2);
 }
 
 }//namespace cv

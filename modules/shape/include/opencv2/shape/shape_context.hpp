@@ -117,9 +117,10 @@ struct CV_EXPORTS DistanceSCDFlags
     { 
         DEFAULT = 0, // CHI Squared Distance
         DIST_CHI = 0,
-        DIST_EMD = 1, // Earth Mover's Distance (Not defined yet)
-        DIST_L1 = 2, //L1 Distance
-        DIST_L2 = 3 // L2 Distance
+        DIST_EMD = 1, // Classic (SLOW) Earth Mover's Distance
+        DIST_EMDL1 = 2, //Modified EMD distance
+        DIST_L1 = 3, //L1 Distance
+        DIST_L2 = 4 // L2 Distance
     };
 };
 
@@ -149,6 +150,7 @@ protected:
     CV_WRAP void buildCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix, int flags) const;
     CV_WRAP void buildChiCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildEMDCostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
+    CV_WRAP void buildEMDL1CostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildL1CostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void buildL2CostMatrix(const Mat& descriptors1,  const Mat& descriptors2, Mat& costMatrix) const;
     CV_WRAP void hungarian(Mat& costMatrix, std::vector<DMatch>& outMatches, std::vector<int> &inliers1,

@@ -86,6 +86,9 @@ void SCDMatcher::buildCostMatrix(const Mat& descriptors1, const Mat& descriptors
         case DistanceSCDFlags::DIST_EMD:
             buildEMDCostMatrix(descriptors1, descriptors2, costMatrix);
             break;
+        case DistanceSCDFlags::DIST_EMDL1:
+            buildEMDL1CostMatrix(descriptors1, descriptors2, costMatrix);
+            break;
         case DistanceSCDFlags::DIST_L1:
             buildL1CostMatrix(descriptors1, descriptors2, costMatrix);
             break;
@@ -200,6 +203,42 @@ void SCDMatcher::buildEMDCostMatrix(const Mat& descriptors1, const Mat& descript
         }
     }
 
+}
+
+void SCDMatcher::buildEMDL1CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const
+{
+    // size of the costMatrix with dummies //
+    int costrows = std::max(descriptors1.rows, descriptors2.rows)+numExtraDummies;
+    // Obtain copies of the descriptors //
+    Mat scd1=descriptors1.clone();
+    Mat scd2=descriptors2.clone();
+
+    // row normalization //
+    for(int i=0; i<scd1.rows; i++)
+    {
+        Mat row = scd1.row(i);
+        scd1.row(i)/=(sum(row)[0]+FLT_EPSILON);
+    }
+    for(int i=0; i<scd2.rows; i++)
+    {
+        Mat row = scd2.row(i);
+        scd2.row(i)/=(sum(row)[0]+FLT_EPSILON);
+    }
+
+    // filling costMatrix //
+    costMatrix = Mat(costrows, costrows, CV_32F, Scalar(outlierWeight));
+
+    // Compute the Cost Matrix //
+    for(int i=0; i<scd1.rows; i++)
+    {
+        for(int j=0; j<scd2.rows; j++)
+        {
+            Mat sig1(scd1.cols,1,CV_32F), sig2(scd2.cols,1,CV_32F);
+            sig1.col(0)=scd1.row(i).t();
+            sig2.col(0)=scd2.row(j).t();
+            costMatrix.at<float>(i,j) = EMDL1(sig1, sig2);
+        }
+    }
 }
 
 void SCDMatcher::buildL1CostMatrix(const Mat& descriptors1, const Mat& descriptors2, Mat& costMatrix) const

@@ -69,7 +69,7 @@ private:
     float computeShapeDistance(vector <Point2f>& queryNormal,
                                vector <Point2f>& queryFlipped1,
                                vector <Point2f>& queryFlipped2,
-                               vector<Point2f>& test, vector<DMatch> &);
+                               vector<Point2f>& testq, vector<DMatch> &);
     float distance(Point2f p, Point2f q);
     void displayMPEGResults();
     vector<float> getLocalTangentAngles(Mat image, vector<Point2f> pts);
@@ -338,7 +338,7 @@ void CV_ShapeTest::listShapeNames( vector<string> &listHeaders)
 }
 
 float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
-                                         vector <Point2f>& query3, vector <Point2f>& test,
+                                         vector <Point2f>& query3, vector <Point2f>& testq,
                                          vector<DMatch>& matches)
 {
     // queries //
@@ -354,9 +354,9 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     shapeDescriptors.push_back(SCD(angularBins,radialBins, minRad, maxRad,false));
     vector<SCDMatcher> scdmatchers;
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
-    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMD));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMDL1));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMDL1));
+    scdmatchers.push_back(SCDMatcher(outlierWeight, numOutliers, DistanceSCDFlags::DIST_EMDL1));
     vector<ThinPlateSplineTransform> tpsTra(3);
 
     // SCD descriptors //
@@ -377,7 +377,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
 
     // outliers vectors
     vector< vector<int> > inliers1(3), inliers2(3);
-    shapeDescriptorT.extractSCD(test, testingSCDMatrix);
+    shapeDescriptorT.extractSCD(testq, testingSCDMatrix);
 
     // Tangent angle
     //Mat tanMat; //this is the additional cost mat
@@ -398,7 +398,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
                 shapeDescriptors[i].extractSCD(query[i], querySCD[i], inliers1[i]);
 
             // Extract SCD descriptor of the testing shape //
-            shapeDescriptorT.extractSCD(test, testingSCDMatrix, inliers2[i], shapeDescriptors[i].getMeanDistance());
+            shapeDescriptorT.extractSCD(testq, testingSCDMatrix, inliers2[i], shapeDescriptors[i].getMeanDistance());
 
             // regularization parameter with annealing rate annRate //
             beta=BETA*pow(shapeDescriptors[i].getMeanDistance(),2)*pow(annRate, j);
@@ -408,7 +408,7 @@ float CV_ShapeTest::computeShapeDistance(vector <Point2f>& query1, vector <Point
 
             // apply TPS transform //
             tpsTra[i].setRegularizationParam(beta);
-            tpsTra[i].applyTransformation(query[i], test, matchesvec[i], query[i]);
+            tpsTra[i].applyTransformation(query[i], testq, matchesvec[i], query[i]);
 
             // updating distances values //
             benergies[i] += tpsTra[i].getTranformCost();
@@ -553,7 +553,8 @@ void CV_ShapeTest::mpegTest()
                     std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
 
                     // draw //
-                    /*Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
+                    #if (0)
+                    Mat queryImage=Mat::zeros(500, 500, CV_8UC3);
                     for (size_t p=0; p<contoursQuery1.size(); p++)
                     {
                         circle(queryImage, origContour[p], 4, Scalar(255,0,0), 1); //blue: query
@@ -573,7 +574,8 @@ void CV_ShapeTest::mpegTest()
                     putText(queryImage, text.str(), Point(10,queryImage.rows-10),1,0.75,Scalar(255,255,0),1);
                     imshow("Query Contour Points", queryImage);
                     char key=(char)waitKey();
-                    if (key == ' ') continue;*/
+                    if (key == ' ') continue;
+                    #endif
                 }
             }
         }

@@ -55,7 +55,7 @@ typedef struct EMDNode * PEmdNode;
 typedef struct EMDNode
 {
     int pos[3]; // grid position
-    double d; // initial value
+    float d; // initial value
     int u;
     // tree maintainance
     int iLevel; // level in the tree, 0 means root
@@ -65,7 +65,7 @@ typedef struct EMDNode
 }EMDNode;
 typedef struct EMDEdge
 {
-    double flow; // initial value
+    float flow; // initial value
     int iDir; // 1:outward, 0:inward
     // tree maintainance
     PEmdNode pParent; // point to its parent
@@ -76,23 +76,23 @@ typedef std::vector<EMDNode> EMDNodeArray;
 typedef std::vector<EMDEdge> EMDEdgeArray;
 typedef std::vector<EMDNodeArray> EMDNodeArray2D;
 typedef std::vector<EMDEdgeArray> EMDEdgeArray2D;
-typedef std::vector<double> EMDTYPEArray;
+typedef std::vector<float> EMDTYPEArray;
 typedef std::vector<EMDTYPEArray> EMDTYPEArray2D;
 
 /****************************************************************************************\
-*                                   EMDL1 Functions                                     *
+*                                   EMDL1 Class                                         *
 \****************************************************************************************/
 class EmdL1
 {
 public:
     EmdL1();
     ~EmdL1();
-    double getEMDL1(double *H1, double *H2, int n1, int n2, int n3=0);
+    float getEMDL1(cv::Mat &sig1, cv::Mat &sig2);
     void setMaxIteration(int nMaxIt){ m_nMaxIt=nMaxIt; }
 private:
     //-- SubFunctions called in the EMD algorithm
-    bool initMemory(int n1=0, int n2=0, int n3=0);
-    bool initialize(double *H1, double *H2);
+    bool initBaseTrees(int n1=0, int n2=0, int n3=0);
+    bool fillBaseTrees(float *H1, float *H2);
     bool greedySolution();
     bool greedySolution2();
     bool greedySolution3();
@@ -101,7 +101,7 @@ private:
     bool isOptimal();
     void findNewSolution();
     void findLoopFromEnterBV();
-    double compuTotalFlow(); // Computing the total flow as the final distance
+    float compuTotalFlow(); // Computing the total flow as the final distance
 private:
     int m_nDim;
     int m_n1, m_n2, m_n3; // the hitogram contains m_n1 rows and m_n2 columns
@@ -127,6 +127,12 @@ private:
     int	m_iFrom;
     int m_iTo;
 };
+
+/****************************************************************************************\
+*                                   EMDL1 Function                                      *
+\****************************************************************************************/
+
+CV_EXPORTS float EMDL1(InputArray signature1, InputArray signature2);
 
 }//namespace cv
 
