@@ -40,7 +40,6 @@
  //M*/
 
 #include "precomp.hpp"
-#include "trackerMILModel.hpp"
 
 namespace cv
 {
