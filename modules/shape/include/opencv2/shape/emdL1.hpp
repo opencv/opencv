@@ -88,7 +88,7 @@ public:
     EmdL1();
     ~EmdL1();
     float getEMDL1(cv::Mat &sig1, cv::Mat &sig2);
-    void setMaxIteration(int nMaxIt){ m_nMaxIt=nMaxIt; }
+    void setMaxIteration(int nMaxIt);
 private:
     //-- SubFunctions called in the EMD algorithm
     bool initBaseTrees(int n1=0, int n2=0, int n3=0);
@@ -103,10 +103,10 @@ private:
     void findLoopFromEnterBV();
     float compuTotalFlow(); // Computing the total flow as the final distance
 private:
-    int m_nDim;
-    int m_n1, m_n2, m_n3; // the hitogram contains m_n1 rows and m_n2 columns
-    int m_nNBV; // number of Non-Basic Variables (NBV)
-    int m_nMaxIt;
+    int dimension;
+    int binsDim1, binsDim2, binsDim3; // the hitogram contains m_n1 rows and m_n2 columns
+    int nNBV; // number of Non-Basic Variables (NBV)
+    int nMaxIt;
     EMDNodeArray2D m_Nodes; // all nodes
     EMDEdgeArray2D m_EdgesRight; // all edges to right
     EMDEdgeArray2D m_EdgesUp; // all edges to upward

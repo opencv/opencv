@@ -62,11 +62,11 @@ namespace cv
 EmdL1::EmdL1()
 {
     m_pRoot	= NULL;
-    m_n1 = 0;
-    m_n2 = 0;
-    m_n3 = 0;
-    m_nDim = 0;
-    m_nMaxIt = 500;
+    binsDim1 = 0;
+    binsDim2 = 0;
+    binsDim3 = 0;
+    dimension = 0;
+    nMaxIt = 500;
 }
 
 EmdL1::~EmdL1()
@@ -96,7 +96,7 @@ float EmdL1::getEMDL1(Mat &sig1, Mat &sig2)
     // Iteration
     bool bOptimal = false;
     m_nItr = 0;
-    while(!bOptimal && m_nItr<m_nMaxIt)
+    while(!bOptimal && m_nItr<nMaxIt)
     {
         // Derive U=(u_ij) for row i and column j
         if(m_nItr==0) updateSubtree(m_pRoot);
@@ -116,57 +116,62 @@ float EmdL1::getEMDL1(Mat &sig1, Mat &sig2)
     return compuTotalFlow();
 }
 
+void EmdL1::setMaxIteration(int _nMaxIt)
+{
+    nMaxIt=_nMaxIt;
+}
+
 // Private methods //
 bool EmdL1::initBaseTrees(int n1, int n2, int n3)
 {
-    if(m_n1==n1 && m_n2==n2 && m_n3==n3)
+    if(binsDim1==n1 && binsDim2==n2 && binsDim3==n3)
         return true;
-    m_n1 = n1;
-    m_n2 = n2;
-    m_n3 = n3;
-    if(m_n1==0 || m_n2==0) m_nDim = 0;
-    else m_nDim	= (m_n3==0)?2:3;
+    binsDim1 = n1;
+    binsDim2 = n2;
+    binsDim3 = n3;
+    if(binsDim1==0 || binsDim2==0) dimension = 0;
+    else dimension	= (binsDim3==0)?2:3;
 
-    if(m_nDim==2)
+    if(dimension==2)
     {
-        m_Nodes.resize(m_n1);
-        m_EdgesUp.resize(m_n1);
-        m_EdgesRight.resize(m_n1);
-        for(int i1=0; i1<m_n1; i1++)
+        m_Nodes.resize(binsDim1);
+        m_EdgesUp.resize(binsDim1);
+        m_EdgesRight.resize(binsDim1);
+        for(int i1=0; i1<binsDim1; i1++)
         {
-            m_Nodes[i1].resize(m_n2);
-            m_EdgesUp[i1].resize(m_n2);
-            m_EdgesRight[i1].resize(m_n2);
+            m_Nodes[i1].resize(binsDim2);
+            m_EdgesUp[i1].resize(binsDim2);
+            m_EdgesRight[i1].resize(binsDim2);
         }
-        m_NBVEdges.resize(m_n1*m_n2*4+2);
-        m_auxQueue.resize(m_n1*m_n2+2);
-        m_fromLoop.resize(m_n1*m_n2+2);
-        m_toLoop.resize(m_n1*m_n2+2);
+        m_NBVEdges.resize(binsDim1*binsDim2*4+2);
+        m_auxQueue.resize(binsDim1*binsDim2+2);
+        m_fromLoop.resize(binsDim1*binsDim2+2);
+        m_toLoop.resize(binsDim1*binsDim2+2);
     }
-    else if(m_nDim==3)
+    else if(dimension==3)
     {
-        m_3dNodes.resize(m_n1);
-        m_3dEdgesUp.resize(m_n1);
-        m_3dEdgesRight.resize(m_n1);
-        m_3dEdgesDeep.resize(m_n1);
-        for(int i1=0; i1<m_n1; i1++)
+        m_3dNodes.resize(binsDim1);
+        m_3dEdgesUp.resize(binsDim1);
+        m_3dEdgesRight.resize(binsDim1);
+        m_3dEdgesDeep.resize(binsDim1);
+        for(int i1=0; i1<binsDim1; i1++)
         {
-            m_3dNodes[i1].resize(m_n2);
-            m_3dEdgesUp[i1].resize(m_n2);
-            m_3dEdgesRight[i1].resize(m_n2);
-            m_3dEdgesDeep[i1].resize(m_n2);
-            for(int i2=0; i2<m_n2; i2++)
+            m_3dNodes[i1].resize(binsDim2);
+            m_3dEdgesUp[i1].resize(binsDim2);
+            m_3dEdgesRight[i1].resize(binsDim2);
+            m_3dEdgesDeep[i1].resize(binsDim2);
+            for(int i2=0; i2<binsDim2; i2++)
             {
-                m_3dNodes[i1][i2].resize(m_n3);
-                m_3dEdgesUp[i1][i2].resize(m_n3);
-                m_3dEdgesRight[i1][i2].resize(m_n3);
-                m_3dEdgesDeep[i1][i2].resize(m_n3);
+                m_3dNodes[i1][i2].resize(binsDim3);
+                m_3dEdgesUp[i1][i2].resize(binsDim3);
+                m_3dEdgesRight[i1][i2].resize(binsDim3);
+                m_3dEdgesDeep[i1][i2].resize(binsDim3);
             }
         }
-        m_NBVEdges.resize(m_n1*m_n2*m_n3*6+4);
-        m_auxQueue.resize(m_n1*m_n2*m_n3+4);
-        m_fromLoop.resize(m_n1*m_n2*m_n3+4);
-        m_toLoop.resize(m_n1*m_n2*m_n3+2);
+        m_NBVEdges.resize(binsDim1*binsDim2*binsDim3*6+4);
+        m_auxQueue.resize(binsDim1*binsDim2*binsDim3+4);
+        m_fromLoop.resize(binsDim1*binsDim2*binsDim3+4);
+        m_toLoop.resize(binsDim1*binsDim2*binsDim3+2);
     }
     else
         return false;
@@ -181,11 +186,11 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
     // Graph initialization
     float *p1 = H1;
     float *p2 = H2;
-    if(m_nDim==2)
+    if(dimension==2)
     {
-        for(int c=0; c<m_n2; c++)
+        for(int c=0; c<binsDim2; c++)
         {
-            for(int r=0; r<m_n1; r++)
+            for(int r=0; r<binsDim1; r++)
             {
                 //- initialize nodes and links
                 m_Nodes[r][c].pos[0] = r;
@@ -198,27 +203,27 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
                 //- initialize edges
                 // to the right
                 m_EdgesRight[r][c].pParent = &(m_Nodes[r][c]);
-                m_EdgesRight[r][c].pChild = &(m_Nodes[r][(c+1)%m_n2]);
+                m_EdgesRight[r][c].pChild = &(m_Nodes[r][(c+1)%binsDim2]);
                 m_EdgesRight[r][c].flow	= 0;
                 m_EdgesRight[r][c].iDir	= 1;
                 m_EdgesRight[r][c].pNxt	= NULL;
 
                 // to the upward
                 m_EdgesUp[r][c].pParent	= &(m_Nodes[r][c]);
-                m_EdgesUp[r][c].pChild	= &(m_Nodes[(r+1)%m_n1][c]);
+                m_EdgesUp[r][c].pChild	= &(m_Nodes[(r+1)%binsDim1][c]);
                 m_EdgesUp[r][c].flow = 0;
                 m_EdgesUp[r][c].iDir = 1;
                 m_EdgesUp[r][c].pNxt = NULL;
             }
         }
     }
-    else if(m_nDim==3)
+    else if(dimension==3)
     {
-        for(int z=0; z<m_n3; z++)
+        for(int z=0; z<binsDim3; z++)
         {
-            for(int c=0; c<m_n2; c++)
+            for(int c=0; c<binsDim2; c++)
             {
-                for(int r=0; r<m_n1; r++)
+                for(int r=0; r<binsDim1; r++)
                 {
                     //- initialize nodes and edges
                     m_3dNodes[r][c][z].pos[0] = r;
@@ -232,21 +237,21 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
                     //- initialize edges
                     // to the upward
                     m_3dEdgesUp[r][c][z].pParent= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesUp[r][c][z].pChild	= &(m_3dNodes[(r+1)%m_n1][c][z]);
+                    m_3dEdgesUp[r][c][z].pChild	= &(m_3dNodes[(r+1)%binsDim1][c][z]);
                     m_3dEdgesUp[r][c][z].flow = 0;
                     m_3dEdgesUp[r][c][z].iDir = 1;
                     m_3dEdgesUp[r][c][z].pNxt = NULL;
 
                     // to the right
                     m_3dEdgesRight[r][c][z].pParent	= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesRight[r][c][z].pChild	= &(m_3dNodes[r][(c+1)%m_n2][z]);
+                    m_3dEdgesRight[r][c][z].pChild	= &(m_3dNodes[r][(c+1)%binsDim2][z]);
                     m_3dEdgesRight[r][c][z].flow	= 0;
                     m_3dEdgesRight[r][c][z].iDir	= 1;
                     m_3dEdgesRight[r][c][z].pNxt	= NULL;
 
                     // to the deep
                     m_3dEdgesDeep[r][c][z].pParent	= &(m_3dNodes[r][c][z]);
-                    m_3dEdgesDeep[r][c][z].pChild	= &(m_3dNodes[r][c])[(z+1)%m_n3];
+                    m_3dEdgesDeep[r][c][z].pChild	= &(m_3dNodes[r][c])[(z+1)%binsDim3];
                     m_3dEdgesDeep[r][c][z].flow = 0;
                     m_3dEdgesDeep[r][c][z].iDir = 1;
                     m_3dEdgesDeep[r][c][z].pNxt = NULL;
@@ -259,54 +264,54 @@ bool EmdL1::fillBaseTrees(float *H1, float *H2)
 
 bool EmdL1::greedySolution()
 {
-    return m_nDim==2?greedySolution2():greedySolution3();
+    return dimension==2?greedySolution2():greedySolution3();
 }
 
 bool EmdL1::greedySolution2()
 {
     //- Prepare auxiliary array, D=H1-H2
     int		c,r;
-    EMDTYPEArray2D D(m_n1);
-    for(r=0; r<m_n1; r++)
+    EMDTYPEArray2D D(binsDim1);
+    for(r=0; r<binsDim1; r++)
     {
-        D[r].resize(m_n2);
-        for(c=0; c<m_n2; c++) D[r][c] = m_Nodes[r][c].d;
+        D[r].resize(binsDim2);
+        for(c=0; c<binsDim2; c++) D[r][c] = m_Nodes[r][c].d;
     }
     // compute integrated values along each dimension
-    std::vector<float>	d2s(m_n2);
+    std::vector<float>	d2s(binsDim2);
     d2s[0] = 0;
-    for(c=0; c<m_n2-1; c++)
+    for(c=0; c<binsDim2-1; c++)
     {
         d2s[c+1] = d2s[c];
-        for(r=0; r<m_n1; r++) d2s[c+1]-= D[r][c];
+        for(r=0; r<binsDim1; r++) d2s[c+1]-= D[r][c];
     }
 
-    std::vector<float>	d1s(m_n1);
+    std::vector<float>	d1s(binsDim1);
     d1s[0] = 0;
-    for(r=0; r<m_n1-1; r++)
+    for(r=0; r<binsDim1-1; r++)
     {
         d1s[r+1] = d1s[r];
-        for(c=0; c<m_n2; c++) d1s[r+1]-= D[r][c];
+        for(c=0; c<binsDim2; c++) d1s[r+1]-= D[r][c];
     }
 
     //- Greedy algorithm for initial solution
     PEmdEdge pBV;
     float dFlow;
     bool bUpward = false;
-    m_nNBV = 0; // number of NON-BV edges
+    nNBV = 0; // number of NON-BV edges
 
-    for(c=0; c<m_n2-1; c++)
-    for(r=0; r<m_n1; r++)
+    for(c=0; c<binsDim2-1; c++)
+    for(r=0; r<binsDim1; r++)
     {
         dFlow = D[r][c];
-        bUpward = (r<m_n1-1) && (fabs(dFlow+d2s[c+1]) > fabs(dFlow+d1s[r+1]));	// Move upward or right
+        bUpward = (r<binsDim1-1) && (fabs(dFlow+d2s[c+1]) > fabs(dFlow+d1s[r+1]));	// Move upward or right
 
         // modify basic variables, record BV and related values
         if(bUpward)
         {
             // move to up
             pBV	= &(m_EdgesUp[r][c]);
-            m_NBVEdges[m_nNBV++]	= &(m_EdgesRight[r][c]);
+            m_NBVEdges[nNBV++]	= &(m_EdgesRight[r][c]);
 
             D[r+1][c] += dFlow;		// auxilary matrix maintanence
             d1s[r+1] += dFlow;		// auxilary matrix maintanence
@@ -315,8 +320,8 @@ bool EmdL1::greedySolution2()
         {
             // move to right, no other choice
             pBV	= &(m_EdgesRight[r][c]);
-            if(r<m_n1-1)
-                m_NBVEdges[m_nNBV++]	= &(m_EdgesUp[r][c]);
+            if(r<binsDim1-1)
+                m_NBVEdges[nNBV++]	= &(m_EdgesUp[r][c]);
 
             D[r][c+1] += dFlow;		// auxilary matrix maintanence
             d2s[c+1] += dFlow;		// auxilary matrix maintanence
@@ -327,8 +332,8 @@ bool EmdL1::greedySolution2()
     }
 
     //- rightmost column, no choice but move upward
-    c = m_n2-1;
-    for(r=0; r<m_n1-1; r++)
+    c = binsDim2-1;
+    for(r=0; r<binsDim1-1; r++)
     {
         dFlow = D[r][c];
         pBV = &(m_EdgesUp[r][c]);
@@ -344,51 +349,51 @@ bool EmdL1::greedySolution3()
 {
     //- Prepare auxiliary array, D=H1-H2
     int i1,i2,i3;
-    std::vector<EMDTYPEArray2D> D(m_n1);
-    for(i1=0; i1<m_n1; i1++)
+    std::vector<EMDTYPEArray2D> D(binsDim1);
+    for(i1=0; i1<binsDim1; i1++)
     {
-        D[i1].resize(m_n2);
-        for(i2=0; i2<m_n2; i2++)
+        D[i1].resize(binsDim2);
+        for(i2=0; i2<binsDim2; i2++)
         {
-            D[i1][i2].resize(m_n3);
-            for(i3=0; i3<m_n3; i3++)
+            D[i1][i2].resize(binsDim3);
+            for(i3=0; i3<binsDim3; i3++)
                 D[i1][i2][i3] = m_3dNodes[i1][i2][i3].d;
         }
     }
 
     // compute integrated values along each dimension
-    std::vector<float>	d1s(m_n1);
+    std::vector<float>	d1s(binsDim1);
     d1s[0]	= 0;
-    for(i1=0; i1<m_n1-1; i1++)
+    for(i1=0; i1<binsDim1-1; i1++)
     {
         d1s[i1+1] = d1s[i1];
-        for(i2=0; i2<m_n2; i2++)
+        for(i2=0; i2<binsDim2; i2++)
         {
-            for(i3=0; i3<m_n3; i3++)
+            for(i3=0; i3<binsDim3; i3++)
                 d1s[i1+1] -= D[i1][i2][i3];
         }
     }
 
-    std::vector<float>	d2s(m_n2);
+    std::vector<float>	d2s(binsDim2);
     d2s[0] = 0;
-    for(i2=0; i2<m_n2-1; i2++)
+    for(i2=0; i2<binsDim2-1; i2++)
     {
         d2s[i2+1] = d2s[i2];
-        for(i1=0; i1<m_n1; i1++)
+        for(i1=0; i1<binsDim1; i1++)
         {
-            for(i3=0; i3<m_n3; i3++)
+            for(i3=0; i3<binsDim3; i3++)
                 d2s[i2+1] -= D[i1][i2][i3];
         }
     }
 
-    std::vector<float>	d3s(m_n3);
+    std::vector<float>	d3s(binsDim3);
     d3s[0] = 0;
-    for(i3=0; i3<m_n3-1; i3++)
+    for(i3=0; i3<binsDim3-1; i3++)
     {
         d3s[i3+1]	= d3s[i3];
-        for(i1=0; i1<m_n1; i1++)
+        for(i1=0; i1<binsDim1; i1++)
         {
-            for(i2=0; i2<m_n2; i2++)
+            for(i2=0; i2<binsDim2; i2++)
                 d3s[i3+1] -= D[i1][i2][i3];
         }
     }
@@ -396,42 +401,42 @@ bool EmdL1::greedySolution3()
     //- Greedy algorithm for initial solution
     PEmdEdge pBV;
     float dFlow, f1,f2,f3;
-    m_nNBV = 0; // number of NON-BV edges
-    for(i3=0; i3<m_n3; i3++)
+    nNBV = 0; // number of NON-BV edges
+    for(i3=0; i3<binsDim3; i3++)
     {
-        for(i2=0; i2<m_n2; i2++)
+        for(i2=0; i2<binsDim2; i2++)
         {
-            for(i1=0; i1<m_n1; i1++)
+            for(i1=0; i1<binsDim1; i1++)
             {
-                if(i3==m_n3-1 && i2==m_n2-1 && i1==m_n1-1) break;
+                if(i3==binsDim3-1 && i2==binsDim2-1 && i1==binsDim1-1) break;
 
                 //- determine which direction to move, either right or upward
                 dFlow = D[i1][i2][i3];
-                f1 = i1<(m_n1-1)?fabs(dFlow+d1s[i1+1]):VHIGH;
-                f2 = i2<(m_n2-1)?fabs(dFlow+d2s[i2+1]):VHIGH;
-                f3 = i3<(m_n3-1)?fabs(dFlow+d3s[i3+1]):VHIGH;
+                f1 = i1<(binsDim1-1)?fabs(dFlow+d1s[i1+1]):VHIGH;
+                f2 = i2<(binsDim2-1)?fabs(dFlow+d2s[i2+1]):VHIGH;
+                f3 = i3<(binsDim3-1)?fabs(dFlow+d3s[i3+1]):VHIGH;
 
                 if(f1<f2 && f1<f3)
                 {
                     pBV	= &(m_3dEdgesUp[i1][i2][i3]); // up
-                    if(i2<m_n2-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
-                    if(i3<m_n3-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
+                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
+                    if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
                     D[i1+1][i2][i3]	+= dFlow; // maintain auxilary matrix
                     d1s[i1+1] += dFlow;
                 }
                 else if(f2<f3)
                 {
                     pBV	= &(m_3dEdgesRight[i1][i2][i3]); // right
-                    if(i1<m_n1-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
-                    if(i3<m_n3-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
+                    if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
+                    if(i3<binsDim3-1) m_NBVEdges[nNBV++] = &(m_3dEdgesDeep[i1][i2][i3]); // deep
                     D[i1][i2+1][i3]	+= dFlow; // maintain auxilary matrix
                     d2s[i2+1] += dFlow;
                 }
                 else
                 {
                     pBV	= &(m_3dEdgesDeep[i1][i2][i3]); // deep
-                    if(i2<m_n2-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
-                    if(i1<m_n1-1) m_NBVEdges[m_nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
+                    if(i2<binsDim2-1) m_NBVEdges[nNBV++] = &(m_3dEdgesRight[i1][i2][i3]);	// right
+                    if(i1<binsDim1-1) m_NBVEdges[nNBV++] = &(m_3dEdgesUp[i1][i2][i3]); // up
                     D[i1][i2][i3+1]	+= dFlow; // maintain auxilary matrix
                     d3s[i3+1] += dFlow;
                 }
@@ -448,10 +453,10 @@ bool EmdL1::greedySolution3()
 void EmdL1::initBVTree()
 {
     //- Using the center of the graph as the root
-    int r = (int)(0.5*m_n1-.5);
-    int c = (int)(0.5*m_n2-.5);
-    int z = (int)(0.5*m_n3-.5);
-    m_pRoot	= m_nDim==2 ? &(m_Nodes[r][c]) : &(m_3dNodes[r][c][z]);
+    int r = (int)(0.5*binsDim1-.5);
+    int c = (int)(0.5*binsDim2-.5);
+    int z = (int)(0.5*binsDim3-.5);
+    m_pRoot	= dimension==2 ? &(m_Nodes[r][c]) : &(m_3dNodes[r][c][z]);
     m_pRoot->u = 0;
     m_pRoot->iLevel	= 0;
     m_pRoot->pParent= NULL;
@@ -465,7 +470,7 @@ void EmdL1::initBVTree()
     //- Recursively build subtrees
     PEmdEdge pCurE=NULL, pNxtE=NULL;
     PEmdNode pCurN=NULL, pNxtN=NULL;
-    int	nBin = m_n1*m_n2*std::max(m_n3,1);
+    int	nBin = binsDim1*binsDim2*std::max(binsDim3,1);
     while(iQHead<nQueue && nQueue<nBin)
     {
         pCurN = m_auxQueue[iQHead++];	// pop out from queue
@@ -484,25 +489,25 @@ void EmdL1::initBVTree()
         }
 
         // check four neighbor nodes
-        int	nNB	= m_nDim==2?4:6;
+        int	nNB	= dimension==2?4:6;
         for(int k=0;k<nNB;k++)
         {
-            if(m_nDim==2)
+            if(dimension==2)
             {
                 if(k==0 && c>0) pNxtN = &(m_Nodes[r][c-1]);		// left
                 else if(k==1 && r>0) pNxtN	= &(m_Nodes[r-1][c]);		// down
-                else if(k==2 && c<m_n2-1) pNxtN	= &(m_Nodes[r][c+1]);		// right
-                else if(k==3 && r<m_n1-1) pNxtN	= &(m_Nodes[r+1][c]);		// up
+                else if(k==2 && c<binsDim2-1) pNxtN	= &(m_Nodes[r][c+1]);		// right
+                else if(k==3 && r<binsDim1-1) pNxtN	= &(m_Nodes[r+1][c]);		// up
                 else continue;
             }
-            else if(m_nDim==3)
+            else if(dimension==3)
             {
                 if(k==0 && c>0) pNxtN = &(m_3dNodes[r][c-1][z]); // left
-                else if(k==1 && c<m_n2-1) pNxtN	= &(m_3dNodes[r][c+1][z]); // right
+                else if(k==1 && c<binsDim2-1) pNxtN	= &(m_3dNodes[r][c+1][z]); // right
                 else if(k==2 && r>0) pNxtN	= &(m_3dNodes[r-1][c][z]); // down
-                else if(k==3 && r<m_n1-1) pNxtN	= &(m_3dNodes[r+1][c][z]); // up
+                else if(k==3 && r<binsDim1-1) pNxtN	= &(m_3dNodes[r+1][c][z]); // up
                 else if(k==4 && z>0) pNxtN = &(m_3dNodes[r][c][z-1]); // shallow
-                else if(k==5 && z<m_n3-1) pNxtN	= &(m_3dNodes[r][c][z+1]); // deep
+                else if(k==5 && z<binsDim3-1) pNxtN	= &(m_3dNodes[r][c][z+1]); // deep
                 else continue;
             }
             if(pNxtN != pCurN->pParent)
@@ -563,7 +568,7 @@ bool EmdL1::isOptimal()
     m_iEnter = -1;
 
     // test each NON-BV edges
-    for(int k=0; k<m_nNBV; ++k)
+    for(int k=0; k<nNBV; ++k)
     {
         pE = m_NBVEdges[k];
         iC = 1 - pE->pParent->u + pE->pChild->u;
