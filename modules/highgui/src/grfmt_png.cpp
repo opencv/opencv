@@ -187,15 +187,15 @@ bool  PngDecoder::readHeader()
                     {
                         switch(color_type)
                         {
-                           case PNG_COLOR_TYPE_RGB:
-                           case PNG_COLOR_TYPE_PALETTE:
-                               m_type = CV_8UC3;
-                               break;
-                          case PNG_COLOR_TYPE_RGB_ALPHA:
-                               m_type = CV_8UC4;
-                               break;
-                          default:
-                               m_type = CV_8UC1;
+                            case PNG_COLOR_TYPE_RGB:
+                                m_type = CV_8UC3;
+                                break;
+                            case PNG_COLOR_TYPE_PALETTE:
+                            case PNG_COLOR_TYPE_RGB_ALPHA:
+                                m_type = CV_8UC4;
+                                break;
+                            default:
+                                m_type = CV_8UC1;
                         }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));

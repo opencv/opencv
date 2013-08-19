@@ -284,6 +284,34 @@ TEST(Highgui_ImreadVSCvtColor, regression)
     EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
     EXPECT_LT(actual_maxval, MAX_ABS_DIFF);
 }
+
+//Test OpenCV issue 3075 is solved
+class CV_GrfmtReadPNGColorPaletteWithAlphaTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            Mat img = imread(string(ts->get_data_path()) + "readwrite/color_palette_alpha.png",-1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 4);
+
+            img = imread(string(ts->get_data_path()) + "readwrite/color_palette_no_alpha.png",-1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 4);
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+    }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
+TEST(Highgui_Image, read_png_color_palette_with_alpha) { CV_GrfmtReadPNGColorPaletteWithAlphaTest test; test.safe_run(); }
 #endif
 
 #ifdef HAVE_JPEG
