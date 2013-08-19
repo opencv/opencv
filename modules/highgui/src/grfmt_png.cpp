@@ -60,8 +60,10 @@
 
 #ifdef HAVE_LIBPNG_PNG_H
 #include <libpng/png.h>
+#include <libpng/pnginfo.h>
 #else
 #include <png.h>
+#include <pnginfo.h>
 #endif
 #include <zlib.h>
 
@@ -187,15 +189,21 @@ bool  PngDecoder::readHeader()
                     {
                         switch(color_type)
                         {
-                           case PNG_COLOR_TYPE_RGB:
-                           case PNG_COLOR_TYPE_PALETTE:
-                               m_type = CV_8UC3;
-                               break;
-                          case PNG_COLOR_TYPE_RGB_ALPHA:
-                               m_type = CV_8UC4;
-                               break;
-                          default:
-                               m_type = CV_8UC1;
+                            case PNG_COLOR_TYPE_RGB:
+                                m_type = CV_8UC3;
+                                break;
+                            case PNG_COLOR_TYPE_PALETTE:
+                                //Check if there is a transparency value in the palette
+                                if ( info_ptr->num_trans > 0 )
+                                    m_type = CV_8UC4;
+                                else
+                                    m_type = CV_8UC3;
+                                break;
+                            case PNG_COLOR_TYPE_RGB_ALPHA:
+                                m_type = CV_8UC4;
+                                break;
+                            default:
+                                m_type = CV_8UC1;
                         }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
