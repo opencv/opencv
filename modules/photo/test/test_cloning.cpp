@@ -164,14 +164,17 @@ TEST(Photo_SeamlessClone_illuminationChange, regression)
 TEST(Photo_SeamlessClone_textureFlattening, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Texture_Flattening/";
-    string original_path = folder + "source1.png";
+    string original_path1 = folder + "source1.png";
+    string original_path2 = folder + "mask.png";
 
-    Mat source = imread(original_path, IMREAD_COLOR);
+    Mat source = imread(original_path1, IMREAD_COLOR);
+    Mat mask = imread(original_path2, IMREAD_COLOR);
 
-    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path;
+    ASSERT_FALSE(source.empty()) << "Could not load source image " << original_path1;
+    ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
 
     Mat result;
-    textureFlattening(source, result);
+    textureFlattening(source, mask, result);
 
     imwrite(folder + "cloned.png", result);
 

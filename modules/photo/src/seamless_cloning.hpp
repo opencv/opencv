@@ -76,7 +76,7 @@ class Cloning
         void normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &final, int num);
         void local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float red, float green, float blue);
         void illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alpha, float beta);
-        void texture_flatten(Mat &I, Mat &final);
+        void texture_flatten(Mat &I, Mat &mask, Mat &wmask, Mat &final);
 };
 
 void Cloning::getGradientx( const Mat &img, Mat &gx)
@@ -782,91 +782,79 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alph
         }
 }
 
-void Cloning::texture_flatten(Mat &I, Mat &final)
+
+void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, Mat &final)
 {
+    init(I,wmask);
 
-    grx = Mat(I.size(),CV_32FC3);
-    gry = Mat(I.size(),CV_32FC3);
+    int w = I.size().width;
+    int h = I.size().height;
 
-    Mat out = Mat(I.size(),CV_8UC1);
+    getGradientx(I,grx);
+    getGradienty(I,gry);
 
-    getGradientx( I, grx);
-    getGradienty( I, gry);
+    getGradientx(mask,sgx);
+    getGradienty(mask,sgy);
 
-    Canny( I, out, 30, 45, 3 );
+    Mat Kernel(Size(3, 3), CV_8UC1);
+    Kernel.setTo(Scalar(1));
 
-    int channel = I.channels();
+    erode(wmask, wmask, Kernel);
+    erode(wmask, wmask, Kernel);
+    erode(wmask, wmask, Kernel);
 
-    for(int i=0;i<I.size().height;i++)
-        for(int j=0;j<I.size().width;j++)
+    wmask.convertTo(smask,CV_32FC1,1.0/255.0);
+    I.convertTo(srx32,CV_32FC3,1.0/255.0);
+    I.convertTo(sry32,CV_32FC3,1.0/255.0);
+
+
+
+    Mat out = Mat(mask.size(),CV_8UC1);
+    Canny( mask, out, 30, 45, 3 );
+
+    int channel = mask.channels();
+
+    for(int i=0;i<mask.size().height;i++)
+        for(int j=0;j<mask.size().width;j++)
             for(int c=0;c<channel;c++)
             {
                 if(out.at<uchar>(i,j) != 255)
                 {
-                    grx.at<float>(i,j*channel+c) = 0.0;
-                    gry.at<float>(i,j*channel+c) = 0.0;
+                    sgx.at<float>(i,j*channel+c) = 0.0;
+                    sgy.at<float>(i,j*channel+c) = 0.0;
                 }
             }
 
-    r_channel = Mat::zeros(I.size(),CV_8UC1);
-    g_channel = Mat::zeros(I.size(),CV_8UC1);
-    b_channel = Mat::zeros(I.size(),CV_8UC1);
+    for(int i=0;i < h; i++)
+        for(int j=0; j < w; j++)
+            for(int c=0;c<channel;++c)
+            {
+                srx32.at<float>(i,j*channel+c) =
+                    (sgx.at<float>(i,j*channel+c)*smask.at<float>(i,j));
+                sry32.at<float>(i,j*channel+c) =
+                    (sgy.at<float>(i,j*channel+c)*smask.at<float>(i,j));
+            }
 
-    for(int i=0;i<I.size().height;i++)
-        for(int j=0;j<I.size().width;j++)
-        {
-            r_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+0); 
-            g_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+1); 
-            b_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+2);
-        }
+    bitwise_not(wmask,wmask);
 
-    Mat gxx = Mat(I.size(),CV_32FC3);
-    Mat gyy = Mat(I.size(),CV_32FC3);
+    wmask.convertTo(smask1,CV_32FC1,1.0/255.0);
+    I.convertTo(grx32,CV_32FC3,1.0/255.0);
+    I.convertTo(gry32,CV_32FC3,1.0/255.0);
 
-    lapx(grx,gxx);
-    lapy(gry,gyy);
+    for(int i=0;i < h; i++)
+        for(int j=0; j < w; j++)
+            for(int c=0;c<channel;++c)
+            {
+                grx32.at<float>(i,j*channel+c) =
+                    (grx.at<float>(i,j*channel+c)*smask1.at<float>(i,j));
+                gry32.at<float>(i,j*channel+c) =
+                    (gry.at<float>(i,j*channel+c)*smask1.at<float>(i,j));
+            }
 
-    rx_channel = Mat(I.size(),CV_32FC1);
-    gx_channel = Mat(I.size(),CV_32FC1);
-    bx_channel = Mat(I.size(),CV_32FC1);
+    calc(I,grx32,gry32,srx32,sry32);
 
-    for(int i=0;i<I.size().height;i++)
-        for(int j=0;j<I.size().width;j++)
-        {
-            rx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+0); 
-            gx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+1); 
-            bx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+2);
-        }
-
-    ry_channel = Mat(I.size(),CV_32FC1);
-    gy_channel = Mat(I.size(),CV_32FC1);
-    by_channel = Mat(I.size(),CV_32FC1);
-
-    for(int i=0;i<I.size().height;i++)
-        for(int j=0;j<I.size().width;j++)
-        {
-            ry_channel.at<float>(i,j) = gyy.at<float>(i,j*3+0); 
-            gy_channel.at<float>(i,j) = gyy.at<float>(i,j*3+1); 
-            by_channel.at<float>(i,j) = gyy.at<float>(i,j*3+2);
-        }
-
-    resultr = Mat(I.size(),CV_8UC1);
-    resultg = Mat(I.size(),CV_8UC1);
-    resultb = Mat(I.size(),CV_8UC1);
-
-    clock_t tic = clock();
-
-
-    poisson_solver(r_channel,rx_channel, ry_channel,resultr);
-    poisson_solver(g_channel,gx_channel, gy_channel,resultg);
-    poisson_solver(b_channel,bx_channel, by_channel,resultb);
-
-    clock_t toc = clock();
-
-    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
-    for(int i=0;i<I.size().height;i++)
-        for(int j=0;j<I.size().width;j++)
+    for(int i=0;i<h;i++)
+        for(int j=0;j<w;j++)
         {
             final.at<uchar>(i,j*3+0) = resultr.at<uchar>(i,j);
             final.at<uchar>(i,j*3+1) = resultg.at<uchar>(i,j);

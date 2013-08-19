@@ -63,7 +63,13 @@ enum
 {
 	NORMAL_CLONE = 1,
 	MIXED_CLONE  = 2, 
-	FEATURE_EXCHANGE = 3
+	MONOCHROME_TRANSFER = 3
+};
+
+enum
+{
+	RECURSIVE_FILTER = 1,
+	NC_FILTER = 2
 };
 
 //! restores the damaged image areas using one of the available intpainting algorithms
@@ -303,7 +309,9 @@ CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, 
 
 CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2, float beta = 0.4);
 
-CV_EXPORTS_W void textureFlattening(InputArray src, OutputArray dst);
+CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst);
+
+CV_EXPORTS_W void edgepreservefilter(InputArray _src, OutputArray _dst, int flags = 1, float sigma_h = 60, float sigma_r = 0.4);
 
 } // cv
 
