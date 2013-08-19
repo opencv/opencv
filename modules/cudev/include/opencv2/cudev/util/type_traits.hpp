@@ -152,7 +152,7 @@ template <typename T> struct TypeTraits
 template <typename A, typename B> struct LargerType
 {
     typedef typename SelectIf<
-        VecTraits<A>::cn != VecTraits<B>::cn,
+        unsigned(VecTraits<A>::cn) != unsigned(VecTraits<B>::cn),
         void,
         typename MakeVec<
             typename type_traits_detail::LargerDepth<
