@@ -289,16 +289,16 @@ inline float CvHaarEvaluator::Feature::calc( const Mat &_sum, const Mat &/*_tilt
   /* TODO Added from MIL implementation */
   Mat_<float> ii_img( _sum );
   cv::Rect r;
-  float sum = 0.0f;
+  float ret = 0.0f;
 
   for ( int k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
   {
     r = rect[k].r;
-    sum += rect[k].weight
+    ret += rect[k].weight
         * ( ii_img( r.y + r.height, r.x + r.width ) + ii_img( r.y, r.x ) - ii_img( r.y + r.height, r.x ) - ii_img( r.y, r.x + r.width ) );  ///_rsums[k];
   }
 
-  return (float) ( sum );
+  return (float) ( ret );
   //return 0;
   /* const int* img = tilted ? _tilted.ptr<int>((int)y) : _sum.ptr<int>((int)y);
    float ret = rect[0].weight * (img[fastRect[0].p0] - img[fastRect[0].p1] - img[fastRect[0].p2] + img[fastRect[0].p3] ) +
