@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-int main(int argc, const char *argv[])
+static int old_main(int argc, const char *argv[])
 {
     const char *keys =
         "{ h | help    | false | print help message }"
@@ -162,3 +162,14 @@ END_DEV:
 
     return 0;
 }
+
+const char * impls[] =
+{
+    "ocl",
+    "plain",
+#ifdef HAVE_OPENCV_GPU
+    "gpu"
+#endif
+};
+
+CV_PERF_TEST_MAIN_WITH_IMPLS(ocl, impls)

@@ -40,6 +40,15 @@
 //
 //M*/
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wunused-function"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
+
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
@@ -50,6 +59,7 @@
 #include <cstdio>
 #include <vector>
 #include <numeric>
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -59,9 +69,8 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-#include "opencv2/ts/ts_gtest.h"
 
+#define OCL_TYPICAL_MAT_SIZES ::testing::Values(cv::Size(1000, 1000), cv::Size(2000, 2000), cv::Size(4000, 4000))
 
 #define Min_Size 1000
 #define Max_Size 4000
