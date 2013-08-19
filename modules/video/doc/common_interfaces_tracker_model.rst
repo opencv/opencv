@@ -198,7 +198,7 @@ TrackerModel::runStateEstimator
 
 Run the TrackerStateEstimator, return true if is possible to estimate a new state, false otherwise
 
-.. ocv:function::  void TrackerModel::runStateEstimator()
+.. ocv:function::  bool TrackerModel::runStateEstimator()
 
 TrackerModel::setTrackerStateEstimator
 --------------------------------------
@@ -257,8 +257,8 @@ In [AMVOT]_  Statistical modeling (Fig. 3), Table III (generative) - IV (discrim
 
 At moment only :ocv:class:`TrackerStateEstimatorMILBoosting` is implemented.
 
-TrackerStateEstimatorMILBoosting
---------------------------------
+TrackerStateEstimatorMILBoosting : TrackerStateEstimator
+--------------------------------------------------------
 
 TrackerStateEstimator based on Boosting
 
@@ -279,12 +279,12 @@ TrackerStateEstimatorMILBoosting class::
 	  void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );
 	};
 
-TrackerStateEstimatorMILBoosting::TrackerMILTargetState
--------------------------------------------------------
+TrackerMILTargetState : TrackerTargetState
+------------------------------------------
 
-Implementation of the target state for TrackerStateEstimatorMILBoosting
+Implementation of the target state for TrackerMILTargetState
 
-.. ocv:class:: TrackerStateEstimatorMILBoosting::TrackerMILTargetState
+.. ocv:class:: TrackerMILTargetState
 
 TrackerMILTargetState class::
 
@@ -300,44 +300,44 @@ TrackerMILTargetState class::
       Mat getFeatures() const;
      };
 
-TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setTargetFg
--------------------------------------------------------------------------------
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setTargetFg
+--------------------------------------------------------------------
 
 Set label: true for target foreground, false for background
 
-.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setTargetFg( bool foreground )
+.. ocv:function::  void TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setTargetFg( bool foreground )
 
     :param foreground: Label for background/foreground
     
-TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures
--------------------------------------------------------------------------------
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setFeatures
+--------------------------------------------------------------------
 
 Set the features extracted from :ocv:class:`TrackerFeatureSet`
 
-.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures( const Mat& features )
+.. ocv:function::  void TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setFeatures( const Mat& features )
 
     :param features: The features extracted
     
-TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::isTargetFg
-------------------------------------------------------------------------------
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::isTargetFg
+-------------------------------------------------------------------
 
 Get the label. Return true for target foreground, false for background
 
-.. ocv:function:: bool TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::isTargetFg() const
+.. ocv:function:: bool TrackerStateEstimatorMILBoosting::TrackerMILTargetState::isTargetFg() const
     
-TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::getFeatures
--------------------------------------------------------------------------------
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::getFeatures
+--------------------------------------------------------------------
 
 Get the features extracted
 
-.. ocv:function:: Mat TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting::setFeatures() const
+.. ocv:function:: void TrackerStateEstimatorMILBoosting::TrackerMILTargetState::setFeatures( const Mat& features )
     
 TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting
 ------------------------------------------------------------------
 
 Constructor
 
-.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures )
+.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures=250 )
 
     :param numFeatures: Number of features for each sample
    

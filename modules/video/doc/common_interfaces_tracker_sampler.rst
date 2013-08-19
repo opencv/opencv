@@ -56,7 +56,7 @@ TrackerSampler::getSamplers
 
 Return the collection of the :ocv:class:`TrackerSamplerAlgorithm`
 
-.. ocv:function::  std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > >& TrackerSampler::getSamplers() const 
+.. ocv:function:: const std::vector<std::pair<String, Ptr<TrackerSamplerAlgorithm> > >& TrackerSampler::getSamplers() const 
 
    
 TrackerSampler::getSamples
@@ -166,10 +166,10 @@ Specialized TrackerSamplerAlgorithm
 
 In [AAM]_ table I are described the most known sampling strategies. At moment only :ocv:class:`TrackerSamplerCSC` is implemented.
 
-TrackerSamplerCSC
------------------
+TrackerSamplerCSC : TrackerSamplerAlgorithm
+-------------------------------------------
 
-TrackerSampler based on CSC (current state centered), used by MIL [MIL]_ algorithm :ocv:class:`TrackerMIL`
+TrackerSampler based on CSC (current state centered), used by MIL [MIL]_ algorithm TrackerMIL
 
 .. ocv:class:: TrackerSamplerCSC
 

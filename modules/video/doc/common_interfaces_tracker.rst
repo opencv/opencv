@@ -4,8 +4,8 @@ Common Interfaces of Tracker
 .. highlight:: cpp
 
 
-Tracker
--------
+Tracker : Algorithm
+-------------------
 
 .. ocv:class:: Tracker
 

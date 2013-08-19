@@ -165,4 +165,3 @@ void TrackerTargetState::setTargetHeight( int height )
 }
 
 } /* namespace cv */
-

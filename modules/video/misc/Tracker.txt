@@ -15,7 +15,7 @@ class Tracker{
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
 }
-class Tracker 
+class Tracker
 note right: Tracker is the general interface for each specialized trackers
 class TrackerMIL{
 	+Params
@@ -31,7 +31,7 @@ class TrackerBoosting{
 	+bool init(const Mat& image, const Rect& boundingBox);
 	+bool update(const Mat& image, Rect& boundingBox);
 }
-Algorithm <|-- Tracker : virtual inheritance 
+Algorithm <|-- Tracker : virtual inheritance
 Tracker <|-- TrackerMIL
 Tracker <|-- TrackerBoosting
 

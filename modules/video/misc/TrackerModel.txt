@@ -13,15 +13,15 @@ class TrackerModel{
 	...
 	TrackerModel();
 	~TrackerModel();
-	
+
 	+bool setTrackerStateEstimator(Ptr<TrackerStateEstimator> trackerStateEstimator);
 	+Ptr<TrackerStateEstimator> getTrackerStateEstimator();
-	
+
 	+void modelEstimation(const vector<Mat>& responses);
 	+void modelUpdate();
 	+void setLastTargetState(const Ptr<TrackerTargetState> lastTargetState);
 	+void runStateEstimator();
-	
+
 	+const vector<ConfidenceMap>& getConfidenceMaps();
 	+const ConfidenceMap& getLastConfidenceMap();
 }
@@ -31,7 +31,7 @@ class TrackerTargetState <<virtual>>{
 	Point2f getTargetPosition();
 	void setTargetPosition(Point2f position);
 }
-class TrackerTargetState 
+class TrackerTargetState
 note bottom: Each TrackerStateEstimator can create own state
 
 class TrackerStateEstimator <<virtual>>{

@@ -214,10 +214,10 @@ Specialized TrackerFeature
 
 In [AAM]_ table I and section III C are described the most known features type. At moment only :ocv:class:`TrackerFeatureHAAR` is implemented.
 
-TrackerFeatureHAAR
-------------------
+TrackerFeatureHAAR : TrackerFeature
+-----------------------------------
 
-TrackerFeature based on HAAR features, used by MIL [MIL]_ :ocv:class:`TrackerMIL` and many others algorithms
+TrackerFeature based on HAAR features, used by MIL [MIL]_ TrackerMIL and many others algorithms
 
 .. ocv:class:: TrackerFeatureHAAR
 
@@ -286,5 +286,3 @@ TrackerFeatureFeature2d
 -----------------------
 
 TODO To be implemented
-
-
