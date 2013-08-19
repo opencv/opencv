@@ -2,8 +2,44 @@
 #include "viz3d_impl.hpp"
 
 
-cv::viz::Viz3d::Viz3d(const String& window_name) : impl_(new VizImpl(window_name)) {}
-cv::viz::Viz3d::~Viz3d() { delete impl_; }
+cv::viz::Viz3d::Viz3d(const String& window_name) : impl_(0) { create(window_name); }
+
+cv::viz::Viz3d::Viz3d(const Viz3d& other) : impl_(other.impl_) 
+{
+    if (impl_) CV_XADD(&impl_->ref_counter, 1);
+}
+
+cv::viz::Viz3d& cv::viz::Viz3d::operator=(const Viz3d& other)
+{
+    if (this != &other)
+    {
+        release();
+        impl_ = other.impl_;
+        if (impl_) CV_XADD(&impl_->ref_counter, 1);
+    }
+    return *this;
+}
+
+cv::viz::Viz3d::~Viz3d() { release(); }
+
+void cv::viz::Viz3d::create(const String &window_name)
+{
+    if (impl_) release();
+    impl_ = new VizImpl(window_name);
+    impl_->ref_counter = 1;
+    // Register the window
+//     cv::viz::VizAccessor::getInstance()->add(*this);
+}
+
+void cv::viz::Viz3d::release()
+{
+    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
+    {
+        cv::viz::VizAccessor::getInstance()->remove(getWindowName());
+        delete impl_;
+        impl_ = 0;
+    }
+}
 
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 
@@ -56,3 +92,4 @@ void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin,
 
 cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
 void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }
+cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName(); }

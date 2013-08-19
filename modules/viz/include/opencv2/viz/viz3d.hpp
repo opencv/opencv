@@ -21,6 +21,8 @@ namespace cv
             typedef void (*MouseCallback)(const MouseEvent&, void*);
 
             Viz3d(const String& window_name = String());
+            Viz3d(const Viz3d&);
+            Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
             void setBackgroundColor(const Color& color = Color::black());
@@ -50,6 +52,8 @@ namespace cv
             
             Size getWindowSize() const;
             void setWindowSize(const Size &window_size);
+            
+            String getWindowName() const;
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
@@ -58,11 +62,12 @@ namespace cv
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
         private:
-            Viz3d(const Viz3d&);
-            Viz3d& operator=(const Viz3d&);
 
             struct VizImpl;
             VizImpl* impl_;
+            
+            void create(const String &window_name);
+            void release();
         };
 
     } /* namespace viz */

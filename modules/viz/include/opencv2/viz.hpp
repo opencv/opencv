@@ -58,13 +58,17 @@
 namespace cv
 {
     namespace viz
-    {
+    {   
+        typedef std::map<String, Viz3d> VizMap;
+        typedef std::pair<String, Viz3d> VizPair;
+        
         //! takes coordiante frame data and builds transfrom to global coordinate frame
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
         //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation
         CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir);
 
+        CV_EXPORTS Viz3d get(const String &window_name);
 
         //! checks float value for Nan
         inline bool isNan(float x)
@@ -87,6 +91,24 @@ namespace cv
         //! checks point for Nans
         template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
         { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
+        
+        class CV_EXPORTS VizAccessor
+        {
+        public:
+            ~VizAccessor();
+            static VizAccessor * getInstance();
+            
+            Viz3d get(const String &window_name);
+            void add(Viz3d window);
+            void remove(const String &window_name);
+            
+        private:
+            VizAccessor(); // Singleton
+            
+            static VizAccessor * instance_;
+            static bool is_instantiated_;
+            static VizMap viz_map_;
+        };
     }
 }
 

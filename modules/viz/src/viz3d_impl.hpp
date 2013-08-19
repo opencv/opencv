@@ -11,6 +11,8 @@ public:
     typedef cv::Ptr<VizImpl> Ptr;
     typedef Viz3d::KeyboardCallback KeyboardCallback;
     typedef Viz3d::MouseCallback MouseCallback;
+    
+    int ref_counter;
 
     VizImpl (const String &name);
     virtual ~VizImpl ();
@@ -142,6 +144,7 @@ public:
     void setWindowSize (int xw, int yw);
     void setFullScreen (bool mode);
     void setWindowName (const String &name);
+    String getWindowName() const;
     void setBackgroundColor (const Color& color);
 
     void spin ();
