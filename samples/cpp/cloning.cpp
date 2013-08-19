@@ -6,26 +6,31 @@
 *
 * This tutorial demonstrates how to use OpenCV seamless cloning
 * module.
-* Flags:
-* 1- NORMAL_CLONE
-* 2- MIXED_CLONE
-* 3- FEATURE_EXCHANGE
+*
+* 1- Normal Cloning
+* 2- Mixed Cloning
+* 3- Monochrome Transfer
+* 4- Color Change
+* 5- Illumination change
+* 6- Texture Flattening
 
-* The program takes as input a source and a destination image
+* The program takes as input a source and a destination image (for 1-3 methods)
 * and ouputs the cloned image.
 
 * Step 1:
 * -> In the source image, select the region of interest by left click mouse button. A Polygon ROI will be created by left clicking mouse button.
-* -> To set the Polygon ROI, click the right mouse button.
-* -> To reset the region selected, click the middle mouse button.
+* -> To set the Polygon ROI, click the right mouse button or 'd' key.
+* -> To reset the region selected, click the middle mouse button or 'r' key.
 
 * Step 2:
 * -> In the destination image, select the point where you want to place the ROI in the image by left clicking mouse button.
-* -> To get the cloned result, click the right mouse button.
-
+* -> To get the cloned result, click the right mouse button or 'c' key.
+* -> To quit the program, use 'q' key.
+*
 * Result: The cloned image will be displayed.
 */
 
+#include <signal.h>
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
@@ -47,6 +52,8 @@ Point* pts = new Point[100];
 Point* pts2 = new Point[100];
 Point* pts_diff = new Point[100];
 
+char src[50];
+char dest[50];
 
 int var = 0;
 int flag = 0;
@@ -56,6 +63,10 @@ int minx,miny,maxx,maxy,lenx,leny;
 int minxd,minyd,maxxd,maxyd,lenxd,lenyd;
 
 int channel,num;
+
+float alpha,beta;
+
+float red, green, blue;
 
 void source(int event, int x, int y, int, void*)
 {
@@ -93,20 +104,20 @@ void source(int event, int x, int y, int, void*)
 			pts[i] = point;
 
 		if(var!=0)
-		{
-			const Point* pts3[1] = {&pts[0]};
-			polylines( img1, pts3, &numpts,1, 1, Scalar(0,0,0), 2, 8, 0);
-		}
+        {
+            const Point* pts3[1] = {&pts[0]};
+            polylines( img1, pts3, &numpts,1, 1, Scalar(0,0,0), 2, 8, 0);
+        }
 
-		for(int i=0;i<var;i++)
-		{
-			minx = min(minx,pts[i].x);
-			maxx = max(maxx,pts[i].x);
-			miny = min(miny,pts[i].y);
-			maxy = max(maxy,pts[i].y);
-		}
-		lenx = maxx - minx;
-		leny = maxy - miny;
+        for(int i=0;i<var;i++)
+        {
+            minx = min(minx,pts[i].x);
+            maxx = max(maxx,pts[i].x);
+            miny = min(miny,pts[i].y);
+            maxy = max(maxy,pts[i].y);
+        }
+        lenx = maxx - minx;
+        leny = maxy - miny;
 
         int mid_pointx = minx + lenx/2;
         int mid_pointy = miny + leny/2;
@@ -117,21 +128,41 @@ void source(int event, int x, int y, int, void*)
             pts_diff[i].y = pts[i].y - mid_pointy;
         }
 
-		imshow("Source", img1);
-	}
+        imshow("Source", img1);
+    }
 
-	if (event == EVENT_RBUTTONUP)
-	{
-		flag = var;
+    if (event == EVENT_RBUTTONUP)
+    {
+        flag = var;
 
-		final = Mat::zeros(img0.size(),CV_8UC3);
-		res1 = Mat::zeros(img0.size(),CV_8UC1);
-		const Point* pts4[1] = {&pts[0]};
+        final = Mat::zeros(img0.size(),CV_8UC3);
+        res1 = Mat::zeros(img0.size(),CV_8UC1);
+        const Point* pts4[1] = {&pts[0]};
 
-		fillPoly(res1, pts4,&numpts, 1, Scalar(255, 255, 255), 8, 0);
-		bitwise_and(img0, img0, final,res1);
+        fillPoly(res1, pts4,&numpts, 1, Scalar(255, 255, 255), 8, 0);
+        bitwise_and(img0, img0, final,res1);
 
-		imshow("Source", img1);
+        imshow("Source", img1);
+
+        if(num == 4)
+        {
+            colorChange(img0,res1,blend,red,green,blue);
+            imshow("Color Change Image", blend);
+            waitKey(0);
+
+        }
+        else if(num == 5)
+        {
+            illuminationChange(img0,res1,blend,alpha,beta);
+            imshow("Illum Change Image", blend);
+            waitKey(0);
+        }
+        else if(num == 6)
+        {
+            textureFlattening(img0,res1,blend);
+            imshow("Texture Flattened", blend);
+            waitKey(0);
+        }
 
 	}
 	if (event == EVENT_MBUTTONDOWN)
@@ -194,95 +225,305 @@ void destination(int event, int x, int y, int, void*)
 			maxyd = max(maxyd,pts2[i].y);
 		}
 
-		if(maxxd > im1.size().width || maxyd > im1.size().height || minxd < 0 || minyd < 0)
-		{
-			cout << "Index out of range" << endl;
-			exit(0);
-		}
+        if(maxxd > im1.size().width || maxyd > im1.size().height || minxd < 0 || minyd < 0)
+        {
+            cout << "Index out of range" << endl;
+            exit(0);
+        }
 
-		final1 = Mat::zeros(img2.size(),CV_8UC3);
-		res = Mat::zeros(img2.size(),CV_8UC1);
-		for(int i=miny, k=minyd;i<(miny+leny);i++,k++)
-			for(int j=minx,l=minxd ;j<(minx+lenx);j++,l++)
-			{
-				for(int c=0;c<channel;c++)
-				{
-					final1.at<uchar>(k,l*channel+c) = final.at<uchar>(i,j*channel+c);
+        final1 = Mat::zeros(img2.size(),CV_8UC3);
+        res = Mat::zeros(img2.size(),CV_8UC1);
+        for(int i=miny, k=minyd;i<(miny+leny);i++,k++)
+            for(int j=minx,l=minxd ;j<(minx+lenx);j++,l++)
+            {
+                for(int c=0;c<channel;c++)
+                {
+                    final1.at<uchar>(k,l*channel+c) = final.at<uchar>(i,j*channel+c);
 
-				}
-			}
+                }
+            }
 
 
-		const Point* pts6[1] = {&pts2[0]};
-		fillPoly(res, pts6, &numpts, 1, Scalar(255, 255, 255), 8, 0);
+        const Point* pts6[1] = {&pts2[0]};
+        fillPoly(res, pts6, &numpts, 1, Scalar(255, 255, 255), 8, 0);
 
-		if(num == 1 || num == 2 || num == 3)
-		{
+        if(num == 1 || num == 2 || num == 3)
+        {
             seamlessClone(img0,img2,res1,point,blend,num);        
-			imshow("Cloned Image", blend);
+            imshow("Cloned Image", blend);
             imwrite("cloned.png",blend);
-			waitKey(0);
-		}
+            waitKey(0);
+        }
 
-		for(int i = 0; i < flag ; i++)
-		{
-			pts2[i].x=0;
-			pts2[i].y=0;
-		}
+        for(int i = 0; i < flag ; i++)
+        {
+            pts2[i].x=0;
+            pts2[i].y=0;
+        }
 
-		minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
-	}
+        minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+    }
 
-	im1.release();
+    im1.release();
+}
+
+void checkfile(char *file)
+{
+    while(1)
+    {
+        printf("Enter %s Image: ",file);
+        if(!strcmp(file,"Source"))
+        {
+            cin >> src;
+            if(access( src, F_OK ) != -1 )
+            {
+                break;
+            }
+            else
+            {
+                printf("Image doesn't exist\n");
+            }
+        }
+        else if(!strcmp(file,"Destination"))
+        {
+            cin >> dest;
+
+            if(access( dest, F_OK ) != -1 )
+            {   
+                break;
+            }
+            else
+            {
+                printf("Image doesn't exist\n");
+            }
+
+        }
+    }
 }
 
 int main(int argc, char **argv)
 {
+    cout << endl;
+    cout << "Cloning Module" << endl;
+    cout << "---------------" << endl;
+    cout << "Step 1:" << endl;
+    cout << " -> In the source image, select the region of interest by left click mouse button. A Polygon ROI will be created by left clicking mouse button." << endl;
+    cout << " -> To set the Polygon ROI, click the right mouse button or use 'd' key" << endl;
+    cout << " -> To reset the region selected, click the middle mouse button or use 'r' key." << endl;
 
-    if (argc != 3) 
+    cout << "Step 2:" << endl;
+    cout << " -> In the destination image, select the point where you want to place the ROI in the image by left clicking mouse button." << endl;
+    cout << " -> To get the cloned result, click the right mouse button or use 'c' key." << endl;
+    cout << " -> To quit the program, use 'q' key." << endl;
+    cout << endl;
+    cout << "Options: " << endl;
+    cout << endl;
+    cout << "1) Normal Cloning " << endl;
+    cout << "2) Mixed Cloning " << endl;
+    cout << "3) Monochrome Transfer " << endl;
+    cout << "4) Local Color Change " << endl;
+    cout << "5) Local Illumination Change " << endl;
+    cout << "6) Texture Flattening " << endl;
+
+    cout << endl;
+
+    cout << "Press number 1-6 to choose from above techniques: ";
+    cin >> num;
+    cout << endl;
+
+    char s[]="Source";
+    char d[]="Destination";
+
+    minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
+
+    minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+
+    if(num == 1 || num == 2 || num == 3)
     {
-        cout << "usage: " << argv[0] << "  <source image>" << "  <destination image>" << endl;
-        exit(1);
+
+        checkfile(s);
+        checkfile(d);
+
+        img0 = imread(src);
+
+        img2 = imread(dest);
+
+        channel = img0.channels();
+
+        res = Mat::zeros(img2.size(),CV_8UC1);
+        res1 = Mat::zeros(img0.size(),CV_8UC1);
+        final = Mat::zeros(img0.size(),CV_8UC3);
+        final1 = Mat::zeros(img2.size(),CV_8UC3);
+        //////////// source image ///////////////////
+
+        namedWindow("Source", 1);
+        setMouseCallback("Source", source, NULL);
+        imshow("Source", img0);
+
+        /////////// destination image ///////////////
+
+        namedWindow("Destination", 1);
+        setMouseCallback("Destination", destination, NULL);
+        imshow("Destination",img2);
+
+    }
+    else if(num == 4)
+    {
+        checkfile(s);
+
+        cout << "Enter RGB values: " << endl;
+        cout << "Red: ";
+        cin >> red;
+
+        cout << "Green: ";
+        cin >> green;
+
+        cout << "Blue: ";
+        cin >> blue;
+
+        img0 = imread(src);
+
+        res1 = Mat::zeros(img0.size(),CV_8UC1);
+        final = Mat::zeros(img0.size(),CV_8UC3);
+
+
+        //////////// source image ///////////////////
+
+        namedWindow("Source", 1);
+        setMouseCallback("Source", source, NULL);
+        imshow("Source", img0);
+
+
+    }
+    else if(num == 5)
+    {
+        checkfile(s);
+
+        cout << "alpha: ";
+        cin >> alpha;
+
+        cout << "beta: ";
+        cin >> beta;
+
+        img0 = imread(src);
+
+        res1 = Mat::zeros(img0.size(),CV_8UC1);
+        final = Mat::zeros(img0.size(),CV_8UC3);
+
+        //////////// source image ///////////////////
+
+        namedWindow("Source", 1);
+        setMouseCallback("Source", source, NULL);
+        imshow("Source", img0);
+
+
+    }
+    else if(num == 6)
+    {
+        checkfile(s);
+
+        img0 = imread(src);
+
+        res1 = Mat::zeros(img0.size(),CV_8UC1);
+        final = Mat::zeros(img0.size(),CV_8UC3);
+
+        //////////// source image ///////////////////
+
+        namedWindow("Source", 1);
+        setMouseCallback("Source", source, NULL);
+        imshow("Source", img0);
+    }
+    
+    while(true)
+    {
+        char key = waitKey(0);
+
+        if(key == 'd')
+        {
+            flag1 = 1;
+            img1 = img0.clone();
+            for(int i = var; i < numpts ; i++)
+                pts[i] = point;
+
+            if(var!=0)
+            {
+                const Point* pts3[1] = {&pts[0]};
+                polylines( img1, pts3, &numpts,1, 1, Scalar(0,0,0), 2, 8, 0);
+            }
+
+            for(int i=0;i<var;i++)
+            {
+                minx = min(minx,pts[i].x);
+                maxx = max(maxx,pts[i].x);
+                miny = min(miny,pts[i].y);
+                maxy = max(maxy,pts[i].y);
+            }
+            lenx = maxx - minx;
+            leny = maxy - miny;
+
+            int mid_pointx = minx + lenx/2;
+            int mid_pointy = miny + leny/2;
+
+            for(int i=0;i<var;i++)
+            {
+                pts_diff[i].x = pts[i].x - mid_pointx;
+                pts_diff[i].y = pts[i].y - mid_pointy;
+            }
+
+            flag = var;
+
+            final = Mat::zeros(img0.size(),CV_8UC3);
+            res1 = Mat::zeros(img0.size(),CV_8UC1);
+            const Point* pts4[1] = {&pts[0]};
+
+            fillPoly(res1, pts4,&numpts, 1, Scalar(255, 255, 255), 8, 0);
+            bitwise_and(img0, img0, final,res1);
+
+            imshow("Source", img1);
+        }
+        else if(key == 'r')
+        {
+            for(int i = 0; i < numpts ; i++)
+            {
+                pts[i].x=0;
+                pts[i].y=0;
+            }
+            var = 0;
+            flag1 = 0;
+            minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
+            imshow("Source", img0);
+            if(num == 1 || num == 2 || num == 3)
+                imshow("Destination",img2);
+            drag = 0;
+        }
+        else if ((num == 1 || num == 2 || num == 3) && key == 'c' && flag1 == 1)
+        {
+            seamlessClone(img0,img2,res1,point,blend,num);
+            imshow("Cloned Image", blend);
+            imwrite("cloned.png",blend);
+        }
+        else if (num == 4 && key == 'c' && flag1 == 1)
+        {
+            colorChange(img0,res1,blend,red,green,blue);
+            imshow("Color Change Image", blend);
+            imwrite("cloned.png",blend);
+        }
+        else if (num == 5 && key == 'c' && flag1 == 1)
+        {
+            illuminationChange(img0,res1,blend,alpha,beta);
+            imshow("Illum Change Image", blend);
+            imwrite("cloned.png",blend);
+        }
+        else if (num == 6 && key == 'c' && flag1 == 1)
+        {
+            textureFlattening(img0,res1,blend);
+            imshow("Texture Flattened", blend);
+            imwrite("cloned.png",blend);
+        }
+        else if(key == 'q')
+            exit(0);
+
     }
 
-    Mat src = imread(argv[1]);
-    Mat dest = imread(argv[2]);
-
-    cout << "Flags:" << endl;
-    cout << "1- NORMAL_CLONE" << endl;
-    cout << "2- MIXED_CLONE" << endl;
-    cout << "3- FEATURE_EXCHANGE" << endl << endl;
-
-    cout << "Enter Flag:";
-    cin >> num;
-
-	minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
-
-	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
-
-	img0 = src;
-	img2 = dest;
-
-	channel = img0.channels();
-
-	res = Mat::zeros(img2.size(),CV_8UC1);
-	res1 = Mat::zeros(img0.size(),CV_8UC1);
-	final = Mat::zeros(img0.size(),CV_8UC3);
-	final1 = Mat::zeros(img2.size(),CV_8UC3);
-	//////////// source image ///////////////////
-
-	namedWindow("Source", 1);
-	setMouseCallback("Source", source, NULL);
-	imshow("Source", img0);
-
-	/////////// destination image ///////////////
-
-	namedWindow("Destination", 1);
-	setMouseCallback("Destination", destination, NULL);
-	imshow("Destination",img2);
-	waitKey(0);
-
-	img0.release();
-	img1.release();
-	img2.release();
+    waitKey(0);
 }

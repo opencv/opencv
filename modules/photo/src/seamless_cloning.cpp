@@ -144,8 +144,12 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 	float blue = b;
 
     Mat gray = Mat::zeros(mask.size(),CV_8UC1);
-    cvtColor(mask, gray, COLOR_BGR2GRAY);
 
+    if(mask.channels() == 3)
+        cvtColor(mask, gray, COLOR_BGR2GRAY );
+    else
+        gray = mask;
+    
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
     int channel = 3;
@@ -178,7 +182,11 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
 	float beta = b;
 
     Mat gray = Mat::zeros(mask.size(),CV_8UC1);
-    cvtColor(mask, gray, COLOR_BGR2GRAY);
+
+    if(mask.channels() == 3)
+        cvtColor(mask, gray, COLOR_BGR2GRAY );
+    else
+        gray = mask;
 
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
@@ -200,14 +208,39 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
     obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
 
 }
-void cv::textureFlattening(InputArray _src, OutputArray _dst)
+
+void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst)
 {
 
 	Mat src  = _src.getMat();
+	Mat mask  = _mask.getMat();
 	_dst.create(src.size(), src.type());
 	Mat blend = _dst.getMat();
 
-	Cloning obj;
-	obj.texture_flatten(src,blend);
+    Mat gray = Mat::zeros(mask.size(),CV_8UC1);
+
+    if(mask.channels() == 3)
+        cvtColor(mask, gray, COLOR_BGR2GRAY );
+    else
+        gray = mask;
+
+    Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
+
+    int channel = 3;
+    for(int i=0;i<mask.size().height;i++)
+        for(int j=0;j<mask.size().width;j++)
+        {
+            if(gray.at<uchar>(i,j) == 255)
+            {
+                for(int c=0;c<channel;c++)
+                {
+                    cs_mask.at<uchar>(i,j*channel+c) = src.at<uchar>(i,j*channel+c);
+                }
+            }
+
+        }
+	
+    Cloning obj;
+	obj.texture_flatten(src,cs_mask,gray,blend);
 }
 
