@@ -531,7 +531,7 @@ class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimat
      * \param foreground label for target or background
      * \param features features extracted
      */
-    TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight, bool foreground, const Mat& features );
+    TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground, const Mat& features );
 
     /**
      * \brief Destructor
@@ -551,7 +551,7 @@ class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimat
     Mat targetFeatures;
   };
 
-  TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+  TrackerStateEstimatorMILBoosting( int nFeatures = 250 );
   ~TrackerStateEstimatorMILBoosting();
 
   void setCurrentConfidenceMap( ConfidenceMap& confidenceMap );

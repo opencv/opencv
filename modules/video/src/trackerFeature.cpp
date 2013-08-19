@@ -101,7 +101,7 @@ String TrackerFeature::getClassName() const
 /**
  * TrackerFeatureFeature2d
  */
-TrackerFeatureFeature2d::TrackerFeatureFeature2d( String detectorType, String descriptorType )
+TrackerFeatureFeature2d::TrackerFeatureFeature2d( String /*detectorType*/, String /*descriptorType*/ )
 {
   className = "FEATURE2D";
 }
@@ -111,12 +111,12 @@ TrackerFeatureFeature2d::~TrackerFeatureFeature2d()
 
 }
 
-bool TrackerFeatureFeature2d::computeImpl( const std::vector<Mat>& images, Mat& response )
+bool TrackerFeatureFeature2d::computeImpl( const std::vector<Mat>& /*images*/, Mat& /*response*/ )
 {
   return false;
 }
 
-void TrackerFeatureFeature2d::selection( Mat& response, int npoints )
+void TrackerFeatureFeature2d::selection( Mat& /*response*/, int /*npoints*/ )
 {
 
 }
@@ -134,12 +134,12 @@ TrackerFeatureHOG::~TrackerFeatureHOG()
 
 }
 
-bool TrackerFeatureHOG::computeImpl( const std::vector<Mat>& images, Mat& response )
+bool TrackerFeatureHOG::computeImpl( const std::vector<Mat>& /*images*/, Mat& /*response*/ )
 {
   return false;
 }
 
-void TrackerFeatureHOG::selection( Mat& response, int npoints )
+void TrackerFeatureHOG::selection( Mat& /*response*/, int /*npoints*/ )
 {
 
 }
@@ -200,7 +200,7 @@ bool TrackerFeatureHAAR::computeImpl( const std::vector<Mat>& images, Mat& respo
   return true;
 }
 
-void TrackerFeatureHAAR::selection( Mat& response, int npoints )
+void TrackerFeatureHAAR::selection( Mat& /*response*/, int /*npoints*/ )
 {
 
 }
@@ -218,12 +218,12 @@ TrackerFeatureLBP::~TrackerFeatureLBP()
 
 }
 
-bool TrackerFeatureLBP::computeImpl( const std::vector<Mat>& images, Mat& response )
+bool TrackerFeatureLBP::computeImpl( const std::vector<Mat>& /*images*/, Mat& /*response*/ )
 {
   return false;
 }
 
-void TrackerFeatureLBP::selection( Mat& response, int npoints )
+void TrackerFeatureLBP::selection( Mat& /*response*/, int /*npoints*/ )
 {
 
 }

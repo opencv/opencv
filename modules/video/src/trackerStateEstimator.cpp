@@ -96,12 +96,12 @@ String TrackerStateEstimator::getClassName() const
 /**
  * TrackerStateEstimatorMILBoosting::TrackerMILTargetState
  */
-TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int targetWidth, int targetHeight,
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int width, int height,
                                                                                 bool foreground, const Mat& features )
 {
   setTargetPosition( position );
-  setTargetWidth( targetWidth );
-  setTargetHeight( targetHeight );
+  setTargetWidth( width );
+  setTargetHeight( height );
   setTargetFg( foreground );
   setFeatures( features );
 }
@@ -126,11 +126,11 @@ Mat TrackerStateEstimatorMILBoosting::TrackerMILTargetState::getFeatures() const
   return targetFeatures;
 }
 
-TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures )
+TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int nFeatures )
 {
   className = "BOOSTING";
   trained = false;
-  this->numFeatures = numFeatures;
+  numFeatures = nFeatures;
 }
 
 TrackerStateEstimatorMILBoosting::~TrackerStateEstimatorMILBoosting()
@@ -151,7 +151,7 @@ uint TrackerStateEstimatorMILBoosting::max_idx( const std::vector<float> &v )
   return (uint) ( findPtr - beginPtr );
 }
 
-Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& confidenceMaps )
+Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& /*confidenceMaps*/ )
 {
   //run ClfMilBoost classify in order to compute next location
   if( currentConfidenceMap.empty() )
@@ -165,7 +165,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const st
   std::vector<float> prob = boostMILModel.classify( positiveStates );
 
   int bestind = max_idx( prob );
-  float resp = prob[bestind];
+  //float resp = prob[bestind];
 
   return currentConfidenceMap.at( bestind ).first;
 }
@@ -259,7 +259,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorSVM::estimateImpl( const std::vecto
   return confidenceMaps.back().back().first;
 }
 
-void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& confidenceMaps )
+void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/ )
 {
 
 }

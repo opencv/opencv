@@ -275,7 +275,7 @@ void ClfOnlineStump::init()
   _trained = false;
 }
 
-void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float> & posw, const Mat_<float> & negw )
+void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>& /*posw*/, const Mat_<float>& /*negw*/ )
 {
   //std::cout << " ClfOnlineStump::update" << _ind << std::endl;
   float posmu = 0.0, negmu = 0.0;

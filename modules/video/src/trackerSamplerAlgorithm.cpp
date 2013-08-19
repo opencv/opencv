@@ -211,7 +211,7 @@ TrackerSamplerCS::~TrackerSamplerCS()
 
 }
 
-bool TrackerSamplerCS::samplingImpl( const Mat& image, Rect boundingBox, std::vector<Mat>& sample )
+bool TrackerSamplerCS::samplingImpl( const Mat& /*image*/, Rect /*boundingBox*/, std::vector<Mat>& /*sample*/ )
 {
   return false;
 }

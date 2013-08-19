@@ -276,7 +276,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   Mat normfactor; /* normalization factor */
 };
 
-inline float CvHaarEvaluator::operator()( int featureIdx, int sampleIdx ) const
+inline float CvHaarEvaluator::operator()( int featureIdx, int /*sampleIdx*/ ) const
 {
   /* TODO Added from MIL implementation */
   // float nf = normfactor.at<float>(0, sampleIdx);
@@ -284,7 +284,7 @@ inline float CvHaarEvaluator::operator()( int featureIdx, int sampleIdx ) const
   return features[featureIdx].calc( _ii_img, Mat(), 0 );
 }
 
-inline float CvHaarEvaluator::Feature::calc( const Mat &_sum, const Mat &_tilted, size_t y ) const
+inline float CvHaarEvaluator::Feature::calc( const Mat &_sum, const Mat &/*_tilted*/, size_t /*y*/ ) const
 {
   /* TODO Added from MIL implementation */
   Mat_<float> ii_img( _sum );

@@ -249,17 +249,17 @@ void CvHaarEvaluator::writeFeature( FileStorage &fs, int fi ) const
   features[fi].write( fs );
 }
 
-void CvHaarEvaluator::generateFeatures( int numFeatures )
+void CvHaarEvaluator::generateFeatures( int nFeatures )
 {
   int mode = ( (const CvHaarFeatureParams*) ( (CvFeatureParams*) featureParams ) )->mode;
   int offset = winSize.width + 1;
-  bool tilted = false;
+  bool isTilted = false;
   if( mode == CvHaarFeatureParams::ALL )
-    tilted = true;
+    isTilted = true;
 
   RNG rng = RNG( (int) time( 0 ) );
 
-  for ( int i = 0; i < numFeatures; i++ )
+  for ( int i = 0; i < nFeatures; i++ )
   {
     //generates new HAAR feature
     int x0 = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
@@ -280,7 +280,7 @@ void CvHaarEvaluator::generateFeatures( int numFeatures )
     int h2 = rng.uniform( 1, ( winSize.height - y2 - 2 ) );
     float wt2 = rng.uniform( -1.f, 1.f );
 
-    features.push_back( Feature( offset, tilted, x0, y0, w0, h0, wt0, x1, y1, w1, h1, wt1, x2, y2, w2, h2, wt2 ) );
+    features.push_back( Feature( offset, isTilted, x0, y0, w0, h0, wt0, x1, y1, w1, h1, wt1, x2, y2, w2, h2, wt2 ) );
   }
 
 }
