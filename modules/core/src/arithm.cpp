@@ -1242,14 +1242,14 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     bool haveMask = !_mask.empty();
     bool reallocate = false;
-    
-    bool src1Scalar = checkScalar(src1, src2.type(), kind1, kind2); 
-    bool src2Scalar = checkScalar(src2, src1.type(), kind2, kind1); 
+
+    bool src1Scalar = checkScalar(src1, src2.type(), kind1, kind2);
+    bool src2Scalar = checkScalar(src2, src1.type(), kind2, kind1);
 
     if( (kind1 == kind2 || src1.channels() == 1) && src1.dims <= 2 && src2.dims <= 2 &&
         src1.size() == src2.size() && src1.type() == src2.type() &&
         !haveMask && ((!_dst.fixedType() && (dtype < 0 || CV_MAT_DEPTH(dtype) == src1.depth())) ||
-                       (_dst.fixedType() && _dst.type() == _src1.type())) && 
+                       (_dst.fixedType() && _dst.type() == _src1.type())) &&
         ((src1Scalar && src2Scalar) || (!src1Scalar && !src2Scalar)) )
     {
         _dst.create(src1.size(), src1.type());
@@ -2120,10 +2120,30 @@ cmp_(const T* src1, size_t step1, const T* src2, size_t step2,
     }
 }
 
+#if ARITHM_USE_IPP
+inline static IppCmpOp convert_cmp(int _cmpop)
+{
+    return _cmpop == CMP_EQ ? ippCmpEq :
+        _cmpop == CMP_GT ? ippCmpGreater :
+        _cmpop == CMP_GE ? ippCmpGreaterEq :
+        _cmpop == CMP_LT ? ippCmpLess :
+        _cmpop == CMP_LE ? ippCmpLessEq :
+        (IppCmpOp)-1;
+}
+#endif
 
 static void cmp8u(const uchar* src1, size_t step1, const uchar* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if( ippiCompare_8u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+            return;
+    }
+#endif
   //vz optimized  cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
     int code = *(int*)_cmpop;
     step1 /= sizeof(src1[0]);
@@ -2198,12 +2218,30 @@ static void cmp8s(const schar* src1, size_t step1, const schar* src2, size_t ste
 static void cmp16u(const ushort* src1, size_t step1, const ushort* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if( ippiCompare_16u_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+            return;
+    }
+#endif
     cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 }
 
 static void cmp16s(const short* src1, size_t step1, const short* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  > 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if( ippiCompare_16s_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+            return;
+    }
+#endif
    //vz optimized cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 
     int code = *(int*)_cmpop;
@@ -2301,6 +2339,15 @@ static void cmp32s(const int* src1, size_t step1, const int* src2, size_t step2,
 static void cmp32f(const float* src1, size_t step1, const float* src2, size_t step2,
                   uchar* dst, size_t step, Size size, void* _cmpop)
 {
+#if ARITHM_USE_IPP
+    IppCmpOp op = convert_cmp(*(int *)_cmpop);
+    if( op  >= 0 )
+    {
+        fixSteps(size, sizeof(dst[0]), step1, step2, step);
+        if( ippiCompare_32f_C1R(src1, (int)step1, src2, (int)step2, dst, (int)step, (IppiSize&)size, op) >= 0 )
+            return;
+    }
+#endif
     cmp_(src1, step1, src2, step2, dst, step, size, *(int*)_cmpop);
 }
 
