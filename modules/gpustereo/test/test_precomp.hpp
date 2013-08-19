@@ -57,4 +57,6 @@
 #include "opencv2/gpustereo.hpp"
 #include "opencv2/calib3d.hpp"
 
+#include "cvconfig.h"
+
 #endif

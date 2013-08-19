@@ -14,6 +14,7 @@
 #include "opencv2/highgui.hpp"
 
 #include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
 
 #ifdef HAVE_OPENCV_OCL
 #  include "opencv2/nonfree/ocl.hpp"
