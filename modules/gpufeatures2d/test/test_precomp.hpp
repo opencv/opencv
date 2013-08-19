@@ -57,4 +57,6 @@
 #include "opencv2/gpufeatures2d.hpp"
 #include "opencv2/features2d.hpp"
 
+#include "cvconfig.h"
+
 #endif
