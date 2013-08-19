@@ -749,7 +749,7 @@ PERF_TEST_P(countNonZeroFixture, countNonZero,
 
     // creating src data
     Mat src(srcSize, type);
-    int result;
+    int result = 0;
     randu(src, 0, 256);
 
     // select implementation

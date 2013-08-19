@@ -172,4 +172,22 @@ const char * impls[] =
 #endif
 };
 
-CV_PERF_TEST_MAIN_WITH_IMPLS(ocl, impls)
+int main(int argc, char **argv)
+{
+    // temp solution: if no '--gtest_' and '--perf_' args switch to old behavior
+    bool useGTest = false;
+    for(int i=1; i<argc; i++)
+    {
+        std::string arg( argv[i] );
+        if( arg.find("--gtest_")==0 || arg.find("--perf_")==0 )
+        {
+            useGTest = true;
+            break;
+        }
+    }
+
+    if( !useGTest )
+        return old_main(argc, (const char**)argv);
+
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
+}

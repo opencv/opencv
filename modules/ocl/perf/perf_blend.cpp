@@ -80,19 +80,17 @@ static void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2,
     }
 }
 
-CV_ENUM(blendLinearMatType, CV_8UC1, CV_8UC4)
+//CV_ENUM(blendLinearMatType, CV_8UC1, CV_8UC4)
 
-typedef tuple<Size, blendLinearMatType> blendLinearParams;
-typedef TestBaseWithParam<blendLinearParams> blendLinearFixture;
+//typedef tuple<Size, blendLinearMatType> blendLinearParams;
+typedef TestBaseWithParam<Size> blendLinearFixture;
 
-PERF_TEST_P(blendLinearFixture, blendLinear,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               blendLinearMatType::all()))
+PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
 {
     // getting params
-    blendLinearParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+//    blendLinearParams params = GetParam();
+    const Size srcSize = GetParam(); //get<0>(params);
+    const int type = CV_8UC1; // get<1>(params);
 
     std::string impl = getSelectedImpl();
 
