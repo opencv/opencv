@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
 static int cvErrorCallback(int /*status*/, const char * /*func_name*/,
     const char *err_msg, const char * /*file_name*/,

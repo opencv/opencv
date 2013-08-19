@@ -374,7 +374,15 @@ private:
 
 struct ImplMutex::Impl
 {
-    void init() { InitializeCriticalSection(&cs); refcount = 1; }
+    void init()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        ::InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        ::InitializeCriticalSection(&cs);
+#endif
+        refcount = 1;
+    }
     void destroy() { DeleteCriticalSection(&cs); }
 
     void lock() { EnterCriticalSection(&cs); }

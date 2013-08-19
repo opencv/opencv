@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include "opencv2/objdetect.hpp"
 
 using namespace std;

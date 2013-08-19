@@ -44,7 +44,7 @@
 //M*/
 
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL

@@ -795,18 +795,18 @@ public:
 };
 
 
-class CV_EXPORTS CLAHE : public Algorithm
+class CV_EXPORTS_W CLAHE : public Algorithm
 {
 public:
-    virtual void apply(InputArray src, OutputArray dst) = 0;
+    CV_WRAP virtual void apply(InputArray src, OutputArray dst) = 0;
 
-    virtual void setClipLimit(double clipLimit) = 0;
-    virtual double getClipLimit() const = 0;
+    CV_WRAP virtual void setClipLimit(double clipLimit) = 0;
+    CV_WRAP virtual double getClipLimit() const = 0;
 
-    virtual void setTilesGridSize(Size tileGridSize) = 0;
-    virtual Size getTilesGridSize() const = 0;
+    CV_WRAP virtual void setTilesGridSize(Size tileGridSize) = 0;
+    CV_WRAP virtual Size getTilesGridSize() const = 0;
 
-    virtual void collectGarbage() = 0;
+    CV_WRAP virtual void collectGarbage() = 0;
 };
 
 
@@ -1479,7 +1479,7 @@ CV_EXPORTS_W void fitLine( InputArray points, OutputArray line, int distType,
 //! checks if the point is inside the contour. Optionally computes the signed distance from the point to the contour boundary
 CV_EXPORTS_W double pointPolygonTest( InputArray contour, Point2f pt, bool measureDist );
 
-CV_EXPORTS Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+CV_EXPORTS_W Ptr<CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Ballard, D.H. (1981). Generalizing the Hough transform to detect arbitrary shapes. Pattern Recognition 13 (2): 111-122.
 //! Detects position only without traslation and rotation

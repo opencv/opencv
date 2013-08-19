@@ -200,14 +200,19 @@ static int sum64f( const double* src, const uchar* mask, double* dst, int len, i
 
 typedef int (*SumFunc)(const uchar*, const uchar* mask, uchar*, int, int);
 
-static SumFunc sumTab[] =
+static SumFunc getSumFunc(int depth)
 {
-    (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
-    (SumFunc)sum16u, (SumFunc)sum16s,
-    (SumFunc)sum32s,
-    (SumFunc)GET_OPTIMIZED(sum32f), (SumFunc)sum64f,
-    0
-};
+    static SumFunc sumTab[] =
+    {
+        (SumFunc)GET_OPTIMIZED(sum8u), (SumFunc)sum8s,
+        (SumFunc)sum16u, (SumFunc)sum16s,
+        (SumFunc)sum32s,
+        (SumFunc)GET_OPTIMIZED(sum32f), (SumFunc)sum64f,
+        0
+    };
+
+    return sumTab[depth];
+}
 
 template<typename T>
 static int countNonZero_(const T* src, int len )
@@ -272,14 +277,18 @@ static int countNonZero64f( const double* src, int len )
 
 typedef int (*CountNonZeroFunc)(const uchar*, int);
 
-static CountNonZeroFunc countNonZeroTab[] =
+static CountNonZeroFunc getCountNonZeroTab(int depth)
 {
-    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
-    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
-    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
-    (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f), 0
-};
+    static CountNonZeroFunc countNonZeroTab[] =
+    {
+        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero8u),
+        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero16u),
+        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32s), (CountNonZeroFunc)GET_OPTIMIZED(countNonZero32f),
+        (CountNonZeroFunc)GET_OPTIMIZED(countNonZero64f), 0
+    };
 
+    return countNonZeroTab[depth];
+}
 
 template<typename T, typename ST, typename SQT>
 static int sumsqr_(const T* src0, const uchar* mask, ST* sum, SQT* sqsum, int len, int cn )
@@ -428,11 +437,16 @@ static int sqsum64f( const double* src, const uchar* mask, double* sum, double* 
 
 typedef int (*SumSqrFunc)(const uchar*, const uchar* mask, uchar*, uchar*, int, int);
 
-static SumSqrFunc sumSqrTab[] =
+static SumSqrFunc getSumSqrTab(int depth)
 {
-    (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
-    (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
-};
+    static SumSqrFunc sumSqrTab[] =
+    {
+        (SumSqrFunc)GET_OPTIMIZED(sqsum8u), (SumSqrFunc)sqsum8s, (SumSqrFunc)sqsum16u, (SumSqrFunc)sqsum16s,
+        (SumSqrFunc)sqsum32s, (SumSqrFunc)GET_OPTIMIZED(sqsum32f), (SumSqrFunc)sqsum64f, 0
+    };
+
+    return sumSqrTab[depth];
+}
 
 }
 
@@ -479,7 +493,7 @@ cv::Scalar cv::sum( InputArray _src )
 	}
 #endif 
 	
-    SumFunc func = sumTab[depth];
+    SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );
 
@@ -531,7 +545,7 @@ cv::Scalar cv::sum( InputArray _src )
 int cv::countNonZero( InputArray _src )
 {
     Mat src = _src.getMat();
-    CountNonZeroFunc func = countNonZeroTab[src.depth()];
+    CountNonZeroFunc func = getCountNonZeroTab(src.depth());
 
     CV_Assert( src.channels() == 1 && func != 0 );
 
@@ -627,7 +641,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 	}
 #endif
 	
-    SumFunc func = sumTab[depth];
+    SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );
 
@@ -686,7 +700,7 @@ void cv::meanStdDev( InputArray _src, OutputArray _mean, OutputArray _sdv, Input
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels(), depth = src.depth();
-    SumSqrFunc func = sumSqrTab[depth];
+    SumSqrFunc func = getSumSqrTab(depth);
 
     CV_Assert( func != 0 );
 
@@ -860,14 +874,19 @@ static void minMaxIdx_64f(const double* src, const uchar* mask, double* minval, 
 
 typedef void (*MinMaxIdxFunc)(const uchar*, const uchar*, int*, int*, size_t*, size_t*, int, size_t);
 
-static MinMaxIdxFunc minmaxTab[] =
+static MinMaxIdxFunc getMinmaxTab(int depth)
 {
-    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
-    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),
-    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32s),
-    (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32f), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64f),
-    0
-};
+    static MinMaxIdxFunc minmaxTab[] =
+    {
+        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_8s),
+        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16u), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_16s),
+        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32s),
+        (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_32f), (MinMaxIdxFunc)GET_OPTIMIZED(minMaxIdx_64f),
+        0
+    };
+
+    return minmaxTab[depth];
+}
 
 static void ofs2idx(const Mat& a, size_t ofs, int* idx)
 {
@@ -900,7 +919,7 @@ void cv::minMaxIdx(InputArray _src, double* minVal,
 
     CV_Assert( (cn == 1 && (mask.empty() || mask.type() == CV_8U)) ||
                (cn >= 1 && mask.empty() && !minIdx && !maxIdx) );
-    MinMaxIdxFunc func = minmaxTab[depth];
+    MinMaxIdxFunc func = getMinmaxTab(depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -1365,43 +1384,53 @@ CV_DEF_NORM_ALL(64f, double, double, double, double)
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
 typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
 
-static NormFunc normTab[3][8] =
+static NormFunc getNormFunc(int normType, int depth)
 {
+    static NormFunc normTab[3][8] =
     {
-        (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
-        (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
-    },
-    {
-        (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
-        (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
-    },
-    {
-        (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
-        (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
-    }
-};
+        {
+            (NormFunc)GET_OPTIMIZED(normInf_8u), (NormFunc)GET_OPTIMIZED(normInf_8s), (NormFunc)GET_OPTIMIZED(normInf_16u), (NormFunc)GET_OPTIMIZED(normInf_16s),
+            (NormFunc)GET_OPTIMIZED(normInf_32s), (NormFunc)GET_OPTIMIZED(normInf_32f), (NormFunc)normInf_64f, 0
+        },
+        {
+            (NormFunc)GET_OPTIMIZED(normL1_8u), (NormFunc)GET_OPTIMIZED(normL1_8s), (NormFunc)GET_OPTIMIZED(normL1_16u), (NormFunc)GET_OPTIMIZED(normL1_16s),
+            (NormFunc)GET_OPTIMIZED(normL1_32s), (NormFunc)GET_OPTIMIZED(normL1_32f), (NormFunc)normL1_64f, 0
+        },
+        {
+            (NormFunc)GET_OPTIMIZED(normL2_8u), (NormFunc)GET_OPTIMIZED(normL2_8s), (NormFunc)GET_OPTIMIZED(normL2_16u), (NormFunc)GET_OPTIMIZED(normL2_16s),
+            (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
+        }
+    };
 
-static NormDiffFunc normDiffTab[3][8] =
+    return normTab[normType][depth];
+}
+
+static NormDiffFunc getNormDiffFunc(int normType, int depth)
 {
+    static NormDiffFunc normDiffTab[3][8] =
     {
-        (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
-        (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
-        (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
-        (NormDiffFunc)normDiffInf_64f, 0
-    },
-    {
-        (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
-        (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
-        (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
-        (NormDiffFunc)normDiffL1_64f, 0
-    },
-    {
-        (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
-        (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
-        (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
-        (NormDiffFunc)normDiffL2_64f, 0
-    }
-};
+        {
+            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
+            (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
+            (NormDiffFunc)normDiffInf_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffInf_32f),
+            (NormDiffFunc)normDiffInf_64f, 0
+        },
+        {
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
+            (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)normDiffL1_16s,
+            (NormDiffFunc)normDiffL1_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_32f),
+            (NormDiffFunc)normDiffL1_64f, 0
+        },
+        {
+            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u), (NormDiffFunc)normDiffL2_8s,
+            (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
+            (NormDiffFunc)normDiffL2_32s, (NormDiffFunc)GET_OPTIMIZED(normDiffL2_32f),
+            (NormDiffFunc)normDiffL2_64f, 0
+        }
+    };
+
+    return normDiffTab[normType][depth];
+}
 
 }
 
@@ -1485,7 +1514,7 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
         return result;
     }
 
-    NormFunc func = normTab[normType >> 1][depth];
+    NormFunc func = getNormFunc(normType >> 1, depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &mask, 0};
@@ -1626,7 +1655,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         return result;
     }
 
-    NormDiffFunc func = normDiffTab[normType >> 1][depth];
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
