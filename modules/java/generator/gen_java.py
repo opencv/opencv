@@ -230,7 +230,7 @@ type_dict = {
     "vector_vector_Point"   : { "j_type" : "List<MatOfPoint>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point> > %(n)s" },
     "vector_vector_Point2f" : { "j_type" : "List<MatOfPoint2f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point2f> > %(n)s" },
     "vector_vector_Point3f" : { "j_type" : "List<MatOfPoint3f>",    "jn_type" : "long", "jni_type" : "jlong", "jni_var" : "std::vector< std::vector<Point3f> > %(n)s" },
-
+                  
     "Mat"     : { "j_type" : "Mat", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
                   "jni_var" : "Mat& %(n)s = *((Mat*)%(n)s_nativeObj)",
                   "jni_type" : "jlong", #"jni_name" : "*%(n)s",
@@ -307,7 +307,33 @@ type_dict = {
                   "jn_type" : "double[]",
                   "jni_var" : "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)", "jni_type" : "jdoubleArray",
                   "suffix" : "DDD"},
-
+                  
+                  
+    "Ptr_FaceRecognizer"     : { "j_type" : "FaceRecognizer", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "Ptr<FaceRecognizer> %(n)s)", # unused here ?
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+    "Ptr_StereoBM"           : { "j_type" : "StereoBM", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "",
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+    "Ptr_StereoSGBM"           : { "j_type" : "StereoSGBM", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "",
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+    "Ptr_BackgroundSubtractorGMG"  : { "j_type" : "BackgroundSubtractorGMG", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "",
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+    "Ptr_BackgroundSubtractorMOG"  : { "j_type" : "BackgroundSubtractorMOG", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "",
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+    "Ptr_BackgroundSubtractorMOG2" : { "j_type" : "BackgroundSubtractorMOG2", "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+                  "jni_var"  : "",
+                  "jni_type" : "jlong", 
+                  "suffix"   : "J" },
+                  
 }
 
 # { class : { func : {j_code, jn_code, cpp_code} } }
@@ -509,7 +535,6 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Core_n_1getTextSize
         "moveWindow"        : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
         "resizeWindow"      : {'j_code' : '', 'jn_code' : '', 'cpp_code' : '' },
     }, # Highgui
-
 }
 
 # { class : { func : { arg_name : {"ctype" : ctype, "attrib" : [attrib]} } } }
@@ -1172,6 +1197,10 @@ extern "C" {
             elif "jn_type" not in type_dict[ret_type]:
                 ret_val = type_dict[fi.ctype]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
                 tail = ")"
+            elif fi.ctype.startswith('Ptr'):
+                ret_val = type_dict[ret_type]["j_type"] + " retVal = new " + type_dict[ret_type]["j_type"] + "("
+                tail = ")"
+                
 
             static = "static"
             if fi.classname:
@@ -1232,6 +1261,8 @@ extern "C" {
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
+            elif fi.ctype.startswith('Ptr_'):
+                ret = "_retval_.addref();\n        return (jlong)_retval_.obj;"
 
             # hack: replacing func call with property set/get
             name = fi.name
@@ -1245,6 +1276,8 @@ extern "C" {
             retval = fi.ctype + " _retval_ = "
             if fi.ctype == "void":
                 retval = ""
+            elif fi.ctype.startswith('Ptr_'):
+                retval = "cv::Ptr<" + type_dict[ret_type]["j_type"] + "> _retval_ = "
             elif fi.ctype == "String":
                 retval = "cv::" + retval
             elif fi.ctype.startswith('vector'):

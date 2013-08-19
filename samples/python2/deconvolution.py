@@ -70,7 +70,7 @@ if __name__ == '__main__':
     try:
         fn = args[0]
     except:
-        fn = 'data/licenseplate_motion.jpg'
+        fn = 'data/licenseplate_motion.jpg' 
 
     win = 'deconvolution'
 
