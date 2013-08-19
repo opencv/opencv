@@ -771,12 +771,12 @@ void EmdL1::findLoopFromEnterBV()
 
 float EmdL1::compuTotalFlow()
 {
-    float	f = 0;
+    float f = 0;
 
     // Initialize auxiliary queue
     m_auxQueue[0] = m_pRoot;
-    int nQueue = 1;		// length of queue
-    int iQHead = 0;		// head of queue
+    int nQueue = 1; // length of queue
+    int iQHead = 0; // head of queue
 
     // BFS browing the tree
     PEmdNode pCurN=NULL,pNxtN=NULL;
