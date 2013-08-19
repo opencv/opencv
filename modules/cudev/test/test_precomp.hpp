@@ -52,4 +52,6 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
+#include "cvconfig.h"
+
 #endif

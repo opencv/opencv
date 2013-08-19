@@ -57,4 +57,6 @@
 #include "opencv2/gpufilters.hpp"
 #include "opencv2/imgproc.hpp"
 
+#include "cvconfig.h"
+
 #endif
