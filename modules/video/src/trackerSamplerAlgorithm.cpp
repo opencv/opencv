@@ -40,6 +40,7 @@
  //M*/
 
 #include "precomp.hpp"
+#include <time.h>
 
 #ifdef _WIN32
 #define TIME( arg ) (((double) clock()) / CLOCKS_PER_SEC)
