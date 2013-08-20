@@ -710,7 +710,7 @@ namespace cv
         //! returns 2D filter with the specified kernel
         // supports CV_8UC1 and CV_8UC4 types
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
-                Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,

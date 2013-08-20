@@ -1378,7 +1378,7 @@ Applies a separable linear filter to an image.
 
     :param kernelY: Coefficients for filtering each column.
 
-    :param anchor: Anchor position within the kernel. The default value  :math:`(-1, 1)`  means that the anchor is at the kernel center.
+    :param anchor: Anchor position within the kernel. The default value  :math:`(-1,-1)`  means that the anchor is at the kernel center.
 
     :param delta: Value added to the filtered results before storing them.
 

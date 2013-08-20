@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Peng Xiao, pengxiao@multicorewareinc.com
+//    Sen Liu, swjtuls1987@126.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -42,9 +43,6 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_local_int32_base_atomics : enable
 
 // specialized for non-image2d_t supported platform, intel HD4000, for example
 #ifdef DISABLE_IMAGE2D
@@ -105,7 +103,7 @@ __constant sampler_t sampler    = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAM
 // for simple haar paatern
 float icvCalcHaarPatternSum_2(
     IMAGE_INT32 sumTex,
-    __constant float src[2][5],
+    __constant float2 *src,
     int oldSize,
     int newSize,
     int y, int x,
@@ -116,21 +114,24 @@ float icvCalcHaarPatternSum_2(
 
     F d = 0;
 
-#pragma unroll
-    for (int k = 0; k < 2; ++k)
-    {
-        int dx1 = convert_int_rte(ratio * src[k][0]);
-        int dy1 = convert_int_rte(ratio * src[k][1]);
-        int dx2 = convert_int_rte(ratio * src[k][2]);
-        int dy2 = convert_int_rte(ratio * src[k][3]);
+    int2 dx1 = convert_int2_rte(ratio * src[0]);
+    int2 dy1 = convert_int2_rte(ratio * src[1]);
+    int2 dx2 = convert_int2_rte(ratio * src[2]);
+    int2 dy2 = convert_int2_rte(ratio * src[3]);
 
-        F t = 0;
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy1), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy2), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy1), rows, cols, elemPerRow );
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy2), rows, cols, elemPerRow );
-        d += t * src[k][4] / ((dx2 - dx1) * (dy2 - dy1));
-    }
+    F t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy2.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
+    d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
+    d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
 
     return (float)d;
 }
@@ -138,7 +139,7 @@ float icvCalcHaarPatternSum_2(
 // N = 3
 float icvCalcHaarPatternSum_3(
     IMAGE_INT32 sumTex,
-    __constant float src[2][5],
+    __constant float4 *src,
     int oldSize,
     int newSize,
     int y, int x,
@@ -149,21 +150,31 @@ float icvCalcHaarPatternSum_3(
 
     F d = 0;
 
-#pragma unroll
-    for (int k = 0; k < 3; ++k)
-    {
-        int dx1 = convert_int_rte(ratio * src[k][0]);
-        int dy1 = convert_int_rte(ratio * src[k][1]);
-        int dx2 = convert_int_rte(ratio * src[k][2]);
-        int dy2 = convert_int_rte(ratio * src[k][3]);
+    int4 dx1 = convert_int4_rte(ratio * src[0]);
+    int4 dy1 = convert_int4_rte(ratio * src[1]);
+    int4 dx2 = convert_int4_rte(ratio * src[2]);
+    int4 dy2 = convert_int4_rte(ratio * src[3]);
 
-        F t = 0;
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy1), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy2), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy1), rows, cols, elemPerRow );
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy2), rows, cols, elemPerRow );
-        d += t * src[k][4] / ((dx2 - dx1) * (dy2 - dy1));
-    }
+    F t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy2.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
+    d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
+    d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy1.z), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy2.z), rows, cols, elemPerRow );
+    d += t * src[4].z / ((dx2.z - dx1.z) * (dy2.z - dy1.z));
 
     return (float)d;
 }
@@ -171,7 +182,7 @@ float icvCalcHaarPatternSum_3(
 // N = 4
 float icvCalcHaarPatternSum_4(
     IMAGE_INT32 sumTex,
-    __constant float src[2][5],
+    __constant float4 *src,
     int oldSize,
     int newSize,
     int y, int x,
@@ -182,21 +193,38 @@ float icvCalcHaarPatternSum_4(
 
     F d = 0;
 
-#pragma unroll
-    for (int k = 0; k < 4; ++k)
-    {
-        int dx1 = convert_int_rte(ratio * src[k][0]);
-        int dy1 = convert_int_rte(ratio * src[k][1]);
-        int dx2 = convert_int_rte(ratio * src[k][2]);
-        int dy2 = convert_int_rte(ratio * src[k][3]);
+    int4 dx1 = convert_int4_rte(ratio * src[0]);
+    int4 dy1 = convert_int4_rte(ratio * src[1]);
+    int4 dx2 = convert_int4_rte(ratio * src[2]);
+    int4 dy2 = convert_int4_rte(ratio * src[3]);
 
-        F t = 0;
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy1), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx1, y + dy2), rows, cols, elemPerRow );
-        t -= read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy1), rows, cols, elemPerRow );
-        t += read_sumTex( sumTex, sampler, (int2)(x + dx2, y + dy2), rows, cols, elemPerRow );
-        d += t * src[k][4] / ((dx2 - dx1) * (dy2 - dy1));
-    }
+    F t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy1.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.x, y + dy2.x), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
+    d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
+    d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy1.z), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy2.z), rows, cols, elemPerRow );
+    d += t * src[4].z / ((dx2.z - dx1.z) * (dy2.z - dy1.z));
+
+    t = 0;
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy1.w), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy2.w), rows, cols, elemPerRow );
+    t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.w, y + dy1.w), rows, cols, elemPerRow );
+    t += read_sumTex( sumTex, sampler, (int2)(x + dx2.w, y + dy2.w), rows, cols, elemPerRow );
+    d += t * src[4].w / ((dx2.w - dx1.w) * (dy2.w - dy1.w));
 
     return (float)d;
 }
@@ -204,9 +232,9 @@ float icvCalcHaarPatternSum_4(
 ////////////////////////////////////////////////////////////////////////
 // Hessian
 
-__constant float c_DX [3][5] = { {0, 2, 3, 7, 1}, {3, 2, 6, 7, -2}, {6, 2, 9, 7, 1} };
-__constant float c_DY [3][5] = { {2, 0, 7, 3, 1}, {2, 3, 7, 6, -2}, {2, 6, 7, 9, 1} };
-__constant float c_DXY[4][5] = { {1, 1, 4, 4, 1}, {5, 1, 8, 4, -1}, {1, 5, 4, 8, -1}, {5, 5, 8, 8, 1} };
+__constant float4 c_DX[5] = { (float4)(0, 3, 6, 0), (float4)(2, 2, 2, 0), (float4)(3, 6, 9, 0), (float4)(7, 7, 7, 0), (float4)(1, -2, 1, 0) };
+__constant float4 c_DY[5] = { (float4)(2, 2, 2, 0), (float4)(0, 3, 6, 0), (float4)(7, 7, 7, 0), (float4)(3, 6, 9, 0), (float4)(1, -2, 1, 0) };
+__constant float4 c_DXY[5] = { (float4)(1, 5, 1, 5), (float4)(1, 1, 5, 5), (float4)(4, 8, 4, 8), (float4)(4, 4, 8, 8), (float4)(1, -1, -1, 1) };// Use integral image to calculate haar wavelets.
 
 __inline int calcSize(int octave, int layer)
 {
@@ -236,7 +264,7 @@ __kernel void icvCalcLayerDetAndTrace(
     int c_octave,
     int c_layer_rows,
     int sumTex_step
-    )
+)
 {
     det_step   /= sizeof(*det);
     trace_step /= sizeof(*trace);
@@ -300,7 +328,7 @@ bool within_check(IMAGE_INT32 maskSumTex, int sum_i, int sum_j, int size, int ro
 
 // Non-maximal suppression to further filtering the candidates from previous step
 __kernel
-    void icvFindMaximaInLayer_withmask(
+void icvFindMaximaInLayer_withmask(
     __global const float * det,
     __global const float * trace,
     __global int4 * maxPosBuffer,
@@ -318,7 +346,7 @@ __kernel
     float c_hessianThreshold,
     IMAGE_INT32 maskSumTex,
     int mask_step
-    )
+)
 {
     volatile __local  float N9[768]; // threads.x * threads.y * 3
 
@@ -347,26 +375,26 @@ __kernel
     const int localLin = get_local_id(0) + get_local_id(1) * get_local_size(0) + zoff;
     N9[localLin - zoff] =
         det[det_step *
-        (c_layer_rows * (layer - 1) + min(max(i, 0), c_img_rows - 1)) // y
-        + min(max(j, 0), c_img_cols - 1)];                            // x
+            (c_layer_rows * (layer - 1) + min(max(i, 0), c_img_rows - 1)) // y
+            + min(max(j, 0), c_img_cols - 1)];                            // x
     N9[localLin       ] =
         det[det_step *
-        (c_layer_rows * (layer    ) + min(max(i, 0), c_img_rows - 1)) // y
-        + min(max(j, 0), c_img_cols - 1)];                            // x
+            (c_layer_rows * (layer    ) + min(max(i, 0), c_img_rows - 1)) // y
+            + min(max(j, 0), c_img_cols - 1)];                            // x
     N9[localLin + zoff] =
         det[det_step *
-        (c_layer_rows * (layer + 1) + min(max(i, 0), c_img_rows - 1)) // y
-        + min(max(j, 0), c_img_cols - 1)];                            // x
+            (c_layer_rows * (layer + 1) + min(max(i, 0), c_img_rows - 1)) // y
+            + min(max(j, 0), c_img_cols - 1)];                            // x
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (i < c_layer_rows - margin
-        && j < c_layer_cols - margin
-        && get_local_id(0) > 0
-        && get_local_id(0) < get_local_size(0) - 1
-        && get_local_id(1) > 0
-        && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
-        )
+            && j < c_layer_cols - margin
+            && get_local_id(0) > 0
+            && get_local_id(0) < get_local_size(0) - 1
+            && get_local_id(1) > 0
+            && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
+       )
     {
         float val0 = N9[localLin];
 
@@ -382,34 +410,34 @@ __kernel
             {
                 // Check to see if we have a max (in its 26 neighbours)
                 const bool condmax = val0 > N9[localLin - 1 - get_local_size(0) - zoff]
-                &&                   val0 > N9[localLin     - get_local_size(0) - zoff]
-                &&                   val0 > N9[localLin + 1 - get_local_size(0) - zoff]
-                &&                   val0 > N9[localLin - 1                     - zoff]
-                &&                   val0 > N9[localLin                         - zoff]
-                &&                   val0 > N9[localLin + 1                     - zoff]
-                &&                   val0 > N9[localLin - 1 + get_local_size(0) - zoff]
-                &&                   val0 > N9[localLin     + get_local_size(0) - zoff]
-                &&                   val0 > N9[localLin + 1 + get_local_size(0) - zoff]
+                                     &&                   val0 > N9[localLin     - get_local_size(0) - zoff]
+                                     &&                   val0 > N9[localLin + 1 - get_local_size(0) - zoff]
+                                     &&                   val0 > N9[localLin - 1                     - zoff]
+                                     &&                   val0 > N9[localLin                         - zoff]
+                                     &&                   val0 > N9[localLin + 1                     - zoff]
+                                     &&                   val0 > N9[localLin - 1 + get_local_size(0) - zoff]
+                                     &&                   val0 > N9[localLin     + get_local_size(0) - zoff]
+                                     &&                   val0 > N9[localLin + 1 + get_local_size(0) - zoff]
 
-                &&                   val0 > N9[localLin - 1 - get_local_size(0)]
-                &&                   val0 > N9[localLin     - get_local_size(0)]
-                &&                   val0 > N9[localLin + 1 - get_local_size(0)]
-                &&                   val0 > N9[localLin - 1                    ]
-                &&                   val0 > N9[localLin + 1                    ]
-                &&                   val0 > N9[localLin - 1 + get_local_size(0)]
-                &&                   val0 > N9[localLin     + get_local_size(0)]
-                &&                   val0 > N9[localLin + 1 + get_local_size(0)]
+                                     &&                   val0 > N9[localLin - 1 - get_local_size(0)]
+                                     &&                   val0 > N9[localLin     - get_local_size(0)]
+                                     &&                   val0 > N9[localLin + 1 - get_local_size(0)]
+                                     &&                   val0 > N9[localLin - 1                    ]
+                                     &&                   val0 > N9[localLin + 1                    ]
+                                     &&                   val0 > N9[localLin - 1 + get_local_size(0)]
+                                     &&                   val0 > N9[localLin     + get_local_size(0)]
+                                     &&                   val0 > N9[localLin + 1 + get_local_size(0)]
 
-                &&                   val0 > N9[localLin - 1 - get_local_size(0) + zoff]
-                &&                   val0 > N9[localLin     - get_local_size(0) + zoff]
-                &&                   val0 > N9[localLin + 1 - get_local_size(0) + zoff]
-                &&                   val0 > N9[localLin - 1                     + zoff]
-                &&                   val0 > N9[localLin                         + zoff]
-                &&                   val0 > N9[localLin + 1                     + zoff]
-                &&                   val0 > N9[localLin - 1 + get_local_size(0) + zoff]
-                &&                   val0 > N9[localLin     + get_local_size(0) + zoff]
-                &&                   val0 > N9[localLin + 1 + get_local_size(0) + zoff]
-                ;
+                                     &&                   val0 > N9[localLin - 1 - get_local_size(0) + zoff]
+                                     &&                   val0 > N9[localLin     - get_local_size(0) + zoff]
+                                     &&                   val0 > N9[localLin + 1 - get_local_size(0) + zoff]
+                                     &&                   val0 > N9[localLin - 1                     + zoff]
+                                     &&                   val0 > N9[localLin                         + zoff]
+                                     &&                   val0 > N9[localLin + 1                     + zoff]
+                                     &&                   val0 > N9[localLin - 1 + get_local_size(0) + zoff]
+                                     &&                   val0 > N9[localLin     + get_local_size(0) + zoff]
+                                     &&                   val0 > N9[localLin + 1 + get_local_size(0) + zoff]
+                                     ;
 
                 if(condmax)
                 {
@@ -428,7 +456,7 @@ __kernel
 }
 
 __kernel
-    void icvFindMaximaInLayer(
+void icvFindMaximaInLayer(
     __global float * det,
     __global float * trace,
     __global int4 * maxPosBuffer,
@@ -444,7 +472,7 @@ __kernel
     int c_layer_cols,
     int c_max_candidates,
     float c_hessianThreshold
-    )
+)
 {
     volatile __local  float N9[768]; // threads.x * threads.y * 3
 
@@ -483,12 +511,12 @@ __kernel
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (i < c_layer_rows - margin
-        && j < c_layer_cols - margin
-        && get_local_id(0) > 0
-        && get_local_id(0) < get_local_size(0) - 1
-        && get_local_id(1) > 0
-        && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
-        )
+            && j < c_layer_cols - margin
+            && get_local_id(0) > 0
+            && get_local_id(0) < get_local_size(0) - 1
+            && get_local_id(1) > 0
+            && get_local_id(1) < get_local_size(1) - 1 // these are unnecessary conditions ported from CUDA
+       )
     {
         float val0 = N9[localLin];
         if (val0 > c_hessianThreshold)
@@ -499,38 +527,38 @@ __kernel
 
             // Check to see if we have a max (in its 26 neighbours)
             const bool condmax = val0 > N9[localLin - 1 - get_local_size(0) - zoff]
-            &&                   val0 > N9[localLin     - get_local_size(0) - zoff]
-            &&                   val0 > N9[localLin + 1 - get_local_size(0) - zoff]
-            &&                   val0 > N9[localLin - 1                     - zoff]
-            &&                   val0 > N9[localLin                         - zoff]
-            &&                   val0 > N9[localLin + 1                     - zoff]
-            &&                   val0 > N9[localLin - 1 + get_local_size(0) - zoff]
-            &&                   val0 > N9[localLin     + get_local_size(0) - zoff]
-            &&                   val0 > N9[localLin + 1 + get_local_size(0) - zoff]
+                                 &&                   val0 > N9[localLin     - get_local_size(0) - zoff]
+                                 &&                   val0 > N9[localLin + 1 - get_local_size(0) - zoff]
+                                 &&                   val0 > N9[localLin - 1                     - zoff]
+                                 &&                   val0 > N9[localLin                         - zoff]
+                                 &&                   val0 > N9[localLin + 1                     - zoff]
+                                 &&                   val0 > N9[localLin - 1 + get_local_size(0) - zoff]
+                                 &&                   val0 > N9[localLin     + get_local_size(0) - zoff]
+                                 &&                   val0 > N9[localLin + 1 + get_local_size(0) - zoff]
 
-            &&                   val0 > N9[localLin - 1 - get_local_size(0)]
-            &&                   val0 > N9[localLin     - get_local_size(0)]
-            &&                   val0 > N9[localLin + 1 - get_local_size(0)]
-            &&                   val0 > N9[localLin - 1                    ]
-            &&                   val0 > N9[localLin + 1                    ]
-            &&                   val0 > N9[localLin - 1 + get_local_size(0)]
-            &&                   val0 > N9[localLin     + get_local_size(0)]
-            &&                   val0 > N9[localLin + 1 + get_local_size(0)]
+                                 &&                   val0 > N9[localLin - 1 - get_local_size(0)]
+                                 &&                   val0 > N9[localLin     - get_local_size(0)]
+                                 &&                   val0 > N9[localLin + 1 - get_local_size(0)]
+                                 &&                   val0 > N9[localLin - 1                    ]
+                                 &&                   val0 > N9[localLin + 1                    ]
+                                 &&                   val0 > N9[localLin - 1 + get_local_size(0)]
+                                 &&                   val0 > N9[localLin     + get_local_size(0)]
+                                 &&                   val0 > N9[localLin + 1 + get_local_size(0)]
 
-            &&                   val0 > N9[localLin - 1 - get_local_size(0) + zoff]
-            &&                   val0 > N9[localLin     - get_local_size(0) + zoff]
-            &&                   val0 > N9[localLin + 1 - get_local_size(0) + zoff]
-            &&                   val0 > N9[localLin - 1                     + zoff]
-            &&                   val0 > N9[localLin                         + zoff]
-            &&                   val0 > N9[localLin + 1                     + zoff]
-            &&                   val0 > N9[localLin - 1 + get_local_size(0) + zoff]
-            &&                   val0 > N9[localLin     + get_local_size(0) + zoff]
-            &&                   val0 > N9[localLin + 1 + get_local_size(0) + zoff]
-            ;
+                                 &&                   val0 > N9[localLin - 1 - get_local_size(0) + zoff]
+                                 &&                   val0 > N9[localLin     - get_local_size(0) + zoff]
+                                 &&                   val0 > N9[localLin + 1 - get_local_size(0) + zoff]
+                                 &&                   val0 > N9[localLin - 1                     + zoff]
+                                 &&                   val0 > N9[localLin                         + zoff]
+                                 &&                   val0 > N9[localLin + 1                     + zoff]
+                                 &&                   val0 > N9[localLin - 1 + get_local_size(0) + zoff]
+                                 &&                   val0 > N9[localLin     + get_local_size(0) + zoff]
+                                 &&                   val0 > N9[localLin + 1 + get_local_size(0) + zoff]
+                                 ;
 
             if(condmax)
             {
-                 int ind = atomic_inc(maxCounter);
+                int ind = atomic_inc(maxCounter);
 
                 if (ind < c_max_candidates)
                 {
@@ -544,30 +572,30 @@ __kernel
 }
 
 // solve 3x3 linear system Ax=b for floating point input
-inline bool solve3x3_float(volatile __local  const float A[3][3], volatile __local  const float b[3], volatile __local  float x[3])
+inline bool solve3x3_float(volatile __local  const float4 *A, volatile __local  const float *b, volatile __local  float *x)
 {
-    float det = A[0][0] * (A[1][1] * A[2][2] - A[1][2] * A[2][1])
-        - A[0][1] * (A[1][0] * A[2][2] - A[1][2] * A[2][0])
-        + A[0][2] * (A[1][0] * A[2][1] - A[1][1] * A[2][0]);
+    float det = A[0].x * (A[1].y * A[2].z - A[1].z * A[2].y)
+                - A[0].y * (A[1].x * A[2].z - A[1].z * A[2].x)
+                + A[0].z * (A[1].x * A[2].y - A[1].y * A[2].x);
 
     if (det != 0)
     {
         F invdet = 1.0 / det;
 
         x[0] = invdet *
-            (b[0]    * (A[1][1] * A[2][2] - A[1][2] * A[2][1]) -
-            A[0][1] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) +
-            A[0][2] * (b[1]    * A[2][1] - A[1][1] * b[2]   ));
+               (b[0]    * (A[1].y * A[2].z - A[1].z * A[2].y) -
+                A[0].y * (b[1]    * A[2].z - A[1].z * b[2]   ) +
+                A[0].z * (b[1]    * A[2].y - A[1].y * b[2]   ));
 
         x[1] = invdet *
-            (A[0][0] * (b[1]    * A[2][2] - A[1][2] * b[2]   ) -
-            b[0]    * (A[1][0] * A[2][2] - A[1][2] * A[2][0]) +
-            A[0][2] * (A[1][0] * b[2]    - b[1]    * A[2][0]));
+               (A[0].x * (b[1]    * A[2].z - A[1].z * b[2]   ) -
+                b[0]    * (A[1].x * A[2].z - A[1].z * A[2].x) +
+                A[0].z * (A[1].x * b[2]    - b[1]    * A[2].x));
 
         x[2] = invdet *
-            (A[0][0] * (A[1][1] * b[2]    - b[1]    * A[2][1]) -
-            A[0][1] * (A[1][0] * b[2]    - b[1]    * A[2][0]) +
-            b[0]    * (A[1][0] * A[2][1] - A[1][1] * A[2][0]));
+               (A[0].x * (A[1].y * b[2]    - b[1]    * A[2].y) -
+                A[0].y * (A[1].x * b[2]    - b[1]    * A[2].x) +
+                b[0]    * (A[1].x * A[2].y - A[1].y * A[2].x));
 
         return true;
     }
@@ -586,7 +614,7 @@ inline bool solve3x3_float(volatile __local  const float A[3][3], volatile __loc
 ////////////////////////////////////////////////////////////////////////
 // INTERPOLATION
 __kernel
-    void icvInterpolateKeypoint(
+void icvInterpolateKeypoint(
     __global const float * det,
     __global const int4 * maxPosBuffer,
     __global float * keypoints,
@@ -598,7 +626,7 @@ __kernel
     int c_octave,
     int c_layer_rows,
     int c_max_features
-    )
+)
 {
     det_step /= sizeof(*det);
     keypoints_step /= sizeof(*keypoints);
@@ -632,26 +660,26 @@ __kernel
         //ds
         dD[2] = -0.5f * (N9[2][1][1] - N9[0][1][1]);
 
-        volatile __local  float H[3][3];
+        volatile __local  float4 H[3];
 
         //dxx
-        H[0][0] = N9[1][1][0] - 2.0f * N9[1][1][1] + N9[1][1][2];
+        H[0].x = N9[1][1][0] - 2.0f * N9[1][1][1] + N9[1][1][2];
         //dxy
-        H[0][1]= 0.25f * (N9[1][2][2] - N9[1][2][0] - N9[1][0][2] + N9[1][0][0]);
+        H[0].y= 0.25f * (N9[1][2][2] - N9[1][2][0] - N9[1][0][2] + N9[1][0][0]);
         //dxs
-        H[0][2]= 0.25f * (N9[2][1][2] - N9[2][1][0] - N9[0][1][2] + N9[0][1][0]);
+        H[0].z= 0.25f * (N9[2][1][2] - N9[2][1][0] - N9[0][1][2] + N9[0][1][0]);
         //dyx = dxy
-        H[1][0] = H[0][1];
+        H[1].x = H[0].y;
         //dyy
-        H[1][1] = N9[1][0][1] - 2.0f * N9[1][1][1] + N9[1][2][1];
+        H[1].y = N9[1][0][1] - 2.0f * N9[1][1][1] + N9[1][2][1];
         //dys
-        H[1][2]= 0.25f * (N9[2][2][1] - N9[2][0][1] - N9[0][2][1] + N9[0][0][1]);
+        H[1].z= 0.25f * (N9[2][2][1] - N9[2][0][1] - N9[0][2][1] + N9[0][0][1]);
         //dsx = dxs
-        H[2][0] = H[0][2];
+        H[2].x = H[0].z;
         //dsy = dys
-        H[2][1] = H[1][2];
+        H[2].y = H[1].z;
         //dss
-        H[2][2] = N9[0][1][1] - 2.0f * N9[1][1][1] + N9[2][1][1];
+        H[2].z = N9[0][1][1] - 2.0f * N9[1][1][1] + N9[2][1][1];
 
         volatile __local  float x[3];
 
@@ -689,7 +717,7 @@ __kernel
                 if ((c_img_rows + 1) >= grad_wav_size && (c_img_cols + 1) >= grad_wav_size)
                 {
                     // Get a new feature index.
-                     int ind = atomic_inc(featureCounter);
+                    int ind = atomic_inc(featureCounter);
 
                     if (ind < c_max_features)
                     {
@@ -716,31 +744,32 @@ __kernel
 __constant float c_aptX[ORI_SAMPLES] = {-6, -5, -5, -5, -5, -5, -5, -5, -4, -4, -4, -4, -4, -4, -4, -4, -4, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -3, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6};
 __constant float c_aptY[ORI_SAMPLES] = {0, -3, -2, -1, 0, 1, 2, 3, -4, -3, -2, -1, 0, 1, 2, 3, 4, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, -4, -3, -2, -1, 0, 1, 2, 3, 4, -3, -2, -1, 0, 1, 2, 3, 0};
 __constant float c_aptW[ORI_SAMPLES] = {0.001455130288377404f, 0.001707611023448408f, 0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f,
-    0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f,
-    0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f,
-    0.002003900473937392f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f,
-    0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f,
-    0.0035081731621176f, 0.001707611023448408f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f,
-    0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f,
-    0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.003238451667129993f, 0.00665318313986063f,
-    0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f,
-    0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.001455130288377404f,
-    0.0035081731621176f, 0.00720730796456337f, 0.01261763460934162f, 0.0188232995569706f, 0.02392910048365593f,
-    0.02592208795249462f, 0.02392910048365593f, 0.0188232995569706f, 0.01261763460934162f, 0.00720730796456337f,
-    0.0035081731621176f, 0.001455130288377404f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f,
-    0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f,
-    0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.002547456417232752f, 0.005233579315245152f,
-    0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f,
-    0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.001707611023448408f,
-    0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f,
-    0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 0.0035081731621176f, 0.001707611023448408f,
-    0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f,
-    0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f,
-    0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 0.003238451667129993f, 0.002547456417232752f,
-    0.001707611023448408f, 0.001455130288377404f};
+                                        0.003238451667129993f, 0.002547456417232752f, 0.001707611023448408f, 0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f,
+                                        0.00665318313986063f, 0.00720730796456337f, 0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f,
+                                        0.002003900473937392f, 0.001707611023448408f, 0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f,
+                                        0.01164754293859005f, 0.01261763460934162f, 0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f,
+                                        0.0035081731621176f, 0.001707611023448408f, 0.002547456417232752f, 0.005233579315245152f, 0.009162282571196556f,
+                                        0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f, 0.01366852037608624f,
+                                        0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.003238451667129993f, 0.00665318313986063f,
+                                        0.01164754293859005f, 0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f,
+                                        0.01737609319388866f, 0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.001455130288377404f,
+                                        0.0035081731621176f, 0.00720730796456337f, 0.01261763460934162f, 0.0188232995569706f, 0.02392910048365593f,
+                                        0.02592208795249462f, 0.02392910048365593f, 0.0188232995569706f, 0.01261763460934162f, 0.00720730796456337f,
+                                        0.0035081731621176f, 0.001455130288377404f, 0.003238451667129993f, 0.00665318313986063f, 0.01164754293859005f,
+                                        0.01737609319388866f, 0.02208934165537357f, 0.02392910048365593f, 0.02208934165537357f, 0.01737609319388866f,
+                                        0.01164754293859005f, 0.00665318313986063f, 0.003238451667129993f, 0.002547456417232752f, 0.005233579315245152f,
+                                        0.009162282571196556f, 0.01366852037608624f, 0.01737609319388866f, 0.0188232995569706f, 0.01737609319388866f,
+                                        0.01366852037608624f, 0.009162282571196556f, 0.005233579315245152f, 0.002547456417232752f, 0.001707611023448408f,
+                                        0.0035081731621176f, 0.006141661666333675f, 0.009162282571196556f, 0.01164754293859005f, 0.01261763460934162f,
+                                        0.01164754293859005f, 0.009162282571196556f, 0.006141661666333675f, 0.0035081731621176f, 0.001707611023448408f,
+                                        0.002003900473937392f, 0.0035081731621176f, 0.005233579315245152f, 0.00665318313986063f, 0.00720730796456337f,
+                                        0.00665318313986063f, 0.005233579315245152f, 0.0035081731621176f, 0.002003900473937392f, 0.001707611023448408f,
+                                        0.002547456417232752f, 0.003238451667129993f, 0.0035081731621176f, 0.003238451667129993f, 0.002547456417232752f,
+                                        0.001707611023448408f, 0.001455130288377404f
+                                       };
 
-__constant float c_NX[2][5] = {{0, 0, 2, 4, -1}, {2, 0, 4, 4, 1}};
-__constant float c_NY[2][5] = {{0, 0, 4, 2, 1}, {0, 2, 4, 4, -1}};
+__constant float2 c_NX[5] = { (float2)(0, 2), (float2)(0, 0), (float2)(2, 4), (float2)(4, 4), (float2)(-1, 1) };
+__constant float2 c_NY[5] = { (float2)(0, 0), (float2)(0, 2), (float2)(4, 4), (float2)(2, 4), (float2)(1, -1) };
 
 void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduction, int tid)
 {
@@ -759,14 +788,14 @@ void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduc
     if (tid < 8)
     {
 #endif
-        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 8 ]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 8]);
 #if WAVE_SIZE < 8
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 4)
     {
 #endif
-        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 4 ]);
+        data[tid] = *partial_reduction = op(partial_reduction, data[tid + 4]);
 #if WAVE_SIZE < 4
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -787,14 +816,14 @@ void reduce_32_sum(volatile __local  float * data, volatile float* partial_reduc
 }
 
 __kernel
-    void icvCalcOrientation(
+void icvCalcOrientation(
     IMAGE_INT32 sumTex,
     __global float * keypoints,
     int keypoints_step,
     int c_img_rows,
     int c_img_cols,
     int sum_step
-    )
+)
 {
     keypoints_step /= sizeof(*keypoints);
     sum_step       /= sizeof(uint);
@@ -838,7 +867,7 @@ __kernel
         const int y = convert_int_rte(featureY[get_group_id(0)] + c_aptY[tid] * s - margin);
 
         if (y >= 0 && y < (c_img_rows + 1) - grad_wav_size &&
-            x >= 0 && x < (c_img_cols + 1) - grad_wav_size)
+                x >= 0 && x < (c_img_cols + 1) - grad_wav_size)
         {
             X = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NX, 4, grad_wav_size, y, x, c_img_rows, c_img_cols, sum_step);
             Y = c_aptW[tid] * icvCalcHaarPatternSum_2(sumTex, c_NY, 4, grad_wav_size, y, x, c_img_rows, c_img_cols, sum_step);
@@ -934,11 +963,11 @@ __kernel
 
 
 __kernel
-    void icvSetUpright(
+void icvSetUpright(
     __global float * keypoints,
     int keypoints_step,
     int nFeatures
-    )
+)
 {
     keypoints_step /= sizeof(*keypoints);
     __global float* featureDir  = keypoints + ANGLE_ROW * keypoints_step;
@@ -988,7 +1017,7 @@ inline uchar readerGet(
     IMAGE_INT8 src,
     const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir,
     int i, int j, int rows, int cols, int elemPerRow
-    )
+)
 {
     float pixel_x = centerX + (win_offset + j) * cos_dir + (win_offset + i) * sin_dir;
     float pixel_y = centerY - (win_offset + j) * sin_dir + (win_offset + i) * cos_dir;
@@ -999,7 +1028,7 @@ inline float linearFilter(
     IMAGE_INT8 src,
     const float centerX, const float centerY, const float win_offset, const float cos_dir, const float sin_dir,
     float y, float x, int rows, int cols, int elemPerRow
-    )
+)
 {
     x -= 0.5f;
     y -= 0.5f;
@@ -1028,9 +1057,9 @@ inline float linearFilter(
 
 void calc_dx_dy(
     IMAGE_INT8 imgTex,
-    volatile __local  float s_dx_bin[25],
-    volatile __local  float s_dy_bin[25],
-    volatile __local  float s_PATCH[6][6],
+    volatile __local  float *s_dx_bin,
+    volatile __local  float *s_dy_bin,
+    volatile __local  float *s_PATCH,
     __global const float* featureX,
     __global const float* featureY,
     __global const float* featureSize,
@@ -1038,7 +1067,7 @@ void calc_dx_dy(
     int rows,
     int cols,
     int elemPerRow
-    )
+)
 {
     const float centerX = featureX[get_group_id(0)];
     const float centerY = featureY[get_group_id(0)];
@@ -1048,6 +1077,7 @@ void calc_dx_dy(
     {
         descriptor_dir = 0.0f;
     }
+
     descriptor_dir *= (float)(CV_PI_F / 180.0f);
 
     /* The sampling intervals and wavelet sized for selecting an orientation
@@ -1074,7 +1104,7 @@ void calc_dx_dy(
     const float icoo = ((float)yIndex / (PATCH_SZ + 1)) * win_size;
     const float jcoo = ((float)xIndex / (PATCH_SZ + 1)) * win_size;
 
-    s_PATCH[get_local_id(1)][get_local_id(0)] = linearFilter(imgTex, centerX, centerY, win_offset, cos_dir, sin_dir, icoo, jcoo, rows, cols, elemPerRow);
+    s_PATCH[get_local_id(1) * 6 + get_local_id(0)] = linearFilter(imgTex, centerX, centerY, win_offset, cos_dir, sin_dir, icoo, jcoo, rows, cols, elemPerRow);
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -1085,17 +1115,17 @@ void calc_dx_dy(
         const float dw = c_DW[yIndex * PATCH_SZ + xIndex];
 
         const float vx = (
-            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1] -
-            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] +
-            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] -
-            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ])
-            * dw;
+                             s_PATCH[      get_local_id(1) * 6 + get_local_id(0) + 1] -
+                             s_PATCH[      get_local_id(1) * 6 + get_local_id(0)    ] +
+                             s_PATCH[(get_local_id(1) + 1) * 6 + get_local_id(0) + 1] -
+                             s_PATCH[(get_local_id(1) + 1) * 6 + get_local_id(0)    ])
+                         * dw;
         const float vy = (
-            s_PATCH[get_local_id(1) + 1][get_local_id(0)    ] -
-            s_PATCH[get_local_id(1)    ][get_local_id(0)    ] +
-            s_PATCH[get_local_id(1) + 1][get_local_id(0) + 1] -
-            s_PATCH[get_local_id(1)    ][get_local_id(0) + 1])
-            * dw;
+                             s_PATCH[(get_local_id(1) + 1) * 6 + get_local_id(0)    ] -
+                             s_PATCH[      get_local_id(1) * 6 + get_local_id(0)    ] +
+                             s_PATCH[(get_local_id(1) + 1) * 6 + get_local_id(0) + 1] -
+                             s_PATCH[      get_local_id(1) * 6 + get_local_id(0) + 1])
+                         * dw;
         s_dx_bin[tid] = vx;
         s_dy_bin[tid] = vy;
     }
@@ -1106,7 +1136,7 @@ void reduce_sum25(
     volatile __local  float* sdata3,
     volatile __local  float* sdata4,
     int tid
-    )
+)
 {
 #ifndef WAVE_SIZE
 #define WAVE_SIZE 1
@@ -1125,11 +1155,8 @@ void reduce_sum25(
     {
 #endif
         sdata1[tid] += sdata1[tid + 8];
-
         sdata2[tid] += sdata2[tid + 8];
-
         sdata3[tid] += sdata3[tid + 8];
-
         sdata4[tid] += sdata4[tid + 8];
 #if WAVE_SIZE < 8
     }
@@ -1166,7 +1193,7 @@ void reduce_sum25(
 }
 
 __kernel
-    void compute_descriptors64(
+void compute_descriptors64(
     IMAGE_INT8 imgTex,
     __global float * descriptors,
     __global const float * keypoints,
@@ -1175,7 +1202,7 @@ __kernel
     int rows,
     int cols,
     int img_step
-    )
+)
 {
     descriptors_step /= sizeof(float);
     keypoints_step   /= sizeof(float);
@@ -1189,7 +1216,7 @@ __kernel
     volatile __local  float sdy[25];
     volatile __local  float sdxabs[25];
     volatile __local  float sdyabs[25];
-    volatile __local  float s_PATCH[6][6];
+    volatile __local  float s_PATCH[6*6];
 
     calc_dx_dy(imgTex, sdx, sdy, s_PATCH, featureX, featureY, featureSize, featureDir, rows, cols, img_step);
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -1203,7 +1230,7 @@ __kernel
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-        reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
+    reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
 
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 25)
@@ -1221,7 +1248,7 @@ __kernel
     }
 }
 __kernel
-    void compute_descriptors128(
+void compute_descriptors128(
     IMAGE_INT8 imgTex,
     __global float * descriptors,
     __global float * keypoints,
@@ -1230,7 +1257,7 @@ __kernel
     int rows,
     int cols,
     int img_step
-    )
+)
 {
     descriptors_step /= sizeof(*descriptors);
     keypoints_step   /= sizeof(*keypoints);
@@ -1249,7 +1276,7 @@ __kernel
     volatile __local  float sd2[25];
     volatile __local  float sdabs1[25];
     volatile __local  float sdabs2[25];
-    volatile __local  float s_PATCH[6][6];
+    volatile __local  float s_PATCH[6*6];
 
     calc_dx_dy(imgTex, sdx, sdy, s_PATCH, featureX, featureY, featureSize, featureDir, rows, cols, img_step);
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -1275,7 +1302,7 @@ __kernel
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
-        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
+    reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     __global float* descriptors_block = descriptors + descriptors_step * get_group_id(0) + (get_group_id(1) << 3);
@@ -1306,8 +1333,7 @@ __kernel
         }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-
-        reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
+    reduce_sum25(sd1, sd2, sdabs1, sdabs2, tid);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 25)
@@ -1322,11 +1348,13 @@ __kernel
         }
     }
 }
+
 void reduce_sum128(volatile __local  float* smem, int tid)
 {
 #ifndef WAVE_SIZE
 #define WAVE_SIZE 1
 #endif
+
     if (tid < 64)
     {
         smem[tid] += smem[tid + 64];
@@ -1374,6 +1402,8 @@ void reduce_sum128(volatile __local  float* smem, int tid)
         smem[tid] += smem[tid + 1];
     }
 }
+
+
 void reduce_sum64(volatile __local  float* smem, int tid)
 {
 #ifndef WAVE_SIZE
@@ -1421,7 +1451,7 @@ void reduce_sum64(volatile __local  float* smem, int tid)
 }
 
 __kernel
-    void normalize_descriptors128(__global float * descriptors, int descriptors_step)
+void normalize_descriptors128(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);
     // no need for thread ID
@@ -1436,8 +1466,6 @@ __kernel
     reduce_sum128(sqDesc, get_local_id(0));
     barrier(CLK_LOCAL_MEM_FENCE);
 
-
-
     // compute length (square root)
     volatile __local  float len;
     if (get_local_id(0) == 0)
@@ -1450,7 +1478,7 @@ __kernel
     descriptor_base[get_local_id(0)] = lookup / len;
 }
 __kernel
-    void normalize_descriptors64(__global float * descriptors, int descriptors_step)
+void normalize_descriptors64(__global float * descriptors, int descriptors_step)
 {
     descriptors_step /= sizeof(*descriptors);
     // no need for thread ID
@@ -1461,7 +1489,6 @@ __kernel
     const float lookup = descriptor_base[get_local_id(0)];
     sqDesc[get_local_id(0)] = lookup * lookup;
     barrier(CLK_LOCAL_MEM_FENCE);
-
 
     reduce_sum64(sqDesc, get_local_id(0));
     barrier(CLK_LOCAL_MEM_FENCE);

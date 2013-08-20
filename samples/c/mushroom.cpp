@@ -90,7 +90,7 @@ static int mushroom_read_database( const char* filename, CvMat** data, CvMat** m
     }
 
     cvReleaseMemStorage( &storage );
-    delete el_ptr;
+    delete [] el_ptr;
     return 1;
 }
 

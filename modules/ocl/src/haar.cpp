@@ -258,7 +258,7 @@ static GpuHidHaarClassifierCascade * gpuCreateHidHaarClassifierCascade( CvHaarCl
     int datasize;
     int total_classifiers = 0;
     int total_nodes = 0;
-    char errorstr[100];
+    char errorstr[256];
 
     GpuHidHaarStageClassifier *stage_classifier_ptr;
     GpuHidHaarClassifier *haar_classifier_ptr;

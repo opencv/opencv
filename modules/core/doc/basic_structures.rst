@@ -49,6 +49,43 @@ Point\_
 -------
 .. ocv:class:: Point_
 
+::
+
+    template<typename _Tp> class CV_EXPORTS Point_
+    {
+    public:
+        typedef _Tp value_type;
+
+        // various constructors
+        Point_();
+        Point_(_Tp _x, _Tp _y);
+        Point_(const Point_& pt);
+        Point_(const CvPoint& pt);
+        Point_(const CvPoint2D32f& pt);
+        Point_(const Size_<_Tp>& sz);
+        Point_(const Vec<_Tp, 2>& v);
+
+        Point_& operator = (const Point_& pt);
+        //! conversion to another data type
+        template<typename _Tp2> operator Point_<_Tp2>() const;
+
+        //! conversion to the old-style C structures
+        operator CvPoint() const;
+        operator CvPoint2D32f() const;
+        operator Vec<_Tp, 2>() const;
+
+        //! dot product
+        _Tp dot(const Point_& pt) const;
+        //! dot product computed in double-precision arithmetics
+        double ddot(const Point_& pt) const;
+        //! cross-product
+        double cross(const Point_& pt) const;
+        //! checks whether the point is inside the specified rectangle
+        bool inside(const Rect_<_Tp>& r) const;
+
+        _Tp x, y; //< the point coordinates
+    };
+
 Template class for 2D points specified by its coordinates
 :math:`x` and
 :math:`y` .
@@ -84,6 +121,39 @@ Point3\_
 --------
 .. ocv:class:: Point3_
 
+::
+
+    template<typename _Tp> class CV_EXPORTS Point3_
+    {
+    public:
+        typedef _Tp value_type;
+
+        // various constructors
+        Point3_();
+        Point3_(_Tp _x, _Tp _y, _Tp _z);
+        Point3_(const Point3_& pt);
+        explicit Point3_(const Point_<_Tp>& pt);
+        Point3_(const CvPoint3D32f& pt);
+        Point3_(const Vec<_Tp, 3>& v);
+
+        Point3_& operator = (const Point3_& pt);
+        //! conversion to another data type
+        template<typename _Tp2> operator Point3_<_Tp2>() const;
+        //! conversion to the old-style CvPoint...
+        operator CvPoint3D32f() const;
+        //! conversion to cv::Vec<>
+        operator Vec<_Tp, 3>() const;
+
+        //! dot product
+        _Tp dot(const Point3_& pt) const;
+        //! dot product computed in double-precision arithmetics
+        double ddot(const Point3_& pt) const;
+        //! cross product of the 2 3D points
+        Point3_ cross(const Point3_& pt) const;
+
+        _Tp x, y, z; //< the point coordinates
+    };
+
 Template class for 3D points specified by its coordinates
 :math:`x`,
 :math:`y` and
@@ -100,6 +170,35 @@ Size\_
 ------
 .. ocv:class:: Size_
 
+::
+
+    template<typename _Tp> class CV_EXPORTS Size_
+    {
+    public:
+        typedef _Tp value_type;
+
+        //! various constructors
+        Size_();
+        Size_(_Tp _width, _Tp _height);
+        Size_(const Size_& sz);
+        Size_(const CvSize& sz);
+        Size_(const CvSize2D32f& sz);
+        Size_(const Point_<_Tp>& pt);
+
+        Size_& operator = (const Size_& sz);
+        //! the area (width*height)
+        _Tp area() const;
+
+        //! conversion of another data type.
+        template<typename _Tp2> operator Size_<_Tp2>() const;
+
+        //! conversion to the old-style OpenCV types
+        operator CvSize() const;
+        operator CvSize2D32f() const;
+
+        _Tp width, height; // the width and the height
+    };
+
 Template class for specifying the size of an image or rectangle. The class includes two members called ``width`` and ``height``. The structure can be converted to and from the old OpenCV structures
 ``CvSize`` and ``CvSize2D32f`` . The same set of arithmetic and comparison operations as for ``Point_`` is available.
 
@@ -112,6 +211,43 @@ OpenCV defines the following ``Size_<>`` aliases: ::
 Rect\_
 ------
 .. ocv:class:: Rect_
+
+::
+
+    template<typename _Tp> class CV_EXPORTS Rect_
+    {
+    public:
+        typedef _Tp value_type;
+
+        //! various constructors
+        Rect_();
+        Rect_(_Tp _x, _Tp _y, _Tp _width, _Tp _height);
+        Rect_(const Rect_& r);
+        Rect_(const CvRect& r);
+        Rect_(const Point_<_Tp>& org, const Size_<_Tp>& sz);
+        Rect_(const Point_<_Tp>& pt1, const Point_<_Tp>& pt2);
+
+        Rect_& operator = ( const Rect_& r );
+        //! the top-left corner
+        Point_<_Tp> tl() const;
+        //! the bottom-right corner
+        Point_<_Tp> br() const;
+
+        //! size (width, height) of the rectangle
+        Size_<_Tp> size() const;
+        //! area (width*height) of the rectangle
+        _Tp area() const;
+
+        //! conversion to another data type
+        template<typename _Tp2> operator Rect_<_Tp2>() const;
+        //! conversion to the old-style CvRect
+        operator CvRect() const;
+
+        //! checks whether the rectangle contains the point
+        bool contains(const Point_<_Tp>& pt) const;
+
+        _Tp x, y, width, height; //< the top-left corner, as well as width and height of the rectangle
+    };
 
 Template class for 2D rectangles, described by the following parameters:
 
@@ -171,6 +307,28 @@ RotatedRect
 -----------
 .. ocv:class:: RotatedRect
 
+::
+
+    class CV_EXPORTS RotatedRect
+    {
+    public:
+        //! various constructors
+        RotatedRect();
+        RotatedRect(const Point2f& center, const Size2f& size, float angle);
+        RotatedRect(const CvBox2D& box);
+
+        //! returns 4 vertices of the rectangle
+        void points(Point2f pts[]) const;
+        //! returns the minimal up-right rectangle containing the rotated rectangle
+        Rect boundingRect() const;
+        //! conversion to the old-style CvBox2D structure
+        operator CvBox2D() const;
+
+        Point2f center; //< the rectangle mass center
+        Size2f size;    //< width and height of the rectangle
+        float angle;    //< the rotation angle. When the angle is 0, 90, 180, 270 etc., the rectangle becomes an up-right rectangle.
+    };
+
 The class represents rotated (i.e. not up-right) rectangles on a plane. Each rectangle is specified by the center point (mass center), length of each side (represented by cv::Size2f structure) and the rotation angle in degrees.
 
     .. ocv:function:: RotatedRect::RotatedRect()
@@ -217,7 +375,33 @@ TermCriteria
 ------------
 .. ocv:class:: TermCriteria
 
-  The class defining termination criteria for iterative algorithms. You can initialize it by default constructor and then override any parameters, or the structure may be fully initialized using the advanced variant of the constructor.
+::
+
+    class CV_EXPORTS TermCriteria
+    {
+    public:
+        enum
+        {
+            COUNT=1, //!< the maximum number of iterations or elements to compute
+            MAX_ITER=COUNT, //!< ditto
+            EPS=2 //!< the desired accuracy or change in parameters at which the iterative algorithm stops
+        };
+
+        //! default constructor
+        TermCriteria();
+        //! full constructor
+        TermCriteria(int type, int maxCount, double epsilon);
+        //! conversion from CvTermCriteria
+        TermCriteria(const CvTermCriteria& criteria);
+        //! conversion to CvTermCriteria
+        operator CvTermCriteria() const;
+
+        int type; //!< the type of termination criteria: COUNT, EPS or COUNT + EPS
+        int maxCount; // the maximum number of iterations/elements
+        double epsilon; // the desired accuracy
+    };
+
+The class defining termination criteria for iterative algorithms. You can initialize it by default constructor and then override any parameters, or the structure may be fully initialized using the advanced variant of the constructor.
 
 TermCriteria::TermCriteria
 --------------------------
@@ -321,9 +505,36 @@ Scalar\_
 --------
 .. ocv:class:: Scalar_
 
-Template class for a 4-element vector derived from Vec. ::
+Template class for a 4-element vector derived from Vec.
 
-    template<typename _Tp> class Scalar_ : public Vec<_Tp, 4> { ... };
+::
+
+    template<typename _Tp> class CV_EXPORTS Scalar_ : public Vec<_Tp, 4>
+    {
+    public:
+        //! various constructors
+        Scalar_();
+        Scalar_(_Tp v0, _Tp v1, _Tp v2=0, _Tp v3=0);
+        Scalar_(const CvScalar& s);
+        Scalar_(_Tp v0);
+
+        //! returns a scalar with all elements set to v0
+        static Scalar_<_Tp> all(_Tp v0);
+        //! conversion to the old-style CvScalar
+        operator CvScalar() const;
+
+        //! conversion to another data type
+        template<typename T2> operator Scalar_<T2>() const;
+
+        //! per-element product
+        Scalar_<_Tp> mul(const Scalar_<_Tp>& t, double scale=1 ) const;
+
+        // returns (v0, -v1, -v2, -v3)
+        Scalar_<_Tp> conj() const;
+
+        // returns true iff v1 == v2 == v3 == 0
+        bool isReal() const;
+    };
 
     typedef Scalar_<double> Scalar;
 
@@ -333,12 +544,21 @@ Range
 -----
 .. ocv:class:: Range
 
-Template class specifying a continuous subsequence (slice) of a sequence. ::
+Template class specifying a continuous subsequence (slice) of a sequence. 
 
-    class Range
+::
+
+    class CV_EXPORTS Range
     {
     public:
-        ...
+        Range();
+        Range(int _start, int _end);
+        Range(const CvSlice& slice);
+        int size() const;
+        bool empty() const;
+        static Range all();
+        operator CvSlice() const;
+
         int start, end;
     };
 
@@ -617,8 +837,8 @@ Ptr::operator ->
 ----------------
 Provide access to the object fields and methods.
 
- .. ocv:function:: template<typename _Tp> _Tp* Ptr::operator -> ()
- .. ocv:function:: template<typename _Tp> const _Tp* Ptr::operator -> () const
+.. ocv:function:: template<typename _Tp> _Tp* Ptr::operator -> ()
+.. ocv:function:: template<typename _Tp> const _Tp* Ptr::operator -> () const
 
 
 Ptr::operator _Tp*
@@ -626,15 +846,16 @@ Ptr::operator _Tp*
 Returns the underlying object pointer. Thanks to the methods, the ``Ptr<_Tp>`` can be used instead
 of ``_Tp*``.
 
- .. ocv:function:: template<typename _Tp> Ptr::operator _Tp* ()
- .. ocv:function:: template<typename _Tp> Ptr::operator const _Tp*() const
+.. ocv:function:: template<typename _Tp> Ptr::operator _Tp* ()
+.. ocv:function:: template<typename _Tp> Ptr::operator const _Tp*() const
 
 
 Mat
 ---
 .. ocv:class:: Mat
 
-OpenCV C++ n-dimensional dense array class ::
+OpenCV C++ n-dimensional dense array class 
+::
 
     class CV_EXPORTS Mat
     {
@@ -663,7 +884,6 @@ OpenCV C++ n-dimensional dense array class ::
         // other members
         ...
     };
-
 
 The class ``Mat`` represents an n-dimensional dense numerical single-channel or multi-channel array. It can be used to store real or complex-valued vectors and matrices, grayscale or color images, voxel volumes, vector fields, point clouds, tensors, histograms (though, very high-dimensional histograms may be better stored in a ``SparseMat`` ). The data layout of the array
 :math:`M` is defined by the array ``M.step[]``, so that the address of element
@@ -2490,6 +2710,82 @@ It simplifies notation of some operations. ::
 Algorithm
 ---------
 .. ocv:class:: Algorithm
+
+::
+
+    class CV_EXPORTS_W Algorithm
+    {
+    public:
+        Algorithm();
+        virtual ~Algorithm();
+        string name() const;
+
+        template<typename _Tp> typename ParamType<_Tp>::member_type get(const string& name) const;
+        template<typename _Tp> typename ParamType<_Tp>::member_type get(const char* name) const;
+
+        CV_WRAP int getInt(const string& name) const;
+        CV_WRAP double getDouble(const string& name) const;
+        CV_WRAP bool getBool(const string& name) const;
+        CV_WRAP string getString(const string& name) const;
+        CV_WRAP Mat getMat(const string& name) const;
+        CV_WRAP vector<Mat> getMatVector(const string& name) const;
+        CV_WRAP Ptr<Algorithm> getAlgorithm(const string& name) const;
+
+        void set(const string& name, int value);
+        void set(const string& name, double value);
+        void set(const string& name, bool value);
+        void set(const string& name, const string& value);
+        void set(const string& name, const Mat& value);
+        void set(const string& name, const vector<Mat>& value);
+        void set(const string& name, const Ptr<Algorithm>& value);
+        template<typename _Tp> void set(const string& name, const Ptr<_Tp>& value);
+
+        CV_WRAP void setInt(const string& name, int value);
+        CV_WRAP void setDouble(const string& name, double value);
+        CV_WRAP void setBool(const string& name, bool value);
+        CV_WRAP void setString(const string& name, const string& value);
+        CV_WRAP void setMat(const string& name, const Mat& value);
+        CV_WRAP void setMatVector(const string& name, const vector<Mat>& value);
+        CV_WRAP void setAlgorithm(const string& name, const Ptr<Algorithm>& value);
+        template<typename _Tp> void setAlgorithm(const string& name, const Ptr<_Tp>& value);
+
+        void set(const char* name, int value);
+        void set(const char* name, double value);
+        void set(const char* name, bool value);
+        void set(const char* name, const string& value);
+        void set(const char* name, const Mat& value);
+        void set(const char* name, const vector<Mat>& value);
+        void set(const char* name, const Ptr<Algorithm>& value);
+        template<typename _Tp> void set(const char* name, const Ptr<_Tp>& value);
+
+        void setInt(const char* name, int value);
+        void setDouble(const char* name, double value);
+        void setBool(const char* name, bool value);
+        void setString(const char* name, const string& value);
+        void setMat(const char* name, const Mat& value);
+        void setMatVector(const char* name, const vector<Mat>& value);
+        void setAlgorithm(const char* name, const Ptr<Algorithm>& value);
+        template<typename _Tp> void setAlgorithm(const char* name, const Ptr<_Tp>& value);
+
+        CV_WRAP string paramHelp(const string& name) const;
+        int paramType(const char* name) const;
+        CV_WRAP int paramType(const string& name) const;
+        CV_WRAP void getParams(CV_OUT vector<string>& names) const;
+
+
+        virtual void write(FileStorage& fs) const;
+        virtual void read(const FileNode& fn);
+
+        typedef Algorithm* (*Constructor)(void);
+        typedef int (Algorithm::*Getter)() const;
+        typedef void (Algorithm::*Setter)(int);
+
+        CV_WRAP static void getList(CV_OUT vector<string>& algorithms);
+        CV_WRAP static Ptr<Algorithm> _create(const string& name);
+        template<typename _Tp> static Ptr<_Tp> create(const string& name);
+
+        virtual AlgorithmInfo* info() const /* TODO: make it = 0;*/ { return 0; }
+    };
 
 This is a base class for all more or less complex algorithms in OpenCV, especially for classes of algorithms, for which there can be multiple implementations. The examples are stereo correspondence (for which there are algorithms like block matching, semi-global block matching, graph-cut etc.), background subtraction (which can be done using mixture-of-gaussians models, codebook-based algorithm etc.), optical flow (block matching, Lucas-Kanade, Horn-Schunck etc.).
 

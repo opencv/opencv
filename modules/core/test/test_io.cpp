@@ -391,7 +391,6 @@ protected:
         try
         {
             string fname = cv::tempfile(".xml");
-            FileStorage fs(fname, FileStorage::WRITE);
             vector<int> mi, mi2, mi3, mi4;
             vector<Mat> mv, mv2, mv3, mv4;
             Mat m(10, 9, CV_32F);
@@ -399,24 +398,59 @@ protected:
             randu(m, 0, 1);
             mi3.push_back(5);
             mv3.push_back(m);
+            Point_<float> p1(1.1f, 2.2f), op1;
+            Point3i p2(3, 4, 5), op2;
+            Size s1(6, 7), os1;
+            Complex<int> c1(9, 10), oc1;
+            Rect r1(11, 12, 13, 14), or1;
+            Vec<int, 5> v1(15, 16, 17, 18, 19), ov1;
+            Scalar sc1(20.0, 21.1, 22.2, 23.3), osc1;
+            Range g1(7, 8), og1;
+            
+            FileStorage fs(fname, FileStorage::WRITE);
             fs << "mi" << mi;
             fs << "mv" << mv;
             fs << "mi3" << mi3;
             fs << "mv3" << mv3;
             fs << "empty" << empty;
+            fs << "p1" << p1;
+            fs << "p2" << p2;
+            fs << "s1" << s1;
+            fs << "c1" << c1;
+            fs << "r1" << r1;
+            fs << "v1" << v1;
+            fs << "sc1" << sc1;
+            fs << "g1" << g1;
             fs.release();
+
             fs.open(fname, FileStorage::READ);
             fs["mi"] >> mi2;
             fs["mv"] >> mv2;
             fs["mi3"] >> mi4;
             fs["mv3"] >> mv4;
             fs["empty"] >> empty;
+            fs["p1"] >> op1;
+            fs["p2"] >> op2;
+            fs["s1"] >> os1;
+            fs["c1"] >> oc1;
+            fs["r1"] >> or1;
+            fs["v1"] >> ov1;
+            fs["sc1"] >> osc1;
+            fs["g1"] >> og1;
             CV_Assert( mi2.empty() );
             CV_Assert( mv2.empty() );
             CV_Assert( norm(mi3, mi4, CV_C) == 0 );
             CV_Assert( mv4.size() == 1 );
             double n = norm(mv3[0], mv4[0], CV_C);
             CV_Assert( n == 0 );
+            CV_Assert( op1 == p1 );
+            CV_Assert( op2 == p2 );
+            CV_Assert( os1 == s1 );
+            CV_Assert( oc1 == c1 );
+            CV_Assert( or1 == r1 );
+            CV_Assert( ov1 == v1 );
+            CV_Assert( osc1 == sc1 );
+            CV_Assert( og1 == g1 );
         }
         catch(...)
         {

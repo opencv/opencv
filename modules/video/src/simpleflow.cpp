@@ -319,7 +319,7 @@ static Mat upscaleOpticalFlow(int new_rows,
 static Mat calcIrregularityMat(const Mat& flow, int radius) {
   const int rows = flow.rows;
   const int cols = flow.cols;
-  Mat irregularity(rows, cols, CV_32F);
+  Mat irregularity = Mat::zeros(rows, cols, CV_32F);
   for (int r = 0; r < rows; ++r) {
     const int start_row = std::max(0, r - radius);
     const int end_row = std::min(rows - 1, r + radius);
@@ -441,7 +441,7 @@ static void extrapolateFlow(Mat& flow,
                             const Mat& speed_up) {
   const int rows = flow.rows;
   const int cols = flow.cols;
-  Mat done(rows, cols, CV_8U);
+  Mat done = Mat::zeros(rows, cols, CV_8U);
   for (int r = 0; r < rows; ++r) {
     for (int c = 0; c < cols; ++c) {
       if (!done.at<uchar>(r, c) && speed_up.at<uchar>(r, c) > 1) {
@@ -540,8 +540,8 @@ CV_EXPORTS_W void calcOpticalFlowSF(InputArray _from,
   Mat mask = Mat::ones(curr_from.size(), CV_8U);
   Mat mask_inv = Mat::ones(curr_from.size(), CV_8U);
 
-  Mat flow(curr_from.size(), CV_32FC2);
-  Mat flow_inv(curr_to.size(), CV_32FC2);
+  Mat flow = Mat::zeros(curr_from.size(), CV_32FC2);
+  Mat flow_inv = Mat::zeros(curr_to.size(), CV_32FC2);
 
   Mat confidence;
   Mat confidence_inv;
