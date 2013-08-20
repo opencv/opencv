@@ -104,7 +104,6 @@ cv::viz::VizAccessor * cv::viz::VizAccessor::getInstance()
 {
     if (is_instantiated_)
     {
-        std::cout << "HERE" << std::endl;
         instance_ = new VizAccessor();
         is_instantiated_ = true;
     }
