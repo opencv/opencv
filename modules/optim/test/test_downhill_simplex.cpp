@@ -3,7 +3,7 @@
 #include <cmath>
 #include <algorithm>
 
-static void mytest(cv::Ptr<cv::optim::DownhillSolver> solver,cv::Ptr<cv::optim::Solver::Function> ptr_F,cv::Mat& x,cv::Mat& step, 
+static void mytest(cv::Ptr<cv::optim::DownhillSolver> solver,cv::Ptr<cv::optim::Solver::Function> ptr_F,cv::Mat& x,cv::Mat& step,
         cv::Mat& etalon_x,double etalon_res){
     solver->setFunction(ptr_F);
     int ndim=MAX(step.cols,step.rows);

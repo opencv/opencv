@@ -32,7 +32,7 @@ positive integer ``termcrit.maxCount`` and positive non-integer ``termcrit.epsil
         public:
            virtual ~Function() {}
            //! ndim - dimensionality
-           virtual double calc(const double* x) const = 0;     
+           virtual double calc(const double* x) const = 0;
         };
 
         virtual Ptr<Function> getFunction() const = 0;
@@ -64,7 +64,7 @@ algorithms in the ``optim`` module.
 optim::DownhillSolver::getFunction
 --------------------------------------------
 
-Getter for the optimized function. The optimized function is represented by ``Solver::Function`` interface, which requires 
+Getter for the optimized function. The optimized function is represented by ``Solver::Function`` interface, which requires
 derivatives to implement the sole method ``calc(double*)`` to evaluate the function.
 
 .. ocv:function:: Ptr<Solver::Function> optim::DownhillSolver::getFunction()
@@ -134,7 +134,7 @@ of projection is treated to be vector given by :math:`s_i:=e_i\cdot\left<e_i\cdo
 optim::DownhillSolver::minimize
 -----------------------------------
 
-The main method of the ``DownhillSolver``. It actually runs the algorithm and performs the minimization. The sole input parameter determines the 
+The main method of the ``DownhillSolver``. It actually runs the algorithm and performs the minimization. The sole input parameter determines the
 centroid of the starting simplex (roughly, it tells where to start), all the others (terminal criteria, initial step, function to be minimized)
 are supposed to be set via the setters before the call to this method or the default values (not always sensible) will be used.
 

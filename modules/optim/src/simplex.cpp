@@ -28,11 +28,11 @@ namespace cv{namespace optim{
     };
 
     double DownhillSolverImpl::try_new_point(
-        Mat_<double>& p, 
+        Mat_<double>& p,
         Mat_<double>& y,
-        Mat_<double>&  coord_sum, 
+        Mat_<double>&  coord_sum,
         const Ptr<Solver::Function>& f,
-        int      ihi, 
+        int      ihi,
         double   fac,
         Mat_<double>& ptry
         )
@@ -40,24 +40,24 @@ namespace cv{namespace optim{
         int ndim=p.cols;
         int j;
         double fac1,fac2,ytry;
-        
+
         fac1=(1.0-fac)/ndim;
         fac2=fac1-fac;
-        for (j=0;j<ndim;j++) 
+        for (j=0;j<ndim;j++)
         {
             ptry(j)=coord_sum(j)*fac1-p(ihi,j)*fac2;
         }
         ytry=f->calc((double*)ptry.data);
-        if (ytry < y(ihi)) 
+        if (ytry < y(ihi))
         {
             y(ihi)=ytry;
-            for (j=0;j<ndim;j++) 
+            for (j=0;j<ndim;j++)
             {
                 coord_sum(j) += ptry(j)-p(ihi,j);
                 p(ihi,j)=ptry(j);
             }
         }
-        
+
         return ytry;
     }
 
@@ -68,8 +68,8 @@ namespace cv{namespace optim{
     form a simplex - each row is an ndim vector.
     On output, nfunk gives the number of function evaluations taken.
     */
-    double DownhillSolverImpl::inner_downhill_simplex( 
-        cv::Mat_<double>&   p, 
+    double DownhillSolverImpl::inner_downhill_simplex(
+        cv::Mat_<double>&   p,
         double     MinRange,
         double     MinError,
         int&       nfunk,
@@ -84,32 +84,32 @@ namespace cv{namespace optim{
         Mat_<double> coord_sum(1,ndim,0.0),buf(1,ndim,0.0),y(1,ndim,0.0);
 
         nfunk = 0;
-        
+
         for(i=0;i<ndim+1;++i)
         {
             y(i) = f->calc(p[i]);
         }
 
         nfunk = ndim+1;
-        
+
         compute_coord_sum(p,coord_sum);
-        
-        for (;;) 
+
+        for (;;)
         {
             ilo=0;
             /*  find highest (worst), next-to-worst, and lowest
                 (best) points by going through all of them. */
             ihi = y(0)>y(1) ? (inhi=1,0) : (inhi=0,1);
-            for (i=0;i<mpts;i++) 
+            for (i=0;i<mpts;i++)
             {
-                if (y(i) <= y(ilo)) 
+                if (y(i) <= y(ilo))
                     ilo=i;
-                if (y(i) > y(ihi)) 
+                if (y(i) > y(ihi))
                 {
                     inhi=ihi;
                     ihi=i;
-                } 
-                else if (y(i) > y(inhi) && i != ihi) 
+                }
+                else if (y(i) > y(inhi) && i != ihi)
                     inhi=i;
             }
 
@@ -130,10 +130,10 @@ namespace cv{namespace optim{
                 if(range < d) range = d;
             }
 
-            if(range <= MinRange || error <= MinError) 
+            if(range <= MinRange || error <= MinError)
             { /* Put best point and value in first slot. */
                 std::swap(y(0),y(ilo));
-                for (i=0;i<ndim;i++) 
+                for (i=0;i<ndim;i++)
                 {
                     std::swap(p(0,i),p(ilo,i));
                 }
@@ -151,17 +151,17 @@ namespace cv{namespace optim{
             { /*If that's better than the best point, go twice as far in that direction*/
                 ytry = try_new_point(p,y,coord_sum,f,ihi,2.0,buf);
             }
-            else if (ytry >= y(inhi)) 
+            else if (ytry >= y(inhi))
             {   /* The new point is worse than the second-highest, but better
                   than the worst so do not go so far in that direction */
                 ysave = y(ihi);
                 ytry = try_new_point(p,y,coord_sum,f,ihi,0.5,buf);
-                if (ytry >= ysave) 
+                if (ytry >= ysave)
                 { /* Can't seem to improve things. Contract the simplex to good point
                in hope to find a simplex landscape. */
-                    for (i=0;i<mpts;i++) 
+                    for (i=0;i<mpts;i++)
                     {
-                        if (i != ilo) 
+                        if (i != ilo)
                         {
                             for (j=0;j<ndim;j++)
                             {
