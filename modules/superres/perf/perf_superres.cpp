@@ -160,7 +160,7 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
 
         TEST_CYCLE_N(10) superRes->nextFrame(dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 2);
     }
     else
     {
