@@ -1,6 +1,6 @@
-****************************************
-gpuoptflow. GPU-accelerated Optical Flow
-****************************************
+******************************************
+cudaoptflow. CUDA-accelerated Optical Flow
+******************************************
 
 .. toctree::
     :maxdepth: 1

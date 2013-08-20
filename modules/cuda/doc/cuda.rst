@@ -1,6 +1,6 @@
-************************************
-gpu. GPU-accelerated Computer Vision
-************************************
+**************************************
+cuda. CUDA-accelerated Computer Vision
+**************************************
 
 .. toctree::
     :maxdepth: 1

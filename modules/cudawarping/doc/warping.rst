@@ -5,11 +5,11 @@ Image Warping
 
 
 
-gpu::remap
---------------
+cuda::remap
+-----------
 Applies a generic geometrical transformation to an image.
 
-.. ocv:function:: void gpu::remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap, int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap, int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -39,11 +39,11 @@ Values of pixels with non-integer coordinates are computed using the bilinear in
 
 
 
-gpu::resize
----------------
+cuda::resize
+------------
 Resizes an image.
 
-.. ocv:function:: void gpu::resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -76,11 +76,11 @@ Resizes an image.
 
 
 
-gpu::warpAffine
--------------------
+cuda::warpAffine
+----------------
 Applies an affine transformation to an image.
 
-.. ocv:function:: void gpu::warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image.  ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -98,11 +98,11 @@ Applies an affine transformation to an image.
 
 
 
-gpu::buildWarpAffineMaps
-------------------------
+cuda::buildWarpAffineMaps
+-------------------------
 Builds transformation maps for affine transformation.
 
-.. ocv:function:: void gpu::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
 
     :param M: *2x3*  transformation matrix.
 
@@ -116,15 +116,15 @@ Builds transformation maps for affine transformation.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`gpu::warpAffine` , :ocv:func:`gpu::remap`
+.. seealso:: :ocv:func:`cuda::warpAffine` , :ocv:func:`cuda::remap`
 
 
 
-gpu::warpPerspective
-------------------------
+cuda::warpPerspective
+---------------------
 Applies a perspective transformation to an image.
 
-.. ocv:function:: void gpu::warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U`` , ``CV_16U`` , ``CV_32S`` , or  ``CV_32F`` depth and 1, 3, or 4 channels are supported.
 
@@ -142,11 +142,11 @@ Applies a perspective transformation to an image.
 
 
 
-gpu::buildWarpPerspectiveMaps
------------------------------
+cuda::buildWarpPerspectiveMaps
+------------------------------
 Builds transformation maps for perspective transformation.
 
-.. ocv:function:: void gpu::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null())
 
     :param M: *3x3*  transformation matrix.
 
@@ -160,45 +160,45 @@ Builds transformation maps for perspective transformation.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`gpu::warpPerspective` , :ocv:func:`gpu::remap`
+.. seealso:: :ocv:func:`cuda::warpPerspective` , :ocv:func:`cuda::remap`
 
 
 
-gpu::buildWarpPlaneMaps
------------------------
+cuda::buildWarpPlaneMaps
+------------------------
 Builds plane warping maps.
 
-.. ocv:function:: void gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, InputArray T, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, InputArray T, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
 
     :param stream: Stream for the asynchronous version.
 
 
 
-gpu::buildWarpCylindricalMaps
------------------------------
+cuda::buildWarpCylindricalMaps
+------------------------------
 Builds cylindrical warping maps.
 
-.. ocv:function:: void gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
 
     :param stream: Stream for the asynchronous version.
 
 
 
-gpu::buildWarpSphericalMaps
----------------------------
+cuda::buildWarpSphericalMaps
+----------------------------
 Builds spherical warping maps.
 
-.. ocv:function:: void gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale, OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null())
 
     :param stream: Stream for the asynchronous version.
 
 
 
-gpu::rotate
----------------
+cuda::rotate
+------------
 Rotates an image around the origin (0,0) and then shifts it.
 
-.. ocv:function:: void gpu::rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null())
 
     :param src: Source image. Supports 1, 3 or 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32F`` depth.
 
@@ -216,15 +216,15 @@ Rotates an image around the origin (0,0) and then shifts it.
 
     :param stream: Stream for the asynchronous version.
 
-.. seealso:: :ocv:func:`gpu::warpAffine`
+.. seealso:: :ocv:func:`cuda::warpAffine`
 
 
 
-gpu::pyrDown
--------------------
+cuda::pyrDown
+-------------
 Smoothes an image and downsamples it.
 
-.. ocv:function:: void gpu::pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -236,11 +236,11 @@ Smoothes an image and downsamples it.
 
 
 
-gpu::pyrUp
--------------------
+cuda::pyrUp
+-----------
 Upsamples an image and then smoothes it.
 
-.. ocv:function:: void gpu::pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 

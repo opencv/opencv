@@ -9,9 +9,10 @@ Optical Flow
    * A general optical flow example using the Nvidia API can be found at opencv_source_code/samples/gpu/opticalflow_nvidia_api.cpp
 
 
-gpu::BroxOpticalFlow
---------------------
-.. ocv:class:: gpu::BroxOpticalFlow
+
+cuda::BroxOpticalFlow
+---------------------
+.. ocv:class:: cuda::BroxOpticalFlow
 
 Class computing the optical flow for two images using Brox et al Optical Flow algorithm ([Brox2004]_). ::
 
@@ -53,9 +54,10 @@ Class computing the optical flow for two images using Brox et al Optical Flow al
    * An example illustrating the Brox et al optical flow algorithm can be found at opencv_source_code/samples/gpu/brox_optical_flow.cpp
 
 
-gpu::FarnebackOpticalFlow
--------------------------
-.. ocv:class:: gpu::FarnebackOpticalFlow
+
+cuda::FarnebackOpticalFlow
+--------------------------
+.. ocv:class:: cuda::FarnebackOpticalFlow
 
 Class computing a dense optical flow using the Gunnar Farneback’s algorithm. ::
 
@@ -93,11 +95,11 @@ Class computing a dense optical flow using the Gunnar Farneback’s algorithm. :
 
 
 
-gpu::FarnebackOpticalFlow::operator ()
---------------------------------------
+cuda::FarnebackOpticalFlow::operator ()
+---------------------------------------
 Computes a dense optical flow using the Gunnar Farneback’s algorithm.
 
-.. ocv:function:: void gpu::FarnebackOpticalFlow::operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null())
+.. ocv:function:: void cuda::FarnebackOpticalFlow::operator ()(const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s = Stream::Null())
 
     :param frame0: First 8-bit gray-scale input image
     :param frame1: Second 8-bit gray-scale input image
@@ -109,17 +111,17 @@ Computes a dense optical flow using the Gunnar Farneback’s algorithm.
 
 
 
-gpu::FarnebackOpticalFlow::releaseMemory
-----------------------------------------
+cuda::FarnebackOpticalFlow::releaseMemory
+-----------------------------------------
 Releases unused auxiliary memory buffers.
 
-.. ocv:function:: void gpu::FarnebackOpticalFlow::releaseMemory()
+.. ocv:function:: void cuda::FarnebackOpticalFlow::releaseMemory()
 
 
 
-gpu::PyrLKOpticalFlow
----------------------
-.. ocv:class:: gpu::PyrLKOpticalFlow
+cuda::PyrLKOpticalFlow
+----------------------
+.. ocv:class:: cuda::PyrLKOpticalFlow
 
 Class used for calculating an optical flow. ::
 
@@ -150,11 +152,12 @@ The class can calculate an optical flow for a sparse feature set or dense optica
    * An example of the Lucas Kanade optical flow algorithm can be found at opencv_source_code/samples/gpu/pyrlk_optical_flow.cpp
 
 
-gpu::PyrLKOpticalFlow::sparse
------------------------------
+
+cuda::PyrLKOpticalFlow::sparse
+------------------------------
 Calculate an optical flow for a sparse feature set.
 
-.. ocv:function:: void gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err = 0)
+.. ocv:function:: void cuda::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err = 0)
 
     :param prevImg: First 8-bit input image (supports both grayscale and color images).
 
@@ -172,11 +175,11 @@ Calculate an optical flow for a sparse feature set.
 
 
 
-gpu::PyrLKOpticalFlow::dense
+cuda::PyrLKOpticalFlow::dense
 -----------------------------
 Calculate dense optical flow.
 
-.. ocv:function:: void gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0)
+.. ocv:function:: void cuda::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err = 0)
 
     :param prevImg: First 8-bit grayscale input image.
 
@@ -190,19 +193,19 @@ Calculate dense optical flow.
 
 
 
-gpu::PyrLKOpticalFlow::releaseMemory
-------------------------------------
+cuda::PyrLKOpticalFlow::releaseMemory
+-------------------------------------
 Releases inner buffers memory.
 
-.. ocv:function:: void gpu::PyrLKOpticalFlow::releaseMemory()
+.. ocv:function:: void cuda::PyrLKOpticalFlow::releaseMemory()
 
 
 
-gpu::interpolateFrames
-----------------------
+cuda::interpolateFrames
+-----------------------
 Interpolates frames (images) using provided optical flow (displacement field).
 
-.. ocv:function:: void gpu::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv, float pos, GpuMat& newFrame, GpuMat& buf, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::interpolateFrames(const GpuMat& frame0, const GpuMat& frame1, const GpuMat& fu, const GpuMat& fv, const GpuMat& bu, const GpuMat& bv, float pos, GpuMat& newFrame, GpuMat& buf, Stream& stream = Stream::Null())
 
     :param frame0: First frame (32-bit floating point images, single channel).
 

@@ -5,11 +5,11 @@ Histogram Calculation
 
 
 
-gpu::calcHist
--------------
+cuda::calcHist
+--------------
 Calculates histogram for one channel 8-bit image.
 
-.. ocv:function:: void gpu::calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::calcHist(InputArray src, OutputArray hist, Stream& stream = Stream::Null())
 
     :param src: Source image with ``CV_8UC1`` type.
 
@@ -19,13 +19,13 @@ Calculates histogram for one channel 8-bit image.
 
 
 
-gpu::equalizeHist
------------------
+cuda::equalizeHist
+------------------
 Equalizes the histogram of a grayscale image.
 
-.. ocv:function:: void gpu::equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::equalizeHist(InputArray src, OutputArray dst, InputOutputArray buf, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::equalizeHist(InputArray src, OutputArray dst, InputOutputArray buf, Stream& stream = Stream::Null())
 
     :param src: Source image with ``CV_8UC1`` type.
 
@@ -39,9 +39,9 @@ Equalizes the histogram of a grayscale image.
 
 
 
-gpu::CLAHE
-----------
-.. ocv:class:: gpu::CLAHE : public cv::CLAHE
+cuda::CLAHE
+-----------
+.. ocv:class:: cuda::CLAHE : public cv::CLAHE
 
 Base class for Contrast Limited Adaptive Histogram Equalization. ::
 
@@ -54,13 +54,13 @@ Base class for Contrast Limited Adaptive Histogram Equalization. ::
 
 
 
-gpu::CLAHE::apply
------------------
+cuda::CLAHE::apply
+------------------
 Equalizes the histogram of a grayscale image using Contrast Limited Adaptive Histogram Equalization.
 
-.. ocv:function:: void gpu::CLAHE::apply(InputArray src, OutputArray dst)
+.. ocv:function:: void cuda::CLAHE::apply(InputArray src, OutputArray dst)
 
-.. ocv:function:: void gpu::CLAHE::apply(InputArray src, OutputArray dst, Stream& stream)
+.. ocv:function:: void cuda::CLAHE::apply(InputArray src, OutputArray dst, Stream& stream)
 
     :param src: Source image with ``CV_8UC1`` type.
 
@@ -70,11 +70,11 @@ Equalizes the histogram of a grayscale image using Contrast Limited Adaptive His
 
 
 
-gpu::createCLAHE
-----------------
-Creates implementation for :ocv:class:`gpu::CLAHE` .
+cuda::createCLAHE
+-----------------
+Creates implementation for :ocv:class:`cuda::CLAHE` .
 
-.. ocv:function:: Ptr<gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8))
+.. ocv:function:: Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8))
 
     :param clipLimit: Threshold for contrast limiting.
 
@@ -83,11 +83,11 @@ Creates implementation for :ocv:class:`gpu::CLAHE` .
 
 
 
-gpu::evenLevels
----------------
+cuda::evenLevels
+----------------
 Computes levels with even distribution.
 
-.. ocv:function:: void gpu::evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel)
+.. ocv:function:: void cuda::evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel)
 
     :param levels: Destination array.  ``levels`` has 1 row, ``nLevels`` columns, and the ``CV_32SC1`` type.
 
@@ -99,17 +99,17 @@ Computes levels with even distribution.
 
 
 
-gpu::histEven
--------------
+cuda::histEven
+--------------
 Calculates a histogram with evenly distributed bins.
 
-.. ocv:function:: void gpu::histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histEven(InputArray src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histEven(InputArray src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histEven(InputArray src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histEven(InputArray src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U``, ``CV_16U``, or ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 
@@ -127,17 +127,17 @@ Calculates a histogram with evenly distributed bins.
 
 
 
-gpu::histRange
---------------
+cuda::histRange
+---------------
 Calculates a histogram with bins determined by the ``levels`` array.
 
-.. ocv:function:: void gpu::histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histRange(InputArray src, OutputArray hist, InputArray levels, InputOutputArray buf, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histRange(InputArray src, OutputArray hist, InputArray levels, InputOutputArray buf, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8U`` , ``CV_16U`` , or  ``CV_16S`` depth and 1 or 4 channels are supported. For a four-channel image, all channels are processed separately.
 

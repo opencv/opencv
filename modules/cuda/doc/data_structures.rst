@@ -5,9 +5,9 @@ Data Structures
 
 
 
-gpu::PtrStepSz
---------------
-.. ocv:class:: gpu::PtrStepSz
+cuda::PtrStepSz
+---------------
+.. ocv:class:: cuda::PtrStepSz
 
 Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compiled code (CUDA kernels). Typically, it is used internally by OpenCV and by users who write device code. You can call its members from both host and device code. ::
 
@@ -30,11 +30,11 @@ Lightweight class encapsulating pitched memory on a GPU and passed to nvcc-compi
 
 
 
-gpu::PtrStep
-------------
-.. ocv:class:: gpu::PtrStep
+cuda::PtrStep
+-------------
+.. ocv:class:: cuda::PtrStep
 
-Structure similar to :ocv:class:`gpu::PtrStepSz` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
+Structure similar to :ocv:class:`cuda::PtrStepSz` but containing only a pointer and row step. Width and height fields are excluded due to performance reasons. The structure is intended for internal use or for users who write device code. ::
 
     template <typename T> struct PtrStep : public DevPtr<T>
     {
@@ -57,9 +57,9 @@ Structure similar to :ocv:class:`gpu::PtrStepSz` but containing only a pointer a
 
 
 
-gpu::GpuMat
------------
-.. ocv:class:: gpu::GpuMat
+cuda::GpuMat
+------------
+.. ocv:class:: cuda::GpuMat
 
 Base storage class for GPU memory with reference counting. Its interface matches the :ocv:class:`Mat` interface with the following limitations:
 
@@ -67,7 +67,7 @@ Base storage class for GPU memory with reference counting. Its interface matches
 * no functions that return references to their data (because references on GPU are not valid for CPU)
 * no expression templates technique support
 
-Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`gpu::PtrStepSz` and :ocv:class:`gpu::PtrStep` so it can be passed directly to the kernel.
+Beware that the latter limitation may lead to overloaded matrix operators that cause memory allocations. The ``GpuMat`` class is convertible to :ocv:class:`cuda::PtrStepSz` and :ocv:class:`cuda::PtrStep` so it can be passed directly to the kernel.
 
 .. note:: In contrast with :ocv:class:`Mat`, in most cases ``GpuMat::isContinuous() == false`` . This means that rows are aligned to a size depending on the hardware. Single-row ``GpuMat`` is always a continuous matrix.
 
@@ -76,34 +76,34 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
     class CV_EXPORTS GpuMat
     {
     public:
-            //! default constructor
-            GpuMat();
+        //! default constructor
+        GpuMat();
 
-            //! constructs GpuMat of the specified size and type
-            GpuMat(int rows, int cols, int type);
-            GpuMat(Size size, int type);
+        //! constructs GpuMat of the specified size and type
+        GpuMat(int rows, int cols, int type);
+        GpuMat(Size size, int type);
 
-            .....
+        .....
 
-            //! builds GpuMat from host memory (Blocking call)
-            explicit GpuMat(InputArray arr);
+        //! builds GpuMat from host memory (Blocking call)
+        explicit GpuMat(InputArray arr);
 
-            //! returns lightweight PtrStepSz structure for passing
-            //to nvcc-compiled code. Contains size, data ptr and step.
-            template <class T> operator PtrStepSz<T>() const;
-            template <class T> operator PtrStep<T>() const;
+        //! returns lightweight PtrStepSz structure for passing
+        //to nvcc-compiled code. Contains size, data ptr and step.
+        template <class T> operator PtrStepSz<T>() const;
+        template <class T> operator PtrStep<T>() const;
 
-            //! pefroms upload data to GpuMat (Blocking call)
-            void upload(InputArray arr);
+        //! pefroms upload data to GpuMat (Blocking call)
+        void upload(InputArray arr);
 
-            //! pefroms upload data to GpuMat (Non-Blocking call)
-            void upload(InputArray arr, Stream& stream);
+        //! pefroms upload data to GpuMat (Non-Blocking call)
+        void upload(InputArray arr, Stream& stream);
 
-            //! pefroms download data from device to host memory (Blocking call)
-            void download(OutputArray dst) const;
+        //! pefroms download data from device to host memory (Blocking call)
+        void download(OutputArray dst) const;
 
-            //! pefroms download data from device to host memory (Non-Blocking call)
-            void download(OutputArray dst, Stream& stream) const;
+        //! pefroms download data from device to host memory (Non-Blocking call)
+        void download(OutputArray dst, Stream& stream) const;
     };
 
 
@@ -113,11 +113,11 @@ Beware that the latter limitation may lead to overloaded matrix operators that c
 
 
 
-gpu::createContinuous
----------------------
+cuda::createContinuous
+----------------------
 Creates a continuous matrix.
 
-.. ocv:function:: void gpu::createContinuous(int rows, int cols, int type, OutputArray arr)
+.. ocv:function:: void cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
 
     :param rows: Row count.
 
@@ -131,11 +131,11 @@ Matrix is called continuous if its elements are stored continuously, that is, wi
 
 
 
-gpu::ensureSizeIsEnough
------------------------
+cuda::ensureSizeIsEnough
+------------------------
 Ensures that the size of a matrix is big enough and the matrix has a proper type.
 
-.. ocv:function:: void gpu::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
+.. ocv:function:: void cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
 
     :param rows: Minimum desired number of rows.
 
@@ -149,9 +149,9 @@ The function does not reallocate memory if the matrix has proper attributes alre
 
 
 
-gpu::CudaMem
-------------
-.. ocv:class:: gpu::CudaMem
+cuda::CudaMem
+-------------
+.. ocv:class:: cuda::CudaMem
 
 Class with reference counting wrapping special memory type allocation functions from CUDA. Its interface is also :ocv:func:`Mat`-like but with additional memory type parameters.
 
@@ -191,47 +191,47 @@ Class with reference counting wrapping special memory type allocation functions 
 
 
 
-gpu::CudaMem::createMatHeader
------------------------------
-Creates a header without reference counting to :ocv:class:`gpu::CudaMem` data.
+cuda::CudaMem::createMatHeader
+------------------------------
+Creates a header without reference counting to :ocv:class:`cuda::CudaMem` data.
 
-.. ocv:function:: Mat gpu::CudaMem::createMatHeader() const
+.. ocv:function:: Mat cuda::CudaMem::createMatHeader() const
 
 
 
-gpu::CudaMem::createGpuMatHeader
---------------------------------
-Maps CPU memory to GPU address space and creates the :ocv:class:`gpu::GpuMat` header without reference counting for it.
+cuda::CudaMem::createGpuMatHeader
+---------------------------------
+Maps CPU memory to GPU address space and creates the :ocv:class:`cuda::GpuMat` header without reference counting for it.
 
-.. ocv:function:: GpuMat gpu::CudaMem::createGpuMatHeader() const
+.. ocv:function:: GpuMat cuda::CudaMem::createGpuMatHeader() const
 
 This can be done only if memory was allocated with the ``SHARED`` flag and if it is supported by the hardware. Laptops often share video and CPU memory, so address spaces can be mapped, which eliminates an extra copy.
 
 
 
-gpu::registerPageLocked
------------------------
+cuda::registerPageLocked
+------------------------
 Page-locks the memory of matrix and maps it for the device(s).
 
-.. ocv:function:: void gpu::registerPageLocked(Mat& m)
+.. ocv:function:: void cuda::registerPageLocked(Mat& m)
 
     :param m: Input matrix.
 
 
 
-gpu::unregisterPageLocked
--------------------------
+cuda::unregisterPageLocked
+--------------------------
 Unmaps the memory of matrix and makes it pageable again.
 
-.. ocv:function:: void gpu::unregisterPageLocked(Mat& m)
+.. ocv:function:: void cuda::unregisterPageLocked(Mat& m)
 
     :param m: Input matrix.
 
 
 
-gpu::Stream
------------
-.. ocv:class:: gpu::Stream
+cuda::Stream
+------------
+.. ocv:class:: cuda::Stream
 
 This class encapsulates a queue of asynchronous calls.
 
@@ -265,45 +265,45 @@ This class encapsulates a queue of asynchronous calls.
 
 
 
-gpu::Stream::queryIfComplete
-----------------------------
+cuda::Stream::queryIfComplete
+-----------------------------
 Returns ``true`` if the current stream queue is finished. Otherwise, it returns false.
 
-.. ocv:function:: bool gpu::Stream::queryIfComplete()
+.. ocv:function:: bool cuda::Stream::queryIfComplete()
 
 
 
-gpu::Stream::waitForCompletion
-------------------------------
+cuda::Stream::waitForCompletion
+-------------------------------
 Blocks the current CPU thread until all operations in the stream are complete.
 
-.. ocv:function:: void gpu::Stream::waitForCompletion()
+.. ocv:function:: void cuda::Stream::waitForCompletion()
 
 
 
-gpu::Stream::waitEvent
-----------------------
+cuda::Stream::waitEvent
+-----------------------
 Makes a compute stream wait on an event.
 
-.. ocv:function:: void gpu::Stream::waitEvent(const Event& event)
+.. ocv:function:: void cuda::Stream::waitEvent(const Event& event)
 
 
 
-gpu::Stream::enqueueHostCallback
---------------------------------
+cuda::Stream::enqueueHostCallback
+---------------------------------
 Adds a callback to be called on the host after all currently enqueued items in the stream have completed.
 
-.. ocv:function:: void gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
+.. ocv:function:: void cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
 
 .. note:: Callbacks must not make any CUDA API calls. Callbacks must not perform any synchronization that may depend on outstanding device work or other callbacks that are not mandated to run earlier.  Callbacks without a mandated order (in independent streams) execute in undefined order and may be serialized.
 
 
 
-gpu::StreamAccessor
--------------------
-.. ocv:struct:: gpu::StreamAccessor
+cuda::StreamAccessor
+--------------------
+.. ocv:struct:: cuda::StreamAccessor
 
-Class that enables getting ``cudaStream_t`` from :ocv:class:`gpu::Stream` and is declared in ``stream_accessor.hpp`` because it is the only public header that depends on the CUDA Runtime API. Including it brings a dependency to your code. ::
+Class that enables getting ``cudaStream_t`` from :ocv:class:`cuda::Stream` and is declared in ``stream_accessor.hpp`` because it is the only public header that depends on the CUDA Runtime API. Including it brings a dependency to your code. ::
 
     struct StreamAccessor
     {

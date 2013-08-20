@@ -1,6 +1,6 @@
-********************************************
-gpuimgproc. GPU-accelerated Image Processing
-********************************************
+**********************************************
+cudaimgproc. CUDA-accelerated Image Processing
+**********************************************
 
 .. toctree::
     :maxdepth: 1

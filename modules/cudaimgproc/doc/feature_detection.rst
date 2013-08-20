@@ -5,9 +5,9 @@ Feature Detection
 
 
 
-gpu::CornernessCriteria
------------------------
-.. ocv:class:: gpu::CornernessCriteria : public Algorithm
+cuda::CornernessCriteria
+------------------------
+.. ocv:class:: cuda::CornernessCriteria : public Algorithm
 
 Base class for Cornerness Criteria computation. ::
 
@@ -19,11 +19,11 @@ Base class for Cornerness Criteria computation. ::
 
 
 
-gpu::CornernessCriteria::compute
---------------------------------
+cuda::CornernessCriteria::compute
+---------------------------------
 Computes the cornerness criteria at each image pixel.
 
-.. ocv:function:: void gpu::CornernessCriteria::compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::CornernessCriteria::compute(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source image.
 
@@ -33,11 +33,11 @@ Computes the cornerness criteria at each image pixel.
 
 
 
-gpu::createHarrisCorner
------------------------
+cuda::createHarrisCorner
+------------------------
 Creates implementation for Harris cornerness criteria.
 
-.. ocv:function:: Ptr<CornernessCriteria> gpu::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101)
+.. ocv:function:: Ptr<CornernessCriteria> cuda::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType = BORDER_REFLECT101)
 
     :param srcType: Input source type. Only  ``CV_8UC1`` and  ``CV_32FC1`` are supported for now.
 
@@ -53,11 +53,11 @@ Creates implementation for Harris cornerness criteria.
 
 
 
-gpu::createMinEigenValCorner
-----------------------------
+cuda::createMinEigenValCorner
+-----------------------------
 Creates implementation for the minimum eigen value of a 2x2 derivative covariation matrix (the cornerness criteria).
 
-.. ocv:function:: Ptr<CornernessCriteria> gpu::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101)
+.. ocv:function:: Ptr<CornernessCriteria> cuda::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType = BORDER_REFLECT101)
 
     :param srcType: Input source type. Only  ``CV_8UC1`` and  ``CV_32FC1`` are supported for now.
 
@@ -71,9 +71,9 @@ Creates implementation for the minimum eigen value of a 2x2 derivative covariati
 
 
 
-gpu::CornersDetector
---------------------
-.. ocv:class:: gpu::CornersDetector : public Algorithm
+cuda::CornersDetector
+---------------------
+.. ocv:class:: cuda::CornersDetector : public Algorithm
 
 Base class for Corners Detector. ::
 
@@ -85,11 +85,11 @@ Base class for Corners Detector. ::
 
 
 
-gpu::CornersDetector::detect
-----------------------------
+cuda::CornersDetector::detect
+-----------------------------
 Determines strong corners on an image.
 
-.. ocv:function:: void gpu::CornersDetector::detect(InputArray image, OutputArray corners, InputArray mask = noArray())
+.. ocv:function:: void cuda::CornersDetector::detect(InputArray image, OutputArray corners, InputArray mask = noArray())
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -99,11 +99,11 @@ Determines strong corners on an image.
 
 
 
-gpu::createGoodFeaturesToTrackDetector
---------------------------------------
-Creates implementation for :ocv:class:`gpu::CornersDetector` .
+cuda::createGoodFeaturesToTrackDetector
+---------------------------------------
+Creates implementation for :ocv:class:`cuda::CornersDetector` .
 
-.. ocv:function:: Ptr<CornersDetector> gpu::createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0, int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
+.. ocv:function:: Ptr<CornersDetector> cuda::createGoodFeaturesToTrackDetector(int srcType, int maxCorners = 1000, double qualityLevel = 0.01, double minDistance = 0.0, int blockSize = 3, bool useHarrisDetector = false, double harrisK = 0.04)
 
     :param srcType: Input source type. Only  ``CV_8UC1`` and  ``CV_32FC1`` are supported for now.
 

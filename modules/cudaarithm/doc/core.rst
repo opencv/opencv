@@ -5,13 +5,13 @@ Core Operations on Matrices
 
 
 
-gpu::merge
-----------
+cuda::merge
+-----------
 Makes a multi-channel matrix out of several single-channel matrices.
 
-.. ocv:function:: void gpu::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Array/vector of source matrices.
 
@@ -25,13 +25,13 @@ Makes a multi-channel matrix out of several single-channel matrices.
 
 
 
-gpu::split
-----------
+cuda::split
+-----------
 Copies each plane of a multi-channel matrix into an array.
 
-.. ocv:function:: void gpu::split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::split(InputArray src, GpuMat* dst, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::split(InputArray src, vector<GpuMat>& dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::split(InputArray src, vector<GpuMat>& dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -43,11 +43,11 @@ Copies each plane of a multi-channel matrix into an array.
 
 
 
-gpu::transpose
---------------
+cuda::transpose
+---------------
 Transposes a matrix.
 
-.. ocv:function:: void gpu::transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::transpose(InputArray src1, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src1: Source matrix. 1-, 4-, 8-byte element sizes are supported for now.
 
@@ -59,11 +59,11 @@ Transposes a matrix.
 
 
 
-gpu::flip
----------
+cuda::flip
+----------
 Flips a 2D matrix around vertical, horizontal, or both axes.
 
-.. ocv:function:: void gpu::flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::flip(InputArray src, OutputArray dst, int flipCode, Stream& stream = Stream::Null())
 
     :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U``, ``CV_16U``, ``CV_32S`` or ``CV_32F`` depth.
 
@@ -83,9 +83,9 @@ Flips a 2D matrix around vertical, horizontal, or both axes.
 
 
 
-gpu::LookUpTable
-----------------
-.. ocv:class:: gpu::LookUpTable : public Algorithm
+cuda::LookUpTable
+-----------------
+.. ocv:class:: cuda::LookUpTable : public Algorithm
 
 Base class for transform using lookup table. ::
 
@@ -99,11 +99,11 @@ Base class for transform using lookup table. ::
 
 
 
-gpu::LookUpTable::transform
----------------------------
+cuda::LookUpTable::transform
+----------------------------
 Transforms the source matrix into the destination matrix using the given look-up table: ``dst(I) = lut(src(I))`` .
 
-.. ocv:function:: void gpu::LookUpTable::transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::LookUpTable::transform(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.  ``CV_8UC1``  and  ``CV_8UC3``  matrices are supported for now.
 
@@ -113,9 +113,9 @@ Transforms the source matrix into the destination matrix using the given look-up
 
 
 
-gpu::createLookUpTable
-----------------------
-Creates implementation for :ocv:class:`gpu::LookUpTable` .
+cuda::createLookUpTable
+-----------------------
+Creates implementation for :ocv:class:`cuda::LookUpTable` .
 
 .. ocv:function:: Ptr<LookUpTable> createLookUpTable(InputArray lut)
 
@@ -123,11 +123,11 @@ Creates implementation for :ocv:class:`gpu::LookUpTable` .
 
 
 
-gpu::copyMakeBorder
------------------------
+cuda::copyMakeBorder
+--------------------
 Forms a border around an image.
 
-.. ocv:function:: void gpu::copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, Scalar value = Scalar(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::copyMakeBorder(InputArray src, OutputArray dst, int top, int bottom, int left, int right, int borderType, Scalar value = Scalar(), Stream& stream = Stream::Null())
 
     :param src: Source image. ``CV_8UC1`` , ``CV_8UC4`` , ``CV_32SC1`` , and ``CV_32FC1`` types are supported.
 

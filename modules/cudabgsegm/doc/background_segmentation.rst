@@ -5,11 +5,11 @@ Background Segmentation
 
 
 
-gpu::BackgroundSubtractorMOG
-----------------------------
+cuda::BackgroundSubtractorMOG
+-----------------------------
 Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
-.. ocv:class:: gpu::BackgroundSubtractorMOG : public cv::BackgroundSubtractorMOG
+.. ocv:class:: cuda::BackgroundSubtractorMOG : public cv::BackgroundSubtractorMOG
 
 The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2001]_.
 
@@ -20,11 +20,12 @@ The class discriminates between foreground and background pixels by building and
    * An example on gaussian mixture based background/foreground segmantation can be found at opencv_source_code/samples/gpu/bgfg_segm.cpp
 
 
-gpu::createBackgroundSubtractorMOG
-----------------------------------
+
+cuda::createBackgroundSubtractorMOG
+-----------------------------------
 Creates mixture-of-gaussian background subtractor
 
-.. ocv:function:: Ptr<gpu::BackgroundSubtractorMOG> gpu::createBackgroundSubtractorMOG(int history=200, int nmixtures=5, double backgroundRatio=0.7, double noiseSigma=0)
+.. ocv:function:: Ptr<cuda::BackgroundSubtractorMOG> cuda::createBackgroundSubtractorMOG(int history=200, int nmixtures=5, double backgroundRatio=0.7, double noiseSigma=0)
 
     :param history: Length of the history.
 
@@ -36,11 +37,11 @@ Creates mixture-of-gaussian background subtractor
 
 
 
-gpu::BackgroundSubtractorMOG2
------------------------------
+cuda::BackgroundSubtractorMOG2
+------------------------------
 Gaussian Mixture-based Background/Foreground Segmentation Algorithm.
 
-.. ocv:class:: gpu::BackgroundSubtractorMOG2 : public cv::BackgroundSubtractorMOG2
+.. ocv:class:: cuda::BackgroundSubtractorMOG2 : public cv::BackgroundSubtractorMOG2
 
 The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [MOG2004]_.
 
@@ -48,11 +49,11 @@ The class discriminates between foreground and background pixels by building and
 
 
 
-gpu::createBackgroundSubtractorMOG2
------------------------------------
+cuda::createBackgroundSubtractorMOG2
+------------------------------------
 Creates MOG2 Background Subtractor
 
-.. ocv:function:: Ptr<gpu::BackgroundSubtractorMOG2> gpu::createBackgroundSubtractorMOG2( int history=500, double varThreshold=16, bool detectShadows=true )
+.. ocv:function:: Ptr<cuda::BackgroundSubtractorMOG2> cuda::createBackgroundSubtractorMOG2( int history=500, double varThreshold=16, bool detectShadows=true )
 
   :param history: Length of the history.
 
@@ -62,21 +63,21 @@ Creates MOG2 Background Subtractor
 
 
 
-gpu::BackgroundSubtractorGMG
-----------------------------
+cuda::BackgroundSubtractorGMG
+-----------------------------
 Background/Foreground Segmentation Algorithm.
 
-.. ocv:class:: gpu::BackgroundSubtractorGMG : public cv::BackgroundSubtractorGMG
+.. ocv:class:: cuda::BackgroundSubtractorGMG : public cv::BackgroundSubtractorGMG
 
 The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [GMG2012]_.
 
 
 
-gpu::createBackgroundSubtractorGMG
-----------------------------------
+cuda::createBackgroundSubtractorGMG
+-----------------------------------
 Creates GMG Background Subtractor
 
-.. ocv:function:: Ptr<gpu::BackgroundSubtractorGMG> gpu::createBackgroundSubtractorGMG(int initializationFrames = 120, double decisionThreshold = 0.8)
+.. ocv:function:: Ptr<cuda::BackgroundSubtractorGMG> cuda::createBackgroundSubtractorGMG(int initializationFrames = 120, double decisionThreshold = 0.8)
 
     :param initializationFrames: Number of frames of video to use to initialize histograms.
 
@@ -84,10 +85,10 @@ Creates GMG Background Subtractor
 
 
 
-gpu::BackgroundSubtractorFGD
-----------------------------
+cuda::BackgroundSubtractorFGD
+-----------------------------
 
-.. ocv:class:: gpu::BackgroundSubtractorFGD : public cv::BackgroundSubtractor
+.. ocv:class:: cuda::BackgroundSubtractorFGD : public cv::BackgroundSubtractor
 
 The class discriminates between foreground and background pixels by building and maintaining a model of the background. Any pixel which does not fit this model is then deemed to be foreground. The class implements algorithm described in [FGD2003]_. ::
 
@@ -101,21 +102,21 @@ The class discriminates between foreground and background pixels by building and
 
 
 
-gpu::BackgroundSubtractorFGD::getForegroundRegions
---------------------------------------------------
+cuda::BackgroundSubtractorFGD::getForegroundRegions
+---------------------------------------------------
 Returns the output foreground regions calculated by :ocv:func:`findContours`.
 
-.. ocv:function:: void gpu::BackgroundSubtractorFGD::getForegroundRegions(OutputArrayOfArrays foreground_regions)
+.. ocv:function:: void cuda::BackgroundSubtractorFGD::getForegroundRegions(OutputArrayOfArrays foreground_regions)
 
     :params foreground_regions: Output array (CPU memory).
 
 
 
-gpu::createBackgroundSubtractorFGD
-----------------------------------
+cuda::createBackgroundSubtractorFGD
+-----------------------------------
 Creates FGD Background Subtractor
 
-.. ocv:function:: Ptr<gpu::BackgroundSubtractorGMG> gpu::createBackgroundSubtractorFGD(const FGDParams& params = FGDParams())
+.. ocv:function:: Ptr<cuda::BackgroundSubtractorGMG> cuda::createBackgroundSubtractorFGD(const FGDParams& params = FGDParams())
 
     :param params: Algorithm's parameters. See [FGD2003]_ for explanation.
 

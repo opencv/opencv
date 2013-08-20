@@ -9,11 +9,13 @@ Functions and classes described in this section are used to perform various line
 
    * An example containing all basic morphology operators like erode and dilate can be found at opencv_source_code/samples/gpu/morphology.cpp
 
-gpu::Filter
------------
-.. ocv:class:: gpu::Filter
 
-Common interface for all GPU filters ::
+
+cuda::Filter
+------------
+.. ocv:class:: cuda::Filter
+
+Common interface for all CUDA filters ::
 
     class CV_EXPORTS Filter : public Algorithm
     {
@@ -23,11 +25,11 @@ Common interface for all GPU filters ::
 
 
 
-gpu::Filter::apply
-------------------
+cuda::Filter::apply
+-------------------
 Applies the specified filter to the image.
 
-.. ocv:function:: void gpu::Filter::apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0
+.. ocv:function:: void cuda::Filter::apply(InputArray src, OutputArray dst, Stream& stream = Stream::Null()) = 0
 
     :param src: Input image.
 
@@ -37,11 +39,11 @@ Applies the specified filter to the image.
 
 
 
-gpu::createBoxFilter
---------------------
+cuda::createBoxFilter
+---------------------
 Creates a normalized 2D box filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1,-1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createBoxFilter(int srcType, int dstType, Size ksize, Point anchor = Point(-1,-1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input image type. Only ``CV_8UC1`` and ``CV_8UC4`` are supported for now.
 
@@ -59,11 +61,11 @@ Creates a normalized 2D box filter.
 
 
 
-gpu::createLinearFilter
------------------------
+cuda::createLinearFilter
+------------------------
 Creates a non-separable linear 2D filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1,-1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor = Point(-1,-1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input image type. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
 
@@ -81,11 +83,11 @@ Creates a non-separable linear 2D filter.
 
 
 
-gpu::createLaplacianFilter
---------------------------
+cuda::createLaplacianFilter
+---------------------------
 Creates a Laplacian operator.
 
-.. ocv:function:: Ptr<Filter> gpu::createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createLaplacianFilter(int srcType, int dstType, int ksize = 1, double scale = 1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input image type. Supports  ``CV_8U``  ,  ``CV_16U``  and  ``CV_32F``  one and four channel image.
 
@@ -103,11 +105,11 @@ Creates a Laplacian operator.
 
 
 
-gpu::createSeparableLinearFilter
---------------------------------
+cuda::createSeparableLinearFilter
+---------------------------------
 Creates a separable linear filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+.. ocv:function:: Ptr<Filter> cuda::createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor = Point(-1,-1), int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
 
     :param srcType: Source array type.
 
@@ -127,11 +129,11 @@ Creates a separable linear filter.
 
 
 
-gpu::createDerivFilter
-----------------------
+cuda::createDerivFilter
+-----------------------
 Creates a generalized Deriv operator.
 
-.. ocv:function:: Ptr<Filter> gpu::createDerivFilter(int srcType, int dstType, int dx, int dy, int ksize, bool normalize = false, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+.. ocv:function:: Ptr<Filter> cuda::createDerivFilter(int srcType, int dstType, int dx, int dy, int ksize, bool normalize = false, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
 
     :param srcType: Source image type.
 
@@ -153,11 +155,11 @@ Creates a generalized Deriv operator.
 
 
 
-gpu::createSobelFilter
-----------------------
+cuda::createSobelFilter
+-----------------------
 Creates a Sobel operator.
 
-.. ocv:function:: Ptr<Filter> gpu::createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+.. ocv:function:: Ptr<Filter> cuda::createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize = 3, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
 
     :param srcType: Source image type.
 
@@ -179,11 +181,11 @@ Creates a Sobel operator.
 
 
 
-gpu::createScharrFilter
------------------------
+cuda::createScharrFilter
+------------------------
 Creates a vertical or horizontal Scharr operator.
 
-.. ocv:function:: Ptr<Filter> gpu::createScharrFilter(int srcType, int dstType, int dx, int dy, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+.. ocv:function:: Ptr<Filter> cuda::createScharrFilter(int srcType, int dstType, int dx, int dy, double scale = 1, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
 
     :param srcType: Source image type.
 
@@ -203,11 +205,11 @@ Creates a vertical or horizontal Scharr operator.
 
 
 
-gpu::createGaussianFilter
--------------------------
+cuda::createGaussianFilter
+--------------------------
 Creates a Gaussian filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createGaussianFilter(int srcType, int dstType, Size ksize, double sigma1, double sigma2 = 0, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
+.. ocv:function:: Ptr<Filter> cuda::createGaussianFilter(int srcType, int dstType, Size ksize, double sigma1, double sigma2 = 0, int rowBorderMode = BORDER_DEFAULT, int columnBorderMode = -1)
 
     :param srcType: Source image type.
 
@@ -227,11 +229,11 @@ Creates a Gaussian filter.
 
 
 
-gpu::createMorphologyFilter
----------------------------
+cuda::createMorphologyFilter
+----------------------------
 Creates a 2D morphological filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1)
+.. ocv:function:: Ptr<Filter> cuda::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor = Point(-1, -1), int iterations = 1)
 
     :param op: Type of morphological operation. The following types are possible:
 
@@ -261,11 +263,11 @@ Creates a 2D morphological filter.
 
 
 
-gpu::createBoxMaxFilter
------------------------
+cuda::createBoxMaxFilter
+------------------------
 Creates the maximum filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createBoxMaxFilter(int srcType, Size ksize, Point anchor = Point(-1, -1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createBoxMaxFilter(int srcType, Size ksize, Point anchor = Point(-1, -1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input/output image type. Only  ``CV_8UC1``  and  ``CV_8UC4`` are supported.
 
@@ -279,11 +281,11 @@ Creates the maximum filter.
 
 
 
-gpu::createBoxMinFilter
------------------------
+cuda::createBoxMinFilter
+------------------------
 Creates the minimum filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createBoxMinFilter(int srcType, Size ksize, Point anchor = Point(-1, -1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createBoxMinFilter(int srcType, Size ksize, Point anchor = Point(-1, -1), int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input/output image type. Only  ``CV_8UC1``  and  ``CV_8UC4`` are supported.
 
@@ -297,11 +299,11 @@ Creates the minimum filter.
 
 
 
-gpu::createRowSumFilter
------------------------
+cuda::createRowSumFilter
+------------------------
 Creates a horizontal 1D box filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createRowSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input image type. Only ``CV_8UC1`` type is supported for now.
 
@@ -317,11 +319,11 @@ Creates a horizontal 1D box filter.
 
 
 
-gpu::createColumnSumFilter
---------------------------
+cuda::createColumnSumFilter
+---------------------------
 Creates a vertical 1D box filter.
 
-.. ocv:function:: Ptr<Filter> gpu::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
+.. ocv:function:: Ptr<Filter> cuda::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0))
 
     :param srcType: Input image type. Only ``CV_8UC1`` type is supported for now.
 

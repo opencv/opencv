@@ -5,9 +5,9 @@ Hough Transform
 
 
 
-gpu::HoughLinesDetector
------------------------
-.. ocv:class:: gpu::HoughLinesDetector : public Algorithm
+cuda::HoughLinesDetector
+------------------------
+.. ocv:class:: cuda::HoughLinesDetector : public Algorithm
 
 Base class for lines detector algorithm. ::
 
@@ -35,11 +35,11 @@ Base class for lines detector algorithm. ::
 
 
 
-gpu::HoughLinesDetector::detect
--------------------------------
+cuda::HoughLinesDetector::detect
+--------------------------------
 Finds lines in a binary image using the classical Hough transform.
 
-.. ocv:function:: void gpu::HoughLinesDetector::detect(InputArray src, OutputArray lines)
+.. ocv:function:: void cuda::HoughLinesDetector::detect(InputArray src, OutputArray lines)
 
     :param src: 8-bit, single-channel binary source image.
 
@@ -49,13 +49,13 @@ Finds lines in a binary image using the classical Hough transform.
 
 
 
-gpu::HoughLinesDetector::downloadResults
-----------------------------------------
-Downloads results from :ocv:func:`gpu::HoughLinesDetector::detect` to host memory.
+cuda::HoughLinesDetector::downloadResults
+-----------------------------------------
+Downloads results from :ocv:func:`cuda::HoughLinesDetector::detect` to host memory.
 
-.. ocv:function:: void gpu::HoughLinesDetector::downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray())
+.. ocv:function:: void cuda::HoughLinesDetector::downloadResults(InputArray d_lines, OutputArray h_lines, OutputArray h_votes = noArray())
 
-    :param d_lines: Result of :ocv:func:`gpu::HoughLinesDetector::detect` .
+    :param d_lines: Result of :ocv:func:`cuda::HoughLinesDetector::detect` .
 
     :param h_lines: Output host array.
 
@@ -63,11 +63,11 @@ Downloads results from :ocv:func:`gpu::HoughLinesDetector::detect` to host memor
 
 
 
-gpu::createHoughLinesDetector
------------------------------
-Creates implementation for :ocv:class:`gpu::HoughLinesDetector` .
+cuda::createHoughLinesDetector
+------------------------------
+Creates implementation for :ocv:class:`cuda::HoughLinesDetector` .
 
-.. ocv:function:: Ptr<HoughLinesDetector> gpu::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
+.. ocv:function:: Ptr<HoughLinesDetector> cuda::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort = false, int maxLines = 4096)
 
     :param rho: Distance resolution of the accumulator in pixels.
 
@@ -81,9 +81,9 @@ Creates implementation for :ocv:class:`gpu::HoughLinesDetector` .
 
 
 
-gpu::HoughSegmentDetector
--------------------------
-.. ocv:class:: gpu::HoughSegmentDetector : public Algorithm
+cuda::HoughSegmentDetector
+--------------------------
+.. ocv:class:: cuda::HoughSegmentDetector : public Algorithm
 
 Base class for line segments detector algorithm. ::
 
@@ -113,11 +113,11 @@ Base class for line segments detector algorithm. ::
    * An example using the Hough segment detector can be found at opencv_source_code/samples/gpu/houghlines.cpp
 
 
-gpu::HoughSegmentDetector::detect
----------------------------------
+cuda::HoughSegmentDetector::detect
+----------------------------------
 Finds line segments in a binary image using the probabilistic Hough transform.
 
-.. ocv:function:: void gpu::HoughSegmentDetector::detect(InputArray src, OutputArray lines)
+.. ocv:function:: void cuda::HoughSegmentDetector::detect(InputArray src, OutputArray lines)
 
     :param src: 8-bit, single-channel binary source image.
 
@@ -127,11 +127,11 @@ Finds line segments in a binary image using the probabilistic Hough transform.
 
 
 
-gpu::createHoughSegmentDetector
--------------------------------
-Creates implementation for :ocv:class:`gpu::HoughSegmentDetector` .
+cuda::createHoughSegmentDetector
+--------------------------------
+Creates implementation for :ocv:class:`cuda::HoughSegmentDetector` .
 
-.. ocv:function:: Ptr<HoughSegmentDetector> gpu::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096)
+.. ocv:function:: Ptr<HoughSegmentDetector> cuda::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines = 4096)
 
     :param rho: Distance resolution of the accumulator in pixels.
 
@@ -145,9 +145,9 @@ Creates implementation for :ocv:class:`gpu::HoughSegmentDetector` .
 
 
 
-gpu::HoughCirclesDetector
--------------------------
-.. ocv:class:: gpu::HoughCirclesDetector : public Algorithm
+cuda::HoughCirclesDetector
+--------------------------
+.. ocv:class:: cuda::HoughCirclesDetector : public Algorithm
 
 Base class for circles detector algorithm. ::
 
@@ -180,11 +180,11 @@ Base class for circles detector algorithm. ::
 
 
 
-gpu::HoughCirclesDetector::detect
----------------------------------
+cuda::HoughCirclesDetector::detect
+----------------------------------
 Finds circles in a grayscale image using the Hough transform.
 
-.. ocv:function:: void gpu::HoughCirclesDetector::detect(InputArray src, OutputArray circles)
+.. ocv:function:: void cuda::HoughCirclesDetector::detect(InputArray src, OutputArray circles)
 
     :param src: 8-bit, single-channel grayscale input image.
 
@@ -194,11 +194,11 @@ Finds circles in a grayscale image using the Hough transform.
 
 
 
-gpu::createHoughCirclesDetector
--------------------------------
-Creates implementation for :ocv:class:`gpu::HoughCirclesDetector` .
+cuda::createHoughCirclesDetector
+--------------------------------
+Creates implementation for :ocv:class:`cuda::HoughCirclesDetector` .
 
-.. ocv:function:: Ptr<HoughCirclesDetector> gpu::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
+.. ocv:function:: Ptr<HoughCirclesDetector> cuda::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
 
     :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
@@ -216,19 +216,19 @@ Creates implementation for :ocv:class:`gpu::HoughCirclesDetector` .
 
 
 
-gpu::createGeneralizedHoughBallard
-----------------------------------
+cuda::createGeneralizedHoughBallard
+-----------------------------------
 Creates implementation for generalized hough transform from [Ballard1981]_ .
 
-.. ocv:function:: Ptr<GeneralizedHoughBallard> gpu::createGeneralizedHoughBallard()
+.. ocv:function:: Ptr<GeneralizedHoughBallard> cuda::createGeneralizedHoughBallard()
 
 
 
-gpu::createGeneralizedHoughGuil
--------------------------------
+cuda::createGeneralizedHoughGuil
+--------------------------------
 Creates implementation for generalized hough transform from [Guil1999]_ .
 
-.. ocv:function:: Ptr<GeneralizedHoughGuil> gpu::createGeneralizedHoughGuil()
+.. ocv:function:: Ptr<GeneralizedHoughGuil> cuda::createGeneralizedHoughGuil()
 
 
 

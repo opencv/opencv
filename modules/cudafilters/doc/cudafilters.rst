@@ -1,6 +1,6 @@
-*******************************************
-gpufilters. GPU-accelerated Image Filtering
-*******************************************
+*********************************************
+cudafilters. CUDA-accelerated Image Filtering
+*********************************************
 
 .. toctree::
     :maxdepth: 1

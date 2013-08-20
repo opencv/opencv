@@ -5,11 +5,11 @@ Per-element Operations
 
 
 
-gpu::add
---------
+cuda::add
+---------
 Computes a matrix-matrix or matrix-scalar sum.
 
-.. ocv:function:: void gpu::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -27,11 +27,11 @@ Computes a matrix-matrix or matrix-scalar sum.
 
 
 
-gpu::subtract
--------------
+cuda::subtract
+--------------
 Computes a matrix-matrix or matrix-scalar difference.
 
-.. ocv:function:: void gpu::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -49,11 +49,11 @@ Computes a matrix-matrix or matrix-scalar difference.
 
 
 
-gpu::multiply
--------------
+cuda::multiply
+--------------
 Computes a matrix-matrix or matrix-scalar per-element product.
 
-.. ocv:function:: void gpu::multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -71,13 +71,13 @@ Computes a matrix-matrix or matrix-scalar per-element product.
 
 
 
-gpu::divide
------------
+cuda::divide
+------------
 Computes a matrix-matrix or matrix-scalar division.
 
-.. ocv:function:: void gpu::divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::divide(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::divide(double src1, InputArray src2, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::divide(double src1, InputArray src2, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or a scalar.
 
@@ -97,11 +97,11 @@ This function, in contrast to :ocv:func:`divide`, uses a round-down rounding mod
 
 
 
-gpu::absdiff
-------------
+cuda::absdiff
+-------------
 Computes per-element absolute difference of two matrices (or of a matrix and scalar).
 
-.. ocv:function:: void gpu::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -115,11 +115,11 @@ Computes per-element absolute difference of two matrices (or of a matrix and sca
 
 
 
-gpu::abs
---------
+cuda::abs
+---------
 Computes an absolute value of each matrix element.
 
-.. ocv:function:: void gpu::abs(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::abs(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -131,11 +131,11 @@ Computes an absolute value of each matrix element.
 
 
 
-gpu::sqr
---------
+cuda::sqr
+---------
 Computes a square value of each matrix element.
 
-.. ocv:function:: void gpu::sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::sqr(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -145,11 +145,11 @@ Computes a square value of each matrix element.
 
 
 
-gpu::sqrt
----------
+cuda::sqrt
+----------
 Computes a square root of each matrix element.
 
-.. ocv:function:: void gpu::sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::sqrt(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -161,11 +161,11 @@ Computes a square root of each matrix element.
 
 
 
-gpu::exp
---------
+cuda::exp
+---------
 Computes an exponent of each matrix element.
 
-.. ocv:function:: void gpu::exp(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::exp(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -177,11 +177,11 @@ Computes an exponent of each matrix element.
 
 
 
-gpu::log
---------
+cuda::log
+---------
 Computes a natural logarithm of absolute value of each matrix element.
 
-.. ocv:function:: void gpu::log(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::log(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -193,11 +193,11 @@ Computes a natural logarithm of absolute value of each matrix element.
 
 
 
-gpu::pow
---------
+cuda::pow
+---------
 Raises every matrix element to a power.
 
-.. ocv:function:: void gpu::pow(InputArray src, double power, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::pow(InputArray src, double power, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -217,11 +217,11 @@ The function ``pow`` raises every element of the input matrix to ``power`` :
 
 
 
-gpu::compare
-------------
+cuda::compare
+-------------
 Compares elements of two matrices (or of a matrix and scalar).
 
-.. ocv:function:: void gpu::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -244,11 +244,11 @@ Compares elements of two matrices (or of a matrix and scalar).
 
 
 
-gpu::bitwise_not
-----------------
+cuda::bitwise_not
+-----------------
 Performs a per-element bitwise inversion.
 
-.. ocv:function:: void gpu::bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::bitwise_not(InputArray src, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
 
     :param src: Source matrix.
 
@@ -260,11 +260,11 @@ Performs a per-element bitwise inversion.
 
 
 
-gpu::bitwise_or
----------------
+cuda::bitwise_or
+----------------
 Performs a per-element bitwise disjunction of two matrices (or of matrix and scalar).
 
-.. ocv:function:: void gpu::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -278,11 +278,11 @@ Performs a per-element bitwise disjunction of two matrices (or of matrix and sca
 
 
 
-gpu::bitwise_and
-----------------
+cuda::bitwise_and
+-----------------
 Performs a per-element bitwise conjunction of two matrices (or of matrix and scalar).
 
-.. ocv:function:: void gpu::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -296,11 +296,11 @@ Performs a per-element bitwise conjunction of two matrices (or of matrix and sca
 
 
 
-gpu::bitwise_xor
-----------------
+cuda::bitwise_xor
+-----------------
 Performs a per-element bitwise ``exclusive or`` operation of two matrices (or of matrix and scalar).
 
-.. ocv:function:: void gpu::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -314,11 +314,11 @@ Performs a per-element bitwise ``exclusive or`` operation of two matrices (or of
 
 
 
-gpu::rshift
------------
+cuda::rshift
+------------
 Performs pixel by pixel right shift of an image by a constant value.
 
-.. ocv:function:: void gpu::rshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::rshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix. Supports 1, 3 and 4 channels images with integers elements.
 
@@ -330,11 +330,11 @@ Performs pixel by pixel right shift of an image by a constant value.
 
 
 
-gpu::lshift
------------
+cuda::lshift
+------------
 Performs pixel by pixel right left of an image by a constant value.
 
-.. ocv:function:: void gpu::lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::lshift(InputArray src, Scalar_<int> val, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src: Source matrix. Supports 1, 3 and 4 channels images with ``CV_8U`` , ``CV_16U`` or ``CV_32S`` depth.
 
@@ -346,11 +346,11 @@ Performs pixel by pixel right left of an image by a constant value.
 
 
 
-gpu::min
---------
+cuda::min
+---------
 Computes the per-element minimum of two matrices (or a matrix and a scalar).
 
-.. ocv:function:: void gpu::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -364,11 +364,11 @@ Computes the per-element minimum of two matrices (or a matrix and a scalar).
 
 
 
-gpu::max
---------
+cuda::max
+---------
 Computes the per-element maximum of two matrices (or a matrix and a scalar).
 
-.. ocv:function:: void gpu::max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream = Stream::Null())
 
     :param src1: First source matrix or scalar.
 
@@ -382,11 +382,11 @@ Computes the per-element maximum of two matrices (or a matrix and a scalar).
 
 
 
-gpu::addWeighted
-----------------
+cuda::addWeighted
+-----------------
 Computes the weighted sum of two arrays.
 
-.. ocv:function:: void gpu::addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::addWeighted(InputArray src1, double alpha, InputArray src2, double beta, double gamma, OutputArray dst, int dtype = -1, Stream& stream = Stream::Null())
 
     :param src1: First source array.
 
@@ -416,11 +416,11 @@ where ``I`` is a multi-dimensional index of array elements. In case of multi-cha
 
 
 
-gpu::threshold
---------------
+cuda::threshold
+---------------
 Applies a fixed-level threshold to each array element.
 
-.. ocv:function:: double gpu::threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null())
+.. ocv:function:: double cuda::threshold(InputArray src, OutputArray dst, double thresh, double maxval, int type, Stream& stream = Stream::Null())
 
     :param src: Source array (single-channel).
 
@@ -438,13 +438,13 @@ Applies a fixed-level threshold to each array element.
 
 
 
-gpu::magnitude
---------------
+cuda::magnitude
+---------------
 Computes magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitude(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::magnitude(InputArray xy, OutputArray magnitude, Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::magnitude(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null())
 
     :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
 
@@ -460,13 +460,13 @@ Computes magnitudes of complex matrix elements.
 
 
 
-gpu::magnitudeSqr
------------------
+cuda::magnitudeSqr
+------------------
 Computes squared magnitudes of complex matrix elements.
 
-.. ocv:function:: void gpu::magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream=Stream::Null() )
+.. ocv:function:: void cuda::magnitudeSqr(InputArray xy, OutputArray magnitude, Stream& stream=Stream::Null() )
 
-.. ocv:function:: void gpu::magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::magnitudeSqr(InputArray x, InputArray y, OutputArray magnitude, Stream& stream = Stream::Null())
 
     :param xy: Source complex matrix in the interleaved format ( ``CV_32FC2`` ).
 
@@ -480,11 +480,11 @@ Computes squared magnitudes of complex matrix elements.
 
 
 
-gpu::phase
-----------
+cuda::phase
+-----------
 Computes polar angles of complex matrix elements.
 
-.. ocv:function:: void gpu::phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::phase(InputArray x, InputArray y, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null())
 
     :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
@@ -500,11 +500,11 @@ Computes polar angles of complex matrix elements.
 
 
 
-gpu::cartToPolar
-----------------
+cuda::cartToPolar
+-----------------
 Converts Cartesian coordinates into polar.
 
-.. ocv:function:: void gpu::cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::cartToPolar(InputArray x, InputArray y, OutputArray magnitude, OutputArray angle, bool angleInDegrees = false, Stream& stream = Stream::Null())
 
     :param x: Source matrix containing real components ( ``CV_32FC1`` ).
 
@@ -522,11 +522,11 @@ Converts Cartesian coordinates into polar.
 
 
 
-gpu::polarToCart
-----------------
+cuda::polarToCart
+-----------------
 Converts polar coordinates into Cartesian.
 
-.. ocv:function:: void gpu::polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::polarToCart(InputArray magnitude, InputArray angle, OutputArray x, OutputArray y, bool angleInDegrees = false, Stream& stream = Stream::Null())
 
     :param magnitude: Source matrix containing magnitudes ( ``CV_32FC1`` ).
 

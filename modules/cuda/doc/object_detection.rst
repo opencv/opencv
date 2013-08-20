@@ -5,9 +5,9 @@ Object Detection
 
 
 
-gpu::HOGDescriptor
-------------------
-.. ocv:struct:: gpu::HOGDescriptor
+cuda::HOGDescriptor
+-------------------
+.. ocv:struct:: cuda::HOGDescriptor
 
 The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detector. ::
 
@@ -65,15 +65,17 @@ Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and det
 .. note::
 
    * An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/cpp/peopledetect.cpp
-   * A GPU example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/gpu/hog.cpp
+   * A CUDA example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/gpu/hog.cpp
 
    * (Python) An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/python2/peopledetect.py
 
-gpu::HOGDescriptor::HOGDescriptor
--------------------------------------
+
+
+cuda::HOGDescriptor::HOGDescriptor
+----------------------------------
 Creates the ``HOG`` descriptor and detector.
 
-.. ocv:function:: gpu::HOGDescriptor::HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA, double threshold_L2hys=0.2, bool gamma_correction=true, int nlevels=DEFAULT_NLEVELS)
+.. ocv:function:: cuda::HOGDescriptor::HOGDescriptor(Size win_size=Size(64, 128), Size block_size=Size(16, 16), Size block_stride=Size(8, 8), Size cell_size=Size(8, 8), int nbins=9, double win_sigma=DEFAULT_WIN_SIGMA, double threshold_L2hys=0.2, bool gamma_correction=true, int nlevels=DEFAULT_NLEVELS)
 
    :param win_size: Detection window size. Align to block size and block stride.
 
@@ -95,59 +97,59 @@ Creates the ``HOG`` descriptor and detector.
 
 
 
-gpu::HOGDescriptor::getDescriptorSize
------------------------------------------
+cuda::HOGDescriptor::getDescriptorSize
+--------------------------------------
 Returns the number of coefficients required for the classification.
 
-.. ocv:function:: size_t gpu::HOGDescriptor::getDescriptorSize() const
+.. ocv:function:: size_t cuda::HOGDescriptor::getDescriptorSize() const
 
 
 
-gpu::HOGDescriptor::getBlockHistogramSize
----------------------------------------------
+cuda::HOGDescriptor::getBlockHistogramSize
+------------------------------------------
 Returns the block histogram size.
 
-.. ocv:function:: size_t gpu::HOGDescriptor::getBlockHistogramSize() const
+.. ocv:function:: size_t cuda::HOGDescriptor::getBlockHistogramSize() const
 
 
 
-gpu::HOGDescriptor::setSVMDetector
---------------------------------------
+cuda::HOGDescriptor::setSVMDetector
+-----------------------------------
 Sets coefficients for the linear SVM classifier.
 
-.. ocv:function:: void gpu::HOGDescriptor::setSVMDetector(const vector<float>& detector)
+.. ocv:function:: void cuda::HOGDescriptor::setSVMDetector(const vector<float>& detector)
 
 
 
-gpu::HOGDescriptor::getDefaultPeopleDetector
-------------------------------------------------
+cuda::HOGDescriptor::getDefaultPeopleDetector
+---------------------------------------------
 Returns coefficients of the classifier trained for people detection (for default window size).
 
-.. ocv:function:: static vector<float> gpu::HOGDescriptor::getDefaultPeopleDetector()
+.. ocv:function:: static vector<float> cuda::HOGDescriptor::getDefaultPeopleDetector()
 
 
 
-gpu::HOGDescriptor::getPeopleDetector48x96
-----------------------------------------------
+cuda::HOGDescriptor::getPeopleDetector48x96
+-------------------------------------------
 Returns coefficients of the classifier trained for people detection (for 48x96 windows).
 
-.. ocv:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector48x96()
+.. ocv:function:: static vector<float> cuda::HOGDescriptor::getPeopleDetector48x96()
 
 
 
-gpu::HOGDescriptor::getPeopleDetector64x128
------------------------------------------------
+cuda::HOGDescriptor::getPeopleDetector64x128
+--------------------------------------------
 Returns coefficients of the classifier trained for people detection (for 64x128 windows).
 
-.. ocv:function:: static vector<float> gpu::HOGDescriptor::getPeopleDetector64x128()
+.. ocv:function:: static vector<float> cuda::HOGDescriptor::getPeopleDetector64x128()
 
 
 
-gpu::HOGDescriptor::detect
-------------------------------
+cuda::HOGDescriptor::detect
+---------------------------
 Performs object detection without a multi-scale window.
 
-.. ocv:function:: void gpu::HOGDescriptor::detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, Size win_stride=Size(), Size padding=Size())
+.. ocv:function:: void cuda::HOGDescriptor::detect(const GpuMat& img, vector<Point>& found_locations, double hit_threshold=0, Size win_stride=Size(), Size padding=Size())
 
    :param img: Source image.  ``CV_8UC1``  and  ``CV_8UC4`` types are supported for now.
 
@@ -161,17 +163,17 @@ Performs object detection without a multi-scale window.
 
 
 
-gpu::HOGDescriptor::detectMultiScale
-----------------------------------------
+cuda::HOGDescriptor::detectMultiScale
+-------------------------------------
 Performs object detection with a multi-scale window.
 
-.. ocv:function:: void gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, double hit_threshold=0, Size win_stride=Size(), Size padding=Size(), double scale0=1.05, int group_threshold=2)
+.. ocv:function:: void cuda::HOGDescriptor::detectMultiScale(const GpuMat& img, vector<Rect>& found_locations, double hit_threshold=0, Size win_stride=Size(), Size padding=Size(), double scale0=1.05, int group_threshold=2)
 
-   :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
+   :param img: Source image. See  :ocv:func:`cuda::HOGDescriptor::detect`  for type limitations.
 
    :param found_locations: Detected objects boundaries.
 
-   :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :ocv:func:`gpu::HOGDescriptor::detect`  for details.
+   :param hit_threshold: Threshold for the distance between features and SVM classifying plane. See  :ocv:func:`cuda::HOGDescriptor::detect`  for details.
 
    :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -183,13 +185,13 @@ Performs object detection with a multi-scale window.
 
 
 
-gpu::HOGDescriptor::getDescriptors
---------------------------------------
+cuda::HOGDescriptor::getDescriptors
+-----------------------------------
 Returns block descriptors computed for the whole image.
 
-.. ocv:function:: void gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, int descr_format=DESCR_FORMAT_COL_BY_COL)
+.. ocv:function:: void cuda::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, int descr_format=DESCR_FORMAT_COL_BY_COL)
 
-   :param img: Source image. See  :ocv:func:`gpu::HOGDescriptor::detect`  for type limitations.
+   :param img: Source image. See  :ocv:func:`cuda::HOGDescriptor::detect`  for type limitations.
 
    :param win_stride: Window stride. It must be a multiple of block stride.
 
@@ -204,18 +206,19 @@ Returns block descriptors computed for the whole image.
 The function is mainly used to learn the classifier.
 
 
-gpu::CascadeClassifier_GPU
---------------------------
-.. ocv:class:: gpu::CascadeClassifier_GPU
+
+cuda::CascadeClassifier_CUDA
+----------------------------
+.. ocv:class:: cuda::CascadeClassifier_CUDA
 
 Cascade classifier class used for object detection. Supports HAAR and LBP cascades. ::
 
-    class CV_EXPORTS CascadeClassifier_GPU
+    class CV_EXPORTS CascadeClassifier_CUDA
     {
     public:
-            CascadeClassifier_GPU();
-            CascadeClassifier_GPU(const String& filename);
-            ~CascadeClassifier_GPU();
+            CascadeClassifier_CUDA();
+            CascadeClassifier_CUDA(const String& filename);
+            ~CascadeClassifier_CUDA();
 
             bool empty() const;
             bool load(const String& filename);
@@ -239,48 +242,51 @@ Cascade classifier class used for object detection. Supports HAAR and LBP cascad
    * A cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier.cpp
    * A Nvidea API specific cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
 
-gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
------------------------------------------------------
+
+
+cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA
+----------------------------------------------------
 Loads the classifier from a file. Cascade type is detected automatically by constructor parameter.
 
-.. ocv:function:: gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
+.. ocv:function:: cuda::CascadeClassifier_CUDA::CascadeClassifier_CUDA(const String& filename)
 
     :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported for HAAR and only new type of OpenCV XML cascade supported for LBP.
 
 
 
-gpu::CascadeClassifier_GPU::empty
--------------------------------------
+cuda::CascadeClassifier_CUDA::empty
+-----------------------------------
 Checks whether the classifier is loaded or not.
 
-.. ocv:function:: bool gpu::CascadeClassifier_GPU::empty() const
+.. ocv:function:: bool cuda::CascadeClassifier_CUDA::empty() const
 
 
 
-gpu::CascadeClassifier_GPU::load
-------------------------------------
+cuda::CascadeClassifier_CUDA::load
+----------------------------------
 Loads the classifier from a file. The previous content is destroyed.
 
-.. ocv:function:: bool gpu::CascadeClassifier_GPU::load(const String& filename)
+.. ocv:function:: bool cuda::CascadeClassifier_CUDA::load(const String& filename)
 
     :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported for HAAR and only new type of OpenCV XML cascade supported for LBP.
 
 
-gpu::CascadeClassifier_GPU::release
----------------------------------------
+
+cuda::CascadeClassifier_CUDA::release
+-------------------------------------
 Destroys the loaded classifier.
 
-.. ocv:function:: void gpu::CascadeClassifier_GPU::release()
+.. ocv:function:: void cuda::CascadeClassifier_CUDA::release()
 
 
 
-gpu::CascadeClassifier_GPU::detectMultiScale
-------------------------------------------------
+cuda::CascadeClassifier_CUDA::detectMultiScale
+----------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
+.. ocv:function:: int cuda::CascadeClassifier_CUDA::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, double scaleFactor=1.2, int minNeighbors=4, Size minSize=Size())
 
-.. ocv:function:: int gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4)
+.. ocv:function:: int cuda::CascadeClassifier_CUDA::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize = Size(), double scaleFactor = 1.1, int minNeighbors = 4)
 
     :param image: Matrix of type  ``CV_8U``  containing an image where objects should be detected.
 
@@ -298,7 +304,7 @@ The detected objects are returned as a list of rectangles.
 
 The function returns the number of detected objects, so you can retrieve them as in the following example: ::
 
-    gpu::CascadeClassifier_GPU cascade_gpu(...);
+    cuda::CascadeClassifier_CUDA cascade_gpu(...);
 
     Mat image_cpu = imread(...)
     GpuMat image_gpu(image_cpu);

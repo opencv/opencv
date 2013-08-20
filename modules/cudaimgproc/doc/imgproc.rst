@@ -5,9 +5,9 @@ Image Processing
 
 
 
-gpu::CannyEdgeDetector
-----------------------
-.. ocv:class:: gpu::CannyEdgeDetector : public Algorithm
+cuda::CannyEdgeDetector
+-----------------------
+.. ocv:class:: cuda::CannyEdgeDetector : public Algorithm
 
 Base class for Canny Edge Detector. ::
 
@@ -32,13 +32,13 @@ Base class for Canny Edge Detector. ::
 
 
 
-gpu::CannyEdgeDetector::detect
-------------------------------
+cuda::CannyEdgeDetector::detect
+-------------------------------
 Finds edges in an image using the [Canny86]_ algorithm.
 
-.. ocv:function:: void gpu::CannyEdgeDetector::detect(InputArray image, OutputArray edges)
+.. ocv:function:: void cuda::CannyEdgeDetector::detect(InputArray image, OutputArray edges)
 
-.. ocv:function:: void gpu::CannyEdgeDetector::detect(InputArray dx, InputArray dy, OutputArray edges)
+.. ocv:function:: void cuda::CannyEdgeDetector::detect(InputArray dx, InputArray dy, OutputArray edges)
 
     :param image: Single-channel 8-bit input image.
 
@@ -50,11 +50,11 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 
 
-gpu::createCannyEdgeDetector
-----------------------------
-Creates implementation for :ocv:class:`gpu::CannyEdgeDetector` .
+cuda::createCannyEdgeDetector
+-----------------------------
+Creates implementation for :ocv:class:`cuda::CannyEdgeDetector` .
 
-.. ocv:function:: Ptr<CannyEdgeDetector> gpu::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
+.. ocv:function:: Ptr<CannyEdgeDetector> cuda::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size = 3, bool L2gradient = false)
 
     :param low_thresh: First threshold for the hysteresis procedure.
 
@@ -66,11 +66,11 @@ Creates implementation for :ocv:class:`gpu::CannyEdgeDetector` .
 
 
 
-gpu::meanShiftFiltering
------------------------
+cuda::meanShiftFiltering
+------------------------
 Performs mean-shift filtering for each point of the source image.
 
-.. ocv:function:: void gpu::meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::meanShiftFiltering(InputArray src, OutputArray dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -86,11 +86,11 @@ It maps each point of the source image into another point. As a result, you have
 
 
 
-gpu::meanShiftProc
-------------------
+cuda::meanShiftProc
+-------------------
 Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
 
-.. ocv:function:: void gpu::meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::meanShiftProc(InputArray src, OutputArray dstr, OutputArray dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1), Stream& stream = Stream::Null())
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -104,15 +104,15 @@ Performs a mean-shift procedure and stores information about processed points (t
 
     :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
 
-.. seealso:: :ocv:func:`gpu::meanShiftFiltering`
+.. seealso:: :ocv:func:`cuda::meanShiftFiltering`
 
 
 
-gpu::meanShiftSegmentation
---------------------------
+cuda::meanShiftSegmentation
+---------------------------
 Performs a mean-shift segmentation of the source image and eliminates small segments.
 
-.. ocv:function:: void gpu::meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+.. ocv:function:: void cuda::meanShiftSegmentation(InputArray src, OutputArray dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
 
     :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
 
@@ -128,9 +128,9 @@ Performs a mean-shift segmentation of the source image and eliminates small segm
 
 
 
-gpu::TemplateMatching
----------------------
-.. ocv:class:: gpu::TemplateMatching : public Algorithm
+cuda::TemplateMatching
+----------------------
+.. ocv:class:: cuda::TemplateMatching : public Algorithm
 
 Base class for Template Matching. ::
 
@@ -142,11 +142,11 @@ Base class for Template Matching. ::
 
 
 
-gpu::TemplateMatching::match
-----------------------------
+cuda::TemplateMatching::match
+-----------------------------
 Computes a proximity map for a raster template and an image where the template is searched for.
 
-.. ocv:function:: void gpu::TemplateMatching::match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::TemplateMatching::match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null())
 
     :param image: Source image.
 
@@ -158,11 +158,11 @@ Computes a proximity map for a raster template and an image where the template i
 
 
 
-gpu::createTemplateMatching
----------------------------
-Creates implementation for :ocv:class:`gpu::TemplateMatching` .
+cuda::createTemplateMatching
+----------------------------
+Creates implementation for :ocv:class:`cuda::TemplateMatching` .
 
-.. ocv:function:: Ptr<TemplateMatching> gpu::createTemplateMatching(int srcType, int method, Size user_block_size = Size())
+.. ocv:function:: Ptr<TemplateMatching> cuda::createTemplateMatching(int srcType, int method, Size user_block_size = Size())
 
     :param srcType: Input source type. ``CV_32F`` and  ``CV_8U`` depth images (1..4 channels) are supported for now.
 
@@ -188,11 +188,11 @@ The following methods are supported for the ``CV_32F`` images for now:
 
 
 
-gpu::bilateralFilter
---------------------
+cuda::bilateralFilter
+---------------------
 Performs bilateral filtering of passed image
 
-.. ocv:function:: void gpu::bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode=BORDER_DEFAULT, Stream& stream=Stream::Null())
+.. ocv:function:: void cuda::bilateralFilter(InputArray src, OutputArray dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode=BORDER_DEFAULT, Stream& stream=Stream::Null())
 
     :param src: Source image. Supports only (channles != 2 && depth() != CV_8S && depth() != CV_32S && depth() != CV_64F).
 
@@ -212,11 +212,11 @@ Performs bilateral filtering of passed image
 
 
 
-gpu::blendLinear
--------------------
+cuda::blendLinear
+-----------------
 Performs linear blending of two images.
 
-.. ocv:function:: void gpu::blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2, OutputArray result, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2, OutputArray result, Stream& stream = Stream::Null())
 
     :param img1: First image. Supports only ``CV_8U`` and ``CV_32F`` depth.
 

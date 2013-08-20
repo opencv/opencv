@@ -5,11 +5,11 @@ Arithm Operations on Matrices
 
 
 
-gpu::gemm
----------
+cuda::gemm
+----------
 Performs generalized matrix multiplication.
 
-.. ocv:function:: void gpu::gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::gemm(InputArray src1, InputArray src2, double alpha, InputArray src3, double beta, OutputArray dst, int flags = 0, Stream& stream = Stream::Null())
 
     :param src1: First multiplied input matrix that should have  ``CV_32FC1`` , ``CV_64FC1`` , ``CV_32FC2`` , or  ``CV_64FC2``  type.
 
@@ -43,11 +43,11 @@ The function performs generalized matrix multiplication similar to the ``gemm`` 
 
 
 
-gpu::mulSpectrums
------------------
+cuda::mulSpectrums
+------------------
 Performs a per-element multiplication of two Fourier spectrums.
 
-.. ocv:function:: void gpu::mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::mulSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, bool conjB=false, Stream& stream = Stream::Null())
 
     :param src1: First spectrum.
 
@@ -55,7 +55,7 @@ Performs a per-element multiplication of two Fourier spectrums.
 
     :param dst: Destination spectrum.
 
-    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
+    :param flags: Mock parameter used for CPU/CUDA interfaces similarity.
 
     :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
 
@@ -67,11 +67,11 @@ Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format 
 
 
 
-gpu::mulAndScaleSpectrums
--------------------------
+cuda::mulAndScaleSpectrums
+--------------------------
 Performs a per-element multiplication of two Fourier spectrums and scales the result.
 
-.. ocv:function:: void gpu::mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::mulAndScaleSpectrums(InputArray src1, InputArray src2, OutputArray dst, int flags, float scale, bool conjB=false, Stream& stream = Stream::Null())
 
     :param src1: First spectrum.
 
@@ -79,7 +79,7 @@ Performs a per-element multiplication of two Fourier spectrums and scales the re
 
     :param dst: Destination spectrum.
 
-    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
+    :param flags: Mock parameter used for CPU/CUDA interfaces similarity.
 
     :param scale: Scale constant.
 
@@ -91,11 +91,11 @@ Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format 
 
 
 
-gpu::dft
---------
+cuda::dft
+---------
 Performs a forward or inverse discrete Fourier transform (1D or 2D) of the floating point matrix.
 
-.. ocv:function:: void gpu::dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::dft(InputArray src, OutputArray dst, Size dft_size, int flags=0, Stream& stream = Stream::Null())
 
     :param src: Source matrix (real or complex).
 
@@ -127,9 +127,9 @@ The source matrix should be continuous, otherwise reallocation and data copying 
 
 
 
-gpu::Convolution
-----------------
-.. ocv:class:: gpu::Convolution : public Algorithm
+cuda::Convolution
+-----------------
+.. ocv:class:: cuda::Convolution : public Algorithm
 
 Base class for convolution (or cross-correlation) operator. ::
 
@@ -141,11 +141,11 @@ Base class for convolution (or cross-correlation) operator. ::
 
 
 
-gpu::Convolution::convolve
+cuda::Convolution::convolve
 ---------------------------
 Computes a convolution (or cross-correlation) of two images.
 
-.. ocv:function:: void gpu::Convolution::convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::Convolution::convolve(InputArray image, InputArray templ, OutputArray result, bool ccorr = false, Stream& stream = Stream::Null())
 
     :param image: Source image. Only  ``CV_32FC1`` images are supported for now.
 
@@ -159,9 +159,9 @@ Computes a convolution (or cross-correlation) of two images.
 
 
 
-gpu::createConvolution
-----------------------
-Creates implementation for :ocv:class:`gpu::Convolution` .
+cuda::createConvolution
+-----------------------
+Creates implementation for :ocv:class:`cuda::Convolution` .
 
 .. ocv:function:: Ptr<Convolution> createConvolution(Size user_block_size = Size())
 

@@ -5,13 +5,13 @@ Feature Detection and Description
 
 
 
-gpu::FAST_GPU
--------------
-.. ocv:class:: gpu::FAST_GPU
+cuda::FAST_CUDA
+---------------
+.. ocv:class:: cuda::FAST_CUDA
 
 Class used for corner detection using the FAST algorithm. ::
 
-    class FAST_GPU
+    class FAST_CUDA
     {
     public:
         enum
@@ -24,7 +24,7 @@ Class used for corner detection using the FAST algorithm. ::
         // all features have same size
         static const int FEATURE_SIZE = 7;
 
-        explicit FAST_GPU(int threshold, bool nonmaxSupression = true,
+        explicit FAST_CUDA(int threshold, bool nonmaxSupression = true,
                           double keypointsRatio = 0.05);
 
         void operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints);
@@ -51,17 +51,17 @@ Class used for corner detection using the FAST algorithm. ::
     };
 
 
-The class ``FAST_GPU`` implements FAST corner detection algorithm.
+The class ``FAST_CUDA`` implements FAST corner detection algorithm.
 
 .. seealso:: :ocv:func:`FAST`
 
 
 
-gpu::FAST_GPU::FAST_GPU
--------------------------------------
+cuda::FAST_CUDA::FAST_CUDA
+--------------------------
 Constructor.
 
-.. ocv:function:: gpu::FAST_GPU::FAST_GPU(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05)
+.. ocv:function:: cuda::FAST_CUDA::FAST_CUDA(int threshold, bool nonmaxSupression = true, double keypointsRatio = 0.05)
 
     :param threshold: Threshold on difference between intensity of the central pixel and pixels on a circle around this pixel.
 
@@ -71,12 +71,12 @@ Constructor.
 
 
 
-gpu::FAST_GPU::operator ()
--------------------------------------
+cuda::FAST_CUDA::operator ()
+----------------------------
 Finds the keypoints using FAST detector.
 
-.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
-.. ocv:function:: void gpu::FAST_GPU::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+.. ocv:function:: void cuda::FAST_CUDA::operator ()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
+.. ocv:function:: void cuda::FAST_CUDA::operator ()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 
     :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
 
@@ -89,35 +89,35 @@ Finds the keypoints using FAST detector.
 
 
 
-gpu::FAST_GPU::downloadKeypoints
--------------------------------------
+cuda::FAST_CUDA::downloadKeypoints
+----------------------------------
 Download keypoints from GPU to CPU memory.
 
-.. ocv:function:: void gpu::FAST_GPU::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
+.. ocv:function:: void cuda::FAST_CUDA::downloadKeypoints(const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints)
 
 
 
-gpu::FAST_GPU::convertKeypoints
--------------------------------------
-Converts keypoints from GPU representation to vector of ``KeyPoint``.
+cuda::FAST_CUDA::convertKeypoints
+---------------------------------
+Converts keypoints from CUDA representation to vector of ``KeyPoint``.
 
-.. ocv:function:: void gpu::FAST_GPU::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
+.. ocv:function:: void cuda::FAST_CUDA::convertKeypoints(const Mat& h_keypoints, std::vector<KeyPoint>& keypoints)
 
 
 
-gpu::FAST_GPU::release
--------------------------------------
+cuda::FAST_CUDA::release
+------------------------
 Releases inner buffer memory.
 
-.. ocv:function:: void gpu::FAST_GPU::release()
+.. ocv:function:: void cuda::FAST_CUDA::release()
 
 
 
-gpu::FAST_GPU::calcKeyPointsLocation
--------------------------------------
+cuda::FAST_CUDA::calcKeyPointsLocation
+--------------------------------------
 Find keypoints and compute it's response if ``nonmaxSupression`` is true.
 
-.. ocv:function:: int gpu::FAST_GPU::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
+.. ocv:function:: int cuda::FAST_CUDA::calcKeyPointsLocation(const GpuMat& image, const GpuMat& mask)
 
     :param image: Image where keypoints (corners) are detected. Only 8-bit grayscale images are supported.
 
@@ -127,11 +127,11 @@ The function returns count of detected keypoints.
 
 
 
-gpu::FAST_GPU::getKeyPoints
--------------------------------------
+cuda::FAST_CUDA::getKeyPoints
+-----------------------------
 Gets final array of keypoints.
 
-.. ocv:function:: int gpu::FAST_GPU::getKeyPoints(GpuMat& keypoints)
+.. ocv:function:: int cuda::FAST_CUDA::getKeyPoints(GpuMat& keypoints)
 
     :param keypoints: The output vector of keypoints.
 
@@ -139,13 +139,13 @@ The function performs non-max suppression if needed and returns final count of k
 
 
 
-gpu::ORB_GPU
--------------
-.. ocv:class:: gpu::ORB_GPU
+cuda::ORB_CUDA
+--------------
+.. ocv:class:: cuda::ORB_CUDA
 
 Class for extracting ORB features and descriptors from an image. ::
 
-    class ORB_GPU
+    class ORB_CUDA
     {
     public:
         enum
@@ -164,7 +164,7 @@ Class for extracting ORB features and descriptors from an image. ::
             DEFAULT_FAST_THRESHOLD = 20
         };
 
-        explicit ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f,
+        explicit ORB_CUDA(int nFeatures = 500, float scaleFactor = 1.2f,
                          int nLevels = 8, int edgeThreshold = 31,
                          int firstLevel = 0, int WTA_K = 2,
                          int scoreType = 0, int patchSize = 31);
@@ -196,11 +196,11 @@ The class implements ORB feature detection and description algorithm.
 
 
 
-gpu::ORB_GPU::ORB_GPU
--------------------------------------
+cuda::ORB_CUDA::ORB_CUDA
+------------------------
 Constructor.
 
-.. ocv:function:: gpu::ORB_GPU::ORB_GPU(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31)
+.. ocv:function:: cuda::ORB_CUDA::ORB_CUDA(int nFeatures = 500, float scaleFactor = 1.2f, int nLevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K = 2, int scoreType = 0, int patchSize = 31)
 
     :param nFeatures: The number of desired features.
 
@@ -214,17 +214,17 @@ Constructor.
 
 
 
-gpu::ORB_GPU::operator()
--------------------------------------
+cuda::ORB_CUDA::operator()
+--------------------------
 Detects keypoints and computes descriptors for them.
 
-.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+.. ocv:function:: void cuda::ORB_CUDA::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 
-.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
+.. ocv:function:: void cuda::ORB_CUDA::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
 
-.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors)
+.. ocv:function:: void cuda::ORB_CUDA::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors)
 
-.. ocv:function:: void gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
+.. ocv:function:: void cuda::ORB_CUDA::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
 
     :param image: Input 8-bit grayscale image.
 
@@ -243,40 +243,40 @@ Detects keypoints and computes descriptors for them.
 
 
 
-gpu::ORB_GPU::downloadKeyPoints
--------------------------------------
+cuda::ORB_CUDA::downloadKeyPoints
+---------------------------------
 Download keypoints from GPU to CPU memory.
 
-.. ocv:function:: static void gpu::ORB_GPU::downloadKeyPoints( const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints )
+.. ocv:function:: static void cuda::ORB_CUDA::downloadKeyPoints( const GpuMat& d_keypoints, std::vector<KeyPoint>& keypoints )
 
 
 
-gpu::ORB_GPU::convertKeyPoints
--------------------------------------
-Converts keypoints from GPU representation to vector of ``KeyPoint``.
+cuda::ORB_CUDA::convertKeyPoints
+--------------------------------
+Converts keypoints from CUDA representation to vector of ``KeyPoint``.
 
-.. ocv:function:: static void gpu::ORB_GPU::convertKeyPoints( const Mat& d_keypoints, std::vector<KeyPoint>& keypoints )
+.. ocv:function:: static void cuda::ORB_CUDA::convertKeyPoints( const Mat& d_keypoints, std::vector<KeyPoint>& keypoints )
 
 
 
-gpu::ORB_GPU::release
--------------------------------------
+cuda::ORB_CUDA::release
+-----------------------
 Releases inner buffer memory.
 
-.. ocv:function:: void gpu::ORB_GPU::release()
+.. ocv:function:: void cuda::ORB_CUDA::release()
 
 
 
-gpu::BFMatcher_GPU
---------------------------
-.. ocv:class:: gpu::BFMatcher_GPU
+cuda::BFMatcher_CUDA
+--------------------
+.. ocv:class:: cuda::BFMatcher_CUDA
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets. ::
 
-    class BFMatcher_GPU
+    class BFMatcher_CUDA
     {
     public:
-        explicit BFMatcher_GPU(int norm = cv::NORM_L2);
+        explicit BFMatcher_CUDA(int norm = cv::NORM_L2);
 
         // Add descriptors to train descriptor collection.
         void add(const std::vector<GpuMat>& descCollection);
@@ -375,67 +375,67 @@ Brute-force descriptor matcher. For each descriptor in the first set, this match
     };
 
 
-The class ``BFMatcher_GPU`` has an interface similar to the class :ocv:class:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative to save results either to the GPU memory or to the CPU memory.
+The class ``BFMatcher_CUDA`` has an interface similar to the class :ocv:class:`DescriptorMatcher`. It has two groups of ``match`` methods: for matching descriptors of one image with another image or with an image set. Also, all functions have an alternative to save results either to the GPU memory or to the CPU memory.
 
 .. seealso:: :ocv:class:`DescriptorMatcher`, :ocv:class:`BFMatcher`
 
 
 
-gpu::BFMatcher_GPU::match
--------------------------------------
+cuda::BFMatcher_CUDA::match
+---------------------------
 Finds the best match for each descriptor from a query set with train descriptors.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat())
+.. ocv:function:: void cuda::BFMatcher_CUDA::match(const GpuMat& query, const GpuMat& train, std::vector<DMatch>& matches, const GpuMat& mask = GpuMat())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::BFMatcher_CUDA::matchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>())
+.. ocv:function:: void cuda::BFMatcher_CUDA::match(const GpuMat& query, std::vector<DMatch>& matches, const std::vector<GpuMat>& masks = std::vector<GpuMat>())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchCollection( const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& masks=GpuMat(), Stream& stream=Stream::Null() )
+.. ocv:function:: void cuda::BFMatcher_CUDA::matchCollection( const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& masks=GpuMat(), Stream& stream=Stream::Null() )
 
 .. seealso:: :ocv:func:`DescriptorMatcher::match`
 
 
 
-gpu::BFMatcher_GPU::makeGpuCollection
--------------------------------------------------
-Performs a GPU collection of train descriptors and masks in a suitable format for the :ocv:func:`gpu::BFMatcher_GPU::matchCollection` function.
+cuda::BFMatcher_CUDA::makeGpuCollection
+---------------------------------------
+Performs a GPU collection of train descriptors and masks in a suitable format for the :ocv:func:`cuda::BFMatcher_CUDA::matchCollection` function.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>& masks = std::vector<GpuMat>())
-
-
-
-gpu::BFMatcher_GPU::matchDownload
----------------------------------------------
-Downloads matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::matchSingle` or :ocv:func:`gpu::BFMatcher_GPU::matchCollection` to vector with :ocv:class:`DMatch`.
-
-.. ocv:function:: static void gpu::BFMatcher_GPU::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>&matches)
-
-.. ocv:function:: static void gpu::BFMatcher_GPU::matchDownload( const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches )
+.. ocv:function:: void cuda::BFMatcher_CUDA::makeGpuCollection(GpuMat& trainCollection, GpuMat& maskCollection, const vector<GpuMat>& masks = std::vector<GpuMat>())
 
 
 
-gpu::BFMatcher_GPU::matchConvert
----------------------------------------------
-Converts matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::matchSingle` or :ocv:func:`gpu::BFMatcher_GPU::matchCollection` to vector with :ocv:class:`DMatch`.
+cuda::BFMatcher_CUDA::matchDownload
+-----------------------------------
+Downloads matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::matchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::matchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>&matches)
+.. ocv:function:: static void cuda::BFMatcher_CUDA::matchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector<DMatch>&matches)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>&matches)
+.. ocv:function:: static void cuda::BFMatcher_CUDA::matchDownload( const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector<DMatch>& matches )
 
 
 
-gpu::BFMatcher_GPU::knnMatch
-----------------------------------------
+cuda::BFMatcher_CUDA::matchConvert
+----------------------------------
+Converts matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::matchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::matchCollection` to vector with :ocv:class:`DMatch`.
+
+.. ocv:function:: void cuda::BFMatcher_CUDA::matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>&matches)
+
+.. ocv:function:: void cuda::BFMatcher_CUDA::matchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector<DMatch>&matches)
+
+
+
+cuda::BFMatcher_CUDA::knnMatch
+------------------------------
 Finds the ``k`` best matches for each descriptor from a query set with train descriptors.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, int k, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& allDist, int k, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, int k, const std::vector<GpuMat>&masks = std::vector<GpuMat>(), bool compactResult = false )
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatch2Collection(const GpuMat& query, const GpuMat& trainCollection, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, const GpuMat& maskCollection = GpuMat(), Stream& stream = Stream::Null())
 
     :param query: Query set of descriptors.
 
@@ -457,41 +457,41 @@ The third variant of the method stores the results in GPU memory.
 
 
 
-gpu::BFMatcher_GPU::knnMatchDownload
-------------------------------------------------
-Downloads matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::knnMatchSingle` or :ocv:func:`gpu::BFMatcher_GPU::knnMatch2Collection` to vector with :ocv:class:`DMatch`.
+cuda::BFMatcher_CUDA::knnMatchDownload
+--------------------------------------
+Downloads matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::knnMatchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::knnMatch2Collection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
-
-If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
-
-
-
-gpu::BFMatcher_GPU::knnMatchConvert
-------------------------------------------------
-Converts matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::knnMatchSingle` or :ocv:func:`gpu::BFMatcher_GPU::knnMatch2Collection` to CPU vector with :ocv:class:`DMatch`.
-
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatchConvert(const Mat& trainIdx, const Mat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
-
-.. ocv:function:: void gpu::BFMatcher_GPU::knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatch2Download(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
 
 
-gpu::BFMatcher_GPU::radiusMatch
--------------------------------------------
+cuda::BFMatcher_CUDA::knnMatchConvert
+-------------------------------------
+Converts matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::knnMatchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::knnMatch2Collection` to CPU vector with :ocv:class:`DMatch`.
+
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatchConvert(const Mat& trainIdx, const Mat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+
+.. ocv:function:: void cuda::BFMatcher_CUDA::knnMatch2Convert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
+
+If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
+
+
+
+cuda::BFMatcher_CUDA::radiusMatch
+---------------------------------
 For each query descriptor, finds the best matches with a distance less than a given threshold.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatch(const GpuMat& query, const GpuMat& train, std::vector< std::vector<DMatch> >&matches, float maxDistance, const GpuMat& mask = GpuMat(), bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchSingle(const GpuMat& query, const GpuMat& train, GpuMat& trainIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const GpuMat& mask = GpuMat(), Stream& stream = Stream::Null())
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatch(const GpuMat& query, std::vector< std::vector<DMatch> >&matches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchCollection(const GpuMat& query, GpuMat& trainIdx, GpuMat& imgIdx, GpuMat& distance, GpuMat& nMatches, float maxDistance, const std::vector<GpuMat>& masks = std::vector<GpuMat>(), Stream& stream = Stream::Null())
 
     :param query: Query set of descriptors.
 
@@ -515,25 +515,25 @@ The third variant of the method stores the results in GPU memory and does not st
 
 
 
-gpu::BFMatcher_GPU::radiusMatchDownload
----------------------------------------------------
-Downloads matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::radiusMatchSingle` or :ocv:func:`gpu::BFMatcher_GPU::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
+cuda::BFMatcher_CUDA::radiusMatchDownload
+-----------------------------------------
+Downloads matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::radiusMatchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchDownload(const GpuMat& trainIdx, const GpuMat& imgIdx, const GpuMat& distance, const GpuMat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
 
 
 
-gpu::BFMatcher_GPU::radiusMatchConvert
----------------------------------------------------
-Converts matrices obtained via :ocv:func:`gpu::BFMatcher_GPU::radiusMatchSingle` or :ocv:func:`gpu::BFMatcher_GPU::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
+cuda::BFMatcher_CUDA::radiusMatchConvert
+----------------------------------------
+Converts matrices obtained via :ocv:func:`cuda::BFMatcher_CUDA::radiusMatchSingle` or :ocv:func:`cuda::BFMatcher_CUDA::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
 
-.. ocv:function:: void gpu::BFMatcher_GPU::radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
+.. ocv:function:: void cuda::BFMatcher_CUDA::radiusMatchConvert(const Mat& trainIdx, const Mat& imgIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >& matches, bool compactResult = false)
 
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.

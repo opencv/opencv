@@ -1,6 +1,6 @@
-*************************************************
-gpuarithm. GPU-accelerated Operations on Matrices
-*************************************************
+***************************************************
+cudaarithm. CUDA-accelerated Operations on Matrices
+***************************************************
 
 .. toctree::
     :maxdepth: 1

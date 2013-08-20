@@ -9,9 +9,11 @@ Stereo Correspondence
    * A stereo matching example using several GPU's can be found at opencv_source_code/samples/gpu/stereo_multi.cpp
    * A stereo matching example using several GPU's and driver API can be found at opencv_source_code/samples/gpu/driver_api_stereo_multi.cpp
 
-gpu::StereoBM
--------------
-.. ocv:class:: gpu::StereoBM : public cv::StereoBM
+
+
+cuda::StereoBM
+--------------
+.. ocv:class:: cuda::StereoBM : public cv::StereoBM
 
 Class computing stereo correspondence (disparity map) using the block matching algorithm. ::
 
@@ -19,11 +21,11 @@ Class computing stereo correspondence (disparity map) using the block matching a
 
 
 
-gpu::createStereoBM
--------------------
+cuda::createStereoBM
+--------------------
 Creates StereoBM object.
 
-.. ocv:function:: Ptr<gpu::StereoBM> gpu::createStereoBM(int numDisparities = 64, int blockSize = 19)
+.. ocv:function:: Ptr<cuda::StereoBM> cuda::createStereoBM(int numDisparities = 64, int blockSize = 19)
 
     :param numDisparities: the disparity search range. For each pixel algorithm will find the best disparity from 0 (default minimum disparity) to ``numDisparities``. The search range can then be shifted by changing the minimum disparity.
 
@@ -31,9 +33,9 @@ Creates StereoBM object.
 
 
 
-gpu::StereoBeliefPropagation
-----------------------------
-.. ocv:class:: gpu::StereoBeliefPropagation : public cv::StereoMatcher
+cuda::StereoBeliefPropagation
+-----------------------------
+.. ocv:class:: cuda::StereoBeliefPropagation : public cv::StereoMatcher
 
 Class computing stereo correspondence using the belief propagation algorithm. ::
 
@@ -118,11 +120,11 @@ By default, ``StereoBeliefPropagation`` uses floating-point arithmetics and the 
 
 
 
-gpu::createStereoBeliefPropagation
-----------------------------------
+cuda::createStereoBeliefPropagation
+-----------------------------------
 Creates StereoBeliefPropagation object.
 
-.. ocv:function:: Ptr<gpu::StereoBeliefPropagation> gpu::createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F)
+.. ocv:function:: Ptr<cuda::StereoBeliefPropagation> cuda::createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F)
 
     :param ndisp: Number of disparities.
 
@@ -134,19 +136,19 @@ Creates StereoBeliefPropagation object.
 
 
 
-gpu::StereoBeliefPropagation::estimateRecommendedParams
--------------------------------------------------------
+cuda::StereoBeliefPropagation::estimateRecommendedParams
+--------------------------------------------------------
 Uses a heuristic method to compute the recommended parameters ( ``ndisp``, ``iters`` and ``levels`` ) for the specified image size ( ``width`` and ``height`` ).
 
-.. ocv:function:: void gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
+.. ocv:function:: void cuda::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
 
 
 
-gpu::StereoBeliefPropagation::compute
--------------------------------------
+cuda::StereoBeliefPropagation::compute
+--------------------------------------
 Enables the stereo correspondence operator that finds the disparity for the specified data cost.
 
-.. ocv:function:: void gpu::StereoBeliefPropagation::compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::StereoBeliefPropagation::compute(InputArray data, OutputArray disparity, Stream& stream = Stream::Null())
 
     :param data: User-specified data cost, a matrix of ``msg_type`` type and ``Size(<image columns>*ndisp, <image rows>)`` size.
 
@@ -156,13 +158,13 @@ Enables the stereo correspondence operator that finds the disparity for the spec
 
 
 
-gpu::StereoConstantSpaceBP
---------------------------
-.. ocv:class:: gpu::StereoConstantSpaceBP : public gpu::StereoBeliefPropagation
+cuda::StereoConstantSpaceBP
+---------------------------
+.. ocv:class:: cuda::StereoConstantSpaceBP : public cuda::StereoBeliefPropagation
 
 Class computing stereo correspondence using the constant space belief propagation algorithm. ::
 
-    class CV_EXPORTS StereoConstantSpaceBP : public gpu::StereoBeliefPropagation
+    class CV_EXPORTS StereoConstantSpaceBP : public cuda::StereoBeliefPropagation
     {
     public:
         //! number of active disparity on the first level
@@ -198,11 +200,11 @@ By default, ``StereoConstantSpaceBP`` uses floating-point arithmetics and the ``
 
 
 
-gpu::createStereoConstantSpaceBP
---------------------------------
+cuda::createStereoConstantSpaceBP
+---------------------------------
 Creates StereoConstantSpaceBP object.
 
-.. ocv:function:: Ptr<gpu::StereoConstantSpaceBP> gpu::createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F)
+.. ocv:function:: Ptr<cuda::StereoConstantSpaceBP> cuda::createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F)
 
     :param ndisp: Number of disparities.
 
@@ -216,17 +218,17 @@ Creates StereoConstantSpaceBP object.
 
 
 
-gpu::StereoConstantSpaceBP::estimateRecommendedParams
------------------------------------------------------
+cuda::StereoConstantSpaceBP::estimateRecommendedParams
+------------------------------------------------------
 Uses a heuristic method to compute parameters (ndisp, iters, levelsand nrplane) for the specified image size (widthand height).
 
-.. ocv:function:: void gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
+.. ocv:function:: void cuda::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
 
 
 
-gpu::DisparityBilateralFilter
------------------------------
-.. ocv:class:: gpu::DisparityBilateralFilter : public cv::Algorithm
+cuda::DisparityBilateralFilter
+------------------------------
+.. ocv:class:: cuda::DisparityBilateralFilter : public cv::Algorithm
 
 Class refining a disparity map using joint bilateral filtering. ::
 
@@ -264,11 +266,11 @@ The class implements [Yang2010]_ algorithm.
 
 
 
-gpu::createDisparityBilateralFilter
------------------------------------
+cuda::createDisparityBilateralFilter
+------------------------------------
 Creates DisparityBilateralFilter object.
 
-.. ocv:function:: Ptr<gpu::DisparityBilateralFilter> gpu::createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1)
+.. ocv:function:: Ptr<cuda::DisparityBilateralFilter> cuda::createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1)
 
     :param ndisp: Number of disparities.
 
@@ -278,11 +280,11 @@ Creates DisparityBilateralFilter object.
 
 
 
-gpu::DisparityBilateralFilter::apply
-------------------------------------
+cuda::DisparityBilateralFilter::apply
+-------------------------------------
 Refines a disparity map using joint bilateral filtering.
 
-.. ocv:function:: void gpu::DisparityBilateralFilter::apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::DisparityBilateralFilter::apply(InputArray disparity, InputArray image, OutputArray dst, Stream& stream = Stream::Null())
 
     :param disparity: Input disparity map.  ``CV_8UC1``  and  ``CV_16SC1``  types are supported.
 
@@ -294,11 +296,11 @@ Refines a disparity map using joint bilateral filtering.
 
 
 
-gpu::reprojectImageTo3D
------------------------
+cuda::reprojectImageTo3D
+------------------------
 Reprojects a disparity image to 3D space.
 
-.. ocv:function:: void gpu::reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray Q, int dst_cn = 4, Stream& stream = Stream::Null())
 
     :param disp: Input disparity image.  ``CV_8U``  and  ``CV_16S``  types are supported.
 
@@ -314,11 +316,11 @@ Reprojects a disparity image to 3D space.
 
 
 
-gpu::drawColorDisp
-------------------
+cuda::drawColorDisp
+-------------------
 Colors a disparity image.
 
-.. ocv:function:: void gpu::drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null())
 
     :param src_disp: Source disparity image.  ``CV_8UC1``  and  ``CV_16SC1``  types are supported.
 

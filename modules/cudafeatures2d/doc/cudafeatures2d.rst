@@ -1,6 +1,6 @@
-****************************************************************
-gpufeatures2d. GPU-accelerated Feature Detection and Description
-****************************************************************
+******************************************************************
+cudafeatures2d. CUDA-accelerated Feature Detection and Description
+******************************************************************
 
 .. toctree::
     :maxdepth: 1

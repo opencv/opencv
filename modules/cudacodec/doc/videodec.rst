@@ -5,40 +5,40 @@ Video Decoding
 
 
 
-gpucodec::VideoReader
----------------------
+cudacodec::VideoReader
+----------------------
 Video reader interface.
 
-.. ocv:class:: gpucodec::VideoReader
+.. ocv:class:: cudacodec::VideoReader
 
 .. note::
 
    * An example on how to use the videoReader class can be found at opencv_source_code/samples/gpu/video_reader.cpp
 
 
-gpucodec::VideoReader::nextFrame
---------------------------------
+cudacodec::VideoReader::nextFrame
+---------------------------------
 Grabs, decodes and returns the next video frame.
 
-.. ocv:function:: bool gpucodec::VideoReader::nextFrame(OutputArray frame)
+.. ocv:function:: bool cudacodec::VideoReader::nextFrame(OutputArray frame)
 
 If no frames has been grabbed (there are no more frames in video file), the methods return ``false`` . The method throws :ocv:class:`Exception` if error occurs.
 
 
 
-gpucodec::VideoReader::format
------------------------------
+cudacodec::VideoReader::format
+------------------------------
 Returns information about video file format.
 
-.. ocv:function:: FormatInfo gpucodec::VideoReader::format() const
+.. ocv:function:: FormatInfo cudacodec::VideoReader::format() const
 
 
 
-gpucodec::Codec
----------------
-Video codecs supported by :ocv:class:`gpucodec::VideoReader` .
+cudacodec::Codec
+----------------
+Video codecs supported by :ocv:class:`cudacodec::VideoReader` .
 
-.. ocv:enum:: gpucodec::Codec
+.. ocv:enum:: cudacodec::Codec
 
   .. ocv:emember:: MPEG1 = 0
   .. ocv:emember:: MPEG2
@@ -71,11 +71,11 @@ Video codecs supported by :ocv:class:`gpucodec::VideoReader` .
 
 
 
-gpucodec::ChromaFormat
-----------------------
-Chroma formats supported by :ocv:class:`gpucodec::VideoReader` .
+cudacodec::ChromaFormat
+-----------------------
+Chroma formats supported by :ocv:class:`cudacodec::VideoReader` .
 
-.. ocv:enum:: gpucodec::ChromaFormat
+.. ocv:enum:: cudacodec::ChromaFormat
 
   .. ocv:emember:: Monochrome = 0
   .. ocv:emember:: YUV420
@@ -84,9 +84,9 @@ Chroma formats supported by :ocv:class:`gpucodec::VideoReader` .
 
 
 
-gpucodec::FormatInfo
---------------------
-.. ocv:struct:: gpucodec::FormatInfo
+cudacodec::FormatInfo
+---------------------
+.. ocv:struct:: cudacodec::FormatInfo
 
 Struct providing information about video file format. ::
 
@@ -100,24 +100,24 @@ Struct providing information about video file format. ::
 
 
 
-gpucodec::createVideoReader
----------------------------
+cudacodec::createVideoReader
+----------------------------
 Creates video reader.
 
-.. ocv:function:: Ptr<VideoReader> gpucodec::createVideoReader(const String& filename)
-.. ocv:function:: Ptr<VideoReader> gpucodec::createVideoReader(const Ptr<RawVideoSource>& source)
+.. ocv:function:: Ptr<VideoReader> cudacodec::createVideoReader(const String& filename)
+.. ocv:function:: Ptr<VideoReader> cudacodec::createVideoReader(const Ptr<RawVideoSource>& source)
 
     :param filename: Name of the input video file.
 
     :param source: RAW video source implemented by user.
 
-FFMPEG is used to read videos. User can implement own demultiplexing with :ocv:class:`gpucodec::RawVideoSource` .
+FFMPEG is used to read videos. User can implement own demultiplexing with :ocv:class:`cudacodec::RawVideoSource` .
 
 
 
-gpucodec::RawVideoSource
-------------------------
-.. ocv:class:: gpucodec::RawVideoSource
+cudacodec::RawVideoSource
+-------------------------
+.. ocv:class:: cudacodec::RawVideoSource
 
 Interface for video demultiplexing. ::
 
@@ -135,11 +135,11 @@ User can implement own demultiplexing by implementing this interface.
 
 
 
-gpucodec::RawVideoSource::getNextPacket
----------------------------------------
+cudacodec::RawVideoSource::getNextPacket
+----------------------------------------
 Returns next packet with RAW video frame.
 
-.. ocv:function:: bool gpucodec::VideoSource::getNextPacket(unsigned char** data, int* size, bool* endOfFile) = 0
+.. ocv:function:: bool cudacodec::VideoSource::getNextPacket(unsigned char** data, int* size, bool* endOfFile) = 0
 
     :param data: Pointer to frame data.
 
@@ -149,8 +149,8 @@ Returns next packet with RAW video frame.
 
 
 
-gpucodec::RawVideoSource::format
---------------------------------
+cudacodec::RawVideoSource::format
+---------------------------------
 Returns information about video file format.
 
-.. ocv:function:: virtual FormatInfo gpucodec::RawVideoSource::format() const = 0
+.. ocv:function:: virtual FormatInfo cudacodec::RawVideoSource::format() const = 0

@@ -52,6 +52,7 @@ using namespace cvtest;
 PARAM_TEST_CASE(HistEven, cv::cuda::DeviceInfo, cv::Size)
 {
     cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
 
     virtual void SetUp()
     {

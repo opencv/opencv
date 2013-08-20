@@ -5,51 +5,51 @@ Initalization and Information
 
 
 
-gpu::getCudaEnabledDeviceCount
-------------------------------
+cuda::getCudaEnabledDeviceCount
+-------------------------------
 Returns the number of installed CUDA-enabled devices.
 
-.. ocv:function:: int gpu::getCudaEnabledDeviceCount()
+.. ocv:function:: int cuda::getCudaEnabledDeviceCount()
 
-Use this function before any other GPU functions calls. If OpenCV is compiled without GPU support, this function returns 0.
+Use this function before any other CUDA functions calls. If OpenCV is compiled without CUDA support, this function returns 0.
 
 
 
-gpu::setDevice
---------------
+cuda::setDevice
+---------------
 Sets a device and initializes it for the current thread.
 
-.. ocv:function:: void gpu::setDevice(int device)
+.. ocv:function:: void cuda::setDevice(int device)
 
-    :param device: System index of a GPU device starting with 0.
+    :param device: System index of a CUDA device starting with 0.
 
-If the call of this function is omitted, a default device is initialized at the fist GPU usage.
-
-
-
-gpu::getDevice
---------------
-Returns the current device index set by :ocv:func:`gpu::setDevice` or initialized by default.
-
-.. ocv:function:: int gpu::getDevice()
+If the call of this function is omitted, a default device is initialized at the fist CUDA usage.
 
 
 
-gpu::resetDevice
-----------------
+cuda::getDevice
+---------------
+Returns the current device index set by :ocv:func:`cuda::setDevice` or initialized by default.
+
+.. ocv:function:: int cuda::getDevice()
+
+
+
+cuda::resetDevice
+-----------------
 Explicitly destroys and cleans up all resources associated with the current device in the current process.
 
-.. ocv:function:: void gpu::resetDevice()
+.. ocv:function:: void cuda::resetDevice()
 
 Any subsequent API call to this device will reinitialize the device.
 
 
 
-gpu::FeatureSet
----------------
-Enumeration providing GPU computing features.
+cuda::FeatureSet
+----------------
+Enumeration providing CUDA computing features.
 
-.. ocv:enum:: gpu::FeatureSet
+.. ocv:enum:: cuda::FeatureSet
 
   .. ocv:emember:: FEATURE_SET_COMPUTE_10
   .. ocv:emember:: FEATURE_SET_COMPUTE_11
@@ -62,33 +62,34 @@ Enumeration providing GPU computing features.
   .. ocv:emember:: NATIVE_DOUBLE
 
 
-gpu::TargetArchs
-----------------
-.. ocv:class:: gpu::TargetArchs
 
-Class providing a set of static methods to check what NVIDIA* card architecture the GPU module was built for.
+cuda::TargetArchs
+-----------------
+.. ocv:class:: cuda::TargetArchs
+
+Class providing a set of static methods to check what NVIDIA* card architecture the CUDA module was built for.
 
 The following method checks whether the module was built with the support of the given feature:
 
-    .. ocv:function:: static bool gpu::TargetArchs::builtWith( FeatureSet feature_set )
+    .. ocv:function:: static bool cuda::TargetArchs::builtWith( FeatureSet feature_set )
 
-        :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
+        :param feature_set: Features to be checked. See :ocv:enum:`cuda::FeatureSet`.
 
-There is a set of methods to check whether the module contains intermediate (PTX) or binary GPU code for the given architecture(s):
+There is a set of methods to check whether the module contains intermediate (PTX) or binary CUDA code for the given architecture(s):
 
-    .. ocv:function:: static bool gpu::TargetArchs::has(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::has(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasPtx(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasPtx(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasBin(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasBin(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreater(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasEqualOrGreater(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 
-    .. ocv:function:: static bool gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
+    .. ocv:function:: static bool cuda::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 
         :param major: Major compute capability version.
 
@@ -98,9 +99,9 @@ According to the CUDA C Programming Guide Version 3.2: "PTX code produced for so
 
 
 
-gpu::DeviceInfo
----------------
-.. ocv:class:: gpu::DeviceInfo
+cuda::DeviceInfo
+----------------
+.. ocv:class:: cuda::DeviceInfo
 
 Class providing functionality for querying the specified GPU properties. ::
 
@@ -285,90 +286,90 @@ Class providing functionality for querying the specified GPU properties. ::
         //! checks whether device supports the given feature
         bool supports(FeatureSet feature_set) const;
 
-        //! checks whether the GPU module can be run on the given device
+        //! checks whether the CUDA module can be run on the given device
         bool isCompatible() const;
     };
 
 
 
-gpu::DeviceInfo::DeviceInfo
----------------------------
+cuda::DeviceInfo::DeviceInfo
+----------------------------
 The constructors.
 
-.. ocv:function:: gpu::DeviceInfo::DeviceInfo()
+.. ocv:function:: cuda::DeviceInfo::DeviceInfo()
 
-.. ocv:function:: gpu::DeviceInfo::DeviceInfo(int device_id)
+.. ocv:function:: cuda::DeviceInfo::DeviceInfo(int device_id)
 
-    :param device_id: System index of the GPU device starting with 0.
+    :param device_id: System index of the CUDA device starting with 0.
 
 Constructs the ``DeviceInfo`` object for the specified device. If ``device_id`` parameter is missed, it constructs an object for the current device.
 
 
 
-gpu::DeviceInfo::name
----------------------
+cuda::DeviceInfo::name
+----------------------
 Returns the device name.
 
-.. ocv:function:: const char* gpu::DeviceInfo::name() const
+.. ocv:function:: const char* cuda::DeviceInfo::name() const
 
 
 
-gpu::DeviceInfo::majorVersion
------------------------------
+cuda::DeviceInfo::majorVersion
+------------------------------
 Returns the major compute capability version.
 
-.. ocv:function:: int gpu::DeviceInfo::majorVersion()
+.. ocv:function:: int cuda::DeviceInfo::majorVersion()
 
 
 
-gpu::DeviceInfo::minorVersion
------------------------------
+cuda::DeviceInfo::minorVersion
+------------------------------
 Returns the minor compute capability version.
 
-.. ocv:function:: int gpu::DeviceInfo::minorVersion()
+.. ocv:function:: int cuda::DeviceInfo::minorVersion()
 
 
 
-gpu::DeviceInfo::freeMemory
----------------------------
+cuda::DeviceInfo::freeMemory
+----------------------------
 Returns the amount of free memory in bytes.
 
-.. ocv:function:: size_t gpu::DeviceInfo::freeMemory()
+.. ocv:function:: size_t cuda::DeviceInfo::freeMemory()
 
 
 
-gpu::DeviceInfo::totalMemory
-----------------------------
+cuda::DeviceInfo::totalMemory
+-----------------------------
 Returns the amount of total memory in bytes.
 
-.. ocv:function:: size_t gpu::DeviceInfo::totalMemory()
+.. ocv:function:: size_t cuda::DeviceInfo::totalMemory()
 
 
 
-gpu::DeviceInfo::supports
--------------------------
-Provides information on GPU feature support.
+cuda::DeviceInfo::supports
+--------------------------
+Provides information on CUDA feature support.
 
-.. ocv:function:: bool gpu::DeviceInfo::supports(FeatureSet feature_set) const
+.. ocv:function:: bool cuda::DeviceInfo::supports(FeatureSet feature_set) const
 
-    :param feature_set: Features to be checked. See :ocv:enum:`gpu::FeatureSet`.
+    :param feature_set: Features to be checked. See :ocv:enum:`cuda::FeatureSet`.
 
-This function returns ``true`` if the device has the specified GPU feature. Otherwise, it returns ``false`` .
-
-
-
-gpu::DeviceInfo::isCompatible
------------------------------
-Checks the GPU module and device compatibility.
-
-.. ocv:function:: bool gpu::DeviceInfo::isCompatible()
-
-This function returns ``true`` if the GPU module can be run on the specified device. Otherwise, it returns ``false`` .
+This function returns ``true`` if the device has the specified CUDA feature. Otherwise, it returns ``false`` .
 
 
 
-gpu::DeviceInfo::deviceID
--------------------------
-Returns system index of the GPU device starting with 0.
+cuda::DeviceInfo::isCompatible
+------------------------------
+Checks the CUDA module and device compatibility.
 
-.. ocv:function:: int gpu::DeviceInfo::deviceID()
+.. ocv:function:: bool cuda::DeviceInfo::isCompatible()
+
+This function returns ``true`` if the CUDA module can be run on the specified device. Otherwise, it returns ``false`` .
+
+
+
+cuda::DeviceInfo::deviceID
+--------------------------
+Returns system index of the CUDA device starting with 0.
+
+.. ocv:function:: int cuda::DeviceInfo::deviceID()

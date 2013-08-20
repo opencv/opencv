@@ -5,11 +5,11 @@ Camera Calibration and 3D Reconstruction
 
 
 
-gpu::solvePnPRansac
--------------------
+cuda::solvePnPRansac
+--------------------
 Finds the object pose from 3D-2D point correspondences.
 
-.. ocv:function:: void gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat, const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false, int num_iters=100, float max_dist=8.0, int min_inlier_count=100, vector<int>* inliers=NULL)
+.. ocv:function:: void cuda::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat, const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess=false, int num_iters=100, float max_dist=8.0, int min_inlier_count=100, vector<int>* inliers=NULL)
 
     :param object: Single-row matrix of object points.
 

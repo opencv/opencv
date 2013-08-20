@@ -5,11 +5,11 @@ Color space processing
 
 
 
-gpu::cvtColor
--------------
+cuda::cvtColor
+--------------
 Converts an image from one color space to another.
 
-.. ocv:function:: void gpu::cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::cvtColor(InputArray src, OutputArray dst, int code, int dcn = 0, Stream& stream = Stream::Null())
 
     :param src: Source image with  ``CV_8U`` , ``CV_16U`` , or  ``CV_32F`` depth and 1, 3, or 4 channels.
 
@@ -27,11 +27,11 @@ Converts an image from one color space to another.
 
 
 
-gpu::demosaicing
-----------------
+cuda::demosaicing
+-----------------
 Converts an image from Bayer pattern to RGB or grayscale.
 
-.. ocv:function:: void gpu::demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::demosaicing(InputArray src, OutputArray dst, int code, int dcn = -1, Stream& stream = Stream::Null())
 
     :param src: Source image (8-bit or 16-bit single channel).
 
@@ -61,11 +61,11 @@ The function can do the following transformations:
 
 
 
-gpu::swapChannels
------------------
+cuda::swapChannels
+------------------
 Exchanges the color channels of an image in-place.
 
-.. ocv:function:: void gpu::swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::swapChannels(InputOutputArray image, const int dstOrder[4], Stream& stream = Stream::Null())
 
     :param image: Source image. Supports only ``CV_8UC4`` type.
 
@@ -77,11 +77,11 @@ The methods support arbitrary permutations of the original channels, including r
 
 
 
-gpu::gammaCorrection
---------------------
+cuda::gammaCorrection
+---------------------
 Routines for correcting image color gamma.
 
-.. ocv:function:: void gpu::gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::gammaCorrection(InputArray src, OutputArray dst, bool forward = true, Stream& stream = Stream::Null())
 
     :param src: Source image (3- or 4-channel 8 bit).
 
@@ -93,11 +93,11 @@ Routines for correcting image color gamma.
 
 
 
-gpu::alphaComp
---------------
+cuda::alphaComp
+---------------
 Composites two images using alpha opacity values contained in each image.
 
-.. ocv:function:: void gpu::alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null())
+.. ocv:function:: void cuda::alphaComp(InputArray img1, InputArray img2, OutputArray dst, int alpha_op, Stream& stream = Stream::Null())
 
     :param img1: First image. Supports ``CV_8UC4`` , ``CV_16UC4`` , ``CV_32SC4`` and ``CV_32FC4`` types.
 

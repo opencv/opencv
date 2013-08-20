@@ -1,6 +1,6 @@
-*****************************************
-gpuwarping. GPU-accelerated Image Warping
-*****************************************
+*******************************************
+cudawarping. CUDA-accelerated Image Warping
+*******************************************
 
 .. toctree::
     :maxdepth: 1
