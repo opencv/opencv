@@ -28,13 +28,14 @@ void cv::viz::Viz3d::create(const String &window_name)
     impl_ = new VizImpl(window_name);
     impl_->ref_counter = 1;
     // Register the window
-//     cv::viz::VizAccessor::getInstance()->add(*this);
+    cv::viz::VizAccessor::getInstance()->add(*this);
 }
 
 void cv::viz::Viz3d::release()
 {
     if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
     {
+        // Erase the window
         cv::viz::VizAccessor::getInstance()->remove(getWindowName());
         delete impl_;
         impl_ = 0;

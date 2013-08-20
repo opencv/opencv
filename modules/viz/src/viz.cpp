@@ -112,7 +112,11 @@ cv::viz::VizAccessor * cv::viz::VizAccessor::getInstance()
 
 cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
 {
-    VizMap::iterator vm_itr = viz_map_.find(window_name);
+    // Add the prefix Viz
+    String name("Viz");
+    name = window_name.empty() ? name : name + " - " + window_name;
+    
+    VizMap::iterator vm_itr = viz_map_.find(name);
     bool exists = vm_itr != viz_map_.end();
     if (exists) return vm_itr->second;
     else return viz_map_.insert(VizPair(window_name, Viz3d(window_name))).first->second;

@@ -83,10 +83,8 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::~VizImpl ()
 {
-    if (interactor_ != NULL)
-        interactor_->DestroyTimer (timer_id_);
-
-    if (renderer_) renderer_->Clear();
+    if (interactor_) 
+        interactor_->DestroyTimer(timer_id_);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
