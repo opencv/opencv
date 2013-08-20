@@ -470,8 +470,16 @@ endmacro()
 #   ocv_create_module(<extra link dependencies>)
 #   ocv_create_module(SKIP_LINK)
 macro(ocv_create_module)
+  # The condition we ought to be testing here is whether ocv_add_precompiled_headers will
+  # be called at some point in the future. We can't look into the future, though,
+  # so this will have to do.
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp")
+    get_native_precompiled_header(${the_module} precomp.hpp)
+  endif()
+
   add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
-    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp")
+    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
+    ${${the_module}_pch})
   if(NOT the_module STREQUAL opencv_ts)
     set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
   endif()
@@ -640,7 +648,9 @@ function(ocv_add_perf_tests)
         set(OPENCV_PERF_${the_module}_SOURCES ${perf_srcs} ${perf_hdrs})
       endif()
 
-      add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES})
+      get_native_precompiled_header(${the_target} perf_precomp.hpp)
+
+      add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_perf_tests ${the_target})
 
@@ -688,7 +698,9 @@ function(ocv_add_accuracy_tests)
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
 
-      add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
+      get_native_precompiled_header(${the_target} test_precomp.hpp)
+
+      add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 

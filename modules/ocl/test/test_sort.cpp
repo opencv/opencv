@@ -44,7 +44,7 @@
 //M*/
 #include <map>
 #include <functional>
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 using namespace std;
 using namespace cvtest;

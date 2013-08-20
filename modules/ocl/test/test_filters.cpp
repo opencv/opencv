@@ -48,7 +48,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -324,6 +324,35 @@ TEST_P(GaussianBlur, Mat)
 
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Filter2D
+struct Filter2D : FilterTestBase
+{
+    int type;
+    cv::Size ksize;
+    int bordertype;
+    Point anchor;
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        ksize = GET_PARAM(1);
+        bordertype = GET_PARAM(3);
+        Init(type);
+        anchor = Point(-1,-1);
+    }
+};
+
+TEST_P(Filter2D, Mat)
+{
+    cv::Mat kernel = randomMat(cv::Size(ksize.width, ksize.height), CV_32FC1, 0.0, 1.0);
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::filter2D(mat1_roi, dst_roi, -1, kernel, anchor, 0.0, bordertype);
+        cv::ocl::filter2D(gmat1, gdst, -1, kernel, anchor, bordertype);
+        Near(1);
+    }
+}
 INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
                         Values(cv::Size(3, 3), cv::Size(5, 5), cv::Size(7, 7)),
@@ -331,7 +360,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Blur, Combine(
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE, (MatType)cv::BORDER_REFLECT, (MatType)cv::BORDER_REFLECT_101)));
 
 
-INSTANTIATE_TEST_CASE_P(Filters, Laplacian, Combine(
+INSTANTIATE_TEST_CASE_P(Filter, Laplacian, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC3, CV_32FC4),
                         Values(Size(3, 3)),
                         Values(Size(0, 0)), //not use
@@ -364,5 +393,11 @@ INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE)));
 
 
+
+INSTANTIATE_TEST_CASE_P(Filter, Filter2D, testing::Combine(
+                        Values(CV_8UC1, CV_32FC1, CV_32FC4), 
+                        Values(Size(3, 3), Size(15, 15), Size(25, 25)),
+                        Values(Size(0, 0)), //not use
+                        Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REFLECT101, (MatType)cv::BORDER_REPLICATE, (MatType)cv::BORDER_REFLECT)));
 
 #endif // HAVE_OPENCL

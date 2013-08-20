@@ -1725,19 +1725,29 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int, int, int );
 
-static TransformFunc transformTab[] =
+static TransformFunc getTransformFunc(int depth)
 {
-    (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
-    (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
-    (TransformFunc)transform_64f, 0
-};
+    static TransformFunc transformTab[] =
+    {
+        (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
+        (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
+        (TransformFunc)transform_64f, 0
+    };
 
-static TransformFunc diagTransformTab[] =
+    return transformTab[depth];
+}
+
+static TransformFunc getDiagTransformFunc(int depth)
 {
-    (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
-    (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
-    (TransformFunc)diagtransform_64f, 0
-};
+    static TransformFunc diagTransformTab[] =
+    {
+        (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
+        (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
+        (TransformFunc)diagtransform_64f, 0
+    };
+
+    return diagTransformTab[depth];
+}
 
 }
 
@@ -1800,7 +1810,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         }
     }
 
-    TransformFunc func = isDiag ? diagTransformTab[depth] : transformTab[depth];
+    TransformFunc func = isDiag ? getDiagTransformFunc(depth): getTransformFunc(depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
@@ -2761,19 +2771,24 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
 
 typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
-static DotProdFunc dotProdTab[] =
+static DotProdFunc getDotProdFunc(int depth)
 {
-    (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
-    (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-    (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
-    (DotProdFunc)dotProd_64f, 0
-};
+    static DotProdFunc dotProdTab[] =
+    {
+        (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
+        (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
+        (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
+        (DotProdFunc)dotProd_64f, 0
+    };
+
+    return dotProdTab[depth];
+}
 
 double Mat::dot(InputArray _mat) const
 {
     Mat mat = _mat.getMat();
     int cn = channels();
-    DotProdFunc func = dotProdTab[depth()];
+    DotProdFunc func = getDotProdFunc(depth());
     CV_Assert( mat.type() == type() && mat.size == size && func != 0 );
 
     if( isContinuous() && mat.isContinuous() )

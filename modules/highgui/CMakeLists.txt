@@ -64,7 +64,6 @@ set(highgui_srcs
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
     src/loadsave.cpp
-    src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
@@ -216,7 +215,7 @@ endif()
 if(HAVE_QUICKTIME)
   list(APPEND highgui_srcs src/cap_qt.cpp)
   list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-elseif(APPLE)
+elseif(HAVE_QTKIT)
   list(APPEND highgui_srcs src/cap_qtkit.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()

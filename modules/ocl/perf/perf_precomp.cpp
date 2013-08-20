@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 #if GTEST_OS_WINDOWS
 #ifndef NOMINMAX
 #define NOMINMAX

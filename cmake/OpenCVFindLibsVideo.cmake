@@ -273,4 +273,6 @@ endif()
 # --- QuickTime ---
 if(WITH_QUICKTIME)
   set(HAVE_QUICKTIME YES)
+elseif(APPLE)
+  set(HAVE_QTKIT YES)
 endif()

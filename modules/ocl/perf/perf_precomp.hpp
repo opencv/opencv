@@ -40,6 +40,9 @@
 //
 //M*/
 
+#ifndef __OPENCV_PERF_PRECOMP_HPP__
+#define __OPENCV_PERF_PRECOMP_HPP__
+
 #ifdef __GNUC__
 #  pragma GCC diagnostic ignored "-Wmissing-declarations"
 #  if defined __clang__ || defined __APPLE__
@@ -515,3 +518,5 @@ struct name##_test: Runnable { \
 #define WARMUP_OFF \
         ocl::finish(); \
     } TestSystem::instance().warmupComplete()
+
+#endif
