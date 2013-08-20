@@ -337,9 +337,9 @@ TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting
 
 Constructor
 
-.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int numFeatures=250 )
+.. ocv:function::  TrackerStateEstimatorMILBoosting::TrackerStateEstimatorMILBoosting( int nFeatures=250 )
 
-    :param numFeatures: Number of features for each sample
+    :param nFeatures: Number of features for each sample
 
 TrackerStateEstimatorMILBoosting::setCurrentConfidenceMap
 ---------------------------------------------------------

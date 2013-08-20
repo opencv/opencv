@@ -40,7 +40,12 @@
  //M*/
 
 #include "precomp.hpp"
-#include <ctime>
+
+#ifdef _WIN32
+#define TIME( arg ) (((double) clock()) / CLOCKS_PER_SEC)
+#else
+#define TIME( arg ) (time( arg ))
+#endif
 
 namespace cv
 {
@@ -91,6 +96,7 @@ String TrackerSamplerAlgorithm::getClassName() const
  * Parameters
  */
 
+
 TrackerSamplerCSC::Params::Params()
 {
   initInRad = 3;
@@ -107,13 +113,7 @@ TrackerSamplerCSC::TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameter
 {
   className = "CSC";
   mode = MODE_INIT_POS;
-
-#ifdef _WIN32
-  /* use clock() function insted of time() */
-  rng = RNG( (((double) clock()) / CLOCKS_PER_SEC) );
-#else
-  rng = RNG( time( 0 ) );
-#endif /* _WIN32 */
+  rng = RNG( TIME( 0 ) );
 
 }
 

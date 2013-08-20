@@ -209,7 +209,7 @@ Example of creating specialized TrackerStateEstimator ``TrackerStateEstimatorMIL
     };
 
     public:
-     TrackerStateEstimatorMILBoosting( int numFeatures = 250 );
+     TrackerStateEstimatorMILBoosting( int nFeatures = 250 );
      ~TrackerStateEstimatorMILBoosting();
      ...
 

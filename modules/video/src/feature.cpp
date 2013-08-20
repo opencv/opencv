@@ -42,6 +42,12 @@
 #include "precomp.hpp"
 #include "opencv2/video/feature.hpp"
 
+#ifdef _WIN32
+#define TIME( arg ) (((double) clock()) / CLOCKS_PER_SEC)
+#else
+#define TIME( arg ) (time( arg ))
+#endif
+
 namespace cv
 {
 
@@ -257,13 +263,7 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
   if( mode == CvHaarFeatureParams::ALL )
     isTilted = true;
 
-  RNG rng;
-#ifdef _WIN32
-  /* use clock() function insted of time() */
-  rng = RNG( (((double) clock()) / CLOCKS_PER_SEC) );
-#else
-  rng = RNG( time( 0 ) );
-#endif /* _WIN32 */
+  RNG rng = RNG( TIME( 0 ) );
 
   for ( int i = 0; i < nFeatures; i++ )
   {

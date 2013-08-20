@@ -46,7 +46,6 @@
 #include "opencv2/imgproc.hpp"
 #include <iostream>
 #include <string>
-#include <ctime>
 
 /*
  * TODO This is a copy from apps/traincascade/
