@@ -31,8 +31,8 @@ int main( int argc, const char** argv )
     ocl::oclMat dsrc(src), dABFilter, dBFilter;
 
     Size ksize(ks, ks);
-    adaptiveBilateralFilter(src,abFilterCPU, ksize);
-    ocl::adaptiveBilateralFilter(dsrc, dABFilter, ksize);
+    adaptiveBilateralFilter(src,abFilterCPU, ksize, 10);
+    ocl::adaptiveBilateralFilter(dsrc, dABFilter, ksize, 10);
     ocl::bilateralFilter(dsrc, dBFilter, ks, 30, 9);
 
     Mat abFilter = dABFilter;

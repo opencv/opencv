@@ -1594,10 +1594,23 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Adaptive Bilateral Filter
 
-void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, Point anchor, int borderType)
+void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor, int borderType)
 {
     CV_Assert((ksize.width & 1) && (ksize.height & 1));  // ksize must be odd
     CV_Assert(src.type() == CV_8UC1 || src.type() == CV_8UC3);  // source must be 8bit RGB image
+    if( sigmaSpace <= 0 )
+        sigmaSpace = 1;
+    Mat lut(Size(ksize.width, ksize.height), CV_32FC1);
+    double sigma2 = sigmaSpace * sigmaSpace;
+    int idx = 0;
+    int w = ksize.width / 2;
+    int h = ksize.height / 2;
+    for(int y=-h; y<=h; y++)
+        for(int x=-w; x<=w; x++)
+    {
+        lut.at<float>(idx++) = sigma2 / (sigma2 + x * x + y * y);
+    }
+    oclMat dlut(lut);
     int depth = src.depth();
     int cn = src.oclchannels();
 
@@ -1630,7 +1643,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     }
 
     //the following constants may be adjusted for performance concerns
-    const static size_t blockSizeX = 256, blockSizeY = 1, EXTRA = 1;
+    const static size_t blockSizeX = 64, blockSizeY = 1, EXTRA = ksize.height - 1;
 
     //Normalize the result by default
     const float alpha = ksize.height * ksize.width;
@@ -1667,6 +1680,9 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.rows));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.cols));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
+    args.push_back(std::make_pair(sizeof(cl_mem), &dlut.data));
+    int lut_step = dlut.step1();
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&lut_step));
 
     openCLExecuteKernel(Context::getContext(), &filtering_adaptive_bilateral, kernelName,
         globalThreads, localThreads, args, cn, depth, build_options);

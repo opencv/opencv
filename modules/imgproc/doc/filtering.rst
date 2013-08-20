@@ -413,9 +413,9 @@ adaptiveBilateralFilter
 -----------------------
 Applies the adaptive bilateral filter to an image.
 
-.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
+.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
 
-.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize[, dst[, anchor[, borderType]]]) -> dst
+.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize, sigmaSpace[, dst[, anchor[, borderType]]]) -> dst
 
     :param src: Source 8-bit, 1-channel or 3-channel image.
 
@@ -423,11 +423,13 @@ Applies the adaptive bilateral filter to an image.
 
     :param ksize: filter kernel size.
 
+    :param sigmaSpace: Filter sigma in the coordinate space. It has similar meaning with ``sigmaSpace`` in ``bilateralFilter``.
+
     :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center. Only default value is supported now.
 
     :param borderType: border mode used to extrapolate pixels outside of the image.
 
-The function applies adaptive bilateral filtering to the input image. This filter is similar to ``bilateralFilter`` which reduce the noise while keeping the edges. It evaluates the weights based on both color intensity and color variance of the small region. So it produces more denoise on low frequency texture than high frequency texture.
+The function applies adaptive bilateral filtering to the input image. This filter is similar to ``bilateralFilter``, in that dissimilarity from and distance to the center pixel is punished. Instead of using ``sigmaColor``, we employ the variance of pixel values in the neighbourhood.
 
 
 blur

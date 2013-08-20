@@ -377,8 +377,8 @@ TEST_P(AdaptiveBilateral, Mat)
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        cv::adaptiveBilateralFilter(mat1_roi, dst_roi, ksize, anchor, bordertype);
-        cv::ocl::adaptiveBilateralFilter(gmat1, gdst, ksize, anchor, bordertype);
+        cv::adaptiveBilateralFilter(mat1_roi, dst_roi, ksize, 5, anchor, bordertype);
+        cv::ocl::adaptiveBilateralFilter(gmat1, gdst, ksize, 5, anchor, bordertype);
         Near(1);
     }
 

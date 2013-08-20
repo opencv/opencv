@@ -91,7 +91,9 @@ edgeEnhancingFilter_C4_D0(
     int dst_offset,
     int dst_rows,
     int dst_cols,
-    int dst_step)
+    int dst_step,
+    __global const float* lut,
+    int lut_step)
 {
     int col = get_local_id(0);
     const int gX = get_group_id(0);
@@ -212,9 +214,8 @@ edgeEnhancingFilter_C4_D0(
             // Top row: don't sum the very last element
             currValCenter = convert_int4( data[ (startLMj + endLMj)/2][col+anX] );
 
-            for(int j = startLMj; j < endLMj; j++)
+            for(int j = startLMj, lut_j = 0; j < endLMj; j++, lut_j++)
             {
-
                 for(int i=-anX; i<=anX; i++)
                 {
 #if FIXED_WEIGHT
@@ -231,7 +232,7 @@ edgeEnhancingFilter_C4_D0(
                     currWRTCenter = currVal-currValCenter;
 
 #if VAR_PER_CHANNEL
-                    weight = var[extraCnt] / (var[extraCnt] + convert_float4(currWRTCenter * currWRTCenter));
+                    weight = var[extraCnt] / (var[extraCnt] + convert_float4(currWRTCenter * currWRTCenter)) * (float4)(lut[lut_j*lut_step+anX+i]);
                     //weight.x = var[extraCnt].x / ( var[extraCnt].x + (float) mul24(currWRTCenter.x , currWRTCenter.x) ) ;
                     //weight.y = var[extraCnt].y / ( var[extraCnt].y + (float) mul24(currWRTCenter.y , currWRTCenter.y) ) ;
                     //weight.z = var[extraCnt].z / ( var[extraCnt].z + (float) mul24(currWRTCenter.z , currWRTCenter.z) ) ;
@@ -274,7 +275,9 @@ edgeEnhancingFilter_C1_D0(
     int dst_offset,
     int dst_rows,
     int dst_cols,
-    int dst_step)
+    int dst_step,
+    __global const float * lut,
+    int lut_step)
 {
     int col = get_local_id(0);
     const int gX = get_group_id(0);
@@ -390,9 +393,8 @@ edgeEnhancingFilter_C1_D0(
             // Top row: don't sum the very last element
             currValCenter = (int)( data[ (startLMj + endLMj)/2][col+anX] );
 
-            for(int j = startLMj; j < endLMj; j++)
+            for(int j = startLMj, lut_j = 0; j < endLMj; j++, lut_j++)
             {
-
                 for(int i=-anX; i<=anX; i++)
                 {
 #if FIXED_WEIGHT
@@ -401,7 +403,7 @@ edgeEnhancingFilter_C1_D0(
                     currVal	= (int)(data[j][col+anX+i])	;
                     currWRTCenter = currVal-currValCenter;
 
-                    weight = var[extraCnt] / ( var[extraCnt] + (float) mul24(currWRTCenter , currWRTCenter) ) ;
+                    weight = var[extraCnt] / (var[extraCnt] + (float)mul24(currWRTCenter,currWRTCenter)) * lut[lut_j*lut_step+anX+i] ;
 #endif
                     tmp_sum[extraCnt] += (float)(data[j][col+anX+i] * weight);
                     totalWeight += weight;

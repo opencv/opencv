@@ -2223,9 +2223,22 @@ class adaptiveBilateralFilter_8u_Invoker :
     public ParallelLoopBody
 {
 public:
-    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, Point _anchor) :
-        temp(&_temp), dest(&_dest), ksize(_ksize),anchor(_anchor)
+    adaptiveBilateralFilter_8u_Invoker(Mat& _dest, const Mat& _temp, Size _ksize, double _sigma_space, Point _anchor) :
+        temp(&_temp), dest(&_dest), ksize(_ksize), sigma_space(_sigma_space), anchor(_anchor)
     {
+        if( sigma_space <= 0 )
+            sigma_space = 1;
+        CV_Assert((ksize.width & 1) && (ksize.height & 1));
+        space_weight.resize(ksize.width * ksize.height);
+        double sigma2 = sigma_space * sigma_space;
+        int idx = 0;
+        int w = ksize.width / 2;
+        int h = ksize.height / 2;
+        for(int y=-h; y<=h; y++)
+            for(int x=-w; x<=w; x++)
+        {
+            space_weight[idx++] = (float)(sigma2 / (sigma2 + x * x + y * y));
+        }
     }
     virtual void operator()(const Range& range) const
     {
@@ -2290,7 +2303,7 @@ public:
                             currVal = tptr[cn*(y+anX)];
                             currWRTCenter = currVal - currValCenter;
 
-                            weight = var / ( var + (currWRTCenter * currWRTCenter) );
+                            weight = var / ( var + (currWRTCenter * currWRTCenter) ) * space_weight[x*ksize.width+y+anX];;
 #endif
                             tmpSum += ((float)tptr[cn*(y+anX)] * weight);
                             totalWeight += weight;
@@ -2365,9 +2378,10 @@ public:
                             currWRTCenter_g = currVal_g - currValCenter_g;
                             currWRTCenter_r = currVal_r - currValCenter_r;
 
-                            weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) );
-                            weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) );
-                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) );
+                            float cur_spw = space_weight[x*ksize.width+y+anX];
+                            weight_b = var_b / ( var_b + (currWRTCenter_b * currWRTCenter_b) ) * cur_spw;
+                            weight_g = var_g / ( var_g + (currWRTCenter_g * currWRTCenter_g) ) * cur_spw;
+                            weight_r = var_r / ( var_r + (currWRTCenter_r * currWRTCenter_r) ) * cur_spw;
 #endif
                             tmpSum_b += ((float)tptr[cn*(y+anX)]   * weight_b);
                             tmpSum_g += ((float)tptr[cn*(y+anX)+1] * weight_g);
@@ -2390,9 +2404,11 @@ private:
     const Mat *temp;
     Mat *dest;
     Size ksize;
+    double sigma_space;
     Point anchor;
+    vector<float> space_weight;
 };
-static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, Point anchor, int borderType )
+static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, double sigmaSpace, Point anchor, int borderType )
 {
     Size size = src.size();
 
@@ -2402,12 +2418,12 @@ static void adaptiveBilateralFilter_8u( const Mat& src, Mat& dst, Size ksize, Po
     Mat temp;
     copyMakeBorder(src, temp, anchor.x, anchor.y, anchor.x, anchor.y, borderType);
 
-    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, anchor);
+    adaptiveBilateralFilter_8u_Invoker body(dst, temp, ksize, sigmaSpace, anchor);
     parallel_for_(Range(0, size.height), body, dst.total()/(double)(1<<16));
 }
 }
 void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
-                                  Point anchor, int borderType )
+                                  double sigmaSpace, Point anchor, int borderType )
 {
     Mat src = _src.getMat();
     _dst.create(src.size(), src.type());
@@ -2417,7 +2433,7 @@ void cv::adaptiveBilateralFilter( InputArray _src, OutputArray _dst, Size ksize,
 
     anchor = normalizeAnchor(anchor,ksize);
     if( src.depth() == CV_8U )
-        adaptiveBilateralFilter_8u( src, dst, ksize, anchor, borderType );
+        adaptiveBilateralFilter_8u( src, dst, ksize, sigmaSpace, anchor, borderType );
     else
         CV_Error( CV_StsUnsupportedFormat,
         "Adaptive Bilateral filtering is only implemented for 8u images" );

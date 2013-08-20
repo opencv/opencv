@@ -444,25 +444,25 @@ PERFTEST(adaptiveBilateralFilter)
 
                 gen(src, size, size, all_type[j], 0, 256);
 
-                cv::adaptiveBilateralFilter(src, dst, ksize[i]);
+                cv::adaptiveBilateralFilter(src, dst, ksize[i], 10);
 
                 CPU_ON;
-                cv::adaptiveBilateralFilter(src, dst, ksize[i]);
+                cv::adaptiveBilateralFilter(src, dst, ksize[i], 10);
                 CPU_OFF;
 
                 d_src.upload(src);
 
                 WARMUP_ON;
-                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i]);
+                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i], 10);
                 WARMUP_OFF;
 
                 GPU_ON;
-                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i]);
+                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i], 10);
                 GPU_OFF;
 
                 GPU_FULL_ON;
                 d_src.upload(src);
-                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i]);
+                cv::ocl::adaptiveBilateralFilter(d_src, d_dst, ksize[i], 10);
                 d_dst.download(ocl_dst);
                 GPU_FULL_OFF;
 
