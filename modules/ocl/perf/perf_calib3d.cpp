@@ -45,57 +45,51 @@
 //M*/
 
 #include "perf_precomp.hpp"
+
 ///////////// StereoMatchBM ////////////////////////
-PERFTEST(StereoMatchBM)
+
+PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM)
 {
-	Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
-	Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
-	Mat disp,dst;
-	ocl::oclMat d_left, d_right,d_disp;
-	int n_disp= 128;
-	int winSize =19;
+    const std::string parent_path = string(cvtest::TS::ptr()->get_data_path()) + "../gpu/stereobm/";
 
-	SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
+    Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
+    Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
 
-	StereoBM bm(0, n_disp, winSize);
-	bm(left_image, right_image, dst);
+    ASSERT_TRUE(!left_image.empty()) << parent_path;
+    ASSERT_TRUE(!right_image.empty());
+    ASSERT_TRUE(right_image.size() == left_image.size());
+    ASSERT_TRUE(right_image.size() == left_image.size());
 
-	CPU_ON;
-	bm(left_image, right_image, dst);
-	CPU_OFF;
+    const std::string impl = getSelectedImpl();
+    const int n_disp = 128, winSize = 19;
 
-	d_left.upload(left_image);
-	d_right.upload(right_image);
+    Mat disp;
 
-	ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
+    if (impl == "ocl")
+    {
+        ocl::oclMat oclLeft(left_image), oclRight(right_image),
+                oclDisp(left_image.size(), CV_16SC1);
+        ocl::StereoBM_OCL oclBM(0, n_disp, winSize);
 
-	WARMUP_ON;
-	d_bm(d_left, d_right, d_disp);
-	WARMUP_OFF;
+        TEST_CYCLE() oclBM(oclLeft, oclRight, oclDisp);
 
-    cv::Mat ocl_mat;
-    d_disp.download(ocl_mat);
-    ocl_mat.convertTo(ocl_mat, dst.type());
+        oclDisp.download(disp);
 
-	GPU_ON;
-	d_bm(d_left, d_right, d_disp);
-	GPU_OFF;
+        SANITY_CHECK(disp);
+    }
+    else if (impl == "plain")
+    {
+        StereoBM bm(0, n_disp, winSize);
+        disp.create(left_image.size(), CV_16SC1);
 
-	GPU_FULL_ON;
-	d_left.upload(left_image);
-	d_right.upload(right_image);
-	d_bm(d_left, d_right, d_disp);
-	d_disp.download(disp);
-	GPU_FULL_OFF;
-    
-    TestSystem::instance().setAccurate(-1, 0.);
+        TEST_CYCLE() bm(left_image, right_image, disp);
+
+        SANITY_CHECK(disp);
+    }
+#ifdef HAVE_OPENCV_GPU
+        else if (impl == "gpu")
+            CV_TEST_FAIL_NO_IMPL();
+    #endif
+        else
+            CV_TEST_FAIL_NO_IMPL();
 }
-
-
-
-
-
-
-
-
-	

@@ -45,55 +45,65 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::get;
+using std::tr1::tuple;
+
 ///////////// Blur////////////////////////
-PERFTEST(Blur)
+
+CV_ENUM(BlurMatType, CV_8UC1, CV_8UC4)
+
+typedef tuple<Size, BlurMatType> BlurParams;
+typedef TestBaseWithParam<BlurParams> BlurFixture;
+
+PERF_TEST_P(BlurFixture, Blur,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               BlurMatType::all()))
 {
-    Mat src1, dst, ocl_dst;
-    ocl::oclMat d_src1, d_dst;
+    // getting params
+    BlurParams params = GetParam();
+    const Size srcSize = get<0>(params), ksize(3, 3);
+    const int type = get<1>(params), bordertype = BORDER_CONSTANT;
 
-    Size ksize = Size(3, 3);
-    int bordertype = BORDER_CONSTANT;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    std::string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src(srcSize, type), dst;
+    declare.in(src, WARMUP_RNG);
+
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(dst, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, ksize, Point(-1, -1), bordertype);
 
-            blur(src1, dst, ksize, Point(-1, -1), bordertype);
+        oclDst.download(dst);
 
-            CPU_ON;
-            blur(src1, dst, ksize, Point(-1, -1), bordertype);
-            CPU_OFF;
-
-            d_src1.upload(src1);
-
-            WARMUP_ON;
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src1.upload(src1);
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.0);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        dst.create(srcSize, type);
+        TEST_CYCLE() cv::blur(src, dst, ksize, Point(-1, -1), bordertype);
+
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }
+
 ///////////// Laplacian////////////////////////
-PERFTEST(Laplacian)
+
+typedef BlurMatType LaplacianMatType;
+typedef tuple<Size, LaplacianMatType> LaplacianParams;
+typedef TestBaseWithParam<LaplacianParams> LaplacianFixture;
+
+PERF_TEST_P(LaplacianFixture, Laplacian,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               LaplacianMatType::all()))
 {
     Mat src1, dst, ocl_dst;
     ocl::oclMat d_src1, d_dst;

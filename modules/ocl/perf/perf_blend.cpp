@@ -47,8 +47,6 @@
 #include "perf_precomp.hpp"
 
 using namespace perf;
-using std::tr1::tuple;
-using std::tr1::get;
 
 ///////////// blend ////////////////////////
 

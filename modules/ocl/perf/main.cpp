@@ -176,14 +176,17 @@ int main(int argc, char **argv)
 {
     // temp solution: if no '--gtest_' and '--perf_' args switch to old behavior
     bool useGTest = false;
+
     for(int i=1; i<argc; i++)
     {
         std::string arg( argv[i] );
+        std::cout << "arg:" << arg << std::endl;
         if( arg.find("--gtest_")==0 || arg.find("--perf_")==0 )
         {
             useGTest = true;
-            break;
         }
+        if (arg == "--perf_verify_sanity")
+            argv[i] = (char*)"--perf_no_verify_sanity";
     }
 
     if( !useGTest )

@@ -45,47 +45,42 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
 ///////////// dft ////////////////////////
-PERFTEST(dft)
+
+typedef TestBaseWithParam<Size> dftFixture;
+
+PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES)
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const std::string impl = getSelectedImpl();
+    Size srcSize = GetParam();
 
-    int all_type[] = {CV_32FC2};
-    std::string type_name[] = {"CV_32FC2"};
+    Mat src(srcSize, CV_32FC2), dst;
+    randu(src, 0.0f, 1.0f);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] << " ; complex-to-complex";
+        ocl::oclMat oclSrc(src), oclDst;
 
-            gen(src, size, size, all_type[j], Scalar::all(0), Scalar::all(1));
+        EXPECT_NO_THROW({
+            TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
+        });
 
-            dft(src, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            dft(src, dst);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::dft(d_src, d_dst, Size(size, size));
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::dft(d_src, d_dst, Size(size, size));
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::dft(d_src, d_dst, Size(size, size));
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, src.size().area() * 1e-4);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() cv::dft(src, dst);
+
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }
