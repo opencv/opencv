@@ -2,44 +2,44 @@
 package "TrackerFeature package" #DDDDDD {
 
 class TrackerFeatureSet{
-	-vector<pair<string, Ptr<TrackerFeature> > > features
-	-vector<Mat> responses
-	...
-	TrackerFeatureSet();
-	~TrackerFeatureSet();
-	--
-	+extraction(const std::vector<Mat>& images);
-	+selection();
-	+removeOutliers();
-	+vector<Mat> response getResponses();
-	+vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > getTrackerFeatures();
-	+bool addTrackerFeature(string trackerFeatureType);
-	+bool addTrackerFeature(Ptr<TrackerFeature>& feature);
-	-clearResponses();
+    -vector<pair<string, Ptr<TrackerFeature> > > features
+    -vector<Mat> responses
+    ...
+    TrackerFeatureSet();
+    ~TrackerFeatureSet();
+    --
+    +extraction(const std::vector<Mat>& images);
+    +selection();
+    +removeOutliers();
+    +vector<Mat> response getResponses();
+    +vector<pair<string TrackerFeatureType, Ptr<TrackerFeature> > > getTrackerFeatures();
+    +bool addTrackerFeature(string trackerFeatureType);
+    +bool addTrackerFeature(Ptr<TrackerFeature>& feature);
+    -clearResponses();
 }
 
 class TrackerFeature <<virtual>>{
-	static Ptr<TrackerFeature> = create(const string& trackerFeatureType);
-	compute(const std::vector<Mat>& images, Mat& response);
-	selection(Mat& response, int npoints);
+    static Ptr<TrackerFeature> = create(const string& trackerFeatureType);
+    compute(const std::vector<Mat>& images, Mat& response);
+    selection(Mat& response, int npoints);
 }
 note bottom: Can be specialized as in table II\nA tracker can use more types of features
 
 class TrackerFeatureFeature2D{
-	-vector<Keypoints> keypoints
-	---
-	TrackerFeatureFeature2D(string detectorType, string descriptorType);
-	~TrackerFeatureFeature2D();
-	---
-	compute(const std::vector<Mat>& images, Mat& response);
-	selection( Mat& response, int npoints);
+    -vector<Keypoints> keypoints
+    ---
+    TrackerFeatureFeature2D(string detectorType, string descriptorType);
+    ~TrackerFeatureFeature2D();
+    ---
+    compute(const std::vector<Mat>& images, Mat& response);
+    selection( Mat& response, int npoints);
 }
 class TrackerFeatureHOG{
-	TrackerFeatureHOG();
-	~TrackerFeatureHOG();
-	---
-	compute(const std::vector<Mat>& images, Mat& response);
-	selection(Mat& response, int npoints);
+    TrackerFeatureHOG();
+    ~TrackerFeatureHOG();
+    ---
+    compute(const std::vector<Mat>& images, Mat& response);
+    selection(Mat& response, int npoints);
 }
 
 TrackerFeatureSet *-- TrackerFeature

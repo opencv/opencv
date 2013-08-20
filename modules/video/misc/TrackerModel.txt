@@ -2,56 +2,56 @@
 package "TrackerModel package" #DDDDDD {
 
 class Typedef << (T,#FF7700) >>{
-	ConfidenceMap
-	Trajectory
+    ConfidenceMap
+    Trajectory
 }
 
 class TrackerModel{
-	-vector<ConfidenceMap> confidenceMaps;
-	-Trajectory trajectory;
-	-Ptr<TrackerStateEstimator> stateEstimator;
-	...
-	TrackerModel();
-	~TrackerModel();
+    -vector<ConfidenceMap> confidenceMaps;
+    -Trajectory trajectory;
+    -Ptr<TrackerStateEstimator> stateEstimator;
+    ...
+    TrackerModel();
+    ~TrackerModel();
 
-	+bool setTrackerStateEstimator(Ptr<TrackerStateEstimator> trackerStateEstimator);
-	+Ptr<TrackerStateEstimator> getTrackerStateEstimator();
+    +bool setTrackerStateEstimator(Ptr<TrackerStateEstimator> trackerStateEstimator);
+    +Ptr<TrackerStateEstimator> getTrackerStateEstimator();
 
-	+void modelEstimation(const vector<Mat>& responses);
-	+void modelUpdate();
-	+void setLastTargetState(const Ptr<TrackerTargetState> lastTargetState);
-	+void runStateEstimator();
+    +void modelEstimation(const vector<Mat>& responses);
+    +void modelUpdate();
+    +void setLastTargetState(const Ptr<TrackerTargetState> lastTargetState);
+    +void runStateEstimator();
 
-	+const vector<ConfidenceMap>& getConfidenceMaps();
-	+const ConfidenceMap& getLastConfidenceMap();
+    +const vector<ConfidenceMap>& getConfidenceMaps();
+    +const ConfidenceMap& getLastConfidenceMap();
 }
 class TrackerTargetState <<virtual>>{
-	Point2f targetPosition;
-	---
-	Point2f getTargetPosition();
-	void setTargetPosition(Point2f position);
+    Point2f targetPosition;
+    ---
+    Point2f getTargetPosition();
+    void setTargetPosition(Point2f position);
 }
 class TrackerTargetState
 note bottom: Each TrackerStateEstimator can create own state
 
 class TrackerStateEstimator <<virtual>>{
-	~TrackerStateEstimator();
-	static Ptr<TrackerStateEstimator> create(const String& trackeStateEstimatorType);
-	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
-	void update(vector<ConfidenceMap>& confidenceMaps)
+    ~TrackerStateEstimator();
+    static Ptr<TrackerStateEstimator> create(const String& trackeStateEstimatorType);
+    Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+    void update(vector<ConfidenceMap>& confidenceMaps)
 }
 
 class TrackerStateEstimatorSVM{
-	TrackerStateEstimatorSVM()
-	~TrackerStateEstimatorSVM()
-	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
-	void update(vector<ConfidenceMap>& confidenceMaps)
+    TrackerStateEstimatorSVM()
+    ~TrackerStateEstimatorSVM()
+    Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+    void update(vector<ConfidenceMap>& confidenceMaps)
 }
 class TrackerStateEstimatorMILBoosting{
-	TrackerStateEstimatorMILBoosting()
-	~TrackerStateEstimatorMILBoosting()
-	Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
-	void update(vector<ConfidenceMap>& confidenceMaps)
+    TrackerStateEstimatorMILBoosting()
+    ~TrackerStateEstimatorMILBoosting()
+    Ptr<TrackerTargetState> estimate(const vector<ConfidenceMap>& confidenceMaps)
+    void update(vector<ConfidenceMap>& confidenceMaps)
 }
 
 TrackerModel -> TrackerStateEstimator: create

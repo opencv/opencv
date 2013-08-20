@@ -47,25 +47,20 @@ using namespace std;
 
 class CV_TrackerBaseTest : public cvtest::BaseTest
 {
-public:
-	CV_TrackerBaseTest();
-    virtual ~CV_TrackerBaseTest();
+ public:
+  CV_TrackerBaseTest();
+  virtual ~CV_TrackerBaseTest();
 
 };
-
 
 CV_TrackerBaseTest::CV_TrackerBaseTest()
 {
 
 }
 
-
 CV_TrackerBaseTest::~CV_TrackerBaseTest()
 {
 
 }
-
-
-
 
 /* End of file. */

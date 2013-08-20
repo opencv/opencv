@@ -7,29 +7,29 @@ package "Tracker package" #DDDDDD {
 class Algorithm {
 }
 class Tracker{
-	Ptr<TrackerFeatureSet> featureSet;
-	Ptr<TrackerSampler> sampler;
-	Ptr<TrackerModel> model;
-	---
-	+static Ptr<Tracker> create(const string& trackerType);
-	+bool init(const Mat& image, const Rect& boundingBox);
-	+bool update(const Mat& image, Rect& boundingBox);
+    Ptr<TrackerFeatureSet> featureSet;
+    Ptr<TrackerSampler> sampler;
+    Ptr<TrackerModel> model;
+    ---
+    +static Ptr<Tracker> create(const string& trackerType);
+    +bool init(const Mat& image, const Rect& boundingBox);
+    +bool update(const Mat& image, Rect& boundingBox);
 }
 class Tracker
 note right: Tracker is the general interface for each specialized trackers
 class TrackerMIL{
-	+Params
-	---
-	TrackerMIL(TrackerMIL::Params parameters);
-	+bool init(const Mat& image, const Rect& boundingBox);
-	+bool update(const Mat& image, Rect& boundingBox);
+    +Params
+    ---
+    TrackerMIL(TrackerMIL::Params parameters);
+    +bool init(const Mat& image, const Rect& boundingBox);
+    +bool update(const Mat& image, Rect& boundingBox);
 }
 class TrackerBoosting{
-	+Params
-	---
-	TrackerBoosting(TrackerBoosting::Params parameters);
-	+bool init(const Mat& image, const Rect& boundingBox);
-	+bool update(const Mat& image, Rect& boundingBox);
+    +Params
+    ---
+    TrackerBoosting(TrackerBoosting::Params parameters);
+    +bool init(const Mat& image, const Rect& boundingBox);
+    +bool update(const Mat& image, Rect& boundingBox);
 }
 Algorithm <|-- Tracker : virtual inheritance
 Tracker <|-- TrackerMIL

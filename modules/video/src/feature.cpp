@@ -257,7 +257,13 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
   if( mode == CvHaarFeatureParams::ALL )
     isTilted = true;
 
-  RNG rng = RNG( (int) time( 0 ) );
+  RNG rng;
+#ifdef _WIN32
+  /* use clock() function insted of time() */
+  rng = RNG( (((double) clock()) / CLOCKS_PER_SEC) );
+#else
+  rng = RNG( time( 0 ) );
+#endif /* _WIN32 */
 
   for ( int i = 0; i < nFeatures; i++ )
   {
