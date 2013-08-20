@@ -97,7 +97,6 @@ String TrackerSamplerAlgorithm::getClassName() const
  * Parameters
  */
 
-
 TrackerSamplerCSC::Params::Params()
 {
   initInRad = 3;
@@ -114,7 +113,7 @@ TrackerSamplerCSC::TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameter
 {
   className = "CSC";
   mode = MODE_INIT_POS;
-  rng = RNG( TIME( 0 ) );
+  rng = RNG( uint64(  TIME( 0 ) ) );
 
 }
 

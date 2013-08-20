@@ -45,7 +45,6 @@
 #include "opencv2/core.hpp"
 #include "feature.hpp"
 #include "onlineMIL.hpp"
-#include "opencv2/highgui.hpp"
 #include <iostream>
 
 /*

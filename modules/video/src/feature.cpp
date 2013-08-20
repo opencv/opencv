@@ -263,7 +263,7 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
   if( mode == CvHaarFeatureParams::ALL )
     isTilted = true;
 
-  RNG rng = RNG( TIME( 0 ) );
+  RNG rng = RNG( uint64( TIME( 0 ) ) );
 
   for ( int i = 0; i < nFeatures; i++ )
   {
