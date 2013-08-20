@@ -79,7 +79,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
-If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`cuda::GpuMat` as input.
 
 .. note:: This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image.
 
