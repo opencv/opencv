@@ -69,7 +69,8 @@ PERF_TEST_P(LUTFixture, LUT,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src(srcSize, type), lut(1, 256, CV_8UC1), dst(srcSize, type);
+    Mat src(srcSize, type), lut(1, 256, CV_8UC1), dst;
+    int dstType = CV_MAKETYPE(lut.depth(), src.channels());
 
     declare.in(src, WARMUP_RNG);
     randu(lut, 0, 2);
@@ -77,7 +78,7 @@ PERF_TEST_P(LUTFixture, LUT,
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclLut(lut), oclDst;
+        ocl::oclMat oclSrc(src), oclLut(lut), oclDst(srcSize, dstType);
 
         TEST_CYCLE() cv::ocl::LUT(oclSrc, oclLut, oclDst);
 
@@ -87,6 +88,7 @@ PERF_TEST_P(LUTFixture, LUT,
     }
     else if (impl == "plain")
     {
+        dst.create(srcSize, dstType);
         TEST_CYCLE() cv::LUT(src, lut, dst);
 
         SANITY_CHECK(dst);
@@ -117,7 +119,7 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
         TEST_CYCLE() cv::ocl::exp(oclSrc, oclDst);
 
@@ -157,7 +159,7 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
         TEST_CYCLE() cv::ocl::log(oclSrc, oclDst);
 
@@ -167,6 +169,7 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
     }
     else if (impl == "plain")
     {
+        dst.create(srcSize, src.type());
         TEST_CYCLE() cv::log(src, dst);
 
         SANITY_CHECK(dst);
@@ -198,14 +201,14 @@ PERF_TEST_P(AddFixture, Add,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::add(oclSrc1, oclSrc2, oclDst);
 
@@ -245,14 +248,14 @@ PERF_TEST_P(MulFixture, Mul, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::multiply(oclSrc1, oclSrc2, oclDst);
 
@@ -291,14 +294,14 @@ PERF_TEST_P(DivFixture, Div, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::divide(oclSrc1, oclSrc2, oclDst);
 
@@ -337,14 +340,14 @@ PERF_TEST_P(AbsDiffFixture, Absdiff, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::absdiff(oclSrc1, oclSrc2, oclDst);
 
@@ -377,14 +380,16 @@ PERF_TEST_P(CartToPolarFixture, CartToPolar, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1), dst1, dst2;
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            dst1(srcSize, CV_32FC1), dst2(srcSize, CV_32FC1);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst1, oclDst2;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2),
+                oclDst1(srcSize, src1.type()), oclDst2(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::cartToPolar(oclSrc1, oclSrc2, oclDst1, oclDst2);
 
@@ -420,14 +425,16 @@ PERF_TEST_P(PolarToCartFixture, PolarToCart, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1), dst1, dst2;
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            dst1(srcSize, CV_32FC1), dst2(srcSize, CV_32FC1);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst1, oclDst2;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2),
+                oclDst1(srcSize, src1.type()), oclDst2(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::polarToCart(oclSrc1, oclSrc2, oclDst1, oclDst2);
 
@@ -463,14 +470,16 @@ PERF_TEST_P(MagnitudeFixture, Magnitude, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1), dst;
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            dst(srcSize, CV_32FC1);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2),
+                oclDst(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::magnitude(oclSrc1, oclSrc2, oclDst);
 
@@ -510,13 +519,13 @@ PERF_TEST_P(TransposeFixture, Transpose,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src(srcSize, type), dst;
-    randu(src, 0, 256);
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::transpose(oclSrc, oclDst);
 
@@ -556,13 +565,13 @@ PERF_TEST_P(FlipFixture, Flip,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src(srcSize, type), dst;
-    randu(src, 0, 256);
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::flip(oclSrc, oclDst, 0);
 
@@ -786,14 +795,16 @@ PERF_TEST_P(PhaseFixture, Phase, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1), dst;
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            dst(srcSize, CV_32FC1);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2),
+                oclDst(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::phase(oclSrc1, oclSrc2, oclDst, 1);
 
@@ -833,14 +844,14 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_and,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::bitwise_and(oclSrc1, oclSrc2, oclDst);
 
@@ -879,13 +890,13 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_not,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src(srcSize, type), dst;
+    Mat src(srcSize, type), dst(srcSize, type);
     randu(src, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::bitwise_not(oclSrc, oclDst);
 
@@ -918,21 +929,21 @@ PERF_TEST_P(CompareFixture, compare,
                                CompareMatTypes::all()))
 {
     // getting params
-    BitwiseAndParams params = GetParam();
+    CompareParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, CV_8UC1);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, CV_8UC1);
 
         TEST_CYCLE() cv::ocl::compare(oclSrc1, oclSrc2, oclDst, CMP_EQ);
 
@@ -965,13 +976,13 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src(srcSize, CV_32F), dst;
+    Mat src(srcSize, CV_32F), dst(srcSize, CV_32F);
     randu(src, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc(src), oclDst;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
         TEST_CYCLE() cv::ocl::pow(oclSrc, -2.0, oclDst);
 
@@ -1004,14 +1015,15 @@ PERF_TEST_P(MagnitudeSqrFixture, MagnitudeSqr, OCL_TYPICAL_MAT_SIZES)
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1), dst;
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            dst(srcSize, CV_32FC1);
     randu(src1, 0, 256);
     randu(src2, 0, 256);
 
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
 
         TEST_CYCLE() cv::ocl::magnitudeSqr(oclSrc1, oclSrc2, oclDst);
 
@@ -1047,7 +1059,7 @@ PERF_TEST_P(AddWeightedFixture, AddWeighted,
     std::string impl = getSelectedImpl();
 
     // creating src data
-    Mat src1(srcSize, type), src2(srcSize, type), dst;
+    Mat src1(srcSize, type), src2(srcSize, type), dst(srcSize, type);
     double alpha = 2.0, beta = 1.0, gama = 3.0;
     randu(src1, 0, 256);
     randu(src2, 0, 256);
@@ -1055,7 +1067,7 @@ PERF_TEST_P(AddWeightedFixture, AddWeighted,
     // select implementation
     if (impl == "ocl")
     {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
         TEST_CYCLE() cv::ocl::addWeighted(oclSrc1, alpha, oclSrc2, beta, gama, oclDst);
 
