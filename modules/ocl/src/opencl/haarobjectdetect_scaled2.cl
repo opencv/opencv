@@ -207,7 +207,7 @@ __kernel void gpuRunHaarClassifierCascade_scaled2(
                         - sum[clamp(mad24(info3.y, step, info3.z), 0, max_idx)] -
                                      sum[clamp(mad24(info3.w, step, info3.x), 0, max_idx)]
                         + sum[clamp(mad24(info3.w, step, info3.z), 0, max_idx)]) * w.z;
-                        
+
                         bool passThres = classsum >= nodethreshold;
 
 #if STUMP_BASED

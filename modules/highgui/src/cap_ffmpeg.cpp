@@ -160,7 +160,7 @@ private:
 };
 
 
-class CvCapture_FFMPEG_proxy : 
+class CvCapture_FFMPEG_proxy :
 	public CvCapture
 {
 public:
@@ -224,7 +224,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     return 0;
 }
 
-class CvVideoWriter_FFMPEG_proxy : 
+class CvVideoWriter_FFMPEG_proxy :
 	public CvVideoWriter
 {
 public:

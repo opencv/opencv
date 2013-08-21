@@ -133,7 +133,7 @@ PERFTEST(Split)
 
             WARMUP_ON;
             ocl::split(d_src, d_dst);
-            WARMUP_OFF;         
+            WARMUP_OFF;
 
             GPU_ON;
             ocl::split(d_src, d_dst);

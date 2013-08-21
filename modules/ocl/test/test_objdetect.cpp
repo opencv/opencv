@@ -222,13 +222,13 @@ TEST_P(Haar, FaceDetect)
 {
     MemStorage storage(cvCreateMemStorage(0));
     CvSeq *_objects;
-    _objects = cascade.oclHaarDetectObjects(d_img, storage, 1.1, 3, 
+    _objects = cascade.oclHaarDetectObjects(d_img, storage, 1.1, 3,
                                             flags, Size(30, 30), Size(0, 0));
     vector<CvAvgComp> vecAvgComp;
     Seq<CvAvgComp>(_objects).copyTo(vecAvgComp);
     oclfaces.resize(vecAvgComp.size());
     std::transform(vecAvgComp.begin(), vecAvgComp.end(), oclfaces.begin(), getRect());
-    
+
     cpucascade.detectMultiScale(img, faces,  1.1, 3,
                                 flags,
                                 Size(30, 30), Size(0, 0));
@@ -261,7 +261,7 @@ TEST_P(Haar, FaceDetectUseBuf)
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ObjDetect, Haar,
-    Combine(Values(CV_HAAR_SCALE_IMAGE, 0), 
+    Combine(Values(CV_HAAR_SCALE_IMAGE, 0),
             Values(cascade_frontalface_alt/*, cascade_frontalface_alt2*/)));
 
 #endif //HAVE_OPENCL

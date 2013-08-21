@@ -4,7 +4,7 @@ stitching. Images stitching
 
 .. toctree::
     :maxdepth: 2
-    
+
     introduction
     high_level
     camera

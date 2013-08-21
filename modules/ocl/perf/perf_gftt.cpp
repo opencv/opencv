@@ -55,14 +55,14 @@ PERFTEST(GoodFeaturesToTrack)
     double qualityLevel = 0.01;
 
     std::string images[] = { "rubberwhale1.png", "aloeL.jpg" };
-    
+
     std::vector<cv::Point2f> pts_gold, pts_ocl;
 
     for(size_t imgIdx = 0; imgIdx < (sizeof(images)/sizeof(std::string)); ++imgIdx)
     {
         Mat frame = imread(abspath(images[imgIdx]), IMREAD_GRAYSCALE);
         CV_Assert(!frame.empty());
-        
+
         for(float minDistance = 0; minDistance < 4; minDistance += 3.0)
         {
             SUBTEST << "image = " << images[imgIdx] << "; ";

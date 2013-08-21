@@ -77,7 +77,7 @@ PERFTEST(HOG)
     WARMUP_ON;
     ocl_hog.detectMultiScale(d_src, d_found_locations);
     WARMUP_OFF;
-    
+
     if(d_found_locations.size() == found_locations.size())
         TestSystem::instance().setAccurate(1, 0);
     else

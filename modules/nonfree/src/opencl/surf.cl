@@ -125,7 +125,7 @@ float icvCalcHaarPatternSum_2(
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
     d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
@@ -161,14 +161,14 @@ float icvCalcHaarPatternSum_3(
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
     d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
     d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
@@ -204,21 +204,21 @@ float icvCalcHaarPatternSum_4(
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy1.x), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.x, y + dy2.x), rows, cols, elemPerRow );
     d += t * src[4].x / ((dx2.x - dx1.x) * (dy2.x - dy1.x));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy1.y), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.y, y + dy2.y), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy1.y), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.y, y + dy2.y), rows, cols, elemPerRow );
     d += t * src[4].y / ((dx2.y - dx1.y) * (dy2.y - dy1.y));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy1.z), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.z, y + dy2.z), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy1.z), rows, cols, elemPerRow );
     t += read_sumTex( sumTex, sampler, (int2)(x + dx2.z, y + dy2.z), rows, cols, elemPerRow );
     d += t * src[4].z / ((dx2.z - dx1.z) * (dy2.z - dy1.z));
-    
+
     t = 0;
     t += read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy1.w), rows, cols, elemPerRow );
     t -= read_sumTex( sumTex, sampler, (int2)(x + dx1.w, y + dy2.w), rows, cols, elemPerRow );
@@ -1231,7 +1231,7 @@ void compute_descriptors64(
     barrier(CLK_LOCAL_MEM_FENCE);
 
     reduce_sum25(sdx, sdy, sdxabs, sdyabs, tid);
- 
+
     barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 25)
     {
@@ -1361,14 +1361,14 @@ void reduce_sum128(volatile __local  float* smem, int tid)
 #if WAVE_SIZE < 64
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 32) 
+    if (tid < 32)
     {
 #endif
         smem[tid] += smem[tid + 32];
 #if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) 
+    if (tid < 16)
     {
 #endif
         smem[tid] += smem[tid + 16];
@@ -1415,7 +1415,7 @@ void reduce_sum64(volatile __local  float* smem, int tid)
 #if WAVE_SIZE < 32
     }
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (tid < 16) 
+    if (tid < 16)
     {
 #endif
         smem[tid] += smem[tid + 16];

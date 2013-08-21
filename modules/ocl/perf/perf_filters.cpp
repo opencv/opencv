@@ -284,7 +284,7 @@ PERFTEST(GaussianBlur)
     Mat src, dst, ocl_dst;
     int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
     std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
-    const int ksize = 7;	
+    const int ksize = 7;
 
     for (int size = Min_Size; size <= Max_Size; size *= Multiple)
     {

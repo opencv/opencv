@@ -16,4 +16,4 @@ The license does not permit the following uses:
 
 You may not use, or allow anyone else to use the icons to create pornographic, libelous, obscene, or defamatory material.
 
-All icon files are provided "as is". You agree not to hold IconEden.com liable for any damages that may occur due to use, or inability to use, icons or image data from IconEden.com. 
+All icon files are provided "as is". You agree not to hold IconEden.com liable for any damages that may occur due to use, or inability to use, icons or image data from IconEden.com.

@@ -1333,7 +1333,7 @@ HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuff
             const int mHistSize[] = {25};
             const float baseRabge[] = {0.f,256.f};
             const float* ranges[] = {baseRabge};
-            
+
 			const cv::Scalar mColorsY[] = { cv::Scalar(76), cv::Scalar(149), cv::Scalar(29) };
 			const cv::Scalar mColorsUV[] = { cv::Scalar(84, 255), cv::Scalar(43, 21), cv::Scalar(255, 107) };
 
@@ -1370,7 +1370,7 @@ HRESULT OcvImageManipulations::OnProcessOutput(IMFMediaBuffer *pIn, IMFMediaBuff
                     mP2.y /= 2;
 					cv::line(OutputUV, mP1, mP2, mColorsUV[c], thikness/2);
                 }
-            }            
+            }
         } break;
     default:
         break;

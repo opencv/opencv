@@ -197,7 +197,7 @@ namespace cv
                 desc.buffer           = NULL;
                 desc.num_mip_levels   = 0;
                 desc.num_samples      = 0;
-                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);            
+                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
             }
             else
 #endif
@@ -223,7 +223,7 @@ namespace cv
                 const size_t regin[3] = {mat.cols * mat.elemSize(), mat.rows, 1};
                 clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
-                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue()); 
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
             }
             else
             {

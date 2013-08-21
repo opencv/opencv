@@ -1,4 +1,4 @@
-function insertIframe (elementId, iframeSrc) 
+function insertIframe (elementId, iframeSrc)
 {
   var iframe;
   if (document.createElement && (iframe = document.createElement('iframe')))

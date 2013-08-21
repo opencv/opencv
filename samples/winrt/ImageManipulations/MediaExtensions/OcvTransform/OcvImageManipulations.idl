@@ -5,7 +5,7 @@ import "Windows.Media.idl";
 namespace OcvTransform
 {
 	[version(NTDDI_WIN8)]
-	runtimeclass OcvImageManipulations 
+	runtimeclass OcvImageManipulations
     {
 	}
 }

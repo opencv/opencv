@@ -72,7 +72,7 @@ PERFTEST(norm)
         WARMUP_OFF;
 
         d_src1.download(ocl_src1);
-        TestSystem::instance().ExpectedMatNear(src1, ocl_src1, .5);                        
+        TestSystem::instance().ExpectedMatNear(src1, ocl_src1, .5);
 
         GPU_ON;
         ocl::norm(d_src1, d_src2, NORM_INF);

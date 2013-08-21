@@ -291,7 +291,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                
+
                 if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
@@ -1115,7 +1115,7 @@ namespace cv
              args.push_back( make_pair( sizeof(cl_int) , (void *)&sum.step));
              args.push_back( make_pair( sizeof(cl_int) , (void *)&sum_offset));
              size_t gt2[3] = {t_sum.cols  * 32, 1, 1}, lt2[3] = {256, 1, 1};
-             openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_rows", gt2, lt2, args, -1, depth);         
+             openCLExecuteKernel(src.clCxt, &imgproc_integral_sum, "integral_sum_rows", gt2, lt2, args, -1, depth);
         }
 
         /////////////////////// corner //////////////////////////////
@@ -1230,7 +1230,7 @@ namespace cv
             oclMat dx, dy;
             cornerMinEigenVal_dxdy(src, dst, dx, dy, blockSize, ksize, borderType);
         }
-        
+
         void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize, int borderType)
         {
             if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)

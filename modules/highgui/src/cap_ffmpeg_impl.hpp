@@ -345,7 +345,7 @@ class ImplMutex
 public:
 	ImplMutex() { init(); }
 	~ImplMutex() { destroy(); }
-	
+
     void init();
     void destroy();
 
@@ -450,7 +450,7 @@ void ImplMutex::init()
 	impl = (Impl*)malloc(sizeof(Impl));
 	impl->init();
 }
-void ImplMutex::destroy() 
+void ImplMutex::destroy()
 {
 	impl->destroy();
 	free(impl);

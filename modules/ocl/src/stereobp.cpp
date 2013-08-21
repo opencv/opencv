@@ -136,7 +136,7 @@ namespace cv
 
                 const int OPT_SIZE = 50;
                 char cn_opt [OPT_SIZE] = "";
-                sprintf( cn_opt, "%s -D CN=%d", 
+                sprintf( cn_opt, "%s -D CN=%d",
                     (data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT"),
                     channels
                     );

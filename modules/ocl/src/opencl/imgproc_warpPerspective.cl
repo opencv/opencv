@@ -116,7 +116,7 @@ __kernel void warpPerspectiveNN_C1_D0(__global uchar const * restrict src, __glo
         sval.s1 = scon.s1 ? src[spos.s1] : 0;
         sval.s2 = scon.s2 ? src[spos.s2] : 0;
         sval.s3 = scon.s3 ? src[spos.s3] : 0;
-        dval = convert_uchar4(dcon) != (uchar4)(0,0,0,0) ? sval : dval;	
+        dval = convert_uchar4(dcon) != (uchar4)(0,0,0,0) ? sval : dval;
         *d = dval;
     }
 }

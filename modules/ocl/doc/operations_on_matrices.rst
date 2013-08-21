@@ -500,13 +500,13 @@ Returns void
             * **SORT_SELECTION** selection sort, currently cannot sort duplicate keys
             * **SORT_MERGE**     merge sort
             * **SORT_RADIX**     radix sort, only support signed int/float keys(``CV_32S``/``CV_32F``)
-            
+
 Returns the sorted result of all the elements in values based on equivalent keys.
 
-The element unit in the values to be sorted is determined from the data type, 
+The element unit in the values to be sorted is determined from the data type,
 i.e., a ``CV_32FC2`` input ``{a1a2, b1b2}`` will be considered as two elements, regardless its matrix dimension.
 
-Both keys and values will be sorted inplace. 
+Both keys and values will be sorted inplace.
 
 Keys needs to be a **single** channel `oclMat`.
 

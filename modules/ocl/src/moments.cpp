@@ -143,7 +143,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
         openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
-        
+
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
         if (!cv::ocl::Context::getContext()->supportsFeature(Context::CL_DOUBLE))

@@ -110,7 +110,7 @@ __kernel void upscaleKernel(__global float* src,
             dst[y * channels * scale * dst_step + 4 * x * scale + 0] = src[y * channels * src_step + 4 * x + 0];
             dst[y * channels * scale * dst_step + 4 * x * scale + 1] = src[y * channels * src_step + 4 * x + 1];
             dst[y * channels * scale * dst_step + 4 * x * scale + 2] = src[y * channels * src_step + 4 * x + 2];
-            dst[y * channels * scale * dst_step + 4 * x * scale + 3] = src[y * channels * src_step + 4 * x + 3];            
+            dst[y * channels * scale * dst_step + 4 * x * scale + 3] = src[y * channels * src_step + 4 * x + 3];
         }
     }
 }

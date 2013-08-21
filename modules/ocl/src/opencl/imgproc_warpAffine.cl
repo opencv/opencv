@@ -183,7 +183,7 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
         spos1 = src_offset + sy * srcStep + sx + 1;
         spos2 = src_offset + (sy+1) * srcStep + sx;
         spos3 = src_offset + (sy+1) * srcStep + sx + 1;
-        
+
         v0.s0 = scon0.s0 ? src[spos0.s0] : 0;
         v1.s0 = scon1.s0 ? src[spos1.s0] : 0;
         v2.s0 = scon2.s0 ? src[spos2.s0] : 0;
@@ -203,7 +203,7 @@ __kernel void warpAffineLinear_C1_D0(__global const uchar * restrict src, __glob
         v1.s3 = scon1.s3 ? src[spos1.s3] : 0;
         v2.s3 = scon2.s3 ? src[spos2.s3] : 0;
         v3.s3 = scon3.s3 ? src[spos3.s3] : 0;
-      
+
         short4 itab0, itab1, itab2, itab3;
         float4 taby, tabx;
         taby = INTER_SCALE * convert_float4(ay);

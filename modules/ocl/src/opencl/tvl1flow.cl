@@ -43,7 +43,7 @@
 //
 //M*/
 
-__kernel void centeredGradientKernel(__global const float* src, int src_col, int src_row, int src_step, 
+__kernel void centeredGradientKernel(__global const float* src, int src_col, int src_row, int src_step,
 __global float* dx, __global float* dy, int dx_step)
 {
     int x = get_global_id(0);
@@ -53,7 +53,7 @@ __global float* dx, __global float* dy, int dx_step)
     {
 		int src_x1 = (x + 1) < (src_col -1)? (x + 1) : (src_col - 1);
      	int src_x2 = (x - 1) > 0 ? (x -1) : 0;
-        
+
         //if(src[y * src_step + src_x1] == src[y * src_step+ src_x2])
         //{
         //    printf("y = %d\n", y);
@@ -61,7 +61,7 @@ __global float* dx, __global float* dy, int dx_step)
         //    printf("src_x2 = %d\n", src_x2);
         //}
         dx[y * dx_step+ x] = 0.5f * (src[y * src_step + src_x1] - src[y * src_step+ src_x2]);
-        
+
 		int src_y1 = (y+1) < (src_row - 1) ? (y + 1) : (src_row - 1);
         int src_y2 = (y - 1) > 0 ? (y - 1) : 0;
         dy[y * dx_step+ x] = 0.5f * (src[src_y1 * src_step + x] - src[src_y2 * src_step+ x]);
@@ -89,8 +89,8 @@ float bicubicCoeff(float x_)
 }
 
 __kernel void warpBackwardKernel(__global const float* I0, int I0_step, int I0_col, int I0_row,
-	image2d_t tex_I1, image2d_t tex_I1x, image2d_t tex_I1y,  
-    __global const float* u1, int u1_step, 
+	image2d_t tex_I1, image2d_t tex_I1x, image2d_t tex_I1y,
+    __global const float* u1, int u1_step,
     __global const float* u2,
     __global float* I1w,
 	__global float* I1wx, /*int I1wx_step,*/
@@ -181,8 +181,8 @@ float readImage(__global const float *image,  const int x,  const int y,  const 
 }
 
 __kernel void warpBackwardKernelNoImage2d(__global const float* I0, int I0_step, int I0_col, int I0_row,
-	__global const float* tex_I1, __global const float* tex_I1x, __global const float* tex_I1y,  
-    __global const float* u1, int u1_step, 
+	__global const float* tex_I1, __global const float* tex_I1x, __global const float* tex_I1y,
+    __global const float* u1, int u1_step,
     __global const float* u2,
     __global float* I1w,
 	__global float* I1wx, /*int I1wx_step,*/
@@ -256,12 +256,12 @@ __kernel void warpBackwardKernelNoImage2d(__global const float* I0, int I0_step,
 }
 
 
-__kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, int u1_row, int u1_step, 
-    __global const float* u2, 
-    __global float* p11, int p11_step, 
+__kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, int u1_row, int u1_step,
+    __global const float* u2,
+    __global float* p11, int p11_step,
     __global float* p12,
     __global float* p21,
-    __global float* p22, 
+    __global float* p22,
     const float taut,
 	int u2_step,
 	int u1_offset_x,
@@ -279,7 +279,7 @@ __kernel void estimateDualVariablesKernel(__global const float* u1, int u1_col, 
     {
 		int src_x1 = (x + 1) < (u1_col - 1) ? (x + 1) : (u1_col - 1);
         const float u1x = u1[(y + u1_offset_y) * u1_step + src_x1 + u1_offset_x] - u1[(y + u1_offset_y) * u1_step + x + u1_offset_x];
-        
+
 		int src_y1 = (y + 1) < (u1_row - 1) ? (y + 1) : (u1_row - 1);
         const float u1y = u1[(src_y1 + u1_offset_y) * u1_step + x + u1_offset_x] - u1[(y + u1_offset_y) * u1_step + x + u1_offset_x];
 
@@ -329,14 +329,14 @@ float divergence(__global const float* v1, __global const float* v2, int y, int 
 
 __kernel void estimateUKernel(__global const float* I1wx, int I1wx_col, int I1wx_row, int I1wx_step,
     __global const float* I1wy, /*int I1wy_step,*/
-    __global const float* grad, /*int grad_step,*/ 
+    __global const float* grad, /*int grad_step,*/
     __global const float* rho_c, /*int rho_c_step,*/
     __global const float* p11, /*int p11_step,*/
     __global const float* p12, /*int p12_step,*/
     __global const float* p21, /*int p21_step,*/
     __global const float* p22, /*int p22_step,*/
-    __global float* u1, int u1_step, 
-    __global float* u2, 
+    __global float* u1, int u1_step,
+    __global float* u2,
     __global float* error, const float l_t, const float theta, int u2_step,
 	int u1_offset_x,
 	int u1_offset_y,

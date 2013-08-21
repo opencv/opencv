@@ -5,9 +5,9 @@
 
 Use the powerfull machine learning classes for statistical classification, regression and clustering of data.
 
-.. include:: ../../definitions/tocDefinitions.rst 
+.. include:: ../../definitions/tocDefinitions.rst
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 
@@ -18,7 +18,7 @@ Use the powerfull machine learning classes for statistical classification, regre
 
                *Author:* |Author_FernandoI|
 
-               Learn what a Suport Vector Machine is. 
+               Learn what a Suport Vector Machine is.
 
   ============ ==============================================
 
@@ -26,7 +26,7 @@ Use the powerfull machine learning classes for statistical classification, regre
      :height: 90pt
      :width:  90pt
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 
@@ -51,6 +51,6 @@ Use the powerfull machine learning classes for statistical classification, regre
 
 .. toctree::
    :hidden:
-   
+
    ../introduction_to_svm/introduction_to_svm
    ../non_linear_svms/non_linear_svms

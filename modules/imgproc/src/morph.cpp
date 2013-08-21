@@ -1149,11 +1149,11 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
 	}
 	//DEPRECATED. Allocates and initializes morphology state structure for erosion or dilation operation.
 	typedef IppStatus (CV_STDCALL* ippiMorphologyInitAllocFunc)(int, const void*, IppiSize, IppiPoint, IppiMorphState **);
-	ippiMorphologyInitAllocFunc ippInitAllocFunc = 
-		type == CV_8UC1 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C1R : 
-		type == CV_8UC3 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C3R : 
-		type == CV_8UC4 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C4R : 
-		type == CV_32FC1 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_32f_C1R : 
+	ippiMorphologyInitAllocFunc ippInitAllocFunc =
+		type == CV_8UC1 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C1R :
+		type == CV_8UC3 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C3R :
+		type == CV_8UC4 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_8u_C4R :
+		type == CV_32FC1 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_32f_C1R :
 		type == CV_32FC3 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_32f_C3R :
 		type == CV_32FC4 ? (ippiMorphologyInitAllocFunc)ippiMorphologyInitAlloc_32f_C4R :
 		0;
@@ -1163,25 +1163,25 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
 	{
 	case MORPH_DILATE:
 		{
-			ippFunc = 
-				type == CV_8UC1 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C1R : 
-				type == CV_8UC3 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C3R : 
-				type == CV_8UC4 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C4R : 
-				type == CV_32FC1 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C1R :  
-				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C3R :  
-				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C4R :  
+			ippFunc =
+				type == CV_8UC1 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C1R :
+				type == CV_8UC3 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C3R :
+				type == CV_8UC4 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_8u_C4R :
+				type == CV_32FC1 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C1R :
+				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C3R :
+				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiDilateBorderReplicate_32f_C4R :
 				0;
 			break;
 		}
 	case MORPH_ERODE:
 		{
-			ippFunc = 
-				type == CV_8UC1 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C1R : 
-				type == CV_8UC3 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C3R : 
-				type == CV_8UC4 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C4R : 
-				type == CV_32FC1 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C1R :  
-				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C3R :  
-				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C4R :  
+			ippFunc =
+				type == CV_8UC1 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C1R :
+				type == CV_8UC3 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C3R :
+				type == CV_8UC4 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_8u_C4R :
+				type == CV_32FC1 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C1R :
+				type == CV_32FC3 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C3R :
+				type == CV_32FC4 ? (ippiMorphologyBorderReplicateFunc)ippiErodeBorderReplicate_32f_C4R :
 				0;
 			break;
 		}
@@ -1207,8 +1207,8 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 	int borderType, const Scalar &borderValue)
 {
 	Mat src = _src.getMat(), kernel = _kernel.getMat();
-	if( !( src.depth() == CV_8U || src.depth() == CV_32F ) || ( iterations > 1 ) || 
-		!( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) ) 
+	if( !( src.depth() == CV_8U || src.depth() == CV_32F ) || ( iterations > 1 ) ||
+		!( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
 		|| !( op == MORPH_DILATE || op == MORPH_ERODE) )
 		return false;
 	if( borderType == cv::BORDER_CONSTANT )

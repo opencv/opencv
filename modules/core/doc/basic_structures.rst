@@ -553,7 +553,7 @@ Range
 -----
 .. ocv:class:: Range
 
-Template class specifying a continuous subsequence (slice) of a sequence. 
+Template class specifying a continuous subsequence (slice) of a sequence.
 
 ::
 
@@ -773,7 +773,7 @@ Mat
 ---
 .. ocv:class:: Mat
 
-OpenCV C++ n-dimensional dense array class 
+OpenCV C++ n-dimensional dense array class
 ::
 
     class CV_EXPORTS Mat

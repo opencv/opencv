@@ -453,7 +453,7 @@ cv::Scalar cv::sum( InputArray _src )
 {
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
-	
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 	size_t total_size = src.total();
 	int rows = src.size[0], cols = (int)(total_size/rows);
@@ -462,7 +462,7 @@ cv::Scalar cv::sum( InputArray _src )
 		IppiSize sz = { cols, rows };
 		int type = src.type();
 		typedef IppStatus (CV_STDCALL* ippiSumFunc)(const void*, int, IppiSize, double *, int);
-		ippiSumFunc ippFunc = 
+		ippiSumFunc ippFunc =
 			type == CV_8UC1 ? (ippiSumFunc)ippiSum_8u_C1R :
 			type == CV_8UC3 ? (ippiSumFunc)ippiSum_8u_C3R :
 			type == CV_8UC4 ? (ippiSumFunc)ippiSum_8u_C4R :
@@ -490,8 +490,8 @@ cv::Scalar cv::sum( InputArray _src )
 			}
 		}
 	}
-#endif 
-	
+#endif
+
     SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );
@@ -565,7 +565,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels(), depth = src.depth();
-	
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 	size_t total_size = src.total();
 	int rows = src.size[0], cols = (int)(total_size/rows);
@@ -576,7 +576,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 		if( !mask.empty() )
 		{
 			typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *);
-			ippiMaskMeanFuncC1 ippFuncC1 = 
+			ippiMaskMeanFuncC1 ippFuncC1 =
 			type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
 			type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
 			type == CV_32FC1 ? (ippiMaskMeanFuncC1)ippiMean_32f_C1MR :
@@ -590,7 +590,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 				}
 			}
 			typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
-			ippiMaskMeanFuncC3 ippFuncC3 = 
+			ippiMaskMeanFuncC3 ippFuncC3 =
 			type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
 			type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
 			type == CV_32FC3 ? (ippiMaskMeanFuncC3)ippiMean_32f_C3CMR :
@@ -609,7 +609,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 		else
 		{
 			typedef IppStatus (CV_STDCALL* ippiMeanFunc)(const void*, int, IppiSize, double *, int);
-			ippiMeanFunc ippFunc = 
+			ippiMeanFunc ippFunc =
 				type == CV_8UC1 ? (ippiMeanFunc)ippiMean_8u_C1R :
 				type == CV_8UC3 ? (ippiMeanFunc)ippiMean_8u_C3R :
 				type == CV_8UC4 ? (ippiMeanFunc)ippiMean_8u_C4R :
@@ -639,7 +639,7 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
 		}
 	}
 #endif
-	
+
     SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );

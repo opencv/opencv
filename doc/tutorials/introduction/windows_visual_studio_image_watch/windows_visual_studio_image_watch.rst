@@ -114,7 +114,7 @@ Now assume you want to do a visual sanity check of the *cv::Canny()* implementat
 
 .. image:: images/edges_zoom.png
 	:height: 160pt
-	
+
 Right-click on the *Image Viewer* to bring up the view context menu and enable :menuselection:`Link Views` (a check box next to the menu item indicates whether the option is enabled).
 
 .. image:: images/viewer_context_menu.png
@@ -124,7 +124,7 @@ The :menuselection:`Link Views` feature keeps the view region fixed when flippin
 
 .. image:: images/input_zoom.png
 	:height: 160pt
-	
+
 You may also switch back and forth between viewing input and edges with your up/down cursor keys. That way you can easily  verify that the detected edges line up nicely with the data in the input image.
 
 More ...

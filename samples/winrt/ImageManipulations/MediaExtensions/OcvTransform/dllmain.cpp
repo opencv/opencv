@@ -47,7 +47,7 @@ HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING activatibleClassId, _Outptr
 
 HRESULT WINAPI DllCanUnloadNow()
 {
-    auto &module = Microsoft::WRL::Module<Microsoft::WRL::InProc>::GetModule();    
+    auto &module = Microsoft::WRL::Module<Microsoft::WRL::InProc>::GetModule();
     return (module.Terminate()) ? S_OK : S_FALSE;
 }
 

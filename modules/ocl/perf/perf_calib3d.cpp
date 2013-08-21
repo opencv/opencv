@@ -87,7 +87,7 @@ PERFTEST(StereoMatchBM)
 	d_bm(d_left, d_right, d_disp);
 	d_disp.download(disp);
 	GPU_FULL_OFF;
-    
+
     TestSystem::instance().setAccurate(-1, 0.);
 }
 
@@ -98,4 +98,4 @@ PERFTEST(StereoMatchBM)
 
 
 
-	
+

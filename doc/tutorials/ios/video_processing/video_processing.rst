@@ -18,34 +18,34 @@ Including OpenCV library in your iOS project
 The OpenCV library comes as a so-called framework, which you can directly drag-and-drop into your XCode project. Download the latest binary from <http://sourceforge.net/projects/opencvlibrary/files/opencv-ios/>. Alternatively follow this guide :ref:`iOS-Installation` to compile the framework manually. Once you have the framework, just drag-and-drop into XCode:
 
 	.. image:: images/xcode_hello_ios_framework_drag_and_drop.png
-	
-	
+
+
 Also you have to locate the prefix header that is used for all header files in the project. The file is typically located at "ProjectName/Supporting Files/ProjectName-Prefix.pch". There, you have add an include statement to import the opencv library. However, make sure you include opencv before you include UIKit and Foundation, because else you will get some weird compile errors that some macros like min and max are defined multiple times. For example the prefix header could look like the following:
 
 .. code-block:: objc
 	:linenos:
-	
+
 	//
 	// Prefix header for all source files of the 'VideoFilters' target in the 'VideoFilters' project
 	//
-	
+
 	#import <Availability.h>
-	
+
 	#ifndef __IPHONE_4_0
 	#warning "This project uses features only available in iOS SDK 4.0 and later."
 	#endif
-	
+
 	#ifdef __cplusplus
 	#import <opencv2/opencv.hpp>
 	#endif
-	
+
 	#ifdef __OBJC__
 		#import <UIKit/UIKit.h>
 		#import <Foundation/Foundation.h>
 	#endif
-	
-	
-	
+
+
+
 Example video frame processing project
 --------------------------------------
 User Interface
@@ -60,18 +60,18 @@ Make sure to add and connect the IBOutlets and IBActions to the corresponding Vi
 
 .. code-block:: objc
 	:linenos:
-	
+
 	@interface ViewController : UIViewController
 	{
 		IBOutlet UIImageView* imageView;
 		IBOutlet UIButton* button;
 	}
-	
+
 	- (IBAction)actionStart:(id)sender;
-	
+
 	@end
-	
-	
+
+
 Adding the Camera
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -79,21 +79,21 @@ We add a camera controller to the view controller and initialize it when the vie
 
 .. code-block:: objc
 	:linenos:
-	
+
 	#import <opencv2/highgui/cap_ios.h>
 	using namespace cv;
-	
-	
+
+
 	@interface ViewController : UIViewController
 	{
-		...	
+		...
 		CvVideoCamera* videoCamera;
 	}
 	...
 	@property (nonatomic, retain) CvVideoCamera* videoCamera;
-	
+
 	@end
-	
+
 .. code-block:: objc
 	:linenos:
 
@@ -101,7 +101,7 @@ We add a camera controller to the view controller and initialize it when the vie
 	{
 		[super viewDidLoad];
 		// Do any additional setup after loading the view, typically from a nib.
-		
+
 		self.videoCamera = [[CvVideoCamera alloc] initWithParentView:imageView];
 		self.videoCamera.defaultAVCaptureDevicePosition = AVCaptureDevicePositionFront;
 		self.videoCamera.defaultAVCaptureSessionPreset = AVCaptureSessionPreset352x288;
@@ -109,7 +109,7 @@ We add a camera controller to the view controller and initialize it when the vie
 		self.videoCamera.defaultFPS = 30;
 		self.videoCamera.grayscale = NO;
 	}
-	
+
 In this case, we initialize the camera and provide the imageView as a target for rendering each frame. CvVideoCamera is basically a wrapper around AVFoundation, so we provie as properties some of the AVFoundation camera options. For example we want to use the front camera, set the video size to 352x288 and a video orientation (the video camera normally outputs in landscape mode, which results in transposed data when you design a portrait application).
 
 The property defaultFPS sets the FPS of the camera. If the processing is less fast than the desired FPS, frames are automatically dropped.
@@ -153,14 +153,14 @@ We follow the delegation pattern, which is very common in iOS, to provide access
 
 .. code-block:: objc
 	:linenos:
-	
+
 	@interface ViewController : UIViewController<CvVideoCameraDelegate>
-	
+
 
 
 .. code-block:: objc
 	:linenos:
-	
+
 	- (void)viewDidLoad
 	{
 		...
@@ -194,13 +194,13 @@ From here you can start processing video frames. For example the following snipp
 
 .. code-block:: objc
 	:linenos:
-	
+
 	- (void)processImage:(Mat&)image;
 	{
 		// Do some OpenCV stuff with the image
 		Mat image_copy;
 		cvtColor(image, image_copy, CV_BGRA2BGR);
-		
+
 		// invert image
 		bitwise_not(image_copy, image_copy);
 		cvtColor(image_copy, image, CV_BGR2BGRA);
@@ -214,9 +214,9 @@ Finally, we have to tell the camera to actually start/stop working. The followin
 
 .. code-block:: objc
 	:linenos:
-	
+
 	#pragma mark - UI Actions
-	
+
 	- (IBAction)actionStart:(id)sender;
 	{
 		[self.videoCamera start];
