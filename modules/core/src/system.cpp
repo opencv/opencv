@@ -411,15 +411,14 @@ string tempfile( const char* suffix )
     temp_file = temp_dir + std::wstring(L"\\") + temp_file;
     DeleteFileW(temp_file.c_str());
 
-    size_t asize = wcstombs(NULL, temp_file.c_str(), 0);
-    Ptr<char> aname = new char[asize+1];
-    aname[asize] = 0;
-    wcstombs(aname, temp_file.c_str(), asize);
+    char aname[MAX_PATH];
+    size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
+    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
     fname = std::string(aname);
     RoUninitialize();
 #else
-    char temp_dir2[MAX_PATH + 1] = { 0 };
-    char temp_file[MAX_PATH + 1] = { 0 };
+    char temp_dir2[MAX_PATH] = { 0 };
+    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir == 0 || temp_dir[0] == 0)
     {
