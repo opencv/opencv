@@ -64,14 +64,6 @@
 #include <png.h>
 #endif
 
-#ifdef HAVE_LIBPNG_PNGINFO_H
-#include <libpng/pnginfo.h>
-#else
-#ifdef HAVE_PNGINFO_H
-#include <pnginfo.h>
-#endif
-#endif
-
 #include <zlib.h>
 
 #include "grfmt_png.hpp"
@@ -180,7 +172,9 @@ bool  PngDecoder::readHeader()
                 if( !m_buf.empty() || m_f )
                 {
                     png_uint_32 wdth, hght;
-                    int bit_depth, color_type;
+                    int bit_depth, color_type, num_trans=0;
+                    png_bytep trans;
+                    png_color_16p trans_values;
 
                     png_read_info( png_ptr, info_ptr );
 
@@ -200,8 +194,9 @@ bool  PngDecoder::readHeader()
                                 m_type = CV_8UC3;
                                 break;
                             case PNG_COLOR_TYPE_PALETTE:
+                                png_get_tRNS( png_ptr, info_ptr, &trans, &num_trans, &trans_values);
                                 //Check if there is a transparency value in the palette
-                                if ( info_ptr->num_trans > 0 )
+                                if ( num_trans > 0 )
                                     m_type = CV_8UC4;
                                 else
                                     m_type = CV_8UC3;
