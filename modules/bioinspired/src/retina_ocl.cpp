@@ -733,7 +733,7 @@ void BasicRetinaFilter::_verticalCausalFilter_Irregular(oclMat &outputFrame, con
     openCLExecuteKernel(ctx, &retina_kernel, "verticalCausalFilter_Irregular", globalSize, localSize, args, -1, -1);
 }
 
-void cv::bioinspired::ocl::normalizeGrayOutput_0_maxOutputValue(oclMat &inputOutputBuffer, const float maxOutputValue)
+void normalizeGrayOutput_0_maxOutputValue(oclMat &inputOutputBuffer, const float maxOutputValue)
 {
     double min_val, max_val;
     ocl::minMax(inputOutputBuffer, &min_val, &max_val);
@@ -743,7 +743,7 @@ void cv::bioinspired::ocl::normalizeGrayOutput_0_maxOutputValue(oclMat &inputOut
     ocl::add(inputOutputBuffer, offset, inputOutputBuffer);
 }
 
-void cv::bioinspired::ocl::normalizeGrayOutputCentredSigmoide(const float meanValue, const float sensitivity, oclMat &in, oclMat &out, const float maxValue)
+void normalizeGrayOutputCentredSigmoide(const float meanValue, const float sensitivity, oclMat &in, oclMat &out, const float maxValue)
 {
     if (sensitivity == 1.0f)
     {
@@ -771,7 +771,7 @@ void cv::bioinspired::ocl::normalizeGrayOutputCentredSigmoide(const float meanVa
     openCLExecuteKernel(ctx, &retina_kernel, "normalizeGrayOutputCentredSigmoide", globalSize, localSize, args, -1, -1);
 }
 
-void cv::bioinspired::ocl::normalizeGrayOutputNearZeroCentreredSigmoide(oclMat &inputPicture, oclMat &outputBuffer, const float sensitivity, const float maxOutputValue)
+void normalizeGrayOutputNearZeroCentreredSigmoide(oclMat &inputPicture, oclMat &outputBuffer, const float sensitivity, const float maxOutputValue)
 {
     float X0cube = sensitivity * sensitivity * sensitivity;
 
@@ -791,7 +791,7 @@ void cv::bioinspired::ocl::normalizeGrayOutputNearZeroCentreredSigmoide(oclMat &
     openCLExecuteKernel(ctx, &retina_kernel, "normalizeGrayOutputNearZeroCentreredSigmoide", globalSize, localSize, args, -1, -1);
 }
 
-void cv::bioinspired::ocl::centerReductImageLuminance(oclMat &inputoutput)
+void centerReductImageLuminance(oclMat &inputoutput)
 {
     Scalar mean, stddev;
     cv::meanStdDev((Mat)inputoutput, mean, stddev);
