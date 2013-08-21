@@ -140,12 +140,9 @@ are supposed to be set via the setters before the call to this method or the def
 
 .. ocv:function:: double optim::DownhillSolver::minimize(InputOutputArray x)
 
-    :param x: The initial point, that will become a centroid of an initial simplex. After the algorithm will terminate, it will be setted to the
-    point where the algorithm stops, the point of possible minimum.
+    :param x: The initial point, that will become a centroid of an initial simplex. After the algorithm will terminate, it will be setted to the point where the algorithm stops, the point of possible minimum.
 
     :return: The value of a function at the point found.
-
-Explain parameters.
 
 optim::createDownhillSolver
 ------------------------------------
