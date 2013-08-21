@@ -438,4 +438,3 @@ cvMinAreaRect2( const CvArr* array, CvMemStorage* storage )
     box.angle = (float)(box.angle*180/CV_PI);
     return box;
 }
-

@@ -439,4 +439,3 @@ double App::checkRectSimilarity(Size sz,
     }
     return final_test_result;
 }
-

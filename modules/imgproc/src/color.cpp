@@ -3896,7 +3896,7 @@ void cv::cvtColor( InputArray _src, OutputArray _dst, int code, int dcn )
                     CV_Error( CV_StsBadArg, "Unsupported image depth" );
                 }
             }
-            break;   
+            break;
         default:
             CV_Error( CV_StsBadFlag, "Unknown/unsupported color conversion code" );
     }

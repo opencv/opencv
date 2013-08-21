@@ -43,7 +43,7 @@ if(HAVE_CUDA)
   ocv_cuda_compile(cuda_objs ${lib_cuda} ${ncv_cuda})
 
   set(cuda_link_libs ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
-  
+
   if(HAVE_CUFFT)
       set(cuda_link_libs ${cuda_link_libs} ${CUDA_cufft_LIBRARY})
   endif()

@@ -852,7 +852,7 @@ PERFTEST(meanShiftProc)
         GPU_FULL_OFF;
 
         vector<double> eps(2, 0.);
-        TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);      
+        TestSystem::instance().ExpectMatsNear(dst, ocl_dst, eps);
     }
 }
 

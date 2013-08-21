@@ -156,4 +156,3 @@ else()
   set(OpenCV_FOUND FALSE CACHE BOOL "" FORCE)
   set(OPENCV_FOUND FALSE CACHE BOOL "" FORCE)
 endif()
-

@@ -10,7 +10,7 @@ In this tutorial you will learn how to:
 
 .. container:: enumeratevisibleitemswithsquare
 
-   + Use the OpenCV functions :svms:`CvSVM::train <cvsvm-train>` to build a classifier based on SVMs and :svms:`CvSVM::predict <cvsvm-predict>` to test its performance.  
+   + Use the OpenCV functions :svms:`CvSVM::train <cvsvm-train>` to build a classifier based on SVMs and :svms:`CvSVM::predict <cvsvm-predict>` to test its performance.
 
 What is a SVM?
 ==============
@@ -36,14 +36,14 @@ Then, the operation of the SVM algorithm is based on finding the hyperplane that
 
 .. image:: images/optimal-hyperplane.png
    :alt: The Optimal hyperplane
-   :align: center 
+   :align: center
 
 How is the optimal hyperplane computed?
 =======================================
 
 Let's introduce the notation used to define formally a hyperplane:
 
-.. math:: 
+.. math::
   f(x) = \beta_{0} + \beta^{T} x,
 
 where :math:`\beta` is known as the *weight vector* and :math:`\beta_{0}` as the *bias*.
@@ -106,7 +106,7 @@ Explanation
   .. code-block:: cpp
 
      Mat trainingDataMat(3, 2, CV_32FC1, trainingData);
-     Mat labelsMat      (3, 1, CV_32FC1, labels);    
+     Mat labelsMat      (3, 1, CV_32FC1, labels);
 
 2. **Set up SVM's parameters**
 
@@ -143,7 +143,7 @@ Explanation
   .. code-block:: cpp
 
      Vec3b green(0,255,0), blue (255,0,0);
-     
+
      for (int i = 0; i < image.rows; ++i)
          for (int j = 0; j < image.cols; ++j)
          {
@@ -152,8 +152,8 @@ Explanation
 
          if (response == 1)
             image.at<Vec3b>(j, i)  = green;
-         else 
-         if (response == -1) 
+         else
+         if (response == -1)
             image.at<Vec3b>(j, i)  = blue;
          }
 
@@ -184,5 +184,4 @@ Results
 
 .. image:: images/result.png
   :alt: The seperated planes
-  :align: center 
-
+  :align: center

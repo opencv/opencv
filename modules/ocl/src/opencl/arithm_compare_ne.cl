@@ -61,7 +61,7 @@ __kernel void arithm_compare_ne_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -116,7 +116,7 @@ __kernel void arithm_compare_ne_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -171,7 +171,7 @@ __kernel void arithm_compare_ne_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -380,7 +380,7 @@ __kernel void arithm_compare_lt_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -435,7 +435,7 @@ __kernel void arithm_compare_lt_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -491,7 +491,7 @@ __kernel void arithm_compare_lt_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -704,7 +704,7 @@ __kernel void arithm_compare_le_D0 (__global uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -760,7 +760,7 @@ __kernel void arithm_compare_le_D2 (__global ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -816,7 +816,7 @@ __kernel void arithm_compare_le_D3 (__global short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -1011,5 +1011,3 @@ __kernel void arithm_compare_le_D6 (__global double *src1, int src1_step, int sr
     }
 }
 #endif
-
-

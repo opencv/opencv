@@ -658,4 +658,3 @@ CV_IMPL void cvCalcOpticalFlowFarneback(
     cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
         winsize, iterations, poly_n, poly_sigma, flags );
 }
-

@@ -130,6 +130,6 @@ Minimum graph cut-based seam estimator. See details in [V03]_. ::
         /* hidden */
     };
 
-.. seealso:: 
+.. seealso::
     :ocv:class:`detail::GraphCutSeamFinderBase`,
     :ocv:class:`detail::SeamFinder`

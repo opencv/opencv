@@ -92,4 +92,3 @@ void CV_BRISKTest::run( int )
 }
 
 TEST(Features2d_BRISK, regression) { CV_BRISKTest test; test.safe_run(); }
-

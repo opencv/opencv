@@ -114,4 +114,3 @@ Result
 
    .. |PPT_1|  image:: images/Point_Polygon_Test_Result.jpg
                     :align: middle
-

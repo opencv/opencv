@@ -66,7 +66,7 @@ __kernel void arithm_absdiff_D0 (__global uchar *src1, int src1_step, int src1_o
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -117,7 +117,7 @@ __kernel void arithm_absdiff_D2 (__global ushort *src1, int src1_step, int src1_
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -154,7 +154,7 @@ __kernel void arithm_absdiff_D3 (__global short *src1, int src1_step, int src1_o
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -261,7 +261,7 @@ __kernel void arithm_s_absdiff_C1_D0 (__global   uchar *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -303,7 +303,7 @@ __kernel void arithm_s_absdiff_C1_D2 (__global   ushort *src1, int src1_step, in
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -337,7 +337,7 @@ __kernel void arithm_s_absdiff_C1_D3 (__global   short *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -443,7 +443,7 @@ __kernel void arithm_s_absdiff_C2_D0 (__global   uchar *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -588,7 +588,7 @@ __kernel void arithm_s_absdiff_C3_D0 (__global   uchar *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -645,7 +645,7 @@ __kernel void arithm_s_absdiff_C3_D2 (__global   ushort *src1, int src1_step, in
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -698,7 +698,7 @@ __kernel void arithm_s_absdiff_C3_D3 (__global   short *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

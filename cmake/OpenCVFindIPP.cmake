@@ -140,7 +140,7 @@ endfunction()
 # ------------------------------------------------------------------------
 function(set_ipp_new_libraries _LATEST_VERSION)
     set(IPP_PREFIX "ipp")
-    
+
     if(${_LATEST_VERSION} VERSION_LESS "8.0")
         set(IPP_SUFFIX "_l")        # static not threaded libs suffix IPP 7.x
     else()

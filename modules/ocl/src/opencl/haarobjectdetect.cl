@@ -46,7 +46,7 @@
 typedef int   sumtype;
 typedef float sqsumtype;
 
-#ifndef STUMP_BASED 
+#ifndef STUMP_BASED
 #define STUMP_BASED 1
 #endif
 
@@ -323,7 +323,7 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
                         int root_offset = 0;
                         for(int lcl_loop=0; lcl_loop<lcl_loops && tempnodecounter<stageinfo.x;)
                         {
-                            __global GpuHidHaarTreeNode* currentnodeptr = 
+                            __global GpuHidHaarTreeNode* currentnodeptr =
                                 nodeptr + (nodecounter + tempnodecounter) * stump_factor + root_offset;
 
                             int4 info1 = *(__global int4*)(&(currentnodeptr->p[0][0]));
@@ -421,5 +421,3 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
         }//end for(int grploop=grpidx;grploop<totalgrp;grploop+=grpnumx)
     }//end for(int scalei = 0; scalei <loopcount; scalei++)
 }
-
-

@@ -138,7 +138,7 @@ int main(int argc, const char* argv[])
         CV_Assert(!useOcl);
         info.clear();
     }
-    
+
     if(useOcl)
     {
         CV_Assert(!useCuda);
@@ -171,7 +171,7 @@ int main(int argc, const char* argv[])
             superRes = createSuperResolution_BTVL1();
 
         Ptr<DenseOpticalFlowExt> of = createOptFlow(optFlow, useCuda);
-        
+
         if (of.empty())
             exit(-1);
         superRes->set("opticalFlow", of);

@@ -178,7 +178,7 @@ PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
     }
 
     void Near1(double threshold = 0.)
-    {     
+    {
         EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
     }
 

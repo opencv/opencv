@@ -95,19 +95,19 @@ macro(ios_include_3party_libs)
       get_filename_component(srcname_we ${srcname} NAME_WE)
       string(REGEX REPLACE <SRC_NAME_WE> "${srcname_we}" objpath2 "${objpath1}")
       string(REGEX REPLACE <RELATIVE_SRC_NAME> "${srcname}" objpath3 "${objpath2}")
-      
+
       list(APPEND objlist "\"${objpath3}\"")
     endforeach() # (srcname ${sources})
-  endforeach() 
+  endforeach()
 endmacro()
 
 if(IOS AND WITH_PNG)
   ios_include_3party_libs(zlib libpng)
-endif() 
+endif()
 
 if(IOS AND WITH_JPEG)
   ios_include_3party_libs(libjpeg)
-endif() 
+endif()
 
 string(REPLACE ";" " " objlist "${objlist}")
 

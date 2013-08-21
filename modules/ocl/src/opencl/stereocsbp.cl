@@ -129,7 +129,7 @@ __kernel void get_first_k_initial_global_1(__global  float *data_cost_selected_,
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////get_first_k_initial_local////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void get_first_k_initial_local_0(__global  short *data_cost_selected_, __global short *selected_disp_pyr, 
+__kernel void get_first_k_initial_local_0(__global  short *data_cost_selected_, __global short *selected_disp_pyr,
     __global  short *ctemp,int h, int w, int nr_plane,
     int cmsg_step1, int cdisp_step1, int cndisp)
 {
@@ -187,7 +187,7 @@ __kernel void get_first_k_initial_local_0(__global  short *data_cost_selected_, 
     }
 }
 
-__kernel void get_first_k_initial_local_1(__global float *data_cost_selected_, __global float *selected_disp_pyr, 
+__kernel void get_first_k_initial_local_1(__global float *data_cost_selected_, __global float *selected_disp_pyr,
     __global float *ctemp,int h, int w, int nr_plane,
     int cmsg_step1,  int cdisp_step1, int cndisp)
 {
@@ -257,20 +257,20 @@ float compute_3(__global uchar* left, __global uchar* right,
 
     return fmin(cdata_weight * (tr + tg + tb), cdata_weight * cmax_data_term);
 }
-float compute_1(__global uchar* left, __global uchar* right, 
+float compute_1(__global uchar* left, __global uchar* right,
     float cdata_weight,  float cmax_data_term)
 {
     return fmin(cdata_weight * abs((int)*left - (int)*right), cdata_weight * cmax_data_term);
 }
 short round_short(float v){
-    return convert_short_sat_rte(v); 
+    return convert_short_sat_rte(v);
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////init_data_cost///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void init_data_cost_0(__global short *ctemp, __global uchar *cleft, __global uchar *cright, 
+__kernel void init_data_cost_0(__global short *ctemp, __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int channels,
-    int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1, 
+    int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1,
     int cth, int cimg_step, int cndisp)
 {
     int x = get_global_id(0);
@@ -312,9 +312,9 @@ __kernel void init_data_cost_0(__global short *ctemp, __global uchar *cleft, __g
         }
     }
 }
-__kernel void init_data_cost_1(__global float *ctemp, __global uchar *cleft, __global uchar *cright, 
+__kernel void init_data_cost_1(__global float *ctemp, __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int channels,
-    int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1, 
+    int cmsg_step1, float cdata_weight, float cmax_data_term, int cdisp_step1,
     int cth, int cimg_step, int cndisp)
 {
     int x = get_global_id(0);
@@ -361,13 +361,13 @@ __kernel void init_data_cost_1(__global float *ctemp, __global uchar *cleft, __g
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cleft, __global uchar *cright,
     __local float *smem, int level, int rows, int cols, int h, int winsz, int channels,
-    int cndisp,int cimg_step, float cdata_weight, float cmax_data_term, int cth, 
+    int cndisp,int cimg_step, float cdata_weight, float cmax_data_term, int cth,
     int cdisp_step1, int cmsg_step1)
 {
     int x_out = get_group_id(0);
     int y_out = get_group_id(1) % h;
     //int d = (blockIdx.y / h) * blockDim.z + threadIdx.z;
-    int d = (get_group_id(1) / h ) * get_local_size(2) + get_local_id(2); 
+    int d = (get_group_id(1) / h ) * get_local_size(2) + get_local_id(2);
 
     int tid = get_local_id(0);
 
@@ -411,39 +411,39 @@ __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cle
     if(d < cndisp)
     {
         __local float* dline = smem + winsz * get_local_id(2);
-        if (winsz >= 256) 
+        if (winsz >= 256)
         {
-            if (tid < 128) 
-                dline[tid] += dline[tid + 128]; 
+            if (tid < 128)
+                dline[tid] += dline[tid + 128];
         }
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local float* dline = smem + winsz * get_local_id(2);
-        if (winsz >= 128) 
+        if (winsz >= 128)
         {
-            if (tid <  64) 
-                dline[tid] += dline[tid + 64]; 
+            if (tid <  64)
+                dline[tid] += dline[tid + 64];
         }
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 64) 
-            if (tid < 32) 
+        if (winsz >= 64)
+            if (tid < 32)
                 vdline[tid] += vdline[tid + 32];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 32) 
-            if (tid < 16) 
+        if (winsz >= 32)
+            if (tid < 16)
                 vdline[tid] += vdline[tid + 16];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -452,7 +452,7 @@ __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cle
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
         if (winsz >= 16)
-            if (tid <  8) 
+            if (tid <  8)
                 vdline[tid] += vdline[tid + 8];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -461,7 +461,7 @@ __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cle
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
         if (winsz >= 8)
-            if (tid <  4) 
+            if (tid <  4)
                 vdline[tid] += vdline[tid + 4];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -470,7 +470,7 @@ __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cle
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
         if (winsz >= 4)
-            if (tid <  2) 
+            if (tid <  2)
                 vdline[tid] += vdline[tid + 2];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -479,7 +479,7 @@ __kernel void init_data_cost_reduce_0(__global short *ctemp, __global uchar *cle
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
         if (winsz >= 2)
-            if (tid <  1) 
+            if (tid <  1)
                 vdline[tid] += vdline[tid + 1];
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -500,7 +500,7 @@ __kernel void init_data_cost_reduce_1(__global float *ctemp, __global uchar *cle
 {
     int x_out = get_group_id(0);
     int y_out = get_group_id(1) % h;
-    int d = (get_group_id(1) / h ) * get_local_size(2) + get_local_id(2); 
+    int d = (get_group_id(1) / h ) * get_local_size(2) + get_local_id(2);
 
     int tid = get_local_id(0);
 
@@ -545,74 +545,74 @@ __kernel void init_data_cost_reduce_1(__global float *ctemp, __global uchar *cle
     if(d < cndisp)
     {
         __local float* dline = smem + winsz * get_local_id(2);
-        if (winsz >= 256) 
-            if (tid < 128) 
-                dline[tid] += dline[tid + 128]; 
+        if (winsz >= 256)
+            if (tid < 128)
+                dline[tid] += dline[tid + 128];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local float* dline = smem + winsz * get_local_id(2);
-        if (winsz >= 128) 
-            if (tid < 64) 
-                dline[tid] += dline[tid + 64]; 
+        if (winsz >= 128)
+            if (tid < 64)
+                dline[tid] += dline[tid + 64];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 64) 
-            if (tid < 32) 
-                vdline[tid] += vdline[tid + 32]; 
+        if (winsz >= 64)
+            if (tid < 32)
+                vdline[tid] += vdline[tid + 32];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 32) 
-            if (tid < 16) 
-                vdline[tid] += vdline[tid + 16]; 
+        if (winsz >= 32)
+            if (tid < 16)
+                vdline[tid] += vdline[tid + 16];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 16) 
-            if (tid < 8) 
-                vdline[tid] += vdline[tid + 8]; 
+        if (winsz >= 16)
+            if (tid < 8)
+                vdline[tid] += vdline[tid + 8];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 8) 
-            if (tid < 4) 
-                vdline[tid] += vdline[tid + 4]; 
+        if (winsz >= 8)
+            if (tid < 4)
+                vdline[tid] += vdline[tid + 4];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 4) 
-            if (tid < 2) 
-                vdline[tid] += vdline[tid + 2]; 
+        if (winsz >= 4)
+            if (tid < 2)
+                vdline[tid] += vdline[tid + 2];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 2) 
-            if (tid < 1) 
-                vdline[tid] += vdline[tid + 1]; 
+        if (winsz >= 2)
+            if (tid < 1)
+                vdline[tid] += vdline[tid + 1];
     }
-    barrier(CLK_LOCAL_MEM_FENCE); 
+    barrier(CLK_LOCAL_MEM_FENCE);
 
     if(d < cndisp)
     {
@@ -626,10 +626,10 @@ __kernel void init_data_cost_reduce_1(__global float *ctemp, __global uchar *cle
 ///////////////////////////////////////////////////////////////
 ////////////////////// compute data cost //////////////////////
 ///////////////////////////////////////////////////////////////
-__kernel void compute_data_cost_0(__global const short *selected_disp_pyr, __global short *data_cost_, 
+__kernel void compute_data_cost_0(__global const short *selected_disp_pyr, __global short *data_cost_,
     __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int nr_plane, int channels,
-    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2, float cdata_weight, 
+    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2, float cdata_weight,
     float cmax_data_term, int cimg_step, int cth)
 {
 
@@ -676,10 +676,10 @@ __kernel void compute_data_cost_0(__global const short *selected_disp_pyr, __glo
         }
     }
 }
-__kernel void compute_data_cost_1(__global const float *selected_disp_pyr, __global float *data_cost_, 
+__kernel void compute_data_cost_1(__global const float *selected_disp_pyr, __global float *data_cost_,
     __global uchar *cleft, __global uchar *cright,
     int h, int w, int level, int nr_plane, int channels,
-    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2, float cdata_weight, 
+    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2, float cdata_weight,
     float cmax_data_term, int cimg_step, int cth)
 {
 
@@ -728,11 +728,11 @@ __kernel void compute_data_cost_1(__global const float *selected_disp_pyr, __glo
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////compute_data_cost_reduce//////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-__kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr, __global short* data_cost_, 
+__kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr, __global short* data_cost_,
     __global uchar *cleft, __global uchar *cright,__local float *smem,
-    int level, int rows, int cols, int h, int nr_plane, 
+    int level, int rows, int cols, int h, int nr_plane,
     int channels, int winsz,
-    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2, 
+    int cmsg_step1, int cmsg_step2, int cdisp_step1, int cdisp_step2,
     float cdata_weight,  float cmax_data_term, int cimg_step,int cth)
 
 {
@@ -788,9 +788,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 64) 
+        if (winsz >= 64)
         {
-            if (tid < 32) 
+            if (tid < 32)
                 vdline[tid] += vdline[tid + 32];
         }
     }
@@ -799,9 +799,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 32) 
+        if (winsz >= 32)
         {
-            if (tid < 16) 
+            if (tid < 16)
                 vdline[tid] += vdline[tid + 16];
         }
     }
@@ -810,9 +810,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 16) 
+        if (winsz >= 16)
         {
-            if (tid < 8) 
+            if (tid < 8)
                 vdline[tid] += vdline[tid + 8];
         }
     }
@@ -821,9 +821,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 8) 
+        if (winsz >= 8)
         {
-            if (tid < 4) 
+            if (tid < 4)
                 vdline[tid] += vdline[tid + 4];
         }
     }
@@ -832,9 +832,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 4) 
+        if (winsz >= 4)
         {
-            if (tid < 2) 
+            if (tid < 2)
                 vdline[tid] += vdline[tid + 2];
         }
     }
@@ -843,9 +843,9 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 2) 
+        if (winsz >= 2)
         {
-            if (tid < 1) 
+            if (tid < 1)
                 vdline[tid] += vdline[tid + 1];
         }
     }
@@ -859,11 +859,11 @@ __kernel void compute_data_cost_reduce_0(__global const short* selected_disp_pyr
     }
 }
 
-__kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr, __global float *data_cost_, 
+__kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr, __global float *data_cost_,
     __global uchar *cleft, __global uchar *cright, __local float *smem,
-    int level, int rows, int cols, int h, int nr_plane, 
+    int level, int rows, int cols, int h, int nr_plane,
     int channels, int winsz,
-    int cmsg_step1, int cmsg_step2, int cdisp_step1,int cdisp_step2, float cdata_weight, 
+    int cmsg_step1, int cmsg_step2, int cdisp_step1,int cdisp_step2, float cdata_weight,
     float cmax_data_term, int cimg_step, int cth)
 
 {
@@ -918,21 +918,21 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 64) 
+        if (winsz >= 64)
         {
-            if (tid < 32) 
+            if (tid < 32)
                 vdline[tid] += vdline[tid + 32];
         }
     }
     barrier(CLK_LOCAL_MEM_FENCE);
 
 
-    if(d < nr_plane)	
+    if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 32) 
+        if (winsz >= 32)
         {
-            if (tid < 16) 
+            if (tid < 16)
                 vdline[tid] += vdline[tid + 16];
         }
     }
@@ -941,9 +941,9 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >= 16) 
+        if (winsz >= 16)
         {
-            if (tid <  8) 
+            if (tid <  8)
                 vdline[tid] += vdline[tid + 8];
         }
     }
@@ -952,9 +952,9 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >=  8) 
+        if (winsz >=  8)
         {
-            if (tid <  4) 
+            if (tid <  4)
                 vdline[tid] += vdline[tid + 4];
         }
     }
@@ -963,9 +963,9 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >=  4) 
+        if (winsz >=  4)
         {
-            if (tid <  2) 
+            if (tid <  2)
                 vdline[tid] += vdline[tid + 2];
         }
     }
@@ -974,9 +974,9 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
     if(d < nr_plane)
     {
         __local volatile float* vdline = smem + winsz * get_local_id(2);
-        if (winsz >=  2) 
+        if (winsz >=  2)
         {
-            if (tid <  1) 
+            if (tid <  1)
                 vdline[tid] += vdline[tid + 1];
         }
     }
@@ -993,11 +993,11 @@ __kernel void compute_data_cost_reduce_1(__global const float *selected_disp_pyr
 ///////////////////////////////////////////////////////////////
 //////////////////////// init message /////////////////////////
 ///////////////////////////////////////////////////////////////
-void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new, 
-    __global short *r_new, __global const short *u_cur, __global const short *d_cur, 
-    __global const short *l_cur, __global const short *r_cur, 
-    __global short *data_cost_selected, __global short *disparity_selected_new, 
-    __global short *data_cost_new, __global const short* data_cost_cur, 
+void get_first_k_element_increase_0(__global short* u_new, __global short *d_new, __global short *l_new,
+    __global short *r_new, __global const short *u_cur, __global const short *d_cur,
+    __global const short *l_cur, __global const short *r_cur,
+    __global short *data_cost_selected, __global short *disparity_selected_new,
+    __global short *data_cost_new, __global const short* data_cost_cur,
     __global const short *disparity_selected_cur,
     int nr_plane, int nr_plane2,
     int cdisp_step1, int cdisp_step2)
@@ -1027,11 +1027,11 @@ void get_first_k_element_increase_0(__global short* u_new, __global short *d_new
         data_cost_new[id * cdisp_step1] = SHRT_MAX;
     }
 }
-void get_first_k_element_increase_1(__global float *u_new, __global float *d_new, __global float *l_new, 
-    __global float *r_new, __global const float *u_cur, __global const float *d_cur, 
+void get_first_k_element_increase_1(__global float *u_new, __global float *d_new, __global float *l_new,
+    __global float *r_new, __global const float *u_cur, __global const float *d_cur,
     __global const float *l_cur, __global const float *r_cur,
-    __global float *data_cost_selected, __global float *disparity_selected_new, 
-    __global float *data_cost_new, __global const float *data_cost_cur, 
+    __global float *data_cost_selected, __global float *disparity_selected_new,
+    __global float *data_cost_new, __global const float *data_cost_cur,
     __global const float *disparity_selected_cur,
     int nr_plane, int nr_plane2,
     int cdisp_step1, int cdisp_step2)
@@ -1057,13 +1057,13 @@ void get_first_k_element_increase_1(__global float *u_new, __global float *d_new
         u_new[i * cdisp_step1] = u_cur[id * cdisp_step2];
         d_new[i * cdisp_step1] = d_cur[id * cdisp_step2];
         l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
-        r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];   
+        r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
         data_cost_new[id * cdisp_step1] = FLT_MAX;
 
     }
 }
 __kernel void init_message_0(__global short *u_new_, __global short *d_new_, __global short *l_new_,
-    __global short *r_new_, __global  short *u_cur_, __global const short *d_cur_, 
+    __global short *r_new_, __global  short *u_cur_, __global const short *d_cur_,
     __global const short *l_cur_, __global const short *r_cur_, __global short *ctemp,
     __global short *selected_disp_pyr_new, __global const short *selected_disp_pyr_cur,
     __global short *data_cost_selected_, __global const short *data_cost_,
@@ -1113,7 +1113,7 @@ __kernel void init_message_0(__global short *u_new_, __global short *d_new_, __g
     }
 }
 __kernel void init_message_1(__global float *u_new_, __global float *d_new_, __global float *l_new_,
-    __global float *r_new_, __global const float *u_cur_, __global const float *d_cur_, 
+    __global float *r_new_, __global const float *u_cur_, __global const float *d_cur_,
     __global const float *l_cur_, __global const float *r_cur_, __global float *ctemp,
     __global float *selected_disp_pyr_new, __global const float *selected_disp_pyr_cur,
     __global float *data_cost_selected_, __global const float *data_cost_,
@@ -1176,28 +1176,28 @@ __kernel void init_message_1(__global float *u_new_, __global float *d_new_, __g
                     id = j;
                 }
             }
-            data_cost_selected[i * cdisp_step1] = data_cost[id * cdisp_step1];	
+            data_cost_selected[i * cdisp_step1] = data_cost[id * cdisp_step1];
             disparity_selected_new[i * cdisp_step1] = disparity_selected_cur[id * cdisp_step2];
             u_new[i * cdisp_step1] = u_cur[id * cdisp_step2];
             d_new[i * cdisp_step1] = d_cur[id * cdisp_step2];
             l_new[i * cdisp_step1] = l_cur[id * cdisp_step2];
-            r_new[i * cdisp_step1] = r_cur[id * cdisp_step2]; 
+            r_new[i * cdisp_step1] = r_cur[id * cdisp_step2];
             data_cost_new[id * cdisp_step1] = FLT_MAX;
-        }  
+        }
     }
 }
 
 ///////////////////////////////////////////////////////////////
 ////////////////////  calc all iterations /////////////////////
 ///////////////////////////////////////////////////////////////
-void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1, 
+void message_per_pixel_0(__global const short *data, __global short *msg_dst, __global const short *msg1,
     __global const short *msg2, __global const short *msg3,
-    __global const short *dst_disp, __global const short *src_disp, 
+    __global const short *dst_disp, __global const short *src_disp,
     int nr_plane, __global short *temp,
     float cmax_disc_term, int cdisp_step1, float cdisc_single_jump)
 {
     short minimum = SHRT_MAX;
-    for(int d = 0; d < nr_plane; d++)     
+    for(int d = 0; d < nr_plane; d++)
     {
         int idx = d * cdisp_step1;
         short val  = data[idx] + msg1[idx] + msg2[idx] + msg3[idx];
@@ -1215,7 +1215,7 @@ void message_per_pixel_0(__global const short *data, __global short *msg_dst, __
         short src_disp_reg = src_disp[d * cdisp_step1];
 
         for(int d2 = 0; d2 < nr_plane; d2++)
-            cost_min = fmin(cost_min, (msg_dst[d2 * cdisp_step1] + 
+            cost_min = fmin(cost_min, (msg_dst[d2 * cdisp_step1] +
             cdisc_single_jump * abs(dst_disp[d2 * cdisp_step1] - src_disp_reg)));
 
         temp[d * cdisp_step1] = convert_short_sat_rte(cost_min);
@@ -1226,14 +1226,14 @@ void message_per_pixel_0(__global const short *data, __global short *msg_dst, __
     for(int d = 0; d < nr_plane; d++)
         msg_dst[d * cdisp_step1] = convert_short_sat_rte(temp[d * cdisp_step1] - sum);
 }
-void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1, 
+void message_per_pixel_1(__global const float *data, __global float *msg_dst, __global const float *msg1,
     __global const float *msg2, __global const float *msg3,
-    __global const float *dst_disp, __global const float *src_disp, 
+    __global const float *dst_disp, __global const float *src_disp,
     int nr_plane, __global float *temp,
     float cmax_disc_term, int cdisp_step1, float cdisc_single_jump)
 {
     float minimum = FLT_MAX;
-    for(int d = 0; d < nr_plane; d++)     
+    for(int d = 0; d < nr_plane; d++)
     {
         int idx = d * cdisp_step1;
         float val  = data[idx] + msg1[idx] + msg2[idx] + msg3[idx];
@@ -1251,7 +1251,7 @@ void message_per_pixel_1(__global const float *data, __global float *msg_dst, __
         float src_disp_reg = src_disp[d * cdisp_step1];
 
         for(int d2 = 0; d2 < nr_plane; d2++)
-            cost_min = fmin(cost_min, (msg_dst[d2 * cdisp_step1] + 
+            cost_min = fmin(cost_min, (msg_dst[d2 * cdisp_step1] +
             cdisc_single_jump * fabs(dst_disp[d2 * cdisp_step1] - src_disp_reg)));
 
         temp[d * cdisp_step1] = cost_min;
@@ -1262,9 +1262,9 @@ void message_per_pixel_1(__global const float *data, __global float *msg_dst, __
     for(int d = 0; d < nr_plane; d++)
         msg_dst[d * cdisp_step1] = temp[d * cdisp_step1] - sum;
 }
-__kernel void compute_message_0(__global short *u_, __global short *d_, __global short *l_, __global short *r_, 
-    __global const short *data_cost_selected, __global const short *selected_disp_pyr_cur, 
-    __global short *ctemp, int h, int w, int nr_plane, int i, 
+__kernel void compute_message_0(__global short *u_, __global short *d_, __global short *l_, __global short *r_,
+    __global const short *data_cost_selected, __global const short *selected_disp_pyr_cur,
+    __global short *ctemp, int h, int w, int nr_plane, int i,
     float cmax_disc_term, int cdisp_step1, int cmsg_step1, float cdisc_single_jump)
 {
     int y = get_global_id(1);
@@ -1283,7 +1283,7 @@ __kernel void compute_message_0(__global short *u_, __global short *d_, __global
 
         __global short *temp = ctemp + y * cmsg_step1 + x;
 
-        message_per_pixel_0(data, u, r - 1, u + cmsg_step1, l + 1, disp, disp - cmsg_step1, nr_plane, temp, 
+        message_per_pixel_0(data, u, r - 1, u + cmsg_step1, l + 1, disp, disp - cmsg_step1, nr_plane, temp,
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
         message_per_pixel_0(data, d, d - cmsg_step1, r - 1, l + 1, disp, disp + cmsg_step1, nr_plane, temp,
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
@@ -1293,9 +1293,9 @@ __kernel void compute_message_0(__global short *u_, __global short *d_, __global
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
     }
 }
-__kernel void compute_message_1(__global float *u_, __global float *d_, __global float *l_, __global float *r_, 
-    __global const float *data_cost_selected, __global const float *selected_disp_pyr_cur, 
-    __global float *ctemp, int h, int w, int nr_plane, int i, 
+__kernel void compute_message_1(__global float *u_, __global float *d_, __global float *l_, __global float *r_,
+    __global const float *data_cost_selected, __global const float *selected_disp_pyr_cur,
+    __global float *ctemp, int h, int w, int nr_plane, int i,
     float cmax_disc_term, int cdisp_step1, int cmsg_step1, float cdisc_single_jump)
 {
     int y = get_global_id(1);
@@ -1313,7 +1313,7 @@ __kernel void compute_message_1(__global float *u_, __global float *d_, __global
         __global const float *disp = selected_disp_pyr_cur + y * cmsg_step1 + x;
         __global float *temp = ctemp + y * cmsg_step1 + x;
 
-        message_per_pixel_1(data, u, r - 1, u + cmsg_step1, l + 1, disp, disp - cmsg_step1, nr_plane, temp, 
+        message_per_pixel_1(data, u, r - 1, u + cmsg_step1, l + 1, disp, disp - cmsg_step1, nr_plane, temp,
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
         message_per_pixel_1(data, d, d - cmsg_step1, r - 1, l + 1, disp, disp + cmsg_step1, nr_plane, temp,
             cmax_disc_term, cdisp_step1, cdisc_single_jump);
@@ -1327,10 +1327,10 @@ __kernel void compute_message_1(__global float *u_, __global float *d_, __global
 ///////////////////////////////////////////////////////////////
 /////////////////////////// output ////////////////////////////
 ///////////////////////////////////////////////////////////////
-__kernel void compute_disp_0(__global const short *u_, __global const short *d_, __global const short *l_, 
-    __global const short *r_, __global const short * data_cost_selected, 
+__kernel void compute_disp_0(__global const short *u_, __global const short *d_, __global const short *l_,
+    __global const short *r_, __global const short * data_cost_selected,
     __global const short *disp_selected_pyr,
-    __global short* disp, 
+    __global short* disp,
     int res_step, int cols, int rows, int nr_plane,
     int cmsg_step1, int cdisp_step1)
 {
@@ -1364,10 +1364,10 @@ __kernel void compute_disp_0(__global const short *u_, __global const short *d_,
         disp[res_step * y + x] = best;
     }
 }
-__kernel void compute_disp_1(__global const float *u_, __global const float *d_, __global const float *l_, 
-    __global const float *r_, __global const float *data_cost_selected, 
+__kernel void compute_disp_1(__global const float *u_, __global const float *d_, __global const float *l_,
+    __global const float *r_, __global const float *data_cost_selected,
     __global const float *disp_selected_pyr,
-    __global short *disp, 
+    __global short *disp,
     int res_step, int cols, int rows, int nr_plane,
     int cmsg_step1, int cdisp_step1)
 {

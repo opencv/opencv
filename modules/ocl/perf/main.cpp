@@ -99,7 +99,7 @@ int main(int argc, const char *argv[])
 
     // set this to overwrite binary cache every time the test starts
     ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
-    
+
     if (cmd.get<bool>("verify"))
     {
         TestSystem::instance().setNumIters(1);

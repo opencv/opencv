@@ -102,4 +102,3 @@ void goodFeaturesToTrack_Demo( int, void* )
   for( size_t i = 0; i < corners.size(); i++ )
      { cout<<" -- Refined Corner ["<<i<<"]  ("<<corners[i].x<<","<<corners[i].y<<")"<<endl; }
 }
-

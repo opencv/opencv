@@ -312,6 +312,3 @@ void CV_DetectorsTest::run( int /*start_from*/ )
 
 
 TEST(Features2d_Detectors, regression) { CV_DetectorsTest test; test.safe_run(); }
-
-
-

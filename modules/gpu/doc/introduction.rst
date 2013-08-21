@@ -60,4 +60,3 @@ With this algorithm, a dual GPU gave a 180
 %
 performance increase comparing to the single Fermi GPU. For a source code example, see
 http://code.opencv.org/projects/opencv/repository/revisions/master/entry/samples/gpu/.
-

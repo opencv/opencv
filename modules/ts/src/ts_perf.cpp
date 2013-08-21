@@ -1415,4 +1415,3 @@ void PrintTo(const Size& sz, ::std::ostream* os)
 }
 
 }  // namespace cv
-

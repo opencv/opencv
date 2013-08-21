@@ -43,7 +43,7 @@
 //
 //M*/
 
-#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable 
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 
 #ifndef N   // number of radices
 #define N 4
@@ -71,14 +71,14 @@ __inline uint convertKey(uint converted_key)
     converted_key ^= mask;
 #elif defined(K_INT)
     const uint SIGN_MASK = 1u << ((sizeof(int) * 8) - 1);
-    converted_key ^= SIGN_MASK;	
+    converted_key ^= SIGN_MASK;
 #else
 
 #endif
     return converted_key;
 }
 
-//FIXME(pengx17): 
+//FIXME(pengx17):
 // exclusive scan, need to be optimized as this is too naive...
 kernel
     void naiveScanAddition(
@@ -108,7 +108,7 @@ kernel
 {
     const int RADIX_T     = N;
     const int RADICES_T   = (1 << RADIX_T);
-    const int NUM_OF_ELEMENTS_PER_WORK_ITEM_T = RADICES_T; 
+    const int NUM_OF_ELEMENTS_PER_WORK_ITEM_T = RADICES_T;
     const int MASK_T      = (1 << RADIX_T) - 1;
     int localBuckets[16] = {0,0,0,0,0,0,0,0,
                             0,0,0,0,0,0,0,0};

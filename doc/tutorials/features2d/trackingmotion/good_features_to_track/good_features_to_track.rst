@@ -118,5 +118,3 @@ Result
 
 .. image:: images/Feature_Detection_Result_a.jpg
               :align: center
-
-

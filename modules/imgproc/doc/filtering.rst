@@ -1642,4 +1642,3 @@ is equivalent to
 .. seealso::
 
     :ocv:func:`cartToPolar`
-

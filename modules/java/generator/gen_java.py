@@ -1485,4 +1485,3 @@ if __name__ == "__main__":
     #print "Generating module '" + module + "' from headers:\n\t" + "\n\t".join(srcfiles)
     generator = JavaWrapperGenerator()
     generator.gen(srcfiles, module, dstdir)
-

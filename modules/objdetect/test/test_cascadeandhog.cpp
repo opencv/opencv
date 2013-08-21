@@ -439,7 +439,7 @@ int CV_CascadeDetectorTest::detectMultiScale_C( const string& filename,
 
     CvMat c_gray = grayImg;
     CvSeq* rs = cvHaarDetectObjects(&c_gray, c_cascade, storage, 1.1, 3, flags[di] );
-    
+
     objects.clear();
     for( int i = 0; i < rs->total; i++ )
     {

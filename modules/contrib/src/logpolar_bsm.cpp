@@ -649,4 +649,3 @@ LogPolar_Adjacent::~LogPolar_Adjacent()
 }
 
 }
-

@@ -67,7 +67,7 @@ The following loss functions are implemented for regression problems:
     :math:`L(y,f(x)) = \left\{ \begin{array}{lr}
     \delta\cdot\left(|y-f(x)|-\dfrac{\delta}{2}\right) & : |y-f(x)|>\delta\\
     \dfrac{1}{2}\cdot(y-f(x))^2 & : |y-f(x)|\leq\delta \end{array} \right.`,
-    
+
     where :math:`\delta` is the :math:`\alpha`-quantile estimation of the
     :math:`|y-f(x)|`. In the current implementation :math:`\alpha=0.2`.
 
@@ -129,9 +129,9 @@ CvGBTreesParams::CvGBTreesParams
    :param weak_count: Count of boosting algorithm iterations. ``weak_count*K`` is the total
     count of trees in the GBT model, where ``K`` is the output classes count
     (equal to one in case of a regression).
-  
+
    :param shrinkage: Regularization parameter (see :ref:`Training GBT`).
-    
+
    :param subsample_portion: Portion of the whole training set used for each algorithm iteration.
     Subset is generated randomly. For more information see
     http://www.salfordsystems.com/doc/StochasticBoostingSS.pdf.
@@ -139,7 +139,7 @@ CvGBTreesParams::CvGBTreesParams
    :param max_depth: Maximal depth of each decision tree in the ensemble (see :ocv:class:`CvDTree`).
 
    :param use_surrogates: If ``true``, surrogate splits are built (see :ocv:class:`CvDTree`).
-    
+
 By default the following constructor is used:
 
 .. code-block:: cpp
@@ -178,7 +178,7 @@ Trains a Gradient boosted tree model.
 .. ocv:function:: bool CvGBTrees::train(CvMLData* data, CvGBTreesParams params=CvGBTreesParams(), bool update=false)
 
 .. ocv:pyfunction:: cv2.GBTrees.train(trainData, tflag, responses[, varIdx[, sampleIdx[, varType[, missingDataMask[, params[, update]]]]]]) -> retval
-    
+
 The first train method follows the common template (see :ocv:func:`CvStatModel::train`).
 Both ``tflag`` values (``CV_ROW_SAMPLE``, ``CV_COL_SAMPLE``) are supported.
 ``trainData`` must be of the ``CV_32F`` type. ``responses`` must be a matrix of type
@@ -188,7 +188,7 @@ list of indices (``CV_32S``) or a mask (``CV_8U`` or ``CV_8S``). ``update`` is
 a dummy parameter.
 
 The second form of :ocv:func:`CvGBTrees::train` function uses :ocv:class:`CvMLData` as a
-data set container. ``update`` is still a dummy parameter. 
+data set container. ``update`` is still a dummy parameter.
 
 All parameters specific to the GBT model are passed into the training function
 as a :ocv:class:`CvGBTreesParams` structure.
@@ -207,42 +207,42 @@ Predicts a response for an input sample.
    :param sample: Input feature vector that has the same format as every training set
     element. If not all the variables were actually used during training,
     ``sample`` contains forged values at the appropriate places.
-    
+
    :param missing: Missing values mask, which is a dimensional matrix of the same size as
     ``sample`` having the ``CV_8U`` type. ``1`` corresponds to the missing value
     in the same position in the ``sample`` vector. If there are no missing values
     in the feature vector, an empty matrix can be passed instead of the missing mask.
-    
+
    :param weakResponses: Matrix used to obtain predictions of all the trees.
     The matrix has :math:`K` rows,
     where :math:`K` is the count of output classes (1 for the regression case).
     The matrix has as many columns as the ``slice`` length.
-    
+
    :param slice: Parameter defining the part of the ensemble used for prediction.
     If ``slice = Range::all()``, all trees are used. Use this parameter to
     get predictions of the GBT models with different ensemble sizes learning
     only one model.
-    
+
    :param k: Number of tree ensembles built in case of the classification problem
     (see :ref:`Training GBT`). Use this
     parameter to change the output to sum of the trees' predictions in the
     ``k``-th ensemble only. To get the total GBT model prediction, ``k`` value
     must be -1. For regression problems, ``k`` is also equal to -1.
- 
+
 The method predicts the response corresponding to the given sample
 (see :ref:`Predicting with GBT`).
 The result is either the class label or the estimated function value. The
 :ocv:func:`CvGBTrees::predict` method enables using the parallel version of the GBT model
 prediction if the OpenCV is built with the TBB library. In this case, predictions
-of single trees are computed in a parallel fashion. 
+of single trees are computed in a parallel fashion.
 
-    
+
 CvGBTrees::clear
 ----------------
 Clears the model.
 
 .. ocv:function:: void CvGBTrees::clear()
-    
+
 .. ocv:pyfunction:: cv2.GBTrees.clear() -> None
 
 The function deletes the data set information and all the weak models and sets all internal
@@ -257,7 +257,7 @@ Calculates a training or testing error.
 .. ocv:function:: float CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp = 0 )
 
    :param _data: Data set.
-    
+
    :param type: Parameter defining the error that should be computed: train (``CV_TRAIN_ERROR``) or test
     (``CV_TEST_ERROR``).
 

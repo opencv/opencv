@@ -2785,4 +2785,3 @@ static void icvDecomposeQ(CvMat* /*matrQ*/,CvMat* /*matrH*/)
 }
 
 #endif
-

@@ -160,7 +160,7 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t vecSize, bool isGreater
 
 namespace radix_sort
 {
-//FIXME(pengx17): 
+//FIXME(pengx17):
 // exclusive scan, need to be optimized as this is too naive...
 //void naive_scan_addition(oclMat& input, oclMat& output)
 //{
@@ -247,8 +247,8 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t origVecSize, bool isGre
             }
         }
         ocl::copyMakeBorder(
-            keys(Rect(0,0,origVecSize,1)), buffer_keys, 
-            0, 0, 0, vecSize - origVecSize, 
+            keys(Rect(0,0,origVecSize,1)), buffer_keys,
+            0, 0, 0, vecSize - origVecSize,
             BORDER_CONSTANT, padding_value);
         vals(Rect(0,0,origVecSize,1)).copyTo(roi_buffer_vals);
         newBuffer = true;
@@ -274,7 +274,7 @@ static void sortByKey(oclMat& keys, oclMat& vals, size_t origVecSize, bool isGre
     genSortBuildOption(keys, vals, isGreaterThan, build_opt_buf);
 
     //additional build option for radix sort
-    sprintf(build_opt_buf + strlen(build_opt_buf), " -D K_%s", isKeyFloat?"FLT":"INT"); 
+    sprintf(build_opt_buf + strlen(build_opt_buf), " -D K_%s", isKeyFloat?"FLT":"INT");
 
     String kernelnames[2] = {String("histogramRadixN"), String("permuteRadixN")};
 

@@ -4054,4 +4054,3 @@ static PyObject* init_cv()
 
   return m;
 }
-

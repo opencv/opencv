@@ -112,7 +112,7 @@ namespace cv
             ///////////////////////////comp data////////////////////////////////////////
             /////////////////////////////////////////////////////////////////////////
             static void  comp_data_call(const oclMat &left, const oclMat &right, oclMat &data, int /*disp*/,
-				float /*cmax_data_term*/, float /*cdata_weight*/)
+                float /*cmax_data_term*/, float /*cdata_weight*/)
             {
                 Context  *clCxt = left.clCxt;
                 int channels = left.oclchannels();
@@ -136,7 +136,7 @@ namespace cv
 
                 const int OPT_SIZE = 50;
                 char cn_opt [OPT_SIZE] = "";
-                sprintf( cn_opt, "%s -D CN=%d", 
+                sprintf( cn_opt, "%s -D CN=%d",
                     (data_type == CV_16S ? "-D T_SHORT":"-D T_FLOAT"),
                     channels
                     );
@@ -516,4 +516,3 @@ void cv::ocl::StereoBeliefPropagation::operator()(const oclMat &data, oclMat &di
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(data, disp);
 }
-

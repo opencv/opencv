@@ -93,7 +93,7 @@ __kernel void arithm_div_D0 (__global uchar *src1, int src1_step, int src1_offse
     if (coor.x < cols && coor.y < rows)
     {
         coor.x = coor.x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -137,7 +137,7 @@ __kernel void arithm_div_D2 (__global ushort *src1, int src1_step, int src1_offs
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -180,7 +180,7 @@ __kernel void arithm_div_D3 (__global short *src1, int src1_step, int src1_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -298,7 +298,7 @@ __kernel void arithm_s_div_D0 (__global uchar *src, int src_step, int src_offset
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -337,7 +337,7 @@ __kernel void arithm_s_div_D2 (__global ushort *src, int src_step, int src_offse
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -375,7 +375,7 @@ __kernel void arithm_s_div_D3 (__global short *src, int src_step, int src_offset
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -466,5 +466,3 @@ __kernel void arithm_s_div_D6 (__global double *src, int src_step, int src_offse
     }
 }
 #endif
-
-
