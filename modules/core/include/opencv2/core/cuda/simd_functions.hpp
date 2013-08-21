@@ -77,9 +77,9 @@
 
 /*
   This header file contains inline functions that implement intra-word SIMD
-  operations, that are hardware accelerated on sm_3x (Kepler) CUDAs. Efficient
+  operations, that are hardware accelerated on sm_3x (Kepler) GPUs. Efficient
   emulation code paths are provided for earlier architectures (sm_1x, sm_2x)
-  to make the code portable across all CUDAs supported by CUDA. The following
+  to make the code portable across all GPUs supported by CUDA. The following
   functions are currently implemented:
 
   vadd2(a,b)      per-halfword unsigned addition, with wrap-around: a + b
