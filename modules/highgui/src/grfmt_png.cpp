@@ -60,11 +60,16 @@
 
 #ifdef HAVE_LIBPNG_PNG_H
 #include <libpng/png.h>
-#include <libpng/pnginfo.h>
 #else
 #include <png.h>
+#endif
+
+#ifdef HAVE_LIBPNG_PNGINFO_H
+#include <libpng/pnginfo.h>
+#else
 #include <pnginfo.h>
 #endif
+
 #include <zlib.h>
 
 #include "grfmt_png.hpp"
