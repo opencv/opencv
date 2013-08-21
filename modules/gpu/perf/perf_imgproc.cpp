@@ -884,7 +884,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve,
 
         TEST_CYCLE() cv::gpu::convolve(d_image, d_templ, dst, ccorr, d_buf);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
