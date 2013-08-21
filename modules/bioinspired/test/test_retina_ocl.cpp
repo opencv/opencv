@@ -48,10 +48,10 @@
 #include "opencv2/bioinspired.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/ocl.hpp"
 
 #if defined(HAVE_OPENCV_OCL) && defined(HAVE_OPENCL)
 
+#include "opencv2/ocl.hpp"
 #define RETINA_ITERATIONS 5
 
 static double checkNear(const cv::Mat &m1, const cv::Mat &m2)
