@@ -295,7 +295,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 4);
 
-            uint8_t* img_data = (uint8_t*)img.data;
+            unsigned char* img_data = (unsigned char*)img.data;
 
             // Verification first pixel is red in BGRA
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -315,7 +315,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (uint8_t*)img.data;
+            img_data = (unsigned char*)img.data;
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -333,7 +333,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (uint8_t*)img.data;
+            img_data = (unsigned char*)img.data;
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
@@ -351,7 +351,7 @@ public:
 
             ASSERT_TRUE(img.channels() == 3);
 
-            img_data = (uint8_t*)img.data;
+            img_data = (unsigned char*)img.data;
 
             // Verification first pixel is red in BGR
             ASSERT_TRUE(img_data[0] == 0x00);
