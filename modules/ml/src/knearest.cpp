@@ -480,4 +480,3 @@ float CvKNearest::find_nearest( const cv::Mat& _samples, int k, CV_OUT cv::Mat& 
 }
 
 /* End of file */
-

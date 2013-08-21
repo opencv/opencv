@@ -304,4 +304,3 @@ __kernel void gpuscaleclassifier(global GpuHidHaarTreeNode *orinode, global GpuH
     newnode[counter].alpha[1] = t1.alpha[1];
     newnode[counter].alpha[2] = t1.alpha[2];
 }
-

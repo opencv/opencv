@@ -531,4 +531,3 @@ The function ``putText`` renders the specified text string in the image.
 Symbols that cannot be rendered using the specified font are
 replaced by question marks. See
 :ocv:func:`getTextSize` for a text rendering code example.
-

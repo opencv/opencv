@@ -466,5 +466,3 @@ __kernel void arithm_s_div_D6 (__global double *src, int src_step, int src_offse
     }
 }
 #endif
-
-

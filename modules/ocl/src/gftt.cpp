@@ -348,5 +348,3 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &poin
         NULL,
         NULL));
 }
-
-

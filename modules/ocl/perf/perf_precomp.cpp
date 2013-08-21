@@ -490,7 +490,3 @@ double checkSimilarity(const Mat &m1, const Mat &m2)
     matchTemplate(m1, m2, diff, CV_TM_CCORR_NORMED);
     return std::abs(diff.at<float>(0, 0) - 1.f);
 }
-
-
-
-

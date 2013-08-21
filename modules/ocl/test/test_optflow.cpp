@@ -346,4 +346,3 @@ INSTANTIATE_TEST_CASE_P(OCL_Video, Farneback, testing::Combine(
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
 #endif // HAVE_OPENCL
-

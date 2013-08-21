@@ -1014,4 +1014,3 @@ __kernel void arithm_compare_ge_D6 (__global double *src1, int src1_step, int sr
     }
 }
 #endif
-

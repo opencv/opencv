@@ -421,5 +421,3 @@ __kernel void __attribute__((reqd_work_group_size(8,8,1)))gpuRunHaarClassifierCa
         }//end for(int grploop=grpidx;grploop<totalgrp;grploop+=grpnumx)
     }//end for(int scalei = 0; scalei <loopcount; scalei++)
 }
-
-

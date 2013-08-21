@@ -73,4 +73,3 @@ bool cv::gpu::tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType)
 }
 
 /* End of file. */
-

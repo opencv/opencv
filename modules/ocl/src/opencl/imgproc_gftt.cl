@@ -273,4 +273,3 @@ __kernel
     for (int j=0; j< same; j++)
         corners[pos + j] = pt1;
 }
-

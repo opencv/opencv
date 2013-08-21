@@ -1483,4 +1483,3 @@ HRESULT GetDefaultStride(IMFMediaType *pType, LONG *plStride)
     }
     return hr;
 }
-

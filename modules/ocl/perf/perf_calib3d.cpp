@@ -90,12 +90,3 @@ PERFTEST(StereoMatchBM)
 
     TestSystem::instance().setAccurate(-1, 0.);
 }
-
-
-
-
-
-
-
-
-

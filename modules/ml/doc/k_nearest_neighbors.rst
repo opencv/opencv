@@ -194,5 +194,3 @@ The sample below (currently using the obsolete ``CvMat`` structures) demonstrate
         cvReleaseMat( &trainData );
         return 0;
     }
-
-

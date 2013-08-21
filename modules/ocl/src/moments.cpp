@@ -338,4 +338,3 @@ Moments ocl_moments( InputArray _array, bool binaryImage )
 }
 
 }
-

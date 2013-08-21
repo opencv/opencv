@@ -57,4 +57,3 @@ if (INSTALL_C_EXAMPLES AND NOT WIN32)
           DESTINATION share/OpenCV/samples/c
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif ()
-

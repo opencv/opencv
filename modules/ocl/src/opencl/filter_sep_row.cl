@@ -467,5 +467,3 @@ __kernel __attribute__((reqd_work_group_size(LSIZE0,LSIZE1,1))) void row_filter_
     }
 
 }
-
-

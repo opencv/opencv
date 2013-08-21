@@ -1258,4 +1258,3 @@ void initcv2()
 
 #include "pyopencv_generated_const_reg.h"
 }
-

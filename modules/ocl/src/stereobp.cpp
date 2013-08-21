@@ -516,4 +516,3 @@ void cv::ocl::StereoBeliefPropagation::operator()(const oclMat &data, oclMat &di
     ::StereoBeliefPropagationImpl impl(*this, u, d, l, r, u2, d2, l2, r2, datas, out);
     impl(data, disp);
 }
-

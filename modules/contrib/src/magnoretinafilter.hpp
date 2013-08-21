@@ -241,5 +241,3 @@ namespace cv
 }
 
 #endif /*MagnoRetinaFilter_H_*/
-
-

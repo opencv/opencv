@@ -686,4 +686,3 @@ __kernel void warpPerspectiveCubic_C4_D5(__global float4 * src, __global float4 
         }
     }
 }
-

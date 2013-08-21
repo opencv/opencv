@@ -10,4 +10,3 @@ function insertIframe (elementId, iframeSrc)
     element.parentNode.replaceChild(iframe, element);
   }
 }
-

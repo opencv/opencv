@@ -204,4 +204,3 @@ BOWImgDescriptorExtractor::descriptorType
 Returns an image descriptor type.
 
 .. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const
-

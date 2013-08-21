@@ -100,4 +100,3 @@ int icvGetIdxAt( CvMat* idx, int pos )
 void icvSave( const CvArr* ptr, const char* filename, int line );
 
 #endif /* __CVCOMMON_H_ */
-

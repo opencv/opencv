@@ -22,4 +22,3 @@ namespace cvtest
 }
 
 #endif
-

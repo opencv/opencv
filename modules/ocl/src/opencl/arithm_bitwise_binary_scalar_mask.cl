@@ -745,4 +745,3 @@ __kernel void arithm_s_bitwise_binary_with_mask_C4_D6 (
     }
 }
 #endif
-

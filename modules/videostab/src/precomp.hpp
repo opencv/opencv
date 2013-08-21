@@ -80,4 +80,3 @@ template <typename T> inline const T& at(int index, const std::vector<T> &items)
 }
 
 #endif
-

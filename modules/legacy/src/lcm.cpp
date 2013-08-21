@@ -718,7 +718,3 @@ void _cvProjectionPointToSegment(CvPoint2D32f* PointO,
     PrPoint->y = PointO->y - VectorAO.y + alfa*VectorAB.y;
     return;
 }//end of _cvProjectionPointToSegment
-
-
-
-

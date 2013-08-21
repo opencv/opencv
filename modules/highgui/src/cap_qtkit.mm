@@ -1046,4 +1046,3 @@ bool CvVideoWriter_QT::writeFrame(const IplImage* image) {
 
     return 1;
 }
-

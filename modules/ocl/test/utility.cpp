@@ -251,4 +251,3 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     }
     return final_test_result;
 }
-

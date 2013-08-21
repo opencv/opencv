@@ -919,5 +919,3 @@ bool CvCalibFilter::Undistort( CvMat** srcarr, CvMat** dstarr )
 
     return true;
 }
-
-

@@ -95,4 +95,3 @@ Result
    .. image:: images/Feature_Detection_Result_b.jpg
       :align: center
       :height: 200pt
-

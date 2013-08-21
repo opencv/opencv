@@ -208,4 +208,3 @@ Spherical warper factory class. ::
     };
 
 .. seealso:: :ocv:class:`detail::SphericalWarper`
-

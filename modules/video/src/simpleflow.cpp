@@ -648,4 +648,3 @@ CV_EXPORTS_W void calcOpticalFlowSF(Mat& from,
 }
 
 }
-

@@ -22,4 +22,3 @@
 #include "opencv2/flann/flann_base.hpp"
 
 #endif
-
