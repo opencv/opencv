@@ -178,8 +178,11 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
     for( i = 0; i < nclasses; i++ )
     {
         Rect r1 = rrects[i];
-        int n1 = levelWeights ? rejectLevels[i] : rweights[i];
+        int n1 = rweights[i];
         double w1 = rejectWeights[i];
+        int l1 = rejectLevels[i];
+    
+        // filter out rectangles which don't have enough similar rectangles
         if( n1 <= groupThreshold )
             continue;
         // filter out small face rectangles inside large rectangles
@@ -207,7 +210,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         {
             rectList.push_back(r1);
             if( weights )
-                weights->push_back(n1);
+                weights->push_back(l1);
             if( levelWeights )
                 levelWeights->push_back(w1);
         }
@@ -970,7 +973,7 @@ public:
                 {
                     if( result == 1 )
                         result =  -(int)classifier->data.stages.size();
-                    if( classifier->data.stages.size() + result < 4 )
+                    if( classifier->data.stages.size() + result == 0 )
                     {
                         mtx->lock();
                         rectangles->push_back(Rect(cvRound(x*scalingFactor), cvRound(y*scalingFactor), winSize.width, winSize.height));
