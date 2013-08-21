@@ -43,11 +43,12 @@
 
 #ifdef HAVE_OPENCL
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
+using std::cout;
+using std::endl;
 
 void print_info()
 {
@@ -86,11 +87,11 @@ int main(int argc, char **argv)
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<string>("h")=="true")
     {
-        cout << "Avaible options besides goole test option:" << endl;
+        cout << "Available options besides google test options:" << endl;
         cmd.printMessage();
         return 0;
     }
-    string type = cmd.get<string>("t");
+    string type = cmd.get<String>("t");
     unsigned int pid = cmd.get<unsigned int>("p");
     int device = cmd.get<int>("d");
 
