@@ -259,7 +259,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     bool ok = true;
     for (int i = 0; i < cam_params_.rows; ++i)
     {
-        if (isnan(cam_params_.at<double>(i,0)))
+        if (std::isnan(cam_params_.at<double>(i,0)))
         {
             ok = false;
             break;

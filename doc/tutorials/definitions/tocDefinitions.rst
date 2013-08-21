@@ -11,3 +11,4 @@
 .. |Author_EricCh| unicode:: Eric U+0020 Christiansen
 .. |Author_AndreyP| unicode:: Andrey U+0020 Pavlenko
 .. |Author_AlexS| unicode:: Alexander U+0020 Smorkalov
+.. |Author_DomenicoB| unicode:: Domenico U+0020 Daniele U+0020 Bloisi
