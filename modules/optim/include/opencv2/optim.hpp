@@ -55,7 +55,7 @@ public:
     public:
        virtual ~Function() {}
        //! ndim - dimensionality
-       virtual double calc(const double* x) const = 0;     
+       virtual double calc(const double* x) const = 0;
     };
 
     virtual Ptr<Function> getFunction() const = 0;
