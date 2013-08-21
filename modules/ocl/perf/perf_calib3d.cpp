@@ -48,45 +48,45 @@
 ///////////// StereoMatchBM ////////////////////////
 PERFTEST(StereoMatchBM)
 {
-	Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
-	Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
-	Mat disp,dst;
-	ocl::oclMat d_left, d_right,d_disp;
-	int n_disp= 128;
-	int winSize =19;
+    Mat left_image = imread(abspath("aloeL.jpg"), cv::IMREAD_GRAYSCALE);
+    Mat right_image = imread(abspath("aloeR.jpg"), cv::IMREAD_GRAYSCALE);
+    Mat disp,dst;
+    ocl::oclMat d_left, d_right,d_disp;
+    int n_disp= 128;
+    int winSize =19;
 
-	SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
+    SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
 
-	StereoBM bm(0, n_disp, winSize);
-	bm(left_image, right_image, dst);
+    StereoBM bm(0, n_disp, winSize);
+    bm(left_image, right_image, dst);
 
-	CPU_ON;
-	bm(left_image, right_image, dst);
-	CPU_OFF;
+    CPU_ON;
+    bm(left_image, right_image, dst);
+    CPU_OFF;
 
-	d_left.upload(left_image);
-	d_right.upload(right_image);
+    d_left.upload(left_image);
+    d_right.upload(right_image);
 
-	ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
+    ocl::StereoBM_OCL d_bm(0, n_disp, winSize);
 
-	WARMUP_ON;
-	d_bm(d_left, d_right, d_disp);
-	WARMUP_OFF;
+    WARMUP_ON;
+    d_bm(d_left, d_right, d_disp);
+    WARMUP_OFF;
 
     cv::Mat ocl_mat;
     d_disp.download(ocl_mat);
     ocl_mat.convertTo(ocl_mat, dst.type());
 
-	GPU_ON;
-	d_bm(d_left, d_right, d_disp);
-	GPU_OFF;
+    GPU_ON;
+    d_bm(d_left, d_right, d_disp);
+    GPU_OFF;
 
-	GPU_FULL_ON;
-	d_left.upload(left_image);
-	d_right.upload(right_image);
-	d_bm(d_left, d_right, d_disp);
-	d_disp.download(disp);
-	GPU_FULL_OFF;
+    GPU_FULL_ON;
+    d_left.upload(left_image);
+    d_right.upload(right_image);
+    d_bm(d_left, d_right, d_disp);
+    d_disp.download(disp);
+    GPU_FULL_OFF;
 
     TestSystem::instance().setAccurate(-1, 0.);
 }

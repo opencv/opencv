@@ -112,7 +112,7 @@ namespace cv
             ///////////////////////////comp data////////////////////////////////////////
             /////////////////////////////////////////////////////////////////////////
             static void  comp_data_call(const oclMat &left, const oclMat &right, oclMat &data, int /*disp*/,
-				float /*cmax_data_term*/, float /*cdata_weight*/)
+                float /*cmax_data_term*/, float /*cdata_weight*/)
             {
                 Context  *clCxt = left.clCxt;
                 int channels = left.oclchannels();
