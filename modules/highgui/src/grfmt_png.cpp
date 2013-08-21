@@ -67,7 +67,9 @@
 #ifdef HAVE_LIBPNG_PNGINFO_H
 #include <libpng/pnginfo.h>
 #else
+#ifdef HAVE_PNGINFO_H
 #include <pnginfo.h>
+#endif
 #endif
 
 #include <zlib.h>
