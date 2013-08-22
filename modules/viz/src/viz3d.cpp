@@ -44,26 +44,6 @@ void cv::viz::Viz3d::release()
 
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 
-bool cv::viz::Viz3d::addPolygonMesh (const Mesh3d& mesh, const String& id)
-{
-    return impl_->addPolygonMesh(mesh, Mat(), id);
-}
-
-bool cv::viz::Viz3d::updatePolygonMesh (const Mesh3d& mesh, const String& id)
-{
-    return impl_->updatePolygonMesh(mesh, Mat(), id);
-}
-
-bool cv::viz::Viz3d::addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id)
-{
-    return impl_->addPolylineFromPolygonMesh(mesh, id);
-}
-
-bool cv::viz::Viz3d::addPolygon(const Mat& cloud, const Color& color, const String& id)
-{
-    return impl_->addPolygon(cloud, color, id);
-}
-
 void cv::viz::Viz3d::spin() { impl_->spin(); }
 void cv::viz::Viz3d::spinOnce (int time, bool force_redraw) { impl_->spinOnce(time, force_redraw); }
 bool cv::viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }

@@ -27,13 +27,6 @@ namespace cv
 
             void setBackgroundColor(const Color& color = Color::black());
 
-            //to refactor
-            bool addPolygonMesh(const Mesh3d& mesh, const String& id = "polygon");
-            bool updatePolygonMesh(const Mesh3d& mesh, const String& id = "polygon");
-            bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
-            bool addPolygon(const Mat& cloud, const Color& color, const String& id = "polygon");
-
-
             void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;

@@ -19,29 +19,10 @@ public:
 
     void removeAllWidgets();
 
-    //to refactor
-    bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
-    bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
-    bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
-
     // to refactor: Widget3D:: & Viz3d::
     bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
     bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
     bool setShapeRenderingProperties (int property, double value, const String& id);
-
-    /** \brief Set whether the point cloud is selected or not
-         *  \param[in] selected whether the cloud is selected or not (true = selected)
-         *  \param[in] id the point cloud object id (default: cloud)
-         */
-    // probably should just remove
-    bool setPointCloudSelected (const bool selected, const String& id = "cloud" );
-
-
-
-
-
-
-
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
@@ -59,30 +40,6 @@ public:
             interactor_->TerminateApp (); // This tends to close the window...
         }
     }
-
-
-
-
-
-
-
-
-
-
-    
-    // to refactor
-    bool addPolygon(const cv::Mat& cloud, const Color& color, const String& id = "polygon");
-    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color, bool display_length, const String& id = "arrow");
-    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color_line, const Color& color_text, const String& id = "arrow");
-
-    // Probably remove this
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const String& id = "PolyData");
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const String& id = "PolyData");
-
-    // I think this should be moved to 'static Widget Widget::fromPlyFile(const String&)';
-    bool addModelFromPLYFile (const String &filename, const String& id = "PLYModel");
-    bool addModelFromPLYFile (const String &filename, vtkSmartPointer<vtkTransform> transform, const String& id = "PLYModel");
-
 
     // to implement in Viz3d with shorter name
     void setRepresentationToSurfaceForAllActors();

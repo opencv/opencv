@@ -16,6 +16,8 @@ namespace cv
             Widget();
             Widget(const Widget &other);
             Widget& operator =(const Widget &other);
+            
+            static Widget fromPlyFile(const String &file_name);
 
             ~Widget();
 

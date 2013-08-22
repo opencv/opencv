@@ -969,7 +969,6 @@ cv::viz::CameraPositionWidget::CameraPositionWidget(const Matx33f &K, const Mat 
     
     // Create a camera
     vtkSmartPointer<vtkCamera> camera = vtkSmartPointer<vtkCamera>::New();
-    float f_x = K(0,0);
     float f_y = K(1,1);
     float c_y = K(1,2);
     float aspect_ratio = float(image.cols)/float(image.rows);

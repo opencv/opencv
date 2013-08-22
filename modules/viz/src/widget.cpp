@@ -54,6 +54,46 @@ void cv::viz::Widget::release()
     }
 }
 
+cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
+{
+    vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New ();
+    reader->SetFileName (file_name.c_str ());
+    
+    vtkSmartPointer<vtkDataSet> data = reader->GetOutput();
+    CV_Assert(data);
+
+    vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
+
+    vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New ();
+    mapper->SetInput (data);
+
+    vtkSmartPointer<vtkDataArray> scalars = data->GetPointData ()->GetScalars ();
+    if (scalars)
+    {
+        cv::Vec3d minmax(scalars->GetRange());
+        mapper->SetScalarRange(minmax.val);
+        mapper->SetScalarModeToUsePointData ();
+
+        // interpolation OFF, if data is a vtkPolyData that contains only vertices, ON for anything else.
+        vtkPolyData* polyData = vtkPolyData::SafeDownCast (data);
+        bool interpolation = (polyData && polyData->GetNumberOfCells () != polyData->GetNumberOfVerts ());
+
+        mapper->SetInterpolateScalarsBeforeMapping (interpolation);
+        mapper->ScalarVisibilityOn ();
+    }
+    mapper->ImmediateModeRenderingOff ();
+
+    actor->SetNumberOfCloudPoints (int (std::max<vtkIdType> (1, data->GetNumberOfPoints () / 10)));
+    actor->GetProperty ()->SetInterpolationToFlat ();
+    actor->GetProperty ()->BackfaceCullingOn ();
+
+    actor->SetMapper (mapper);
+    
+    Widget widget;
+    widget.impl_->prop = actor;
+    return widget;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// widget accessor implementaion
 
