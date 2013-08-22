@@ -1274,7 +1274,7 @@ void CvSVM::get_svm_detector( std::vector< float > & detector ) const
         }
         detector.push_back( svi );
     }
-    detector.push_back( -decision_func->rho );
+    detector.push_back( (float)-decision_func->rho );
 }
 
 bool CvSVM::set_params( const CvSVMParams& _params )
