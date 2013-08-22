@@ -45,142 +45,147 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 ///////////// ConvertTo////////////////////////
-PERFTEST(ConvertTo)
+
+CV_ENUM(ConvertToMatType, CV_8UC1, CV_8UC4)
+
+typedef tuple<Size, ConvertToMatType> ConvertToParams;
+typedef TestBaseWithParam<ConvertToParams> ConvertToFixture;
+
+PERF_TEST_P(ConvertToFixture, ConvertTo,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               ConvertToMatType::all()))
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    // getting params
+    ConvertToParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    std::string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    // creating src data
+    Mat src(srcSize, type), dst;
+    const int dstType = CV_MAKE_TYPE(CV_32F, src.channels());
+    dst.create(srcSize, dstType);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    // select implementation
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] << " to 32FC1";
+        ocl::oclMat oclSrc(src), oclDst(srcSize, dstType);
 
-            gen(src, size, size, all_type[j], 0, 256);
-            //gen(dst, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() oclSrc.convertTo(oclDst, dstType);
 
-            //d_dst.upload(dst);
+        oclDst.download(dst);
 
-            src.convertTo(dst, CV_32FC1);
-
-            CPU_ON;
-            src.convertTo(dst, CV_32FC1);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            d_src.convertTo(d_dst, CV_32FC1);
-            WARMUP_OFF;
-
-            GPU_ON;
-            d_src.convertTo(d_dst, CV_32FC1);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            d_src.convertTo(d_dst, CV_32FC1);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() src.convertTo(dst, dstType);
+
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }
+
 ///////////// copyTo////////////////////////
-PERFTEST(copyTo)
+
+typedef ConvertToMatType copyToMatType;
+typedef tuple<Size, copyToMatType> copyToParams;
+typedef TestBaseWithParam<copyToParams> copyToFixture;
+
+PERF_TEST_P(copyToFixture, copyTo,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               copyToMatType::all()))
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    // getting params
+    copyToParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    std::string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    // creating src data
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    // select implementation
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
-            //gen(dst, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() oclSrc.copyTo(oclDst);
 
-            //d_dst.upload(dst);
+        oclDst.download(dst);
 
-            src.copyTo(dst);
-
-            CPU_ON;
-            src.copyTo(dst);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            d_src.copyTo(d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            d_src.copyTo(d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            d_src.copyTo(d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 0.0);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() src.copyTo(dst);
+
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }
+
 ///////////// setTo////////////////////////
-PERFTEST(setTo)
+
+typedef ConvertToMatType setToMatType;
+typedef tuple<Size, setToMatType> setToParams;
+typedef TestBaseWithParam<setToParams> setToFixture;
+
+PERF_TEST_P(setToFixture, setTo,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               setToMatType::all()))
 {
-    Mat src, ocl_src;
-    Scalar val(1, 2, 3, 4);
-    ocl::oclMat d_src;
+    // getting params
+    setToParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    const Scalar val(1, 2, 3, 4);
 
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    std::string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    // creating src data
+    Mat src(srcSize, type);
+    declare.in(src);
+
+    // select implementation
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(srcSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() oclSrc.setTo(val);
+        oclSrc.download(src);
 
-            src.setTo(val);
-
-            CPU_ON;
-            src.setTo(val);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            d_src.setTo(val);
-            WARMUP_OFF;
-
-            d_src.download(ocl_src);
-            TestSystem::instance().ExpectedMatNear(src, ocl_src, 1.0);
-
-            GPU_ON;;
-            d_src.setTo(val);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            d_src.setTo(val);
-            GPU_FULL_OFF;
-        }
-
+        SANITY_CHECK(src);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() src.setTo(val);
+
+        SANITY_CHECK(src);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }

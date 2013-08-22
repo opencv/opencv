@@ -46,56 +46,54 @@
 
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 ///////////// GoodFeaturesToTrack ////////////////////////
-PERFTEST(GoodFeaturesToTrack)
+
+typedef tuple<string, double> GoodFeaturesToTrackParams;
+typedef TestBaseWithParam<GoodFeaturesToTrackParams> GoodFeaturesToTrackFixture;
+
+PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
+            ::testing::Combine(::testing::Values(string("gpu/opticalflow/rubberwhale1.png"),
+                                                 string("gpu/stereobm/aloe-L.png")),
+                               ::testing::Range(0.0, 4.0, 3.0)))
 {
-    using namespace cv;
+    std::vector<cv::Point2f> pts_gold;
 
-    int maxCorners = 2000;
-    double qualityLevel = 0.01;
+    // getting params
+    GoodFeaturesToTrackParams param = GetParam();
+    const string fileName = getDataPath(get<0>(param)), impl = getSelectedImpl();
+    const int maxCorners = 2000;
+    const double qualityLevel = 0.01, minDistance = get<1>(param);
 
-    std::string images[] = { "rubberwhale1.png", "aloeL.jpg" };
+    Mat frame = imread(fileName, IMREAD_GRAYSCALE);
+    declare.in(frame);
+    ASSERT_TRUE(!frame.empty()) << "no input image";
 
-    std::vector<cv::Point2f> pts_gold, pts_ocl;
-
-    for(size_t imgIdx = 0; imgIdx < (sizeof(images)/sizeof(std::string)); ++imgIdx)
+    if (impl == "ocl")
     {
-        Mat frame = imread(abspath(images[imgIdx]), IMREAD_GRAYSCALE);
-        CV_Assert(!frame.empty());
+        ocl::oclMat oclFrame(frame), pts_oclmat;
+        cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
 
-        for(float minDistance = 0; minDistance < 4; minDistance += 3.0)
-        {
-            SUBTEST << "image = " << images[imgIdx] << "; ";
-            SUBTEST << "minDistance = " << minDistance << "; ";
+        TEST_CYCLE() detector(oclFrame, pts_oclmat);
 
-            cv::goodFeaturesToTrack(frame, pts_gold, maxCorners, qualityLevel, minDistance);
+        detector.downloadPoints(pts_oclmat, pts_gold);
 
-            CPU_ON;
-            cv::goodFeaturesToTrack(frame, pts_gold, maxCorners, qualityLevel, minDistance);
-            CPU_OFF;
-
-            cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
-
-            ocl::oclMat frame_ocl(frame), pts_oclmat;
-
-            WARMUP_ON;
-            detector(frame_ocl, pts_oclmat);
-            WARMUP_OFF;
-
-            detector.downloadPoints(pts_oclmat, pts_ocl);
-
-            double diff = abs(static_cast<float>(pts_gold.size() - pts_ocl.size()));
-            TestSystem::instance().setAccurate(diff == 0.0, diff);
-
-            GPU_ON;
-            detector(frame_ocl, pts_oclmat);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            frame_ocl.upload(frame);
-            detector(frame_ocl, pts_oclmat);
-            detector.downloadPoints(pts_oclmat, pts_ocl);
-            GPU_FULL_OFF;
-        }
+        SANITY_CHECK(pts_gold);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() cv::goodFeaturesToTrack(frame, pts_gold,
+                                             maxCorners, qualityLevel, minDistance);
+
+        SANITY_CHECK(pts_gold);
+    }
+ #ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }

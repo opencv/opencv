@@ -45,6 +45,8 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
 ///////////// Haar ////////////////////////
 namespace cv
 {
@@ -83,61 +85,45 @@ public:
 
 }
 }
-PERFTEST(Haar)
+
+PERF_TEST(HaarFixture, Haar)
 {
-    Mat img = imread(abspath("basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
-
-    if (img.empty())
-    {
-        throw runtime_error("can't open basketball1.png");
-    }
-
-    CascadeClassifier faceCascadeCPU;
-
-    if (!faceCascadeCPU.load(abspath("haarcascade_frontalface_alt.xml")))
-    {
-        throw runtime_error("can't load haarcascade_frontalface_alt.xml");
-    }
-
+    const std::string impl = getSelectedImpl();
     vector<Rect> faces;
 
-    SUBTEST << img.cols << "x" << img.rows << "; scale image";
-    CPU_ON;
-    faceCascadeCPU.detectMultiScale(img, faces,
-                                    1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
-    CPU_OFF;
+    Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
+    ASSERT_TRUE(!img.empty()) << "can't open basketball1.png";
+    declare.in(img);
 
-
-    vector<Rect> oclfaces;
-    ocl::CascadeClassifier_GPU faceCascade;
-
-    if (!faceCascade.load(abspath("haarcascade_frontalface_alt.xml")))
+    if (impl == "plain")
     {
-        throw runtime_error("can't load haarcascade_frontalface_alt.xml");
+        CascadeClassifier faceCascade;
+        ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
+                << "can't load haarcascade_frontalface_alt.xml";
+
+        TEST_CYCLE() faceCascade.detectMultiScale(img, faces,
+                                                     1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+
+        SANITY_CHECK(faces, 4 + 1e-4);
+    }
+    else if (impl == "ocl")
+    {
+        ocl::CascadeClassifier_GPU faceCascade;
+        ocl::oclMat oclImg(img);
+
+        ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
+                << "can't load haarcascade_frontalface_alt.xml";
+
+        TEST_CYCLE() faceCascade.detectMultiScale(oclImg, faces,
+                                     1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
+
+        SANITY_CHECK(faces, 4 + 1e-4);
     }
 
-    ocl::oclMat d_img(img);
-
-    WARMUP_ON;
-    faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
-    WARMUP_OFF;
-
-    if(faces.size() == oclfaces.size())
-        TestSystem::instance().setAccurate(1, 0);
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
     else
-        TestSystem::instance().setAccurate(0, abs((int)faces.size() - (int)oclfaces.size()));
-
-    faces.clear();
-
-    GPU_ON;
-    faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
-    GPU_OFF;
-
-    GPU_FULL_ON;
-    d_img.upload(img);
-    faceCascade.detectMultiScale(d_img, oclfaces,
-                                 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
-    GPU_FULL_OFF;
+        CV_TEST_FAIL_NO_IMPL();
 }

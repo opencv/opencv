@@ -45,49 +45,39 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
 ///////////// cvtColor////////////////////////
-PERFTEST(cvtColor)
+
+typedef TestBaseWithParam<Size> cvtColorFixture;
+
+PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const Size srcSize = GetParam();
+    const std::string impl = getSelectedImpl();
 
-    int all_type[] = {CV_8UC4};
-    std::string type_name[] = {"CV_8UC4"};
+    Mat src(srcSize, CV_8UC4), dst(srcSize, CV_8UC4);
+    declare.in(src).out(dst);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            gen(src, size, size, all_type[j], 0, 256);
-            SUBTEST << size << "x" << size << "; " << type_name[j] << " ; CV_RGBA2GRAY";
+        ocl::oclMat oclSrc(src), oclDst(src.size(), CV_8UC4);
 
-            cvtColor(src, dst, CV_RGBA2GRAY, 4);
+        TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, CV_RGBA2GRAY, 4);
+        oclDst.download(dst);
 
-            CPU_ON;
-            cvtColor(src, dst, CV_RGBA2GRAY, 4);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::cvtColor(d_src, d_dst, CV_RGBA2GRAY, 4);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExceptedMatSimilar(dst, ocl_dst, 1e-5);
-        }
-
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() cv::cvtColor(src, dst, CV_RGBA2GRAY, 4);
 
-
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }

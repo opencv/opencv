@@ -43,50 +43,59 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
+
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 ///////////// Moments ////////////////////////
-PERFTEST(Moments)
+
+CV_ENUM(MomentsMatType, CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)
+
+typedef tuple<Size, MomentsMatType> MomentsParams;
+typedef TestBaseWithParam<MomentsParams> MomentsFixture;
+
+PERF_TEST_P(MomentsFixture, DISABLED_Moments,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               MomentsMatType::all()))
 {
-    Mat src;
-    bool binaryImage = 0;
+    // getting params
+    MomentsParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    int all_type[] = {CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1};
-    std::string type_name[] = {"CV_8UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
+    std::string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    // creating src data
+    Mat src(srcSize, type), dst(7, 1, CV_64F);
+    const bool binaryImage = false;
+    cv::Moments mom;
+
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    // select implementation
+    if (impl == "ocl")
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j];
+        ocl::oclMat oclSrc(src);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage);
+        cv::HuMoments(mom, dst);
 
-            cv::Moments CvMom = moments(src, binaryImage);
-
-            CPU_ON;
-            moments(src, binaryImage);
-            CPU_OFF;
-
-            cv::Moments oclMom;
-            WARMUP_ON;
-            oclMom = ocl::ocl_moments(src, binaryImage);
-            WARMUP_OFF;
-
-            Mat gpu_dst, cpu_dst;
-            HuMoments(CvMom, cpu_dst);
-            HuMoments(oclMom, gpu_dst);
-
-            GPU_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(gpu_dst, cpu_dst, .5);
-
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (impl == "plain")
+    {
+        TEST_CYCLE() mom = cv::moments(src, binaryImage);
+        cv::HuMoments(mom, dst);
+
+        SANITY_CHECK(dst);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }

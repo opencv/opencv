@@ -46,117 +46,130 @@
 #include "perf_precomp.hpp"
 
 ///////////// PyrLKOpticalFlow ////////////////////////
-PERFTEST(PyrLKOpticalFlow)
+
+using namespace perf;
+using std::tr1::get;
+using std::tr1::tuple;
+using std::tr1::make_tuple;
+
+template <typename T>
+static vector<T> & MatToVector(const ocl::oclMat & oclSrc, vector<T> & instance)
 {
-    std::string images1[] = {"rubberwhale1.png", "aloeL.jpg"};
-    std::string images2[] = {"rubberwhale2.png", "aloeR.jpg"};
+    Mat src;
+    oclSrc.download(src);
 
-    for (size_t i = 0; i < sizeof(images1) / sizeof(std::string); i++)
+    for (int i = 0; i < src.cols; ++i)
+        instance.push_back(src.at<T>(0, i));
+
+    return instance;
+}
+
+CV_ENUM(LoadMode, IMREAD_GRAYSCALE, IMREAD_COLOR)
+
+typedef tuple<int, tuple<string, string, LoadMode> > PyrLKOpticalFlowParamType;
+typedef TestBaseWithParam<PyrLKOpticalFlowParamType> PyrLKOpticalFlowFixture;
+
+PERF_TEST_P(PyrLKOpticalFlowFixture,
+            PyrLKOpticalFlow,
+            ::testing::Combine(
+                ::testing::Values(1000, 2000, 4000),
+                ::testing::Values(
+                    make_tuple<string, string, LoadMode>
+                    (
+                        string("gpu/opticalflow/rubberwhale1.png"),
+                        string("gpu/opticalflow/rubberwhale1.png"),
+                        LoadMode(IMREAD_COLOR)
+                        )
+//                    , make_tuple<string, string, LoadMode>
+//                    (
+//                        string("gpu/stereobm/aloe-L.png"),
+//                        string("gpu/stereobm/aloe-R.png"),
+//                        LoadMode(IMREAD_GRAYSCALE)
+//                        )
+                    )
+                )
+            )
+{
+    PyrLKOpticalFlowParamType params = GetParam();
+    tuple<string, string, LoadMode> fileParam = get<1>(params);
+    const int pointsCount = get<0>(params);
+    const int openMode = static_cast<int>(get<2>(fileParam));
+    const string fileName0 = get<0>(fileParam), fileName1 = get<1>(fileParam);
+    Mat frame0 = imread(getDataPath(fileName0), openMode);
+    Mat frame1 = imread(getDataPath(fileName1), openMode);
+    const string impl = getSelectedImpl();
+
+    ASSERT_FALSE(frame0.empty()) << "can't load " << fileName0;
+    ASSERT_FALSE(frame1.empty()) << "can't load " << fileName1;
+
+    Mat grayFrame;
+    if (openMode == IMREAD_COLOR)
+        cvtColor(frame0, grayFrame, COLOR_BGR2GRAY);
+    else
+        grayFrame = frame0;
+
+    // initialization
+    vector<Point2f> pts, nextPts;
+    vector<unsigned char> status;
+    vector<float> err;
+    goodFeaturesToTrack(grayFrame, pts, pointsCount, 0.01, 0.0);
+
+    // selecting implementation
+    if (impl == "plain")
     {
-        Mat frame0 = imread(abspath(images1[i]), i == 0 ? IMREAD_COLOR : IMREAD_GRAYSCALE);
+        TEST_CYCLE()
+                cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
 
-        if (frame0.empty())
-        {
-            std::string errstr = "can't open " + images1[i];
-            throw runtime_error(errstr);
-        }
-
-        Mat frame1 = imread(abspath(images2[i]), i == 0 ? IMREAD_COLOR : IMREAD_GRAYSCALE);
-
-        if (frame1.empty())
-        {
-            std::string errstr = "can't open " + images2[i];
-            throw runtime_error(errstr);
-        }
-
-        Mat gray_frame;
-
-        if (i == 0)
-        {
-            cvtColor(frame0, gray_frame, COLOR_BGR2GRAY);
-        }
-
-        for (int points = Min_Size; points <= Max_Size; points *= Multiple)
-        {
-            if (i == 0)
-                SUBTEST << frame0.cols << "x" << frame0.rows << "; color; " << points << " points";
-            else
-                SUBTEST << frame0.cols << "x" << frame0.rows << "; gray; " << points << " points";
-            Mat ocl_nextPts;
-            Mat ocl_status;
-
-            vector<Point2f> pts;
-            goodFeaturesToTrack(i == 0 ? gray_frame : frame0, pts, points, 0.01, 0.0);
-
-            vector<Point2f> nextPts;
-            vector<unsigned char> status;
-
-            vector<float> err;
-
-            calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
-
-            CPU_ON;
-            calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
-            CPU_OFF;
-
-            ocl::PyrLKOpticalFlow d_pyrLK;
-
-            ocl::oclMat d_frame0(frame0);
-            ocl::oclMat d_frame1(frame1);
-
-            ocl::oclMat d_pts;
-            Mat pts_mat(1, (int)pts.size(), CV_32FC2, (void *)&pts[0]);
-            d_pts.upload(pts_mat);
-
-            ocl::oclMat d_nextPts;
-            ocl::oclMat d_status;
-            ocl::oclMat d_err;
-
-            WARMUP_ON;
-            d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
-            WARMUP_OFF;
-
-            GPU_ON;
-            d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_frame0.upload(frame0);
-            d_frame1.upload(frame1);
-            d_pts.upload(pts_mat);
-            d_pyrLK.sparse(d_frame0, d_frame1, d_pts, d_nextPts, d_status, &d_err);
-
-            if (!d_nextPts.empty())
-                d_nextPts.download(ocl_nextPts);
-
-            if (!d_status.empty())
-                d_status.download(ocl_status);
-            GPU_FULL_OFF;
-
-            size_t mismatch = 0;
-            for (int i = 0; i < (int)nextPts.size(); ++i)
-            {
-                if(status[i] != ocl_status.at<unsigned char>(0, i))
-                {
-                    mismatch++;
-                    continue;
-                }
-                if(status[i])
-                {
-                    Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
-                    Point2f cpu_rst = nextPts[i];
-                    if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
-                        mismatch++;
-                }
-            }
-            double ratio = (double)mismatch / (double)nextPts.size();
-            if(ratio < .02)
-                TestSystem::instance().setAccurate(1, ratio);
-            else
-                TestSystem::instance().setAccurate(0, ratio);
-        }
-
+        SANITY_CHECK(nextPts);
+        SANITY_CHECK(status);
+        SANITY_CHECK(err);
     }
+    else if (impl == "ocl")
+    {
+        ocl::PyrLKOpticalFlow oclPyrLK;
+        ocl::oclMat oclFrame0(frame0), oclFrame1(frame1);
+        ocl::oclMat oclPts(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
+        ocl::oclMat oclNextPts, oclStatus, oclErr;
+
+        TEST_CYCLE()
+                oclPyrLK.sparse(oclFrame0, oclFrame1, oclPts, oclNextPts, oclStatus, &oclErr);
+
+        MatToVector(oclNextPts, nextPts);
+        MatToVector(oclStatus, status);
+        MatToVector(oclErr, err);
+
+        SANITY_CHECK(nextPts);
+        SANITY_CHECK(status);
+        SANITY_CHECK(err);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
+
+//    size_t mismatch = 0;
+//    for (int i = 0; i < (int)nextPts.size(); ++i)
+//    {
+//        if(status[i] != ocl_status.at<unsigned char>(0, i))
+//        {
+//            mismatch++;
+//            continue;
+//        }
+//        if(status[i])
+//        {
+//            Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
+//            Point2f cpu_rst = nextPts[i];
+//            if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
+//                mismatch++;
+//        }
+//    }
+//    double ratio = (double)mismatch / (double)nextPts.size();
+//    if(ratio < .02)
+//        TestSystem::instance().setAccurate(1, ratio);
+//    else
+//        TestSystem::instance().setAccurate(0, ratio);
 }
 
 

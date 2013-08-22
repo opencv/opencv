@@ -45,123 +45,242 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
+#define OCL_BFMATCHER_TYPICAL_MAT_SIZES ::testing::Values(cv::Size(128, 500), cv::Size(128, 1000), cv::Size(128, 2000))
+
 //////////////////// BruteForceMatch /////////////////
-PERFTEST(BruteForceMatcher)
+
+typedef TestBaseWithParam<Size> BruteForceMatcherFixture;
+
+PERF_TEST_P(BruteForceMatcherFixture, match,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
-    Mat trainIdx_cpu;
-    Mat distance_cpu;
-    Mat allDist_cpu;
-    Mat nMatches_cpu;
+    const Size srcSize = GetParam();
+    const string impl = getSelectedImpl();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    vector<DMatch> matches;
+    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    declare.in(query, train).time(srcSize.height == 2000 ? 8 : 4 );
+    randu(query, 0.0f, 1.0f);
+    randu(train, 0.0f, 1.0f);
+
+    if (impl == "plain")
     {
-        // Init CPU matcher
-        int desc_len = 64;
-
         BFMatcher matcher(NORM_L2);
+        TEST_CYCLE() matcher.match(query, train, matches);
 
-        Mat query;
-        gen(query, size, desc_len, CV_32F, 0, 1);
-
-        Mat train;
-        gen(train, size, desc_len, CV_32F, 0, 1);
-        // Output
-        vector< vector<DMatch> > matches(2);
-        vector< vector<DMatch> > d_matches(2);
-        // Init GPU matcher
-        ocl::BruteForceMatcher_OCL_base d_matcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
-
-        ocl::oclMat d_query(query);
-        ocl::oclMat d_train(train);
-
-        ocl::oclMat d_trainIdx, d_distance, d_allDist, d_nMatches;
-
-        SUBTEST << size << "; match";
-
-        matcher.match(query, train, matches[0]);
-
-        CPU_ON;
-        matcher.match(query, train, matches[0]);
-        CPU_OFF;
-
-        WARMUP_ON;
-        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-        WARMUP_OFF;
-
-        GPU_ON;
-        d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_query.upload(query);
-        d_train.upload(train);
-        d_matcher.match(d_query, d_train, d_matches[0]);
-        GPU_FULL_OFF;
-
-        int diff = abs((int)d_matches[0].size() - (int)matches[0].size());
-        if(diff == 0)
-            TestSystem::instance().setAccurate(1, 0);
-        else
-            TestSystem::instance().setAccurate(0, diff);
-
-        SUBTEST << size << "; knnMatch";
-
-        matcher.knnMatch(query, train, matches, 2);
-
-        CPU_ON;
-        matcher.knnMatch(query, train, matches, 2);
-        CPU_OFF;
-
-        WARMUP_ON;
-        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
-        WARMUP_OFF;
-
-        GPU_ON;
-        d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, 2);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_query.upload(query);
-        d_train.upload(train);
-        d_matcher.knnMatch(d_query, d_train, d_matches, 2);
-        GPU_FULL_OFF;
-
-        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
-        if(diff == 0)
-            TestSystem::instance().setAccurate(1, 0);
-        else
-            TestSystem::instance().setAccurate(0, diff);
-
-        SUBTEST << size << "; radiusMatch";
-
-        float max_distance = 2.0f;
-
-        matcher.radiusMatch(query, train, matches, max_distance);
-
-        CPU_ON;
-        matcher.radiusMatch(query, train, matches, max_distance);
-        CPU_OFF;
-
-        d_trainIdx.release();
-
-        WARMUP_ON;
-        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
-        WARMUP_OFF;
-
-        GPU_ON;
-        d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, max_distance);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_query.upload(query);
-        d_train.upload(train);
-        d_matcher.radiusMatch(d_query, d_train, d_matches, max_distance);
-        GPU_FULL_OFF;
-
-        diff = abs((int)d_matches[0].size() - (int)matches[0].size());
-        if(diff == 0)
-            TestSystem::instance().setAccurate(1, 0);
-        else
-            TestSystem::instance().setAccurate(0, diff);
+        SANITY_CHECK_MATCHES(matches);
     }
+    else if (impl == "ocl")
+    {
+        // Init GPU matcher
+        ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
+        ocl::oclMat oclQuery(query), oclTrain(train);
+
+        TEST_CYCLE() oclMatcher.match(oclQuery, oclTrain, matches);
+
+        SANITY_CHECK_MATCHES(matches);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
 }
+
+//PERF_TEST_P(BruteForceMatcherFixture, matchSingle,
+//            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+//{
+//    const Size srcSize = GetParam();
+//    const string impl = getSelectedImpl();
+
+//    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+//    Mat trainIdx, distance;
+
+//    randu(query, 0.0f, 1.0f);
+//    randu(train, 0.0f, 1.0f);
+
+//    if (impl == "plain")
+//        CV_TEST_FAIL_NO_IMPL();
+//    else if (impl == "ocl")
+//    {
+//        ocl::oclMat oclQuery(query), oclTrain(train), oclTrainIdx, oclDistance;
+
+//        TEST_CYCLE() oclMatcher->matchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance);
+
+//        oclTrainIdx.download(trainIdx);
+//        oclDistance.download(distance);
+
+//        SANITY_CHECK(trainIdx);
+//        SANITY_CHECK(distance);
+//    }
+//#ifdef HAVE_OPENCV_GPU
+//    else if (impl == "gpu")
+//        CV_TEST_FAIL_NO_IMPL();
+//#endif
+//    else
+//        CV_TEST_FAIL_NO_IMPL();
+//}
+
+PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+{
+    const Size srcSize = GetParam();
+    const string impl = getSelectedImpl();
+
+    vector<vector<DMatch> > matches(2);
+    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    randu(query, 0.0f, 1.0f);
+    randu(train, 0.0f, 1.0f);
+
+    declare.in(query, train);
+    if (srcSize.height == 2000)
+        declare.time(8);
+
+    if (impl == "plain")
+    {
+        BFMatcher matcher (NORM_L2);
+        TEST_CYCLE() matcher.knnMatch(query, train, matches, 2);
+
+        std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
+        SANITY_CHECK_MATCHES(matches0);
+        SANITY_CHECK_MATCHES(matches1);
+    }
+    else if (impl == "ocl")
+    {
+        ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
+        ocl::oclMat oclQuery(query), oclTrain(train);
+
+        TEST_CYCLE() oclMatcher.knnMatch(oclQuery, oclTrain, matches, 2);
+
+        std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
+        SANITY_CHECK_MATCHES(matches0);
+        SANITY_CHECK_MATCHES(matches1);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
+}
+
+//PERF_TEST_P(BruteForceMatcherFixture, knnMatchSingle,
+//            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+//{
+//    const Size srcSize = GetParam();
+//    const string impl = getSelectedImpl();
+
+//    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+//    Mat trainIdx, distance, allDist;
+
+//    randu(query, 0.0f, 1.0f);
+//    randu(train, 0.0f, 1.0f);
+
+//    if (impl == "plain")
+//        CV_TEST_FAIL_NO_IMPL();
+//    else if (impl == "ocl")
+//    {
+//        ocl::oclMat oclQuery(query), oclTrain(train), oclTrainIdx, oclDistance, oclAllDist;
+
+//        TEST_CYCLE() oclMatcher->knnMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclAllDist, 2);
+
+//        oclTrainIdx.download(trainIdx);
+//        oclDistance.download(distance);
+//        oclAllDist.download(allDist);
+
+//        SANITY_CHECK(trainIdx);
+//        SANITY_CHECK(distance);
+//        SANITY_CHECK(allDist);
+//    }
+//#ifdef HAVE_OPENCV_GPU
+//    else if (impl == "gpu")
+//        CV_TEST_FAIL_NO_IMPL();
+//#endif
+//    else
+//        CV_TEST_FAIL_NO_IMPL();
+//}
+
+PERF_TEST_P(BruteForceMatcherFixture, DISABLED_radiusMatch,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+{
+    const Size srcSize = GetParam();
+    const string impl = getSelectedImpl();
+
+    const float max_distance = 2.0f;
+    vector<vector<DMatch> > matches(2);
+    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+    declare.in(query, train);
+    Mat trainIdx, distance, allDist;
+
+    randu(query, 0.0f, 1.0f);
+    randu(train, 0.0f, 1.0f);
+
+    if (impl == "plain")
+    {
+        BFMatcher matcher (NORM_L2);
+        TEST_CYCLE() matcher.radiusMatch(query, matches, max_distance);
+
+        std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
+        SANITY_CHECK_MATCHES(matches0);
+        SANITY_CHECK_MATCHES(matches1);
+    }
+    else if (impl == "ocl")
+    {
+        ocl::oclMat oclQuery(query), oclTrain(train);
+        ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
+
+        TEST_CYCLE() oclMatcher.radiusMatch(oclQuery, oclTrain, matches, max_distance);
+
+        std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
+        SANITY_CHECK_MATCHES(matches0);
+        SANITY_CHECK_MATCHES(matches1);
+    }
+#ifdef HAVE_OPENCV_GPU
+    else if (impl == "gpu")
+        CV_TEST_FAIL_NO_IMPL();
+#endif
+    else
+        CV_TEST_FAIL_NO_IMPL();
+}
+
+//PERF_TEST_P(BruteForceMatcherFixture, radiusMatchSingle,
+//            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
+//{
+//    const Size srcSize = GetParam();
+//    const string impl = getSelectedImpl();
+
+//    const float max_distance = 2.0f;
+//    Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
+//    Mat trainIdx, distance, nMatches;
+
+//    randu(query, 0.0f, 1.0f);
+//    randu(train, 0.0f, 1.0f);
+
+//    if (impl == "plain")
+//        CV_TEST_FAIL_NO_IMPL();
+//    else if (impl == "ocl")
+//    {
+//        ocl::oclMat oclQuery(query), oclTrain(train), oclTrainIdx, oclDistance, oclNMatches;
+
+//        TEST_CYCLE() oclMatcher->radiusMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclNMatches, max_distance);
+
+//        oclTrainIdx.download(trainIdx);
+//        oclDistance.download(distance);
+//        oclNMatches.download(nMatches);
+
+//        SANITY_CHECK(trainIdx);
+//        SANITY_CHECK(distance);
+//        SANITY_CHECK(nMatches);
+//    }
+//#ifdef HAVE_OPENCV_GPU
+//    else if (impl == "gpu")
+//        CV_TEST_FAIL_NO_IMPL();
+//#endif
+//    else
+//        CV_TEST_FAIL_NO_IMPL();
+//}
+
+#undef OCL_BFMATCHER_TYPICAL_MAT_SIZES

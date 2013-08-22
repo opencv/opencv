@@ -40,6 +40,15 @@
 //
 //M*/
 
+#ifdef __GNUC__
+#  pragma GCC diagnostic ignored "-Wmissing-declarations"
+#  pragma GCC diagnostic ignored "-Wunused-function"
+#  if defined __clang__ || defined __APPLE__
+#    pragma GCC diagnostic ignored "-Wmissing-prototypes"
+#    pragma GCC diagnostic ignored "-Wextra"
+#  endif
+#endif
+
 #ifndef __OPENCV_PERF_PRECOMP_HPP__
 #define __OPENCV_PERF_PRECOMP_HPP__
 
@@ -50,6 +59,7 @@
 #include <cstdio>
 #include <vector>
 #include <numeric>
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -59,9 +69,12 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/ts/ts.hpp"
-#include "opencv2/ts/ts_perf.hpp"
-#include "opencv2/ts/ts_gtest.h"
 
+#define OCL_SIZE_1000 cv::Size(1000, 1000)
+#define OCL_SIZE_2000 cv::Size(2000, 2000)
+#define OCL_SIZE_4000 cv::Size(4000, 4000)
+
+#define OCL_TYPICAL_MAT_SIZES ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000, OCL_SIZE_4000)
 
 #define Min_Size 1000
 #define Max_Size 4000
@@ -76,15 +89,15 @@ void gen(Mat &mat, int rows, int cols, int type, int low, int high, int n);
 
 string abspath(const string &relpath);
 int CV_CDECL cvErrorCallback(int, const char *, const char *, const char *, int, void *);
-typedef struct
-{
-    short x;
-    short y;
-} COOR;
-COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep,
-                  cv::Size size, int sp, int sr, int maxIter, float eps, int *tab);
-void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi,
-                    int sp, int sr, cv::TermCriteria crit);
+//typedef struct
+//{
+//    short x;
+//    short y;
+//} COOR;
+//COOR do_meanShift(int x0, int y0, uchar *sptr, uchar *dptr, int sstep,
+//                  cv::Size size, int sp, int sr, int maxIter, float eps, int *tab);
+//void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi,
+//                    int sp, int sr, cv::TermCriteria crit);
 
 
 template<class T1, class T2>

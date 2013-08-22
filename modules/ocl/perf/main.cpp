@@ -42,7 +42,7 @@
 
 #include "perf_precomp.hpp"
 
-int main(int argc, const char *argv[])
+static int old_main(int argc, const char *argv[])
 {
     const char *keys =
         "{ h | help    | false | print help message }"
@@ -99,7 +99,7 @@ int main(int argc, const char *argv[])
 
     // set this to overwrite binary cache every time the test starts
     ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
-
+    
     if (cmd.get<bool>("verify"))
     {
         TestSystem::instance().setNumIters(1);
@@ -161,4 +161,34 @@ END_DEV:
     TestSystem::instance().run();
 
     return 0;
+}
+
+const char * impls[] =
+{
+    "ocl",
+    "plain",
+#ifdef HAVE_OPENCV_GPU
+    "gpu"
+#endif
+};
+
+int main(int argc, char **argv)
+{
+    // temp solution: if no '--gtest_' and '--perf_' args switch to old behavior
+    bool useGTest = false;
+
+    for(int i=1; i<argc; i++)
+    {
+        std::string arg( argv[i] );
+        if( arg.find("--gtest_")==0 || arg.find("--perf_")==0 )
+            useGTest = true;
+
+//        if (arg == "--perf_verify_sanity")
+//            argv[i] = (char*)"--perf_no_verify_sanity";
+    }
+
+    if( !useGTest )
+        return old_main(argc, (const char**)argv);
+
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
 }
