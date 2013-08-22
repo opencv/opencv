@@ -461,7 +461,7 @@ void TS::init( const string& modulename )
         char buf[1024];
         size_t l = strlen(datapath_dir);
         bool haveSlash = l > 0 && (datapath_dir[l-1] == '/' || datapath_dir[l-1] == '\\');
-        sprintf( buf, "%s%s%s/", datapath_dir, haveSlash ? "" : "/", modulename.c_str() );
+        sprintf( buf, "%s%s%s/", datapath_dir, haveSlash ? "" : "/", modulename == "ocl" ? "gpu" : modulename.c_str() );
         data_path = string(buf);
     }
 
