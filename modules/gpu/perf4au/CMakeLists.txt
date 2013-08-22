@@ -25,4 +25,3 @@ if(WIN32)
         set_target_properties(${the_target} PROPERTIES LINK_FLAGS "/NODEFAULTLIB:atlthunk.lib /NODEFAULTLIB:atlsd.lib /DEBUG")
     endif()
 endif()
-

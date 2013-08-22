@@ -1218,4 +1218,3 @@ TEST(DISABLED_Features2d_SURF_using_mask, regression)
     FeatureDetectorUsingMaskTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"));
     test.safe_run();
 }
-

@@ -11,8 +11,8 @@ Required Packages
 
     .. code-block:: bash
 
-       sudo apt-get install build-essential 
- 
+       sudo apt-get install build-essential
+
   * CMake 2.6 or higher;
   * Git;
   * GTK+2.x or higher, including headers (libgtk2.0-dev);
@@ -48,7 +48,7 @@ In Linux it can be achieved with the following command in Terminal:
 
    cd ~/<my_working _directory>
    git clone https://github.com/Itseez/opencv.git
- 
+
 
 Building OpenCV from Source Using CMake, Using the Command Line
 ===============================================================
@@ -58,26 +58,25 @@ Building OpenCV from Source Using CMake, Using the Command Line
 #. Enter the <cmake_binary_dir> and type
 
    .. code-block:: bash
-     
+
       cmake [<some optional parameters>] <path to the OpenCV source directory>
 
    For example
 
    .. code-block:: bash
-       
+
       cd ~/opencv
       mkdir release
       cd release
       cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
-       
+
 #. Enter the created temporary directory (<cmake_binary_dir>) and proceed with:
 
    .. code-block:: bash
-      
+
       make
       sudo make install
 
 .. note::
-  
-   If the size of the created library is a critical issue (like in case of an Android build) you can use the ``install/strip`` command to get the smallest size as possible. The *stripped* version appears to be twice as small. However, we do not recommend using this unless those extra megabytes do really matter.
 
+   If the size of the created library is a critical issue (like in case of an Android build) you can use the ``install/strip`` command to get the smallest size as possible. The *stripped* version appears to be twice as small. However, we do not recommend using this unless those extra megabytes do really matter.

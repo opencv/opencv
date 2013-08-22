@@ -1,42 +1,58 @@
-.git*       export-ignore
-
 *           text=auto whitespace=trailing-space,space-before-tab,-indent-with-non-tab,tab-in-indent,tabwidth=4
 
-*.py        text
-*.cpp       text
-*.hpp       text
-*.cxx       text
-*.hxx       text
-*.mm        text
-*.c         text
-*.h         text
-*.i         text
-*.js        text
-*.java      text
-*.scala     text
-*.cu        text
-*.cl        text
-*.css_t     text
-*.qrc       text
-*.qss       text
-*.S         text
-*.rst       text
-*.tex       text
-*.sty       text
+.git*       text export-ignore
 
-*.aidl      text
-*.mk        text
+*.aidl         text
+*.appxmanifest text
+*.bib          text
+*.c            text
+*.cl           text
+*.conf         text
+*.cpp          text
+*.css_t        text
+*.cu           text
+*.cxx          text
+*.def          text
+*.filelist     text
+*.h            text
+*.hpp          text
+*.htm          text
+*.html         text
+*.hxx          text
+*.i            text
+*.idl          text
+*.java         text
+*.js           text
+*.mk           text
+*.mm           text
+*.plist        text
+*.properties   text
+*.py           text
+*.qrc          text
+*.qss          text
+*.S            text
+*.sbt          text
+*.scala        text
+*.sty          text
+*.tex          text
+*.txt          text
+*.xaml         text
+
+# reST underlines/overlines can look like conflict markers
+*.rst          text conflict-marker-size=80
 
 *.cmake         text whitespace=tabwidth=2
 *.cmakein       text whitespace=tabwidth=2
 *.in            text whitespace=tabwidth=2
 CMakeLists.txt  text whitespace=tabwidth=2
 
-*.png       binary
-*.jpeg      binary
-*.jpg       binary
+*.avi       binary
+*.bmp       binary
 *.exr       binary
 *.ico       binary
+*.jpeg      binary
+*.jpg       binary
+*.png       binary
 
 *.a         binary
 *.so        binary
@@ -47,6 +63,7 @@ CMakeLists.txt  text whitespace=tabwidth=2
 *.pbxproj   binary
 *.vec       binary
 *.doc       binary
+*.dia       binary
 
 *.xml                      -text whitespace=cr-at-eol
 *.yml                      -text whitespace=cr-at-eol
@@ -55,9 +72,12 @@ CMakeLists.txt  text whitespace=tabwidth=2
 .cproject                  -text whitespace=cr-at-eol merge=union
 org.eclipse.jdt.core.prefs -text whitespace=cr-at-eol merge=union
 
-*.vcproj    text eol=crlf merge=union
 *.bat       text eol=crlf
 *.cmd       text eol=crlf
 *.cmd.tmpl  text eol=crlf
+*.dsp       text eol=crlf -whitespace
+*.sln       text eol=crlf -whitespace
+*.vcproj    text eol=crlf -whitespace merge=union
+*.vcxproj   text eol=crlf -whitespace merge=union
 
 *.sh        text eol=lf

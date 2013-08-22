@@ -221,4 +221,3 @@ Point2f CvFeatureTracker::getTrackingCenter()
     center.y = (float)(prev_center.y + prev_trackwindow.height/2.0);
     return center;
 }
-

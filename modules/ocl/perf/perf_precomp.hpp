@@ -463,51 +463,51 @@ private:
 
 #define GLOBAL_INIT(name) \
 struct name##_init: Runnable { \
-	name##_init(): Runnable(#name) { \
-	TestSystem::instance().addInit(this); \
+    name##_init(): Runnable(#name) { \
+    TestSystem::instance().addInit(this); \
 } \
-	void run(); \
+    void run(); \
 } name##_init_instance; \
-	void name##_init::run()
+    void name##_init::run()
 
 
 #define PERFTEST(name) \
 struct name##_test: Runnable { \
-	name##_test(): Runnable(#name) { \
-	TestSystem::instance().addTest(this); \
+    name##_test(): Runnable(#name) { \
+    TestSystem::instance().addTest(this); \
 } \
-	void run(); \
+    void run(); \
 } name##_test_instance; \
-	void name##_test::run()
+    void name##_test::run()
 
 #define SUBTEST TestSystem::instance().startNewSubtest()
 
 #define CPU_ON \
-	while (!TestSystem::instance().cpu_stop()) { \
-	TestSystem::instance().cpuOn()
+    while (!TestSystem::instance().cpu_stop()) { \
+    TestSystem::instance().cpuOn()
 #define CPU_OFF \
-	TestSystem::instance().cpuOff(); \
-	} TestSystem::instance().cpuComplete()
+    TestSystem::instance().cpuOff(); \
+    } TestSystem::instance().cpuComplete()
 
 #define GPU_ON \
-	while (!TestSystem::instance().stop()) { \
-	TestSystem::instance().gpuOn()
+    while (!TestSystem::instance().stop()) { \
+    TestSystem::instance().gpuOn()
 #define GPU_OFF \
-	ocl::finish();\
-	TestSystem::instance().gpuOff(); \
-	} TestSystem::instance().gpuComplete()
+    ocl::finish();\
+    TestSystem::instance().gpuOff(); \
+    } TestSystem::instance().gpuComplete()
 
 #define GPU_FULL_ON \
-	while (!TestSystem::instance().stop()) { \
-	TestSystem::instance().gpufullOn()
+    while (!TestSystem::instance().stop()) { \
+    TestSystem::instance().gpufullOn()
 #define GPU_FULL_OFF \
-	TestSystem::instance().gpufullOff(); \
-	} TestSystem::instance().gpufullComplete()
+    TestSystem::instance().gpufullOff(); \
+    } TestSystem::instance().gpufullComplete()
 
 #define WARMUP_ON \
-	while (!TestSystem::instance().warmupStop()) {
+    while (!TestSystem::instance().warmupStop()) {
 #define WARMUP_OFF \
-	ocl::finish();\
-	} TestSystem::instance().warmupComplete()
+    ocl::finish();\
+    } TestSystem::instance().warmupComplete()
 
 #endif

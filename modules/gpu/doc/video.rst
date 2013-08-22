@@ -7,7 +7,7 @@ Video Analysis
 
    * A general optical flow example can be found at opencv_source_code/samples/gpu/optical_flow.cpp
    * A general optical flow example using the Nvidia API can be found at opencv_source_code/samples/gpu/opticalflow_nvidia_api.cpp
-   
+
 gpu::BroxOpticalFlow
 --------------------
 .. ocv:class:: gpu::BroxOpticalFlow

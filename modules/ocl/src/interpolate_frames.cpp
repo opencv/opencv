@@ -234,6 +234,5 @@ void interpolate::bindImgTex(const oclMat &img, cl_mem &texture)
     {
         openCLFree(texture);
     }
-	texture = bindTexture(img);
+    texture = bindTexture(img);
 }
-

@@ -160,7 +160,7 @@ void btv_l1_device_ocl::upscale(const oclMat& src, oclMat& dst, int scale)
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.rows));
     args.push_back(make_pair(sizeof(cl_int), (void*)&src.cols));
     args.push_back(make_pair(sizeof(cl_int), (void*)&scale));
-    args.push_back(make_pair(sizeof(cl_int), (void*)&cn));    
+    args.push_back(make_pair(sizeof(cl_int), (void*)&cn));
 
     openCLExecuteKernel(clCxt, &superres_btvl1, kernel_name, global_thread, local_thread, args, -1, -1);
 
@@ -465,8 +465,8 @@ namespace
 
         // calc motions between input frames
 
-        calcRelativeMotions(forwardMotions, backwardMotions, 
-            lowResForwardMotions_, lowResBackwardMotions_, 
+        calcRelativeMotions(forwardMotions, backwardMotions,
+            lowResForwardMotions_, lowResBackwardMotions_,
             baseIdx, src[0].size());
 
         upscaleMotions(lowResForwardMotions_, highResForwardMotions_, scale_);

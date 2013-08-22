@@ -53,7 +53,7 @@
 
 #if defined(HAVE_OPENCV_GPU)
     #include "opencv2/nonfree/gpu.hpp"
-    
+
     #if defined(HAVE_CUDA)
         #include "opencv2/gpu/stream_accessor.hpp"
         #include "opencv2/gpu/device/common.hpp"

@@ -460,4 +460,3 @@ void Retina::activateMovingContoursProcessing(const bool activate){_retinaFilter
 void Retina::activateContoursProcessing(const bool activate){_retinaFilter->activateContoursProcessing(activate);}
 
 } // end of namespace cv
-

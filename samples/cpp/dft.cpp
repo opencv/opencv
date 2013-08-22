@@ -79,4 +79,3 @@ int main(int argc, const char ** argv)
     waitKey();
     return 0;
 }
-

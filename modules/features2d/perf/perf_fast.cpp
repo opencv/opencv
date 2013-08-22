@@ -41,4 +41,3 @@ PERF_TEST_P(fast, detect, testing::Combine(
 
     SANITY_CHECK_KEYPOINTS(points);
 }
-

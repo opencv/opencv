@@ -34,4 +34,3 @@ if(ENABLE_SOLUTION_FOLDERS)
 endif()
 
 install(TARGETS ${the_target} RUNTIME DESTINATION bin COMPONENT main)
-

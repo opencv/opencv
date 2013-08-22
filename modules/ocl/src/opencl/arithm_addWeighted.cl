@@ -128,7 +128,7 @@ __kernel void addWeighted_D2 (__global ushort *src1, int src1_step,int src1_offs
     {
 
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -191,7 +191,7 @@ __kernel void addWeighted_D3 (__global short *src1, int src1_step,int src1_offse
     {
 
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -255,7 +255,7 @@ __kernel void addWeighted_D4 (__global int *src1, int src1_step,int src1_offset,
         x = x << 2;
 
 #define bitOfInt  (sizeof(int)== 4 ? 2: 3)
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -319,7 +319,7 @@ __kernel void addWeighted_D5 (__global float *src1,int src1_step,int src1_offset
     {
 
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -384,7 +384,7 @@ __kernel void addWeighted_D6 (__global double *src1, int src1_step,int src1_offs
     {
 
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

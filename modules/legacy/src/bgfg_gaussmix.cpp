@@ -1319,4 +1319,3 @@ icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model )
 }
 
 /* End of file. */
-

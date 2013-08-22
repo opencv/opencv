@@ -346,4 +346,3 @@ void cv::solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     }
     return;
 }
-

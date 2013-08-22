@@ -130,7 +130,7 @@ namespace cv
             {
                 openCLFree(tex_);
             }
-            operator cl_mem() 
+            operator cl_mem()
             {
                 return tex_;
             }

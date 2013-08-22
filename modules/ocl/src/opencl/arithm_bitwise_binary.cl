@@ -72,7 +72,7 @@ __kernel void arithm_bitwise_binary_D0 (__global uchar *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -125,7 +125,7 @@ __kernel void arithm_bitwise_binary_D1 (__global char *src1, int src1_step, int 
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -179,7 +179,7 @@ __kernel void arithm_bitwise_binary_D2 (__global ushort *src1, int src1_step, in
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -234,7 +234,7 @@ __kernel void arithm_bitwise_binary_D3 (__global short *src1, int src1_step, int
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

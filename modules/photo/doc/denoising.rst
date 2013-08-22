@@ -88,4 +88,3 @@ Modification of ``fastNlMeansDenoisingMulti`` function for colored images sequen
     :param hForColorComponents: The same as h but for color components.
 
 The function converts images to CIELAB colorspace and then separately denoise L and AB components with given h parameters using ``fastNlMeansDenoisingMulti`` function.
-

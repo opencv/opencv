@@ -11,10 +11,10 @@ using namespace cv;
 static void throwJavaException(JNIEnv *env, const std::exception *e, const char *method) {
   std::string what = "unknown exception";
   jclass je = 0;
-  
+
   if(e) {
     std::string exception_type = "std::exception";
-    
+
     if(dynamic_cast<const cv::Exception*>(e)) {
       exception_type = "cv::Exception";
       je = env->FindClass("org/opencv/core/CvException");
@@ -22,16 +22,16 @@ static void throwJavaException(JNIEnv *env, const std::exception *e, const char 
 
     what = exception_type + ": " + e->what();
   }
-  
+
   if(!je) je = env->FindClass("java/lang/Exception");
   env->ThrowNew(je, what.c_str());
-  
+
   LOGE("%s caught %s", method, what.c_str());
   (void)method;        // avoid "unused" warning
 }
 
 extern "C" {
-  
+
 
 //
 //   MatXXX::MatXXX()
@@ -69,7 +69,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__III
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -95,7 +95,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -122,7 +122,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__IIIDDDD
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -149,7 +149,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__DDIDDDD
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -176,7 +176,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__JIIII
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -198,7 +198,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1Mat__JII
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -224,7 +224,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1adjustROI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -293,7 +293,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1channels
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -319,7 +319,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JIIZ
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -341,7 +341,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JII
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -363,7 +363,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1checkVector__JI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -391,7 +391,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1clone
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -418,7 +418,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1col
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -445,7 +445,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1colRange
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -454,7 +454,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1colRange
 //
 //  int Mat::dims()
 //
-  
+
 JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
   (JNIEnv* env, jclass, jlong self);
 
@@ -471,7 +471,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1dims
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -497,7 +497,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1cols
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -690,7 +690,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1cross
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -733,7 +733,7 @@ JNIEXPORT jint JNICALL Java_org_opencv_core_Mat_n_1depth
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -760,7 +760,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1diag__JI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -787,7 +787,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1diag__J
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -814,7 +814,7 @@ JNIEXPORT jdouble JNICALL Java_org_opencv_core_Mat_n_1dot
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -840,7 +840,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1elemSize
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -866,7 +866,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1elemSize1
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -892,7 +892,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_core_Mat_n_1empty
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -918,7 +918,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1eye__III
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -945,7 +945,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1eye__DDI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -972,7 +972,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1inv__JI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -994,7 +994,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1inv__J
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1020,7 +1020,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_core_Mat_n_1isContinuous
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1046,7 +1046,7 @@ JNIEXPORT jboolean JNICALL Java_org_opencv_core_Mat_n_1isSubmatrix
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1101,7 +1101,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1mul__JJD
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1253,7 +1253,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape__JII
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1276,7 +1276,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1reshape__JI
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1303,7 +1303,7 @@ JNIEXPORT jlong JNICALL Java_org_opencv_core_Mat_n_1row
     } catch (...) {
         throwJavaException(env, 0, method_name);
     }
-    
+
     return 0;
 }
 
@@ -1487,7 +1487,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_opencv_core_Mat_n_1size
         LOGD("%s", method_name);
         Mat* me = (Mat*) self; //TODO: check for NULL
         Size _retval_ = me->size(  );
-        jdoubleArray _da_retval_ = env->NewDoubleArray(2);  
+        jdoubleArray _da_retval_ = env->NewDoubleArray(2);
         jdouble _tmp_retval_[2] = {_retval_.width, _retval_.height};
         env->SetDoubleArrayRegion(_da_retval_, 0, 2, _tmp_retval_);
         return _da_retval_;

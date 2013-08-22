@@ -1458,7 +1458,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             gimg1.release();
             gsum.release();
             gsqsum.release();
-        } 
+        }
         else if (!(m_flags & CV_HAAR_SCALE_IMAGE) && (flags & CV_HAAR_SCALE_IMAGE))
         {
             openCLSafeCall(clReleaseMemObject(((OclBuffers *)buffers)->newnodebuffer));
@@ -1476,7 +1476,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             {
                 return;
             }
-        } 
+        }
         else
         {
             if (fabs(m_scaleFactor - scaleFactor) < 1e-6

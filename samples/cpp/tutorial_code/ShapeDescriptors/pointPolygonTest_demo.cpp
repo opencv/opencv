@@ -79,5 +79,3 @@ int main( void )
   waitKey(0);
   return(0);
 }
-
-

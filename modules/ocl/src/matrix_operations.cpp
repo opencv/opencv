@@ -627,7 +627,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, stri
     if(Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
         dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(), 
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
             (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else

@@ -160,8 +160,8 @@ private:
 };
 
 
-class CvCapture_FFMPEG_proxy : 
-	public CvCapture
+class CvCapture_FFMPEG_proxy :
+    public CvCapture
 {
 public:
     CvCapture_FFMPEG_proxy() { ffmpegCapture = 0; }
@@ -186,7 +186,7 @@ public:
 
         if (!ffmpegCapture ||
            !icvRetrieveFrame_FFMPEG_p(ffmpegCapture, &data, &step, &width, &height, &cn))
-			return 0;
+            return 0;
         cvInitImageHeader(&frame, cvSize(width, height), 8, cn);
         cvSetData(&frame, data, step);
         return &frame;
@@ -224,8 +224,8 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     return 0;
 }
 
-class CvVideoWriter_FFMPEG_proxy : 
-	public CvVideoWriter
+class CvVideoWriter_FFMPEG_proxy :
+    public CvVideoWriter
 {
 public:
     CvVideoWriter_FFMPEG_proxy() { ffmpegWriter = 0; }

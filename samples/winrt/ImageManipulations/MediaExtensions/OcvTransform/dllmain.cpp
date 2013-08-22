@@ -17,7 +17,7 @@
 using namespace Microsoft::WRL;
 
 namespace Microsoft { namespace Samples {
-	ActivatableClass(OcvImageManipulations);
+    ActivatableClass(OcvImageManipulations);
 }}
 
 BOOL WINAPI DllMain( _In_ HINSTANCE hInstance, _In_ DWORD dwReason, _In_opt_ LPVOID lpReserved )
@@ -47,7 +47,7 @@ HRESULT WINAPI DllGetActivationFactory( _In_ HSTRING activatibleClassId, _Outptr
 
 HRESULT WINAPI DllCanUnloadNow()
 {
-    auto &module = Microsoft::WRL::Module<Microsoft::WRL::InProc>::GetModule();    
+    auto &module = Microsoft::WRL::Module<Microsoft::WRL::InProc>::GetModule();
     return (module.Terminate()) ? S_OK : S_FALSE;
 }
 

@@ -145,7 +145,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
             static char opt[32] = {0};
             sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
 
-            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, 
+            openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads,
                                 args, I.oclchannels(), I.depth(), opt);
             releaseTexture(ITex);
             releaseTexture(JTex);

@@ -1060,5 +1060,3 @@ int CvBlobDetectorCC::DetectNewBlob(IplImage* /*pImg*/, IplImage* pFGMask, CvBlo
     return result;
 
 }   /* cvDetectNewBlob */
-
-

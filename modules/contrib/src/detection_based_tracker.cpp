@@ -853,4 +853,3 @@ const DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameters()
 }
 
 #endif
-

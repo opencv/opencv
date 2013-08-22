@@ -851,4 +851,3 @@ void findMaxSpanningTree(int num_images, const vector<MatchesInfo> &pairwise_mat
 
 } // namespace detail
 } // namespace cv
-
