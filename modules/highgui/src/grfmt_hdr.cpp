@@ -122,15 +122,15 @@ HdrEncoder::~HdrEncoder()
 {
 }
 
-bool HdrEncoder::write( const Mat& _img, const std::vector<int>& params )
+bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
 {
 	Mat img;
-	CV_Assert(img.channels() == 3 || img.channels() == 1);
-	if(img.channels() == 1) {
-		std::vector<Mat> splitted(3, _img);
+	CV_Assert(input_img.channels() == 3 || input_img.channels() == 1);
+	if(input_img.channels() == 1) {
+		 std::vector<Mat> splitted(3, input_img);
 		 merge(splitted, img);
 	} else {
-		_img.copyTo(img);
+		input_img.copyTo(img);
 	}
 	if(img.depth() != CV_32F) {
 		img.convertTo(img, CV_32FC3, 1/255.0f);
