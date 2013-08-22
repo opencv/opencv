@@ -146,7 +146,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* mom )
         cl_int dst_step = (cl_int)dst_a.step;
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_step ));
 
-        openCLExecuteKernel(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
+        openCLExecuteKernel2(dst_a.clCxt, &moments, "icvContourMoments", globalThreads, localThreads, args, -1, -1);
 
         cv::Mat dst(dst_a);
         a00 = a10 = a01 = a20 = a11 = a02 = a30 = a21 = a12 = a03 = 0.0;
@@ -301,7 +301,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&coi ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&binary ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
-    openCLExecuteKernel(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel2(Context::getContext(), &moments, "CvMoments", globalThreads, localThreads, args, -1, depth);
 
     size_t localThreadss[3]  = { 128, 1, 1};
     size_t globalThreadss[3] = { 128, 1, 1};
@@ -310,10 +310,10 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
     args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&tile_height ));
     args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&tile_width ));
     args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&TILE_SIZE ));
-    args_sum.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum ));
+    args_sum.push_back( std::make_pair( sizeof(cl_mem) , (void *)&sum.data ));
     args_sum.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst_m.data ));
     args_sum.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst_m.step ));
-    openCLExecuteKernel(Context::getContext(), &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
+    openCLExecuteKernel2(Context::getContext(), &moments, "dst_sum", globalThreadss, localThreadss, args_sum, -1, -1);
 
     Mat dstsum(sum);
     mom->m00 = dstsum.at<double>(0, 0);

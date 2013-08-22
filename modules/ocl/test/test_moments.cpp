@@ -34,7 +34,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
 };
 
 
-TEST_P(MomentsTest, DISABLED_Mat)
+TEST_P(MomentsTest, Mat)
 {
     bool binaryImage = 0;
     SetUp();
