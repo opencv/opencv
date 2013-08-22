@@ -54,17 +54,68 @@ namespace cv { namespace gpu { namespace device
 {
     namespace imgproc
     {
+        template <typename T> __global__ void resize_nearest(const PtrStep<T> src, const float fx, const float fy, PtrStepSz<T> dst)
+        {
+            const int dst_x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int dst_y = blockDim.y * blockIdx.y + threadIdx.y;
+
+            if (dst_x < dst.cols && dst_y < dst.rows)
+            {
+                const float src_x = dst_x * fx;
+                const float src_y = dst_y * fy;
+
+                dst(dst_y, dst_x) = src(__float2int_rz(src_y), __float2int_rz(src_x));
+            }
+        }
+
+        template <typename T> __global__ void resize_linear(const PtrStepSz<T> src, const float fx, const float fy, PtrStepSz<T> dst)
+        {
+            typedef typename TypeVec<float, VecTraits<T>::cn>::vec_type work_type;
+
+            const int dst_x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int dst_y = blockDim.y * blockIdx.y + threadIdx.y;
+
+            if (dst_x < dst.cols && dst_y < dst.rows)
+            {
+                const float src_x = dst_x * fx;
+                const float src_y = dst_y * fy;
+
+                work_type out = VecTraits<work_type>::all(0);
+
+                const int x1 = __float2int_rd(src_x);
+                const int y1 = __float2int_rd(src_y);
+                const int x2 = x1 + 1;
+                const int y2 = y1 + 1;
+                const int x2_read = ::min(x2, src.cols - 1);
+                const int y2_read = ::min(y2, src.rows - 1);
+
+                T src_reg = src(y1, x1);
+                out = out + src_reg * ((x2 - src_x) * (y2 - src_y));
+
+                src_reg = src(y1, x2_read);
+                out = out + src_reg * ((src_x - x1) * (y2 - src_y));
+
+                src_reg = src(y2_read, x1);
+                out = out + src_reg * ((x2 - src_x) * (src_y - y1));
+
+                src_reg = src(y2_read, x2_read);
+                out = out + src_reg * ((src_x - x1) * (src_y - y1));
+
+                dst(dst_y, dst_x) = saturate_cast<T>(out);
+            }
+        }
+
         template <class Ptr2D, typename T> __global__ void resize(const Ptr2D src, const float fx, const float fy, PtrStepSz<T> dst)
         {
-            const int x = blockDim.x * blockIdx.x + threadIdx.x;
-            const int y = blockDim.y * blockIdx.y + threadIdx.y;
+            const int dst_x = blockDim.x * blockIdx.x + threadIdx.x;
+            const int dst_y = blockDim.y * blockIdx.y + threadIdx.y;
 
-            if (x < dst.cols && y < dst.rows)
+            if (dst_x < dst.cols && dst_y < dst.rows)
             {
-                const float xcoo = x * fx;
-                const float ycoo = y * fy;
+                const float src_x = dst_x * fx;
+                const float src_y = dst_y * fy;
 
-                dst(y, x) = saturate_cast<T>(src(ycoo, xcoo));
+                dst(dst_y, dst_x) = src(src_y, src_x);
             }
         }
 
@@ -77,9 +128,31 @@ namespace cv { namespace gpu { namespace device
 
                 BrdReplicate<T> brd(src.rows, src.cols);
                 BorderReader< PtrStep<T>, BrdReplicate<T> > brdSrc(src, brd);
-                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc, fx, fy);
+                Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
                 resize<<<grid, block, 0, stream>>>(filteredSrc, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+            }
+        };
+        template <typename T> struct ResizeDispatcherStream<PointFilter, T>
+        {
+            static void call(PtrStepSz<T> src, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
+            {
+                const dim3 block(32, 8);
+                const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                resize_nearest<<<grid, block, 0, stream>>>(src, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+            }
+        };
+        template <typename T> struct ResizeDispatcherStream<LinearFilter, T>
+        {
+            static void call(PtrStepSz<T> src, float fx, float fy, PtrStepSz<T> dst, cudaStream_t stream)
+            {
+                const dim3 block(32, 8);
+                const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                resize_linear<<<grid, block, 0, stream>>>(src, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
             }
         };
@@ -96,6 +169,32 @@ namespace cv { namespace gpu { namespace device
                 Filter< BorderReader< PtrStep<T>, BrdReplicate<T> > > filteredSrc(brdSrc);
 
                 resize<<<grid, block>>>(filteredSrc, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+
+                cudaSafeCall( cudaDeviceSynchronize() );
+            }
+        };
+        template <typename T> struct ResizeDispatcherNonStream<PointFilter, T>
+        {
+        static void call(PtrStepSz<T> src, PtrStepSz<T>, int, int, float fx, float fy, PtrStepSz<T> dst)
+            {
+                const dim3 block(32, 8);
+                const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                resize_nearest<<<grid, block>>>(src, fx, fy, dst);
+                cudaSafeCall( cudaGetLastError() );
+
+                cudaSafeCall( cudaDeviceSynchronize() );
+            }
+        };
+        template <typename T> struct ResizeDispatcherNonStream<LinearFilter, T>
+        {
+        static void call(PtrStepSz<T> src, PtrStepSz<T>, int, int, float fx, float fy, PtrStepSz<T> dst)
+            {
+                const dim3 block(32, 8);
+                const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
+
+                resize_linear<<<grid, block>>>(src, fx, fy, dst);
                 cudaSafeCall( cudaGetLastError() );
 
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -135,6 +234,58 @@ namespace cv { namespace gpu { namespace device
                         BrdReplicate< type > brd(src.rows, src.cols); \
                         BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
                         Filter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
+                    cudaSafeCall( cudaGetLastError() ); \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
+                } \
+            }; \
+            template <> struct ResizeDispatcherNonStream<PointFilter, type > \
+            { \
+                static void call(PtrStepSz< type > src, PtrStepSz< type > srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz< type > dst) \
+                { \
+                    const dim3 block(32, 8); \
+                    const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
+                    bindTexture(&tex_resize_ ## type, srcWhole); \
+                    tex_resize_ ## type ## _reader texSrc; \
+                    texSrc.xoff = xoff; \
+                    texSrc.yoff = yoff; \
+                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    { \
+                        PointFilter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
+                    else \
+                    { \
+                        BrdReplicate< type > brd(src.rows, src.cols); \
+                        BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
+                        PointFilter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
+                    cudaSafeCall( cudaGetLastError() ); \
+                    cudaSafeCall( cudaDeviceSynchronize() ); \
+                } \
+            }; \
+            template <> struct ResizeDispatcherNonStream<LinearFilter, type > \
+            { \
+                static void call(PtrStepSz< type > src, PtrStepSz< type > srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSz< type > dst) \
+                { \
+                    const dim3 block(32, 8); \
+                    const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
+                    bindTexture(&tex_resize_ ## type, srcWhole); \
+                    tex_resize_ ## type ## _reader texSrc; \
+                    texSrc.xoff = xoff; \
+                    texSrc.yoff = yoff; \
+                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    { \
+                        LinearFilter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
+                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
+                    } \
+                    else \
+                    { \
+                        BrdReplicate< type > brd(src.rows, src.cols); \
+                        BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
+                        LinearFilter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
                         resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
                     } \
                     cudaSafeCall( cudaGetLastError() ); \
@@ -180,7 +331,7 @@ namespace cv { namespace gpu { namespace device
 
             if (x < dst.cols && y < dst.rows)
             {
-                dst(y, x) = saturate_cast<T>(src(y, x));
+                dst(y, x) = src(y, x);
             }
         }
 
@@ -227,7 +378,8 @@ namespace cv { namespace gpu { namespace device
                 ResizeDispatcher<CubicFilter, T>::call,
                 ResizeAreaDispatcher<T>::call
             };
-            // chenge to linear if area interpolation upscaling
+
+            // change to linear if area interpolation upscaling
             if (interpolation == 3 && (fx <= 1.f || fy <= 1.f))
                 interpolation = 1;
 
