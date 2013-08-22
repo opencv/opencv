@@ -220,17 +220,21 @@ namespace cv { namespace gpu { namespace device
                 { \
                     const dim3 block(32, 8); \
                     const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_resize_ ## type, srcWhole); \
-                    tex_resize_ ## type ## _reader texSrc; \
-                    texSrc.xoff = xoff; \
-                    texSrc.yoff = yoff; \
-                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    if (srcWhole.data == src.data) \
                     { \
+                        bindTexture(&tex_resize_ ## type, src); \
+                        tex_resize_ ## type ## _reader texSrc; \
+                        texSrc.xoff = 0; \
+                        texSrc.yoff = 0; \
                         Filter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
                         resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
                     } \
                     else \
                     { \
+                        bindTexture(&tex_resize_ ## type, srcWhole); \
+                        tex_resize_ ## type ## _reader texSrc; \
+                        texSrc.xoff = xoff; \
+                        texSrc.yoff = yoff; \
                         BrdReplicate< type > brd(src.rows, src.cols); \
                         BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
                         Filter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
@@ -250,18 +254,7 @@ namespace cv { namespace gpu { namespace device
                     tex_resize_ ## type ## _reader texSrc; \
                     texSrc.xoff = xoff; \
                     texSrc.yoff = yoff; \
-                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
-                    { \
-                        PointFilter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
-                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
-                    } \
-                    else \
-                    { \
-                        BrdReplicate< type > brd(src.rows, src.cols); \
-                        BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
-                        PointFilter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
-                        resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
-                    } \
+                    resize<<<grid, block>>>(texSrc, fx, fy, dst); \
                     cudaSafeCall( cudaGetLastError() ); \
                     cudaSafeCall( cudaDeviceSynchronize() ); \
                 } \
@@ -272,17 +265,21 @@ namespace cv { namespace gpu { namespace device
                 { \
                     const dim3 block(32, 8); \
                     const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y)); \
-                    bindTexture(&tex_resize_ ## type, srcWhole); \
-                    tex_resize_ ## type ## _reader texSrc; \
-                    texSrc.xoff = xoff; \
-                    texSrc.yoff = yoff; \
-                    if (srcWhole.cols == src.cols && srcWhole.rows == src.rows) \
+                    if (srcWhole.data == src.data) \
                     { \
+                        bindTexture(&tex_resize_ ## type, src); \
+                        tex_resize_ ## type ## _reader texSrc; \
+                        texSrc.xoff = 0; \
+                        texSrc.yoff = 0; \
                         LinearFilter<tex_resize_ ## type ## _reader> filteredSrc(texSrc); \
                         resize<<<grid, block>>>(filteredSrc, fx, fy, dst); \
                     } \
                     else \
                     { \
+                        bindTexture(&tex_resize_ ## type, srcWhole); \
+                        tex_resize_ ## type ## _reader texSrc; \
+                        texSrc.xoff = xoff; \
+                        texSrc.yoff = yoff; \
                         BrdReplicate< type > brd(src.rows, src.cols); \
                         BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > brdSrc(texSrc, brd); \
                         LinearFilter< BorderReader<tex_resize_ ## type ## _reader, BrdReplicate< type > > > filteredSrc(brdSrc); \
