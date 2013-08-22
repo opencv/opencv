@@ -128,103 +128,12 @@ void cv::viz::Viz3d::VizImpl::spinOnce (int time, bool force_redraw)
     }
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removePointCloud (const std::string &id)
+//////////////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::removeAllWidgets()
 {
-    CloudActorMap::iterator am_it = cloud_actor_map_->find (id);
-    if (am_it == cloud_actor_map_->end ())
-        return false;
-
-    if (removeActorFromRenderer (am_it->second.actor))
-        return cloud_actor_map_->erase (am_it), true;
-
-    return false;
+    widget_actor_map_->clear();
+    renderer_->RemoveAllViewProps();
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeShape (const std::string &id)
-{
-    // Check to see if the given ID entry exists
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    // Extra step: check if there is a cloud with the same ID
-    CloudActorMap::iterator ca_it = cloud_actor_map_->find (id);
-
-    bool shape = true;
-    // Try to find a shape first
-    if (am_it == shape_actor_map_->end ())
-    {
-        // There is no cloud or shape with this ID, so just exit
-        if (ca_it == cloud_actor_map_->end ())
-            return false;
-        // Cloud found, set shape to false
-        shape = false;
-    }
-
-    // Remove the pointer/ID pair to the global actor map
-    if (shape)
-    {
-        if (removeActorFromRenderer (am_it->second))
-        {
-            shape_actor_map_->erase (am_it);
-            return (true);
-        }
-    }
-    else
-    {
-        if (removeActorFromRenderer (ca_it->second.actor))
-        {
-            cloud_actor_map_->erase (ca_it);
-            return true;
-        }
-    }
-    return false;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeText3D (const std::string &id)
-{
-    // Check to see if the given ID entry exists
-    ShapeActorMap::iterator am_it = shape_actor_map_->find (id);
-    if (am_it == shape_actor_map_->end ())
-        return false;
-
-    // Remove it from all renderers
-    if (removeActorFromRenderer (am_it->second))
-        return shape_actor_map_->erase (am_it), true;
-
-    return false;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeAllPointClouds ()
-{
-    // Check to see if the given ID entry exists
-    CloudActorMap::iterator am_it = cloud_actor_map_->begin ();
-    while (am_it != cloud_actor_map_->end () )
-    {
-        if (removePointCloud (am_it->first))
-            am_it = cloud_actor_map_->begin ();
-        else
-            ++am_it;
-    }
-    return (true);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeAllShapes ()
-{
-    // Check to see if the given ID entry exists
-    ShapeActorMap::iterator am_it = shape_actor_map_->begin ();
-    while (am_it != shape_actor_map_->end ())
-    {
-        if (removeShape (am_it->first))
-            am_it = shape_actor_map_->begin ();
-        else
-            ++am_it;
-    }
-    return (true);
-}
-
 
 //////////////////////////////////////////////////////////////////////////////////////////
 bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor)

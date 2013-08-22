@@ -79,6 +79,7 @@ void cv::viz::Viz3d::registerMouseCallback(MouseCallback callback, void* cookie)
 void cv::viz::Viz3d::showWidget(const String &id, const Widget &widget, const Affine3f &pose) { impl_->showWidget(id, widget, pose); }
 void cv::viz::Viz3d::removeWidget(const String &id) { impl_->removeWidget(id); }
 cv::viz::Widget cv::viz::Viz3d::getWidget(const String &id) const { return impl_->getWidget(id); }
+void cv::viz::Viz3d::removeAllWidgets() { impl_->removeAllWidgets(); }
 void cv::viz::Viz3d::setWidgetPose(const String &id, const Affine3f &pose) { impl_->setWidgetPose(id, pose); }
 void cv::viz::Viz3d::updateWidgetPose(const String &id, const Affine3f &pose) { impl_->updateWidgetPose(id, pose); }
 cv::Affine3f cv::viz::Viz3d::getWidgetPose(const String &id) const { return impl_->getWidgetPose(id); }

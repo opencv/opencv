@@ -37,6 +37,7 @@ namespace cv
             void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;
+            void removeAllWidgets();
 
             void setWidgetPose(const String &id, const Affine3f &pose);
             void updateWidgetPose(const String &id, const Affine3f &pose);

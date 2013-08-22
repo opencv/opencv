@@ -17,23 +17,7 @@ public:
     VizImpl (const String &name);
     virtual ~VizImpl ();
 
-
-
-
-
-
-
-
-
-    //to refactor
-    bool removePointCloud (const String& id = "cloud");
-    inline bool removePolygonMesh (const String& id = "polygon") { return removePointCloud (id); }
-    bool removeShape (const String& id = "cloud");
-    bool removeText3D (const String& id = "cloud");
-    bool removeAllPointClouds ();
-
-    //create Viz3d::removeAllWidgets()
-    bool removeAllShapes ();
+    void removeAllWidgets();
 
     //to refactor
     bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
