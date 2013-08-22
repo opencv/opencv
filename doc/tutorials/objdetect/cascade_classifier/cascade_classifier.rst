@@ -104,7 +104,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
             {
                 Point eye_center( faces[i].x + eyes[j].x + eyes[j].width/2, faces[i].y + eyes[j].y + eyes[j].height/2 );
                 int radius = cvRound( (eyes[j].width + eyes[j].height)*0.25 );
-                circle( frame, center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
+                circle( frame, eye_center, radius, Scalar( 255, 0, 0 ), 4, 8, 0 );
             }
         }
         //-- Show what you got
