@@ -1,7 +1,6 @@
 #include "precomp.hpp"
 #include "viz3d_impl.hpp"
 
-#include <vtkRenderWindowInteractor.h>
 #ifndef __APPLE__
 vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew ()
 {
