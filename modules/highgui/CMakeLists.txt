@@ -10,7 +10,7 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 ocv_clear_vars(GRFMT_LIBS)
 
 if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIR})
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 

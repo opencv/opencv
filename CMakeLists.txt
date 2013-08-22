@@ -631,7 +631,7 @@ status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE N
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
-status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARY} (ver ${ZLIB_VERSION_STRING})")
+status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})")
 
 if(WITH_JPEG)
   status("    JPEG:"       JPEG_FOUND    THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})"        ELSE "build (ver ${JPEG_LIB_VERSION})")
