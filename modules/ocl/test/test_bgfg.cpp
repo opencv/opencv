@@ -191,7 +191,7 @@ TEST_P(mog2, getBackgroundImage)
     if (useGray)
         return;
 
-    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "video/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 

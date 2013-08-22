@@ -254,13 +254,15 @@ static void mog_withoutLearning(const oclMat& frame, int cn, oclMat& fgmask, ocl
 }
 
 
-static void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
+static void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask_raw, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
     int nmixtures, float varThreshold, float backgroundRatio, float learningRate, float minVar)
 {
     Context* clCxt = Context::getContext();
 
     size_t local_thread[] = {32, 8, 1};
     size_t global_thread[] = {frame.cols, frame.rows, 1};
+
+    oclMat fgmask(fgmask_raw.size(), CV_32SC1);
 
     int frame_step = (int)(frame.step/frame.elemSize());
     int fgmask_step = (int)(fgmask.step/fgmask.elemSize());
@@ -318,6 +320,8 @@ static void mog_withLearning(const oclMat& frame, int cn, oclMat& fgmask, oclMat
     args.push_back(make_pair(sizeof(cl_int), (void*)&frame_offset_y));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
+    fgmask.convertTo(fgmask, CV_8U);
+    fgmask.copyTo(fgmask_raw);
 }
 
 void cv::ocl::device::mog::mog_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& weight, oclMat& sortKey, oclMat& mean, oclMat& var,
@@ -392,9 +396,11 @@ void cv::ocl::device::mog::loadConstants(float Tb, float TB, float Tg, float var
         (void *)constants, sizeof(_contant_struct));
 }
 
-void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& modesUsed, oclMat& weight, oclMat& variance, 
+void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmaskRaw, oclMat& modesUsed, oclMat& weight, oclMat& variance, 
                                 oclMat& mean, float alphaT, float prune, bool detectShadows, int nmixtures)
 {
+    oclMat fgmask(fgmaskRaw.size(), CV_32SC1);
+
     Context* clCxt = Context::getContext();
 
     const float alpha1 = 1.0f - alphaT;
@@ -464,6 +470,9 @@ void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask,
     args.push_back(make_pair(sizeof(cl_mem), (void*)&cl_constants));
 
     openCLExecuteKernel(clCxt, &bgfg_mog, kernel_name, global_thread, local_thread, args, -1, -1, build_option);
+
+    fgmask.convertTo(fgmask, CV_8U);
+    fgmask.copyTo(fgmaskRaw);
 }
 
 void cv::ocl::device::mog::getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures)
@@ -580,7 +589,7 @@ void cv::ocl::MOG2::initialize(cv::Size frameSize, int frameType)
     mean_.setTo(Scalar::all(0));
 
     //make the array for keeping track of the used modes per pixel - all zeros at start
-    bgmodelUsedModes_.create(frameSize_, CV_8UC1);
+    bgmodelUsedModes_.create(frameSize_, CV_32FC1);
     bgmodelUsedModes_.setTo(cv::Scalar::all(0));
 
     loadConstants(varThreshold, backgroundRatio, varThresholdGen, fVarInit, fVarMin, fVarMax, fTau, nShadowDetection);
