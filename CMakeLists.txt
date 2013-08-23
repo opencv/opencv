@@ -814,8 +814,8 @@ if(BUILD_opencv_python)
   else()
     status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES}"                                      ELSE NO)
   endif()
-  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIR THEN "${PYTHON_NUMPY_INCLUDE_DIR} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
-  status("    packages path:" PYTHON_EXECUTABLE        THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
+  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIRS THEN "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
+  status("    packages path:" PYTHON_EXECUTABLE         THEN "${PYTHON_PACKAGES_PATH}"                                    ELSE "-")
 endif()
 
 # ========================== java ==========================

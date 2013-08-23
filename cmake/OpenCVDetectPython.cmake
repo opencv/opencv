@@ -54,24 +54,24 @@ if(PYTHONINTERP_FOUND)
     endif()
     SET(PYTHON_PACKAGES_PATH "${_PYTHON_PACKAGES_PATH}" CACHE PATH "Where to install the python packages.")
 
-    if(NOT PYTHON_NUMPY_INCLUDE_DIR)
+    if(NOT PYTHON_NUMPY_INCLUDE_DIRS)
       # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(numpy.distutils.misc_util.get_numpy_include_dirs()[0])"
+      execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c
+                        "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(os.pathsep.join(numpy.distutils.misc_util.get_numpy_include_dirs()))"
                       RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
+                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
 
       if(PYTHON_NUMPY_PROCESS EQUAL 0)
-        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIR}" _PYTHON_NUMPY_INCLUDE_DIR)
-        set(PYTHON_NUMPY_INCLUDE_DIR ${_PYTHON_NUMPY_INCLUDE_DIR} CACHE PATH "Path to numpy headers")
+        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIRS}" _PYTHON_NUMPY_INCLUDE_DIRS)
+        set(PYTHON_NUMPY_INCLUDE_DIRS "${_PYTHON_NUMPY_INCLUDE_DIRS}" CACHE PATH "Path to numpy headers")
       endif()
     endif()
 
-    if(PYTHON_NUMPY_INCLUDE_DIR)
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.version.version)"
-                        RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                        OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(PYTHON_NUMPY_INCLUDE_DIRS)
+      execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c "import numpy; print(numpy.version.version)"
+                      OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif()
   endif(NOT ANDROID AND NOT IOS)
 
