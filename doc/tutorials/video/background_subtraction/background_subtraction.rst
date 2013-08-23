@@ -178,40 +178,41 @@ The results as well as the input data are shown on the screen.
       pMOG2->apply(frame, fgMaskMOG2);
       //get the frame number and write it on the current frame
       size_t index = fn.find_last_of("/");
-      if(index == string::npos)
+      if(index == string::npos) {
         index = fn.find_last_of("\\");
-        size_t index2 = fn.find_last_of(".");
-        string prefix = fn.substr(0,index+1);
-        string suffix = fn.substr(index2);
-        string frameNumberString = fn.substr(index+1, index2-index-1);
-        istringstream iss(frameNumberString);
-        int frameNumber;
-        iss >> frameNumber;
-        rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
-                  cv::Scalar(255,255,255), -1);
-        putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
-                CV_FONT_NORMAL, 0.5 , cv::Scalar(0,0,0));
-        //show the current frame and the fg masks
-        imshow("Frame", frame);
-        imshow("FG Mask MOG", fgMaskMOG);
-        imshow("FG Mask MOG 2", fgMaskMOG2);
-        //get the input from the keyboard
-        keyboard = waitKey( 30 );
-        //search for the next image in the sequence
-        ostringstream oss;
-        oss << (frameNumber + 1);
-        string nextFrameNumberString = oss.str();
-        string nextFrameFilename = prefix + nextFrameNumberString + suffix;
-        //read the next frame
-        frame = imread(nextFrameFilename);
-        if(!frame.data){
-          //error in opening the next image in the sequence
-          cerr << "Unable to open image frame: " << nextFrameFilename << endl;
-          exit(EXIT_FAILURE);
-        }
-        //update the path of the current frame
-        fn.assign(nextFrameFilename);
       }
+      size_t index2 = fn.find_last_of(".");
+      string prefix = fn.substr(0,index+1);
+      string suffix = fn.substr(index2);
+      string frameNumberString = fn.substr(index+1, index2-index-1);
+      istringstream iss(frameNumberString);
+      int frameNumber;
+      iss >> frameNumber;
+      rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
+                cv::Scalar(255,255,255), -1);
+      putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
+              CV_FONT_NORMAL, 0.5 , cv::Scalar(0,0,0));
+      //show the current frame and the fg masks
+      imshow("Frame", frame);
+      imshow("FG Mask MOG", fgMaskMOG);
+      imshow("FG Mask MOG 2", fgMaskMOG2);
+      //get the input from the keyboard
+      keyboard = waitKey( 30 );
+      //search for the next image in the sequence
+      ostringstream oss;
+      oss << (frameNumber + 1);
+      string nextFrameNumberString = oss.str();
+      string nextFrameFilename = prefix + nextFrameNumberString + suffix;
+      //read the next frame
+      frame = imread(nextFrameFilename);
+      if(!frame.data){
+        //error in opening the next image in the sequence
+        cerr << "Unable to open image frame: " << nextFrameFilename << endl;
+        exit(EXIT_FAILURE);
+      }
+      //update the path of the current frame
+      fn.assign(nextFrameFilename);
+    }
   }
   
 * The source file can be downloaded :download:`here <../../../../samples/cpp/tutorial_code/video/bg_sub.cpp>`.
