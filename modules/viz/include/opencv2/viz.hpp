@@ -95,15 +95,18 @@ namespace cv
         class CV_EXPORTS VizAccessor
         {
         public:
-            ~VizAccessor();
-            static VizAccessor * getInstance();
+            static VizAccessor & getInstance();
+            static void release();
             
             Viz3d get(const String &window_name);
             void add(Viz3d window);
             void remove(const String &window_name);
             
+            static void generateWindowName(const String &window_name, String &output);
+            
         private:
             VizAccessor(); // Singleton
+            ~VizAccessor();
             
             static VizAccessor * instance_;
             static bool is_instantiated_;

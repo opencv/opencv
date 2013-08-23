@@ -74,9 +74,8 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
 
 
     //////////////////////////////
-
-    String window_name("Viz");
-    window_name = name.empty() ? window_name : window_name + " - " + name;
+    String window_name;
+    VizAccessor::generateWindowName(name, window_name);
     window_->SetWindowName (window_name.c_str ());
 }
 
@@ -85,6 +84,7 @@ cv::viz::Viz3d::VizImpl::~VizImpl ()
 {
     if (interactor_) 
         interactor_->DestroyTimer(timer_id_);
+    if (renderer_) renderer_->Clear();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

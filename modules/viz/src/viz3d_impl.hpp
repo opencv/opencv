@@ -69,7 +69,11 @@ public:
     void close ()
     {
         stopped_ = true;
-        interactor_->TerminateApp (); // This tends to close the window...
+        if (interactor_) 
+        {
+            interactor_->GetRenderWindow()->Finalize();
+            interactor_->TerminateApp (); // This tends to close the window...
+        }
     }
 
 
