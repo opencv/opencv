@@ -497,6 +497,8 @@ include(cmake/OpenCVGenAndroidMK.cmake)
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake)
 
+# Generate Info.plist for the IOS framework
+include(cmake/OpenCVGenInfoPlist.cmake)
 
 # ----------------------------------------------------------------------------
 # Summary:
