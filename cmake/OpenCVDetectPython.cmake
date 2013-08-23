@@ -2,7 +2,7 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
   # search for executable with the same bitness as resulting binaries
   # standard FindPythonInterp always prefers executable from system path
   # this is really important because we are using the interpreter for numpy search and for choosing the install location
-  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0)
+  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 "${MIN_VER_PYTHON}")
     find_host_program(PYTHON_EXECUTABLE
       NAMES python${_CURRENT_VERSION} python
       PATHS
@@ -12,7 +12,7 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
     )
   endforeach()
 endif()
-find_host_package(PythonInterp 2.0)
+find_host_package(PythonInterp "${MIN_VER_PYTHON}")
 
 unset(HAVE_SPHINX CACHE)
 
