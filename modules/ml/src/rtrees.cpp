@@ -274,8 +274,10 @@ bool CvRTrees::train( const CvMat* _train_data, int _tflag,
         params.cv_folds, params.use_1se_rule, false, params.priors );
 
     data = new CvDTreeTrainData();
-    data->set_data( _train_data, _tflag, _responses, _var_idx,
-        _sample_idx, _var_type, _missing_mask, tree_params, true);
+    CvMat *_tdata = cvCloneMat(_train_data);
+
+    data->set_data( _tdata, _tflag, _responses, _var_idx,
+         _sample_idx, _var_type, _missing_mask, tree_params, true);
 
     int var_count = data->var_count;
     if( params.nactive_vars > var_count )
