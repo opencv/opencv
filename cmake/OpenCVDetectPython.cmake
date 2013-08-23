@@ -2,7 +2,7 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
   # search for executable with the same bitness as resulting binaries
   # standard FindPythonInterp always prefers executable from system path
   # this is really important because we are using the interpreter for numpy search and for choosing the install location
-  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 2.6 2.5 2.4 2.3 2.2 2.1 2.0)
+  foreach(_CURRENT_VERSION ${Python_ADDITIONAL_VERSIONS} 2.7 "${MIN_VER_PYTHON}")
     find_host_program(PYTHON_EXECUTABLE
       NAMES python${_CURRENT_VERSION} python
       PATHS
@@ -12,39 +12,15 @@ if(WIN32 AND NOT PYTHON_EXECUTABLE)
     )
   endforeach()
 endif()
-find_host_package(PythonInterp 2.0)
+find_host_package(PythonInterp "${MIN_VER_PYTHON}")
 
 unset(HAVE_SPHINX CACHE)
-if(PYTHON_EXECUTABLE)
-  if(PYTHON_VERSION_STRING)
-    set(PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
-    set(PYTHON_VERSION_FULL "${PYTHON_VERSION_STRING}")
-  else()
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
-      ERROR_VARIABLE PYTHON_VERSION_FULL
-      ERROR_STRIP_TRAILING_WHITESPACE)
 
-    string(REGEX MATCH "[0-9]+.[0-9]+" PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_FULL}")
-  endif()
-
-  if("${PYTHON_VERSION_FULL}" MATCHES "[0-9]+.[0-9]+.[0-9]+")
-    set(PYTHON_VERSION_FULL "${CMAKE_MATCH_0}")
-  elseif("${PYTHON_VERSION_FULL}" MATCHES "[0-9]+.[0-9]+")
-    set(PYTHON_VERSION_FULL "${CMAKE_MATCH_0}")
-  else()
-    unset(PYTHON_VERSION_FULL)
-  endif()
+if(PYTHONINTERP_FOUND)
+  set(PYTHON_VERSION_MAJOR_MINOR "${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}")
 
   if(NOT ANDROID AND NOT IOS)
-    if(CMAKE_VERSION VERSION_GREATER 2.8.8 AND PYTHON_VERSION_FULL)
-      find_host_package(PythonLibs ${PYTHON_VERSION_FULL} EXACT)
-    else()
-      find_host_package(PythonLibs ${PYTHON_VERSION_FULL})
-    endif()
-    # cmake 2.4 (at least on Ubuntu 8.04 (hardy)) don't define PYTHONLIBS_FOUND
-    if(NOT PYTHONLIBS_FOUND AND PYTHON_INCLUDE_PATH)
-      set(PYTHONLIBS_FOUND ON)
-    endif()
+    find_host_package(PythonLibs "${PYTHON_VERSION_STRING}" EXACT)
   endif()
 
   if(NOT ANDROID AND NOT IOS)
@@ -78,39 +54,39 @@ if(PYTHON_EXECUTABLE)
     endif()
     SET(PYTHON_PACKAGES_PATH "${_PYTHON_PACKAGES_PATH}" CACHE PATH "Where to install the python packages.")
 
-    if(NOT PYTHON_NUMPY_INCLUDE_DIR)
+    if(NOT PYTHON_NUMPY_INCLUDE_DIRS)
       # Attempt to discover the NumPy include directory. If this succeeds, then build python API with NumPy
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(numpy.distutils.misc_util.get_numpy_include_dirs()[0])"
+      execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c
+                        "import os; os.environ['DISTUTILS_USE_SDK']='1'; import numpy.distutils; print(os.pathsep.join(numpy.distutils.misc_util.get_numpy_include_dirs()))"
                       RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIR
+                      OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
                       OUTPUT_STRIP_TRAILING_WHITESPACE)
 
       if(PYTHON_NUMPY_PROCESS EQUAL 0)
-        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIR}" _PYTHON_NUMPY_INCLUDE_DIR)
-        set(PYTHON_NUMPY_INCLUDE_DIR ${_PYTHON_NUMPY_INCLUDE_DIR} CACHE PATH "Path to numpy headers")
+        file(TO_CMAKE_PATH "${PYTHON_NUMPY_INCLUDE_DIRS}" _PYTHON_NUMPY_INCLUDE_DIRS)
+        set(PYTHON_NUMPY_INCLUDE_DIRS "${_PYTHON_NUMPY_INCLUDE_DIRS}" CACHE PATH "Path to numpy headers")
       endif()
     endif()
 
-    if(PYTHON_NUMPY_INCLUDE_DIR)
-      execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import numpy; print(numpy.version.version)"
-                        RESULT_VARIABLE PYTHON_NUMPY_PROCESS
-                        OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(PYTHON_NUMPY_INCLUDE_DIRS)
+      execute_process(COMMAND "${PYTHON_EXECUTABLE}" -c "import numpy; print(numpy.version.version)"
+                      OUTPUT_VARIABLE PYTHON_NUMPY_VERSION
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
     endif()
   endif(NOT ANDROID AND NOT IOS)
+endif()
 
-  if(BUILD_DOCS)
-    find_host_program(SPHINX_BUILD sphinx-build)
-    if(SPHINX_BUILD)
-        execute_process(COMMAND "${SPHINX_BUILD}"
-                        OUTPUT_QUIET
-                        ERROR_VARIABLE SPHINX_OUTPUT
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-        if(SPHINX_OUTPUT MATCHES "Sphinx v([0-9][^ \n]*)")
-          set(SPHINX_VERSION "${CMAKE_MATCH_1}")
-          set(HAVE_SPHINX 1)
-          message(STATUS "Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
-        endif()
-    endif()
-  endif(BUILD_DOCS)
-endif(PYTHON_EXECUTABLE)
+if(BUILD_DOCS)
+  find_host_program(SPHINX_BUILD sphinx-build)
+  if(SPHINX_BUILD)
+      execute_process(COMMAND "${SPHINX_BUILD}"
+                      OUTPUT_QUIET
+                      ERROR_VARIABLE SPHINX_OUTPUT
+                      OUTPUT_STRIP_TRAILING_WHITESPACE)
+      if(SPHINX_OUTPUT MATCHES "Sphinx v([0-9][^ \n]*)")
+        set(SPHINX_VERSION "${CMAKE_MATCH_1}")
+        set(HAVE_SPHINX 1)
+        message(STATUS "Found Sphinx ${SPHINX_VERSION}: ${SPHINX_BUILD}")
+      endif()
+  endif()
+endif(BUILD_DOCS)
