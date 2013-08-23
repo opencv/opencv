@@ -26,8 +26,8 @@ else()
   set(HAVE_MSVC2012 TRUE)
 endif()
 
-TRY_COMPILE(HAVE_WINRT_SDK
-  "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+try_compile(HAVE_WINRT_SDK
+  "${OpenCV_BINARY_DIR}"
   "${OpenCV_SOURCE_DIR}/cmake/checks/winrttest.cpp")
 
 if (ENABLE_WINRT_MODE AND HAVE_WINRT_SDK AND HAVE_MSVC2012 AND HAVE_MSPDK)
