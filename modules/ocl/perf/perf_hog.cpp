@@ -54,22 +54,21 @@ PERF_TEST(HOGFixture, HOG)
     Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
     ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
 
-    const std::string impl = getSelectedImpl();
-    std::vector<cv::Rect> found_locations;
+    vector<cv::Rect> found_locations;
     declare.in(src).time(5);
 
-    if (impl == "plain")
+    if (RUN_PLAIN_IMPL)
     {
-        cv::HOGDescriptor hog;
+        HOGDescriptor hog;
         hog.setSVMDetector(hog.getDefaultPeopleDetector());
 
         TEST_CYCLE() hog.detectMultiScale(src, found_locations);
 
         SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
-    else if (impl == "ocl")
+    else if (RUN_OCL_IMPL)
     {
-        cv::ocl::HOGDescriptor ocl_hog;
+        ocl::HOGDescriptor ocl_hog;
         ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
         ocl::oclMat oclSrc(src);
 
@@ -77,10 +76,6 @@ PERF_TEST(HOGFixture, HOG)
 
         SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

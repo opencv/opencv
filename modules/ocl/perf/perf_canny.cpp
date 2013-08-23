@@ -49,34 +49,29 @@ using namespace perf;
 
 ///////////// Canny ////////////////////////
 
-PERF_TEST(CannyFixture, Canny)
+PERF_TEST(CannyFixture, DISABLED_Canny) // TODO difference between implmentations
 {
     Mat img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE),
             edges(img.size(), CV_8UC1);
-    ASSERT_TRUE(!img.empty()) << "can't open aloeL.jpg";
+    ASSERT_TRUE(!img.empty()) << "can't open aloe-L.png";
 
-    const std::string impl = getSelectedImpl();
     declare.in(img).out(edges);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
 
-        TEST_CYCLE() Canny(oclImg, oclEdges, 50.0, 100.0);
+        TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
         oclEdges.download(edges);
 
         SANITY_CHECK(edges);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() Canny(img, edges, 50.0, 100.0);
 
         SANITY_CHECK(edges);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

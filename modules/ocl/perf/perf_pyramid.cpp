@@ -51,97 +51,74 @@ using std::tr1::get;
 
 ///////////// pyrDown //////////////////////
 
-CV_ENUM(pyrDownMatType, CV_8UC1, CV_8UC4)
-
-typedef tuple<Size, pyrDownMatType> pyrDownParams;
-typedef TestBaseWithParam<pyrDownParams> pyrDownFixture;
+typedef Size_MatType pyrDownFixture;
 
 PERF_TEST_P(pyrDownFixture, pyrDown,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               pyrDownMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    pyrDownParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst;
     Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
     dst.create(dstSize, type);
-    declare.in(src).out(dst);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() cv::ocl::pyrDown(oclSrc, oclDst);
+        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
         oclDst.download(dst);
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::pyrDown(src, dst);
+        TEST_CYCLE() pyrDown(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// pyrUp ////////////////////////
 
-typedef pyrDownMatType pyrUpMatType;
-typedef tuple<Size, pyrUpMatType> pyrUpParams;
-typedef TestBaseWithParam<pyrUpParams> pyrUpFixture;
+typedef Size_MatType pyrUpFixture;
 
 PERF_TEST_P(pyrUpFixture, pyrUp,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               pyrUpMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    pyrUpParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst;
     Size dstSize(srcSize.height << 1, srcSize.width << 1);
     dst.create(dstSize, type);
-    declare.in(src).out(dst);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() cv::ocl::pyrDown(oclSrc, oclDst);
+        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
         oclDst.download(dst);
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() cv::pyrDown(src, dst);
+        TEST_CYCLE() pyrDown(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

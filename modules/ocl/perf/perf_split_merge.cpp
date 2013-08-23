@@ -51,23 +51,16 @@ using std::tr1::get;
 
 ///////////// Merge////////////////////////
 
-CV_ENUM(MergeMatType, CV_8U, CV_32F)
-
-typedef tuple<Size, MergeMatType> MergeParams;
-typedef TestBaseWithParam<MergeParams> MergeFixture;
+typedef Size_MatType MergeFixture;
 
 PERF_TEST_P(MergeFixture, Merge,
             ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               MergeMatType::all()))
+                               OCL_PERF_ENUM(CV_8U, CV_32F)))
 {
-    // getting params
-    MergeParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), channels = 3;
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     const int dstType = CV_MAKE_TYPE(depth, channels);
     Mat dst(srcSize, dstType);
     vector<Mat> src(channels);
@@ -78,8 +71,7 @@ PERF_TEST_P(MergeFixture, Merge,
     }
     declare.out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclDst(srcSize, dstType);
         vector<ocl::oclMat> oclSrc(src.size());
@@ -92,50 +84,39 @@ PERF_TEST_P(MergeFixture, Merge,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::merge(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// Split////////////////////////
 
-typedef MergeMatType SplitMatType;
-typedef tuple<Size, SplitMatType> SplitParams;
-typedef TestBaseWithParam<SplitParams> SplitFixture;
+typedef Size_MatType SplitFixture;
 
 PERF_TEST_P(SplitFixture, Split,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               SplitMatType::all()))
+                               OCL_PERF_ENUM(CV_8U, CV_32F)))
 {
-    // getting params
-    MergeParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int depth = get<1>(params), channels = 3;
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, CV_MAKE_TYPE(depth, channels));
     declare.in(src, WARMUP_RNG);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src);
         vector<ocl::oclMat> oclDst(channels, ocl::oclMat(srcSize, CV_MAKE_TYPE(depth, 1)));
 
         TEST_CYCLE() cv::ocl::split(oclSrc, oclDst);
 
-        AssertEQ(channels, 3);
+        ASSERT_EQ(3, channels);
         Mat dst0, dst1, dst2;
         oclDst[0].download(dst0);
         oclDst[1].download(dst1);
@@ -144,21 +125,17 @@ PERF_TEST_P(SplitFixture, Split,
         SANITY_CHECK(dst1);
         SANITY_CHECK(dst2);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         vector<Mat> dst(channels, Mat(srcSize, CV_MAKE_TYPE(depth, 1)));
         TEST_CYCLE() cv::split(src, dst);
 
-        AssertEQ(channels, 3);
+        ASSERT_EQ(3, channels);
         Mat & dst0 = dst[0], & dst1 = dst[1], & dst2 = dst[2];
         SANITY_CHECK(dst0);
         SANITY_CHECK(dst1);
         SANITY_CHECK(dst2);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

@@ -60,22 +60,22 @@ PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
                                                  string("gpu/stereobm/aloe-L.png")),
                                ::testing::Range(0.0, 4.0, 3.0)))
 {
-    std::vector<cv::Point2f> pts_gold;
 
-    // getting params
-    GoodFeaturesToTrackParams param = GetParam();
-    const string fileName = getDataPath(get<0>(param)), impl = getSelectedImpl();
+    const GoodFeaturesToTrackParams param = GetParam();
+    const string fileName = getDataPath(get<0>(param));
     const int maxCorners = 2000;
     const double qualityLevel = 0.01, minDistance = get<1>(param);
 
     Mat frame = imread(fileName, IMREAD_GRAYSCALE);
-    declare.in(frame);
     ASSERT_TRUE(!frame.empty()) << "no input image";
 
-    if (impl == "ocl")
+    vector<Point2f> pts_gold;
+    declare.in(frame);
+
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclFrame(frame), pts_oclmat;
-        cv::ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
+        ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
 
         TEST_CYCLE() detector(oclFrame, pts_oclmat);
 
@@ -83,17 +83,13 @@ PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
 
         SANITY_CHECK(pts_gold);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::goodFeaturesToTrack(frame, pts_gold,
                                              maxCorners, qualityLevel, minDistance);
 
         SANITY_CHECK(pts_gold);
     }
- #ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

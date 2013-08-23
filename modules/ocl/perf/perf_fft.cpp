@@ -51,37 +51,33 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> dftFixture;
 
-PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES)
+PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES) // TODO not implemented
 {
-    const std::string impl = getSelectedImpl();
-    Size srcSize = GetParam();
+    const Size srcSize = GetParam();
 
     Mat src(srcSize, CV_32FC2), dst;
     randu(src, 0.0f, 1.0f);
     declare.in(src);
 
-    if (impl == "ocl")
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(7.4);
+
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst;
 
-        EXPECT_NO_THROW({
-            TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
-        });
+        TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
 
         oclDst.download(dst);
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::dft(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

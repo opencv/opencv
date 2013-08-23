@@ -51,30 +51,22 @@ using std::tr1::get;
 
 ///////////// ConvertTo////////////////////////
 
-CV_ENUM(ConvertToMatType, CV_8UC1, CV_8UC4)
-
-typedef tuple<Size, ConvertToMatType> ConvertToParams;
-typedef TestBaseWithParam<ConvertToParams> ConvertToFixture;
+typedef Size_MatType ConvertToFixture;
 
 PERF_TEST_P(ConvertToFixture, ConvertTo,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               ConvertToMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    ConvertToParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst;
     const int dstType = CV_MAKE_TYPE(CV_32F, src.channels());
     dst.create(srcSize, dstType);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, dstType);
 
@@ -84,43 +76,32 @@ PERF_TEST_P(ConvertToFixture, ConvertTo,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() src.convertTo(dst, dstType);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// copyTo////////////////////////
 
-typedef ConvertToMatType copyToMatType;
-typedef tuple<Size, copyToMatType> copyToParams;
-typedef TestBaseWithParam<copyToParams> copyToFixture;
+typedef Size_MatType copyToFixture;
 
 PERF_TEST_P(copyToFixture, copyTo,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               copyToMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    copyToParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -130,44 +111,33 @@ PERF_TEST_P(copyToFixture, copyTo,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() src.copyTo(dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// setTo////////////////////////
 
-typedef ConvertToMatType setToMatType;
-typedef tuple<Size, setToMatType> setToParams;
-typedef TestBaseWithParam<setToParams> setToFixture;
+typedef Size_MatType setToFixture;
 
 PERF_TEST_P(setToFixture, setTo,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               setToMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    setToParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
     const Scalar val(1, 2, 3, 4);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type);
     declare.in(src);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(srcSize, type);
 
@@ -176,16 +146,12 @@ PERF_TEST_P(setToFixture, setTo,
 
         SANITY_CHECK(src);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() src.setTo(val);
 
         SANITY_CHECK(src);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

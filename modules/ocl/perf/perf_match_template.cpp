@@ -51,23 +51,16 @@ using std::tr1::get;
 
 /////////// matchTemplate ////////////////////////
 
-CV_ENUM(CV_TM_CCORRMatType, CV_32FC1, CV_32FC4)
-
-typedef tuple<Size, CV_TM_CCORRMatType> CV_TM_CCORRParams;
-typedef TestBaseWithParam<CV_TM_CCORRParams> CV_TM_CCORRFixture;
+typedef Size_MatType CV_TM_CCORRFixture;
 
 PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
             ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               CV_TM_CCORRMatType::all()))
+                               OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    // getting params
-    CV_TM_CCORRParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params), templSize(5, 5);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), templ(templSize, type);
     const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
     Mat dst(dstSize, CV_32F);
@@ -75,8 +68,7 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
     randu(templ, 0.0f, 1.0f);
     declare.time(srcSize == OCL_SIZE_2000 ? 20 : 6).in(src, templ).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_32F);
 
@@ -86,37 +78,29 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
 
         SANITY_CHECK(dst, 1e-4);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR);
 
         SANITY_CHECK(dst, 1e-4);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 typedef TestBaseWithParam<Size> CV_TM_CCORR_NORMEDFixture;
 
 PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
 {
-    // getting params
     const Size srcSize = GetParam(), templSize(5, 5);
-    const std::string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_8UC1), templ(templSize, CV_8UC1), dst;
     const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
     dst.create(dstSize, CV_8UC1);
     declare.in(src, templ, WARMUP_RNG).out(dst)
             .time(srcSize == OCL_SIZE_2000 ? 10 : srcSize == OCL_SIZE_4000 ? 23 : 2);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_8UC1);
 
@@ -126,16 +110,12 @@ PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst, 2e-2);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
 
         SANITY_CHECK(dst, 2e-2);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

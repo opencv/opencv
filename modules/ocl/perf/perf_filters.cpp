@@ -51,21 +51,15 @@ using std::tr1::tuple;
 
 ///////////// Blur////////////////////////
 
-CV_ENUM(BlurMatType, CV_8UC1, CV_8UC4)
-
-typedef tuple<Size, BlurMatType> BlurParams;
-typedef TestBaseWithParam<BlurParams> BlurFixture;
+typedef Size_MatType BlurFixture;
 
 PERF_TEST_P(BlurFixture, Blur,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               BlurMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    BlurParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params), ksize(3, 3);
     const int type = get<1>(params), bordertype = BORDER_CONSTANT;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -73,7 +67,7 @@ PERF_TEST_P(BlurFixture, Blur,
     if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(5);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -83,36 +77,27 @@ PERF_TEST_P(BlurFixture, Blur,
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::blur(src, dst, ksize, Point(-1, -1), bordertype);
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// Laplacian////////////////////////
 
-typedef BlurMatType LaplacianMatType;
-typedef tuple<Size, LaplacianMatType> LaplacianParams;
-typedef TestBaseWithParam<LaplacianParams> LaplacianFixture;
+typedef Size_MatType LaplacianFixture;
 
 PERF_TEST_P(LaplacianFixture, Laplacian,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               LaplacianMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    LaplacianParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 3;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -120,7 +105,7 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
     if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(6);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -130,38 +115,28 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize, 1);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// Erode ////////////////////
 
-CV_ENUM(ErodeMatType, CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)
-
-typedef tuple<Size, ErodeMatType> ErodeParams;
-typedef TestBaseWithParam<ErodeParams> ErodeFixture;
+typedef Size_MatType ErodeFixture;
 
 PERF_TEST_P(ErodeFixture, Erode,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               ErodeMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
 {
-    // getting params
-    ErodeParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 3;
     const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst).in(ker);
@@ -169,7 +144,7 @@ PERF_TEST_P(ErodeFixture, Erode,
     if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(5);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKer(ker);
 
@@ -179,36 +154,27 @@ PERF_TEST_P(ErodeFixture, Erode,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::erode(src, dst, ker);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// Sobel ////////////////////////
 
-typedef BlurMatType SobelMatType;
-typedef tuple<Size, SobelMatType> SobelMatParams;
-typedef TestBaseWithParam<SobelMatParams> SobelFixture;
+typedef Size_MatType SobelFixture;
 
 PERF_TEST_P(SobelFixture, Sobel,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               SobelMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    SobelMatParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), dx = 1, dy = 1;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -219,7 +185,7 @@ PERF_TEST_P(SobelFixture, Sobel,
     else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(20);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -229,36 +195,27 @@ PERF_TEST_P(SobelFixture, Sobel,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// Scharr ////////////////////////
 
-typedef BlurMatType ScharrMatType;
-typedef tuple<Size, ScharrMatType> ScharrParams;
-typedef TestBaseWithParam<ScharrParams> ScharrFixture;
+typedef Size_MatType ScharrFixture;
 
 PERF_TEST_P(ScharrFixture, Scharr,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               ScharrMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    ScharrParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), dx = 1, dy = 0;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -269,7 +226,7 @@ PERF_TEST_P(ScharrFixture, Scharr,
     else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(21);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -279,43 +236,34 @@ PERF_TEST_P(ScharrFixture, Scharr,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::Scharr(src, dst, -1, dx, dy);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// GaussianBlur ////////////////////////
 
-typedef ErodeMatType GaussianBlurMatType;
-typedef tuple<Size, GaussianBlurMatType> GaussianBlurParams;
-typedef TestBaseWithParam<GaussianBlurParams> GaussianBlurFixture;
+typedef Size_MatType GaussianBlurFixture;
 
 PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
             ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
-                               GaussianBlurMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
 {
-    // getting params
-    GaussianBlurParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 7;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
     const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 3e-4;
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -325,36 +273,27 @@ PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
 
         SANITY_CHECK(dst, eps);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 0);
 
         SANITY_CHECK(dst, eps);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// filter2D////////////////////////
 
-typedef BlurMatType filter2DMatType;
-typedef tuple<Size, filter2DMatType> filter2DParams;
-typedef TestBaseWithParam<filter2DParams> filter2DFixture;
+typedef Size_MatType filter2DFixture;
 
 PERF_TEST_P(filter2DFixture, filter2D,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               filter2DMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    filter2DParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), ksize = 3;
-
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, type), dst(srcSize, type), kernel(ksize, ksize, CV_32SC1);
     declare.in(src, WARMUP_RNG).in(kernel).out(dst);
@@ -363,7 +302,7 @@ PERF_TEST_P(filter2DFixture, filter2D,
     if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
         declare.time(8);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKernel(kernel);
 
@@ -373,16 +312,12 @@ PERF_TEST_P(filter2DFixture, filter2D,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
 
         SANITY_CHECK(dst);
     }
- #ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

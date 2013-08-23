@@ -55,16 +55,12 @@ typedef TestBaseWithParam<Size> equalizeHistFixture;
 
 PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 {
-    // getting params
     const Size srcSize = GetParam();
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_8UC1), dst(srcSize, CV_8UC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
@@ -74,45 +70,34 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::equalizeHist(src, dst);
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 /////////// CopyMakeBorder //////////////////////
 
-CV_ENUM(CopyMakeBorderMatType, CV_8UC1, CV_8UC4)
-
-typedef tuple<Size, CopyMakeBorderMatType> CopyMakeBorderParams;
-typedef TestBaseWithParam<CopyMakeBorderParams> CopyMakeBorderFixture;
+typedef Size_MatType CopyMakeBorderFixture;
 
 PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               CopyMakeBorderMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    // getting params
-    CopyMakeBorderParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = BORDER_CONSTANT;
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, type), dst;
     const Size dstSize = srcSize + Size(12, 12);
     dst.create(dstSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
@@ -122,40 +107,29 @@ PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::copyMakeBorder(src, dst, 7, 5, 5, 7, borderType, cv::Scalar(1.0));
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// cornerMinEigenVal ////////////////////////
 
-CV_ENUM(cornerMinEigenValMatType, CV_8UC1, CV_32FC1)
-
-typedef tuple<Size, cornerMinEigenValMatType> cornerMinEigenValParams;
-typedef TestBaseWithParam<cornerMinEigenValParams> cornerMinEigenValFixture;
+typedef Size_MatType cornerMinEigenValFixture;
 
 PERF_TEST_P(cornerMinEigenValFixture, cornerMinEigenVal,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               cornerMinEigenValMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
 {
-    // getting params
-    cornerMinEigenValParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = BORDER_REFLECT;
     const int blockSize = 7, apertureSize = 1 + 2 * 3;
 
-    const string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst)
             .time(srcSize == OCL_SIZE_4000 ? 20 : srcSize == OCL_SIZE_2000 ? 5 : 3);
@@ -163,8 +137,7 @@ PERF_TEST_P(cornerMinEigenValFixture, cornerMinEigenVal,
     const int depth = CV_MAT_DEPTH(type);
     const ERROR_TYPE errorType = depth == CV_8U ? ERROR_ABSOLUTE : ERROR_RELATIVE;
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
@@ -174,45 +147,34 @@ PERF_TEST_P(cornerMinEigenValFixture, cornerMinEigenVal,
 
         SANITY_CHECK(dst, 1e-6, errorType);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::cornerMinEigenVal(src, dst, blockSize, apertureSize, borderType);
 
         SANITY_CHECK(dst, 1e-6, errorType);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// cornerHarris ////////////////////////
 
-typedef cornerMinEigenValMatType cornerHarrisMatType;
-typedef tuple<Size, cornerHarrisMatType> cornerHarrisParams;
-typedef TestBaseWithParam<cornerHarrisParams> cornerHarrisFixture;
+typedef Size_MatType cornerHarrisFixture;
 
 PERF_TEST_P(cornerHarrisFixture, cornerHarris,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               cornerHarrisMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_32FC1)))
 {
-    // getting params
-    cornerHarrisParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), borderType = BORDER_REFLECT;
 
-    const string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, CV_32FC1);
     randu(src, 0, 1);
     declare.in(src).out(dst)
             .time(srcSize == OCL_SIZE_4000 ? 20 : srcSize == OCL_SIZE_2000 ? 5 : 3);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
@@ -222,36 +184,28 @@ PERF_TEST_P(cornerHarrisFixture, cornerHarris,
 
         SANITY_CHECK(dst, 3e-5);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::cornerHarris(src, dst, 5, 7, 0.1, borderType);
 
         SANITY_CHECK(dst, 3e-5);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// integral ////////////////////////
 
 typedef TestBaseWithParam<Size> integralFixture;
 
-PERF_TEST_P(integralFixture, DISABLED_integral, OCL_TYPICAL_MAT_SIZES)
+PERF_TEST_P(integralFixture, DISABLED_integral, OCL_TYPICAL_MAT_SIZES) // TODO does not work properly
 {
-    // getting params
     const Size srcSize = GetParam();
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_8UC1), dst;
     declare.in(src, WARMUP_RNG);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst;
 
@@ -261,29 +215,23 @@ PERF_TEST_P(integralFixture, DISABLED_integral, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::integral(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// WarpAffine ////////////////////////
 
-typedef CopyMakeBorderMatType WarpAffineMatType;
-typedef tuple<Size, WarpAffineMatType> WarpAffineParams;
-typedef TestBaseWithParam<WarpAffineParams> WarpAffineFixture;
+typedef Size_MatType WarpAffineFixture;
 
 PERF_TEST_P(WarpAffineFixture, WarpAffine,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               WarpAffineMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
     static const double coeffs[2][3] =
     {
@@ -293,18 +241,14 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
     Mat M(2, 3, CV_64F, (void *)coeffs);
     const int interpolation = INTER_NEAREST;
 
-    // getting params
-    WarpAffineParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -314,29 +258,23 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::warpAffine(src, dst, M, srcSize, interpolation);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// WarpPerspective ////////////////////////
 
-typedef CopyMakeBorderMatType WarpPerspectiveMatType;
-typedef tuple<Size, WarpPerspectiveMatType> WarpPerspectiveParams;
-typedef TestBaseWithParam<WarpPerspectiveParams> WarpPerspectiveFixture;
+typedef Size_MatType WarpPerspectiveFixture;
 
 PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               WarpPerspectiveMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
     static const double coeffs[3][3] =
     {
@@ -347,19 +285,15 @@ PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
     Mat M(3, 3, CV_64F, (void *)coeffs);
     const int interpolation = INTER_LINEAR;
 
-    // getting params
-    WarpPerspectiveParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst)
             .time(srcSize == OCL_SIZE_4000 ? 18 : srcSize == OCL_SIZE_2000 ? 5 : 2);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
@@ -369,42 +303,34 @@ PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::warpPerspective(src, dst, M, srcSize, interpolation);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// resize ////////////////////////
 
 CV_ENUM(resizeInterType, INTER_NEAREST, INTER_LINEAR)
 
-typedef CopyMakeBorderMatType resizeMatType;
-typedef tuple<Size, resizeMatType, resizeInterType, double> resizeParams;
+typedef tuple<Size, MatType, resizeInterType, double> resizeParams;
 typedef TestBaseWithParam<resizeParams> resizeFixture;
 
 PERF_TEST_P(resizeFixture, resize,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               resizeMatType::all(),
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
                                resizeInterType::all(),
                                ::testing::Values(0.5, 2.0)))
 {
-    // getting params
-    resizeParams params = GetParam();
+    const resizeParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interType = get<2>(params);
     double scale = get<3>(params);
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, type), dst;
     const Size dstSize(cvRound(srcSize.width * scale), cvRound(srcSize.height * scale));
     dst.create(dstSize, type);
@@ -412,8 +338,7 @@ PERF_TEST_P(resizeFixture, resize,
     if (interType == INTER_LINEAR && type == CV_8UC4 && OCL_SIZE_4000 == srcSize)
         declare.time(11);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
@@ -423,18 +348,14 @@ PERF_TEST_P(resizeFixture, resize,
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::resize(src, dst, Size(), scale, scale, interType);
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// threshold////////////////////////
@@ -448,19 +369,15 @@ PERF_TEST_P(ThreshFixture, threshold,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
                                ThreshType::all()))
 {
-    // getting params
-    ThreshParams params = GetParam();
+    const ThreshParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int threshType = get<1>(params);
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_8U), dst(srcSize, CV_8U);
     randu(src, 0, 100);
     declare.in(src).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8U);
 
@@ -470,23 +387,19 @@ PERF_TEST_P(ThreshFixture, threshold,
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::threshold(src, dst, 50.0, 0.0, threshType);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// meanShiftFiltering////////////////////////
 
-typedef struct
+typedef struct _COOR
 {
     short x;
     short y;
@@ -681,7 +594,6 @@ PERF_TEST_P(meanShiftFilteringFixture, meanShiftFiltering,
 {
     const Size srcSize = GetParam();
     const int sp = 5, sr = 6;
-    const string impl = getSelectedImpl();
     cv::TermCriteria crit(cv::TermCriteria::COUNT + cv::TermCriteria::EPS, 5, 1);
 
     Mat src(srcSize, CV_8UC4), dst(srcSize, CV_8UC4);
@@ -689,13 +601,13 @@ PERF_TEST_P(meanShiftFilteringFixture, meanShiftFiltering,
             .time(srcSize == OCL_SIZE_4000 ?
                       56 : srcSize == OCL_SIZE_2000 ? 15 : 3.8);
 
-    if (impl == "plain")
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() meanShiftFiltering_(src, dst, sp, sr, crit);
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "ocl")
+    else if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8UC4);
 
@@ -705,12 +617,8 @@ PERF_TEST_P(meanShiftFilteringFixture, meanShiftFiltering,
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 static void meanShiftProc_(const Mat &src_roi, Mat &dst_roi, Mat &dstCoor_roi, int sp, int sr, cv::TermCriteria crit)
@@ -778,7 +686,6 @@ PERF_TEST_P(meanShiftProcFixture, meanShiftProc,
             OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
-    const string impl = getSelectedImpl();
     TermCriteria crit(TermCriteria::COUNT + TermCriteria::EPS, 5, 1);
 
     Mat src(srcSize, CV_8UC4), dst1(srcSize, CV_8UC4),
@@ -787,14 +694,14 @@ PERF_TEST_P(meanShiftProcFixture, meanShiftProc,
             .time(srcSize == OCL_SIZE_4000 ?
                       56 : srcSize == OCL_SIZE_2000 ? 15 : 3.8);;
 
-    if (impl == "plain")
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() meanShiftProc_(src, dst1, dst2, 5, 6, crit);
 
         SANITY_CHECK(dst1);
         SANITY_CHECK(dst2);
     }
-    else if (impl == "ocl")
+    else if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst1(srcSize, CV_8UC4),
                 oclDst2(srcSize, CV_16SC2);
@@ -807,34 +714,26 @@ PERF_TEST_P(meanShiftProcFixture, meanShiftProc,
         SANITY_CHECK(dst1);
         SANITY_CHECK(dst2);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// remap////////////////////////
 
 CV_ENUM(RemapInterType, INTER_NEAREST, INTER_LINEAR)
 
-typedef CopyMakeBorderMatType remapMatType;
-typedef tuple<Size, remapMatType, RemapInterType> remapParams;
+typedef tuple<Size, MatType, RemapInterType> remapParams;
 typedef TestBaseWithParam<remapParams> remapFixture;
 
 PERF_TEST_P(remapFixture, remap,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               remapMatType::all(),
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4),
                                RemapInterType::all()))
 {
-    // getting params
-    remapParams params = GetParam();
+    const remapParams params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), interpolation = get<2>(params);
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
@@ -859,8 +758,7 @@ PERF_TEST_P(remapFixture, remap,
 
     const int borderMode = BORDER_CONSTANT;
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
         ocl::oclMat oclXMap(xmap), oclYMap(ymap);
@@ -871,18 +769,14 @@ PERF_TEST_P(remapFixture, remap,
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::remap(src, dst, xmap, ymap, interpolation, borderMode);
 
         SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// CLAHE ////////////////////////
@@ -891,11 +785,9 @@ typedef TestBaseWithParam<Size> CLAHEFixture;
 
 PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TYPICAL_MAT_SIZES)
 {
-    // getting params
     const Size srcSize = GetParam();
     const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_8UC1), dst;
     const double clipLimit = 40.0;
     declare.in(src, WARMUP_RNG);
@@ -903,8 +795,7 @@ PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TYPICAL_MAT_SIZES)
     if (srcSize == OCL_SIZE_4000)
         declare.time(11);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst;
         cv::Ptr<cv::CLAHE> oclClahe = cv::ocl::createCLAHE(clipLimit);
@@ -915,19 +806,15 @@ PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(clipLimit);
         TEST_CYCLE() clahe->apply(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
 
 ///////////// columnSum////////////////////////
@@ -946,19 +833,15 @@ static void columnSumPerfTest(const Mat & src, Mat & dst)
 
 PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
 {
-    // getting params
     const Size srcSize = GetParam();
-    const string impl = getSelectedImpl();
 
-    // creating src data
     Mat src(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (srcSize == OCL_SIZE_4000)
         declare.time(5);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
@@ -968,16 +851,12 @@ PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() columnSumPerfTest(src, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

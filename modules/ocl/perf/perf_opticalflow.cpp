@@ -70,25 +70,25 @@ typedef tuple<int, tuple<string, string, LoadMode> > PyrLKOpticalFlowParamType;
 typedef TestBaseWithParam<PyrLKOpticalFlowParamType> PyrLKOpticalFlowFixture;
 
 PERF_TEST_P(PyrLKOpticalFlowFixture,
-            PyrLKOpticalFlow,
+            DISABLED_PyrLKOpticalFlow,
             ::testing::Combine(
                 ::testing::Values(1000, 2000, 4000),
                 ::testing::Values(
                     make_tuple<string, string, LoadMode>
                     (
                         string("gpu/opticalflow/rubberwhale1.png"),
-                        string("gpu/opticalflow/rubberwhale1.png"),
+                        string("gpu/opticalflow/rubberwhale2.png"),
                         LoadMode(IMREAD_COLOR)
                         )
-//                    , make_tuple<string, string, LoadMode>
-//                    (
-//                        string("gpu/stereobm/aloe-L.png"),
-//                        string("gpu/stereobm/aloe-R.png"),
-//                        LoadMode(IMREAD_GRAYSCALE)
-//                        )
+                    , make_tuple<string, string, LoadMode>
+                    (
+                        string("gpu/stereobm/aloe-L.png"),
+                        string("gpu/stereobm/aloe-R.png"),
+                        LoadMode(IMREAD_GRAYSCALE)
+                        )
                     )
                 )
-            )
+            ) // TODO to big difference between implementations
 {
     PyrLKOpticalFlowParamType params = GetParam();
     tuple<string, string, LoadMode> fileParam = get<1>(params);
@@ -97,7 +97,6 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
     const string fileName0 = get<0>(fileParam), fileName1 = get<1>(fileParam);
     Mat frame0 = imread(getDataPath(fileName0), openMode);
     Mat frame1 = imread(getDataPath(fileName1), openMode);
-    const string impl = getSelectedImpl();
 
     ASSERT_FALSE(frame0.empty()) << "can't load " << fileName0;
     ASSERT_FALSE(frame1.empty()) << "can't load " << fileName1;
@@ -108,14 +107,12 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
     else
         grayFrame = frame0;
 
-    // initialization
     vector<Point2f> pts, nextPts;
     vector<unsigned char> status;
     vector<float> err;
     goodFeaturesToTrack(grayFrame, pts, pointsCount, 0.01, 0.0);
 
-    // selecting implementation
-    if (impl == "plain")
+    if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE()
                 cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
@@ -124,7 +121,7 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
         SANITY_CHECK(status);
         SANITY_CHECK(err);
     }
-    else if (impl == "ocl")
+    else if (RUN_OCL_IMPL)
     {
         ocl::PyrLKOpticalFlow oclPyrLK;
         ocl::oclMat oclFrame0(frame0), oclFrame1(frame1);
@@ -142,228 +139,135 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
         SANITY_CHECK(status);
         SANITY_CHECK(err);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
-
-//    size_t mismatch = 0;
-//    for (int i = 0; i < (int)nextPts.size(); ++i)
-//    {
-//        if(status[i] != ocl_status.at<unsigned char>(0, i))
-//        {
-//            mismatch++;
-//            continue;
-//        }
-//        if(status[i])
-//        {
-//            Point2f gpu_rst = ocl_nextPts.at<Point2f>(0, i);
-//            Point2f cpu_rst = nextPts[i];
-//            if(fabs(gpu_rst.x - cpu_rst.x) >= 1. || fabs(gpu_rst.y - cpu_rst.y) >= 1.)
-//                mismatch++;
-//        }
-//    }
-//    double ratio = (double)mismatch / (double)nextPts.size();
-//    if(ratio < .02)
-//        TestSystem::instance().setAccurate(1, ratio);
-//    else
-//        TestSystem::instance().setAccurate(0, ratio);
+        OCL_PERF_ELSE
 }
 
-
-PERFTEST(tvl1flow)
+PERF_TEST(tvl1flowFixture, tvl1flow)
 {
-    cv::Mat frame0 = imread("rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-    assert(!frame0.empty());
+    Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
 
-    cv::Mat frame1 = imread("rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-    assert(!frame1.empty());
+    Mat frame1 = imread(getDataPath("gpu/opticalflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
 
-    cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
-    cv::ocl::oclMat d_flowx(frame0.size(), CV_32FC1);
-    cv::ocl::oclMat d_flowy(frame1.size(), CV_32FC1);
+    const Size srcSize = frame0.size();
+    const double eps = 1.2;
+    Mat flow(srcSize, CV_32FC2), flow1(srcSize, CV_32FC1), flow2(srcSize, CV_32FC1);
+    declare.in(frame0, frame1).out(flow1, flow2).time(159);
 
-    cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
-    cv::Mat flow;
+    if (RUN_PLAIN_IMPL)
+    {
+        Ptr<DenseOpticalFlow> alg = createOptFlow_DualTVL1();
 
+        TEST_CYCLE() alg->calc(frame0, frame1, flow);
 
-    SUBTEST << frame0.cols << 'x' << frame0.rows << "; rubberwhale1.png; "<<frame1.cols<<'x'<<frame1.rows<<"; rubberwhale2.png";
+        alg->collectGarbage();
+        Mat flows[2] = { flow1, flow2 };
+        split(flow, flows);
 
-    alg->calc(frame0, frame1, flow);
+        SANITY_CHECK(flow1, eps);
+        SANITY_CHECK(flow2, eps);
+    }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::OpticalFlowDual_TVL1_OCL oclAlg;
+        ocl::oclMat oclFrame0(frame0), oclFrame1(frame1), oclFlow1(srcSize, CV_32FC1),
+                oclFlow2(srcSize, CV_32FC1);
 
-    CPU_ON;
-    alg->calc(frame0, frame1, flow);
-    CPU_OFF;
+        TEST_CYCLE() oclAlg(oclFrame0, oclFrame1, oclFlow1, oclFlow2);
 
-    cv::Mat gold[2];
-    cv::split(flow, gold);
+        oclAlg.collectGarbage();
 
-    cv::ocl::oclMat d0(frame0.size(), CV_32FC1);
-    d0.upload(frame0);
-    cv::ocl::oclMat d1(frame1.size(), CV_32FC1);
-    d1.upload(frame1);
+        oclFlow1.download(flow1);
+        oclFlow2.download(flow2);
 
-    WARMUP_ON;
-    d_alg(d0, d1, d_flowx, d_flowy);
-    WARMUP_OFF;
-    /*
-        double diff1 = 0.0, diff2 = 0.0;
-        if(ExceptedMatSimilar(gold[0], cv::Mat(d_flowx), 3e-3, diff1) == 1
-            &&ExceptedMatSimilar(gold[1], cv::Mat(d_flowy), 3e-3, diff2) == 1)
-            TestSystem::instance().setAccurate(1);
-        else
-            TestSystem::instance().setAccurate(0);
-
-        TestSystem::instance().setDiff(diff1);
-        TestSystem::instance().setDiff(diff2);
-    */
-
-
-    GPU_ON;
-    d_alg(d0, d1, d_flowx, d_flowy);
-    d_alg.collectGarbage();
-    GPU_OFF;
-
-
-    cv::Mat flowx, flowy;
-
-    GPU_FULL_ON;
-    d0.upload(frame0);
-    d1.upload(frame1);
-    d_alg(d0, d1, d_flowx, d_flowy);
-    d_alg.collectGarbage();
-    d_flowx.download(flowx);
-    d_flowy.download(flowy);
-    GPU_FULL_OFF;
-
-    TestSystem::instance().ExceptedMatSimilar(gold[0], flowx, 3e-3);
-    TestSystem::instance().ExceptedMatSimilar(gold[1], flowy, 3e-3);
+        SANITY_CHECK(flow1, eps);
+        SANITY_CHECK(flow2, eps);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// FarnebackOpticalFlow ////////////////////////
-PERFTEST(FarnebackOpticalFlow)
+
+CV_ENUM(farneFlagType, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+
+typedef tuple<tuple<int, double>, farneFlagType, bool> FarnebackOpticalFlowParams;
+typedef TestBaseWithParam<FarnebackOpticalFlowParams> FarnebackOpticalFlowFixture;
+
+PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
+            ::testing::Combine(
+                ::testing::Values(make_tuple<int, double>(5, 1.1),
+                                  make_tuple<int, double>(7, 1.5)),
+                farneFlagType::all(),
+                ::testing::Bool()))
 {
-    cv::Mat frame0 = imread("rubberwhale1.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame0.empty());
+    Mat frame0 = imread(getDataPath("gpu/opticalflow/rubberwhale1.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty()) << "can't load rubberwhale1.png";
 
-    cv::Mat frame1 = imread("rubberwhale2.png", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(frame1.empty());
+    Mat frame1 = imread(getDataPath("gpu/opticalflow/rubberwhale2.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty()) << "can't load rubberwhale2.png";
 
-    cv::ocl::oclMat d_frame0(frame0), d_frame1(frame1);
+    const Size srcSize = frame0.size();
 
-    int polyNs[2] = { 5, 7 };
-    double polySigmas[2] = { 1.1, 1.5 };
-    int farneFlags[2] = { 0, cv::OPTFLOW_FARNEBACK_GAUSSIAN };
-    bool UseInitFlows[2] = { false, true };
-    double pyrScale = 0.5;
+    const FarnebackOpticalFlowParams params = GetParam();
+    const tuple<int, double> polyParams = get<0>(params);
+    const int polyN = get<0>(polyParams), flags = get<1>(params);
+    const double polySigma = get<1>(polyParams), pyrScale = 0.5;
+    const bool useInitFlow = get<2>(params);
+    const double eps = 1.5;
 
-    string farneFlagStrs[2] = { "BoxFilter", "GaussianBlur" };
-    string useInitFlowStrs[2] = { "", "UseInitFlow" };
+    Mat flowx(srcSize, CV_32FC1), flowy(srcSize, CV_32FC1), flow(srcSize, CV_32FC2);
+    declare.in(frame0, frame1).out(flowx, flowy);
 
-    for ( int i = 0; i < 2; ++i)
+    ocl::FarnebackOpticalFlow farn;
+    farn.pyrScale = pyrScale;
+    farn.polyN = polyN;
+    farn.polySigma = polySigma;
+    farn.flags = flags;
+
+    if (RUN_PLAIN_IMPL)
     {
-        int polyN = polyNs[i];
-        double polySigma = polySigmas[i];
-
-        for ( int j = 0; j < 2; ++j)
+        if (useInitFlow)
         {
-            int flags = farneFlags[j];
+            calcOpticalFlowFarneback(
+                        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
+                        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+            farn.flags |= OPTFLOW_USE_INITIAL_FLOW;
+        }
 
-            for ( int k = 0; k < 2; ++k)
-            {
-                bool useInitFlow = UseInitFlows[k];
-                SUBTEST << "polyN(" << polyN << "); " << farneFlagStrs[j] << "; " << useInitFlowStrs[k];
-
-                cv::ocl::FarnebackOpticalFlow farn;
-                farn.pyrScale = pyrScale;
-                farn.polyN = polyN;
-                farn.polySigma = polySigma;
-                farn.flags = flags;
-
-                cv::ocl::oclMat d_flowx, d_flowy;
-                cv::Mat flow, flowBuf, flowxBuf, flowyBuf;
-
-                WARMUP_ON;
-                farn(d_frame0, d_frame1, d_flowx, d_flowy);
-
-                if (useInitFlow)
-                {
-                    cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
-                    cv::merge(flowxy, 2, flow);
-                    flow.copyTo(flowBuf);
-                    flowxy[0].copyTo(flowxBuf);
-                    flowxy[1].copyTo(flowyBuf);
-
-                    farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
-                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
-                }
-                WARMUP_OFF;
-
-                cv::calcOpticalFlowFarneback(
+        TEST_CYCLE()
+                calcOpticalFlowFarneback(
                     frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
                     farn.numIters, farn.polyN, farn.polySigma, farn.flags);
 
-                std::vector<cv::Mat> flowxy;
-                cv::split(flow, flowxy);
+        Mat flowxy[2] = { flowx, flowy };
+        split(flow, flowxy);
 
-                Mat md_flowx = cv::Mat(d_flowx);
-                Mat md_flowy = cv::Mat(d_flowy);
-                TestSystem::instance().ExceptedMatSimilar(flowxy[0], md_flowx, 0.1);
-                TestSystem::instance().ExceptedMatSimilar(flowxy[1], md_flowy, 0.1);
-
-                if (useInitFlow)
-                {
-                    cv::Mat flowx, flowy;
-                    farn.flags = (flags | cv::OPTFLOW_USE_INITIAL_FLOW);
-
-                    CPU_ON;
-                    cv::calcOpticalFlowFarneback(
-                        frame0, frame1, flowBuf, farn.pyrScale, farn.numLevels, farn.winSize,
-                        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
-                    CPU_OFF;
-
-                    GPU_ON;
-                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
-                    GPU_OFF;
-
-                    GPU_FULL_ON;
-                    d_frame0.upload(frame0);
-                    d_frame1.upload(frame1);
-                    d_flowx.upload(flowxBuf);
-                    d_flowy.upload(flowyBuf);
-                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
-                    d_flowx.download(flowx);
-                    d_flowy.download(flowy);
-                    GPU_FULL_OFF;
-                }
-                else
-                {
-                    cv::Mat flow, flowx, flowy;
-                    cv::ocl::oclMat d_flowx, d_flowy;
-
-                    farn.flags = flags;
-
-                    CPU_ON;
-                    cv::calcOpticalFlowFarneback(
-                        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
-                        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
-                    CPU_OFF;
-
-                    GPU_ON;
-                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
-                    GPU_OFF;
-
-                    GPU_FULL_ON;
-                    d_frame0.upload(frame0);
-                    d_frame1.upload(frame1);
-                    farn(d_frame0, d_frame1, d_flowx, d_flowy);
-                    d_flowx.download(flowx);
-                    d_flowy.download(flowy);
-                    GPU_FULL_OFF;
-                }
-            }
-        }
+        SANITY_CHECK(flowx, eps);
+        SANITY_CHECK(flowy, eps);
     }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclFrame0(frame0), oclFrame1(frame1),
+                oclFlowx(srcSize, CV_32FC1), oclFlowy(srcSize, CV_32FC1);
+
+        if (useInitFlow)
+        {
+            farn(oclFrame0, oclFrame1, oclFlowx, oclFlowy);
+            farn.flags |= OPTFLOW_USE_INITIAL_FLOW;
+        }
+
+        TEST_CYCLE()
+                farn(oclFrame0, oclFrame1, oclFlowx, oclFlowy);
+
+        oclFlowx.download(flowx);
+        oclFlowy.download(flowy);
+
+        SANITY_CHECK(flowx, eps);
+        SANITY_CHECK(flowy, eps);
+    }
+    else
+        OCL_PERF_ELSE
 }

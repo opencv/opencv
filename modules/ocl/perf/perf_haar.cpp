@@ -88,14 +88,13 @@ public:
 
 PERF_TEST(HaarFixture, Haar)
 {
-    const std::string impl = getSelectedImpl();
     vector<Rect> faces;
 
     Mat img = imread(getDataPath("gpu/haarcascade/basketball1.png"), CV_LOAD_IMAGE_GRAYSCALE);
     ASSERT_TRUE(!img.empty()) << "can't open basketball1.png";
     declare.in(img);
 
-    if (impl == "plain")
+    if (RUN_PLAIN_IMPL)
     {
         CascadeClassifier faceCascade;
         ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
@@ -106,7 +105,7 @@ PERF_TEST(HaarFixture, Haar)
 
         SANITY_CHECK(faces, 4 + 1e-4);
     }
-    else if (impl == "ocl")
+    else if (RUN_OCL_IMPL)
     {
         ocl::CascadeClassifier_GPU faceCascade;
         ocl::oclMat oclImg(img);
@@ -119,11 +118,6 @@ PERF_TEST(HaarFixture, Haar)
 
         SANITY_CHECK(faces, 4 + 1e-4);
     }
-
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

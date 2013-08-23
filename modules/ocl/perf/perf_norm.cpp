@@ -53,21 +53,18 @@ using std::tr1::get;
 
 typedef TestBaseWithParam<Size> normFixture;
 
-PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES)
+PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't work properly
 {
-    // getting params
     const Size srcSize = GetParam();
     const std::string impl = getSelectedImpl();
     double value = 0.0;
 
-    // creating src data
     Mat src1(srcSize, CV_8UC1), src2(srcSize, CV_8UC1);
     declare.in(src1, src2);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
@@ -75,16 +72,12 @@ PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(value);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() value = cv::norm(src1, src2, NORM_INF);
 
         SANITY_CHECK(value);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

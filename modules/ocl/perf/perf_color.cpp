@@ -54,12 +54,11 @@ typedef TestBaseWithParam<Size> cvtColorFixture;
 PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
-    const std::string impl = getSelectedImpl();
 
     Mat src(srcSize, CV_8UC4), dst(srcSize, CV_8UC4);
-    declare.in(src).out(dst);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src), oclDst(src.size(), CV_8UC4);
 
@@ -68,16 +67,12 @@ PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::cvtColor(src, dst, CV_RGBA2GRAY, 4);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

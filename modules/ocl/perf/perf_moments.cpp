@@ -52,50 +52,38 @@ using std::tr1::get;
 
 ///////////// Moments ////////////////////////
 
-CV_ENUM(MomentsMatType, CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)
-
-typedef tuple<Size, MomentsMatType> MomentsParams;
-typedef TestBaseWithParam<MomentsParams> MomentsFixture;
+typedef Size_MatType MomentsFixture;
 
 PERF_TEST_P(MomentsFixture, DISABLED_Moments,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               MomentsMatType::all()))
+                               OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)))  // TODO does not work properly (see below)
 {
-    // getting params
-    MomentsParams params = GetParam();
+    const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    std::string impl = getSelectedImpl();
-
-    // creating src data
     Mat src(srcSize, type), dst(7, 1, CV_64F);
     const bool binaryImage = false;
     cv::Moments mom;
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage);
+        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
         cv::HuMoments(mom, dst);
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() mom = cv::moments(src, binaryImage);
         cv::HuMoments(mom, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

@@ -42,153 +42,54 @@
 
 #include "perf_precomp.hpp"
 
-static int old_main(int argc, const char *argv[])
+const char * impls[] =
 {
-    const char *keys =
-        "{ h | help    | false | print help message }"
-        "{ f | filter  |       | filter for test }"
-        "{ w | workdir |       | set working directory }"
-        "{ l | list    | false | show all tests }"
-        "{ d | device  | 0     | device id }"
-        "{ c | cpu_ocl | false | use cpu as ocl device}"
-        "{ i | iters   | 10    | iteration count }"
-        "{ m | warmup  | 1     | gpu warm up iteration count}"
-        "{ t | xtop    | 1.1   | xfactor top boundary}"
-        "{ b | xbottom | 0.9   | xfactor bottom boundary}"
-        "{ v | verify  | false | only run gpu once to verify if problems occur}";
+    IMPL_OCL,
+    IMPL_PLAIN,
+#ifdef HAVE_OPENCV_GPU
+    IMPL_GPU
+#endif
+};
 
-    redirectError(cvErrorCallback);
+int main(int argc, char ** argv)
+{
+    const char * keys =
+        "{ h | help     | false              | print help message }"
+        "{ t | type     | gpu                | set device type:cpu or gpu}"
+        "{ p | platform | 0                  | set platform id }"
+        "{ d | device   | 0                  | set device id }";
+
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        cout << "Avaible options:" << endl;
+        cout << "Available options besides google test option:" << endl;
         cmd.printParams();
         return 0;
     }
 
-    // get ocl devices
-    bool use_cpu = cmd.get<bool>("c");
-    vector<ocl::Info> oclinfo;
-    int num_devices = 0;
-    if(use_cpu)
-        num_devices = getDevice(oclinfo, ocl::CVCL_DEVICE_TYPE_CPU);
-    else
-        num_devices = getDevice(oclinfo);
-    if (num_devices < 1)
-    {
-        cerr << "no device found\n";
-        return -1;
-    }
-
-    // show device info
-    int devidx = 0;
-    for (size_t i = 0; i < oclinfo.size(); i++)
-    {
-        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++)
-        {
-            cout << "device " << devidx++ << ": " << oclinfo[i].DeviceName[j] << endl;
-        }
-    }
-
+    string type = cmd.get<string>("type");
+    unsigned int pid = cmd.get<unsigned int>("platform");
     int device = cmd.get<int>("device");
-    if (device < 0 || device >= num_devices)
+
+    int flag = type == "cpu" ? cv::ocl::CVCL_DEVICE_TYPE_CPU :
+                               cv::ocl::CVCL_DEVICE_TYPE_GPU;
+
+    std::vector<cv::ocl::Info> oclinfo;
+    int devnums = cv::ocl::getDevice(oclinfo, flag);
+    if (devnums <= device || device < 0)
     {
-        cerr << "Invalid device ID" << endl;
+        std::cout << "device invalid\n";
         return -1;
     }
 
-    // set this to overwrite binary cache every time the test starts
-    ocl::setBinaryDiskCache(ocl::CACHE_UPDATE);
-    
-    if (cmd.get<bool>("verify"))
+    if (pid >= oclinfo.size())
     {
-        TestSystem::instance().setNumIters(1);
-        TestSystem::instance().setGPUWarmupIters(0);
-        TestSystem::instance().setCPUIters(0);
+        std::cout << "platform invalid\n";
+        return -1;
     }
 
-    devidx = 0;
-    for (size_t i = 0; i < oclinfo.size(); i++)
-    {
-        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++, devidx++)
-        {
-            if (device == devidx)
-            {
-                ocl::setDevice(oclinfo[i], (int)j);
-                TestSystem::instance().setRecordName(oclinfo[i].DeviceName[j]);
-                cout << "use " << devidx << ": " <<oclinfo[i].DeviceName[j] << endl;
-                goto END_DEV;
-            }
-        }
-    }
-
-END_DEV:
-
-    string filter = cmd.get<string>("filter");
-    string workdir = cmd.get<string>("workdir");
-    bool list = cmd.get<bool>("list");
-    int iters = cmd.get<int>("iters");
-    int wu_iters = cmd.get<int>("warmup");
-    double x_top = cmd.get<double>("xtop");
-    double x_bottom = cmd.get<double>("xbottom");
-
-    TestSystem::instance().setTopThreshold(x_top);
-    TestSystem::instance().setBottomThreshold(x_bottom);
-
-    if (!filter.empty())
-    {
-        TestSystem::instance().setTestFilter(filter);
-    }
-
-    if (!workdir.empty())
-    {
-        if (workdir[workdir.size() - 1] != '/' && workdir[workdir.size() - 1] != '\\')
-        {
-            workdir += '/';
-        }
-
-        TestSystem::instance().setWorkingDir(workdir);
-    }
-
-    if (list)
-    {
-        TestSystem::instance().setListMode(true);
-    }
-
-    TestSystem::instance().setNumIters(iters);
-    TestSystem::instance().setGPUWarmupIters(wu_iters);
-
-    TestSystem::instance().run();
-
-    return 0;
-}
-
-const char * impls[] =
-{
-    "ocl",
-    "plain",
-#ifdef HAVE_OPENCV_GPU
-    "gpu"
-#endif
-};
-
-int main(int argc, char **argv)
-{
-    // temp solution: if no '--gtest_' and '--perf_' args switch to old behavior
-    bool useGTest = false;
-
-    for(int i=1; i<argc; i++)
-    {
-        std::string arg( argv[i] );
-        if( arg.find("--gtest_")==0 || arg.find("--perf_")==0 )
-            useGTest = true;
-
-//        if (arg == "--perf_verify_sanity")
-//            argv[i] = (char*)"--perf_no_verify_sanity";
-    }
-
-    if( !useGTest )
-        return old_main(argc, (const char**)argv);
+    cv::ocl::setDevice(oclinfo[pid], device);
+    cv::ocl::setBinaryDiskCache(cv::ocl::CACHE_UPDATE);
 
     CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
 }

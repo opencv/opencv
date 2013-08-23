@@ -48,7 +48,7 @@
 
 ///////////// StereoMatchBM ////////////////////////
 
-PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM)
+PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM) // TODO doesn't work properly
 {
     Mat left_image = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE);
     Mat right_image = imread(getDataPath("gpu/stereobm/aloe-R.png"), cv::IMREAD_GRAYSCALE);
@@ -58,13 +58,12 @@ PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM)
     ASSERT_TRUE(right_image.size() == left_image.size());
     ASSERT_TRUE(right_image.size() == left_image.size());
 
-    const std::string impl = getSelectedImpl();
     const int n_disp = 128, winSize = 19;
     Mat disp(left_image.size(), CV_16SC1);
 
     declare.in(left_image, right_image).out(disp);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclLeft(left_image), oclRight(right_image),
                 oclDisp(left_image.size(), CV_16SC1);
@@ -76,7 +75,7 @@ PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM)
 
         SANITY_CHECK(disp);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         StereoBM bm(0, n_disp, winSize);
 
@@ -84,10 +83,6 @@ PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM)
 
         SANITY_CHECK(disp);
     }
-#ifdef HAVE_OPENCV_GPU
-        else if (impl == "gpu")
-            CV_TEST_FAIL_NO_IMPL();
-    #endif
-        else
-            CV_TEST_FAIL_NO_IMPL();
+    else
+        OCL_PERF_ELSE
 }

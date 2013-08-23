@@ -51,11 +51,9 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> gemmFixture;
 
-PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES)
+PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES) // TODO not implemented
 {
-    // getting params
     const Size srcSize = GetParam();
-    const std::string impl = getSelectedImpl();
 
     Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
             src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
@@ -64,7 +62,7 @@ PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES)
     randu(src2, -10.0f, 10.0f);
     randu(src3, -10.0f, 10.0f);
 
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclSrc3(src3), oclDst(srcSize, CV_32FC1);
@@ -75,16 +73,12 @@ PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
 
         SANITY_CHECK(dst);
     }
- #ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }

@@ -82,12 +82,9 @@ typedef TestBaseWithParam<Size> blendLinearFixture;
 
 PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
 {
-    // getting params
     const Size srcSize = GetParam();
     const int type = CV_8UC1;
-    const std::string impl = getSelectedImpl();
 
-    // creating src data
     Mat src1(srcSize, type), src2(srcSize, CV_8UC1), dst;
     Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
 
@@ -95,8 +92,7 @@ PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
     randu(weights1, 0.0f, 1.0f);
     randu(weights2, 0.0f, 1.0f);
 
-    // select implementation
-    if (impl == "ocl")
+    if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
         ocl::oclMat oclWeights1(weights1), oclWeights2(weights2);
@@ -107,16 +103,12 @@ PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
 
         SANITY_CHECK(dst);
     }
-    else if (impl == "plain")
+    else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
 
         SANITY_CHECK(dst);
     }
-#ifdef HAVE_OPENCV_GPU
-    else if (impl == "gpu")
-        CV_TEST_FAIL_NO_IMPL();
-#endif
     else
-        CV_TEST_FAIL_NO_IMPL();
+        OCL_PERF_ELSE
 }
