@@ -144,9 +144,9 @@ namespace
         {
             cv::Range r;
             r.start = (int)(wholeRange.start +
-                            ((size_t)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+                            ((uint64)sr.start*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             r.end = sr.end >= nstripes ? wholeRange.end : (int)(wholeRange.start +
-                            ((size_t)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
+                            ((uint64)sr.end*(wholeRange.end - wholeRange.start) + nstripes/2)/nstripes);
             (*body)(r);
         }
         cv::Range stripeRange() const { return cv::Range(0, nstripes); }
