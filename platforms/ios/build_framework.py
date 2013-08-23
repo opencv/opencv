@@ -75,6 +75,7 @@ def put_framework_together(srcroot, dstroot):
     dstdir = "Versions/A"
     os.makedirs(dstdir + "/Resources")
 
+    tdir0 = "../build/" + targetlist[0]
     # copy headers
     shutil.copytree(tdir0 + "/install/include/opencv2", dstdir + "/Headers")
 
@@ -83,7 +84,7 @@ def put_framework_together(srcroot, dstroot):
     os.system("lipo -create " + wlist + " -o " + dstdir + "/opencv2")
 
     # copy Info.plist
-    shutil.copyfile("../build/ios/Info.plist", dstdir + "/Resources/Info.plist")
+    shutil.copyfile(tdir0 + "/ios/Info.plist", dstdir + "/Resources/Info.plist")
 
     # make symbolic links
     os.symlink("A", "Versions/Current")
