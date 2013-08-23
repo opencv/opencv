@@ -50,27 +50,21 @@ void cv::gpu::resize(const GpuMat&, GpuMat&, Size, double, double, int, Stream&)
 
 namespace cv { namespace gpu { namespace device
 {
-    namespace imgproc
-    {
-        template <typename T>
-        void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
-                        PtrStepSzb dst, int interpolation, cudaStream_t stream);
-    }
+    template <typename T>
+    void resize(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
 }}}
 
 void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, double fy, int interpolation, Stream& stream)
 {
-    using namespace ::cv::gpu::device::imgproc;
-
-    typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
+    typedef void (*func_t)(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
     static const func_t funcs[6][4] =
     {
-        {resize_gpu<uchar>      , 0 /*resize_gpu<uchar2>*/ , resize_gpu<uchar3>     , resize_gpu<uchar4>     },
-        {0 /*resize_gpu<schar>*/, 0 /*resize_gpu<char2>*/  , 0 /*resize_gpu<char3>*/, 0 /*resize_gpu<char4>*/},
-        {resize_gpu<ushort>     , 0 /*resize_gpu<ushort2>*/, resize_gpu<ushort3>    , resize_gpu<ushort4>    },
-        {resize_gpu<short>      , 0 /*resize_gpu<short2>*/ , resize_gpu<short3>     , resize_gpu<short4>     },
-        {0 /*resize_gpu<int>*/  , 0 /*resize_gpu<int2>*/   , 0 /*resize_gpu<int3>*/ , 0 /*resize_gpu<int4>*/ },
-        {resize_gpu<float>      , 0 /*resize_gpu<float2>*/ , resize_gpu<float3>     , resize_gpu<float4>     }
+        {device::resize<uchar>      , 0 /*device::resize<uchar2>*/ , device::resize<uchar3>     , device::resize<uchar4>     },
+        {0 /*device::resize<schar>*/, 0 /*device::resize<char2>*/  , 0 /*device::resize<char3>*/, 0 /*device::resize<char4>*/},
+        {device::resize<ushort>     , 0 /*device::resize<ushort2>*/, device::resize<ushort3>    , device::resize<ushort4>    },
+        {device::resize<short>      , 0 /*device::resize<short2>*/ , device::resize<short3>     , device::resize<short4>     },
+        {0 /*device::resize<int>*/  , 0 /*device::resize<int2>*/   , 0 /*device::resize<int3>*/ , 0 /*device::resize<int4>*/ },
+        {device::resize<float>      , 0 /*device::resize<float2>*/ , device::resize<float3>     , device::resize<float4>     }
     };
 
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
@@ -108,7 +102,7 @@ void cv::gpu::resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx, doub
     src.locateROI(wholeSize, ofs);
     PtrStepSzb wholeSrc(wholeSize.height, wholeSize.width, src.datastart, src.step);
 
-    func(src, wholeSrc, ofs.x, ofs.y, static_cast<float>(1.0 / fx), static_cast<float>(1.0 / fy), dst, interpolation, StreamAccessor::getStream(stream));
+    func(src, wholeSrc, ofs.y, ofs.x, dst, static_cast<float>(1.0 / fy), static_cast<float>(1.0 / fx), interpolation, StreamAccessor::getStream(stream));
 }
 
 #endif // HAVE_CUDA
