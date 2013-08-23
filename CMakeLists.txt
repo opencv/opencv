@@ -200,10 +200,6 @@ OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too no
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
 
-# uncategorized options
-# ===================================================
-OCV_OPTION(CMAKE_VERBOSE "Verbose mode" OFF )
-
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -267,10 +263,6 @@ endif()
 
 if(DEFINED CMAKE_DEBUG_POSTFIX)
   set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
-endif()
-
-if(CMAKE_VERBOSE)
-  set(CMAKE_VERBOSE_MAKEFILE 1)
 endif()
 
 
