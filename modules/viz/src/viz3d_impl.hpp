@@ -190,16 +190,8 @@ namespace cv
 {
     namespace viz
     {
-        //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
         vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
         cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
-
-        /** \brief Convert origin and orientation to vtkMatrix4x4
-              * \param[in] origin the point cloud origin
-              * \param[in] orientation the point cloud orientation
-              * \param[out] vtk_matrix the resultant VTK 4x4 matrix
-              */
-        void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 
         struct NanFilter
         {

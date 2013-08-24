@@ -5,8 +5,6 @@
 #include <list>
 #include <vector>
 
-#include <Eigen/Geometry>
-
 #if defined __GNUC__
 #pragma GCC system_header
 #ifdef __DEPRECATED

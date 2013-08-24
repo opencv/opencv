@@ -472,24 +472,6 @@ void cv::viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstr
 { polydata = vtkSmartPointer<vtkUnstructuredGrid>::New (); }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix)
-{
-    // set rotation
-    Eigen::Matrix3f rot = orientation.toRotationMatrix ();
-    for (int i = 0; i < 3; i++)
-        for (int k = 0; k < 3; k++)
-            vtk_matrix->SetElement (i, k, rot (i, k));
-
-    // set translation
-    vtk_matrix->SetElement (0, 3, origin (0));
-    vtk_matrix->SetElement (1, 3, origin (1));
-    vtk_matrix->SetElement (2, 3, origin (2));
-    vtk_matrix->SetElement (3, 3, 1.0f);
-}
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////
-
 void cv::viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {
     if (window_)
