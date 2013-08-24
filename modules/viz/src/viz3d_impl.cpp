@@ -11,8 +11,6 @@ vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew ()
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
     :  style_ (vtkSmartPointer<cv::viz::InteractorStyle>::New ())
-    , cloud_actor_map_ (new CloudActorMap)
-    , shape_actor_map_ (new ShapeActorMap)
     , widget_actor_map_ (new WidgetActorMap)
     , s_lastDone_(0.0)
 {
@@ -30,7 +28,7 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
     // Create the interactor style
     style_->Initialize ();
     style_->setRenderer (renderer_);
-    style_->setCloudActorMap (cloud_actor_map_);
+    style_->setWidgetActorMap (widget_actor_map_);
     style_->UseTimersOn ();
 
     /////////////////////////////////////////////////
@@ -358,21 +356,19 @@ void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
 {
-    // TODO Cloud actor is not used
     vtkSmartPointer<vtkMatrix4x4> camera_pose;
-    static CloudActorMap::iterator it = cloud_actor_map_->find (id);
-    if (it != cloud_actor_map_->end ())
-        camera_pose = it->second.viewpoint_transformation_;
+    static WidgetActorMap::iterator it = widget_actor_map_->find (id);
+    if (it != widget_actor_map_->end ())
+    {
+        vtkProp3D *actor = vtkProp3D::SafeDownCast(it->second);
+        camera_pose = actor->GetUserMatrix();
+    }
     else
         return;
 
     // Prevent a segfault
     if (!camera_pose)
         return;
-
-    // set all renderer to this viewpoint
-    //rens_->InitTraversal ();
-
 
     vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
     cam->SetPosition (camera_pose->GetElement (0, 3),
@@ -522,7 +518,7 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     if (exists)
     {
         // Remove it if it exists and add it again
-        removeActorFromRenderer(wam_itr->second.actor);
+        removeActorFromRenderer(wam_itr->second);
     }
     // Get the actor and set the user matrix
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(widget));
@@ -541,7 +537,7 @@ void cv::viz::Viz3d::VizImpl::showWidget(const String &id, const Widget &widget,
     }
 
     renderer_->AddActor(WidgetAccessor::getProp(widget));
-    (*widget_actor_map_)[id].actor = WidgetAccessor::getProp(widget);
+    (*widget_actor_map_)[id] = WidgetAccessor::getProp(widget);
 }
 
 void cv::viz::Viz3d::VizImpl::removeWidget(const String &id)
@@ -549,7 +545,7 @@ void cv::viz::Viz3d::VizImpl::removeWidget(const String &id)
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
-    CV_Assert(removeActorFromRenderer (wam_itr->second.actor));
+    CV_Assert(removeActorFromRenderer (wam_itr->second));
     widget_actor_map_->erase(wam_itr);
 }
 
@@ -560,7 +556,7 @@ cv::viz::Widget cv::viz::Viz3d::VizImpl::getWidget(const String &id) const
     CV_Assert(exists);
 
     Widget widget;
-    WidgetAccessor::setProp(widget, wam_itr->second.actor);
+    WidgetAccessor::setProp(widget, wam_itr->second);
     return widget;
 }
 
@@ -570,7 +566,7 @@ void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &po
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
 
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert(actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
@@ -584,7 +580,7 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f 
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
 
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert(actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
@@ -607,7 +603,7 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
     bool exists = wam_itr != widget_actor_map_->end();
     CV_Assert(exists);
 
-    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second.actor);
+    vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
     CV_Assert(actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();

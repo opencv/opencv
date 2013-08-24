@@ -144,10 +144,10 @@ private:
     vtkSmartPointer<InteractorStyle> style_;
 
     /** \brief Internal list with actor pointers and name IDs for point clouds. */
-    cv::Ptr<CloudActorMap> cloud_actor_map_;
+//     cv::Ptr<CloudActorMap> cloud_actor_map_;
 
     /** \brief Internal list with actor pointers and name IDs for shapes. */
-    cv::Ptr<ShapeActorMap> shape_actor_map_;
+//     cv::Ptr<ShapeActorMap> shape_actor_map_;
     
     /** \brief Internal list with actor pointers and name IDs for all widget actors */
     cv::Ptr<WidgetActorMap> widget_actor_map_;

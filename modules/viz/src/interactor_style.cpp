@@ -432,17 +432,17 @@ cv::viz::InteractorStyle::OnKeyDown ()
 
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera ();
 
-        static CloudActorMap::iterator it = actors_->begin ();
+        static WidgetActorMap::iterator it = widget_actor_map_->begin ();
         // it might be that some actors don't have a valid transformation set -> we skip them to avoid a seg fault.
         bool found_transformation = false;
 
-        for (size_t idx = 0; idx < actors_->size (); ++idx, ++it)
+        for (size_t idx = 0; idx < widget_actor_map_->size (); ++idx, ++it)
         {
-            if (it == actors_->end ())
-                it = actors_->begin ();
-
-            const CloudActor& actor = it->second;
-            if (actor.viewpoint_transformation_.GetPointer ())
+            if (it == widget_actor_map_->end ())
+                it = widget_actor_map_->begin ();
+            
+            vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
+            if (actor && actor->GetUserMatrix())
             {
                 found_transformation = true;
                 break;
@@ -452,18 +452,18 @@ cv::viz::InteractorStyle::OnKeyDown ()
         // if a valid transformation was found, use it otherwise fall back to default view point.
         if (found_transformation)
         {
-            const CloudActor& actor = it->second;
-            cam->SetPosition (actor.viewpoint_transformation_->GetElement (0, 3),
-                              actor.viewpoint_transformation_->GetElement (1, 3),
-                              actor.viewpoint_transformation_->GetElement (2, 3));
+            vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
+            cam->SetPosition (actor->GetUserMatrix()->GetElement (0, 3),
+                              actor->GetUserMatrix()->GetElement (1, 3),
+                              actor->GetUserMatrix()->GetElement (2, 3));
 
-            cam->SetFocalPoint (actor.viewpoint_transformation_->GetElement (0, 3) - actor.viewpoint_transformation_->GetElement (0, 2),
-                                actor.viewpoint_transformation_->GetElement (1, 3) - actor.viewpoint_transformation_->GetElement (1, 2),
-                                actor.viewpoint_transformation_->GetElement (2, 3) - actor.viewpoint_transformation_->GetElement (2, 2));
+            cam->SetFocalPoint (actor->GetUserMatrix()->GetElement (0, 3) - actor->GetUserMatrix()->GetElement (0, 2),
+                                actor->GetUserMatrix()->GetElement (1, 3) - actor->GetUserMatrix()->GetElement (1, 2),
+                                actor->GetUserMatrix()->GetElement (2, 3) - actor->GetUserMatrix()->GetElement (2, 2));
 
-            cam->SetViewUp (actor.viewpoint_transformation_->GetElement (0, 1),
-                            actor.viewpoint_transformation_->GetElement (1, 1),
-                            actor.viewpoint_transformation_->GetElement (2, 1));
+            cam->SetViewUp (actor->GetUserMatrix()->GetElement (0, 1),
+                            actor->GetUserMatrix()->GetElement (1, 1),
+                            actor->GetUserMatrix()->GetElement (2, 1));
         }
         else
         {
@@ -473,10 +473,10 @@ cv::viz::InteractorStyle::OnKeyDown ()
         }
 
         // go to the next actor for the next key-press event.
-        if (it != actors_->end ())
+        if (it != widget_actor_map_->end ())
             ++it;
         else
-            it = actors_->begin ();
+            it = widget_actor_map_->begin ();
 
         CurrentRenderer->SetActiveCamera (cam);
         CurrentRenderer->ResetCameraClippingRange ();

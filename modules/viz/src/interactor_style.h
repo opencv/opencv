@@ -50,7 +50,7 @@ namespace cv
             /** \brief Initialization routine. Must be called before anything else. */
             virtual void Initialize ();
 
-            inline void setCloudActorMap (const Ptr<CloudActorMap>& actors) { actors_ = actors; }
+            inline void setWidgetActorMap (const Ptr<WidgetActorMap>& actors) { widget_actor_map_ = actors; }
             void setRenderer (vtkSmartPointer<vtkRenderer>& ren) { renderer_ = ren; }
             void registerMouseCallback(void (*callback)(const MouseEvent&, void*), void* cookie = 0);
             void registerKeyboardCallback(void (*callback)(const KeyboardEvent&, void*), void * cookie = 0);
@@ -73,8 +73,8 @@ namespace cv
             vtkSmartPointer<vtkRenderer> renderer_;
 
             /** \brief Actor map stored internally. */
-            cv::Ptr<CloudActorMap> actors_;
-
+            cv::Ptr<WidgetActorMap> widget_actor_map_;
+            
             /** \brief The current window width/height. */
             Vec2i win_size_;
 
