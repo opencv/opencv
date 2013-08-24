@@ -99,9 +99,6 @@ elseif(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 endif()
 
-# ----------------------------------------------------------------------------
-# For all compilers:
-# ----------------------------------------------------------------------------
 if(MSVC64 OR MINGW64)
   set(X86_64 1)
 elseif(MINGW OR (MSVC AND NOT CMAKE_CROSSCOMPILING))
