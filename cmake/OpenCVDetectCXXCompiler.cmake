@@ -113,7 +113,3 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*|ARM.*")
   set(ARM 1)
 endif()
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(CMAKE_COMPILER_IS_64 1)
-endif()

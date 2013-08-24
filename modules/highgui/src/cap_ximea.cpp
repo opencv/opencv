@@ -58,7 +58,7 @@ void CvCaptureCAM_XIMEA::init()
 
 /**********************************************************************************/
 // Initialize camera input
-bool CvCaptureCAM_XIMEA::open(int wIndex)
+bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
     bool res = true;
     int mvret = XI_OK;
