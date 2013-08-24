@@ -57,6 +57,10 @@ namespace cv
             
             void setRenderingProperty(int property, double value, const String &id);
             double getRenderingProperty(int property, const String &id);
+            
+            void setRepresentationToSurface();
+            void setRepresentationToWireframe();
+            void setRepresentationToPoints();
         private:
 
             struct VizImpl;

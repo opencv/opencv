@@ -76,3 +76,7 @@ cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName()
 
 void cv::viz::Viz3d::setRenderingProperty(int property, double value, const String &id) { getWidget(id).setRenderingProperty(property, value); }
 double cv::viz::Viz3d::getRenderingProperty(int property, const String &id) { return getWidget(id).getRenderingProperty(property); }
+
+void cv::viz::Viz3d::setRepresentationToSurface() { impl_->setRepresentationToSurface(); }
+void cv::viz::Viz3d::setRepresentationToWireframe() { impl_->setRepresentationToWireframe(); }
+void cv::viz::Viz3d::setRepresentationToPoints() { impl_->setRepresentationToPoints(); }

@@ -39,16 +39,9 @@ public:
         }
     }
 
-    // to implement in Viz3d with shorter name
-    void setRepresentationToSurfaceForAllActors();
-    void setRepresentationToPointsForAllActors();
-    void setRepresentationToWireframeForAllActors();
-
-
-
-
-
-
+    void setRepresentationToSurface();
+    void setRepresentationToPoints();
+    void setRepresentationToWireframe();
 
 
     // ////////////////////////////////////////////////////////////////////////////////////

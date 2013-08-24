@@ -423,33 +423,33 @@ void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToSurfaceForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToSurface()
 {
-    vtkActorCollection * actors = renderer_->GetActors ();
-    actors->InitTraversal ();
+    vtkActorCollection * actors = renderer_->GetActors();
+    actors->InitTraversal();
     vtkActor * actor;
-    while ((actor = actors->GetNextActor ()) != NULL)
-        actor->GetProperty ()->SetRepresentationToSurface ();
+    while ((actor = actors->GetNextActor()) != NULL)
+        actor->GetProperty()->SetRepresentationToSurface();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToPointsForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToPoints()
 {
-    vtkActorCollection * actors = renderer_->GetActors ();
-    actors->InitTraversal ();
+    vtkActorCollection * actors = renderer_->GetActors();
+    actors->InitTraversal();
     vtkActor * actor;
-    while ((actor = actors->GetNextActor ()) != NULL)
-        actor->GetProperty ()->SetRepresentationToPoints ();
+    while ((actor = actors->GetNextActor()) != NULL)
+        actor->GetProperty()->SetRepresentationToPoints();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToWireframeForAllActors ()
+void cv::viz::Viz3d::VizImpl::setRepresentationToWireframe()
 {
-    vtkActorCollection * actors = renderer_->GetActors ();
-    actors->InitTraversal ();
+    vtkActorCollection * actors = renderer_->GetActors();
+    actors->InitTraversal();
     vtkActor *actor;
-    while ((actor = actors->GetNextActor ()) != NULL)
-        actor->GetProperty ()->SetRepresentationToWireframe ();
+    while ((actor = actors->GetNextActor()) != NULL)
+        actor->GetProperty()->SetRepresentationToWireframe();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
