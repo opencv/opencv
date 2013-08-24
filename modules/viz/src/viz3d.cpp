@@ -54,8 +54,6 @@ void cv::viz::Viz3d::registerKeyboardCallback(KeyboardCallback callback, void* c
 void cv::viz::Viz3d::registerMouseCallback(MouseCallback callback, void* cookie)
 { impl_->registerMouseCallback(callback, cookie); }
 
-
-
 void cv::viz::Viz3d::showWidget(const String &id, const Widget &widget, const Affine3f &pose) { impl_->showWidget(id, widget, pose); }
 void cv::viz::Viz3d::removeWidget(const String &id) { impl_->removeWidget(id); }
 cv::viz::Widget cv::viz::Viz3d::getWidget(const String &id) const { return impl_->getWidget(id); }
@@ -75,3 +73,6 @@ void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin,
 cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
 void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }
 cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName(); }
+
+void cv::viz::Viz3d::setRenderingProperty(int property, double value, const String &id) { getWidget(id).setRenderingProperty(property, value); }
+double cv::viz::Viz3d::getRenderingProperty(int property, const String &id) { return getWidget(id).getRenderingProperty(property); }

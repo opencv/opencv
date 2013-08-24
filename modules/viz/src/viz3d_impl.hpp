@@ -19,10 +19,8 @@ public:
 
     void removeAllWidgets();
 
-    // to refactor: Widget3D:: & Viz3d::
-    bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
-    bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
-    bool setShapeRenderingProperties (int property, double value, const String& id);
+    void setRenderingProperty(int property, double value, const String &id);
+    double getRenderingProperty(int property, const String &id);
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }

@@ -7,7 +7,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
-#include <boost/concept_check.hpp>
 
 namespace cv
 {
@@ -55,6 +54,9 @@ namespace cv
 
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
+            
+            void setRenderingProperty(int property, double value, const String &id);
+            double getRenderingProperty(int property, const String &id);
         private:
 
             struct VizImpl;

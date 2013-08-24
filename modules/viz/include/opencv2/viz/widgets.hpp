@@ -16,10 +16,12 @@ namespace cv
             Widget();
             Widget(const Widget &other);
             Widget& operator =(const Widget &other);
+            ~Widget();
             
             static Widget fromPlyFile(const String &file_name);
-
-            ~Widget();
+            
+            void setRenderingProperty(int property, double value);
+            double getRenderingProperty(int property) const;
 
             template<typename _W> _W cast();
         private:
@@ -43,7 +45,6 @@ namespace cv
             Affine3f getPose() const;
 
             void setColor(const Color &color);
-
         private:
             struct MatrixConverter;
 
