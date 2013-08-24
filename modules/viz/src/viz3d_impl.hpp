@@ -16,8 +16,15 @@ public:
 
     VizImpl (const String &name);
     virtual ~VizImpl ();
-
+    
+    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+    void removeWidget(const String &id);
+    Widget getWidget(const String &id) const;
     void removeAllWidgets();
+    
+    void setWidgetPose(const String &id, const Affine3f &pose);
+    void updateWidgetPose(const String &id, const Affine3f &pose);
+    Affine3f getWidgetPose(const String &id) const; 
 
     void setRenderingProperty(int property, double value, const String &id);
     double getRenderingProperty(int property, const String &id);
@@ -51,29 +58,16 @@ public:
     void setCamera(const Camera &camera);
     Camera getCamera() const;
 
-    void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
-    bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/
-    void updateCamera (); /** \brief Update camera parameters and render. */
-    void resetCamera (); /** \brief Reset camera parameters and render. */
-
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
       * \param[in] id the point cloud object id (default: cloud) */
     void resetCameraViewpoint (const String& id = "cloud");
     
-    //to implement Viz3d set/getViewerPose()
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();
 
     void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
 
-
-
-
-
-
-
-    //to implemnt in Viz3d
     void saveScreenshot (const String &file);
     void setWindowPosition (int x, int y);
     Size getWindowSize() const;
@@ -88,22 +82,6 @@ public:
 
     void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
     void registerMouseCallback(MouseCallback callback, void* cookie = 0);
-
-
-
-
-
-
-
-
-    //declare above (to move to up)
-    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
-    void removeWidget(const String &id);
-    Widget getWidget(const String &id) const;
-    
-    void setWidgetPose(const String &id, const Affine3f &pose);
-    void updateWidgetPose(const String &id, const Affine3f &pose);
-    Affine3f getWidgetPose(const String &id) const; 
 
 private:
     vtkSmartPointer<vtkRenderWindowInteractor> interactor_;

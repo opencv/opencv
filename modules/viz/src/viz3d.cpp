@@ -42,8 +42,6 @@ void cv::viz::Viz3d::release()
     }
 }
 
-void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
-
 void cv::viz::Viz3d::spin() { impl_->spin(); }
 void cv::viz::Viz3d::spinOnce (int time, bool force_redraw) { impl_->spinOnce(time, force_redraw); }
 bool cv::viz::Viz3d::wasStopped() const { return impl_->wasStopped(); }
@@ -73,6 +71,11 @@ void cv::viz::Viz3d::converTo3DRay(const Point3d &window_coord, Point3d &origin,
 cv::Size cv::viz::Viz3d::getWindowSize() const { return impl_->getWindowSize(); }
 void cv::viz::Viz3d::setWindowSize(const Size &window_size) { impl_->setWindowSize(window_size.width, window_size.height); }
 cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName(); }
+void cv::viz::Viz3d::saveScreenshot (const String &file) { impl_->saveScreenshot(file); }
+void cv::viz::Viz3d::setWindowPosition (int x, int y) { impl_->setWindowPosition(x,y); }
+void cv::viz::Viz3d::setFullScreen (bool mode) { impl_->setFullScreen(mode); }
+void cv::viz::Viz3d::setWindowName (const String &name) { impl_->setWindowName(name); }
+void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 
 void cv::viz::Viz3d::setRenderingProperty(int property, double value, const String &id) { getWidget(id).setRenderingProperty(property, value); }
 double cv::viz::Viz3d::getRenderingProperty(int property, const String &id) { return getWidget(id).getRenderingProperty(property); }

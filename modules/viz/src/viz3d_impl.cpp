@@ -250,30 +250,6 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor (const Color& color)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::initCameraParameters ()
-{
-    Vec2i window_size(window_->GetScreenSize());
-    window_size /= 2;
-    
-    Camera camera_temp(Vec2f(0.0,0.8575), Size(window_size[0], window_size[1]));
-    setCamera(camera_temp);
-    setViewerPose(makeCameraPose(Vec3f(0.0f,0.0f,0.0f), Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f)));
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::cameraParamsSet () const { return (camera_set_); }
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::updateCamera ()
-{
-    std::cout << "[cv::viz::PCLVisualizer::updateCamera()] This method was deprecated, just re-rendering all scenes now." << std::endl;
-    //rens_->InitTraversal ();
-    // Update the camera parameters
-
-    renderer_->Render ();
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
@@ -377,12 +353,6 @@ void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d
     active_camera.GetPosition(cam_pos.val);
     origin = cam_pos;
     direction = normalize(Vec3d(world_pt.val) - cam_pos);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::resetCamera ()
-{
-    renderer_->ResetCamera ();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

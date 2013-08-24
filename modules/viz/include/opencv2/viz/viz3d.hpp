@@ -24,8 +24,6 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
-            void setBackgroundColor(const Color& color = Color::black());
-
             void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;
@@ -45,8 +43,12 @@ namespace cv
             
             Size getWindowSize() const;
             void setWindowSize(const Size &window_size);
-            
             String getWindowName() const;
+            void saveScreenshot (const String &file);
+            void setWindowPosition (int x, int y);
+            void setFullScreen (bool mode);
+            void setWindowName (const String &name);
+            void setBackgroundColor(const Color& color = Color::black());
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
