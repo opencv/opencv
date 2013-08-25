@@ -14,8 +14,8 @@ cv::viz::Color cv::viz::Color::blue()    { return Color(255,   0, 0); }
 cv::viz::Color cv::viz::Color::cyan()    { return Color(255, 255, 0); }
 
 cv::viz::Color cv::viz::Color::red()     { return Color(  0,   0, 255); }
-cv::viz::Color cv::viz::Color::magenta() { return Color(  0, 255, 255); }
-cv::viz::Color cv::viz::Color::yellow()  { return Color(255,   0, 255); }
+cv::viz::Color cv::viz::Color::yellow() { return Color(  0, 255, 255); }
+cv::viz::Color cv::viz::Color::magenta()  { return Color(255,   0, 255); }
 cv::viz::Color cv::viz::Color::white()   { return Color(255, 255, 255); }
 
 cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
