@@ -583,22 +583,13 @@ void cv::viz::Viz3d::VizImpl::updateCells (vtkSmartPointer<vtkIdTypeArray> &cell
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata)
-{polydata = vtkSmartPointer<vtkAppendPolyData>::New (); }
-
-void cv::viz::Viz3d::VizImpl::allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata)
-{ polydata = vtkSmartPointer<vtkPolyData>::New (); }
-
-void cv::viz::Viz3d::VizImpl::allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata)
-{ polydata = vtkSmartPointer<vtkUnstructuredGrid>::New (); }
-
-//////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setFullScreen (bool mode)
 {
     if (window_)
         window_->SetFullScreen (mode);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 {
     if (window_)
@@ -610,6 +601,7 @@ cv::String cv::viz::Viz3d::VizImpl::getWindowName() const
     return (window_ ? window_->GetWindowName() : "");
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }
 void cv::viz::Viz3d::VizImpl::setWindowSize (int xw, int yw) { window_->SetSize (xw, yw); }
 cv::Size cv::viz::Viz3d::VizImpl::getWindowSize() const { return Size(window_->GetSize()[0], window_->GetSize()[1]); }

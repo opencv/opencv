@@ -178,10 +178,6 @@ private:
           * generate
           */
     void updateCells (vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
-
-    void allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata);
-    void allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata);
-    void allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata);
 };
 
 
