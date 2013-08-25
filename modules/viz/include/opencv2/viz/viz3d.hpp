@@ -60,6 +60,9 @@ namespace cv
             void setRenderingProperty(int property, double value, const String &id);
             double getRenderingProperty(int property, const String &id);
             
+            void setDesiredUpdateRate(double time);
+            double getDesiredUpdateRate();
+            
             void setRepresentationToSurface();
             void setRepresentationToWireframe();
             void setRepresentationToPoints();

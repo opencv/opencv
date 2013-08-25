@@ -26,8 +26,8 @@ public:
     void updateWidgetPose(const String &id, const Affine3f &pose);
     Affine3f getWidgetPose(const String &id) const; 
 
-    void setRenderingProperty(int property, double value, const String &id);
-    double getRenderingProperty(int property, const String &id);
+    void setDesiredUpdateRate(double time);
+    double getDesiredUpdateRate();
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
