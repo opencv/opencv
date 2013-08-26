@@ -186,56 +186,6 @@ double cv::cuda::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normT
     return retVal;
 }
 
-////////////////////////////////////////////////////////////////////////
-// minMaxLoc
-
-namespace minMaxLoc
-{
-    void getBufSize(int cols, int rows, size_t elem_size, int& b1cols, int& b1rows, int& b2cols, int& b2rows);
-
-    template <typename T>
-    void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
-}
-
-void cv::cuda::minMaxLoc(InputArray _src, double* minVal, double* maxVal, Point* minLoc, Point* maxLoc,
-                        InputArray _mask, GpuMat& valBuf, GpuMat& locBuf)
-{
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
-
-    typedef void (*func_t)(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, int* minloc, int* maxloc, PtrStepb valbuf, PtrStep<unsigned int> locbuf);
-    static const func_t funcs[] =
-    {
-        ::minMaxLoc::run<uchar>,
-        ::minMaxLoc::run<schar>,
-        ::minMaxLoc::run<ushort>,
-        ::minMaxLoc::run<short>,
-        ::minMaxLoc::run<int>,
-        ::minMaxLoc::run<float>,
-        ::minMaxLoc::run<double>
-    };
-
-    CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
-
-    if (src.depth() == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    Size valbuf_size, locbuf_size;
-    ::minMaxLoc::getBufSize(src.cols, src.rows, src.elemSize(), valbuf_size.width, valbuf_size.height, locbuf_size.width, locbuf_size.height);
-    ensureSizeIsEnough(valbuf_size, CV_8U, valBuf);
-    ensureSizeIsEnough(locbuf_size, CV_8U, locBuf);
-
-    const func_t func = funcs[src.depth()];
-
-    double temp1, temp2;
-    Point temp3, temp4;
-    func(src, mask, minVal ? minVal : &temp1, maxVal ? maxVal : &temp2, minLoc ? &minLoc->x : &temp3.x, maxLoc ? &maxLoc->x : &temp4.x, valBuf, locBuf);
-}
-
 //////////////////////////////////////////////////////////////////////////////
 // countNonZero
 
