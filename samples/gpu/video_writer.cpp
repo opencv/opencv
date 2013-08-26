@@ -30,13 +30,13 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     cv::VideoWriter writer;
     cv::Ptr<cv::cudacodec::VideoWriter> d_writer;
 
     cv::Mat frame;
-    cv::gpu::GpuMat d_frame;
+    cv::cuda::GpuMat d_frame;
 
     std::vector<double> cpu_times;
     std::vector<double> gpu_times;
