@@ -187,50 +187,6 @@ double cv::cuda::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normT
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// countNonZero
-
-namespace countNonZero
-{
-    void getBufSize(int cols, int rows, int& bufcols, int& bufrows);
-
-    template <typename T>
-    int run(const PtrStepSzb src, PtrStep<unsigned int> buf);
-}
-
-int cv::cuda::countNonZero(InputArray _src, GpuMat& buf)
-{
-    GpuMat src = _src.getGpuMat();
-
-    typedef int (*func_t)(const PtrStepSzb src, PtrStep<unsigned int> buf);
-    static const func_t funcs[] =
-    {
-        ::countNonZero::run<uchar>,
-        ::countNonZero::run<schar>,
-        ::countNonZero::run<ushort>,
-        ::countNonZero::run<short>,
-        ::countNonZero::run<int>,
-        ::countNonZero::run<float>,
-        ::countNonZero::run<double>
-    };
-
-    CV_Assert(src.channels() == 1);
-
-    if (src.depth() == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    Size buf_size;
-    ::countNonZero::getBufSize(src.cols, src.rows, buf_size.width, buf_size.height);
-    ensureSizeIsEnough(buf_size, CV_8U, buf);
-
-    const func_t func = funcs[src.depth()];
-
-    return func(src, buf);
-}
-
-//////////////////////////////////////////////////////////////////////////////
 // reduce
 
 namespace reduce
