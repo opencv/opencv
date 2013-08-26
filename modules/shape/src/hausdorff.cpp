@@ -46,38 +46,32 @@
  */
 namespace cv
 {
-    static float _apply(const Mat &set1, const Mat &set2, int distType)
+    static float _apply(const Mat &set1, const Mat &set2, int distType, double propRank)
     {
-        float max_dist = -1;
+        // Building distance matrix //
+        Mat disMat(set1.cols, set2.cols, CV_32F);
+        int K = int(propRank*(disMat.rows-1));
         switch (distType)
         {
         case DIST_L2:
-            for (int r=0; r<set1.cols; r++)
+            for (int r=0; r<disMat.rows; r++)
             {
-                Point2f diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,0);
-                float min_dist = std::sqrt(diff.x*diff.x + diff.y*diff.y);
-                for (int c=1; c<set2.cols; c++)
+                for (int c=0; c<disMat.cols; c++)
                 {
-                    diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,c);
-                    float dist = std::sqrt(diff.x*diff.x + diff.y*diff.y);
-                    min_dist = std::min(dist,min_dist);
+                    Point2f diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,c);
+                    disMat.at<float>(r,c) = std::sqrt(diff.x*diff.x + diff.y*diff.y);
                 }
-                max_dist = std::max(min_dist, max_dist);
             }
             break;
 
         case DIST_L1:
-            for (int r=0; r<set1.cols; r++)
+            for (int r=0; r<disMat.rows; r++)
             {
-                Point2f diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,0);
-                float min_dist = std::sqrt(diff.x*diff.x + diff.y*diff.y);
-                for (int c=1; c<set2.cols; c++)
+                for (int c=0; c<disMat.cols; c++)
                 {
-                    diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,c);
-                    float dist = std::fabs(diff.x) + std::fabs(diff.y);
-                    min_dist = std::min(dist, min_dist);
+                    Point2f diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,c);
+                    disMat.at<float>(r,c) = std::fabs(diff.x) + std::fabs(diff.y);
                 }
-                max_dist = std::max(min_dist, max_dist);
             }
             break;
 
@@ -85,15 +79,27 @@ namespace cv
             CV_Error(-206, "The available flags are: DIST_L1, DIST_L2");
             break;
         }
-        return max_dist;
+        Mat shortest(disMat.rows,1,CV_32F);
+        for (int ii=0; ii<disMat.rows; ii++)
+        {
+            Mat therow = disMat.row(ii);
+            double mindis;
+            minMaxIdx(therow, &mindis);
+            shortest.at<float>(ii,0) = float(mindis);
+        }
+        Mat sorted;
+        cv::sort(shortest, sorted, SORT_EVERY_ROW | SORT_DESCENDING);
+        return sorted.at<float>(K,0);
     }
 
-    float hausdorff(InputArray _set1, InputArray _set2, int distType)
+    float hausdorff(InputArray _set1, InputArray _set2, int distType, double proportionRank)
     {
         Mat set1=_set1.getMat(), set2=_set2.getMat();
         CV_Assert((set1.channels()==2) & (set1.cols>0));
         CV_Assert((set1.channels()==2) & (set2.cols>0));
-        return _apply(set1, set2, distType);
+        CV_Assert((proportionRank>0) & (proportionRank<=1));
+        return std::max( _apply(set1, set2, distType, proportionRank),
+                         _apply(set2, set1, distType, proportionRank) );
     }
 }
 

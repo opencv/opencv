@@ -47,7 +47,7 @@
 
 namespace cv
 {
-    CV_EXPORTS float hausdorff(InputArray set1, InputArray set2, int distType);
+    CV_EXPORTS float hausdorff(InputArray set1, InputArray set2, int distType=DIST_L2, double proportionRank=1);
 }//namespace cv
 
 #endif 
