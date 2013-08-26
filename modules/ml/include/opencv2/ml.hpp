@@ -942,6 +942,8 @@ protected:
     CvDTreeNode* root;
     CvMat* var_importance;
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
+    cv::Mat train_data_mat, responses_mat;
 
 public:
     int pruned_tree_idx;
@@ -1053,6 +1055,8 @@ protected:
     // array of the trees of the forest
     CvForestTree** trees;
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
+    cv::Mat train_data_mat, responses_mat;
     int ntrees;
     int nclasses;
     double oob_error;
@@ -1268,6 +1272,8 @@ protected:
     virtual void initialize_weights(double (&p)[2]);
 
     CvDTreeTrainData* data;
+    CvMat train_data_hdr, responses_hdr;
+    cv::Mat train_data_mat, responses_mat;
     CvBoostParams params;
     CvSeq* weak;
 
