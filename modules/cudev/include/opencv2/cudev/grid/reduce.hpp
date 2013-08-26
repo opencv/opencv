@@ -61,7 +61,7 @@ __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskP
 {
     typedef typename PtrTraits<SrcPtr>::value_type src_type;
 
-    CV_StaticAssert( VecTraits<src_type>::cn == VecTraits<ResType>::cn, "" );
+    CV_StaticAssert( unsigned(VecTraits<src_type>::cn) == unsigned(VecTraits<ResType>::cn), "" );
 
     dst.create(1, 1);
     dst.setTo(0, stream);
@@ -83,7 +83,7 @@ __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& str
 {
     typedef typename PtrTraits<SrcPtr>::value_type src_type;
 
-    CV_StaticAssert( VecTraits<src_type>::cn == VecTraits<ResType>::cn, "" );
+    CV_StaticAssert( unsigned(VecTraits<src_type>::cn) == unsigned(VecTraits<ResType>::cn), "" );
 
     dst.create(1, 1);
     dst.setTo(0, stream);
