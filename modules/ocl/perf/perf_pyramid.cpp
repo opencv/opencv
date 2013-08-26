@@ -45,88 +45,80 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 ///////////// pyrDown //////////////////////
-PERFTEST(pyrDown)
+
+typedef Size_MatType pyrDownFixture;
+
+PERF_TEST_P(pyrDownFixture, pyrDown,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src, dst, ocl_dst;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src(srcSize, type), dst;
+    Size dstSize((srcSize.height + 1) >> 1, (srcSize.width + 1) >> 1);
+    dst.create(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
-            pyrDown(src, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            pyrDown(src, dst);
-            CPU_OFF;
-
-            ocl::oclMat d_src(src);
-            ocl::oclMat d_dst;
-
-            WARMUP_ON;
-            ocl::pyrDown(d_src, d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::pyrDown(d_src, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::pyrDown(d_src, d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, dst.depth() == CV_32F ? 1e-4f : 1.0f);
-        }
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() pyrDown(src, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// pyrUp ////////////////////////
-PERFTEST(pyrUp)
+
+typedef Size_MatType pyrUpFixture;
+
+PERF_TEST_P(pyrUpFixture, pyrUp,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src, dst, ocl_dst;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    for (int size = 500; size <= 2000; size *= 2)
+    Mat src(srcSize, type), dst;
+    Size dstSize(srcSize.height << 1, srcSize.width << 1);
+    dst.create(dstSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
-            pyrUp(src, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            pyrUp(src, dst);
-            CPU_OFF;
-
-            ocl::oclMat d_src(src);
-            ocl::oclMat d_dst;
-
-            WARMUP_ON;
-            ocl::pyrUp(d_src, d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::pyrUp(d_src, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::pyrUp(d_src, d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, (src.depth() == CV_32F ? 1e-4f : 1.0));
-        }
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() pyrDown(src, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }

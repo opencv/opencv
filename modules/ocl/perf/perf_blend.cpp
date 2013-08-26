@@ -45,9 +45,15 @@
 //M*/
 
 #include "perf_precomp.hpp"
+
+using namespace perf;
+
 ///////////// blend ////////////////////////
+
 template <typename T>
-void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &weights1, const cv::Mat &weights2, cv::Mat &result_gold)
+static void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2,
+                            const cv::Mat &weights1, const cv::Mat &weights2,
+                            cv::Mat &result_gold)
 {
     result_gold.create(img1.size(), img1.type());
 
@@ -63,60 +69,46 @@ void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2, const cv::Mat &we
 
         for (int x = 0; x < img1.cols * cn; ++x)
         {
-            float w1 = weights1_row[x / cn];
-            float w2 = weights2_row[x / cn];
-            result_gold_row[x] = static_cast<T>((img1_row[x] * w1 + img2_row[x] * w2) / (w1 + w2 + 1e-5f));
+            int x1 = x * cn;
+            float w1 = weights1_row[x];
+            float w2 = weights2_row[x];
+            result_gold_row[x] = static_cast<T>((img1_row[x1] * w1
+                                                 + img2_row[x1] * w2) / (w1 + w2 + 1e-5f));
         }
     }
 }
-PERFTEST(blend)
+
+typedef TestBaseWithParam<Size> blendLinearFixture;
+
+PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
 {
-    Mat src1, src2, weights1, weights2, dst, ocl_dst;
-    ocl::oclMat d_src1, d_src2, d_weights1, d_weights2, d_dst;
+    const Size srcSize = GetParam();
+    const int type = CV_8UC1;
 
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src1(srcSize, type), src2(srcSize, CV_8UC1), dst;
+    Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    declare.in(src1, src2, WARMUP_RNG);
+    randu(weights1, 0.0f, 1.0f);
+    randu(weights2, 0.0f, 1.0f);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] << " and CV_32FC1";
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclWeights1(weights1), oclWeights2(weights2);
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(src2, size, size, all_type[j], 0, 256);
-            gen(weights1, size, size, CV_32FC1, 0, 1);
-            gen(weights2, size, size, CV_32FC1, 0, 1);
+        TEST_CYCLE() cv::ocl::blendLinear(oclSrc1, oclSrc2, oclWeights1, oclWeights2, oclDst);
 
-            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+        oclDst.download(dst);
 
-            CPU_ON;
-            blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
-            CPU_OFF;
-
-            d_src1.upload(src1);
-            d_src2.upload(src2);
-            d_weights1.upload(weights1);
-            d_weights2.upload(weights2);
-
-            WARMUP_ON;
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src1.upload(src1);
-            d_src2.upload(src2);
-            d_weights1.upload(weights1);
-            d_weights2.upload(weights2);
-            ocl::blendLinear(d_src1, d_src2, d_weights1, d_weights2, d_dst);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(dst, ocl_dst, 1.f);
-        }
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }

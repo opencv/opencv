@@ -7,16 +7,11 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
-// Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
-//
-// @Authors
-//    Fangfang Bai, fangfang@multicorewareinc.com
-//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -26,12 +21,12 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other oclMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors as is and
+// This software is provided by the copyright holders and contributors "as is" and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -44,46 +39,25 @@
 //
 //M*/
 
-#include "perf_precomp.hpp"
+#include "test_precomp.hpp"
 
-using namespace perf;
-using std::tr1::tuple;
-using std::tr1::get;
+typedef ::testing::TestWithParam<cv::Size> normFixture;
 
-///////////// Moments ////////////////////////
-
-typedef Size_MatType MomentsFixture;
-
-PERF_TEST_P(MomentsFixture, DISABLED_Moments,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)))  // TODO does not work properly (see below)
+TEST_P(normFixture, DISABLED_accuracy)
 {
-    const Size_MatType_t params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int type = get<1>(params);
+    const cv::Size srcSize = GetParam();
 
-    Mat src(srcSize, type), dst(7, 1, CV_64F);
-    const bool binaryImage = false;
-    cv::Moments mom;
+    cv::Mat src1(srcSize, CV_8UC1), src2(srcSize, CV_8UC1);
+    cv::randu(src1, 0, 2);
+    cv::randu(src2, 0, 2);
 
-    declare.in(src, WARMUP_RNG).out(dst);
+    cv::ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc(src);
+    double value = cv::norm(src1, src2, cv::NORM_INF);
+    double oclValue = cv::ocl::norm(oclSrc1, oclSrc2, cv::NORM_INF);
 
-        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        TEST_CYCLE() mom = cv::moments(src, binaryImage);
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
-    }
-    else
-        OCL_PERF_ELSE
+    ASSERT_EQ(value, oclValue);
 }
+
+INSTANTIATE_TEST_CASE_P(oclNormTest, normFixture,
+                        ::testing::Values(cv::Size(500, 500), cv::Size(1000, 1000)));

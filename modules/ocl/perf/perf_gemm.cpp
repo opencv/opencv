@@ -45,46 +45,40 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
 ///////////// gemm ////////////////////////
-PERFTEST(gemm)
+
+typedef TestBaseWithParam<Size> gemmFixture;
+
+PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES) // TODO not implemented
 {
-    Mat src1, src2, src3, dst, ocl_dst;
-    ocl::oclMat d_src1, d_src2, d_src3, d_dst;
+    const Size srcSize = GetParam();
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
+            src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
+    declare.in(src1, src2, src3).out(dst);
+    randu(src1, -10.0f, 10.0f);
+    randu(src2, -10.0f, 10.0f);
+    randu(src3, -10.0f, 10.0f);
+
+    if (RUN_OCL_IMPL)
     {
-        SUBTEST << size << 'x' << size;
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2),
+                oclSrc3(src3), oclDst(srcSize, CV_32FC1);
 
-        gen(src1, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src2, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
-        gen(src3, size, size, CV_32FC1, Scalar::all(-10), Scalar::all(10));
+        TEST_CYCLE() cv::ocl::gemm(oclSrc1, oclSrc2, 1.0, oclSrc3, 1.0, oclDst);
 
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
+        oclDst.download(dst);
 
-        CPU_ON;
-        gemm(src1, src2, 1.0, src3, 1.0, dst);
-        CPU_OFF;
-
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-
-        WARMUP_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        WARMUP_OFF;
-
-        GPU_ON;
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        GPU_OFF;
-
-        GPU_FULL_ON;
-        d_src1.upload(src1);
-        d_src2.upload(src2);
-        d_src3.upload(src3);
-        ocl::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, d_dst);
-        d_dst.download(ocl_dst);
-        GPU_FULL_OFF;
-
-        TestSystem::instance().ExpectedMatNear(ocl_dst, dst, src1.cols * src1.rows * 1e-4);
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
