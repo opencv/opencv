@@ -440,30 +440,24 @@ namespace grid_reduce_detail
     __host__ void minVal(const SrcPtr& src, ResType* result, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         typedef typename PtrTraits<SrcPtr>::value_type src_type;
-        const int cn = VecTraits<src_type>::cn;
-        typedef typename MakeVec<ResType, cn>::type work_type;
 
-        glob_reduce<MinMaxReductor<minop<work_type>, src_type, work_type>, Policy>(src, result, mask, rows, cols, stream);
+        glob_reduce<MinMaxReductor<minop<ResType>, src_type, ResType>, Policy>(src, result, mask, rows, cols, stream);
     }
 
     template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
     __host__ void maxVal(const SrcPtr& src, ResType* result, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         typedef typename PtrTraits<SrcPtr>::value_type src_type;
-        const int cn = VecTraits<src_type>::cn;
-        typedef typename MakeVec<ResType, cn>::type work_type;
 
-        glob_reduce<MinMaxReductor<maxop<work_type>, src_type, work_type>, Policy>(src, result, mask, rows, cols, stream);
+        glob_reduce<MinMaxReductor<maxop<ResType>, src_type, ResType>, Policy>(src, result, mask, rows, cols, stream);
     }
 
     template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
     __host__ void minMaxVal(const SrcPtr& src, ResType* result, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         typedef typename PtrTraits<SrcPtr>::value_type src_type;
-        const int cn = VecTraits<src_type>::cn;
-        typedef typename MakeVec<ResType, cn>::type work_type;
 
-        glob_reduce<MinMaxReductor<both, src_type, work_type>, Policy>(src, result, mask, rows, cols, stream);
+        glob_reduce<MinMaxReductor<both, src_type, ResType>, Policy>(src, result, mask, rows, cols, stream);
     }
 }
 

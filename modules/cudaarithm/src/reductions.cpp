@@ -187,53 +187,6 @@ double cv::cuda::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normT
 }
 
 ////////////////////////////////////////////////////////////////////////
-// minMax
-
-namespace minMax
-{
-    void getBufSize(int cols, int rows, int& bufcols, int& bufrows);
-
-    template <typename T>
-    void run(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-}
-
-void cv::cuda::minMax(InputArray _src, double* minVal, double* maxVal, InputArray _mask, GpuMat& buf)
-{
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
-
-    typedef void (*func_t)(const PtrStepSzb src, const PtrStepb mask, double* minval, double* maxval, PtrStepb buf);
-    static const func_t funcs[] =
-    {
-        ::minMax::run<uchar>,
-        ::minMax::run<schar>,
-        ::minMax::run<ushort>,
-        ::minMax::run<short>,
-        ::minMax::run<int>,
-        ::minMax::run<float>,
-        ::minMax::run<double>
-    };
-
-    CV_Assert( src.channels() == 1 );
-    CV_Assert( mask.empty() || (mask.size() == src.size() && mask.type() == CV_8U) );
-
-    if (src.depth() == CV_64F)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-    }
-
-    Size buf_size;
-    ::minMax::getBufSize(src.cols, src.rows, buf_size.width, buf_size.height);
-    ensureSizeIsEnough(buf_size, CV_8U, buf);
-
-    const func_t func = funcs[src.depth()];
-
-    double temp1, temp2;
-    func(src, mask, minVal ? minVal : &temp1, maxVal ? maxVal : &temp2, buf);
-}
-
-////////////////////////////////////////////////////////////////////////
 // minMaxLoc
 
 namespace minMaxLoc
