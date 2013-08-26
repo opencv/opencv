@@ -1637,6 +1637,7 @@ void cv::ocl::device::hog::compute_hists(int nbins,
         / block_stride_x;
     int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)
         / block_stride_y;
+    int blocks_total = img_block_width * img_block_height;
 
     int grad_quadstep = grad.step >> 2;
     int qangle_step = qangle.step;
@@ -1648,14 +1649,16 @@ void cv::ocl::device::hog::compute_hists(int nbins,
 
     int hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y * 12) * sizeof(float);
     int final_hists_size = (nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y) * sizeof(float);
-    int smem = hists_size + final_hists_size;
 
-    args.push_back( std::make_pair( sizeof(cl_int), (void *)&width));
+    int smem = (hists_size + final_hists_size) * blocks_in_group;
+
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_stride_x));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_stride_y));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cnbins));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&cblock_hist_size));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&img_block_width));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&blocks_in_group));
+    args.push_back( std::make_pair( sizeof(cl_int), (void *)&blocks_total));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&grad_quadstep));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&qangle_step));
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&grad.data));
@@ -1690,12 +1693,13 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
     String kernelName;
 
     int block_hist_size = nbins * CELLS_PER_BLOCK_X * CELLS_PER_BLOCK_Y;
-    int nthreads = power_2up(block_hist_size);
-
-    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x) / block_stride_x;
-    int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y) / block_stride_y;
-    size_t globalThreads[3] = { img_block_width * nthreads, img_block_height, 1 };
-    size_t localThreads[3] = { nthreads, 1, 1  };
+    int img_block_width = (width - CELLS_PER_BLOCK_X * CELL_WIDTH + block_stride_x)
+        / block_stride_x;
+    int img_block_height = (height - CELLS_PER_BLOCK_Y * CELL_HEIGHT + block_stride_y)
+        / block_stride_y;
+    int nthreads;
+    size_t globalThreads[3] = { 1, 1, 1  };
+    size_t localThreads[3] = { 1, 1, 1  };
 
     if ( nbins == 9 )
     {
