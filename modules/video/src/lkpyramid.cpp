@@ -160,7 +160,7 @@ cv::detail::LKTrackerInvoker::LKTrackerInvoker(
 }
 
 #if defined __arm__ && !CV_NEON
-typedef int64 acctype;
+typedef cv::int64 acctype;
 typedef int itemtype;
 #else
 typedef float acctype;

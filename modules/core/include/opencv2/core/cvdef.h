@@ -202,9 +202,13 @@
 #  include <stdint.h>
 #endif
 
+#ifdef __cplusplus
+namespace cv {
+#endif
+
 typedef signed char schar;
 
-#ifndef __IPL_H__
+#if !defined __IPL_H__ || defined __cplusplus
    typedef unsigned char uchar;
    typedef unsigned short ushort;
    typedef unsigned int uint;
@@ -220,6 +224,10 @@ typedef signed char schar;
    typedef uint64_t uint64;
 #  define CV_BIG_INT(n)   n##LL
 #  define CV_BIG_UINT(n)  n##ULL
+#endif
+
+#ifdef __cplusplus
+} // namespace cv
 #endif
 
 /* special informative macros for wrapper generators */
@@ -414,6 +422,9 @@ CV_INLINE int cvCeil( double value )
 
 CV_INLINE int cvIsNaN( double value )
 {
+#ifdef __cplusplus
+    using cv::uint64;
+#endif
     union { uint64 u; double f; } ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) +
@@ -422,6 +433,9 @@ CV_INLINE int cvIsNaN( double value )
 
 CV_INLINE int cvIsInf( double value )
 {
+#ifdef __cplusplus
+    using cv::uint64;
+#endif
     union { uint64 u; double f; } ieee754;
     ieee754.f = value;
     return ((unsigned)(ieee754.u >> 32) & 0x7fffffff) == 0x7ff00000 &&

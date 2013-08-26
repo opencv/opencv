@@ -59,6 +59,8 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
+using cv::uchar;
+
 MatType nulltype = -1;
 
 #define ONE_TYPE(type)  testing::ValuesIn(typeVector(type))

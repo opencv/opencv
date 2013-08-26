@@ -54,6 +54,10 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+using cv::schar;
+using cv::ushort;
+
 namespace minMax
 {
     __device__ unsigned int blocks_finished = 0;

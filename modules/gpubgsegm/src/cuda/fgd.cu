@@ -53,6 +53,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace fgd
 {
     ////////////////////////////////////////////////////////////////////////////

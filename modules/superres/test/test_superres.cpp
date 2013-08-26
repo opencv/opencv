@@ -42,6 +42,8 @@
 
 #include "test_precomp.hpp"
 
+using cv::uchar;
+
 class AllignedFrameSource : public cv::superres::FrameSource
 {
 public:

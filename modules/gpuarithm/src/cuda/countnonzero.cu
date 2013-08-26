@@ -52,6 +52,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+using cv::schar;
+
 namespace countNonZero
 {
     __device__ unsigned int blocks_finished = 0;

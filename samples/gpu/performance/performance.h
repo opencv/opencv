@@ -9,6 +9,8 @@
 #include <opencv2/core/utility.hpp>
 #include "opencv2/gpu.hpp"
 
+using cv::int64;
+
 #define TAB "    "
 
 class Runnable

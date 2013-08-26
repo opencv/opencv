@@ -285,7 +285,7 @@ protected:
     void RunPerfTestBody();
 private:
     typedef std::vector<std::pair<int, cv::Size> > SizeVector;
-    typedef std::vector<int64> TimeVector;
+    typedef std::vector<cv::int64> TimeVector;
 
     SizeVector inputData;
     SizeVector outputData;
@@ -293,10 +293,10 @@ private:
     unsigned int getTotalOutputSize() const;
 
     TimeVector times;
-    int64 lastTime;
-    int64 totalTime;
-    int64 timeLimit;
-    static int64 timeLimitDefault;
+    cv::int64 lastTime;
+    cv::int64 totalTime;
+    cv::int64 timeLimit;
+    static cv::int64 timeLimitDefault;
     static unsigned int iterationsLimitDefault;
 
     unsigned int nIters;
@@ -306,8 +306,8 @@ private:
     performance_metrics metrics;
     void validateMetrics();
 
-    static int64 _timeadjustment;
-    static int64 _calibrate();
+    static cv::int64 _timeadjustment;
+    static cv::int64 _calibrate();
 
     static void warmup_impl(cv::Mat m, int wtype);
     static int getSizeInBytes(cv::InputArray a);

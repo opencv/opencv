@@ -79,10 +79,10 @@ namespace cv
 
 namespace std
 {
-    static inline uchar abs(uchar a) { return a; }
-    static inline ushort abs(ushort a) { return a; }
-    static inline unsigned abs(unsigned a) { return a; }
-    static inline uint64 abs(uint64 a) { return a; }
+    static inline cv::uchar abs(cv::uchar a) { return a; }
+    static inline cv::ushort abs(cv::ushort a) { return a; }
+    static inline cv::uint abs(cv::uint a) { return a; }
+    static inline cv::uint64 abs(cv::uint64 a) { return a; }
 }
 
 #else

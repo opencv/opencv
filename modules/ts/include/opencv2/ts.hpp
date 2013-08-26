@@ -46,6 +46,9 @@ using cv::Size;
 using cv::Point;
 using cv::Rect;
 
+using cv::int64;
+using cv::uint64;
+
 class CV_EXPORTS TS;
 
 CV_EXPORTS int64 readSeed(const char* str);

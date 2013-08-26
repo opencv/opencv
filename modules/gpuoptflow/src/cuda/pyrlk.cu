@@ -52,6 +52,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace pyrlk
 {
     __constant__ int c_winSize_x;

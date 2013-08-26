@@ -53,6 +53,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::schar;
+using cv::uchar;
+
 namespace arithm
 {
     struct VCmpEq4 : binary_function<uint, uint, uint>

@@ -2,6 +2,8 @@
 #include "opencv2/core.hpp"
 #include "features2d_manual.hpp"
 
+using cv::uchar;
+
 void Mat_to_vector_int(cv::Mat& mat, std::vector<int>& v_int);
 void vector_int_to_Mat(std::vector<int>& v_int, cv::Mat& mat);
 
