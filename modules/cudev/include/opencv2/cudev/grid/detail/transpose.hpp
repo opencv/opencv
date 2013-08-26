@@ -55,15 +55,12 @@ namespace cv { namespace cudev {
 
 namespace transpose_detail
 {
-    const int TRANSPOSE_TILE_DIM   = 16;
-    const int TRANSPOSE_BLOCK_ROWS = 16;
-
-    template <class SrcPtr, typename DstType>
+    template <int TILE_DIM, int BLOCK_DIM_Y, class SrcPtr, typename DstType>
     __global__ void transpose(const SrcPtr src, GlobPtr<DstType> dst, const int rows, const int cols)
     {
         typedef typename PtrTraits<SrcPtr>::value_type src_type;
 
-        __shared__ src_type tile[TRANSPOSE_TILE_DIM][TRANSPOSE_TILE_DIM + 1];
+        __shared__ src_type tile[TILE_DIM][TILE_DIM + 1];
 
         int blockIdx_x, blockIdx_y;
 
@@ -80,12 +77,12 @@ namespace transpose_detail
             blockIdx_x = ((bid / gridDim.y) + blockIdx_y) % gridDim.x;
         }
 
-        int xIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.x;
-        int yIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.y;
+        int xIndex = blockIdx_x * TILE_DIM + threadIdx.x;
+        int yIndex = blockIdx_y * TILE_DIM + threadIdx.y;
 
         if (xIndex < cols)
         {
-            for (int i = 0; i < TRANSPOSE_TILE_DIM; i += TRANSPOSE_BLOCK_ROWS)
+            for (int i = 0; i < TILE_DIM; i += BLOCK_DIM_Y)
             {
                 if (yIndex + i < rows)
                 {
@@ -96,12 +93,12 @@ namespace transpose_detail
 
         __syncthreads();
 
-        xIndex = blockIdx_y * TRANSPOSE_TILE_DIM + threadIdx.x;
-        yIndex = blockIdx_x * TRANSPOSE_TILE_DIM + threadIdx.y;
+        xIndex = blockIdx_y * TILE_DIM + threadIdx.x;
+        yIndex = blockIdx_x * TILE_DIM + threadIdx.y;
 
         if (xIndex < rows)
         {
-            for (int i = 0; i < TRANSPOSE_TILE_DIM; i += TRANSPOSE_BLOCK_ROWS)
+            for (int i = 0; i < TILE_DIM; i += BLOCK_DIM_Y)
             {
                 if (yIndex + i < cols)
                 {
@@ -111,13 +108,13 @@ namespace transpose_detail
         }
     }
 
-    template <class SrcPtr, typename DstType>
+    template <class Policy, class SrcPtr, typename DstType>
     __host__ void transpose(const SrcPtr& src, const GlobPtr<DstType>& dst, int rows, int cols, cudaStream_t stream)
     {
-        const dim3 block(TRANSPOSE_TILE_DIM, TRANSPOSE_TILE_DIM);
+        const dim3 block(Policy::tile_dim, Policy::block_dim_y);
         const dim3 grid(divUp(cols, block.x), divUp(rows, block.y));
 
-        transpose<<<grid, block, 0, stream>>>(src, dst, rows, cols);
+        transpose<Policy::tile_dim, Policy::block_dim_y><<<grid, block, 0, stream>>>(src, dst, rows, cols);
         CV_CUDEV_SAFE_CALL( cudaGetLastError() );
 
         if (stream == 0)

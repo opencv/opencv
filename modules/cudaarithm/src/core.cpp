@@ -64,52 +64,6 @@ void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
-// transpose
-
-namespace arithm
-{
-    template <typename T> void transpose(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream);
-}
-
-void cv::cuda::transpose(InputArray _src, OutputArray _dst, Stream& _stream)
-{
-    GpuMat src = _src.getGpuMat();
-
-    CV_Assert( src.elemSize() == 1 || src.elemSize() == 4 || src.elemSize() == 8 );
-
-    _dst.create( src.cols, src.rows, src.type() );
-    GpuMat dst = _dst.getGpuMat();
-
-    cudaStream_t stream = StreamAccessor::getStream(_stream);
-
-    if (src.elemSize() == 1)
-    {
-        NppStreamHandler h(stream);
-
-        NppiSize sz;
-        sz.width  = src.cols;
-        sz.height = src.rows;
-
-        nppSafeCall( nppiTranspose_8u_C1R(src.ptr<Npp8u>(), static_cast<int>(src.step),
-            dst.ptr<Npp8u>(), static_cast<int>(dst.step), sz) );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-    else if (src.elemSize() == 4)
-    {
-        arithm::transpose<int>(src, dst, stream);
-    }
-    else // if (src.elemSize() == 8)
-    {
-        if (!deviceSupports(NATIVE_DOUBLE))
-            CV_Error(cv::Error::StsUnsupportedFormat, "The device doesn't support double");
-
-        arithm::transpose<double>(src, dst, stream);
-    }
-}
-
-////////////////////////////////////////////////////////////////////////
 // flip
 
 namespace
