@@ -7,8 +7,7 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
-using namespace std;
-extern string workdir;
+
 PARAM_TEST_CASE(MomentsTest, MatType, bool)
 {
     int type;
@@ -63,9 +62,9 @@ TEST_P(MomentsTest, Mat)
         cv::Moments oclMom = cv::ocl::ocl_moments(_array, binaryImage);
 
         Compare(CvMom, oclMom);
-
     }
 }
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MomentsTest, Combine(
                             Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_64FC1), Values(true,false)));
+
 #endif // HAVE_OPENCL

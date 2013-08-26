@@ -46,13 +46,10 @@
 #include "test_precomp.hpp"
 #include "opencv2/objdetect.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace testing;
 
 #ifdef HAVE_OPENCL
-
-extern string workdir;
 
 ///////////////////// HOG /////////////////////////////
 PARAM_TEST_CASE(HOG, Size, int)
@@ -196,14 +193,14 @@ PARAM_TEST_CASE(Haar, int, CascadeName)
 
     int flags;
     std::string cascadeName;
-    vector<Rect> faces, oclfaces;
+    std::vector<Rect> faces, oclfaces;
     Mat img;
     ocl::oclMat d_img;
 
     virtual void SetUp()
     {
         flags = GET_PARAM(0);
-        cascadeName = (string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
+        cascadeName = (std::string(cvtest::TS::ptr()->get_data_path()) + "cv/cascadeandhog/cascades/").append(GET_PARAM(1));
         ASSERT_TRUE(cascade.load( cascadeName ));
         ASSERT_TRUE(cpucascade.load(cascadeName));
         img = readImage("cv/shared/lena.png", IMREAD_GRAYSCALE);
