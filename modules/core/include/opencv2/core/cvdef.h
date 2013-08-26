@@ -199,15 +199,7 @@
 */
 
 #if !defined _MSC_VER && !defined __BORLANDC__
-#  if defined __cplusplus && __cplusplus >= 201103L
-#    include <cstdint>
-     typedef std::uint32_t uint;
-#  else
-#    include <stdint.h>
-     typedef uint32_t uint;
-#  endif
-#else
-   typedef unsigned uint;
+#  include <stdint.h>
 #endif
 
 typedef signed char schar;
@@ -215,6 +207,7 @@ typedef signed char schar;
 #ifndef __IPL_H__
    typedef unsigned char uchar;
    typedef unsigned short ushort;
+   typedef unsigned int uint;
 #endif
 
 #if defined _MSC_VER || defined __BORLANDC__
