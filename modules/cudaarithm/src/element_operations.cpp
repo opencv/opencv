@@ -159,180 +159,6 @@ namespace
     }
 }
 
-
-////////////////////////////////////////////////////////////////////////
-// Basic arithmetical operations (add subtract multiply divide)
-
-namespace
-{
-    template<int DEPTH> struct NppTypeTraits;
-    template<> struct NppTypeTraits<CV_8U>  { typedef Npp8u npp_t; };
-    template<> struct NppTypeTraits<CV_8S>  { typedef Npp8s npp_t; };
-    template<> struct NppTypeTraits<CV_16U> { typedef Npp16u npp_t; };
-    template<> struct NppTypeTraits<CV_16S> { typedef Npp16s npp_t; typedef Npp16sc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_32S> { typedef Npp32s npp_t; typedef Npp32sc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_32F> { typedef Npp32f npp_t; typedef Npp32fc npp_complex_type; };
-    template<> struct NppTypeTraits<CV_64F> { typedef Npp64f npp_t; typedef Npp64fc npp_complex_type; };
-
-    template<int DEPTH, int cn> struct NppArithmScalarFunc
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        typedef NppStatus (*func_ptr)(const npp_t* pSrc1, int nSrc1Step, const npp_t* pConstants,
-            npp_t* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    };
-    template<int DEPTH> struct NppArithmScalarFunc<DEPTH, 1>
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        typedef NppStatus (*func_ptr)(const npp_t* pSrc1, int nSrc1Step, const npp_t pConstants,
-            npp_t* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    };
-    template<int DEPTH> struct NppArithmScalarFunc<DEPTH, 2>
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_complex_type npp_complex_type;
-
-        typedef NppStatus (*func_ptr)(const npp_complex_type* pSrc1, int nSrc1Step, const npp_complex_type pConstants,
-            npp_complex_type* pDst, int nDstStep, NppiSize oSizeROI, int nScaleFactor);
-    };
-    template<int cn> struct NppArithmScalarFunc<CV_32F, cn>
-    {
-        typedef NppStatus (*func_ptr)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f* pConstants, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
-    };
-    template<> struct NppArithmScalarFunc<CV_32F, 1>
-    {
-        typedef NppStatus (*func_ptr)(const Npp32f* pSrc1, int nSrc1Step, const Npp32f pConstants, Npp32f* pDst, int nDstStep, NppiSize oSizeROI);
-    };
-    template<> struct NppArithmScalarFunc<CV_32F, 2>
-    {
-        typedef NppStatus (*func_ptr)(const Npp32fc* pSrc1, int nSrc1Step, const Npp32fc pConstants, Npp32fc* pDst, int nDstStep, NppiSize oSizeROI);
-    };
-
-    template<int DEPTH, int cn, typename NppArithmScalarFunc<DEPTH, cn>::func_ptr func> struct NppArithmScalar
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            const npp_t pConstants[] = { saturate_cast<npp_t>(sc.val[0]), saturate_cast<npp_t>(sc.val[1]), saturate_cast<npp_t>(sc.val[2]), saturate_cast<npp_t>(sc.val[3]) };
-
-            nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), pConstants, (npp_t*)dst.data, static_cast<int>(dst.step), sz, 0) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template<int DEPTH, typename NppArithmScalarFunc<DEPTH, 1>::func_ptr func> struct NppArithmScalar<DEPTH, 1, func>
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), (npp_t*)dst.data, static_cast<int>(dst.step), sz, 0) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template<int DEPTH, typename NppArithmScalarFunc<DEPTH, 2>::func_ptr func> struct NppArithmScalar<DEPTH, 2, func>
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-        typedef typename NppTypeTraits<DEPTH>::npp_complex_type npp_complex_type;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            npp_complex_type nConstant;
-            nConstant.re = saturate_cast<npp_t>(sc.val[0]);
-            nConstant.im = saturate_cast<npp_t>(sc.val[1]);
-
-            nppSafeCall( func((const npp_complex_type*)src.data, static_cast<int>(src.step), nConstant,
-                              (npp_complex_type*)dst.data, static_cast<int>(dst.step), sz, 0) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template<int cn, typename NppArithmScalarFunc<CV_32F, cn>::func_ptr func> struct NppArithmScalar<CV_32F, cn, func>
-    {
-        typedef typename NppTypeTraits<CV_32F>::npp_t npp_t;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            const Npp32f pConstants[] = { saturate_cast<Npp32f>(sc.val[0]), saturate_cast<Npp32f>(sc.val[1]), saturate_cast<Npp32f>(sc.val[2]), saturate_cast<Npp32f>(sc.val[3]) };
-
-            nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), pConstants, (npp_t*)dst.data, static_cast<int>(dst.step), sz) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template<typename NppArithmScalarFunc<CV_32F, 1>::func_ptr func> struct NppArithmScalar<CV_32F, 1, func>
-    {
-        typedef typename NppTypeTraits<CV_32F>::npp_t npp_t;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            nppSafeCall( func((const npp_t*)src.data, static_cast<int>(src.step), saturate_cast<Npp32f>(sc.val[0]), (npp_t*)dst.data, static_cast<int>(dst.step), sz) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template<typename NppArithmScalarFunc<CV_32F, 2>::func_ptr func> struct NppArithmScalar<CV_32F, 2, func>
-    {
-        typedef typename NppTypeTraits<CV_32F>::npp_t npp_t;
-        typedef typename NppTypeTraits<CV_32F>::npp_complex_type npp_complex_type;
-
-        static void call(const PtrStepSzb src, Scalar sc, PtrStepb dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize sz;
-            sz.width = src.cols;
-            sz.height = src.rows;
-
-            Npp32fc nConstant;
-            nConstant.re = saturate_cast<Npp32f>(sc.val[0]);
-            nConstant.im = saturate_cast<Npp32f>(sc.val[1]);
-
-            nppSafeCall( func((const npp_complex_type*)src.data, static_cast<int>(src.step), nConstant, (npp_complex_type*)dst.data, static_cast<int>(dst.step), sz) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-}
-
 ////////////////////////////////////////////////////////////////////////
 // add
 
@@ -464,60 +290,6 @@ void cv::cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cm
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// bitwise_not
-
-namespace arithm
-{
-    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-}
-
-void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& _stream)
-{
-    using namespace arithm;
-
-    GpuMat src = _src.getGpuMat();
-    GpuMat mask = _mask.getGpuMat();
-
-    const int depth = src.depth();
-
-    CV_Assert( depth <= CV_64F );
-    CV_Assert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
-
-    _dst.create(src.size(), src.type());
-    GpuMat dst = _dst.getGpuMat();
-
-    cudaStream_t stream = StreamAccessor::getStream(_stream);
-
-    const int bcols = (int) (src.cols * src.elemSize());
-
-    if ((bcols & 3) == 0)
-    {
-        const int vcols = bcols >> 2;
-
-        bitMatNot<unsigned int>(
-                    PtrStepSzb(src.rows, vcols, src.data, src.step),
-                    PtrStepSzb(src.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
-
-        bitMatNot<unsigned short>(
-                    PtrStepSzb(src.rows, vcols, src.data, src.step),
-                    PtrStepSzb(src.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else
-    {
-        bitMatNot<unsigned char>(
-                    PtrStepSzb(src.rows, bcols, src.data, src.step),
-                    PtrStepSzb(src.rows, bcols, dst.data, dst.step),
-                    mask, stream);
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
 
 namespace
@@ -530,195 +302,9 @@ namespace
     };
 }
 
-namespace arithm
-{
-    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-}
+void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
-static void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& _stream, int op)
-{
-    using namespace arithm;
-
-    typedef void (*func_t)(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    static const func_t funcs32[] =
-    {
-        bitMatAnd<uint>,
-        bitMatOr<uint>,
-        bitMatXor<uint>
-    };
-    static const func_t funcs16[] =
-    {
-        bitMatAnd<ushort>,
-        bitMatOr<ushort>,
-        bitMatXor<ushort>
-    };
-    static const func_t funcs8[] =
-    {
-        bitMatAnd<uchar>,
-        bitMatOr<uchar>,
-        bitMatXor<uchar>
-    };
-
-    cudaStream_t stream = StreamAccessor::getStream(_stream);
-
-    const int bcols = (int) (src1.cols * src1.elemSize());
-
-    if ((bcols & 3) == 0)
-    {
-        const int vcols = bcols >> 2;
-
-        funcs32[op](PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else if ((bcols & 1) == 0)
-    {
-        const int vcols = bcols >> 1;
-
-        funcs16[op](PtrStepSzb(src1.rows, vcols, src1.data, src1.step),
-                    PtrStepSzb(src1.rows, vcols, src2.data, src2.step),
-                    PtrStepSzb(src1.rows, vcols, dst.data, dst.step),
-                    mask, stream);
-    }
-    else
-    {
-
-        funcs8[op](PtrStepSzb(src1.rows, bcols, src1.data, src1.step),
-                   PtrStepSzb(src1.rows, bcols, src2.data, src2.step),
-                   PtrStepSzb(src1.rows, bcols, dst.data, dst.step),
-                   mask, stream);
-    }
-}
-
-namespace arithm
-{
-    template <typename T> void bitScalarAnd(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
-    template <typename T> void bitScalarOr(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
-    template <typename T> void bitScalarXor(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
-}
-
-namespace
-{
-    typedef void (*bit_scalar_func_t)(PtrStepSzb src1, unsigned int src2, PtrStepSzb dst, cudaStream_t stream);
-
-    template <typename T, bit_scalar_func_t func> struct BitScalar
-    {
-        static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
-        {
-            func(src, saturate_cast<T>(sc.val[0]), dst, stream);
-        }
-    };
-
-    template <bit_scalar_func_t func> struct BitScalar4
-    {
-        static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
-        {
-            unsigned int packedVal = 0;
-
-            packedVal |= (saturate_cast<unsigned char>(sc.val[0]) & 0xffff);
-            packedVal |= (saturate_cast<unsigned char>(sc.val[1]) & 0xffff) << 8;
-            packedVal |= (saturate_cast<unsigned char>(sc.val[2]) & 0xffff) << 16;
-            packedVal |= (saturate_cast<unsigned char>(sc.val[3]) & 0xffff) << 24;
-
-            func(src, packedVal, dst, stream);
-        }
-    };
-
-    template <int DEPTH, int cn> struct NppBitwiseCFunc
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const npp_t* pConstants, npp_t* pDst, int nDstStep, NppiSize oSizeROI);
-    };
-    template <int DEPTH> struct NppBitwiseCFunc<DEPTH, 1>
-    {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
-
-        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const npp_t pConstant, npp_t* pDst, int nDstStep, NppiSize oSizeROI);
-    };
-
-    template <int DEPTH, int cn, typename NppBitwiseCFunc<DEPTH, cn>::func_t func> struct NppBitwiseC
-    {
-        typedef typename NppBitwiseCFunc<DEPTH, cn>::npp_t npp_t;
-
-        static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize oSizeROI;
-            oSizeROI.width = src.cols;
-            oSizeROI.height = src.rows;
-
-            const npp_t pConstants[] = {saturate_cast<npp_t>(sc.val[0]), saturate_cast<npp_t>(sc.val[1]), saturate_cast<npp_t>(sc.val[2]), saturate_cast<npp_t>(sc.val[3])};
-
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), pConstants, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-    template <int DEPTH, typename NppBitwiseCFunc<DEPTH, 1>::func_t func> struct NppBitwiseC<DEPTH, 1, func>
-    {
-        typedef typename NppBitwiseCFunc<DEPTH, 1>::npp_t npp_t;
-
-        static void call(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream)
-        {
-            NppStreamHandler h(stream);
-
-            NppiSize oSizeROI;
-            oSizeROI.width = src.cols;
-            oSizeROI.height = src.rows;
-
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), saturate_cast<npp_t>(sc.val[0]), dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
-
-            if (stream == 0)
-                cudaSafeCall( cudaDeviceSynchronize() );
-        }
-    };
-}
-
-static void bitScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
-{
-    using namespace arithm;
-
-    typedef void (*func_t)(const GpuMat& src, Scalar sc, GpuMat& dst, cudaStream_t stream);
-    static const func_t funcs[3][5][4] =
-    {
-        {
-            {BitScalar<unsigned char, bitScalarAnd<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiAndC_8u_C3R >::call, BitScalar4< bitScalarAnd<unsigned int> >::call},
-            {0,0,0,0},
-            {BitScalar<unsigned short, bitScalarAnd<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiAndC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiAndC_16u_C4R>::call},
-            {0,0,0,0},
-            {BitScalar<int, bitScalarAnd<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiAndC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiAndC_32s_C4R>::call}
-        },
-        {
-            {BitScalar<unsigned char, bitScalarOr<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiOrC_8u_C3R >::call, BitScalar4< bitScalarOr<unsigned int> >::call},
-            {0,0,0,0},
-            {BitScalar<unsigned short, bitScalarOr<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiOrC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiOrC_16u_C4R>::call},
-            {0,0,0,0},
-            {BitScalar<int, bitScalarOr<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiOrC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiOrC_32s_C4R>::call}
-        },
-        {
-            {BitScalar<unsigned char, bitScalarXor<unsigned char> >::call  , 0, NppBitwiseC<CV_8U , 3, nppiXorC_8u_C3R >::call, BitScalar4< bitScalarXor<unsigned int> >::call},
-            {0,0,0,0},
-            {BitScalar<unsigned short, bitScalarXor<unsigned short> >::call, 0, NppBitwiseC<CV_16U, 3, nppiXorC_16u_C3R>::call, NppBitwiseC<CV_16U, 4, nppiXorC_16u_C4R>::call},
-            {0,0,0,0},
-            {BitScalar<int, bitScalarXor<int> >::call                      , 0, NppBitwiseC<CV_32S, 3, nppiXorC_32s_C3R>::call, NppBitwiseC<CV_32S, 4, nppiXorC_32s_C4R>::call}
-        }
-    };
-
-    const int depth = src.depth();
-    const int cn = src.channels();
-
-    CV_Assert( depth == CV_8U || depth == CV_16U || depth == CV_32S );
-    CV_Assert( cn == 1 || cn == 3 || cn == 4 );
-    CV_Assert( mask.empty() );
-
-    funcs[op][depth][cn - 1](src, val, dst, StreamAccessor::getStream(stream));
-}
+void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
 void cv::cuda::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
@@ -742,20 +328,20 @@ namespace
 {
     template <int DEPTH, int cn> struct NppShiftFunc
     {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_type;
 
-        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const Npp32u* pConstants, npp_t* pDst,  int nDstStep,  NppiSize oSizeROI);
+        typedef NppStatus (*func_t)(const npp_type* pSrc1, int nSrc1Step, const Npp32u* pConstants, npp_type* pDst,  int nDstStep,  NppiSize oSizeROI);
     };
     template <int DEPTH> struct NppShiftFunc<DEPTH, 1>
     {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_type;
 
-        typedef NppStatus (*func_t)(const npp_t* pSrc1, int nSrc1Step, const Npp32u pConstants, npp_t* pDst,  int nDstStep,  NppiSize oSizeROI);
+        typedef NppStatus (*func_t)(const npp_type* pSrc1, int nSrc1Step, const Npp32u pConstants, npp_type* pDst,  int nDstStep,  NppiSize oSizeROI);
     };
 
     template <int DEPTH, int cn, typename NppShiftFunc<DEPTH, cn>::func_t func> struct NppShift
     {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_type;
 
         static void call(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream)
         {
@@ -765,7 +351,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), sc.val, dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
+            nppSafeCall( func(src.ptr<npp_type>(), static_cast<int>(src.step), sc.val, dst.ptr<npp_type>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );
@@ -773,7 +359,7 @@ namespace
     };
     template <int DEPTH, typename NppShiftFunc<DEPTH, 1>::func_t func> struct NppShift<DEPTH, 1, func>
     {
-        typedef typename NppTypeTraits<DEPTH>::npp_t npp_t;
+        typedef typename NPPTypeTraits<DEPTH>::npp_type npp_type;
 
         static void call(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream)
         {
@@ -783,7 +369,7 @@ namespace
             oSizeROI.width = src.cols;
             oSizeROI.height = src.rows;
 
-            nppSafeCall( func(src.ptr<npp_t>(), static_cast<int>(src.step), sc.val[0], dst.ptr<npp_t>(), static_cast<int>(dst.step), oSizeROI) );
+            nppSafeCall( func(src.ptr<npp_type>(), static_cast<int>(src.step), sc.val[0], dst.ptr<npp_type>(), static_cast<int>(dst.step), oSizeROI) );
 
             if (stream == 0)
                 cudaSafeCall( cudaDeviceSynchronize() );

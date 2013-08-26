@@ -40,87 +40,124 @@
 //
 //M*/
 
-#if !defined CUDA_DISABLER
+#include "opencv2/opencv_modules.hpp"
 
-#include "opencv2/core/cuda/common.hpp"
-#include "opencv2/core/cuda/functional.hpp"
-#include "opencv2/core/cuda/transform.hpp"
-#include "opencv2/core/cuda/saturate_cast.hpp"
-#include "opencv2/core/cuda/simd_functions.hpp"
+#ifndef HAVE_OPENCV_CUDEV
 
-#include "arithm_func_traits.hpp"
+#error "opencv_cudev is required"
 
-using namespace cv::cuda;
-using namespace cv::cuda::device;
+#else
 
-namespace cv { namespace cuda { namespace device
+#include "opencv2/cudaarithm.hpp"
+#include "opencv2/cudev.hpp"
+
+using namespace cv::cudev;
+
+void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
+
+//////////////////////////////////////////////////////////////////////////////
+/// bitwise_not
+
+namespace
 {
-    template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
+    template <typename T>
+    void bitMatNot(const GpuMat& src, GpuMat& dst, const GpuMat& mask, Stream& stream)
     {
-    };
+        GlobPtrSz<T> vsrc = globPtr((T*) src.data, src.step, src.rows, src.cols * src.channels());
+        GlobPtrSz<T> vdst = globPtr((T*) dst.data, dst.step, src.rows, src.cols * src.channels());
 
-    template <typename T> struct TransformFunctorTraits< bit_and<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< bit_or<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-
-    template <typename T> struct TransformFunctorTraits< bit_xor<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
-    {
-    };
-}}}
-
-namespace arithm
-{
-    template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
-    {
         if (mask.data)
-            device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), mask, stream);
+            gridTransformUnary(vsrc, vdst, bit_not<T>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
         else
-            device::transform((PtrStepSz<T>) src, (PtrStepSz<T>) dst, bit_not<T>(), WithOutMask(), stream);
+            gridTransformUnary(vsrc, vdst, bit_not<T>(), stream);
     }
-
-    template <typename T> void bitMatAnd(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
-    {
-        if (mask.data)
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), mask, stream);
-        else
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_and<T>(), WithOutMask(), stream);
-    }
-
-    template <typename T> void bitMatOr(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
-    {
-        if (mask.data)
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), mask, stream);
-        else
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_or<T>(), WithOutMask(), stream);
-    }
-
-    template <typename T> void bitMatXor(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream)
-    {
-        if (mask.data)
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), mask, stream);
-        else
-            device::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) src2, (PtrStepSz<T>) dst, bit_xor<T>(), WithOutMask(), stream);
-    }
-
-    template void bitMatNot<uchar>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatNot<ushort>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatNot<uint>(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    template void bitMatAnd<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatAnd<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatAnd<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    template void bitMatOr<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatOr<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatOr<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-
-    template void bitMatXor<uchar>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatXor<ushort>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
-    template void bitMatXor<uint>(PtrStepSzb src1, PtrStepSzb src2, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-#endif // CUDA_DISABLER
+void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
+{
+    GpuMat src = _src.getGpuMat();
+    GpuMat mask = _mask.getGpuMat();
+
+    const int depth = src.depth();
+
+    CV_DbgAssert( depth <= CV_32F );
+    CV_DbgAssert( mask.empty() || (mask.type() == CV_8UC1 && mask.size() == src.size()) );
+
+    _dst.create(src.size(), src.type());
+    GpuMat dst = _dst.getGpuMat();
+
+    if (depth == CV_32F || depth == CV_32S)
+    {
+        bitMatNot<uint>(src, dst, mask, stream);
+    }
+    else if (depth == CV_16S || depth == CV_16U)
+    {
+        bitMatNot<ushort>(src, dst, mask, stream);
+    }
+    else
+    {
+        bitMatNot<uchar>(src, dst, mask, stream);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// Binary bitwise logical operations
+
+namespace
+{
+    template <template <typename> class Op, typename T>
+    void bitMatOp(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream)
+    {
+        GlobPtrSz<T> vsrc1 = globPtr((T*) src1.data, src1.step, src1.rows, src1.cols * src1.channels());
+        GlobPtrSz<T> vsrc2 = globPtr((T*) src2.data, src2.step, src1.rows, src1.cols * src1.channels());
+        GlobPtrSz<T> vdst = globPtr((T*) dst.data, dst.step, src1.rows, src1.cols * src1.channels());
+
+        if (mask.data)
+            gridTransformBinary(vsrc1, vsrc2, vdst, Op<T>(), singleMaskChannels(globPtr<uchar>(mask), src1.channels()), stream);
+        else
+            gridTransformBinary(vsrc1, vsrc2, vdst, Op<T>(), stream);
+    }
+}
+
+void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
+{
+    typedef void (*func_t)(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, Stream& stream);
+    static const func_t funcs32[] =
+    {
+        bitMatOp<bit_and, uint>,
+        bitMatOp<bit_or, uint>,
+        bitMatOp<bit_xor, uint>
+    };
+    static const func_t funcs16[] =
+    {
+        bitMatOp<bit_and, ushort>,
+        bitMatOp<bit_or, ushort>,
+        bitMatOp<bit_xor, ushort>
+    };
+    static const func_t funcs8[] =
+    {
+        bitMatOp<bit_and, uchar>,
+        bitMatOp<bit_or, uchar>,
+        bitMatOp<bit_xor, uchar>
+    };
+
+    const int depth = src1.depth();
+
+    CV_DbgAssert( depth <= CV_32F );
+    CV_DbgAssert( op >= 0 && op < 3 );
+
+    if (depth == CV_32F || depth == CV_32S)
+    {
+        funcs32[op](src1, src2, dst, mask, stream);
+    }
+    else if (depth == CV_16S || depth == CV_16U)
+    {
+        funcs16[op](src1, src2, dst, mask, stream);
+    }
+    else
+    {
+        funcs8[op](src1, src2, dst, mask, stream);
+    }
+}
+
+#endif
