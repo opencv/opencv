@@ -150,4 +150,121 @@ Ptr<CalibrateDebevec> createCalibrateDebevec(int samples, float lambda)
     return new CalibrateDebevecImpl(samples, lambda);
 }
 
+class CalibrateRobertsonImpl : public CalibrateRobertson
+{
+public:
+    CalibrateRobertsonImpl(int max_iter, float threshold) :
+        max_iter(max_iter),
+        threshold(threshold),
+        name("CalibrateRobertson"),
+        weight(RobertsonWeights())
+    {
+    }
+    
+    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
+    {
+        std::vector<Mat> images;
+        src.getMatVector(images);
+
+        CV_Assert(images.size() == times.size());
+        checkImageDimensions(images);
+        CV_Assert(images[0].depth() == CV_8U);
+
+        int channels = images[0].channels();
+        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        dst.create(256, 1, CV_32FCC);
+        Mat response = dst.getMat();
+        
+        response = Mat::zeros(256, 1, CV_32FCC);
+        for(int i = 0; i < 256; i++) {
+            for(int c = 0; c < channels; c++) {
+                response.at<Vec3f>(i)[c] = i / 128.0;
+            }
+        }
+
+        Mat card = Mat::zeros(256, 1, CV_32FCC);
+        for(int i = 0; i < images.size(); i++) {
+           uchar *ptr = images[i].ptr();
+           for(int pos = 0; pos < images[i].total(); pos++) {
+               for(int c = 0; c < channels; c++, ptr++) {
+                   card.at<Vec3f>(*ptr)[c] += 1;
+               }
+           }
+        }
+        card = 1.0 / card;
+
+        for(int iter = 0; iter < max_iter; iter++) {
+
+            Scalar channel_err(0, 0, 0);
+            Mat radiance = Mat::zeros(images[0].size(), CV_32FCC);
+            Mat wsum = Mat::zeros(images[0].size(), CV_32FCC);
+            for(int i = 0; i < images.size(); i++) {
+                Mat im, w;
+                LUT(images[i], weight, w);
+                LUT(images[i], response, im);
+
+                Mat err_mat;
+                pow(im - times[i] * radiance, 2.0f, err_mat);
+                err_mat = w.mul(err_mat);
+                channel_err += sum(err_mat);
+
+                radiance += times[i] * w.mul(im);
+                wsum += pow(times[i], 2) * w;
+            }
+            float err = (channel_err[0] + channel_err[1] + channel_err[2]) / (channels * radiance.total());
+            radiance = radiance.mul(1 / wsum);
+
+            float* rad_ptr = radiance.ptr<float>();
+            response = Mat::zeros(256, 1, CV_32FC3);
+            for(int i = 0; i < images.size(); i++) {
+                uchar *ptr = images[i].ptr();
+                for(int pos = 0; pos < images[i].total(); pos++) {
+                    for(int c = 0; c < channels; c++, ptr++, rad_ptr++) {
+                        response.at<Vec3f>(*ptr)[c] += times[i] * *rad_ptr;
+                    }
+                }
+            }
+            response = response.mul(card);
+            for(int c = 0; c < 3; c++) {
+                for(int i = 0; i < 256; i++) {
+                    response.at<Vec3f>(i)[c] /= response.at<Vec3f>(128)[c];
+                }
+            }
+        }
+    }
+
+    int getMaxIter() const { return max_iter; }
+    void setMaxIter(int val) { max_iter = val; }
+
+    float getThreshold() const { return threshold; }
+    void setThreshold(float val) { threshold = val; }
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "max_iter" << max_iter
+           << "threshold" << threshold;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        max_iter = fn["max_iter"];
+        threshold = fn["threshold"];
+    }
+
+protected:
+    String name;
+    int max_iter;
+    float threshold;
+    Mat weight;
+};
+
+Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter, float threshold)
+{
+    return new CalibrateRobertsonImpl(max_iter, threshold);
+}
+
 }

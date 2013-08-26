@@ -132,7 +132,7 @@ As always, we would be happy to hear your comments and receive your contribution
    .. cssclass:: toctableopencv
 
    =========== =======================================================
-   |ml|        Use the powerfull machine learning classes for statistical classification, regression and clustering of data.
+   |ml|        Use the powerful machine learning classes for statistical classification, regression and clustering of data.
 
    =========== =======================================================
 
@@ -141,6 +141,21 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: ml Icon
 
+*  :ref:`Table-Of-Content-Photo`
+
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+
+   =========== =======================================================
+   |photo|      Use OpenCV for advanced photo processing.
+
+   =========== =======================================================
+
+   .. |photo| image:: images/photo.png
+                 :height: 80pt
+                 :width:  80pt
+                 :alt: photo Icon
+				 
 *  :ref:`Table-Of-Content-GPU`
 
    .. tabularcolumns:: m{100pt} m{300pt}

@@ -213,6 +213,20 @@ public:
 
 CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);
 
+// "Dynamic range improvement through multiple exposures", Robertson et al., 1999
+
+class CV_EXPORTS_W CalibrateRobertson : public ExposureCalibrate
+{
+public:
+    CV_WRAP virtual int getMaxIter() const = 0;
+    CV_WRAP virtual void setMaxIter(int max_iter) = 0;
+    
+    CV_WRAP virtual float getThreshold() const = 0;
+    CV_WRAP virtual void setThreshold(float threshold) = 0;
+};
+
+CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int samples = 50, float lambda = 10.0f);
+
 class CV_EXPORTS_W ExposureMerge : public Algorithm
 {
 public:
@@ -253,6 +267,16 @@ public:
 
 CV_EXPORTS_W Ptr<MergeMertens> 
 createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f);
+
+// "Dynamic range improvement through multiple exposures", Robertson et al., 1999
+
+class CV_EXPORTS_W MergeRobertson : public ExposureMerge
+{
+public:
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
+                                 const std::vector<float>& times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
+};
 
 } // cv
 

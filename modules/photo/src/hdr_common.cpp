@@ -68,6 +68,18 @@ Mat tringleWeights()
     return w;
 }
 
+Mat RobertsonWeights()
+{
+    Mat weight(256, 1, CV_32FC3);
+    for(int i = 0; i < 256; i++) {
+        float value = exp(-4.0f * pow(i - 127.5f, 2.0f) / pow(127.5f, 2.0f));
+        for(int c = 0; c < 3; c++) {
+            weight.at<Vec3f>(i)[c] = value;
+        }
+    }
+    return weight;
+}
+
 void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
 {
     std::vector<Mat> channels(3);

@@ -303,4 +303,74 @@ Ptr<MergeMertens> createMergeMertens(float wcon, float wsat, float wexp)
     return new MergeMertensImpl(wcon, wsat, wexp);
 }
 
+class MergeRobertsonImpl : public MergeRobertson
+{
+public:
+    MergeRobertsonImpl() :
+        name("MergeRobertson"),
+        weight(RobertsonWeights())
+    {
+    }
+    
+    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times, InputArray input_response)
+    {
+        std::vector<Mat> images;
+        src.getMatVector(images);
+
+        CV_Assert(images.size() == times.size());
+        checkImageDimensions(images);
+        CV_Assert(images[0].depth() == CV_8U);
+
+        int channels = images[0].channels();
+        int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        dst.create(images[0].size(), CV_32FCC);
+        Mat result = dst.getMat();
+
+        Mat response = input_response.getMat();
+        if(response.empty()) {
+            response = linearResponse(channels);
+        }
+        CV_Assert(response.rows == 256 && response.cols == 1 && 
+                  response.channels() == channels);
+    
+        result = Mat::zeros(images[0].size(), CV_32FCC);
+        Mat wsum = Mat::zeros(images[0].size(), CV_32FCC);
+        for(size_t i = 0; i < images.size(); i++) {
+            Mat im, w;
+            LUT(images[i], weight, w);
+            LUT(images[i], response, im);
+
+            result += times[i] * w.mul(im);
+            wsum += pow(times[i], 2) * w;
+        }
+        result = result.mul(1 / wsum);
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times)
+    {
+        process(src, dst, times, Mat());
+    }
+
+protected:
+    String name;
+    Mat weight;
+
+    Mat linearResponse(int channels)
+    {
+        Mat response = Mat::zeros(256, 1, CV_32FC3);
+        for(int i = 0; i < 256; i++) {
+            for(int c = 0; c < 3; c++) {
+                response.at<Vec3f>(i)[c] = static_cast<float>(i) / 128.0f;
+            }
+        }
+        return response;
+    }
+};
+
+Ptr<MergeRobertson> createMergeRobertson()
+{
+    return new MergeRobertsonImpl;
+}
+
 }
