@@ -48,17 +48,12 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     private CameraBridgeViewBase mOpenCvCameraView;
 
     private Size                 mSize0;
-    private Size                 mSizeRgba;
-    private Size                 mSizeRgbaInner;
 
-    private Mat                  mRgba;
-    private Mat                  mGray;
     private Mat                  mIntermediateMat;
-    private Mat                  mHist;
     private Mat                  mMat0;
     private MatOfInt             mChannels[];
     private MatOfInt             mHistSize;
-    private int                  mHistSizeNum;
+    private int                  mHistSizeNum = 25;
     private MatOfFloat           mRanges;
     private Scalar               mColorsRGB[];
     private Scalar               mColorsHue[];
@@ -66,10 +61,6 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     private Point                mP1;
     private Point                mP2;
     private float                mBuff[];
-    private Mat                  mRgbaInnerWindow;
-    private Mat                  mGrayInnerWindow;
-    private Mat                  mZoomWindow;
-    private Mat                  mZoomCorner;
     private Mat                  mSepiaKernel;
 
     public static int           viewMode = VIEW_MODE_RGBA;
@@ -166,13 +157,9 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
     }
 
     public void onCameraViewStarted(int width, int height) {
-        mGray = new Mat();
-        mRgba = new Mat();
         mIntermediateMat = new Mat();
         mSize0 = new Size();
-        mHist = new Mat();
         mChannels = new MatOfInt[] { new MatOfInt(0), new MatOfInt(1), new MatOfInt(2) };
-        mHistSizeNum = 25;
         mBuff = new float[mHistSizeNum];
         mHistSize = new MatOfInt(mHistSizeNum);
         mRanges = new MatOfFloat(0f, 256f);
@@ -197,14 +184,22 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         mSepiaKernel.put(3, 0, /* A */0.000f, 0.000f, 0.000f, 1f);
     }
 
-    private void CreateAuxiliaryMats() {
-        if (mRgba.empty())
-            return;
+    public void onCameraViewStopped() {
+        // Explicitly deallocate Mats
+        if (mIntermediateMat != null)
+            mIntermediateMat.release();
 
-        mSizeRgba = mRgba.size();
+        mIntermediateMat = null;
+    }
 
-        int rows = (int) mSizeRgba.height;
-        int cols = (int) mSizeRgba.width;
+    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+        Mat rgba = inputFrame.rgba();
+        Size sizeRgba = rgba.size();
+
+        Mat rgbaInnerWindow;
+
+        int rows = (int) sizeRgba.height;
+        int cols = (int) sizeRgba.width;
 
         int left = cols / 8;
         int top = rows / 8;
@@ -212,151 +207,107 @@ public class ImageManipulationsActivity extends Activity implements CvCameraView
         int width = cols * 3 / 4;
         int height = rows * 3 / 4;
 
-        if (mRgbaInnerWindow == null)
-            mRgbaInnerWindow = mRgba.submat(top, top + height, left, left + width);
-        mSizeRgbaInner = mRgbaInnerWindow.size();
-
-        if (mGrayInnerWindow == null && !mGray.empty())
-            mGrayInnerWindow = mGray.submat(top, top + height, left, left + width);
-
-        if (mZoomCorner == null)
-            mZoomCorner = mRgba.submat(0, rows / 2 - rows / 10, 0, cols / 2 - cols / 10);
-
-        if (mZoomWindow == null)
-            mZoomWindow = mRgba.submat(rows / 2 - 9 * rows / 100, rows / 2 + 9 * rows / 100, cols / 2 - 9 * cols / 100, cols / 2 + 9 * cols / 100);
-    }
-
-    public void onCameraViewStopped() {
-        // Explicitly deallocate Mats
-        if (mZoomWindow != null)
-            mZoomWindow.release();
-        if (mZoomCorner != null)
-            mZoomCorner.release();
-        if (mGrayInnerWindow != null)
-            mGrayInnerWindow.release();
-        if (mRgbaInnerWindow != null)
-            mRgbaInnerWindow.release();
-        if (mRgba != null)
-            mRgba.release();
-        if (mGray != null)
-            mGray.release();
-        if (mIntermediateMat != null)
-            mIntermediateMat.release();
-
-        mRgba = null;
-        mGray = null;
-        mIntermediateMat = null;
-        mRgbaInnerWindow = null;
-        mGrayInnerWindow = null;
-        mZoomCorner = null;
-        mZoomWindow = null;
-    }
-
-    public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-        mRgba = inputFrame.rgba();
-
         switch (ImageManipulationsActivity.viewMode) {
         case ImageManipulationsActivity.VIEW_MODE_RGBA:
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_HIST:
-            if ((mSizeRgba == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-            int thikness = (int) (mSizeRgba.width / (mHistSizeNum + 10) / 5);
+            Mat hist = new Mat();
+            int thikness = (int) (sizeRgba.width / (mHistSizeNum + 10) / 5);
             if(thikness > 5) thikness = 5;
-            int offset = (int) ((mSizeRgba.width - (5*mHistSizeNum + 4*10)*thikness)/2);
+            int offset = (int) ((sizeRgba.width - (5*mHistSizeNum + 4*10)*thikness)/2);
             // RGB
             for(int c=0; c<3; c++) {
-                Imgproc.calcHist(Arrays.asList(mRgba), mChannels[c], mMat0, mHist, mHistSize, mRanges);
-                Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-                mHist.get(0, 0, mBuff);
+                Imgproc.calcHist(Arrays.asList(rgba), mChannels[c], mMat0, hist, mHistSize, mRanges);
+                Core.normalize(hist, hist, sizeRgba.height/2, 0, Core.NORM_INF);
+                hist.get(0, 0, mBuff);
                 for(int h=0; h<mHistSizeNum; h++) {
                     mP1.x = mP2.x = offset + (c * (mHistSizeNum + 10) + h) * thikness;
-                    mP1.y = mSizeRgba.height-1;
+                    mP1.y = sizeRgba.height-1;
                     mP2.y = mP1.y - 2 - (int)mBuff[h];
-                    Core.line(mRgba, mP1, mP2, mColorsRGB[c], thikness);
+                    Core.line(rgba, mP1, mP2, mColorsRGB[c], thikness);
                 }
             }
             // Value and Hue
-            Imgproc.cvtColor(mRgba, mIntermediateMat, Imgproc.COLOR_RGB2HSV_FULL);
+            Imgproc.cvtColor(rgba, mIntermediateMat, Imgproc.COLOR_RGB2HSV_FULL);
             // Value
-            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[2], mMat0, mHist, mHistSize, mRanges);
-            Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-            mHist.get(0, 0, mBuff);
+            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[2], mMat0, hist, mHistSize, mRanges);
+            Core.normalize(hist, hist, sizeRgba.height/2, 0, Core.NORM_INF);
+            hist.get(0, 0, mBuff);
             for(int h=0; h<mHistSizeNum; h++) {
                 mP1.x = mP2.x = offset + (3 * (mHistSizeNum + 10) + h) * thikness;
-                mP1.y = mSizeRgba.height-1;
+                mP1.y = sizeRgba.height-1;
                 mP2.y = mP1.y - 2 - (int)mBuff[h];
-                Core.line(mRgba, mP1, mP2, mWhilte, thikness);
+                Core.line(rgba, mP1, mP2, mWhilte, thikness);
             }
             // Hue
-            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[0], mMat0, mHist, mHistSize, mRanges);
-            Core.normalize(mHist, mHist, mSizeRgba.height/2, 0, Core.NORM_INF);
-            mHist.get(0, 0, mBuff);
+            Imgproc.calcHist(Arrays.asList(mIntermediateMat), mChannels[0], mMat0, hist, mHistSize, mRanges);
+            Core.normalize(hist, hist, sizeRgba.height/2, 0, Core.NORM_INF);
+            hist.get(0, 0, mBuff);
             for(int h=0; h<mHistSizeNum; h++) {
                 mP1.x = mP2.x = offset + (4 * (mHistSizeNum + 10) + h) * thikness;
-                mP1.y = mSizeRgba.height-1;
+                mP1.y = sizeRgba.height-1;
                 mP2.y = mP1.y - 2 - (int)mBuff[h];
-                Core.line(mRgba, mP1, mP2, mColorsHue[h], thikness);
+                Core.line(rgba, mP1, mP2, mColorsHue[h], thikness);
             }
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_CANNY:
-             if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-            Imgproc.Canny(mRgbaInnerWindow, mIntermediateMat, 80, 90);
-            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+            rgbaInnerWindow = rgba.submat(top, top + height, left, left + width);
+            Imgproc.Canny(rgbaInnerWindow, mIntermediateMat, 80, 90);
+            Imgproc.cvtColor(mIntermediateMat, rgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+            rgbaInnerWindow.release();
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SOBEL:
-            mGray = inputFrame.gray();
-
-            if ((mRgbaInnerWindow == null) || (mGrayInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-
-            Imgproc.Sobel(mGrayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
+            Mat gray = inputFrame.gray();
+            Mat grayInnerWindow = gray.submat(top, top + height, left, left + width);
+            rgbaInnerWindow = rgba.submat(top, top + height, left, left + width);
+            Imgproc.Sobel(grayInnerWindow, mIntermediateMat, CvType.CV_8U, 1, 1);
             Core.convertScaleAbs(mIntermediateMat, mIntermediateMat, 10, 0);
-            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+            Imgproc.cvtColor(mIntermediateMat, rgbaInnerWindow, Imgproc.COLOR_GRAY2BGRA, 4);
+            grayInnerWindow.release();
+            rgbaInnerWindow.release();
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_SEPIA:
-            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-            Core.transform(mRgbaInnerWindow, mRgbaInnerWindow, mSepiaKernel);
+            rgbaInnerWindow = rgba.submat(top, top + height, left, left + width);
+            Core.transform(rgbaInnerWindow, rgbaInnerWindow, mSepiaKernel);
+            rgbaInnerWindow.release();
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_ZOOM:
-            if ((mZoomCorner == null) || (mZoomWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-            Imgproc.resize(mZoomWindow, mZoomCorner, mZoomCorner.size());
-
+            Mat zoomCorner = rgba.submat(0, rows / 2 - rows / 10, 0, cols / 2 - cols / 10);
+            Mat mZoomWindow = rgba.submat(rows / 2 - 9 * rows / 100, rows / 2 + 9 * rows / 100, cols / 2 - 9 * cols / 100, cols / 2 + 9 * cols / 100);
+            Imgproc.resize(mZoomWindow, zoomCorner, zoomCorner.size());
             Size wsize = mZoomWindow.size();
             Core.rectangle(mZoomWindow, new Point(1, 1), new Point(wsize.width - 2, wsize.height - 2), new Scalar(255, 0, 0, 255), 2);
+            zoomCorner.release();
+            mZoomWindow.release();
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_PIXELIZE:
-            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
-            Imgproc.resize(mRgbaInnerWindow, mIntermediateMat, mSize0, 0.1, 0.1, Imgproc.INTER_NEAREST);
-            Imgproc.resize(mIntermediateMat, mRgbaInnerWindow, mSizeRgbaInner, 0., 0., Imgproc.INTER_NEAREST);
+            rgbaInnerWindow = rgba.submat(top, top + height, left, left + width);
+            Imgproc.resize(rgbaInnerWindow, mIntermediateMat, mSize0, 0.1, 0.1, Imgproc.INTER_NEAREST);
+            Imgproc.resize(mIntermediateMat, rgbaInnerWindow, rgbaInnerWindow.size(), 0., 0., Imgproc.INTER_NEAREST);
+            rgbaInnerWindow.release();
             break;
 
         case ImageManipulationsActivity.VIEW_MODE_POSTERIZE:
-            if ((mRgbaInnerWindow == null) || (mRgba.cols() != mSizeRgba.width) || (mRgba.height() != mSizeRgba.height))
-                CreateAuxiliaryMats();
             /*
-            Imgproc.cvtColor(mRgbaInnerWindow, mIntermediateMat, Imgproc.COLOR_RGBA2RGB);
+            Imgproc.cvtColor(rgbaInnerWindow, mIntermediateMat, Imgproc.COLOR_RGBA2RGB);
             Imgproc.pyrMeanShiftFiltering(mIntermediateMat, mIntermediateMat, 5, 50);
-            Imgproc.cvtColor(mIntermediateMat, mRgbaInnerWindow, Imgproc.COLOR_RGB2RGBA);
+            Imgproc.cvtColor(mIntermediateMat, rgbaInnerWindow, Imgproc.COLOR_RGB2RGBA);
             */
-
-            Imgproc.Canny(mRgbaInnerWindow, mIntermediateMat, 80, 90);
-            mRgbaInnerWindow.setTo(new Scalar(0, 0, 0, 255), mIntermediateMat);
-            Core.convertScaleAbs(mRgbaInnerWindow, mIntermediateMat, 1./16, 0);
-            Core.convertScaleAbs(mIntermediateMat, mRgbaInnerWindow, 16, 0);
+            rgbaInnerWindow = rgba.submat(top, top + height, left, left + width);
+            Imgproc.Canny(rgbaInnerWindow, mIntermediateMat, 80, 90);
+            rgbaInnerWindow.setTo(new Scalar(0, 0, 0, 255), mIntermediateMat);
+            Core.convertScaleAbs(rgbaInnerWindow, mIntermediateMat, 1./16, 0);
+            Core.convertScaleAbs(mIntermediateMat, rgbaInnerWindow, 16, 0);
+            rgbaInnerWindow.release();
             break;
         }
 
-        return mRgba;
+        return rgba;
     }
 }
