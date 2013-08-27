@@ -1,5 +1,6 @@
 #include "precomp.hpp"
 #include "debug.hpp"
+#include "opencv2/core/core_c.h"
 
 namespace cv{namespace optim{
 
@@ -19,15 +20,14 @@ namespace cv{namespace optim{
         TermCriteria _termcrit;
         Mat _step;
     private:
-        inline void compute_coord_sum(Mat_<double>& points,Mat_<double>& coord_sum);
-        inline void create_initial_simplex(Mat_<double>& simplex,Mat& step);
-        inline double inner_downhill_simplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
+        inline void createInitialSimplex(Mat_<double>& simplex,Mat& step);
+        inline double innerDownhillSimplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
                 const Ptr<Solver::Function>& f,int nmax);
-        inline double try_new_point(Mat_<double>& p,Mat_<double>& y,Mat_<double>& coord_sum,const Ptr<Solver::Function>& f,int ihi,
+        inline double tryNewPoint(Mat_<double>& p,Mat_<double>& y,Mat_<double>& coord_sum,const Ptr<Solver::Function>& f,int ihi,
                 double fac,Mat_<double>& ptry);
     };
 
-    double DownhillSolverImpl::try_new_point(
+    double DownhillSolverImpl::tryNewPoint(
         Mat_<double>& p,
         Mat_<double>& y,
         Mat_<double>&  coord_sum,
@@ -68,7 +68,7 @@ namespace cv{namespace optim{
     form a simplex - each row is an ndim vector.
     On output, nfunk gives the number of function evaluations taken.
     */
-    double DownhillSolverImpl::inner_downhill_simplex(
+    double DownhillSolverImpl::innerDownhillSimplex(
         cv::Mat_<double>&   p,
         double     MinRange,
         double     MinError,
@@ -92,7 +92,7 @@ namespace cv{namespace optim{
 
         nfunk = ndim+1;
 
-        compute_coord_sum(p,coord_sum);
+        reduce(p,coord_sum,0,CV_REDUCE_SUM);
 
         for (;;)
         {
@@ -146,16 +146,16 @@ namespace cv{namespace optim{
             }
             nfunk += 2;
             /*Begin a new iteration. First, reflect the worst point about the centroid of others */
-            ytry = try_new_point(p,y,coord_sum,f,ihi,-1.0,buf);
+            ytry = tryNewPoint(p,y,coord_sum,f,ihi,-1.0,buf);
             if (ytry <= y(ilo))
             { /*If that's better than the best point, go twice as far in that direction*/
-                ytry = try_new_point(p,y,coord_sum,f,ihi,2.0,buf);
+                ytry = tryNewPoint(p,y,coord_sum,f,ihi,2.0,buf);
             }
             else if (ytry >= y(inhi))
             {   /* The new point is worse than the second-highest, but better
                   than the worst so do not go so far in that direction */
                 ysave = y(ihi);
-                ytry = try_new_point(p,y,coord_sum,f,ihi,0.5,buf);
+                ytry = tryNewPoint(p,y,coord_sum,f,ihi,0.5,buf);
                 if (ytry >= ysave)
                 { /* Can't seem to improve things. Contract the simplex to good point
                in hope to find a simplex landscape. */
@@ -171,7 +171,7 @@ namespace cv{namespace optim{
                         }
                     }
                     nfunk += ndim;
-                    compute_coord_sum(p,coord_sum);
+                    reduce(p,coord_sum,0,CV_REDUCE_SUM);
                 }
             } else --(nfunk); /* correct nfunk */
             dprintf(("this is simplex on iteration %d\n",nfunk));
@@ -182,17 +182,7 @@ namespace cv{namespace optim{
         return res;
     }
 
-    void DownhillSolverImpl::compute_coord_sum(Mat_<double>& points,Mat_<double>& coord_sum){
-        for (int j=0;j<points.cols;j++) {
-            double sum=0.0;
-            for (int i=0;i<points.rows;i++){
-                sum += points(i,j);
-                coord_sum(0,j)=sum;
-            }
-        }
-    }
-
-    void DownhillSolverImpl::create_initial_simplex(Mat_<double>& simplex,Mat& step){
+    void DownhillSolverImpl::createInitialSimplex(Mat_<double>& simplex,Mat& step){
         for(int i=1;i<=step.cols;++i)
         {
             simplex.row(0).copyTo(simplex.row(i));
@@ -229,8 +219,8 @@ namespace cv{namespace optim{
         Mat_<double> simplex=Mat_<double>(ndim+1,ndim,0.0);
 
         simplex.row(0).copyTo(proxy_x);
-        create_initial_simplex(simplex,_step);
-        double res = inner_downhill_simplex(
+        createInitialSimplex(simplex,_step);
+        double res = innerDownhillSimplex(
                 simplex,_termcrit.epsilon, _termcrit.epsilon, count,_Function,_termcrit.maxCount);
         simplex.row(0).copyTo(proxy_x);
 
@@ -267,7 +257,6 @@ namespace cv{namespace optim{
         return Ptr<DownhillSolver>(DS);
     }
     void DownhillSolverImpl::getInitStep(OutputArray step)const{
-        step.create(1,_step.cols,CV_64FC1);
         _step.copyTo(step);
     }
     void DownhillSolverImpl::setInitStep(InputArray step){
@@ -275,15 +264,10 @@ namespace cv{namespace optim{
         Mat m=step.getMat();
         dprintf(("m.cols=%d\nm.rows=%d\n",m.cols,m.rows));
         CV_Assert(MIN(m.cols,m.rows)==1 && m.type()==CV_64FC1);
-        int ndim=MAX(m.cols,m.rows);
-        if(ndim!=_step.cols){
-            _step=Mat_<double>(1,ndim);
-        }
         if(m.rows==1){
             m.copyTo(_step);
         }else{
-            Mat step_t=Mat_<double>(ndim,1,(double*)_step.data);
-            m.copyTo(step_t);
+            transpose(m,_step);
         }
     }
 }}
