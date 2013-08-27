@@ -44,7 +44,7 @@
 #define __CVVECTRACK_H__
 
 #include <string.h>
-#include <math.h>
+#include <cmath>
 #include <time.h>
 #include <stdio.h>
 

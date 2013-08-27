@@ -91,7 +91,7 @@
 #if defined __BORLANDC__
 #  include <fastmath.h>
 #else
-#  include <math.h>
+#  include <cmath>
 #endif
 
 #ifdef HAVE_IPL

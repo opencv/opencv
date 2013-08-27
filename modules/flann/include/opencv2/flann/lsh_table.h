@@ -50,7 +50,7 @@
 #else
 #include <map>
 #endif
-#include <math.h>
+#include <cmath>
 #include <stddef.h>
 
 #include "dynamic_bitset.h"
