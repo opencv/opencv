@@ -61,7 +61,7 @@ PERF_TEST(CannyFixture, DISABLED_Canny) // TODO difference between implmentation
     {
         ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
 
-        TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
+        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
         oclEdges.download(edges);
 
         SANITY_CHECK(edges);

@@ -97,7 +97,7 @@ PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
         ocl::oclMat oclWeights1(weights1), oclWeights2(weights2);
 
-        TEST_CYCLE() cv::ocl::blendLinear(oclSrc1, oclSrc2, oclWeights1, oclWeights2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::blendLinear(oclSrc1, oclSrc2, oclWeights1, oclWeights2, oclDst);
 
         oclDst.download(dst);
 

@@ -76,7 +76,7 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
 
-        TEST_CYCLE() oclMatcher.match(oclQuery, oclTrain, matches);
+        OCL_TEST_CYCLE() oclMatcher.match(oclQuery, oclTrain, matches);
 
         SANITY_CHECK_MATCHES(matches);
     }
@@ -112,7 +112,7 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
 
-        TEST_CYCLE() oclMatcher.knnMatch(oclQuery, oclTrain, matches, 2);
+        OCL_TEST_CYCLE() oclMatcher.knnMatch(oclQuery, oclTrain, matches, 2);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
         SANITY_CHECK_MATCHES(matches0);
@@ -150,7 +150,7 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_radiusMatch,
         ocl::oclMat oclQuery(query), oclTrain(train);
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
 
-        TEST_CYCLE() oclMatcher.radiusMatch(oclQuery, oclTrain, matches, max_distance);
+        OCL_TEST_CYCLE() oclMatcher.radiusMatch(oclQuery, oclTrain, matches, max_distance);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
         SANITY_CHECK_MATCHES(matches0);

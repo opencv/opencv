@@ -77,7 +77,7 @@ PERF_TEST_P(GoodFeaturesToTrackFixture, GoodFeaturesToTrack,
         ocl::oclMat oclFrame(frame), pts_oclmat;
         ocl::GoodFeaturesToTrackDetector_OCL detector(maxCorners, qualityLevel, minDistance);
 
-        TEST_CYCLE() detector(oclFrame, pts_oclmat);
+        OCL_TEST_CYCLE() detector(oclFrame, pts_oclmat);
 
         detector.downloadPoints(pts_oclmat, pts_gold);
 

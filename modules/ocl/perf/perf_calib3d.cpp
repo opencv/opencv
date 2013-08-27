@@ -69,7 +69,7 @@ PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM) // TODO doesn't work pro
                 oclDisp(left_image.size(), CV_16SC1);
         ocl::StereoBM_OCL oclBM(0, n_disp, winSize);
 
-        TEST_CYCLE() oclBM(oclLeft, oclRight, oclDisp);
+        OCL_TEST_CYCLE() oclBM(oclLeft, oclRight, oclDisp);
 
         oclDisp.download(disp);
 

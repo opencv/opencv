@@ -71,7 +71,7 @@ PERF_TEST_P(BlurFixture, Blur,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, ksize, Point(-1, -1), bordertype);
+        OCL_TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, ksize, Point(-1, -1), bordertype);
 
         oclDst.download(dst);
 
@@ -109,7 +109,7 @@ PERF_TEST_P(LaplacianFixture, Laplacian,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::Laplacian(oclSrc, oclDst, -1, ksize, 1);
+        OCL_TEST_CYCLE() cv::ocl::Laplacian(oclSrc, oclDst, -1, ksize, 1);
 
         oclDst.download(dst);
 
@@ -148,7 +148,7 @@ PERF_TEST_P(ErodeFixture, Erode,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKer(ker);
 
-        TEST_CYCLE() cv::ocl::erode(oclSrc, oclDst, oclKer);
+        OCL_TEST_CYCLE() cv::ocl::erode(oclSrc, oclDst, oclKer);
 
         oclDst.download(dst);
 
@@ -189,7 +189,7 @@ PERF_TEST_P(SobelFixture, Sobel,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::Sobel(oclSrc, oclDst, -1, dx, dy);
+        OCL_TEST_CYCLE() cv::ocl::Sobel(oclSrc, oclDst, -1, dx, dy);
 
         oclDst.download(dst);
 
@@ -230,7 +230,7 @@ PERF_TEST_P(ScharrFixture, Scharr,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::Scharr(oclSrc, oclDst, -1, dx, dy);
+        OCL_TEST_CYCLE() cv::ocl::Scharr(oclSrc, oclDst, -1, dx, dy);
 
         oclDst.download(dst);
 
@@ -267,7 +267,7 @@ PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::GaussianBlur(oclSrc, oclDst, Size(ksize, ksize), 0);
+        OCL_TEST_CYCLE() cv::ocl::GaussianBlur(oclSrc, oclDst, Size(ksize, ksize), 0);
 
         oclDst.download(dst);
 
@@ -306,7 +306,7 @@ PERF_TEST_P(filter2DFixture, filter2D,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKernel(kernel);
 
-        TEST_CYCLE() cv::ocl::filter2D(oclSrc, oclDst, -1, oclKernel);
+        OCL_TEST_CYCLE() cv::ocl::filter2D(oclSrc, oclDst, -1, oclKernel);
 
         oclDst.download(dst);
 

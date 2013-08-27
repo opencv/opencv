@@ -78,7 +78,7 @@ PERF_TEST_P(MergeFixture, Merge,
         for (vector<ocl::oclMat>::size_type i = 0, end = src.size(); i < end; ++i)
             oclSrc[i] = src[i];
 
-        TEST_CYCLE() cv::ocl::merge(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::merge(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -114,7 +114,7 @@ PERF_TEST_P(SplitFixture, Split,
         ocl::oclMat oclSrc(src);
         vector<ocl::oclMat> oclDst(channels, ocl::oclMat(srcSize, CV_MAKE_TYPE(depth, 1)));
 
-        TEST_CYCLE() cv::ocl::split(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::split(oclSrc, oclDst);
 
         ASSERT_EQ(3, channels);
         Mat dst0, dst1, dst2;
