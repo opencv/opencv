@@ -74,19 +74,17 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
 
 
     //////////////////////////////
-
-    String window_name("Viz");
-    window_name = name.empty() ? window_name : window_name + " - " + name;
+    String window_name;
+    VizAccessor::generateWindowName(name, window_name);
     window_->SetWindowName (window_name.c_str ());
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::~VizImpl ()
 {
-    if (interactor_ != NULL)
-        interactor_->DestroyTimer (timer_id_);
-
-    renderer_->Clear();
+    if (interactor_) 
+        interactor_->DestroyTimer(timer_id_);
+    if (renderer_) renderer_->Clear();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -966,6 +964,11 @@ void cv::viz::Viz3d::VizImpl::setWindowName (const std::string &name)
 {
     if (window_)
         window_->SetWindowName (name.c_str ());
+}
+
+cv::String cv::viz::Viz3d::VizImpl::getWindowName() const
+{
+    return (window_ ? window_->GetWindowName() : "");
 }
 
 void cv::viz::Viz3d::VizImpl::setWindowPosition (int x, int y) { window_->SetPosition (x, y); }

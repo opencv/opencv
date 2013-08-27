@@ -85,3 +85,84 @@ namespace cv
         }
     }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/// Viz accessor implementation
+
+cv::viz::VizAccessor * cv::viz::VizAccessor::instance_ = 0;
+bool cv::viz::VizAccessor::is_instantiated_ = false;
+cv::viz::VizMap cv::viz::VizAccessor::viz_map_;
+
+cv::viz::VizAccessor::VizAccessor() {}
+
+cv::viz::VizAccessor::~VizAccessor() {}
+
+cv::viz::VizAccessor & cv::viz::VizAccessor::getInstance()
+{
+    if (!is_instantiated_)
+    {
+        instance_ = new VizAccessor();
+        is_instantiated_ = true;
+    }
+    return *instance_;
+}
+
+void cv::viz::VizAccessor::release()
+{
+    if (is_instantiated_)
+    {
+        delete instance_;
+        instance_ = 0;
+        is_instantiated_ = false;
+    }
+}
+
+cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
+{
+    // Add the prefix Viz
+    String name;
+    generateWindowName(window_name, name);
+
+    VizMap::iterator vm_itr = viz_map_.find(name);
+    bool exists = vm_itr != viz_map_.end();
+    if (exists) return vm_itr->second;
+    else return viz_map_.insert(VizPair(window_name, Viz3d(window_name))).first->second;
+}
+
+void cv::viz::VizAccessor::add(Viz3d window)
+{
+    String window_name = window.getWindowName();
+    VizMap::iterator vm_itr = viz_map_.find(window_name);
+    bool exists = vm_itr != viz_map_.end();
+    if (exists) return ;
+    viz_map_.insert(std::pair<String,Viz3d>(window_name, window));
+}
+
+void cv::viz::VizAccessor::remove(const String &window_name)
+{
+    // Add the prefix Viz
+    String name;
+    generateWindowName(window_name, name);
+    
+    VizMap::iterator vm_itr = viz_map_.find(name);
+    bool exists = vm_itr != viz_map_.end();
+    if (!exists) return ;
+    viz_map_.erase(vm_itr);
+}
+
+void cv::viz::VizAccessor::generateWindowName(const String &window_name, String &output)
+{
+    output = "Viz";
+    // Already is Viz
+    if (window_name == output) return;
+    
+    String prefixed = output + " - ";
+    if (window_name.substr(0, prefixed.length()) == prefixed) output = window_name; // Already has "Viz - "
+    else if (window_name.substr(0, output.length()) == output) output = prefixed + window_name; // Doesn't have prefix
+    else output = (window_name == "" ? output : prefixed + window_name);
+}
+
+cv::viz::Viz3d cv::viz::get(const String &window_name)
+{
+    return cv::viz::VizAccessor::getInstance().get(window_name);
+}
