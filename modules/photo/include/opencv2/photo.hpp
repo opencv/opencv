@@ -206,9 +206,6 @@ public:
     
     CV_WRAP virtual int getSamples() const = 0;
     CV_WRAP virtual void setSamples(int samples) = 0;
-
-    CV_WRAP virtual bool getTest() const = 0;
-    CV_WRAP virtual void setTest(bool val) = 0;
 };
 
 CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);

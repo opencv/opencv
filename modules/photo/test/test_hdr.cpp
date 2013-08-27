@@ -79,11 +79,11 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DE
 void loadResponseCSV(String path, Mat& response)
 {
 	response = Mat(256, 1, CV_32FC3);
-    ifstream resp_file(path.c_str());
+    ifstream resp_file(path);
 	for(int i = 0; i < 256; i++) {
 		for(int c = 0; c < 3; c++) {
 			resp_file >> response.at<Vec3f>(i)[c];
-			resp_file.ignore(1);
+            resp_file.ignore(1);
 		}
 	}
 	resp_file.close();
@@ -101,31 +101,31 @@ TEST(Photo_Tonemap, regression)
 	linear->process(img, result);
 	loadImage(test_path + "linear.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(result, expected, 0);
+	checkEqual(result, expected, 3);
 
 	Ptr<TonemapDrago> drago = createTonemapDrago(gamma);
 	drago->process(img, result);
 	loadImage(test_path + "drago.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(result, expected, 0);
+	checkEqual(result, expected, 3);
 
 	Ptr<TonemapDurand> durand = createTonemapDurand(gamma);
 	durand->process(img, result);
 	loadImage(test_path + "durand.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(result, expected, 0);
+	checkEqual(result, expected, 3);
 
 	Ptr<TonemapReinhardDevlin> reinhard_devlin = createTonemapReinhardDevlin(gamma);
 	reinhard_devlin->process(img, result);
 	loadImage(test_path + "reinharddevlin.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(result, expected, 0);
+	checkEqual(result, expected, 3);
 
 	Ptr<TonemapMantiuk> mantiuk = createTonemapMantiuk(gamma);
 	mantiuk->process(img, result);
 	loadImage(test_path + "mantiuk.png", expected);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(result, expected, 0);
+	checkEqual(result, expected, 3);
 }
 
 TEST(Photo_AlignMTB, regression)
@@ -169,7 +169,7 @@ TEST(Photo_MergeMertens, regression)
 	loadImage(test_path + "merge/mertens.png", expected);
 	merge->process(images, result);
 	result.convertTo(result, CV_8UC3, 255);
-	checkEqual(expected, result, 0);
+	checkEqual(expected, result, 3);
 }
 
 TEST(Photo_MergeDebevec, regression)
@@ -188,7 +188,7 @@ TEST(Photo_MergeDebevec, regression)
 	loadImage(test_path + "merge/debevec.exr", expected);
 	merge->process(images, result, times, response);
 	imwrite("test.exr", result);
-	checkEqual(expected, result, 1e-3f);
+	checkEqual(expected, result, 1e-2f);
 }
 
 TEST(Photo_CalibrateDebevec, regression)
@@ -197,11 +197,11 @@ TEST(Photo_CalibrateDebevec, regression)
 
 	vector<Mat> images;
 	vector<float> times;
-	Mat expected, response;
+	Mat response, expected;
 	loadExposureSeq(test_path + "exposures/", images, times);
-	loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
+    loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
 	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-	calibrate->setTest(true);
+    srand(1);
 	calibrate->process(images, response, times);
-	checkEqual(expected, response, 1e-3f);
+    checkEqual(expected, response, 1e-3f);
 }
