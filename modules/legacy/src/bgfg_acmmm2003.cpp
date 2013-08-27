@@ -49,7 +49,7 @@
 
 #include "precomp.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <stdio.h>
 #include <stdlib.h>
 //#include <algorithm>

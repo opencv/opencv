@@ -50,7 +50,7 @@
 #include <assert.h>
 #include <float.h>
 #include <limits.h>
-#include <math.h>
+#include <cmath>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
