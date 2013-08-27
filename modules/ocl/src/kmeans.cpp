@@ -435,4 +435,3 @@ double cv::ocl::kmeans(const oclMat &_src, int K, oclMat &_bestLabels,
 
     return best_compactness;
 }
-

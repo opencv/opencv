@@ -448,7 +448,7 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     {
         cv::Mat cpu_cldst;
         cldst.download(cpu_cldst);
-        EXPECT_MAT_NEAR(dst, cpu_cldst, threshold);       
+        EXPECT_MAT_NEAR(dst, cpu_cldst, threshold);
     }
 };
 ////////////////////////////////equalizeHist//////////////////////////////////////////

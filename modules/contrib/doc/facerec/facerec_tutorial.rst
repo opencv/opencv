@@ -626,5 +626,3 @@ CSV for the AT&T Facedatabase
 .. literalinclude:: etc/at.txt
    :language: none
    :linenos:
-
-

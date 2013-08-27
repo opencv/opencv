@@ -454,45 +454,45 @@ cv::Scalar cv::sum( InputArray _src )
 {
     Mat src = _src.getMat();
     int k, cn = src.channels(), depth = src.depth();
-	
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-	size_t total_size = src.total();
-	int rows = src.size[0], cols = (int)(total_size/rows);
-	if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
-	{
-		IppiSize sz = { cols, rows };
-		int type = src.type();
-		typedef IppStatus (CV_STDCALL* ippiSumFunc)(const void*, int, IppiSize, double *, int);
-		ippiSumFunc ippFunc = 
-			type == CV_8UC1 ? (ippiSumFunc)ippiSum_8u_C1R :
-			type == CV_8UC3 ? (ippiSumFunc)ippiSum_8u_C3R :
-			type == CV_8UC4 ? (ippiSumFunc)ippiSum_8u_C4R :
-			type == CV_16UC1 ? (ippiSumFunc)ippiSum_16u_C1R :
-			type == CV_16UC3 ? (ippiSumFunc)ippiSum_16u_C3R :
-			type == CV_16UC4 ? (ippiSumFunc)ippiSum_16u_C4R :
-			type == CV_16SC1 ? (ippiSumFunc)ippiSum_16s_C1R :
-			type == CV_16SC3 ? (ippiSumFunc)ippiSum_16s_C3R :
-			type == CV_16SC4 ? (ippiSumFunc)ippiSum_16s_C4R :
-			type == CV_32FC1 ? (ippiSumFunc)ippiSum_32f_C1R :
-			type == CV_32FC3 ? (ippiSumFunc)ippiSum_32f_C3R :
-			type == CV_32FC4 ? (ippiSumFunc)ippiSum_32f_C4R :
-			0;
-		if( ippFunc )
-		{
-			Ipp64f res[4];
-			if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
-			{
-				Scalar sc;
-				for( int i = 0; i < cn; i++ )
-				{
-					sc[i] = res[i];
-				}
-				return sc;
-			}
-		}
-	}
-#endif 
-	
+    size_t total_size = src.total();
+    int rows = src.size[0], cols = (int)(total_size/rows);
+    if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
+    {
+        IppiSize sz = { cols, rows };
+        int type = src.type();
+        typedef IppStatus (CV_STDCALL* ippiSumFunc)(const void*, int, IppiSize, double *, int);
+        ippiSumFunc ippFunc =
+            type == CV_8UC1 ? (ippiSumFunc)ippiSum_8u_C1R :
+            type == CV_8UC3 ? (ippiSumFunc)ippiSum_8u_C3R :
+            type == CV_8UC4 ? (ippiSumFunc)ippiSum_8u_C4R :
+            type == CV_16UC1 ? (ippiSumFunc)ippiSum_16u_C1R :
+            type == CV_16UC3 ? (ippiSumFunc)ippiSum_16u_C3R :
+            type == CV_16UC4 ? (ippiSumFunc)ippiSum_16u_C4R :
+            type == CV_16SC1 ? (ippiSumFunc)ippiSum_16s_C1R :
+            type == CV_16SC3 ? (ippiSumFunc)ippiSum_16s_C3R :
+            type == CV_16SC4 ? (ippiSumFunc)ippiSum_16s_C4R :
+            type == CV_32FC1 ? (ippiSumFunc)ippiSum_32f_C1R :
+            type == CV_32FC3 ? (ippiSumFunc)ippiSum_32f_C3R :
+            type == CV_32FC4 ? (ippiSumFunc)ippiSum_32f_C4R :
+            0;
+        if( ippFunc )
+        {
+            Ipp64f res[4];
+            if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
+            {
+                Scalar sc;
+                for( int i = 0; i < cn; i++ )
+                {
+                    sc[i] = res[i];
+                }
+                return sc;
+            }
+        }
+    }
+#endif
+
     SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );
@@ -566,81 +566,81 @@ cv::Scalar cv::mean( InputArray _src, InputArray _mask )
     CV_Assert( mask.empty() || mask.type() == CV_8U );
 
     int k, cn = src.channels(), depth = src.depth();
-	
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-	size_t total_size = src.total();
-	int rows = src.size[0], cols = (int)(total_size/rows);
-	if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
-	{
-		IppiSize sz = { cols, rows };
-		int type = src.type();
-		if( !mask.empty() )
-		{
-			typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *);
-			ippiMaskMeanFuncC1 ippFuncC1 = 
-			type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
-			type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
-			type == CV_32FC1 ? (ippiMaskMeanFuncC1)ippiMean_32f_C1MR :
-			0;
-			if( ippFuncC1 )
-			{
-				Ipp64f res;
-				if( ippFuncC1(src.data, src.step[0], mask.data, mask.step[0], sz, &res) >= 0 )
-				{
-					return Scalar(res);
-				}
-			}
-			typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
-			ippiMaskMeanFuncC3 ippFuncC3 = 
-			type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
-			type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
-			type == CV_32FC3 ? (ippiMaskMeanFuncC3)ippiMean_32f_C3CMR :
-			0;
-			if( ippFuncC3 )
-			{
-				Ipp64f res1, res2, res3;
-				if( ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 1, &res1) >= 0 &&
-					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 2, &res2) >= 0 &&
-					ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 3, &res3) >= 0 )
-				{
-					return Scalar(res1, res2, res3);
-				}
-			}
-		}
-		else
-		{
-			typedef IppStatus (CV_STDCALL* ippiMeanFunc)(const void*, int, IppiSize, double *, int);
-			ippiMeanFunc ippFunc = 
-				type == CV_8UC1 ? (ippiMeanFunc)ippiMean_8u_C1R :
-				type == CV_8UC3 ? (ippiMeanFunc)ippiMean_8u_C3R :
-				type == CV_8UC4 ? (ippiMeanFunc)ippiMean_8u_C4R :
-				type == CV_16UC1 ? (ippiMeanFunc)ippiMean_16u_C1R :
-				type == CV_16UC3 ? (ippiMeanFunc)ippiMean_16u_C3R :
-				type == CV_16UC4 ? (ippiMeanFunc)ippiMean_16u_C4R :
-				type == CV_16SC1 ? (ippiMeanFunc)ippiMean_16s_C1R :
-				type == CV_16SC3 ? (ippiMeanFunc)ippiMean_16s_C3R :
-				type == CV_16SC4 ? (ippiMeanFunc)ippiMean_16s_C4R :
-				type == CV_32FC1 ? (ippiMeanFunc)ippiMean_32f_C1R :
-				type == CV_32FC3 ? (ippiMeanFunc)ippiMean_32f_C3R :
-				type == CV_32FC4 ? (ippiMeanFunc)ippiMean_32f_C4R :
-				0;
-			if( ippFunc )
-			{
-				Ipp64f res[4];
-				if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
-				{
-					Scalar sc;
-					for( int i = 0; i < cn; i++ )
-					{
-						sc[i] = res[i];
-					}
-					return sc;
-				}
-			}
-		}
-	}
+    size_t total_size = src.total();
+    int rows = src.size[0], cols = (int)(total_size/rows);
+    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
+    {
+        IppiSize sz = { cols, rows };
+        int type = src.type();
+        if( !mask.empty() )
+        {
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC1)(const void *, int, void *, int, IppiSize, Ipp64f *);
+            ippiMaskMeanFuncC1 ippFuncC1 =
+            type == CV_8UC1 ? (ippiMaskMeanFuncC1)ippiMean_8u_C1MR :
+            type == CV_16UC1 ? (ippiMaskMeanFuncC1)ippiMean_16u_C1MR :
+            type == CV_32FC1 ? (ippiMaskMeanFuncC1)ippiMean_32f_C1MR :
+            0;
+            if( ippFuncC1 )
+            {
+                Ipp64f res;
+                if( ippFuncC1(src.data, src.step[0], mask.data, mask.step[0], sz, &res) >= 0 )
+                {
+                    return Scalar(res);
+                }
+            }
+            typedef IppStatus (CV_STDCALL* ippiMaskMeanFuncC3)(const void *, int, void *, int, IppiSize, int, Ipp64f *);
+            ippiMaskMeanFuncC3 ippFuncC3 =
+            type == CV_8UC3 ? (ippiMaskMeanFuncC3)ippiMean_8u_C3CMR :
+            type == CV_16UC3 ? (ippiMaskMeanFuncC3)ippiMean_16u_C3CMR :
+            type == CV_32FC3 ? (ippiMaskMeanFuncC3)ippiMean_32f_C3CMR :
+            0;
+            if( ippFuncC3 )
+            {
+                Ipp64f res1, res2, res3;
+                if( ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 1, &res1) >= 0 &&
+                    ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 2, &res2) >= 0 &&
+                    ippFuncC3(src.data, src.step[0], mask.data, mask.step[0], sz, 3, &res3) >= 0 )
+                {
+                    return Scalar(res1, res2, res3);
+                }
+            }
+        }
+        else
+        {
+            typedef IppStatus (CV_STDCALL* ippiMeanFunc)(const void*, int, IppiSize, double *, int);
+            ippiMeanFunc ippFunc =
+                type == CV_8UC1 ? (ippiMeanFunc)ippiMean_8u_C1R :
+                type == CV_8UC3 ? (ippiMeanFunc)ippiMean_8u_C3R :
+                type == CV_8UC4 ? (ippiMeanFunc)ippiMean_8u_C4R :
+                type == CV_16UC1 ? (ippiMeanFunc)ippiMean_16u_C1R :
+                type == CV_16UC3 ? (ippiMeanFunc)ippiMean_16u_C3R :
+                type == CV_16UC4 ? (ippiMeanFunc)ippiMean_16u_C4R :
+                type == CV_16SC1 ? (ippiMeanFunc)ippiMean_16s_C1R :
+                type == CV_16SC3 ? (ippiMeanFunc)ippiMean_16s_C3R :
+                type == CV_16SC4 ? (ippiMeanFunc)ippiMean_16s_C4R :
+                type == CV_32FC1 ? (ippiMeanFunc)ippiMean_32f_C1R :
+                type == CV_32FC3 ? (ippiMeanFunc)ippiMean_32f_C3R :
+                type == CV_32FC4 ? (ippiMeanFunc)ippiMean_32f_C4R :
+                0;
+            if( ippFunc )
+            {
+                Ipp64f res[4];
+                if( ippFunc(src.data, src.step[0], sz, res, ippAlgHintAccurate) >= 0 )
+                {
+                    Scalar sc;
+                    for( int i = 0; i < cn; i++ )
+                    {
+                        sc[i] = res[i];
+                    }
+                    return sc;
+                }
+            }
+        }
+    }
 #endif
-	
+
     SumFunc func = getSumFunc(depth);
 
     CV_Assert( cn <= 4 && func != 0 );

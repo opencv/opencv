@@ -85,21 +85,21 @@ void LayoutAwarePage::DefaultViewModel::set(IObservableMap<String^, Object^>^ va
 /// <param name="e">Event data describing the conditions that led to the event.</param>
 void LayoutAwarePage::OnLoaded(Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-	this->StartLayoutUpdates(sender, e);
+    this->StartLayoutUpdates(sender, e);
 
-	// Keyboard and mouse navigation only apply when occupying the entire window
-	if (this->ActualHeight == Window::Current->Bounds.Height &&
-		this->ActualWidth == Window::Current->Bounds.Width)
-	{
-		// Listen to the window directly so focus isn't required
-		_acceleratorKeyEventToken = Window::Current->CoreWindow->Dispatcher->AcceleratorKeyActivated +=
-			ref new TypedEventHandler<CoreDispatcher^, AcceleratorKeyEventArgs^>(this,
-			&LayoutAwarePage::CoreDispatcher_AcceleratorKeyActivated);
-		_pointerPressedEventToken = Window::Current->CoreWindow->PointerPressed +=
-			ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this,
-			&LayoutAwarePage::CoreWindow_PointerPressed);
-		_navigationShortcutsRegistered = true;
-	}
+    // Keyboard and mouse navigation only apply when occupying the entire window
+    if (this->ActualHeight == Window::Current->Bounds.Height &&
+        this->ActualWidth == Window::Current->Bounds.Width)
+    {
+        // Listen to the window directly so focus isn't required
+        _acceleratorKeyEventToken = Window::Current->CoreWindow->Dispatcher->AcceleratorKeyActivated +=
+            ref new TypedEventHandler<CoreDispatcher^, AcceleratorKeyEventArgs^>(this,
+            &LayoutAwarePage::CoreDispatcher_AcceleratorKeyActivated);
+        _pointerPressedEventToken = Window::Current->CoreWindow->PointerPressed +=
+            ref new TypedEventHandler<CoreWindow^, PointerEventArgs^>(this,
+            &LayoutAwarePage::CoreWindow_PointerPressed);
+        _navigationShortcutsRegistered = true;
+    }
 }
 
 /// <summary>
@@ -109,13 +109,13 @@ void LayoutAwarePage::OnLoaded(Object^ sender, Windows::UI::Xaml::RoutedEventArg
 /// <param name="e">Event data describing the conditions that led to the event.</param>
 void LayoutAwarePage::OnUnloaded(Object^ sender, Windows::UI::Xaml::RoutedEventArgs^ e)
 {
-	if (_navigationShortcutsRegistered)
-	{
-		Window::Current->CoreWindow->Dispatcher->AcceleratorKeyActivated -= _acceleratorKeyEventToken;
-		Window::Current->CoreWindow->PointerPressed -= _pointerPressedEventToken;
-		_navigationShortcutsRegistered = false;
-	}
-	StopLayoutUpdates(sender, e);
+    if (_navigationShortcutsRegistered)
+    {
+        Window::Current->CoreWindow->Dispatcher->AcceleratorKeyActivated -= _acceleratorKeyEventToken;
+        Window::Current->CoreWindow->PointerPressed -= _pointerPressedEventToken;
+        _navigationShortcutsRegistered = false;
+    }
+    StopLayoutUpdates(sender, e);
 }
 
 #pragma region Navigation support

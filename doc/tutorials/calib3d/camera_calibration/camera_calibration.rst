@@ -8,23 +8,23 @@ Cameras have been around for a long-long time. However, with the introduction of
 Theory
 ======
 
-For the distortion OpenCV takes into account the radial and tangential factors. For the radial factor one uses the following formula: 
+For the distortion OpenCV takes into account the radial and tangential factors. For the radial factor one uses the following formula:
 
 .. math::
 
    x_{corrected} = x( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6) \\
    y_{corrected} = y( 1 + k_1 r^2 + k_2 r^4 + k_3 r^6)
 
-So for an old pixel point at :math:`(x,y)` coordinates in the input image, its position on the corrected output image will be :math:`(x_{corrected} y_{corrected})`. The presence of the radial distortion manifests in form of the "barrel" or "fish-eye" effect. 
+So for an old pixel point at :math:`(x,y)` coordinates in the input image, its position on the corrected output image will be :math:`(x_{corrected} y_{corrected})`. The presence of the radial distortion manifests in form of the "barrel" or "fish-eye" effect.
 
-Tangential distortion occurs because the image taking lenses are not perfectly parallel to the imaging plane. It can be corrected via the formulas: 
+Tangential distortion occurs because the image taking lenses are not perfectly parallel to the imaging plane. It can be corrected via the formulas:
 
 .. math::
 
    x_{corrected} = x + [ 2p_1xy + p_2(r^2+2x^2)] \\
    y_{corrected} = y + [ p_1(r^2+ 2y^2)+ 2p_2xy]
 
-So we have five distortion parameters which in OpenCV are presented as one row matrix with 5 columns: 
+So we have five distortion parameters which in OpenCV are presented as one row matrix with 5 columns:
 
 .. math::
 
@@ -38,7 +38,7 @@ Now for the unit conversion we use the following formula:
 
 Here the presence of :math:`w` is explained by the use of homography coordinate system (and :math:`w=Z`). The unknown parameters are :math:`f_x` and :math:`f_y` (camera focal lengths) and :math:`(c_x, c_y)` which are the optical centers expressed in pixels coordinates. If for both axes a common focal length is used with a given :math:`a` aspect ratio (usually 1), then :math:`f_y=f_x*a` and in the upper formula we will have a single focal length :math:`f`. The matrix containing these four parameters is referred to as the *camera matrix*. While the distortion coefficients are the same regardless of the camera resolutions used, these should be scaled along with the current resolution from the calibrated resolution.
 
-The process of determining these two matrices is the calibration. Calculation of these parameters is done through basic geometrical equations. The equations used depend on the chosen calibrating objects. Currently OpenCV supports three types of objects for calibration: 
+The process of determining these two matrices is the calibration. Calculation of these parameters is done through basic geometrical equations. The equations used depend on the chosen calibrating objects. Currently OpenCV supports three types of objects for calibration:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -148,7 +148,7 @@ Explanation
 
    Depending on the type of the input pattern you use either the :calib3d:`findChessboardCorners <findchessboardcorners>` or the :calib3d:`findCirclesGrid <findcirclesgrid>` function. For both of them you pass the current image and the size of the board and you'll get the positions of the patterns. Furthermore, they return a boolean variable which states if the pattern was found in the input (we only need to take into account those images where this is true!).
 
-   Then again in case of cameras we only take camera images when an input delay time is passed. This is done in order to allow user moving the chessboard around and getting different images. Similar images result in similar equations, and similar equations at the calibration step will form an ill-posed problem, so the calibration will fail. For square images the positions of the corners are only approximate. We may improve this by calling the :feature2d:`cornerSubPix <cornersubpix>` function. It will produce better calibration result. After this we add a valid inputs result to the *imagePoints* vector to collect all of the equations into a single container. Finally, for visualization feedback purposes we will draw the found points on the input image using :calib3d:`findChessboardCorners <drawchessboardcorners>` function. 
+   Then again in case of cameras we only take camera images when an input delay time is passed. This is done in order to allow user moving the chessboard around and getting different images. Similar images result in similar equations, and similar equations at the calibration step will form an ill-posed problem, so the calibration will fail. For square images the positions of the corners are only approximate. We may improve this by calling the :feature2d:`cornerSubPix <cornersubpix>` function. It will produce better calibration result. After this we add a valid inputs result to the *imagePoints* vector to collect all of the equations into a single container. Finally, for visualization feedback purposes we will draw the found points on the input image using :calib3d:`findChessboardCorners <drawchessboardcorners>` function.
 
    .. code-block:: cpp
 
@@ -175,7 +175,7 @@ Explanation
               drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
         }
 
-#. **Show state and result to the user, plus command line control of the application**. This  part shows text output on the image. 
+#. **Show state and result to the user, plus command line control of the application**. This  part shows text output on the image.
 
    .. code-block:: cpp
 
@@ -199,7 +199,7 @@ Explanation
       if( blinkOutput )
          bitwise_not(view, view);
 
-   If we ran calibration and got camera's matrix with the distortion coefficients we may want to correct the image using :imgproc_geometric:`undistort <undistort>` function: 
+   If we ran calibration and got camera's matrix with the distortion coefficients we may want to correct the image using :imgproc_geometric:`undistort <undistort>` function:
 
    .. code-block:: cpp
 
@@ -229,7 +229,7 @@ Explanation
         imagePoints.clear();
       }
 
-#. **Show the distortion removal for the images too**. When you work with an image list it is not possible to remove the distortion inside the loop. Therefore, you must do this after the loop. Taking advantage of this now I'll expand the :imgproc_geometric:`undistort <undistort>` function, which is in fact first calls :imgproc_geometric:`initUndistortRectifyMap <initundistortrectifymap>` to find transformation matrices and then performs transformation using :imgproc_geometric:`remap <remap>` function. Because, after successful calibration map calculation needs to be done only once, by using this expanded form you may speed up your application: 
+#. **Show the distortion removal for the images too**. When you work with an image list it is not possible to remove the distortion inside the loop. Therefore, you must do this after the loop. Taking advantage of this now I'll expand the :imgproc_geometric:`undistort <undistort>` function, which is in fact first calls :imgproc_geometric:`initUndistortRectifyMap <initundistortrectifymap>` to find transformation matrices and then performs transformation using :imgproc_geometric:`remap <remap>` function. Because, after successful calibration map calculation needs to be done only once, by using this expanded form you may speed up your application:
 
    .. code-block:: cpp
 
@@ -256,7 +256,7 @@ Explanation
 The calibration and save
 ========================
 
-Because the calibration needs to be done only once per camera, it makes sense to save it after a successful calibration. This way later on you can just load these values into your program. Due to this we first make the calibration, and if it succeeds we save the result into an OpenCV style XML or YAML file, depending on the extension you give in the configuration file. 
+Because the calibration needs to be done only once per camera, it makes sense to save it after a successful calibration. This way later on you can just load these values into your program. Due to this we first make the calibration, and if it succeeds we save the result into an OpenCV style XML or YAML file, depending on the extension you give in the configuration file.
 
 Therefore in the first function we just split up these two processes. Because we want to save many of the calibration variables we'll create these variables here and pass on both of them to the calibration and saving function. Again, I'll not show the saving part as that has little in common with the calibration. Explore the source file in order to find out how and what:
 
@@ -280,7 +280,7 @@ Therefore in the first function we just split up these two processes. Because we
     return ok;
    }
 
-We do the calibration with the help of the :calib3d:`calibrateCamera <calibratecamera>` function. It has the following parameters: 
+We do the calibration with the help of the :calib3d:`calibrateCamera <calibratecamera>` function. It has the following parameters:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -318,11 +318,11 @@ We do the calibration with the help of the :calib3d:`calibrateCamera <calibratec
         calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
         objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
-   + The image points. This is a vector of *Point2f* vector which for each input image contains coordinates of the important points (corners for chessboard and centers of the circles for the circle pattern). We have already collected this from :calib3d:`findChessboardCorners <findchessboardcorners>` or :calib3d:`findCirclesGrid <findcirclesgrid>` function. We just need to pass it on. 
+   + The image points. This is a vector of *Point2f* vector which for each input image contains coordinates of the important points (corners for chessboard and centers of the circles for the circle pattern). We have already collected this from :calib3d:`findChessboardCorners <findchessboardcorners>` or :calib3d:`findCirclesGrid <findcirclesgrid>` function. We just need to pass it on.
 
    + The size of the image acquired from the camera, video file or the images.
 
-   + The camera matrix. If we used the fixed aspect ratio option we need to set the :math:`f_x` to zero: 
+   + The camera matrix. If we used the fixed aspect ratio option we need to set the :math:`f_x` to zero:
 
      .. code-block:: cpp
 
@@ -336,16 +336,16 @@ We do the calibration with the help of the :calib3d:`calibrateCamera <calibratec
 
         distCoeffs = Mat::zeros(8, 1, CV_64F);
 
-   + For all the views the function will calculate rotation and translation vectors which transform the object points (given in the model coordinate space) to the image points (given in the world coordinate space). The 7-th and 8-th parameters are the output vector of matrices containing in the i-th position the rotation and translation vector for the i-th object point to the i-th image point. 
+   + For all the views the function will calculate rotation and translation vectors which transform the object points (given in the model coordinate space) to the image points (given in the world coordinate space). The 7-th and 8-th parameters are the output vector of matrices containing in the i-th position the rotation and translation vector for the i-th object point to the i-th image point.
 
-   + The final argument is the flag. You need to specify here options like fix the aspect ratio for the focal length, assume zero tangential distortion or to fix the principal point. 
+   + The final argument is the flag. You need to specify here options like fix the aspect ratio for the focal length, assume zero tangential distortion or to fix the principal point.
 
    .. code-block:: cpp
 
      double rms = calibrateCamera(objectPoints, imagePoints, imageSize, cameraMatrix,
                                  distCoeffs, rvecs, tvecs, s.flag|CV_CALIB_FIX_K4|CV_CALIB_FIX_K5);
 
-   + The function returns the average re-projection error. This number gives a good estimation of precision of the found parameters. This should be as close to zero as possible. Given the intrinsic, distortion, rotation and translation matrices we may calculate the error for one view by using the :calib3d:`projectPoints <projectpoints>` to first transform the object point to image point. Then we calculate the absolute norm between what we got with our transformation and the corner/circle finding algorithm. To find the average error we calculate the arithmetical mean of the errors calculated for all the calibration images. 
+   + The function returns the average re-projection error. This number gives a good estimation of precision of the found parameters. This should be as close to zero as possible. Given the intrinsic, distortion, rotation and translation matrices we may calculate the error for one view by using the :calib3d:`projectPoints <projectpoints>` to first transform the object point to image point. Then we calculate the absolute norm between what we got with our transformation and the corner/circle finding algorithm. To find the average error we calculate the arithmetical mean of the errors calculated for all the calibration images.
 
      .. code-block:: cpp
 
@@ -378,7 +378,7 @@ We do the calibration with the help of the :calib3d:`calibrateCamera <calibratec
 Results
 =======
 
-Let there be :download:`this input chessboard pattern <../../../pattern.png>` which has a size of 9 X 6. I've used an AXIS IP camera to create a couple of snapshots of the board and saved it into VID5 directory. I've put this inside the :file:`images/CameraCalibration` folder of my working directory and created the following :file:`VID5.XML` file that describes which images to use: 
+Let there be :download:`this input chessboard pattern <../../../pattern.png>` which has a size of 9 X 6. I've used an AXIS IP camera to create a couple of snapshots of the board and saved it into VID5 directory. I've put this inside the :file:`images/CameraCalibration` folder of my working directory and created the following :file:`VID5.XML` file that describes which images to use:
 
 .. code-block:: xml
 
@@ -396,7 +396,7 @@ Let there be :download:`this input chessboard pattern <../../../pattern.png>` wh
    </images>
    </opencv_storage>
 
-Then passed :file:`images/CameraCalibration/VID5/VID5.XML` as an input in the configuration file. Here's a chessboard pattern found during the runtime of the application: 
+Then passed :file:`images/CameraCalibration/VID5/VID5.XML` as an input in the configuration file. Here's a chessboard pattern found during the runtime of the application:
 
 .. image:: images/fileListImage.jpg
    :alt: A found chessboard
@@ -433,7 +433,7 @@ In both cases in the specified output XML/YAML file you'll find the camera and d
     -4.1802327176423804e-001 5.0715244063187526e-001 0. 0.
     -5.7843597214487474e-001</data></Distortion_Coefficients>
 
-Add these values as constants to your program, call the :imgproc_geometric:`initUndistortRectifyMap <initundistortrectifymap>` and the :imgproc_geometric:`remap <remap>` function to remove distortion and enjoy distortion free inputs for cheap and low quality cameras. 
+Add these values as constants to your program, call the :imgproc_geometric:`initUndistortRectifyMap <initundistortrectifymap>` and the :imgproc_geometric:`remap <remap>` function to remove distortion and enjoy distortion free inputs for cheap and low quality cameras.
 
 You may observe a runtime instance of this on the `YouTube here <https://www.youtube.com/watch?v=ViPN810E0SU>`_.
 

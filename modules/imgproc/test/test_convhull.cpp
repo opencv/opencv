@@ -1700,4 +1700,3 @@ TEST(Imgproc_ContourPerimeterSlice, accuracy) { CV_PerimeterAreaSliceTest test; 
 TEST(Imgproc_FitEllipse, small) { CV_FitEllipseSmallTest test; test.safe_run(); }
 
 /* End of file. */
-

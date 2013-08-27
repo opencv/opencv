@@ -16,4 +16,3 @@ core. The Core Functionality
     clustering
     utility_and_system_functions_and_macros
     opengl_interop
-

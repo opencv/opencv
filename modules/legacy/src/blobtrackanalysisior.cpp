@@ -171,4 +171,3 @@ CvBlobTrackAnalysis* cvCreateModuleBlobTrackAnalysisIOR()
     return (CvBlobTrackAnalysis*)pIOR;
 }/* cvCreateCvBlobTrackAnalysisIOR */
 /* ======================== Analyser modules ============================= */
-

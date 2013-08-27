@@ -87,7 +87,7 @@ PARAM_TEST_CASE(Kmeans, int, int, int)
             for(int j = 0; j < nchannel; j++)
                 center_row_header.at<float>(0, i*nchannel+j) = 50000.0;
 
-            for(int j = 0; (j < max_neighbour) || 
+            for(int j = 0; (j < max_neighbour) ||
                            (i == K-1 && j < max_neighbour + MHEIGHT%K); j ++)
             {
                 Mat cur_row_header = src.row(row_idx + 1 + j);
@@ -121,15 +121,15 @@ TEST_P(Kmeans, Mat){
         ocl::kmeans(d_src, K, d_labels,
             TermCriteria( TermCriteria::EPS + TermCriteria::MAX_ITER, 100, 0),
             1, flags, d_centers);
-  
+
         Mat dd_labels(d_labels);
         Mat dd_centers(d_centers);
         if(flags & KMEANS_USE_INITIAL_LABELS)
         {
             EXPECT_MAT_NEAR(labels, dd_labels, 0);
             EXPECT_MAT_NEAR(centers, dd_centers, 1e-3);
-        } 
-        else 
+        }
+        else
         {
             int row_idx = 0;
             for(int i = 0; i < K; i++)
@@ -157,6 +157,6 @@ TEST_P(Kmeans, Mat){
 INSTANTIATE_TEST_CASE_P(OCL_ML, Kmeans, Combine(
     Values(3, 5, 8),
     Values(CV_32FC1, CV_32FC2, CV_32FC4),
-    Values(OCL_KMEANS_USE_INITIAL_LABELS/*, OCL_KMEANS_PP_CENTERS*/))); 
+    Values(OCL_KMEANS_USE_INITIAL_LABELS/*, OCL_KMEANS_PP_CENTERS*/)));
 
 #endif

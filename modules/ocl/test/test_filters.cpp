@@ -57,8 +57,8 @@ using namespace testing;
 using namespace std;
 
 
-PARAM_TEST_CASE(FilterTestBase, 
-                MatType, 
+PARAM_TEST_CASE(FilterTestBase,
+                MatType,
                 cv::Size, // kernel size
                 cv::Size, // dx,dy
                 int       // border type, or iteration
@@ -367,7 +367,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Laplacian, Combine(
                         Values(0)));        //not use
 
 INSTANTIATE_TEST_CASE_P(Filter, ErodeDilate, Combine(
-                        Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4), 
+                        Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
                         Values(Size(0, 0)), //not use
                         Values(Size(0, 0)), //not use
                         Values(1)));
@@ -383,7 +383,7 @@ INSTANTIATE_TEST_CASE_P(Filter, Sobel, Combine(
 INSTANTIATE_TEST_CASE_P(Filter, Scharr, Combine(
                         Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1, CV_32FC4),
                         Values(Size(0, 0)), //not use
-                        Values(Size(0, 1), Size(1, 0)), 
+                        Values(Size(0, 1), Size(1, 0)),
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REPLICATE)));
 
 INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
@@ -395,7 +395,7 @@ INSTANTIATE_TEST_CASE_P(Filter, GaussianBlur, Combine(
 
 
 INSTANTIATE_TEST_CASE_P(Filter, Filter2D, testing::Combine(
-                        Values(CV_8UC1, CV_32FC1, CV_32FC4), 
+                        Values(CV_8UC1, CV_32FC1, CV_32FC4),
                         Values(Size(3, 3), Size(15, 15), Size(25, 25)),
                         Values(Size(0, 0)), //not use
                         Values((MatType)cv::BORDER_CONSTANT, (MatType)cv::BORDER_REFLECT101, (MatType)cv::BORDER_REPLICATE, (MatType)cv::BORDER_REFLECT)));

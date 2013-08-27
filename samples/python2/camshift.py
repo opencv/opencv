@@ -123,4 +123,3 @@ if __name__ == '__main__':
         video_src = 0
     print __doc__
     App(video_src).run()
-

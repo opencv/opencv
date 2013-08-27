@@ -318,15 +318,15 @@ __kernel void classify_hists_180_kernel(
     volatile __local float* smem = products;
 #ifdef CPU
     if (tid < 13) smem[tid] = product = product + smem[tid + 32];
-	barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
     if (tid < 16) smem[tid] = product = product + smem[tid + 16];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<8) smem[tid] = product = product + smem[tid + 8];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<4) smem[tid] = product = product + smem[tid + 4];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<2) smem[tid] = product = product + smem[tid + 2];
-	barrier(CLK_LOCAL_MEM_FENCE);
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<8) smem[tid] = product = product + smem[tid + 8];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<4) smem[tid] = product = product + smem[tid + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<2) smem[tid] = product = product + smem[tid + 2];
+    barrier(CLK_LOCAL_MEM_FENCE);
 #else
     if (tid < 13)
     {
@@ -345,9 +345,9 @@ __kernel void classify_hists_180_kernel(
 #endif
 
     if (tid == 0){
-		product = product + smem[tid + 1];
+        product = product + smem[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
-	}
+    }
 }
 
 //---------------------------------------------------------------------
@@ -388,18 +388,18 @@ __kernel void classify_hists_252_kernel(
     if (tid < 64) products[tid] = product = product + products[tid + 64];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-	volatile __local float* smem = products;
+    volatile __local float* smem = products;
 #ifdef CPU
-	if(tid<32) smem[tid] = product = product + smem[tid + 32];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<16) smem[tid] = product = product + smem[tid + 16];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<8) smem[tid] = product = product + smem[tid + 8];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<4) smem[tid] = product = product + smem[tid + 4];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<2) smem[tid] = product = product + smem[tid + 2];
-	barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<32) smem[tid] = product = product + smem[tid + 32];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<16) smem[tid] = product = product + smem[tid + 16];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<8) smem[tid] = product = product + smem[tid + 8];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<4) smem[tid] = product = product + smem[tid + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<2) smem[tid] = product = product + smem[tid + 2];
+    barrier(CLK_LOCAL_MEM_FENCE);
 #else
     if (tid < 32)
     {
@@ -415,9 +415,9 @@ __kernel void classify_hists_252_kernel(
     }
 #endif
     if (tid == 0){
-		product = product + smem[tid + 1];
+        product = product + smem[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
-	}
+    }
 }
 
 //---------------------------------------------------------------------
@@ -458,18 +458,18 @@ __kernel void classify_hists_kernel(
     if (tid < 64) products[tid] = product = product + products[tid + 64];
     barrier(CLK_LOCAL_MEM_FENCE);
 
-	volatile __local float* smem = products;
+    volatile __local float* smem = products;
 #ifdef CPU
-	if(tid<32) smem[tid] = product = product + smem[tid + 32];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<16) smem[tid] = product = product + smem[tid + 16];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<8) smem[tid] = product = product + smem[tid + 8];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<4) smem[tid] = product = product + smem[tid + 4];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	if(tid<2) smem[tid] = product = product + smem[tid + 2];
-	barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<32) smem[tid] = product = product + smem[tid + 32];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<16) smem[tid] = product = product + smem[tid + 16];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<8) smem[tid] = product = product + smem[tid + 8];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<4) smem[tid] = product = product + smem[tid + 4];
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if(tid<2) smem[tid] = product = product + smem[tid + 2];
+    barrier(CLK_LOCAL_MEM_FENCE);
 #else
     if (tid < 32)
     {
@@ -485,9 +485,9 @@ __kernel void classify_hists_kernel(
     }
 #endif
     if (tid == 0){
-		smem[tid] = product = product + smem[tid + 1];
+        smem[tid] = product = product + smem[tid + 1];
         labels[gidY * img_win_width + gidX] = (product + free_coef >= threshold);
-	}
+    }
 }
 
 //----------------------------------------------------------------------------

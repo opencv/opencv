@@ -191,4 +191,3 @@ Reads the trained Gaussian mixture model from the file storage.
     :param fs: A file storage with the trained model.
 
     :param node: The parent map. If it is NULL, the function searches a node with parameters in all the top-level nodes (streams), starting with the first one.
-

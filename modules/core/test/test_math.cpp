@@ -2755,4 +2755,3 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
 }
 
 /* End of file. */
-

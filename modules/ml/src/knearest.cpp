@@ -116,7 +116,7 @@ bool CvKNearest::train( const CvMat* _train_data, const CvMat* _responses,
 
     if( !responses )
         CV_ERROR( CV_StsNoMem, "Could not allocate memory for responses" );
-        
+
     if( _update_base && _dims != var_count )
         CV_ERROR( CV_StsBadArg, "The newly added data have different dimensionality" );
 
@@ -480,4 +480,3 @@ float CvKNearest::find_nearest( const cv::Mat& _samples, int k, CV_OUT cv::Mat& 
 }
 
 /* End of file */
-

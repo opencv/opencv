@@ -771,5 +771,3 @@ int main(int argc, char* argv[])
     LOGLN("Finished, total time: " << ((getTickCount() - app_start_time) / getTickFrequency()) << " sec");
     return 0;
 }
-
-

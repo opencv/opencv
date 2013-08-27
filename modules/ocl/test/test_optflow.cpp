@@ -85,7 +85,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_FALSE(d_pts.empty());
 
     std::vector<cv::Point2f> pts(d_pts.cols);
-    
+
     detector.downloadPoints(d_pts, pts);
 
     std::vector<cv::Point2f> pts_gold;
@@ -125,7 +125,7 @@ TEST_P(GoodFeaturesToTrack, EmptyCorners)
     ASSERT_TRUE(corners.empty());
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack, 
+INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack,
     testing::Values(MinDistance(0.0), MinDistance(3.0)));
 
 //////////////////////////////////////////////////////////////////////////
@@ -342,4 +342,3 @@ INSTANTIATE_TEST_CASE_P(OCL_Video, Farneback, testing::Combine(
     testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
 #endif // HAVE_OPENCL
-

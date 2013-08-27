@@ -59,7 +59,7 @@ IMPLEMENT_PARAM_CLASS(InputSize, int)
 IMPLEMENT_PARAM_CLASS(SortMethod, int)
 
 
-template<class T> 
+template<class T>
 struct KV_CVTYPE{ static int toType() {return 0;} };
 
 template<> struct KV_CVTYPE<int>  { static int toType() {return CV_32SC1;} };
@@ -101,7 +101,7 @@ void kvquicksort(Mat& keys, Mat& vals, bool isGreater = false)
 {
     vector<pair<key_type, val_type> > kvres;
     toKVPair(keys.begin<key_type>(), vals.begin<val_type>(), keys.cols, kvres);
-    
+
     if(isGreater)
     {
         std::sort(kvres.begin(), kvres.end(), kvgreater<key_type, val_type>);
@@ -180,7 +180,7 @@ bool checkUnstableSorterResult(const Mat& gkeys_, const Mat& gvals_,
         {
             ++ iden_count;
         }
-        
+
         // sort dv and gv
         int num_of_val = (iden_count + 1) * cn_val;
         std::sort(gvptr + i * cn_val, gvptr + i * cn_val + num_of_val);

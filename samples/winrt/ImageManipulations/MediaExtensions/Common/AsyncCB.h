@@ -3,7 +3,7 @@
 //////////////////////////////////////////////////////////////////////////
 //  AsyncCallback [template]
 //
-//  Description: 
+//  Description:
 //  Helper class that routes IMFAsyncCallback::Invoke calls to a class
 //  method on the parent class.
 //
@@ -24,7 +24,7 @@
 template<class T>
 class AsyncCallback : public IMFAsyncCallback
 {
-public: 
+public:
     typedef HRESULT (T::*InvokeFn)(IMFAsyncResult *pAsyncResult);
 
     AsyncCallback(T *pParent, InvokeFn fn) : m_pParent(pParent), m_pInvokeFn(fn)
@@ -32,13 +32,13 @@ public:
     }
 
     // IUnknown
-    STDMETHODIMP_(ULONG) AddRef() { 
+    STDMETHODIMP_(ULONG) AddRef() {
         // Delegate to parent class.
-        return m_pParent->AddRef(); 
+        return m_pParent->AddRef();
     }
-    STDMETHODIMP_(ULONG) Release() { 
+    STDMETHODIMP_(ULONG) Release() {
         // Delegate to parent class.
-        return m_pParent->Release(); 
+        return m_pParent->Release();
     }
     STDMETHODIMP QueryInterface(REFIID iid, void** ppv)
     {
