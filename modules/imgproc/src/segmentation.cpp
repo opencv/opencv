@@ -534,4 +534,3 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
 
     cv::pyrMeanShiftFiltering(src, dst, sp0, sr, max_level, termcrit);
 }
-

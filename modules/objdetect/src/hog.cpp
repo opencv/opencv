@@ -3023,4 +3023,3 @@ void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector
     }
 }
 }
-
