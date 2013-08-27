@@ -8,3 +8,4 @@ tegra/
 .*.swp
 tags
 build/
+Thumbs.db
