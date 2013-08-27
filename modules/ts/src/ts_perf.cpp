@@ -740,6 +740,14 @@ void TestBase::RecordRunParameters()
 {
     ::testing::Test::RecordProperty("cv_implementation", param_impl);
     ::testing::Test::RecordProperty("cv_num_threads", param_threads);
+
+#ifdef HAVE_CUDA
+    if (param_impl == "cuda")
+    {
+        cv::gpu::DeviceInfo info(param_cuda_device);
+        ::testing::Test::RecordProperty("cv_cuda_gpu", info.name());
+    }
+#endif
 }
 
 std::string TestBase::getSelectedImpl()
