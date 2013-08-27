@@ -413,7 +413,7 @@ void ocl_tvl1flow::estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
     args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_x));
     args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
     args.push_back( make_pair( sizeof(cl_char), (void*)&calc_error));
-    
+
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
 }
 
