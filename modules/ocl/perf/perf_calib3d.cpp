@@ -57,12 +57,12 @@ PERFTEST(StereoMatchBM)
 
     SUBTEST << left_image.cols << 'x' << left_image.rows << "; aloeL.jpg ;"<< right_image.cols << 'x' << right_image.rows << "; aloeR.jpg ";
 
-	Ptr<StereoBM> bm = createStereoBM(n_disp, winSize);
-	bm->compute(left_image, right_image, dst);
+    Ptr<StereoBM> bm = createStereoBM(n_disp, winSize);
+    bm->compute(left_image, right_image, dst);
 
-	CPU_ON;
-	bm->compute(left_image, right_image, dst);
-	CPU_OFF;
+    CPU_ON;
+    bm->compute(left_image, right_image, dst);
+    CPU_OFF;
 
     d_left.upload(left_image);
     d_right.upload(right_image);
