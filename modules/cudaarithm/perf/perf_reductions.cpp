@@ -373,7 +373,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
         const cv::cuda::GpuMat d_src(src);
         cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp);
+        TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp, CV_32F);
 
         CUDA_SANITY_CHECK(dst);
     }
@@ -381,7 +381,7 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
     {
         cv::Mat dst;
 
-        TEST_CYCLE() cv::reduce(src, dst, dim, reduceOp);
+        TEST_CYCLE() cv::reduce(src, dst, dim, reduceOp, CV_32F);
 
         CPU_SANITY_CHECK(dst);
     }
