@@ -256,7 +256,7 @@ cvChangeDetection( IplImage*  prev_frame,
             uchar* rowStart1 = (uchar*)curr_frame->imageData + y * curr_frame->widthStep + b;
             uchar* rowStart2 = (uchar*)prev_frame->imageData + y * prev_frame->widthStep + b;
             for (x=0 ; x<curr_frame->width ; x++, rowStart1+=curr_frame->nChannels, rowStart2+=prev_frame->nChannels) {
-                int diff = abs( int(*rowStart1) - int(*rowStart2) );
+                int diff = std::abs( int(*rowStart1) - int(*rowStart2) );
                 HISTOGRAM[diff]++;
             }
         }
@@ -279,7 +279,7 @@ cvChangeDetection( IplImage*  prev_frame,
             count = count == 0 ? 1 : count;
             //            fprintf(stderr, "Iter %d finishing loop\n", thres);
             double my = sum / count;
-            double sigma = sqrt( sqsum/count - my*my);
+            double sigma = std::sqrt( sqsum/count - my*my);
             //            fprintf(stderr, "Iter %d sum=%g sqsum=%g count=%d sigma = %g\n", thres, sum, sqsum, count, sigma);
             //            fprintf(stderr, "Writing to %x\n", &(relativeVariance[thres]));
             relativeVariance[thres] = sigma;
@@ -300,7 +300,7 @@ cvChangeDetection( IplImage*  prev_frame,
             for (x = 0; x < curr_frame->width; x++, rowStart1+=curr_frame->nChannels,
                 rowStart2+=prev_frame->nChannels, rowStart3+=change_mask->nChannels) {
                 // OR between different color channels
-                int diff = abs( int(*rowStart1) - int(*rowStart2) );
+                int diff = std::abs( int(*rowStart1) - int(*rowStart2) );
                 if ( diff > bestThres)
                     *rowStart3 |=255;
             }
@@ -384,12 +384,12 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                         // Compare with stored CCt vectors:
                         for( k = 0;  PV_CC(k) > model->params.alpha2 && k < model->params.N1cc;  k++ )
                         {
-                            if ( abs( V_CC(k,0) - prev_data[0]) <=  deltaCC &&
-                                 abs( V_CC(k,1) - prev_data[1]) <=  deltaCC &&
-                                 abs( V_CC(k,2) - prev_data[2]) <=  deltaCC &&
-                                 abs( V_CC(k,3) - curr_data[0]) <=  deltaCC &&
-                                 abs( V_CC(k,4) - curr_data[1]) <=  deltaCC &&
-                                 abs( V_CC(k,5) - curr_data[2]) <=  deltaCC)
+                            if ( std::abs( V_CC(k,0) - prev_data[0]) <=  deltaCC &&
+                                 std::abs( V_CC(k,1) - prev_data[1]) <=  deltaCC &&
+                                 std::abs( V_CC(k,2) - prev_data[2]) <=  deltaCC &&
+                                 std::abs( V_CC(k,3) - curr_data[0]) <=  deltaCC &&
+                                 std::abs( V_CC(k,4) - curr_data[1]) <=  deltaCC &&
+                                 std::abs( V_CC(k,5) - curr_data[2]) <=  deltaCC)
                             {
                                 Pv += PV_CC(k);
                                 Pvb += PVB_CC(k);
@@ -404,9 +404,9 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                     // Compare with stored Ct vectors:
                     for( k = 0;  PV_C(k) > model->params.alpha2 && k < model->params.N1c;  k++ )
                     {
-                        if ( abs( V_C(k,0) - curr_data[0]) <=  deltaC &&
-                             abs( V_C(k,1) - curr_data[1]) <=  deltaC &&
-                             abs( V_C(k,2) - curr_data[2]) <=  deltaC )
+                        if ( std::abs( V_C(k,0) - curr_data[0]) <=  deltaC &&
+                             std::abs( V_C(k,1) - curr_data[1]) <=  deltaC &&
+                             std::abs( V_C(k,2) - curr_data[2]) <=  deltaC )
                         {
                             Pv += PV_C(k);
                             Pvb += PVB_C(k);
@@ -524,10 +524,10 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                     dist = 0;
                     for( l = 0; l < 3; l++ )
                     {
-                        int val = abs( V_CC(k,l) - prev_data[l] );
+                        int val = std::abs( V_CC(k,l) - prev_data[l] );
                         if( val > deltaCC ) break;
                         dist += val;
-                        val = abs( V_CC(k,l+3) - curr_data[l] );
+                        val = std::abs( V_CC(k,l+3) - curr_data[l] );
                         if( val > deltaCC) break;
                         dist += val;
                     }
@@ -632,7 +632,7 @@ icvUpdateFGDStatModel( IplImage* curr_frame, CvFGDStatModel*  model, double )
                     dist = 0;
                     for( l = 0; l < 3; l++ )
                     {
-                        int val = abs( V_C(k,l) - curr_data[l] );
+                        int val = std::abs( V_C(k,l) - curr_data[l] );
                         if( val > deltaC ) break;
                         dist += val;
                     }

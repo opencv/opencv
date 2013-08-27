@@ -2521,7 +2521,7 @@ AssertionResult DoubleNearPredFormat(const char* expr1,
                                      double val1,
                                      double val2,
                                      double abs_error) {
-  const double diff = fabs(val1 - val2);
+  const double diff = std::fabs(val1 - val2);
   if (diff <= abs_error) return AssertionSuccess();
 
   // TODO(wan): do not print the value of an expression if it's
