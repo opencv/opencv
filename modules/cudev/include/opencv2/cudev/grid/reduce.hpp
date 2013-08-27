@@ -59,6 +59,10 @@ namespace cv { namespace cudev {
 template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
 __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskPtr& mask, Stream& stream = Stream::Null())
 {
+    typedef typename PtrTraits<SrcPtr>::value_type src_type;
+
+    CV_StaticAssert( VecTraits<src_type>::cn == VecTraits<ResType>::cn, "" );
+
     dst.create(1, 1);
     dst.setTo(0, stream);
 
@@ -77,6 +81,10 @@ __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, const MaskP
 template <class Policy, class SrcPtr, typename ResType>
 __host__ void gridCalcSum_(const SrcPtr& src, GpuMat_<ResType>& dst, Stream& stream = Stream::Null())
 {
+    typedef typename PtrTraits<SrcPtr>::value_type src_type;
+
+    CV_StaticAssert( VecTraits<src_type>::cn == VecTraits<ResType>::cn, "" );
+
     dst.create(1, 1);
     dst.setTo(0, stream);
 

@@ -418,9 +418,7 @@ namespace grid_reduce_detail
         const dim3 block(Policy::block_size_x, Policy::block_size_y);
         const dim3 grid(divUp(cols, block.x * Policy::patch_size_x), divUp(rows, block.y * Policy::patch_size_y));
 
-        const int BLOCK_SIZE = Policy::block_size_x * Policy::block_size_y;
-
-        glob_reduce<Reductor, BLOCK_SIZE, Policy::patch_size_x, Policy::patch_size_y><<<grid, block, 0, stream>>>(src, result, mask, rows, cols);
+        glob_reduce<Reductor, Policy::block_size_x * Policy::block_size_y, Policy::patch_size_x, Policy::patch_size_y><<<grid, block, 0, stream>>>(src, result, mask, rows, cols);
         CV_CUDEV_SAFE_CALL( cudaGetLastError() );
 
         if (stream == 0)
@@ -433,10 +431,9 @@ namespace grid_reduce_detail
     __host__ void sum(const SrcPtr& src, ResType* result, const MaskPtr& mask, int rows, int cols, cudaStream_t stream)
     {
         typedef typename PtrTraits<SrcPtr>::value_type src_type;
-        const int cn = VecTraits<src_type>::cn;
-        typedef typename MakeVec<ResType, cn>::type work_type;
+        typedef typename VecTraits<ResType>::elem_type res_elem_type;
 
-        glob_reduce<SumReductor<src_type, work_type>, Policy>(src, result, mask, rows, cols, stream);
+        glob_reduce<SumReductor<src_type, ResType>, Policy>(src, (res_elem_type*) result, mask, rows, cols, stream);
     }
 
     template <class Policy, class SrcPtr, typename ResType, class MaskPtr>
