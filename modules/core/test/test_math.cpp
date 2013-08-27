@@ -4,7 +4,7 @@
 
 #include "test_precomp.hpp"
 #include <float.h>
-#include <math.h>
+#include <cmath>
 
 using namespace cv;
 using namespace std;
@@ -140,7 +140,7 @@ void Core_PowTest::get_minmax_bounds( int /*i*/, int /*j*/, int type, Scalar& lo
     if( power > 0 )
     {
         double mval = cvtest::getMaxVal(type);
-        double u1 = pow(mval,1./power)*2;
+        double u1 = std::pow(mval,1./power)*2;
         u = MIN(u,u1);
     }
 
@@ -154,7 +154,7 @@ void Core_PowTest::run_func()
 {
     if(!test_nd)
     {
-        if( fabs(power-1./3) <= DBL_EPSILON && test_mat[INPUT][0].depth() == CV_32F )
+        if( std::fabs(power-1./3) <= DBL_EPSILON && test_mat[INPUT][0].depth() == CV_32F )
         {
             Mat a = test_mat[INPUT][0], b = test_mat[OUTPUT][0];
 
@@ -162,9 +162,9 @@ void Core_PowTest::run_func()
             b = b.reshape(1);
             for( int i = 0; i < a.rows; i++ )
             {
-                b.at<float>(i,0) = (float)fabs(cvCbrt(a.at<float>(i,0)));
+                b.at<float>(i,0) = (float)std::fabs(cvCbrt(a.at<float>(i,0)));
                 for( int j = 1; j < a.cols; j++ )
-                    b.at<float>(i,j) = (float)fabs(cv::cubeRoot(a.at<float>(i,j)));
+                    b.at<float>(i,j) = (float)std::fabs(cv::cubeRoot(a.at<float>(i,j)));
             }
         }
         else
@@ -217,7 +217,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
 
     int depth = a.depth();
     int ncols = a.cols*a.channels();
-    int ipower = cvRound(power), apower = abs(ipower);
+    int ipower = cvRound(power), apower = std::abs(ipower);
     int i, j;
 
     for( i = 0; i < a.rows; i++ )
@@ -316,7 +316,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((float*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( std::fabs(val), power );
                         ((float*)b_data)[j] = (float)val;
                     }
                 else
@@ -334,7 +334,7 @@ void Core_PowTest::prepare_to_validation( int /*test_case_idx*/ )
                     for( j = 0; j < ncols; j++ )
                     {
                         double val = ((double*)a_data)[j];
-                        val = pow( fabs(val), power );
+                        val = std::pow( std::fabs(val), power );
                         ((double*)b_data)[j] = (double)val;
                     }
                 else
@@ -1131,7 +1131,7 @@ void Core_MahalanobisTest::prepare_to_validation( int )
         cvtest::gemm( test_mat[INPUT][2], test_mat[TEMP][0], 1.,
                  Mat(), 0., test_mat[TEMP][1], 0 );
 
-    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(sqrt(cvtest::crossCorr(test_mat[TEMP][0], test_mat[TEMP][1])));
+    test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = cvRealScalar(std::sqrt(cvtest::crossCorr(test_mat[TEMP][0], test_mat[TEMP][1])));
 }
 
 
@@ -1402,13 +1402,13 @@ static double cvTsLU( CvMat* a, CvMat* b=NULL, CvMat* x=NULL, int* rank=0 )
 
     for( i = 0; i < Nm; i++ )
     {
-        double max_val = fabs(a0[i*step + i]);
+        double max_val = std::fabs(a0[i*step + i]);
         double *a1, *a2, *b1 = 0, *b2 = 0;
         k = i;
 
         for( j = i+1; j < N; j++ )
         {
-            t = fabs(a0[j*step + i]);
+            t = std::fabs(a0[j*step + i]);
             if( max_val < t )
             {
                 max_val = t;
@@ -1967,7 +1967,7 @@ void Core_SVDTest::prepare_to_validation( int /*test_case_idx*/ )
             normval = aii = depth == CV_32F ? w->at<float>(i) : w->at<double>(i);
         }
 
-        normval = fabs(normval - aii);
+        normval = std::fabs(normval - aii);
         test_mat[OUTPUT][3].at<uchar>(i) = aii >= 0 && normval < threshold && (i == 0 || aii <= prev);
         prev = aii;
     }
@@ -2196,7 +2196,7 @@ struct pred_complex
 {
     bool operator() (const complex_type& lhs, const complex_type& rhs) const
     {
-        return fabs(lhs.real() - rhs.real()) > fabs(rhs.real())*FLT_EPSILON ? lhs.real() < rhs.real() : lhs.imag() < rhs.imag();
+        return std::fabs(lhs.real() - rhs.real()) > std::fabs(rhs.real())*FLT_EPSILON ? lhs.real() < rhs.real() : lhs.imag() < rhs.imag();
     }
 };
 
@@ -2302,7 +2302,7 @@ void Core_SolvePolyTest::run( int )
 
                 int nr1 = 0;
                 for(int j = 0; j < n; j++)
-                    if( fabs(r[j].imag()) < DBL_EPSILON )
+                    if( std::fabs(r[j].imag()) < DBL_EPSILON )
                         ar1[nr1++] = r[j].real();
 
                 pass = pass && nr1 == nr2;
@@ -2311,8 +2311,8 @@ void Core_SolvePolyTest::run( int )
                     div = s = 0;
                     for(int j = 0; j < nr1; j++)
                     {
-                        s += fabs(ar1[j]);
-                        div += fabs(ar1[j] - ar2[j]);
+                        s += std::fabs(ar1[j]);
+                        div += std::fabs(ar1[j] - ar2[j]);
                     }
                     div /= s;
                     pass = pass && div < err_eps;
@@ -2322,8 +2322,8 @@ void Core_SolvePolyTest::run( int )
             div = s = 0;
             for (int j = 0; j < n; ++j)
             {
-                s += fabs(r[j].real()) + fabs(r[j].imag());
-                div += sqrt(pow(r[j].real() - ar[j].real(), 2) + pow(r[j].imag() - ar[j].imag(), 2));
+                s += std::fabs(r[j].real()) + std::fabs(r[j].imag());
+                div += std::sqrt(std::pow(r[j].real() - ar[j].real(), 2) + std::pow(r[j].imag() - ar[j].imag(), 2));
             }
             div /= s;
             pass = pass && div < err_eps;

@@ -99,7 +99,7 @@ static char* icv_itoa( int _val, char* buffer, int /*radix*/ )
 {
     const int radix = 10;
     char* ptr=buffer + 23 /* enough even for 64-bit integers */;
-    unsigned val = abs(_val);
+    unsigned val = std::abs(_val);
 
     *ptr = '\0';
     do

@@ -1093,7 +1093,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
 void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
 {
-    bool noScale = fabs(alpha-1) < DBL_EPSILON && fabs(beta) < DBL_EPSILON;
+    bool noScale = std::fabs(alpha-1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
 
     if( _type < 0 )
         _type = _dst.fixedType() ? _dst.type() : type();

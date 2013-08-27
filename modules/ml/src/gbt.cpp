@@ -481,17 +481,17 @@ void CvGBTrees::find_gradient(const int k)
             for (int i=0; i<n; ++i)
             {
                 int idx = *(sample_data + subsample_data[i]*s_step);
-                residuals[i] = fabs(resp_data[idx] - current_data[idx]);
+                residuals[i] = std::fabs(resp_data[idx] - current_data[idx]);
             }
             icvSortFloat(residuals, n, 0.0f);
 
-            delta = residuals[int(ceil(n*alpha))];
+            delta = residuals[int(std::ceil(n*alpha))];
 
             for (int i=0; i<n; ++i)
             {
                 int idx = *(sample_data + subsample_data[i]*s_step);
                 float r = resp_data[idx] - current_data[idx];
-                grad_data[idx] = (fabs(r) > delta) ? delta*Sign(r) : r;
+                grad_data[idx] = (std::fabs(r) > delta) ? delta*Sign(r) : r;
             }
             delete[] residuals;
 
@@ -511,7 +511,7 @@ void CvGBTrees::find_gradient(const int k)
                 {
                     double res;
                     res = current_data[idx + j*sum_response->cols];
-                    res = exp(res);
+                    res = std::exp(res);
                     if (j == k) exp_fk = res;
                     exp_sfi += res;
                 }
@@ -728,7 +728,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
             for (int i=0; i<n; ++i)
             {
                 float dif = residuals[i] - r_median;
-                gamma += (delta < fabs(dif)) ? Sign(dif)*delta : dif;
+                gamma += (delta < std::fabs(dif)) ? Sign(dif)*delta : dif;
             }
             gamma /= (double)n;
             gamma += r_median;
@@ -746,7 +746,7 @@ float CvGBTrees::find_optimal_value( const CvMat* _Idx )
             {
                 tmp = grad_data[idx[i]];
                 tmp1 += tmp;
-                tmp2 += fabs(tmp)*(1-fabs(tmp));
+                tmp2 += std::fabs(tmp)*(1-std::fabs(tmp));
             };
             if (tmp2 == 0)
             {
@@ -1313,7 +1313,7 @@ CvGBTrees::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
         for( int i = 0; i < n; i++ )
         {
             int si = sidx ? sidx[i] : i;
-            int d = fabs((double)pred_resp[i] - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = std::fabs((double)pred_resp[i] - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = err / (float)n * 100.0f;

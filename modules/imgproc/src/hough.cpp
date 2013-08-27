@@ -118,8 +118,8 @@ icvHoughLinesStandard( const CvMat* img, float rho, float theta,
     float ang = 0;
     for(int n = 0; n < numangle; ang += theta, n++ )
     {
-        tabSin[n] = (float)(sin((double)ang) * irho);
-        tabCos[n] = (float)(cos((double)ang) * irho);
+        tabSin[n] = (float)(std::sin((double)ang) * irho);
+        tabCos[n] = (float)(std::cos((double)ang) * irho);
     }
 
     // stage 1. fill accumulator
@@ -233,7 +233,7 @@ icvHoughLinesSDiv( const CvMat* img,
     isrho = 1 / srho;
     istheta = 1 / stheta;
 
-    rn = cvFloor( sqrt( (double)w * w + (double)h * h ) * irho );
+    rn = cvFloor( std::sqrt( (double)w * w + (double)h * h ) * irho );
     tn = cvFloor( 2 * Pi * itheta );
 
     list = h_create_list__index( linesMax < 1000 ? linesMax : 1000 );
@@ -241,12 +241,12 @@ icvHoughLinesSDiv( const CvMat* img,
     vi.rho = -1;
     h_add_head__index( list, &vi );
 
-    /* Precalculating sin */
+    /* Precalculating std::sin */
     _sinTable.resize( 5 * tn * stn );
     sinTable = &_sinTable[0];
 
     for( index = 0; index < 5 * tn * stn; index++ )
-        sinTable[index] = (float)cos( stheta * index * 0.2f );
+        sinTable[index] = (float)std::cos( stheta * index * 0.2f );
 
     _caccum.resize(rn * tn);
     caccum = &_caccum[0];
@@ -286,8 +286,8 @@ icvHoughLinesSDiv( const CvMat* img,
                 xc = (float) col + 0.5f;
 
                 /* Update the accumulator */
-                t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                r = (float) sqrt( (double)xc * xc + (double)yc * yc );
+                t = (float) std::fabs( cvFastArctan( yc, xc ) * d2r );
+                r = (float) std::sqrt( (double)xc * xc + (double)yc * yc );
                 r0 = r * irho;
                 ti0 = cvFloor( (t + Pi / 2) * itheta );
 
@@ -356,8 +356,8 @@ icvHoughLinesSDiv( const CvMat* img,
                     xc = (float) x[index] + 0.5f;
 
                     /* Update the accumulator */
-                    t = (float) fabs( cvFastArctan( yc, xc ) * d2r );
-                    r = (float) sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
+                    t = (float) std::fabs( cvFastArctan( yc, xc ) * d2r );
+                    r = (float) std::sqrt( (double)xc * xc + (double)yc * yc ) * isrho;
                     ti0 = cvFloor( (t + Pi * 0.5f) * istheta );
                     ti2 = (ti * stn - ti0) * 5;
                     r0 = (float) ri *srn;
@@ -366,7 +366,7 @@ icvHoughLinesSDiv( const CvMat* img,
                          /*phi += stheta */  )
                     {
                         /*rv = r*_cos(phi) - r0; */
-                        rv = r * sinTable[(int) (abs( ti2 ))] - r0;
+                        rv = r * sinTable[(int) (std::abs( ti2 ))] - r0;
                         i = cvFloor( rv ) * stn + ti1;
 
                         i = CV_IMAX( i, -1 );
@@ -490,8 +490,8 @@ icvHoughLinesProbabilistic( CvMat* image,
 
     for( ang = 0, n = 0; n < numangle; ang += theta, n++ )
     {
-        trigtab[n*2] = (float)(cos(ang) * irho);
-        trigtab[n*2+1] = (float)(sin(ang) * irho);
+        trigtab[n*2] = (float)(std::cos(ang) * irho);
+        trigtab[n*2+1] = (float)(std::sin(ang) * irho);
     }
     ttab = &trigtab[0];
     mdata0 = mask.data;
@@ -565,18 +565,18 @@ icvHoughLinesProbabilistic( CvMat* image,
         b = ttab[max_n*2];
         x0 = j;
         y0 = i;
-        if( fabs(a) > fabs(b) )
+        if( std::fabs(a) > std::fabs(b) )
         {
             xflag = 1;
             dx0 = a > 0 ? 1 : -1;
-            dy0 = cvRound( b*(1 << shift)/fabs(a) );
+            dy0 = cvRound( b*(1 << shift)/std::fabs(a) );
             y0 = (y0 << shift) + (1 << (shift-1));
         }
         else
         {
             xflag = 0;
             dy0 = b > 0 ? 1 : -1;
-            dx0 = cvRound( a*(1 << shift)/fabs(b) );
+            dx0 = cvRound( a*(1 << shift)/std::fabs(b) );
             x0 = (x0 << shift) + (1 << (shift-1));
         }
 
@@ -625,8 +625,8 @@ icvHoughLinesProbabilistic( CvMat* image,
             }
         }
 
-        good_line = abs(line_end[1].x - line_end[0].x) >= lineLength ||
-                    abs(line_end[1].y - line_end[0].y) >= lineLength;
+        good_line = std::abs(line_end[1].x - line_end[0].x) >= lineLength ||
+                    std::abs(line_end[1].y - line_end[0].y) >= lineLength;
 
         for( k = 0; k < 2; k++ )
         {
@@ -856,7 +856,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
             if( !edges_row[x] || (vx == 0 && vy == 0) )
                 continue;
 
-            float mag = sqrt(vx*vx+vy*vy);
+            float mag = std::sqrt(vx*vx+vy*vy);
             assert( mag >= 1 );
             sx = cvRound((vx*idp)*ONE/mag);
             sy = cvRound((vy*idp)*ONE/mag);

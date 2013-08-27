@@ -47,7 +47,7 @@ log_ratio( double val )
 
     val = MAX( val, eps );
     val = MIN( val, 1. - eps );
-    return log( val/(1. - val) );
+    return std::log( val/(1. - val) );
 }
 
 
@@ -590,7 +590,7 @@ CvBoostTree::find_split_cat_reg( CvDTreeNode* node, int vi, float init_quality, 
     {
         R += counts[i];
         rsum += sum[i];
-        sum[i] = fabs(counts[i]) > DBL_EPSILON ? sum[i]/counts[i] : 0;
+        sum[i] = std::fabs(counts[i]) > DBL_EPSILON ? sum[i]/counts[i] : 0;
         sum_ptr[i] = sum + i;
     }
 
@@ -1302,7 +1302,7 @@ CvBoost::update_weights_impl( CvBoostTree* tree, double initial_weights[2] )
             if( sumw != 0 )
                 err /= sumw;
             C = err = -log_ratio( err );
-            scale[1] = exp(err);
+            scale[1] = std::exp(err);
 
             sumw = 0;
             for( i = 0; i < n; i++ )
@@ -1858,7 +1858,7 @@ float CvBoost::calc_error( CvMLData* _data, int type, std::vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 );
             if( pred_resp )
                 pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = std::fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;

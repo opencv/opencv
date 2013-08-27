@@ -302,8 +302,8 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
         }
 
         templSum2 /= invArea;
-        templNorm = sqrt(templNorm);
-        templNorm /= sqrt(invArea); // care of accuracy here
+        templNorm = std::sqrt(templNorm);
+        templNorm /= std::sqrt(invArea); // care of accuracy here
 
         q0 = (double*)sqsum.data;
         q1 = q0 + templ.cols*cn;
@@ -361,10 +361,10 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
             if( isNormed )
             {
-                t = sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
-                if( fabs(num) < t )
+                t = std::sqrt(MAX(wndSum2 - wndMean2,0))*templNorm;
+                if( std::fabs(num) < t )
                     num /= t;
-                else if( fabs(num) < t*1.125 )
+                else if( std::fabs(num) < t*1.125 )
                     num = num > 0 ? 1 : -1;
                 else
                     num = method != CV_TM_SQDIFF_NORMED ? 0 : 1;

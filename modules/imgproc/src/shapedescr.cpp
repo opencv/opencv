@@ -451,7 +451,7 @@ cvMinEnclosingCircle( const void* array, CvPoint2D32f * _center, float *_radius 
             radius = MAX(radius,t);
         }
 
-        radius = (float)(sqrt(radius)*(1 + eps));
+        radius = (float)(std::sqrt(radius)*(1 + eps));
         result = 1;
     }
 
@@ -640,9 +640,9 @@ static CvStatus icvContourSecArea( CvSeq * contour, CvSlice slice, double *area 
 
 /****************   edges intersection examination   **************************/
                 sk = nx * (xi - pt_s.x) + ny * (yi - pt_s.y);
-                if( (fabs( sk ) < eps && lpt > 0) || sk * sk1 < -eps )
+                if( (std::fabs( sk ) < eps && lpt > 0) || sk * sk1 < -eps )
                 {
-                    if( fabs( sk ) < eps )
+                    if( std::fabs( sk ) < eps )
                     {
                         dxy = xi_1 * yi - xi * yi_1;
                         a00 = a00 + dxy;
@@ -667,7 +667,7 @@ static CvStatus icvContourSecArea( CvSeq * contour, CvSlice slice, double *area 
                         du = xi - xi_1;
                         dx = ny;
                         dy = -nx;
-                        if( fabs( du ) > eps )
+                        if( std::fabs( du ) > eps )
                             t = ((yi_1 - pt_s.y) * du + dv * (pt_s.x - xi_1)) /
                                 (du * dy - dx * dv);
                         else
@@ -720,7 +720,7 @@ static CvStatus icvContourSecArea( CvSeq * contour, CvSlice slice, double *area 
 /*     common area calculation    */
         *area = 0;
         for( i = 0; i < p_ind; i++ )
-            (*area) += fabs( p_are[i] );
+            (*area) += std::fabs( p_are[i] );
 
         if( p_are1 != NULL )
             cvFree( &p_are1 );
@@ -767,7 +767,7 @@ cvContourArea( const void *array, CvSlice slice, int oriented )
         IPPI_CALL( icvContourSecArea( contour, slice, &area ));
     }
 
-    return oriented ? area : fabs(area);
+    return oriented ? area : std::fabs(area);
 }
 
 
@@ -897,18 +897,18 @@ cvFitEllipse2( const CvArr* array )
     cvSolve(&A, &b, &x, CV_SVD);
 
     // store angle and radii
-    rp[4] = -0.5 * atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
-    t = sin(-2.0 * rp[4]);
-    if( fabs(t) > fabs(gfp[2])*min_eps )
+    rp[4] = -0.5 * std::atan2(gfp[2], gfp[1] - gfp[0]); // convert from APP angle usage
+    t = std::sin(-2.0 * rp[4]);
+    if( std::fabs(t) > std::fabs(gfp[2])*min_eps )
         t = gfp[2]/t;
     else
         t = gfp[1] - gfp[0];
-    rp[2] = fabs(gfp[0] + gfp[1] - t);
+    rp[2] = std::fabs(gfp[0] + gfp[1] - t);
     if( rp[2] > min_eps )
-        rp[2] = sqrt(2.0 / rp[2]);
-    rp[3] = fabs(gfp[0] + gfp[1] + t);
+        rp[2] = std::sqrt(2.0 / rp[2]);
+    rp[3] = std::fabs(gfp[0] + gfp[1] + t);
     if( rp[3] > min_eps )
-        rp[3] = sqrt(2.0 / rp[3]);
+        rp[3] = std::sqrt(2.0 / rp[3]);
 
     box.center.x = (float)rp[0] + c.x;
     box.center.y = (float)rp[1] + c.y;

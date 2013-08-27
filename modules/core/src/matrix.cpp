@@ -3034,8 +3034,8 @@ cvRange( CvArr* arr, double start, double end )
         int* idata = mat->data.i;
         int ival = cvRound(val), idelta = cvRound(delta);
 
-        if( fabs(val - ival) < DBL_EPSILON &&
-            fabs(delta - idelta) < DBL_EPSILON )
+        if( std::fabs(val - ival) < DBL_EPSILON &&
+            std::fabs(delta - idelta) < DBL_EPSILON )
         {
             for( i = 0; i < rows; i++, idata += step )
                 for( j = 0; j < cols; j++, ival += idelta )
@@ -4264,8 +4264,8 @@ void normalize( const SparseMat& src, SparseMat& dst, double a, int norm_type )
 void RotatedRect::points(Point2f pt[]) const
 {
     double _angle = angle*CV_PI/180.;
-    float b = (float)cos(_angle)*0.5f;
-    float a = (float)sin(_angle)*0.5f;
+    float b = (float)std::cos(_angle)*0.5f;
+    float a = (float)std::sin(_angle)*0.5f;
 
     pt[0].x = center.x - a*size.height - b*size.width;
     pt[0].y = center.y + b*size.height - a*size.width;

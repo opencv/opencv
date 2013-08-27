@@ -1,4 +1,4 @@
-#include <math.h>
+#include <cmath>
 #include <iostream>
 using namespace std;
 #include "precomp.hpp"
@@ -19,7 +19,7 @@ int solve_deg2(double a, double b, double c, double & x1, double & x2)
     return 1;
   }
 
-  double sqrt_delta = sqrt(delta);
+  double sqrt_delta = std::sqrt(delta);
   x1 = (-b + sqrt_delta) * inv_2a;
   x2 = (-b - sqrt_delta) * inv_2a;
   return 2;
@@ -66,24 +66,24 @@ int solve_deg3(double a, double b, double c, double d,
       return 3;
     }
     else {
-      x0 = pow(2 * R, 1 / 3.0) - b_a_3;
+      x0 = std::pow(2 * R, 1 / 3.0) - b_a_3;
       return 1;
     }
   }
 
   if (D <= 0) {
     // Three real roots
-    double theta = acos(R / sqrt(-Q3));
-    double sqrt_Q = sqrt(-Q);
-    x0 = 2 * sqrt_Q * cos(theta             / 3.0) - b_a_3;
-    x1 = 2 * sqrt_Q * cos((theta + 2 * CV_PI)/ 3.0) - b_a_3;
-    x2 = 2 * sqrt_Q * cos((theta + 4 * CV_PI)/ 3.0) - b_a_3;
+    double theta = std::acos(R / std::sqrt(-Q3));
+    double sqrt_Q = std::sqrt(-Q);
+    x0 = 2 * sqrt_Q * std::cos(theta             / 3.0) - b_a_3;
+    x1 = 2 * sqrt_Q * std::cos((theta + 2 * CV_PI)/ 3.0) - b_a_3;
+    x2 = 2 * sqrt_Q * std::cos((theta + 4 * CV_PI)/ 3.0) - b_a_3;
 
     return 3;
   }
 
   // D > 0, only one real root
-  double AD = pow(fabs(R) + sqrt(D), 1.0 / 3.0) * (R > 0 ? 1 : (R < 0 ? -1 : 0));
+  double AD = std::pow(std::fabs(R) + std::sqrt(D), 1.0 / 3.0) * (R > 0 ? 1 : (R < 0 ? -1 : 0));
   double BD = (AD == 0) ? 0 : -Q / AD;
 
   // Calculate the only real root
@@ -118,7 +118,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
   if (R2 < 0)
     return 0;
 
-  R = sqrt(R2);
+  R = std::sqrt(R2);
   double inv_R = 1. / R;
 
   int nb_real_roots = 0;
@@ -130,7 +130,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
     if (temp < 0)
       D2 = E2 = -1;
     else {
-      double sqrt_temp = sqrt(temp);
+      double sqrt_temp = std::sqrt(temp);
       D2 = 0.75 * b2 - 2 * c + 2 * sqrt_temp;
       E2 = D2 - 4 * sqrt_temp;
     }
@@ -144,7 +144,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
 
   double b_4 = 0.25 * b, R_2 = 0.5 * R;
   if (D2 >= 0) {
-    double D = sqrt(D2);
+    double D = std::sqrt(D2);
     nb_real_roots = 2;
     double D_2 = 0.5 * D;
     x0 = R_2 + D_2 - b_4;
@@ -153,7 +153,7 @@ int solve_deg4(double a, double b, double c, double d, double e,
 
   // Calculate E^2
   if (E2 >= 0) {
-    double E = sqrt(E2);
+    double E = std::sqrt(E2);
     double E_2 = 0.5 * E;
     if (nb_real_roots == 0) {
       x0 = - R_2 + E_2 - b_4;

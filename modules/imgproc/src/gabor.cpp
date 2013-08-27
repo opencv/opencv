@@ -55,17 +55,17 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
     double sigma_y = sigma/gamma;
     int nstds = 3;
     int xmin, xmax, ymin, ymax;
-    double c = cos(theta), s = sin(theta);
+    double c = std::cos(theta), s = std::sin(theta);
 
     if( ksize.width > 0 )
         xmax = ksize.width/2;
     else
-        xmax = cvRound(std::max(fabs(nstds*sigma_x*c), fabs(nstds*sigma_y*s)));
+        xmax = cvRound(std::max(std::fabs(nstds*sigma_x*c), std::fabs(nstds*sigma_y*s)));
 
     if( ksize.height > 0 )
         ymax = ksize.height/2;
     else
-        ymax = cvRound(std::max(fabs(nstds*sigma_x*s), fabs(nstds*sigma_y*c)));
+        ymax = cvRound(std::max(std::fabs(nstds*sigma_x*s), std::fabs(nstds*sigma_y*c)));
 
     xmin = -xmax;
     ymin = -ymax;
@@ -84,7 +84,7 @@ cv::Mat cv::getGaborKernel( Size ksize, double sigma, double theta,
             double xr = x*c + y*s;
             double yr = -x*s + y*c;
 
-            double v = scale*exp(ex*xr*xr + ey*yr*yr)*cos(cscale*xr + psi);
+            double v = scale*std::exp(ex*xr*xr + ey*yr*yr)*std::cos(cscale*xr + psi);
             if( ktype == CV_32F )
                 kernel.at<float>(ymax - y, xmax - x) = (float)v;
             else

@@ -1231,7 +1231,7 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
         else
             cv::addWeighted(e.a, e.alpha, e.b, e.beta, e.s[0], dst);
     }
-    else if( e.s.isReal() && (dst.data != m.data || fabs(e.alpha) != 1))
+    else if( e.s.isReal() && (dst.data != m.data || std::fabs(e.alpha) != 1))
     {
         e.a.convertTo(m, _type, e.alpha, e.s[0]);
         return;
@@ -1293,7 +1293,7 @@ void MatOp_AddEx::transpose(const MatExpr& e, MatExpr& res) const
 
 void MatOp_AddEx::abs(const MatExpr& e, MatExpr& res) const
 {
-    if( (!e.b.data || e.beta == 0) && fabs(e.alpha) == 1 )
+    if( (!e.b.data || e.beta == 0) && std::fabs(e.alpha) == 1 )
         MatOp_Bin::makeExpr(res, 'a', e.a, -e.s*e.alpha);
     else if( e.b.data && e.alpha + e.beta == 0 && e.alpha*e.beta == -1 )
         MatOp_Bin::makeExpr(res, 'a', e.a, e.b);

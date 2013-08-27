@@ -49,7 +49,7 @@ static void icvCompleteMomentState( CvMoments* moments )
     assert( moments != 0 );
     moments->inv_sqrt_m00 = 0;
 
-    if( fabs(moments->m00) > DBL_EPSILON )
+    if( std::fabs(moments->m00) > DBL_EPSILON )
     {
         double inv_m00 = 1. / moments->m00;
         cx = moments->m10 * inv_m00;
@@ -153,7 +153,7 @@ static void icvContourMoments( CvSeq* contour, CvMoments* moments )
 
         double db1_2, db1_6, db1_12, db1_24, db1_20, db1_60;
 
-        if( fabs(a00) > FLT_EPSILON )
+        if( std::fabs(a00) > FLT_EPSILON )
         {
             if( a00 > 0 )
             {

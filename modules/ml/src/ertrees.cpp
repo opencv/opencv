@@ -431,7 +431,7 @@ void CvERTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                     else
                         val = fdata[(size_t)si*step];
 
-                    if( fabs(val) >= ord_nan )
+                    if( std::fabs(val) >= ord_nan )
                     {
                         sprintf( err, "%d-th value of %d-th (ordered) "
                             "variable (=%g) is too large", i, vi, val );
@@ -1567,7 +1567,7 @@ bool CvERTrees::train( const CvMat* _train_data, int _tflag,
     if( params.nactive_vars > var_count )
         params.nactive_vars = var_count;
     else if( params.nactive_vars == 0 )
-        params.nactive_vars = (int)sqrt((double)var_count);
+        params.nactive_vars = (int)std::sqrt((double)var_count);
     else if( params.nactive_vars < 0 )
         CV_ERROR( CV_StsBadArg, "<nactive_vars> must be non-negative" );
 
@@ -1678,7 +1678,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
             double minval, maxval;
             CvMat responses = cvMat(1, nsamples, CV_32FC1, true_resp_ptr);
             cvMinMaxLoc( &responses, &minval, &maxval );
-            maximal_response = (float)MAX( MAX( fabs(minval), fabs(maxval) ), 0 );
+            maximal_response = (float)MAX( MAX( std::fabs(minval), std::fabs(maxval) ), 0 );
         }
     }
 
@@ -1728,7 +1728,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
                     avg_resp -= true_resp_ptr[i];
                     oob_error += avg_resp*avg_resp;
                     resp = (resp - true_resp_ptr[i])/maximal_response;
-                    ncorrect_responses += exp( -resp*resp );
+                    ncorrect_responses += std::exp( -resp*resp );
                 }
                 else //classification
                 {
@@ -1743,7 +1743,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
                     cvMinMaxLoc( &votes, 0, 0, 0, &max_loc );
 
                     prdct_resp = data->cat_map->data.i[max_loc.x];
-                    oob_error += (fabs(prdct_resp - true_resp_ptr[i]) < FLT_EPSILON) ? 0 : 1;
+                    oob_error += (std::fabs(prdct_resp - true_resp_ptr[i]) < FLT_EPSILON) ? 0 : 1;
 
                     ncorrect_responses += cvRound(predicted_node->value - true_resp_ptr[i]) == 0;
                 }
@@ -1795,7 +1795,7 @@ bool CvERTrees::grow_forest( const CvTermCriteria term_crit )
                         else
                         {
                             true_resp = (true_resp - predct_resp)/maximal_response;
-                            ncorrect_responses_permuted += exp( -true_resp*true_resp );
+                            ncorrect_responses_permuted += std::exp( -true_resp*true_resp );
                         }
                     }
                     var_importance->data.fl[m] += (float)(ncorrect_responses

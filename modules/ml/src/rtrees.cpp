@@ -281,7 +281,7 @@ bool CvRTrees::train( const CvMat* _train_data, int _tflag,
     if( params.nactive_vars > var_count )
         params.nactive_vars = var_count;
     else if( params.nactive_vars == 0 )
-        params.nactive_vars = (int)sqrt((double)var_count);
+        params.nactive_vars = (int)std::sqrt((double)var_count);
     else if( params.nactive_vars < 0 )
         CV_Error( CV_StsBadArg, "<nactive_vars> must be non-negative" );
 
@@ -380,7 +380,7 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
         double minval, maxval;
         CvMat responses = cvMat(1, nsamples, CV_32FC1, true_resp_ptr);
         cvMinMaxLoc( &responses, &minval, &maxval );
-        maximal_response = (float)MAX( MAX( fabs(minval), fabs(maxval) ), 0 );
+        maximal_response = (float)MAX( MAX( std::fabs(minval), std::fabs(maxval) ), 0 );
     }
 
     trees = (CvForestTree**)cvAlloc( sizeof(trees[0])*max_ntrees );
@@ -439,7 +439,7 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
                     avg_resp -= true_resp_ptr[i];
                     oob_error += avg_resp*avg_resp;
                     resp = (resp - true_resp_ptr[i])/maximal_response;
-                    ncorrect_responses += exp( -resp*resp );
+                    ncorrect_responses += std::exp( -resp*resp );
                 }
                 else //classification
                 {
@@ -454,7 +454,7 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
                     cvMinMaxLoc( &votes, 0, 0, 0, &max_loc );
 
                     prdct_resp = data->cat_map->data.i[max_loc.x];
-                    oob_error += (fabs(prdct_resp - true_resp_ptr[i]) < FLT_EPSILON) ? 0 : 1;
+                    oob_error += (std::fabs(prdct_resp - true_resp_ptr[i]) < FLT_EPSILON) ? 0 : 1;
 
                     ncorrect_responses += cvRound(predicted_node->value - true_resp_ptr[i]) == 0;
                 }
@@ -511,7 +511,7 @@ bool CvRTrees::grow_forest( const CvTermCriteria term_crit )
                         else
                         {
                             true_resp = (true_resp - predct_resp)/maximal_response;
-                            ncorrect_responses_permuted += exp( -true_resp*true_resp );
+                            ncorrect_responses_permuted += std::exp( -true_resp*true_resp );
                         }
                     }
                     var_importance->data.fl[m] += (float)(ncorrect_responses
@@ -598,7 +598,7 @@ float CvRTrees::calc_error( CvMLData* _data, int type , std::vector<float> *resp
             float r = (float)predict( &sample, missing ? &miss : 0 );
             if( pred_resp )
                 pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = std::fabs((double)r - response->data.fl[si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
@@ -646,7 +646,7 @@ float CvRTrees::get_train_error()
             CvMat sample = cvMat( 1, var_count, CV_32FC1, vp );
             CvMat missing = cvMat( 1, var_count, CV_8UC1,  mp );
             float r = predict( &sample, &missing );
-            if (fabs(r - responses_ptr[si]) >= FLT_EPSILON)
+            if (std::fabs(r - responses_ptr[si]) >= FLT_EPSILON)
                 err_count++;
         }
         err = (float)err_count / (float)sample_count;

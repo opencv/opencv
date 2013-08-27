@@ -138,7 +138,7 @@ static void cvChol( CvMat* A, CvMat* S )
         for( k = 0; k < i; k++ )
             sum += CV_MAT_ELEM(*S, float, k, i) * CV_MAT_ELEM(*S, float, k, i);
 
-        CV_MAT_ELEM(*S, float, i, i) = (float)sqrt(CV_MAT_ELEM(*A, float, i, i) - sum);
+        CV_MAT_ELEM(*S, float, i, i) = (float)std::sqrt(CV_MAT_ELEM(*A, float, i, i) - sum);
 
         for( j = i + 1; j < dim; j++ )
         {
@@ -1796,12 +1796,12 @@ static int icvGetNumberOfCluster( double* prob_vector, int num_of_clusters, floa
             maxprob = prob;
         }
     }
-    if( normalize_probs && fabs(sum - 1.) > FLT_EPSILON )
+    if( normalize_probs && std::fabs(sum - 1.) > FLT_EPSILON )
     {
         for( i = 0; i < num_of_clusters; i++ )
             prob_vector[i] /= sum;
     }
-    if( fabs(r - 1.) > FLT_EPSILON && fabs(sum - 1.) < outlier_thresh )
+    if( std::fabs(r - 1.) > FLT_EPSILON && std::fabs(sum - 1.) < outlier_thresh )
         max_prob_loc = -1;
 
     __END__;

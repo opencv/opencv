@@ -177,16 +177,16 @@ void eigen2x2( const float* cov, float* dst, int n )
 
         double x = b;
         double y = l1 - a;
-        double e = fabs(x);
+        double e = std::fabs(x);
 
-        if( e + fabs(y) < 1e-4 )
+        if( e + std::fabs(y) < 1e-4 )
         {
             y = b;
             x = l1 - c;
-            e = fabs(x);
-            if( e + fabs(y) < 1e-4 )
+            e = std::fabs(x);
+            if( e + std::fabs(y) < 1e-4 )
             {
-                e = 1./(e + fabs(y) + FLT_EPSILON);
+                e = 1./(e + std::fabs(y) + FLT_EPSILON);
                 x *= e, y *= e;
             }
         }
@@ -198,16 +198,16 @@ void eigen2x2( const float* cov, float* dst, int n )
 
         x = b;
         y = l2 - a;
-        e = fabs(x);
+        e = std::fabs(x);
 
-        if( e + fabs(y) < 1e-4 )
+        if( e + std::fabs(y) < 1e-4 )
         {
             y = b;
             x = l2 - c;
-            e = fabs(x);
-            if( e + fabs(y) < 1e-4 )
+            e = std::fabs(x);
+            if( e + std::fabs(y) < 1e-4 )
             {
-                e = 1./(e + fabs(y) + FLT_EPSILON);
+                e = 1./(e + std::fabs(y) + FLT_EPSILON);
                 x *= e, y *= e;
             }
         }

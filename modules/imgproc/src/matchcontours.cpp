@@ -100,8 +100,8 @@ cvMatchShapes( const void* contour1, const void* contour2,
         {
             for( i = 0; i < 7; i++ )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
+                double ama = std::fabs( ma[i] );
+                double amb = std::fabs( mb[i] );
 
                 if( ma[i] > 0 )
                     sma = 1;
@@ -118,9 +118,9 @@ cvMatchShapes( const void* contour1, const void* contour2,
 
                 if( ama > eps && amb > eps )
                 {
-                    ama = 1. / (sma * log10( ama ));
-                    amb = 1. / (smb * log10( amb ));
-                    result += fabs( -ama + amb );
+                    ama = 1. / (sma * std::log10( ama ));
+                    amb = 1. / (smb * std::log10( amb ));
+                    result += std::fabs( -ama + amb );
                 }
             }
             break;
@@ -130,8 +130,8 @@ cvMatchShapes( const void* contour1, const void* contour2,
         {
             for( i = 0; i < 7; i++ )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
+                double ama = std::fabs( ma[i] );
+                double amb = std::fabs( mb[i] );
 
                 if( ma[i] > 0 )
                     sma = 1;
@@ -148,9 +148,9 @@ cvMatchShapes( const void* contour1, const void* contour2,
 
                 if( ama > eps && amb > eps )
                 {
-                    ama = sma * log10( ama );
-                    amb = smb * log10( amb );
-                    result += fabs( -ama + amb );
+                    ama = sma * std::log10( ama );
+                    amb = smb * std::log10( amb );
+                    result += std::fabs( -ama + amb );
                 }
             }
             break;
@@ -160,8 +160,8 @@ cvMatchShapes( const void* contour1, const void* contour2,
         {
             for( i = 0; i < 7; i++ )
             {
-                double ama = fabs( ma[i] );
-                double amb = fabs( mb[i] );
+                double ama = std::fabs( ma[i] );
+                double amb = std::fabs( mb[i] );
 
                 if( ma[i] > 0 )
                     sma = 1;
@@ -178,9 +178,9 @@ cvMatchShapes( const void* contour1, const void* contour2,
 
                 if( ama > eps && amb > eps )
                 {
-                    ama = sma * log10( ama );
-                    amb = smb * log10( amb );
-                    mmm = fabs( (ama - amb) / ama );
+                    ama = sma * std::log10( ama );
+                    amb = smb * std::log10( amb );
+                    mmm = std::fabs( (ama - amb) / ama );
                     if( result < mmm )
                         result = mmm;
                 }

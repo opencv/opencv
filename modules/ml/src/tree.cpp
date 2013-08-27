@@ -429,7 +429,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                     {
                         float t = fdata[(size_t)si*step];
                         val = cvRound(t);
-                        if( fabs(t - val) > FLT_EPSILON )
+                        if( std::fabs(t - val) > FLT_EPSILON )
                         {
                             sprintf( err, "%d-th value of %d-th (categorical) "
                                 "variable is not an integer", i, vi );
@@ -544,7 +544,7 @@ void CvDTreeTrainData::set_data( const CvMat* _train_data, int _tflag,
                     else
                         val = fdata[(size_t)si*step];
 
-                    if( fabs(val) >= ord_nan )
+                    if( std::fabs(val) >= ord_nan )
                     {
                         sprintf( err, "%d-th value of %d-th (ordered) "
                             "variable (=%g) is too large", i, vi, val );
@@ -1690,7 +1690,7 @@ void CvDTree::try_split_node( CvDTreeNode* node )
     }
     else if( can_split )
     {
-        if( sqrt(node->node_risk)/n < data->params.regression_accuracy )
+        if( std::sqrt(node->node_risk)/n < data->params.regression_accuracy )
             can_split = false;
     }
 
@@ -3333,7 +3333,7 @@ float CvDTree::calc_error( CvMLData* _data, int type, vector<float> *resp )
             float r = (float)predict( &sample, missing ? &miss : 0 )->value;
             if( pred_resp )
                 pred_resp[i] = r;
-            int d = fabs((double)r - response->data.fl[(size_t)si*r_step]) <= FLT_EPSILON ? 0 : 1;
+            int d = std::fabs((double)r - response->data.fl[(size_t)si*r_step]) <= FLT_EPSILON ? 0 : 1;
             err += d;
         }
         err = sample_count ? err / (float)sample_count * 100 : -FLT_MAX;
@@ -3406,7 +3406,7 @@ void CvDTree::prune_cv()
     if( tree_count > 0 )
     {
         for( ti = 1; ti < tree_count-1; ti++ )
-            ab->data.db[ti] = sqrt(ab->data.db[ti]*ab->data.db[ti+1]);
+            ab->data.db[ti] = std::sqrt(ab->data.db[ti]*ab->data.db[ti+1]);
         ab->data.db[tree_count-1] = DBL_MAX*0.5;
 
         CV_CALL( err_jk = cvCreateMat( cv_n, tree_count, CV_64F ));
@@ -3440,7 +3440,7 @@ void CvDTree::prune_cv()
                 min_err = sum_err;
                 min_idx = ti;
                 if( use_1se )
-                    min_err_se = sqrt( sum_err*(n - sum_err) );
+                    min_err_se = std::sqrt( sum_err*(n - sum_err) );
             }
             else if( sum_err < min_err + min_err_se )
                 min_idx = ti;

@@ -302,7 +302,7 @@ cvPointPolygonTest( const CvArr* _contour, CvPoint2D32f pt, int measure_dist )
                 counter += dist_num > 0;
             }
 
-            result = sqrt(min_dist_num/min_dist_denom);
+            result = std::sqrt(min_dist_num/min_dist_denom);
             if( counter % 2 == 0 )
                 result = -result;
         }
@@ -649,7 +649,7 @@ float cv::intersectConvexConvex( InputArray _p1, InputArray _p2, OutputArray _p1
 
         temp.copyTo(_p12);
     }
-    return (float)fabs(area);
+    return (float)std::fabs(area);
 }
 
 /*

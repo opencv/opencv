@@ -48,7 +48,7 @@
 
 #include "precomp.hpp"
 
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 
 #define CV_MAX_NUM_GREY_LEVELS_8U  256
@@ -463,14 +463,14 @@ icvCreateGLCMDescriptors_AllowDoubleNest( CvGLCM* destGLCM, int matrixIndex )
 
             if( entryValue > 0 )
             {
-                descriptors[ CV_GLCMDESC_ENTROPY ] += entryValue * log( entryValue );
+                descriptors[ CV_GLCMDESC_ENTROPY ] += entryValue * std::log( entryValue );
             }
 
             descriptors[ CV_GLCMDESC_ENERGY ] += entryValue*entryValue;
         }
 
         if( marginalProbability[ actualSideLoop1 ] > 0 )
-            marginalProbabilityEntropy += marginalProbability[ actualSideLoop1 ]*log(marginalProbability[ actualSideLoop1 ]);
+            marginalProbabilityEntropy += marginalProbability[ actualSideLoop1 ]*std::log(marginalProbability[ actualSideLoop1 ]);
     }
 
     marginalProbabilityEntropy = -marginalProbabilityEntropy;
@@ -506,7 +506,7 @@ icvCreateGLCMDescriptors_AllowDoubleNest( CvGLCM* destGLCM, int matrixIndex )
             double HXYValue = marginalProbability[ actualSideLoop1 ] * marginalProbability[ actualSideLoop2 ];
             if( HXYValue>0 )
             {
-                double HXYValueLog = log( HXYValue );
+                double HXYValueLog = std::log( HXYValue );
                 HXY1 += entryValue * HXYValueLog;
                 HXY2 += HXYValue * HXYValueLog;
             }
@@ -519,9 +519,9 @@ icvCreateGLCMDescriptors_AllowDoubleNest( CvGLCM* destGLCM, int matrixIndex )
     HXY2 = -HXY2;
 
     descriptors[ CV_GLCMDESC_CORRELATIONINFO1 ] = ( HXY - HXY1 ) / ( correlationMean );
-    descriptors[ CV_GLCMDESC_CORRELATIONINFO2 ] = sqrt( 1.0 - exp( -2.0 * (HXY2 - HXY ) ) );
+    descriptors[ CV_GLCMDESC_CORRELATIONINFO2 ] = std::sqrt( 1.0 - std::exp( -2.0 * (HXY2 - HXY ) ) );
 
-    correlationStdDeviation = sqrt( correlationStdDeviation );
+    correlationStdDeviation = std::sqrt( correlationStdDeviation );
 
     descriptors[ CV_GLCMDESC_CORRELATION ] = correlationProductTerm / (correlationStdDeviation*correlationStdDeviation );
 
@@ -598,7 +598,7 @@ cvGetGLCMDescriptorStatistics( CvGLCM* GLCM, int descriptor,
         *_average = average;
 
     if( _standardDeviation )
-        *_standardDeviation = sqrt( (squareSum - average*average*numMatrices)/(numMatrices-1));
+        *_standardDeviation = std::sqrt( (squareSum - average*average*numMatrices)/(numMatrices-1));
 
     __END__;
 }

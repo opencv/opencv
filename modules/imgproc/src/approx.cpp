@@ -200,7 +200,7 @@ CvSeq* icvApproximateChainTC89( CvChain* chain, int header_size,
                 temp_num = dx1 * dx2 + dy1 * dy2;
                 temp_num =
                     (float) (temp_num /
-                             sqrt( ((double)dx1 * dx1 + (double)dy1 * dy1) *
+                             std::sqrt( ((double)dx1 * dx1 + (double)dy1 * dy1) *
                                    ((double)dx2 * dx2 + (double)dy2 * dy2) ));
                 sk.f = (float) (temp_num + 1.1);
 
@@ -591,7 +591,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
             for( i = slice.start_index + 1; i < slice.end_index; i++ )
             {
                 CV_READ_SEQ_ELEM( pt, reader );
-                dist = fabs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
+                dist = std::fabs((pt.y - start_pt.y) * dx - (pt.x - start_pt.x) * dy);
 
                 if( dist > max_dist )
                 {
@@ -647,7 +647,7 @@ icvApproxPolyDP( CvSeq* src_contour, int header_size,
 
         dx = end_pt.x - start_pt.x;
         dy = end_pt.y - start_pt.y;
-        dist = fabs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
+        dist = std::fabs((pt.x - start_pt.x)*dy - (pt.y - start_pt.y)*dx);
         successive_inner_product = (pt.x - start_pt.x) * (end_pt.x - pt.x) +
             (pt.y - start_pt.y) * (end_pt.y - pt.y);
 
