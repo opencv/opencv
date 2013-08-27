@@ -181,7 +181,7 @@ void groupRectangles(std::vector<Rect>& rectList, int groupThreshold, double eps
         int n1 = rweights[i];
         double w1 = rejectWeights[i];
         int l1 = rejectLevels[i];
-    
+
         // filter out rectangles which don't have enough similar rectangles
         if( n1 <= groupThreshold )
             continue;

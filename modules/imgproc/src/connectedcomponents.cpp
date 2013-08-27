@@ -399,7 +399,7 @@ int cv::connectedComponentsWithStats(InputArray _img, OutputArray _labels, Outpu
     const cv::Mat img = _img.getMat();
     _labels.create(img.size(), CV_MAT_DEPTH(ltype));
     cv::Mat labels = _labels.getMat();
-    connectedcomponents::CCStatsOp sop(statsv, centroids); 
+    connectedcomponents::CCStatsOp sop(statsv, centroids);
     if(ltype == CV_16U){
         return connectedComponents_sub1(img, labels, connectivity, sop);
     }else if(ltype == CV_32S){

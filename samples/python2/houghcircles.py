@@ -2,7 +2,7 @@
 
 '''
 This example illustrates how to use cv2.HoughCircles() function.
-Usage: ./houghcircles.py [<image_name>] 
+Usage: ./houghcircles.py [<image_name>]
 image argument defaults to ../cpp/board.jpg
 '''
 

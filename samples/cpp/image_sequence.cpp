@@ -17,7 +17,7 @@ static void help(char** argv)
 
 int main(int argc, char** argv)
 {
-    if(argc != 2) 
+    if(argc != 2)
     {
         help(argv);
         return 1;
@@ -25,28 +25,28 @@ int main(int argc, char** argv)
 
     string first_file = argv[1];
     VideoCapture sequence(first_file);
-    
+
     if (!sequence.isOpened())
     {
         cerr << "Failed to open the image sequence!\n" << endl;
         return 1;
     }
-    
+
     Mat image;
     namedWindow("Image sequence | press ESC to close", 1);
-    
+
     for(;;)
     {
         // Read in image from sequence
         sequence >> image;
-		
+
         // If no image was retrieved -> end of sequence
         if(image.empty())
         {
             cout << "End of Sequence" << endl;
             break;
         }
-        
+
         imshow("Image sequence | press ESC to close", image);
 
         if(waitKey(500) == 27)
