@@ -816,4 +816,78 @@ INSTANTIATE_TEST_CASE_P(CUDA_Arithm, MeanStdDev, testing::Combine(
     DIFFERENT_SIZES,
     WHOLE_SUBMAT));
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Integral
+
+PARAM_TEST_CASE(Integral, cv::cuda::DeviceInfo, cv::Size, UseRoi)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(Integral, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_32SC1, useRoi);
+    cv::cuda::integral(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold;
+    cv::integral(src, dst_gold, CV_32S);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, Integral, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    WHOLE_SUBMAT));
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// IntegralSqr
+
+PARAM_TEST_CASE(IntegralSqr, cv::cuda::DeviceInfo, cv::Size, UseRoi)
+{
+    cv::cuda::DeviceInfo devInfo;
+    cv::Size size;
+    bool useRoi;
+
+    virtual void SetUp()
+    {
+        devInfo = GET_PARAM(0);
+        size = GET_PARAM(1);
+        useRoi = GET_PARAM(2);
+
+        cv::cuda::setDevice(devInfo.deviceID());
+    }
+};
+
+CUDA_TEST_P(IntegralSqr, Accuracy)
+{
+    cv::Mat src = randomMat(size, CV_8UC1);
+
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_64FC1, useRoi);
+    cv::cuda::sqrIntegral(loadMat(src, useRoi), dst);
+
+    cv::Mat dst_gold, temp;
+    cv::integral(src, temp, dst_gold);
+
+    EXPECT_MAT_NEAR(dst_gold, dst, 0.0);
+}
+
+INSTANTIATE_TEST_CASE_P(CUDA_Arithm, IntegralSqr, testing::Combine(
+    ALL_DEVICES,
+    DIFFERENT_SIZES,
+    WHOLE_SUBMAT));
+
 #endif // HAVE_CUDA
