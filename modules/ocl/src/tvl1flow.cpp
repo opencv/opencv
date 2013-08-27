@@ -172,7 +172,7 @@ namespace ocl_tvl1flow
     void estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
         oclMat &rho_c, oclMat &p11, oclMat &p12,
         oclMat &p21, oclMat &p22, oclMat &u1,
-        oclMat &u2, oclMat &error, float l_t, float theta);
+        oclMat &u2, oclMat &error, float l_t, float theta, char calc_error);
 
     void estimateDualVariables(oclMat &u1, oclMat &u2,
         oclMat &p11, oclMat &p12, oclMat &p21, oclMat &p22, float taut);
