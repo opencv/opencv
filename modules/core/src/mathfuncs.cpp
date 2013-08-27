@@ -2111,8 +2111,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
     }
     else
     {
-        int i, loc = 0;
-        Size size = getContinuousSize( src, src.channels() );
+        size_t i, loc = 0;
+        Size_<size_t> size = getContinuousSize( src, src.channels() );
 
         if( depth == CV_32F )
         {
@@ -2127,7 +2127,8 @@ bool checkRange(InputArray _src, bool quiet, Point* pt, double minVal, double ma
             ia = CV_TOGGLE_FLT(a.i);
             ib = CV_TOGGLE_FLT(b.i);
 
-            for( ; badPt.x < 0 && size.height--; loc += size.width, isrc += step )
+            // Note that size.height is always >=0 since it's size_t; hence, count up from 0 to size.height
+            for(size_t j = 0; badPt.x < 0 && j < size.height; loc += size.width, isrc += step, j++ )
             {
                 for( i = 0; i < size.width; i++ )
                 {
