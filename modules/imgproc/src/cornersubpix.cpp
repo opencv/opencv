@@ -127,7 +127,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
     /* calculate mask */
     for( i = -win.width, k = 0; i <= win.width; i++, k++ )
     {
-        maskX[k] = (float)exp( -i * i * coeff );
+        maskX[k] = (float)std::exp( -i * i * coeff );
     }
 
     if( win.width == win.height )
@@ -139,7 +139,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
         coeff = 1. / (win.height * win.height);
         for( i = -win.height, k = 0; i <= win.height; i++, k++ )
         {
-            maskY[k] = (float) exp( -i * i * coeff );
+            maskY[k] = (float) std::exp( -i * i * coeff );
         }
     }
 
@@ -220,7 +220,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
             }
 
             double det=a*c-b*b;
-            if( fabs( det ) > DBL_EPSILON*DBL_EPSILON )
+            if( std::fabs( det ) > DBL_EPSILON*DBL_EPSILON )
             {
                 // 2x2 matrix inversion
                 double scale=1.0/det;
@@ -239,7 +239,7 @@ cvFindCornerSubPix( const void* srcarr, CvPoint2D32f* corners,
 
         /* if new point is too far from initial, it means poor convergence.
            leave initial point as the result */
-        if( fabs( cI.x - cT.x ) > win.width || fabs( cI.y - cT.y ) > win.height )
+        if( std::fabs( cI.x - cT.x ) > win.width || std::fabs( cI.y - cT.y ) > win.height )
         {
             cI = cT;
         }

@@ -1901,7 +1901,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     int ipower = cvRound(power);
     bool is_ipower = false;
 
-    if( fabs(ipower - power) < DBL_EPSILON )
+    if( std::fabs(ipower - power) < DBL_EPSILON )
     {
         if( ipower < 0 )
         {
@@ -1943,7 +1943,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
         for( size_t i = 0; i < it.nplanes; i++, ++it )
             func( ptrs[0], ptrs[1], len, ipower );
     }
-    else if( fabs(fabs(power) - 0.5) < DBL_EPSILON )
+    else if( std::fabs(std::fabs(power) - 0.5) < DBL_EPSILON )
     {
         MathFunc func = power < 0 ?
             (depth == CV_32F ? (MathFunc)InvSqrt_32f : (MathFunc)InvSqrt_64f) :
@@ -2396,10 +2396,10 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             double d = a2*a2 - 4*a1*a3;
             if( d >= 0 )
             {
-                d = sqrt(d);
+                d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
-                if( fabs(q1) > fabs(q2) )
+                if( std::fabs(q1) > std::fabs(q2) )
                 {
                     x0 = q1 / a1;
                     x1 = a3 / q1;
@@ -2427,21 +2427,21 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
         if( d >= 0 )
         {
-            double theta = acos(R / sqrt(Qcubed));
-            double sqrtQ = sqrt(Q);
+            double theta = std::acos(R / std::sqrt(Qcubed));
+            double sqrtQ = std::sqrt(Q);
             double t0 = -2 * sqrtQ;
             double t1 = theta * (1./3);
             double t2 = a1 * (1./3);
-            x0 = t0 * cos(t1) - t2;
-            x1 = t0 * cos(t1 + (2.*CV_PI/3)) - t2;
-            x2 = t0 * cos(t1 + (4.*CV_PI/3)) - t2;
+            x0 = t0 * std::cos(t1) - t2;
+            x1 = t0 * std::cos(t1 + (2.*CV_PI/3)) - t2;
+            x2 = t0 * std::cos(t1 + (4.*CV_PI/3)) - t2;
             n = 3;
         }
         else
         {
             double e;
-            d = sqrt(-d);
-            e = pow(d + fabs(R), 0.333333333333);
+            d = std::sqrt(-d);
+            e = std::pow(d + std::fabs(R), 0.333333333333);
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
@@ -2529,7 +2529,7 @@ double cv::solvePoly( InputArray _coeffs0, OutputArray _roots0, int maxIters )
     {
         const double verySmallEps = 1e-100;
         for( i = 0; i < n; i++ )
-            if( fabs(roots[i].im) < verySmallEps )
+            if( std::fabs(roots[i].im) < verySmallEps )
                 roots[i].im = 0;
     }
 

@@ -132,9 +132,9 @@ cvWatershed( const CvArr* srcarr, CvArr* dstarr )
 
     #define c_diff(ptr1,ptr2,diff)      \
     {                                   \
-        db = abs((ptr1)[0] - (ptr2)[0]);\
-        dg = abs((ptr1)[1] - (ptr2)[1]);\
-        dr = abs((ptr1)[2] - (ptr2)[2]);\
+        db = std::abs((ptr1)[0] - (ptr2)[0]);\
+        dg = std::abs((ptr1)[1] - (ptr2)[1]);\
+        dr = std::abs((ptr1)[2] - (ptr2)[2]);\
         diff = ws_max(db,dg);           \
         diff = ws_max(diff,dr);         \
         assert( 0 <= diff && diff <= 255 ); \
@@ -507,7 +507,7 @@ cvPyrMeanShiftFiltering( const CvArr* srcarr, CvArr* dstarr,
                     s1 = cvRound(s1*icount);
                     s2 = cvRound(s2*icount);
 
-                    stop_flag = (x0 == x1 && y0 == y1) || abs(x1-x0) + abs(y1-y0) +
+                    stop_flag = (x0 == x1 && y0 == y1) || std::abs(x1-x0) + std::abs(y1-y0) +
                         tab[s0 - c0 + 255] + tab[s1 - c1 + 255] +
                         tab[s2 - c2 + 255] <= termcrit.epsilon;
 

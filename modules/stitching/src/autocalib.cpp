@@ -79,8 +79,8 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     v1 = -(h[0] * h[1] + h[3] * h[4]) / d1;
     v2 = (h[0] * h[0] + h[3] * h[3] - h[1] * h[1] - h[4] * h[4]) / d2;
     if (v1 < v2) std::swap(v1, v2);
-    if (v1 > 0 && v2 > 0) f1 = sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
-    else if (v1 > 0) f1 = sqrt(v1);
+    if (v1 > 0 && v2 > 0) f1 = std::sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
+    else if (v1 > 0) f1 = std::sqrt(v1);
     else f1_ok = false;
 
     f0_ok = true;
@@ -89,8 +89,8 @@ void focalsFromHomography(const Mat& H, double &f0, double &f1, bool &f0_ok, boo
     v1 = -h[2] * h[5] / d1;
     v2 = (h[5] * h[5] - h[2] * h[2]) / d2;
     if (v1 < v2) std::swap(v1, v2);
-    if (v1 > 0 && v2 > 0) f0 = sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
-    else if (v1 > 0) f0 = sqrt(v1);
+    if (v1 > 0 && v2 > 0) f0 = std::sqrt(std::abs(d1) > std::abs(d2) ? v1 : v2);
+    else if (v1 > 0) f0 = std::sqrt(v1);
     else f0_ok = false;
 }
 
@@ -114,7 +114,7 @@ void estimateFocal(const vector<ImageFeatures> &features, const vector<MatchesIn
             bool f0ok, f1ok;
             focalsFromHomography(m.H, f0, f1, f0ok, f1ok);
             if (f0ok && f1ok)
-                all_focals.push_back(sqrt(f0 * f1));
+                all_focals.push_back(std::sqrt(f0 * f1));
         }
     }
 
@@ -152,7 +152,7 @@ bool calibrateRotatingCamera(const vector<Mat> &Hs, Mat &K)
     for (int i = 0; i < m; ++i)
     {
         CV_Assert(Hs[i].size() == Size(3, 3) && Hs[i].type() == CV_64F);
-        Hs_[i] = Hs[i] / pow(determinant(Hs[i]), 1./3.);
+        Hs_[i] = Hs[i] / std::pow(determinant(Hs[i]), 1./3.);
     }
 
     const int idx_map[3][3] = {{0, 1, 2}, {1, 3, 4}, {2, 4, 5}};

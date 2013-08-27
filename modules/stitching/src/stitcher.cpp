@@ -227,7 +227,7 @@ Stitcher::Status Stitcher::composePanorama(InputArray images, OutputArray pano)
         if (!is_compose_scale_set)
         {
             if (compose_resol_ > 0)
-                compose_scale = min(1.0, sqrt(compose_resol_ * 1e6 / full_img.size().area()));
+                compose_scale = min(1.0, std::sqrt(compose_resol_ * 1e6 / full_img.size().area()));
             is_compose_scale_set = true;
 
             // Compute relative scales
@@ -372,14 +372,14 @@ Stitcher::Status Stitcher::matchImages()
         {
             if (!is_work_scale_set)
             {
-                work_scale_ = min(1.0, sqrt(registr_resol_ * 1e6 / full_img.size().area()));
+                work_scale_ = min(1.0, std::sqrt(registr_resol_ * 1e6 / full_img.size().area()));
                 is_work_scale_set = true;
             }
             resize(full_img, img, Size(), work_scale_, work_scale_);
         }
         if (!is_seam_scale_set)
         {
-            seam_scale_ = min(1.0, sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
+            seam_scale_ = min(1.0, std::sqrt(seam_est_resol_ * 1e6 / full_img.size().area()));
             seam_work_aspect_ = seam_scale_ / work_scale_;
             is_seam_scale_set = true;
         }

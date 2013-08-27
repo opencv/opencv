@@ -305,7 +305,7 @@ DFTInit( int n0, int nf, int* factors, int* itab, int elem_size, void* _wave, in
     else
     {
         t = -CV_PI*2/n0;
-        w.im = w1.im = sin(t);
+        w.im = w1.im = std::sin(t);
         w.re = w1.re = std::sqrt(1. - w1.im*w1.im);
     }
     n = (n0+1)/2;
@@ -2167,7 +2167,7 @@ DCTInit( int n, int elem_size, void* _wave, int inv )
     {
         t = 1./(2*n);
         scale = (!inv ? 2 : 1)*std::sqrt(t);
-        w1.im = sin(-CV_PI*t);
+        w1.im = std::sin(-CV_PI*t);
         w1.re = std::sqrt(1. - w1.im*w1.im);
     }
     n >>= 1;

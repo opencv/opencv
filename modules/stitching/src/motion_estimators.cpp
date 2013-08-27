@@ -242,7 +242,7 @@ void BundleAdjusterBase::estimate(const vector<ImageFeatures> &features,
     }
 
     LOGLN_CHAT("");
-    LOGLN_CHAT("Bundle adjustment, final RMS error: " << sqrt(err.dot(err) / total_num_matches_));
+    LOGLN_CHAT("Bundle adjustment, final RMS error: " << std::sqrt(err.dot(err) / total_num_matches_));
     LOGLN_CHAT("Bundle adjustment, iterations done: " << iter);
 
     obtainRefinedCameraParams(cameras);
@@ -537,17 +537,17 @@ void BundleAdjusterRay::calcError(Mat &err)
             double x1 = H1(0,0)*p1.x + H1(0,1)*p1.y + H1(0,2);
             double y1 = H1(1,0)*p1.x + H1(1,1)*p1.y + H1(1,2);
             double z1 = H1(2,0)*p1.x + H1(2,1)*p1.y + H1(2,2);
-            double len = sqrt(x1*x1 + y1*y1 + z1*z1);
+            double len = std::sqrt(x1*x1 + y1*y1 + z1*z1);
             x1 /= len; y1 /= len; z1 /= len;
 
             Point2f p2 = features2.keypoints[m.trainIdx].pt;
             double x2 = H2(0,0)*p2.x + H2(0,1)*p2.y + H2(0,2);
             double y2 = H2(1,0)*p2.x + H2(1,1)*p2.y + H2(1,2);
             double z2 = H2(2,0)*p2.x + H2(2,1)*p2.y + H2(2,2);
-            len = sqrt(x2*x2 + y2*y2 + z2*z2);
+            len = std::sqrt(x2*x2 + y2*y2 + z2*z2);
             x2 /= len; y2 /= len; z2 /= len;
 
-            double mult = sqrt(f1 * f2);
+            double mult = std::sqrt(f1 * f2);
             err.at<double>(3 * match_idx, 0) = mult * (x1 - x2);
             err.at<double>(3 * match_idx + 1, 0) = mult * (y1 - y2);
             err.at<double>(3 * match_idx + 2, 0) = mult * (z1 - z2);

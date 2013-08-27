@@ -488,7 +488,7 @@ int cv::getKernelType(InputArray filter_kernel, Point anchor)
         sum += a;
     }
 
-    if( fabs(sum - 1) > FLT_EPSILON*(fabs(sum) + 1) )
+    if( std::fabs(sum - 1) > FLT_EPSILON*(std::fabs(sum) + 1) )
         type &= ~KERNEL_SMOOTH;
     return type;
 }
@@ -1194,7 +1194,7 @@ struct SymmColumnSmallVec_32s16s
         }
         else
         {
-            if( fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
+            if( std::fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);
@@ -1900,7 +1900,7 @@ struct SymmColumnSmallVec_32f
         }
         else
         {
-            if( fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
+            if( std::fabs(ky[1]) == 1 && ky[1] == -ky[-1] )
             {
                 if( ky[1] < 0 )
                     std::swap(S0, S2);

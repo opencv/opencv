@@ -108,7 +108,7 @@ static inline void interpolateLanczos4( float x, float* coeffs )
     }
 
     float sum = 0;
-    double y0=-(x+3)*CV_PI*0.25, s0 = sin(y0), c0=cos(y0);
+    double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0=std::cos(y0);
     for(int i = 0; i < 8; i++ )
     {
         double y = -(x+3-i)*CV_PI*0.25;
@@ -3449,8 +3449,8 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 cv::Mat cv::getRotationMatrix2D( Point2f center, double angle, double scale )
 {
     angle *= CV_PI/180;
-    double alpha = cos(angle)*scale;
-    double beta = sin(angle)*scale;
+    double alpha = std::cos(angle)*scale;
+    double beta = std::sin(angle)*scale;
 
     Mat M(2, 3, CV_64F);
     double* m = (double*)M.data;
@@ -3756,8 +3756,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
 
         for( phi = 0; phi < dsize.height; phi++ )
         {
-            double cp = cos(phi*2*CV_PI/dsize.height);
-            double sp = sin(phi*2*CV_PI/dsize.height);
+            double cp = std::cos(phi*2*CV_PI/dsize.height);
+            double sp = std::sin(phi*2*CV_PI/dsize.height);
             float* mx = (float*)(mapx->data.ptr + phi*mapx->step);
             float* my = (float*)(mapy->data.ptr + phi*mapy->step);
 
@@ -3818,8 +3818,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
                 double xx = bufx.data.fl[x];
                 double yy = bufy.data.fl[x];
 
-                double p = log(sqrt(xx*xx + yy*yy) + 1.)*M;
-                double a = atan2(yy,xx);
+                double p = std::log(std::sqrt(xx*xx + yy*yy) + 1.)*M;
+                double a = std::atan2(yy,xx);
                 if( a < 0 )
                     a = 2*CV_PI + a;
                 a *= ascale;
@@ -3869,8 +3869,8 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
 
         for( phi = 0; phi < dsize.height; phi++ )
         {
-            double cp = cos(phi*2*CV_PI/dsize.height);
-            double sp = sin(phi*2*CV_PI/dsize.height);
+            double cp = std::cos(phi*2*CV_PI/dsize.height);
+            double sp = std::sin(phi*2*CV_PI/dsize.height);
             float* mx = (float*)(mapx->data.ptr + phi*mapx->step);
             float* my = (float*)(mapy->data.ptr + phi*mapy->step);
 

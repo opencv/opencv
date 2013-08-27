@@ -259,7 +259,7 @@ bool CvNormalBayesClassifier::train( const CvMat* _train_data, const CvMat* _res
             det *= w->data.db[j];
 
         CV_CALL( cvDiv( NULL, w, w ));
-        c->data.db[cls] = det > 0 ? log(det) : -700;
+        c->data.db[cls] = det > 0 ? std::log(det) : -700;
     }
 
     result = true;

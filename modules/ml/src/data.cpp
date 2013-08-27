@@ -236,7 +236,7 @@ int CvMLData::read_csv(const char* filename)
         for( int j = 0; j < cols_count; j++ )
         {
             ddata[j] = sdata[j];
-            dm[j] = ( fabs( MISS_VAL - sdata[j] ) <= FLT_EPSILON );
+            dm[j] = ( std::fabs( MISS_VAL - sdata[j] ) <= FLT_EPSILON );
         }
         CV_NEXT_SEQ_ELEM( seq->elem_size, reader );
     }

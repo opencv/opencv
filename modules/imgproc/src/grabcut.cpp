@@ -126,7 +126,7 @@ double GMM::operator()( int ci, const Vec3d color ) const
         double mult = diff[0]*(diff[0]*inverseCovs[ci][0][0] + diff[1]*inverseCovs[ci][1][0] + diff[2]*inverseCovs[ci][2][0])
                    + diff[1]*(diff[0]*inverseCovs[ci][0][1] + diff[1]*inverseCovs[ci][1][1] + diff[2]*inverseCovs[ci][2][1])
                    + diff[2]*(diff[0]*inverseCovs[ci][0][2] + diff[1]*inverseCovs[ci][1][2] + diff[2]*inverseCovs[ci][2][2]);
-        res = 1.0f/sqrt(covDeterms[ci]) * exp(-0.5f*mult);
+        res = 1.0f/std::sqrt(covDeterms[ci]) * std::exp(-0.5f*mult);
     }
     return res;
 }
@@ -287,28 +287,28 @@ static void calcNWeights( const Mat& img, Mat& leftW, Mat& upleftW, Mat& upW, Ma
             if( x-1>=0 ) // left
             {
                 Vec3d diff = color - (Vec3d)img.at<Vec3b>(y,x-1);
-                leftW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
+                leftW.at<double>(y,x) = gamma * std::exp(-beta*diff.dot(diff));
             }
             else
                 leftW.at<double>(y,x) = 0;
             if( x-1>=0 && y-1>=0 ) // upleft
             {
                 Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x-1);
-                upleftW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
+                upleftW.at<double>(y,x) = gammaDivSqrt2 * std::exp(-beta*diff.dot(diff));
             }
             else
                 upleftW.at<double>(y,x) = 0;
             if( y-1>=0 ) // up
             {
                 Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x);
-                upW.at<double>(y,x) = gamma * exp(-beta*diff.dot(diff));
+                upW.at<double>(y,x) = gamma * std::exp(-beta*diff.dot(diff));
             }
             else
                 upW.at<double>(y,x) = 0;
             if( x+1<img.cols && y-1>=0 ) // upright
             {
                 Vec3d diff = color - (Vec3d)img.at<Vec3b>(y-1,x+1);
-                uprightW.at<double>(y,x) = gammaDivSqrt2 * exp(-beta*diff.dot(diff));
+                uprightW.at<double>(y,x) = gammaDivSqrt2 * std::exp(-beta*diff.dot(diff));
             }
             else
                 uprightW.at<double>(y,x) = 0;
@@ -463,8 +463,8 @@ static void constructGCGraph( const Mat& img, const Mat& mask, const GMM& bgdGMM
             double fromSource, toSink;
             if( mask.at<uchar>(p) == GC_PR_BGD || mask.at<uchar>(p) == GC_PR_FGD )
             {
-                fromSource = -log( bgdGMM(color) );
-                toSink = -log( fgdGMM(color) );
+                fromSource = -std::log( bgdGMM(color) );
+                toSink = -std::log( fgdGMM(color) );
             }
             else if( mask.at<uchar>(p) == GC_BGD )
             {

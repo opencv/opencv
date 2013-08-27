@@ -2000,7 +2000,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             {
                 double a = h1[j] - h2[j];
                 double b = h1[j];
-                if( fabs(b) > DBL_EPSILON )
+                if( std::fabs(b) > DBL_EPSILON )
                     result += a*a/b;
             }
         }
@@ -2049,7 +2049,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     else if( method == CV_COMP_BHATTACHARYYA )
     {
         s1 *= s2;
-        s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
+        s1 = std::fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
         result = std::sqrt(std::max(1. - result*s1, 0.));
     }
 
@@ -2082,7 +2082,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             double a = v1 - v2;
             double b = v1;
-            if( fabs(b) > DBL_EPSILON )
+            if( std::fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
     }
@@ -2144,7 +2144,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             s2 += it.value<float>();
 
         s1 *= s2;
-        s1 = fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
+        s1 = std::fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
         result = std::sqrt(std::max(1. - result*s1, 0.));
     }
     else
@@ -2299,7 +2299,7 @@ cvNormalizeHist( CvHistogram* hist, double factor )
         CvMat mat;
         cvGetMat( hist->bins, &mat, 0, 1 );
         sum = cvSum( &mat ).val[0];
-        if( fabs(sum) < DBL_EPSILON )
+        if( std::fabs(sum) < DBL_EPSILON )
             sum = 1;
         cvScale( &mat, &mat, factor/sum, 0 );
     }
@@ -2316,7 +2316,7 @@ cvNormalizeHist( CvHistogram* hist, double factor )
             sum += *(float*)CV_NODE_VAL(mat,node);
         }
 
-        if( fabs(sum) < DBL_EPSILON )
+        if( std::fabs(sum) < DBL_EPSILON )
             sum = 1;
         scale = (float)(factor/sum);
 
@@ -2504,7 +2504,7 @@ cvCompareHist( const CvHistogram* hist1,
             double v2 = node2_data ? *(float*)node2_data : 0.f;
             double a = v1 - v2;
             double b = v1;
-            if( fabs(b) > DBL_EPSILON )
+            if( std::fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
     }
@@ -2540,7 +2540,7 @@ cvCompareHist( const CvHistogram* hist1,
 
         num = s12 - s1*s2*scale;
         denom2 = (s11 - s1*s1*scale)*(s22 - s2*s2*scale);
-        result = fabs(denom2) > DBL_EPSILON ? num/sqrt(denom2) : 1;
+        result = std::fabs(denom2) > DBL_EPSILON ? num/std::sqrt(denom2) : 1;
     }
     else if( method == CV_COMP_INTERSECT )
     {
@@ -2574,7 +2574,7 @@ cvCompareHist( const CvHistogram* hist1,
             if( node2_data )
             {
                 double v2 = *(float*)node2_data;
-                result += sqrt(v1 * v2);
+                result += std::sqrt(v1 * v2);
             }
         }
 
@@ -2586,9 +2586,9 @@ cvCompareHist( const CvHistogram* hist1,
         }
 
         s1 *= s2;
-        s1 = fabs(s1) > FLT_EPSILON ? 1./sqrt(s1) : 1.;
+        s1 = std::fabs(s1) > FLT_EPSILON ? 1./std::sqrt(s1) : 1.;
         result = 1. - result*s1;
-        result = sqrt(MAX(result,0.));
+        result = std::sqrt(MAX(result,0.));
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );

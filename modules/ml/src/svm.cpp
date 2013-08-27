@@ -272,7 +272,7 @@ void CvSVMKernel::calc_sigmoid( int vcount, int var_count, const float** vecs,
     for( j = 0; j < vcount; j++ )
     {
         Qfloat t = results[j];
-        double e = exp(-fabs(t));
+        double e = std::exp(-std::fabs(t));
         if( t > 0 )
             results[j] = (Qfloat)((1. - e)/(1. + e));
         else
@@ -602,7 +602,7 @@ bool CvSVMSolver::solve_generic( CvSVMSolutionInfo& si )
     {
         update_alpha_status(i);
         G[i] = b[i];
-        if( fabs(G[i]) > 1e200 )
+        if( std::fabs(G[i]) > 1e200 )
             return false;
     }
 
@@ -629,10 +629,10 @@ bool CvSVMSolver::solve_generic( CvSVMSolutionInfo& si )
 #ifdef _DEBUG
         for( i = 0; i < alpha_count; i++ )
         {
-            if( fabs(G[i]) > 1e+300 )
+            if( std::fabs(G[i]) > 1e+300 )
                 return false;
 
-            if( fabs(alpha[i]) > 1e16 )
+            if( std::fabs(alpha[i]) > 1e16 )
                 return false;
         }
 #endif
@@ -652,7 +652,7 @@ bool CvSVMSolver::solve_generic( CvSVMSolutionInfo& si )
         if( y[i] != y[j] )
         {
             double denom = Q_i[i]+Q_j[j]+2*Q_i[j];
-            double delta = (-G[i]-G[j])/MAX(fabs(denom),FLT_EPSILON);
+            double delta = (-G[i]-G[j])/MAX(std::fabs(denom),FLT_EPSILON);
             double diff = alpha_i - alpha_j;
             alpha_i += delta;
             alpha_j += delta;
@@ -682,7 +682,7 @@ bool CvSVMSolver::solve_generic( CvSVMSolutionInfo& si )
         else
         {
             double denom = Q_i[i]+Q_j[j]-2*Q_i[j];
-            double delta = (G[i]-G[j])/MAX(fabs(denom),FLT_EPSILON);
+            double delta = (G[i]-G[j])/MAX(std::fabs(denom),FLT_EPSILON);
             double sum = alpha_i + alpha_j;
             alpha_i -= delta;
             alpha_j += delta;
@@ -1341,7 +1341,7 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
             EXIT;
 
         for( i = 0; i < sample_count; i++ )
-            sv_count += fabs(alpha[i]) > 0;
+            sv_count += std::fabs(alpha[i]) > 0;
 
         sv_total = df->sv_count = sv_count;
         CV_CALL( df->alpha = (double*)cvMemStorageAlloc( storage, sv_count*sizeof(df->alpha[0])) );
@@ -1349,7 +1349,7 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
 
         for( i = k = 0; i < sample_count; i++ )
         {
-            if( fabs(alpha[i]) > 0 )
+            if( std::fabs(alpha[i]) > 0 )
             {
                 CV_CALL( sv[k] = (float*)cvMemStorageAlloc( storage, sample_size ));
                 memcpy( sv[k], samples[i], sample_size );
@@ -1450,7 +1450,7 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
                     EXIT;
 
                 for( k = 0; k < ci + cj; k++ )
-                    sv_count += fabs(alpha[k]) > 0;
+                    sv_count += std::fabs(alpha[k]) > 0;
 
                 df->sv_count = sv_count;
 
@@ -1461,7 +1461,7 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
 
                 for( k = 0; k < ci; k++ )
                 {
-                    if( fabs(alpha[k]) > 0 )
+                    if( std::fabs(alpha[k]) > 0 )
                     {
                         sv_tab[si + k] = 1;
                         df->sv_index[k1] = si + k;
@@ -1471,7 +1471,7 @@ bool CvSVM::do_train( int svm_type, int sample_count, int var_count, const float
 
                 for( k = 0; k < cj; k++ )
                 {
-                    if( fabs(alpha[ci + k]) > 0 )
+                    if( std::fabs(alpha[ci + k]) > 0 )
                     {
                         sv_tab[sj + k] = 1;
                         df->sv_index[k1] = sj + k;
@@ -1878,7 +1878,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
         qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
         double old_dist = 0.0;
         for (int k=0; k<k_fold; ++k)
-            old_dist += abs(ratios[k].val-class_ratio);
+            old_dist += std::abs(ratios[k].val-class_ratio);
         double new_dist = 1.0;
         // iterate to make the folds more balanced
         while (new_dist > 0.0)
@@ -1895,7 +1895,7 @@ bool CvSVM::train_auto( const CvMat* _train_data, const CvMat* _responses,
             qsort(ratios, k_fold, sizeof(ratios[0]), icvCmpIndexedratio);
             new_dist = 0.0;
             for (int k=0; k<k_fold; ++k)
-                new_dist += abs(ratios[k].val-class_ratio);
+                new_dist += std::abs(ratios[k].val-class_ratio);
             if (new_dist < old_dist)
             {
                 // swapping really improves, so swap the samples
@@ -2544,7 +2544,7 @@ void CvSVM::read( CvFileStorage* fs, CvFileNode* svm_node )
         df[i].sv_count = sv_count;
 
         df[i].rho = cvReadRealByName( fs, df_elem, "rho", not_found_dbl );
-        if( fabs(df[i].rho - not_found_dbl) < DBL_EPSILON )
+        if( std::fabs(df[i].rho - not_found_dbl) < DBL_EPSILON )
             CV_ERROR( CV_StsParseError, "rho is missing" );
 
         if( !alpha_node )

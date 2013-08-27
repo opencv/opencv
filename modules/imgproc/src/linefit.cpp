@@ -88,9 +88,9 @@ icvFitLine2D_wods( CvPoint2D32f * points, int _count, float *weights, float *lin
     dy2 = y2 - y * y;
     dxy = xy - x * y;
 
-    t = (float) atan2( 2 * dxy, dx2 - dy2 ) / 2;
-    line[0] = (float) cos( t );
-    line[1] = (float) sin( t );
+    t = (float) std::atan2( 2 * dxy, dx2 - dy2 ) / 2;
+    line[0] = (float) std::cos( t );
+    line[1] = (float) std::sin( t );
 
     line[2] = (float) x;
     line[3] = (float) y;
@@ -204,7 +204,7 @@ icvFitLine3D_wods( CvPoint3D32f * points, int count, float *weights, float *line
     i = 2;
 #endif
     v = &evc[i * 3];
-    n = (float) sqrt( (double)v[0] * v[0] + (double)v[1] * v[1] + (double)v[2] * v[2] );
+    n = (float) std::sqrt( (double)v[0] * v[0] + (double)v[1] * v[1] + (double)v[2] * v[2] );
     n = (float)MAX(n, eps);
     line[0] = v[0] / n;
     line[1] = v[1] / n;
@@ -231,7 +231,7 @@ icvCalcDist2D( CvPoint2D32f * points, int count, float *_line, float *dist )
         x = points[j].x - px;
         y = points[j].y - py;
 
-        dist[j] = (float) fabs( nx * x + ny * y );
+        dist[j] = (float) std::fabs( nx * x + ny * y );
         sum_dist += dist[j];
     }
 
@@ -259,7 +259,7 @@ icvCalcDist3D( CvPoint3D32f * points, int count, float *_line, float *dist )
         p2 = vz * x - vx * z;
         p3 = vx * y - vy * x;
 
-        dist[j] = (float) sqrt( p1*p1 + p2*p2 + p3*p3 );
+        dist[j] = (float) std::sqrt( p1*p1 + p2*p2 + p3*p3 );
         sum_dist += dist[j];
     }
 
@@ -273,7 +273,7 @@ icvWeightL1( float *d, int count, float *w )
 
     for( i = 0; i < count; i++ )
     {
-        double t = fabs( (double) d[i] );
+        double t = std::fabs( (double) d[i] );
         w[i] = (float)(1. / MAX(t, eps));
     }
 }
@@ -285,7 +285,7 @@ icvWeightL12( float *d, int count, float *w )
 
     for( i = 0; i < count; i++ )
     {
-        w[i] = 1.0f / (float) sqrt( 1 + (double) (d[i] * d[i] * 0.5) );
+        w[i] = 1.0f / (float) std::sqrt( 1 + (double) (d[i] * d[i] * 0.5) );
     }
 }
 
@@ -326,7 +326,7 @@ icvWeightWelsch( float *d, int count, float *w, float _c )
 
     for( i = 0; i < count; i++ )
     {
-        w[i] = (float) exp( -d[i] * d[i] * c * c );
+        w[i] = (float) std::exp( -d[i] * d[i] * c * c );
     }
 }
 
@@ -419,12 +419,12 @@ static CvStatus  icvFitLine2D( CvPoint2D32f * points, int count, int dist,
                 double t = _line[0] * _lineprev[0] + _line[1] * _lineprev[1];
                 t = MAX(t,-1.);
                 t = MIN(t,1.);
-                if( fabs(acos(t)) < adelta )
+                if( std::fabs(std::acos(t)) < adelta )
                 {
                     float x, y, d;
 
-                    x = (float) fabs( _line[2] - _lineprev[2] );
-                    y = (float) fabs( _line[3] - _lineprev[3] );
+                    x = (float) std::fabs( _line[2] - _lineprev[2] );
+                    y = (float) std::fabs( _line[3] - _lineprev[3] );
 
                     d = x > y ? x : y;
                     if( d < rdelta )
@@ -445,7 +445,7 @@ static CvStatus  icvFitLine2D( CvPoint2D32f * points, int count, int dist,
             for( j = 0; j < count; j++ )
                 sum_w += w[j];
 
-            if( fabs(sum_w) > FLT_EPSILON )
+            if( std::fabs(sum_w) > FLT_EPSILON )
             {
                 sum_w = 1./sum_w;
                 for( j = 0; j < count; j++ )
@@ -567,7 +567,7 @@ icvFitLine3D( CvPoint3D32f * points, int count, int dist,
                 double t = _line[0] * _lineprev[0] + _line[1] * _lineprev[1] + _line[2] * _lineprev[2];
                 t = MAX(t,-1.);
                 t = MIN(t,1.);
-                if( fabs(acos(t)) < adelta )
+                if( std::fabs(std::acos(t)) < adelta )
                 {
                     float x, y, z, ax, ay, az, dx, dy, dz, d;
 
@@ -577,9 +577,9 @@ icvFitLine3D( CvPoint3D32f * points, int count, int dist,
                     ax = _line[0] - _lineprev[0];
                     ay = _line[1] - _lineprev[1];
                     az = _line[2] - _lineprev[2];
-                    dx = (float) fabs( y * az - z * ay );
-                    dy = (float) fabs( z * ax - x * az );
-                    dz = (float) fabs( x * ay - y * ax );
+                    dx = (float) std::fabs( y * az - z * ay );
+                    dy = (float) std::fabs( z * ax - x * az );
+                    dz = (float) std::fabs( x * ay - y * ax );
 
                     d = dx > dy ? (dx > dz ? dx : dz) : (dy > dz ? dy : dz);
                     if( d < rdelta )
@@ -599,7 +599,7 @@ icvFitLine3D( CvPoint3D32f * points, int count, int dist,
             for( j = 0; j < count; j++ )
                 sum_w += w[j];
 
-            if( fabs(sum_w) > FLT_EPSILON )
+            if( std::fabs(sum_w) > FLT_EPSILON )
             {
                 sum_w = 1./sum_w;
                 for( j = 0; j < count; j++ )

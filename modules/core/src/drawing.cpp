@@ -1498,7 +1498,7 @@ ThickLine( Mat& img, Point p0, Point p1, const void* color,
         int i, oddThickness = thickness & 1;
         thickness <<= XY_SHIFT - 1;
 
-        if( fabs(r) > DBL_EPSILON )
+        if( std::fabs(r) > DBL_EPSILON )
         {
             r = (thickness + oddThickness*XY_ONE*0.5)/std::sqrt(r);
             dp.x = cvRound( dy * r );

@@ -415,7 +415,7 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
     double x = p.x, y = p.y;
     double beta = 1 + 2*alpha;
     double v = x*x + y*y + 1, iv = 1/v;
-    double u = sqrt(beta*v + alpha*alpha);
+    double u = std::sqrt(beta*v + alpha*alpha);
 
     double k = (u - alpha)*iv;
     double kv = (v*beta/u - (u - alpha)*2)*iv*iv;
@@ -436,11 +436,11 @@ static Point2f mapPointSpherical(const Point2f& p, float alpha, Vec4d* J, int pr
 
         if(J)
         {
-            double fx1 = iR/sqrt(1 - x1*x1);
-            double fy1 = iR/sqrt(1 - y1*y1);
+            double fx1 = iR/std::sqrt(1 - x1*x1);
+            double fy1 = iR/std::sqrt(1 - y1*y1);
             *J = Vec4d(fx1*(kx*x + k), fx1*ky*x, fy1*kx*y, fy1*(ky*y + k));
         }
-        return Point2f((float)asin(x1), (float)asin(y1));
+        return Point2f((float)std::asin(x1), (float)std::asin(y1));
     }
     CV_Error(CV_StsBadArg, "Unknown projection type");
     return Point2f();
@@ -526,8 +526,8 @@ float cv::initWideAngleProjMap( InputArray _cameraMatrix0, InputArray _distCoeff
             if( ymax < q.y ) ymax = q.y;
         }
 
-    float scale = (float)std::min(dcenter.x/fabs(xmax), dcenter.x/fabs(xmin));
-    Size dsize(destImageWidth, cvCeil(std::max(scale*fabs(ymin)*2, scale*fabs(ymax)*2)));
+    float scale = (float)std::min(dcenter.x/std::fabs(xmax), dcenter.x/std::fabs(xmin));
+    Size dsize(destImageWidth, cvCeil(std::max(scale*std::fabs(ymin)*2, scale*std::fabs(ymax)*2)));
     dcenter.y = (dsize.height - 1)*0.5f;
 
     Mat mapxy(dsize, CV_32FC2);

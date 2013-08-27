@@ -477,7 +477,7 @@ cvFloodFill( CvArr* arr, CvPoint seed_point,
     {
         if( lo_diff.val[i] < 0 || up_diff.val[i] < 0 )
             CV_Error( CV_StsBadArg, "lo_diff and up_diff must be non-negative" );
-        is_simple &= fabs(lo_diff.val[i]) < DBL_EPSILON && fabs(up_diff.val[i]) < DBL_EPSILON;
+        is_simple &= std::fabs(lo_diff.val[i]) < DBL_EPSILON && std::fabs(up_diff.val[i]) < DBL_EPSILON;
     }
 
     size = cvGetMatSize( img );

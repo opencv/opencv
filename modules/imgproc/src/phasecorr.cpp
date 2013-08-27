@@ -588,10 +588,10 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         for(int i = 0; i < rows; i++)
         {
             float* dstData = dst.ptr<float>(i);
-            double wr = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0f - std::cos(2.0f * CV_PI * (double)i / (double)(rows - 1)));
             for(int j = 0; j < cols; j++)
             {
-                double wc = 0.5 * (1.0f - cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
+                double wc = 0.5 * (1.0f - std::cos(2.0f * CV_PI * (double)j / (double)(cols - 1)));
                 dstData[j] = (float)(wr * wc);
             }
         }
@@ -601,10 +601,10 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         for(int i = 0; i < rows; i++)
         {
             double* dstData = dst.ptr<double>(i);
-            double wr = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)i / (double)(rows - 1)));
+            double wr = 0.5 * (1.0 - std::cos(2.0 * CV_PI * (double)i / (double)(rows - 1)));
             for(int j = 0; j < cols; j++)
             {
-                double wc = 0.5 * (1.0 - cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
+                double wc = 0.5 * (1.0 - std::cos(2.0 * CV_PI * (double)j / (double)(cols - 1)));
                 dstData[j] = wr * wc;
             }
         }

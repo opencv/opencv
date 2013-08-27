@@ -1804,7 +1804,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
             for( j = 0; isDiag && j < scn; j++ )
             {
                 double v = mtype == CV_32F ? m.at<float>(i, j) : m.at<double>(i, j);
-                if( i != j && fabs(v) > eps )
+                if( i != j && std::fabs(v) > eps )
                     isDiag = false;
             }
         }
@@ -1842,7 +1842,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
             T x = src[i], y = src[i + 1];
             double w = x*m[6] + y*m[7] + m[8];
 
-            if( fabs(w) > eps )
+            if( std::fabs(w) > eps )
             {
                 w = 1./w;
                 dst[i] = (T)((x*m[0] + y*m[1] + m[2])*w);
@@ -1859,7 +1859,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
             T x = src[i], y = src[i + 1], z = src[i + 2];
             double w = x*m[12] + y*m[13] + z*m[14] + m[15];
 
-            if( fabs(w) > eps )
+            if( std::fabs(w) > eps )
             {
                 w = 1./w;
                 dst[i] = (T)((x*m[0] + y*m[1] + z*m[2] + m[3]) * w);
@@ -1877,7 +1877,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
             T x = src[0], y = src[1], z = src[2];
             double w = x*m[8] + y*m[9] + z*m[10] + m[11];
 
-            if( fabs(w) > eps )
+            if( std::fabs(w) > eps )
             {
                 w = 1./w;
                 dst[0] = (T)((x*m[0] + y*m[1] + z*m[2] + m[3])*w);
@@ -1896,7 +1896,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
             int j, k;
             for( k = 0; k < scn; k++ )
                 w += _m[k]*src[k];
-            if( fabs(w) > eps )
+            if( std::fabs(w) > eps )
             {
                 _m = m;
                 for( j = 0; j < dcn; j++, _m += scn + 1 )

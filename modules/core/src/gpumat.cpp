@@ -1471,7 +1471,7 @@ void cv::gpu::GpuMat::copyTo(GpuMat& mat, const GpuMat& mask) const
 
 void cv::gpu::GpuMat::convertTo(GpuMat& dst, int rtype, double alpha, double beta) const
 {
-    bool noScale = fabs(alpha - 1) < numeric_limits<double>::epsilon() && fabs(beta) < numeric_limits<double>::epsilon();
+    bool noScale = std::fabs(alpha - 1) < numeric_limits<double>::epsilon() && std::fabs(beta) < numeric_limits<double>::epsilon();
 
     if (rtype < 0)
         rtype = type();

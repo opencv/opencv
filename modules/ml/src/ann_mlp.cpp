@@ -147,17 +147,17 @@ void CvANN_MLP::set_activ_func( int _activ_func, double _f_param1, double _f_par
     case SIGMOID_SYM:
         max_val = 0.95; min_val = -max_val;
         max_val1 = 0.98; min_val1 = -max_val1;
-        if( fabs(_f_param1) < FLT_EPSILON )
+        if( std::fabs(_f_param1) < FLT_EPSILON )
             _f_param1 = 2./3;
-        if( fabs(_f_param2) < FLT_EPSILON )
+        if( std::fabs(_f_param2) < FLT_EPSILON )
             _f_param2 = 1.7159;
         break;
     case GAUSSIAN:
         max_val = 1.; min_val = 0.05;
         max_val1 = 1.; min_val1 = 0.02;
-        if( fabs(_f_param1) < FLT_EPSILON )
+        if( std::fabs(_f_param1) < FLT_EPSILON )
             _f_param1 = 1.;
-        if( fabs(_f_param2) < FLT_EPSILON )
+        if( std::fabs(_f_param2) < FLT_EPSILON )
             _f_param2 = 1.;
         break;
     default:
@@ -181,7 +181,7 @@ void CvANN_MLP::init_weights()
     {
         int n1 = layer_sizes->data.i[i-1];
         int n2 = layer_sizes->data.i[i];
-        double val = 0, G = n2 > 2 ? 0.7*pow((double)n1,1./(n2-1)) : 1.;
+        double val = 0, G = n2 > 2 ? 0.7*std::pow((double)n1,1./(n2-1)) : 1.;
         double* w = weights[i];
 
         // initialize weights using Nguyen-Widrow algorithm
@@ -192,12 +192,12 @@ void CvANN_MLP::init_weights()
             {
                 val = rng->uniform(0., 1.)*2-1.;
                 w[k*n2 + j] = val;
-                s += fabs(val);
+                s += std::fabs(val);
             }
 
             if( i < layer_sizes->cols - 1 )
             {
-                s = 1./(s - fabs(val));
+                s = 1./(s - std::fabs(val));
                 for( k = 0; k <= n1; k++ )
                     w[k*n2 + j] *= s;
                 w[n1*n2 + j] *= G*(-1+j*2./n2);
@@ -511,7 +511,7 @@ void CvANN_MLP::calc_activ_func_deriv( CvMat* _xf, CvMat* _df,
             for( j = 0; j < cols; j++ )
             {
                 xf[j] = (xf[j] + bias[j])*scale;
-                df[j] = -fabs(xf[j]);
+                df[j] = -std::fabs(xf[j]);
             }
 
         cvExp( _df, _df );
@@ -519,9 +519,9 @@ void CvANN_MLP::calc_activ_func_deriv( CvMat* _xf, CvMat* _df,
         n *= cols;
         xf -= n; df -= n;
 
-        // ((1+exp(-ax))^-1)'=a*((1+exp(-ax))^-2)*exp(-ax);
-        // ((1-exp(-ax))/(1+exp(-ax)))'=(a*exp(-ax)*(1+exp(-ax)) + a*exp(-ax)*(1-exp(-ax)))/(1+exp(-ax))^2=
-        // 2*a*exp(-ax)/(1+exp(-ax))^2
+        // ((1+std::exp(-ax))^-1)'=a*((1+std::exp(-ax))^-2)*std::exp(-ax);
+        // ((1-std::exp(-ax))/(1+std::exp(-ax)))'=(a*std::exp(-ax)*(1+std::exp(-ax)) + a*std::exp(-ax)*(1-std::exp(-ax)))/(1+std::exp(-ax))^2=
+        // 2*a*std::exp(-ax)/(1+std::exp(-ax))^2
         scale *= 2*f_param2;
         for( i = 0; i < n; i++ )
         {
@@ -571,7 +571,7 @@ void CvANN_MLP::calc_input_scale( const CvVectors* vecs, int flags )
         {
             double s = scale[j*2], s2 = scale[j*2+1];
             double m = s/count, sigma2 = s2/count - m*m;
-            scale[j*2] = sigma2 < DBL_EPSILON ? 1 : 1./sqrt(sigma2);
+            scale[j*2] = sigma2 < DBL_EPSILON ? 1 : 1./std::sqrt(sigma2);
             scale[j*2+1] = -m*scale[j*2];
         }
     }
@@ -911,7 +911,7 @@ int CvANN_MLP::train_backprop( CvVectors x0, CvVectors u, const double* sw )
         if( idx == 0 )
         {
             //printf("%d. E = %g\n", iter/count, E);
-            if( fabs(prev_E - E) < epsilon )
+            if( std::fabs(prev_E - E) < epsilon )
                 break;
             prev_E = E;
             E = 0;
@@ -1340,7 +1340,7 @@ int CvANN_MLP::train_rprop( CvVectors x0, CvVectors u, const double* sw )
         }
 
         //printf("%d. E = %g\n", iter, E);
-        if( fabs(prev_E - E) < epsilon )
+        if( std::fabs(prev_E - E) < epsilon )
             break;
         prev_E = E;
         E = 0;
