@@ -127,39 +127,43 @@ template<typename T> struct OpMax
     T operator ()(const T a, const T b) const { return std::max(a, b); }
 };
 
-inline Size getContinuousSize( const Mat& m1, int widthScale=1 )
+/*
+ * For getContinuousSize(), make sure to use size_t because the number of matrix elements
+ * could exceed 2**31.
+ */
+inline Size_<size_t> getContinuousSize( const Mat& m1, int widthScale=1 )
 {
-    return m1.isContinuous() ? Size(m1.cols*m1.rows*widthScale, 1) :
-        Size(m1.cols*widthScale, m1.rows);
+    return m1.isContinuous() ? Size_<size_t>((size_t) m1.cols*m1.rows*widthScale, 1) :
+        Size_<size_t>((size_t) m1.cols*widthScale, m1.rows);
 }
 
-inline Size getContinuousSize( const Mat& m1, const Mat& m2, int widthScale=1 )
+inline Size_<size_t> getContinuousSize( const Mat& m1, const Mat& m2, int widthScale=1 )
 {
     return (m1.flags & m2.flags & Mat::CONTINUOUS_FLAG) != 0 ?
-        Size(m1.cols*m1.rows*widthScale, 1) : Size(m1.cols*widthScale, m1.rows);
+        Size_<size_t>((size_t) m1.cols*m1.rows*widthScale, 1) : Size_<size_t>((size_t) m1.cols*widthScale, m1.rows);
 }
 
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
+inline Size_<size_t> getContinuousSize( const Mat& m1, const Mat& m2,
                                const Mat& m3, int widthScale=1 )
 {
     return (m1.flags & m2.flags & m3.flags & Mat::CONTINUOUS_FLAG) != 0 ?
-        Size(m1.cols*m1.rows*widthScale, 1) : Size(m1.cols*widthScale, m1.rows);
+        Size_<size_t>((size_t) m1.cols*m1.rows*widthScale, 1) : Size_<size_t>((size_t) m1.cols*widthScale, m1.rows);
 }
 
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
+inline Size_<size_t> getContinuousSize( const Mat& m1, const Mat& m2,
                                const Mat& m3, const Mat& m4,
                                int widthScale=1 )
 {
     return (m1.flags & m2.flags & m3.flags & m4.flags & Mat::CONTINUOUS_FLAG) != 0 ?
-        Size(m1.cols*m1.rows*widthScale, 1) : Size(m1.cols*widthScale, m1.rows);
+        Size_<size_t>((size_t) m1.cols*m1.rows*widthScale, 1) : Size_<size_t>((size_t) m1.cols*widthScale, m1.rows);
 }
 
-inline Size getContinuousSize( const Mat& m1, const Mat& m2,
+inline Size_<size_t> getContinuousSize( const Mat& m1, const Mat& m2,
                                const Mat& m3, const Mat& m4,
                                const Mat& m5, int widthScale=1 )
 {
     return (m1.flags & m2.flags & m3.flags & m4.flags & m5.flags & Mat::CONTINUOUS_FLAG) != 0 ?
-        Size(m1.cols*m1.rows*widthScale, 1) : Size(m1.cols*widthScale, m1.rows);
+        Size_<size_t>((size_t) m1.cols*m1.rows*widthScale, 1) : Size_<size_t>((size_t) m1.cols*widthScale, m1.rows);
 }
 
 struct NoVec
