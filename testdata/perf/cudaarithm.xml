@@ -1602,60 +1602,6 @@
       <x>494</x>
       <y>83</y>
       <val>5191872.</val></rng2></gpu_dst></Sz_Integral--Integral--1920x1080>
-<Sz_IntegralSqr--IntegralSqr--1280x720>
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <min>0.</min>
-    <max>9.8781291004915150e-314</max>
-    <last>
-      <x>1280</x>
-      <y>720</y>
-      <val>9.8781291004915150e-314</val></last>
-    <rng1>
-      <x>816</x>
-      <y>395</y>
-      <val>3.4533426900082536e-314</val></rng1>
-    <rng2>
-      <x>2</x>
-      <y>392</y>
-      <val>8.6237972724039565e-317</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1280x720>
-<Sz_IntegralSqr--IntegralSqr--1280x1024>
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <min>0.</min>
-    <max>1.4050544590934561e-313</max>
-    <last>
-      <x>1280</x>
-      <y>1024</y>
-      <val>1.4050544590934561e-313</val></last>
-    <rng1>
-      <x>751</x>
-      <y>984</y>
-      <val>7.9116226624645050e-314</val></rng1>
-    <rng2>
-      <x>984</x>
-      <y>705</y>
-      <val>7.4357209794246904e-314</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1280x1024>
-<Sz_IntegralSqr--IntegralSqr--1920x1080>
-  <gpu_dst>
-    <kind>65536</kind>
-    <type>6</type>
-    <min>0.</min>
-    <max>2.2222191950456621e-313</max>
-    <last>
-      <x>1920</x>
-      <y>1080</y>
-      <val>2.2222191950456621e-313</val></last>
-    <rng1>
-      <x>1664</x>
-      <y>150</y>
-      <val>2.6727917103700556e-314</val></rng1>
-    <rng2>
-      <x>675</x>
-      <y>521</y>
-      <val>3.7677311543668252e-314</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1920x1080>
 <Sz_Depth_Norm_Norm--Norm---1280x720--CV_8U--NORM_INF->
   <gpu_dst>
     <kind>131072</kind>
@@ -33690,4 +33636,60 @@
       <y>0</y>
       <cn>3</cn>
       <val>-4.0907187500000000e+03</val></rng2></gpu_dst></Sz_Depth_Cn_Code_Dim_Reduce--Reduce---1920x1080--CV_32F--BGRA--REDUCE_MIN--Cols->
+ <!-- resumed -->
+
+<Sz_IntegralSqr--IntegralSqr--1280x720>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>0.</min>
+    <max>1.9993555884000000e+10</max>
+    <last>
+      <x>1280</x>
+      <y>720</y>
+      <val>1.9993555884000000e+10</val></last>
+    <rng1>
+      <x>82</x>
+      <y>174</y>
+      <val>304170822.</val></rng1>
+    <rng2>
+      <x>234</x>
+      <y>109</y>
+      <val>548111014.</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1280x720>
+<Sz_IntegralSqr--IntegralSqr--1280x1024>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>0.</min>
+    <max>2.8438618854000000e+10</max>
+    <last>
+      <x>1280</x>
+      <y>1024</y>
+      <val>2.8438618854000000e+10</val></last>
+    <rng1>
+      <x>846</x>
+      <y>740</y>
+      <val>1.3577237741000000e+10</val></rng1>
+    <rng2>
+      <x>745</x>
+      <y>1021</y>
+      <val>1.6486960050000000e+10</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1280x1024>
+<Sz_IntegralSqr--IntegralSqr--1920x1080>
+  <gpu_dst>
+    <kind>65536</kind>
+    <type>6</type>
+    <min>0.</min>
+    <max>4.4978217242000000e+10</max>
+    <last>
+      <x>1920</x>
+      <y>1080</y>
+      <val>4.4978217242000000e+10</val></last>
+    <rng1>
+      <x>912</x>
+      <y>15</y>
+      <val>292987791.</val></rng1>
+    <rng2>
+      <x>387</x>
+      <y>500</y>
+      <val>4.1987383370000000e+09</val></rng2></gpu_dst></Sz_IntegralSqr--IntegralSqr--1920x1080>
 </opencv_storage>
