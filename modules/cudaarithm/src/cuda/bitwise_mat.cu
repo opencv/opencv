@@ -58,21 +58,6 @@ void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& m
 //////////////////////////////////////////////////////////////////////////////
 /// bitwise_not
 
-namespace
-{
-    template <typename T>
-    void bitMatNot(const GpuMat& src, GpuMat& dst, const GpuMat& mask, Stream& stream)
-    {
-        GlobPtrSz<T> vsrc = globPtr((T*) src.data, src.step, src.rows, src.cols * src.channels());
-        GlobPtrSz<T> vdst = globPtr((T*) dst.data, dst.step, src.rows, src.cols * src.channels());
-
-        if (mask.data)
-            gridTransformUnary(vsrc, vdst, bit_not<T>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
-        else
-            gridTransformUnary(vsrc, vdst, bit_not<T>(), stream);
-    }
-}
-
 void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
@@ -86,17 +71,59 @@ void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, 
     _dst.create(src.size(), src.type());
     GpuMat dst = _dst.getGpuMat();
 
-    if (depth == CV_32F || depth == CV_32S)
+    if (mask.empty())
     {
-        bitMatNot<uint>(src, dst, mask, stream);
-    }
-    else if (depth == CV_16S || depth == CV_16U)
-    {
-        bitMatNot<ushort>(src, dst, mask, stream);
+        const int bcols = (int) (src.cols * src.elemSize());
+
+        if ((bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
+
+            GlobPtrSz<uint> vsrc = globPtr((uint*) src.data, src.step, src.rows, vcols);
+            GlobPtrSz<uint> vdst = globPtr((uint*) dst.data, dst.step, src.rows, vcols);
+
+            gridTransformUnary(vsrc, vdst, bit_not<uint>(), stream);
+        }
+        else if ((bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            GlobPtrSz<ushort> vsrc = globPtr((ushort*) src.data, src.step, src.rows, vcols);
+            GlobPtrSz<ushort> vdst = globPtr((ushort*) dst.data, dst.step, src.rows, vcols);
+
+            gridTransformUnary(vsrc, vdst, bit_not<ushort>(), stream);
+        }
+        else
+        {
+            GlobPtrSz<uchar> vsrc = globPtr((uchar*) src.data, src.step, src.rows, bcols);
+            GlobPtrSz<uchar> vdst = globPtr((uchar*) dst.data, dst.step, src.rows, bcols);
+
+            gridTransformUnary(vsrc, vdst, bit_not<uchar>(), stream);
+        }
     }
     else
     {
-        bitMatNot<uchar>(src, dst, mask, stream);
+        if (depth == CV_32F || depth == CV_32S)
+        {
+            GlobPtrSz<uint> vsrc = globPtr((uint*) src.data, src.step, src.rows, src.cols * src.channels());
+            GlobPtrSz<uint> vdst = globPtr((uint*) dst.data, dst.step, src.rows, src.cols * src.channels());
+
+            gridTransformUnary(vsrc, vdst, bit_not<uint>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
+        }
+        else if (depth == CV_16S || depth == CV_16U)
+        {
+            GlobPtrSz<ushort> vsrc = globPtr((ushort*) src.data, src.step, src.rows, src.cols * src.channels());
+            GlobPtrSz<ushort> vdst = globPtr((ushort*) dst.data, dst.step, src.rows, src.cols * src.channels());
+
+            gridTransformUnary(vsrc, vdst, bit_not<ushort>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
+        }
+        else
+        {
+            GlobPtrSz<uchar> vsrc = globPtr((uchar*) src.data, src.step, src.rows, src.cols * src.channels());
+            GlobPtrSz<uchar> vdst = globPtr((uchar*) dst.data, dst.step, src.rows, src.cols * src.channels());
+
+            gridTransformUnary(vsrc, vdst, bit_not<uchar>(), singleMaskChannels(globPtr<uchar>(mask), src.channels()), stream);
+        }
     }
 }
 
@@ -146,17 +173,53 @@ void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& m
     CV_DbgAssert( depth <= CV_32F );
     CV_DbgAssert( op >= 0 && op < 3 );
 
-    if (depth == CV_32F || depth == CV_32S)
+    if (mask.empty())
     {
-        funcs32[op](src1, src2, dst, mask, stream);
-    }
-    else if (depth == CV_16S || depth == CV_16U)
-    {
-        funcs16[op](src1, src2, dst, mask, stream);
+        const int bcols = (int) (src1.cols * src1.elemSize());
+
+        if ((bcols & 3) == 0)
+        {
+            const int vcols = bcols >> 2;
+
+            GpuMat vsrc1(src1.rows, vcols, CV_32SC1, src1.data, src1.step);
+            GpuMat vsrc2(src1.rows, vcols, CV_32SC1, src2.data, src2.step);
+            GpuMat vdst(src1.rows, vcols, CV_32SC1, dst.data, dst.step);
+
+            funcs32[op](vsrc1, vsrc2, vdst, GpuMat(), stream);
+        }
+        else if ((bcols & 1) == 0)
+        {
+            const int vcols = bcols >> 1;
+
+            GpuMat vsrc1(src1.rows, vcols, CV_16UC1, src1.data, src1.step);
+            GpuMat vsrc2(src1.rows, vcols, CV_16UC1, src2.data, src2.step);
+            GpuMat vdst(src1.rows, vcols, CV_16UC1, dst.data, dst.step);
+
+            funcs16[op](vsrc1, vsrc2, vdst, GpuMat(), stream);
+        }
+        else
+        {
+            GpuMat vsrc1(src1.rows, bcols, CV_8UC1, src1.data, src1.step);
+            GpuMat vsrc2(src1.rows, bcols, CV_8UC1, src2.data, src2.step);
+            GpuMat vdst(src1.rows, bcols, CV_8UC1, dst.data, dst.step);
+
+            funcs8[op](vsrc1, vsrc2, vdst, GpuMat(), stream);
+        }
     }
     else
     {
-        funcs8[op](src1, src2, dst, mask, stream);
+        if (depth == CV_32F || depth == CV_32S)
+        {
+            funcs32[op](src1, src2, dst, mask, stream);
+        }
+        else if (depth == CV_16S || depth == CV_16U)
+        {
+            funcs16[op](src1, src2, dst, mask, stream);
+        }
+        else
+        {
+            funcs8[op](src1, src2, dst, mask, stream);
+        }
     }
 }
 
