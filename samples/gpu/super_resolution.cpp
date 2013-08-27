@@ -212,7 +212,7 @@ int main(int argc, const char* argv[])
 #if defined(HAVE_OPENCV_OCL)
         cout << "Mode            : " << (useCuda ? "CUDA" : useOcl? "OpenCL" : "CPU") << endl;
 #else
-        cout << "Mode            : " << (useGpu ? "CUDA" : "CPU") << endl;
+        cout << "Mode            : " << (useCuda ? "CUDA" : "CPU") << endl;
 #endif
     }
 

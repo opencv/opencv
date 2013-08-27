@@ -77,7 +77,7 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
     if(_fname)
       MESSAGE(STATUS "Performing Test ${RESULT}")
       TRY_COMPILE(${RESULT}
-        ${CMAKE_BINARY_DIR}
+        "${CMAKE_BINARY_DIR}"
         "${_fname}"
         COMPILE_DEFINITIONS "${FLAG}"
         OUTPUT_VARIABLE OUTPUT)

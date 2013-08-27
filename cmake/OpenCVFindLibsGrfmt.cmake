@@ -149,7 +149,7 @@ if(WITH_JASPER)
 endif()
 
 # --- libpng (optional, should be searched after zlib) ---
-if(WITH_PNG AND NOT IOS)
+if(WITH_PNG)
   if(BUILD_PNG)
     ocv_clear_vars(PNG_FOUND)
   else()

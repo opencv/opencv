@@ -50,17 +50,24 @@ void cv::gpu::resize(InputArray, OutputArray, Size, double, double, int, Stream&
 
 namespace cv { namespace gpu { namespace cudev
 {
-    namespace imgproc
-    {
-        template <typename T>
-        void resize_gpu(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy,
-                        PtrStepSzb dst, int interpolation, cudaStream_t stream);
-    }
+    template <typename T>
+    void resize(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
 }}}
 
-void cv::gpu::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, double fy, int interpolation, Stream& _stream)
+void cv::gpu::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, double fy, int interpolation, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
+
+    typedef void (*func_t)(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
+    static const func_t funcs[6][4] =
+    {
+        {cudev::resize<uchar>      , 0 /*cudev::resize<uchar2>*/ , cudev::resize<uchar3>     , cudev::resize<uchar4>     },
+        {0 /*cudev::resize<schar>*/, 0 /*cudev::resize<char2>*/  , 0 /*cudev::resize<char3>*/, 0 /*cudev::resize<char4>*/},
+        {cudev::resize<ushort>     , 0 /*cudev::resize<ushort2>*/, cudev::resize<ushort3>    , cudev::resize<ushort4>    },
+        {cudev::resize<short>      , 0 /*cudev::resize<short2>*/ , cudev::resize<short3>     , cudev::resize<short4>     },
+        {0 /*cudev::resize<int>*/  , 0 /*cudev::resize<int2>*/   , 0 /*cudev::resize<int3>*/ , 0 /*cudev::resize<int4>*/ },
+        {cudev::resize<float>      , 0 /*cudev::resize<float2>*/ , cudev::resize<float3>     , cudev::resize<float4>     }
+    };
 
     CV_Assert( src.depth() <= CV_32F && src.channels() <= 4 );
     CV_Assert( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_AREA );
@@ -81,72 +88,21 @@ void cv::gpu::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, d
 
     if (dsize == src.size())
     {
-        src.copyTo(dst, _stream);
+        src.copyTo(dst, stream);
         return;
     }
 
-    cudaStream_t stream = StreamAccessor::getStream(_stream);
+    const func_t func = funcs[src.depth()][src.channels() - 1];
+
+    if (!func)
+        CV_Error(Error::StsUnsupportedFormat, "Unsupported combination of source and destination types");
 
     Size wholeSize;
     Point ofs;
     src.locateROI(wholeSize, ofs);
+    PtrStepSzb wholeSrc(wholeSize.height, wholeSize.width, src.datastart, src.step);
 
-    bool useNpp = (src.type() == CV_8UC1 || src.type() == CV_8UC4);
-    useNpp = useNpp && (interpolation == INTER_NEAREST || interpolation == INTER_LINEAR);
-
-    if (useNpp)
-    {
-        typedef NppStatus (*func_t)(const Npp8u * pSrc, NppiSize oSrcSize, int nSrcStep, NppiRect oSrcROI, Npp8u * pDst, int nDstStep, NppiSize dstROISize,
-                                    double xFactor, double yFactor, int eInterpolation);
-
-        const func_t funcs[4] = { nppiResize_8u_C1R, 0, 0, nppiResize_8u_C4R };
-
-        static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC, 0, NPPI_INTER_LANCZOS};
-
-        NppiSize srcsz;
-        srcsz.width  = wholeSize.width;
-        srcsz.height = wholeSize.height;
-
-        NppiRect srcrect;
-        srcrect.x = ofs.x;
-        srcrect.y = ofs.y;
-        srcrect.width  = src.cols;
-        srcrect.height = src.rows;
-
-        NppiSize dstsz;
-        dstsz.width  = dst.cols;
-        dstsz.height = dst.rows;
-
-        NppStreamHandler h(stream);
-
-        nppSafeCall( funcs[src.channels() - 1](src.datastart, srcsz, static_cast<int>(src.step), srcrect,
-                dst.ptr<Npp8u>(), static_cast<int>(dst.step), dstsz, fx, fy, npp_inter[interpolation]) );
-
-        if (stream == 0)
-            cudaSafeCall( cudaDeviceSynchronize() );
-    }
-    else
-    {
-        using namespace ::cv::gpu::cudev::imgproc;
-
-        typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float fx, float fy, PtrStepSzb dst, int interpolation, cudaStream_t stream);
-
-        static const func_t funcs[6][4] =
-        {
-            {resize_gpu<uchar>      , 0 /*resize_gpu<uchar2>*/ , resize_gpu<uchar3>     , resize_gpu<uchar4>     },
-            {0 /*resize_gpu<schar>*/, 0 /*resize_gpu<char2>*/  , 0 /*resize_gpu<char3>*/, 0 /*resize_gpu<char4>*/},
-            {resize_gpu<ushort>     , 0 /*resize_gpu<ushort2>*/, resize_gpu<ushort3>    , resize_gpu<ushort4>    },
-            {resize_gpu<short>      , 0 /*resize_gpu<short2>*/ , resize_gpu<short3>     , resize_gpu<short4>     },
-            {0 /*resize_gpu<int>*/  , 0 /*resize_gpu<int2>*/   , 0 /*resize_gpu<int3>*/ , 0 /*resize_gpu<int4>*/ },
-            {resize_gpu<float>      , 0 /*resize_gpu<float2>*/ , resize_gpu<float3>     , resize_gpu<float4>     }
-        };
-
-        const func_t func = funcs[src.depth()][src.channels() - 1];
-        CV_Assert(func != 0);
-
-        func(src, PtrStepSzb(wholeSize.height, wholeSize.width, src.datastart, src.step), ofs.x, ofs.y,
-            static_cast<float>(1.0 / fx), static_cast<float>(1.0 / fy), dst, interpolation, stream);
-    }
+    func(src, wholeSrc, ofs.y, ofs.x, dst, static_cast<float>(1.0 / fy), static_cast<float>(1.0 / fx), interpolation, StreamAccessor::getStream(stream));
 }
 
 #endif // HAVE_CUDA

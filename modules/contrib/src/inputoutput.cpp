@@ -136,7 +136,7 @@ namespace cv
                         char* fname;
                     #ifdef HAVE_WINRT
                         char fname_tmp[MAX_PATH];
-                        size_t copied = wcstombs(fname, FindFileData.cFileName, MAX_PATH);
+                        size_t copied = wcstombs(fname_tmp, FindFileData.cFileName, MAX_PATH);
                         CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
                         fname = fname_tmp;
                     #else

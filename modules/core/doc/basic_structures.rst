@@ -1369,7 +1369,7 @@ The method makes a new header for the specified row span of the matrix. Similarl
 
 Mat::colRange
 -------------
-Creates a matrix header for the specified row span.
+Creates a matrix header for the specified column span.
 
 .. ocv:function:: Mat Mat::colRange(int startcol, int endcol) const
 

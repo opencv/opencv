@@ -222,7 +222,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
         {
             estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, diff, l_t, static_cast<float>(theta));
 
-            error = gpu::sum(diff, norm_buf)[0];
+            if (epsilon > 0)
+                error = gpu::sum(diff, norm_buf)[0];
 
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);
         }
