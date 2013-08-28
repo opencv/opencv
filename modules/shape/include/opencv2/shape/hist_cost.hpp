@@ -7,11 +7,12 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                          License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009-2012, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,14 +41,63 @@
 //
 //M*/
 
-#ifndef __OPENCV_HAUSDORFF_HPP__
-#define __OPENCV_HAUSDORFF_HPP__
+#ifndef __OPENCV_HIST_COST_HPP__
+#define __OPENCV_HIST_COST_HPP__
 
-#include <vector>
+#include "opencv2/imgproc.hpp"
 
 namespace cv
 {
-    CV_EXPORTS float hausdorff(InputArray set1, InputArray set2, int distType=DIST_L2, double proportionRank=1);
-}//namespace cv
 
-#endif 
+/*!
+ * The base class for HistogramCostExtractor.
+ */
+class CV_EXPORTS_W HistogramCostExtractor : public Algorithm
+{
+public:
+    CV_WRAP virtual void buildCostMatrix(InputArray descriptors1, InputArray descriptors2, OutputArray costMatrix) = 0;
+
+    CV_WRAP virtual void setNDummies(int nDummies) = 0;
+    CV_WRAP virtual int getNDummies() const = 0;
+
+    CV_WRAP virtual void setDefaultCost(float defaultCost) = 0;
+    CV_WRAP virtual float getDefaultCost() const = 0;
+};
+
+/*!  */
+class CV_EXPORTS_W NormHistogramCostExtractor : public HistogramCostExtractor
+{
+public:
+    CV_WRAP virtual void setNormFlag(int flag) = 0;
+    CV_WRAP virtual int getNormFlag() const = 0;
+};
+
+CV_EXPORTS_W Ptr<HistogramCostExtractor>
+    createNormHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2);
+
+/*!  */
+class CV_EXPORTS_W EMDHistogramCostExtractor : public HistogramCostExtractor
+{
+public:
+    CV_WRAP virtual void setNormFlag(int flag) = 0;
+    CV_WRAP virtual int getNormFlag() const = 0;
+};
+
+CV_EXPORTS_W Ptr<HistogramCostExtractor>
+    createEMDHistogramCostExtractor(int flag=DIST_L2, int nDummies=25, float defaultCost=0.2);
+
+/*!  */
+class CV_EXPORTS_W ChiHistogramCostExtractor : public HistogramCostExtractor
+{};
+
+CV_EXPORTS_W Ptr<HistogramCostExtractor> createChiHistogramCostExtractor(int nDummies=25, float defaultCost=0.2);
+
+/*!  */
+class CV_EXPORTS_W EMDL1HistogramCostExtractor : public HistogramCostExtractor
+{};
+
+CV_EXPORTS_W Ptr<HistogramCostExtractor>
+    createEMDL1HistogramCostExtractor(int nDummies=25, float defaultCost=0.2);
+
+} // cv
+#endif

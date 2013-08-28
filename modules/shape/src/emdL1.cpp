@@ -46,35 +46,18 @@
  * for comparing histogram-based descriptors", by Haibin Ling and 
  * Kazunori Okuda; and "The Earth Mover's Distance is the Mallows
  * Distance: Some Insights from Statistics", by Elizaveta Levina and 
- * Peter Bickel .
+ * Peter Bickel, based on HAIBIN LING AND KAZUNORI OKADA implementation.
  */
  
 #include "precomp.hpp"
+#include "emdL1_def.hpp"
 
-#include <stdlib.h>
-#include <math.h>
 
-#define VHIGH 1e10;
+/****************************************************************************************\
+*                                   EMDL1 Class                                         *
+\****************************************************************************************/
 
-namespace cv
-{
-// Constructors //
-EmdL1::EmdL1()
-{
-    m_pRoot	= NULL;
-    binsDim1 = 0;
-    binsDim2 = 0;
-    binsDim3 = 0;
-    dimension = 0;
-    nMaxIt = 500;
-}
-
-EmdL1::~EmdL1()
-{
-}
-
-// Public methods //
-float EmdL1::getEMDL1(Mat &sig1, Mat &sig2)
+float EmdL1::getEMDL1(cv::Mat &sig1, cv::Mat &sig2)
 {
     // Initialization
     CV_Assert((sig1.rows==sig2.rows) & (sig1.cols==sig2.cols) & (!sig1.empty()) & (!sig2.empty()));
@@ -87,7 +70,6 @@ float EmdL1::getEMDL1(Mat &sig1, Mat &sig2)
         H1[ii]=sig1.at<float>(ii,0);
         H2[ii]=sig2.at<float>(ii,0);
     }
-
 
     fillBaseTrees(H1,H2); // Initialize histograms
     greedySolution(); // Construct an initial Basic Feasible solution
@@ -121,7 +103,7 @@ void EmdL1::setMaxIteration(int _nMaxIt)
     nMaxIt=_nMaxIt;
 }
 
-// Private methods //
+//-- SubFunctions called in the EMD algorithm
 bool EmdL1::initBaseTrees(int n1, int n2, int n3)
 {
     if(binsDim1==n1 && binsDim2==n2 && binsDim3==n3)
@@ -270,15 +252,15 @@ bool EmdL1::greedySolution()
 bool EmdL1::greedySolution2()
 {
     //- Prepare auxiliary array, D=H1-H2
-    int		c,r;
-    EMDTYPEArray2D D(binsDim1);
+    int	c,r;
+    floatArray2D D(binsDim1);
     for(r=0; r<binsDim1; r++)
     {
         D[r].resize(binsDim2);
         for(c=0; c<binsDim2; c++) D[r][c] = m_Nodes[r][c].d;
     }
     // compute integrated values along each dimension
-    std::vector<float>	d2s(binsDim2);
+    std::vector<float> d2s(binsDim2);
     d2s[0] = 0;
     for(c=0; c<binsDim2-1; c++)
     {
@@ -286,7 +268,7 @@ bool EmdL1::greedySolution2()
         for(r=0; r<binsDim1; r++) d2s[c+1]-= D[r][c];
     }
 
-    std::vector<float>	d1s(binsDim1);
+    std::vector<float> d1s(binsDim1);
     d1s[0] = 0;
     for(r=0; r<binsDim1-1; r++)
     {
@@ -295,7 +277,7 @@ bool EmdL1::greedySolution2()
     }
 
     //- Greedy algorithm for initial solution
-    PEmdEdge pBV;
+    cvPEmdEdge pBV;
     float dFlow;
     bool bUpward = false;
     nNBV = 0; // number of NON-BV edges
@@ -312,7 +294,6 @@ bool EmdL1::greedySolution2()
             // move to up
             pBV	= &(m_EdgesUp[r][c]);
             m_NBVEdges[nNBV++]	= &(m_EdgesRight[r][c]);
-
             D[r+1][c] += dFlow;		// auxilary matrix maintanence
             d1s[r+1] += dFlow;		// auxilary matrix maintanence
         }
@@ -349,7 +330,7 @@ bool EmdL1::greedySolution3()
 {
     //- Prepare auxiliary array, D=H1-H2
     int i1,i2,i3;
-    std::vector<EMDTYPEArray2D> D(binsDim1);
+    std::vector<floatArray2D> D(binsDim1);
     for(i1=0; i1<binsDim1; i1++)
     {
         D[i1].resize(binsDim2);
@@ -362,8 +343,8 @@ bool EmdL1::greedySolution3()
     }
 
     // compute integrated values along each dimension
-    std::vector<float>	d1s(binsDim1);
-    d1s[0]	= 0;
+    std::vector<float> d1s(binsDim1);
+    d1s[0] = 0;
     for(i1=0; i1<binsDim1-1; i1++)
     {
         d1s[i1+1] = d1s[i1];
@@ -374,7 +355,7 @@ bool EmdL1::greedySolution3()
         }
     }
 
-    std::vector<float>	d2s(binsDim2);
+    std::vector<float> d2s(binsDim2);
     d2s[0] = 0;
     for(i2=0; i2<binsDim2-1; i2++)
     {
@@ -386,7 +367,7 @@ bool EmdL1::greedySolution3()
         }
     }
 
-    std::vector<float>	d3s(binsDim3);
+    std::vector<float> d3s(binsDim3);
     d3s[0] = 0;
     for(i3=0; i3<binsDim3-1; i3++)
     {
@@ -399,7 +380,7 @@ bool EmdL1::greedySolution3()
     }
 
     //- Greedy algorithm for initial solution
-    PEmdEdge pBV;
+    cvPEmdEdge pBV;
     float dFlow, f1,f2,f3;
     nNBV = 0; // number of NON-BV edges
     for(i3=0; i3<binsDim3; i3++)
@@ -452,6 +433,7 @@ bool EmdL1::greedySolution3()
 
 void EmdL1::initBVTree()
 {
+    // initialize BVTree from the initial BF solution
     //- Using the center of the graph as the root
     int r = (int)(0.5*binsDim1-.5);
     int c = (int)(0.5*binsDim2-.5);
@@ -468,8 +450,8 @@ void EmdL1::initBVTree()
     int iQHead = 0; // head of queue
 
     //- Recursively build subtrees
-    PEmdEdge pCurE=NULL, pNxtE=NULL;
-    PEmdNode pCurN=NULL, pNxtN=NULL;
+    cvPEmdEdge pCurE=NULL, pNxtE=NULL;
+    cvPEmdNode pCurN=NULL, pNxtN=NULL;
     int	nBin = binsDim1*binsDim2*std::max(binsDim3,1);
     while(iQHead<nQueue && nQueue<nBin)
     {
@@ -533,7 +515,7 @@ void EmdL1::initBVTree()
     }
 }
 
-void EmdL1::updateSubtree(PEmdNode pRoot)
+void EmdL1::updateSubtree(cvPEmdNode pRoot)
 {
     // Initialize auxiliary queue
     m_auxQueue[0] = pRoot;
@@ -541,8 +523,8 @@ void EmdL1::updateSubtree(PEmdNode pRoot)
     int iQHead = 0; // head of queue
 
     // BFS browing
-    PEmdNode pCurN=NULL,pNxtN=NULL;
-    PEmdEdge pCurE=NULL;
+    cvPEmdNode pCurN=NULL,pNxtN=NULL;
+    cvPEmdEdge pCurE=NULL;
     while(iQHead<nQueue)
     {
         pCurN = m_auxQueue[iQHead++];	// pop out from queue
@@ -563,7 +545,7 @@ void EmdL1::updateSubtree(PEmdNode pRoot)
 bool EmdL1::isOptimal()
 {
     int iC, iMinC = 0;
-    PEmdEdge pE;
+    cvPEmdEdge pE;
     m_pEnter = NULL;
     m_iEnter = -1;
 
@@ -594,7 +576,7 @@ bool EmdL1::isOptimal()
         m_pEnter = m_NBVEdges[m_iEnter];
         if(iMinC == (1 - m_pEnter->pChild->u + m_pEnter->pParent->u))	{
             // reverse direction
-            PEmdNode pN = m_pEnter->pParent;
+            cvPEmdNode pN = m_pEnter->pParent;
             m_pEnter->pParent = m_pEnter->pChild;
             m_pEnter->pChild = pN;
         }
@@ -609,7 +591,7 @@ void EmdL1::findNewSolution()
     // Find loop formed by adding the Enter BV edge.
     findLoopFromEnterBV();
     // Modify flow values along the loop
-    PEmdEdge pE = NULL;
+    cvPEmdEdge pE = NULL;
     float	minFlow = m_pLeave->flow;
     int k;
     for(k=0; k<m_iFrom; k++)
@@ -626,9 +608,9 @@ void EmdL1::findNewSolution()
     }
 
     // Update BV Tree, removing the Leaving-BV edge
-    PEmdNode pLParentN = m_pLeave->pParent;
-    PEmdNode pLChildN = m_pLeave->pChild;
-    PEmdEdge pPreE = pLParentN->pChild;
+    cvPEmdNode pLParentN = m_pLeave->pParent;
+    cvPEmdNode pLChildN = m_pLeave->pChild;
+    cvPEmdEdge pPreE = pLParentN->pChild;
     if(pPreE==m_pLeave)
     {
         pLParentN->pChild = m_pLeave->pNxt; // Leaving-BV is the first child
@@ -645,17 +627,17 @@ void EmdL1::findNewSolution()
     m_NBVEdges[m_iEnter]= m_pLeave; // put the leaving-BV into the NBV array
 
     // Add the Enter BV edge
-    PEmdNode pEParentN = m_pEnter->pParent;
-    PEmdNode pEChildN = m_pEnter->pChild;
+    cvPEmdNode pEParentN = m_pEnter->pParent;
+    cvPEmdNode pEChildN = m_pEnter->pChild;
     m_pEnter->flow = minFlow;
     m_pEnter->pNxt = pEParentN->pChild;		// insert the Enter BV as the first child
     pEParentN->pChild = m_pEnter;					//		of its parent
 
     // Recursively update the tree start from pEChildN
-    PEmdNode pPreN = pEParentN;
-    PEmdNode pCurN = pEChildN;
-    PEmdNode pNxtN;
-    PEmdEdge pNxtE, pPreE0;
+    cvPEmdNode pPreN = pEParentN;
+    cvPEmdNode pCurN = pEChildN;
+    cvPEmdNode pNxtN;
+    cvPEmdEdge pNxtE, pPreE0;
     pPreE = m_pEnter;
     while(pCurN)
     {
@@ -698,12 +680,12 @@ void EmdL1::findLoopFromEnterBV()
 {
     // Initialize Leaving-BV edge
     float minFlow	= VHIGH;
-    PEmdEdge pE = NULL;
+    cvPEmdEdge pE = NULL;
     int iLFlag = 0;	// 0: in the FROM list, 1: in the TO list
 
     // Using two loop list to store the loop nodes
-    PEmdNode pFrom = m_pEnter->pParent;
-    PEmdNode pTo = m_pEnter->pChild;
+    cvPEmdNode pFrom = m_pEnter->pParent;
+    cvPEmdNode pTo = m_pEnter->pChild;
     m_iFrom	= 0;
     m_iTo = 0;
     m_pLeave = NULL;
@@ -762,7 +744,7 @@ void EmdL1::findLoopFromEnterBV()
     // Reverse the direction of the Enter BV edge if necessary
     if(iLFlag==0)
     {
-        PEmdNode pN = m_pEnter->pParent;
+        cvPEmdNode pN = m_pEnter->pParent;
         m_pEnter->pParent = m_pEnter->pChild;
         m_pEnter->pChild = pN;
         m_pEnter->iDir = !m_pEnter->iDir;
@@ -771,6 +753,7 @@ void EmdL1::findLoopFromEnterBV()
 
 float EmdL1::compuTotalFlow()
 {
+    // Computing the total flow as the final distance
     float f = 0;
 
     // Initialize auxiliary queue
@@ -779,8 +762,8 @@ float EmdL1::compuTotalFlow()
     int iQHead = 0; // head of queue
 
     // BFS browing the tree
-    PEmdNode pCurN=NULL,pNxtN=NULL;
-    PEmdEdge pCurE=NULL;
+    cvPEmdNode pCurN=NULL,pNxtN=NULL;
+    cvPEmdEdge pCurE=NULL;
     while(iQHead<nQueue)
     {
         pCurN = m_auxQueue[iQHead++];	// pop out from queue
@@ -802,11 +785,10 @@ float EmdL1::compuTotalFlow()
 *                                   EMDL1 Function                                      *
 \****************************************************************************************/
 
-float EMDL1(InputArray _signature1, InputArray _signature2)
+float cv::EMDL1(InputArray _signature1, InputArray _signature2)
 {
     Mat signature1 = _signature1.getMat(), signature2 = _signature2.getMat();
     EmdL1 emdl1;
     return emdl1.getEMDL1(signature1, signature2);
 }
 
-}//namespace cv

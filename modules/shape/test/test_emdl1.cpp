@@ -40,96 +40,292 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include <stdlib.h>
-#include <time.h>
 
 using namespace cv;
 using namespace std;
 
-const int numBins=100;
+const int angularBins=12;
+const int radialBins=4;
+const float minRad=0.2;
+const float maxRad=2;
+const int NSN=5;//10;//20; //number of shapes per class
+const int NP=100; //number of points sympliying the contour
+const float outlierWeight=0.1;
+const int numOutliers=20;
+const float CURRENT_MAX_ACCUR=94; //97% and 98% reached in several tests, 95 is fixed as minimum boundary
 
-class CV_EmdL1Test : public cvtest::BaseTest
+class CV_ShapeEMDTest : public cvtest::BaseTest
 {
 public:
-    CV_EmdL1Test();
-    ~CV_EmdL1Test();
+    CV_ShapeEMDTest();
+    ~CV_ShapeEMDTest();
 protected:
     void run(int);
+
 private:
-    void testLowDistance();
-    void testFairDistance();
-    void testBigDistance();
+    void mpegTest();
+    void listShapeNames(vector<string> &listHeaders);
+    vector<Point2f> convertContourType(const Mat &, int n=0 );
+    float computeShapeDistance(vector <Point2f>& queryNormal,
+                               vector <Point2f>& queryFlipped1,
+                               vector <Point2f>& queryFlipped2,
+                               vector<Point2f>& testq);
+    void displayMPEGResults();
 };
 
-CV_EmdL1Test::CV_EmdL1Test()
+CV_ShapeEMDTest::CV_ShapeEMDTest()
 {
 }
-CV_EmdL1Test::~CV_EmdL1Test()
+CV_ShapeEMDTest::~CV_ShapeEMDTest()
 {
 }
 
-void CV_EmdL1Test::testFairDistance()
+vector <Point2f> CV_ShapeEMDTest::convertContourType(const Mat& currentQuery, int n)
 {
-	// Defining Histograms
-    Mat sig1(numBins,3,CV_32F), sig2(numBins,3,CV_32F);
-    for (int ii=0; ii<numBins; ii++)
+    vector<vector<Point> > _contoursQuery;
+    vector <Point2f> contoursQuery;
+    findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
+    for (size_t border=0; border<_contoursQuery.size(); border++)
     {
-        sig1.at<float>(ii,0)=float(ii)/float(numBins);
-        sig2.at<float>(ii,0)=(0.5+float(rand())/float(RAND_MAX))*float(ii+10)/float(numBins);
-        sig1.at<float>(ii,1)=ii;
-        sig2.at<float>(ii,1)=ii;
-        sig1.at<float>(ii,2)=0;
-        sig2.at<float>(ii,2)=0;
+        for (size_t p=0; p<_contoursQuery[border].size(); p++)
+        {
+            contoursQuery.push_back(Point2f((float)_contoursQuery[border][p].x,
+                                            (float)_contoursQuery[border][p].y));
+        }
     }
-    std::cout<<"EMD between the histograms: "<<EMD(sig1, sig2, DIST_L2)<<std::endl;
-    std::cout<<"EMDL1 between the histograms: "<<EMDL1(sig1.col(0), sig2.col(0))<<std::endl;
-    std::cout<<std::endl;
-}
 
-void CV_EmdL1Test::testLowDistance()
-{
-    srand (time(NULL));
-    // Defining Histograms
-    Mat sig1(numBins,3,CV_32F), sig2(numBins,3,CV_32F);
-    for (int ii=0; ii<numBins; ii++)
+    // In case actual number of points is less than n
+    int dum=0;
+    for (int add=contoursQuery.size()-1; add<n; add++)
     {
-        sig1.at<float>(ii,0)=float(ii)/float(numBins);
-        sig2.at<float>(ii,0)=float(ii+float(rand())/float(RAND_MAX))/float(numBins);
-        sig1.at<float>(ii,1)=ii;
-        sig2.at<float>(ii,1)=ii;
-        sig1.at<float>(ii,2)=0;
-        sig2.at<float>(ii,2)=0;
+        contoursQuery.push_back(contoursQuery[dum++]); //adding dummy values
     }
-    std::cout<<"EMD between the histograms: "<<EMD(sig1, sig2, DIST_L2)<<std::endl;
-    std::cout<<"EMDL1 between the histograms: "<<EMDL1(sig1.col(0), sig2.col(0))<<std::endl;
-    std::cout<<std::endl;
-}
 
-void CV_EmdL1Test::testBigDistance()
-{
-    srand (time(NULL));
-    // Defining Histograms
-    Mat sig1(numBins,3,CV_32F), sig2(numBins,3,CV_32F);
-    for (int ii=0; ii<numBins; ii++)
+    // Uniformly sampling
+    random_shuffle(contoursQuery.begin(), contoursQuery.end());
+    int nStart=n;
+    vector<Point2f> cont;
+    for (int i=0; i<nStart; i++)
     {
-        sig1.at<float>(ii,0)=float(ii)/float(numBins);
-        sig2.at<float>(ii,0)=(rand()%numBins)/float(numBins);
-        sig1.at<float>(ii,1)=ii;
-        sig2.at<float>(ii,1)=ii;
-        sig1.at<float>(ii,2)=0;
-        sig2.at<float>(ii,2)=0;
+        cont.push_back(contoursQuery[i]);
     }
-    std::cout<<"EMD between the histograms: "<<EMD(sig1, sig2, DIST_L2)<<std::endl;
-    std::cout<<"EMDL1 between the histograms: "<<EMDL1(sig1.col(0), sig2.col(0))<<std::endl;
-    std::cout<<std::endl;
+    return cont;
 }
 
-void CV_EmdL1Test::run(int /* */)
+void CV_ShapeEMDTest::listShapeNames( vector<string> &listHeaders)
 {
-    /*testLowDistance();
-    testFairDistance();
-    testBigDistance();*/
-	ts->set_failed_test_info(cvtest::TS::OK);	
+    listHeaders.push_back("apple"); //ok
+    //listHeaders.push_back("bat");
+    //listHeaders.push_back("beetle");
+    //listHeaders.push_back("bell"); // ~ok
+    //listHeaders.push_back("bird");
+    //listHeaders.push_back("Bone"); // ok
+    //listHeaders.push_back("bottle"); // ok
+    //listHeaders.push_back("brick"); // ok
+    //listHeaders.push_back("butterfly");
+    //listHeaders.push_back("camel");
+    //listHeaders.push_back("car"); // ok
+    //listHeaders.push_back("carriage"); // ok
+    //listHeaders.push_back("cattle");
+    //listHeaders.push_back("cellular_phone");
+    //listHeaders.push_back("chicken");
+    listHeaders.push_back("children"); // ok
+    //listHeaders.push_back("chopper"); // ok
+    //listHeaders.push_back("classic"); // ~
+    //listHeaders.push_back("Comma"); // ~ok
+    //listHeaders.push_back("crown");
+    //listHeaders.push_back("cup"); // ~ok
+    //listHeaders.push_back("deer");
+    //listHeaders.push_back("device0"); // ~ok
+    //listHeaders.push_back("device1");
+    //listHeaders.push_back("device2");
+    //listHeaders.push_back("device3");
+    //listHeaders.push_back("device4");
+    //listHeaders.push_back("device5"); // ~ok
+    //listHeaders.push_back("device6");
+    listHeaders.push_back("device7"); // ok
+    //listHeaders.push_back("device8");
+    //listHeaders.push_back("device9");
+    //listHeaders.push_back("dog");
+    //listHeaders.push_back("elephant");
+    //listHeaders.push_back("face"); // ok
+    //listHeaders.push_back("fish"); // ok
+    //listHeaders.push_back("flatfish"); // ok
+    //listHeaders.push_back("fly"); //~
+    //listHeaders.push_back("fork"); // ~ok
+    //listHeaders.push_back("fountain"); //ok
+    //listHeaders.push_back("frog");
+    //listHeaders.push_back("Glas"); // ~ok
+    //listHeaders.push_back("guitar");
+    //listHeaders.push_back("hammer");
+    //listHeaders.push_back("hat");
+    //listHeaders.push_back("HCircle"); // ok
+    listHeaders.push_back("Heart"); // ok
+    //listHeaders.push_back("horse");
+    //listHeaders.push_back("horseshoe"); // ~ok
+    //listHeaders.push_back("jar");
+    //listHeaders.push_back("key"); // ok
+    //listHeaders.push_back("lizzard");
+    //listHeaders.push_back("lmfish"); //~
+    //listHeaders.push_back("Misk"); // ~ok
+    //listHeaders.push_back("octopus");
+    //listHeaders.push_back("pencil"); // ~
+    //listHeaders.push_back("personal_car"); // ~ok
+    //listHeaders.push_back("pocket");
+    //listHeaders.push_back("rat"); // ok
+    //listHeaders.push_back("ray");
+    //listHeaders.push_back("sea_snake");
+    //listHeaders.push_back("shoe"); // ~ok
+    //listHeaders.push_back("spoon");
+    //listHeaders.push_back("spring");
+    //listHeaders.push_back("stef"); // ~ok
+    listHeaders.push_back("teddy"); // ok
+    //listHeaders.push_back("tree"); //~ok
+    //listHeaders.push_back("truck"); // ok
+    //listHeaders.push_back("turtle");
+    //listHeaders.push_back("watch"); // ok
+}
+float CV_ShapeEMDTest::computeShapeDistance(vector <Point2f>& query1, vector <Point2f>& query2,
+                                         vector <Point2f>& query3, vector <Point2f>& testq)
+{
+    //waitKey(0);
+    Ptr <ShapeContextDistanceExtractor> mysc = createShapeContextDistanceExtractor(angularBins, radialBins, minRad, maxRad);
+    //Ptr <HistogramCostExtractor> cost = createNormHistogramCostExtractor(cv::DIST_L1);
+    //Ptr <HistogramCostExtractor> cost = createChiHistogramCostExtractor(30,0.15);
+    //Ptr <HistogramCostExtractor> cost = createEMDHistogramCostExtractor();
+    // Ptr <HistogramCostExtractor> cost = createEMDL1HistogramCostExtractor();
+    mysc->setIterations(1); //(3)
+    mysc->setCostExtractor( createEMDL1HistogramCostExtractor() );
+    //mysc->setTransformAlgorithm(createAffineTransformer(true));
+    mysc->setTransformAlgorithm( createThinPlateSplineShapeTransformer() );
+    //mysc->setImageAppearanceWeight(1.6);
+    //mysc->setImageAppearanceWeight(0.0);
+    //mysc->setImages(im1,imtest);
+    return ( std::min( mysc->computeDistance(query1, testq),
+                       std::min(mysc->computeDistance(query2, testq), mysc->computeDistance(query3, testq) )));
 }
 
-TEST(EmdL1, regression) { CV_EmdL1Test test; test.safe_run(); }
+void CV_ShapeEMDTest::mpegTest()
+{
+    string baseTestFolder="shape/mpeg_test/";
+    string path = cvtest::TS::ptr()->get_data_path() + baseTestFolder;
+    vector<string> namesHeaders;
+    listShapeNames(namesHeaders);
+
+    // distance matrix //
+    Mat distanceMat=Mat::zeros(NSN*namesHeaders.size(), NSN*namesHeaders.size(), CV_32F);
+
+    // query contours (normal v flipped, h flipped) and testing contour //
+    vector<Point2f> contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting;
+
+    // reading query and computing its properties //
+    int counter=0;
+    const int loops=NSN*namesHeaders.size()*NSN*namesHeaders.size();
+    for (size_t n=0; n<namesHeaders.size(); n++)
+    {
+        for (int i=1; i<=NSN; i++)
+        {
+            // read current image //
+            stringstream thepathandname;
+            thepathandname<<path+namesHeaders[n]<<"-"<<i<<".png";
+            Mat currentQuery, flippedHQuery, flippedVQuery;
+            currentQuery=imread(thepathandname.str(), IMREAD_GRAYSCALE);
+            Mat currentQueryBuf=currentQuery.clone();
+            flip(currentQuery, flippedHQuery, 0);
+            flip(currentQuery, flippedVQuery, 1);
+            // compute border of the query and its flipped versions //
+            vector<Point2f> origContour;
+            contoursQuery1=convertContourType(currentQuery, NP);
+            origContour=contoursQuery1;
+            contoursQuery2=convertContourType(flippedHQuery, NP);
+            contoursQuery3=convertContourType(flippedVQuery, NP);
+
+            // compare with all the rest of the images: testing //
+            for (size_t nt=0; nt<namesHeaders.size(); nt++)
+            {
+                for (int it=1; it<=NSN; it++)
+                {
+                    // skip self-comparisson //
+                    counter++;
+                    if (nt==n && it==i)
+                    {
+                        distanceMat.at<float>(NSN*n+i-1,
+                                              NSN*nt+it-1)=0;
+                        continue;
+                    }
+                    // read testing image //
+                    stringstream thetestpathandname;
+                    thetestpathandname<<path+namesHeaders[nt]<<"-"<<it<<".png";
+                    Mat currentTest;
+                    currentTest=imread(thetestpathandname.str().c_str(), 0);
+                    // compute border of the testing //
+                    contoursTesting=convertContourType(currentTest, NP);
+
+                    // compute shape distance //
+                    std::cout<<std::endl<<"Progress: "<<counter<<"/"<<loops<<": "<<100*double(counter)/loops<<"% *******"<<std::endl;
+                    std::cout<<"Computing shape distance between "<<namesHeaders[n]<<i<<
+                               " and "<<namesHeaders[nt]<<it<<": ";
+                    distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)=
+                            computeShapeDistance(contoursQuery1, contoursQuery2, contoursQuery3, contoursTesting);
+                    std::cout<<distanceMat.at<float>(NSN*n+i-1, NSN*nt+it-1)<<std::endl;
+                }
+            }
+        }
+    }
+    // save distance matrix //
+    FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::WRITE);
+    fs << "distanceMat" << distanceMat;
+}
+
+const int FIRST_MANY=2*NSN;
+void CV_ShapeEMDTest::displayMPEGResults()
+{
+    string baseTestFolder="shape/mpeg_test/";
+    Mat distanceMat;
+    FileStorage fs(cvtest::TS::ptr()->get_data_path() + baseTestFolder + "distanceMatrixMPEGTest.yml", FileStorage::READ);
+    vector<string> namesHeaders;
+    listShapeNames(namesHeaders);
+
+    // Read generated MAT //
+    fs["distanceMat"]>>distanceMat;
+
+    int corrects=0;
+    int divi=0;
+    for (int row=0; row<distanceMat.rows; row++)
+    {
+        if (row%NSN==0) //another group
+        {
+            divi+=NSN;
+        }
+        for (int col=divi-NSN; col<divi; col++)
+        {
+            int nsmall=0;
+            for (int i=0; i<distanceMat.cols; i++)
+            {
+                if (distanceMat.at<float>(row,col)>distanceMat.at<float>(row,i))
+                {
+                    nsmall++;
+                }
+            }
+            if (nsmall<=FIRST_MANY)
+            {
+                corrects++;
+            }
+        }
+    }
+    float porc = 100*float(corrects)/(NSN*distanceMat.rows);
+    std::cout<<"%="<<porc<<std::endl;
+    if (porc >= CURRENT_MAX_ACCUR)
+        ts->set_failed_test_info(cvtest::TS::OK);
+    else
+        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+
+}
+
+void CV_ShapeEMDTest::run( int /*start_from*/ )
+{
+    mpegTest();
+    displayMPEGResults();
+}
+
+TEST(ShapeEMD_SCD, regression) { CV_ShapeEMDTest test; test.safe_run(); }

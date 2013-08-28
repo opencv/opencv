@@ -43,91 +43,10 @@
 #ifndef __OPENCV_EMD_L1_HPP__
 #define __OPENCV_EMD_L1_HPP__
 
-#include <vector>
+#include "opencv2/core.hpp"
 
 namespace cv
 {
-/****************************************************************************************\
-*                                   For EMDL1 Framework                                 *
-\****************************************************************************************/
-typedef struct EMDEdge * PEmdEdge;
-typedef struct EMDNode * PEmdNode;
-typedef struct EMDNode
-{
-    int pos[3]; // grid position
-    float d; // initial value
-    int u;
-    // tree maintainance
-    int iLevel; // level in the tree, 0 means root
-    PEmdNode pParent; // pointer to its parent
-    PEmdEdge pChild;
-    PEmdEdge pPEdge; // point to the edge coming out from its parent
-}EMDNode;
-typedef struct EMDEdge
-{
-    float flow; // initial value
-    int iDir; // 1:outward, 0:inward
-    // tree maintainance
-    PEmdNode pParent; // point to its parent
-    PEmdNode pChild; // the child node
-    PEmdEdge pNxt; // next child/edge
-}EMDEdge;
-typedef std::vector<EMDNode> EMDNodeArray;
-typedef std::vector<EMDEdge> EMDEdgeArray;
-typedef std::vector<EMDNodeArray> EMDNodeArray2D;
-typedef std::vector<EMDEdgeArray> EMDEdgeArray2D;
-typedef std::vector<float> EMDTYPEArray;
-typedef std::vector<EMDTYPEArray> EMDTYPEArray2D;
-
-/****************************************************************************************\
-*                                   EMDL1 Class                                         *
-\****************************************************************************************/
-class EmdL1
-{
-public:
-    EmdL1();
-    ~EmdL1();
-    float getEMDL1(cv::Mat &sig1, cv::Mat &sig2);
-    void setMaxIteration(int nMaxIt);
-private:
-    //-- SubFunctions called in the EMD algorithm
-    bool initBaseTrees(int n1=0, int n2=0, int n3=0);
-    bool fillBaseTrees(float *H1, float *H2);
-    bool greedySolution();
-    bool greedySolution2();
-    bool greedySolution3();
-    void initBVTree(); // initialize BVTree from the initial BF solution
-    void updateSubtree(PEmdNode pRoot);
-    bool isOptimal();
-    void findNewSolution();
-    void findLoopFromEnterBV();
-    float compuTotalFlow(); // Computing the total flow as the final distance
-private:
-    int dimension;
-    int binsDim1, binsDim2, binsDim3; // the hitogram contains m_n1 rows and m_n2 columns
-    int nNBV; // number of Non-Basic Variables (NBV)
-    int nMaxIt;
-    EMDNodeArray2D m_Nodes; // all nodes
-    EMDEdgeArray2D m_EdgesRight; // all edges to right
-    EMDEdgeArray2D m_EdgesUp; // all edges to upward
-    std::vector<EMDNodeArray2D>	m_3dNodes; // all nodes for 3D
-    std::vector<EMDEdgeArray2D>	m_3dEdgesRight; // all edges to right, 3D
-    std::vector<EMDEdgeArray2D>	m_3dEdgesUp; // all edges to upward, 3D
-    std::vector<EMDEdgeArray2D>	m_3dEdgesDeep; // all edges to deep, 3D
-    std::vector<PEmdEdge> m_NBVEdges; // pointers to all NON-BV edges
-    std::vector<PEmdNode> m_auxQueue; // auxiliary node queue
-    PEmdNode m_pRoot; // root of the BV Tree
-    PEmdEdge m_pEnter; // Enter BV edge
-    int m_iEnter; // Enter BV edge, index in m_NBVEdges
-    PEmdEdge m_pLeave; // Leave BV edge
-    int m_nItr; // number of iteration
-    // auxiliary variables for searching a new loop
-    std::vector<PEmdEdge> m_fromLoop;
-    std::vector<PEmdEdge> m_toLoop;
-    int	m_iFrom;
-    int m_iTo;
-};
-
 /****************************************************************************************\
 *                                   EMDL1 Function                                      *
 \****************************************************************************************/
