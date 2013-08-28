@@ -128,7 +128,7 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
         ocl::oclMat oclPts(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
         ocl::oclMat oclNextPts, oclStatus, oclErr;
 
-        TEST_CYCLE()
+        OCL_TEST_CYCLE()
                 oclPyrLK.sparse(oclFrame0, oclFrame1, oclPts, oclNextPts, oclStatus, &oclErr);
 
         MatToVector(oclNextPts, nextPts);
@@ -175,7 +175,7 @@ PERF_TEST(tvl1flowFixture, tvl1flow)
         ocl::oclMat oclFrame0(frame0), oclFrame1(frame1), oclFlow1(srcSize, CV_32FC1),
                 oclFlow2(srcSize, CV_32FC1);
 
-        TEST_CYCLE() oclAlg(oclFrame0, oclFrame1, oclFlow1, oclFlow2);
+        OCL_TEST_CYCLE() oclAlg(oclFrame0, oclFrame1, oclFlow1, oclFlow2);
 
         oclAlg.collectGarbage();
 
@@ -259,7 +259,7 @@ PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
             farn.flags |= OPTFLOW_USE_INITIAL_FLOW;
         }
 
-        TEST_CYCLE()
+        OCL_TEST_CYCLE()
                 farn(oclFrame0, oclFrame1, oclFlowx, oclFlowy);
 
         oclFlowx.download(flowx);

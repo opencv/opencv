@@ -67,7 +67,7 @@ PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES) // TODO not imple
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclSrc3(src3), oclDst(srcSize, CV_32FC1);
 
-        TEST_CYCLE() cv::ocl::gemm(oclSrc1, oclSrc2, 1.0, oclSrc3, 1.0, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::gemm(oclSrc1, oclSrc2, 1.0, oclSrc3, 1.0, oclDst);
 
         oclDst.download(dst);
 
