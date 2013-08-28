@@ -42,7 +42,7 @@ to get help on the purpose and call signature of a particular method, or
 
 to get general help regarding the OpenCV bindings. If you ever run into issues with the bindings
 
-	cv.buildInformation();
+	  cv.buildInformation();
 	
 will produce a printout of diagnostic information pertaining to your particular build of OS, OpenCV and Matlab. It is useful to submit this information alongside a bug report to the OpenCV team.
 
@@ -52,46 +52,48 @@ The Matlab bindings come with a set of utilities to help you quickly write your 
 
 The first thing you need to learn how to do is write a mex-file with Matlab constructs. Following is a brief example:
 
-    // include useful constructs 
-    // this automatically includes opencv core.hpp and mex.h)
-    #include <opencv2/matlab/bridge.hpp>
-    using namespace cv;
-    using namespace std;
+```cpp
+// include useful constructs 
+// this automatically includes opencv core.hpp and mex.h)
+#include <opencv2/matlab/bridge.hpp>
+using namespace cv;
+using namespace std;
 
-    // define the mex gateway
-    void mexFunction(int nlhs, mxArray* plhs[],
-                     int nrhs, const mxArray* prhs[]) {
+// define the mex gateway
+void mexFunction(int nlhs, mxArray* plhs[],
+                 int nrhs, const mxArray* prhs[]) {
 
-      // claim the inputs into scoped management
-      MxArrayVector raw_inputs(prhs, prhs+nrhs);
+  // claim the inputs into scoped management
+  MxArrayVector raw_inputs(prhs, prhs+nrhs);
 
-      // add an argument parser to automatically handle basic options
-      ArgumentParser parser("my function");
-      parser.addVariant(1, 1, "opt");
-      MxArrayVector parsed_inputs = parser.parse(inputs);
+  // add an argument parser to automatically handle basic options
+  ArgumentParser parser("my function");
+  parser.addVariant(1, 1, "opt");
+  MxArrayVector parsed_inputs = parser.parse(inputs);
 
-      // if we get here, we know the inputs are valid. Unpack...
-      BridgeVector inputs(parsed_inputs);
-      Mat required    = inputs[0].toMat();
-      string optional = inputs[1].empty() ? "Default string" : inputs[1].toString();
+  // if we get here, we know the inputs are valid. Unpack...
+  BridgeVector inputs(parsed_inputs);
+  Mat required    = inputs[0].toMat();
+  string optional = inputs[1].empty() ? "Default string" : inputs[1].toString();
 
-      try {
-        // Do stuff...
-      } catch(Exception& e) {
-        error(e.what());
-      } catch(...) {
-        error("Uncaught exception occurred");
-      }
+  try {
+    // Do stuff...
+  } catch(Exception& e) {
+    error(e.what());
+  } catch(...) {
+    error("Uncaught exception occurred");
+  }
 
-      // allocate an output
-      Bridge out = required;
-      plhs[0] = out.toMxArray().releaseOwnership();
-    }
+  // allocate an output
+  Bridge out = required;
+  plhs[0] = out.toMxArray().releaseOwnership();
+}
+```
 
 There are a couple of important things going on in this example. Firstly, you need to include `<opencv2/matlab/bridge.hpp>` to enable the bridging capabilities. Once you've done this, you get some nice utilities for free. `MxArray` is a class that wraps Matlab's `mxArray*` class in an OOP-style interface. `ArgumentParser` is a class that handles default, optional and named arguments for you, along with multiple possible calling syntaxes. Finally, `Bridge` is a class that allows bidirectional conversions between OpenCV/std and Matlab types.
 
 Once you have written your file, it can be compiled with the provided mex utility:
-    
+
     cv.mex('my_function.cpp');
 
 This utility automatically links in all of the necessary OpenCV libraries to make your function work.
