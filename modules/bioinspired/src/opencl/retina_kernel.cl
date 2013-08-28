@@ -742,7 +742,7 @@ kernel void processRetinaParvoMagnoMapping(
     }
     const int offset = mad24(gidy, elements_per_row, gidx);
 
-    float distanceToCenter = 
+    float distanceToCenter =
         sqrt(((float)(gidy - halfRows) * (gidy - halfRows) + (gidx - halfCols) * (gidx - halfCols)));
 
     float a = distanceToCenter < minDistance ?
