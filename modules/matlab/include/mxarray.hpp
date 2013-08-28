@@ -2,9 +2,19 @@
 #define OPENCV_MXARRAY_HPP_
 
 #include <stdint.h>
+#include <cstdarg>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <sstream>
 #include <opencv2/core.hpp>
+#if __cplusplus > 201103
+#include <unordered_set>
+typedef std::unordered_set<std::string> StringSet;
+#else
+#include <set>
+typedef std::set<std::string> StringSet;
+#endif
 #include "mex.h"
 #include "transpose.hpp"
 
@@ -274,10 +284,10 @@ public:
    * Explicitly construct a scalar of given type. Since constructors cannot
    * be explicitly templated, this is a static factory method
    */
-  template <typename Scalar>
-  static MxArray Scalar(Scalar value = 0) {
-    MxArray s(1, 1, 1, Matlab::Traits<Scalar>::ScalarType);
-    s.real<Scalar>()[0] = value;
+  template <typename ScalarType>
+  static MxArray Scalar(ScalarType value = 0) {
+    MxArray s(1, 1, 1, Matlab::Traits<ScalarType>::ScalarType);
+    s.real<ScalarType>()[0] = value;
     return s;
   }
 
@@ -410,8 +420,8 @@ public:
 
   std::string toString() const {
     conditionalError(isString(), "Attempted to convert non-string type to string");
-    std::string str(size()+1, '\0');
-    mxGetString(ptr_, const_cast<char *>(str.data()), str.size());
+    std::string str(size(), '\0');
+    mxGetString(ptr_, const_cast<char *>(str.data()), str.size()+1);
     return str;
   }
 
@@ -429,6 +439,214 @@ public:
   std::string className() const { return std::string(mxGetClassName(ptr_)); }
   mxClassID ID() const { return mxGetClassID(ptr_); }
 
+};
+
+
+/*! @class ArgumentParser
+ *  @brief parses inputs to a method and resolves the argument names.
+ *
+ * The ArgumentParser resolves the inputs to a method. It checks that all
+ * required arguments are specified and also allows named optional arguments.
+ * For example, the C++ function:
+ *    void randn(Mat& mat, Mat& mean=Mat(), Mat& std=Mat());
+ * could be called in Matlab using any of the following signatures:
+ * \code
+ *    out = randn(in);
+ *    out = randn(in, 0, 1);
+ *    out = randn(in, 'mean', 0, 'std', 1);
+ * \endcode
+ *
+ * ArgumentParser also enables function overloading by allowing users
+ * to add variants to a method. For example, there may be two C++ sum() methods:
+ * \code
+ *    double sum(Mat& mat);     % sum elements of a matrix
+ *    Mat sum(Mat& A, Mat& B);  % add two matrices
+ * \endcode
+ *
+ * by adding two variants to ArgumentParser, the correct underlying sum 
+ * method can be called. If the function call is ambiguous, the 
+ * ArgumentParser will fail with an error message.
+ *
+ * The previous example could be parsed as:
+ * \code
+ *    // set up the Argument parser
+ *    ArgumentParser arguments;
+ *    arguments.addVariant("elementwise", 1);
+ *    arguments.addVariant("matrix", 2);
+ *
+ *    // parse the arguments
+ *    std::vector<MxArray> inputs;
+ *    inputs = arguments.parse(std::vector<MxArray>(prhs, prhs+nrhs));
+ *
+ *    // if we get here, one unique variant is valid
+ *    if (arguments.variantIs("elementwise")) {
+ *      // call elementwise sum()
+ *    }
+ */
+class ArgumentParser {
+private:
+  struct Variant;
+  typedef std::string String;
+  typedef std::vector<std::string> StringVector;
+  typedef std::vector<MxArray> MxArrayVector;
+  typedef std::vector<Variant> VariantVector;
+  /* @class Variant
+   * @brief Describes a variant of arguments to a method
+   *
+   * When addVariant() is called on an instance to ArgumentParser, this class
+   * holds the the information that decribes that variant. The parse() method
+   * of ArgumentParser then attempts to match a Variant, given a set of 
+   * inputs for a method invocation.
+   */
+  class Variant {
+  public:
+    Variant(const String& _name, size_t _nreq, size_t _nopt, const StringVector& _keys) 
+      : name(_name), nreq(_nreq), nopt(_nopt), keys(_keys), using_named(false) {}
+    String name;
+    size_t nreq;
+    size_t nopt;
+    StringVector keys;
+    bool using_named;
+    /*! @brief return true if the named-argument is in the Variant */
+    bool count(const String& key) { return std::find(keys.begin(), keys.end(), key) != keys.end(); }
+    /*! @brief remove a key by index from the Variant */
+    void erase(const size_t idx) { keys.erase(keys.begin()+idx); }
+    /*! @brief remove a key by name from the Variant */ 
+    void erase(const String& key) { keys.erase(std::find(keys.begin(), keys.end(), key)); }
+    /*! @brief convert a Variant to a string representation */
+    String toString(const String& method_name=String("f")) const {
+      std::ostringstream s;
+      s << method_name << "(";
+      for (size_t n = 0; n < nreq; ++n) { 
+        s << "src" << n+1; if (n != nreq-1) s << ", "; 
+      }
+      if (nreq && nopt) s << ", ";
+      for (size_t n = 0; n < keys.size(); ++n) { 
+        s << "'" << keys[n] << "', " << keys[n]; 
+        if (n != keys.size()-1) s << ", ";
+      }
+      s << ");";
+      return s.str();
+    }
+  };
+  MxArrayVector filled_;
+  VariantVector variants_;
+  String valid_;
+  String method_name_;
+public:
+  ArgumentParser(const String& method_name) : method_name_(method_name) {}
+  /*! @brief add a function call variant to the parser
+   *
+   * Adds a function-call signature to the parser. The function call *must* be 
+   * unique either in its number of arguments, or in the named-syntax.
+   * Currently this function does not check whether that invariant stands true.
+   *
+   * This function is variadic. If should be called as follows:
+   *  addVariant(2, 2, 'opt_1_name', 'opt_2_name');
+   */
+  void addVariant(const String& name, size_t nreq, size_t nopt = 0, ...) {
+    StringVector keys;
+    va_list opt;
+    va_start(opt, nopt);
+    for (size_t n = 0; n < nopt; ++n) keys.push_back(va_arg(opt, const char*));
+    addVariant(name, nreq, nopt, keys);
+  }
+  void addVariant(const String& name, size_t nreq, size_t nopt, StringVector keys) {
+    variants_.push_back(Variant(name, nreq, nopt, keys));
+  }
+  /*! @brief check if the valid variant is the key name */
+  bool variantIs(const String& name) {
+    return name.compare(valid_) == 0;
+  }
+  /*! @brief parse a vector of input arguments
+   * 
+   * This method parses a vector of input arguments, attempting to match them 
+   * to a Variant spec. For each input, the method attempts to cull any 
+   * Variants which don't match the given inputs so far.
+   *
+   * Once all inputs have been parsed, if there is one unique spec remaining,
+   * the output MxArray vector gets populated with the arguments, with named
+   * arguments removed. Any optional arguments that have not been encountered
+   * are set to an empty array.
+   *
+   * If multiple variants or no variants match the given call, an error 
+   * message is emitted
+   */
+  MxArrayVector parse(const MxArrayVector& inputs) {
+    // allocate the outputs
+    MxArrayVector outputs;
+    VariantVector candidates = variants_;
+
+    // iterate over the inputs, attempting to match a variant
+    for (MxArrayVector::const_iterator input = inputs.begin(); input != inputs.end(); ++input) {
+      String name = input->isString() ? input->toString() : String();
+      for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
+        // check if the input is a key
+        bool key = candidate->count(name);
+
+        /* 
+         * FAILURE CASES
+         * 1. too many inputs, or
+         * 2. name is not a key and we're expecting a key
+         * 3. name is a key, and
+         *    we're still expecting required arguments, or
+         *    we're expecting an argument for a previous key
+         */
+        if ((!candidate->nreq && !candidate->nopt) ||
+           (!key && !candidate->nreq && candidate->keys.size() == candidate->nopt && candidate->using_named) ||
+            (key && (candidate->nreq || candidate->keys.size()  < candidate->nopt))) {
+          candidate = candidates.erase(candidate)--;
+        }
+
+        // VALID CASES
+        // Still parsing required argments (input is not a key)
+        else if (!key && candidate->nreq) {
+          candidate->nreq--;
+        }
+
+        // Parsing optional arguments and a named argument is encountered
+        else if (key && !candidate->nreq && candidate->nopt > 0 && candidate->keys.size() == candidate->nopt) {
+          candidate->erase(name);
+          candidate->using_named = true;
+        }
+
+        // Parsing input for a named argument
+        else if (!key && candidate->keys.size() < candidate->nopt) {
+          candidate->nopt--; 
+        }
+
+        // Parsing un-named optional arguments
+        else if (!key && !candidate->nreq && candidate->nopt && candidate->keys.size() && !candidate->using_named) {
+          candidate->erase(0);
+          candidate->nopt--;
+        }
+      }
+    }
+
+    // if any candidates remain, check that they have been fully parsed
+    for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
+      if (candidate->nreq || candidate->keys.size() < candidate->nopt) {
+        candidate = candidates.erase(candidate)--;
+      }
+    }
+
+    // if there is not a unique candidate, throw an error
+    String variant_string;
+    for (VariantVector::iterator variant = variants_.begin(); variant != variants_.end(); ++variant) {
+      variant_string += "\n" + variant->toString(method_name_);
+    }
+
+    // if there is not a unique candidate, throw an error
+    if (candidates.size()  > 1) {
+      error(String("Call to method is ambiguous. Valid variants are:")
+        .append(variant_string).append("\nUse named arguments to disambiguate call"));
+    }
+    if (candidates.size() == 0) {
+      error(String("No matching method signatures for given arguments. Valid variants are:").append(variant_string));
+    }
+
+    return outputs;
+  }
 };
 
 

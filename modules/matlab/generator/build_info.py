@@ -19,7 +19,7 @@ def substitute(build, output_dir):
       os.mkdir(output_dir)
 
     # populate template
-    populated = template.render(build=build)
+    populated = template.render(build=build, time=time)
     with open(os.path.join(output_dir, 'buildInformation.m'), 'wb') as f:
         f.write(populated)
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     """
    
     # parse the input options
-    import sys, re, os
+    import sys, re, os, time 
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--os')

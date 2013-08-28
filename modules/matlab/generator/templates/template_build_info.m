@@ -6,6 +6,8 @@ function buildInformation()
 %   run into issues with the Toolbox, it is useful to submit this 
 %   information alongside a bug report to the OpenCV team.
 %
+%   Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
+%
 info = {
 '  ------------------------------------------------------------------------'
 '                              <strong>OpenCV Toolbox</strong>'

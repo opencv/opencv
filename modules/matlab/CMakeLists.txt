@@ -34,20 +34,29 @@ macro(PREPEND TOKEN OUT IN)
     endforeach()
 endmacro()
 
+
 # WARN_MIXED_PRECISION
 # Formats a warning message if the compiler and Matlab bitness is different
 macro(WARN_MIXED_PRECISION COMPILER_BITNESS MATLAB_BITNESS)
     set(MSG "Your compiler is ${COMPILER_BITNESS}-bit")
     set(MSG "${MSG} but your version of Matlab is ${MATLAB_BITNESS}-bit.")
-    set(MSG "${MSG} Mixed preicision pointers are not supported. Disabling Matlab bindings...")
+    set(MSG "${MSG} To build Matlab bindings, please switch to a ${MATLAB_BITNESS}-bit compiler.")
     message(WARNING ${MSG})
 endmacro()
 
+# ----------------------------------------------------------------------------
+#  Architecture checks
+# ----------------------------------------------------------------------------
 # make sure we're on a supported architecture with Matlab and python installed
-if (IOS OR ANDROID OR NOT MATLAB_FOUND OR NOT PYTHONLIBS_FOUND)
+if (IOS OR ANDROID OR NOT MATLAB_FOUND)
+    ocv_module_disable(matlab)
+    return()
+elseif (NOT PYTHONLIBS_FOUND)
+    message(WARNING "A required dependency of the matlab module (PythonLibs) was not found. Disabling Matlab bindings...")
     ocv_module_disable(matlab)
     return()
 endif()
+    
 
 # If the user built OpenCV as X-bit, but they have a Y-bit version of Matlab,
 # attempting to link to OpenCV during binding generation will fail, since
@@ -63,6 +72,16 @@ elseif (${ARCH} EQUAL 64 AND NOT ${MATLAB_ARCH} MATCHES "64")
     return()
 endif()
 
+# If it's MSVC, warn the user that bindings will only be built in Release mode.
+# Debug mode seems to cause issues...
+if (MSVC)
+    message(STATUS "Warning: Matlab bindings will only be built in Release configurations")
+endif()
+
+
+# ----------------------------------------------------------------------------
+#  Configure time components
+# ----------------------------------------------------------------------------
 set(the_description "The Matlab/Octave bindings")
 ocv_add_module(matlab   BINDINGS
                         OPTIONAL opencv_core
@@ -93,9 +112,9 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 
-# ----------------------------------------------------------------------------
-#  Configure time components
-# ----------------------------------------------------------------------------
+# intersection of available modules and optional dependencies
+# 1. populate the command-line include directories (-I/path/to/module/header, ...)
+# 2. populate the command-line link libraries (-lopencv_core, ...) for Debug and Release
 set(MATLAB_DEPS ${OPENCV_MODULE_${the_module}_REQ_DEPS} ${OPENCV_MODULE_${the_module}_OPT_DEPS})
 foreach(opencv_module ${MATLAB_DEPS})
     if (HAVE_${opencv_module})
@@ -114,7 +133,7 @@ list(APPEND opencv_extra_hdrs "core=${OPENCV_MODULE_opencv_core_LOCATION}/includ
 # pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
 # remove the visibility modifiers, so the mex gateway is visible
 # TODO: get mex working without warnings
-#string(REGEX REPLACE "[^\ ]*visibility[^\ ]*" "" MEX_CXXFLAGS "${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
+string(REGEX REPLACE "[^\ ]*visibility[^\ ]*" "" MEX_CXXFLAGS "${OPENCV_EXTRA_FLAGS} ${OPENCV_EXTRA_CXX_FLAGS}")
 
 # Configure checks
 # Check to see whether the generator and the mex compiler are working.
@@ -149,7 +168,7 @@ if (NOT MEX_WORKS)
     # attempt to compile a gateway using mex
     message(STATUS "Trying to compile mex file")
     execute_process(
-        COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} "CXXFLAGS=\$CXXFLAGS ${MEX_CXXFLAGS}"
+        COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} "CXXFLAGS=\$CXXFLAGS ${MEX_CXX_FLAGS}"
                 ${MEX_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_compiler.cpp
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE MEX_ERROR
@@ -208,6 +227,14 @@ add_custom_command(
             --modules ${opencv_modules}
             --configuration "$(Configuration)" ${CMAKE_BUILD_TYPE}
             --outdir ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
+            --opts="${MEX_OPTS}"
+            --include_dirs="${MEX_INCLUDE_DIRS}"
+            --lib_dir=${MEX_LIB_DIR}
+            --libs="${MEX_LIBS}"
+            --flags ${MEX_CXXFLAGS}
+            --outdir ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/help.m ${CMAKE_CURRENT_BINARY_DIR}/+cv
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
     COMMENT "Generating Matlab source files"
@@ -222,7 +249,7 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -DMATLAB_MEX_SCRIPT=${MATLAB_MEX_SCRIPT}
                              -DMATLAB_MEXEXT=${MATLAB_MEXEXT}
                              -DMEX_OPTS=${MEX_OPTS}
-                             -DMEX_CXXFLAGS=${MEX_CXXFLAGS}
+                             -DMEX_CXXFLAGS=${MEX_CXX_FLAGS}
                              -DMEX_INCLUDE_DIRS="${MEX_INCLUDE_DIRS}"
                              -DMEX_LIB_DIR=${MEX_LIB_DIR}
                              -DCONFIGURATION="$(Configuration)"

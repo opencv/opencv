@@ -139,9 +139,17 @@ def filename(fullpath):
     '''
     return os.path.splitext(os.path.basename(fullpath))[0]
 
+def split(text, delimiter=' '):
+    '''Split a text string into a list using the specified delimiter'''
+    return text.split(delimiter)
+
 def csv(items, sep=', '):
     '''format a list with a separator (comma if not specified)'''
     return sep.join(item for item in items)
+
+def cellarray(items, escape='\''):
+    '''format a list of items as a matlab cell array'''
+    return '{' + ', '.join(escape+item+escape for item in items) + '}'
 
 def stripExtraSpaces(text):
     '''Removes superfluous whitespace from a string, including the removal

@@ -7,7 +7,7 @@
  * Copyright 2013 The OpenCV Foundation
  */
 #include <exception>
-//#include <opencv2/core.hpp>
+#include <opencv2/core.hpp>
 #include "mex.h"
 
 /* 
@@ -24,9 +24,9 @@ void mexFunction(int nlhs, mxArray* plhs[],
   // call the opencv function
   // [out =] namespace.fun(src1, ..., srcn, dst1, ..., dstn, opt1, ..., optn);
   try {
-  //  throw cv::exception;
-  //} catch(cv::exception& e) {
-  //  mexErrMsgTxt(e.what());
+    throw cv::Exception(-1, "OpenCV exception thrown", __func__, __FILE__, __LINE__);
+  } catch(cv::Exception& e) {
+    mexErrMsgTxt(e.what());
   } catch(...) {
     mexErrMsgTxt("Incorrect exception caught!");
   }
