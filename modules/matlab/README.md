@@ -26,11 +26,13 @@ Run
 ---
 Once you've added the bindings directory to the Matlab path, you can start using them straight away! OpenCV calls need to be prefixed with a 'cv' qualifier, to disambiguate them from Matlab methods of the same name. For example, to compute the dft of a matrix, you might do the following:
 
-    % load an image (Matlab)
-    I = imread('cameraman.tif');
+```matlab
+% load an image (Matlab)
+I = imread('cameraman.tif');
 
-    % compute the DFT (OpenCV)
-    If = cv.dft(I, cv.DFT_COMPLEX_OUTPUT);
+% compute the DFT (OpenCV)
+If = cv.dft(I, cv.DFT_COMPLEX_OUTPUT);
+```
 
 As you can see, both OpenCV methods and constants can be used with 'cv' qualification. You can also call:
 
@@ -206,42 +208,48 @@ Jinja2 is a powerful templating engine, similar to python's builtin `string.Temp
 
 **view.py**
 
-	<title>{{ title }}</title>
-	<ul>
-	{% for user in users %}
-		<li><a href="{{ user.url }}">{{ user.username | sanitize }}</a></li>
-	{% endfor %}
-	</ul>
-	
+```html+django
+<title>{{ title }}</title>
+<ul>
+{% for user in users %}
+  <li><a href="{{ user.url }}">{{ user.username | sanitize }}</a></li>
+{% endfor %}
+</ul>
+```
+
 **model.py**
 
-	class User(object):
-		__init__(self):
-			self.username = ''
-			self.url = ''
+```python
+class User(object):
+  __init__(self):
+    self.username = ''
+    self.url = ''
 
-	def sanitize(text):
-		"""Filter for escaping html tags to prevent code injection"""
-		
+def sanitize(text):
+  """Filter for escaping html tags to prevent code injection"""
+```
+
 **controller.py**
 
-	def populate(users):
-		# initialize jinja
-		jtemplate = jinja2.Environment(loader=FileSystemLoader())
-		
-		# add the filters to the engine
-		jtemplate['sanitize'] = sanitize
-		
-		# get the view
-		template = jtemplate.get_template('view')
-		
-		# populate the template with a list of User objects
-		populated = template.render(title='all users', users=users)
-		
-		# write to file
-		with open('users.html', 'wb') as f:
-			f.write(populated)
-			
+```python
+def populate(users):
+# initialize jinja
+jtemplate = jinja2.Environment(loader=FileSystemLoader())
+
+# add the filters to the engine
+jtemplate['sanitize'] = sanitize
+
+# get the view
+template = jtemplate.get_template('view')
+
+# populate the template with a list of User objects
+populated = template.render(title='all users', users=users)
+
+# write to file
+with open('users.html', 'wb') as f:
+  f.write(populated)
+```
+
 Thus the style and layout of the view is kept separate from the content (model). This modularity improves readability and maintainability of both the view and content and (for my own sanity) has helped significantly in debugging errors.
 
 File Reference
