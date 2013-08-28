@@ -259,6 +259,8 @@ public:
                 Jptr[8] = Jptr[9] = Jptr[10] = 0.;
                 Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
                 Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
+
+                Jptr += 16;
             }
         }
 
