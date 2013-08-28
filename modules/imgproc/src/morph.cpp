@@ -1182,6 +1182,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
     default:
         return false;
     }
+    #undef IPP_MORPH_CASE
 
     IppiSize roiSize = {src.cols, src.rows};
     IppiSize kernelSize = {ksize.width, ksize.height};
@@ -1206,7 +1207,7 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
         AutoBuffer<uchar> buf(bufSize + 64);
         uchar* buffer = alignPtr((uchar*)buf, 32);
         return morphRectFunc(_src->data, (int)_src->step[0], dst.data, (int)dst.step[0],
-                             roiSize, kernelSize, point, buffer);
+                             roiSize, kernelSize, point, buffer) >= 0;
     }
     return false;
 }
@@ -1268,7 +1269,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
         rectKernel = true;
         iterations = 1;
     }
-    else if( iterations > 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
+    else if( iterations >= 1 && countNonZero(kernel) == kernel.rows*kernel.cols )
     {
         ksize = Size(ksize.width + (iterations-1)*(ksize.width-1),
              ksize.height + (iterations-1)*(ksize.height-1)),
@@ -1475,7 +1476,7 @@ static void convertConvKernel( const IplConvKernel* src, cv::Mat& dst, cv::Point
 
     int i, size = src->nRows*src->nCols;
     for( i = 0; i < size; i++ )
-        dst.data[i] = (uchar)src->values[i];
+        dst.data[i] = (uchar)(src->values[i] != 0);
 }
 
 
