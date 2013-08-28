@@ -287,20 +287,20 @@ build_info has the following call signature:
 To build a parse tree, first parse a set of headers, then invoke the parse tree to refactor the output:
 
 ```python
-	# parse a set of definitions into a dictionary of namespaces
-	parser = CppHeaderParser()
-	ns['core'] = parser.parse('path/to/opencv/core.hpp')
-	
-	# refactor into a semantic tree
-	parse_tree = ParseTree()
-	parse_tree.build(ns)
-	
-	# iterate over the tree
-	for namespace in parse_tree.namespaces:
-		for clss in namespace.classes:
-			# do stuff
-		for method in namespace.methods:
-			# do stuff
+# parse a set of definitions into a dictionary of namespaces
+parser = CppHeaderParser()
+ns['core'] = parser.parse('path/to/opencv/core.hpp')
+
+# refactor into a semantic tree
+parse_tree = ParseTree()
+parse_tree.build(ns)
+
+# iterate over the tree
+for namespace in parse_tree.namespaces:
+  for clss in namespace.classes:
+    # do stuff
+  for method in namespace.methods:
+    # do stuff
 ```
 
 **mxarray.hpp**  
@@ -331,7 +331,6 @@ mat.isClass();
 mat.className();
 mat.real();
 mat.imag();
-etc…
 ```
 
 The MxArray object uses scoped memory management. If you wish to pass an MxArray back to Matlab (as a lhs pointer), you need to explicitly release ownership of the array so that it is not destroyed when it leaves scope:
