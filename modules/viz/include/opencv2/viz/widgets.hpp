@@ -14,6 +14,9 @@ namespace cv
         {
         public:
             Widget();
+            Widget(const Widget& other);
+            Widget& operator=(const Widget& other);
+            ~Widget();
             
             static Widget fromPlyFile(const String &file_name);
             
@@ -25,6 +28,9 @@ namespace cv
             class Impl;
             Impl *impl_;
             friend struct WidgetAccessor;
+            
+            void create();
+            void release();
         };
 
         /////////////////////////////////////////////////////////////////////////////
