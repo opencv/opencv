@@ -166,10 +166,13 @@ Given a set of modules (the intersection of the OpenCV modules being built and t
 
 The `ParseTree()` from `opencv/modules/matlab/generator/parse_tree.py` takes this set of definitions and refactors them into a semantic tree better suited to templatization. For example, a trivial definition from the header parser may look something like:
 
-	[fill, void, ['/S'], [cv::Mat&, mat, '', ['/I', '/O']]]
+```python
+[fill, void, ['/S'], [cv::Mat&, mat, '', ['/I', '/O']]]
+```
 	
 The equivalent refactored output will look like:
 
+```python
 	Function 
 		name   = 'fill'
 		rtype  = 'void'
@@ -182,6 +185,7 @@ The equivalent refactored output will look like:
 				I       = True
 				O       = True
 				default = ''
+```
 
 The added semantics (Namespace, Class, Function, Argument, name, etc) make it easier for the templating engine to parse, slice and populate definitions.
 
@@ -282,6 +286,7 @@ build_info has the following call signature:
 **parse_tree.py**  
 To build a parse tree, first parse a set of headers, then invoke the parse tree to refactor the output:
 
+```python
 	# parse a set of definitions into a dictionary of namespaces
 	parser = CppHeaderParser()
 	ns['core'] = parser.parse('path/to/opencv/core.hpp')
@@ -296,41 +301,52 @@ To build a parse tree, first parse a set of headers, then invoke the parse tree 
 			# do stuff
 		for method in namespace.methods:
 			# do stuff
+```
 
 **mxarray.hpp**  
 mxarray.hpp defines a class called `MxArray` which provides an OOP-style interface for Matlab's homogeneous `mxArray*` type. To create an `MxArray`, you can either inherit an existing array
 
-	MxArray mat(prhs[0]);
+```cpp
+MxArray mat(prhs[0]);
+```
 	
 or create a new array
 
-	MxArray mat(5, 5, Matlab::Traits<double>::ScalarType);
-	MxArray mat = MxArray::Matrix<double>(5, 5);
+```cpp
+MxArray mat(5, 5, Matlab::Traits<double>::ScalarType);
+MxArray mat = MxArray::Matrix<double>(5, 5);
+```
 	
 The default constructor allocates a `0 x 0` array. Once you have encapculated an `mxArray*` you can access its properties through member functions:
 
-	mat.rows();
-	mat.cols();
-	mat.size();
-	mat.channels();
-	mat.isComplex();
-	mat.isNumeric();
-	mat.isLogical();
-	mat.isClass();
-	mat.className();
-	mat.real();
-	mat.imag();
-	etc…
-	
+```cpp
+mat.rows();
+mat.cols();
+mat.size();
+mat.channels();
+mat.isComplex();
+mat.isNumeric();
+mat.isLogical();
+mat.isClass();
+mat.className();
+mat.real();
+mat.imag();
+etc…
+```
+
 The MxArray object uses scoped memory management. If you wish to pass an MxArray back to Matlab (as a lhs pointer), you need to explicitly release ownership of the array so that it is not destroyed when it leaves scope:
 
-	plhs[0] = mat.releaseOwnership();
+```cpp
+plhs[0] = mat.releaseOwnership();
+```
 
 **bridge.hpp**  
 The bridge interface defines a `Bridge` class which provides type conversion between std/OpenCV and Matlab types. A type conversion must provide the following:
 
-	Bridge& operator=(const MyObject&);
-	MyObject toMyObject();
-	operator MyObject();
+```cpp
+Bridge& operator=(const MyObject&);
+MyObject toMyObject();
+operator MyObject();
+```
 	
 The binding generator will then automatically call the conversion operators (either explicitly or implicitly) if your `MyObject` class is encountered as an input or return from a parsed definition.
