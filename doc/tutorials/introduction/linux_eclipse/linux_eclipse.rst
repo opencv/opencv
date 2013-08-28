@@ -245,6 +245,3 @@ Say you have or create a new file, *helloworld.cpp* in a directory called *foo*:
  a. You can also optionally modify the ``Build command:`` from ``make`` to something like ``make VERBOSE=1 -j4`` which tells the compiler to produce detailed symbol files for debugging and also to compile in 4 parallel threads.
 
 #. Done!
-
-
-

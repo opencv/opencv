@@ -10,7 +10,7 @@
 
 namespace cv
 {
-    std::vector<String> Directory::GetListFiles(  const String& path, const String & exten, bool addPath )
+    std::vector<String> Directory::GetListFiles( const String& path, const String & exten, bool addPath )
     {
         std::vector<String> list;
         list.clear();
@@ -24,10 +24,9 @@ namespace cv
         HANDLE hFind;
 
         #ifdef HAVE_WINRT
-            size_t size = mbstowcs(NULL, path_f.c_str(), path_f.size());
-            Ptr<wchar_t> wpath = new wchar_t[size+1];
-            wpath[size] = 0;
-            mbstowcs(wpath, path_f.c_str(), path_f.size());
+            wchar_t wpath[MAX_PATH];
+            size_t copied = mbstowcs(wpath, path_f.c_str(), MAX_PATH);
+            CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
             hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
@@ -46,12 +45,12 @@ namespace cv
                         FindFileData.dwFileAttributes == FILE_ATTRIBUTE_SYSTEM  ||
                         FindFileData.dwFileAttributes == FILE_ATTRIBUTE_READONLY)
                     {
-                        cv::Ptr<char> fname;
+                        char* fname;
                     #ifdef HAVE_WINRT
-                        size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        fname = new char[asize+1];
-                        fname[asize] = 0;
-                        wcstombs(fname, FindFileData.cFileName, asize);
+                        char fname_tmp[MAX_PATH] = {0};
+                        size_t copied = wcstombs(fname_tmp, FindFileData.cFileName, MAX_PATH);
+                        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+                        fname = fname_tmp;
                     #else
                         fname = FindFileData.cFileName;
                     #endif
@@ -108,10 +107,10 @@ namespace cv
             HANDLE hFind;
 
         #ifdef HAVE_WINRT
-            size_t size = mbstowcs(NULL, path_f.c_str(), path_f.size());
-            Ptr<wchar_t> wpath = new wchar_t[size+1];
-            wpath[size] = 0;
-            mbstowcs(wpath, path_f.c_str(), path_f.size());
+            wchar_t wpath [MAX_PATH];
+            size_t copied = mbstowcs(wpath, path_f.c_str(), path_f.size());
+            CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+
             hFind = FindFirstFileExW(wpath, FindExInfoStandard, &FindFileData, FindExSearchNameMatch, NULL, 0);
         #else
             hFind = FindFirstFileA((LPCSTR)path_f.c_str(), &FindFileData);
@@ -134,12 +133,12 @@ namespace cv
                         strcmp(FindFileData.cFileName, "..") != 0)
 #endif
                     {
-                        cv::Ptr<char> fname;
+                        char* fname;
                     #ifdef HAVE_WINRT
-                        size_t asize = wcstombs(NULL, FindFileData.cFileName, 0);
-                        fname = new char[asize+1];
-                        fname[asize] = 0;
-                        wcstombs(fname, FindFileData.cFileName, asize);
+                        char fname_tmp[MAX_PATH];
+                        size_t copied = wcstombs(fname_tmp, FindFileData.cFileName, MAX_PATH);
+                        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+                        fname = fname_tmp;
                     #else
                         fname = FindFileData.cFileName;
                     #endif

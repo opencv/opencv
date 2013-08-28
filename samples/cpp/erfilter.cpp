@@ -1,6 +1,6 @@
 
 //--------------------------------------------------------------------------------------------------
-//  A demo program of the Extremal Region Filter algorithm described in 
+//  A demo program of the Extremal Region Filter algorithm described in
 //  Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
 //--------------------------------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@ void  er_draw(Mat &src, Mat &dst, ERStat& er);
 void  er_draw(Mat &src, Mat &dst, ERStat& er)
 {
 
-    if (er.parent != NULL) // deprecate the root region 
+    if (er.parent != NULL) // deprecate the root region
     {
         int newMaskVal = 255;
         int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
@@ -29,7 +29,7 @@ void  er_draw(Mat &src, Mat &dst, ERStat& er)
     }
 
 }
-		
+
 int  main(int argc, const char * argv[])
 {
 
@@ -54,14 +54,14 @@ int  main(int argc, const char * argv[])
     }
     Mat grey(original.size(),CV_8UC1);
     cvtColor(original,grey,COLOR_RGB2GRAY);
-    
+
     double t = (double)getTickCount();
-    
+
     // Build ER tree and filter with the 1st stage default classifier
     Ptr<ERFilter> er_filter1 = createERFilterNM1();
-    
+
     er_filter1->run(grey, regions);
-    
+
     t = (double)getTickCount() - t;
     cout << " --------------------------------------------------------------------------------------------------" << endl;
     cout << "\t FIRST STAGE CLASSIFIER done in " << t * 1000. / getTickFrequency() << " ms." << endl;
@@ -87,11 +87,11 @@ int  main(int argc, const char * argv[])
     }
 
     t = (double)getTickCount();
-    
+
     // Default second stage classifier
     Ptr<ERFilter> er_filter2 = createERFilterNM2();
     er_filter2->run(grey, regions);
-    
+
     t = (double)getTickCount() - t;
     cout << " --------------------------------------------------------------------------------------------------" << endl;
     cout << "\t SECOND STAGE CLASSIFIER done in " << t * 1000. / getTickFrequency() << " ms." << endl;

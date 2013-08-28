@@ -221,4 +221,3 @@ PERF_TEST(Transform, getPerspectiveTransform)
 
     SANITY_CHECK(transformCoefficient, 1e-5);
 }
-

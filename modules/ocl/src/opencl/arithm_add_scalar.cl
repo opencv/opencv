@@ -67,7 +67,7 @@ __kernel void arithm_s_add_C1_D0 (__global   uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -110,7 +110,7 @@ __kernel void arithm_s_add_C1_D2 (__global   ushort *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -145,7 +145,7 @@ __kernel void arithm_s_add_C1_D3 (__global   short *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -250,7 +250,7 @@ __kernel void arithm_s_add_C2_D0 (__global   uchar *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

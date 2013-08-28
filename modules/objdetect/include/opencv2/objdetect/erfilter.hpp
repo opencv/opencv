@@ -52,12 +52,12 @@ namespace cv
 {
 
 /*!
-    Extremal Region Stat structure 
+    Extremal Region Stat structure
 
     The ERStat structure represents a class-specific Extremal Region (ER).
 
-    An ER is a 4-connected set of pixels with all its grey-level values smaller than the values 
-    in its outer boundary. A class-specific ER is selected (using a classifier) from all the ER's 
+    An ER is a 4-connected set of pixels with all its grey-level values smaller than the values
+    in its outer boundary. A class-specific ER is selected (using a classifier) from all the ER's
     in the component tree of the image.
 */
 struct CV_EXPORTS ERStat
@@ -69,17 +69,17 @@ public:
     ~ERStat(){};
 
     //! seed point and the threshold (max grey-level value)
-    int pixel; 
-    int level; 
+    int pixel;
+    int level;
 
     //! incrementally computable features
-    int area; 
+    int area;
     int perimeter;
     int euler;                 //!< euler number
     Rect rect;
     double raw_moments[2];     //!< order 1 raw moments to derive the centroid
     double central_moments[3]; //!< order 2 central moments to construct the covariance matrix
-    std::deque<int> *crossings;//!< horizontal crossings 
+    std::deque<int> *crossings;//!< horizontal crossings
     float med_crossings;       //!< median of the crossings at three different height levels
 
     //! 2nd stage features
@@ -88,21 +88,21 @@ public:
     float num_inflexion_points;
 
     // TODO Other features can be added (average color, standard deviation, and such)
-    
+
 
     // TODO shall we include the pixel list whenever available (i.e. after 2nd stage) ?
-    std::vector<int> *pixels; 
- 
+    std::vector<int> *pixels;
+
     //! probability that the ER belongs to the class we are looking for
     double probability;
 
     //! pointers preserving the tree structure of the component tree
-    ERStat* parent; 
-    ERStat* child; 
+    ERStat* parent;
+    ERStat* child;
     ERStat* next;
     ERStat* prev;
 
-    //! wenever the regions is a local maxima of the probability 
+    //! wenever the regions is a local maxima of the probability
     bool local_maxima;
     ERStat* max_probability_ancestor;
     ERStat* min_probability_ancestor;
@@ -124,11 +124,11 @@ public:
     public:
         virtual ~Callback(){};
         //! The classifier must return probability measure for the region.
-        virtual double eval(const ERStat& stat) = 0; //const = 0; //TODO why cannot use const = 0 here? 
+        virtual double eval(const ERStat& stat) = 0; //const = 0; //TODO why cannot use const = 0 here?
     };
 
-    /*! 
-        the key method. Takes image on input and returns the selected regions in a vector of ERStat 
+    /*!
+        the key method. Takes image on input and returns the selected regions in a vector of ERStat
         only distinctive ERs which correspond to characters are selected by a sequential classifier
         \param image   is the input image
         \param regions is output for the first stage, input/output for the second one.
@@ -151,15 +151,15 @@ public:
 /*!
     Create an Extremal Region Filter for the 1st stage classifier of N&M algorithm
     Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
- 
+
     The component tree of the image is extracted by a threshold increased step by step
-    from 0 to 255, incrementally computable descriptors (aspect_ratio, compactness, 
-    number of holes, and number of horizontal crossings) are computed for each ER 
-    and used as features for a classifier which estimates the class-conditional 
-    probability P(er|character). The value of P(er|character) is tracked using the inclusion 
-    relation of ER across all thresholds and only the ERs which correspond to local maximum 
+    from 0 to 255, incrementally computable descriptors (aspect_ratio, compactness,
+    number of holes, and number of horizontal crossings) are computed for each ER
+    and used as features for a classifier which estimates the class-conditional
+    probability P(er|character). The value of P(er|character) is tracked using the inclusion
+    relation of ER across all thresholds and only the ERs which correspond to local maximum
     of the probability P(er|character) are selected (if the local maximum of the
-    probability is above a global limit pmin and the difference between local maximum and 
+    probability is above a global limit pmin and the difference between local maximum and
     local minimum is greater than minProbabilityDiff).
 
     \param  cb                Callback with the classifier.
@@ -168,29 +168,29 @@ public:
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
     \param  minProbability    The minimum probability P(er|character) allowed for retreived ER's
-    \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities  
+    \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = NULL, 
-                                                  int thresholdDelta = 1, float minArea = 0.000025, 
-                                                  float maxArea = 0.13, float minProbability = 0.2, 
-                                                  bool nonMaxSuppression = true, 
+CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = NULL,
+                                                  int thresholdDelta = 1, float minArea = 0.000025,
+                                                  float maxArea = 0.13, float minProbability = 0.2,
+                                                  bool nonMaxSuppression = true,
                                                   float minProbabilityDiff = 0.1);
 
 /*!
     Create an Extremal Region Filter for the 2nd stage classifier of N&M algorithm
     Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
 
-    In the second stage, the ERs that passed the first stage are classified into character 
+    In the second stage, the ERs that passed the first stage are classified into character
     and non-character classes using more informative but also more computationally expensive
-    features. The classifier uses all the features calculated in the first stage and the following 
+    features. The classifier uses all the features calculated in the first stage and the following
     additional features: hole area ratio, convex hull ratio, and number of outer inflexion points.
 
     \param  cb             Callback with the classifier
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL, 
+CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL,
                                                   float minProbability = 0.85);
 
 }

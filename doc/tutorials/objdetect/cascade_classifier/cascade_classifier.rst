@@ -130,4 +130,3 @@ Result
    .. image:: images/Cascade_Classifier_Tutorial_Result_LBP.jpg
       :align: center
       :height: 300pt
-

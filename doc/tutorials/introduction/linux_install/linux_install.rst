@@ -80,4 +80,3 @@ Building OpenCV from Source Using CMake, Using the Command Line
 .. note::
 
    If the size of the created library is a critical issue (like in case of an Android build) you can use the ``install/strip`` command to get the smallest size as possible. The *stripped* version appears to be twice as small. However, we do not recommend using this unless those extra megabytes do really matter.
-

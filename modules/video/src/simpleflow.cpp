@@ -685,4 +685,3 @@ CV_EXPORTS_W void calcOpticalFlowSF(InputArray from,
 }
 
 }
-

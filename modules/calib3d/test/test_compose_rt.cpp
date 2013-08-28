@@ -212,4 +212,3 @@ protected:
 };
 
 TEST(Calib3d_ComposeRT, accuracy) { CV_composeRT_Test test; test.safe_run(); }
-

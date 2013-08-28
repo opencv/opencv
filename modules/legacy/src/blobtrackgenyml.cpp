@@ -215,5 +215,3 @@ CvBlobTrackGen* cvCreateModuleBlobTrackGenYML()
 {
     return (CvBlobTrackGen*) new CvBlobTrackGenYML;
 }
-
-

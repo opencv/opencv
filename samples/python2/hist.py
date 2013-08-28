@@ -61,7 +61,7 @@ if __name__ == '__main__':
         print "usage : python hist.py <image_file>"
 
     im = cv2.imread(fname)
-    
+
     if im is None:
         print 'Failed to load image file:', fname
         sys.exit(1)
@@ -114,4 +114,3 @@ if __name__ == '__main__':
             cv2.destroyAllWindows()
             break
     cv2.destroyAllWindows()
-

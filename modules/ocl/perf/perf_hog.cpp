@@ -45,50 +45,37 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+
 ///////////// HOG////////////////////////
 
-PERFTEST(HOG)
+PERF_TEST(HOGFixture, HOG)
 {
-    Mat src = imread(abspath("road.png"), cv::IMREAD_GRAYSCALE);
+    Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
 
-    if (src.empty())
+    vector<cv::Rect> found_locations;
+    declare.in(src).time(5);
+
+    if (RUN_PLAIN_IMPL)
     {
-        throw runtime_error("can't open road.png");
+        HOGDescriptor hog;
+        hog.setSVMDetector(hog.getDefaultPeopleDetector());
+
+        TEST_CYCLE() hog.detectMultiScale(src, found_locations);
+
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
+    else if (RUN_OCL_IMPL)
+    {
+        ocl::HOGDescriptor ocl_hog;
+        ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
+        ocl::oclMat oclSrc(src);
 
-    cv::HOGDescriptor hog;
-    hog.setSVMDetector(hog.getDefaultPeopleDetector());
-    std::vector<cv::Rect> found_locations;
-    std::vector<cv::Rect> d_found_locations;
+        TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
 
-    SUBTEST << src.cols << 'x' << src.rows << "; road.png";
-
-    hog.detectMultiScale(src, found_locations);
-
-    CPU_ON;
-    hog.detectMultiScale(src, found_locations);
-    CPU_OFF;
-
-    cv::ocl::HOGDescriptor ocl_hog;
-    ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
-    ocl::oclMat d_src;
-    d_src.upload(src);
-
-    WARMUP_ON;
-    ocl_hog.detectMultiScale(d_src, d_found_locations);
-    WARMUP_OFF;
-    
-    if(d_found_locations.size() == found_locations.size())
-        TestSystem::instance().setAccurate(1, 0);
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
+    }
     else
-        TestSystem::instance().setAccurate(0, abs((int)found_locations.size() - (int)d_found_locations.size()));
-
-    GPU_ON;
-    ocl_hog.detectMultiScale(d_src, found_locations);
-    GPU_OFF;
-
-    GPU_FULL_ON;
-    d_src.upload(src);
-    ocl_hog.detectMultiScale(d_src, found_locations);
-    GPU_FULL_OFF;
+        OCL_PERF_ELSE
 }

@@ -45,101 +45,77 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 /////////// matchTemplate ////////////////////////
-//void InitMatchTemplate()
-//{
-//	Mat src; gen(src, 500, 500, CV_32F, 0, 1);
-//	Mat templ; gen(templ, 500, 500, CV_32F, 0, 1);
-//	ocl::oclMat d_src(src), d_templ(templ), d_dst;
-//	ocl::matchTemplate(d_src, d_templ, d_dst, CV_TM_CCORR);
-//}
-PERFTEST(matchTemplate)
+
+typedef Size_MatType CV_TM_CCORRFixture;
+
+PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+                               OCL_PERF_ENUM(CV_32FC1, CV_32FC4)))
 {
-    //InitMatchTemplate();
-    Mat src, templ, dst, ocl_dst;
-    int templ_size = 5;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params), templSize(5, 5);
+    const int type = get<1>(params);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src(srcSize, type), templ(templSize, type);
+    const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
+    Mat dst(dstSize, CV_32F);
+    randu(src, 0.0f, 1.0f);
+    randu(templ, 0.0f, 1.0f);
+    declare.time(srcSize == OCL_SIZE_2000 ? 20 : 6).in(src, templ).out(dst);
+
+    if (RUN_OCL_IMPL)
     {
-        int all_type[] = {CV_32FC1, CV_32FC4};
-        std::string type_name[] = {"CV_32FC1", "CV_32FC4"};
+        ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_32F);
 
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            for(templ_size = 5; templ_size <= 5; templ_size *= 5)
-            {
-                gen(src, size, size, all_type[j], 0, 1);
+        TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR);
 
-                SUBTEST << src.cols << 'x' << src.rows << "; " << type_name[j] << "; templ " << templ_size << 'x' << templ_size << "; CCORR";
+        oclDst.download(dst);
 
-                gen(templ, templ_size, templ_size, all_type[j], 0, 1);
-
-                matchTemplate(src, templ, dst, TM_CCORR);
-
-                CPU_ON;
-                matchTemplate(src, templ, dst, TM_CCORR);
-                CPU_OFF;
-
-                ocl::oclMat d_src(src), d_templ(templ), d_dst;
-
-                WARMUP_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
-                WARMUP_OFF;
-
-                GPU_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
-                GPU_OFF;
-
-                GPU_FULL_ON;
-                d_src.upload(src);
-                d_templ.upload(templ);
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR);
-                d_dst.download(ocl_dst);
-                GPU_FULL_OFF;
-
-                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
-            }
-        }
-
-        int all_type_8U[] = {CV_8UC1};
-        std::string type_name_8U[] = {"CV_8UC1"};
-
-        for (size_t j = 0; j < sizeof(all_type_8U) / sizeof(int); j++)
-        {
-            for(templ_size = 5; templ_size <= 5; templ_size *= 5)
-            {
-                SUBTEST << src.cols << 'x' << src.rows << "; " << type_name_8U[j] << "; templ " << templ_size << 'x' << templ_size << "; CCORR_NORMED";
-
-                gen(src, size, size, all_type_8U[j], 0, 255);
-
-                gen(templ, templ_size, templ_size, all_type_8U[j], 0, 255);
-
-                matchTemplate(src, templ, dst, TM_CCORR_NORMED);
-
-                CPU_ON;
-                matchTemplate(src, templ, dst, TM_CCORR_NORMED);
-                CPU_OFF;
-
-                ocl::oclMat d_src(src);
-                ocl::oclMat d_templ(templ), d_dst;
-
-                WARMUP_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
-                WARMUP_OFF;
-
-                GPU_ON;
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
-                GPU_OFF;
-
-                GPU_FULL_ON;
-                d_src.upload(src);
-                d_templ.upload(templ);
-                ocl::matchTemplate(d_src, d_templ, d_dst, TM_CCORR_NORMED);
-                d_dst.download(ocl_dst);
-                GPU_FULL_OFF;
-
-                TestSystem::instance().ExpectedMatNear(dst, ocl_dst, templ.rows * templ.cols * 1e-1);
-            }
-        }
+        SANITY_CHECK(dst, 1e-4);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::matchTemplate(src, templ, dst, TM_CCORR);
+
+        SANITY_CHECK(dst, 1e-4);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+typedef TestBaseWithParam<Size> CV_TM_CCORR_NORMEDFixture;
+
+PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
+{
+    const Size srcSize = GetParam(), templSize(5, 5);
+
+    Mat src(srcSize, CV_8UC1), templ(templSize, CV_8UC1), dst;
+    const Size dstSize(src.cols - templ.cols + 1, src.rows - templ.rows + 1);
+    dst.create(dstSize, CV_8UC1);
+    declare.in(src, templ, WARMUP_RNG).out(dst)
+            .time(srcSize == OCL_SIZE_2000 ? 10 : srcSize == OCL_SIZE_4000 ? 23 : 2);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_8UC1);
+
+        TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR_NORMED);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst, 2e-2);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::matchTemplate(src, templ, dst, TM_CCORR_NORMED);
+
+        SANITY_CHECK(dst, 2e-2);
+    }
+    else
+        OCL_PERF_ELSE
 }

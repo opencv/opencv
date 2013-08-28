@@ -1169,4 +1169,3 @@ void cv::validateDisparity( InputOutputArray _disp, InputArray _cost, int minDis
         }
     }
 }
-

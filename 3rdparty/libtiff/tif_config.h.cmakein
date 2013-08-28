@@ -168,4 +168,3 @@
 
 /* Support Deflate compression */
 #define ZIP_SUPPORT 1
-

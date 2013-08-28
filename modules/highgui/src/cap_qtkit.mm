@@ -411,9 +411,9 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
 void CvCaptureCAM::setWidthHeight() {
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
-	
+
     [mCaptureSession stopRunning];
-	
+
     NSDictionary* pixelBufferOptions = [NSDictionary dictionaryWithObjectsAndKeys:
                           [NSNumber numberWithDouble:1.0*width], (id)kCVPixelBufferWidthKey,
                           [NSNumber numberWithDouble:1.0*height], (id)kCVPixelBufferHeightKey,
@@ -422,9 +422,9 @@ void CvCaptureCAM::setWidthHeight() {
                           nil];
 
     [mCaptureDecompressedVideoOutput setPixelBufferAttributes:pixelBufferOptions];
-	
+
     [mCaptureSession startRunning];
-	
+
     grabFrame(60);
     [localpool drain];
 }
@@ -1044,4 +1044,3 @@ bool CvVideoWriter_QT::writeFrame(const IplImage* image) {
 
     return 1;
 }
-

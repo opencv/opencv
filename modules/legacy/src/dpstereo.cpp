@@ -551,4 +551,3 @@ cvFindStereoCorrespondence(
 }
 
 /* End of file. */
-

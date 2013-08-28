@@ -404,4 +404,3 @@ void cv::boxPoints(cv::RotatedRect box, OutputArray _pts)
     Mat pts = _pts.getMat();
     box.points((Point2f*)pts.data);
 }
-

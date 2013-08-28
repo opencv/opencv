@@ -366,4 +366,3 @@ Finds circles in a grayscale image using the Hough transform.
 
 .. note:: Currently only non-ROI oclMat is supported for src.
 .. seealso:: :ocv:func:`HoughCircles`
-

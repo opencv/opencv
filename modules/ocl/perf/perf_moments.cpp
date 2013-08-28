@@ -43,50 +43,47 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
+
+using namespace perf;
+using std::tr1::tuple;
+using std::tr1::get;
+
 ///////////// Moments ////////////////////////
-PERFTEST(Moments)
+
+typedef Size_MatType MomentsFixture;
+
+PERF_TEST_P(MomentsFixture, DISABLED_Moments,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)))  // TODO does not work properly (see below)
 {
-    Mat src;
-    bool binaryImage = 0;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
 
-    int all_type[] = {CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1};
-    std::string type_name[] = {"CV_8UC1", "CV_16SC1", "CV_32FC1", "CV_64FC1"};
+    Mat src(srcSize, type), dst(7, 1, CV_64F);
+    const bool binaryImage = false;
+    cv::Moments mom;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j];
+        ocl::oclMat oclSrc(src);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
+        cv::HuMoments(mom, dst);
 
-            cv::Moments CvMom = moments(src, binaryImage);
-
-            CPU_ON;
-            moments(src, binaryImage);
-            CPU_OFF;
-
-            cv::Moments oclMom;
-            WARMUP_ON;
-            oclMom = ocl::ocl_moments(src, binaryImage);
-            WARMUP_OFF;
-
-            Mat gpu_dst, cpu_dst;
-            HuMoments(CvMom, cpu_dst);
-            HuMoments(oclMom, gpu_dst);
-
-            GPU_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            ocl::ocl_moments(src, binaryImage);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(gpu_dst, cpu_dst, .5);
-
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() mom = cv::moments(src, binaryImage);
+        cv::HuMoments(mom, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }

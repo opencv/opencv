@@ -178,4 +178,3 @@ TYPED_TEST(SplitTest, C4)
 {
     SplitTest<TypeParam>::test_c4();
 }
-

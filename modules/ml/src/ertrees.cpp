@@ -1857,4 +1857,3 @@ bool CvERTrees::train( const Mat& _train_data, int _tflag,
 }
 
 // End of file.
-

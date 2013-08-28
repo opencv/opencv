@@ -132,5 +132,3 @@ Point2f CvMeanShiftTracker::getTrackingCenter()
 {
     return prev_center;
 }
-
-

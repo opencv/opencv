@@ -83,4 +83,4 @@ Draws keypoints.
 
     :param flags: Flags setting drawing features. Possible  ``flags``  bit values are defined by  ``DrawMatchesFlags``. See details above in  :ocv:func:`drawMatches` .
 
-.. note:: For Python API, flags are modified as `cv2.DRAW_MATCHES_FLAGS_DEFAULT`, `cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS`, `cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG`, `cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS` 
+.. note:: For Python API, flags are modified as `cv2.DRAW_MATCHES_FLAGS_DEFAULT`, `cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS`, `cv2.DRAW_MATCHES_FLAGS_DRAW_OVER_OUTIMG`, `cv2.DRAW_MATCHES_FLAGS_NOT_DRAW_SINGLE_POINTS`

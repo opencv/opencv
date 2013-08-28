@@ -10,7 +10,7 @@
 //*********************************************************
 -->
 
-<common:LayoutAwarePage 
+<common:LayoutAwarePage
     x:Class="SDKSample.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -80,7 +80,7 @@
                             <TextBlock Grid.Row="0" Text="Input" Style="{StaticResource H2Style}"/>
 
                             <TextBlock x:Name="ScenarioListLabel" Text="Select Scenario:" Grid.Row="1"  Style="{StaticResource SubheaderTextStyle}" Margin="0,5,0,0" />
-                            <ListBox x:Name="Scenarios" Margin="0,0,20,0" Grid.Row="2" AutomationProperties.Name="Scenarios" HorizontalAlignment="Left" 
+                            <ListBox x:Name="Scenarios" Margin="0,0,20,0" Grid.Row="2" AutomationProperties.Name="Scenarios" HorizontalAlignment="Left"
                                          VerticalAlignment="Top" ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                          AutomationProperties.LabeledBy="{Binding ElementName=ScenarioListLabel}" MaxHeight="125">
                                 <ListBox.ItemTemplate>

@@ -204,7 +204,7 @@ pyrDown_( const Mat& _src, Mat& _dst, int borderType )
     CastOp castOp;
     VecOp vecOp;
 
-    CV_Assert( ssize.width > 0 && ssize.height > 0 && 
+    CV_Assert( ssize.width > 0 && ssize.height > 0 &&
                std::abs(dsize.width*2 - ssize.width) <= 2 &&
                std::abs(dsize.height*2 - ssize.height) <= 2 );
     int k, x, sy0 = -PD_SZ/2, sy = sy0, width0 = std::min((ssize.width-PD_SZ/2-1)/2 + 1, dsize.width);

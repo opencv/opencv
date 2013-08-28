@@ -834,5 +834,3 @@ Mat getMotion(int from, int to, const std::vector<Mat> &motions)
 
 } // namespace videostab
 } // namespace cv
-
-

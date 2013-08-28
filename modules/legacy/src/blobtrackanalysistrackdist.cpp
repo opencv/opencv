@@ -578,4 +578,3 @@ public:
 
 CvBlobTrackAnalysis* cvCreateModuleBlobTrackAnalysisTrackDist()
 {return (CvBlobTrackAnalysis*) new CvBlobTrackAnalysisTrackDist;}
-

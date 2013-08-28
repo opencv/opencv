@@ -678,4 +678,3 @@ TEST(ML_KNearest, accuracy) { CV_KNearestTest test; test.safe_run(); }
 TEST(ML_EM, accuracy) { CV_EMTest test; test.safe_run(); }
 TEST(ML_EM, save_load) { CV_EMTest_SaveLoad test; test.safe_run(); }
 TEST(ML_EM, classification) { CV_EMTest_Classification test; test.safe_run(); }
-

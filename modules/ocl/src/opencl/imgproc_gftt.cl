@@ -49,12 +49,12 @@
 
 __constant sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
-inline float ELEM_INT2(image2d_t _eig, int _x, int _y) 
+inline float ELEM_INT2(image2d_t _eig, int _x, int _y)
 {
     return read_imagef(_eig, sampler, (int2)(_x, _y)).x;
 }
 
-inline float ELEM_FLT2(image2d_t _eig, float2 pt) 
+inline float ELEM_FLT2(image2d_t _eig, float2 pt)
 {
     return read_imagef(_eig, sampler, pt).x;
 }
@@ -132,7 +132,7 @@ __kernel
     const int pairDistance = 1 << (stage - passOfStage);
     const int blockWidth   = 2 * pairDistance;
 
-    const int leftId = min( (threadId % pairDistance) 
+    const int leftId = min( (threadId % pairDistance)
                    + (threadId / pairDistance) * blockWidth, count );
 
     const int rightId = min( leftId + pairDistance, count );
@@ -147,7 +147,7 @@ __kernel
 
     float2 greater = compareResult ? leftPt:rightPt;
     float2 lesser  = compareResult ? rightPt:leftPt;
-    
+
     corners[leftId]  = sortOrder ? lesser : greater;
     corners[rightId] = sortOrder ? greater : lesser;
 }
@@ -195,20 +195,20 @@ __kernel
     {
         pt2  = scratch[j];
         val2 = ELEM_FLT2(eig, pt2);
-        if(val2 > val1) 
+        if(val2 > val1)
             pos++;//calculate the rank of this element in this work group
-        else 
+        else
         {
             if(val1 > val2)
                 continue;
-            else 
+            else
             {
                 // val1 and val2 are same
                 same++;
             }
         }
     }
-    for (int j=0; j< same; j++)      
+    for (int j=0; j< same; j++)
         corners[pos + j] = pt1;
 }
 __kernel
@@ -240,15 +240,15 @@ __kernel
         for(int k=0; k<wg; k++)
         {
             pt2  = corners[j*wg + k];
-            val2 = ELEM_FLT2(eig, pt2); 
+            val2 = ELEM_FLT2(eig, pt2);
             if(val1 > val2)
                 break;
             else
             {
-                //Increment only if the value is not the same. 
+                //Increment only if the value is not the same.
                 if( val2 > val1 )
                     pos++;
-                else 
+                else
                     same++;
             }
         }
@@ -257,20 +257,19 @@ __kernel
     for(int k=0; k<remainder; k++)
     {
         pt2  = corners[(numOfGroups-1)*wg + k];
-        val2 = ELEM_FLT2(eig, pt2); 
+        val2 = ELEM_FLT2(eig, pt2);
         if(val1 > val2)
             break;
         else
         {
-            //Don't increment if the value is the same. 
+            //Don't increment if the value is the same.
             //Two elements are same if (*userComp)(jData, iData)  and (*userComp)(iData, jData) are both false
             if(val2 > val1)
                 pos++;
-            else 
+            else
                 same++;
         }
-    }  
-    for (int j=0; j< same; j++)      
+    }
+    for (int j=0; j< same; j++)
         corners[pos + j] = pt1;
 }
-
