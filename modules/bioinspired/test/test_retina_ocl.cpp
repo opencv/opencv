@@ -62,6 +62,7 @@ static double checkNear(const cv::Mat &m1, const cv::Mat &m2)
 #define PARAM_TEST_CASE(name, ...) struct name : testing::TestWithParam< std::tr1::tuple< __VA_ARGS__ > >
 #define GET_PARAM(k) std::tr1::get< k >(GetParam())
 
+static int oclInit = false;
 
 PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
 {
@@ -81,8 +82,12 @@ PARAM_TEST_CASE(Retina_OCL, bool, int, bool, double, double)
         reductionFactor     = GET_PARAM(3);
         samplingStrength    = GET_PARAM(4);
 
-        cv::ocl::getDevice(infos);
-        std::cout << "Device name:" << infos[0].DeviceName[0] << std::endl;
+        if(!oclInit)
+        {
+            cv::ocl::getDevice(infos);
+            std::cout << "Device name:" << infos[0].DeviceName[0] << std::endl;
+            oclInit = true;
+        }
     }
 };
 
