@@ -73,10 +73,10 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerHarris,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::CornernessCriteria> harris = cv::gpu::createHarrisCorner(img.type(), blockSize, apertureSize, k, borderMode);
+        cv::Ptr<cv::cuda::CornernessCriteria> harris = cv::cuda::createHarrisCorner(img.type(), blockSize, apertureSize, k, borderMode);
 
         TEST_CYCLE() harris->compute(d_img, dst);
 
@@ -115,10 +115,10 @@ PERF_TEST_P(Image_Type_Border_BlockSz_ApertureSz, CornerMinEigenVal,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::CornernessCriteria> minEigenVal = cv::gpu::createMinEigenValCorner(img.type(), blockSize, apertureSize, borderMode);
+        cv::Ptr<cv::cuda::CornernessCriteria> minEigenVal = cv::cuda::createMinEigenValCorner(img.type(), blockSize, apertureSize, borderMode);
 
         TEST_CYCLE() minEigenVal->compute(d_img, dst);
 

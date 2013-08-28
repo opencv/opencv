@@ -44,9 +44,9 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
-cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
+cv::cuda::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(rows_), cols(cols_),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
@@ -71,7 +71,7 @@ cv::gpu::GpuMat::GpuMat(int rows_, int cols_, int type_, void* data_, size_t ste
     dataend += step * (rows - 1) + minstep;
 }
 
-cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
+cv::cuda::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     flags(Mat::MAGIC_VAL + (type_ & Mat::TYPE_MASK)), rows(size_.height), cols(size_.width),
     step(step_), data((uchar*)data_), refcount(0),
     datastart((uchar*)data_), dataend((uchar*)data_)
@@ -95,7 +95,7 @@ cv::gpu::GpuMat::GpuMat(Size size_, int type_, void* data_, size_t step_) :
     dataend += step * (rows - 1) + minstep;
 }
 
-cv::gpu::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
+cv::cuda::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
 {
     flags = m.flags;
     step = m.step; refcount = m.refcount;
@@ -136,7 +136,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m, Range rowRange_, Range colRange_)
         rows = cols = 0;
 }
 
-cv::gpu::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
+cv::cuda::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
     flags(m.flags), rows(roi.height), cols(roi.width),
     step(m.step), data(m.data + roi.y*step), refcount(m.refcount),
     datastart(m.datastart), dataend(m.dataend)
@@ -153,7 +153,7 @@ cv::gpu::GpuMat::GpuMat(const GpuMat& m, Rect roi) :
         rows = cols = 0;
 }
 
-GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
+GpuMat cv::cuda::GpuMat::reshape(int new_cn, int new_rows) const
 {
     GpuMat hdr = *this;
 
@@ -196,7 +196,7 @@ GpuMat cv::gpu::GpuMat::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-void cv::gpu::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
+void cv::cuda::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
 {
     CV_DbgAssert( step > 0 );
 
@@ -222,7 +222,7 @@ void cv::gpu::GpuMat::locateROI(Size& wholeSize, Point& ofs) const
     wholeSize.width = std::max(static_cast<int>((delta2 - step * (wholeSize.height - 1)) / esz), ofs.x + cols);
 }
 
-GpuMat& cv::gpu::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
+GpuMat& cv::cuda::GpuMat::adjustROI(int dtop, int dbottom, int dleft, int dright)
 {
     Size wholeSize;
     Point ofs;
@@ -262,7 +262,7 @@ namespace
     }
 }
 
-void cv::gpu::createContinuous(int rows, int cols, int type, OutputArray arr)
+void cv::cuda::createContinuous(int rows, int cols, int type, OutputArray arr)
 {
     switch (arr.kind())
     {
@@ -316,7 +316,7 @@ namespace
     }
 }
 
-void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
+void cv::cuda::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
 {
     switch (arr.kind())
     {
@@ -337,7 +337,7 @@ void cv::gpu::ensureSizeIsEnough(int rows, int cols, int type, OutputArray arr)
     }
 }
 
-GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
+GpuMat cv::cuda::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
 {
     if (!mat.empty() && mat.type() == type && mat.rows >= rows && mat.cols >= cols)
         return mat(Rect(0, 0, cols, rows));
@@ -347,7 +347,7 @@ GpuMat cv::gpu::allocMatFromBuf(int rows, int cols, int type, GpuMat& mat)
 
 #ifndef HAVE_CUDA
 
-void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
+void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {
     (void) _rows;
     (void) _cols;
@@ -355,50 +355,50 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
     throw_no_cuda();
 }
 
-void cv::gpu::GpuMat::release()
+void cv::cuda::GpuMat::release()
 {
 }
 
-void cv::gpu::GpuMat::upload(InputArray arr)
-{
-    (void) arr;
-    throw_no_cuda();
-}
-
-void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
+void cv::cuda::GpuMat::upload(InputArray arr)
 {
     (void) arr;
+    throw_no_cuda();
+}
+
+void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
+{
+    (void) arr;
     (void) _stream;
     throw_no_cuda();
 }
 
-void cv::gpu::GpuMat::download(OutputArray _dst) const
+void cv::cuda::GpuMat::download(OutputArray _dst) const
 {
     (void) _dst;
     throw_no_cuda();
 }
 
-void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
-{
-    (void) _dst;
-    (void) _stream;
-    throw_no_cuda();
-}
-
-void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
-{
-    (void) _dst;
-    throw_no_cuda();
-}
-
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
+void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 {
     (void) _dst;
     (void) _stream;
     throw_no_cuda();
 }
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _stream) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst) const
+{
+    (void) _dst;
+    throw_no_cuda();
+}
+
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
+{
+    (void) _dst;
+    (void) _stream;
+    throw_no_cuda();
+}
+
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _stream) const
 {
     (void) _dst;
     (void) _mask;
@@ -406,7 +406,7 @@ void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& _stream
     throw_no_cuda();
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar s, Stream& _stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar s, Stream& _stream)
 {
     (void) s;
     (void) _stream;
@@ -414,7 +414,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar s, Stream& _stream)
     return *this;
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
 {
     (void) s;
     (void) _mask;
@@ -423,7 +423,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar s, InputArray _mask, Stream& _stream)
     return *this;
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) const
 {
     (void) _dst;
     (void) rtype;
@@ -431,7 +431,7 @@ void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& _stream) co
     throw_no_cuda();
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& _stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& _stream) const
 {
     (void) _dst;
     (void) rtype;

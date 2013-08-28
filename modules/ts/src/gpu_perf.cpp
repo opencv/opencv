@@ -278,13 +278,13 @@ namespace perf
         printf("[----------]\n"), fflush(stdout);
 
         printf("[----------]\n"), fflush(stdout);
-        int deviceCount = cv::gpu::getCudaEnabledDeviceCount();
+        int deviceCount = cv::cuda::getCudaEnabledDeviceCount();
         printf("[ GPU INFO ] \tCUDA device count:: %d.\n", deviceCount), fflush(stdout);
         printf("[----------]\n"), fflush(stdout);
 
         for (int i = 0; i < deviceCount; ++i)
         {
-            cv::gpu::DeviceInfo info(i);
+            cv::cuda::DeviceInfo info(i);
 
             printf("[----------]\n"), fflush(stdout);
             printf("[ DEVICE   ] \t# %d %s.\n", i, info.name()), fflush(stdout);

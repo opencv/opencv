@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/imgproc.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 /////////////////////////// Color Processing ///////////////////////////
 
@@ -106,7 +106,7 @@ CV_EXPORTS void equalizeHist(InputArray src, OutputArray dst, InputOutputArray b
 static inline void equalizeHist(InputArray src, OutputArray dst, Stream& stream = Stream::Null())
 {
     GpuMat buf;
-    gpu::equalizeHist(src, dst, buf, stream);
+    cuda::equalizeHist(src, dst, buf, stream);
 }
 
 class CV_EXPORTS CLAHE : public cv::CLAHE
@@ -115,7 +115,7 @@ public:
     using cv::CLAHE::apply;
     virtual void apply(InputArray src, OutputArray dst, Stream& stream) = 0;
 };
-CV_EXPORTS Ptr<gpu::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
+CV_EXPORTS Ptr<cuda::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
 //! Compute levels with even distribution. levels will have 1 row and nLevels cols and CV_32SC1 type.
 CV_EXPORTS void evenLevels(OutputArray levels, int nLevels, int lowerLevel, int upperLevel);
@@ -128,7 +128,7 @@ CV_EXPORTS void histEven(InputArray src, OutputArray hist, InputOutputArray buf,
 static inline void histEven(InputArray src, OutputArray hist, int histSize, int lowerLevel, int upperLevel, Stream& stream = Stream::Null())
 {
     GpuMat buf;
-    gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
+    cuda::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
 }
 
 //! Calculates histogram with evenly distributed bins for four-channel source.
@@ -140,7 +140,7 @@ CV_EXPORTS void histEven(InputArray src, GpuMat hist[4], InputOutputArray buf, i
 static inline void histEven(InputArray src, GpuMat hist[4], int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream = Stream::Null())
 {
     GpuMat buf;
-    gpu::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
+    cuda::histEven(src, hist, buf, histSize, lowerLevel, upperLevel, stream);
 }
 
 //! Calculates histogram with bins determined by levels array.
@@ -152,7 +152,7 @@ CV_EXPORTS void histRange(InputArray src, OutputArray hist, InputArray levels, I
 static inline void histRange(InputArray src, OutputArray hist, InputArray levels, Stream& stream = Stream::Null())
 {
     GpuMat buf;
-    gpu::histRange(src, hist, levels, buf, stream);
+    cuda::histRange(src, hist, levels, buf, stream);
 }
 
 //! Calculates histogram with bins determined by levels array.
@@ -165,7 +165,7 @@ CV_EXPORTS void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4]
 static inline void histRange(InputArray src, GpuMat hist[4], const GpuMat levels[4], Stream& stream = Stream::Null())
 {
     GpuMat buf;
-    gpu::histRange(src, hist, levels, buf, stream);
+    cuda::histRange(src, hist, levels, buf, stream);
 }
 
 //////////////////////////////// Canny ////////////////////////////////
@@ -357,6 +357,6 @@ CV_EXPORTS void bilateralFilter(InputArray src, OutputArray dst, int kernel_size
 CV_EXPORTS void blendLinear(InputArray img1, InputArray img2, InputArray weights1, InputArray weights2,
                             OutputArray result, Stream& stream = Stream::Null());
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUIMGPROC_HPP__ */

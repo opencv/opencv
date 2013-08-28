@@ -50,8 +50,8 @@
 
 #include "arithm_func_traits.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace arithm
 {
@@ -89,7 +89,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VSub4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {

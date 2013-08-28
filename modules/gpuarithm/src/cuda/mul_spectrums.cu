@@ -50,7 +50,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     //////////////////////////////////////////////////////////////////////////
     // mulSpectrums
@@ -164,7 +164,7 @@ namespace cv { namespace gpu { namespace cudev
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // HAVE_CUFFT
 

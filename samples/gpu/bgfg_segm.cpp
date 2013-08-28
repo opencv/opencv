@@ -14,7 +14,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 enum Method
 {
@@ -75,10 +75,10 @@ int main(int argc, const char** argv)
 
     GpuMat d_frame(frame);
 
-    Ptr<BackgroundSubtractor> mog = gpu::createBackgroundSubtractorMOG();
-    Ptr<BackgroundSubtractor> mog2 = gpu::createBackgroundSubtractorMOG2();
-    Ptr<BackgroundSubtractor> gmg = gpu::createBackgroundSubtractorGMG(40);
-    Ptr<BackgroundSubtractor> fgd = gpu::createBackgroundSubtractorFGD();
+    Ptr<BackgroundSubtractor> mog = cuda::createBackgroundSubtractorMOG();
+    Ptr<BackgroundSubtractor> mog2 = cuda::createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractor> gmg = cuda::createBackgroundSubtractorGMG(40);
+    Ptr<BackgroundSubtractor> fgd = cuda::createBackgroundSubtractorFGD();
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;

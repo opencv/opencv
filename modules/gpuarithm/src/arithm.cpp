@@ -43,18 +43,18 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::gemm(InputArray, InputArray, double, InputArray, double, OutputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::gemm(InputArray, InputArray, double, InputArray, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::mulSpectrums(InputArray, InputArray, OutputArray, int, bool, Stream&) { throw_no_cuda(); }
-void cv::gpu::mulAndScaleSpectrums(InputArray, InputArray, OutputArray, int, float, bool, Stream&) { throw_no_cuda(); }
+void cv::cuda::mulSpectrums(InputArray, InputArray, OutputArray, int, bool, Stream&) { throw_no_cuda(); }
+void cv::cuda::mulAndScaleSpectrums(InputArray, InputArray, OutputArray, int, float, bool, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::dft(InputArray, OutputArray, Size, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::dft(InputArray, OutputArray, Size, int, Stream&) { throw_no_cuda(); }
 
-Ptr<Convolution> cv::gpu::createConvolution(Size) { throw_no_cuda(); return Ptr<Convolution>(); }
+Ptr<Convolution> cv::cuda::createConvolution(Size) { throw_no_cuda(); return Ptr<Convolution>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -162,7 +162,7 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // gemm
 
-void cv::gpu::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray _src3, double beta, OutputArray _dst, int flags, Stream& stream)
+void cv::cuda::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray _src3, double beta, OutputArray _dst, int flags, Stream& stream)
 {
 #ifndef HAVE_CUBLAS
     (void) _src1;
@@ -221,7 +221,7 @@ void cv::gpu::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray 
         {
             if (tr3)
             {
-                gpu::transpose(src3, dst, stream);
+                cuda::transpose(src3, dst, stream);
             }
             else
             {
@@ -297,7 +297,7 @@ void cv::gpu::gemm(InputArray _src1, InputArray _src2, double alpha, InputArray 
 
 #ifdef HAVE_CUFFT
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     void mulSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
@@ -306,7 +306,7 @@ namespace cv { namespace gpu { namespace cudev
 
 #endif
 
-void cv::gpu::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
+void cv::cuda::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, bool conjB, Stream& stream)
 {
 #ifndef HAVE_CUFFT
     (void) _src1;
@@ -341,7 +341,7 @@ void cv::gpu::mulSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst,
 
 #ifdef HAVE_CUFFT
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     void mulAndScaleSpectrums(const PtrStep<cufftComplex> a, const PtrStep<cufftComplex> b, float scale, PtrStepSz<cufftComplex> c, cudaStream_t stream);
 
@@ -350,7 +350,7 @@ namespace cv { namespace gpu { namespace cudev
 
 #endif
 
-void cv::gpu::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
+void cv::cuda::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArray _dst, int flags, float scale, bool conjB, Stream& stream)
 {
 #ifndef HAVE_CUFFT
     (void) _src1;
@@ -384,7 +384,7 @@ void cv::gpu::mulAndScaleSpectrums(InputArray _src1, InputArray _src2, OutputArr
 //////////////////////////////////////////////////////////////////////////////
 // dft
 
-void cv::gpu::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, Stream& stream)
+void cv::cuda::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, Stream& stream)
 {
 #ifndef HAVE_CUFFT
     (void) _src;
@@ -478,7 +478,7 @@ void cv::gpu::dft(InputArray _src, OutputArray _dst, Size dft_size, int flags, S
     cufftSafeCall( cufftDestroy(plan) );
 
     if (is_scaled_dft)
-        gpu::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
+        cuda::multiply(_dst, Scalar::all(1. / dft_size.area()), _dst, 1, -1, stream);
 
 #endif
 }
@@ -580,7 +580,7 @@ namespace
         cufftSafeCall( cufftSetStream(planC2R, stream) );
 
         GpuMat templ_roi(templ.size(), CV_32FC1, templ.data, templ.step);
-        gpu::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
+        cuda::copyMakeBorder(templ_roi, templ_block, 0, templ_block.rows - templ_roi.rows, 0,
                             templ_block.cols - templ_roi.cols, 0, Scalar(), _stream);
 
         cufftSafeCall( cufftExecR2C(planR2C, templ_block.ptr<cufftReal>(), templ_spect.ptr<cufftComplex>()) );
@@ -594,12 +594,12 @@ namespace
                                     std::min(y + dft_size.height, image.rows) - y);
                 GpuMat image_roi(image_roi_size, CV_32F, (void*)(image.ptr<float>(y) + x),
                                  image.step);
-                gpu::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
+                cuda::copyMakeBorder(image_roi, image_block, 0, image_block.rows - image_roi.rows,
                                     0, image_block.cols - image_roi.cols, 0, Scalar(), _stream);
 
                 cufftSafeCall(cufftExecR2C(planR2C, image_block.ptr<cufftReal>(),
                                            image_spect.ptr<cufftComplex>()));
-                gpu::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
+                cuda::mulAndScaleSpectrums(image_spect, templ_spect, result_spect, 0,
                                           1.f / dft_size.area(), ccorr, _stream);
                 cufftSafeCall(cufftExecC2R(planC2R, result_spect.ptr<cufftComplex>(),
                                            result_data.ptr<cufftReal>()));
@@ -622,7 +622,7 @@ namespace
 
 #endif
 
-Ptr<Convolution> cv::gpu::createConvolution(Size user_block_size)
+Ptr<Convolution> cv::cuda::createConvolution(Size user_block_size)
 {
 #ifndef HAVE_CUFFT
     (void) user_block_size;

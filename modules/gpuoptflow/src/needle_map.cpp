@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::createOpticalFlowNeedleMap(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace optical_flow
     {
@@ -60,9 +60,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
+void cv::cuda::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors)
 {
-    using namespace cv::gpu::cudev::optical_flow;
+    using namespace cv::cuda::cudev::optical_flow;
 
     CV_Assert(u.type() == CV_32FC1);
     CV_Assert(v.type() == u.type() && v.size() == u.size());
@@ -87,14 +87,14 @@ void cv::gpu::createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMa
     colors.setTo(Scalar::all(1.0));
 
     double uMax, vMax;
-    gpu::minMax(u_avg, 0, &uMax);
-    gpu::minMax(v_avg, 0, &vMax);
+    cuda::minMax(u_avg, 0, &uMax);
+    cuda::minMax(v_avg, 0, &vMax);
 
     float max_flow = static_cast<float>(std::sqrt(uMax * uMax + vMax * vMax));
 
     CreateOpticalFlowNeedleMap_gpu(u_avg, v_avg, vertex.ptr<float>(), colors.ptr<float>(), max_flow, 1.0f / u.cols, 1.0f / u.rows);
 
-    gpu::cvtColor(colors, colors, COLOR_HSV2RGB);
+    cuda::cvtColor(colors, colors, COLOR_HSV2RGB);
 }
 
 #endif /* HAVE_CUDA */

@@ -50,10 +50,10 @@
 
 #include "arithm_func_traits.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {

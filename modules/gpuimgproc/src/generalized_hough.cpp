@@ -43,17 +43,17 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUARITHM)
 
-Ptr<GeneralizedHoughBallard> cv::gpu::createGeneralizedHoughBallard() { throw_no_cuda(); return Ptr<GeneralizedHoughBallard>(); }
+Ptr<GeneralizedHoughBallard> cv::cuda::createGeneralizedHoughBallard() { throw_no_cuda(); return Ptr<GeneralizedHoughBallard>(); }
 
-Ptr<GeneralizedHoughGuil> cv::gpu::createGeneralizedHoughGuil() { throw_no_cuda(); return Ptr<GeneralizedHoughGuil>(); }
+Ptr<GeneralizedHoughGuil> cv::cuda::createGeneralizedHoughGuil() { throw_no_cuda(); return Ptr<GeneralizedHoughGuil>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace ght
     {
@@ -148,9 +148,9 @@ namespace
         void convertTo(OutputArray positions, OutputArray votes);
 
 #ifdef HAVE_OPENCV_GPUFILTERS
-        Ptr<gpu::CannyEdgeDetector> canny_;
-        Ptr<gpu::Filter> filterDx_;
-        Ptr<gpu::Filter> filterDy_;
+        Ptr<cuda::CannyEdgeDetector> canny_;
+        Ptr<cuda::Filter> filterDx_;
+        Ptr<cuda::Filter> filterDy_;
 #endif
 
         std::vector<float4> oldPosBuf_;
@@ -170,9 +170,9 @@ namespace
         maxBufferSize_ = 10000;
 
 #ifdef HAVE_OPENCV_GPUFILTERS
-        canny_ = gpu::createCannyEdgeDetector(cannyLowThresh_, cannyHighThresh_);
-        filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-        filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+        canny_ = cuda::createCannyEdgeDetector(cannyLowThresh_, cannyHighThresh_);
+        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
 #endif
     }
 
@@ -298,7 +298,7 @@ namespace
 
     void GeneralizedHoughBase::buildEdgePointList(const GpuMat& edges, const GpuMat& dx, const GpuMat& dy)
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         typedef int (*func_t)(PtrStepSzb edges, PtrStepSzb dx, PtrStepSzb dy, unsigned int* coordList, float* thetaList);
         static const func_t funcs[] =
@@ -493,7 +493,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::processTempl()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         CV_Assert( levels_ > 0 );
 
@@ -507,7 +507,7 @@ namespace
         {
             buildRTable_gpu(edgePointList_.ptr<unsigned int>(0), edgePointList_.ptr<float>(1), edgePointList_.cols,
                             r_table_, r_sizes_.ptr<int>(), make_short2(templCenter_.x, templCenter_.y), levels_);
-            gpu::min(r_sizes_, maxBufferSize_, r_sizes_);
+            cuda::min(r_sizes_, maxBufferSize_, r_sizes_);
         }
     }
 
@@ -519,7 +519,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::calcHist()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         CV_Assert( levels_ > 0 && r_table_.rows == (levels_ + 1) && r_sizes_.cols == (levels_ + 1) );
         CV_Assert( dp_ > 0.0);
@@ -542,7 +542,7 @@ namespace
 
     void GeneralizedHoughBallardImpl::findPosInHist()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         CV_Assert( votesThreshold_ > 0 );
 
@@ -552,7 +552,7 @@ namespace
     }
 }
 
-Ptr<GeneralizedHoughBallard> cv::gpu::createGeneralizedHoughBallard()
+Ptr<GeneralizedHoughBallard> cv::cuda::createGeneralizedHoughBallard()
 {
     return new GeneralizedHoughBallardImpl;
 }
@@ -728,7 +728,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::processTempl()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         buildFeatureList(templEdges_, templDx_, templDy_, templFeatures_,
             Guil_Full_setTemplFeatures, Guil_Full_buildTemplFeatureList_gpu,
@@ -741,7 +741,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::processImage()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         CV_Assert( levels_ > 0 );
         CV_Assert( templFeatures_.sizes.cols == levels_ + 1 );
@@ -837,7 +837,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcOrientation()
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         const double iAngleStep = 1.0 / angleStep_;
         const int angleRange = cvCeil((maxAngle_ - minAngle_) * iAngleStep);
@@ -861,7 +861,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcScale(double angle)
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         const double iScaleStep = 1.0 / scaleStep_;
         const int scaleRange = cvCeil((maxScale_ - minScale_) * iScaleStep);
@@ -886,7 +886,7 @@ namespace
 
     void GeneralizedHoughGuilImpl::calcPosition(double angle, int angleVotes, double scale, int scaleVotes)
     {
-        using namespace cv::gpu::cudev::ght;
+        using namespace cv::cuda::cudev::ght;
 
         hist_.setTo(Scalar::all(0));
         Guil_Full_calcPHist_gpu(templFeatures_.sizes.ptr<int>(), imageFeatures_.sizes.ptr<int>(0), hist_,
@@ -898,7 +898,7 @@ namespace
     }
 }
 
-Ptr<GeneralizedHoughGuil> cv::gpu::createGeneralizedHoughGuil()
+Ptr<GeneralizedHoughGuil> cv::cuda::createGeneralizedHoughGuil()
 {
     return new GeneralizedHoughGuilImpl;
 }

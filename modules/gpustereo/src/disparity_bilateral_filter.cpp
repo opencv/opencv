@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<gpu::DisparityBilateralFilter> cv::gpu::createDisparityBilateralFilter(int, int, int) { throw_no_cuda(); return Ptr<gpu::DisparityBilateralFilter>(); }
+Ptr<cuda::DisparityBilateralFilter> cv::cuda::createDisparityBilateralFilter(int, int, int) { throw_no_cuda(); return Ptr<cuda::DisparityBilateralFilter>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace disp_bilateral_filter
     {
@@ -64,7 +64,7 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    class DispBilateralFilterImpl : public gpu::DisparityBilateralFilter
+    class DispBilateralFilterImpl : public cuda::DisparityBilateralFilter
     {
     public:
         DispBilateralFilterImpl(int ndisp, int radius, int iters);
@@ -160,7 +160,7 @@ namespace
                                         const GpuMat& disp, const GpuMat& img,
                                         OutputArray _dst, Stream& stream)
     {
-        using namespace cv::gpu::cudev::disp_bilateral_filter;
+        using namespace cv::cuda::cudev::disp_bilateral_filter;
 
         const short edge_disc = std::max<short>(short(1), short(ndisp * edge_threshold + 0.5));
         const short max_disc = short(ndisp * max_disc_threshold + 0.5);
@@ -198,7 +198,7 @@ namespace
     }
 }
 
-Ptr<gpu::DisparityBilateralFilter> cv::gpu::createDisparityBilateralFilter(int ndisp, int radius, int iters)
+Ptr<cuda::DisparityBilateralFilter> cv::cuda::createDisparityBilateralFilter(int ndisp, int radius, int iters)
 {
     return new DispBilateralFilterImpl(ndisp, radius, iters);
 }

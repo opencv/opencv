@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 namespace
 {
@@ -57,7 +57,7 @@ namespace
     }
 }
 
-void cv::gpu::CudaMem::create(int rows_, int cols_, int type_)
+void cv::cuda::CudaMem::create(int rows_, int cols_, int type_)
 {
 #ifndef HAVE_CUDA
     (void) rows_;
@@ -121,7 +121,7 @@ void cv::gpu::CudaMem::create(int rows_, int cols_, int type_)
 #endif
 }
 
-CudaMem cv::gpu::CudaMem::reshape(int new_cn, int new_rows) const
+CudaMem cv::cuda::CudaMem::reshape(int new_cn, int new_rows) const
 {
     CudaMem hdr = *this;
 
@@ -164,7 +164,7 @@ CudaMem cv::gpu::CudaMem::reshape(int new_cn, int new_rows) const
     return hdr;
 }
 
-void cv::gpu::CudaMem::release()
+void cv::cuda::CudaMem::release()
 {
 #ifdef HAVE_CUDA
     if (refcount && CV_XADD(refcount, -1) == 1)
@@ -179,7 +179,7 @@ void cv::gpu::CudaMem::release()
 #endif
 }
 
-GpuMat cv::gpu::CudaMem::createGpuMatHeader() const
+GpuMat cv::cuda::CudaMem::createGpuMatHeader() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -194,7 +194,7 @@ GpuMat cv::gpu::CudaMem::createGpuMatHeader() const
 #endif
 }
 
-void cv::gpu::registerPageLocked(Mat& m)
+void cv::cuda::registerPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
     (void) m;
@@ -205,7 +205,7 @@ void cv::gpu::registerPageLocked(Mat& m)
 #endif
 }
 
-void cv::gpu::unregisterPageLocked(Mat& m)
+void cv::cuda::unregisterPageLocked(Mat& m)
 {
 #ifndef HAVE_CUDA
     (void) m;

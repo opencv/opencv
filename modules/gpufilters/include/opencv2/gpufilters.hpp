@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/imgproc.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 class CV_EXPORTS Filter : public Algorithm
 {
@@ -144,6 +144,6 @@ CV_EXPORTS Ptr<Filter> createRowSumFilter(int srcType, int dstType, int ksize, i
 //! supports only CV_8UC1 sum type and CV_32FC1 dst type
 CV_EXPORTS Ptr<Filter> createColumnSumFilter(int srcType, int dstType, int ksize, int anchor = -1, int borderMode = BORDER_DEFAULT, Scalar borderVal = Scalar::all(0));
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUFILTERS_HPP__ */

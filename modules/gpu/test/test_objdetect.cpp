@@ -48,9 +48,9 @@ using namespace cvtest;
 
 //#define DUMP
 
-struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
+struct HOG : testing::TestWithParam<cv::cuda::DeviceInfo>, cv::cuda::HOGDescriptor
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
 #ifdef DUMP
     std::ofstream f;
@@ -68,7 +68,7 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 
 #ifdef DUMP
@@ -127,7 +127,7 @@ struct HOG : testing::TestWithParam<cv::gpu::DeviceInfo>, cv::gpu::HOGDescriptor
     void testDetect(const cv::Mat& img)
     {
         gamma_correction = false;
-        setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+        setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
 
         std::vector<cv::Point> locations;
 
@@ -212,10 +212,10 @@ GPU_TEST_P(HOG, GetDescriptors)
     cv::Mat img;
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
 
-    cv::gpu::GpuMat d_img(img);
+    cv::cuda::GpuMat d_img(img);
 
     // Convert train images into feature vectors (train table)
-    cv::gpu::GpuMat descriptors, descriptors_by_cols;
+    cv::cuda::GpuMat descriptors, descriptors_by_cols;
     getDescriptors(d_img, win_size, descriptors, DESCR_FORMAT_ROW_BY_ROW);
     getDescriptors(d_img, win_size, descriptors_by_cols, DESCR_FORMAT_COL_BY_COL);
 
@@ -251,38 +251,38 @@ GPU_TEST_P(HOG, GetDescriptors)
     img_rgb = readImage("hog/positive1.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     // Everything is fine with interpolation for left top subimage
     ASSERT_EQ(0.0, cv::norm((cv::Mat)block_hists, (cv::Mat)descriptors.rowRange(0, 1)));
 
     img_rgb = readImage("hog/positive2.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(1, 2)));
 
     img_rgb = readImage("hog/negative1.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(2, 3)));
 
     img_rgb = readImage("hog/negative2.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(3, 4)));
 
     img_rgb = readImage("hog/positive3.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(4, 5)));
 
     img_rgb = readImage("hog/negative3.png");
     ASSERT_TRUE(!img_rgb.empty());
     cv::cvtColor(img_rgb, img, cv::COLOR_BGR2BGRA);
-    computeBlockHistograms(cv::gpu::GpuMat(img));
+    computeBlockHistograms(cv::cuda::GpuMat(img));
     compare_inner_parts(cv::Mat(block_hists), cv::Mat(descriptors.rowRange(5, 6)));
 }
 
@@ -290,15 +290,15 @@ INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, ALL_DEVICES);
 
 //============== caltech hog tests =====================//
 
-struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string> >
+struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string> >
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Mat img;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         img = readImage(GET_PARAM(1), cv::IMREAD_GRAYSCALE);
         ASSERT_FALSE(img.empty());
@@ -307,11 +307,11 @@ struct CalTech : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::Device
 
 GPU_TEST_P(CalTech, HOG)
 {
-    cv::gpu::GpuMat d_img(img);
+    cv::cuda::GpuMat d_img(img);
     cv::Mat markedImage(img.clone());
 
-    cv::gpu::HOGDescriptor d_hog;
-    d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+    cv::cuda::HOGDescriptor d_hog;
+    d_hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
     d_hog.nlevels = d_hog.nlevels + 32;
 
     std::vector<cv::Rect> found_locations;
@@ -341,20 +341,20 @@ INSTANTIATE_TEST_CASE_P(detect, CalTech, testing::Combine(ALL_DEVICES,
 //////////////////////////////////////////////////////////////////////////////////////////
 /// LBP classifier
 
-PARAM_TEST_CASE(LBP_Read_classifier, cv::gpu::DeviceInfo, int)
+PARAM_TEST_CASE(LBP_Read_classifier, cv::cuda::DeviceInfo, int)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
 GPU_TEST_P(LBP_Read_classifier, Accuracy)
 {
-    cv::gpu::CascadeClassifier_GPU classifier;
+    cv::cuda::CascadeClassifier_GPU classifier;
     std::string classifierXmlPath = std::string(cvtest::TS::ptr()->get_data_path()) + "lbpcascade/lbpcascade_frontalface.xml";
     ASSERT_TRUE(classifier.load(classifierXmlPath));
 }
@@ -363,14 +363,14 @@ INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, LBP_Read_classifier,
                         testing::Combine(ALL_DEVICES, testing::Values<int>(0)));
 
 
-PARAM_TEST_CASE(LBP_classify, cv::gpu::DeviceInfo, int)
+PARAM_TEST_CASE(LBP_classify, cv::cuda::DeviceInfo, int)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -396,11 +396,11 @@ GPU_TEST_P(LBP_classify, Accuracy)
     for (; it != rects.end(); ++it)
         cv::rectangle(markedImage, *it, cv::Scalar(255, 0, 0));
 
-    cv::gpu::CascadeClassifier_GPU gpuClassifier;
+    cv::cuda::CascadeClassifier_GPU gpuClassifier;
     ASSERT_TRUE(gpuClassifier.load(classifierXmlPath));
 
-    cv::gpu::GpuMat gpu_rects;
-    cv::gpu::GpuMat tested(grey);
+    cv::cuda::GpuMat gpu_rects;
+    cv::cuda::GpuMat tested(grey);
     int count = gpuClassifier.detectMultiScale(tested, gpu_rects);
 
 #if defined (LOG_CASCADE_STATISTIC)

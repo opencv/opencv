@@ -51,8 +51,8 @@
 #include "opencv2/core/cuda/limits.hpp"
 #include "opencv2/core/cuda/utility.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace minMax
 {

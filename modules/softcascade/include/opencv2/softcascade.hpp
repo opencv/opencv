@@ -233,7 +233,7 @@ public:
     // Param frame is an input 3-channel bgr image.
     // Param channels is a GPU matrix of optionally shrinked channels
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution.
-    virtual void apply(InputArray frame, OutputArray channels, cv::gpu::Stream& stream = cv::gpu::Stream::Null()) = 0;
+    virtual void apply(InputArray frame, OutputArray channels, cv::cuda::Stream& stream = cv::cuda::Stream::Null()) = 0;
 
     // Creates a specific preprocessor implementation.
     // Param shrinkage is a resizing factor. Resize is applied before the computing integral sum
@@ -280,7 +280,7 @@ public:
     // Param objects is an output array of Detections represented as GpuMat of detections (SCascade::Detection)
     //    The first element of the matrix is  actually a count of detections.
     // Param stream is stream is a high-level CUDA stream abstraction used for asynchronous execution
-    virtual void detect(InputArray image, InputArray rois, OutputArray objects, cv::gpu::Stream& stream = cv::gpu::Stream::Null()) const;
+    virtual void detect(InputArray image, InputArray rois, OutputArray objects, cv::cuda::Stream& stream = cv::cuda::Stream::Null()) const;
 
 private:
 

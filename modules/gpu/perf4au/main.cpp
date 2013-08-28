@@ -80,10 +80,10 @@ PERF_TEST_P(Image, HoughLinesP, testing::Values(std::string("im1_1280x800.jpg"))
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat d_lines;
+        cv::cuda::GpuMat d_image(image);
+        cv::cuda::GpuMat d_lines;
 
-        cv::Ptr<cv::gpu::HoughSegmentDetector> hough = cv::gpu::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
 
         hough->detect(d_image, d_lines);
 
@@ -144,11 +144,11 @@ PERF_TEST_P(Image_Depth, GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::CornersDetector> detector = cv::gpu::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
+        cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, k);
 
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_mask(mask);
-        cv::gpu::GpuMat d_pts;
+        cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_mask(mask);
+        cv::cuda::GpuMat d_pts;
 
         detector->detect(d_src, d_pts, d_mask);
 
@@ -233,13 +233,13 @@ PERF_TEST_P(ImagePair_Depth_GraySource, OpticalFlowPyrLKSparse,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_pts(pts.reshape(2, 1));
-        cv::gpu::GpuMat d_nextPts;
-        cv::gpu::GpuMat d_status;
+        cv::cuda::GpuMat d_src1(src1);
+        cv::cuda::GpuMat d_src2(src2);
+        cv::cuda::GpuMat d_pts(pts.reshape(2, 1));
+        cv::cuda::GpuMat d_nextPts;
+        cv::cuda::GpuMat d_status;
 
-        cv::gpu::PyrLKOpticalFlow d_pyrLK;
+        cv::cuda::PyrLKOpticalFlow d_pyrLK;
         d_pyrLK.winSize = winSize;
         d_pyrLK.maxLevel = maxLevel;
         d_pyrLK.iters = criteria.maxCount;
@@ -311,12 +311,12 @@ PERF_TEST_P(ImagePair_Depth, OpticalFlowFarneback,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_u(src1.size(), CV_32FC1, cv::Scalar::all(0));
-        cv::gpu::GpuMat d_v(src1.size(), CV_32FC1, cv::Scalar::all(0));
+        cv::cuda::GpuMat d_src1(src1);
+        cv::cuda::GpuMat d_src2(src2);
+        cv::cuda::GpuMat d_u(src1.size(), CV_32FC1, cv::Scalar::all(0));
+        cv::cuda::GpuMat d_v(src1.size(), CV_32FC1, cv::Scalar::all(0));
 
-        cv::gpu::FarnebackOpticalFlow d_farneback;
+        cv::cuda::FarnebackOpticalFlow d_farneback;
         d_farneback.pyrScale = pyrScale;
         d_farneback.numLevels = numLevels;
         d_farneback.winSize = winSize;
@@ -398,15 +398,15 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, OpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_velx, d_vely, buf;
+        cv::cuda::GpuMat d_src1(src1);
+        cv::cuda::GpuMat d_src2(src2);
+        cv::cuda::GpuMat d_velx, d_vely, buf;
 
-        cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+        cv::cuda::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
 
         TEST_CYCLE_N(10)
         {
-            cv::gpu::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
+            cv::cuda::calcOpticalFlowBM(d_src1, d_src2, block_size, shift_size, max_range, false, d_velx, d_vely, buf);
         }
     }
     else
@@ -449,11 +449,11 @@ PERF_TEST_P(ImagePair_BlockSize_ShiftSize_MaxRange, FastOpticalFlowBM,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_src1(src1);
-        cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_velx, d_vely;
+        cv::cuda::GpuMat d_src1(src1);
+        cv::cuda::GpuMat d_src2(src2);
+        cv::cuda::GpuMat d_velx, d_vely;
 
-        cv::gpu::FastOpticalFlowBM fastBM;
+        cv::cuda::FastOpticalFlowBM fastBM;
 
         fastBM(d_src1, d_src2, d_velx, d_vely, max_range.width, block_size.width);
 

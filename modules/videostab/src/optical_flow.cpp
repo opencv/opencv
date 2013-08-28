@@ -62,7 +62,7 @@ void SparsePyrLkOptFlowEstimator::run(
 
 SparsePyrLkOptFlowEstimatorGpu::SparsePyrLkOptFlowEstimatorGpu()
 {
-    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+    CV_Assert(cuda::getCudaEnabledDeviceCount() > 0);
 }
 
 
@@ -88,8 +88,8 @@ void SparsePyrLkOptFlowEstimatorGpu::run(
 
 
 void SparsePyrLkOptFlowEstimatorGpu::run(
-        const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0,
-        gpu::GpuMat &points1, gpu::GpuMat &status, gpu::GpuMat &errors)
+        const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, const cuda::GpuMat &points0,
+        cuda::GpuMat &points1, cuda::GpuMat &status, cuda::GpuMat &errors)
 {
     optFlowEstimator_.winSize = winSize_;
     optFlowEstimator_.maxLevel = maxLevel_;
@@ -98,8 +98,8 @@ void SparsePyrLkOptFlowEstimatorGpu::run(
 
 
 void SparsePyrLkOptFlowEstimatorGpu::run(
-        const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, const gpu::GpuMat &points0,
-        gpu::GpuMat &points1, gpu::GpuMat &status)
+        const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, const cuda::GpuMat &points0,
+        cuda::GpuMat &points1, cuda::GpuMat &status)
 {
     optFlowEstimator_.winSize = winSize_;
     optFlowEstimator_.maxLevel = maxLevel_;
@@ -109,7 +109,7 @@ void SparsePyrLkOptFlowEstimatorGpu::run(
 
 DensePyrLkOptFlowEstimatorGpu::DensePyrLkOptFlowEstimatorGpu()
 {
-    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+    CV_Assert(cuda::getCudaEnabledDeviceCount() > 0);
 }
 
 

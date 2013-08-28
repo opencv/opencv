@@ -43,23 +43,23 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::calcHist(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::calcHist(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::equalizeHist(InputArray, OutputArray, InputOutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::equalizeHist(InputArray, OutputArray, InputOutputArray, Stream&) { throw_no_cuda(); }
 
-cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::gpu::CLAHE>(); }
+cv::Ptr<cv::cuda::CLAHE> cv::cuda::createCLAHE(double, cv::Size) { throw_no_cuda(); return cv::Ptr<cv::cuda::CLAHE>(); }
 
-void cv::gpu::evenLevels(OutputArray, int, int, int) { throw_no_cuda(); }
+void cv::cuda::evenLevels(OutputArray, int, int, int) { throw_no_cuda(); }
 
-void cv::gpu::histEven(InputArray, OutputArray, InputOutputArray, int, int, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::histEven(InputArray, GpuMat*, InputOutputArray, int*, int*, int*, Stream&) { throw_no_cuda(); }
+void cv::cuda::histEven(InputArray, OutputArray, InputOutputArray, int, int, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::histEven(InputArray, GpuMat*, InputOutputArray, int*, int*, int*, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::histRange(InputArray, OutputArray, InputArray, InputOutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::histRange(InputArray, GpuMat*, const GpuMat*, InputOutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::histRange(InputArray, OutputArray, InputArray, InputOutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::histRange(InputArray, GpuMat*, const GpuMat*, InputOutputArray, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -71,7 +71,7 @@ namespace hist
     void histogram256(PtrStepSzb src, int* hist, cudaStream_t stream);
 }
 
-void cv::gpu::calcHist(InputArray _src, OutputArray _hist, Stream& stream)
+void cv::cuda::calcHist(InputArray _src, OutputArray _hist, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -93,7 +93,7 @@ namespace hist
     void equalizeHist(PtrStepSzb src, PtrStepSzb dst, const int* lut, cudaStream_t stream);
 }
 
-void cv::gpu::equalizeHist(InputArray _src, OutputArray _dst, InputOutputArray _buf, Stream& _stream)
+void cv::cuda::equalizeHist(InputArray _src, OutputArray _dst, InputOutputArray _buf, Stream& _stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -114,7 +114,7 @@ void cv::gpu::equalizeHist(InputArray _src, OutputArray _dst, InputOutputArray _
     GpuMat lut(1, 256, CV_32SC1, buf.data + 256 * sizeof(int));
     GpuMat intBuf(1, intBufSize, CV_8UC1, buf.data + 2 * 256 * sizeof(int));
 
-    gpu::calcHist(src, hist, _stream);
+    cuda::calcHist(src, hist, _stream);
 
     cudaStream_t stream = StreamAccessor::getStream(_stream);
     NppStreamHandler h(stream);
@@ -135,7 +135,7 @@ namespace clahe
 
 namespace
 {
-    class CLAHE_Impl : public cv::gpu::CLAHE
+    class CLAHE_Impl : public cv::cuda::CLAHE
     {
     public:
         CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
@@ -205,7 +205,7 @@ namespace
 #ifndef HAVE_OPENCV_GPUARITHM
             throw_no_cuda();
 #else
-            cv::gpu::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);
+            cv::cuda::copyMakeBorder(src, srcExt_, 0, tilesY_ - (src.rows % tilesY_), 0, tilesX_ - (src.cols % tilesX_), cv::BORDER_REFLECT_101, cv::Scalar(), s);
 #endif
 
             tileSize = cv::Size(srcExt_.cols / tilesX_, srcExt_.rows / tilesY_);
@@ -255,7 +255,7 @@ namespace
     }
 }
 
-cv::Ptr<cv::gpu::CLAHE> cv::gpu::createCLAHE(double clipLimit, cv::Size tileGridSize)
+cv::Ptr<cv::cuda::CLAHE> cv::cuda::createCLAHE(double clipLimit, cv::Size tileGridSize)
 {
     return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
 }
@@ -460,7 +460,7 @@ namespace
     };
 }
 
-void cv::gpu::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int upperLevel)
+void cv::cuda::evenLevels(OutputArray _levels, int nLevels, int lowerLevel, int upperLevel)
 {
     const int kind = _levels.kind();
 
@@ -493,7 +493,7 @@ namespace
     }
 }
 
-void cv::gpu::histEven(InputArray _src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream)
+void cv::cuda::histEven(InputArray _src, OutputArray hist, InputOutputArray buf, int histSize, int lowerLevel, int upperLevel, Stream& stream)
 {
     typedef void (*hist_t)(const GpuMat& src, OutputArray hist, InputOutputArray buf, int levels, int lowerLevel, int upperLevel, cudaStream_t stream);
     static const hist_t hist_callers[] =
@@ -517,7 +517,7 @@ void cv::gpu::histEven(InputArray _src, OutputArray hist, InputOutputArray buf, 
     hist_callers[src.depth()](src, hist, buf, histSize, lowerLevel, upperLevel, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::histEven(InputArray _src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream)
+void cv::cuda::histEven(InputArray _src, GpuMat hist[4], InputOutputArray buf, int histSize[4], int lowerLevel[4], int upperLevel[4], Stream& stream)
 {
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], InputOutputArray buf, int levels[4], int lowerLevel[4], int upperLevel[4], cudaStream_t stream);
     static const hist_t hist_callers[] =
@@ -535,7 +535,7 @@ void cv::gpu::histEven(InputArray _src, GpuMat hist[4], InputOutputArray buf, in
     hist_callers[src.depth()](src, hist, buf, histSize, lowerLevel, upperLevel, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::histRange(InputArray _src, OutputArray hist, InputArray _levels, InputOutputArray buf, Stream& stream)
+void cv::cuda::histRange(InputArray _src, OutputArray hist, InputArray _levels, InputOutputArray buf, Stream& stream)
 {
     typedef void (*hist_t)(const GpuMat& src, OutputArray hist, const GpuMat& levels, InputOutputArray buf, cudaStream_t stream);
     static const hist_t hist_callers[] =
@@ -556,7 +556,7 @@ void cv::gpu::histRange(InputArray _src, OutputArray hist, InputArray _levels, I
     hist_callers[src.depth()](src, hist, levels, buf, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::histRange(InputArray _src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream)
+void cv::cuda::histRange(InputArray _src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, Stream& stream)
 {
     typedef void (*hist_t)(const GpuMat& src, GpuMat hist[4], const GpuMat levels[4], InputOutputArray buf, cudaStream_t stream);
     static const hist_t hist_callers[] =

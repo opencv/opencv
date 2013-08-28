@@ -43,31 +43,31 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<Filter> cv::gpu::createBoxFilter(int, int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createBoxFilter(int, int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createLinearFilter(int, int, InputArray, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createLinearFilter(int, int, InputArray, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createLaplacianFilter(int, int, int, double, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createLaplacianFilter(int, int, int, double, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createSeparableLinearFilter(int, int, InputArray, InputArray, Point, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createSeparableLinearFilter(int, int, InputArray, InputArray, Point, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createDerivFilter(int, int, int, int, int, bool, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
-Ptr<Filter> cv::gpu::createSobelFilter(int, int, int, int, int, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
-Ptr<Filter> cv::gpu::createScharrFilter(int, int, int, int, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createDerivFilter(int, int, int, int, int, bool, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createSobelFilter(int, int, int, int, int, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createScharrFilter(int, int, int, int, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createGaussianFilter(int, int, Size, double, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createGaussianFilter(int, int, Size, double, double, int, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createMorphologyFilter(int, int, InputArray, Point, int) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createMorphologyFilter(int, int, InputArray, Point, int) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createBoxMaxFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
-Ptr<Filter> cv::gpu::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createBoxMaxFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createBoxMinFilter(int, Size, Point, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
-Ptr<Filter> cv::gpu::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
-Ptr<Filter> cv::gpu::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createRowSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
+Ptr<Filter> cv::cuda::createColumnSumFilter(int, int, int, int, int, Scalar) { throw_no_cuda(); return Ptr<Filter>(); }
 
 #else
 
@@ -131,7 +131,7 @@ namespace
         GpuMat src = _src.getGpuMat();
         CV_Assert( src.type() == type_ );
 
-        gpu::copyMakeBorder(src, srcBorder_, ksize_.height, ksize_.height, ksize_.width, ksize_.width, borderMode_, borderVal_, _stream);
+        cuda::copyMakeBorder(src, srcBorder_, ksize_.height, ksize_.height, ksize_.width, ksize_.width, borderMode_, borderVal_, _stream);
 
         _dst.create(src.size(), src.type());
         GpuMat dst = _dst.getGpuMat();
@@ -162,7 +162,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxFilter(int srcType, int dstType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
     if (dstType < 0)
         dstType = srcType;
@@ -175,7 +175,7 @@ Ptr<Filter> cv::gpu::createBoxFilter(int srcType, int dstType, Size ksize, Point
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Linear Filter
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename T, typename D>
     void filter2D(PtrStepSzb srcWhole, int ofsX, int ofsY, PtrStepSzb dst, const float* kernel,
@@ -222,7 +222,7 @@ namespace
         Mat kernel32F;
         kernel.convertTo(kernel32F, CV_32F);
 
-        kernel_ = gpu::createContinuous(kernel.size(), CV_32FC1);
+        kernel_ = cuda::createContinuous(kernel.size(), CV_32FC1);
         kernel_.upload(kernel32F);
 
         normalizeAnchor(anchor_, kernel.size());
@@ -230,22 +230,22 @@ namespace
         switch (srcType)
         {
         case CV_8UC1:
-            func_ = cv::gpu::cudev::filter2D<uchar, uchar>;
+            func_ = cv::cuda::cudev::filter2D<uchar, uchar>;
             break;
         case CV_8UC4:
-            func_ = cv::gpu::cudev::filter2D<uchar4, uchar4>;
+            func_ = cv::cuda::cudev::filter2D<uchar4, uchar4>;
             break;
         case CV_16UC1:
-            func_ = cv::gpu::cudev::filter2D<ushort, ushort>;
+            func_ = cv::cuda::cudev::filter2D<ushort, ushort>;
             break;
         case CV_16UC4:
-            func_ = cv::gpu::cudev::filter2D<ushort4, ushort4>;
+            func_ = cv::cuda::cudev::filter2D<ushort4, ushort4>;
             break;
         case CV_32FC1:
-            func_ = cv::gpu::cudev::filter2D<float, float>;
+            func_ = cv::cuda::cudev::filter2D<float, float>;
             break;
         case CV_32FC4:
-            func_ = cv::gpu::cudev::filter2D<float4, float4>;
+            func_ = cv::cuda::cudev::filter2D<float4, float4>;
             break;
         }
     }
@@ -270,7 +270,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createLinearFilter(int srcType, int dstType, InputArray kernel, Point anchor, int borderMode, Scalar borderVal)
 {
     if (dstType < 0)
         dstType = srcType;
@@ -283,7 +283,7 @@ Ptr<Filter> cv::gpu::createLinearFilter(int srcType, int dstType, InputArray ker
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Laplacian Filter
 
-Ptr<Filter> cv::gpu::createLaplacianFilter(int srcType, int dstType, int ksize, double scale, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createLaplacianFilter(int srcType, int dstType, int ksize, double scale, int borderMode, Scalar borderVal)
 {
     CV_Assert( ksize == 1 || ksize == 3 );
 
@@ -297,7 +297,7 @@ Ptr<Filter> cv::gpu::createLaplacianFilter(int srcType, int dstType, int ksize, 
     if (scale != 1)
         kernel *= scale;
 
-    return gpu::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
+    return cuda::createLinearFilter(srcType, dstType, kernel, Point(-1,-1), borderMode, borderVal);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -418,7 +418,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createSeparableLinearFilter(int srcType, int dstType, InputArray rowKernel, InputArray columnKernel, Point anchor, int rowBorderMode, int columnBorderMode)
 {
     if (dstType < 0)
         dstType = srcType;
@@ -434,7 +434,7 @@ Ptr<Filter> cv::gpu::createSeparableLinearFilter(int srcType, int dstType, Input
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Deriv Filter
 
-Ptr<Filter> cv::gpu::createDerivFilter(int srcType, int dstType, int dx, int dy, int ksize, bool normalize, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createDerivFilter(int srcType, int dstType, int dx, int dy, int ksize, bool normalize, double scale, int rowBorderMode, int columnBorderMode)
 {
     Mat kx, ky;
     getDerivKernels(kx, ky, dx, dy, ksize, normalize, CV_32F);
@@ -449,23 +449,23 @@ Ptr<Filter> cv::gpu::createDerivFilter(int srcType, int dstType, int dx, int dy,
             ky *= scale;
     }
 
-    return gpu::createSeparableLinearFilter(srcType, dstType, kx, ky, Point(-1, -1), rowBorderMode, columnBorderMode);
+    return cuda::createSeparableLinearFilter(srcType, dstType, kx, ky, Point(-1, -1), rowBorderMode, columnBorderMode);
 }
 
-Ptr<Filter> cv::gpu::createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createSobelFilter(int srcType, int dstType, int dx, int dy, int ksize, double scale, int rowBorderMode, int columnBorderMode)
 {
-    return gpu::createDerivFilter(srcType, dstType, dx, dy, ksize, false, scale, rowBorderMode, columnBorderMode);
+    return cuda::createDerivFilter(srcType, dstType, dx, dy, ksize, false, scale, rowBorderMode, columnBorderMode);
 }
 
-Ptr<Filter> cv::gpu::createScharrFilter(int srcType, int dstType, int dx, int dy, double scale, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createScharrFilter(int srcType, int dstType, int dx, int dy, double scale, int rowBorderMode, int columnBorderMode)
 {
-    return gpu::createDerivFilter(srcType, dstType, dx, dy, -1, false, scale, rowBorderMode, columnBorderMode);
+    return cuda::createDerivFilter(srcType, dstType, dx, dy, -1, false, scale, rowBorderMode, columnBorderMode);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gaussian Filter
 
-Ptr<Filter> cv::gpu::createGaussianFilter(int srcType, int dstType, Size ksize, double sigma1, double sigma2, int rowBorderMode, int columnBorderMode)
+Ptr<Filter> cv::cuda::createGaussianFilter(int srcType, int dstType, Size ksize, double sigma1, double sigma2, int rowBorderMode, int columnBorderMode)
 {
     const int depth = CV_MAT_DEPTH(srcType);
 
@@ -557,7 +557,7 @@ namespace
         Mat kernel8U;
         kernel.convertTo(kernel8U, CV_8U);
 
-        kernel_ = gpu::createContinuous(kernel.size(), CV_8UC1);
+        kernel_ = cuda::createContinuous(kernel.size(), CV_8UC1);
         kernel_.upload(kernel8U);
 
         func_ = funcs[op][CV_MAT_CN(srcType)];
@@ -569,7 +569,7 @@ namespace
         CV_Assert( src.type() == type_ );
 
         Size ksize = kernel_.size();
-        gpu::copyMakeBorder(src, srcBorder_, ksize.height, ksize.height, ksize.width, ksize.width, BORDER_DEFAULT, Scalar(), _stream);
+        cuda::copyMakeBorder(src, srcBorder_, ksize.height, ksize.height, ksize.width, ksize.width, BORDER_DEFAULT, Scalar(), _stream);
 
         GpuMat srcRoi = srcBorder_(Rect(ksize.width, ksize.height, src.cols, src.rows));
 
@@ -623,14 +623,14 @@ namespace
         MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations);
 
     protected:
-        Ptr<gpu::Filter> erodeFilter_, dilateFilter_;
+        Ptr<cuda::Filter> erodeFilter_, dilateFilter_;
         GpuMat buf_;
     };
 
     MorphologyExFilter::MorphologyExFilter(int srcType, InputArray kernel, Point anchor, int iterations)
     {
-        erodeFilter_ = gpu::createMorphologyFilter(MORPH_ERODE, srcType, kernel, anchor, iterations);
-        dilateFilter_ = gpu::createMorphologyFilter(MORPH_DILATE, srcType, kernel, anchor, iterations);
+        erodeFilter_ = cuda::createMorphologyFilter(MORPH_ERODE, srcType, kernel, anchor, iterations);
+        dilateFilter_ = cuda::createMorphologyFilter(MORPH_DILATE, srcType, kernel, anchor, iterations);
     }
 
     // MORPH_OPEN
@@ -694,7 +694,7 @@ namespace
     {
         erodeFilter_->apply(src, buf_, stream);
         dilateFilter_->apply(src, dst, stream);
-        gpu::subtract(dst, buf_, dst, noArray(), -1, stream);
+        cuda::subtract(dst, buf_, dst, noArray(), -1, stream);
     }
 
     // MORPH_TOPHAT
@@ -716,7 +716,7 @@ namespace
     {
         erodeFilter_->apply(src, dst, stream);
         dilateFilter_->apply(dst, buf_, stream);
-        gpu::subtract(src, buf_, dst, noArray(), -1, stream);
+        cuda::subtract(src, buf_, dst, noArray(), -1, stream);
     }
 
     // MORPH_BLACKHAT
@@ -738,11 +738,11 @@ namespace
     {
         dilateFilter_->apply(src, dst, stream);
         erodeFilter_->apply(dst, buf_, stream);
-        gpu::subtract(buf_, src, dst, noArray(), -1, stream);
+        cuda::subtract(buf_, src, dst, noArray(), -1, stream);
     }
 }
 
-Ptr<Filter> cv::gpu::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations)
+Ptr<Filter> cv::cuda::createMorphologyFilter(int op, int srcType, InputArray kernel, Point anchor, int iterations)
 {
     switch( op )
     {
@@ -830,7 +830,7 @@ namespace
         GpuMat src = _src.getGpuMat();
         CV_Assert( src.type() == type_ );
 
-        gpu::copyMakeBorder(src, srcBorder_, ksize_.height, ksize_.height, ksize_.width, ksize_.width, borderMode_, borderVal_, _stream);
+        cuda::copyMakeBorder(src, srcBorder_, ksize_.height, ksize_.height, ksize_.width, ksize_.width, borderMode_, borderVal_, _stream);
 
         _dst.create(src.size(), src.type());
         GpuMat dst = _dst.getGpuMat();
@@ -860,12 +860,12 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createBoxMaxFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxMaxFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
     return new NPPRankFilter(RANK_MAX, srcType, ksize, anchor, borderMode, borderVal);
 }
 
-Ptr<Filter> cv::gpu::createBoxMinFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createBoxMinFilter(int srcType, Size ksize, Point anchor, int borderMode, Scalar borderVal)
 {
     return new NPPRankFilter(RANK_MIN, srcType, ksize, anchor, borderMode, borderVal);
 }
@@ -906,7 +906,7 @@ namespace
         GpuMat src = _src.getGpuMat();
         CV_Assert( src.type() == srcType_ );
 
-        gpu::copyMakeBorder(src, srcBorder_, 0, 0, ksize_, ksize_, borderMode_, borderVal_, _stream);
+        cuda::copyMakeBorder(src, srcBorder_, 0, 0, ksize_, ksize_, borderMode_, borderVal_, _stream);
 
         _dst.create(src.size(), dstType_);
         GpuMat dst = _dst.getGpuMat();
@@ -929,7 +929,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createRowSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return new NppRowSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }
@@ -967,7 +967,7 @@ namespace
         GpuMat src = _src.getGpuMat();
         CV_Assert( src.type() == srcType_ );
 
-        gpu::copyMakeBorder(src, srcBorder_, ksize_, ksize_, 0, 0, borderMode_, borderVal_, _stream);
+        cuda::copyMakeBorder(src, srcBorder_, ksize_, ksize_, 0, 0, borderMode_, borderVal_, _stream);
 
         _dst.create(src.size(), dstType_);
         GpuMat dst = _dst.getGpuMat();
@@ -990,7 +990,7 @@ namespace
     }
 }
 
-Ptr<Filter> cv::gpu::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
+Ptr<Filter> cv::cuda::createColumnSumFilter(int srcType, int dstType, int ksize, int anchor, int borderMode, Scalar borderVal)
 {
     return new NppColumnSumFilter(srcType, dstType, ksize, anchor, borderMode, borderVal);
 }

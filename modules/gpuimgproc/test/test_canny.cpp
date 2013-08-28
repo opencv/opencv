@@ -55,9 +55,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(L2gradient, bool)
 }
 
-PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, AppertureSize, L2gradient, UseRoi)
+PARAM_TEST_CASE(Canny, cv::cuda::DeviceInfo, AppertureSize, L2gradient, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int apperture_size;
     bool useL2gradient;
     bool useRoi;
@@ -69,7 +69,7 @@ PARAM_TEST_CASE(Canny, cv::gpu::DeviceInfo, AppertureSize, L2gradient, UseRoi)
         useL2gradient = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -81,9 +81,9 @@ GPU_TEST_P(Canny, Accuracy)
     double low_thresh = 50.0;
     double high_thresh = 100.0;
 
-    cv::Ptr<cv::gpu::CannyEdgeDetector> canny = cv::gpu::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
+    cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
 
-    cv::gpu::GpuMat edges;
+    cv::cuda::GpuMat edges;
     canny->detect(loadMat(img, useRoi), edges);
 
     cv::Mat edges_gold;

@@ -85,10 +85,10 @@ PERF_TEST_P(Sz_Depth_Code, CvtColor,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::cvtColor(d_src, dst, info.code, info.dcn);
+        TEST_CYCLE() cv::cuda::cvtColor(d_src, dst, info.code, info.dcn);
 
         GPU_SANITY_CHECK(dst, 1e-4);
     }
@@ -124,10 +124,10 @@ PERF_TEST_P(Sz_Depth_Code, CvtColorBayer,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::cvtColor(d_src, dst, info.code, info.dcn);
+        TEST_CYCLE() cv::cuda::cvtColor(d_src, dst, info.code, info.dcn);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -147,8 +147,8 @@ PERF_TEST_P(Sz_Depth_Code, CvtColorBayer,
 CV_ENUM(DemosaicingCode,
         cv::COLOR_BayerBG2BGR, cv::COLOR_BayerGB2BGR, cv::COLOR_BayerRG2BGR, cv::COLOR_BayerGR2BGR,
         cv::COLOR_BayerBG2GRAY, cv::COLOR_BayerGB2GRAY, cv::COLOR_BayerRG2GRAY, cv::COLOR_BayerGR2GRAY,
-        cv::gpu::COLOR_BayerBG2BGR_MHT, cv::gpu::COLOR_BayerGB2BGR_MHT, cv::gpu::COLOR_BayerRG2BGR_MHT, cv::gpu::COLOR_BayerGR2BGR_MHT,
-        cv::gpu::COLOR_BayerBG2GRAY_MHT, cv::gpu::COLOR_BayerGB2GRAY_MHT, cv::gpu::COLOR_BayerRG2GRAY_MHT, cv::gpu::COLOR_BayerGR2GRAY_MHT)
+        cv::cuda::COLOR_BayerBG2BGR_MHT, cv::cuda::COLOR_BayerGB2BGR_MHT, cv::cuda::COLOR_BayerRG2BGR_MHT, cv::cuda::COLOR_BayerGR2BGR_MHT,
+        cv::cuda::COLOR_BayerBG2GRAY_MHT, cv::cuda::COLOR_BayerGB2GRAY_MHT, cv::cuda::COLOR_BayerRG2GRAY_MHT, cv::cuda::COLOR_BayerGR2GRAY_MHT)
 
 DEF_PARAM_TEST(Sz_Code, cv::Size, DemosaicingCode);
 
@@ -164,10 +164,10 @@ PERF_TEST_P(Sz_Code, Demosaicing,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::demosaicing(d_src, dst, code);
+        TEST_CYCLE() cv::cuda::demosaicing(d_src, dst, code);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -203,9 +203,9 @@ PERF_TEST_P(Sz, SwapChannels,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat dst(src);
+        cv::cuda::GpuMat dst(src);
 
-        TEST_CYCLE() cv::gpu::swapChannels(dst, dstOrder);
+        TEST_CYCLE() cv::cuda::swapChannels(dst, dstOrder);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -218,7 +218,7 @@ PERF_TEST_P(Sz, SwapChannels,
 //////////////////////////////////////////////////////////////////////
 // AlphaComp
 
-CV_ENUM(AlphaOp, cv::gpu::ALPHA_OVER, cv::gpu::ALPHA_IN, cv::gpu::ALPHA_OUT, cv::gpu::ALPHA_ATOP, cv::gpu::ALPHA_XOR, cv::gpu::ALPHA_PLUS, cv::gpu::ALPHA_OVER_PREMUL, cv::gpu::ALPHA_IN_PREMUL, cv::gpu::ALPHA_OUT_PREMUL, cv::gpu::ALPHA_ATOP_PREMUL, cv::gpu::ALPHA_XOR_PREMUL, cv::gpu::ALPHA_PLUS_PREMUL, cv::gpu::ALPHA_PREMUL)
+CV_ENUM(AlphaOp, cv::cuda::ALPHA_OVER, cv::cuda::ALPHA_IN, cv::cuda::ALPHA_OUT, cv::cuda::ALPHA_ATOP, cv::cuda::ALPHA_XOR, cv::cuda::ALPHA_PLUS, cv::cuda::ALPHA_OVER_PREMUL, cv::cuda::ALPHA_IN_PREMUL, cv::cuda::ALPHA_OUT_PREMUL, cv::cuda::ALPHA_ATOP_PREMUL, cv::cuda::ALPHA_XOR_PREMUL, cv::cuda::ALPHA_PLUS_PREMUL, cv::cuda::ALPHA_PREMUL)
 
 DEF_PARAM_TEST(Sz_Type_Op, cv::Size, MatType, AlphaOp);
 
@@ -237,11 +237,11 @@ PERF_TEST_P(Sz_Type_Op, AlphaComp,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_img1(img1);
-        const cv::gpu::GpuMat d_img2(img2);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_img1(img1);
+        const cv::cuda::GpuMat d_img2(img2);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::alphaComp(d_img1, d_img2, dst, alpha_op);
+        TEST_CYCLE() cv::cuda::alphaComp(d_img1, d_img2, dst, alpha_op);
 
         GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }

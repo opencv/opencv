@@ -57,7 +57,7 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
 
 #ifdef HAVE_OPENCV_GPU
-    if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+    if (try_use_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
 #ifdef HAVE_OPENCV_NONFREE
         stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());

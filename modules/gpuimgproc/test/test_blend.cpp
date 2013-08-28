@@ -76,9 +76,9 @@ namespace
     }
 }
 
-PARAM_TEST_CASE(Blend, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(Blend, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -90,7 +90,7 @@ PARAM_TEST_CASE(Blend, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -103,8 +103,8 @@ GPU_TEST_P(Blend, Accuracy)
     cv::Mat weights1 = randomMat(size, CV_32F, 0, 1);
     cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
 
-    cv::gpu::GpuMat result;
-    cv::gpu::blendLinear(loadMat(img1, useRoi), loadMat(img2, useRoi), loadMat(weights1, useRoi), loadMat(weights2, useRoi), result);
+    cv::cuda::GpuMat result;
+    cv::cuda::blendLinear(loadMat(img1, useRoi), loadMat(img2, useRoi), loadMat(weights1, useRoi), loadMat(weights2, useRoi), result);
 
     cv::Mat result_gold;
     if (depth == CV_8U)

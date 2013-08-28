@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/gpufilters.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 class CV_EXPORTS BFMatcher_GPU
 {
@@ -351,11 +351,11 @@ private:
 
     FAST_GPU fastDetector_;
 
-    Ptr<gpu::Filter> blurFilter;
+    Ptr<cuda::Filter> blurFilter;
 
     GpuMat d_keypoints_;
 };
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUFEATURES2D_HPP__ */

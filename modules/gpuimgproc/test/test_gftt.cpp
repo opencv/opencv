@@ -54,9 +54,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(MinDistance, double)
 }
 
-PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
+PARAM_TEST_CASE(GoodFeaturesToTrack, cv::cuda::DeviceInfo, MinDistance)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     double minDistance;
 
     virtual void SetUp()
@@ -64,7 +64,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, cv::gpu::DeviceInfo, MinDistance)
         devInfo = GET_PARAM(0);
         minDistance = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -76,9 +76,9 @@ GPU_TEST_P(GoodFeaturesToTrack, Accuracy)
     int maxCorners = 1000;
     double qualityLevel = 0.01;
 
-    cv::Ptr<cv::gpu::CornersDetector> detector = cv::gpu::createGoodFeaturesToTrackDetector(image.type(), maxCorners, qualityLevel, minDistance);
+    cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(image.type(), maxCorners, qualityLevel, minDistance);
 
-    cv::gpu::GpuMat d_pts;
+    cv::cuda::GpuMat d_pts;
     detector->detect(loadMat(image), d_pts);
 
     ASSERT_FALSE(d_pts.empty());
@@ -114,10 +114,10 @@ GPU_TEST_P(GoodFeaturesToTrack, EmptyCorners)
     int maxCorners = 1000;
     double qualityLevel = 0.01;
 
-    cv::gpu::GpuMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
-    cv::gpu::GpuMat corners(1, maxCorners, CV_32FC2);
+    cv::cuda::GpuMat src(100, 100, CV_8UC1, cv::Scalar::all(0));
+    cv::cuda::GpuMat corners(1, maxCorners, CV_32FC2);
 
-    cv::Ptr<cv::gpu::CornersDetector> detector = cv::gpu::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance);
+    cv::Ptr<cv::cuda::CornersDetector> detector = cv::cuda::createGoodFeaturesToTrackDetector(src.type(), maxCorners, qualityLevel, minDistance);
 
     detector->detect(src, corners);
 

@@ -44,23 +44,23 @@
 #include "opencv2/objdetect/objdetect_c.h"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no_cuda(); }
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_no_cuda(); }
-cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_no_cuda(); }
-bool cv::gpu::CascadeClassifier_GPU::empty() const                    { throw_no_cuda(); return true; }
-bool cv::gpu::CascadeClassifier_GPU::load(const String&)              { throw_no_cuda(); return true; }
-Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const        { throw_no_cuda(); return Size();}
-void cv::gpu::CascadeClassifier_GPU::release()                        { throw_no_cuda(); }
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
+cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU()               { throw_no_cuda(); }
+cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU(const String&)  { throw_no_cuda(); }
+cv::cuda::CascadeClassifier_GPU::~CascadeClassifier_GPU()              { throw_no_cuda(); }
+bool cv::cuda::CascadeClassifier_GPU::empty() const                    { throw_no_cuda(); return true; }
+bool cv::cuda::CascadeClassifier_GPU::load(const String&)              { throw_no_cuda(); return true; }
+Size cv::cuda::CascadeClassifier_GPU::getClassifierSize() const        { throw_no_cuda(); return Size();}
+void cv::cuda::CascadeClassifier_GPU::release()                        { throw_no_cuda(); }
+int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, double, int, Size)       {throw_no_cuda(); return -1;}
+int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat&, GpuMat&, Size, Size, double, int) {throw_no_cuda(); return -1;}
 
 #else
 
-struct cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
 {
 public:
     CascadeClassifierImpl(){}
@@ -75,7 +75,7 @@ public:
 
 #ifndef HAVE_OPENCV_GPULEGACY
 
-struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_GPU::HaarCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
 {
 public:
     HaarCascade()
@@ -104,7 +104,7 @@ public:
 
 #else
 
-struct cv::gpu::CascadeClassifier_GPU::HaarCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_GPU::HaarCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
 {
 public:
     HaarCascade() : lastAllocatedFrameSize(-1, -1)
@@ -203,7 +203,7 @@ private:
 
     NCVStatus load(const String& classifierFile)
     {
-        int devId = cv::gpu::getDevice();
+        int devId = cv::cuda::getDevice();
         ncvAssertCUDAReturn(cudaGetDeviceProperties(&devProp, devId), NCV_CUDA_ERROR);
 
         // Load the classifier from file (assuming its size is about 1 mb) using a simple allocator
@@ -372,7 +372,7 @@ struct PyrLavel
     cv::Size sWindow;
 };
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace lbp
     {
@@ -398,7 +398,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-struct cv::gpu::CascadeClassifier_GPU::LbpCascade : cv::gpu::CascadeClassifier_GPU::CascadeClassifierImpl
+struct cv::cuda::CascadeClassifier_GPU::LbpCascade : cv::cuda::CascadeClassifier_GPU::CascadeClassifierImpl
 {
 public:
     struct Stage
@@ -457,8 +457,8 @@ public:
                 GpuMat buff = integralBuffer;
 
                 // generate integral for scale
-                gpu::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
-                gpu::integral(src, sint, buff);
+                cuda::resize(image, src, level.sFrame, 0, 0, cv::INTER_LINEAR);
+                cuda::integral(src, sint, buff);
 
                 // calculate job
                 int totalWidth = level.workArea.width / step;
@@ -515,7 +515,7 @@ private:
             roiSize.height = frame.height;
 
             cudaDeviceProp prop;
-            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::gpu::getDevice()) );
+            cudaSafeCall( cudaGetDeviceProperties(&prop, cv::cuda::getDevice()) );
 
             Ncv32u bufSize;
             ncvSafeCall( nppiStIntegralGetSize_8u32u(roiSize, &bufSize, prop) );
@@ -694,36 +694,36 @@ private:
     static const int integralFactor = 4;
 };
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU()
+cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU()
 : findLargestObject(false), visualizeInPlace(false), impl(0) {}
 
-cv::gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
+cv::cuda::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
 : findLargestObject(false), visualizeInPlace(false), impl(0) { load(filename); }
 
-cv::gpu::CascadeClassifier_GPU::~CascadeClassifier_GPU() { release(); }
+cv::cuda::CascadeClassifier_GPU::~CascadeClassifier_GPU() { release(); }
 
-void cv::gpu::CascadeClassifier_GPU::release() { if (impl) { delete impl; impl = 0; } }
+void cv::cuda::CascadeClassifier_GPU::release() { if (impl) { delete impl; impl = 0; } }
 
-bool cv::gpu::CascadeClassifier_GPU::empty() const { return impl == 0; }
+bool cv::cuda::CascadeClassifier_GPU::empty() const { return impl == 0; }
 
-Size cv::gpu::CascadeClassifier_GPU::getClassifierSize() const
+Size cv::cuda::CascadeClassifier_GPU::getClassifierSize() const
 {
     return this->empty() ? Size() : impl->getClassifierCvSize();
 }
 
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
+int cv::cuda::CascadeClassifier_GPU::detectMultiScale( const GpuMat& image, GpuMat& objectsBuf, double scaleFactor, int minNeighbors, Size minSize)
 {
     CV_Assert( !this->empty());
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, cv::Size());
 }
 
-int cv::gpu::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
+int cv::cuda::CascadeClassifier_GPU::detectMultiScale(const GpuMat& image, GpuMat& objectsBuf, Size maxObjectSize, Size minSize, double scaleFactor, int minNeighbors)
 {
     CV_Assert( !this->empty());
     return impl->process(image, objectsBuf, (float)scaleFactor, minNeighbors, findLargestObject, visualizeInPlace, minSize, maxObjectSize);
 }
 
-bool cv::gpu::CascadeClassifier_GPU::load(const String& filename)
+bool cv::cuda::CascadeClassifier_GPU::load(const String& filename)
 {
     release();
 

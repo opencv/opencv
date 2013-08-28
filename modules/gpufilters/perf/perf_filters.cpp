@@ -67,10 +67,10 @@ PERF_TEST_P(Sz_Type_KernelSz, Blur,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> blurFilter = cv::gpu::createBoxFilter(d_src.type(), -1, cv::Size(ksize, ksize));
+        cv::Ptr<cv::cuda::Filter> blurFilter = cv::cuda::createBoxFilter(d_src.type(), -1, cv::Size(ksize, ksize));
 
         TEST_CYCLE() blurFilter->apply(d_src, dst);
 
@@ -105,10 +105,10 @@ PERF_TEST_P(Sz_Type_KernelSz, Filter2D, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> filter2D = cv::gpu::createLinearFilter(d_src.type(), -1, kernel);
+        cv::Ptr<cv::cuda::Filter> filter2D = cv::cuda::createLinearFilter(d_src.type(), -1, kernel);
 
         TEST_CYCLE() filter2D->apply(d_src, dst);
 
@@ -140,10 +140,10 @@ PERF_TEST_P(Sz_Type_KernelSz, Laplacian, Combine(GPU_TYPICAL_MAT_SIZES, Values(C
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> laplacian = cv::gpu::createLaplacianFilter(d_src.type(), -1, ksize);
+        cv::Ptr<cv::cuda::Filter> laplacian = cv::cuda::createLaplacianFilter(d_src.type(), -1, ksize);
 
         TEST_CYCLE() laplacian->apply(d_src, dst);
 
@@ -175,10 +175,10 @@ PERF_TEST_P(Sz_Type_KernelSz, Sobel, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8U
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> sobel = cv::gpu::createSobelFilter(d_src.type(), -1, 1, 1, ksize);
+        cv::Ptr<cv::cuda::Filter> sobel = cv::cuda::createSobelFilter(d_src.type(), -1, 1, 1, ksize);
 
         TEST_CYCLE() sobel->apply(d_src, dst);
 
@@ -209,10 +209,10 @@ PERF_TEST_P(Sz_Type, Scharr, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> scharr = cv::gpu::createScharrFilter(d_src.type(), -1, 1, 0);
+        cv::Ptr<cv::cuda::Filter> scharr = cv::cuda::createScharrFilter(d_src.type(), -1, 1, 0);
 
         TEST_CYCLE() scharr->apply(d_src, dst);
 
@@ -244,10 +244,10 @@ PERF_TEST_P(Sz_Type_KernelSz, GaussianBlur, Combine(GPU_TYPICAL_MAT_SIZES, Value
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> gauss = cv::gpu::createGaussianFilter(d_src.type(), -1, cv::Size(ksize, ksize), 0.5);
+        cv::Ptr<cv::cuda::Filter> gauss = cv::cuda::createGaussianFilter(d_src.type(), -1, cv::Size(ksize, ksize), 0.5);
 
         TEST_CYCLE() gauss->apply(d_src, dst);
 
@@ -280,10 +280,10 @@ PERF_TEST_P(Sz_Type, Erode, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8U
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> erode = cv::gpu::createMorphologyFilter(cv::MORPH_ERODE, src.type(), ker);
+        cv::Ptr<cv::cuda::Filter> erode = cv::cuda::createMorphologyFilter(cv::MORPH_ERODE, src.type(), ker);
 
         TEST_CYCLE() erode->apply(d_src, dst);
 
@@ -316,10 +316,10 @@ PERF_TEST_P(Sz_Type, Dilate, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8UC1, CV_8
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> dilate = cv::gpu::createMorphologyFilter(cv::MORPH_DILATE, src.type(), ker);
+        cv::Ptr<cv::cuda::Filter> dilate = cv::cuda::createMorphologyFilter(cv::MORPH_DILATE, src.type(), ker);
 
         TEST_CYCLE() dilate->apply(d_src, dst);
 
@@ -357,10 +357,10 @@ PERF_TEST_P(Sz_Type_Op, MorphologyEx, Combine(GPU_TYPICAL_MAT_SIZES, Values(CV_8
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::Filter> morph = cv::gpu::createMorphologyFilter(morphOp, src.type(), ker);
+        cv::Ptr<cv::cuda::Filter> morph = cv::cuda::createMorphologyFilter(morphOp, src.type(), ker);
 
         TEST_CYCLE() morph->apply(d_src, dst);
 

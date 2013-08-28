@@ -62,9 +62,9 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test buildWarpAffineMaps
 
-PARAM_TEST_CASE(BuildWarpAffineMaps, cv::gpu::DeviceInfo, cv::Size, Inverse)
+PARAM_TEST_CASE(BuildWarpAffineMaps, cv::cuda::DeviceInfo, cv::Size, Inverse)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     bool inverse;
 
@@ -74,7 +74,7 @@ PARAM_TEST_CASE(BuildWarpAffineMaps, cv::gpu::DeviceInfo, cv::Size, Inverse)
         size = GET_PARAM(1);
         inverse = GET_PARAM(2);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -83,8 +83,8 @@ GPU_TEST_P(BuildWarpAffineMaps, Accuracy)
     cv::Mat M = createTransfomMatrix(size, CV_PI / 4);
     cv::Mat src = randomMat(randomSize(200, 400), CV_8UC1);
 
-    cv::gpu::GpuMat xmap, ymap;
-    cv::gpu::buildWarpAffineMaps(M, inverse, size, xmap, ymap);
+    cv::cuda::GpuMat xmap, ymap;
+    cv::cuda::buildWarpAffineMaps(M, inverse, size, xmap, ymap);
 
     int interpolation = cv::INTER_NEAREST;
     int borderMode = cv::BORDER_CONSTANT;
@@ -180,9 +180,9 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test
 
-PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Interpolation, BorderType, UseRoi)
+PARAM_TEST_CASE(WarpAffine, cv::cuda::DeviceInfo, cv::Size, MatType, Inverse, Interpolation, BorderType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool inverse;
@@ -200,7 +200,7 @@ PARAM_TEST_CASE(WarpAffine, cv::gpu::DeviceInfo, cv::Size, MatType, Inverse, Int
         borderType = GET_PARAM(5);
         useRoi = GET_PARAM(6);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -213,8 +213,8 @@ GPU_TEST_P(WarpAffine, Accuracy)
         flags |= cv::WARP_INVERSE_MAP;
     cv::Scalar val = randomScalar(0.0, 255.0);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::warpAffine(loadMat(src, useRoi), dst, M, size, flags, borderType, val);
+    cv::cuda::GpuMat dst = createMat(size, type, useRoi);
+    cv::cuda::warpAffine(loadMat(src, useRoi), dst, M, size, flags, borderType, val);
 
     cv::Mat dst_gold;
     warpAffineGold(src, M, inverse, size, dst_gold, interpolation, borderType, val);
@@ -234,9 +234,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Warping, WarpAffine, testing::Combine(
 ///////////////////////////////////////////////////////////////////
 // Test NPP
 
-PARAM_TEST_CASE(WarpAffineNPP, cv::gpu::DeviceInfo, MatType, Inverse, Interpolation)
+PARAM_TEST_CASE(WarpAffineNPP, cv::cuda::DeviceInfo, MatType, Inverse, Interpolation)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int type;
     bool inverse;
     int interpolation;
@@ -248,7 +248,7 @@ PARAM_TEST_CASE(WarpAffineNPP, cv::gpu::DeviceInfo, MatType, Inverse, Interpolat
         inverse = GET_PARAM(2);
         interpolation = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -262,8 +262,8 @@ GPU_TEST_P(WarpAffineNPP, Accuracy)
     if (inverse)
         flags |= cv::WARP_INVERSE_MAP;
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::warpAffine(loadMat(src), dst, M, src.size(), flags);
+    cv::cuda::GpuMat dst;
+    cv::cuda::warpAffine(loadMat(src), dst, M, src.size(), flags);
 
     cv::Mat dst_gold;
     warpAffineGold(src, M, inverse, src.size(), dst_gold, interpolation, cv::BORDER_CONSTANT, cv::Scalar::all(0));

@@ -8,7 +8,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 inline bool isFlowCorrect(Point2f u)
 {

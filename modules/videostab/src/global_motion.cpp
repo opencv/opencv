@@ -742,9 +742,9 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    detector_ = gpu::createGoodFeaturesToTrackDetector(CV_8UC1);
+    detector_ = cuda::createGoodFeaturesToTrackDetector(CV_8UC1);
 
-    CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
+    CV_Assert(cuda::getCudaEnabledDeviceCount() > 0);
     setOutlierRejector(new NullOutlierRejector());
 }
 
@@ -757,16 +757,16 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const Mat &frame0, const Mat &fram
 }
 
 
-Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok)
+Mat KeypointBasedMotionEstimatorGpu::estimate(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, bool *ok)
 {
     // convert frame to gray if it's color
 
-    gpu::GpuMat grayFrame0;
+    cuda::GpuMat grayFrame0;
     if (frame0.channels() == 1)
         grayFrame0 = frame0;
     else
     {
-        gpu::cvtColor(frame0, grayFrame0_, COLOR_BGR2GRAY);
+        cuda::cvtColor(frame0, grayFrame0_, COLOR_BGR2GRAY);
         grayFrame0 = grayFrame0_;
     }
 
@@ -777,7 +777,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
     optFlowEstimator_.run(frame0, frame1, pointsPrev_, points_, status_);
 
     // leave good correspondences only
-    gpu::compactPoints(pointsPrev_, points_, status_);
+    cuda::compactPoints(pointsPrev_, points_, status_);
 
     pointsPrev_.download(hostPointsPrev_);
     points_.download(hostPoints_);

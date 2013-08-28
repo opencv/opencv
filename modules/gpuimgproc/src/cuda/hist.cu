@@ -47,8 +47,8 @@
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/transform.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace hist
 {
@@ -207,7 +207,7 @@ namespace hist
     };
 }
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <> struct TransformFunctorTraits<hist::EqualizeHist> : DefaultTransformFunctorTraits<hist::EqualizeHist>
     {

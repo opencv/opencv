@@ -43,27 +43,27 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::reprojectImageTo3D(InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::reprojectImageTo3D(InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::drawColorDisp(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
 #else
 
 ////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename T, typename D>
     void reprojectImageTo3D_gpu(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
 }}}
 
-void cv::gpu::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, Stream& stream)
+void cv::cuda::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray _Q, int dst_cn, Stream& stream)
 {
-    using namespace cv::gpu::cudev;
+    using namespace cv::cuda::cudev;
 
     typedef void (*func_t)(const PtrStepSzb disp, PtrStepSzb xyz, const float* q, cudaStream_t stream);
     static const func_t funcs[2][4] =
@@ -88,7 +88,7 @@ void cv::gpu::reprojectImageTo3D(InputArray _disp, OutputArray _xyz, InputArray 
 ////////////////////////////////////////////////////////////////////////
 // drawColorDisp
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     void drawColorDisp_gpu(const PtrStepSzb& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
     void drawColorDisp_gpu(const PtrStepSz<short>& src, const PtrStepSzb& dst, int ndisp, const cudaStream_t& stream);
@@ -99,7 +99,7 @@ namespace
     template <typename T>
     void drawColorDisp_caller(const GpuMat& src, OutputArray _dst, int ndisp, const cudaStream_t& stream)
     {
-        using namespace ::cv::gpu::cudev;
+        using namespace ::cv::cuda::cudev;
 
         _dst.create(src.size(), CV_8UC4);
         GpuMat dst = _dst.getGpuMat();
@@ -108,7 +108,7 @@ namespace
     }
 }
 
-void cv::gpu::drawColorDisp(InputArray _src, OutputArray dst, int ndisp, Stream& stream)
+void cv::cuda::drawColorDisp(InputArray _src, OutputArray dst, int ndisp, Stream& stream)
 {
     typedef void (*drawColorDisp_caller_t)(const GpuMat& src, OutputArray dst, int ndisp, const cudaStream_t& stream);
     const drawColorDisp_caller_t drawColorDisp_callers[] = {drawColorDisp_caller<unsigned char>, 0, 0, drawColorDisp_caller<short>, 0, 0, 0, 0};

@@ -10,7 +10,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 template <typename T>
 inline T mapVal(T x, T a, T b, T c, T d)

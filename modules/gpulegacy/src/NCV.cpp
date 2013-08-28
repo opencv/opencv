@@ -118,7 +118,7 @@ namespace
     const size_t ncv_error_num = sizeof(ncv_errors) / sizeof(ncv_errors[0]);
 }
 
-cv::String cv::gpu::getNcvErrorMessage(int code)
+cv::String cv::cuda::getNcvErrorMessage(int code)
 {
     size_t idx = std::find_if(ncv_errors, ncv_errors + ncv_error_num, ErrorEntryComparer(code)) - ncv_errors;
 

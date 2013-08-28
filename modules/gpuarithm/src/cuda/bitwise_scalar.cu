@@ -50,10 +50,10 @@
 
 #include "arithm_func_traits.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< binder2nd< bit_and<T> > > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>
     {
@@ -72,17 +72,17 @@ namespace arithm
 {
     template <typename T> void bitScalarAnd(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(bit_and<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarOr(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(bit_or<T>(), src2), WithOutMask(), stream);
     }
 
     template <typename T> void bitScalarXor(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(bit_xor<T>(), src2), WithOutMask(), stream);
     }
 
     template void bitScalarAnd<uchar>(PtrStepSzb src1, uint src2, PtrStepSzb dst, cudaStream_t stream);

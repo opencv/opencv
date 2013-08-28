@@ -49,7 +49,7 @@
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/dynamic_smem.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hough_lines
     {

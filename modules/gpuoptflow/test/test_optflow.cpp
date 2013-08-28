@@ -52,15 +52,15 @@ using namespace cvtest;
 
 //#define BROX_DUMP
 
-struct BroxOpticalFlow : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct BroxOpticalFlow : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -72,11 +72,11 @@ GPU_TEST_P(BroxOpticalFlow, Regression)
     cv::Mat frame1 = readImageType("opticalflow/frame1.png", CV_32FC1);
     ASSERT_FALSE(frame1.empty());
 
-    cv::gpu::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                   10 /*inner_iterations*/, 77 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::gpu::GpuMat u;
-    cv::gpu::GpuMat v;
+    cv::cuda::GpuMat u;
+    cv::cuda::GpuMat v;
     brox(loadMat(frame0), loadMat(frame1), u, v);
 
     std::string fname(cvtest::TS::ptr()->get_data_path());
@@ -134,11 +134,11 @@ GPU_TEST_P(BroxOpticalFlow, OpticalFlowNan)
     cv::resize(frame0, r_frame0, cv::Size(1380,1000));
     cv::resize(frame1, r_frame1, cv::Size(1380,1000));
 
-    cv::gpu::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
+    cv::cuda::BroxOpticalFlow brox(0.197f /*alpha*/, 50.0f /*gamma*/, 0.8f /*scale_factor*/,
                                   5 /*inner_iterations*/, 150 /*outer_iterations*/, 10 /*solver_iterations*/);
 
-    cv::gpu::GpuMat u;
-    cv::gpu::GpuMat v;
+    cv::cuda::GpuMat u;
+    cv::cuda::GpuMat v;
     brox(loadMat(r_frame0), loadMat(r_frame1), u, v);
 
     cv::Mat h_u, h_v;
@@ -159,9 +159,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(UseGray, bool)
 }
 
-PARAM_TEST_CASE(PyrLKOpticalFlow, cv::gpu::DeviceInfo, UseGray)
+PARAM_TEST_CASE(PyrLKOpticalFlow, cv::cuda::DeviceInfo, UseGray)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     bool useGray;
 
     virtual void SetUp()
@@ -169,7 +169,7 @@ PARAM_TEST_CASE(PyrLKOpticalFlow, cv::gpu::DeviceInfo, UseGray)
         devInfo = GET_PARAM(0);
         useGray = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -190,14 +190,14 @@ GPU_TEST_P(PyrLKOpticalFlow, Sparse)
     std::vector<cv::Point2f> pts;
     cv::goodFeaturesToTrack(gray_frame, pts, 1000, 0.01, 0.0);
 
-    cv::gpu::GpuMat d_pts;
+    cv::cuda::GpuMat d_pts;
     cv::Mat pts_mat(1, (int) pts.size(), CV_32FC2, (void*) &pts[0]);
     d_pts.upload(pts_mat);
 
-    cv::gpu::PyrLKOpticalFlow pyrLK;
+    cv::cuda::PyrLKOpticalFlow pyrLK;
 
-    cv::gpu::GpuMat d_nextPts;
-    cv::gpu::GpuMat d_status;
+    cv::cuda::GpuMat d_nextPts;
+    cv::cuda::GpuMat d_status;
     pyrLK.sparse(loadMat(frame0), loadMat(frame1), d_pts, d_nextPts, d_status);
 
     std::vector<cv::Point2f> nextPts(d_nextPts.cols);
@@ -256,9 +256,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
 }
 
-PARAM_TEST_CASE(FarnebackOpticalFlow, cv::gpu::DeviceInfo, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
+PARAM_TEST_CASE(FarnebackOpticalFlow, cv::cuda::DeviceInfo, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     double pyrScale;
     int polyN;
     int flags;
@@ -272,7 +272,7 @@ PARAM_TEST_CASE(FarnebackOpticalFlow, cv::gpu::DeviceInfo, PyrScale, PolyN, Farn
         flags = GET_PARAM(3);
         useInitFlow = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -286,13 +286,13 @@ GPU_TEST_P(FarnebackOpticalFlow, Accuracy)
 
     double polySigma = polyN <= 5 ? 1.1 : 1.5;
 
-    cv::gpu::FarnebackOpticalFlow farn;
+    cv::cuda::FarnebackOpticalFlow farn;
     farn.pyrScale = pyrScale;
     farn.polyN = polyN;
     farn.polySigma = polySigma;
     farn.flags = flags;
 
-    cv::gpu::GpuMat d_flowx, d_flowy;
+    cv::cuda::GpuMat d_flowx, d_flowy;
     farn(loadMat(frame0), loadMat(frame1), d_flowx, d_flowy);
 
     cv::Mat flow;
@@ -326,9 +326,9 @@ INSTANTIATE_TEST_CASE_P(GPU_OptFlow, FarnebackOpticalFlow, testing::Combine(
 //////////////////////////////////////////////////////
 // OpticalFlowDual_TVL1
 
-PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::gpu::DeviceInfo, UseRoi)
+PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::cuda::DeviceInfo, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     bool useRoi;
 
     virtual void SetUp()
@@ -336,7 +336,7 @@ PARAM_TEST_CASE(OpticalFlowDual_TVL1, cv::gpu::DeviceInfo, UseRoi)
         devInfo = GET_PARAM(0);
         useRoi = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -348,9 +348,9 @@ GPU_TEST_P(OpticalFlowDual_TVL1, Accuracy)
     cv::Mat frame1 = readImage("opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
-    cv::gpu::OpticalFlowDual_TVL1_GPU d_alg;
-    cv::gpu::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
-    cv::gpu::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
+    cv::cuda::OpticalFlowDual_TVL1_GPU d_alg;
+    cv::cuda::GpuMat d_flowx = createMat(frame0.size(), CV_32FC1, useRoi);
+    cv::cuda::GpuMat d_flowy = createMat(frame0.size(), CV_32FC1, useRoi);
     d_alg(loadMat(frame0, useRoi), loadMat(frame1, useRoi), d_flowx, d_flowy);
 
     cv::Ptr<cv::DenseOpticalFlow> alg = cv::createOptFlow_DualTVL1();
@@ -394,14 +394,14 @@ namespace
     }
 }
 
-struct OpticalFlowBM : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct OpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
 };
 
 GPU_TEST_P(OpticalFlowBM, Accuracy)
 {
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::cuda::DeviceInfo devInfo = GetParam();
+    cv::cuda::setDevice(devInfo.deviceID());
 
     cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -413,8 +413,8 @@ GPU_TEST_P(OpticalFlowBM, Accuracy)
     cv::Size shift_size(1, 1);
     cv::Size max_range(16, 16);
 
-    cv::gpu::GpuMat d_velx, d_vely, buf;
-    cv::gpu::calcOpticalFlowBM(loadMat(frame0), loadMat(frame1),
+    cv::cuda::GpuMat d_velx, d_vely, buf;
+    cv::cuda::calcOpticalFlowBM(loadMat(frame0), loadMat(frame1),
                                block_size, shift_size, max_range, false,
                                d_velx, d_vely, buf);
 
@@ -497,7 +497,7 @@ namespace
     }
 }
 
-struct FastOpticalFlowBM : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct FastOpticalFlowBM : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
 };
 
@@ -508,8 +508,8 @@ GPU_TEST_P(FastOpticalFlowBM, Accuracy)
     int search_window = 15;
     int block_window = 5;
 
-    cv::gpu::DeviceInfo devInfo = GetParam();
-    cv::gpu::setDevice(devInfo.deviceID());
+    cv::cuda::DeviceInfo devInfo = GetParam();
+    cv::cuda::setDevice(devInfo.deviceID());
 
     cv::Mat frame0 = readImage("opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
@@ -524,9 +524,9 @@ GPU_TEST_P(FastOpticalFlowBM, Accuracy)
     cv::resize(frame0, frame0_small, smallSize);
     cv::resize(frame1, frame1_small, smallSize);
 
-    cv::gpu::GpuMat d_flowx;
-    cv::gpu::GpuMat d_flowy;
-    cv::gpu::FastOpticalFlowBM fastBM;
+    cv::cuda::GpuMat d_flowx;
+    cv::cuda::GpuMat d_flowy;
+    cv::cuda::FastOpticalFlowBM fastBM;
 
     fastBM(loadMat(frame0_small), loadMat(frame1_small), d_flowx, d_flowy, search_window, block_window);
 

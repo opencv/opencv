@@ -151,14 +151,14 @@ namespace
     };
 }
 
-struct Labeling : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Labeling : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 
     cv::Mat loat_image()
@@ -179,15 +179,15 @@ GPU_TEST_P(Labeling, DISABLED_ConnectedComponents)
     GreedyLabeling host(image);
     host(host._labels);
 
-    cv::gpu::GpuMat mask;
+    cv::cuda::GpuMat mask;
     mask.create(image.rows, image.cols, CV_8UC1);
 
-    cv::gpu::GpuMat components;
+    cv::cuda::GpuMat components;
     components.create(image.rows, image.cols, CV_32SC1);
 
-    cv::gpu::connectivityMask(cv::gpu::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
+    cv::cuda::connectivityMask(cv::cuda::GpuMat(image), mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-    cv::gpu::labelComponents(mask, components);
+    cv::cuda::labelComponents(mask, components);
 
     host.checkCorrectness(cv::Mat(components));
 }

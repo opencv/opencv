@@ -51,15 +51,15 @@
 #define ENABLE_GPU_RESIZE 1
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::FarnebackOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::FarnebackOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
+namespace cv { namespace cuda { namespace cudev { namespace optflow_farneback
 {
     void setPolynomialExpansionConsts(
             int polyN, const float *g, const float *xg, const float *xxg,
@@ -93,10 +93,10 @@ namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
     void gaussianBlur5Gpu_CC11(
             const PtrStepSzf src, int ksizeHalf, PtrStepSzf dst, int borderType, cudaStream_t stream);
 
-}}}} // namespace cv { namespace gpu { namespace cudev { namespace optflow_farneback
+}}}} // namespace cv { namespace cuda { namespace cudev { namespace optflow_farneback
 
 
-void cv::gpu::FarnebackOpticalFlow::prepareGaussian(
+void cv::cuda::FarnebackOpticalFlow::prepareGaussian(
         int n, double sigma, float *g, float *xg, float *xxg,
         double &ig11, double &ig03, double &ig33, double &ig55)
 {
@@ -150,7 +150,7 @@ void cv::gpu::FarnebackOpticalFlow::prepareGaussian(
 }
 
 
-void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
+void cv::cuda::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double sigma)
 {
     std::vector<float> buf(n*6 + 3);
     float* g = &buf[0] + n;
@@ -167,7 +167,7 @@ void cv::gpu::FarnebackOpticalFlow::setPolynomialExpansionConsts(int n, double s
 }
 
 
-void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
+void cv::cuda::FarnebackOpticalFlow::updateFlow_boxFilter(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat &flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
@@ -186,7 +186,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_boxFilter(
 }
 
 
-void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
+void cv::cuda::FarnebackOpticalFlow::updateFlow_gaussianBlur(
         const GpuMat& R0, const GpuMat& R1, GpuMat& flowx, GpuMat& flowy,
         GpuMat& M, GpuMat &bufM, int blockSize, bool updateMatrices, Stream streams[])
 {
@@ -205,7 +205,7 @@ void cv::gpu::FarnebackOpticalFlow::updateFlow_gaussianBlur(
 }
 
 
-void cv::gpu::FarnebackOpticalFlow::operator ()(
+void cv::cuda::FarnebackOpticalFlow::operator ()(
         const GpuMat &frame0, const GpuMat &frame1, GpuMat &flowx, GpuMat &flowy, Stream &s)
 {
     CV_Assert(frame0.channels() == 1 && frame1.channels() == 1);
@@ -247,8 +247,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         pyramid1_[0] = frames_[1];
         for (int i = 1; i <= numLevelsCropped; ++i)
         {
-            gpu::pyrDown(pyramid0_[i - 1], pyramid0_[i], streams[0]);
-            gpu::pyrDown(pyramid1_[i - 1], pyramid1_[i], streams[1]);
+            cuda::pyrDown(pyramid0_[i - 1], pyramid0_[i], streams[0]);
+            cuda::pyrDown(pyramid1_[i - 1], pyramid1_[i], streams[1]);
         }
     }
 
@@ -291,8 +291,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         {
             if (flags & OPTFLOW_USE_INITIAL_FLOW)
             {
-                gpu::resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
-                gpu::resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
+                cuda::resize(flowx0, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
+                cuda::resize(flowy0, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
                 curFlowX.convertTo(curFlowX, curFlowX.depth(), scale, streams[0]);
                 curFlowY.convertTo(curFlowY, curFlowY.depth(), scale, streams[1]);
             }
@@ -304,8 +304,8 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
         }
         else
         {
-            gpu::resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
-            gpu::resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
+            cuda::resize(prevFlowX, curFlowX, Size(width, height), 0, 0, INTER_LINEAR, streams[0]);
+            cuda::resize(prevFlowY, curFlowY, Size(width, height), 0, 0, INTER_LINEAR, streams[1]);
             curFlowX.convertTo(curFlowX, curFlowX.depth(), 1./pyrScale, streams[0]);
             curFlowY.convertTo(curFlowY, curFlowY.depth(), 1./pyrScale, streams[1]);
         }
@@ -343,7 +343,7 @@ void cv::gpu::FarnebackOpticalFlow::operator ()(
             {
                 cudev::optflow_farneback::gaussianBlurGpu(
                         frames_[i], smoothSize/2, blurredFrame[i], BORDER_REFLECT101, S(streams[i]));
-                gpu::resize(blurredFrame[i], pyrLevel[i], Size(width, height), 0.0, 0.0, INTER_LINEAR, streams[i]);
+                cuda::resize(blurredFrame[i], pyrLevel[i], Size(width, height), 0.0, 0.0, INTER_LINEAR, streams[i]);
                 cudev::optflow_farneback::polynomialExpansionGpu(pyrLevel[i], polyN, R[i], S(streams[i]));
             }
         }

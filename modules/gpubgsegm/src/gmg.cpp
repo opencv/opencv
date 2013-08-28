@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-Ptr<gpu::BackgroundSubtractorGMG> cv::gpu::createBackgroundSubtractorGMG(int, double) { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorGMG>(); }
+Ptr<cuda::BackgroundSubtractorGMG> cv::cuda::createBackgroundSubtractorGMG(int, double) { throw_no_cuda(); return Ptr<cuda::BackgroundSubtractorGMG>(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev {
+namespace cv { namespace cuda { namespace cudev {
     namespace gmg
     {
         void loadConstants(int width, int height, float minVal, float maxVal, int quantizationLevels, float backgroundPrior,
@@ -65,7 +65,7 @@ namespace cv { namespace gpu { namespace cudev {
 
 namespace
 {
-    class GMGImpl : public gpu::BackgroundSubtractorGMG
+    class GMGImpl : public cuda::BackgroundSubtractorGMG
     {
     public:
         GMGImpl(int initializationFrames, double decisionThreshold);
@@ -142,7 +142,7 @@ namespace
         GpuMat weights_;
 
 #if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_GPUARITHM)
-        Ptr<gpu::Filter> boxFilter_;
+        Ptr<cuda::Filter> boxFilter_;
         GpuMat buf_;
 #endif
     };
@@ -167,7 +167,7 @@ namespace
 
     void GMGImpl::apply(InputArray _frame, OutputArray _fgmask, double newLearningRate, Stream& stream)
     {
-        using namespace cv::gpu::cudev::gmg;
+        using namespace cv::cuda::cudev::gmg;
 
         typedef void (*func_t)(PtrStepSzb frame, PtrStepb fgmask, PtrStepSzi colors, PtrStepf weights, PtrStepi nfeatures,
                                int frameNum, float learningRate, bool updateBackgroundModel, cudaStream_t stream);
@@ -221,7 +221,7 @@ namespace
             boxFilter_->apply(fgmask, buf_, stream);
             const int minCount = (smoothingRadius_ * smoothingRadius_ + 1) / 2;
             const double thresh = 255.0 * minCount / (smoothingRadius_ * smoothingRadius_);
-            gpu::threshold(buf_, fgmask, thresh, 255.0, THRESH_BINARY, stream);
+            cuda::threshold(buf_, fgmask, thresh, 255.0, THRESH_BINARY, stream);
         }
 #endif
 
@@ -237,7 +237,7 @@ namespace
 
     void GMGImpl::initialize(Size frameSize, float min, float max)
     {
-        using namespace cv::gpu::cudev::gmg;
+        using namespace cv::cuda::cudev::gmg;
 
         CV_Assert( maxFeatures_ > 0 );
         CV_Assert( learningRate_ >= 0.0f && learningRate_ <= 1.0f);
@@ -261,7 +261,7 @@ namespace
 
 #if defined(HAVE_OPENCV_GPUFILTERS) && defined(HAVE_OPENCV_GPUARITHM)
         if (smoothingRadius_ > 0)
-            boxFilter_ = gpu::createBoxFilter(CV_8UC1, -1, Size(smoothingRadius_, smoothingRadius_));
+            boxFilter_ = cuda::createBoxFilter(CV_8UC1, -1, Size(smoothingRadius_, smoothingRadius_));
 #endif
 
         loadConstants(frameSize_.width, frameSize_.height, minVal_, maxVal_,
@@ -269,7 +269,7 @@ namespace
     }
 }
 
-Ptr<gpu::BackgroundSubtractorGMG> cv::gpu::createBackgroundSubtractorGMG(int initializationFrames, double decisionThreshold)
+Ptr<cuda::BackgroundSubtractorGMG> cv::cuda::createBackgroundSubtractorGMG(int initializationFrames, double decisionThreshold)
 {
     return new GMGImpl(initializationFrames, decisionThreshold);
 }

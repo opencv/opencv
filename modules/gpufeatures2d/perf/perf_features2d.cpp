@@ -64,12 +64,12 @@ PERF_TEST_P(Image_Threshold_NonMaxSupression, FAST,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::FAST_GPU d_fast(threshold, nonMaxSuppersion, 0.5);
+        cv::cuda::FAST_GPU d_fast(threshold, nonMaxSuppersion, 0.5);
 
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat d_keypoints;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat d_keypoints;
 
-        TEST_CYCLE() d_fast(d_img, cv::gpu::GpuMat(), d_keypoints);
+        TEST_CYCLE() d_fast(d_img, cv::cuda::GpuMat(), d_keypoints);
 
         std::vector<cv::KeyPoint> gpu_keypoints;
         d_fast.downloadKeypoints(d_keypoints, gpu_keypoints);
@@ -106,12 +106,12 @@ PERF_TEST_P(Image_NFeatures, ORB,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::ORB_GPU d_orb(nFeatures);
+        cv::cuda::ORB_GPU d_orb(nFeatures);
 
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat d_keypoints, d_descriptors;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat d_keypoints, d_descriptors;
 
-        TEST_CYCLE() d_orb(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+        TEST_CYCLE() d_orb(d_img, cv::cuda::GpuMat(), d_keypoints, d_descriptors);
 
         std::vector<cv::KeyPoint> gpu_keypoints;
         d_orb.downloadKeyPoints(d_keypoints, gpu_keypoints);
@@ -164,11 +164,11 @@ PERF_TEST_P(DescSize_Norm, BFMatch,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_GPU d_matcher(normType);
 
-        const cv::gpu::GpuMat d_query(query);
-        const cv::gpu::GpuMat d_train(train);
-        cv::gpu::GpuMat d_trainIdx, d_distance;
+        const cv::cuda::GpuMat d_query(query);
+        const cv::cuda::GpuMat d_train(train);
+        cv::cuda::GpuMat d_trainIdx, d_distance;
 
         TEST_CYCLE() d_matcher.matchSingle(d_query, d_train, d_trainIdx, d_distance);
 
@@ -223,11 +223,11 @@ PERF_TEST_P(DescSize_K_Norm, BFKnnMatch,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_GPU d_matcher(normType);
 
-        const cv::gpu::GpuMat d_query(query);
-        const cv::gpu::GpuMat d_train(train);
-        cv::gpu::GpuMat d_trainIdx, d_distance, d_allDist;
+        const cv::cuda::GpuMat d_query(query);
+        const cv::cuda::GpuMat d_train(train);
+        cv::cuda::GpuMat d_trainIdx, d_distance, d_allDist;
 
         TEST_CYCLE() d_matcher.knnMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_allDist, k);
 
@@ -277,11 +277,11 @@ PERF_TEST_P(DescSize_Norm, BFRadiusMatch,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::BFMatcher_GPU d_matcher(normType);
+        cv::cuda::BFMatcher_GPU d_matcher(normType);
 
-        const cv::gpu::GpuMat d_query(query);
-        const cv::gpu::GpuMat d_train(train);
-        cv::gpu::GpuMat d_trainIdx, d_nMatches, d_distance;
+        const cv::cuda::GpuMat d_query(query);
+        const cv::cuda::GpuMat d_train(train);
+        cv::cuda::GpuMat d_trainIdx, d_nMatches, d_distance;
 
         TEST_CYCLE() d_matcher.radiusMatchSingle(d_query, d_train, d_trainIdx, d_distance, d_nMatches, maxDistance);
 

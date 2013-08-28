@@ -48,7 +48,7 @@ using namespace testing;
 using namespace perf;
 using namespace cv;
 using namespace cv::superres;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 namespace
 {

@@ -72,11 +72,11 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_image(image);
-        const cv::gpu::GpuMat d_templ(templ);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_image(image);
+        const cv::cuda::GpuMat d_templ(templ);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+        cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), method);
 
         TEST_CYCLE() alg->match(d_image, d_templ, dst);
 
@@ -114,11 +114,11 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_image(image);
-        const cv::gpu::GpuMat d_templ(templ);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_image(image);
+        const cv::cuda::GpuMat d_templ(templ);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+        cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), method);
 
         TEST_CYCLE() alg->match(d_image, d_templ, dst);
 

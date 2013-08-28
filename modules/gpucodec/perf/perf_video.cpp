@@ -77,7 +77,7 @@ PERF_TEST_P(FileName, VideoReader, Values("gpu/video/768x576.avi", "gpu/video/19
     {
         cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(inputFile);
 
-        cv::gpu::GpuMat frame;
+        cv::cuda::GpuMat frame;
 
         TEST_CYCLE_N(10) d_reader->nextFrame(frame);
 
@@ -121,7 +121,7 @@ PERF_TEST_P(FileName, VideoWriter, Values("gpu/video/768x576.avi", "gpu/video/19
     {
         cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
 
-        cv::gpu::GpuMat d_frame;
+        cv::cuda::GpuMat d_frame;
 
         for (int i = 0; i < 10; ++i)
         {

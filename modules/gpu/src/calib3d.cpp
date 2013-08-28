@@ -43,19 +43,19 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::transformPoints(const GpuMat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::projectPoints(const GpuMat&, const Mat&, const Mat&, const Mat&, const Mat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_no_cuda(); }
+void cv::cuda::solvePnPRansac(const Mat&, const Mat&, const Mat&, const Mat&, Mat&, Mat&, bool, int, float, int, std::vector<int>*) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace transform_points
     {
@@ -78,7 +78,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-using namespace ::cv::gpu::cudev;
+using namespace ::cv::cuda::cudev;
 
 namespace
 {
@@ -97,7 +97,7 @@ namespace
     }
 }
 
-void cv::gpu::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, GpuMat& dst, Stream& stream)
+void cv::cuda::transformPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, GpuMat& dst, Stream& stream)
 {
     transformPointsCaller(src, rvec, tvec, dst, StreamAccessor::getStream(stream));
 }
@@ -121,7 +121,7 @@ namespace
     }
 }
 
-void cv::gpu::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, Stream& stream)
+void cv::cuda::projectPoints(const GpuMat& src, const Mat& rvec, const Mat& tvec, const Mat& camera_mat, const Mat& dist_coef, GpuMat& dst, Stream& stream)
 {
     projectPointsCaller(src, rvec, tvec, camera_mat, dist_coef, dst, StreamAccessor::getStream(stream));
 }
@@ -208,7 +208,7 @@ namespace
     };
 }
 
-void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
+void cv::cuda::solvePnPRansac(const Mat& object, const Mat& image, const Mat& camera_mat,
                              const Mat& dist_coef, Mat& rvec, Mat& tvec, bool use_extrinsic_guess,
                              int num_iters, float max_dist, int min_inlier_count,
                              std::vector<int>* inliers)
@@ -252,7 +252,7 @@ void cv::gpu::solvePnPRansac(const Mat& object, const Mat& image, const Mat& cam
     // Find the best hypothesis index
     Point best_idx;
     double best_score;
-    gpu::minMaxLoc(d_hypothesis_scores, NULL, &best_score, NULL, &best_idx);
+    cuda::minMaxLoc(d_hypothesis_scores, NULL, &best_score, NULL, &best_idx);
     int num_inliers = static_cast<int>(best_score);
 
     // Extract the best hypothesis data

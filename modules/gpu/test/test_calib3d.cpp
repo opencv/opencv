@@ -49,15 +49,15 @@ using namespace cvtest;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // transformPoints
 
-struct TransformPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct TransformPoints : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -67,8 +67,8 @@ GPU_TEST_P(TransformPoints, Accuracy)
     cv::Mat rvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
     cv::Mat tvec = randomMat(cv::Size(3, 1), CV_32F, 0, 1);
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::transformPoints(loadMat(src), rvec, tvec, dst);
+    cv::cuda::GpuMat dst;
+    cv::cuda::transformPoints(loadMat(src), rvec, tvec, dst);
 
     ASSERT_EQ(src.size(), dst.size());
     ASSERT_EQ(src.type(), dst.type());
@@ -97,15 +97,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Calib3D, TransformPoints, ALL_DEVICES);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // ProjectPoints
 
-struct ProjectPoints : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct ProjectPoints : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -120,8 +120,8 @@ GPU_TEST_P(ProjectPoints, Accuracy)
     camera_mat.at<float>(2, 0) = 0.f;
     camera_mat.at<float>(2, 1) = 0.f;
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::projectPoints(loadMat(src), rvec, tvec, camera_mat, cv::Mat(), dst);
+    cv::cuda::GpuMat dst;
+    cv::cuda::projectPoints(loadMat(src), rvec, tvec, camera_mat, cv::Mat(), dst);
 
     ASSERT_EQ(1, dst.rows);
     ASSERT_EQ(MatType(CV_32FC2), MatType(dst.type()));
@@ -147,15 +147,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Calib3D, ProjectPoints, ALL_DEVICES);
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // SolvePnPRansac
 
-struct SolvePnPRansac : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct SolvePnPRansac : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -177,7 +177,7 @@ GPU_TEST_P(SolvePnPRansac, Accuracy)
 
     cv::Mat rvec, tvec;
     std::vector<int> inliers;
-    cv::gpu::solvePnPRansac(object, cv::Mat(1, (int)image_vec.size(), CV_32FC2, &image_vec[0]),
+    cv::cuda::solvePnPRansac(object, cv::Mat(1, (int)image_vec.size(), CV_32FC2, &image_vec[0]),
                             camera_mat, cv::Mat(1, 8, CV_32F, cv::Scalar::all(0)),
                             rvec, tvec, false, 200, 2.f, 100, &inliers);
 

@@ -14,7 +14,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 
 static void help()
@@ -51,7 +51,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 {
     if (src.channels() == 3)
     {
-        cv::gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
+        cv::cuda::cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -62,7 +62,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 
     if (scale != 1)
     {
-        cv::gpu::resize(gray, resized, sz);
+        cv::cuda::resize(gray, resized, sz);
     }
     else
     {
@@ -131,7 +131,7 @@ int main(int argc, const char *argv[])
         return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     string cascadeName;
     string inputName;

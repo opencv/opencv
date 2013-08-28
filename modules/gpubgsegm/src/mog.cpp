@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-Ptr<gpu::BackgroundSubtractorMOG> cv::gpu::createBackgroundSubtractorMOG(int, int, double, double)  { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorMOG>(); }
+Ptr<cuda::BackgroundSubtractorMOG> cv::cuda::createBackgroundSubtractorMOG(int, int, double, double)  { throw_no_cuda(); return Ptr<cuda::BackgroundSubtractorMOG>(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace mog
     {
@@ -71,7 +71,7 @@ namespace
     const float defaultNoiseSigma = 30.0f * 0.5f;
     const float defaultInitialWeight = 0.05f;
 
-    class MOGImpl : public gpu::BackgroundSubtractorMOG
+    class MOGImpl : public cuda::BackgroundSubtractorMOG
     {
     public:
         MOGImpl(int history, int nmixtures, double backgroundRatio, double noiseSigma);
@@ -133,7 +133,7 @@ namespace
 
     void MOGImpl::apply(InputArray _frame, OutputArray _fgmask, double learningRate, Stream& stream)
     {
-        using namespace cv::gpu::cudev::mog;
+        using namespace cv::cuda::cudev::mog;
 
         GpuMat frame = _frame.getGpuMat();
 
@@ -164,7 +164,7 @@ namespace
 
     void MOGImpl::getBackgroundImage(OutputArray _backgroundImage, Stream& stream) const
     {
-        using namespace cv::gpu::cudev::mog;
+        using namespace cv::cuda::cudev::mog;
 
         _backgroundImage.create(frameSize_, frameType_);
         GpuMat backgroundImage = _backgroundImage.getGpuMat();
@@ -201,7 +201,7 @@ namespace
     }
 }
 
-Ptr<gpu::BackgroundSubtractorMOG> cv::gpu::createBackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma)
+Ptr<cuda::BackgroundSubtractorMOG> cv::cuda::createBackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma)
 {
     return new MOGImpl(history, nmixtures, backgroundRatio, noiseSigma);
 }

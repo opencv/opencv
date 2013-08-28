@@ -43,19 +43,19 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanShiftFiltering(InputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
-void cv::gpu::meanShiftProc(InputArray, OutputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::cuda::meanShiftFiltering(InputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::cuda::meanShiftProc(InputArray, OutputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftFiltering
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -63,9 +63,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int sr, TermCriteria criteria, Stream& stream)
+void cv::cuda::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::cudev::imgproc;
+    using namespace ::cv::cuda::cudev::imgproc;
 
     GpuMat src = _src.getGpuMat();
 
@@ -90,7 +90,7 @@ void cv::gpu::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int 
 ////////////////////////////////////////////////////////////////////////
 // meanShiftProc_GPU
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -98,9 +98,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::meanShiftProc(InputArray _src, OutputArray _dstr, OutputArray _dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
+void cv::cuda::meanShiftProc(InputArray _src, OutputArray _dstr, OutputArray _dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
-    using namespace ::cv::gpu::cudev::imgproc;
+    using namespace ::cv::cuda::cudev::imgproc;
 
     GpuMat src = _src.getGpuMat();
 

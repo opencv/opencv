@@ -56,7 +56,7 @@
 
 #include "opencv2/gpulegacy.hpp"
 
-namespace cv { namespace gpu
+namespace cv { namespace cuda
 {
     class NppStStreamHandler
     {
@@ -88,9 +88,9 @@ namespace cv { namespace gpu
 }}
 
 #if defined(__GNUC__)
-    #define ncvSafeCall(expr)  cv::gpu::checkNcvError(expr, __FILE__, __LINE__, __func__)
+    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define ncvSafeCall(expr)  cv::gpu::checkNcvError(expr, __FILE__, __LINE__, "")
+    #define ncvSafeCall(expr)  cv::cuda::checkNcvError(expr, __FILE__, __LINE__, "")
 #endif
 
 #endif // __OPENCV_CORE_GPULEGACY_PRIVATE_HPP__

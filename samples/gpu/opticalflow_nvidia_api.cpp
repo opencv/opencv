@@ -393,7 +393,7 @@ int main(int argc, char **argv)
         return result;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     std::cout << "OpenCV / NVIDIA Computer Vision\n";
     std::cout << "Optical Flow Demo: Frame Interpolation\n";

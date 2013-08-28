@@ -43,13 +43,13 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined(HAVE_CUDA) || defined(CUDA_DISABLER) || !defined(HAVE_OPENCV_IMGPROC) || !defined(HAVE_OPENCV_GPUARITHM) || !defined(HAVE_OPENCV_GPUIMGPROC)
 
-cv::gpu::FGDParams::FGDParams() { throw_no_cuda(); }
+cv::cuda::FGDParams::FGDParams() { throw_no_cuda(); }
 
-Ptr<gpu::BackgroundSubtractorFGD> cv::gpu::createBackgroundSubtractorFGD(const FGDParams&) { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorFGD>(); }
+Ptr<cuda::BackgroundSubtractorFGD> cv::cuda::createBackgroundSubtractorFGD(const FGDParams&) { throw_no_cuda(); return Ptr<cuda::BackgroundSubtractorFGD>(); }
 
 #else
 
@@ -87,7 +87,7 @@ namespace
     const float BGFG_FGD_MINAREA= 15.0f;
 }
 
-cv::gpu::FGDParams::FGDParams()
+cv::cuda::FGDParams::FGDParams()
 {
     Lc      = BGFG_FGD_LC;
     N1c     = BGFG_FGD_N1C;
@@ -122,7 +122,7 @@ namespace
         if (dst_cn < 0)
             dst_cn = src_cn;
 
-        gpu::ensureSizeIsEnough(src.size(), CV_MAKE_TYPE(src.depth(), dst_cn), dst);
+        cuda::ensureSizeIsEnough(src.size(), CV_MAKE_TYPE(src.depth(), dst_cn), dst);
 
         if (src_cn == dst_cn)
         {
@@ -141,7 +141,7 @@ namespace
             const int cvt_code = cvt_codes[src_cn - 1][dst_cn - 1];
             CV_DbgAssert( cvt_code >= 0 );
 
-            gpu::cvtColor(src, dst, cvt_code, dst_cn);
+            cuda::cvtColor(src, dst, cvt_code, dst_cn);
         }
     }
 }
@@ -298,9 +298,9 @@ namespace
                                                                              deltaC, deltaCC, params.alpha2,
                                                                              params.N1c, params.N1cc, 0);
 
-        int count = gpu::countNonZero(foreground, countBuf);
+        int count = cuda::countNonZero(foreground, countBuf);
 
-        gpu::multiply(foreground, Scalar::all(255), foreground);
+        cuda::multiply(foreground, Scalar::all(255), foreground);
 
         return count;
     }
@@ -313,14 +313,14 @@ namespace
 
 namespace
 {
-    void morphology(const GpuMat& src, GpuMat& dst, GpuMat& filterBrd, int brd, Ptr<gpu::Filter>& filter, Scalar brdVal)
+    void morphology(const GpuMat& src, GpuMat& dst, GpuMat& filterBrd, int brd, Ptr<cuda::Filter>& filter, Scalar brdVal)
     {
-        gpu::copyMakeBorder(src, filterBrd, brd, brd, brd, brd, BORDER_CONSTANT, brdVal);
+        cuda::copyMakeBorder(src, filterBrd, brd, brd, brd, brd, BORDER_CONSTANT, brdVal);
         filter->apply(filterBrd(Rect(brd, brd, src.cols, src.rows)), dst);
     }
 
     void smoothForeground(GpuMat& foreground, GpuMat& filterBrd, GpuMat& buf,
-                          Ptr<gpu::Filter>& erodeFilter, Ptr<gpu::Filter>& dilateFilter,
+                          Ptr<cuda::Filter>& erodeFilter, Ptr<cuda::Filter>& dilateFilter,
                           const FGDParams& params)
     {
         const int brd = params.perform_morphing;
@@ -491,37 +491,37 @@ namespace
 
     void BGPixelStat::create(Size size, const FGDParams& params)
     {
-        gpu::ensureSizeIsEnough(size, CV_32FC1, Pbc_);
+        cuda::ensureSizeIsEnough(size, CV_32FC1, Pbc_);
         Pbc_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(size, CV_32FC1, Pbcc_);
+        cuda::ensureSizeIsEnough(size, CV_32FC1, Pbcc_);
         Pbcc_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(size, CV_8UC1, is_trained_st_model_);
+        cuda::ensureSizeIsEnough(size, CV_8UC1, is_trained_st_model_);
         is_trained_st_model_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(size, CV_8UC1, is_trained_dyn_model_);
+        cuda::ensureSizeIsEnough(size, CV_8UC1, is_trained_dyn_model_);
         is_trained_dyn_model_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_32FC1, ctable_Pv_);
+        cuda::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_32FC1, ctable_Pv_);
         ctable_Pv_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_32FC1, ctable_Pvb_);
+        cuda::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_32FC1, ctable_Pvb_);
         ctable_Pvb_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_8UC4, ctable_v_);
+        cuda::ensureSizeIsEnough(params.N2c * size.height, size.width, CV_8UC4, ctable_v_);
         ctable_v_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_32FC1, cctable_Pv_);
+        cuda::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_32FC1, cctable_Pv_);
         cctable_Pv_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_32FC1, cctable_Pvb_);
+        cuda::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_32FC1, cctable_Pvb_);
         cctable_Pvb_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_8UC4, cctable_v1_);
+        cuda::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_8UC4, cctable_v1_);
         cctable_v1_.setTo(Scalar::all(0));
 
-        gpu::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_8UC4, cctable_v2_);
+        cuda::ensureSizeIsEnough(params.N2cc * size.height, size.width, CV_8UC4, cctable_v2_);
         cctable_v2_.setTo(Scalar::all(0));
     }
 
@@ -573,7 +573,7 @@ namespace
         return stat;
     }
 
-    class FGDImpl : public gpu::BackgroundSubtractorFGD
+    class FGDImpl : public cuda::BackgroundSubtractorFGD
     {
     public:
         explicit FGDImpl(const FGDParams& params);
@@ -611,8 +611,8 @@ namespace
         GpuMat filterBrd_;
 
 #ifdef HAVE_OPENCV_GPUFILTERS
-        Ptr<gpu::Filter> dilateFilter_;
-        Ptr<gpu::Filter> erodeFilter_;
+        Ptr<cuda::Filter> dilateFilter_;
+        Ptr<cuda::Filter> erodeFilter_;
 #endif
 
         CvMemStorage* storage_;
@@ -673,7 +673,7 @@ namespace
 
     void FGDImpl::getBackgroundImage(OutputArray backgroundImage) const
     {
-        gpu::cvtColor(background_, backgroundImage, COLOR_BGRA2BGR);
+        cuda::cvtColor(background_, backgroundImage, COLOR_BGRA2BGR);
     }
 
     void FGDImpl::getForegroundRegions(OutputArrayOfArrays dst)
@@ -699,13 +699,13 @@ namespace
 
         frameSize_ = firstFrame.size();
 
-        gpu::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, foreground_);
+        cuda::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, foreground_);
 
         copyChannels(firstFrame, background_, 4);
         copyChannels(firstFrame, prevFrame_, 4);
 
-        gpu::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, Ftd_);
-        gpu::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, Fbd_);
+        cuda::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, Ftd_);
+        cuda::ensureSizeIsEnough(firstFrame.size(), CV_8UC1, Fbd_);
 
         stat_.create(firstFrame.size(), params_);
         fgd::setBGPixelStat(stat_);
@@ -716,14 +716,14 @@ namespace
             Mat kernel = getStructuringElement(MORPH_RECT, Size(1 + params_.perform_morphing * 2, 1 + params_.perform_morphing * 2));
             Point anchor(params_.perform_morphing, params_.perform_morphing);
 
-            dilateFilter_ = gpu::createMorphologyFilter(MORPH_DILATE, CV_8UC1, kernel, anchor);
-            erodeFilter_ = gpu::createMorphologyFilter(MORPH_ERODE, CV_8UC1, kernel, anchor);
+            dilateFilter_ = cuda::createMorphologyFilter(MORPH_DILATE, CV_8UC1, kernel, anchor);
+            erodeFilter_ = cuda::createMorphologyFilter(MORPH_ERODE, CV_8UC1, kernel, anchor);
         }
 #endif
     }
 }
 
-Ptr<gpu::BackgroundSubtractorFGD> cv::gpu::createBackgroundSubtractorFGD(const FGDParams& params)
+Ptr<cuda::BackgroundSubtractorFGD> cv::cuda::createBackgroundSubtractorFGD(const FGDParams& params)
 {
     return new FGDImpl(params);
 }

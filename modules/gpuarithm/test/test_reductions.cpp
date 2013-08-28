@@ -49,9 +49,9 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////////////////////////////
 // Norm
 
-PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
+PARAM_TEST_CASE(Norm, cv::cuda::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     int normCode;
@@ -65,7 +65,7 @@ PARAM_TEST_CASE(Norm, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
         normCode = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -74,8 +74,8 @@ GPU_TEST_P(Norm, Accuracy)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
 
-    cv::gpu::GpuMat d_buf;
-    double val = cv::gpu::norm(loadMat(src, useRoi), normCode, loadMat(mask, useRoi), d_buf);
+    cv::cuda::GpuMat d_buf;
+    double val = cv::cuda::norm(loadMat(src, useRoi), normCode, loadMat(mask, useRoi), d_buf);
 
     double val_gold = cv::norm(src, normCode, mask);
 
@@ -97,9 +97,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Norm, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // normDiff
 
-PARAM_TEST_CASE(NormDiff, cv::gpu::DeviceInfo, cv::Size, NormCode, UseRoi)
+PARAM_TEST_CASE(NormDiff, cv::cuda::DeviceInfo, cv::Size, NormCode, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int normCode;
     bool useRoi;
@@ -111,7 +111,7 @@ PARAM_TEST_CASE(NormDiff, cv::gpu::DeviceInfo, cv::Size, NormCode, UseRoi)
         normCode = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -120,7 +120,7 @@ GPU_TEST_P(NormDiff, Accuracy)
     cv::Mat src1 = randomMat(size, CV_8UC1);
     cv::Mat src2 = randomMat(size, CV_8UC1);
 
-    double val = cv::gpu::norm(loadMat(src1, useRoi), loadMat(src2, useRoi), normCode);
+    double val = cv::cuda::norm(loadMat(src1, useRoi), loadMat(src2, useRoi), normCode);
 
     double val_gold = cv::norm(src1, src2, normCode);
 
@@ -216,9 +216,9 @@ namespace
     }
 }
 
-PARAM_TEST_CASE(Sum, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(Sum, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -232,7 +232,7 @@ PARAM_TEST_CASE(Sum, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         src = randomMat(size, type, -128.0, 128.0);
     }
@@ -240,7 +240,7 @@ PARAM_TEST_CASE(Sum, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
 
 GPU_TEST_P(Sum, Simple)
 {
-    cv::Scalar val = cv::gpu::sum(loadMat(src, useRoi));
+    cv::Scalar val = cv::cuda::sum(loadMat(src, useRoi));
 
     cv::Scalar val_gold = cv::sum(src);
 
@@ -249,7 +249,7 @@ GPU_TEST_P(Sum, Simple)
 
 GPU_TEST_P(Sum, Abs)
 {
-    cv::Scalar val = cv::gpu::absSum(loadMat(src, useRoi));
+    cv::Scalar val = cv::cuda::absSum(loadMat(src, useRoi));
 
     cv::Scalar val_gold = absSumGold(src);
 
@@ -258,7 +258,7 @@ GPU_TEST_P(Sum, Abs)
 
 GPU_TEST_P(Sum, Sqr)
 {
-    cv::Scalar val = cv::gpu::sqrSum(loadMat(src, useRoi));
+    cv::Scalar val = cv::cuda::sqrSum(loadMat(src, useRoi));
 
     cv::Scalar val_gold = sqrSumGold(src);
 
@@ -274,9 +274,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Sum, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MinMax
 
-PARAM_TEST_CASE(MinMax, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
+PARAM_TEST_CASE(MinMax, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     bool useRoi;
@@ -288,7 +288,7 @@ PARAM_TEST_CASE(MinMax, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
         depth = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -296,12 +296,12 @@ GPU_TEST_P(MinMax, WithoutMask)
 {
     cv::Mat src = randomMat(size, depth);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
-            cv::gpu::minMax(loadMat(src), &minVal, &maxVal);
+            cv::cuda::minMax(loadMat(src), &minVal, &maxVal);
         }
         catch (const cv::Exception& e)
         {
@@ -311,7 +311,7 @@ GPU_TEST_P(MinMax, WithoutMask)
     else
     {
         double minVal, maxVal;
-        cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal);
+        cv::cuda::minMax(loadMat(src, useRoi), &minVal, &maxVal);
 
         double minVal_gold, maxVal_gold;
         minMaxLocGold(src, &minVal_gold, &maxVal_gold);
@@ -326,12 +326,12 @@ GPU_TEST_P(MinMax, WithMask)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
-            cv::gpu::minMax(loadMat(src), &minVal, &maxVal, loadMat(mask));
+            cv::cuda::minMax(loadMat(src), &minVal, &maxVal, loadMat(mask));
         }
         catch (const cv::Exception& e)
         {
@@ -341,7 +341,7 @@ GPU_TEST_P(MinMax, WithMask)
     else
     {
         double minVal, maxVal;
-        cv::gpu::minMax(loadMat(src, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
+        cv::cuda::minMax(loadMat(src, useRoi), &minVal, &maxVal, loadMat(mask, useRoi));
 
         double minVal_gold, maxVal_gold;
         minMaxLocGold(src, &minVal_gold, &maxVal_gold, 0, 0, mask);
@@ -355,13 +355,13 @@ GPU_TEST_P(MinMax, NullPtr)
 {
     cv::Mat src = randomMat(size, depth);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
-            cv::gpu::minMax(loadMat(src), &minVal, 0);
-            cv::gpu::minMax(loadMat(src), 0, &maxVal);
+            cv::cuda::minMax(loadMat(src), &minVal, 0);
+            cv::cuda::minMax(loadMat(src), 0, &maxVal);
         }
         catch (const cv::Exception& e)
         {
@@ -371,8 +371,8 @@ GPU_TEST_P(MinMax, NullPtr)
     else
     {
         double minVal, maxVal;
-        cv::gpu::minMax(loadMat(src, useRoi), &minVal, 0);
-        cv::gpu::minMax(loadMat(src, useRoi), 0, &maxVal);
+        cv::cuda::minMax(loadMat(src, useRoi), &minVal, 0);
+        cv::cuda::minMax(loadMat(src, useRoi), 0, &maxVal);
 
         double minVal_gold, maxVal_gold;
         minMaxLocGold(src, &minVal_gold, &maxVal_gold, 0, 0);
@@ -418,9 +418,9 @@ namespace
     }
 }
 
-PARAM_TEST_CASE(MinMaxLoc, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
+PARAM_TEST_CASE(MinMaxLoc, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     bool useRoi;
@@ -432,7 +432,7 @@ PARAM_TEST_CASE(MinMaxLoc, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
         depth = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -440,13 +440,13 @@ GPU_TEST_P(MinMaxLoc, WithoutMask)
 {
     cv::Mat src = randomMat(size, depth);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
             cv::Point minLoc, maxLoc;
-            cv::gpu::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc);
+            cv::cuda::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc);
         }
         catch (const cv::Exception& e)
         {
@@ -457,7 +457,7 @@ GPU_TEST_P(MinMaxLoc, WithoutMask)
     {
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc);
 
         double minVal_gold, maxVal_gold;
         cv::Point minLoc_gold, maxLoc_gold;
@@ -476,13 +476,13 @@ GPU_TEST_P(MinMaxLoc, WithMask)
     cv::Mat src = randomMat(size, depth);
     cv::Mat mask = randomMat(size, CV_8UC1, 0.0, 2.0);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
             cv::Point minLoc, maxLoc;
-            cv::gpu::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask));
+            cv::cuda::minMaxLoc(loadMat(src), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask));
         }
         catch (const cv::Exception& e)
         {
@@ -493,7 +493,7 @@ GPU_TEST_P(MinMaxLoc, WithMask)
     {
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, &maxVal, &minLoc, &maxLoc, loadMat(mask, useRoi));
 
         double minVal_gold, maxVal_gold;
         cv::Point minLoc_gold, maxLoc_gold;
@@ -511,16 +511,16 @@ GPU_TEST_P(MinMaxLoc, NullPtr)
 {
     cv::Mat src = randomMat(size, depth);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
             double minVal, maxVal;
             cv::Point minLoc, maxLoc;
-            cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
-            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
-            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
-            cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
+            cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
+            cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
+            cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
+            cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
         }
         catch (const cv::Exception& e)
         {
@@ -531,10 +531,10 @@ GPU_TEST_P(MinMaxLoc, NullPtr)
     {
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
-        cv::gpu::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), &minVal, 0, 0, 0);
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, &maxVal, 0, 0);
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, 0, &minLoc, 0);
+        cv::cuda::minMaxLoc(loadMat(src, useRoi), 0, 0, 0, &maxLoc);
 
         double minVal_gold, maxVal_gold;
         cv::Point minLoc_gold, maxLoc_gold;
@@ -557,9 +557,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, MinMaxLoc, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////
 // CountNonZero
 
-PARAM_TEST_CASE(CountNonZero, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
+PARAM_TEST_CASE(CountNonZero, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     bool useRoi;
@@ -572,7 +572,7 @@ PARAM_TEST_CASE(CountNonZero, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
         depth = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -582,11 +582,11 @@ GPU_TEST_P(CountNonZero, Accuracy)
     cv::Mat src;
     srcBase.convertTo(src, depth);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
-            cv::gpu::countNonZero(loadMat(src));
+            cv::cuda::countNonZero(loadMat(src));
         }
         catch (const cv::Exception& e)
         {
@@ -595,7 +595,7 @@ GPU_TEST_P(CountNonZero, Accuracy)
     }
     else
     {
-        int val = cv::gpu::countNonZero(loadMat(src, useRoi));
+        int val = cv::cuda::countNonZero(loadMat(src, useRoi));
 
         int val_gold = cv::countNonZero(src);
 
@@ -615,9 +615,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, CountNonZero, testing::Combine(
 CV_ENUM(ReduceCode, cv::REDUCE_SUM, cv::REDUCE_AVG, cv::REDUCE_MAX, cv::REDUCE_MIN)
 #define ALL_REDUCE_CODES testing::Values(ReduceCode(cv::REDUCE_SUM), ReduceCode(cv::REDUCE_AVG), ReduceCode(cv::REDUCE_MAX), ReduceCode(cv::REDUCE_MIN))
 
-PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, ReduceCode, UseRoi)
+PARAM_TEST_CASE(Reduce, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, ReduceCode, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     int channels;
@@ -637,7 +637,7 @@ PARAM_TEST_CASE(Reduce, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, Reduc
         reduceOp = GET_PARAM(4);
         useRoi = GET_PARAM(5);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         type = CV_MAKE_TYPE(depth, channels);
 
@@ -657,8 +657,8 @@ GPU_TEST_P(Reduce, Rows)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(src.cols, 1), dst_type, useRoi);
-    cv::gpu::reduce(loadMat(src, useRoi), dst, 0, reduceOp, dst_depth);
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols, 1), dst_type, useRoi);
+    cv::cuda::reduce(loadMat(src, useRoi), dst, 0, reduceOp, dst_depth);
 
     cv::Mat dst_gold;
     cv::reduce(src, dst_gold, 0, reduceOp, dst_depth);
@@ -670,8 +670,8 @@ GPU_TEST_P(Reduce, Cols)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(src.rows, 1), dst_type, useRoi);
-    cv::gpu::reduce(loadMat(src, useRoi), dst, 1, reduceOp, dst_depth);
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.rows, 1), dst_type, useRoi);
+    cv::cuda::reduce(loadMat(src, useRoi), dst, 1, reduceOp, dst_depth);
 
     cv::Mat dst_gold;
     cv::reduce(src, dst_gold, 1, reduceOp, dst_depth);
@@ -697,9 +697,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Reduce, testing::Combine(
 //////////////////////////////////////////////////////////////////////////////
 // Normalize
 
-PARAM_TEST_CASE(Normalize, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
+PARAM_TEST_CASE(Normalize, cv::cuda::DeviceInfo, cv::Size, MatDepth, NormCode, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int norm_type;
@@ -716,7 +716,7 @@ PARAM_TEST_CASE(Normalize, cv::gpu::DeviceInfo, cv::Size, MatDepth, NormCode, Us
         norm_type = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         alpha = 1;
         beta = 0;
@@ -728,8 +728,8 @@ GPU_TEST_P(Normalize, WithOutMask)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type);
+    cv::cuda::GpuMat dst = createMat(size, type, useRoi);
+    cv::cuda::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type);
 
     cv::Mat dst_gold;
     cv::normalize(src, dst_gold, alpha, beta, norm_type, type);
@@ -742,9 +742,9 @@ GPU_TEST_P(Normalize, WithMask)
     cv::Mat src = randomMat(size, type);
     cv::Mat mask = randomMat(size, CV_8UC1, 0, 2);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
+    cv::cuda::GpuMat dst = createMat(size, type, useRoi);
     dst.setTo(cv::Scalar::all(0));
-    cv::gpu::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type, loadMat(mask, useRoi));
+    cv::cuda::normalize(loadMat(src, useRoi), dst, alpha, beta, norm_type, type, loadMat(mask, useRoi));
 
     cv::Mat dst_gold(size, type);
     dst_gold.setTo(cv::Scalar::all(0));
@@ -763,9 +763,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Normalize, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MeanStdDev
 
-PARAM_TEST_CASE(MeanStdDev, cv::gpu::DeviceInfo, cv::Size, UseRoi)
+PARAM_TEST_CASE(MeanStdDev, cv::cuda::DeviceInfo, cv::Size, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     bool useRoi;
 
@@ -775,7 +775,7 @@ PARAM_TEST_CASE(MeanStdDev, cv::gpu::DeviceInfo, cv::Size, UseRoi)
         size = GET_PARAM(1);
         useRoi = GET_PARAM(2);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -783,13 +783,13 @@ GPU_TEST_P(MeanStdDev, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    if (!supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_13))
+    if (!supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_13))
     {
         try
         {
             cv::Scalar mean;
             cv::Scalar stddev;
-            cv::gpu::meanStdDev(loadMat(src, useRoi), mean, stddev);
+            cv::cuda::meanStdDev(loadMat(src, useRoi), mean, stddev);
         }
         catch (const cv::Exception& e)
         {
@@ -800,7 +800,7 @@ GPU_TEST_P(MeanStdDev, Accuracy)
     {
         cv::Scalar mean;
         cv::Scalar stddev;
-        cv::gpu::meanStdDev(loadMat(src, useRoi), mean, stddev);
+        cv::cuda::meanStdDev(loadMat(src, useRoi), mean, stddev);
 
         cv::Scalar mean_gold;
         cv::Scalar stddev_gold;

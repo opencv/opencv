@@ -69,13 +69,13 @@ PERF_TEST_P(Sz_Depth_Cn, BlendLinear,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_img1(img1);
-        const cv::gpu::GpuMat d_img2(img2);
-        const cv::gpu::GpuMat d_weights1(weights1);
-        const cv::gpu::GpuMat d_weights2(weights2);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_img1(img1);
+        const cv::cuda::GpuMat d_img2(img2);
+        const cv::cuda::GpuMat d_weights1(weights1);
+        const cv::cuda::GpuMat d_weights2(weights2);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::blendLinear(d_img1, d_img2, d_weights1, d_weights2, dst);
+        TEST_CYCLE() cv::cuda::blendLinear(d_img1, d_img2, d_weights1, d_weights2, dst);
 
         GPU_SANITY_CHECK(dst);
     }

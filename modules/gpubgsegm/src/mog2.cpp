@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-Ptr<gpu::BackgroundSubtractorMOG2> cv::gpu::createBackgroundSubtractorMOG2(int, double, bool) { throw_no_cuda(); return Ptr<gpu::BackgroundSubtractorMOG2>(); }
+Ptr<cuda::BackgroundSubtractorMOG2> cv::cuda::createBackgroundSubtractorMOG2(int, double, bool) { throw_no_cuda(); return Ptr<cuda::BackgroundSubtractorMOG2>(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace mog2
     {
@@ -78,7 +78,7 @@ namespace
     const unsigned char defaultShadowValue = 127; // value to use in the segmentation mask for shadows, set 0 not to do shadow detection
     const float defaultShadowThreshold = 0.5f; // Tau - shadow threshold, see the paper for explanation
 
-    class MOG2Impl : public gpu::BackgroundSubtractorMOG2
+    class MOG2Impl : public cuda::BackgroundSubtractorMOG2
     {
     public:
         MOG2Impl(int history, double varThreshold, bool detectShadows);
@@ -178,7 +178,7 @@ namespace
 
     void MOG2Impl::apply(InputArray _frame, OutputArray _fgmask, double learningRate, Stream& stream)
     {
-        using namespace cv::gpu::cudev::mog2;
+        using namespace cv::cuda::cudev::mog2;
 
         GpuMat frame = _frame.getGpuMat();
 
@@ -208,7 +208,7 @@ namespace
 
     void MOG2Impl::getBackgroundImage(OutputArray _backgroundImage, Stream& stream) const
     {
-        using namespace cv::gpu::cudev::mog2;
+        using namespace cv::cuda::cudev::mog2;
 
         _backgroundImage.create(frameSize_, frameType_);
         GpuMat backgroundImage = _backgroundImage.getGpuMat();
@@ -218,7 +218,7 @@ namespace
 
     void MOG2Impl::initialize(cv::Size frameSize, int frameType)
     {
-        using namespace cv::gpu::cudev::mog2;
+        using namespace cv::cuda::cudev::mog2;
 
         CV_Assert( frameType == CV_8UC1 || frameType == CV_8UC3 || frameType == CV_8UC4 );
 
@@ -245,7 +245,7 @@ namespace
     }
 }
 
-Ptr<gpu::BackgroundSubtractorMOG2> cv::gpu::createBackgroundSubtractorMOG2(int history, double varThreshold, bool detectShadows)
+Ptr<cuda::BackgroundSubtractorMOG2> cv::cuda::createBackgroundSubtractorMOG2(int history, double varThreshold, bool detectShadows)
 {
     return new MOG2Impl(history, varThreshold, detectShadows);
 }

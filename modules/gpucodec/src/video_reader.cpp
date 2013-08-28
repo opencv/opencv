@@ -43,7 +43,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::gpucodec;
 
 #ifndef HAVE_NVCUVID
@@ -53,7 +53,7 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const Ptr<RawVideoSource>&) { t
 
 #else // HAVE_NVCUVID
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
 }}}
@@ -125,7 +125,7 @@ namespace
 
     void cudaPostProcessFrame(const GpuMat& decodedFrame, OutputArray _outFrame, int width, int height)
     {
-        using namespace cv::gpu::cudev;
+        using namespace cv::cuda::cudev;
 
         // Final Stage: NV12toARGB color space conversion
 

@@ -49,8 +49,8 @@
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace countNonZero
 {

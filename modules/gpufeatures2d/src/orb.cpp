@@ -43,26 +43,26 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::release() { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::computeKeyPointsPyramid() { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::computeDescriptors(GpuMat&) { throw_no_cuda(); }
-void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat&) { throw_no_cuda(); }
+cv::cuda::ORB_GPU::ORB_GPU(int, float, int, int, int, int, int, int) : fastDetector_(20) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::downloadKeyPoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::convertKeyPoints(const Mat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::release() { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::buildScalePyramids(const GpuMat&, const GpuMat&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::computeKeyPointsPyramid() { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::computeDescriptors(GpuMat&) { throw_no_cuda(); }
+void cv::cuda::ORB_GPU::mergeKeyPoints(GpuMat&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace orb
     {
@@ -395,7 +395,7 @@ namespace
     }
 }
 
-cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edgeThreshold, int firstLevel, int WTA_K, int scoreType, int patchSize) :
+cv::cuda::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edgeThreshold, int firstLevel, int WTA_K, int scoreType, int patchSize) :
     nFeatures_(nFeatures), scaleFactor_(scaleFactor), nLevels_(nLevels), edgeThreshold_(edgeThreshold), firstLevel_(firstLevel), WTA_K_(WTA_K),
     scoreType_(scoreType), patchSize_(patchSize),
     fastDetector_(DEFAULT_FAST_THRESHOLD)
@@ -431,7 +431,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
         ++v_0;
     }
     CV_Assert(u_max.size() < 32);
-    cv::gpu::cudev::orb::loadUMax(&u_max[0], static_cast<int>(u_max.size()));
+    cv::cuda::cudev::orb::loadUMax(&u_max[0], static_cast<int>(u_max.size()));
 
     // Calc pattern
     const int npoints = 512;
@@ -468,7 +468,7 @@ cv::gpu::ORB_GPU::ORB_GPU(int nFeatures, float scaleFactor, int nLevels, int edg
 
     pattern_.upload(h_pattern);
 
-    blurFilter = gpu::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
+    blurFilter = cuda::createGaussianFilter(CV_8UC1, -1, Size(7, 7), 2, 2, BORDER_REFLECT_101);
 
     blurForDescriptor = false;
 }
@@ -481,7 +481,7 @@ namespace
     }
 }
 
-void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mask)
+void cv::cuda::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mask)
 {
     CV_Assert(image.type() == CV_8UC1);
     CV_Assert(mask.empty() || (mask.type() == CV_8UC1 && mask.size() == image.size()));
@@ -504,19 +504,19 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         {
             if (level < firstLevel_)
             {
-                gpu::resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                cuda::resize(image, imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
                 if (!mask.empty())
-                    gpu::resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                    cuda::resize(mask, maskPyr_[level], sz, 0, 0, INTER_LINEAR);
             }
             else
             {
-                gpu::resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
+                cuda::resize(imagePyr_[level - 1], imagePyr_[level], sz, 0, 0, INTER_LINEAR);
 
                 if (!mask.empty())
                 {
-                    gpu::resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
-                    gpu::threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
+                    cuda::resize(maskPyr_[level - 1], maskPyr_[level], sz, 0, 0, INTER_LINEAR);
+                    cuda::threshold(maskPyr_[level], maskPyr_[level], 254, 0, THRESH_TOZERO);
                 }
             }
         }
@@ -534,7 +534,7 @@ void cv::gpu::ORB_GPU::buildScalePyramids(const GpuMat& image, const GpuMat& mas
         Rect inner(edgeThreshold_, edgeThreshold_, sz.width - 2 * edgeThreshold_, sz.height - 2 * edgeThreshold_);
         buf_(inner).setTo(Scalar::all(255));
 
-        gpu::bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
+        cuda::bitwise_and(maskPyr_[level], buf_, maskPyr_[level]);
     }
 }
 
@@ -543,7 +543,7 @@ namespace
     //takes keypoints and culls them by the response
     void cull(GpuMat& keypoints, int& count, int n_points)
     {
-        using namespace cv::gpu::cudev::orb;
+        using namespace cv::cuda::cudev::orb;
 
         //this is only necessary if the keypoints size is greater than the number of desired points.
         if (count > n_points)
@@ -559,9 +559,9 @@ namespace
     }
 }
 
-void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
+void cv::cuda::ORB_GPU::computeKeyPointsPyramid()
 {
-    using namespace cv::gpu::cudev::orb;
+    using namespace cv::cuda::cudev::orb;
 
     int half_patch_size = patchSize_ / 2;
 
@@ -602,9 +602,9 @@ void cv::gpu::ORB_GPU::computeKeyPointsPyramid()
     }
 }
 
-void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
+void cv::cuda::ORB_GPU::computeDescriptors(GpuMat& descriptors)
 {
-    using namespace cv::gpu::cudev::orb;
+    using namespace cv::cuda::cudev::orb;
 
     int nAllkeypoints = 0;
 
@@ -642,9 +642,9 @@ void cv::gpu::ORB_GPU::computeDescriptors(GpuMat& descriptors)
     }
 }
 
-void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
+void cv::cuda::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
 {
-    using namespace cv::gpu::cudev::orb;
+    using namespace cv::cuda::cudev::orb;
 
     int nAllkeypoints = 0;
 
@@ -684,7 +684,7 @@ void cv::gpu::ORB_GPU::mergeKeyPoints(GpuMat& keypoints)
     }
 }
 
-void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::cuda::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -697,7 +697,7 @@ void cv::gpu::ORB_GPU::downloadKeyPoints(const GpuMat &d_keypoints, std::vector<
     convertKeyPoints(h_keypoints, keypoints);
 }
 
-void cv::gpu::ORB_GPU::convertKeyPoints(const Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
+void cv::cuda::ORB_GPU::convertKeyPoints(const Mat &d_keypoints, std::vector<KeyPoint>& keypoints)
 {
     if (d_keypoints.empty())
     {
@@ -731,14 +731,14 @@ void cv::gpu::ORB_GPU::convertKeyPoints(const Mat &d_keypoints, std::vector<KeyP
     }
 }
 
-void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
+void cv::cuda::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints)
 {
     buildScalePyramids(image, mask);
     computeKeyPointsPyramid();
     mergeKeyPoints(keypoints);
 }
 
-void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
+void cv::cuda::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors)
 {
     buildScalePyramids(image, mask);
     computeKeyPointsPyramid();
@@ -746,19 +746,19 @@ void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, GpuMa
     mergeKeyPoints(keypoints);
 }
 
-void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+void cv::cuda::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 {
     (*this)(image, mask, d_keypoints_);
     downloadKeyPoints(d_keypoints_, keypoints);
 }
 
-void cv::gpu::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors)
+void cv::cuda::ORB_GPU::operator()(const GpuMat& image, const GpuMat& mask, std::vector<KeyPoint>& keypoints, GpuMat& descriptors)
 {
     (*this)(image, mask, d_keypoints_, descriptors);
     downloadKeyPoints(d_keypoints_, keypoints);
 }
 
-void cv::gpu::ORB_GPU::release()
+void cv::cuda::ORB_GPU::release()
 {
     imagePyr_.clear();
     maskPyr_.clear();

@@ -44,7 +44,7 @@
 
 #ifdef HAVE_NVCUVID
 
-PARAM_TEST_CASE(Video, cv::gpu::DeviceInfo, std::string)
+PARAM_TEST_CASE(Video, cv::cuda::DeviceInfo, std::string)
 {
 };
 
@@ -53,13 +53,13 @@ PARAM_TEST_CASE(Video, cv::gpu::DeviceInfo, std::string)
 
 GPU_TEST_P(Video, Reader)
 {
-    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+    cv::cuda::setDevice(GET_PARAM(0).deviceID());
 
     const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
     cv::Ptr<cv::gpucodec::VideoReader> reader = cv::gpucodec::createVideoReader(inputFile);
 
-    cv::gpu::GpuMat frame;
+    cv::cuda::GpuMat frame;
 
     for (int i = 0; i < 10; ++i)
     {
@@ -75,7 +75,7 @@ GPU_TEST_P(Video, Reader)
 
 GPU_TEST_P(Video, Writer)
 {
-    cv::gpu::setDevice(GET_PARAM(0).deviceID());
+    cv::cuda::setDevice(GET_PARAM(0).deviceID());
 
     const std::string inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
@@ -88,7 +88,7 @@ GPU_TEST_P(Video, Writer)
     cv::Ptr<cv::gpucodec::VideoWriter> d_writer;
 
     cv::Mat frame;
-    cv::gpu::GpuMat d_frame;
+    cv::cuda::GpuMat d_frame;
 
     for (int i = 0; i < 10; ++i)
     {

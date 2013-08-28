@@ -68,10 +68,10 @@ PERF_TEST_P(Image_AppertureSz_L2gradient, Canny,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_image(image);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::CannyEdgeDetector> canny = cv::gpu::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
+        cv::Ptr<cv::cuda::CannyEdgeDetector> canny = cv::cuda::createCannyEdgeDetector(low_thresh, high_thresh, apperture_size, useL2gradient);
 
         TEST_CYCLE() canny->detect(d_image, dst);
 

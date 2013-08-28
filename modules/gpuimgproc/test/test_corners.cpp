@@ -55,9 +55,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(ApertureSize, int);
 }
 
-PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, BorderType, BlockSize, ApertureSize)
+PARAM_TEST_CASE(CornerHarris, cv::cuda::DeviceInfo, MatType, BorderType, BlockSize, ApertureSize)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int type;
     int borderType;
     int blockSize;
@@ -71,7 +71,7 @@ PARAM_TEST_CASE(CornerHarris, cv::gpu::DeviceInfo, MatType, BorderType, BlockSiz
         blockSize = GET_PARAM(3);
         apertureSize = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -82,9 +82,9 @@ GPU_TEST_P(CornerHarris, Accuracy)
 
     double k = randomDouble(0.1, 0.9);
 
-    cv::Ptr<cv::gpu::CornernessCriteria> harris = cv::gpu::createHarrisCorner(src.type(), blockSize, apertureSize, k, borderType);
+    cv::Ptr<cv::cuda::CornernessCriteria> harris = cv::cuda::createHarrisCorner(src.type(), blockSize, apertureSize, k, borderType);
 
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
     harris->compute(loadMat(src), dst);
 
     cv::Mat dst_gold;
@@ -103,9 +103,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CornerHarris, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // cornerMinEigen
 
-PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, BorderType, BlockSize, ApertureSize)
+PARAM_TEST_CASE(CornerMinEigen, cv::cuda::DeviceInfo, MatType, BorderType, BlockSize, ApertureSize)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int type;
     int borderType;
     int blockSize;
@@ -119,7 +119,7 @@ PARAM_TEST_CASE(CornerMinEigen, cv::gpu::DeviceInfo, MatType, BorderType, BlockS
         blockSize = GET_PARAM(3);
         apertureSize = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -128,9 +128,9 @@ GPU_TEST_P(CornerMinEigen, Accuracy)
     cv::Mat src = readImageType("stereobm/aloe-L.png", type);
     ASSERT_FALSE(src.empty());
 
-    cv::Ptr<cv::gpu::CornernessCriteria> minEigenVal = cv::gpu::createMinEigenValCorner(src.type(), blockSize, apertureSize, borderType);
+    cv::Ptr<cv::cuda::CornernessCriteria> minEigenVal = cv::cuda::createMinEigenValCorner(src.type(), blockSize, apertureSize, borderType);
 
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
     minEigenVal->compute(loadMat(src), dst);
 
     cv::Mat dst_gold;

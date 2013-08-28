@@ -120,12 +120,12 @@ private:
 class CV_EXPORTS MoreAccurateMotionWobbleSuppressorGpu : public MoreAccurateMotionWobbleSuppressorBase
 {
 public:
-    void suppress(int idx, const gpu::GpuMat &frame, gpu::GpuMat &result);
+    void suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result);
     virtual void suppress(int idx, const Mat &frame, Mat &result);
 
 private:
-    gpu::GpuMat frameDevice_, resultDevice_;
-    gpu::GpuMat mapx_, mapy_;
+    cuda::GpuMat frameDevice_, resultDevice_;
+    cuda::GpuMat mapx_, mapy_;
 };
 #endif
 

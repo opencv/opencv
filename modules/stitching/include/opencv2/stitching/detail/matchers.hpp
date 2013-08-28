@@ -116,11 +116,11 @@ public:
 private:
     void find(const Mat &image, ImageFeatures &features);
 
-    gpu::GpuMat image_;
-    gpu::GpuMat gray_image_;
-    gpu::SURF_GPU surf_;
-    gpu::GpuMat keypoints_;
-    gpu::GpuMat descriptors_;
+    cuda::GpuMat image_;
+    cuda::GpuMat gray_image_;
+    cuda::SURF_GPU surf_;
+    cuda::GpuMat keypoints_;
+    cuda::GpuMat descriptors_;
     int num_octaves_, num_layers_;
     int num_octaves_descr_, num_layers_descr_;
 };

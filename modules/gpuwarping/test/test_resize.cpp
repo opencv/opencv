@@ -117,9 +117,9 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test
 
-PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
+PARAM_TEST_CASE(Resize, cv::cuda::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     double coeff;
     int interpolation;
@@ -135,7 +135,7 @@ PARAM_TEST_CASE(Resize, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpol
         interpolation = GET_PARAM(4);
         useRoi = GET_PARAM(5);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -143,8 +143,8 @@ GPU_TEST_P(Resize, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+    cv::cuda::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
+    cv::cuda::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
 
     cv::Mat dst_gold;
     resizeGold(src, dst_gold, coeff, coeff, interpolation);
@@ -162,9 +162,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Warping, Resize, testing::Combine(
 
 /////////////////
 
-PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
+PARAM_TEST_CASE(ResizeSameAsHost, cv::cuda::DeviceInfo, cv::Size, MatType, double, Interpolation, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     double coeff;
     int interpolation;
@@ -180,7 +180,7 @@ PARAM_TEST_CASE(ResizeSameAsHost, cv::gpu::DeviceInfo, cv::Size, MatType, double
         interpolation = GET_PARAM(4);
         useRoi = GET_PARAM(5);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -189,8 +189,8 @@ GPU_TEST_P(ResizeSameAsHost, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
-    cv::gpu::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
+    cv::cuda::GpuMat dst = createMat(cv::Size(cv::saturate_cast<int>(src.cols * coeff), cv::saturate_cast<int>(src.rows * coeff)), type, useRoi);
+    cv::cuda::resize(loadMat(src, useRoi), dst, cv::Size(), coeff, coeff, interpolation);
 
     cv::Mat dst_gold;
     cv::resize(src, dst_gold, cv::Size(), coeff, coeff, interpolation);

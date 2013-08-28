@@ -43,9 +43,9 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
-int cv::gpu::getCudaEnabledDeviceCount()
+int cv::cuda::getCudaEnabledDeviceCount()
 {
 #ifndef HAVE_CUDA
     return 0;
@@ -64,7 +64,7 @@ int cv::gpu::getCudaEnabledDeviceCount()
 #endif
 }
 
-void cv::gpu::setDevice(int device)
+void cv::cuda::setDevice(int device)
 {
 #ifndef HAVE_CUDA
     (void) device;
@@ -74,7 +74,7 @@ void cv::gpu::setDevice(int device)
 #endif
 }
 
-int cv::gpu::getDevice()
+int cv::cuda::getDevice()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -86,7 +86,7 @@ int cv::gpu::getDevice()
 #endif
 }
 
-void cv::gpu::resetDevice()
+void cv::cuda::resetDevice()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -95,7 +95,7 @@ void cv::gpu::resetDevice()
 #endif
 }
 
-bool cv::gpu::deviceSupports(FeatureSet feature_set)
+bool cv::cuda::deviceSupports(FeatureSet feature_set)
 {
 #ifndef HAVE_CUDA
     (void) feature_set;
@@ -225,7 +225,7 @@ namespace
 
 #endif
 
-bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
+bool cv::cuda::TargetArchs::builtWith(cv::cuda::FeatureSet feature_set)
 {
 #ifndef HAVE_CUDA
     (void) feature_set;
@@ -236,7 +236,7 @@ bool cv::gpu::TargetArchs::builtWith(cv::gpu::FeatureSet feature_set)
 #endif
 }
 
-bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
+bool cv::cuda::TargetArchs::hasPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
     (void) major;
@@ -248,7 +248,7 @@ bool cv::gpu::TargetArchs::hasPtx(int major, int minor)
 #endif
 }
 
-bool cv::gpu::TargetArchs::hasBin(int major, int minor)
+bool cv::cuda::TargetArchs::hasBin(int major, int minor)
 {
 #ifndef HAVE_CUDA
     (void) major;
@@ -260,7 +260,7 @@ bool cv::gpu::TargetArchs::hasBin(int major, int minor)
 #endif
 }
 
-bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
+bool cv::cuda::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
     (void) major;
@@ -272,7 +272,7 @@ bool cv::gpu::TargetArchs::hasEqualOrLessPtx(int major, int minor)
 #endif
 }
 
-bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
+bool cv::cuda::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 {
 #ifndef HAVE_CUDA
     (void) major;
@@ -284,7 +284,7 @@ bool cv::gpu::TargetArchs::hasEqualOrGreaterPtx(int major, int minor)
 #endif
 }
 
-bool cv::gpu::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
+bool cv::cuda::TargetArchs::hasEqualOrGreaterBin(int major, int minor)
 {
 #ifndef HAVE_CUDA
     (void) major;
@@ -345,7 +345,7 @@ namespace
 
 #endif
 
-const char* cv::gpu::DeviceInfo::name() const
+const char* cv::cuda::DeviceInfo::name() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -355,7 +355,7 @@ const char* cv::gpu::DeviceInfo::name() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::totalGlobalMem() const
+size_t cv::cuda::DeviceInfo::totalGlobalMem() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -365,7 +365,7 @@ size_t cv::gpu::DeviceInfo::totalGlobalMem() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
+size_t cv::cuda::DeviceInfo::sharedMemPerBlock() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -375,7 +375,7 @@ size_t cv::gpu::DeviceInfo::sharedMemPerBlock() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::regsPerBlock() const
+int cv::cuda::DeviceInfo::regsPerBlock() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -385,7 +385,7 @@ int cv::gpu::DeviceInfo::regsPerBlock() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::warpSize() const
+int cv::cuda::DeviceInfo::warpSize() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -395,7 +395,7 @@ int cv::gpu::DeviceInfo::warpSize() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::memPitch() const
+size_t cv::cuda::DeviceInfo::memPitch() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -405,7 +405,7 @@ size_t cv::gpu::DeviceInfo::memPitch() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxThreadsPerBlock() const
+int cv::cuda::DeviceInfo::maxThreadsPerBlock() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -415,7 +415,7 @@ int cv::gpu::DeviceInfo::maxThreadsPerBlock() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxThreadsDim() const
+Vec3i cv::cuda::DeviceInfo::maxThreadsDim() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -425,7 +425,7 @@ Vec3i cv::gpu::DeviceInfo::maxThreadsDim() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxGridSize() const
+Vec3i cv::cuda::DeviceInfo::maxGridSize() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -435,7 +435,7 @@ Vec3i cv::gpu::DeviceInfo::maxGridSize() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::clockRate() const
+int cv::cuda::DeviceInfo::clockRate() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -445,7 +445,7 @@ int cv::gpu::DeviceInfo::clockRate() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::totalConstMem() const
+size_t cv::cuda::DeviceInfo::totalConstMem() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -455,7 +455,7 @@ size_t cv::gpu::DeviceInfo::totalConstMem() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::majorVersion() const
+int cv::cuda::DeviceInfo::majorVersion() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -465,7 +465,7 @@ int cv::gpu::DeviceInfo::majorVersion() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::minorVersion() const
+int cv::cuda::DeviceInfo::minorVersion() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -475,7 +475,7 @@ int cv::gpu::DeviceInfo::minorVersion() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::textureAlignment() const
+size_t cv::cuda::DeviceInfo::textureAlignment() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -485,7 +485,7 @@ size_t cv::gpu::DeviceInfo::textureAlignment() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::texturePitchAlignment() const
+size_t cv::cuda::DeviceInfo::texturePitchAlignment() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -495,7 +495,7 @@ size_t cv::gpu::DeviceInfo::texturePitchAlignment() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::multiProcessorCount() const
+int cv::cuda::DeviceInfo::multiProcessorCount() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -505,7 +505,7 @@ int cv::gpu::DeviceInfo::multiProcessorCount() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::kernelExecTimeoutEnabled() const
+bool cv::cuda::DeviceInfo::kernelExecTimeoutEnabled() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -515,7 +515,7 @@ bool cv::gpu::DeviceInfo::kernelExecTimeoutEnabled() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::integrated() const
+bool cv::cuda::DeviceInfo::integrated() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -525,7 +525,7 @@ bool cv::gpu::DeviceInfo::integrated() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::canMapHostMemory() const
+bool cv::cuda::DeviceInfo::canMapHostMemory() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -535,7 +535,7 @@ bool cv::gpu::DeviceInfo::canMapHostMemory() const
 #endif
 }
 
-DeviceInfo::ComputeMode cv::gpu::DeviceInfo::computeMode() const
+DeviceInfo::ComputeMode cv::cuda::DeviceInfo::computeMode() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -553,7 +553,7 @@ DeviceInfo::ComputeMode cv::gpu::DeviceInfo::computeMode() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxTexture1D() const
+int cv::cuda::DeviceInfo::maxTexture1D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -563,7 +563,7 @@ int cv::gpu::DeviceInfo::maxTexture1D() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxTexture1DMipmap() const
+int cv::cuda::DeviceInfo::maxTexture1DMipmap() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -578,7 +578,7 @@ int cv::gpu::DeviceInfo::maxTexture1DMipmap() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxTexture1DLinear() const
+int cv::cuda::DeviceInfo::maxTexture1DLinear() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -588,7 +588,7 @@ int cv::gpu::DeviceInfo::maxTexture1DLinear() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxTexture2D() const
+Vec2i cv::cuda::DeviceInfo::maxTexture2D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -598,7 +598,7 @@ Vec2i cv::gpu::DeviceInfo::maxTexture2D() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxTexture2DMipmap() const
+Vec2i cv::cuda::DeviceInfo::maxTexture2DMipmap() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -613,7 +613,7 @@ Vec2i cv::gpu::DeviceInfo::maxTexture2DMipmap() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxTexture2DLinear() const
+Vec3i cv::cuda::DeviceInfo::maxTexture2DLinear() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -623,7 +623,7 @@ Vec3i cv::gpu::DeviceInfo::maxTexture2DLinear() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxTexture2DGather() const
+Vec2i cv::cuda::DeviceInfo::maxTexture2DGather() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -633,7 +633,7 @@ Vec2i cv::gpu::DeviceInfo::maxTexture2DGather() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxTexture3D() const
+Vec3i cv::cuda::DeviceInfo::maxTexture3D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -643,7 +643,7 @@ Vec3i cv::gpu::DeviceInfo::maxTexture3D() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxTextureCubemap() const
+int cv::cuda::DeviceInfo::maxTextureCubemap() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -653,7 +653,7 @@ int cv::gpu::DeviceInfo::maxTextureCubemap() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxTexture1DLayered() const
+Vec2i cv::cuda::DeviceInfo::maxTexture1DLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -663,7 +663,7 @@ Vec2i cv::gpu::DeviceInfo::maxTexture1DLayered() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxTexture2DLayered() const
+Vec3i cv::cuda::DeviceInfo::maxTexture2DLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -673,7 +673,7 @@ Vec3i cv::gpu::DeviceInfo::maxTexture2DLayered() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxTextureCubemapLayered() const
+Vec2i cv::cuda::DeviceInfo::maxTextureCubemapLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -683,7 +683,7 @@ Vec2i cv::gpu::DeviceInfo::maxTextureCubemapLayered() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxSurface1D() const
+int cv::cuda::DeviceInfo::maxSurface1D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -693,7 +693,7 @@ int cv::gpu::DeviceInfo::maxSurface1D() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxSurface2D() const
+Vec2i cv::cuda::DeviceInfo::maxSurface2D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -703,7 +703,7 @@ Vec2i cv::gpu::DeviceInfo::maxSurface2D() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxSurface3D() const
+Vec3i cv::cuda::DeviceInfo::maxSurface3D() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -713,7 +713,7 @@ Vec3i cv::gpu::DeviceInfo::maxSurface3D() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxSurface1DLayered() const
+Vec2i cv::cuda::DeviceInfo::maxSurface1DLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -723,7 +723,7 @@ Vec2i cv::gpu::DeviceInfo::maxSurface1DLayered() const
 #endif
 }
 
-Vec3i cv::gpu::DeviceInfo::maxSurface2DLayered() const
+Vec3i cv::cuda::DeviceInfo::maxSurface2DLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -733,7 +733,7 @@ Vec3i cv::gpu::DeviceInfo::maxSurface2DLayered() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxSurfaceCubemap() const
+int cv::cuda::DeviceInfo::maxSurfaceCubemap() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -743,7 +743,7 @@ int cv::gpu::DeviceInfo::maxSurfaceCubemap() const
 #endif
 }
 
-Vec2i cv::gpu::DeviceInfo::maxSurfaceCubemapLayered() const
+Vec2i cv::cuda::DeviceInfo::maxSurfaceCubemapLayered() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -753,7 +753,7 @@ Vec2i cv::gpu::DeviceInfo::maxSurfaceCubemapLayered() const
 #endif
 }
 
-size_t cv::gpu::DeviceInfo::surfaceAlignment() const
+size_t cv::cuda::DeviceInfo::surfaceAlignment() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -763,7 +763,7 @@ size_t cv::gpu::DeviceInfo::surfaceAlignment() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::concurrentKernels() const
+bool cv::cuda::DeviceInfo::concurrentKernels() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -773,7 +773,7 @@ bool cv::gpu::DeviceInfo::concurrentKernels() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::ECCEnabled() const
+bool cv::cuda::DeviceInfo::ECCEnabled() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -783,7 +783,7 @@ bool cv::gpu::DeviceInfo::ECCEnabled() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::pciBusID() const
+int cv::cuda::DeviceInfo::pciBusID() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -793,7 +793,7 @@ int cv::gpu::DeviceInfo::pciBusID() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::pciDeviceID() const
+int cv::cuda::DeviceInfo::pciDeviceID() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -803,7 +803,7 @@ int cv::gpu::DeviceInfo::pciDeviceID() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::pciDomainID() const
+int cv::cuda::DeviceInfo::pciDomainID() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -813,7 +813,7 @@ int cv::gpu::DeviceInfo::pciDomainID() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::tccDriver() const
+bool cv::cuda::DeviceInfo::tccDriver() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -823,7 +823,7 @@ bool cv::gpu::DeviceInfo::tccDriver() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::asyncEngineCount() const
+int cv::cuda::DeviceInfo::asyncEngineCount() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -833,7 +833,7 @@ int cv::gpu::DeviceInfo::asyncEngineCount() const
 #endif
 }
 
-bool cv::gpu::DeviceInfo::unifiedAddressing() const
+bool cv::cuda::DeviceInfo::unifiedAddressing() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -843,7 +843,7 @@ bool cv::gpu::DeviceInfo::unifiedAddressing() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::memoryClockRate() const
+int cv::cuda::DeviceInfo::memoryClockRate() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -853,7 +853,7 @@ int cv::gpu::DeviceInfo::memoryClockRate() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::memoryBusWidth() const
+int cv::cuda::DeviceInfo::memoryBusWidth() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -863,7 +863,7 @@ int cv::gpu::DeviceInfo::memoryBusWidth() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::l2CacheSize() const
+int cv::cuda::DeviceInfo::l2CacheSize() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -873,7 +873,7 @@ int cv::gpu::DeviceInfo::l2CacheSize() const
 #endif
 }
 
-int cv::gpu::DeviceInfo::maxThreadsPerMultiProcessor() const
+int cv::cuda::DeviceInfo::maxThreadsPerMultiProcessor() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -883,7 +883,7 @@ int cv::gpu::DeviceInfo::maxThreadsPerMultiProcessor() const
 #endif
 }
 
-void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
+void cv::cuda::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory) const
 {
 #ifndef HAVE_CUDA
     (void) _totalMemory;
@@ -901,7 +901,7 @@ void cv::gpu::DeviceInfo::queryMemory(size_t& _totalMemory, size_t& _freeMemory)
 #endif
 }
 
-bool cv::gpu::DeviceInfo::isCompatible() const
+bool cv::cuda::DeviceInfo::isCompatible() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -951,7 +951,7 @@ namespace
 
 #endif
 
-void cv::gpu::printCudaDeviceInfo(int device)
+void cv::cuda::printCudaDeviceInfo(int device)
 {
 #ifndef HAVE_CUDA
     (void) device;
@@ -1037,7 +1037,7 @@ void cv::gpu::printCudaDeviceInfo(int device)
 #endif
 }
 
-void cv::gpu::printShortCudaDeviceInfo(int device)
+void cv::cuda::printShortCudaDeviceInfo(int device)
 {
 #ifndef HAVE_CUDA
     (void) device;
@@ -1251,7 +1251,7 @@ namespace
 
 #endif
 
-String cv::gpu::getNppErrorMessage(int code)
+String cv::cuda::getNppErrorMessage(int code)
 {
 #ifndef HAVE_CUDA
     (void) code;
@@ -1261,7 +1261,7 @@ String cv::gpu::getNppErrorMessage(int code)
 #endif
 }
 
-String cv::gpu::getCudaDriverApiErrorMessage(int code)
+String cv::cuda::getCudaDriverApiErrorMessage(int code)
 {
 #ifndef HAVE_CUDA
     (void) code;

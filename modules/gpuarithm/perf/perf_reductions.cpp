@@ -68,11 +68,11 @@ PERF_TEST_P(Sz_Depth_Norm, Norm,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         double gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::norm(d_src, normType, d_buf);
+        TEST_CYCLE() gpu_dst = cv::cuda::norm(d_src, normType, d_buf);
 
         SANITY_CHECK(gpu_dst, 1e-6, ERROR_RELATIVE);
     }
@@ -106,12 +106,12 @@ PERF_TEST_P(Sz_Norm, NormDiff,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src1(src1);
-        const cv::gpu::GpuMat d_src2(src2);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src1(src1);
+        const cv::cuda::GpuMat d_src2(src2);
+        cv::cuda::GpuMat d_buf;
         double gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::norm(d_src1, d_src2, d_buf, normType);
+        TEST_CYCLE() gpu_dst = cv::cuda::norm(d_src1, d_src2, d_buf, normType);
 
         SANITY_CHECK(gpu_dst);
 
@@ -145,11 +145,11 @@ PERF_TEST_P(Sz_Depth_Cn, Sum,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         cv::Scalar gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::sum(d_src, d_buf);
+        TEST_CYCLE() gpu_dst = cv::cuda::sum(d_src, d_buf);
 
         SANITY_CHECK(gpu_dst, 1e-5, ERROR_RELATIVE);
     }
@@ -182,11 +182,11 @@ PERF_TEST_P(Sz_Depth_Cn, SumAbs,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         cv::Scalar gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::absSum(d_src, d_buf);
+        TEST_CYCLE() gpu_dst = cv::cuda::absSum(d_src, d_buf);
 
         SANITY_CHECK(gpu_dst, 1e-6, ERROR_RELATIVE);
     }
@@ -215,11 +215,11 @@ PERF_TEST_P(Sz_Depth_Cn, SumSqr,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         cv::Scalar gpu_dst;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::sqrSum(d_src, d_buf);
+        TEST_CYCLE() gpu_dst = cv::cuda::sqrSum(d_src, d_buf);
 
         SANITY_CHECK(gpu_dst, 1e-6, ERROR_RELATIVE);
     }
@@ -247,11 +247,11 @@ PERF_TEST_P(Sz_Depth, MinMax,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         double gpu_minVal, gpu_maxVal;
 
-        TEST_CYCLE() cv::gpu::minMax(d_src, &gpu_minVal, &gpu_maxVal, cv::gpu::GpuMat(), d_buf);
+        TEST_CYCLE() cv::cuda::minMax(d_src, &gpu_minVal, &gpu_maxVal, cv::cuda::GpuMat(), d_buf);
 
         SANITY_CHECK(gpu_minVal, 1e-10);
         SANITY_CHECK(gpu_maxVal, 1e-10);
@@ -285,12 +285,12 @@ PERF_TEST_P(Sz_Depth, MinMaxLoc,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_valbuf, d_locbuf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_valbuf, d_locbuf;
         double gpu_minVal, gpu_maxVal;
         cv::Point gpu_minLoc, gpu_maxLoc;
 
-        TEST_CYCLE() cv::gpu::minMaxLoc(d_src, &gpu_minVal, &gpu_maxVal, &gpu_minLoc, &gpu_maxLoc, cv::gpu::GpuMat(), d_valbuf, d_locbuf);
+        TEST_CYCLE() cv::cuda::minMaxLoc(d_src, &gpu_minVal, &gpu_maxVal, &gpu_minLoc, &gpu_maxLoc, cv::cuda::GpuMat(), d_valbuf, d_locbuf);
 
         SANITY_CHECK(gpu_minVal, 1e-10);
         SANITY_CHECK(gpu_maxVal, 1e-10);
@@ -322,11 +322,11 @@ PERF_TEST_P(Sz_Depth, CountNonZero,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         int gpu_dst = 0;
 
-        TEST_CYCLE() gpu_dst = cv::gpu::countNonZero(d_src, d_buf);
+        TEST_CYCLE() gpu_dst = cv::cuda::countNonZero(d_src, d_buf);
 
         SANITY_CHECK(gpu_dst);
     }
@@ -370,10 +370,10 @@ PERF_TEST_P(Sz_Depth_Cn_Code_Dim, Reduce,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::reduce(d_src, dst, dim, reduceOp);
+        TEST_CYCLE() cv::cuda::reduce(d_src, dst, dim, reduceOp);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -412,11 +412,11 @@ PERF_TEST_P(Sz_Depth_NormType, Normalize,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_norm_buf, d_cvt_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
+        cv::cuda::GpuMat d_norm_buf, d_cvt_buf;
 
-        TEST_CYCLE() cv::gpu::normalize(d_src, dst, alpha, beta, norm_type, type, cv::gpu::GpuMat(), d_norm_buf, d_cvt_buf);
+        TEST_CYCLE() cv::cuda::normalize(d_src, dst, alpha, beta, norm_type, type, cv::cuda::GpuMat(), d_norm_buf, d_cvt_buf);
 
         GPU_SANITY_CHECK(dst, 1e-6);
     }
@@ -444,12 +444,12 @@ PERF_TEST_P(Sz, MeanStdDev,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_buf;
         cv::Scalar gpu_mean;
         cv::Scalar gpu_stddev;
 
-        TEST_CYCLE() cv::gpu::meanStdDev(d_src, gpu_mean, gpu_stddev, d_buf);
+        TEST_CYCLE() cv::cuda::meanStdDev(d_src, gpu_mean, gpu_stddev, d_buf);
 
         SANITY_CHECK(gpu_mean);
         SANITY_CHECK(gpu_stddev);

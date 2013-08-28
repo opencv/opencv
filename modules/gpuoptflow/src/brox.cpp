@@ -43,11 +43,11 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPULEGACY) || defined (CUDA_DISABLER)
 
-void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::BroxOpticalFlow::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -69,7 +69,7 @@ namespace
     static void outputHandler(const String &msg) { CV_Error(cv::Error::GpuApiCallError, msg.c_str()); }
 }
 
-void cv::gpu::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& s)
+void cv::cuda::BroxOpticalFlow::operator ()(const GpuMat& frame0, const GpuMat& frame1, GpuMat& u, GpuMat& v, Stream& s)
 {
     ncvSetDebugOutputHandler(outputHandler);
 

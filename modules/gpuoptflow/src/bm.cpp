@@ -43,11 +43,11 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::calcOpticalFlowBM(const GpuMat&, const GpuMat&, Size, Size, Size, bool, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -57,7 +57,7 @@ namespace optflowbm
               int maxX, int maxY, int acceptLevel, int escapeLevel, const short2* ss, int ssCount, cudaStream_t stream);
 }
 
-void cv::gpu::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blockSize, Size shiftSize, Size maxRange, bool usePrevious, GpuMat& velx, GpuMat& vely, GpuMat& buf, Stream& st)
+void cv::cuda::calcOpticalFlowBM(const GpuMat& prev, const GpuMat& curr, Size blockSize, Size shiftSize, Size maxRange, bool usePrevious, GpuMat& velx, GpuMat& vely, GpuMat& buf, Stream& st)
 {
     CV_Assert( prev.type() == CV_8UC1 );
     CV_Assert( curr.size() == prev.size() && curr.type() == prev.type() );

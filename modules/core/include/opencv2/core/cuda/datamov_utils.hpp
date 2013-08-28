@@ -45,7 +45,7 @@
 
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     #if defined __CUDA_ARCH__ && __CUDA_ARCH__ >= 200
 
@@ -100,6 +100,6 @@ namespace cv { namespace gpu { namespace cudev
         #undef OPENCV_GPU_ASM_PTR
 
     #endif // __CUDA_ARCH__ >= 200
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_GPU_DATAMOV_UTILS_HPP__

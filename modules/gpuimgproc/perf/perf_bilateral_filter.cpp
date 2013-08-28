@@ -75,10 +75,10 @@ PERF_TEST_P(Sz_Depth_Cn_KernelSz, BilateralFilter,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::bilateralFilter(d_src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
+        TEST_CYCLE() cv::cuda::bilateralFilter(d_src, dst, kernel_size, sigma_color, sigma_spatial, borderMode);
 
         GPU_SANITY_CHECK(dst);
     }

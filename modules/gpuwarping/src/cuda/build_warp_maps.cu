@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -215,7 +215,7 @@ namespace cv { namespace gpu { namespace cudev
                 cudaSafeCall(cudaDeviceSynchronize());
         }
     } // namespace imgproc
-}}} // namespace cv { namespace gpu { namespace cudev {
+}}} // namespace cv { namespace cuda { namespace cudev {
 
 
 #endif /* CUDA_DISABLER */

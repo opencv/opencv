@@ -52,8 +52,8 @@
 
 #include "unroll_detail.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace reduce
 {

@@ -44,25 +44,25 @@
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_no_cuda(); }
-size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_no_cuda(); return 0; }
-size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_no_cuda(); return 0; }
-double cv::gpu::HOGDescriptor::getWinSigma() const { throw_no_cuda(); return 0; }
-bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_no_cuda(); return false; }
-void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_no_cuda(); }
-void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_no_cuda(); }
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_no_cuda(); }
-void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_no_cuda(); }
-std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_no_cuda(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_no_cuda(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_no_cuda(); return std::vector<float>(); }
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_no_cuda(); }
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_no_cuda(); }
+cv::cuda::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_no_cuda(); }
+size_t cv::cuda::HOGDescriptor::getDescriptorSize() const { throw_no_cuda(); return 0; }
+size_t cv::cuda::HOGDescriptor::getBlockHistogramSize() const { throw_no_cuda(); return 0; }
+double cv::cuda::HOGDescriptor::getWinSigma() const { throw_no_cuda(); return 0; }
+bool cv::cuda::HOGDescriptor::checkDetectorSize() const { throw_no_cuda(); return false; }
+void cv::cuda::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_no_cuda(); }
+void cv::cuda::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_no_cuda(); }
+void cv::cuda::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_no_cuda(); }
+void cv::cuda::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_no_cuda(); }
+void cv::cuda::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_no_cuda(); }
+std::vector<float> cv::cuda::HOGDescriptor::getDefaultPeopleDetector() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::cuda::HOGDescriptor::getPeopleDetector48x96() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::cuda::HOGDescriptor::getPeopleDetector64x128() { throw_no_cuda(); return std::vector<float>(); }
+void cv::cuda::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_no_cuda(); }
+void cv::cuda::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hog
     {
@@ -70,8 +70,8 @@ namespace cv { namespace gpu { namespace cudev
                               int nblocks_win_x, int nblocks_win_y);
 
         void compute_hists(int nbins, int block_stride_x, int blovck_stride_y,
-                           int height, int width, const cv::gpu::PtrStepSzf& grad,
-                           const cv::gpu::PtrStepSzb& qangle, float sigma, float* block_hists);
+                           int height, int width, const cv::cuda::PtrStepSzf& grad,
+                           const cv::cuda::PtrStepSzb& qangle, float sigma, float* block_hists);
 
         void normalize_hists(int nbins, int block_stride_x, int block_stride_y,
                              int height, int width, float* block_hists, float threshold);
@@ -87,24 +87,24 @@ namespace cv { namespace gpu { namespace cudev
 
         void extract_descrs_by_rows(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                     int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
-                                    cv::gpu::PtrStepSzf descriptors);
+                                    cv::cuda::PtrStepSzf descriptors);
         void extract_descrs_by_cols(int win_height, int win_width, int block_stride_y, int block_stride_x,
                                     int win_stride_y, int win_stride_x, int height, int width, float* block_hists,
-                                    cv::gpu::PtrStepSzf descriptors);
+                                    cv::cuda::PtrStepSzf descriptors);
 
-        void compute_gradients_8UC1(int nbins, int height, int width, const cv::gpu::PtrStepSzb& img,
-                                    float angle_scale, cv::gpu::PtrStepSzf grad, cv::gpu::PtrStepSzb qangle, bool correct_gamma);
-        void compute_gradients_8UC4(int nbins, int height, int width, const cv::gpu::PtrStepSzb& img,
-                                    float angle_scale, cv::gpu::PtrStepSzf grad, cv::gpu::PtrStepSzb qangle, bool correct_gamma);
+        void compute_gradients_8UC1(int nbins, int height, int width, const cv::cuda::PtrStepSzb& img,
+                                    float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
+        void compute_gradients_8UC4(int nbins, int height, int width, const cv::cuda::PtrStepSzb& img,
+                                    float angle_scale, cv::cuda::PtrStepSzf grad, cv::cuda::PtrStepSzb qangle, bool correct_gamma);
 
-        void resize_8UC1(const cv::gpu::PtrStepSzb& src, cv::gpu::PtrStepSzb dst);
-        void resize_8UC4(const cv::gpu::PtrStepSzb& src, cv::gpu::PtrStepSzb dst);
+        void resize_8UC1(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
+        void resize_8UC4(const cv::cuda::PtrStepSzb& src, cv::cuda::PtrStepSzb dst);
     }
 }}}
 
-using namespace ::cv::gpu::cudev;
+using namespace ::cv::cuda::cudev;
 
-cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_, Size cell_size_,
+cv::cuda::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_, Size cell_size_,
                                       int nbins_, double win_sigma_, double threshold_L2hys_, bool gamma_correction_, int nlevels_)
         : win_size(win_size_),
           block_size(block_size_),
@@ -132,30 +132,30 @@ cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size blo
     hog::set_up_constants(nbins, block_stride.width, block_stride.height, blocks_per_win.width, blocks_per_win.height);
 }
 
-size_t cv::gpu::HOGDescriptor::getDescriptorSize() const
+size_t cv::cuda::HOGDescriptor::getDescriptorSize() const
 {
     return numPartsWithin(win_size, block_size, block_stride).area() * getBlockHistogramSize();
 }
 
-size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const
+size_t cv::cuda::HOGDescriptor::getBlockHistogramSize() const
 {
     Size cells_per_block = Size(block_size.width / cell_size.width, block_size.height / cell_size.height);
     return (size_t)(nbins * cells_per_block.area());
 }
 
-double cv::gpu::HOGDescriptor::getWinSigma() const
+double cv::cuda::HOGDescriptor::getWinSigma() const
 {
     return win_sigma >= 0 ? win_sigma : (block_size.width + block_size.height) / 8.0;
 }
 
-bool cv::gpu::HOGDescriptor::checkDetectorSize() const
+bool cv::cuda::HOGDescriptor::checkDetectorSize() const
 {
     size_t detector_size = detector.rows * detector.cols;
     size_t descriptor_size = getDescriptorSize();
     return detector_size == 0 || detector_size == descriptor_size || detector_size == descriptor_size + 1;
 }
 
-void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>& _detector)
+void cv::cuda::HOGDescriptor::setSVMDetector(const std::vector<float>& _detector)
 {
     std::vector<float> detector_reordered(_detector.size());
 
@@ -179,7 +179,7 @@ void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>& _detector)
     CV_Assert(checkDetectorSize());
 }
 
-cv::gpu::GpuMat cv::gpu::HOGDescriptor::getBuffer(const Size& sz, int type, GpuMat& buf)
+cv::cuda::GpuMat cv::cuda::HOGDescriptor::getBuffer(const Size& sz, int type, GpuMat& buf)
 {
     if (buf.empty() || buf.type() != type)
         buf.create(sz, type);
@@ -190,13 +190,13 @@ cv::gpu::GpuMat cv::gpu::HOGDescriptor::getBuffer(const Size& sz, int type, GpuM
     return buf(Rect(Point(0,0), sz));
 }
 
-cv::gpu::GpuMat cv::gpu::HOGDescriptor::getBuffer(int rows, int cols, int type, GpuMat& buf)
+cv::cuda::GpuMat cv::cuda::HOGDescriptor::getBuffer(int rows, int cols, int type, GpuMat& buf)
 {
     return getBuffer(Size(cols, rows), type, buf);
 }
 
 
-void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& _grad, GpuMat& _qangle)
+void cv::cuda::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& _grad, GpuMat& _qangle)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
 
@@ -219,7 +219,7 @@ void cv::gpu::HOGDescriptor::computeGradient(const GpuMat& img, GpuMat& _grad, G
 }
 
 
-void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
+void cv::cuda::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
 {
     computeGradient(img, grad, qangle);
 
@@ -237,7 +237,7 @@ void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat& img)
 }
 
 
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, int descr_format)
+void cv::cuda::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, GpuMat& descriptors, int descr_format)
 {
     CV_Assert(win_stride.width % block_stride.width == 0 && win_stride.height % block_stride.height == 0);
 
@@ -264,7 +264,7 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
     }
 }
 
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, std::vector<Point>& hits, double hit_threshold,
+void cv::cuda::HOGDescriptor::computeConfidence(const GpuMat& img, std::vector<Point>& hits, double hit_threshold,
                           Size win_stride, Size padding, std::vector<Point>& locations, std::vector<double>& confidences)
 {
   CV_Assert(padding == Size(0, 0));
@@ -307,7 +307,7 @@ void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat& img, std::vector<Po
     }
 }
 
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
+void cv::cuda::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std::vector<Rect>& found_locations,
                             double hit_threshold, Size win_stride, Size padding,
                             std::vector<HOGConfidence> &conf_out, int group_threshold)
 {
@@ -359,7 +359,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std:
 }
 
 
-void cv::gpu::HOGDescriptor::detect(const GpuMat& img, std::vector<Point>& hits, double hit_threshold, Size win_stride, Size padding)
+void cv::cuda::HOGDescriptor::detect(const GpuMat& img, std::vector<Point>& hits, double hit_threshold, Size win_stride, Size padding)
 {
     CV_Assert(img.type() == CV_8UC1 || img.type() == CV_8UC4);
     CV_Assert(padding == Size(0, 0));
@@ -396,7 +396,7 @@ void cv::gpu::HOGDescriptor::detect(const GpuMat& img, std::vector<Point>& hits,
 
 
 
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rect>& found_locations, double hit_threshold,
+void cv::cuda::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rect>& found_locations, double hit_threshold,
                                               Size win_stride, Size padding, double scale0, int group_threshold)
 {
 
@@ -450,22 +450,22 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rec
     groupRectangles(found_locations, group_threshold, 0.2/*magic number copied from CPU version*/);
 }
 
-int cv::gpu::HOGDescriptor::numPartsWithin(int size, int part_size, int stride)
+int cv::cuda::HOGDescriptor::numPartsWithin(int size, int part_size, int stride)
 {
     return (size - part_size + stride) / stride;
 }
 
-cv::Size cv::gpu::HOGDescriptor::numPartsWithin(cv::Size size, cv::Size part_size, cv::Size stride)
+cv::Size cv::cuda::HOGDescriptor::numPartsWithin(cv::Size size, cv::Size part_size, cv::Size stride)
 {
     return Size(numPartsWithin(size.width, part_size.width, stride.width), numPartsWithin(size.height, part_size.height, stride.height));
 }
 
-std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector()
+std::vector<float> cv::cuda::HOGDescriptor::getDefaultPeopleDetector()
 {
     return getPeopleDetector64x128();
 }
 
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96()
+std::vector<float> cv::cuda::HOGDescriptor::getPeopleDetector48x96()
 {
     static const float detector[] = {
         0.294350f, -0.098796f, -0.129522f, 0.078753f, 0.387527f, 0.261529f,
@@ -805,7 +805,7 @@ std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96()
 
 
 
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128()
+std::vector<float> cv::cuda::HOGDescriptor::getPeopleDetector64x128()
 {
     static const float detector[] = {
        0.05359386f, -0.14721455f, -0.05532170f, 0.05077307f,

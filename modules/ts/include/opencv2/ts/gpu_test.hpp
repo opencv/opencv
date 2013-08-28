@@ -65,8 +65,8 @@ namespace cvtest
     //////////////////////////////////////////////////////////////////////
     // GpuMat create
 
-    CV_EXPORTS cv::gpu::GpuMat createMat(cv::Size size, int type, bool useRoi = false);
-    CV_EXPORTS cv::gpu::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
+    CV_EXPORTS cv::cuda::GpuMat createMat(cv::Size size, int type, bool useRoi = false);
+    CV_EXPORTS cv::cuda::GpuMat loadMat(const cv::Mat& m, bool useRoi = false);
 
     //////////////////////////////////////////////////////////////////////
     // Image load
@@ -81,7 +81,7 @@ namespace cvtest
     // Gpu devices
 
     //! return true if device supports specified feature and gpu module was built with support the feature.
-    CV_EXPORTS bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
+    CV_EXPORTS bool supportFeature(const cv::cuda::DeviceInfo& info, cv::cuda::FeatureSet feature);
 
     class CV_EXPORTS DeviceManager
     {
@@ -91,10 +91,10 @@ namespace cvtest
         void load(int i);
         void loadAll();
 
-        const std::vector<cv::gpu::DeviceInfo>& values() const { return devices_; }
+        const std::vector<cv::cuda::DeviceInfo>& values() const { return devices_; }
 
     private:
-        std::vector<cv::gpu::DeviceInfo> devices_;
+        std::vector<cv::cuda::DeviceInfo> devices_;
     };
 
     #define ALL_DEVICES testing::ValuesIn(cvtest::DeviceManager::instance().values())
@@ -201,7 +201,7 @@ namespace cvtest
         } \
         catch (...) \
         { \
-          cv::gpu::resetDevice(); \
+          cv::cuda::resetDevice(); \
           throw; \
         } \
       } \
@@ -342,7 +342,7 @@ namespace cvtest
     CV_EXPORTS void printCudaInfo();
 }
 
-namespace cv { namespace gpu
+namespace cv { namespace cuda
 {
     CV_EXPORTS void PrintTo(const DeviceInfo& info, std::ostream* os);
 }}
@@ -378,7 +378,7 @@ namespace cv { namespace gpu
             else \
             { \
                 cvtest::DeviceManager::instance().load(device); \
-                cv::gpu::DeviceInfo info(device); \
+                cv::cuda::DeviceInfo info(device); \
                 std::cout << "Run tests on device " << device << " [" << info.name() << "] \n" << std::endl; \
             } \
             cvtest::TS::ptr()->init( resourcesubdir ); \

@@ -44,17 +44,17 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_no_cuda(); }
-void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::OpticalFlowDual_TVL1_GPU::collectGarbage() {}
-void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+cv::cuda::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU() { throw_no_cuda(); }
+void cv::cuda::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::OpticalFlowDual_TVL1_GPU::collectGarbage() {}
+void cv::cuda::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
-cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
+cv::cuda::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
 {
     tau            = 0.25;
     lambda         = 0.15;
@@ -67,7 +67,7 @@ cv::gpu::OpticalFlowDual_TVL1_GPU::OpticalFlowDual_TVL1_GPU()
     useInitialFlow = false;
 }
 
-void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy)
+void cv::cuda::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy)
 {
     CV_Assert( I0.type() == CV_8UC1 || I0.type() == CV_32FC1 );
     CV_Assert( I0.size() == I1.size() );
@@ -113,8 +113,8 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
     // create the scales
     for (int s = 1; s < nscales; ++s)
     {
-        gpu::resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
-        gpu::resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
+        cuda::resize(I0s[s-1], I0s[s], Size(), scaleStep, scaleStep);
+        cuda::resize(I1s[s-1], I1s[s], Size(), scaleStep, scaleStep);
 
         if (I0s[s].cols < 16 || I0s[s].rows < 16)
         {
@@ -124,11 +124,11 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
 
         if (useInitialFlow)
         {
-            gpu::resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
-            gpu::resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
+            cuda::resize(u1s[s-1], u1s[s], Size(), scaleStep, scaleStep);
+            cuda::resize(u2s[s-1], u2s[s], Size(), scaleStep, scaleStep);
 
-            gpu::multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
-            gpu::multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
+            cuda::multiply(u1s[s], Scalar::all(scaleStep), u1s[s]);
+            cuda::multiply(u2s[s], Scalar::all(scaleStep), u2s[s]);
         }
         else
         {
@@ -156,12 +156,12 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::operator ()(const GpuMat& I0, const GpuM
         // otherwise, upsample the optical flow
 
         // zoom the optical flow for the next finer scale
-        gpu::resize(u1s[s], u1s[s - 1], I0s[s - 1].size());
-        gpu::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
+        cuda::resize(u1s[s], u1s[s - 1], I0s[s - 1].size());
+        cuda::resize(u2s[s], u2s[s - 1], I0s[s - 1].size());
 
         // scale the optical flow with the appropriate zoom factor
-        gpu::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
-        gpu::multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
+        cuda::multiply(u1s[s - 1], Scalar::all(1/scaleStep), u1s[s - 1]);
+        cuda::multiply(u2s[s - 1], Scalar::all(1/scaleStep), u2s[s - 1]);
     }
 }
 
@@ -177,7 +177,7 @@ namespace tvl1flow
     void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, float taut);
 }
 
-void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2)
+void cv::cuda::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const GpuMat& I1, GpuMat& u1, GpuMat& u2)
 {
     using namespace tvl1flow;
 
@@ -223,14 +223,14 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
             estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, diff, l_t, static_cast<float>(theta));
 
             if (epsilon > 0)
-                error = gpu::sum(diff, norm_buf)[0];
+                error = cuda::sum(diff, norm_buf)[0];
 
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);
         }
     }
 }
 
-void cv::gpu::OpticalFlowDual_TVL1_GPU::collectGarbage()
+void cv::cuda::OpticalFlowDual_TVL1_GPU::collectGarbage()
 {
     I0s.clear();
     I1s.clear();

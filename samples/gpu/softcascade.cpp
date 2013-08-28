@@ -33,7 +33,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    cv::gpu::setDevice(parser.get<int>("device"));
+    cv::cuda::setDevice(parser.get<int>("device"));
 
     std::string cascadePath = parser.get<std::string>("cascade");
 
@@ -67,8 +67,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    cv::gpu::GpuMat objects(1, sizeof(Detection) * 10000, CV_8UC1);
-    cv::gpu::printShortCudaDeviceInfo(parser.get<int>("device"));
+    cv::cuda::GpuMat objects(1, sizeof(Detection) * 10000, CV_8UC1);
+    cv::cuda::printShortCudaDeviceInfo(parser.get<int>("device"));
     for (;;)
     {
         cv::Mat frame;
@@ -78,7 +78,7 @@ int main(int argc, char** argv)
             return 0;
         }
 
-        cv::gpu::GpuMat dframe(frame), roi(frame.rows, frame.cols, CV_8UC1);
+        cv::cuda::GpuMat dframe(frame), roi(frame.rows, frame.cols, CV_8UC1);
         roi.setTo(cv::Scalar::all(1));
         cascade.detect(dframe, roi, objects);
 

@@ -52,7 +52,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace surf
     {
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace surf
     {
@@ -955,6 +955,6 @@ namespace cv { namespace gpu { namespace cudev
             }
         }
     } // namespace surf
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // HAVE_OPENCV_GPUARITHM

@@ -357,7 +357,7 @@ int main(int argc, char* argv[])
     if (features_type == "surf")
     {
 #ifdef HAVE_OPENCV_NONFREE
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             finder = new SurfFeaturesFinderGpu();
         else
 #endif
@@ -553,7 +553,7 @@ int main(int argc, char* argv[])
 
     Ptr<WarperCreator> warper_creator;
 #ifdef HAVE_OPENCV_GPUWARPING
-    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+    if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane") warper_creator = new cv::PlaneWarperGpu();
         else if (warp_type == "cylindrical") warper_creator = new cv::CylindricalWarperGpu();
@@ -618,7 +618,7 @@ int main(int argc, char* argv[])
     else if (seam_find_type == "gc_color")
     {
 #ifdef HAVE_OPENCV_GPU
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR);
         else
 #endif
@@ -627,7 +627,7 @@ int main(int argc, char* argv[])
     else if (seam_find_type == "gc_colorgrad")
     {
 #ifdef HAVE_OPENCV_GPU
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = new detail::GraphCutSeamFinderGpu(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
 #endif

@@ -75,7 +75,7 @@
 #  endif
 #endif
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
     CV_EXPORTS cv::String getNppErrorMessage(int code);
     CV_EXPORTS cv::String getCudaDriverApiErrorMessage(int code);
 }}
@@ -88,7 +88,7 @@ static inline void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The l
 
 static inline void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
-namespace cv { namespace gpu
+namespace cv { namespace cuda
 {
     static inline void checkNppError(int code, const char* file, const int line, const char* func)
     {
@@ -131,11 +131,11 @@ namespace cv { namespace gpu
 }}
 
 #if defined(__GNUC__)
-    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, __func__)
-    #define cuSafeCall(expr)  cv::gpu::checkCudaDriverApiError(expr, __FILE__, __LINE__, __func__)
+    #define nppSafeCall(expr)  cv::cuda::checkNppError(expr, __FILE__, __LINE__, __func__)
+    #define cuSafeCall(expr)  cv::cuda::checkCudaDriverApiError(expr, __FILE__, __LINE__, __func__)
 #else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define nppSafeCall(expr)  cv::gpu::checkNppError(expr, __FILE__, __LINE__, "")
-    #define cuSafeCall(expr)  cv::gpu::checkCudaDriverApiError(expr, __FILE__, __LINE__, "")
+    #define nppSafeCall(expr)  cv::cuda::checkNppError(expr, __FILE__, __LINE__, "")
+    #define cuSafeCall(expr)  cv::cuda::checkCudaDriverApiError(expr, __FILE__, __LINE__, "")
 #endif
 
 #endif // HAVE_CUDA

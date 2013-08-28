@@ -43,25 +43,25 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::warpAffine(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpAffineMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::warpAffine(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::buildWarpAffineMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::warpPerspective(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpPerspectiveMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::warpPerspective(InputArray, OutputArray, InputArray, Size, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::buildWarpPerspectiveMaps(InputArray, bool, Size, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::buildWarpPlaneMaps(Size, Rect, InputArray, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpCylindricalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::buildWarpSphericalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::buildWarpPlaneMaps(Size, Rect, InputArray, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::buildWarpCylindricalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::buildWarpSphericalMaps(Size, Rect, InputArray, InputArray, float, OutputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::rotate(InputArray, OutputArray, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::rotate(InputArray, OutputArray, Size, double, double, double, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -79,9 +79,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
+void cv::cuda::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
-    using namespace cv::gpu::cudev::imgproc;
+    using namespace cv::cuda::cudev::imgproc;
 
     Mat M = _M.getMat();
 
@@ -108,9 +108,9 @@ void cv::gpu::buildWarpAffineMaps(InputArray _M, bool inverse, Size dsize, Outpu
     buildWarpAffineMaps_gpu(coeffs, xmap, ymap, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::buildWarpPerspectiveMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
+void cv::cuda::buildWarpPerspectiveMaps(InputArray _M, bool inverse, Size dsize, OutputArray _xmap, OutputArray _ymap, Stream& stream)
 {
-    using namespace cv::gpu::cudev::imgproc;
+    using namespace cv::cuda::cudev::imgproc;
 
     Mat M = _M.getMat();
 
@@ -152,7 +152,7 @@ namespace
     {
         typedef typename NppWarpFunc<DEPTH>::npp_type npp_type;
 
-        static void call(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int interpolation, cudaStream_t stream)
+        static void call(const cv::cuda::GpuMat& src, cv::cuda::GpuMat& dst, double coeffs[][3], int interpolation, cudaStream_t stream)
         {
             static const int npp_inter[] = {NPPI_INTER_NN, NPPI_INTER_LINEAR, NPPI_INTER_CUBIC};
 
@@ -172,7 +172,7 @@ namespace
             dstroi.height = dst.rows;
             dstroi.width = dst.cols;
 
-            cv::gpu::NppStreamHandler h(stream);
+            cv::cuda::NppStreamHandler h(stream);
 
             nppSafeCall( func(src.ptr<npp_type>(), srcsz, static_cast<int>(src.step), srcroi,
                               dst.ptr<npp_type>(), static_cast<int>(dst.step), dstroi,
@@ -184,7 +184,7 @@ namespace
     };
 }
 
-void cv::gpu::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
+void cv::cuda::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     Mat M = _M.getMat();
@@ -250,7 +250,7 @@ void cv::gpu::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size 
 
     if (useNpp)
     {
-        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
+        typedef void (*func_t)(const cv::cuda::GpuMat& src, cv::cuda::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
 
         static const func_t funcs[2][6][4] =
         {
@@ -285,7 +285,7 @@ void cv::gpu::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size 
     }
     else
     {
-        using namespace cv::gpu::cudev::imgproc;
+        using namespace cv::cuda::cudev::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -323,7 +323,7 @@ void cv::gpu::warpAffine(InputArray _src, OutputArray _dst, InputArray _M, Size 
     }
 }
 
-void cv::gpu::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
+void cv::cuda::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, Size dsize, int flags, int borderMode, Scalar borderValue, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     Mat M = _M.getMat();
@@ -389,7 +389,7 @@ void cv::gpu::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, 
 
     if (useNpp)
     {
-        typedef void (*func_t)(const cv::gpu::GpuMat& src, cv::gpu::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
+        typedef void (*func_t)(const cv::cuda::GpuMat& src, cv::cuda::GpuMat& dst, double coeffs[][3], int flags, cudaStream_t stream);
 
         static const func_t funcs[2][6][4] =
         {
@@ -424,7 +424,7 @@ void cv::gpu::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, 
     }
     else
     {
-        using namespace cv::gpu::cudev::imgproc;
+        using namespace cv::cuda::cudev::imgproc;
 
         typedef void (*func_t)(PtrStepSzb src, PtrStepSzb srcWhole, int xoff, int yoff, float coeffs[2 * 3], PtrStepSzb dst, int interpolation,
             int borderMode, const float* borderValue, cudaStream_t stream, bool cc20);
@@ -465,7 +465,7 @@ void cv::gpu::warpPerspective(InputArray _src, OutputArray _dst, InputArray _M, 
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpPlaneMaps
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -475,7 +475,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, InputArray _T,
+void cv::cuda::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, InputArray _T,
                                  float scale, OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
     (void) src_size;
@@ -506,7 +506,7 @@ void cv::gpu::buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray _K, Inp
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpCylyndricalMaps
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -516,7 +516,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+void cv::cuda::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
                                        OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
     (void) src_size;
@@ -545,7 +545,7 @@ void cv::gpu::buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray _
 //////////////////////////////////////////////////////////////////////////////
 // buildWarpSphericalMaps
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -555,7 +555,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
+void cv::cuda::buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray _K, InputArray _R, float scale,
                                      OutputArray _map_x, OutputArray _map_y, Stream& stream)
 {
     (void) src_size;
@@ -626,7 +626,7 @@ namespace
     };
 }
 
-void cv::gpu::rotate(InputArray _src, OutputArray _dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& stream)
+void cv::cuda::rotate(InputArray _src, OutputArray _dst, Size dsize, double angle, double xShift, double yShift, int interpolation, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift, double yShift, int interpolation, cudaStream_t stream);
     static const func_t funcs[6][4] =

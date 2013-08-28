@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<gpu::HoughLinesDetector> cv::gpu::createHoughLinesDetector(float, float, int, bool, int) { throw_no_cuda(); return Ptr<HoughLinesDetector>(); }
+Ptr<cuda::HoughLinesDetector> cv::cuda::createHoughLinesDetector(float, float, int, bool, int) { throw_no_cuda(); return Ptr<HoughLinesDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hough
     {
@@ -127,8 +127,8 @@ namespace
 
     void HoughLinesDetectorImpl::detect(InputArray _src, OutputArray lines)
     {
-        using namespace cv::gpu::cudev::hough;
-        using namespace cv::gpu::cudev::hough_lines;
+        using namespace cv::cuda::cudev::hough;
+        using namespace cv::cuda::cudev::hough_lines;
 
         GpuMat src = _src.getGpuMat();
 
@@ -194,7 +194,7 @@ namespace
     }
 }
 
-Ptr<HoughLinesDetector> cv::gpu::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort, int maxLines)
+Ptr<HoughLinesDetector> cv::cuda::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort, int maxLines)
 {
     return new HoughLinesDetectorImpl(rho, theta, threshold, doSort, maxLines);
 }

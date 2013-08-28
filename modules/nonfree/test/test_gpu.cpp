@@ -83,7 +83,7 @@ GPU_TEST_P(SURF, Detector)
     cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::gpu::SURF_GPU surf;
+    cv::cuda::SURF_GPU surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -92,7 +92,7 @@ GPU_TEST_P(SURF, Detector)
     surf.keypointsRatio = 0.05f;
 
     std::vector<cv::KeyPoint> keypoints;
-    surf(loadMat(image), cv::gpu::GpuMat(), keypoints);
+    surf(loadMat(image), cv::cuda::GpuMat(), keypoints);
 
     cv::SURF surf_gold;
     surf_gold.hessianThreshold = hessianThreshold;
@@ -119,7 +119,7 @@ GPU_TEST_P(SURF, Detector_Masked)
     cv::Mat mask(image.size(), CV_8UC1, cv::Scalar::all(1));
     mask(cv::Range(0, image.rows / 2), cv::Range(0, image.cols / 2)).setTo(cv::Scalar::all(0));
 
-    cv::gpu::SURF_GPU surf;
+    cv::cuda::SURF_GPU surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -152,7 +152,7 @@ GPU_TEST_P(SURF, Descriptor)
     cv::Mat image = readImage("../gpu/features2d/aloe.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(image.empty());
 
-    cv::gpu::SURF_GPU surf;
+    cv::cuda::SURF_GPU surf;
     surf.hessianThreshold = hessianThreshold;
     surf.nOctaves = nOctaves;
     surf.nOctaveLayers = nOctaveLayers;
@@ -170,8 +170,8 @@ GPU_TEST_P(SURF, Descriptor)
     std::vector<cv::KeyPoint> keypoints;
     surf_gold(image, cv::noArray(), keypoints);
 
-    cv::gpu::GpuMat descriptors;
-    surf(loadMat(image), cv::gpu::GpuMat(), keypoints, descriptors, true);
+    cv::cuda::GpuMat descriptors;
+    surf(loadMat(image), cv::cuda::GpuMat(), keypoints, descriptors, true);
 
     cv::Mat descriptors_gold;
     surf_gold(image, cv::noArray(), keypoints, descriptors_gold, true);

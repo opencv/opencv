@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace stereobm
     {
@@ -534,7 +534,7 @@ namespace cv { namespace gpu { namespace cudev
             cudaSafeCall( cudaUnbindTexture (texForTF) );
         }
     } // namespace stereobm
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

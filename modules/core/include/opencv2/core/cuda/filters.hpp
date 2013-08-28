@@ -48,7 +48,7 @@
 #include "vec_math.hpp"
 #include "type_traits.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename Ptr2D> struct PointFilter
     {
@@ -273,6 +273,6 @@ namespace cv { namespace gpu { namespace cudev
         float scale_x, scale_y;
         int width, haight;
     };
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_GPU_FILTERS_HPP__

@@ -49,9 +49,9 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////
 // BilateralFilter
 
-PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
+PARAM_TEST_CASE(BilateralFilter, cv::cuda::DeviceInfo, cv::Size, MatType)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int kernel_size;
@@ -68,7 +68,7 @@ PARAM_TEST_CASE(BilateralFilter, cv::gpu::DeviceInfo, cv::Size, MatType)
         sigma_color = 10.f;
         sigma_spatial = 3.5f;
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -77,9 +77,9 @@ GPU_TEST_P(BilateralFilter, Accuracy)
     cv::Mat src = randomMat(size, type);
 
     src.convertTo(src, type);
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
 
-    cv::gpu::bilateralFilter(loadMat(src), dst, kernel_size, sigma_color, sigma_spatial);
+    cv::cuda::bilateralFilter(loadMat(src), dst, kernel_size, sigma_color, sigma_spatial);
 
     cv::Mat dst_gold;
     cv::bilateralFilter(src, dst_gold, kernel_size, sigma_color, sigma_spatial);

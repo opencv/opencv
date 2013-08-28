@@ -46,8 +46,8 @@
 #include "opencv2/core/cuda/border_interpolate.hpp"
 #include "opencv2/core/cuda/limits.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 ////////////////////////////////////////////////////////////
 // centeredGradient

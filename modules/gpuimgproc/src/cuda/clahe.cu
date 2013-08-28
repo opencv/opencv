@@ -49,8 +49,8 @@
 #include "opencv2/core/cuda/reduce.hpp"
 #include "opencv2/core/cuda/saturate_cast.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace clahe
 {

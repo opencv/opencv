@@ -43,14 +43,14 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_no_cuda(); }
-void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
-void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
-void cv::gpu::PyrLKOpticalFlow::releaseMemory() {}
+cv::cuda::PyrLKOpticalFlow::PyrLKOpticalFlow() { throw_no_cuda(); }
+void cv::cuda::PyrLKOpticalFlow::sparse(const GpuMat&, const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
+void cv::cuda::PyrLKOpticalFlow::dense(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, GpuMat*) { throw_no_cuda(); }
+void cv::cuda::PyrLKOpticalFlow::releaseMemory() {}
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -67,7 +67,7 @@ namespace pyrlk
                PtrStepSzf err, int2 winSize, cudaStream_t stream = 0);
 }
 
-cv::gpu::PyrLKOpticalFlow::PyrLKOpticalFlow()
+cv::cuda::PyrLKOpticalFlow::PyrLKOpticalFlow()
 {
     winSize = Size(21, 21);
     maxLevel = 3;
@@ -97,7 +97,7 @@ namespace
     }
 }
 
-void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
+void cv::cuda::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& nextImg, const GpuMat& prevPts, GpuMat& nextPts, GpuMat& status, GpuMat* err)
 {
     if (prevPts.empty())
     {
@@ -124,7 +124,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
 
     GpuMat temp1 = (useInitialFlow ? nextPts : prevPts).reshape(1);
     GpuMat temp2 = nextPts.reshape(1);
-    gpu::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
+    cuda::multiply(temp1, Scalar::all(1.0 / (1 << maxLevel) / 2.0), temp2);
 
     ensureSizeIsEnough(1, prevPts.cols, CV_8UC1, status);
     status.setTo(Scalar::all(1));
@@ -146,17 +146,17 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
     else
     {
-        gpu::cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
+        cuda::cvtColor(prevImg, buf_, COLOR_BGR2BGRA);
         buf_.convertTo(prevPyr_[0], CV_32F);
 
-        gpu::cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
+        cuda::cvtColor(nextImg, buf_, COLOR_BGR2BGRA);
         buf_.convertTo(nextPyr_[0], CV_32F);
     }
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        gpu::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        gpu::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
+        cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     pyrlk::loadConstants(make_int2(winSize.width, winSize.height), iters);
@@ -178,7 +178,7 @@ void cv::gpu::PyrLKOpticalFlow::sparse(const GpuMat& prevImg, const GpuMat& next
     }
 }
 
-void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
+void cv::cuda::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextImg, GpuMat& u, GpuMat& v, GpuMat* err)
 {
     CV_Assert(prevImg.type() == CV_8UC1);
     CV_Assert(prevImg.size() == nextImg.size() && prevImg.type() == nextImg.type());
@@ -198,8 +198,8 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
 
     for (int level = 1; level <= maxLevel; ++level)
     {
-        gpu::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
-        gpu::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
+        cuda::pyrDown(prevPyr_[level - 1], prevPyr_[level]);
+        cuda::pyrDown(nextPyr_[level - 1], nextPyr_[level]);
     }
 
     ensureSizeIsEnough(prevImg.size(), CV_32FC1, uPyr_[0]);
@@ -233,7 +233,7 @@ void cv::gpu::PyrLKOpticalFlow::dense(const GpuMat& prevImg, const GpuMat& nextI
     vPyr_[idx].copyTo(v);
 }
 
-void cv::gpu::PyrLKOpticalFlow::releaseMemory()
+void cv::cuda::PyrLKOpticalFlow::releaseMemory()
 {
     prevPyr_.clear();
     nextPyr_.clear();

@@ -67,11 +67,11 @@ PERF_TEST_P(ImagePair, StereoBM,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::StereoBM> d_bm = cv::gpu::createStereoBM(ndisp);
+        cv::Ptr<cv::StereoBM> d_bm = cv::cuda::createStereoBM(ndisp);
 
-        const cv::gpu::GpuMat d_imgLeft(imgLeft);
-        const cv::gpu::GpuMat d_imgRight(imgRight);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_imgLeft(imgLeft);
+        const cv::cuda::GpuMat d_imgRight(imgRight);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_bm->compute(d_imgLeft, d_imgRight, dst);
 
@@ -107,11 +107,11 @@ PERF_TEST_P(ImagePair, StereoBeliefPropagation,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::StereoBeliefPropagation> d_bp = cv::gpu::createStereoBeliefPropagation(ndisp);
+        cv::Ptr<cv::cuda::StereoBeliefPropagation> d_bp = cv::cuda::createStereoBeliefPropagation(ndisp);
 
-        const cv::gpu::GpuMat d_imgLeft(imgLeft);
-        const cv::gpu::GpuMat d_imgRight(imgRight);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_imgLeft(imgLeft);
+        const cv::cuda::GpuMat d_imgRight(imgRight);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_bp->compute(d_imgLeft, d_imgRight, dst);
 
@@ -141,11 +141,11 @@ PERF_TEST_P(ImagePair, StereoConstantSpaceBP,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::StereoConstantSpaceBP> d_csbp = cv::gpu::createStereoConstantSpaceBP(ndisp);
+        cv::Ptr<cv::cuda::StereoConstantSpaceBP> d_csbp = cv::cuda::createStereoConstantSpaceBP(ndisp);
 
-        const cv::gpu::GpuMat d_imgLeft(imgLeft);
-        const cv::gpu::GpuMat d_imgRight(imgRight);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_imgLeft(imgLeft);
+        const cv::cuda::GpuMat d_imgRight(imgRight);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_csbp->compute(d_imgLeft, d_imgRight, dst);
 
@@ -173,11 +173,11 @@ PERF_TEST_P(ImagePair, DisparityBilateralFilter,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::DisparityBilateralFilter> d_filter = cv::gpu::createDisparityBilateralFilter(ndisp);
+        cv::Ptr<cv::cuda::DisparityBilateralFilter> d_filter = cv::cuda::createDisparityBilateralFilter(ndisp);
 
-        const cv::gpu::GpuMat d_img(img);
-        const cv::gpu::GpuMat d_disp(disp);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_img(img);
+        const cv::cuda::GpuMat d_disp(disp);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_filter->apply(d_disp, d_img, dst);
 
@@ -207,10 +207,10 @@ PERF_TEST_P(Sz_Depth, ReprojectImageTo3D,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::reprojectImageTo3D(d_src, dst, Q);
+        TEST_CYCLE() cv::cuda::reprojectImageTo3D(d_src, dst, Q);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -239,10 +239,10 @@ PERF_TEST_P(Sz_Depth, DrawColorDisp,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::drawColorDisp(d_src, dst, 255);
+        TEST_CYCLE() cv::cuda::drawColorDisp(d_src, dst, 255);
 
         GPU_SANITY_CHECK(dst);
     }

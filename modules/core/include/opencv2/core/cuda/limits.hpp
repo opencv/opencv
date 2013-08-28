@@ -47,7 +47,7 @@
 #include <float.h>
 #include "common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
 
 template <class T> struct numeric_limits;
@@ -117,6 +117,6 @@ template <> struct numeric_limits<double>
     static const bool is_signed = true;
 };
 
-}}} // namespace cv { namespace gpu { namespace cudev {
+}}} // namespace cv { namespace cuda { namespace cudev {
 
 #endif // __OPENCV_GPU_LIMITS_GPU_HPP__

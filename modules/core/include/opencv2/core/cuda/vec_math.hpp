@@ -46,7 +46,7 @@
 #include "vec_traits.hpp"
 #include "saturate_cast.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
 
 // saturate_cast
@@ -917,6 +917,6 @@ CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC(atan2, ::atan2, double, double, double)
 
 #undef CV_CUDEV_IMPLEMENT_SCALAR_BINARY_FUNC
 
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace cuda { namespace device
 
 #endif // __OPENCV_GPU_VECMATH_HPP__

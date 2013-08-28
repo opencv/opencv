@@ -44,15 +44,15 @@
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
-void cv::gpu::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
+void cv::cuda::graphcut(GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, GpuMat&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_no_cuda(); }
-void cv::gpu::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::connectivityMask(const GpuMat&, GpuMat&, const cv::Scalar&, const cv::Scalar&, Stream&) { throw_no_cuda(); }
+void cv::cuda::labelComponents(const GpuMat&, GpuMat&, int, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace ccl
     {
@@ -68,7 +68,7 @@ static float4 scalarToCudaType(const cv::Scalar& in)
   return make_float4((float)in[0], (float)in[1], (float)in[2], (float)in[3]);
 }
 
-void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
+void cv::cuda::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scalar& lo, const cv::Scalar& hi, Stream& s)
 {
     CV_Assert(!image.empty());
 
@@ -102,7 +102,7 @@ void cv::gpu::connectivityMask(const GpuMat& image, GpuMat& mask, const cv::Scal
     f(image, mask, culo, cuhi, stream);
 }
 
-void cv::gpu::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
+void cv::cuda::labelComponents(const GpuMat& mask, GpuMat& components, int flags, Stream& s)
 {
     CV_Assert(!mask.empty() && mask.type() == CV_8U);
 
@@ -142,7 +142,7 @@ namespace
     };
 }
 
-void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf, Stream& s)
+void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& bottom, GpuMat& labels, GpuMat& buf, Stream& s)
 {
 #if (CUDA_VERSION < 5000)
     CV_Assert(terminals.type() == CV_32S);
@@ -201,7 +201,7 @@ void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTrans
         cudaSafeCall( cudaDeviceSynchronize() );
 }
 
-void cv::gpu::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
+void cv::cuda::graphcut(GpuMat& terminals, GpuMat& leftTransp, GpuMat& rightTransp, GpuMat& top, GpuMat& topLeft, GpuMat& topRight,
               GpuMat& bottom, GpuMat& bottomLeft, GpuMat& bottomRight, GpuMat& labels, GpuMat& buf, Stream& s)
 {
 #if (CUDA_VERSION < 5000)

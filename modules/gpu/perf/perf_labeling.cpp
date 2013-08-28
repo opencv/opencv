@@ -151,10 +151,10 @@ PERF_TEST_P(Image, DISABLED_Labeling_ConnectivityMask,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat mask;
+        cv::cuda::GpuMat d_image(image);
+        cv::cuda::GpuMat mask;
 
-        TEST_CYCLE() cv::gpu::connectivityMask(d_image, mask, cv::Scalar::all(0), cv::Scalar::all(2));
+        TEST_CYCLE() cv::cuda::connectivityMask(d_image, mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
         GPU_SANITY_CHECK(mask);
     }
@@ -174,12 +174,12 @@ PERF_TEST_P(Image, DISABLED_Labeling_ConnectedComponents,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat d_mask;
-        cv::gpu::connectivityMask(cv::gpu::GpuMat(image), d_mask, cv::Scalar::all(0), cv::Scalar::all(2));
+        cv::cuda::GpuMat d_mask;
+        cv::cuda::connectivityMask(cv::cuda::GpuMat(image), d_mask, cv::Scalar::all(0), cv::Scalar::all(2));
 
-        cv::gpu::GpuMat components;
+        cv::cuda::GpuMat components;
 
-        TEST_CYCLE() cv::gpu::labelComponents(d_mask, components);
+        TEST_CYCLE() cv::cuda::labelComponents(d_mask, components);
 
         GPU_SANITY_CHECK(components);
     }

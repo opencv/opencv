@@ -43,30 +43,30 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::merge(const GpuMat*, size_t, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::merge(const std::vector<GpuMat>&, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::merge(const GpuMat*, size_t, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::merge(const std::vector<GpuMat>&, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::split(InputArray, GpuMat*, Stream&) { throw_no_cuda(); }
-void cv::gpu::split(InputArray, std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
+void cv::cuda::split(InputArray, GpuMat*, Stream&) { throw_no_cuda(); }
+void cv::cuda::split(InputArray, std::vector<GpuMat>&, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::transpose(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::transpose(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::flip(InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
+Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray) { throw_no_cuda(); return Ptr<LookUpTable>(); }
 
-void cv::gpu::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, Scalar, Stream&) { throw_no_cuda(); }
+void cv::cuda::copyMakeBorder(InputArray, OutputArray, int, int, int, int, int, Scalar, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
 // merge/split
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace split_merge
     {
@@ -112,7 +112,7 @@ namespace
                 src_as_devmem[i] = src[i];
 
             PtrStepSzb dst_as_devmem(dst);
-            cv::gpu::cudev::split_merge::merge(src_as_devmem, dst_as_devmem, (int)n, CV_ELEM_SIZE(depth), StreamAccessor::getStream(stream));
+            cv::cuda::cudev::split_merge::merge(src_as_devmem, dst_as_devmem, (int)n, CV_ELEM_SIZE(depth), StreamAccessor::getStream(stream));
         }
     }
 
@@ -145,28 +145,28 @@ namespace
             dst_as_devmem[i] = dst[i];
 
         PtrStepSzb src_as_devmem(src);
-        cv::gpu::cudev::split_merge::split(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), StreamAccessor::getStream(stream));
+        cv::cuda::cudev::split_merge::split(src_as_devmem, dst_as_devmem, num_channels, src.elemSize1(), StreamAccessor::getStream(stream));
     }
 }
 
-void cv::gpu::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream)
+void cv::cuda::merge(const GpuMat* src, size_t n, OutputArray dst, Stream& stream)
 {
     merge_caller(src, n, dst, stream);
 }
 
 
-void cv::gpu::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream)
+void cv::cuda::merge(const std::vector<GpuMat>& src, OutputArray dst, Stream& stream)
 {
     merge_caller(&src[0], src.size(), dst, stream);
 }
 
-void cv::gpu::split(InputArray _src, GpuMat* dst, Stream& stream)
+void cv::cuda::split(InputArray _src, GpuMat* dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     split_caller(src, dst, stream);
 }
 
-void cv::gpu::split(InputArray _src, std::vector<GpuMat>& dst, Stream& stream)
+void cv::cuda::split(InputArray _src, std::vector<GpuMat>& dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
     dst.resize(src.channels());
@@ -182,7 +182,7 @@ namespace arithm
     template <typename T> void transpose(PtrStepSz<T> src, PtrStepSz<T> dst, cudaStream_t stream);
 }
 
-void cv::gpu::transpose(InputArray _src, OutputArray _dst, Stream& _stream)
+void cv::cuda::transpose(InputArray _src, OutputArray _dst, Stream& _stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -263,7 +263,7 @@ namespace
     };
 }
 
-void cv::gpu::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& stream)
+void cv::cuda::flip(InputArray _src, OutputArray _dst, int flipCode, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, GpuMat& dst, int flipCode, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -349,7 +349,7 @@ namespace
         }
         else
         {
-            gpu::split(d_nppLut, d_nppLut3);
+            cuda::split(d_nppLut, d_nppLut3);
 
             pValues3[0] = d_nppLut3[0].ptr<Npp32s>();
             pValues3[1] = d_nppLut3[1].ptr<Npp32s>();
@@ -495,7 +495,7 @@ namespace
 
 #endif //  (CUDA_VERSION >= 5000)
 
-Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray lut)
+Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
 {
     return new LookUpTableImpl(lut);
 }
@@ -503,7 +503,7 @@ Ptr<LookUpTable> cv::gpu::createLookUpTable(InputArray lut)
 ////////////////////////////////////////////////////////////////////////
 // copyMakeBorder
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -515,7 +515,7 @@ namespace
 {
     template <typename T, int cn> void copyMakeBorder_caller(const PtrStepSzb& src, const PtrStepSzb& dst, int top, int left, int borderType, const Scalar& value, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::cudev::imgproc;
+        using namespace ::cv::cuda::cudev::imgproc;
 
         Scalar_<T> val(saturate_cast<T>(value[0]), saturate_cast<T>(value[1]), saturate_cast<T>(value[2]), saturate_cast<T>(value[3]));
 
@@ -529,7 +529,7 @@ typedef Npp32s __attribute__((__may_alias__)) Npp32s_a;
 typedef Npp32s Npp32s_a;
 #endif
 
-void cv::gpu::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, Scalar value, Stream& _stream)
+void cv::cuda::copyMakeBorder(InputArray _src, OutputArray _dst, int top, int bottom, int left, int right, int borderType, Scalar value, Stream& _stream)
 {
     GpuMat src = _src.getGpuMat();
 

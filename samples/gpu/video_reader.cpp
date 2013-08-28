@@ -24,12 +24,12 @@ int main(int argc, const char* argv[])
 
     cv::namedWindow("CPU", cv::WINDOW_NORMAL);
     cv::namedWindow("GPU", cv::WINDOW_OPENGL);
-    cv::gpu::setGlDevice();
+    cv::cuda::setGlDevice();
 
     cv::Mat frame;
     cv::VideoCapture reader(fname);
 
-    cv::gpu::GpuMat d_frame;
+    cv::cuda::GpuMat d_frame;
     cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(fname);
 
     cv::TickMeter tm;

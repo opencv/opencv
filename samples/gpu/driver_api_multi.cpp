@@ -49,7 +49,7 @@ int main()
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 struct Worker { void operator()(int device_id) const; };
 void destroyContexts();
@@ -80,7 +80,7 @@ int main()
 
     for (int i = 0; i < num_devices; ++i)
     {
-        cv::gpu::printShortCudaDeviceInfo(i);
+        cv::cuda::printShortCudaDeviceInfo(i);
 
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
@@ -135,7 +135,7 @@ void Worker::operator()(int device_id) const
     // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-    gpu::transpose(d_src, d_dst);
+    cuda::transpose(d_src, d_dst);
 
     // Check results
     bool passed = cv::norm(dst - Mat(d_dst), NORM_INF) < 1e-3;

@@ -49,9 +49,9 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////////////////////////////
 // Merge
 
-PARAM_TEST_CASE(Merge, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
+PARAM_TEST_CASE(Merge, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     int channels;
@@ -65,7 +65,7 @@ PARAM_TEST_CASE(Merge, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi
         channels = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -76,16 +76,16 @@ GPU_TEST_P(Merge, Accuracy)
     for (int i = 0; i < channels; ++i)
         src.push_back(cv::Mat(size, depth, cv::Scalar::all(i)));
 
-    std::vector<cv::gpu::GpuMat> d_src;
+    std::vector<cv::cuda::GpuMat> d_src;
     for (int i = 0; i < channels; ++i)
         d_src.push_back(loadMat(src[i], useRoi));
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
-            cv::gpu::GpuMat dst;
-            cv::gpu::merge(d_src, dst);
+            cv::cuda::GpuMat dst;
+            cv::cuda::merge(d_src, dst);
         }
         catch (const cv::Exception& e)
         {
@@ -94,8 +94,8 @@ GPU_TEST_P(Merge, Accuracy)
     }
     else
     {
-        cv::gpu::GpuMat dst;
-        cv::gpu::merge(d_src, dst);
+        cv::cuda::GpuMat dst;
+        cv::cuda::merge(d_src, dst);
 
         cv::Mat dst_gold;
         cv::merge(src, dst_gold);
@@ -114,9 +114,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Merge, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Split
 
-PARAM_TEST_CASE(Split, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
+PARAM_TEST_CASE(Split, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     int channels;
@@ -132,7 +132,7 @@ PARAM_TEST_CASE(Split, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi
         channels = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         type = CV_MAKE_TYPE(depth, channels);
     }
@@ -142,12 +142,12 @@ GPU_TEST_P(Split, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    if (depth == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (depth == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
-            std::vector<cv::gpu::GpuMat> dst;
-            cv::gpu::split(loadMat(src), dst);
+            std::vector<cv::cuda::GpuMat> dst;
+            cv::cuda::split(loadMat(src), dst);
         }
         catch (const cv::Exception& e)
         {
@@ -156,8 +156,8 @@ GPU_TEST_P(Split, Accuracy)
     }
     else
     {
-        std::vector<cv::gpu::GpuMat> dst;
-        cv::gpu::split(loadMat(src, useRoi), dst);
+        std::vector<cv::cuda::GpuMat> dst;
+        cv::cuda::split(loadMat(src, useRoi), dst);
 
         std::vector<cv::Mat> dst_gold;
         cv::split(src, dst_gold);
@@ -181,9 +181,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Split, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // Transpose
 
-PARAM_TEST_CASE(Transpose, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(Transpose, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -195,7 +195,7 @@ PARAM_TEST_CASE(Transpose, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -203,12 +203,12 @@ GPU_TEST_P(Transpose, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
-            cv::gpu::GpuMat dst;
-            cv::gpu::transpose(loadMat(src), dst);
+            cv::cuda::GpuMat dst;
+            cv::cuda::transpose(loadMat(src), dst);
         }
         catch (const cv::Exception& e)
         {
@@ -217,8 +217,8 @@ GPU_TEST_P(Transpose, Accuracy)
     }
     else
     {
-        cv::gpu::GpuMat dst = createMat(cv::Size(size.height, size.width), type, useRoi);
-        cv::gpu::transpose(loadMat(src, useRoi), dst);
+        cv::cuda::GpuMat dst = createMat(cv::Size(size.height, size.width), type, useRoi);
+        cv::cuda::transpose(loadMat(src, useRoi), dst);
 
         cv::Mat dst_gold;
         cv::transpose(src, dst_gold);
@@ -246,9 +246,9 @@ enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 #define ALL_FLIP_CODES testing::Values(FlipCode(FLIP_BOTH), FlipCode(FLIP_X), FlipCode(FLIP_Y))
 
-PARAM_TEST_CASE(Flip, cv::gpu::DeviceInfo, cv::Size, MatType, FlipCode, UseRoi)
+PARAM_TEST_CASE(Flip, cv::cuda::DeviceInfo, cv::Size, MatType, FlipCode, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int flip_code;
@@ -262,7 +262,7 @@ PARAM_TEST_CASE(Flip, cv::gpu::DeviceInfo, cv::Size, MatType, FlipCode, UseRoi)
         flip_code = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -270,8 +270,8 @@ GPU_TEST_P(Flip, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-    cv::gpu::flip(loadMat(src, useRoi), dst, flip_code);
+    cv::cuda::GpuMat dst = createMat(size, type, useRoi);
+    cv::cuda::flip(loadMat(src, useRoi), dst, flip_code);
 
     cv::Mat dst_gold;
     cv::flip(src, dst_gold, flip_code);
@@ -300,9 +300,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Flip, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // LUT
 
-PARAM_TEST_CASE(LUT, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(LUT, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -314,7 +314,7 @@ PARAM_TEST_CASE(LUT, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -323,9 +323,9 @@ GPU_TEST_P(LUT, OneChannel)
     cv::Mat src = randomMat(size, type);
     cv::Mat lut = randomMat(cv::Size(256, 1), CV_8UC1);
 
-    cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+    cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
-    cv::gpu::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()));
+    cv::cuda::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()));
     lutAlg->transform(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
@@ -339,9 +339,9 @@ GPU_TEST_P(LUT, MultiChannel)
     cv::Mat src = randomMat(size, type);
     cv::Mat lut = randomMat(cv::Size(256, 1), CV_MAKE_TYPE(CV_8U, src.channels()));
 
-    cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+    cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
-    cv::gpu::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()), useRoi);
+    cv::cuda::GpuMat dst = createMat(size, CV_MAKE_TYPE(lut.depth(), src.channels()), useRoi);
     lutAlg->transform(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
@@ -364,9 +364,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(Border, int)
 }
 
-PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, Border, BorderType, UseRoi)
+PARAM_TEST_CASE(CopyMakeBorder, cv::cuda::DeviceInfo, cv::Size, MatType, Border, BorderType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int border;
@@ -382,7 +382,7 @@ PARAM_TEST_CASE(CopyMakeBorder, cv::gpu::DeviceInfo, cv::Size, MatType, Border, 
         borderType = GET_PARAM(4);
         useRoi = GET_PARAM(5);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -391,8 +391,8 @@ GPU_TEST_P(CopyMakeBorder, Accuracy)
     cv::Mat src = randomMat(size, type);
     cv::Scalar val = randomScalar(0, 255);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
-    cv::gpu::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
+    cv::cuda::GpuMat dst = createMat(cv::Size(size.width + 2 * border, size.height + 2 * border), type, useRoi);
+    cv::cuda::copyMakeBorder(loadMat(src, useRoi), dst, border, border, border, border, borderType, val);
 
     cv::Mat dst_gold;
     cv::copyMakeBorder(src, dst_gold, border, border, border, border, borderType, val);

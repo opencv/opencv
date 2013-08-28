@@ -64,7 +64,7 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetTo,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat dst(size, type);
+        cv::cuda::GpuMat dst(size, type);
 
         TEST_CYCLE() dst.setTo(val);
 
@@ -102,8 +102,8 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_SetToMasked,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat dst(src);
-        const cv::gpu::GpuMat d_mask(mask);
+        cv::cuda::GpuMat dst(src);
+        const cv::cuda::GpuMat d_mask(mask);
 
         TEST_CYCLE() dst.setTo(val, d_mask);
 
@@ -139,9 +139,9 @@ PERF_TEST_P(Sz_Depth_Cn, MatOp_CopyToMasked,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        const cv::gpu::GpuMat d_mask(mask);
-        cv::gpu::GpuMat dst(d_src.size(), d_src.type(), cv::Scalar::all(0));
+        const cv::cuda::GpuMat d_src(src);
+        const cv::cuda::GpuMat d_mask(mask);
+        cv::cuda::GpuMat dst(d_src.size(), d_src.type(), cv::Scalar::all(0));
 
         TEST_CYCLE() d_src.copyTo(dst, d_mask);
 
@@ -179,8 +179,8 @@ PERF_TEST_P(Sz_2Depth, MatOp_ConvertTo,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() d_src.convertTo(dst, depth2, a, b);
 

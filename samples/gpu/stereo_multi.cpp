@@ -44,14 +44,14 @@ int main()
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 struct Worker { void operator()(int device_id) const; };
 
 // GPUs data
 GpuMat d_left[2];
 GpuMat d_right[2];
-Ptr<gpu::StereoBM> bm[2];
+Ptr<cuda::StereoBM> bm[2];
 GpuMat d_result[2];
 
 static void printHelp()
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     }
     for (int i = 0; i < num_devices; ++i)
     {
-        cv::gpu::printShortCudaDeviceInfo(i);
+        cv::cuda::printShortCudaDeviceInfo(i);
 
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
@@ -112,13 +112,13 @@ int main(int argc, char** argv)
     setDevice(0);
     d_left[0].upload(left.rowRange(0, left.rows / 2));
     d_right[0].upload(right.rowRange(0, right.rows / 2));
-    bm[0] = gpu::createStereoBM();
+    bm[0] = cuda::createStereoBM();
 
     // Split source images for processing on the GPU #1
     setDevice(1);
     d_left[1].upload(left.rowRange(left.rows / 2, left.rows));
     d_right[1].upload(right.rowRange(right.rows / 2, right.rows));
-    bm[1] = gpu::createStereoBM();
+    bm[1] = cuda::createStereoBM();
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};

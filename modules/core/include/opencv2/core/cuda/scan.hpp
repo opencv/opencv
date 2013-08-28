@@ -48,7 +48,7 @@
 #include "opencv2/core/cuda/warp.hpp"
 #include "opencv2/core/cuda/warp_shuffle.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     enum ScanKind { EXCLUSIVE = 0,  INCLUSIVE = 1 };
 
@@ -174,13 +174,13 @@ namespace cv { namespace gpu { namespace cudev
     __device__ T warpScanInclusive(T idata, volatile T* s_Data, unsigned int tid)
     {
     #if __CUDA_ARCH__ >= 300
-        const unsigned int laneId = cv::gpu::cudev::Warp::laneId();
+        const unsigned int laneId = cv::cuda::cudev::Warp::laneId();
 
         // scan on shuffl functions
         #pragma unroll
         for (int i = 1; i <= (OPENCV_GPU_WARP_SIZE / 2); i *= 2)
         {
-            const T n = cv::gpu::cudev::shfl_up(idata, i);
+            const T n = cv::cuda::cudev::shfl_up(idata, i);
             if (laneId >= i)
                   idata += n;
         }

@@ -85,17 +85,17 @@ public:
         return cuvidDecodePicture(decoder_, picParams) == CUDA_SUCCESS;
     }
 
-    gpu::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
+    cuda::GpuMat mapFrame(int picIdx, CUVIDPROCPARAMS& videoProcParams)
     {
         CUdeviceptr ptr;
         unsigned int pitch;
 
         cuSafeCall( cuvidMapVideoFrame(decoder_, picIdx, &ptr, &pitch, &videoProcParams) );
 
-        return gpu::GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
+        return cuda::GpuMat(targetHeight() * 3 / 2, targetWidth(), CV_8UC1, (void*) ptr, pitch);
     }
 
-    void unmapFrame(gpu::GpuMat& frame)
+    void unmapFrame(cuda::GpuMat& frame)
     {
         cuSafeCall( cuvidUnmapVideoFrame(decoder_, (CUdeviceptr) frame.data) );
         frame.release();

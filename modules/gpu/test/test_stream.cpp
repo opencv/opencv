@@ -50,20 +50,20 @@
 
 using namespace cvtest;
 
-struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Async : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::CudaMem src;
-    cv::gpu::GpuMat d_src;
+    cv::cuda::CudaMem src;
+    cv::cuda::GpuMat d_src;
 
-    cv::gpu::CudaMem dst;
-    cv::gpu::GpuMat d_dst;
+    cv::cuda::CudaMem dst;
+    cv::cuda::GpuMat d_dst;
 
     virtual void SetUp()
     {
-        cv::gpu::DeviceInfo devInfo = GetParam();
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::DeviceInfo devInfo = GetParam();
+        cv::cuda::setDevice(devInfo.deviceID());
 
-        src = cv::gpu::CudaMem(cv::gpu::CudaMem::PAGE_LOCKED);
+        src = cv::cuda::CudaMem(cv::cuda::CudaMem::PAGE_LOCKED);
 
         cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
         m.copyTo(src);
@@ -76,8 +76,8 @@ void checkMemSet(int status, void* userData)
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::gpu::CudaMem src = test->src;
-    cv::gpu::CudaMem dst = test->dst;
+    cv::cuda::CudaMem src = test->src;
+    cv::cuda::CudaMem dst = test->dst;
 
     cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
 
@@ -86,7 +86,7 @@ void checkMemSet(int status, void* userData)
 
 GPU_TEST_P(Async, MemSet)
 {
-    cv::gpu::Stream stream;
+    cv::cuda::Stream stream;
 
     d_dst.upload(src);
 
@@ -105,8 +105,8 @@ void checkConvert(int status, void* userData)
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::gpu::CudaMem src = test->src;
-    cv::gpu::CudaMem dst = test->dst;
+    cv::cuda::CudaMem src = test->src;
+    cv::cuda::CudaMem dst = test->dst;
 
     cv::Mat dst_gold;
     src.createMatHeader().convertTo(dst_gold, CV_32S);
@@ -116,7 +116,7 @@ void checkConvert(int status, void* userData)
 
 GPU_TEST_P(Async, Convert)
 {
-    cv::gpu::Stream stream;
+    cv::cuda::Stream stream;
 
     d_src.upload(src, stream);
     d_src.convertTo(d_dst, CV_32S, stream);

@@ -57,9 +57,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size);
 }
 
-PARAM_TEST_CASE(MatchTemplate8U, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
+PARAM_TEST_CASE(MatchTemplate8U, cv::cuda::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     cv::Size templ_size;
     int cn;
@@ -73,7 +73,7 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Ch
         cn = GET_PARAM(3);
         method = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -82,9 +82,9 @@ GPU_TEST_P(MatchTemplate8U, Accuracy)
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), method);
 
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
     alg->match(loadMat(image), loadMat(templ), dst);
 
     cv::Mat dst_gold;
@@ -103,9 +103,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate8U, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate32F
 
-PARAM_TEST_CASE(MatchTemplate32F, cv::gpu::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
+PARAM_TEST_CASE(MatchTemplate32F, cv::cuda::DeviceInfo, cv::Size, TemplateSize, Channels, TemplateMethod)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     cv::Size templ_size;
     int cn;
@@ -121,7 +121,7 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::gpu::DeviceInfo, cv::Size, TemplateSize, C
         cn = GET_PARAM(3);
         method = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -130,9 +130,9 @@ GPU_TEST_P(MatchTemplate32F, Regression)
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_32F, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_32F, cn));
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), method);
 
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
     alg->match(loadMat(image), loadMat(templ), dst);
 
     cv::Mat dst_gold;
@@ -151,9 +151,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate32F, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplateBlackSource
 
-PARAM_TEST_CASE(MatchTemplateBlackSource, cv::gpu::DeviceInfo, TemplateMethod)
+PARAM_TEST_CASE(MatchTemplateBlackSource, cv::cuda::DeviceInfo, TemplateMethod)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int method;
 
     virtual void SetUp()
@@ -161,7 +161,7 @@ PARAM_TEST_CASE(MatchTemplateBlackSource, cv::gpu::DeviceInfo, TemplateMethod)
         devInfo = GET_PARAM(0);
         method = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -173,9 +173,9 @@ GPU_TEST_P(MatchTemplateBlackSource, Accuracy)
     cv::Mat pattern = readImage("matchtemplate/cat.png");
     ASSERT_FALSE(pattern.empty());
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), method);
 
-    cv::gpu::GpuMat d_dst;
+    cv::cuda::GpuMat d_dst;
     alg->match(loadMat(image), loadMat(pattern), d_dst);
 
     cv::Mat dst(d_dst);
@@ -196,9 +196,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplateBlackSource, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate_CCOEF_NORMED
 
-PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED, cv::gpu::DeviceInfo, std::pair<std::string, std::string>)
+PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED, cv::cuda::DeviceInfo, std::pair<std::string, std::string>)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     std::string imageName;
     std::string patternName;
 
@@ -208,7 +208,7 @@ PARAM_TEST_CASE(MatchTemplate_CCOEF_NORMED, cv::gpu::DeviceInfo, std::pair<std::
         imageName = GET_PARAM(1).first;
         patternName = GET_PARAM(1).second;
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -220,9 +220,9 @@ GPU_TEST_P(MatchTemplate_CCOEF_NORMED, Accuracy)
     cv::Mat pattern = readImage(patternName);
     ASSERT_FALSE(pattern.empty());
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), cv::TM_CCOEFF_NORMED);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(image.type(), cv::TM_CCOEFF_NORMED);
 
-    cv::gpu::GpuMat d_dst;
+    cv::cuda::GpuMat d_dst;
     alg->match(loadMat(image), loadMat(pattern), d_dst);
 
     cv::Mat dst(d_dst);
@@ -251,15 +251,15 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, MatchTemplate_CCOEF_NORMED, testing::Combin
 ////////////////////////////////////////////////////////////////////////////////
 // MatchTemplate_CanFindBigTemplate
 
-struct MatchTemplate_CanFindBigTemplate : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct MatchTemplate_CanFindBigTemplate : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -271,9 +271,9 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF_NORMED)
     cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(scene.type(), cv::TM_SQDIFF_NORMED);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(scene.type(), cv::TM_SQDIFF_NORMED);
 
-    cv::gpu::GpuMat d_result;
+    cv::cuda::GpuMat d_result;
     alg->match(loadMat(scene), loadMat(templ), d_result);
 
     cv::Mat result(d_result);
@@ -296,9 +296,9 @@ GPU_TEST_P(MatchTemplate_CanFindBigTemplate, SQDIFF)
     cv::Mat templ = readImage("matchtemplate/template.png");
     ASSERT_FALSE(templ.empty());
 
-    cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(scene.type(), cv::TM_SQDIFF);
+    cv::Ptr<cv::cuda::TemplateMatching> alg = cv::cuda::createTemplateMatching(scene.type(), cv::TM_SQDIFF);
 
-    cv::gpu::GpuMat d_result;
+    cv::cuda::GpuMat d_result;
     alg->match(loadMat(scene), loadMat(templ), d_result);
 
     cv::Mat result(d_result);

@@ -43,17 +43,17 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_no_cuda(); }
+void cv::cuda::StereoBeliefPropagation::estimateRecommendedParams(int, int, int&, int&, int&) { throw_no_cuda(); }
 
-Ptr<gpu::StereoBeliefPropagation> cv::gpu::createStereoBeliefPropagation(int, int, int, int) { throw_no_cuda(); return Ptr<gpu::StereoBeliefPropagation>(); }
+Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int, int, int, int) { throw_no_cuda(); return Ptr<cuda::StereoBeliefPropagation>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace stereobp
     {
@@ -75,7 +75,7 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    class StereoBPImpl : public gpu::StereoBeliefPropagation
+    class StereoBPImpl : public cuda::StereoBeliefPropagation
     {
     public:
         StereoBPImpl(int ndisp, int iters, int levels, int msg_type);
@@ -164,7 +164,7 @@ namespace
 
     void StereoBPImpl::compute(InputArray _left, InputArray _right, OutputArray disparity, Stream& stream)
     {
-        using namespace cv::gpu::cudev::stereobp;
+        using namespace cv::cuda::cudev::stereobp;
 
         typedef void (*comp_data_t)(const PtrStepSzb& left, const PtrStepSzb& right, const PtrStepSzb& data, cudaStream_t stream);
         static const comp_data_t comp_data_callers[2][5] =
@@ -233,7 +233,7 @@ namespace
 
     void StereoBPImpl::init(Stream& stream)
     {
-        using namespace cv::gpu::cudev::stereobp;
+        using namespace cv::cuda::cudev::stereobp;
 
         u_.create(rows_ * ndisp_, cols_, msg_type_);
         d_.create(rows_ * ndisp_, cols_, msg_type_);
@@ -281,7 +281,7 @@ namespace
 
     void StereoBPImpl::calcBP(OutputArray disp, Stream& _stream)
     {
-        using namespace cv::gpu::cudev::stereobp;
+        using namespace cv::cuda::cudev::stereobp;
 
         typedef void (*data_step_down_t)(int dst_cols, int dst_rows, int src_rows, const PtrStepSzb& src, const PtrStepSzb& dst, cudaStream_t stream);
         static const data_step_down_t data_step_down_callers[2] =
@@ -359,12 +359,12 @@ namespace
     }
 }
 
-Ptr<gpu::StereoBeliefPropagation> cv::gpu::createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
+Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
 {
     return new StereoBPImpl(ndisp, iters, levels, msg_type);
 }
 
-void cv::gpu::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
+void cv::cuda::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)
 {
     ndisp = width / 4;
     if ((ndisp & 1) != 0)

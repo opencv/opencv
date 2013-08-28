@@ -50,8 +50,8 @@
 
 #include "arithm_func_traits.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 //////////////////////////////////////////////////////////////////////////
 // min
@@ -81,7 +81,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VMin4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -127,7 +127,7 @@ namespace arithm
 
     template <typename T> void minScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(minimum<T>(), src2), WithOutMask(), stream);
     }
 
     template void minScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);
@@ -167,7 +167,7 @@ namespace arithm
     };
 }
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <> struct TransformFunctorTraits< arithm::VMax4 > : arithm::ArithmFuncTraits<sizeof(uint), sizeof(uint)>
     {
@@ -213,7 +213,7 @@ namespace arithm
 
     template <typename T> void maxScalar(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream)
     {
-        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::gpu::cudev::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
+        cudev::transform((PtrStepSz<T>) src1, (PtrStepSz<T>) dst, cv::cuda::cudev::bind2nd(maximum<T>(), src2), WithOutMask(), stream);
     }
 
     template void maxScalar<uchar >(PtrStepSzb src1, double src2, PtrStepSzb dst, cudaStream_t stream);

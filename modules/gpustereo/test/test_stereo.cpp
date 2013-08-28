@@ -49,15 +49,15 @@ using namespace cvtest;
 //////////////////////////////////////////////////////////////////////////
 // StereoBM
 
-struct StereoBM : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoBM : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -71,8 +71,8 @@ GPU_TEST_P(StereoBM, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::Ptr<cv::StereoBM> bm = cv::gpu::createStereoBM(128, 19);
-    cv::gpu::GpuMat disp;
+    cv::Ptr<cv::StereoBM> bm = cv::cuda::createStereoBM(128, 19);
+    cv::cuda::GpuMat disp;
 
     bm->compute(loadMat(left_image), loadMat(right_image), disp);
 
@@ -84,15 +84,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBM, ALL_DEVICES);
 //////////////////////////////////////////////////////////////////////////
 // StereoBeliefPropagation
 
-struct StereoBeliefPropagation : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoBeliefPropagation : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -106,13 +106,13 @@ GPU_TEST_P(StereoBeliefPropagation, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::Ptr<cv::gpu::StereoBeliefPropagation> bp = cv::gpu::createStereoBeliefPropagation(64, 8, 2, CV_16S);
+    cv::Ptr<cv::cuda::StereoBeliefPropagation> bp = cv::cuda::createStereoBeliefPropagation(64, 8, 2, CV_16S);
     bp->setMaxDataTerm(25.0);
     bp->setDataWeight(0.1);
     bp->setMaxDiscTerm(15.0);
     bp->setDiscSingleJump(1.0);
 
-    cv::gpu::GpuMat disp;
+    cv::cuda::GpuMat disp;
 
     bp->compute(loadMat(left_image), loadMat(right_image), disp);
 
@@ -127,15 +127,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoBeliefPropagation, ALL_DEVICES);
 //////////////////////////////////////////////////////////////////////////
 // StereoConstantSpaceBP
 
-struct StereoConstantSpaceBP : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct StereoConstantSpaceBP : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -146,7 +146,7 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
 
     cv::Mat disp_gold;
 
-    if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
+    if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
         disp_gold = readImage("csstereobp/aloe-disp.png", cv::IMREAD_GRAYSCALE);
     else
         disp_gold = readImage("csstereobp/aloe-disp_CC1X.png", cv::IMREAD_GRAYSCALE);
@@ -155,8 +155,8 @@ GPU_TEST_P(StereoConstantSpaceBP, Regression)
     ASSERT_FALSE(right_image.empty());
     ASSERT_FALSE(disp_gold.empty());
 
-    cv::Ptr<cv::gpu::StereoConstantSpaceBP> csbp = cv::gpu::createStereoConstantSpaceBP(128, 16, 4, 4);
-    cv::gpu::GpuMat disp;
+    cv::Ptr<cv::cuda::StereoConstantSpaceBP> csbp = cv::cuda::createStereoConstantSpaceBP(128, 16, 4, 4);
+    cv::cuda::GpuMat disp;
 
     csbp->compute(loadMat(left_image), loadMat(right_image), disp);
 
@@ -171,9 +171,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Stereo, StereoConstantSpaceBP, ALL_DEVICES);
 ////////////////////////////////////////////////////////////////////////////////
 // reprojectImageTo3D
 
-PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, cv::Size, MatDepth, UseRoi)
+PARAM_TEST_CASE(ReprojectImageTo3D, cv::cuda::DeviceInfo, cv::Size, MatDepth, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int depth;
     bool useRoi;
@@ -185,7 +185,7 @@ PARAM_TEST_CASE(ReprojectImageTo3D, cv::gpu::DeviceInfo, cv::Size, MatDepth, Use
         depth = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -194,8 +194,8 @@ GPU_TEST_P(ReprojectImageTo3D, Accuracy)
     cv::Mat disp = randomMat(size, depth, 5.0, 30.0);
     cv::Mat Q = randomMat(cv::Size(4, 4), CV_32FC1, 0.1, 1.0);
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::reprojectImageTo3D(loadMat(disp, useRoi), dst, Q, 3);
+    cv::cuda::GpuMat dst;
+    cv::cuda::reprojectImageTo3D(loadMat(disp, useRoi), dst, Q, 3);
 
     cv::Mat dst_gold;
     cv::reprojectImageTo3D(disp, dst_gold, Q, false);

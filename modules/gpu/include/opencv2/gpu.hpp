@@ -89,7 +89,7 @@
     #endif
 #endif
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //////////////// HOG (Histogram-of-Oriented-Gradients) Descriptor and Object Detector //////////////
 
@@ -255,6 +255,6 @@ CV_EXPORTS void calcWobbleSuppressionMaps(
         int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
         GpuMat &mapx, GpuMat &mapy);
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPU_HPP__ */

@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUARITHM)
 
-Ptr<gpu::CornersDetector> cv::gpu::createGoodFeaturesToTrackDetector(int, int, double, double, int, bool, double) { throw_no_cuda(); return Ptr<gpu::CornersDetector>(); }
+Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int, int, double, double, int, bool, double) { throw_no_cuda(); return Ptr<cuda::CornersDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace gfft
     {
@@ -75,7 +75,7 @@ namespace
         double qualityLevel_;
         double minDistance_;
 
-        Ptr<gpu::CornernessCriteria> cornerCriteria_;
+        Ptr<cuda::CornernessCriteria> cornerCriteria_;
 
         GpuMat Dx_;
         GpuMat Dy_;
@@ -92,13 +92,13 @@ namespace
         CV_Assert( qualityLevel_ > 0 && minDistance_ >= 0 && maxCorners_ >= 0 );
 
         cornerCriteria_ = useHarrisDetector ?
-                    gpu::createHarrisCorner(srcType, blockSize, 3, harrisK) :
-                    gpu::createMinEigenValCorner(srcType, blockSize, 3);
+                    cuda::createHarrisCorner(srcType, blockSize, 3, harrisK) :
+                    cuda::createMinEigenValCorner(srcType, blockSize, 3);
     }
 
     void GoodFeaturesToTrackDetector::detect(InputArray _image, OutputArray _corners, InputArray _mask)
     {
-        using namespace cv::gpu::cudev::gfft;
+        using namespace cv::cuda::cudev::gfft;
 
         GpuMat image = _image.getGpuMat();
         GpuMat mask = _mask.getGpuMat();
@@ -109,7 +109,7 @@ namespace
         cornerCriteria_->compute(image, eig_);
 
         double maxVal = 0;
-        gpu::minMax(eig_, 0, &maxVal, noArray(), minMaxbuf_);
+        cuda::minMax(eig_, 0, &maxVal, noArray(), minMaxbuf_);
 
         ensureSizeIsEnough(1, std::max(1000, static_cast<int>(image.size().area() * 0.05)), CV_32FC2, tmpCorners_);
 
@@ -206,7 +206,7 @@ namespace
     }
 }
 
-Ptr<gpu::CornersDetector> cv::gpu::createGoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
+Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
                                                                      int blockSize, bool useHarrisDetector, double harrisK)
 {
     return new GoodFeaturesToTrackDetector(srcType, maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, harrisK);

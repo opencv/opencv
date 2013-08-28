@@ -50,7 +50,7 @@
 
 #ifdef HAVE_OPENCV_GPUFILTERS
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hough_circles
     {

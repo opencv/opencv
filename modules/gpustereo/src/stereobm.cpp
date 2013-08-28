@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<gpu::StereoBM> cv::gpu::createStereoBM(int, int) { throw_no_cuda(); return Ptr<gpu::StereoBM>(); }
+Ptr<cuda::StereoBM> cv::cuda::createStereoBM(int, int) { throw_no_cuda(); return Ptr<cuda::StereoBM>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace stereobm
     {
@@ -63,7 +63,7 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    class StereoBMImpl : public gpu::StereoBM
+    class StereoBMImpl : public cuda::StereoBM
     {
     public:
         StereoBMImpl(int numDisparities, int blockSize);
@@ -135,7 +135,7 @@ namespace
 
     void StereoBMImpl::compute(InputArray _left, InputArray _right, OutputArray _disparity, Stream& _stream)
     {
-        using namespace ::cv::gpu::cudev::stereobm;
+        using namespace ::cv::cuda::cudev::stereobm;
 
         const int max_supported_ndisp = 1 << (sizeof(unsigned char) * 8);
         CV_Assert( 0 < ndisp_ && ndisp_ <= max_supported_ndisp );
@@ -153,15 +153,15 @@ namespace
 
         cudaStream_t stream = StreamAccessor::getStream(_stream);
 
-        gpu::ensureSizeIsEnough(left.size(), CV_32SC1, minSSD_);
+        cuda::ensureSizeIsEnough(left.size(), CV_32SC1, minSSD_);
 
         PtrStepSzb le_for_bm =  left;
         PtrStepSzb ri_for_bm = right;
 
         if (preset_ == cv::StereoBM::PREFILTER_XSOBEL)
         {
-            gpu::ensureSizeIsEnough(left.size(), left.type(), leBuf_);
-            gpu::ensureSizeIsEnough(right.size(), right.type(), riBuf_);
+            cuda::ensureSizeIsEnough(left.size(), left.type(), leBuf_);
+            cuda::ensureSizeIsEnough(right.size(), right.type(), riBuf_);
 
             prefilter_xsobel( left, leBuf_, preFilterCap_, stream);
             prefilter_xsobel(right, riBuf_, preFilterCap_, stream);
@@ -177,7 +177,7 @@ namespace
     }
 }
 
-Ptr<gpu::StereoBM> cv::gpu::createStereoBM(int numDisparities, int blockSize)
+Ptr<cuda::StereoBM> cv::cuda::createStereoBM(int numDisparities, int blockSize)
 {
     return new StereoBMImpl(numDisparities, blockSize);
 }

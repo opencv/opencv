@@ -65,10 +65,10 @@ PERF_TEST_P(Count, Calib3D_ProjectPoints,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), dst);
+        TEST_CYCLE() cv::cuda::projectPoints(d_src, rvec, tvec, camera_mat, cv::Mat(), dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -120,7 +120,7 @@ PERF_TEST_P(Count, Calib3D_SolvePnPRansac,
 
     if (PERF_RUN_GPU())
     {
-        TEST_CYCLE() cv::gpu::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
+        TEST_CYCLE() cv::cuda::solvePnPRansac(object, image, camera_mat, dist_coef, rvec, tvec);
 
         GPU_SANITY_CHECK(rvec, 1e-3);
         GPU_SANITY_CHECK(tvec, 1e-3);

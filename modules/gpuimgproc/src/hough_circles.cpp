@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
 
-Ptr<gpu::HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
+Ptr<cuda::HoughCirclesDetector> cv::cuda::createHoughCirclesDetector(float, float, int, int, int, int, int) { throw_no_cuda(); return Ptr<HoughCirclesDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hough
     {
@@ -135,9 +135,9 @@ namespace
         GpuMat accum_;
         GpuMat list_;
         GpuMat result_;
-        Ptr<gpu::Filter> filterDx_;
-        Ptr<gpu::Filter> filterDy_;
-        Ptr<gpu::CannyEdgeDetector> canny_;
+        Ptr<cuda::Filter> filterDx_;
+        Ptr<cuda::Filter> filterDy_;
+        Ptr<cuda::CannyEdgeDetector> canny_;
     };
 
     HoughCirclesDetectorImpl::HoughCirclesDetectorImpl(float dp, float minDist, int cannyThreshold, int votesThreshold,
@@ -145,16 +145,16 @@ namespace
         dp_(dp), minDist_(minDist), cannyThreshold_(cannyThreshold), votesThreshold_(votesThreshold),
         minRadius_(minRadius), maxRadius_(maxRadius), maxCircles_(maxCircles)
     {
-        canny_ = gpu::createCannyEdgeDetector(std::max(cannyThreshold_ / 2, 1), cannyThreshold_);
+        canny_ = cuda::createCannyEdgeDetector(std::max(cannyThreshold_ / 2, 1), cannyThreshold_);
 
-        filterDx_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
-        filterDy_ = gpu::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
+        filterDx_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 1, 0);
+        filterDy_ = cuda::createSobelFilter(CV_8UC1, CV_32S, 0, 1);
     }
 
     void HoughCirclesDetectorImpl::detect(InputArray _src, OutputArray circles)
     {
-        using namespace cv::gpu::cudev::hough;
-        using namespace cv::gpu::cudev::hough_circles;
+        using namespace cv::cuda::cudev::hough;
+        using namespace cv::cuda::cudev::hough_circles;
 
         GpuMat src = _src.getGpuMat();
 
@@ -289,7 +289,7 @@ namespace
     }
 }
 
-Ptr<HoughCirclesDetector> cv::gpu::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
+Ptr<HoughCirclesDetector> cv::cuda::createHoughCirclesDetector(float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles)
 {
     return new HoughCirclesDetectorImpl(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius, maxCircles);
 }

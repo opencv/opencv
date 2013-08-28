@@ -49,9 +49,9 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////////////////////////////
 // MeanShift
 
-struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct MeanShift : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     cv::Mat img;
 
@@ -62,7 +62,7 @@ struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         img = readImageType("meanshift/cones.png", CV_8UC4);
         ASSERT_FALSE(img.empty());
@@ -75,14 +75,14 @@ struct MeanShift : testing::TestWithParam<cv::gpu::DeviceInfo>
 GPU_TEST_P(MeanShift, Filtering)
 {
     cv::Mat img_template;
-    if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
+    if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
         img_template = readImage("meanshift/con_result.png");
     else
         img_template = readImage("meanshift/con_result_CC1X.png");
     ASSERT_FALSE(img_template.empty());
 
-    cv::gpu::GpuMat d_dst;
-    cv::gpu::meanShiftFiltering(loadMat(img), d_dst, spatialRad, colorRad);
+    cv::cuda::GpuMat d_dst;
+    cv::cuda::meanShiftFiltering(loadMat(img), d_dst, spatialRad, colorRad);
 
     ASSERT_EQ(CV_8UC4, d_dst.type());
 
@@ -97,7 +97,7 @@ GPU_TEST_P(MeanShift, Filtering)
 GPU_TEST_P(MeanShift, Proc)
 {
     cv::FileStorage fs;
-    if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
+    if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
         fs.open(std::string(cvtest::TS::ptr()->get_data_path()) + "meanshift/spmap.yaml", cv::FileStorage::READ);
     else
         fs.open(std::string(cvtest::TS::ptr()->get_data_path()) + "meanshift/spmap_CC1X.yaml", cv::FileStorage::READ);
@@ -107,12 +107,12 @@ GPU_TEST_P(MeanShift, Proc)
     fs["spmap"] >> spmap_template;
     ASSERT_FALSE(spmap_template.empty());
 
-    cv::gpu::GpuMat rmap_filtered;
-    cv::gpu::meanShiftFiltering(loadMat(img), rmap_filtered, spatialRad, colorRad);
+    cv::cuda::GpuMat rmap_filtered;
+    cv::cuda::meanShiftFiltering(loadMat(img), rmap_filtered, spatialRad, colorRad);
 
-    cv::gpu::GpuMat rmap;
-    cv::gpu::GpuMat spmap;
-    cv::gpu::meanShiftProc(loadMat(img), rmap, spmap, spatialRad, colorRad);
+    cv::cuda::GpuMat rmap;
+    cv::cuda::GpuMat spmap;
+    cv::cuda::meanShiftProc(loadMat(img), rmap, spmap, spatialRad, colorRad);
 
     ASSERT_EQ(CV_8UC4, rmap.type());
 
@@ -130,9 +130,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(MinSize, int);
 }
 
-PARAM_TEST_CASE(MeanShiftSegmentation, cv::gpu::DeviceInfo, MinSize)
+PARAM_TEST_CASE(MeanShiftSegmentation, cv::cuda::DeviceInfo, MinSize)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     int minsize;
 
     virtual void SetUp()
@@ -140,7 +140,7 @@ PARAM_TEST_CASE(MeanShiftSegmentation, cv::gpu::DeviceInfo, MinSize)
         devInfo = GET_PARAM(0);
         minsize = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -151,7 +151,7 @@ GPU_TEST_P(MeanShiftSegmentation, Regression)
 
     std::ostringstream path;
     path << "meanshift/cones_segmented_sp10_sr10_minsize" << minsize;
-    if (supportFeature(devInfo, cv::gpu::FEATURE_SET_COMPUTE_20))
+    if (supportFeature(devInfo, cv::cuda::FEATURE_SET_COMPUTE_20))
         path << ".png";
     else
         path << "_CC1X.png";
@@ -159,7 +159,7 @@ GPU_TEST_P(MeanShiftSegmentation, Regression)
     ASSERT_FALSE(dst_gold.empty());
 
     cv::Mat dst;
-    cv::gpu::meanShiftSegmentation(loadMat(img), dst, 10, 10, minsize);
+    cv::cuda::meanShiftSegmentation(loadMat(img), dst, 10, 10, minsize);
 
     cv::Mat dst_rgb;
     cv::cvtColor(dst, dst_rgb, cv::COLOR_BGRA2BGR);

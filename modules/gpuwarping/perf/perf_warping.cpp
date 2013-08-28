@@ -119,12 +119,12 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border_Mode, Remap,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        const cv::gpu::GpuMat d_xmap(xmap);
-        const cv::gpu::GpuMat d_ymap(ymap);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        const cv::cuda::GpuMat d_xmap(xmap);
+        const cv::cuda::GpuMat d_ymap(ymap);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::remap(d_src, dst, d_xmap, d_ymap, interpolation, borderMode);
+        TEST_CYCLE() cv::cuda::remap(d_src, dst, d_xmap, d_ymap, interpolation, borderMode);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -165,10 +165,10 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Scale, Resize,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::resize(d_src, dst, cv::Size(), f, f, interpolation);
+        TEST_CYCLE() cv::cuda::resize(d_src, dst, cv::Size(), f, f, interpolation);
 
         GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
@@ -208,10 +208,10 @@ PERF_TEST_P(Sz_Depth_Cn_Scale, ResizeArea,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::resize(d_src, dst, cv::Size(), f, f, interpolation);
+        TEST_CYCLE() cv::cuda::resize(d_src, dst, cv::Size(), f, f, interpolation);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -260,10 +260,10 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpAffine,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::warpAffine(d_src, dst, M, size, interpolation, borderMode);
+        TEST_CYCLE() cv::cuda::warpAffine(d_src, dst, M, size, interpolation, borderMode);
 
         GPU_SANITY_CHECK(dst, 1);
     }
@@ -308,10 +308,10 @@ PERF_TEST_P(Sz_Depth_Cn_Inter_Border, WarpPerspective,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::warpPerspective(d_src, dst, M, size, interpolation, borderMode);
+        TEST_CYCLE() cv::cuda::warpPerspective(d_src, dst, M, size, interpolation, borderMode);
 
         GPU_SANITY_CHECK(dst, 1);
     }
@@ -339,10 +339,10 @@ PERF_TEST_P(Sz, BuildWarpPlaneMaps,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat map_x;
-        cv::gpu::GpuMat map_y;
+        cv::cuda::GpuMat map_x;
+        cv::cuda::GpuMat map_y;
 
-        TEST_CYCLE() cv::gpu::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, map_x, map_y);
+        TEST_CYCLE() cv::cuda::buildWarpPlaneMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, T, 1.0, map_x, map_y);
 
         GPU_SANITY_CHECK(map_x);
         GPU_SANITY_CHECK(map_y);
@@ -366,10 +366,10 @@ PERF_TEST_P(Sz, BuildWarpCylindricalMaps,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat map_x;
-        cv::gpu::GpuMat map_y;
+        cv::cuda::GpuMat map_x;
+        cv::cuda::GpuMat map_y;
 
-        TEST_CYCLE() cv::gpu::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+        TEST_CYCLE() cv::cuda::buildWarpCylindricalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
 
         GPU_SANITY_CHECK(map_x);
         GPU_SANITY_CHECK(map_y);
@@ -393,10 +393,10 @@ PERF_TEST_P(Sz, BuildWarpSphericalMaps,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::GpuMat map_x;
-        cv::gpu::GpuMat map_y;
+        cv::cuda::GpuMat map_x;
+        cv::cuda::GpuMat map_y;
 
-        TEST_CYCLE() cv::gpu::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
+        TEST_CYCLE() cv::cuda::buildWarpSphericalMaps(size, cv::Rect(0, 0, size.width, size.height), K, R, 1.0, map_x, map_y);
 
         GPU_SANITY_CHECK(map_x);
         GPU_SANITY_CHECK(map_y);
@@ -430,10 +430,10 @@ PERF_TEST_P(Sz_Depth_Cn_Inter, Rotate,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::rotate(d_src, dst, size, 30.0, 0, 0, interpolation);
+        TEST_CYCLE() cv::cuda::rotate(d_src, dst, size, 30.0, 0, 0, interpolation);
 
         GPU_SANITY_CHECK(dst, 1e-3, ERROR_RELATIVE);
     }
@@ -462,10 +462,10 @@ PERF_TEST_P(Sz_Depth_Cn, PyrDown,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::pyrDown(d_src, dst);
+        TEST_CYCLE() cv::cuda::pyrDown(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -498,10 +498,10 @@ PERF_TEST_P(Sz_Depth_Cn, PyrUp,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::pyrUp(d_src, dst);
+        TEST_CYCLE() cv::cuda::pyrUp(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -537,10 +537,10 @@ PERF_TEST_P(Sz_Depth_Cn, ImagePyramidGetLayer,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        cv::Ptr<cv::gpu::ImagePyramid> d_pyr = cv::gpu::createImagePyramid(d_src, nLayers);
+        cv::Ptr<cv::cuda::ImagePyramid> d_pyr = cv::cuda::createImagePyramid(d_src, nLayers);
 
         TEST_CYCLE() d_pyr->getLayer(dst, dstSize);
 

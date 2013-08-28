@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::bilateralFilter(InputArray, OutputArray, int, float, float, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::bilateralFilter(InputArray, OutputArray, int, float, float, int, Stream&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -60,9 +60,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::bilateralFilter(InputArray _src, OutputArray _dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream)
+void cv::cuda::bilateralFilter(InputArray _src, OutputArray _dst, int kernel_size, float sigma_color, float sigma_spatial, int borderMode, Stream& stream)
 {
-    using cv::gpu::cudev::imgproc::bilateral_filter_gpu;
+    using cv::cuda::cudev::imgproc::bilateral_filter_gpu;
 
     typedef void (*func_t)(const PtrStepSzb& src, PtrStepSzb dst, int kernel_size, float sigma_spatial, float sigma_color, int borderMode, cudaStream_t s);
 

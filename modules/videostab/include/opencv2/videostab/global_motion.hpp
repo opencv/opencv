@@ -213,17 +213,17 @@ public:
     Ptr<IOutlierRejector> outlierRejector() const { return outlierRejector_; }
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
-    Mat estimate(const gpu::GpuMat &frame0, const gpu::GpuMat &frame1, bool *ok = 0);
+    Mat estimate(const cuda::GpuMat &frame0, const cuda::GpuMat &frame1, bool *ok = 0);
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
-    Ptr<gpu::CornersDetector> detector_;
+    Ptr<cuda::CornersDetector> detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
     Ptr<IOutlierRejector> outlierRejector_;
 
-    gpu::GpuMat frame0_, grayFrame0_, frame1_;
-    gpu::GpuMat pointsPrev_, points_;
-    gpu::GpuMat status_;
+    cuda::GpuMat frame0_, grayFrame0_, frame1_;
+    cuda::GpuMat pointsPrev_, points_;
+    cuda::GpuMat status_;
 
     Mat hostPointsPrev_, hostPoints_;
     std::vector<Point2f> hostPointsPrevTmp_, hostPointsTmp_;

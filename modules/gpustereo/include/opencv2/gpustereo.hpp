@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/calib3d.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 /////////////////////////////////////////
 // StereoBM
@@ -63,7 +63,7 @@ public:
     virtual void compute(InputArray left, InputArray right, OutputArray disparity, Stream& stream) = 0;
 };
 
-CV_EXPORTS Ptr<gpu::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
+CV_EXPORTS Ptr<cuda::StereoBM> createStereoBM(int numDisparities = 64, int blockSize = 19);
 
 /////////////////////////////////////////
 // StereoBeliefPropagation
@@ -110,7 +110,7 @@ public:
     static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels);
 };
 
-CV_EXPORTS Ptr<gpu::StereoBeliefPropagation>
+CV_EXPORTS Ptr<cuda::StereoBeliefPropagation>
     createStereoBeliefPropagation(int ndisp = 64, int iters = 5, int levels = 5, int msg_type = CV_32F);
 
 /////////////////////////////////////////
@@ -119,7 +119,7 @@ CV_EXPORTS Ptr<gpu::StereoBeliefPropagation>
 //! "A Constant-Space Belief Propagation Algorithm for Stereo Matching"
 //! Qingxiong Yang, Liang Wang, Narendra Ahuja
 //! http://vision.ai.uiuc.edu/~qyang6/
-class CV_EXPORTS StereoConstantSpaceBP : public gpu::StereoBeliefPropagation
+class CV_EXPORTS StereoConstantSpaceBP : public cuda::StereoBeliefPropagation
 {
 public:
     //! number of active disparity on the first level
@@ -132,7 +132,7 @@ public:
     static void estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane);
 };
 
-CV_EXPORTS Ptr<gpu::StereoConstantSpaceBP>
+CV_EXPORTS Ptr<cuda::StereoConstantSpaceBP>
     createStereoConstantSpaceBP(int ndisp = 128, int iters = 8, int levels = 4, int nr_plane = 4, int msg_type = CV_32F);
 
 /////////////////////////////////////////
@@ -170,7 +170,7 @@ public:
     virtual void setSigmaRange(double sigma_range) = 0;
 };
 
-CV_EXPORTS Ptr<gpu::DisparityBilateralFilter>
+CV_EXPORTS Ptr<cuda::DisparityBilateralFilter>
     createDisparityBilateralFilter(int ndisp = 64, int radius = 3, int iters = 1);
 
 /////////////////////////////////////////
@@ -188,6 +188,6 @@ CV_EXPORTS void reprojectImageTo3D(InputArray disp, OutputArray xyzw, InputArray
 //! Output disparity has CV_8UC4 type in BGRA format (alpha = 255).
 CV_EXPORTS void drawColorDisp(InputArray src_disp, OutputArray dst_disp, int ndisp, Stream& stream = Stream::Null());
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUSTEREO_HPP__ */

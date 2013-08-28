@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/imgproc.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
 //! supports only CV_32FC1 map type
@@ -108,6 +108,6 @@ public:
 
 CV_EXPORTS Ptr<ImagePyramid> createImagePyramid(InputArray img, int nLayers = -1, Stream& stream = Stream::Null());
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUWARPING_HPP__ */

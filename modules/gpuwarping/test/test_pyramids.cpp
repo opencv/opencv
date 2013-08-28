@@ -49,9 +49,9 @@ using namespace cvtest;
 ////////////////////////////////////////////////////////
 // pyrDown
 
-PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(PyrDown, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -63,7 +63,7 @@ PARAM_TEST_CASE(PyrDown, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -71,8 +71,8 @@ GPU_TEST_P(PyrDown, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size((size.width + 1) / 2, (size.height + 1) / 2), type, useRoi);
-    cv::gpu::pyrDown(loadMat(src, useRoi), dst);
+    cv::cuda::GpuMat dst = createMat(cv::Size((size.width + 1) / 2, (size.height + 1) / 2), type, useRoi);
+    cv::cuda::pyrDown(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::pyrDown(src, dst_gold);
@@ -89,9 +89,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Warping, PyrDown, testing::Combine(
 ////////////////////////////////////////////////////////
 // pyrUp
 
-PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
+PARAM_TEST_CASE(PyrUp, cv::cuda::DeviceInfo, cv::Size, MatType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     bool useRoi;
@@ -103,7 +103,7 @@ PARAM_TEST_CASE(PyrUp, cv::gpu::DeviceInfo, cv::Size, MatType, UseRoi)
         type = GET_PARAM(2);
         useRoi = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -111,8 +111,8 @@ GPU_TEST_P(PyrUp, Accuracy)
 {
     cv::Mat src = randomMat(size, type);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(size.width * 2, size.height * 2), type, useRoi);
-    cv::gpu::pyrUp(loadMat(src, useRoi), dst);
+    cv::cuda::GpuMat dst = createMat(cv::Size(size.width * 2, size.height * 2), type, useRoi);
+    cv::cuda::pyrUp(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::pyrUp(src, dst_gold);

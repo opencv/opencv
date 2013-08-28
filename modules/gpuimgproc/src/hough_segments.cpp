@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<gpu::HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float, float, int, int, int) { throw_no_cuda(); return Ptr<HoughSegmentDetector>(); }
+Ptr<cuda::HoughSegmentDetector> cv::cuda::createHoughSegmentDetector(float, float, int, int, int) { throw_no_cuda(); return Ptr<HoughSegmentDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace hough
     {
@@ -130,9 +130,9 @@ namespace
 
     void HoughSegmentDetectorImpl::detect(InputArray _src, OutputArray lines)
     {
-        using namespace cv::gpu::cudev::hough;
-        using namespace cv::gpu::cudev::hough_lines;
-        using namespace cv::gpu::cudev::hough_segments;
+        using namespace cv::cuda::cudev::hough;
+        using namespace cv::cuda::cudev::hough_lines;
+        using namespace cv::cuda::cudev::hough_segments;
 
         GpuMat src = _src.getGpuMat();
 
@@ -175,7 +175,7 @@ namespace
     }
 }
 
-Ptr<HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
+Ptr<HoughSegmentDetector> cv::cuda::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
 {
     return new HoughSegmentDetectorImpl(rho, theta, minLineLength, maxLineGap, maxLines);
 }

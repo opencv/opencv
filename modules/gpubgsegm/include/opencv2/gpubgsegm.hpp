@@ -50,7 +50,7 @@
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/video/background_segm.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 ////////////////////////////////////////////////////
 // MOG
@@ -66,7 +66,7 @@ public:
     virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
 };
 
-CV_EXPORTS Ptr<gpu::BackgroundSubtractorMOG>
+CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG>
     createBackgroundSubtractorMOG(int history = 200, int nmixtures = 5,
                                   double backgroundRatio = 0.7, double noiseSigma = 0);
 
@@ -84,7 +84,7 @@ public:
     virtual void getBackgroundImage(OutputArray backgroundImage, Stream& stream) const = 0;
 };
 
-CV_EXPORTS Ptr<gpu::BackgroundSubtractorMOG2>
+CV_EXPORTS Ptr<cuda::BackgroundSubtractorMOG2>
     createBackgroundSubtractorMOG2(int history = 500, double varThreshold = 16,
                                    bool detectShadows = true);
 
@@ -99,7 +99,7 @@ public:
     virtual void apply(InputArray image, OutputArray fgmask, double learningRate, Stream& stream) = 0;
 };
 
-CV_EXPORTS Ptr<gpu::BackgroundSubtractorGMG>
+CV_EXPORTS Ptr<cuda::BackgroundSubtractorGMG>
     createBackgroundSubtractorGMG(int initializationFrames = 120, double decisionThreshold = 0.8);
 
 ////////////////////////////////////////////////////
@@ -144,9 +144,9 @@ struct CV_EXPORTS FGDParams
     FGDParams();
 };
 
-CV_EXPORTS Ptr<gpu::BackgroundSubtractorFGD>
+CV_EXPORTS Ptr<cuda::BackgroundSubtractorFGD>
     createBackgroundSubtractorFGD(const FGDParams& params = FGDParams());
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUBGSEGM_HPP__ */

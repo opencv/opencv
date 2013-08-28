@@ -48,7 +48,7 @@
 #include "opencv2/gpulegacy/NCV.hpp"
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace pyramid
     {

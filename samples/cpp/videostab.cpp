@@ -347,7 +347,7 @@ int main(int argc, const char **argv)
         {
             cout << "initializing GPU..."; cout.flush();
             Mat hostTmp = Mat::zeros(1, 1, CV_32F);
-            gpu::GpuMat deviceTmp;
+            cuda::GpuMat deviceTmp;
             deviceTmp.upload(hostTmp);
             cout << endl;
         }

@@ -45,7 +45,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //! Brute force non-local means algorith (slow but universal)
 CV_EXPORTS void nonLocalMeans(const GpuMat& src, GpuMat& dst, float h, int search_window = 21, int block_size = 7, int borderMode = BORDER_DEFAULT, Stream& s = Stream::Null());
@@ -66,6 +66,6 @@ private:
     GpuMat lab, l, ab;
 };
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_PHOTO_GPU_HPP__ */

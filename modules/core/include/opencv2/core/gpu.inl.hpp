@@ -46,7 +46,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //////////////////////////////// GpuMat ///////////////////////////////
 
@@ -587,14 +587,14 @@ bool DeviceInfo::supports(FeatureSet feature_set) const
     return version >= feature_set;
 }
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 //////////////////////////////// Mat ////////////////////////////////
 
 namespace cv {
 
 inline
-Mat::Mat(const gpu::GpuMat& m)
+Mat::Mat(const cuda::GpuMat& m)
     : flags(0), dims(0), rows(0), cols(0), data(0), refcount(0), datastart(0), dataend(0), datalimit(0), allocator(0), size(&rows)
 {
     m.download(*this);

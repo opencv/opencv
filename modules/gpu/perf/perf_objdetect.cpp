@@ -68,11 +68,11 @@ PERF_TEST_P(Image, ObjDetect_HOG,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_img(img);
+        const cv::cuda::GpuMat d_img(img);
         std::vector<cv::Rect> gpu_found_locations;
 
-        cv::gpu::HOGDescriptor d_hog;
-        d_hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+        cv::cuda::HOGDescriptor d_hog;
+        d_hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
 
         TEST_CYCLE() d_hog.detectMultiScale(d_img, gpu_found_locations);
 
@@ -83,7 +83,7 @@ PERF_TEST_P(Image, ObjDetect_HOG,
         std::vector<cv::Rect> cpu_found_locations;
 
         cv::HOGDescriptor hog;
-        hog.setSVMDetector(cv::gpu::HOGDescriptor::getDefaultPeopleDetector());
+        hog.setSVMDetector(cv::cuda::HOGDescriptor::getDefaultPeopleDetector());
 
         TEST_CYCLE() hog.detectMultiScale(img, cpu_found_locations);
 
@@ -105,11 +105,11 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_HaarClassifier,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::CascadeClassifier_GPU d_cascade;
+        cv::cuda::CascadeClassifier_GPU d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat objects_buffer;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat objects_buffer;
         int detections_num = 0;
 
         TEST_CYCLE() detections_num = d_cascade.detectMultiScale(d_img, objects_buffer);
@@ -144,11 +144,11 @@ PERF_TEST_P(ImageAndCascade, ObjDetect_LBPClassifier,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::CascadeClassifier_GPU d_cascade;
+        cv::cuda::CascadeClassifier_GPU d_cascade;
         ASSERT_TRUE(d_cascade.load(perf::TestBase::getDataPath(GetParam().second)));
 
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat objects_buffer;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat objects_buffer;
         int detections_num = 0;
 
         TEST_CYCLE() detections_num = d_cascade.detectMultiScale(d_img, objects_buffer);

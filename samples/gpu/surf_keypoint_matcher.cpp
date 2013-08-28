@@ -12,7 +12,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 static void help()
 {
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     SURF_GPU surf;
 

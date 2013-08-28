@@ -47,7 +47,7 @@
 #include "../vec_traits.hpp"
 #include "../functional.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace transform_detail
     {
@@ -390,6 +390,6 @@ namespace cv { namespace gpu { namespace cudev
             }
         };
     } // namespace transform_detail
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif // __OPENCV_GPU_TRANSFORM_DETAIL_HPP__

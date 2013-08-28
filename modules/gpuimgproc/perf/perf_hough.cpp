@@ -101,10 +101,10 @@ PERF_TEST_P(Sz, HoughLines,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_lines;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_lines;
 
-        cv::Ptr<cv::gpu::HoughLinesDetector> hough = cv::gpu::createHoughLinesDetector(rho, theta, threshold);
+        cv::Ptr<cv::cuda::HoughLinesDetector> hough = cv::cuda::createHoughLinesDetector(rho, theta, threshold);
 
         TEST_CYCLE() hough->detect(d_src, d_lines);
 
@@ -150,10 +150,10 @@ PERF_TEST_P(Image, HoughLinesP,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_mask(mask);
-        cv::gpu::GpuMat d_lines;
+        const cv::cuda::GpuMat d_mask(mask);
+        cv::cuda::GpuMat d_lines;
 
-        cv::Ptr<cv::gpu::HoughSegmentDetector> hough = cv::gpu::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
+        cv::Ptr<cv::cuda::HoughSegmentDetector> hough = cv::cuda::createHoughSegmentDetector(rho, theta, minLineLenght, maxLineGap);
 
         TEST_CYCLE() hough->detect(d_mask, d_lines);
 
@@ -201,10 +201,10 @@ PERF_TEST_P(Sz_Dp_MinDist, HoughCircles,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_circles;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_circles;
 
-        cv::Ptr<cv::gpu::HoughCirclesDetector> houghCircles = cv::gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        cv::Ptr<cv::cuda::HoughCirclesDetector> houghCircles = cv::cuda::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
 
         TEST_CYCLE() houghCircles->detect(d_src, d_circles);
 
@@ -248,14 +248,14 @@ PERF_TEST_P(Sz, GeneralizedHoughBallard, GPU_TYPICAL_MAT_SIZES)
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::gpu::createGeneralizedHoughBallard();
+        cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::cuda::createGeneralizedHoughBallard();
 
-        const cv::gpu::GpuMat d_edges(edges);
-        const cv::gpu::GpuMat d_dx(dx);
-        const cv::gpu::GpuMat d_dy(dy);
-        cv::gpu::GpuMat positions;
+        const cv::cuda::GpuMat d_edges(edges);
+        const cv::cuda::GpuMat d_dx(dx);
+        const cv::cuda::GpuMat d_dy(dy);
+        cv::cuda::GpuMat positions;
 
-        alg->setTemplate(cv::gpu::GpuMat(templ));
+        alg->setTemplate(cv::cuda::GpuMat(templ));
 
         TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
 
@@ -317,16 +317,16 @@ PERF_TEST_P(Sz, GeneralizedHoughGuil, GPU_TYPICAL_MAT_SIZES)
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::GeneralizedHoughGuil> alg = cv::gpu::createGeneralizedHoughGuil();
+        cv::Ptr<cv::GeneralizedHoughGuil> alg = cv::cuda::createGeneralizedHoughGuil();
         alg->setMaxAngle(90.0);
         alg->setAngleStep(2.0);
 
-        const cv::gpu::GpuMat d_edges(edges);
-        const cv::gpu::GpuMat d_dx(dx);
-        const cv::gpu::GpuMat d_dy(dy);
-        cv::gpu::GpuMat positions;
+        const cv::cuda::GpuMat d_edges(edges);
+        const cv::cuda::GpuMat d_dx(dx);
+        const cv::cuda::GpuMat d_dy(dy);
+        cv::cuda::GpuMat positions;
 
-        alg->setTemplate(cv::gpu::GpuMat(templ));
+        alg->setTemplate(cv::cuda::GpuMat(templ));
 
         TEST_CYCLE() alg->detect(d_edges, d_dx, d_dy, positions);
 

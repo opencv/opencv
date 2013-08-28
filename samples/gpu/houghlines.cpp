@@ -9,7 +9,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 static void help()
 {
@@ -59,7 +59,7 @@ int main(int argc, const char* argv[])
     {
         const int64 start = getTickCount();
 
-        Ptr<gpu::HoughSegmentDetector> hough = gpu::createHoughSegmentDetector(1.0f, (float) (CV_PI / 180.0f), 50, 5);
+        Ptr<cuda::HoughSegmentDetector> hough = cuda::createHoughSegmentDetector(1.0f, (float) (CV_PI / 180.0f), 50, 5);
 
         hough->detect(d_src, d_lines);
 

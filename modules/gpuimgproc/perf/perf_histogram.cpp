@@ -61,11 +61,11 @@ PERF_TEST_P(Sz_Depth, HistEvenC1,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
+        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::histEven(d_src, dst, d_buf, 30, 0, 180);
+        TEST_CYCLE() cv::cuda::histEven(d_src, dst, d_buf, 30, 0, 180);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -104,11 +104,11 @@ PERF_TEST_P(Sz_Depth, HistEvenC4,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat d_hist[4];
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat d_hist[4];
+        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
+        TEST_CYCLE() cv::cuda::histEven(d_src, d_hist, d_buf, histSize, lowerLevel, upperLevel);
 
         cv::Mat cpu_hist0, cpu_hist1, cpu_hist2, cpu_hist3;
         d_hist[0].download(cpu_hist0);
@@ -139,10 +139,10 @@ PERF_TEST_P(Sz, CalcHist,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::calcHist(d_src, dst);
+        TEST_CYCLE() cv::cuda::calcHist(d_src, dst);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -165,11 +165,11 @@ PERF_TEST_P(Sz, EqualizeHist,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
-        cv::gpu::GpuMat d_buf;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
+        cv::cuda::GpuMat d_buf;
 
-        TEST_CYCLE() cv::gpu::equalizeHist(d_src, dst, d_buf);
+        TEST_CYCLE() cv::cuda::equalizeHist(d_src, dst, d_buf);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -200,9 +200,9 @@ PERF_TEST_P(Sz_ClipLimit, CLAHE,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
-        cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(clipLimit);
+        cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() clahe->apply(d_src, dst);
 

@@ -43,16 +43,16 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER) || !defined(HAVE_OPENCV_GPUFILTERS)
 
-Ptr<gpu::CornernessCriteria> cv::gpu::createHarrisCorner(int, int, int, double, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }
-Ptr<gpu::CornernessCriteria> cv::gpu::createMinEigenValCorner(int, int, int, int) { throw_no_cuda(); return Ptr<gpu::CornernessCriteria>(); }
+Ptr<cuda::CornernessCriteria> cv::cuda::createHarrisCorner(int, int, int, double, int) { throw_no_cuda(); return Ptr<cuda::CornernessCriteria>(); }
+Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(int, int, int, int) { throw_no_cuda(); return Ptr<cuda::CornernessCriteria>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -77,7 +77,7 @@ namespace
         GpuMat Dx_, Dy_;
 
     private:
-        Ptr<gpu::Filter> filterDx_, filterDy_;
+        Ptr<cuda::Filter> filterDx_, filterDy_;
     };
 
     CornerBase::CornerBase(int srcType, int blockSize, int ksize, int borderType) :
@@ -102,13 +102,13 @@ namespace
 
         if (ksize_ > 0)
         {
-            filterDx_ = gpu::createSobelFilter(srcType, CV_32F, 1, 0, ksize_, scale, borderType_);
-            filterDy_ = gpu::createSobelFilter(srcType, CV_32F, 0, 1, ksize_, scale, borderType_);
+            filterDx_ = cuda::createSobelFilter(srcType, CV_32F, 1, 0, ksize_, scale, borderType_);
+            filterDy_ = cuda::createSobelFilter(srcType, CV_32F, 0, 1, ksize_, scale, borderType_);
         }
         else
         {
-            filterDx_ = gpu::createScharrFilter(srcType, CV_32F, 1, 0, scale, borderType_);
-            filterDy_ = gpu::createScharrFilter(srcType, CV_32F, 0, 1, scale, borderType_);
+            filterDx_ = cuda::createScharrFilter(srcType, CV_32F, 1, 0, scale, borderType_);
+            filterDy_ = cuda::createScharrFilter(srcType, CV_32F, 0, 1, scale, borderType_);
         }
     }
 
@@ -135,7 +135,7 @@ namespace
 
     void Harris::compute(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        using namespace cv::gpu::cudev::imgproc;
+        using namespace cv::cuda::cudev::imgproc;
 
         GpuMat src = _src.getGpuMat();
 
@@ -163,7 +163,7 @@ namespace
 
     void MinEigenVal::compute(InputArray _src, OutputArray _dst, Stream& stream)
     {
-        using namespace cv::gpu::cudev::imgproc;
+        using namespace cv::cuda::cudev::imgproc;
 
         GpuMat src = _src.getGpuMat();
 
@@ -176,12 +176,12 @@ namespace
     }
 }
 
-Ptr<gpu::CornernessCriteria> cv::gpu::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType)
+Ptr<cuda::CornernessCriteria> cv::cuda::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType)
 {
     return new Harris(srcType, blockSize, ksize, k, borderType);
 }
 
-Ptr<gpu::CornernessCriteria> cv::gpu::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType)
+Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType)
 {
     return new MinEigenVal(srcType, blockSize, ksize, borderType);
 }

@@ -43,11 +43,11 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::FastOpticalFlowBM::operator ()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, int, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
@@ -59,7 +59,7 @@ namespace optflowbm_fast
     void calc(PtrStepSzb I0, PtrStepSzb I1, PtrStepSzf velx, PtrStepSzf vely, PtrStepi buffer, int search_window, int block_window, cudaStream_t stream);
 }
 
-void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window, int block_window, Stream& stream)
+void cv::cuda::FastOpticalFlowBM::operator ()(const GpuMat& I0, const GpuMat& I1, GpuMat& flowx, GpuMat& flowy, int search_window, int block_window, Stream& stream)
 {
     CV_Assert( I0.type() == CV_8UC1 );
     CV_Assert( I1.size() == I0.size() && I1.type() == I0.type() );
@@ -70,8 +70,8 @@ void cv::gpu::FastOpticalFlowBM::operator ()(const GpuMat& I0, const GpuMat& I1,
     ensureSizeIsEnough(esize, I0.type(), extended_I0);
     ensureSizeIsEnough(esize, I0.type(), extended_I1);
 
-    gpu::copyMakeBorder(I0, extended_I0, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), stream);
-    gpu::copyMakeBorder(I1, extended_I1, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), stream);
+    cuda::copyMakeBorder(I0, extended_I0, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), stream);
+    cuda::copyMakeBorder(I1, extended_I1, border_size, border_size, border_size, border_size, cv::BORDER_DEFAULT, Scalar(), stream);
 
     GpuMat I0_hdr = extended_I0(Rect(Point2i(border_size, border_size), I0.size()));
     GpuMat I1_hdr = extended_I1(Rect(Point2i(border_size, border_size), I0.size()));

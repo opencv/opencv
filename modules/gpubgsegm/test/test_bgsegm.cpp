@@ -76,15 +76,15 @@ namespace cv
     }
 }
 
-PARAM_TEST_CASE(FGDStatModel, cv::gpu::DeviceInfo, std::string)
+PARAM_TEST_CASE(FGDStatModel, cv::cuda::DeviceInfo, std::string)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     std::string inputFile;
 
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
     }
@@ -102,9 +102,9 @@ GPU_TEST_P(FGDStatModel, Update)
     IplImage ipl_frame = frame;
     cv::Ptr<CvBGStatModel> model(cvCreateFGDStatModel(&ipl_frame));
 
-    cv::gpu::GpuMat d_frame(frame);
-    cv::Ptr<cv::gpu::BackgroundSubtractorFGD> d_fgd = cv::gpu::createBackgroundSubtractorFGD();
-    cv::gpu::GpuMat d_foreground, d_background;
+    cv::cuda::GpuMat d_frame(frame);
+    cv::Ptr<cv::cuda::BackgroundSubtractorFGD> d_fgd = cv::cuda::createBackgroundSubtractorFGD();
+    cv::cuda::GpuMat d_foreground, d_background;
     std::vector< std::vector<cv::Point> > foreground_regions;
     d_fgd->apply(d_frame, d_foreground);
 
@@ -148,9 +148,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(LearningRate, double)
 }
 
-PARAM_TEST_CASE(MOG, cv::gpu::DeviceInfo, std::string, UseGray, LearningRate, UseRoi)
+PARAM_TEST_CASE(MOG, cv::cuda::DeviceInfo, std::string, UseGray, LearningRate, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     std::string inputFile;
     bool useGray;
     double learningRate;
@@ -159,7 +159,7 @@ PARAM_TEST_CASE(MOG, cv::gpu::DeviceInfo, std::string, UseGray, LearningRate, Us
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
 
@@ -180,8 +180,8 @@ GPU_TEST_P(MOG, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::gpu::createBackgroundSubtractorMOG();
-    cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
+    cv::Ptr<cv::BackgroundSubtractorMOG> mog = cv::cuda::createBackgroundSubtractorMOG();
+    cv::cuda::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG> mog_gold = cv::createBackgroundSubtractorMOG();
     cv::Mat foreground_gold;
@@ -225,9 +225,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(DetectShadow, bool)
 }
 
-PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, DetectShadow, UseRoi)
+PARAM_TEST_CASE(MOG2, cv::cuda::DeviceInfo, std::string, UseGray, DetectShadow, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     std::string inputFile;
     bool useGray;
     bool detectShadow;
@@ -236,7 +236,7 @@ PARAM_TEST_CASE(MOG2, cv::gpu::DeviceInfo, std::string, UseGray, DetectShadow, U
     virtual void SetUp()
     {
         devInfo = GET_PARAM(0);
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         inputFile = std::string(cvtest::TS::ptr()->get_data_path()) + "video/" + GET_PARAM(1);
         useGray = GET_PARAM(2);
@@ -254,9 +254,9 @@ GPU_TEST_P(MOG2, Update)
     cap >> frame;
     ASSERT_FALSE(frame.empty());
 
-    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::cuda::createBackgroundSubtractorMOG2();
     mog2->setDetectShadows(detectShadow);
-    cv::gpu::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
+    cv::cuda::GpuMat foreground = createMat(frame.size(), CV_8UC1, useRoi);
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
     mog2_gold->setDetectShadows(detectShadow);
@@ -299,9 +299,9 @@ GPU_TEST_P(MOG2, getBackgroundImage)
 
     cv::Mat frame;
 
-    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::gpu::createBackgroundSubtractorMOG2();
+    cv::Ptr<cv::BackgroundSubtractorMOG2> mog2 = cv::cuda::createBackgroundSubtractorMOG2();
     mog2->setDetectShadows(detectShadow);
-    cv::gpu::GpuMat foreground;
+    cv::cuda::GpuMat foreground;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> mog2_gold = cv::createBackgroundSubtractorMOG2();
     mog2_gold->setDetectShadows(detectShadow);
@@ -317,7 +317,7 @@ GPU_TEST_P(MOG2, getBackgroundImage)
         mog2_gold->apply(frame, foreground_gold);
     }
 
-    cv::gpu::GpuMat background = createMat(frame.size(), frame.type(), useRoi);
+    cv::cuda::GpuMat background = createMat(frame.size(), frame.type(), useRoi);
     mog2->getBackgroundImage(background);
 
     cv::Mat background_gold;
@@ -338,14 +338,14 @@ INSTANTIATE_TEST_CASE_P(GPU_BgSegm, MOG2, testing::Combine(
 //////////////////////////////////////////////////////
 // GMG
 
-PARAM_TEST_CASE(GMG, cv::gpu::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
+PARAM_TEST_CASE(GMG, cv::cuda::DeviceInfo, cv::Size, MatDepth, Channels, UseRoi)
 {
 };
 
 GPU_TEST_P(GMG, Accuracy)
 {
-    const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
-    cv::gpu::setDevice(devInfo.deviceID());
+    const cv::cuda::DeviceInfo devInfo = GET_PARAM(0);
+    cv::cuda::setDevice(devInfo.deviceID());
     const cv::Size size = GET_PARAM(1);
     const int depth = GET_PARAM(2);
     const int channels = GET_PARAM(3);
@@ -357,13 +357,13 @@ GPU_TEST_P(GMG, Accuracy)
     const cv::Mat fullfg(size, CV_8UC1, cv::Scalar::all(255));
 
     cv::Mat frame = randomMat(size, type, 0, 100);
-    cv::gpu::GpuMat d_frame = loadMat(frame, useRoi);
+    cv::cuda::GpuMat d_frame = loadMat(frame, useRoi);
 
-    cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::gpu::createBackgroundSubtractorGMG();
+    cv::Ptr<cv::BackgroundSubtractorGMG> gmg = cv::cuda::createBackgroundSubtractorGMG();
     gmg->setNumFrames(5);
     gmg->setSmoothingRadius(0);
 
-    cv::gpu::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
+    cv::cuda::GpuMat d_fgmask = createMat(size, CV_8UC1, useRoi);
 
     for (int i = 0; i < gmg->getNumFrames(); ++i)
     {

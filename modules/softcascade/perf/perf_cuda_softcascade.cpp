@@ -37,7 +37,7 @@ namespace {
         }
     };
 
-    cv::Mat sortDetections(cv::gpu::GpuMat& objects)
+    cv::Mat sortDetections(cv::cuda::GpuMat& objects)
     {
         cv::Mat detections(objects);
 
@@ -64,7 +64,7 @@ RUN_GPU(SCascadeTest, detect)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));;
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -73,7 +73,7 @@ RUN_GPU(SCascadeTest, detect)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -122,7 +122,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -131,7 +131,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int nroi = get<2>(GetParam());
@@ -139,7 +139,7 @@ RUN_GPU(SCascadeTestRoi, detectInRoi)
     for (int i = 0; i < nroi; ++i)
     {
         cv::Rect r = getFromTable(rng(10));
-        cv::gpu::GpuMat sub(rois, r);
+        cv::cuda::GpuMat sub(rois, r);
         sub.setTo(1);
     }
 
@@ -167,7 +167,7 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -176,12 +176,12 @@ RUN_GPU(SCascadeTestRoi, detectEachRoi)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 16384 * 20, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int idx = get<2>(GetParam());
     cv::Rect r = getFromTable(idx);
-    cv::gpu::GpuMat sub(rois, r);
+    cv::cuda::GpuMat sub(rois, r);
     sub.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -206,7 +206,7 @@ RUN_GPU(SCascadeTest, detectStream)
 {
     cv::Mat cpu = cv::imread(getDataPath(get<1>(GetParam())));
     ASSERT_FALSE(cpu.empty());
-    cv::gpu::GpuMat colored(cpu);
+    cv::cuda::GpuMat colored(cpu);
 
     cv::softcascade::SCascade cascade;
 
@@ -215,10 +215,10 @@ RUN_GPU(SCascadeTest, detectStream)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat objectBoxes(1, 10000 * sizeof(cv::softcascade::Detection), CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
-    cv::gpu::Stream s;
+    cv::cuda::Stream s;
 
     cascade.detect(colored, rois, objectBoxes, s);
 

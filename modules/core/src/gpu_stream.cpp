@@ -43,14 +43,14 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 ////////////////////////////////////////////////////////////////
 // Stream
 
 #ifndef HAVE_CUDA
 
-class cv::gpu::Stream::Impl
+class cv::cuda::Stream::Impl
 {
 public:
     Impl(void* ptr = 0)
@@ -62,7 +62,7 @@ public:
 
 #else
 
-class cv::gpu::Stream::Impl
+class cv::cuda::Stream::Impl
 {
 public:
     cudaStream_t stream;
@@ -73,29 +73,29 @@ public:
     ~Impl();
 };
 
-cv::gpu::Stream::Impl::Impl() : stream(0)
+cv::cuda::Stream::Impl::Impl() : stream(0)
 {
     cudaSafeCall( cudaStreamCreate(&stream) );
 }
 
-cv::gpu::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_)
+cv::cuda::Stream::Impl::Impl(cudaStream_t stream_) : stream(stream_)
 {
 }
 
-cv::gpu::Stream::Impl::~Impl()
+cv::cuda::Stream::Impl::~Impl()
 {
     if (stream)
         cudaStreamDestroy(stream);
 }
 
-cudaStream_t cv::gpu::StreamAccessor::getStream(const Stream& stream)
+cudaStream_t cv::cuda::StreamAccessor::getStream(const Stream& stream)
 {
     return stream.impl_->stream;
 }
 
 #endif
 
-cv::gpu::Stream::Stream()
+cv::cuda::Stream::Stream()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -104,7 +104,7 @@ cv::gpu::Stream::Stream()
 #endif
 }
 
-bool cv::gpu::Stream::queryIfComplete() const
+bool cv::cuda::Stream::queryIfComplete() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -120,7 +120,7 @@ bool cv::gpu::Stream::queryIfComplete() const
 #endif
 }
 
-void cv::gpu::Stream::waitForCompletion()
+void cv::cuda::Stream::waitForCompletion()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -129,7 +129,7 @@ void cv::gpu::Stream::waitForCompletion()
 #endif
 }
 
-void cv::gpu::Stream::waitEvent(const Event& event)
+void cv::cuda::Stream::waitEvent(const Event& event)
 {
 #ifndef HAVE_CUDA
     (void) event;
@@ -161,7 +161,7 @@ namespace
 
 #endif
 
-void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
+void cv::cuda::Stream::enqueueHostCallback(StreamCallback callback, void* userData)
 {
 #ifndef HAVE_CUDA
     (void) callback;
@@ -180,13 +180,13 @@ void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userDat
 #endif
 }
 
-Stream& cv::gpu::Stream::Null()
+Stream& cv::cuda::Stream::Null()
 {
     static Stream s(new Impl(0));
     return s;
 }
 
-cv::gpu::Stream::operator bool_type() const
+cv::cuda::Stream::operator bool_type() const
 {
 #ifndef HAVE_CUDA
     return 0;
@@ -205,7 +205,7 @@ template <> void cv::Ptr<Stream::Impl>::delete_obj()
 
 #ifndef HAVE_CUDA
 
-class cv::gpu::Event::Impl
+class cv::cuda::Event::Impl
 {
 public:
     Impl(unsigned int)
@@ -216,7 +216,7 @@ public:
 
 #else
 
-class cv::gpu::Event::Impl
+class cv::cuda::Event::Impl
 {
 public:
     cudaEvent_t event;
@@ -225,25 +225,25 @@ public:
     ~Impl();
 };
 
-cv::gpu::Event::Impl::Impl(unsigned int flags) : event(0)
+cv::cuda::Event::Impl::Impl(unsigned int flags) : event(0)
 {
     cudaSafeCall( cudaEventCreateWithFlags(&event, flags) );
 }
 
-cv::gpu::Event::Impl::~Impl()
+cv::cuda::Event::Impl::~Impl()
 {
     if (event)
         cudaEventDestroy(event);
 }
 
-cudaEvent_t cv::gpu::EventAccessor::getEvent(const Event& event)
+cudaEvent_t cv::cuda::EventAccessor::getEvent(const Event& event)
 {
     return event.impl_->event;
 }
 
 #endif
 
-cv::gpu::Event::Event(CreateFlags flags)
+cv::cuda::Event::Event(CreateFlags flags)
 {
 #ifndef HAVE_CUDA
     (void) flags;
@@ -253,7 +253,7 @@ cv::gpu::Event::Event(CreateFlags flags)
 #endif
 }
 
-void cv::gpu::Event::record(Stream& stream)
+void cv::cuda::Event::record(Stream& stream)
 {
 #ifndef HAVE_CUDA
     (void) stream;
@@ -263,7 +263,7 @@ void cv::gpu::Event::record(Stream& stream)
 #endif
 }
 
-bool cv::gpu::Event::queryIfComplete() const
+bool cv::cuda::Event::queryIfComplete() const
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -279,7 +279,7 @@ bool cv::gpu::Event::queryIfComplete() const
 #endif
 }
 
-void cv::gpu::Event::waitForCompletion()
+void cv::cuda::Event::waitForCompletion()
 {
 #ifndef HAVE_CUDA
     throw_no_cuda();
@@ -288,7 +288,7 @@ void cv::gpu::Event::waitForCompletion()
 #endif
 }
 
-float cv::gpu::Event::elapsedTime(const Event& start, const Event& end)
+float cv::cuda::Event::elapsedTime(const Event& start, const Event& end)
 {
 #ifndef HAVE_CUDA
     (void) start;

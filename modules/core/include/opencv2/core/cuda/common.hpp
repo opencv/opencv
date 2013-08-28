@@ -56,7 +56,7 @@
     #endif
 #endif
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
     static inline void checkCudaError(cudaError_t err, const char* file, const int line, const char* func)
     {
         if (cudaSuccess != err)
@@ -66,13 +66,13 @@ namespace cv { namespace gpu {
 
 #ifndef cudaSafeCall
     #if defined(__GNUC__)
-        #define cudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, __func__)
+        #define cudaSafeCall(expr)  cv::cuda::checkCudaError(expr, __FILE__, __LINE__, __func__)
     #else /* defined(__CUDACC__) || defined(__MSVC__) */
-        #define cudaSafeCall(expr)  cv::gpu::checkCudaError(expr, __FILE__, __LINE__, "")
+        #define cudaSafeCall(expr)  cv::cuda::checkCudaError(expr, __FILE__, __LINE__, "")
     #endif
 #endif
 
-namespace cv { namespace gpu
+namespace cv { namespace cuda
 {
     template <typename T> static inline bool isAligned(const T* ptr, size_t size)
     {
@@ -85,7 +85,7 @@ namespace cv { namespace gpu
     }
 }}
 
-namespace cv { namespace gpu
+namespace cv { namespace cuda
 {
     namespace cudev
     {

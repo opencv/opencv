@@ -44,7 +44,7 @@
 #include <stdexcept>
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cvtest;
 using namespace testing;
 using namespace testing::internal;
@@ -515,7 +515,7 @@ namespace cvtest
 }
 
 
-void cv::gpu::PrintTo(const DeviceInfo& info, std::ostream* os)
+void cv::cuda::PrintTo(const DeviceInfo& info, std::ostream* os)
 {
     (*os) << info.name();
 }

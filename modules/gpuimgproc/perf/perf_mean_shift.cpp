@@ -67,10 +67,10 @@ PERF_TEST_P(Image, MeanShiftFiltering,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(rgba);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(rgba);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::meanShiftFiltering(d_src, dst, sp, sr);
+        TEST_CYCLE() cv::cuda::meanShiftFiltering(d_src, dst, sp, sr);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -103,11 +103,11 @@ PERF_TEST_P(Image, MeanShiftProc,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(rgba);
-        cv::gpu::GpuMat dstr;
-        cv::gpu::GpuMat dstsp;
+        const cv::cuda::GpuMat d_src(rgba);
+        cv::cuda::GpuMat dstr;
+        cv::cuda::GpuMat dstsp;
 
-        TEST_CYCLE() cv::gpu::meanShiftProc(d_src, dstr, dstsp, sp, sr);
+        TEST_CYCLE() cv::cuda::meanShiftProc(d_src, dstr, dstsp, sp, sr);
 
         GPU_SANITY_CHECK(dstr);
         GPU_SANITY_CHECK(dstsp);
@@ -138,10 +138,10 @@ PERF_TEST_P(Image, MeanShiftSegmentation,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(rgba);
+        const cv::cuda::GpuMat d_src(rgba);
         cv::Mat dst;
 
-        TEST_CYCLE() cv::gpu::meanShiftSegmentation(d_src, dst, sp, sr, minsize);
+        TEST_CYCLE() cv::cuda::meanShiftSegmentation(d_src, dst, sp, sr, minsize);
 
         GPU_SANITY_CHECK(dst);
     }

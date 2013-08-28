@@ -54,7 +54,7 @@
 
 #ifdef HAVE_OPENCV_GPUARITHM
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace ght
     {

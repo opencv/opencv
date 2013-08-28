@@ -46,7 +46,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 
@@ -98,20 +98,20 @@ namespace
 
         for (int i = baseIdx - 1; i >= 0; --i)
         {
-            gpu::add(relForwardMotions[i + 1].first, forwardMotions[i].first, relForwardMotions[i].first);
-            gpu::add(relForwardMotions[i + 1].second, forwardMotions[i].second, relForwardMotions[i].second);
+            cuda::add(relForwardMotions[i + 1].first, forwardMotions[i].first, relForwardMotions[i].first);
+            cuda::add(relForwardMotions[i + 1].second, forwardMotions[i].second, relForwardMotions[i].second);
 
-            gpu::add(relBackwardMotions[i + 1].first, backwardMotions[i + 1].first, relBackwardMotions[i].first);
-            gpu::add(relBackwardMotions[i + 1].second, backwardMotions[i + 1].second, relBackwardMotions[i].second);
+            cuda::add(relBackwardMotions[i + 1].first, backwardMotions[i + 1].first, relBackwardMotions[i].first);
+            cuda::add(relBackwardMotions[i + 1].second, backwardMotions[i + 1].second, relBackwardMotions[i].second);
         }
 
         for (int i = baseIdx + 1; i < count; ++i)
         {
-            gpu::add(relForwardMotions[i - 1].first, backwardMotions[i].first, relForwardMotions[i].first);
-            gpu::add(relForwardMotions[i - 1].second, backwardMotions[i].second, relForwardMotions[i].second);
+            cuda::add(relForwardMotions[i - 1].first, backwardMotions[i].first, relForwardMotions[i].first);
+            cuda::add(relForwardMotions[i - 1].second, backwardMotions[i].second, relForwardMotions[i].second);
 
-            gpu::add(relBackwardMotions[i - 1].first, forwardMotions[i - 1].first, relBackwardMotions[i].first);
-            gpu::add(relBackwardMotions[i - 1].second, forwardMotions[i - 1].second, relBackwardMotions[i].second);
+            cuda::add(relBackwardMotions[i - 1].first, forwardMotions[i - 1].first, relBackwardMotions[i].first);
+            cuda::add(relBackwardMotions[i - 1].second, forwardMotions[i - 1].second, relBackwardMotions[i].second);
         }
     }
 
@@ -121,11 +121,11 @@ namespace
 
         for (size_t i = 0; i < lowResMotions.size(); ++i)
         {
-            gpu::resize(lowResMotions[i].first, highResMotions[i].first, Size(), scale, scale, INTER_CUBIC);
-            gpu::resize(lowResMotions[i].second, highResMotions[i].second, Size(), scale, scale, INTER_CUBIC);
+            cuda::resize(lowResMotions[i].first, highResMotions[i].first, Size(), scale, scale, INTER_CUBIC);
+            cuda::resize(lowResMotions[i].second, highResMotions[i].second, Size(), scale, scale, INTER_CUBIC);
 
-            gpu::multiply(highResMotions[i].first, Scalar::all(scale), highResMotions[i].first);
-            gpu::multiply(highResMotions[i].second, Scalar::all(scale), highResMotions[i].second);
+            cuda::multiply(highResMotions[i].first, Scalar::all(scale), highResMotions[i].first);
+            cuda::multiply(highResMotions[i].second, Scalar::all(scale), highResMotions[i].second);
         }
     }
 
@@ -230,7 +230,7 @@ namespace
         Ptr<DenseOpticalFlowExt> opticalFlow_;
 
     private:
-        std::vector<Ptr<gpu::Filter> > filters_;
+        std::vector<Ptr<cuda::Filter> > filters_;
         int curBlurKernelSize_;
         double curBlurSigma_;
         int curSrcType_;
@@ -299,7 +299,7 @@ namespace
         {
             filters_.resize(src.size());
             for (size_t i = 0; i < src.size(); ++i)
-                filters_[i] = gpu::createGaussianFilter(src[0].type(), -1, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
+                filters_[i] = cuda::createGaussianFilter(src[0].type(), -1, Size(blurKernelSize_, blurKernelSize_), blurSigma_);
             curBlurKernelSize_ = blurKernelSize_;
             curBlurSigma_ = blurSigma_;
             curSrcType_ = src[0].type();
@@ -329,7 +329,7 @@ namespace
         const Size lowResSize = src[0].size();
         const Size highResSize(lowResSize.width * scale_, lowResSize.height * scale_);
 
-        gpu::resize(src[baseIdx], highRes_, highResSize, 0, 0, INTER_CUBIC);
+        cuda::resize(src[baseIdx], highRes_, highResSize, 0, 0, INTER_CUBIC);
 
         // iterations
 
@@ -344,11 +344,11 @@ namespace
             for (size_t k = 0; k < src.size(); ++k)
             {
                 // a = M * Ih
-                gpu::remap(highRes_, a_[k], backwardMaps_[k].first, backwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
+                cuda::remap(highRes_, a_[k], backwardMaps_[k].first, backwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
                 // b = HM * Ih
                 filters_[k]->apply(a_[k], b_[k], streams_[k]);
                 // c = DHF * Ih
-                gpu::resize(b_[k], c_[k], lowResSize, 0, 0, INTER_NEAREST, streams_[k]);
+                cuda::resize(b_[k], c_[k], lowResSize, 0, 0, INTER_NEAREST, streams_[k]);
 
                 diffSign(src[k], c_[k], c_[k], streams_[k]);
 
@@ -357,19 +357,19 @@ namespace
                 // b = HtDt * diff
                 filters_[k]->apply(a_[k], b_[k], streams_[k]);
                 // diffTerm = MtHtDt * diff
-                gpu::remap(b_[k], diffTerms_[k], forwardMaps_[k].first, forwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
+                cuda::remap(b_[k], diffTerms_[k], forwardMaps_[k].first, forwardMaps_[k].second, INTER_NEAREST, BORDER_REPLICATE, Scalar(), streams_[k]);
             }
 
             if (lambda_ > 0)
             {
                 calcBtvRegularization(highRes_, regTerm_, btvKernelSize_);
-                gpu::addWeighted(highRes_, 1.0, regTerm_, -tau_ * lambda_, 0.0, highRes_);
+                cuda::addWeighted(highRes_, 1.0, regTerm_, -tau_ * lambda_, 0.0, highRes_);
             }
 
             for (size_t k = 0; k < src.size(); ++k)
             {
                 streams_[k].waitForCompletion();
-                gpu::addWeighted(highRes_, 1.0, diffTerms_[k], tau_, 0.0, highRes_);
+                cuda::addWeighted(highRes_, 1.0, diffTerms_[k], tau_, 0.0, highRes_);
             }
         }
 

@@ -54,9 +54,9 @@ using namespace cvtest;
 CV_FLAGS(GemmFlags, 0, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
 #define ALL_GEMM_FLAGS testing::Values(GemmFlags(0), GemmFlags(cv::GEMM_1_T), GemmFlags(cv::GEMM_2_T), GemmFlags(cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_3_T), GemmFlags(cv::GEMM_1_T | cv::GEMM_2_T | cv::GEMM_3_T))
 
-PARAM_TEST_CASE(GEMM, cv::gpu::DeviceInfo, cv::Size, MatType, GemmFlags, UseRoi)
+PARAM_TEST_CASE(GEMM, cv::cuda::DeviceInfo, cv::Size, MatType, GemmFlags, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int flags;
@@ -70,7 +70,7 @@ PARAM_TEST_CASE(GEMM, cv::gpu::DeviceInfo, cv::Size, MatType, GemmFlags, UseRoi)
         flags = GET_PARAM(3);
         useRoi = GET_PARAM(4);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -82,12 +82,12 @@ GPU_TEST_P(GEMM, Accuracy)
     double alpha = randomDouble(-10.0, 10.0);
     double beta = randomDouble(-10.0, 10.0);
 
-    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::gpu::NATIVE_DOUBLE))
+    if (CV_MAT_DEPTH(type) == CV_64F && !supportFeature(devInfo, cv::cuda::NATIVE_DOUBLE))
     {
         try
         {
-            cv::gpu::GpuMat dst;
-            cv::gpu::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
+            cv::cuda::GpuMat dst;
+            cv::cuda::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
         }
         catch (const cv::Exception& e)
         {
@@ -98,8 +98,8 @@ GPU_TEST_P(GEMM, Accuracy)
     {
         try
         {
-            cv::gpu::GpuMat dst;
-            cv::gpu::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
+            cv::cuda::GpuMat dst;
+            cv::cuda::gemm(loadMat(src1), loadMat(src2), alpha, loadMat(src3), beta, dst, flags);
         }
         catch (const cv::Exception& e)
         {
@@ -108,8 +108,8 @@ GPU_TEST_P(GEMM, Accuracy)
     }
     else
     {
-        cv::gpu::GpuMat dst = createMat(size, type, useRoi);
-        cv::gpu::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dst, flags);
+        cv::cuda::GpuMat dst = createMat(size, type, useRoi);
+        cv::cuda::gemm(loadMat(src1, useRoi), loadMat(src2, useRoi), alpha, loadMat(src3, useRoi), beta, dst, flags);
 
         cv::Mat dst_gold;
         cv::gemm(src1, src2, alpha, src3, beta, dst_gold, flags);
@@ -128,9 +128,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, GEMM, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // Integral
 
-PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, cv::Size, UseRoi)
+PARAM_TEST_CASE(Integral, cv::cuda::DeviceInfo, cv::Size, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     bool useRoi;
 
@@ -140,7 +140,7 @@ PARAM_TEST_CASE(Integral, cv::gpu::DeviceInfo, cv::Size, UseRoi)
         size = GET_PARAM(1);
         useRoi = GET_PARAM(2);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -148,8 +148,8 @@ GPU_TEST_P(Integral, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    cv::gpu::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_32SC1, useRoi);
-    cv::gpu::integral(loadMat(src, useRoi), dst);
+    cv::cuda::GpuMat dst = createMat(cv::Size(src.cols + 1, src.rows + 1), CV_32SC1, useRoi);
+    cv::cuda::integral(loadMat(src, useRoi), dst);
 
     cv::Mat dst_gold;
     cv::integral(src, dst_gold, CV_32S);
@@ -167,9 +167,9 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, Integral, testing::Combine(
 
 CV_FLAGS(DftFlags, 0, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
 
-PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, cv::Size, DftFlags)
+PARAM_TEST_CASE(MulSpectrums, cv::cuda::DeviceInfo, cv::Size, DftFlags)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int flag;
 
@@ -181,7 +181,7 @@ PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, cv::Size, DftFlags)
         size = GET_PARAM(1);
         flag = GET_PARAM(2);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         a = randomMat(size, CV_32FC2);
         b = randomMat(size, CV_32FC2);
@@ -190,8 +190,8 @@ PARAM_TEST_CASE(MulSpectrums, cv::gpu::DeviceInfo, cv::Size, DftFlags)
 
 GPU_TEST_P(MulSpectrums, Simple)
 {
-    cv::gpu::GpuMat c;
-    cv::gpu::mulSpectrums(loadMat(a), loadMat(b), c, flag, false);
+    cv::cuda::GpuMat c;
+    cv::cuda::mulSpectrums(loadMat(a), loadMat(b), c, flag, false);
 
     cv::Mat c_gold;
     cv::mulSpectrums(a, b, c_gold, flag, false);
@@ -203,8 +203,8 @@ GPU_TEST_P(MulSpectrums, Scaled)
 {
     float scale = 1.f / size.area();
 
-    cv::gpu::GpuMat c;
-    cv::gpu::mulAndScaleSpectrums(loadMat(a), loadMat(b), c, flag, scale, false);
+    cv::cuda::GpuMat c;
+    cv::cuda::mulAndScaleSpectrums(loadMat(a), loadMat(b), c, flag, scale, false);
 
     cv::Mat c_gold;
     cv::mulSpectrums(a, b, c_gold, flag, false);
@@ -221,15 +221,15 @@ INSTANTIATE_TEST_CASE_P(GPU_Arithm, MulSpectrums, testing::Combine(
 ////////////////////////////////////////////////////////////////////////////
 // Dft
 
-struct Dft : testing::TestWithParam<cv::gpu::DeviceInfo>
+struct Dft : testing::TestWithParam<cv::cuda::DeviceInfo>
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     virtual void SetUp()
     {
         devInfo = GetParam();
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -244,14 +244,14 @@ namespace
         cv::Mat b_gold;
         cv::dft(a, b_gold, flags);
 
-        cv::gpu::GpuMat d_b;
-        cv::gpu::GpuMat d_b_data;
+        cv::cuda::GpuMat d_b;
+        cv::cuda::GpuMat d_b_data;
         if (inplace)
         {
             d_b_data.create(1, a.size().area(), CV_32FC2);
-            d_b = cv::gpu::GpuMat(a.rows, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
+            d_b = cv::cuda::GpuMat(a.rows, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
         }
-        cv::gpu::dft(loadMat(a), d_b, cv::Size(cols, rows), flags);
+        cv::cuda::dft(loadMat(a), d_b, cv::Size(cols, rows), flags);
 
         EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
         ASSERT_EQ(CV_32F, d_b.depth());
@@ -293,26 +293,26 @@ namespace
 
         cv::Mat a = randomMat(cv::Size(cols, rows), CV_32FC1, 0.0, 10.0);
 
-        cv::gpu::GpuMat d_b, d_c;
-        cv::gpu::GpuMat d_b_data, d_c_data;
+        cv::cuda::GpuMat d_b, d_c;
+        cv::cuda::GpuMat d_b_data, d_c_data;
         if (inplace)
         {
             if (a.cols == 1)
             {
                 d_b_data.create(1, (a.rows / 2 + 1) * a.cols, CV_32FC2);
-                d_b = cv::gpu::GpuMat(a.rows / 2 + 1, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
+                d_b = cv::cuda::GpuMat(a.rows / 2 + 1, a.cols, CV_32FC2, d_b_data.ptr(), a.cols * d_b_data.elemSize());
             }
             else
             {
                 d_b_data.create(1, a.rows * (a.cols / 2 + 1), CV_32FC2);
-                d_b = cv::gpu::GpuMat(a.rows, a.cols / 2 + 1, CV_32FC2, d_b_data.ptr(), (a.cols / 2 + 1) * d_b_data.elemSize());
+                d_b = cv::cuda::GpuMat(a.rows, a.cols / 2 + 1, CV_32FC2, d_b_data.ptr(), (a.cols / 2 + 1) * d_b_data.elemSize());
             }
             d_c_data.create(1, a.size().area(), CV_32F);
-            d_c = cv::gpu::GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
+            d_c = cv::cuda::GpuMat(a.rows, a.cols, CV_32F, d_c_data.ptr(), a.cols * d_c_data.elemSize());
         }
 
-        cv::gpu::dft(loadMat(a), d_b, cv::Size(cols, rows), 0);
-        cv::gpu::dft(d_b, d_c, cv::Size(cols, rows), cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
+        cv::cuda::dft(loadMat(a), d_b, cv::Size(cols, rows), 0);
+        cv::cuda::dft(d_b, d_c, cv::Size(cols, rows), cv::DFT_REAL_OUTPUT | cv::DFT_SCALE);
 
         EXPECT_TRUE(!inplace || d_b.ptr() == d_b_data.ptr());
         EXPECT_TRUE(!inplace || d_c.ptr() == d_c_data.ptr());
@@ -396,9 +396,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(Ccorr, bool)
 }
 
-PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, cv::Size, KSize, Ccorr)
+PARAM_TEST_CASE(Convolve, cv::cuda::DeviceInfo, cv::Size, KSize, Ccorr)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int ksize;
     bool ccorr;
@@ -410,7 +410,7 @@ PARAM_TEST_CASE(Convolve, cv::gpu::DeviceInfo, cv::Size, KSize, Ccorr)
         ksize = GET_PARAM(2);
         ccorr = GET_PARAM(3);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -419,9 +419,9 @@ GPU_TEST_P(Convolve, Accuracy)
     cv::Mat src = randomMat(size, CV_32FC1, 0.0, 100.0);
     cv::Mat kernel = randomMat(cv::Size(ksize, ksize), CV_32FC1, 0.0, 1.0);
 
-    cv::Ptr<cv::gpu::Convolution> conv = cv::gpu::createConvolution();
+    cv::Ptr<cv::cuda::Convolution> conv = cv::cuda::createConvolution();
 
-    cv::gpu::GpuMat dst;
+    cv::cuda::GpuMat dst;
     conv->convolve(loadMat(src), loadMat(kernel), dst, ccorr);
 
     cv::Mat dst_gold;

@@ -49,7 +49,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 class CV_EXPORTS BroxOpticalFlow
 {
@@ -306,6 +306,6 @@ CV_EXPORTS void interpolateFrames(const GpuMat& frame0, const GpuMat& frame1,
 
 CV_EXPORTS void createOpticalFlowNeedleMap(const GpuMat& u, const GpuMat& v, GpuMat& vertex, GpuMat& colors);
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUOPTFLOW_HPP__ */

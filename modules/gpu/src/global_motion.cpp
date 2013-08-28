@@ -43,17 +43,17 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
-void cv::gpu::calcWobbleSuppressionMaps(
+void cv::cuda::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
+void cv::cuda::calcWobbleSuppressionMaps(
         int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev { namespace globmotion {
+namespace cv { namespace cuda { namespace cudev { namespace globmotion {
 
     int compactPoints(int N, float *points0, float *points1, const uchar *mask);
 
@@ -63,14 +63,14 @@ namespace cv { namespace gpu { namespace cudev { namespace globmotion {
 
 }}}}
 
-void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
+void cv::cuda::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask)
 {
     CV_Assert(points0.rows == 1 && points1.rows == 1 && mask.rows == 1);
     CV_Assert(points0.type() == CV_32FC2 && points1.type() == CV_32FC2 && mask.type() == CV_8U);
     CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
 
     int npoints = points0.cols;
-    int remaining = cv::gpu::cudev::globmotion::compactPoints(
+    int remaining = cv::cuda::cudev::globmotion::compactPoints(
             npoints, (float*)points0.data, (float*)points1.data, mask.data);
 
     points0 = points0.colRange(0, remaining);
@@ -78,7 +78,7 @@ void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask
 }
 
 
-void cv::gpu::calcWobbleSuppressionMaps(
+void cv::cuda::calcWobbleSuppressionMaps(
         int left, int idx, int right, Size size, const Mat &ml, const Mat &mr,
         GpuMat &mapx, GpuMat &mapy)
 {
@@ -88,7 +88,7 @@ void cv::gpu::calcWobbleSuppressionMaps(
     mapx.create(size, CV_32F);
     mapy.create(size, CV_32F);
 
-    cv::gpu::cudev::globmotion::calcWobbleSuppressionMaps(
+    cv::cuda::cudev::globmotion::calcWobbleSuppressionMaps(
                 left, idx, right, size.width, size.height,
                 ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
 }

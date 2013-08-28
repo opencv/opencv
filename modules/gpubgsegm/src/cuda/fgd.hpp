@@ -164,24 +164,24 @@ namespace fgd
     const int HISTOGRAM_BIN_COUNT = 256;
 
     template <typename PT, typename CT>
-    void calcDiffHistogram_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
+    void calcDiffHistogram_gpu(cv::cuda::PtrStepSzb prevFrame, cv::cuda::PtrStepSzb curFrame,
                                unsigned int* hist0, unsigned int* hist1, unsigned int* hist2,
                                unsigned int* partialBuf0, unsigned int* partialBuf1, unsigned int* partialBuf2,
                                bool cc20, cudaStream_t stream);
 
     template <typename PT, typename CT>
-    void calcDiffThreshMask_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame, uchar3 bestThres, cv::gpu::PtrStepSzb changeMask, cudaStream_t stream);
+    void calcDiffThreshMask_gpu(cv::cuda::PtrStepSzb prevFrame, cv::cuda::PtrStepSzb curFrame, uchar3 bestThres, cv::cuda::PtrStepSzb changeMask, cudaStream_t stream);
 
     void setBGPixelStat(const BGPixelStat& stat);
 
     template <typename PT, typename CT, typename OT>
-    void bgfgClassification_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
-                                cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd, cv::gpu::PtrStepSzb foreground,
+    void bgfgClassification_gpu(cv::cuda::PtrStepSzb prevFrame, cv::cuda::PtrStepSzb curFrame,
+                                cv::cuda::PtrStepSzb Ftd, cv::cuda::PtrStepSzb Fbd, cv::cuda::PtrStepSzb foreground,
                                 int deltaC, int deltaCC, float alpha2, int N1c, int N1cc, cudaStream_t stream);
 
     template <typename PT, typename CT, typename OT>
-    void updateBackgroundModel_gpu(cv::gpu::PtrStepSzb prevFrame, cv::gpu::PtrStepSzb curFrame,
-                                   cv::gpu::PtrStepSzb Ftd, cv::gpu::PtrStepSzb Fbd, cv::gpu::PtrStepSzb foreground, cv::gpu::PtrStepSzb background,
+    void updateBackgroundModel_gpu(cv::cuda::PtrStepSzb prevFrame, cv::cuda::PtrStepSzb curFrame,
+                                   cv::cuda::PtrStepSzb Ftd, cv::cuda::PtrStepSzb Fbd, cv::cuda::PtrStepSzb foreground, cv::cuda::PtrStepSzb background,
                                    int deltaC, int deltaCC, float alpha1, float alpha2, float alpha3, int N1c, int N1cc, int N2c, int N2cc, float T,
                                    cudaStream_t stream);
 }

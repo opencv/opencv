@@ -47,9 +47,9 @@
 using namespace std;
 using namespace cv;
 
-struct CompactPoints : testing::TestWithParam<gpu::DeviceInfo>
+struct CompactPoints : testing::TestWithParam<cuda::DeviceInfo>
 {
-    virtual void SetUp() { gpu::setDevice(GetParam().deviceID()); }
+    virtual void SetUp() { cuda::setDevice(GetParam().deviceID()); }
 };
 
 GPU_TEST_P(CompactPoints, CanCompactizeSmallInput)
@@ -69,8 +69,8 @@ GPU_TEST_P(CompactPoints, CanCompactizeSmallInput)
     mask.at<uchar>(0,1) = 0;
     mask.at<uchar>(0,2) = 1;
 
-    gpu::GpuMat dsrc0(src0), dsrc1(src1), dmask(mask);
-    gpu::compactPoints(dsrc0, dsrc1, dmask);
+    cuda::GpuMat dsrc0(src0), dsrc1(src1), dmask(mask);
+    cuda::compactPoints(dsrc0, dsrc1, dmask);
 
     dsrc0.download(src0);
     dsrc1.download(src1);

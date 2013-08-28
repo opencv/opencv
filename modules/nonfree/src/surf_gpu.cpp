@@ -43,26 +43,26 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM)
 
-cv::gpu::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
-cv::gpu::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }
-int cv::gpu::SURF_GPU::descriptorSize() const { throw_no_cuda(); return 0;}
-void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_no_cuda(); }
-void cv::gpu::SURF_GPU::releaseMemory() { throw_no_cuda(); }
+cv::cuda::SURF_GPU::SURF_GPU() { throw_no_cuda(); }
+cv::cuda::SURF_GPU::SURF_GPU(double, int, int, bool, float, bool) { throw_no_cuda(); }
+int cv::cuda::SURF_GPU::descriptorSize() const { throw_no_cuda(); return 0;}
+void cv::cuda::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::downloadKeypoints(const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::downloadDescriptors(const GpuMat&, std::vector<float>&) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::operator()(const GpuMat&, const GpuMat&, GpuMat&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, GpuMat&, bool) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::operator()(const GpuMat&, const GpuMat&, std::vector<KeyPoint>&, std::vector<float>&, bool) { throw_no_cuda(); }
+void cv::cuda::SURF_GPU::releaseMemory() { throw_no_cuda(); }
 
 #else // !defined (HAVE_CUDA)
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace surf
     {
@@ -89,7 +89,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-using namespace ::cv::gpu::cudev::surf;
+using namespace ::cv::cuda::cudev::surf;
 
 namespace
 {
@@ -142,13 +142,13 @@ namespace
 
             bindImgTex(img);
 
-            gpu::integral(img, surf_.sum, surf_.intBuffer);
+            cuda::integral(img, surf_.sum, surf_.intBuffer);
             sumOffset = bindSumTex(surf_.sum);
 
             if (use_mask)
             {
-                gpu::min(mask, 1.0, surf_.mask1);
-                gpu::integral(surf_.mask1, surf_.maskSum, surf_.intBuffer);
+                cuda::min(mask, 1.0, surf_.mask1);
+                cuda::integral(surf_.mask1, surf_.maskSum, surf_.intBuffer);
                 maskOffset = bindMaskSumTex(surf_.maskSum);
             }
         }
@@ -240,7 +240,7 @@ namespace
     };
 }
 
-cv::gpu::SURF_GPU::SURF_GPU()
+cv::cuda::SURF_GPU::SURF_GPU()
 {
     hessianThreshold = 100;
     extended = true;
@@ -250,7 +250,7 @@ cv::gpu::SURF_GPU::SURF_GPU()
     upright = false;
 }
 
-cv::gpu::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio, bool _upright)
+cv::cuda::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers, bool _extended, float _keypointsRatio, bool _upright)
 {
     hessianThreshold = _threshold;
     extended = _extended;
@@ -260,12 +260,12 @@ cv::gpu::SURF_GPU::SURF_GPU(double _threshold, int _nOctaves, int _nOctaveLayers
     upright = _upright;
 }
 
-int cv::gpu::SURF_GPU::descriptorSize() const
+int cv::cuda::SURF_GPU::descriptorSize() const
 {
     return extended ? 128 : 64;
 }
 
-void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>& keypoints, GpuMat& keypointsGPU)
+void cv::cuda::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>& keypoints, GpuMat& keypointsGPU)
 {
     if (keypoints.empty())
         keypointsGPU.release();
@@ -297,7 +297,7 @@ void cv::gpu::SURF_GPU::uploadKeypoints(const std::vector<KeyPoint>& keypoints, 
     }
 }
 
-void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, std::vector<KeyPoint>& keypoints)
+void cv::cuda::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, std::vector<KeyPoint>& keypoints)
 {
     const int nFeatures = keypointsGPU.cols;
 
@@ -333,7 +333,7 @@ void cv::gpu::SURF_GPU::downloadKeypoints(const GpuMat& keypointsGPU, std::vecto
     }
 }
 
-void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat& descriptorsGPU, std::vector<float>& descriptors)
+void cv::cuda::SURF_GPU::downloadDescriptors(const GpuMat& descriptorsGPU, std::vector<float>& descriptors)
 {
     if (descriptorsGPU.empty())
         descriptors.clear();
@@ -347,7 +347,7 @@ void cv::gpu::SURF_GPU::downloadDescriptors(const GpuMat& descriptorsGPU, std::v
     }
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
+void cv::cuda::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints)
 {
     if (!img.empty())
     {
@@ -357,7 +357,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat
     }
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors,
+void cv::cuda::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat& keypoints, GpuMat& descriptors,
                                    bool useProvidedKeypoints)
 {
     if (!img.empty())
@@ -375,7 +375,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, GpuMat
     }
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
+void cv::cuda::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints)
 {
     GpuMat keypointsGPU;
 
@@ -384,7 +384,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::v
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
+void cv::cuda::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
     GpuMat& descriptors, bool useProvidedKeypoints)
 {
     GpuMat keypointsGPU;
@@ -397,7 +397,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::v
     downloadKeypoints(keypointsGPU, keypoints);
 }
 
-void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
+void cv::cuda::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::vector<KeyPoint>& keypoints,
     std::vector<float>& descriptors, bool useProvidedKeypoints)
 {
     GpuMat descriptorsGPU;
@@ -407,7 +407,7 @@ void cv::gpu::SURF_GPU::operator()(const GpuMat& img, const GpuMat& mask, std::v
     downloadDescriptors(descriptorsGPU, descriptors);
 }
 
-void cv::gpu::SURF_GPU::releaseMemory()
+void cv::cuda::SURF_GPU::releaseMemory()
 {
     sum.release();
     mask1.release();

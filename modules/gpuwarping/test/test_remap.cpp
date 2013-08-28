@@ -112,9 +112,9 @@ namespace
 ///////////////////////////////////////////////////////////////////
 // Test
 
-PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, BorderType, UseRoi)
+PARAM_TEST_CASE(Remap, cv::cuda::DeviceInfo, cv::Size, MatType, Interpolation, BorderType, UseRoi)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     int type;
     int interpolation;
@@ -133,7 +133,7 @@ PARAM_TEST_CASE(Remap, cv::gpu::DeviceInfo, cv::Size, MatType, Interpolation, Bo
         borderType = GET_PARAM(4);
         useRoi = GET_PARAM(5);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
 
         // rotation matrix
 
@@ -160,8 +160,8 @@ GPU_TEST_P(Remap, Accuracy)
     cv::Mat src = randomMat(size, type);
     cv::Scalar val = randomScalar(0.0, 255.0);
 
-    cv::gpu::GpuMat dst = createMat(xmap.size(), type, useRoi);
-    cv::gpu::remap(loadMat(src, useRoi), dst, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType, val);
+    cv::cuda::GpuMat dst = createMat(xmap.size(), type, useRoi);
+    cv::cuda::remap(loadMat(src, useRoi), dst, loadMat(xmap, useRoi), loadMat(ymap, useRoi), interpolation, borderType, val);
 
     cv::Mat dst_gold;
     remapGold(src, xmap, ymap, dst_gold, interpolation, borderType, val);

@@ -49,7 +49,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //! adds one matrix to another (dst = src1 + src2)
 CV_EXPORTS void add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), int dtype = -1, Stream& stream = Stream::Null());
@@ -369,6 +369,6 @@ public:
 
 CV_EXPORTS Ptr<Convolution> createConvolution(Size user_block_size = Size());
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif /* __OPENCV_GPUARITHM_HPP__ */

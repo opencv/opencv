@@ -52,7 +52,7 @@
 
 namespace cv { namespace cudev {
 
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 // CV_CUDEV_ARCH
 

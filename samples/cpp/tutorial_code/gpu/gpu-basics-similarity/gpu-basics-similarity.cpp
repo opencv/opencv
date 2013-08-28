@@ -21,28 +21,28 @@ Scalar getMSSIM_GPU( const Mat& I1, const Mat& I2);
 
 struct BufferPSNR                                     // Optimized GPU versions
 {   // Data allocations are very expensive on GPU. Use a buffer to solve: allocate once reuse later.
-    gpu::GpuMat gI1, gI2, gs, t1,t2;
+    cuda::GpuMat gI1, gI2, gs, t1,t2;
 
-    gpu::GpuMat buf;
+    cuda::GpuMat buf;
 };
 double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b);
 
 struct BufferMSSIM                                     // Optimized GPU versions
 {   // Data allocations are very expensive on GPU. Use a buffer to solve: allocate once reuse later.
-    gpu::GpuMat gI1, gI2, gs, t1,t2;
+    cuda::GpuMat gI1, gI2, gs, t1,t2;
 
-    gpu::GpuMat I1_2, I2_2, I1_I2;
-    vector<gpu::GpuMat> vI1, vI2;
+    cuda::GpuMat I1_2, I2_2, I1_I2;
+    vector<cuda::GpuMat> vI1, vI2;
 
-    gpu::GpuMat mu1, mu2;
-    gpu::GpuMat mu1_2, mu2_2, mu1_mu2;
+    cuda::GpuMat mu1, mu2;
+    cuda::GpuMat mu1_2, mu2_2, mu1_mu2;
 
-    gpu::GpuMat sigma1_2, sigma2_2, sigma12;
-    gpu::GpuMat t3;
+    cuda::GpuMat sigma1_2, sigma2_2, sigma12;
+    cuda::GpuMat t3;
 
-    gpu::GpuMat ssim_map;
+    cuda::GpuMat ssim_map;
 
-    gpu::GpuMat buf;
+    cuda::GpuMat buf;
 };
 Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b);
 
@@ -197,10 +197,10 @@ double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
     b.gI1.convertTo(b.t1, CV_32F);
     b.gI2.convertTo(b.t2, CV_32F);
 
-    gpu::absdiff(b.t1.reshape(1), b.t2.reshape(1), b.gs);
-    gpu::multiply(b.gs, b.gs, b.gs);
+    cuda::absdiff(b.t1.reshape(1), b.t2.reshape(1), b.gs);
+    cuda::multiply(b.gs, b.gs, b.gs);
 
-    double sse = gpu::sum(b.gs, b.buf)[0];
+    double sse = cuda::sum(b.gs, b.buf)[0];
 
     if( sse <= 1e-10) // for small values return zero
         return 0;
@@ -214,7 +214,7 @@ double getPSNR_GPU_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
 
 double getPSNR_GPU(const Mat& I1, const Mat& I2)
 {
-    gpu::GpuMat gI1, gI2, gs, t1,t2;
+    cuda::GpuMat gI1, gI2, gs, t1,t2;
 
     gI1.upload(I1);
     gI2.upload(I2);
@@ -222,10 +222,10 @@ double getPSNR_GPU(const Mat& I1, const Mat& I2)
     gI1.convertTo(t1, CV_32F);
     gI2.convertTo(t2, CV_32F);
 
-    gpu::absdiff(t1.reshape(1), t2.reshape(1), gs);
-    gpu::multiply(gs, gs, gs);
+    cuda::absdiff(t1.reshape(1), t2.reshape(1), gs);
+    cuda::multiply(gs, gs, gs);
 
-    Scalar s = gpu::sum(gs);
+    Scalar s = cuda::sum(gs);
     double sse = s.val[0] + s.val[1] + s.val[2];
 
     if( sse <= 1e-10) // for small values return zero
@@ -295,7 +295,7 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
 {
     const float C1 = 6.5025f, C2 = 58.5225f;
     /***************************** INITS **********************************/
-    gpu::GpuMat gI1, gI2, gs1, tmp1,tmp2;
+    cuda::GpuMat gI1, gI2, gs1, tmp1,tmp2;
 
     gI1.upload(i1);
     gI2.upload(i2);
@@ -303,57 +303,57 @@ Scalar getMSSIM_GPU( const Mat& i1, const Mat& i2)
     gI1.convertTo(tmp1, CV_MAKE_TYPE(CV_32F, gI1.channels()));
     gI2.convertTo(tmp2, CV_MAKE_TYPE(CV_32F, gI2.channels()));
 
-    vector<gpu::GpuMat> vI1, vI2;
-    gpu::split(tmp1, vI1);
-    gpu::split(tmp2, vI2);
+    vector<cuda::GpuMat> vI1, vI2;
+    cuda::split(tmp1, vI1);
+    cuda::split(tmp2, vI2);
     Scalar mssim;
 
-    Ptr<gpu::Filter> gauss = gpu::createGaussianFilter(vI2[0].type(), -1, Size(11, 11), 1.5);
+    Ptr<cuda::Filter> gauss = cuda::createGaussianFilter(vI2[0].type(), -1, Size(11, 11), 1.5);
 
     for( int i = 0; i < gI1.channels(); ++i )
     {
-        gpu::GpuMat I2_2, I1_2, I1_I2;
+        cuda::GpuMat I2_2, I1_2, I1_I2;
 
-        gpu::multiply(vI2[i], vI2[i], I2_2);        // I2^2
-        gpu::multiply(vI1[i], vI1[i], I1_2);        // I1^2
-        gpu::multiply(vI1[i], vI2[i], I1_I2);       // I1 * I2
+        cuda::multiply(vI2[i], vI2[i], I2_2);        // I2^2
+        cuda::multiply(vI1[i], vI1[i], I1_2);        // I1^2
+        cuda::multiply(vI1[i], vI2[i], I1_I2);       // I1 * I2
 
         /*************************** END INITS **********************************/
-        gpu::GpuMat mu1, mu2;   // PRELIMINARY COMPUTING
+        cuda::GpuMat mu1, mu2;   // PRELIMINARY COMPUTING
         gauss->apply(vI1[i], mu1);
         gauss->apply(vI2[i], mu2);
 
-        gpu::GpuMat mu1_2, mu2_2, mu1_mu2;
-        gpu::multiply(mu1, mu1, mu1_2);
-        gpu::multiply(mu2, mu2, mu2_2);
-        gpu::multiply(mu1, mu2, mu1_mu2);
+        cuda::GpuMat mu1_2, mu2_2, mu1_mu2;
+        cuda::multiply(mu1, mu1, mu1_2);
+        cuda::multiply(mu2, mu2, mu2_2);
+        cuda::multiply(mu1, mu2, mu1_mu2);
 
-        gpu::GpuMat sigma1_2, sigma2_2, sigma12;
+        cuda::GpuMat sigma1_2, sigma2_2, sigma12;
 
         gauss->apply(I1_2, sigma1_2);
-        gpu::subtract(sigma1_2, mu1_2, sigma1_2); // sigma1_2 -= mu1_2;
+        cuda::subtract(sigma1_2, mu1_2, sigma1_2); // sigma1_2 -= mu1_2;
 
         gauss->apply(I2_2, sigma2_2);
-        gpu::subtract(sigma2_2, mu2_2, sigma2_2); // sigma2_2 -= mu2_2;
+        cuda::subtract(sigma2_2, mu2_2, sigma2_2); // sigma2_2 -= mu2_2;
 
         gauss->apply(I1_I2, sigma12);
-        gpu::subtract(sigma12, mu1_mu2, sigma12); // sigma12 -= mu1_mu2;
+        cuda::subtract(sigma12, mu1_mu2, sigma12); // sigma12 -= mu1_mu2;
 
         ///////////////////////////////// FORMULA ////////////////////////////////
-        gpu::GpuMat t1, t2, t3;
+        cuda::GpuMat t1, t2, t3;
 
         mu1_mu2.convertTo(t1, -1, 2, C1); // t1 = 2 * mu1_mu2 + C1;
         sigma12.convertTo(t2, -1, 2, C2); // t2 = 2 * sigma12 + C2;
-        gpu::multiply(t1, t2, t3);        // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+        cuda::multiply(t1, t2, t3);        // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
 
-        gpu::addWeighted(mu1_2, 1.0, mu2_2, 1.0, C1, t1);       // t1 = mu1_2 + mu2_2 + C1;
-        gpu::addWeighted(sigma1_2, 1.0, sigma2_2, 1.0, C2, t2); // t2 = sigma1_2 + sigma2_2 + C2;
-        gpu::multiply(t1, t2, t1);                              // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+        cuda::addWeighted(mu1_2, 1.0, mu2_2, 1.0, C1, t1);       // t1 = mu1_2 + mu2_2 + C1;
+        cuda::addWeighted(sigma1_2, 1.0, sigma2_2, 1.0, C2, t2); // t2 = sigma1_2 + sigma2_2 + C2;
+        cuda::multiply(t1, t2, t1);                              // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
 
-        gpu::GpuMat ssim_map;
-        gpu::divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
+        cuda::GpuMat ssim_map;
+        cuda::divide(t3, t1, ssim_map);      // ssim_map =  t3./t1;
 
-        Scalar s = gpu::sum(ssim_map);
+        Scalar s = cuda::sum(ssim_map);
         mssim.val[i] = s.val[0] / (ssim_map.rows * ssim_map.cols);
 
     }
@@ -368,63 +368,63 @@ Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
     b.gI1.upload(i1);
     b.gI2.upload(i2);
 
-    gpu::Stream stream;
+    cuda::Stream stream;
 
     b.gI1.convertTo(b.t1, CV_32F, stream);
     b.gI2.convertTo(b.t2, CV_32F, stream);
 
-    gpu::split(b.t1, b.vI1, stream);
-    gpu::split(b.t2, b.vI2, stream);
+    cuda::split(b.t1, b.vI1, stream);
+    cuda::split(b.t2, b.vI2, stream);
     Scalar mssim;
 
-    Ptr<gpu::Filter> gauss = gpu::createGaussianFilter(b.vI1[0].type(), -1, Size(11, 11), 1.5);
+    Ptr<cuda::Filter> gauss = cuda::createGaussianFilter(b.vI1[0].type(), -1, Size(11, 11), 1.5);
 
     for( int i = 0; i < b.gI1.channels(); ++i )
     {
-        gpu::multiply(b.vI2[i], b.vI2[i], b.I2_2, 1, -1, stream);        // I2^2
-        gpu::multiply(b.vI1[i], b.vI1[i], b.I1_2, 1, -1, stream);        // I1^2
-        gpu::multiply(b.vI1[i], b.vI2[i], b.I1_I2, 1, -1, stream);       // I1 * I2
+        cuda::multiply(b.vI2[i], b.vI2[i], b.I2_2, 1, -1, stream);        // I2^2
+        cuda::multiply(b.vI1[i], b.vI1[i], b.I1_2, 1, -1, stream);        // I1^2
+        cuda::multiply(b.vI1[i], b.vI2[i], b.I1_I2, 1, -1, stream);       // I1 * I2
 
         gauss->apply(b.vI1[i], b.mu1, stream);
         gauss->apply(b.vI2[i], b.mu2, stream);
 
-        gpu::multiply(b.mu1, b.mu1, b.mu1_2, 1, -1, stream);
-        gpu::multiply(b.mu2, b.mu2, b.mu2_2, 1, -1, stream);
-        gpu::multiply(b.mu1, b.mu2, b.mu1_mu2, 1, -1, stream);
+        cuda::multiply(b.mu1, b.mu1, b.mu1_2, 1, -1, stream);
+        cuda::multiply(b.mu2, b.mu2, b.mu2_2, 1, -1, stream);
+        cuda::multiply(b.mu1, b.mu2, b.mu1_mu2, 1, -1, stream);
 
         gauss->apply(b.I1_2, b.sigma1_2, stream);
-        gpu::subtract(b.sigma1_2, b.mu1_2, b.sigma1_2, gpu::GpuMat(), -1, stream);
+        cuda::subtract(b.sigma1_2, b.mu1_2, b.sigma1_2, cuda::GpuMat(), -1, stream);
         //b.sigma1_2 -= b.mu1_2;  - This would result in an extra data transfer operation
 
         gauss->apply(b.I2_2, b.sigma2_2, stream);
-        gpu::subtract(b.sigma2_2, b.mu2_2, b.sigma2_2, gpu::GpuMat(), -1, stream);
+        cuda::subtract(b.sigma2_2, b.mu2_2, b.sigma2_2, cuda::GpuMat(), -1, stream);
         //b.sigma2_2 -= b.mu2_2;
 
         gauss->apply(b.I1_I2, b.sigma12, stream);
-        gpu::subtract(b.sigma12, b.mu1_mu2, b.sigma12, gpu::GpuMat(), -1, stream);
+        cuda::subtract(b.sigma12, b.mu1_mu2, b.sigma12, cuda::GpuMat(), -1, stream);
         //b.sigma12 -= b.mu1_mu2;
 
         //here too it would be an extra data transfer due to call of operator*(Scalar, Mat)
-        gpu::multiply(b.mu1_mu2, 2, b.t1, 1, -1, stream); //b.t1 = 2 * b.mu1_mu2 + C1;
-        gpu::add(b.t1, C1, b.t1, gpu::GpuMat(), -1, stream);
-        gpu::multiply(b.sigma12, 2, b.t2, 1, -1, stream); //b.t2 = 2 * b.sigma12 + C2;
-        gpu::add(b.t2, C2, b.t2, gpu::GpuMat(), -12, stream);
+        cuda::multiply(b.mu1_mu2, 2, b.t1, 1, -1, stream); //b.t1 = 2 * b.mu1_mu2 + C1;
+        cuda::add(b.t1, C1, b.t1, cuda::GpuMat(), -1, stream);
+        cuda::multiply(b.sigma12, 2, b.t2, 1, -1, stream); //b.t2 = 2 * b.sigma12 + C2;
+        cuda::add(b.t2, C2, b.t2, cuda::GpuMat(), -12, stream);
 
-        gpu::multiply(b.t1, b.t2, b.t3, 1, -1, stream);     // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
+        cuda::multiply(b.t1, b.t2, b.t3, 1, -1, stream);     // t3 = ((2*mu1_mu2 + C1).*(2*sigma12 + C2))
 
-        gpu::add(b.mu1_2, b.mu2_2, b.t1, gpu::GpuMat(), -1, stream);
-        gpu::add(b.t1, C1, b.t1, gpu::GpuMat(), -1, stream);
+        cuda::add(b.mu1_2, b.mu2_2, b.t1, cuda::GpuMat(), -1, stream);
+        cuda::add(b.t1, C1, b.t1, cuda::GpuMat(), -1, stream);
 
-        gpu::add(b.sigma1_2, b.sigma2_2, b.t2, gpu::GpuMat(), -1, stream);
-        gpu::add(b.t2, C2, b.t2, gpu::GpuMat(), -1, stream);
+        cuda::add(b.sigma1_2, b.sigma2_2, b.t2, cuda::GpuMat(), -1, stream);
+        cuda::add(b.t2, C2, b.t2, cuda::GpuMat(), -1, stream);
 
 
-        gpu::multiply(b.t1, b.t2, b.t1, 1, -1, stream);     // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
-        gpu::divide(b.t3, b.t1, b.ssim_map, 1, -1, stream);      // ssim_map =  t3./t1;
+        cuda::multiply(b.t1, b.t2, b.t1, 1, -1, stream);     // t1 =((mu1_2 + mu2_2 + C1).*(sigma1_2 + sigma2_2 + C2))
+        cuda::divide(b.t3, b.t1, b.ssim_map, 1, -1, stream);      // ssim_map =  t3./t1;
 
         stream.waitForCompletion();
 
-        Scalar s = gpu::sum(b.ssim_map, b.buf);
+        Scalar s = cuda::sum(b.ssim_map, b.buf);
         mssim.val[i] = s.val[0] / (b.ssim_map.rows * b.ssim_map.cols);
 
     }

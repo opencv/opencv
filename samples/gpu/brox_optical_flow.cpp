@@ -10,7 +10,7 @@
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 void getFlowField(const Mat& u, const Mat& v, Mat& flowField);
 
@@ -64,7 +64,7 @@ int main(int argc, const char* argv[])
             return -1;
         }
 
-        cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+        cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
         cout << "OpenCV / NVIDIA Computer Vision" << endl;
         cout << "Optical Flow Demo: Frame Interpolation" << endl;

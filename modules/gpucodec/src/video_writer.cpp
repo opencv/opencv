@@ -44,7 +44,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::gpucodec;
 
 #if !defined(HAVE_NVCUVID) || !defined(WIN32)
@@ -62,7 +62,7 @@ Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>&, Si
 
 #else // !defined HAVE_CUDA || !defined WIN32
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     void RGB_to_YV12(const PtrStepSzb src, int cn, PtrStepSzb dst, cudaStream_t stream = 0);
 }}}

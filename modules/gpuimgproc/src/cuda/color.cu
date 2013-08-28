@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/color.hpp"
 #include "cvt_color_internal.h"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(bgra_to_rgba_traits<uchar>::functor_type)
     {
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace cudev
         traits::functor_type functor = traits::create_functor(); \
         typedef typename traits::functor_type::argument_type src_t; \
         typedef typename traits::functor_type::result_type   dst_t; \
-        cv::gpu::cudev::transform((PtrStepSz<src_t>)src, (PtrStepSz<dst_t>)dst, functor, WithOutMask(), stream); \
+        cv::cuda::cudev::transform((PtrStepSz<src_t>)src, (PtrStepSz<dst_t>)dst, functor, WithOutMask(), stream); \
     }
 
 #define OPENCV_GPU_IMPLEMENT_CVTCOLOR_ONE(name) \
@@ -456,6 +456,6 @@ namespace cv { namespace gpu { namespace cudev
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_ALL
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F
     #undef OPENCV_GPU_IMPLEMENT_CVTCOLOR_8U32F_FULL
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif /* CUDA_DISABLER */

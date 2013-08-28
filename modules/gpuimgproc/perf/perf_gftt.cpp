@@ -66,10 +66,10 @@ PERF_TEST_P(Image_MinDistance, GoodFeaturesToTrack,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::CornersDetector> d_detector = cv::gpu::createGoodFeaturesToTrackDetector(image.type(), maxCorners, qualityLevel, minDistance);
+        cv::Ptr<cv::cuda::CornersDetector> d_detector = cv::cuda::createGoodFeaturesToTrackDetector(image.type(), maxCorners, qualityLevel, minDistance);
 
-        const cv::gpu::GpuMat d_image(image);
-        cv::gpu::GpuMat pts;
+        const cv::cuda::GpuMat d_image(image);
+        cv::cuda::GpuMat pts;
 
         TEST_CYCLE() d_detector->detect(d_image, pts);
 

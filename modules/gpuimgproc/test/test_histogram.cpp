@@ -49,9 +49,9 @@ using namespace cvtest;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // HistEven
 
-PARAM_TEST_CASE(HistEven, cv::gpu::DeviceInfo, cv::Size)
+PARAM_TEST_CASE(HistEven, cv::cuda::DeviceInfo, cv::Size)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     cv::Size size;
 
@@ -60,7 +60,7 @@ PARAM_TEST_CASE(HistEven, cv::gpu::DeviceInfo, cv::Size)
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -71,8 +71,8 @@ GPU_TEST_P(HistEven, Accuracy)
     int hbins = 30;
     float hranges[] = {50.0f, 200.0f};
 
-    cv::gpu::GpuMat hist;
-    cv::gpu::histEven(loadMat(src), hist, hbins, (int) hranges[0], (int) hranges[1]);
+    cv::cuda::GpuMat hist;
+    cv::cuda::histEven(loadMat(src), hist, hbins, (int) hranges[0], (int) hranges[1]);
 
     cv::Mat hist_gold;
 
@@ -94,9 +94,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, HistEven, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CalcHist
 
-PARAM_TEST_CASE(CalcHist, cv::gpu::DeviceInfo, cv::Size)
+PARAM_TEST_CASE(CalcHist, cv::cuda::DeviceInfo, cv::Size)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
 
     cv::Size size;
 
@@ -105,7 +105,7 @@ PARAM_TEST_CASE(CalcHist, cv::gpu::DeviceInfo, cv::Size)
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -113,8 +113,8 @@ GPU_TEST_P(CalcHist, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    cv::gpu::GpuMat hist;
-    cv::gpu::calcHist(loadMat(src), hist);
+    cv::cuda::GpuMat hist;
+    cv::cuda::calcHist(loadMat(src), hist);
 
     cv::Mat hist_gold;
 
@@ -138,9 +138,9 @@ INSTANTIATE_TEST_CASE_P(GPU_ImgProc, CalcHist, testing::Combine(
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // EqualizeHist
 
-PARAM_TEST_CASE(EqualizeHist, cv::gpu::DeviceInfo, cv::Size)
+PARAM_TEST_CASE(EqualizeHist, cv::cuda::DeviceInfo, cv::Size)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
 
     virtual void SetUp()
@@ -148,7 +148,7 @@ PARAM_TEST_CASE(EqualizeHist, cv::gpu::DeviceInfo, cv::Size)
         devInfo = GET_PARAM(0);
         size = GET_PARAM(1);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -156,8 +156,8 @@ GPU_TEST_P(EqualizeHist, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    cv::gpu::GpuMat dst;
-    cv::gpu::equalizeHist(loadMat(src), dst);
+    cv::cuda::GpuMat dst;
+    cv::cuda::equalizeHist(loadMat(src), dst);
 
     cv::Mat dst_gold;
     cv::equalizeHist(src, dst_gold);
@@ -177,9 +177,9 @@ namespace
     IMPLEMENT_PARAM_CLASS(ClipLimit, double)
 }
 
-PARAM_TEST_CASE(CLAHE, cv::gpu::DeviceInfo, cv::Size, ClipLimit)
+PARAM_TEST_CASE(CLAHE, cv::cuda::DeviceInfo, cv::Size, ClipLimit)
 {
-    cv::gpu::DeviceInfo devInfo;
+    cv::cuda::DeviceInfo devInfo;
     cv::Size size;
     double clipLimit;
 
@@ -189,7 +189,7 @@ PARAM_TEST_CASE(CLAHE, cv::gpu::DeviceInfo, cv::Size, ClipLimit)
         size = GET_PARAM(1);
         clipLimit = GET_PARAM(2);
 
-        cv::gpu::setDevice(devInfo.deviceID());
+        cv::cuda::setDevice(devInfo.deviceID());
     }
 };
 
@@ -197,8 +197,8 @@ GPU_TEST_P(CLAHE, Accuracy)
 {
     cv::Mat src = randomMat(size, CV_8UC1);
 
-    cv::Ptr<cv::gpu::CLAHE> clahe = cv::gpu::createCLAHE(clipLimit);
-    cv::gpu::GpuMat dst;
+    cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(clipLimit);
+    cv::cuda::GpuMat dst;
     clahe->apply(loadMat(src), dst);
 
     cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);

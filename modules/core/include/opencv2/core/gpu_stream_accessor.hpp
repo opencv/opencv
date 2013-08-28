@@ -57,7 +57,7 @@
 
 namespace cv
 {
-    namespace gpu
+    namespace cuda
     {
         class Stream;
         class Event;

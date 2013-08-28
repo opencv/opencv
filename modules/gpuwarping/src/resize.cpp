@@ -44,17 +44,17 @@
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::resize(InputArray, OutputArray, Size, double, double, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::resize(InputArray, OutputArray, Size, double, double, int, Stream&) { throw_no_cuda(); }
 
 #else // HAVE_CUDA
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     template <typename T>
     void resize(const PtrStepSzb& src, const PtrStepSzb& srcWhole, int yoff, int xoff, const PtrStepSzb& dst, float fy, float fx, int interpolation, cudaStream_t stream);
 }}}
 
-void cv::gpu::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, double fy, int interpolation, Stream& stream)
+void cv::cuda::resize(InputArray _src, OutputArray _dst, Size dsize, double fx, double fy, int interpolation, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
 

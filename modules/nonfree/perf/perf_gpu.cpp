@@ -67,12 +67,12 @@ PERF_TEST_P(Image, GPU_SURF,
 
     if (PERF_RUN_GPU())
     {
-        cv::gpu::SURF_GPU d_surf;
+        cv::cuda::SURF_GPU d_surf;
 
-        const cv::gpu::GpuMat d_img(img);
-        cv::gpu::GpuMat d_keypoints, d_descriptors;
+        const cv::cuda::GpuMat d_img(img);
+        cv::cuda::GpuMat d_keypoints, d_descriptors;
 
-        TEST_CYCLE() d_surf(d_img, cv::gpu::GpuMat(), d_keypoints, d_descriptors);
+        TEST_CYCLE() d_surf(d_img, cv::cuda::GpuMat(), d_keypoints, d_descriptors);
 
         std::vector<cv::KeyPoint> gpu_keypoints;
         d_surf.downloadKeypoints(d_keypoints, gpu_keypoints);

@@ -69,13 +69,13 @@ PERF_TEST_P(Sz_Depth_Cn, Merge,
 
     if (PERF_RUN_GPU())
     {
-        std::vector<cv::gpu::GpuMat> d_src(channels);
+        std::vector<cv::cuda::GpuMat> d_src(channels);
         for (int i = 0; i < channels; ++i)
             d_src[i].upload(src[i]);
 
-        cv::gpu::GpuMat dst;
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::merge(d_src, dst);
+        TEST_CYCLE() cv::cuda::merge(d_src, dst);
 
         GPU_SANITY_CHECK(dst, 1e-10);
     }
@@ -106,13 +106,13 @@ PERF_TEST_P(Sz_Depth_Cn, Split,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        std::vector<cv::gpu::GpuMat> dst;
+        const cv::cuda::GpuMat d_src(src);
+        std::vector<cv::cuda::GpuMat> dst;
 
-        TEST_CYCLE() cv::gpu::split(d_src, dst);
+        TEST_CYCLE() cv::cuda::split(d_src, dst);
 
-        const cv::gpu::GpuMat& dst0 = dst[0];
-        const cv::gpu::GpuMat& dst1 = dst[1];
+        const cv::cuda::GpuMat& dst0 = dst[0];
+        const cv::cuda::GpuMat& dst1 = dst[1];
 
         GPU_SANITY_CHECK(dst0, 1e-10);
         GPU_SANITY_CHECK(dst1, 1e-10);
@@ -146,10 +146,10 @@ PERF_TEST_P(Sz_Type, Transpose,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::transpose(d_src, dst);
+        TEST_CYCLE() cv::cuda::transpose(d_src, dst);
 
         GPU_SANITY_CHECK(dst, 1e-10);
     }
@@ -189,10 +189,10 @@ PERF_TEST_P(Sz_Depth_Cn_Code, Flip,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::flip(d_src, dst, flipCode);
+        TEST_CYCLE() cv::cuda::flip(d_src, dst, flipCode);
 
         GPU_SANITY_CHECK(dst);
     }
@@ -224,10 +224,10 @@ PERF_TEST_P(Sz_Type, LutOneChannel,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+        cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() lutAlg->transform(d_src, dst);
 
@@ -261,10 +261,10 @@ PERF_TEST_P(Sz_Type, LutMultiChannel,
 
     if (PERF_RUN_GPU())
     {
-        cv::Ptr<cv::gpu::LookUpTable> lutAlg = cv::gpu::createLookUpTable(lut);
+        cv::Ptr<cv::cuda::LookUpTable> lutAlg = cv::cuda::createLookUpTable(lut);
 
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
         TEST_CYCLE() lutAlg->transform(d_src, dst);
 
@@ -303,10 +303,10 @@ PERF_TEST_P(Sz_Depth_Cn_Border, CopyMakeBorder,
 
     if (PERF_RUN_GPU())
     {
-        const cv::gpu::GpuMat d_src(src);
-        cv::gpu::GpuMat dst;
+        const cv::cuda::GpuMat d_src(src);
+        cv::cuda::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::copyMakeBorder(d_src, dst, 5, 5, 5, 5, borderMode);
+        TEST_CYCLE() cv::cuda::copyMakeBorder(d_src, dst, 5, 5, 5, 5, borderMode);
 
         GPU_SANITY_CHECK(dst);
     }

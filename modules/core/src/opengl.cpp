@@ -50,7 +50,7 @@
 #endif
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 namespace
 {
@@ -122,7 +122,7 @@ namespace
 ////////////////////////////////////////////////////////////////////////
 // setGlDevice
 
-void cv::gpu::setGlDevice(int device)
+void cv::cuda::setGlDevice(int device)
 {
 #ifndef HAVE_OPENGL
     (void) device;
@@ -627,7 +627,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, Target target, bool autoRelease)
 #endif
 }
 
-void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target target, bool autoRelease)
+void cv::ogl::Buffer::copyFrom(InputArray arr, cuda::Stream& stream, Target target, bool autoRelease)
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -647,7 +647,7 @@ void cv::ogl::Buffer::copyFrom(InputArray arr, gpu::Stream& stream, Target targe
 
         create(dmat.size(), dmat.type(), target, autoRelease);
 
-        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyFrom(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -692,7 +692,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr) const
 #endif
 }
 
-void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
+void cv::ogl::Buffer::copyTo(OutputArray arr, cuda::Stream& stream) const
 {
 #ifndef HAVE_OPENGL
     (void) arr;
@@ -706,7 +706,7 @@ void cv::ogl::Buffer::copyTo(OutputArray arr, gpu::Stream& stream) const
     #else
         arr.create(rows_, cols_, type_);
         GpuMat dmat = arr.getGpuMat();
-        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, gpu::StreamAccessor::getStream(stream));
+        impl_->copyTo(dmat.data, dmat.step, dmat.cols * dmat.elemSize(), dmat.rows, cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }
@@ -794,7 +794,7 @@ void cv::ogl::Buffer::unmapDevice()
 #endif
 }
 
-gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
+cuda::GpuMat cv::ogl::Buffer::mapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -806,12 +806,12 @@ gpu::GpuMat cv::ogl::Buffer::mapDevice(gpu::Stream& stream)
         throw_no_cuda();
         return GpuMat();
     #else
-        return GpuMat(rows_, cols_, type_, impl_->mapDevice(gpu::StreamAccessor::getStream(stream)));
+        return GpuMat(rows_, cols_, type_, impl_->mapDevice(cuda::StreamAccessor::getStream(stream)));
     #endif
 #endif
 }
 
-void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
+void cv::ogl::Buffer::unmapDevice(cuda::Stream& stream)
 {
 #ifndef HAVE_OPENGL
     (void) stream;
@@ -821,7 +821,7 @@ void cv::ogl::Buffer::unmapDevice(gpu::Stream& stream)
         (void) stream;
         throw_no_cuda();
     #else
-        impl_->unmapDevice(gpu::StreamAccessor::getStream(stream));
+        impl_->unmapDevice(cuda::StreamAccessor::getStream(stream));
     #endif
 #endif
 }

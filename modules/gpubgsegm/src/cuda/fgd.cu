@@ -50,8 +50,8 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "fgd.hpp"
 
-using namespace cv::gpu;
-using namespace cv::gpu::cudev;
+using namespace cv::cuda;
+using namespace cv::cuda::cudev;
 
 namespace fgd
 {

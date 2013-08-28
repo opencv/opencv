@@ -44,7 +44,7 @@
 
 #include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace mathfunc
     {
@@ -212,6 +212,6 @@ namespace cv { namespace gpu { namespace cudev
             callers[mag.data == 0](mag, angle, x, y, angleInDegrees, stream);
         }
     } // namespace mathfunc
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 #endif /* CUDA_DISABLER */

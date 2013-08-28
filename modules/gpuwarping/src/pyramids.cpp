@@ -43,21 +43,21 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::pyrDown(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::pyrUp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::pyrDown(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::pyrUp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-Ptr<ImagePyramid> cv::gpu::createImagePyramid(InputArray, int, Stream&) { throw_no_cuda(); return Ptr<ImagePyramid>(); }
+Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray, int, Stream&) { throw_no_cuda(); return Ptr<ImagePyramid>(); }
 
 #else // HAVE_CUDA
 
 //////////////////////////////////////////////////////////////////////////////
 // pyrDown
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -65,9 +65,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    using namespace cv::gpu::cudev::imgproc;
+    using namespace cv::cuda::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -97,7 +97,7 @@ void cv::gpu::pyrDown(InputArray _src, OutputArray _dst, Stream& stream)
 //////////////////////////////////////////////////////////////////////////////
 // pyrUp
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -105,9 +105,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::pyrUp(InputArray _src, OutputArray _dst, Stream& stream)
 {
-    using namespace cv::gpu::cudev::imgproc;
+    using namespace cv::cuda::cudev::imgproc;
 
     typedef void (*func_t)(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[6][4] =
@@ -181,7 +181,7 @@ namespace
 
             const GpuMat& prevLayer = i == 0 ? layer0_ : pyramid_[i - 1];
 
-            cv::gpu::cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
+            cv::cuda::cudev::pyramid::downsampleX2(prevLayer, pyramid_[i], img.depth(), img.channels(), StreamAccessor::getStream(stream));
 
             szLastLayer = szCurLayer;
         }
@@ -222,13 +222,13 @@ namespace
             lastLayer = curLayer;
         }
 
-        cv::gpu::cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
+        cv::cuda::cudev::pyramid::interpolateFrom1(lastLayer, outImg, outImg.depth(), outImg.channels(), StreamAccessor::getStream(stream));
     }
 }
 
 #endif
 
-Ptr<ImagePyramid> cv::gpu::createImagePyramid(InputArray img, int nLayers, Stream& stream)
+Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray img, int nLayers, Stream& stream)
 {
 #ifndef HAVE_OPENCV_GPULEGACY
     (void) img;

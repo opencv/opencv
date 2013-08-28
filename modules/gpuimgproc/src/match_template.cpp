@@ -43,15 +43,15 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || !defined (HAVE_OPENCV_GPUARITHM) || defined (CUDA_DISABLER)
 
-Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int, int, Size) { throw_no_cuda(); return Ptr<gpu::TemplateMatching>(); }
+Ptr<cuda::TemplateMatching> cv::cuda::createTemplateMatching(int, int, Size) { throw_no_cuda(); return Ptr<cuda::TemplateMatching>(); }
 
 #else
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace match_template
     {
@@ -171,18 +171,18 @@ namespace
         void match(InputArray image, InputArray templ, OutputArray result, Stream& stream = Stream::Null());
 
     private:
-        Ptr<gpu::Convolution> conv_;
+        Ptr<cuda::Convolution> conv_;
         GpuMat result_;
     };
 
     Match_CCORR_32F::Match_CCORR_32F(Size user_block_size)
     {
-        conv_ = gpu::createConvolution(user_block_size);
+        conv_ = cuda::createConvolution(user_block_size);
     }
 
     void Match_CCORR_32F::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& _stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -232,7 +232,7 @@ namespace
 
     void Match_CCORR_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -276,7 +276,7 @@ namespace
 
     void Match_CCORR_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -288,9 +288,9 @@ namespace
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
 
-        gpu::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) gpu::sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
 
         normalize_8U(templ.cols, templ.rows, image_sqsums_, templ_sqsum, result, image.channels(), StreamAccessor::getStream(stream));
     }
@@ -306,7 +306,7 @@ namespace
 
     void Match_SQDIFF_32F::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -341,7 +341,7 @@ namespace
 
     void Match_SQDIFF_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -359,9 +359,9 @@ namespace
             return;
         }
 
-        gpu::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) gpu::sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
 
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
@@ -389,7 +389,7 @@ namespace
 
     void Match_SQDIFF_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -398,9 +398,9 @@ namespace
         CV_Assert( image.type() == templ.type() );
         CV_Assert( image.cols >= templ.cols && image.rows >= templ.rows );
 
-        gpu::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
+        cuda::sqrIntegral(image.reshape(1), image_sqsums_, intBuffer_, stream);
 
-        unsigned long long templ_sqsum = (unsigned long long) gpu::sqrSum(templ.reshape(1))[0];
+        unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ.reshape(1))[0];
 
         match_CCORR_.match(image, templ, _result, stream);
         GpuMat result = _result.getGpuMat();
@@ -429,7 +429,7 @@ namespace
 
     void Match_CCOEFF_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -444,21 +444,21 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            gpu::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], intBuffer_, stream);
 
-            unsigned int templ_sum = (unsigned int) gpu::sum(templ)[0];
+            unsigned int templ_sum = (unsigned int) cuda::sum(templ)[0];
 
             matchTemplatePrepared_CCOFF_8U(templ.cols, templ.rows, image_sums_[0], templ_sum, result, StreamAccessor::getStream(stream));
         }
         else
         {
-            gpu::split(image, images_);
+            cuda::split(image, images_);
 
             image_sums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
-                gpu::integral(images_[i], image_sums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
 
-            Scalar templ_sum = gpu::sum(templ);
+            Scalar templ_sum = cuda::sum(templ);
 
             switch (image.channels())
             {
@@ -509,7 +509,7 @@ namespace
 
     void Match_CCOEFF_NORMED_8U::match(InputArray _image, InputArray _templ, OutputArray _result, Stream& stream)
     {
-        using namespace cv::gpu::cudev::match_template;
+        using namespace cv::cuda::cudev::match_template;
 
         GpuMat image = _image.getGpuMat();
         GpuMat templ = _templ.getGpuMat();
@@ -527,13 +527,13 @@ namespace
         if (image.channels() == 1)
         {
             image_sums_.resize(1);
-            gpu::integral(image, image_sums_[0], intBuffer_, stream);
+            cuda::integral(image, image_sums_[0], intBuffer_, stream);
 
             image_sqsums_.resize(1);
-            gpu::sqrIntegral(image, image_sqsums_[0], intBuffer_, stream);
+            cuda::sqrIntegral(image, image_sqsums_[0], intBuffer_, stream);
 
-            unsigned int templ_sum = (unsigned int) gpu::sum(templ)[0];
-            unsigned long long templ_sqsum = (unsigned long long) gpu::sqrSum(templ)[0];
+            unsigned int templ_sum = (unsigned int) cuda::sum(templ)[0];
+            unsigned long long templ_sqsum = (unsigned long long) cuda::sqrSum(templ)[0];
 
             matchTemplatePrepared_CCOFF_NORMED_8U(
                     templ.cols, templ.rows, image_sums_[0], image_sqsums_[0],
@@ -541,18 +541,18 @@ namespace
         }
         else
         {
-            gpu::split(image, images_);
+            cuda::split(image, images_);
 
             image_sums_.resize(images_.size());
             image_sqsums_.resize(images_.size());
             for (int i = 0; i < image.channels(); ++i)
             {
-                gpu::integral(images_[i], image_sums_[i], intBuffer_, stream);
-                gpu::sqrIntegral(images_[i], image_sqsums_[i], intBuffer_, stream);
+                cuda::integral(images_[i], image_sums_[i], intBuffer_, stream);
+                cuda::sqrIntegral(images_[i], image_sqsums_[i], intBuffer_, stream);
             }
 
-            Scalar templ_sum = gpu::sum(templ);
-            Scalar templ_sqsum = gpu::sqrSum(templ);
+            Scalar templ_sum = cuda::sum(templ);
+            Scalar templ_sqsum = cuda::sqrSum(templ);
 
             switch (image.channels())
             {
@@ -596,7 +596,7 @@ namespace
     }
 }
 
-Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int srcType, int method, Size user_block_size)
+Ptr<cuda::TemplateMatching> cv::cuda::createTemplateMatching(int srcType, int method, Size user_block_size)
 {
     const int sdepth = CV_MAT_DEPTH(srcType);
 
@@ -614,7 +614,7 @@ Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int srcType, int meth
 
         default:
             CV_Error( Error::StsBadFlag, "Unsopported method" );
-            return Ptr<gpu::TemplateMatching>();
+            return Ptr<cuda::TemplateMatching>();
         }
     }
     else
@@ -641,7 +641,7 @@ Ptr<gpu::TemplateMatching> cv::gpu::createTemplateMatching(int srcType, int meth
 
         default:
             CV_Error( Error::StsBadFlag, "Unsopported method" );
-            return Ptr<gpu::TemplateMatching>();
+            return Ptr<cuda::TemplateMatching>();
         }
     }
 }

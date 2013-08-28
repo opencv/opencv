@@ -43,17 +43,17 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, int&, int&, int&) { throw_no_cuda(); }
+void cv::cuda::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int&, int&, int&, int&) { throw_no_cuda(); }
 
-Ptr<gpu::StereoConstantSpaceBP> cv::gpu::createStereoConstantSpaceBP(int, int, int, int, int) { throw_no_cuda(); return Ptr<gpu::StereoConstantSpaceBP>(); }
+Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int, int, int, int, int) { throw_no_cuda(); return Ptr<cuda::StereoConstantSpaceBP>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace stereocsbp
     {
@@ -87,7 +87,7 @@ namespace cv { namespace gpu { namespace cudev
 
 namespace
 {
-    class StereoCSBPImpl : public gpu::StereoConstantSpaceBP
+    class StereoCSBPImpl : public cuda::StereoConstantSpaceBP
     {
     public:
         StereoCSBPImpl(int ndisp, int iters, int levels, int nr_plane, int msg_type);
@@ -179,7 +179,7 @@ namespace
 
     void StereoCSBPImpl::compute(InputArray _left, InputArray _right, OutputArray disp, Stream& _stream)
     {
-        using namespace cv::gpu::cudev::stereocsbp;
+        using namespace cv::cuda::cudev::stereocsbp;
 
         CV_Assert( msg_type_ == CV_32F || msg_type_ == CV_16S );
         CV_Assert( 0 < ndisp_ && 0 < iters_ && 0 < levels_ && 0 < nr_plane_ && levels_ <= 8 );
@@ -364,12 +364,12 @@ namespace
     }
 }
 
-Ptr<gpu::StereoConstantSpaceBP> cv::gpu::createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
+Ptr<cuda::StereoConstantSpaceBP> cv::cuda::createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
 {
     return new StereoCSBPImpl(ndisp, iters, levels, nr_plane, msg_type);
 }
 
-void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
+void cv::cuda::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)
 {
     ndisp = (int) ((float) width / 3.14f);
     if ((ndisp & 1) != 0)

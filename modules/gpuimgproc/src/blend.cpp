@@ -43,18 +43,18 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::blendLinear(InputArray, InputArray, InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::blendLinear(InputArray, InputArray, InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
 #else
 
 ////////////////////////////////////////////////////////////////////////
 // blendLinear
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace blend
     {
@@ -65,9 +65,9 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-using namespace ::cv::gpu::cudev::blend;
+using namespace ::cv::cuda::cudev::blend;
 
-void cv::gpu::blendLinear(InputArray _img1, InputArray _img2, InputArray _weights1, InputArray _weights2,
+void cv::cuda::blendLinear(InputArray _img1, InputArray _img2, InputArray _weights1, InputArray _weights2,
                           OutputArray _result, Stream& stream)
 {
     GpuMat img1 = _img1.getGpuMat();

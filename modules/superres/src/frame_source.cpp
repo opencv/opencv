@@ -42,7 +42,7 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::superres;
 using namespace cv::superres::detail;
 

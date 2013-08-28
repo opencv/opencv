@@ -44,7 +44,7 @@
 
 using namespace cv;
 using namespace cv::detail;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree.hpp"

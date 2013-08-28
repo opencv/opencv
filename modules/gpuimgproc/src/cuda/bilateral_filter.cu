@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/vec_math.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 typedef unsigned char uchar;
 typedef unsigned short ushort;
@@ -55,7 +55,7 @@ typedef unsigned short ushort;
 //////////////////////////////////////////////////////////////////////////////////
 /// Bilateral filtering
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace imgproc
     {
@@ -163,7 +163,7 @@ namespace cv { namespace gpu { namespace cudev
 
 
 #define OCV_INSTANTIATE_BILATERAL_FILTER(T) \
-    template void cv::gpu::cudev::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
+    template void cv::cuda::cudev::imgproc::bilateral_filter_gpu<T>(const PtrStepSzb&, PtrStepSzb, int, float, float, int, cudaStream_t);
 
 OCV_INSTANTIATE_BILATERAL_FILTER(uchar)
 //OCV_INSTANTIATE_BILATERAL_FILTER(uchar2)

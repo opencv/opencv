@@ -43,47 +43,47 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::add(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::subtract(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::multiply(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::divide(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
-void cv::gpu::absdiff(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::add(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::subtract(InputArray, InputArray, OutputArray, InputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::multiply(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::divide(InputArray, InputArray, OutputArray, double, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::absdiff(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::abs(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::sqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::sqrt(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::exp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::log(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::abs(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::sqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::sqrt(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::exp(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::log(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::pow(InputArray, double, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::compare(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::compare(InputArray, InputArray, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::bitwise_not(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_or(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::bitwise_not(InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::bitwise_or(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::bitwise_and(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::bitwise_xor(InputArray, InputArray, OutputArray, InputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::rshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::rshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::lshift(InputArray, Scalar_<int>, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::min(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::min(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::max(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
 
-void cv::gpu::addWeighted(InputArray, double, InputArray, double, double, OutputArray, int, Stream&) { throw_no_cuda(); }
+void cv::cuda::addWeighted(InputArray, double, InputArray, double, double, OutputArray, int, Stream&) { throw_no_cuda(); }
 
-double cv::gpu::threshold(InputArray, OutputArray, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
+double cv::cuda::threshold(InputArray, OutputArray, double, double, int, Stream&) {throw_no_cuda(); return 0.0;}
 
-void cv::gpu::magnitude(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::magnitude(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::magnitudeSqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::magnitudeSqr(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
-void cv::gpu::phase(InputArray, InputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
-void cv::gpu::cartToPolar(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
-void cv::gpu::polarToCart(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
+void cv::cuda::magnitude(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::magnitude(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::magnitudeSqr(InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::magnitudeSqr(InputArray, InputArray, OutputArray, Stream&) { throw_no_cuda(); }
+void cv::cuda::phase(InputArray, InputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
+void cv::cuda::cartToPolar(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
+void cv::cuda::polarToCart(InputArray, InputArray, OutputArray, OutputArray, bool, Stream&) { throw_no_cuda(); }
 
 #else
 
@@ -579,7 +579,7 @@ static void addScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const Gp
     func(src, val[0], dst, mask, stream);
 }
 
-void cv::gpu::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
+void cv::cuda::add(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, dtype, stream, addMat, addScalar);
 }
@@ -830,7 +830,7 @@ static void subScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, cons
     func(src, val[0], inv, dst, mask, stream);
 }
 
-void cv::gpu::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
+void cv::cuda::subtract(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, int dtype, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, dtype, stream, subMat, subScalar);
 }
@@ -1052,7 +1052,7 @@ static void mulScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const Gp
     func(src, val[0], dst, stream);
 }
 
-void cv::gpu::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
+void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
     if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
     {
@@ -1311,7 +1311,7 @@ static void divScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, cons
     func(src, val[0], inv, dst, stream);
 }
 
-void cv::gpu::divide(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
+void cv::cuda::divide(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
     if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
     {
@@ -1446,7 +1446,7 @@ static void absDiffScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, cons
     funcs[depth](src, val[0], dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
+void cv::cuda::absdiff(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, absDiffMat, absDiffScalar);
 }
@@ -1460,7 +1460,7 @@ namespace arithm
     void absMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::abs(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::abs(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1504,7 +1504,7 @@ namespace arithm
     void sqrMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::sqr(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::sqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1548,7 +1548,7 @@ namespace arithm
     void sqrtMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::sqrt(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::sqrt(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1592,7 +1592,7 @@ namespace arithm
     void expMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::exp(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::exp(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1636,7 +1636,7 @@ namespace arithm
     void logMat(PtrStepSzb src, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::log(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::log(InputArray _src, OutputArray _dst, Stream& stream)
 {
     using namespace arithm;
 
@@ -1679,7 +1679,7 @@ namespace arithm
     template<typename T> void pow(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::pow(InputArray _src, double power, OutputArray _dst, Stream& stream)
+void cv::cuda::pow(InputArray _src, double power, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(PtrStepSzb src, double power, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[] =
@@ -1860,7 +1860,7 @@ static void cmpScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, cons
     funcs[depth][cmpop](src, cn, val.val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream)
+void cv::cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream)
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, CV_8U, stream, cmpMat, cmpScalar, cmpop);
 }
@@ -1873,7 +1873,7 @@ namespace arithm
     template <typename T> void bitMatNot(PtrStepSzb src, PtrStepSzb dst, PtrStepb mask, cudaStream_t stream);
 }
 
-void cv::gpu::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& _stream)
+void cv::cuda::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, Stream& _stream)
 {
     using namespace arithm;
 
@@ -2122,17 +2122,17 @@ static void bitScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const Gp
     funcs[op][depth][cn - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
+void cv::cuda::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_OR);
 }
 
-void cv::gpu::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
+void cv::cuda::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_AND);
 }
 
-void cv::gpu::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
+void cv::cuda::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_XOR);
 }
@@ -2193,7 +2193,7 @@ namespace
     };
 }
 
-void cv::gpu::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
+void cv::cuda::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
@@ -2216,7 +2216,7 @@ void cv::gpu::rshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream
     funcs[src.depth()][src.channels() - 1](src, val, dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
+void cv::cuda::lshift(InputArray _src, Scalar_<int> val, OutputArray _dst, Stream& stream)
 {
     typedef void (*func_t)(const GpuMat& src, Scalar_<Npp32u> sc, GpuMat& dst, cudaStream_t stream);
     static const func_t funcs[5][4] =
@@ -2404,12 +2404,12 @@ void minMaxScalar(const GpuMat& src, Scalar val, bool, GpuMat& dst, const GpuMat
     funcs[op][depth](src, cast_func[depth](val[0]), dst, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
+void cv::cuda::min(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, minMaxMat, minMaxScalar, MIN_OP);
 }
 
-void cv::gpu::max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
+void cv::cuda::max(InputArray src1, InputArray src2, OutputArray dst, Stream& stream)
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, -1, stream, minMaxMat, minMaxScalar, MAX_OP);
 }
@@ -2423,7 +2423,7 @@ namespace arithm
     void addWeighted(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
 }
 
-void cv::gpu::addWeighted(InputArray _src1, double alpha, InputArray _src2, double beta, double gamma, OutputArray _dst, int ddepth, Stream& stream)
+void cv::cuda::addWeighted(InputArray _src1, double alpha, InputArray _src2, double beta, double gamma, OutputArray _dst, int ddepth, Stream& stream)
 {
     typedef void (*func_t)(PtrStepSzb src1, double alpha, PtrStepSzb src2, double beta, double gamma, PtrStepSzb dst, cudaStream_t stream);
     static const func_t funcs[7][7][7] =
@@ -2934,7 +2934,7 @@ namespace arithm
     void threshold(PtrStepSzb src, PtrStepSzb dst, double thresh, double maxVal, int type, cudaStream_t stream);
 }
 
-double cv::gpu::threshold(InputArray _src, OutputArray _dst, double thresh, double maxVal, int type, Stream& _stream)
+double cv::cuda::threshold(InputArray _src, OutputArray _dst, double thresh, double maxVal, int type, Stream& _stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -3018,7 +3018,7 @@ namespace
     }
 }
 
-void cv::gpu::magnitude(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::magnitude(InputArray _src, OutputArray _dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -3028,7 +3028,7 @@ void cv::gpu::magnitude(InputArray _src, OutputArray _dst, Stream& stream)
     npp_magnitude(src, dst, nppiMagnitude_32fc32f_C1R, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
+void cv::cuda::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
 {
     GpuMat src = _src.getGpuMat();
 
@@ -3041,7 +3041,7 @@ void cv::gpu::magnitudeSqr(InputArray _src, OutputArray _dst, Stream& stream)
 ////////////////////////////////////////////////////////////////////////
 // Polar <-> Cart
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     namespace mathfunc
     {
@@ -3054,7 +3054,7 @@ namespace
 {
     void cartToPolar_caller(const GpuMat& x, const GpuMat& y, GpuMat* mag, bool magSqr, GpuMat* angle, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::cudev::mathfunc;
+        using namespace ::cv::cuda::cudev::mathfunc;
 
         CV_Assert(x.size() == y.size() && x.type() == y.type());
         CV_Assert(x.depth() == CV_32F);
@@ -3069,7 +3069,7 @@ namespace
 
     void polarToCart_caller(const GpuMat& mag, const GpuMat& angle, GpuMat& x, GpuMat& y, bool angleInDegrees, cudaStream_t stream)
     {
-        using namespace ::cv::gpu::cudev::mathfunc;
+        using namespace ::cv::cuda::cudev::mathfunc;
 
         CV_Assert((mag.empty() || mag.size() == angle.size()) && mag.type() == angle.type());
         CV_Assert(mag.depth() == CV_32F);
@@ -3083,7 +3083,7 @@ namespace
     }
 }
 
-void cv::gpu::magnitude(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
+void cv::cuda::magnitude(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
     GpuMat x = _x.getGpuMat();
     GpuMat y = _y.getGpuMat();
@@ -3094,7 +3094,7 @@ void cv::gpu::magnitude(InputArray _x, InputArray _y, OutputArray _dst, Stream& 
     cartToPolar_caller(x, y, &dst, false, 0, false, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::magnitudeSqr(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
+void cv::cuda::magnitudeSqr(InputArray _x, InputArray _y, OutputArray _dst, Stream& stream)
 {
     GpuMat x = _x.getGpuMat();
     GpuMat y = _y.getGpuMat();
@@ -3105,7 +3105,7 @@ void cv::gpu::magnitudeSqr(InputArray _x, InputArray _y, OutputArray _dst, Strea
     cartToPolar_caller(x, y, &dst, true, 0, false, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleInDegrees, Stream& stream)
+void cv::cuda::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleInDegrees, Stream& stream)
 {
     GpuMat x = _x.getGpuMat();
     GpuMat y = _y.getGpuMat();
@@ -3116,7 +3116,7 @@ void cv::gpu::phase(InputArray _x, InputArray _y, OutputArray _dst, bool angleIn
     cartToPolar_caller(x, y, 0, false, &dst, angleInDegrees, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, OutputArray _angle, bool angleInDegrees, Stream& stream)
+void cv::cuda::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, OutputArray _angle, bool angleInDegrees, Stream& stream)
 {
     GpuMat x = _x.getGpuMat();
     GpuMat y = _y.getGpuMat();
@@ -3130,7 +3130,7 @@ void cv::gpu::cartToPolar(InputArray _x, InputArray _y, OutputArray _mag, Output
     cartToPolar_caller(x, y, &mag, false, &angle, angleInDegrees, StreamAccessor::getStream(stream));
 }
 
-void cv::gpu::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, OutputArray _y, bool angleInDegrees, Stream& stream)
+void cv::cuda::polarToCart(InputArray _mag, InputArray _angle, OutputArray _x, OutputArray _y, bool angleInDegrees, Stream& stream)
 {
     GpuMat mag = _mag.getGpuMat();
     GpuMat angle = _angle.getGpuMat();

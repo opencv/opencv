@@ -43,11 +43,11 @@
 #include "precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-Ptr<CannyEdgeDetector> cv::gpu::createCannyEdgeDetector(double, double, int, bool) { throw_no_cuda(); return Ptr<CannyEdgeDetector>(); }
+Ptr<CannyEdgeDetector> cv::cuda::createCannyEdgeDetector(double, double, int, bool) { throw_no_cuda(); return Ptr<CannyEdgeDetector>(); }
 
 #else /* !defined (HAVE_CUDA) */
 
@@ -200,8 +200,8 @@ namespace
 #ifdef HAVE_OPENCV_GPUFILTERS
         if (apperture_size_ != 3 && apperture_size_ != old_apperture_size_)
         {
-            filterDX_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
-            filterDY_ = gpu::createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
+            filterDX_ = cuda::createDerivFilter(CV_8UC1, CV_32S, 1, 0, apperture_size_, false, 1, BORDER_REPLICATE);
+            filterDY_ = cuda::createDerivFilter(CV_8UC1, CV_32S, 0, 1, apperture_size_, false, 1, BORDER_REPLICATE);
             old_apperture_size_ = apperture_size_;
         }
 #endif
@@ -226,7 +226,7 @@ namespace
     }
 }
 
-Ptr<CannyEdgeDetector> cv::gpu::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
+Ptr<CannyEdgeDetector> cv::cuda::createCannyEdgeDetector(double low_thresh, double high_thresh, int apperture_size, bool L2gradient)
 {
     return new CannyImpl(low_thresh, high_thresh, apperture_size, L2gradient);
 }

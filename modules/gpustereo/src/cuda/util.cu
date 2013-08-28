@@ -47,7 +47,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/reduce.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace cudev
 {
     /////////////////////////////////// reprojectImageTo3D ///////////////////////////////////////////////
 
@@ -229,7 +229,7 @@ namespace cv { namespace gpu { namespace cudev
         if (stream == 0)
             cudaSafeCall( cudaDeviceSynchronize() );
     }
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

@@ -45,7 +45,7 @@
 
 #include "opencv2/core/gpu.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 class CV_EXPORTS SURF_GPU
 {
@@ -121,6 +121,6 @@ public:
     GpuMat maxPosBuffer;
 };
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 #endif // __OPENCV_NONFREE_GPU_HPP__

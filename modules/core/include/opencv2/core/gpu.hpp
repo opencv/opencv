@@ -51,7 +51,7 @@
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpu_types.hpp"
 
-namespace cv { namespace gpu {
+namespace cv { namespace cuda {
 
 //////////////////////////////// GpuMat ///////////////////////////////
 
@@ -664,12 +664,12 @@ private:
 CV_EXPORTS void printCudaDeviceInfo(int device);
 CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
-}} // namespace cv { namespace gpu {
+}} // namespace cv { namespace cuda {
 
 namespace cv {
 
-template <> CV_EXPORTS void Ptr<cv::gpu::Stream::Impl>::delete_obj();
-template <> CV_EXPORTS void Ptr<cv::gpu::Event::Impl>::delete_obj();
+template <> CV_EXPORTS void Ptr<cv::cuda::Stream::Impl>::delete_obj();
+template <> CV_EXPORTS void Ptr<cv::cuda::Event::Impl>::delete_obj();
 
 }
 

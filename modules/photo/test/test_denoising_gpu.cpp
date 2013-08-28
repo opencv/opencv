@@ -57,7 +57,7 @@ using namespace cvtest;
 
 TEST(GPU_BruteForceNonLocalMeans, Regression)
 {
-    using cv::gpu::GpuMat;
+    using cv::cuda::GpuMat;
 
     cv::Mat bgr  = readImage("../gpu/denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
@@ -66,8 +66,8 @@ TEST(GPU_BruteForceNonLocalMeans, Regression)
     cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
 
     GpuMat dbgr, dgray;
-    cv::gpu::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
-    cv::gpu::nonLocalMeans(GpuMat(gray), dgray, 20);
+    cv::cuda::nonLocalMeans(GpuMat(bgr),  dbgr, 20);
+    cv::cuda::nonLocalMeans(GpuMat(gray), dgray, 20);
 
 #if 0
     dumpImage("../gpu/denoising/nlm_denoised_lena_bgr.png", cv::Mat(dbgr));
@@ -87,7 +87,7 @@ TEST(GPU_BruteForceNonLocalMeans, Regression)
 
 TEST(GPU_FastNonLocalMeans, Regression)
 {
-    using cv::gpu::GpuMat;
+    using cv::cuda::GpuMat;
 
     cv::Mat bgr  = readImage("../gpu/denoising/lena_noised_gaussian_sigma=20_multi_0.png", cv::IMREAD_COLOR);
     ASSERT_FALSE(bgr.empty());
@@ -96,7 +96,7 @@ TEST(GPU_FastNonLocalMeans, Regression)
     cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
 
     GpuMat dbgr, dgray;
-    cv::gpu::FastNonLocalMeansDenoising fnlmd;
+    cv::cuda::FastNonLocalMeansDenoising fnlmd;
 
     fnlmd.simpleMethod(GpuMat(gray),  dgray, 20);
     fnlmd.labMethod(GpuMat(bgr),  dbgr, 20, 10);
