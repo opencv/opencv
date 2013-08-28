@@ -3,13 +3,12 @@
 # ----------------------------------------------------------------------------
 
 ocv_clear_vars(HAVE_VFW)
-if (WITH_VFW)
-  TRY_COMPILE(HAVE_VFW
-    "${OPENCV_BINARY_DIR}/CMakeFiles/CMakeTmp"
+if(WITH_VFW)
+  try_compile(HAVE_VFW
+    "${OpenCV_BINARY_DIR}"
     "${OpenCV_SOURCE_DIR}/cmake/checks/vfwtest.cpp"
-    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32"
-    OUTPUT_VARIABLE OUTPUT)
- endif(WITH_VFW)
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=vfw32")
+endif(WITH_VFW)
 
 # --- GStreamer ---
 ocv_clear_vars(HAVE_GSTREAMER)
@@ -271,8 +270,10 @@ if(WITH_AVFOUNDATION)
 endif()
 
 # --- QuickTime ---
-if(WITH_QUICKTIME)
-  set(HAVE_QUICKTIME YES)
-elseif(APPLE)
-  set(HAVE_QTKIT YES)
+if (NOT IOS)
+  if(WITH_QUICKTIME)
+    set(HAVE_QUICKTIME YES)
+  elseif(APPLE)
+    set(HAVE_QTKIT YES)
+  endif()
 endif()

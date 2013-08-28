@@ -406,7 +406,7 @@ protected:
             Vec<int, 5> v1(15, 16, 17, 18, 19), ov1;
             Scalar sc1(20.0, 21.1, 22.2, 23.3), osc1;
             Range g1(7, 8), og1;
-            
+
             FileStorage fs(fname, FileStorage::WRITE);
             fs << "mi" << mi;
             fs << "mv" << mv;

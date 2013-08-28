@@ -79,4 +79,3 @@ if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(opencv_haartraining PROPERTIES FOLDER "applications")
   set_target_properties(opencv_haartraining_engine PROPERTIES FOLDER "applications")
 endif()
-

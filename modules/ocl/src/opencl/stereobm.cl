@@ -190,7 +190,7 @@ __kernel void stereoKernel(__global unsigned char *left, __global unsigned char 
         {
             int idx1 = y_tex * img_step + x_tex;
             int idx2 = min(y_tex + ((radius << 1) + 1), cheight - 1) * img_step + x_tex;
-            
+
             barrier(CLK_LOCAL_MEM_FENCE);
 
             StepDown(idx1, idx2, left, right, d, col_ssd);

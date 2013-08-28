@@ -195,4 +195,3 @@ The function converts image to CIELAB colorspace and then separately denoise L a
 .. seealso::
 
     :ocv:func:`fastNlMeansDenoisingColored`
-

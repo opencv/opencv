@@ -1912,7 +1912,7 @@ void cv::gpu::bitwise_not(InputArray _src, OutputArray _dst, InputArray _mask, S
     }
     else
     {
-        bitMatNot<unsigned short>(
+        bitMatNot<unsigned char>(
                     PtrStepSzb(src.rows, bcols, src.data, src.step),
                     PtrStepSzb(src.rows, bcols, dst.data, dst.step),
                     mask, stream);

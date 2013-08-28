@@ -84,7 +84,7 @@ PERF_TEST_P(Sz_Type_Flags, GEMM,
 
         TEST_CYCLE() cv::gpu::gemm(d_src1, d_src2, 1.0, d_src3, 1.0, dst, flags);
 
-        GPU_SANITY_CHECK(dst, 1e-6);
+        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {
@@ -234,7 +234,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, Convolve,
 
         TEST_CYCLE() convolution->convolve(d_image, d_templ, dst, ccorr);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {

@@ -42,6 +42,12 @@
 
 #include "precomp.hpp"
 
+#ifdef _MSC_VER
+# if _MSC_VER >= 1700
+#  pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+# endif
+#endif
+
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
@@ -423,15 +429,14 @@ String tempfile( const char* suffix )
     temp_file = temp_dir + std::wstring(L"\\") + temp_file;
     DeleteFileW(temp_file.c_str());
 
-    size_t asize = wcstombs(NULL, temp_file.c_str(), 0);
-    Ptr<char> aname = new char[asize+1];
-    aname[asize] = 0;
-    wcstombs(aname, temp_file.c_str(), asize);
+    char aname[MAX_PATH];
+    size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
+    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
     fname = std::string(aname);
     RoUninitialize();
 #else
-    char temp_dir2[MAX_PATH + 1] = { 0 };
-    char temp_file[MAX_PATH + 1] = { 0 };
+    char temp_dir2[MAX_PATH] = { 0 };
+    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir == 0 || temp_dir[0] == 0)
     {

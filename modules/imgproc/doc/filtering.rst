@@ -789,7 +789,7 @@ The function supports the in-place mode. Dilation can be applied several ( ``ite
 
    * An example using the morphological dilate operation can be found at opencv_source_code/samples/cpp/morphology2.cpp
 
-    
+
 
 
 erode
@@ -1000,17 +1000,17 @@ Returns Gabor filter coefficients.
 .. ocv:pyfunction:: cv2.getGaborKernel(ksize, sigma, theta, lambd, gamma[, psi[, ktype]]) -> retval
 
     :param ksize: Size of the filter returned.
-    
+
     :param sigma: Standard deviation of the gaussian envelope.
-    
+
     :param theta: Orientation of the normal to the parallel stripes of a Gabor function.
-    
+
     :param lambd: Wavelength of the sinusoidal factor.
-    
+
     :param gamma: Spatial aspect ratio.
-    
+
     :param psi: Phase offset.
-    
+
     :param ktype: Type of filter coefficients. It can be  ``CV_32F``  or  ``CV_64F`` .
 
 For more details about gabor filter equations and parameters, see: `Gabor Filter <http://en.wikipedia.org/wiki/Gabor_filter>`_.
@@ -1132,7 +1132,7 @@ Performs advanced morphological transformations.
     :param dst: Destination image of the same size and type as  ``src`` .
 
     :param kernel: Structuring element. It can be created using :ocv:func:`getStructuringElement`.
-    
+
     :param anchor: Anchor position with the kernel. Negative values mean that the anchor is at the kernel center.
 
     :param op: Type of a morphological operation that can be one of the following:
@@ -1570,4 +1570,3 @@ is equivalent to
 .. seealso::
 
     :ocv:func:`cartToPolar`
-

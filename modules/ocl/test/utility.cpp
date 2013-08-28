@@ -225,7 +225,7 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
         cpu_result.setTo(0);
 
         for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
-        {      
+        {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
             cpu_result.copyTo(cpu_result);
@@ -251,4 +251,3 @@ double checkRectSimilarity(Size sz, std::vector<Rect>& ob1, std::vector<Rect>& o
     }
     return final_test_result;
 }
-

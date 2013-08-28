@@ -45,333 +45,279 @@
 //M*/
 #include "perf_precomp.hpp"
 
+using namespace perf;
+using std::tr1::get;
+using std::tr1::tuple;
+
 ///////////// Blur////////////////////////
-PERFTEST(Blur)
+
+typedef Size_MatType BlurFixture;
+
+PERF_TEST_P(BlurFixture, Blur,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src1, dst, ocl_dst;
-    ocl::oclMat d_src1, d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params), ksize(3, 3);
+    const int type = get<1>(params), bordertype = BORDER_CONSTANT;
 
-    Size ksize = Size(3, 3);
-    int bordertype = BORDER_CONSTANT;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(5);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(dst, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::blur(oclSrc, oclDst, ksize, Point(-1, -1), bordertype);
 
-            blur(src1, dst, ksize, Point(-1, -1), bordertype);
+        oclDst.download(dst);
 
-            CPU_ON;
-            blur(src1, dst, ksize, Point(-1, -1), bordertype);
-            CPU_OFF;
-
-            d_src1.upload(src1);
-
-            WARMUP_ON;
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src1.upload(src1);
-            ocl::blur(d_src1, d_dst, ksize, Point(-1, -1), bordertype);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.0);
-        }
-
+        SANITY_CHECK(dst, 1 + DBL_EPSILON);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::blur(src, dst, ksize, Point(-1, -1), bordertype);
+
+        SANITY_CHECK(dst, 1 + DBL_EPSILON);
+    }
+    else
+        OCL_PERF_ELSE
 }
+
 ///////////// Laplacian////////////////////////
-PERFTEST(Laplacian)
+
+typedef Size_MatType LaplacianFixture;
+
+PERF_TEST_P(LaplacianFixture, Laplacian,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src1, dst, ocl_dst;
-    ocl::oclMat d_src1, d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = 3;
 
-    int ksize = 3;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(6);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src1, size, size, all_type[j], 0, 256);
-            gen(dst, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::Laplacian(oclSrc, oclDst, -1, ksize, 1);
 
-            Laplacian(src1, dst, -1, ksize, 1);
+        oclDst.download(dst);
 
-            CPU_ON;
-            Laplacian(src1, dst, -1, ksize, 1);
-            CPU_OFF;
-
-            d_src1.upload(src1);
-
-            WARMUP_ON;
-            ocl::Laplacian(d_src1, d_dst, -1, ksize, 1);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::Laplacian(d_src1, d_dst, -1, ksize, 1);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src1.upload(src1);
-            ocl::Laplacian(d_src1, d_dst, -1, ksize, 1);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::Laplacian(src, dst, -1, ksize, 1);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// Erode ////////////////////
-PERFTEST(Erode)
+
+typedef Size_MatType ErodeFixture;
+
+PERF_TEST_P(ErodeFixture, Erode,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
 {
-    Mat src, dst, ker, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = 3;
+    const Mat ker = getStructuringElement(MORPH_RECT, Size(ksize, ksize));
 
-    int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst).in(ker);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(5);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKer(ker);
 
-            gen(src, size, size, all_type[j], Scalar::all(0), Scalar::all(256));
-            ker = getStructuringElement(MORPH_RECT, Size(3, 3));
+        TEST_CYCLE() cv::ocl::erode(oclSrc, oclDst, oclKer);
 
-            erode(src, dst, ker);
+        oclDst.download(dst);
 
-            CPU_ON;
-            erode(src, dst, ker);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::erode(d_src, d_dst, ker);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::erode(d_src, d_dst, ker);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::erode(d_src, d_dst, ker);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::erode(src, dst, ker);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// Sobel ////////////////////////
-PERFTEST(Sobel)
+
+typedef Size_MatType SobelFixture;
+
+PERF_TEST_P(SobelFixture, Sobel,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), dx = 1, dy = 1;
 
-    int dx = 1;
-    int dy = 1;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if ((srcSize == OCL_SIZE_2000 && type == CV_8UC4) ||
+            (srcSize == OCL_SIZE_4000 && type == CV_8UC1))
+        declare.time(5.5);
+    else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(20);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::Sobel(oclSrc, oclDst, -1, dx, dy);
 
-            Sobel(src, dst, -1, dx, dy);
+        oclDst.download(dst);
 
-            CPU_ON;
-            Sobel(src, dst, -1, dx, dy);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::Sobel(d_src, d_dst, -1, dx, dy);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::Sobel(d_src, d_dst, -1, dx, dy);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::Sobel(d_src, d_dst, -1, dx, dy);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::Sobel(src, dst, -1, dx, dy);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
+
 ///////////// Scharr ////////////////////////
-PERFTEST(Scharr)
+
+typedef Size_MatType ScharrFixture;
+
+PERF_TEST_P(ScharrFixture, Scharr,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src, dst, ocl_dst;
-    ocl::oclMat d_src, d_dst;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), dx = 1, dy = 0;
 
-    int dx = 1;
-    int dy = 0;
-    int all_type[] = {CV_8UC1, CV_8UC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    if ((srcSize == OCL_SIZE_2000 && type == CV_8UC4) ||
+            (srcSize == OCL_SIZE_4000 && type == CV_8UC1))
+        declare.time(5.5);
+    else if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(21);
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::Scharr(oclSrc, oclDst, -1, dx, dy);
 
-            Scharr(src, dst, -1, dx, dy);
+        oclDst.download(dst);
 
-            CPU_ON;
-            Scharr(src, dst, -1, dx, dy);
-            CPU_OFF;
-
-            d_src.upload(src);
-
-            WARMUP_ON;
-            ocl::Scharr(d_src, d_dst, -1, dx, dy);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::Scharr(d_src, d_dst, -1, dx, dy);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::Scharr(d_src, d_dst, -1, dx, dy);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1);
-        }
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::Scharr(src, dst, -1, dx, dy);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// GaussianBlur ////////////////////////
-PERFTEST(GaussianBlur)
+
+typedef Size_MatType GaussianBlurFixture;
+
+PERF_TEST_P(GaussianBlurFixture, GaussianBlur,
+            ::testing::Combine(::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000),
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4)))
 {
-    Mat src, dst, ocl_dst;
-    int all_type[] = {CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4};
-    std::string type_name[] = {"CV_8UC1", "CV_8UC4", "CV_32FC1", "CV_32FC4"};
-    const int ksize = 7;	
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = 7;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    const double eps = src.depth() == CV_8U ? 1 + DBL_EPSILON : 3e-4;
+
+    if (RUN_OCL_IMPL)
     {
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            SUBTEST << size << 'x' << size << "; " << type_name[j] ;
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::GaussianBlur(oclSrc, oclDst, Size(ksize, ksize), 0);
 
-            GaussianBlur(src, dst, Size(ksize, ksize), 0);
+        oclDst.download(dst);
 
-            CPU_ON;
-            GaussianBlur(src, dst, Size(ksize, ksize), 0);
-            CPU_OFF;
-
-            ocl::oclMat d_src(src);
-            ocl::oclMat d_dst;
-
-            WARMUP_ON;
-            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::GaussianBlur(d_src, d_dst, Size(ksize, ksize), 0);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1.0);
-        }
-
+        SANITY_CHECK(dst, eps);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::GaussianBlur(src, dst, Size(ksize, ksize), 0);
+
+        SANITY_CHECK(dst, eps);
+    }
+    else
+        OCL_PERF_ELSE
 }
 
 ///////////// filter2D////////////////////////
-PERFTEST(filter2D)
+
+typedef Size_MatType filter2DFixture;
+
+PERF_TEST_P(filter2DFixture, filter2D,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC4)))
 {
-    Mat src;
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), ksize = 3;
 
-    for (int size = Min_Size; size <= Max_Size; size *= Multiple)
+    Mat src(srcSize, type), dst(srcSize, type), kernel(ksize, ksize, CV_32SC1);
+    declare.in(src, WARMUP_RNG).in(kernel).out(dst);
+    randu(kernel, -3.0, 3.0);
+
+    if (srcSize == OCL_SIZE_4000 && type == CV_8UC4)
+        declare.time(8);
+
+    if (RUN_OCL_IMPL)
     {
-        int all_type[] = {CV_8UC1, CV_8UC4};
-        std::string type_name[] = {"CV_8UC1", "CV_8UC4"};
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type), oclKernel(kernel);
 
-        for (size_t j = 0; j < sizeof(all_type) / sizeof(int); j++)
-        {
-            gen(src, size, size, all_type[j], 0, 256);
+        TEST_CYCLE() cv::ocl::filter2D(oclSrc, oclDst, -1, oclKernel);
 
-            const int ksize = 3;
+        oclDst.download(dst);
 
-            SUBTEST << "ksize = " << ksize << "; " << size << 'x' << size << "; " << type_name[j] ;
-
-            Mat kernel;
-            gen(kernel, ksize, ksize, CV_32SC1, -3.0, 3.0);
-
-            Mat dst, ocl_dst;
-
-            cv::filter2D(src, dst, -1, kernel);
-
-            CPU_ON;
-            cv::filter2D(src, dst, -1, kernel);
-            CPU_OFF;
-
-            ocl::oclMat d_src(src), d_dst;
-
-            WARMUP_ON;
-            ocl::filter2D(d_src, d_dst, -1, kernel);
-            WARMUP_OFF;
-
-            GPU_ON;
-            ocl::filter2D(d_src, d_dst, -1, kernel);
-            GPU_OFF;
-
-            GPU_FULL_ON;
-            d_src.upload(src);
-            ocl::filter2D(d_src, d_dst, -1, kernel);
-            d_dst.download(ocl_dst);
-            GPU_FULL_OFF;
-
-            TestSystem::instance().ExpectedMatNear(ocl_dst, dst, 1e-5);
-
-        }
-
-
+        SANITY_CHECK(dst);
     }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::filter2D(src, dst, -1, kernel);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
 }

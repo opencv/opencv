@@ -542,7 +542,7 @@ JNIEXPORT jstring JNICALL Java_org_opencv_highgui_VideoCapture_getSupportedPrevi
 {
     static const char method_name[] = "highgui::VideoCapture_getSupportedPreviewSizes_10()";
     try {
-        LOGD(%s, method_name);
+        LOGD("%s", method_name);
         VideoCapture* me = (VideoCapture*) self; //TODO: check for NULL
         union {double prop; const char* name;} u;
         u.prop = me->get(CAP_PROP_ANDROID_PREVIEW_SIZES_STRING);

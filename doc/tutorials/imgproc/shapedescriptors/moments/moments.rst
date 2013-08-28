@@ -133,4 +133,3 @@ Result
    .. |MU_2|  image:: images/Moments_Result2.jpg
                     :width: 250pt
                     :align: middle
-

@@ -48,9 +48,9 @@ using namespace std;
 namespace cv
 {
 
-ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(init_pixel), 
-               level(init_level), area(0), perimeter(0), euler(0), probability(1.0), 
-               parent(0), child(0), next(0), prev(0), local_maxima(0), 
+ERStat::ERStat(int init_level, int init_pixel, int init_x, int init_y) : pixel(init_pixel),
+               level(init_level), area(0), perimeter(0), euler(0), probability(1.0),
+               parent(0), child(0), next(0), prev(0), local_maxima(0),
                max_probability_ancestor(0), min_probability_ancestor(0)
 {
     rect = Rect(init_x,init_y,1,1);
@@ -76,17 +76,17 @@ public:
     //Destructor
     ~ERFilterNM() {};
 
-    float minProbability;   
+    float minProbability;
     bool  nonMaxSuppression;
     float minProbabilityDiff;
 
-    // the key method. Takes image on input, vector of ERStat is output for the first stage, 
+    // the key method. Takes image on input, vector of ERStat is output for the first stage,
     // input/output - for the second one.
     void run( InputArray image, std::vector<ERStat>& regions );
 
 protected:
     int thresholdDelta;
-    float maxArea; 
+    float maxArea;
     float minArea;
 
     Ptr<ERFilter::Callback> classifier;
@@ -116,8 +116,8 @@ private:
     // extract the component tree and store all the ER regions
     void er_tree_extract( InputArray image );
     // accumulate a pixel into an ER
-    void er_add_pixel( ERStat *parent, int x, int y, int non_boundary_neighbours, 
-                       int non_boundary_neighbours_horiz, 
+    void er_add_pixel( ERStat *parent, int x, int y, int non_boundary_neighbours,
+                       int non_boundary_neighbours_horiz,
                        int d_C1, int d_C2, int d_C3 );
     // merge an ER with its nested parent
     void er_merge( ERStat *parent, ERStat *child );
@@ -133,7 +133,7 @@ private:
 
 
 // default 1st stage classifier
-class CV_EXPORTS ERClassifierNM1 : public ERFilter::Callback 
+class CV_EXPORTS ERClassifierNM1 : public ERFilter::Callback
 {
 public:
     //Constructor
@@ -142,14 +142,14 @@ public:
     ~ERClassifierNM1() {};
 
     // The classifier must return probability measure for the region.
-    double eval(const ERStat& stat); 
+    double eval(const ERStat& stat);
 
 private:
     CvBoost boost;
 };
 
 // default 2nd stage classifier
-class CV_EXPORTS ERClassifierNM2 : public ERFilter::Callback 
+class CV_EXPORTS ERClassifierNM2 : public ERFilter::Callback
 {
 public:
     //constructor
@@ -158,7 +158,7 @@ public:
     ~ERClassifierNM2() {};
 
     // The classifier must return probability measure for the region.
-    double eval(const ERStat& stat); 
+    double eval(const ERStat& stat);
 
 private:
     CvBoost boost;
@@ -182,7 +182,7 @@ ERFilterNM::ERFilterNM()
     classifier = NULL;
 }
 
-// the key method. Takes image on input, vector of ERStat is output for the first stage, 
+// the key method. Takes image on input, vector of ERStat is output for the first stage,
 // input/output for the second one.
 void ERFilterNM::run( InputArray image, std::vector<ERStat>& _regions )
 {
@@ -192,7 +192,7 @@ void ERFilterNM::run( InputArray image, std::vector<ERStat>& _regions )
 
     regions = &_regions;
     region_mask = Mat::zeros(image.getMat().rows+2, image.getMat().cols+2, CV_8UC1);
-    
+
     // if regions vector is empty we must extract the entire component tree
     if ( regions->size() == 0 )
     {
@@ -237,13 +237,13 @@ void ERFilterNM::er_tree_extract( InputArray image )
         src = (image.getMat() / thresholdDelta) -1;
     }
 
-    const unsigned char * image_data = src.data; 
-    int width = src.cols, height = src.rows; 
+    const unsigned char * image_data = src.data;
+    int width = src.cols, height = src.rows;
 
     // the component stack
     vector<ERStat*> er_stack;
 
-    //the quads for euler number calculation 
+    //the quads for euler number calculation
     unsigned char quads[3][4];
     quads[0][0] = 1 << 3;
     quads[0][1] = 1 << 2;
@@ -271,32 +271,32 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
     // we'll look initially for all pixels with grey-level lower than a grey-level higher than any allowed in the image
     int threshold_level = (255/thresholdDelta)+1;
-    
+
     // starting from the first pixel (0,0)
     int current_pixel = 0;
     int current_edge = 0;
     int current_level = image_data[0];
     accessible_pixel_mask[0] = true;
-    
+
     bool push_new_component = true;
-    
+
     for (;;) {
 
         int x = current_pixel % width;
         int y = current_pixel / width;
 
         // push a component with current level in the component stack
-        if (push_new_component) 
+        if (push_new_component)
             er_stack.push_back(new ERStat(current_level, current_pixel, x, y));
         push_new_component = false;
-        
+
         // explore the (remaining) edges to the neighbors to the current pixel
-        for (current_edge = current_edge; current_edge < 4; current_edge++) 
+        for (current_edge = current_edge; current_edge < 4; current_edge++)
         {
 
             int neighbour_pixel = current_pixel;
-            
-            switch (current_edge) 
+
+            switch (current_edge)
             {
                     case 0: if (x < width - 1) neighbour_pixel = current_pixel + 1;  break;
                     case 1: if (y < height - 1) neighbour_pixel = current_pixel + width; break;
@@ -305,46 +305,46 @@ void ERFilterNM::er_tree_extract( InputArray image )
             }
 
             // if neighbour is not accessible, mark it accessible and retreive its grey-level value
-            if ( !accessible_pixel_mask[neighbour_pixel] && (neighbour_pixel != current_pixel) ) 
+            if ( !accessible_pixel_mask[neighbour_pixel] && (neighbour_pixel != current_pixel) )
             {
 
                 int neighbour_level = image_data[neighbour_pixel];
                 accessible_pixel_mask[neighbour_pixel] = true;
 
-                // if neighbour level is not lower than current level add neighbour to the boundary heap         
-                if (neighbour_level >= current_level) 
+                // if neighbour level is not lower than current level add neighbour to the boundary heap
+                if (neighbour_level >= current_level)
                 {
 
                     boundary_pixes[neighbour_level].push_back(neighbour_pixel);
                     boundary_edges[neighbour_level].push_back(0);
-                    
+
                     // if neighbour level is lower than our threshold_level set threshold_level to neighbour level
                     if (neighbour_level < threshold_level)
                         threshold_level = neighbour_level;
 
-                } 
-                else // if neighbour level is lower than current add current_pixel (and next edge) 
+                }
+                else // if neighbour level is lower than current add current_pixel (and next edge)
                      // to the boundary heap for later processing
                 {
-                    
+
                     boundary_pixes[current_level].push_back(current_pixel);
                     boundary_edges[current_level].push_back(current_edge + 1);
-                    
+
                     // if neighbour level is lower than threshold_level set threshold_level to neighbour level
                     if (current_level < threshold_level)
                         threshold_level = current_level;
-                    
+
                     // consider the new pixel and its grey-level as current pixel
                     current_pixel = neighbour_pixel;
                     current_edge = 0;
                     current_level = neighbour_level;
-                    
+
                     // and push a new component
                     push_new_component = true;
-                    break; 
+                    break;
                 }
             }
-                
+
         } // else neigbor was already accessible
 
         if (push_new_component) continue;
@@ -363,12 +363,12 @@ void ERFilterNM::er_tree_extract( InputArray image )
         quad_after[2] = 1<<2;
         quad_after[3] = 1;
 
-        for (int edge = 0; edge < 8; edge++) 
+        for (int edge = 0; edge < 8; edge++)
         {
             int neighbour4 = -1;
             int neighbour8 = -1;
             int cell = 0;
-            switch (edge) 
+            switch (edge)
             {
                     case 0: if (x < width - 1) { neighbour4 = neighbour8 = current_pixel + 1;} cell = 5; break;
                     case 1: if ((x < width - 1)&&(y < height - 1)) { neighbour8 = current_pixel + 1 + width;} cell = 8; break;
@@ -391,7 +391,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
             {
                 if (accumulated_pixel_mask[neighbour8])
                     pix_value = image_data[neighbour8];
-            } 
+            }
 
             if (pix_value<=image_data[current_pixel])
             {
@@ -453,18 +453,18 @@ void ERFilterNM::er_tree_extract( InputArray image )
                     C_before[p]++;
                 if ( (quad_before[1] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_before[p]++;
-                if ( (quad_before[2] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                if ( (quad_before[2] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_before[p]++;
                 if ( (quad_before[3] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_before[p]++;
 
-                if ( (quad_after[0] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                if ( (quad_after[0] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_after[p]++;
-                if ( (quad_after[1] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                if ( (quad_after[1] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_after[p]++;
-                if ( (quad_after[2] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                if ( (quad_after[2] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_after[p]++;
-                if ( (quad_after[3] == quads[p][q]) && ((p<2)||(q<2)) ) 
+                if ( (quad_after[3] == quads[p][q]) && ((p<2)||(q<2)) )
                     C_after[p]++;
             }
         }
@@ -475,9 +475,9 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
         er_add_pixel(er_stack.back(), x, y, non_boundary_neighbours, non_boundary_neighbours_horiz, d_C1, d_C2, d_C3);
         accumulated_pixel_mask[current_pixel] = true;
-        
+
         // if we have processed all the possible threshold levels (the hea is empty) we are done!
-        if (threshold_level == (255/thresholdDelta)+1) 
+        if (threshold_level == (255/thresholdDelta)+1)
         {
 
             // save the extracted regions into the output vector
@@ -490,18 +490,18 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
             return;
         }
-            
-        
+
+
         // pop the heap of boundary pixels
         current_pixel = boundary_pixes[threshold_level].back();
         boundary_pixes[threshold_level].erase(boundary_pixes[threshold_level].end()-1);
         current_edge  = boundary_edges[threshold_level].back();
         boundary_edges[threshold_level].erase(boundary_edges[threshold_level].end()-1);
-        
+
         while (boundary_pixes[threshold_level].empty() && (threshold_level < (255/thresholdDelta)+1))
             threshold_level++;
 
-        
+
         int new_level = image_data[current_pixel];
 
         // if the new pixel has higher grey value than the current one
@@ -514,11 +514,11 @@ void ERFilterNM::er_tree_extract( InputArray image )
             {
                 ERStat* er = er_stack.back();
                 er_stack.erase(er_stack.end()-1);
-                
-                if (new_level < er_stack.back()->level) 
+
+                if (new_level < er_stack.back()->level)
                 {
                     er_stack.push_back(new ERStat(new_level, current_pixel, current_pixel%width, current_pixel/width));
-                    er_merge(er_stack.back(), er); 
+                    er_merge(er_stack.back(), er);
                     break;
                 }
 
@@ -531,8 +531,8 @@ void ERFilterNM::er_tree_extract( InputArray image )
 }
 
 // accumulate a pixel into an ER
-void ERFilterNM::er_add_pixel(ERStat *parent, int x, int y, int non_border_neighbours, 
-                                                            int non_border_neighbours_horiz, 
+void ERFilterNM::er_add_pixel(ERStat *parent, int x, int y, int non_border_neighbours,
+                                                            int non_border_neighbours_horiz,
                                                             int d_C1, int d_C2, int d_C3)
 {
     parent->area++;
@@ -575,7 +575,7 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     parent->area += child->area;
 
     parent->perimeter += child->perimeter;
-    
+
 
     for (int i=parent->rect.y; i<=min(parent->rect.br().y-1,child->rect.br().y-1); i++)
         if (i-child->rect.y >= 0)
@@ -584,12 +584,12 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     for (int i=parent->rect.y-1; i>=child->rect.y; i--)
         if (i-child->rect.y < (int)child->crossings->size())
             parent->crossings->push_front(child->crossings->at(i-child->rect.y));
-        else 
+        else
             parent->crossings->push_front(0);
 
     for (int i=parent->rect.br().y; i<child->rect.y; i++)
         parent->crossings->push_back(0);
-        
+
     for (int i=max(parent->rect.br().y,child->rect.y); i<=child->rect.br().y-1; i++)
         parent->crossings->push_back(child->crossings->at(i-child->rect.y));
 
@@ -618,8 +618,8 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
     std::sort(m_crossings.begin(), m_crossings.end());
     child->med_crossings = (float)m_crossings.at(1);
 
-    // free unnecessary mem 
-    child->crossings->clear(); 
+    // free unnecessary mem
+    child->crossings->clear();
     delete(child->crossings);
     child->crossings = NULL;
 
@@ -632,15 +632,15 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
         child->probability = classifier->eval(*child);
     }
 
-    if ( ((classifier!=NULL)?(child->probability >= minProbability):true) && 
-         ((child->area >= (minArea*region_mask.rows*region_mask.cols)) && 
+    if ( ((classifier!=NULL)?(child->probability >= minProbability):true) &&
+         ((child->area >= (minArea*region_mask.rows*region_mask.cols)) &&
           (child->area <= (maxArea*region_mask.rows*region_mask.cols))) )
     {
 
         num_accepted_regions++;
 
         child->next = parent->child;
-        if (parent->child) 
+        if (parent->child)
             parent->child->prev = child;
         parent->child = child;
         child->parent = parent;
@@ -658,7 +658,7 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
             while (new_child->next != NULL)
                 new_child = new_child->next;
             new_child->next = parent->child;
-            if (parent->child) 
+            if (parent->child)
                 parent->child->prev = new_child;
             parent->child   = child->child;
             child->child->parent = parent;
@@ -672,8 +672,8 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
             child->crossings = NULL;
         }
         delete(child);
-    } 
-    
+    }
+
 }
 
 // recursively walk the tree and clean memory
@@ -691,11 +691,11 @@ void ERFilterNM::er_tree_clean( ERStat *stat )
         }
         delete stat;
 }
-    
+
 // copy extracted regions into the output vector
 ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
 {
-    
+
     regions->push_back(*er);
 
     regions->back().parent = parent;
@@ -714,7 +714,7 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
             this_er->probability = 0; //TODO this makes sense in order to select at least one region in short tree's but is it really necessary?
             this_er->max_probability_ancestor = this_er;
             this_er->min_probability_ancestor = this_er;
-        } 
+        }
         else
         {
             this_er->max_probability_ancestor = (this_er->probability > parent->max_probability_ancestor->probability)? this_er :  parent->max_probability_ancestor;
@@ -730,11 +730,11 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
                 //  this_er->min_probability_ancestor->local_maxima = false;
 
                 this_er->max_probability_ancestor = this_er;
-                this_er->min_probability_ancestor = this_er;		
+                this_er->min_probability_ancestor = this_er;
             }
         }
     }
-        
+
     for (ERStat * child = er->child; child; child = child->next)
     {
         old_prev = er_save(child, this_er, old_prev);
@@ -749,16 +749,16 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     Mat src = image.getMat();
     // assert correct image type
     CV_Assert( src.type() == CV_8UC1 );
-    
+
     //Fill the region and calculate 2nd stage features
     Mat region = region_mask(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x+2,stat->rect.br().y+2)));
     region = Scalar(0);
     int newMaskVal = 255;
     int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
     Rect rect;
-    
-    floodFill( src(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))), 
-               region, Point(stat->pixel%src.cols - stat->rect.x, stat->pixel/src.cols - stat->rect.y), 
+
+    floodFill( src(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
+               region, Point(stat->pixel%src.cols - stat->rect.x, stat->pixel/src.cols - stat->rect.y),
                Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
     rect.width += 2;
     rect.height += 2;
@@ -768,9 +768,9 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     vector<Point> contour_poly;
     vector<Vec4i> hierarchy;
     findContours( region, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0) );
-    //TODO check epsilon parameter of approxPolyDP (set empirically) : we want more precission 
+    //TODO check epsilon parameter of approxPolyDP (set empirically) : we want more precission
     //     if the region is very small because otherwise we'll loose all the convexities
-    approxPolyDP( Mat(contours[0]), contour_poly, max(rect.width,rect.height)/25, true ); 
+    approxPolyDP( Mat(contours[0]), contour_poly, max(rect.width,rect.height)/25, true );
 
 
     bool was_convex = false;
@@ -829,11 +829,11 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     if ( (classifier != NULL) && (stat->parent != NULL) )
     {
         stat->probability = classifier->eval(*stat);
-    } 
+    }
 
-    if ( ( ((classifier != NULL)?(stat->probability >= minProbability):true) && 
-          ((stat->area >= minArea*region_mask.rows*region_mask.cols) && 
-           (stat->area <= maxArea*region_mask.rows*region_mask.cols)) ) || 
+    if ( ( ((classifier != NULL)?(stat->probability >= minProbability):true) &&
+          ((stat->area >= minArea*region_mask.rows*region_mask.cols) &&
+           (stat->area <= maxArea*region_mask.rows*region_mask.cols)) ) ||
         (stat->parent == NULL) )
     {
 
@@ -979,19 +979,19 @@ int ERFilterNM::getNumRejected()
 ERClassifierNM1::ERClassifierNM1()
 {
 
-    if (ifstream("./trained_classifierNM1.xml")) 
+    if (ifstream("./trained_classifierNM1.xml"))
     {
         // The file with default classifier exists
         boost.load("./trained_classifierNM1.xml", "boost");
-    } 
-    else if (ifstream("./training/trained_classifierNM1.xml")) 
+    }
+    else if (ifstream("./training/trained_classifierNM1.xml"))
     {
         // The file with default classifier exists
         boost.load("./training/trained_classifierNM1.xml", "boost");
-    } 
-    else 
+    }
+    else
     {
-        // File not found 
+        // File not found
         CV_Error(CV_StsBadArg, "Default classifier ./trained_classifierNM1.xml not found!");
     }
 };
@@ -1017,19 +1017,19 @@ double ERClassifierNM1::eval(const ERStat& stat)
 ERClassifierNM2::ERClassifierNM2()
 {
 
-    if (ifstream("./trained_classifierNM2.xml")) 
+    if (ifstream("./trained_classifierNM2.xml"))
     {
         // The file with default classifier exists
         boost.load("./trained_classifierNM2.xml", "boost");
-    } 
-    else if (ifstream("./training/trained_classifierNM2.xml")) 
+    }
+    else if (ifstream("./training/trained_classifierNM2.xml"))
     {
         // The file with default classifier exists
         boost.load("./training/trained_classifierNM2.xml", "boost");
-    } 
-    else 
+    }
+    else
     {
-        // File not found 
+        // File not found
         CV_Error(CV_StsBadArg, "Default classifier ./trained_classifierNM2.xml not found!");
     }
 };
@@ -1040,7 +1040,7 @@ double ERClassifierNM2::eval(const ERStat& stat)
     float arr[] = {0,(float)(stat.rect.width)/(stat.rect.height), // aspect ratio
                      sqrt((float)(stat.area))/stat.perimeter, // compactness
                      (float)(1-stat.euler), //number of holes
-                     stat.med_crossings, stat.hole_area_ratio, 
+                     stat.med_crossings, stat.hole_area_ratio,
                      stat.convex_hull_ratio, stat.num_inflexion_points};
 
     vector<float> sample (arr, arr + sizeof(arr) / sizeof(arr[0]) );
@@ -1055,15 +1055,15 @@ double ERClassifierNM2::eval(const ERStat& stat)
 /*!
     Create an Extremal Region Filter for the 1st stage classifier of N&M algorithm
     Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
- 
+
     The component tree of the image is extracted by a threshold increased step by step
-    from 0 to 255, incrementally computable descriptors (aspect_ratio, compactness, 
-    number of holes, and number of horizontal crossings) are computed for each ER 
-    and used as features for a classifier which estimates the class-conditional 
-    probability P(er|character). The value of P(er|character) is tracked using the inclusion 
-    relation of ER across all thresholds and only the ERs which correspond to local maximum 
+    from 0 to 255, incrementally computable descriptors (aspect_ratio, compactness,
+    number of holes, and number of horizontal crossings) are computed for each ER
+    and used as features for a classifier which estimates the class-conditional
+    probability P(er|character). The value of P(er|character) is tracked using the inclusion
+    relation of ER across all thresholds and only the ERs which correspond to local maximum
     of the probability P(er|character) are selected (if the local maximum of the
-    probability is above a global limit pmin and the difference between local maximum and 
+    probability is above a global limit pmin and the difference between local maximum and
     local minimum is greater than minProbabilityDiff).
 
     \param  cb                Callback with the classifier.
@@ -1072,11 +1072,11 @@ double ERClassifierNM2::eval(const ERStat& stat)
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
     \param  minProbability    The minimum probability P(er|character) allowed for retreived ER's
-    \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities  
+    \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int thresholdDelta, 
-                                float minArea, float maxArea, float minProbability, 
+Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int thresholdDelta,
+                                float minArea, float maxArea, float minProbability,
                                 bool nonMaxSuppression, float minProbabilityDiff)
 {
 
@@ -1086,7 +1086,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     CV_Assert( (minProbabilityDiff >= 0.) && (minProbabilityDiff <= 1.) );
 
     Ptr<ERFilterNM> filter = new ERFilterNM();
-    
+
     if (cb == NULL)
         filter->setCallback(new ERClassifierNM1());
     else
@@ -1105,9 +1105,9 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     Create an Extremal Region Filter for the 2nd stage classifier of N&M algorithm
     Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
 
-    In the second stage, the ERs that passed the first stage are classified into character 
+    In the second stage, the ERs that passed the first stage are classified into character
     and non-character classes using more informative but also more computationally expensive
-    features. The classifier uses all the features calculated in the first stage and the following 
+    features. The classifier uses all the features calculated in the first stage and the following
     additional features: hole area ratio, convex hull ratio, and number of outer inflexion points.
 
     \param  cb             Callback with the classifier
@@ -1121,7 +1121,7 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     Ptr<ERFilterNM> filter = new ERFilterNM();
 
-    
+
     if (cb == NULL)
         filter->setCallback(new ERClassifierNM2());
     else

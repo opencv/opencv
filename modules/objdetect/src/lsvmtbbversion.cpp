@@ -120,4 +120,3 @@ int tbbTasksThresholdFunctionalScore(const CvLSVMFilterObject **filters, const i
     return LATENT_SVM_OK;
 };
 #endif
-

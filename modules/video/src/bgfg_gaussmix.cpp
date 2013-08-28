@@ -470,4 +470,3 @@ Ptr<BackgroundSubtractorMOG> createBackgroundSubtractorMOG(int history, int nmix
 }
 
 /* End of file. */
-

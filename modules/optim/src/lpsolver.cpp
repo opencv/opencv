@@ -14,20 +14,20 @@ static void print_matrix(const Mat& x){
 }
 static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
     printf("\tprint simplex state\n");
-    
+
     printf("v=%g\n",v);
-    
+
     printf("here c goes\n");
     print_matrix(c);
-    
+
     printf("non-basic: ");
     print(Mat(N));
     printf("\n");
-    
+
     printf("here b goes\n");
     print_matrix(b);
     printf("basic: ");
-    
+
     print(Mat(B));
     printf("\n");
 }
@@ -185,7 +185,7 @@ static int initialize_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<
         if(indexToRow[I]<N.size()){
             dprintf(("I=%d from nonbasic\n",I));
             int iterator_offset=indexToRow[I];
-            c(0,iterator_offset)+=old_c(0,I);     
+            c(0,iterator_offset)+=old_c(0,I);
             print_matrix(c);
         }else{
             dprintf(("I=%d from basic\n",I));
@@ -272,7 +272,7 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
     }
 }
 
-static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B, 
+static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& N,vector<int>& B,
         int leaving_index,int entering_index,vector<unsigned int>& indexToRow){
     double Coef=b(leaving_index,entering_index);
     for(int i=0;i<b.cols;i++){
@@ -307,7 +307,7 @@ static inline void pivot(Mat_<double>& c,Mat_<double>& b,double& v,vector<int>& 
     }
     dprintf(("v was %g\n",v));
     v+=Coef*b(leaving_index,b.cols-1);
-    
+
     SWAP(int,N[entering_index],B[leaving_index]);
     SWAP(int,indexToRow[N[entering_index]],indexToRow[B[leaving_index]]);
 }

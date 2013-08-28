@@ -98,4 +98,3 @@ Use:
     # ./app -fps=aaa
     ERRORS:
     Exception: can not convert: [aaa] to [double]
-

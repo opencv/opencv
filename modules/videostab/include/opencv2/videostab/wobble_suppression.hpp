@@ -133,4 +133,3 @@ private:
 } // namespace cv
 
 #endif
-

@@ -125,9 +125,9 @@ designed mostly for development purposes. This approach is deprecated for the pr
 release package is recommended to communicate with OpenCV Manager via the async initialization
 described above.
 
-#. Add the OpenCV library project to your workspace the same way as for the async initialization 
+#. Add the OpenCV library project to your workspace the same way as for the async initialization
    above. Use menu :guilabel:`File -> Import -> Existing project in your workspace`,
-   press :guilabel:`Browse` button and select OpenCV SDK path 
+   press :guilabel:`Browse` button and select OpenCV SDK path
    (:file:`OpenCV-2.4.6-android-sdk/sdk`).
 
    .. image:: images/eclipse_opencv_dependency0.png

@@ -120,7 +120,7 @@ Finds keypoints in an image and computes their descriptors
     :param descriptors: The output descriptors. Pass ``cv::noArray()`` if you do not need it.
 
     :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
-    
+
 
 BRISK
 -----

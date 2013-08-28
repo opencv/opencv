@@ -460,6 +460,8 @@ include(cmake/OpenCVGenAndroidMK.cmake)
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake)
 
+# Generate Info.plist for the IOS framework
+include(cmake/OpenCVGenInfoPlist.cmake)
 
 # ----------------------------------------------------------------------------
 # Summary:
@@ -863,4 +865,3 @@ ocv_finalize_status()
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
   message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
-

@@ -1148,4 +1148,3 @@ CvStatus icvEstimate1DHMMStateParams(CvImgObsInfo** obs_info_array, int num_img,
 
 
 #endif
-

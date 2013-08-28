@@ -539,4 +539,3 @@ Writes the next video frame
     :param image: The written frame
 
 The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
-

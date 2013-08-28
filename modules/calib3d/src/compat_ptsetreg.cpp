@@ -428,4 +428,3 @@ CV_IMPL void cvConvertPointsHomogeneous( const CvMat* _src, CvMat* _dst )
             dst.convertTo(dst0, dst0.type());
     }
 }
-
