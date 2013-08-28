@@ -8,11 +8,11 @@
  * See LICENCE for full modification and redistribution details.
  * Copyright {{time.strftime("%Y", time.localtime())}} The OpenCV Foundation
  */
-#include "mex.h"
-#include "map.hpp"
-#include "bridge.hpp"
+#include <mex.h>
 #include <vector>
 #include <string>
+#include <opencv2/matlab/map.hpp>
+#include <opencv2/matlab/bridge.hpp>
 #include <opencv2/core.hpp>
 using namespace cv;
 

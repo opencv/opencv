@@ -15,7 +15,7 @@ typedef std::unordered_set<std::string> StringSet;
 #include <set>
 typedef std::set<std::string> StringSet;
 #endif
-#include "mex.h"
+#include <mex.h>
 #include "transpose.hpp"
 
 /*
@@ -488,6 +488,7 @@ private:
   struct Variant;
   typedef std::string String;
   typedef std::vector<std::string> StringVector;
+  typedef std::vector<size_t> IndexVector;
   typedef std::vector<MxArray> MxArrayVector;
   typedef std::vector<Variant> VariantVector;
   /* @class Variant
@@ -506,6 +507,7 @@ private:
     size_t nreq;
     size_t nopt;
     StringVector keys;
+    IndexVector order;
     bool using_named;
     /*! @brief return true if the named-argument is in the Variant */
     bool count(const String& key) { return std::find(keys.begin(), keys.end(), key) != keys.end(); }
@@ -529,6 +531,14 @@ private:
       return s.str();
     }
   };
+  void sortArguments(Variant& v, MxArrayVector& in, MxArrayVector& out) {
+    // allocate the output array with ALL arguments
+    out.resize(v.nreq + v.nopt);
+    // reorder the inputs based on the variant ordering
+    for (size_t n = 0; n < v.order.size(); ++n) {
+      swap(in[n], out[v.order[n]]);
+    }
+  }
   MxArrayVector filled_;
   VariantVector variants_;
   String valid_;

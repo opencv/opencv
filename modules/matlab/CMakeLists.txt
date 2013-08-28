@@ -276,22 +276,26 @@ endif()
 # ----------------------------------------------------------------------------
 # NOTE: Trailing slashes on the DIRECTORY paths are important!
 # TODO: What needs to be done with rpath????
-file(GLOB MATLAB_FUNCTIONS "${CMAKE_CURRENT_BINARY_DIR}/src/*.${MATLAB_MEXEXT}")
-file(GLOB MATLAB_CLASSES   "${CMAKE_CURRENT_BINARY_DIR}/+cv/*.m")
-file(GLOB MATLAB_PRIVATE   "${CMAKE_CURRENT_BINARY_DIR}/src/private/*.${MATLAB_MEXEXT}")
-install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
-        FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
-)
-install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv
-        FILES_MATCHING PATTERN "*.m"
-)
-install(DIRECTORY   ${CMAKE_CURRENT_BINARY_DIR}/+cv/private/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab/+cv/private
-        FILES_MATCHING PATTERN "*.${MATLAB_MEXEXT}"
-)
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/matlab
-        FILES_MATCHING PATTERN "cv.m"
+
+# install the +cv directory verbatim
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${OPENCV_INCLUDE_INSTALL_PATH})
+install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/+cv/     DESTINATION matlab/+cv)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cv.m         DESTINATION matlab)
+
+# update the custom mex compiler to point to the install locations
+string(REPLACE ";" "\\ " MEX_OPTS "${MEX_OPTS}")
+string(REPLACE ";" "\\ " MEX_LIBS "${MEX_LIBS}")
+string(REPLACE " " "\\ " MEX_CXXFLAGS ${MEX_CXXFLAGS})
+string(REPLACE ";" "\\ " MEX_INCLUDE_DIRS "${MEX_INCLUDE_DIRS}")
+install(CODE
+    "execute_process(
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
+            --opts=${MEX_OPTS}
+            --include_dirs=-I${CMAKE_INSTALL_PREFIX}/${OPENCV_INCLUDE_INSTALL_PATH}
+            --lib_dir=-L${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}
+            --libs=${MEX_LIBS}
+            --flags=${MEX_CXXFLAGS}
+            --outdir ${CMAKE_INSTALL_PREFIX}/matlab
+    )"
 )
