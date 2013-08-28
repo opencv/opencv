@@ -17,7 +17,6 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
 {
     vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New ();
     reader->SetFileName (file_name.c_str ());
-    reader->Update();
     
     vtkSmartPointer<vtkDataSet> data = reader->GetOutput();
     CV_Assert(data);

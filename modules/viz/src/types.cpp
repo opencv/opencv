@@ -72,11 +72,12 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
         reader->SetFileName(file.c_str());
         reader->Update();
+        
         vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput ();
+        CV_Assert(poly_data);
         
         vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints ();
         vtkIdType nr_points = mesh_points->GetNumberOfPoints ();
-        //vtkIdType nr_polygons = poly_data->GetNumberOfPolys ();
 
         mesh.cloud.create(1, nr_points, CV_32FC3);
 
@@ -89,18 +90,10 @@ struct cv::viz::Mesh3d::loadMeshImpl
         }
 
         // Then the color information, if any
-        vtkUnsignedCharArray* poly_colors = NULL;
-        if (poly_data->GetPointData() != NULL)
-            poly_colors = vtkUnsignedCharArray::SafeDownCast (poly_data->GetPointData ()->GetScalars ("Colors"));
-
-        // some applications do not save the name of scalars (including PCL's native vtk_io)
-        if (!poly_colors && poly_data->GetPointData () != NULL)
-            poly_colors = vtkUnsignedCharArray::SafeDownCast (poly_data->GetPointData ()->GetScalars ("scalars"));
-
-        if (!poly_colors && poly_data->GetPointData () != NULL)
-            poly_colors = vtkUnsignedCharArray::SafeDownCast (poly_data->GetPointData ()->GetScalars ("RGB"));
-
-        // TODO: currently only handles rgb values with 3 components
+        vtkUnsignedCharArray* poly_colors = 0;
+        if (poly_data->GetPointData())
+            poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
+              
         if (poly_colors && (poly_colors->GetNumberOfComponents () == 3))
         {
             mesh.colors.create(1, nr_points, CV_8UC3);
