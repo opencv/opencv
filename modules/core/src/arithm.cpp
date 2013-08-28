@@ -999,7 +999,7 @@ static void binary_op(InputArray _src1, InputArray _src2, OutputArray _dst,
             c = src1.channels();
         }
 
-        Size sz = getContinuousSize(src1, src2, dst);
+        Size_<size_t> sz = getContinuousSize(src1, src2, dst);
         size_t len = sz.width*(size_t)c;
         if( len == (size_t)(int)len )
         {
@@ -1264,7 +1264,7 @@ static void arithm_op(InputArray _src1, InputArray _src2, OutputArray _dst,
     {
         _dst.create(src1.size(), src1.type());
         Mat dst = _dst.getMat();
-        Size sz = getContinuousSize(src1, src2, dst, src1.channels());
+        Size_<size_t> sz = getContinuousSize(src1, src2, dst, src1.channels());
         tab[src1.depth()](src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, usrdata);
         return;
     }
@@ -2395,7 +2395,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
         int cn = src1.channels();
         _dst.create(src1.size(), CV_8UC(cn));
         Mat dst = _dst.getMat();
-        Size sz = getContinuousSize(src1, src2, dst, src1.channels());
+        Size_<size_t> sz = getContinuousSize(src1, src2, dst, src1.channels());
         getCmpFunc(src1.depth())(src1.data, src1.step, src2.data, src2.step, dst.data, dst.step, sz, &op);
         return;
     }

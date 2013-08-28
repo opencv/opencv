@@ -1076,7 +1076,7 @@ void cv::convertScaleAbs( InputArray _src, OutputArray _dst, double alpha, doubl
 
     if( src.dims <= 2 )
     {
-        Size sz = getContinuousSize(src, dst, cn);
+        Size_<size_t> sz = getContinuousSize(src, dst, cn);
         func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
     }
     else
@@ -1118,7 +1118,7 @@ void cv::Mat::convertTo(OutputArray _dst, int _type, double alpha, double beta) 
     {
         _dst.create( size(), _type );
         Mat dst = _dst.getMat();
-        Size sz = getContinuousSize(src, dst, cn);
+        Size_<size_t> sz = getContinuousSize(src, dst, cn);
         func( src.data, src.step, 0, 0, dst.data, dst.step, sz, scale );
     }
     else

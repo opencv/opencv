@@ -233,7 +233,7 @@ void Mat::copyTo( OutputArray _dst ) const
             uchar* dptr = dst.data;
 
             // to handle the copying 1xn matrix => nx1 std vector.
-            Size sz = size() == dst.size() ?
+            Size_<size_t> sz = size() == dst.size() ?
                 getContinuousSize(*this, dst) :
                 getContinuousSize(*this);
             size_t len = sz.width*elemSize();
@@ -286,7 +286,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 
     if( dims <= 2 )
     {
-        Size sz = getContinuousSize(*this, dst, mask, mcn);
+        Size_<size_t> sz = getContinuousSize(*this, dst, mask, mcn);
         copymask(data, step, mask.data, mask.step, dst.data, dst.step, sz, &esz);
         return;
     }
