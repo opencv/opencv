@@ -33,7 +33,9 @@ void cv::viz::Viz3d::create(const String &window_name)
 
 void cv::viz::Viz3d::release()
 {
-    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
+    // If the current referene count is equal to 2, we can delete it
+    // - 2 : because minimum there will be two instances, one of which is in the map
+    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 2)
     {
         // Erase the window
         cv::viz::VizAccessor::getInstance().remove(getWindowName());
