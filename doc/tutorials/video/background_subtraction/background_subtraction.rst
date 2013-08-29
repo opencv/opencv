@@ -270,7 +270,7 @@ We discuss the main parts of the above code:
           exit(EXIT_FAILURE);
         }
 
-#. Every frame is used both for calculating the foreground mask and for updating the background.
+#. Every frame is used both for calculating the foreground mask and for updating the background. If you want to change the learning rate used for updating the background model, it is possible to set a specific learning rate by passing a third parameter to the 'apply' method.
 
    .. code-block:: cpp
 
