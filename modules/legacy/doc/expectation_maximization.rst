@@ -5,6 +5,12 @@ This section describes obsolete ``C`` interface of EM algorithm. Details of the 
 
 .. highlight:: cpp
 
+.. note::
+
+   * An example on using the Expectation Maximalization algorithm can be found at opencv_source_code/samples/cpp/em.cpp
+
+   * (Python) An example using Expectation Maximalization for Gaussian Mixing can be found at opencv_source_code/samples/python2/gaussian_mix.py
+
 
 CvEMParams
 ----------
@@ -185,4 +191,3 @@ Reads the trained Gaussian mixture model from the file storage.
     :param fs: A file storage with the trained model.
 
     :param node: The parent map. If it is NULL, the function searches a node with parameters in all the top-level nodes (streams), starting with the first one.
-

@@ -487,4 +487,3 @@ inline int predictCategoricalStump( CascadeClassifier& cascade, Ptr<FeatureEvalu
     return 1;
 }
 }
-

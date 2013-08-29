@@ -44,7 +44,7 @@
 //M*/
 
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
@@ -79,7 +79,7 @@ TEST_P(PyrDown, Mat)
         Size size(MWIDTH, MHEIGHT);
         Mat src = randomMat(size, CV_MAKETYPE(type, channels));
         oclMat gsrc(src);
-        
+
         pyrDown(src, dst_cpu);
         pyrDown(gsrc, gdst);
 

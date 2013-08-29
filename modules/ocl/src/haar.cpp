@@ -262,7 +262,7 @@ static GpuHidHaarClassifierCascade * gpuCreateHidHaarClassifierCascade( CvHaarCl
     int datasize;
     int total_classifiers = 0;
     int total_nodes = 0;
-    char errorstr[100];
+    char errorstr[256];
 
     GpuHidHaarStageClassifier *stage_classifier_ptr;
     GpuHidHaarClassifier *haar_classifier_ptr;
@@ -1458,7 +1458,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             gimg1.release();
             gsum.release();
             gsqsum.release();
-        } 
+        }
         else if (!(m_flags & CV_HAAR_SCALE_IMAGE) && (flags & CV_HAAR_SCALE_IMAGE))
         {
             openCLSafeCall(clReleaseMemObject(((OclBuffers *)buffers)->newnodebuffer));
@@ -1476,7 +1476,7 @@ void cv::ocl::OclCascadeClassifierBuf::CreateFactorRelatedBufs(
             {
                 return;
             }
-        } 
+        }
         else
         {
             if (fabs(m_scaleFactor - scaleFactor) < 1e-6

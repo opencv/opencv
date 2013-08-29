@@ -42,11 +42,20 @@
 
 #include "precomp.hpp"
 
+#ifdef _MSC_VER
+# if _MSC_VER >= 1700
+#  pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+# endif
+#endif
+
 #if defined WIN32 || defined _WIN32 || defined WINCE
 #ifndef _WIN32_WINNT           // This is needed for the declaration of TryEnterCriticalSection in winbase.h with Visual Studio 2005 (and older?)
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
 #include <windows.h>
+#if (_WIN32_WINNT >= 0x0602)
+  #include <synchapi.h>
+#endif
 #undef small
 #undef min
 #undef max
@@ -74,6 +83,30 @@
         }
     }
   #endif
+#endif
+
+#ifdef HAVE_WINRT
+#include <wrl/client.h>
+
+std::wstring GetTempPathWinRT()
+{
+    return std::wstring(Windows::Storage::ApplicationData::Current->TemporaryFolder->Path->Data());
+}
+
+std::wstring GetTempFileNameWinRT(std::wstring prefix)
+{
+    wchar_t guidStr[40];
+    GUID g;
+    CoCreateGuid(&g);
+    wchar_t* mask = L"%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
+    swprintf(&guidStr[0], sizeof(guidStr)/sizeof(wchar_t), mask,
+             g.Data1, g.Data2, g.Data3, UINT(g.Data4[0]), UINT(g.Data4[1]),
+             UINT(g.Data4[2]), UINT(g.Data4[3]), UINT(g.Data4[4]),
+             UINT(g.Data4[5]), UINT(g.Data4[6]), UINT(g.Data4[7]));
+
+    return prefix + std::wstring(guidStr);
+}
+
 #endif
 #else
 #include <pthread.h>
@@ -359,12 +392,39 @@ string format( const char* fmt, ... )
 
 string tempfile( const char* suffix )
 {
+#ifdef HAVE_WINRT
+    std::wstring temp_dir = L"";
+    const wchar_t* opencv_temp_dir = _wgetenv(L"OPENCV_TEMP_PATH");
+    if (opencv_temp_dir)
+        temp_dir = std::wstring(opencv_temp_dir);
+#else
     const char *temp_dir = getenv("OPENCV_TEMP_PATH");
+#endif
     string fname;
 
 #if defined WIN32 || defined _WIN32
-    char temp_dir2[MAX_PATH + 1] = { 0 };
-    char temp_file[MAX_PATH + 1] = { 0 };
+#ifdef HAVE_WINRT
+    RoInitialize(RO_INIT_MULTITHREADED);
+    std::wstring temp_dir2;
+    if (temp_dir.empty())
+        temp_dir = GetTempPathWinRT();
+
+    std::wstring temp_file;
+    temp_file = GetTempFileNameWinRT(L"ocv");
+    if (temp_file.empty())
+        return std::string();
+
+    temp_file = temp_dir + std::wstring(L"\\") + temp_file;
+    DeleteFileW(temp_file.c_str());
+
+    char aname[MAX_PATH];
+    size_t copied = wcstombs(aname, temp_file.c_str(), MAX_PATH);
+    CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+    fname = std::string(aname);
+    RoUninitialize();
+#else
+    char temp_dir2[MAX_PATH] = { 0 };
+    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir == 0 || temp_dir[0] == 0)
     {
@@ -377,6 +437,7 @@ string tempfile( const char* suffix )
     DeleteFileA(temp_file);
 
     fname = temp_file;
+#endif
 # else
 #  ifdef ANDROID
     //char defaultTemplate[] = "/mnt/sdcard/__opencv_temp.XXXXXX";
@@ -468,40 +529,6 @@ redirectError( CvErrorCallback errCallback, void* userdata, void** prevUserdata)
 }
 
 }
-
-/*CV_IMPL int
-cvGuiBoxReport( int code, const char *func_name, const char *err_msg,
-                const char *file, int line, void* )
-{
-#if (!defined WIN32 && !defined _WIN32) || defined WINCE
-    return cvStdErrReport( code, func_name, err_msg, file, line, 0 );
-#else
-    if( code != CV_StsBackTrace && code != CV_StsAutoTrace )
-    {
-        size_t msg_len = strlen(err_msg ? err_msg : "") + 1024;
-        char* message = (char*)alloca(msg_len);
-        char title[100];
-
-        wsprintf( message, "%s (%s)\nin function %s, %s(%d)\n\n"
-                  "Press \"Abort\" to terminate application.\n"
-                  "Press \"Retry\" to debug (if the app is running under debugger).\n"
-                  "Press \"Ignore\" to continue (this is not safe).\n",
-                  cvErrorStr(code), err_msg ? err_msg : "no description",
-                  func_name, file, line );
-
-        wsprintf( title, "OpenCV GUI Error Handler" );
-
-        int answer = MessageBox( NULL, message, title, MB_ICONERROR|MB_ABORTRETRYIGNORE|MB_SYSTEMMODAL );
-
-        if( answer == IDRETRY )
-        {
-            CV_DBG_BREAK();
-        }
-        return answer != IDIGNORE;
-    }
-    return 0;
-#endif
-}*/
 
 CV_IMPL int cvCheckHardwareSupport(int feature)
 {
@@ -779,7 +806,11 @@ cvGetModuleInfo( const char* name, const char **version, const char **plugin_lis
         *plugin_list = plugin_list_buf;
 }
 
-#if defined BUILD_SHARED_LIBS && defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#if defined CVAPI_EXPORTS && defined WIN32 && !defined WINCE
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+#endif
+
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID );
 
 BOOL WINAPI DllMain( HINSTANCE, DWORD  fdwReason, LPVOID )
@@ -800,7 +831,15 @@ namespace cv
 
 struct Mutex::Impl
 {
-    Impl() { InitializeCriticalSection(&cs); refcount = 1; }
+    Impl()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        ::InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        ::InitializeCriticalSection(&cs);
+#endif
+        refcount = 1;
+    }
     ~Impl() { DeleteCriticalSection(&cs); }
 
     void lock() { EnterCriticalSection(&cs); }

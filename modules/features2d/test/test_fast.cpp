@@ -134,4 +134,3 @@ void CV_FastTest::run( int )
 }
 
 TEST(Features2d_FAST, regression) { CV_FastTest test; test.safe_run(); }
-

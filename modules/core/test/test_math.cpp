@@ -2457,7 +2457,7 @@ TEST(Core_Invert, small)
 {
     cv::Mat a = (cv::Mat_<float>(3,3) << 2.42104644730331, 1.81444796521479, -3.98072565304758, 0, 7.08389214348967e-3, 5.55326770986007e-3, 0,0, 7.44556154284261e-3);
     //cv::randu(a, -1, 1);
-    
+
     cv::Mat b = a.t()*a;
     cv::Mat c, i = Mat_<float>::eye(3, 3);
     cv::invert(b, c, cv::DECOMP_LU); //std::cout << b*c << std::endl;
@@ -2643,4 +2643,3 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
 }
 
 /* End of file. */
-

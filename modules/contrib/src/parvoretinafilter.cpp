@@ -228,4 +228,3 @@ void ParvoRetinaFilter::_OPL_OnOffWaysComputing() // WARNING : this method requi
 #endif
 }
 }
-

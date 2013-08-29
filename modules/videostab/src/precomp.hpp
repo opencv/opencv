@@ -43,9 +43,7 @@
 #ifndef __OPENCV_PRECOMP_HPP__
 #define __OPENCV_PRECOMP_HPP__
 
-#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
-#endif
 
 #include <stdexcept>
 #include <iostream>
@@ -82,4 +80,3 @@ template <typename T> inline const T& at(int index, const std::vector<T> &items)
 }
 
 #endif
-

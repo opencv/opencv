@@ -173,7 +173,7 @@ namespace tvl1flow
                    PtrStepSzf grad, PtrStepSzf rho_c,
                    PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22,
                    PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf error,
-                   float l_t, float theta);
+                   float l_t, float theta, bool calcError);
     void estimateDualVariables(PtrStepSzf u1, PtrStepSzf u2, PtrStepSzf p11, PtrStepSzf p12, PtrStepSzf p21, PtrStepSzf p22, float taut);
 }
 
@@ -218,11 +218,24 @@ void cv::gpu::OpticalFlowDual_TVL1_GPU::procOneScale(const GpuMat& I0, const Gpu
         warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c);
 
         double error = numeric_limits<double>::max();
+        double prevError = 0.0;
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
-            estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, diff, l_t, static_cast<float>(theta));
+            // some tweaks to make sum operation less frequently
+            bool calcError = (epsilon > 0) && (n & 0x1) && (prevError < scaledEpsilon);
 
-            error = gpu::sum(diff, norm_buf)[0];
+            estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22, u1, u2, diff, l_t, static_cast<float>(theta), calcError);
+
+            if (calcError)
+            {
+                error = gpu::sum(diff, norm_buf)[0];
+                prevError = error;
+            }
+            else
+            {
+                error = numeric_limits<double>::max();
+                prevError -= scaledEpsilon;
+            }
 
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);
         }

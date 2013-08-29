@@ -13,7 +13,7 @@ Images
 Load an image from a file: ::
 
     Mat img = imread(filename)
-    
+
 If you read a jpg file, a 3 channel image is created by default. If you need a grayscale image, use: ::
 
     Mat img = imread(filename, 0);
@@ -23,14 +23,14 @@ If you read a jpg file, a 3 channel image is created by default. If you need a g
 Save an image to a file: ::
 
     imwrite(filename, img);
-    
+
 .. note:: format of the file is determined by its extension.
 
 .. note:: use ``imdecode`` and ``imencode`` to read and write image from/to memory rather than a file.
 
 XML/YAML
 --------
-    
+
 TBD
 
 Basic operations with images
@@ -71,7 +71,7 @@ There are functions in OpenCV, especially from calib3d module, such as ``project
     //... fill the array
     Mat pointsMat = Mat(points);
 
-One can access a point in this matrix using the same method ``Mat::at`` : 
+One can access a point in this matrix using the same method ``Mat::at`` :
 
 ::
 
@@ -87,7 +87,7 @@ Memory management and reference counting
     // .. fill the array
     Mat pointsMat = Mat(points).reshape(1);
 
-As a result we get a 32FC1 matrix with 3 columns instead of 32FC3 matrix with 1 column. ``pointsMat`` uses data from ``points`` and will not deallocate the memory when destroyed. In this particular instance, however, developer has to make sure that lifetime of ``points`` is longer than of ``pointsMat``. 
+As a result we get a 32FC1 matrix with 3 columns instead of 32FC3 matrix with 1 column. ``pointsMat`` uses data from ``points`` and will not deallocate the memory when destroyed. In this particular instance, however, developer has to make sure that lifetime of ``points`` is longer than of ``pointsMat``.
 If we need to copy the data, this is done using, for example, ``Mat::copyTo`` or ``Mat::clone``: ::
 
     Mat img = imread("image.jpg");
@@ -117,7 +117,7 @@ A convertion from ``Mat`` to C API data structures: ::
     IplImage img1 = img;
     CvMat m = img;
 
-Note that there is no data copying here. 
+Note that there is no data copying here.
 
 Conversion from color to grey scale: ::
 

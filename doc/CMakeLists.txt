@@ -49,7 +49,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
     set(toc_file "${OPENCV_MODULE_opencv_${mod}_LOCATION}/doc/${mod}.rst")
     if(EXISTS "${toc_file}")
       file(RELATIVE_PATH toc_file "${OpenCV_SOURCE_DIR}/modules" "${toc_file}")
-      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${toc_file}\r\n")
+      set(OPENCV_REFMAN_TOC "${OPENCV_REFMAN_TOC}   ${toc_file}\n")
     endif()
   endforeach()
 

@@ -304,4 +304,3 @@ Formatted::Formatted(const Mat& _m, const Formatter* _fmt, const int* _params)
 }
 
 }
-

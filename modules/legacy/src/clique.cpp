@@ -706,4 +706,3 @@ void cvBronKerbosch( CvGraph* graph )
 }//end cvBronKerbosch
 
 #endif
-

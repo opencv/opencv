@@ -499,5 +499,3 @@ Face * FaceDetectionList::GetData()
     m_pCurElem = m_pCurElem->m_pNext;
     return m_pCurElem->m_pFace;
 }//Face * FaceDetectionList::GetData()
-
-

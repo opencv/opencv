@@ -103,7 +103,7 @@ namespace cv
         {
             // FIXME!
             //   always use naive until convolve is imported
-            return true; 
+            return true;
         }
 
         //////////////////////////////////////////////////////////////////////
@@ -120,7 +120,7 @@ namespace cv
             else
             {
                 buf.image_sqsums.resize(1);
-                
+
                 // TODO, add double support for ocl::integral
                 // use CPU integral temporarily
                 Mat sums, sqsums;
@@ -360,7 +360,7 @@ namespace cv
             }
             else
             {
-                
+
                 split(image, buf.images);
                 templ_sum = sum(templ) / templ.size().area();
                 buf.image_sums.resize(buf.images.size());

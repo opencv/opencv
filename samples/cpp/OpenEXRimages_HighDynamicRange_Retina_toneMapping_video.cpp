@@ -357,5 +357,3 @@ static void loadNewFrame(const std::string filenamePrototype, const int currentF
 
      return 0;
  }
-
-

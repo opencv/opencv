@@ -418,4 +418,3 @@ void BackgroundSubtractorMOG::operator()(InputArray _image, OutputArray _fgmask,
 }
 
 /* End of file. */
-

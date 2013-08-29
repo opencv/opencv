@@ -111,7 +111,7 @@ An example. If the haar-cascade is at ``C:/opencv/data/haarcascades/haarcascade_
 
     facerec_video.exe C:/opencv/data/haarcascades/haarcascade_frontalface_default.xml C:/facerec/data/celebrities.txt 1
 
-That's it. 
+That's it.
 
 Results
 -------
@@ -205,5 +205,3 @@ Here are some examples:
 +---------------------------------+----------------------------------------------------------------------------+
 | 0.2 (20%), 0.2 (20%), (70,70)   | .. image:: ../img/tutorial/gender_classification/arnie_20_20_70_70.jpg     |
 +---------------------------------+----------------------------------------------------------------------------+
-
-

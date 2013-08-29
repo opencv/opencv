@@ -562,7 +562,17 @@ PERF_TEST_P(Sz, ImgProc_CalcHist,
     }
     else
     {
-        FAIL_NO_CPU();
+        cv::Mat dst;
+
+        const int hbins = 256;
+        const float hranges[] = {0.0f, 256.0f};
+        const int histSize[] = {hbins};
+        const float* ranges[] = {hranges};
+        const int channels[] = {0};
+
+        TEST_CYCLE() cv::calcHist(&src, 1, channels, cv::Mat(), dst, 1, histSize, ranges);
+
+        CPU_SANITY_CHECK(dst);
     }
 }
 
@@ -874,7 +884,7 @@ PERF_TEST_P(Sz_KernelSz_Ccorr, ImgProc_Convolve,
 
         TEST_CYCLE() cv::gpu::convolve(d_image, d_templ, dst, ccorr, d_buf);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }
     else
     {

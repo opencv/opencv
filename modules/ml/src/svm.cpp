@@ -2949,4 +2949,3 @@ cvTrainSVM_CrossValidation( const CvMat* train_data, int tflag,
 #endif
 
 /* End of file. */
-

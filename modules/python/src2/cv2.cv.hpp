@@ -510,7 +510,11 @@ static void arrayinterface_common(PyArrayInterface *s, int mtype)
     assert(0);
   }
 
+#ifdef NPY_1_7_API_VERSION
+  s->flags = NPY_ARRAY_WRITEABLE | NPY_ARRAY_NOTSWAPPED;
+#else
   s->flags = NPY_WRITEABLE | NPY_NOTSWAPPED;
+#endif
 }
 
 static PyObject *cvmat_array_struct(cvmat_t *cva)
@@ -4050,4 +4054,3 @@ static PyObject* init_cv()
 
   return m;
 }
-

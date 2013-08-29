@@ -309,7 +309,7 @@ enum
     // alpha premultiplication
     CV_RGBA2mRGBA = 125,
     CV_mRGBA2RGBA = 126,
-    
+
     CV_RGB2YUV_I420 = 127,
     CV_BGR2YUV_I420 = 128,
     CV_RGB2YUV_IYUV = CV_RGB2YUV_I420,

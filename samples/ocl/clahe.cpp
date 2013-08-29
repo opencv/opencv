@@ -46,7 +46,7 @@ int main(int argc, char** argv)
     createTrackbar("Clip Limit", "CLAHE", &cliplimit, 20, (TrackbarCallback)Clip_Callback);
     Mat frame, outframe;
     ocl::oclMat d_outframe;
-    
+
     int cur_clip;
     Size cur_tilesize;
     if(use_cpu)

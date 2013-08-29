@@ -4,9 +4,9 @@ File Input and Output using XML and YAML files
 **********************************************
 
 Goal
-==== 
+====
 
-You'll find answers for the following questions: 
+You'll find answers for the following questions:
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -18,7 +18,7 @@ You'll find answers for the following questions:
 Source code
 ===========
 
-You can :download:`download this from here <../../../../samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp>` or find it in the :file:`samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code library. 
+You can :download:`download this from here <../../../../samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp>` or find it in the :file:`samples/cpp/tutorial_code/core/file_input_output/file_input_output.cpp` of the OpenCV source code library.
 
 Here's a sample code of how to achieve all the stuff enumerated at the goal list.
 
@@ -31,9 +31,9 @@ Here's a sample code of how to achieve all the stuff enumerated at the goal list
 Explanation
 ===========
 
-Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may have only one of these extensions and the structure coming from this. They are two kinds of data structures you may serialize: *mappings* (like the STL map) and *element sequence* (like the STL vector>. The difference between these is that in a map every element has a unique name through what you may access it. For sequences you need to go through them to query a specific item. 
+Here we talk only about XML and YAML file inputs. Your output (and its respective input) file may have only one of these extensions and the structure coming from this. They are two kinds of data structures you may serialize: *mappings* (like the STL map) and *element sequence* (like the STL vector>. The difference between these is that in a map every element has a unique name through what you may access it. For sequences you need to go through them to query a specific item.
 
-1. **XML\\YAML File Open and Close.** Before you write any content to such file you need to open it and at the end to close it. The XML\YAML data structure in OpenCV is :xmlymlpers:`FileStorage <filestorage>`. To specify that this structure to which file binds on your hard drive you can use either its constructor or the *open()* function of this: 
+1. **XML\\YAML File Open and Close.** Before you write any content to such file you need to open it and at the end to close it. The XML\YAML data structure in OpenCV is :xmlymlpers:`FileStorage <filestorage>`. To specify that this structure to which file binds on your hard drive you can use either its constructor or the *open()* function of this:
 
    .. code-block:: cpp
 
@@ -42,29 +42,29 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
       \\...
       fs.open(filename, FileStorage::READ);
 
-   Either one of this you use the second argument is a constant specifying the type of operations you'll be able to on them: WRITE, READ or APPEND. The extension specified in the file name also determinates the output format that will be used. The output may be even compressed if you specify an extension such as *.xml.gz*. 
+   Either one of this you use the second argument is a constant specifying the type of operations you'll be able to on them: WRITE, READ or APPEND. The extension specified in the file name also determinates the output format that will be used. The output may be even compressed if you specify an extension such as *.xml.gz*.
 
-   The file automatically closes when the :xmlymlpers:`FileStorage <filestorage>` objects is destroyed. However, you may explicitly call for this by using the *release* function: 
-   
+   The file automatically closes when the :xmlymlpers:`FileStorage <filestorage>` objects is destroyed. However, you may explicitly call for this by using the *release* function:
+
    .. code-block:: cpp
 
       fs.release();                                       // explicit close
 
-#. **Input and Output of text and numbers.** The data structure uses the same << output operator that the STL library. For outputting any type of data structure we need first to specify its name. We do this by just simply printing out the name of this. For basic types you may follow this with the print of the value : 
+#. **Input and Output of text and numbers.** The data structure uses the same << output operator that the STL library. For outputting any type of data structure we need first to specify its name. We do this by just simply printing out the name of this. For basic types you may follow this with the print of the value :
 
    .. code-block:: cpp
 
       fs << "iterationNr" << 100;
 
-   Reading in is a simple addressing (via the [] operator) and casting operation or a read via the >> operator : 
+   Reading in is a simple addressing (via the [] operator) and casting operation or a read via the >> operator :
 
    .. code-block:: cpp
 
-      int itNr; 
+      int itNr;
       fs["iterationNr"] >> itNr;
       itNr = (int) fs["iterationNr"];
 
-#. **Input\\Output of OpenCV Data structures.** Well these behave exactly just as the basic C++ types: 
+#. **Input\\Output of OpenCV Data structures.** Well these behave exactly just as the basic C++ types:
 
    .. code-block:: cpp
 
@@ -77,7 +77,7 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
       fs["R"] >> R;                                      // Read cv::Mat
       fs["T"] >> T;
 
-#. **Input\\Output of vectors (arrays) and associative maps.** As I mentioned beforehand we can output maps and sequences (array, vector) too. Again we first print the name of the variable and then we have to specify if our output is either a sequence or map. 
+#. **Input\\Output of vectors (arrays) and associative maps.** As I mentioned beforehand we can output maps and sequences (array, vector) too. Again we first print the name of the variable and then we have to specify if our output is either a sequence or map.
 
    For sequence before the first element print the "[" character and after the last one the "]" character:
 
@@ -95,7 +95,7 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
         fs << "{" << "One" << 1;
         fs <<        "Two" << 2 << "}";
 
-   To read from these we use the :xmlymlpers:`FileNode <filenode>` and the :xmlymlpers:`FileNodeIterator <filenodeiterator>` data structures. The [] operator of the :xmlymlpers:`FileStorage <filestorage>` class returns a :xmlymlpers:`FileNode <filenode>` data type. If the node is sequential we can use the :xmlymlpers:`FileNodeIterator <filenodeiterator>` to iterate through the items: 
+   To read from these we use the :xmlymlpers:`FileNode <filenode>` and the :xmlymlpers:`FileNodeIterator <filenodeiterator>` data structures. The [] operator of the :xmlymlpers:`FileStorage <filestorage>` class returns a :xmlymlpers:`FileNode <filenode>` data type. If the node is sequential we can use the :xmlymlpers:`FileNodeIterator <filenodeiterator>` to iterate through the items:
 
    .. code-block:: cpp
 
@@ -115,8 +115,8 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
    .. code-block:: cpp
 
       n = fs["Mapping"];                                // Read mappings from a sequence
-      cout << "Two  " << (int)(n["Two"]) << "; "; 
-      cout << "One  " << (int)(n["One"]) << endl << endl; 
+      cout << "Two  " << (int)(n["Two"]) << "; ";
+      cout << "One  " << (int)(n["One"]) << endl << endl;
 
 #. **Read and write your own data structures.** Suppose you have a data structure such as:
 
@@ -148,7 +148,7 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
         id = (string)node["id"];
       }
 
-   Then you need to add the following functions definitions outside the class: 
+   Then you need to add the following functions definitions outside the class:
 
    .. code-block:: cpp
 
@@ -175,17 +175,17 @@ Here we talk only about XML and YAML file inputs. Your output (and its respectiv
       fs << "MyData" << m;                                // your own data structures
       fs["MyData"] >> m;                                 // Read your own structure_
 
-   Or to try out reading a non-existing read: 
+   Or to try out reading a non-existing read:
 
    .. code-block:: cpp
 
-      fs["NonExisting"] >> m;   // Do not add a fs << "NonExisting" << m command for this to work 
+      fs["NonExisting"] >> m;   // Do not add a fs << "NonExisting" << m command for this to work
       cout << endl << "NonExisting = " << endl << m << endl;
 
 Result
 ======
 
-Well mostly we just print out the defined numbers. On the screen of your console you could see: 
+Well mostly we just print out the defined numbers. On the screen of your console you could see:
 
 .. code-block:: bash
 
@@ -212,7 +212,7 @@ Well mostly we just print out the defined numbers. On the screen of your console
 
    Tip: Open up output.xml with a text editor to see the serialized data.
 
-Nevertheless, it's much more interesting what you may see in the output xml file: 
+Nevertheless, it's much more interesting what you may see in the output xml file:
 
 .. code-block:: xml
 
@@ -242,7 +242,7 @@ Nevertheless, it's much more interesting what you may see in the output xml file
      <id>mydata1234</id></MyData>
    </opencv_storage>
 
-Or the YAML file: 
+Or the YAML file:
 
 .. code-block:: yaml
 
@@ -277,4 +277,3 @@ You may observe a runtime instance of this on the `YouTube here <https://www.you
   <div align="center">
   <iframe title="File Input and Output using XML and YAML files in OpenCV" width="560" height="349" src="http://www.youtube.com/embed/A4yqVnByMMM?rel=0&loop=1" frameborder="0" allowfullscreen align="middle"></iframe>
   </div>
-

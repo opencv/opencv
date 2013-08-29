@@ -61,4 +61,3 @@ if __name__ == '__main__':
         if need_update:
             update()
     cv2.destroyAllWindows()
-

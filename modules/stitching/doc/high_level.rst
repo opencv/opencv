@@ -57,9 +57,9 @@ High level image stitcher. It's possible to use this class without being aware o
 
         const cv::Mat& matchingMask() const { return matching_mask_; }
         void setMatchingMask(const cv::Mat &mask)
-        { 
+        {
             CV_Assert(mask.type() == CV_8U && mask.cols == mask.rows);
-            matching_mask_ = mask.clone(); 
+            matching_mask_ = mask.clone();
         }
 
         Ptr<detail::BundleAdjusterBase> bundleAdjuster() { return bundle_adjuster_; }
@@ -84,9 +84,14 @@ High level image stitcher. It's possible to use this class without being aware o
         const Ptr<detail::Blender> blender() const { return blender_; }
         void setBlender(Ptr<detail::Blender> blender) { blender_ = blender; }
 
-    private: 
+    private:
         /* hidden */
     };
+
+.. note::
+
+   * A basic example on image stitching can be found at opencv_source_code/samples/cpp/stitching.cpp
+   * A detailed example on image stitching can be found at opencv_source_code/samples/cpp/stitching_detailed.cpp
 
 Stitcher::createDefault
 -----------------------
@@ -112,7 +117,7 @@ These functions try to match the given images and to estimate rotations of each 
     :param images: Input images.
 
     :param rois: Region of interest rectangles.
-    
+
     :return: Status code.
 
 Stitcher::composePanorama
@@ -127,7 +132,7 @@ These functions try to compose the given images (or images stored internally fro
 .. ocv:function:: Status Stitcher::composePanorama(InputArray images, OutputArray pano)
 
     :param images: Input images.
-    
+
     :param pano: Final pano.
 
     :return: Status code.
@@ -142,7 +147,7 @@ These functions try to stitch the given images.
 .. ocv:function:: Status Stitcher::stitch(InputArray images, const std::vector<std::vector<Rect> > &rois, OutputArray pano)
 
     :param images: Input images.
-    
+
     :param rois: Region of interest rectangles.
 
     :param pano: Final pano.
@@ -203,4 +208,3 @@ Spherical warper factory class. ::
     };
 
 .. seealso:: :ocv:class:`detail::SphericalWarper`
-

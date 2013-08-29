@@ -80,4 +80,3 @@
 #endif //__cplusplus
 
 #endif // __OPENCV_OLD_CV_H_
-

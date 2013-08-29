@@ -207,5 +207,3 @@ const std::valarray<float> &MagnoRetinaFilter::runFilter(const std::valarray<flo
     return (*_magnoYOutput);
 }
 }
-
-

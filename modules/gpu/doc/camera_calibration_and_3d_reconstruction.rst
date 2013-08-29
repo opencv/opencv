@@ -44,7 +44,11 @@ The class also performs pre- and post-filtering steps: Sobel pre-filtering (if `
 
 This means that the input left image is low textured.
 
+.. note::
 
+   * A basic stereo matching example can be found at opencv_source_code/samples/gpu/stereo_match.cpp
+   * A stereo matching example using several GPU's can be found at opencv_source_code/samples/gpu/stereo_multi.cpp
+   * A stereo matching example using several GPU's and driver API can be found at opencv_source_code/samples/gpu/driver_api_stereo_multi.cpp
 
 gpu::StereoBM_GPU::StereoBM_GPU
 -----------------------------------

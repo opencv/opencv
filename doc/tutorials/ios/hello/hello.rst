@@ -19,7 +19,7 @@ Follow this step by step guide to link OpenCV to iOS.
 
 1. Create a new XCode project.
 
-2. Now we need to link *opencv2.framework* with Xcode. Select the project Navigator in the left hand panel and click on project name.  
+2. Now we need to link *opencv2.framework* with Xcode. Select the project Navigator in the left hand panel and click on project name.
 
 3. Under the TARGETS click on Build Phases. Expand Link Binary With Libraries option.
 
@@ -29,10 +29,10 @@ Follow this step by step guide to link OpenCV to iOS.
 
 .. image:: images/linking_opencv_ios.png
      :alt: OpenCV iOS in Xcode
-     :align: center 
+     :align: center
 
 *Hello OpenCV iOS Application*
-=============================== 
+===============================
 
 Now we will learn how to write a simple Hello World Application in Xcode using OpenCV.
 
@@ -43,13 +43,13 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 
 .. code-block:: cpp
 
-	#ifdef __cplusplus
-	#import <opencv2/opencv.hpp>
-	#endif
+        #ifdef __cplusplus
+        #import <opencv2/opencv.hpp>
+        #endif
 
 .. image:: images/header_directive.png
      :alt: header
-     :align: center 
+     :align: center
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -61,7 +61,7 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 
 .. image:: images/view_did_load.png
      :alt: view did load
-     :align: center 
+     :align: center
 
 .. container:: enumeratevisibleitemswithsquare
 
@@ -73,4 +73,3 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 .. image:: images/output.png
      :alt: output
      :align: center
-                

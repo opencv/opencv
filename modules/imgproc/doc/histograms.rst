@@ -99,7 +99,12 @@ input arrays at the same location. The sample below shows how to compute a 2D Hu
         waitKey();
     }
 
+.. note::
 
+   * An example for creating histograms of an image can be found at opencv_source_code/samples/cpp/demhist.cpp
+
+   * (Python) An example for creating color histograms can be found at opencv_source/samples/python2/color_histogram.py
+   * (Python) An example illustrating RGB and grayscale histogram plotting can be found at opencv_source/samples/python2/hist.py
 
 
 calcBackProject
@@ -174,7 +179,7 @@ Compares two histograms.
             * **CV_COMP_INTERSECT**     Intersection
 
             * **CV_COMP_BHATTACHARYYA**     Bhattacharyya distance
-            
+
             * **CV_COMP_HELLINGER**     Synonym for ``CV_COMP_BHATTACHARYYA``
 
 The functions ``compareHist`` compare two dense or two sparse histograms using the specified method:

@@ -119,7 +119,7 @@ namespace cv
         CV_EXPORTS void setDevice(Info &oclinfo, int devnum = 0);
 
         //The two functions below enable other opencl program to use ocl module's cl_context and cl_command_queue
-        //returns cl_context * 
+        //returns cl_context *
         CV_EXPORTS void* getoclContext();
         //returns cl_command_queue *
         CV_EXPORTS void* getoclCommandQueue();
@@ -183,8 +183,8 @@ namespace cv
 
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
-        // compiled OpenCL program to be cached to the path automatically as "path/*.clb" 
-        // binary file, which will be reused when the OpenCV executable is started again. 
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
+        // binary file, which will be reused when the OpenCV executable is started again.
         //
         // Caching mode is controlled by the following enums
         // Notes
@@ -201,7 +201,7 @@ namespace cv
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
-        //! set where binary cache to be saved to 
+        //! set where binary cache to be saved to
         CV_EXPORTS void setBinpath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
@@ -514,10 +514,10 @@ namespace cv
         CV_EXPORTS void calcHist(const oclMat &mat_src, oclMat &mat_hist);
         //! only 8UC1 and 256 bins is supported now
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
-        
+
         //! only 8UC1 is supported now
         CV_EXPORTS Ptr<cv::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
-        
+
         //! bilateralFilter
         // supports 8UC1 8UC4
         CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
@@ -691,7 +691,7 @@ namespace cv
         //! returns 2D filter with the specified kernel
         // supports CV_8UC1 and CV_8UC4 types
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
-                Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
@@ -833,6 +833,18 @@ namespace cv
         CV_EXPORTS void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
         CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
+
+        /////////////////////////////////// ML ///////////////////////////////////////////
+
+        //! Compute closest centers for each lines in source and lable it after center's index
+        // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
+        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
+
+        //!Does k-means procedure on GPU
+        // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
+        CV_EXPORTS double kmeans(const oclMat &src, int K, oclMat &bestLabels,
+                                     TermCriteria criteria, int attemps, int flags, oclMat &centers);
+
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
@@ -1661,6 +1673,31 @@ namespace cv
             oclMat diff_buf;
             oclMat norm_buf;
         };
+        // current supported sorting methods
+        enum
+        {
+            SORT_BITONIC,   // only support power-of-2 buffer size
+            SORT_SELECTION, // cannot sort duplicate keys
+            SORT_MERGE,
+            SORT_RADIX      // only support signed int/float keys(CV_32S/CV_32F)
+        };
+        //! Returns the sorted result of all the elements in input based on equivalent keys.
+        //
+        //  The element unit in the values to be sorted is determined from the data type,
+        //  i.e., a CV_32FC2 input {a1a2, b1b2} will be considered as two elements, regardless its
+        //  matrix dimension.
+        //  both keys and values will be sorted inplace
+        //  Key needs to be single channel oclMat.
+        //
+        //  Example:
+        //  input -
+        //    keys   = {2,    3,   1}   (CV_8UC1)
+        //    values = {10,5, 4,3, 6,2} (CV_8UC2)
+        //  sortByKey(keys, values, SORT_SELECTION, false);
+        //  output -
+        //    keys   = {1,    2,   3}   (CV_8UC1)
+        //    values = {6,2, 10,5, 4,3} (CV_8UC2)
+        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200

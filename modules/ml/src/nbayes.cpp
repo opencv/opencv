@@ -623,4 +623,3 @@ float CvNormalBayesClassifier::predict( const Mat& _samples, Mat* _results ) con
 }
 
 /* End of file. */
-

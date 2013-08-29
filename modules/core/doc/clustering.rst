@@ -66,6 +66,12 @@ Basically, you can use only the core of the function, set the number of
 attempts to 1, initialize labels each time using a custom algorithm, pass them with the
 ( ``flags`` = ``KMEANS_USE_INITIAL_LABELS`` ) flag, and then choose the best (most-compact) clustering.
 
+.. note::
+
+   * An example on K-means clustering can be found at opencv_source_code/samples/cpp/kmeans.cpp
+
+   * (Python) An example on K-means clustering can be found at opencv_source_code/samples/python2/kmeans.py
+
 partition
 -------------
 Splits an element set into equivalency classes.
@@ -74,8 +80,8 @@ Splits an element set into equivalency classes.
 
     :param vec: Set of elements stored as a vector.
 
-    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .   
-    
+    :param labels: Output vector of labels. It contains as many elements as  ``vec``. Each label  ``labels[i]``  is a 0-based cluster index of  ``vec[i]`` .
+
     :param predicate: Equivalence predicate (pointer to a boolean function of two arguments or an instance of the class that has the method  ``bool operator()(const _Tp& a, const _Tp& b)`` ). The predicate returns ``true`` when the elements are certainly in the same class, and returns ``false`` if they may or may not be in the same class.
 
 The generic function ``partition`` implements an

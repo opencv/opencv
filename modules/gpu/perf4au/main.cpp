@@ -42,9 +42,7 @@
 
 #include <cstdio>
 
-#ifdef HAVE_CVCONFIG_H
 #include "cvconfig.h"
-#endif
 
 #include "opencv2/ts/ts.hpp"
 #include "opencv2/ts/gpu_perf.hpp"
@@ -55,16 +53,12 @@
 #include "opencv2/video/video.hpp"
 #include "opencv2/legacy/legacy.hpp"
 
-int main(int argc, char* argv[])
-{
-    perf::printCudaInfo();
+static const char * impls[] = {
+    "cuda",
+    "plain"
+};
 
-    perf::Regression::Init("gpu_perf4au");
-    perf::TestBase::Init(argc, argv);
-    testing::InitGoogleTest(&argc, argv);
-
-    return RUN_ALL_TESTS();
-}
+CV_PERF_TEST_MAIN_WITH_IMPLS(gpu_perf4au, impls, perf::printCudaInfo())
 
 //////////////////////////////////////////////////////////
 // HoughLinesP

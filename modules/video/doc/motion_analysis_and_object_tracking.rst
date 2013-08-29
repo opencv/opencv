@@ -42,6 +42,13 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
+.. note::
+
+   * An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/cpp/lkdemo.cpp
+
+   * (Python) An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/python2/lk_track.py
+   * (Python) An example using the Lucas-Kanade tracker for homography matching can be found at opencv_source_code/samples/python2/lk_homography.py
+
 buildOpticalFlowPyramid
 -----------------------
 Constructs the image pyramid which can be passed to :ocv:func:`calcOpticalFlowPyrLK`.
@@ -109,6 +116,11 @@ The function finds an optical flow for each ``prev`` pixel using the [Farneback2
 
     \texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])
 
+.. note::
+
+   * An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/cpp/fback.cpp
+
+   * (Python) An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/python2/opt_flow.py
 
 estimateRigidTransform
 --------------------------
@@ -227,7 +239,9 @@ In fact,
 :ocv:func:`fastAtan2` and
 :ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
+.. note::
 
+   * (Python) An example on how to perform a motion template technique can be found at opencv_source_code/samples/python2/motempl.py
 
 calcGlobalOrientation
 -------------------------
@@ -313,7 +327,9 @@ First, it finds an object center using
 
 See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
+.. note::
 
+   * (Python) A sample explaining the camshift tracking algorithm can be found at opencv_source_code/samples/python2/camshift.py
 
 meanShift
 ---------
@@ -342,7 +358,9 @@ The function implements the iterative object search algorithm. It takes the inpu
 :ocv:func:`contourArea` ), and rendering the  remaining contours with
 :ocv:func:`drawContours` .
 
+.. note::
 
+   * A mean-shift tracking sample can be found at opencv_source_code/samples/cpp/camshiftdemo.cpp
 
 KalmanFilter
 ------------
@@ -353,7 +371,9 @@ KalmanFilter
 The class implements a standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter, [Welch95]_. However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
 
+.. note::
 
+   * An example using the standard Kalman filter can be found at opencv_source_code/samples/cpp/kalman.cpp
 
 
 KalmanFilter::KalmanFilter
@@ -641,7 +661,9 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
 See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
 
+.. note::
 
+   * An example using the simpleFlow algorithm can be found at opencv_source_code/samples/cpp/simpleflow_demo.cpp
 
 createOptFlow_DualTVL1
 ----------------------

@@ -87,14 +87,14 @@ This tutorial code's is shown lines below. You can also download it from `here <
 
      /// Apply corner detection
      goodFeaturesToTrack( src_gray,
-	  	          corners,
-		          maxCorners,
-		          qualityLevel,
-		          minDistance,
-		          Mat(),
-		          blockSize,
-		          useHarrisDetector,
-		          k );
+                          corners,
+                          maxCorners,
+                          qualityLevel,
+                          minDistance,
+                          Mat(),
+                          blockSize,
+                          useHarrisDetector,
+                          k );
 
 
      /// Draw corners detected
@@ -135,4 +135,3 @@ Here is the result:
 
 .. image:: images/Corner_Subpixeles_Result.jpg
               :align: center
-

@@ -653,5 +653,3 @@ namespace cv
 
 }
 #endif
-
-

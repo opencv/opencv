@@ -168,7 +168,7 @@ namespace cv
         };
 
         // global variables to hold binary cache properties
-        static int enable_disk_cache = 
+        static int enable_disk_cache =
 #ifdef _DEBUG
             false;
 #else
@@ -319,7 +319,7 @@ namespace cv
             char clVersion[256];
             for (unsigned i = 0; i < numPlatforms; ++i)
             {
-                cl_uint numsdev;
+                cl_uint numsdev = 0;
                 cl_int status = clGetDeviceIDs(platforms[i], devicetype, 0, NULL, &numsdev);
                 if(status != CL_DEVICE_NOT_FOUND)
                     openCLVerifyCall(status);
@@ -514,8 +514,8 @@ namespace cv
                 return;
             }
             update_disk_cache |= (mode & CACHE_UPDATE) == CACHE_UPDATE;
-            enable_disk_cache |= 
-#ifdef _DEBUG 
+            enable_disk_cache |=
+#ifdef _DEBUG
                 (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
                 (mode & CACHE_RELEASE) == CACHE_RELEASE;
@@ -950,8 +950,8 @@ namespace cv
 
         bool initialized()
         {
-            return *((volatile int*)&Context::val) != 0 && 
-                Context::clCxt->impl->clCmdQueue != NULL&& 
+            return *((volatile int*)&Context::val) != 0 &&
+                Context::clCxt->impl->clCmdQueue != NULL&&
                 Context::clCxt->impl->oclcontext != NULL;
         }
 

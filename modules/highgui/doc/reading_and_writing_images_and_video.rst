@@ -20,7 +20,7 @@ Reads an image from a buffer in memory.
     :param buf: Input array or vector of bytes.
 
     :param flags: The same flags as in :ocv:func:`imread` .
-    
+
     :param dst: The optional output placeholder for the decoded matrix. It can save the image reallocations when the function is called repeatedly for images of the same size.
 
 The function reads an image from the specified buffer in the memory.
@@ -74,9 +74,9 @@ Loads an image from a file.
     :param filename: Name of file to be loaded.
 
     :param flags: Flags specifying the color type of a loaded image:
-    
+
         * CV_LOAD_IMAGE_ANYDEPTH - If set, return 16-bit/32-bit image when the input has the corresponding depth, otherwise convert it to 8-bit.
-        
+
         * CV_LOAD_IMAGE_COLOR - If set, always convert image to the color one
 
         * CV_LOAD_IMAGE_GRAYSCALE - If set, always convert image to the grayscale one
@@ -223,6 +223,15 @@ The class provides C++ API for capturing video from cameras or for reading video
 
 
 .. note:: In C API the black-box structure ``CvCapture`` is used instead of ``VideoCapture``.
+
+.. note::
+
+   * A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/cpp/starter_video.cpp
+   * Another basic video processing sample can be found at opencv_source_code/samples/cpp/video_dmtx.cpp
+
+   * (Python) A basic sample on using the VideoCapture interface can be found at opencv_source_code/samples/python2/video.py
+   * (Python) Another basic video processing sample can be found at opencv_source_code/samples/python2/video_dmtx.py
+   * (Python) A multi threaded video processing sample can be found at opencv_source_code/samples/python2/video_threaded.py
 
 
 VideoCapture::VideoCapture
@@ -546,4 +555,3 @@ Writes the next video frame
     :param image: The written frame
 
 The functions/methods write the specified image to video file. It must have the same size as has been specified when opening the video writer.
-
