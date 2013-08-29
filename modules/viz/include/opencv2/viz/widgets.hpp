@@ -28,9 +28,6 @@ namespace cv
             class Impl;
             Impl *impl_;
             friend struct WidgetAccessor;
-            
-            void create();
-            void release();
         };
 
         /////////////////////////////////////////////////////////////////////////////

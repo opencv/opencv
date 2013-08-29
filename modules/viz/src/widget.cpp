@@ -7,47 +7,27 @@ class cv::viz::Widget::Impl
 {
 public:
     vtkSmartPointer<vtkProp> prop;
-    int ref_counter;
     
     Impl() : prop(0) {}
 };
 
-cv::viz::Widget::Widget() : impl_(0) 
-{ 
-    create(); 
-}
+cv::viz::Widget::Widget() : impl_( new Impl() ) { }
 
-cv::viz::Widget::Widget(const Widget& other) : impl_(other.impl_) 
+cv::viz::Widget::Widget(const Widget& other) : impl_( new Impl() )
 { 
-    if (impl_) CV_XADD(&impl_->ref_counter, 1);
+    if (other.impl_ && other.impl_->prop) impl_->prop = other.impl_->prop;
 }
 
 cv::viz::Widget& cv::viz::Widget::operator=(const Widget& other)
 {
-    if (this != &other)
-    {
-        release();
-        impl_ = other.impl_;
-        if (impl_) CV_XADD(&impl_->ref_counter, 1);
-    }
+    if (!impl_) impl_ = new Impl();
+    if (other.impl_) impl_->prop = other.impl_->prop;
     return *this;
 }
 
 cv::viz::Widget::~Widget() 
 { 
-    release();
-}
-
-void cv::viz::Widget::create()
-{
-    if (impl_) release();
-    impl_ = new Impl();
-    impl_->ref_counter = 1;
-}
-
-void cv::viz::Widget::release()
-{
-    if (impl_ && CV_XADD(&impl_->ref_counter, -1) == 1)
+    if (impl_)
     {
         delete impl_;
         impl_ = 0;
