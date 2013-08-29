@@ -333,7 +333,7 @@ PERF_TEST_P(BilateralFixture, Bilateral,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), d = 7;
-	double sigmacolor = 50.0, sigmaspace = 50.0;
+    double sigmacolor = 50.0, sigmaspace = 50.0;
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
@@ -372,8 +372,8 @@ PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-	double sigmaspace = 10.0;
-	Size ksize(9,9);
+    double sigmaspace = 10.0;
+    Size ksize(9,9);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
