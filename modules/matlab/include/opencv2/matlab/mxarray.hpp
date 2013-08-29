@@ -49,6 +49,8 @@
 #include <vector>
 #include <algorithm>
 #include <sstream>
+#include <iostream>
+#include <iterator>
 #include <opencv2/core.hpp>
 #if __cplusplus > 201103
 #include <unordered_set>
@@ -533,6 +535,7 @@ private:
   typedef std::vector<size_t> IndexVector;
   typedef std::vector<MxArray> MxArrayVector;
   typedef std::vector<Variant> VariantVector;
+
   /* @class Variant
    * @brief Describes a variant of arguments to a method
    *
@@ -542,43 +545,79 @@ private:
    * inputs for a method invocation.
    */
   class Variant {
+  private:
+    String name_;
+    size_t Nreq_;
+    size_t Nopt_;
+    StringVector keys_;
+    IndexVector order_;
+    bool valid_;
+    size_t nparsed_;
+    size_t nkeys_;
+    size_t working_opt_;
+    bool expecting_val_;
+    bool using_named_;
+    size_t find(const String& key) const {
+      return std::find(keys_.begin(), keys_.end(), key) - keys_.begin();
+    }
   public:
-    Variant(const String& _name, size_t _nreq, size_t _nopt, const StringVector& _keys) 
-      : name(_name), nreq(_nreq), nopt(_nopt), keys(_keys), using_named(false) {}
-    String name;
-    size_t nreq;
-    size_t nopt;
-    StringVector keys;
-    IndexVector order;
-    bool using_named;
-    /*! @brief return true if the named-argument is in the Variant */
-    bool count(const String& key) { return std::find(keys.begin(), keys.end(), key) != keys.end(); }
-    /*! @brief remove a key by index from the Variant */
-    void erase(const size_t idx) { keys.erase(keys.begin()+idx); }
-    /*! @brief remove a key by name from the Variant */ 
-    void erase(const String& key) { keys.erase(std::find(keys.begin(), keys.end(), key)); }
-    /*! @brief convert a Variant to a string representation */
-    String toString(const String& method_name=String("f")) const {
+    /*! @brief default constructor */
+    Variant() : Nreq_(0), Nopt_(0), valid_(false) {}
+    /*! @brief construct a new variant spec */
+    Variant(const String& name, size_t Nreq, size_t Nopt, const StringVector& keys)
+      : name_(name), Nreq_(Nreq), Nopt_(Nopt), keys_(keys),
+      order_(Nreq+Nopt, Nreq+2*Nopt), valid_(true), nparsed_(0), nkeys_(0),
+      working_opt_(0), expecting_val_(false), using_named_(false) {}
+    /*! @brief return the total number of arguments the variant can take */
+    size_t size() const { return Nreq_ + Nopt_; }
+    /*! @brief has the variant been fulfilled? */
+    bool fulfilled() const { return (valid_ && nparsed_ >= Nreq_ && !expecting_val_); }
+    /*! @brief is the variant in a valid state (though not necessarily fulfilled) */
+    bool valid() const { return valid_; }
+    /*! @brief check if the named argument exists in the variant */
+    bool exist(const String& key) const { return find(key) != keys_.size(); }
+    /*! @brief retrieve the order mapping raw inputs to their position in the variant */
+    const IndexVector& order() const { return order_; }
+    size_t order(size_t n) const { return order_[n]; }
+    /*! @brief attempt to parse the next argument as a value */
+    bool parseNextAsValue() {
+      if (!valid_) {}
+      else if ((using_named_ && !expecting_val_) || (nparsed_-nkeys_ == Nreq_+Nopt_)) { valid_ = false; }
+      else if (nparsed_ < Nreq_) { order_[nparsed_] = nparsed_; }
+      else if (!using_named_) { order_[nparsed_] = nparsed_; }
+      else if (using_named_ && expecting_val_) { order_[Nreq_ + working_opt_] = nparsed_; }
+      nparsed_++;
+      expecting_val_ = false;
+      return valid_;
+    }
+    /*! @biref attempt to parse the next argument as a name (key) */
+    bool parseNextAsKey(const String& key) {
+      if (!valid_) {}
+      else if ((nparsed_ < Nreq_) || (nparsed_-nkeys_ == Nreq_+Nopt_)) { valid_ = false; }
+      else if (using_named_ && expecting_val_) { valid_ = false; }
+      else if ((working_opt_ = find(key)) == keys_.size()) { valid_ = false; }
+      else { using_named_ = true; expecting_val_ = true; nkeys_++; nparsed_++; }
+      return valid_;
+    }
+    String toString(const String& method_name="f") const {
       std::ostringstream s;
       s << method_name << "(";
-      for (size_t n = 0; n < nreq; ++n) { 
-        s << "src" << n+1; if (n != nreq-1) s << ", "; 
-      }
-      if (nreq && nopt) s << ", ";
-      for (size_t n = 0; n < keys.size(); ++n) { 
-        s << "'" << keys[n] << "', " << keys[n]; 
-        if (n != keys.size()-1) s << ", ";
-      }
+      for (size_t n = 0; n < Nreq_; ++n) { s << "src" << n+1 << (n != Nreq_-1 ? ", " : ""); }
+      if (Nreq_ && Nopt_) s << ", ";
+      for (size_t n = 0; n < keys_.size(); ++n) { s << "'" << keys_[n] << "', " << keys_[n] << (n != Nopt_-1 ? ", " : ""); }
       s << ");";
       return s.str();
     }
   };
+  /*! @brief given an input and output vector of arguments, and a variant spec, sort */
   void sortArguments(Variant& v, MxArrayVector& in, MxArrayVector& out) {
     // allocate the output array with ALL arguments
-    out.resize(v.nreq + v.nopt);
+    out.resize(v.size());
+    std::copy(v.order().begin(), v.order().end(), std::ostream_iterator<size_t>(std::cout, ", "));
     // reorder the inputs based on the variant ordering
-    for (size_t n = 0; n < v.order.size(); ++n) {
-      swap(in[n], out[v.order[n]]);
+    for (size_t n = 0; n < v.size(); ++n) {
+      if (v.order(n) >= in.size()) continue;
+      swap(in[v.order(n)], out[n]);
     }
   }
   MxArrayVector filled_;
@@ -587,6 +626,7 @@ private:
   String method_name_;
 public:
   ArgumentParser(const String& method_name) : method_name_(method_name) {}
+
   /*! @brief add a function call variant to the parser
    *
    * Adds a function-call signature to the parser. The function call *must* be 
@@ -606,10 +646,12 @@ public:
   void addVariant(const String& name, size_t nreq, size_t nopt, StringVector keys) {
     variants_.push_back(Variant(name, nreq, nopt, keys));
   }
+
   /*! @brief check if the valid variant is the key name */
   bool variantIs(const String& name) {
     return name.compare(valid_) == 0;
   }
+
   /*! @brief parse a vector of input arguments
    * 
    * This method parses a vector of input arguments, attempting to match them 
@@ -633,51 +675,19 @@ public:
     for (MxArrayVector::const_iterator input = inputs.begin(); input != inputs.end(); ++input) {
       String name = input->isString() ? input->toString() : String();
       for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
-        // check if the input is a key
-        bool key = candidate->count(name);
-
-        /* 
-         * FAILURE CASES
-         * 1. too many inputs, or
-         * 2. name is not a key and we're expecting a key
-         * 3. name is a key, and
-         *    we're still expecting required arguments, or
-         *    we're expecting an argument for a previous key
-         */
-        if ((!candidate->nreq && !candidate->nopt) ||
-           (!key && !candidate->nreq && candidate->keys.size() == candidate->nopt && candidate->using_named) ||
-            (key && (candidate->nreq || candidate->keys.size()  < candidate->nopt))) {
-          candidate = candidates.erase(candidate)--;
-        }
-
-        // VALID CASES
-        // Still parsing required argments (input is not a key)
-        else if (!key && candidate->nreq) {
-          candidate->nreq--;
-        }
-
-        // Parsing optional arguments and a named argument is encountered
-        else if (key && !candidate->nreq && candidate->nopt > 0 && candidate->keys.size() == candidate->nopt) {
-          candidate->erase(name);
-          candidate->using_named = true;
-        }
-
-        // Parsing input for a named argument
-        else if (!key && candidate->keys.size() < candidate->nopt) {
-          candidate->nopt--; 
-        }
-
-        // Parsing un-named optional arguments
-        else if (!key && !candidate->nreq && candidate->nopt && candidate->keys.size() && !candidate->using_named) {
-          candidate->erase(0);
-          candidate->nopt--;
+        if (candidate->exist(name)) {
+          mexPrintf("%d\n", candidate->parseNextAsKey(name));
+        } else {
+          mexPrintf("%d\n", candidate->parseNextAsValue());
         }
       }
     }
 
-    // if any candidates remain, check that they have been fully parsed
+    mexPrintf("We get here!\n");
+
+    // make sure the candidates have been fulfilled
     for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
-      if (candidate->nreq || candidate->keys.size() < candidate->nopt) {
+      if (!candidate->fulfilled()) {
         candidate = candidates.erase(candidate)--;
       }
     }
@@ -697,6 +707,8 @@ public:
       error(String("No matching method signatures for given arguments. Valid variants are:").append(variant_string));
     }
 
+    // Unique candidate!
+    sortArguments(candidates[0], const_cast<MxArrayVector&>(inputs), outputs);
     return outputs;
   }
 };
