@@ -330,7 +330,7 @@ void cv::ocl::device::mog::mog_ocl(const oclMat& frame, int cn, oclMat& fgmask, 
     const float minVar = noiseSigma * noiseSigma;
 
     if(learningRate > 0.0f)
-        mog_withLearning(frame, cn, fgmask, weight, sortKey, mean, var, nmixtures, 
+        mog_withLearning(frame, cn, fgmask, weight, sortKey, mean, var, nmixtures,
                          varThreshold, backgroundRatio, learningRate, minVar);
     else
         mog_withoutLearning(frame, cn, fgmask, weight, mean, var, nmixtures, varThreshold, backgroundRatio);
