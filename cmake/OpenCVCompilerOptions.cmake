@@ -274,6 +274,13 @@ set(CMAKE_EXE_LINKER_FLAGS         "${CMAKE_EXE_LINKER_FLAGS} ${OPENCV_EXTRA_EXE
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_RELEASE}")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG   "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${OPENCV_EXTRA_EXE_LINKER_FLAGS_DEBUG}")
 
+# Remove dependency from libgcc_s_sjlj-1.dll, that is not distributed with some MinGW 64x builds (Issue #3214).
+if (MINGW)
+  set(CMAKE_SHARED_LINKER_FLAGS "-static-libgcc ${CMAKE_SHARED_LINKER_FLAGS}")
+  set(CMAKE_MODULE_LINKER_FLAGS "-static-libgcc ${CMAKE_MODULE_LINKER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS    "-static-libgcc ${CMAKE_EXE_LINKER_FLAGS}")
+endif()
+
 if(MSVC)
   # avoid warnings from MSVC about overriding the /W* option
   # we replace /W3 with /W4 only for C++ files,
