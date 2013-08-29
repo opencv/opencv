@@ -119,19 +119,19 @@ if __name__ == '__main__':
     img1 = cv2.imread(fn1, 0)
     img2 = cv2.imread(fn2, 0)
     detector, matcher = init_feature(feature_name)
-    
+
     if img1 is None:
         print 'Failed to load fn1:', fn1
         sys.exit(1)
-        
+
     if img2 is None:
         print 'Failed to load fn2:', fn2
         sys.exit(1)
-    
+
     if detector is None:
         print 'unknown feature:', feature_name
         sys.exit(1)
-        
+
     print 'using', feature_name
 
     pool=ThreadPool(processes = cv2.getNumberOfCPUs())
@@ -158,4 +158,3 @@ if __name__ == '__main__':
     match_and_draw('affine find_obj')
     cv2.waitKey()
     cv2.destroyAllWindows()
-

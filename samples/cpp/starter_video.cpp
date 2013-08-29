@@ -41,15 +41,15 @@ namespace {
         cout << "press space to save a picture. q or esc to quit" << endl;
         namedWindow(window_name, WINDOW_KEEPRATIO); //resizable window;
         Mat frame;
-        
+
         for (;;) {
             capture >> frame;
             if (frame.empty())
                 break;
-            
+
             imshow(window_name, frame);
             char key = (char)waitKey(30); //delay N millis, usually long enough to display and capture input
-            
+
             switch (key) {
             case 'q':
             case 'Q':

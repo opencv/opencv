@@ -334,5 +334,3 @@ See below various examples of the ``createButton`` function call: ::
     createButton("button6",callbackButton2,NULL,CV_PUSH_BUTTON,1);
 
 ..
-
-

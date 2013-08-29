@@ -820,7 +820,7 @@ const float* HOGCache::getBlock(Point pt, float* buf)
         int h0 = h[0], h1 = h[1];
 
         __m128 _a0 = _mm_set1_ps(a[0]), _a1 = _mm_set1_ps(a[1]);
-		__m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
+        __m128 _w = _mm_mul_ps(_mm_set1_ps(pk.gradWeight), _mm_loadu_ps(pk.histWeights));
         __m128 _t0 = _mm_mul_ps(_a0, _w), _t1 = _mm_mul_ps(_a1, _w);
 
         _mm_storeu_ps(hist0, _t0);
@@ -3023,4 +3023,3 @@ void HOGDescriptor::groupRectangles(std::vector<cv::Rect>& rectList, std::vector
     }
 }
 }
-

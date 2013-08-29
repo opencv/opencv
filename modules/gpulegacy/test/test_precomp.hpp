@@ -74,6 +74,8 @@
 
 #include "opencv2/core/private.gpu.hpp"
 
+#include "cvconfig.h"
+
 #include "NCVTest.hpp"
 #include "NCVAutoTestLister.hpp"
 #include "NCVTestSourceProvider.hpp"

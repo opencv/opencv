@@ -479,4 +479,3 @@ void CvBlobTrackerAuto1::Process(IplImage* pImg, IplImage* pMask)
     TIME_END("TrackAnalysis",m_BlobList.GetBlobNum())
 
 } /* CvBlobTrackerAuto1::Process */
-

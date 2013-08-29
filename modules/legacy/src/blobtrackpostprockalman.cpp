@@ -325,4 +325,3 @@ CvBlobTrackPredictor* cvCreateModuleBlobTrackPredictKalman()
     return (CvBlobTrackPredictor*) new CvBlobTrackPredictKalman;
 }
 /*======================= KALMAN PREDICTOR =========================*/
-

@@ -23,16 +23,16 @@ if __name__ == '__main__':
     import sys
     try:
         fn = sys.argv[1]
-    except: 
+    except:
         fn = '../cpp/fruits.jpg'
-        
+
     print __doc__
 
     img = cv2.imread(fn)
     if img is None:
         print 'Failed to load image file:', fn
         sys.exit(1)
-        
+
     img_mark = img.copy()
     mark = np.zeros(img.shape[:2], np.uint8)
     sketch = Sketcher('img', [img_mark, mark], lambda : ((255, 255, 255), 255))
@@ -49,4 +49,3 @@ if __name__ == '__main__':
             mark[:] = 0
             sketch.show()
     cv2.destroyAllWindows()
-

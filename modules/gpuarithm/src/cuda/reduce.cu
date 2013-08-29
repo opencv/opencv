@@ -72,13 +72,22 @@ namespace reduce
         }
 
         template <typename T>
-        __device__ __forceinline__ T result(T r, double) const
+        __device__ __forceinline__ T result(T r, int) const
         {
             return r;
         }
 
         __host__ __device__ __forceinline__ Sum() {}
         __host__ __device__ __forceinline__ Sum(const Sum&) {}
+    };
+
+    template <typename T> struct OutputType
+    {
+        typedef float type;
+    };
+    template <> struct OutputType<double>
+    {
+        typedef double type;
     };
 
     struct Avg
@@ -96,7 +105,7 @@ namespace reduce
         }
 
         template <typename T>
-        __device__ __forceinline__ typename TypeVec<double, VecTraits<T>::cn>::vec_type result(T r, double sz) const
+        __device__ __forceinline__ typename TypeVec<typename OutputType<typename VecTraits<T>::elem_type>::type, VecTraits<T>::cn>::vec_type result(T r, float sz) const
         {
             return r / sz;
         }
@@ -121,7 +130,7 @@ namespace reduce
         }
 
         template <typename T>
-        __device__ __forceinline__ T result(T r, double) const
+        __device__ __forceinline__ T result(T r, int) const
         {
             return r;
         }
@@ -146,7 +155,7 @@ namespace reduce
         }
 
         template <typename T>
-        __device__ __forceinline__ T result(T r, double) const
+        __device__ __forceinline__ T result(T r, int) const
         {
             return r;
         }

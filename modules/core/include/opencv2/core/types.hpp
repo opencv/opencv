@@ -68,7 +68,7 @@ namespace cv
   more convenient access to the real and imaginary parts using through the simple field access, as opposite
   to std::complex::real() and std::complex::imag().
 */
-template<typename _Tp> class CV_EXPORTS Complex
+template<typename _Tp> class Complex
 {
 public:
 
@@ -120,7 +120,7 @@ public:
   as a template parameter. There are a few shorter aliases available for user convenience.
   See cv::Point, cv::Point2i, cv::Point2f and cv::Point2d.
 */
-template<typename _Tp> class CV_EXPORTS Point_
+template<typename _Tp> class Point_
 {
 public:
     typedef _Tp value_type;
@@ -191,7 +191,7 @@ public:
 
   \see cv::Point3i, cv::Point3f and cv::Point3d
 */
-template<typename _Tp> class CV_EXPORTS Point3_
+template<typename _Tp> class Point3_
 {
 public:
     typedef _Tp value_type;
@@ -256,7 +256,7 @@ public:
   The class represents the size of a 2D rectangle, image size, matrix size etc.
   Normally, cv::Size ~ cv::Size_<int> is used.
 */
-template<typename _Tp> class CV_EXPORTS Size_
+template<typename _Tp> class Size_
 {
 public:
     typedef _Tp value_type;
@@ -314,7 +314,7 @@ public:
   The class represents a 2D rectangle with coordinates of the specified data type.
   Normally, cv::Rect ~ cv::Rect_<int> is used.
 */
-template<typename _Tp> class CV_EXPORTS Rect_
+template<typename _Tp> class Rect_
 {
 public:
     typedef _Tp value_type;
@@ -470,7 +470,7 @@ public:
    This is partially specialized cv::Vec class with the number of elements = 4, i.e. a short vector of four elements.
    Normally, cv::Scalar ~ cv::Scalar_<double> is used.
 */
-template<typename _Tp> class CV_EXPORTS Scalar_ : public Vec<_Tp, 4>
+template<typename _Tp> class Scalar_ : public Vec<_Tp, 4>
 {
 public:
     //! various constructors

@@ -189,7 +189,7 @@ void cv::ocl::oclMat::upload(const Mat &m)
             temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
                                   (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
             openCLVerifyCall(err);
-            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, 
+            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step,
                            wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
         }
         else{
@@ -198,7 +198,7 @@ void cv::ocl::oclMat::upload(const Mat &m)
             openCLVerifyCall(err);
         }
 
-        
+
         convert_C3C4(temp, *this);
         openCLSafeCall(clReleaseMemObject(temp));
     }

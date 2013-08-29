@@ -80,7 +80,7 @@ namespace cv
  }
  \endcode
 */
-template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class CV_EXPORTS AutoBuffer
+template<typename _Tp, size_t fixed_size = 1024/sizeof(_Tp)+8> class AutoBuffer
 {
 public:
     typedef _Tp value_type;
@@ -116,8 +116,8 @@ protected:
     _Tp* ptr;
     //! size of the real buffer
     size_t sz;
-    //! pre-allocated buffer
-    _Tp buf[fixed_size];
+    //! pre-allocated buffer. At least 1 element to confirm C++ standard reqirements
+    _Tp buf[(fixed_size > 0) ? fixed_size : 1];
 };
 
 //! Sets/resets the break-on-error mode.

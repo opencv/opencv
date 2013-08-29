@@ -122,5 +122,3 @@ cvGetStarKeypoints( const CvArr* _img, CvMemStorage* storage,
     }
     return seq;
 }
-
-

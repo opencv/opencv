@@ -76,5 +76,3 @@ void Morphology_Operations( int, void* )
   morphologyEx( src, dst, operation, element );
   imshow( window_name, dst );
 }
-
-

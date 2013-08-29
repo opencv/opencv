@@ -1644,4 +1644,3 @@ void GraphCutSeamFinderGpu::setGraphWeightsColorGrad(
 
 } // namespace detail
 } // namespace cv
-

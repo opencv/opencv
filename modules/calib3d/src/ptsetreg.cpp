@@ -534,4 +534,3 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
 
     return createRANSACPointSetRegistrator(new Affine3DEstimatorCallback, 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }
-

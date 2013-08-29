@@ -259,7 +259,7 @@ void Draw(Mat& img, vector<Rect>& faces, double scale)
         resize(img, img, Size((int)(img.cols/scale), (int)(img.rows/scale)));
     }
     imshow( "result", img );
-    
+
 }
 
 

@@ -161,4 +161,3 @@ Predicts the response for a sample.
 The method is used to predict the response for a new sample. In case of a classification, the method returns the class label. In case of a regression, the method returns the output function value. The input sample must have as many components as the ``train_data`` passed to ``train`` contains. If the ``var_idx`` parameter is passed to ``train``, it is remembered and then is used to extract only the necessary components from the input sample in the method ``predict``.
 
 The suffix ``const`` means that prediction does not affect the internal model state, so the method can be safely called from within different threads.
-

@@ -125,4 +125,3 @@ CvBlobTrackAnalysis* cvCreateBlobTrackAnalysisList(CvBlobTrackAnalysisOne* (*cre
 }
 
 /* ======================== Analyser modules ============================= */
-

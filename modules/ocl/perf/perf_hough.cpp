@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 

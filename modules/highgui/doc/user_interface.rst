@@ -33,9 +33,9 @@ The function ``createTrackbar`` creates a trackbar (a slider or range control) w
 
 Clicking the label of each trackbar enables editing the trackbar values manually.
 
-.. Sample code::
+.. note::
 
-   * : An example of using the trackbar functionality can be found at opencv_source_code/samples/cpp/connected_components.cpp
+   * An example of using the trackbar functionality can be found at opencv_source_code/samples/cpp/connected_components.cpp
 
 getTrackbarPos
 ------------------
@@ -80,6 +80,9 @@ The function ``imshow`` displays an image in the specified window. If the window
     * If the image is 32-bit floating-point, the pixel values are multiplied by 255. That is, the value range [0,1] is mapped to [0,255].
 
 If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
+
+.. note:: This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image.
+
 
 namedWindow
 ---------------

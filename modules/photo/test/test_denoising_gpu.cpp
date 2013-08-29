@@ -46,6 +46,7 @@
 #include "opencv2/ts/gpu_test.hpp"
 
 #include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
 
 #if defined (HAVE_CUDA) && defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUIMGPROC)
 

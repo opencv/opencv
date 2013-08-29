@@ -302,5 +302,3 @@ static void drawPlot(const cv::Mat curve, const std::string figureTitle, const i
 
      return 0;
  }
-
-

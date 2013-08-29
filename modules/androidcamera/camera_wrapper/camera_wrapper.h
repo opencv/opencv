@@ -14,4 +14,3 @@ double getCameraPropertyC(void* camera, int propIdx);
 void setCameraPropertyC(void* camera, int propIdx, double value);
 void applyCameraPropertiesC(void** camera);
 }
-

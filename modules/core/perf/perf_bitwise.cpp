@@ -73,4 +73,3 @@ PERF_TEST_P(Size_MatType, bitwise_xor, TYPICAL_MATS_BITW_ARITHM)
 
     SANITY_CHECK(c);
 }
-

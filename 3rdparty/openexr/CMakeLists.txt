@@ -22,7 +22,7 @@ set(OPENEXR_INCLUDE_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/Half"
                           "${CMAKE_CURRENT_SOURCE_DIR}/Imath"
                           "${CMAKE_CURRENT_SOURCE_DIR}/IlmImf")
 
-ocv_include_directories("${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIR} ${OPENEXR_INCLUDE_PATHS})
+ocv_include_directories("${CMAKE_CURRENT_BINARY_DIR}" ${ZLIB_INCLUDE_DIRS} ${OPENEXR_INCLUDE_PATHS})
 
 file(GLOB lib_srcs Half/half.cpp Iex/*.cpp IlmThread/*.cpp Imath/*.cpp IlmImf/*.cpp)
 file(GLOB lib_hdrs Half/*.h Iex/Iex*.h IlmThread/IlmThread*.h Imath/Imath*.h IlmImf/*.h)

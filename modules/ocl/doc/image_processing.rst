@@ -257,10 +257,10 @@ The class can calculate an optical flow for a sparse feature set or dense optica
 
 .. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
 
-.. Sample code::
+.. note::
 
-   * : OCL : An example the Lucas Kanade optical flow pyramid method can be found at opencv_source_code/samples/ocl/pyrlk_optical_flow.cpp
-   * : OCL : An example for square detection can be found at opencv_source_code/samples/ocl/squares.cpp
+   (Ocl) An example the Lucas Kanade optical flow pyramid method can be found at opencv_source_code/samples/ocl/pyrlk_optical_flow.cpp
+   (Ocl) An example for square detection can be found at opencv_source_code/samples/ocl/squares.cpp
 
 ocl::PyrLKOpticalFlow::sparse
 -----------------------------
@@ -366,4 +366,3 @@ Finds circles in a grayscale image using the Hough transform.
 
 .. note:: Currently only non-ROI oclMat is supported for src.
 .. seealso:: :ocv:func:`HoughCircles`
-

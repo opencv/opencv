@@ -311,4 +311,3 @@ Result
          :alt: Result 0 for remapping
          :width: 250pt
          :align: center
-

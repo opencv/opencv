@@ -1965,10 +1965,10 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
 
     size += (n+1)*sizeof(char*);
     const char** input_cascade = (const char**)cvAlloc( size );
-    
+
     if( !input_cascade )
       CV_Error( CV_StsNoMem, "Could not allocate memory for input_cascade" );
-      
+
     char* ptr = (char*)(input_cascade + n + 1);
 
     for( int i = 0; i < n; i++ )
@@ -1989,7 +1989,7 @@ cvLoadHaarClassifierCascade( const char* directory, CvSize orig_window_size )
     }
 
     input_cascade[n] = 0;
-    
+
     CvHaarClassifierCascade* cascade = icvLoadCascadeCART( input_cascade, n, orig_window_size );
 
     if( input_cascade )

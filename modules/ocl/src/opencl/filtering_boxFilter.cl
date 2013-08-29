@@ -231,7 +231,7 @@ __kernel void boxFilter_C1_D0(__global const uchar * restrict src, __global ucha
     {
         tmp_sum += (data[i]);
     }
-    
+
     int index = dst_startY * dst_step + dst_startX + (col-anX)*4;
 
     temp[0][col] = tmp_sum + (data[0]);

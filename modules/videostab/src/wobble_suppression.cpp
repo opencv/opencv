@@ -160,4 +160,3 @@ void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const Mat &frame, 
 
 } // namespace videostab
 } // namespace cv
-
