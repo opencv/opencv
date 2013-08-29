@@ -46,7 +46,7 @@
 #include "precomp.hpp"
 using namespace cv;
 using namespace cv::ocl;
-namespace cv 
+namespace cv
 {
     namespace ocl
     {
@@ -82,10 +82,10 @@ namespace cv { namespace ocl { namespace device
 
         void getBackgroundImage_ocl(int cn, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures, float backgroundRatio);
 
-        void loadConstants(float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau, 
+        void loadConstants(float Tb, float TB, float Tg, float varInit, float varMin, float varMax, float tau,
                             unsigned char shadowVal);
 
-        void mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& modesUsed, oclMat& weight, oclMat& variance, oclMat& mean, 
+        void mog2_ocl(const oclMat& frame, int cn, oclMat& fgmask, oclMat& modesUsed, oclMat& weight, oclMat& variance, oclMat& mean,
                       float alphaT, float prune, bool detectShadows, int nmixtures);
 
         void getBackgroundImage2_ocl(int cn, const oclMat& modesUsed, const oclMat& weight, const oclMat& mean, oclMat& dst, int nmixtures);
@@ -392,11 +392,11 @@ void cv::ocl::device::mog::loadConstants(float Tb, float TB, float Tg, float var
     constants->c_tau = tau;
     constants->c_shadowVal = shadowVal;
 
-    cl_constants = load_constant(*((cl_context*)getoclContext()), *((cl_command_queue*)getoclCommandQueue()), 
+    cl_constants = load_constant(*((cl_context*)getoclContext()), *((cl_command_queue*)getoclCommandQueue()),
         (void *)constants, sizeof(_contant_struct));
 }
 
-void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmaskRaw, oclMat& modesUsed, oclMat& weight, oclMat& variance, 
+void cv::ocl::device::mog::mog2_ocl(const oclMat& frame, int cn, oclMat& fgmaskRaw, oclMat& modesUsed, oclMat& weight, oclMat& variance,
                                 oclMat& mean, float alphaT, float prune, bool detectShadows, int nmixtures)
 {
     oclMat fgmask(fgmaskRaw.size(), CV_32SC1);
@@ -636,4 +636,3 @@ void cv::ocl::MOG2::release()
 
     bgmodelUsedModes_.release();
 }
-

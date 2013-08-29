@@ -134,7 +134,7 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
     __global float* weight, __global T_MEAN_VAR* mean, __global T_MEAN_VAR* var,
     int frame_row, int frame_col, int frame_step, int fgmask_step,
     int weight_step, int mean_step, int var_step,
-    float varThreshold, float backgroundRatio, int fgmask_offset_x, 
+    float varThreshold, float backgroundRatio, int fgmask_offset_x,
     int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
     int x = get_global_id(0);
@@ -142,7 +142,6 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
 
     if (x < frame_col && y < frame_row)
     {
-    
         T_MEAN_VAR pix = cvt(frame[(y + frame_offset_y) * frame_step + (x + frame_offset_x)]);
 
         int kHit = -1;
@@ -179,20 +178,18 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
                 }
             }
         }
-        
         if(kHit < 0 || kHit >= kForeground)
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar) (-1);
         else
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar) (0);
-        
     }
 }
 
 __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global int* fgmask,
-    __global float* weight, __global float* sortKey, __global T_MEAN_VAR* mean, 
+    __global float* weight, __global float* sortKey, __global T_MEAN_VAR* mean,
     __global T_MEAN_VAR* var, int frame_row, int frame_col, int frame_step, int fgmask_step,
     int weight_step, int sortKey_step, int mean_step, int var_step,
-    float varThreshold, float backgroundRatio, float learningRate, float minVar, 
+    float varThreshold, float backgroundRatio, float learningRate, float minVar,
     int fgmask_offset_x, int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
     const float w0 = 0.05f;
@@ -322,7 +319,7 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global int* fgm
 
 
 __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_VAR* mean, __global T_FRAME* dst,
-    int dst_row, int dst_col, int weight_step, int mean_step, int dst_step, 
+    int dst_row, int dst_col, int weight_step, int mean_step, int dst_step,
     float backgroundRatio)
 {
     int x = get_global_id(0);
@@ -351,8 +348,8 @@ __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_
 }
 
 __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __global float* weight, __global T_MEAN_VAR * mean,
-        __global int* modesUsed, __global float* variance, int frame_row, int frame_col, int frame_step, 
-        int fgmask_step, int weight_step, int mean_step, int modesUsed_step, int var_step, float alphaT, float alpha1, float prune, 
+        __global int* modesUsed, __global float* variance, int frame_row, int frame_col, int frame_step,
+        int fgmask_step, int weight_step, int mean_step, int modesUsed_step, int var_step, float alphaT, float alpha1, float prune,
         int detectShadows_flag, int fgmask_offset_x, int fgmask_offset_y, int frame_offset_x, int frame_offset_y, __constant con_srtuct_t* constants)
 {
     int x = get_global_id(0);
@@ -505,7 +502,7 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
 }
 
 __kernel void getBackgroundImage2_kernel(__global int* modesUsed, __global float* weight, __global T_MEAN_VAR* mean,
-    __global T_FRAME* dst, float c_TB, int modesUsed_row, int modesUsed_col, int modesUsed_step, int weight_step, 
+    __global T_FRAME* dst, float c_TB, int modesUsed_row, int modesUsed_col, int modesUsed_step, int weight_step,
     int mean_step, int dst_step, int dst_x, int dst_y)
 {
     int x = get_global_id(0);
