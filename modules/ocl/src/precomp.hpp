@@ -70,7 +70,6 @@
 #include "opencv2/ocl/ocl.hpp"
 
 #include "opencv2/core/internal.hpp"
-//#include "opencv2/highgui/highgui.hpp"
 
 #define __ATI__
 
