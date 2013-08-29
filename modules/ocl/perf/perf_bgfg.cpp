@@ -43,6 +43,7 @@
 //
 //M*/
 #include "perf_precomp.hpp"
+using namespace perf;
 using namespace cv;
 using namespace cv::ocl;
 
