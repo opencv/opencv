@@ -1,0 +1,15 @@
+﻿<Page
+    x:Class="OcvImageProcessing.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:OcvImageProcessing"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
+        <Image x:Name="PreviewWidget" HorizontalAlignment="Left" Height="748" Margin="10,10,0,0" VerticalAlignment="Top" Width="1146"/>
+        <Button Content="Button" HorizontalAlignment="Left" Margin="1161,10,0,0" VerticalAlignment="Top" Width="195" Height="63" Click="Button_Click"/>
+
+    </Grid>
+</Page>
