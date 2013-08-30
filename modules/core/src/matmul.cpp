@@ -2911,6 +2911,27 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     return *this;
 }
 
+void PCA::write(FileStorage& fs ) const
+{
+    CV_Assert( fs.isOpened() );
+
+    fs << "name" << "PCA";
+    fs << "vectors" << eigenvectors;
+    fs << "values" << eigenvalues;
+    fs << "mean" << mean;
+}
+
+void PCA::read(const FileNode& fs)
+{
+    CV_Assert( !fs.empty() );
+    String name = (String)fs["name"];
+    CV_Assert( name == "PCA" );
+
+    cv::read(fs["vectors"], eigenvectors);
+    cv::read(fs["values"], eigenvalues);
+    cv::read(fs["mean"], mean);
+}
+
 template <typename T>
 int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
 {
