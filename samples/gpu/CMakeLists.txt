@@ -47,10 +47,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
+    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
     if(HAVE_CUDA)
-        target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
+      target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
     endif()
 
     if(HAVE_opencv_nonfree)
