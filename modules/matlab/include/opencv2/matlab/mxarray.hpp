@@ -66,8 +66,6 @@ typedef std::set<std::string> StringSet;
  * Matlab does not ship headers for the mkl functions, so we define them
  * here.
  *
- * This operation is used extensively to copy between Matlab's column-major
- * format and OpenCV's row-major format.
  */
 #ifdef __cplusplus
 extern "C" {
@@ -76,7 +74,7 @@ extern "C" {
 }
 #endif
 
-
+namespace matlab {
 /*!
  * @brief raise error if condition fails
  *
@@ -101,96 +99,94 @@ static void error(const std::string& str) {
 // ----------------------------------------------------------------------------
 //                            MATLAB TRAITS
 // ----------------------------------------------------------------------------
-namespace Matlab {
-  class DefaultTraits {};
-  class InheritType {};
-  static const int Dynamic = -1;
+class DefaultTraits {};
+class InheritType {};
+static const int Dynamic = -1;
 
-  template<typename _Tp = DefaultTraits> class Traits {
-  public:
-    static const mxClassID ScalarType = mxUNKNOWN_CLASS;
-    static const mxComplexity Complex = mxCOMPLEX;
-    static const mxComplexity Real    = mxCOMPLEX;
-    static std::string ToString()  { return "Unknown/Unsupported"; }
-  };
-  // bool
-  template<> class Traits<bool> {
-  public:
-    static const mxClassID ScalarType = mxLOGICAL_CLASS;
-    static std::string ToString()  { return "boolean"; }
-  };
-  // uint8_t
-  template<> class Traits<uint8_t> {
-  public:
-    static const mxClassID ScalarType = mxUINT8_CLASS;
-    static std::string ToString()  { return "uint8_t"; }
-  };
-  // int8_t
-  template<> class Traits<int8_t> {
-  public:
-    static const mxClassID ScalarType = mxINT8_CLASS;
-    static std::string ToString()  { return "int8_t"; }
-  };
-  // uint16_t
-  template<> class Traits<uint16_t> {
-  public:
-    static const mxClassID ScalarType = mxUINT16_CLASS;
-    static std::string ToString()  { return "uint16_t"; }
-  };
-  // int16_t
-  template<> class Traits<int16_t> {
-  public:
-    static const mxClassID ScalarType = mxINT16_CLASS;
-    static std::string ToString()  { return "int16_t"; }
-  };
-  // uint32_t
-  template<> class Traits<uint32_t> {
-  public:
-    static const mxClassID ScalarType = mxUINT32_CLASS;
-    static std::string ToString()  { return "uint32_t"; }
-  };
-  // int32_t
-  template<> class Traits<int32_t> {
-  public:
-    static const mxClassID ScalarType = mxINT32_CLASS;
-    static std::string ToString()  { return "int32_t"; }
-  };
-  // uint64_t
-  template<> class Traits<uint64_t> {
-  public:
-    static const mxClassID ScalarType = mxUINT64_CLASS;
-    static std::string ToString()  { return "uint64_t"; }
-  };
-  // int64_t
-  template<> class Traits<int64_t> {
-  public:
-    static const mxClassID ScalarType = mxINT64_CLASS;
-    static std::string ToString()  { return "int64_t"; }
-  };
-  // float
-  template<> class Traits<float> {
-  public:
-    static const mxClassID ScalarType = mxSINGLE_CLASS;
-    static std::string ToString()  { return "float"; }
-  };
-  // double
-  template<> class Traits<double> {
-  public:
-    static const mxClassID ScalarType = mxDOUBLE_CLASS;
-    static std::string ToString()  { return "double"; }
-  };
-  // char
-  template<> class Traits<char> {
-  public:
-    static const mxClassID ScalarType = mxCHAR_CLASS;
-    static std::string ToString()  { return "char"; }
-  };
-  // inherited type
-  template<> class Traits<Matlab::InheritType> {
-  public:
-    static std::string ToString()  { return "Inherited type"; }
-  };
-}
+template<typename _Tp = DefaultTraits> class Traits {
+public:
+  static const mxClassID ScalarType = mxUNKNOWN_CLASS;
+  static const mxComplexity Complex = mxCOMPLEX;
+  static const mxComplexity Real    = mxCOMPLEX;
+  static std::string ToString()  { return "Unknown/Unsupported"; }
+};
+// bool
+template<> class Traits<bool> {
+public:
+  static const mxClassID ScalarType = mxLOGICAL_CLASS;
+  static std::string ToString()  { return "boolean"; }
+};
+// uint8_t
+template<> class Traits<uint8_t> {
+public:
+  static const mxClassID ScalarType = mxUINT8_CLASS;
+  static std::string ToString()  { return "uint8_t"; }
+};
+// int8_t
+template<> class Traits<int8_t> {
+public:
+  static const mxClassID ScalarType = mxINT8_CLASS;
+  static std::string ToString()  { return "int8_t"; }
+};
+// uint16_t
+template<> class Traits<uint16_t> {
+public:
+  static const mxClassID ScalarType = mxUINT16_CLASS;
+  static std::string ToString()  { return "uint16_t"; }
+};
+// int16_t
+template<> class Traits<int16_t> {
+public:
+  static const mxClassID ScalarType = mxINT16_CLASS;
+  static std::string ToString()  { return "int16_t"; }
+};
+// uint32_t
+template<> class Traits<uint32_t> {
+public:
+  static const mxClassID ScalarType = mxUINT32_CLASS;
+  static std::string ToString()  { return "uint32_t"; }
+};
+// int32_t
+template<> class Traits<int32_t> {
+public:
+  static const mxClassID ScalarType = mxINT32_CLASS;
+  static std::string ToString()  { return "int32_t"; }
+};
+// uint64_t
+template<> class Traits<uint64_t> {
+public:
+  static const mxClassID ScalarType = mxUINT64_CLASS;
+  static std::string ToString()  { return "uint64_t"; }
+};
+// int64_t
+template<> class Traits<int64_t> {
+public:
+  static const mxClassID ScalarType = mxINT64_CLASS;
+  static std::string ToString()  { return "int64_t"; }
+};
+// float
+template<> class Traits<float> {
+public:
+  static const mxClassID ScalarType = mxSINGLE_CLASS;
+  static std::string ToString()  { return "float"; }
+};
+// double
+template<> class Traits<double> {
+public:
+  static const mxClassID ScalarType = mxDOUBLE_CLASS;
+  static std::string ToString()  { return "double"; }
+};
+// char
+template<> class Traits<char> {
+public:
+  static const mxClassID ScalarType = mxCHAR_CLASS;
+  static std::string ToString()  { return "char"; }
+};
+// inherited type
+template<> class Traits<matlab::InheritType> {
+public:
+  static std::string ToString()  { return "Inherited type"; }
+};
 
 
 
@@ -244,7 +240,7 @@ public:
    *
    * Construct a valid 0x0 matrix (so all other methods do not need validity checks
    */
-  MxArray() : ptr_(mxCreateDoubleMatrix(1, 1, Matlab::Traits<>::Real)), owns_(true) {}
+  MxArray() : ptr_(mxCreateDoubleMatrix(1, 1, matlab::Traits<>::Real)), owns_(true) {}
 
   /*!
    * @brief inheriting constructor
@@ -265,7 +261,7 @@ public:
    *
    * This constructor explicitly creates an MxArray of the given size and type.
    */
-  MxArray(size_t m, size_t n, size_t k, mxClassID id, mxComplexity com = Matlab::Traits<>::Real) : owns_(true) {
+  MxArray(size_t m, size_t n, size_t k, mxClassID id, mxComplexity com = matlab::Traits<>::Real) : owns_(true) {
     mwSize dims[] = { static_cast<mwSize>(m), static_cast<mwSize>(n), static_cast<mwSize>(k) };
     ptr_ = mxCreateNumericArray(3, dims, id, com);
   }
@@ -278,7 +274,7 @@ public:
    */
   template <typename Scalar>
   static MxArray Tensor(size_t m, size_t n, size_t k=1) {
-    return MxArray(m, n, k, Matlab::Traits<Scalar>::ScalarType);
+    return MxArray(m, n, k, matlab::Traits<Scalar>::ScalarType);
   }
 
   /*!
@@ -289,7 +285,7 @@ public:
    */
   template <typename Scalar>
   static MxArray Matrix(size_t m, size_t n) {
-    return MxArray(m, n, 1, Matlab::Traits<Scalar>::ScalarType);
+    return MxArray(m, n, 1, matlab::Traits<Scalar>::ScalarType);
   }
 
   /*!
@@ -300,7 +296,7 @@ public:
    */
   template <typename Scalar>
   static MxArray Vector(size_t m) {
-    return MxArray(m, 1, 1, Matlab::Traits<Scalar>::ScalarType);
+    return MxArray(m, 1, 1, matlab::Traits<Scalar>::ScalarType);
   }
 
   /*!
@@ -311,7 +307,7 @@ public:
    */
   template <typename ScalarType>
   static MxArray Scalar(ScalarType value = 0) {
-    MxArray s(1, 1, 1, Matlab::Traits<ScalarType>::ScalarType);
+    MxArray s(1, 1, 1, matlab::Traits<ScalarType>::ScalarType);
     s.real<ScalarType>()[0] = value;
     return s;
   }
@@ -652,5 +648,7 @@ public:
     return outputs;
   }
 };
+
+} // namespace matlab
 
 #endif

@@ -15,6 +15,8 @@
 #include <opencv2/matlab/bridge.hpp>
 #include <opencv2/{{includes}}.hpp>
 using namespace cv;
+using namespace matlab;
+using namespace bridge;
 
 /* 
  * {{ fun.name }}

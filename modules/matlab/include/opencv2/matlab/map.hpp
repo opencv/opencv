@@ -43,6 +43,7 @@
 #ifndef OPENCV_MAP_HPP_
 #define OPENCV_MAP_HPP_
 
+namespace matlab {
 #if __cplusplus >= 201103L
 
  // If we have C++11 support, we just want to use unordered_map 
@@ -83,6 +84,8 @@ public:
     return *it;
   }
 };
+
+} // namespace matlab
 
 #endif
 #endif

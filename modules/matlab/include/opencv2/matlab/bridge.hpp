@@ -49,6 +49,9 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 
+namespace cv {
+namespace bridge {
+
 /* 
  * Custom typedefs
  * Parsed names from the hdr_parser
@@ -72,10 +75,10 @@ typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
 class Bridge;
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const cv::Mat& src, MxArray& dst);
+void deepCopyAndTranspose(const cv::Mat& src, matlab::MxArray& dst);
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const MxArray& src, cv::Mat& dst);
+void deepCopyAndTranspose(const matlab::MxArray& src, cv::Mat& dst);
 
 
 
@@ -104,7 +107,7 @@ void deepCopyAndTranspose(const MxArray& src, cv::Mat& dst);
  * you can add your own custom type conversions.
  *
  * Because Matlab uses a homogeneous storage type, all operations are provided
- * relative to Matlab's type. That is, Bridge always stores an MxArray object
+ * relative to Matlab's type. That is, Bridge always stores an matlab::MxArray object
  * and converts to and from other object types on demand.
  *
  * NOTE: for the explicit conversion function, the object name must be
@@ -126,7 +129,7 @@ void deepCopyAndTranspose(const MxArray& src, cv::Mat& dst);
  */
 class Bridge {
 private:
-  MxArray ptr_;
+  matlab::MxArray ptr_;
 public:
   // bridges are default constructible
   Bridge() {}
@@ -145,11 +148,11 @@ public:
     // check that the object is actually of correct type before unpacking
     // TODO: Traverse class hierarchy?
     if (!ptr_.isClass(name)) {
-      error(std::string("Expected class ").append(std::string(name))
-                .append(" but was given ").append(ptr_.className()));
+      matlab::error(std::string("Expected class ").append(std::string(name))
+                        .append(" but was given ").append(ptr_.className()));
     }
     // get the instance field
-    MxArray inst = ptr_.field("inst_");
+    matlab::MxArray inst = ptr_.field("inst_");
     Object* obj = NULL;
     // make sure the pointer is the correct size for the system
     if (sizeof(void *) == 8 && inst.ID() == mxUINT64_CLASS) {
@@ -160,11 +163,11 @@ public:
       // 32-bit pointers
       obj = reinterpret_cast<Object *>(inst.scalar<uint32_t>());
     } else {
-      error("Incorrect pointer type stored for architecture");
+      matlab::error("Incorrect pointer type stored for architecture");
     }
 
     // finally check if the object is NULL
-    conditionalError(obj, std::string("Object ").append(std::string(name)).append(std::string(" is NULL")));
+    matlab::conditionalError(obj, std::string("Object ").append(std::string(name)).append(std::string(" is NULL")));
     return obj;
   }
  
@@ -173,10 +176,10 @@ public:
   //                           MATLAB TYPES
   // --------------------------------------------------------------------------
   Bridge& operator=(const mxArray* obj) { ptr_ = obj; return *this; }
-  Bridge& operator=(const MxArray& obj) { ptr_ = obj; return *this; }
-  Bridge(const MxArray& obj) : ptr_(obj) {}
+  Bridge& operator=(const matlab::MxArray& obj) { ptr_ = obj; return *this; }
+  Bridge(const matlab::MxArray& obj) : ptr_(obj) {}
   Bridge(const mxArray* obj) : ptr_(obj) {}
-  MxArray toMxArray() { return ptr_; }
+  matlab::MxArray toMxArray() { return ptr_; }
   
   
   // --------------------------------------------------------------------------
@@ -187,8 +190,8 @@ public:
   operator cv::Mat() const { return toMat(); }
 
   template <typename Scalar>
-  static MxArray FromMat(const cv::Mat& mat) {
-    MxArray arr(mat.rows, mat.cols, mat.channels(), Matlab::Traits<Scalar>::ScalarType);
+  static matlab::MxArray FromMat(const cv::Mat& mat) {
+    matlab::MxArray arr(mat.rows, mat.cols, mat.channels(), matlab::Traits<Scalar>::ScalarType);
     switch (mat.depth()) {
       case CV_8U:  deepCopyAndTranspose<uint8_t,  Scalar>(mat, arr); break;
       case CV_8S:  deepCopyAndTranspose<int8_t,   Scalar>(mat, arr); break;
@@ -197,7 +200,7 @@ public:
       case CV_32S: deepCopyAndTranspose<int32_t,  Scalar>(mat, arr); break;
       case CV_32F: deepCopyAndTranspose<float,    Scalar>(mat, arr); break;
       case CV_64F: deepCopyAndTranspose<double,   Scalar>(mat, arr); break;
-      default: error("Attempted to convert from unknown class");
+      default: matlab::error("Attempted to convert from unknown class");
     }
     return arr;
   }
@@ -218,7 +221,7 @@ public:
       case mxDOUBLE_CLASS:  deepCopyAndTranspose<double,   Scalar>(ptr_, mat); break;
       case mxCHAR_CLASS:    deepCopyAndTranspose<char,     Scalar>(ptr_, mat); break;
       case mxLOGICAL_CLASS: deepCopyAndTranspose<int8_t,   Scalar>(ptr_, mat); break;
-      default: error("Attempted to convert from unknown class");
+      default: matlab::error("Attempted to convert from unknown class");
     }
     return mat;
   }
@@ -393,9 +396,13 @@ public:
   Ptr_FeatureDetector toPtrFeatureDetector() { return Ptr_FeatureDetector(); }
   operator Ptr_FeatureDetector() { return toPtrFeatureDetector(); }
 
+}; // class Bridge
 
 
-};
+
+// --------------------------------------------------------------------------
+//                           SPECIALIZATIONS
+// --------------------------------------------------------------------------
 
 /*!
  * @brief template specialization for inheriting types
@@ -407,7 +414,7 @@ public:
  * that gets mapped to an unsigned 8-bit value
  */
 template <>
-MxArray Bridge::FromMat<Matlab::InheritType>(const cv::Mat& mat) {
+matlab::MxArray Bridge::FromMat<matlab::InheritType>(const cv::Mat& mat) {
   switch (mat.depth()) {
     case CV_8U:  return FromMat<uint8_t>(mat);
     case CV_8S:  return FromMat<int8_t>(mat);
@@ -416,9 +423,9 @@ MxArray Bridge::FromMat<Matlab::InheritType>(const cv::Mat& mat) {
     case CV_32S: return FromMat<int32_t>(mat);
     case CV_32F: return FromMat<double>(mat); //NOTE: Matlab uses double as native type!
     case CV_64F: return FromMat<double>(mat);
-    default: error("Attempted to convert from unknown class");
+    default: matlab::error("Attempted to convert from unknown class");
   }
-  return MxArray();
+  return matlab::MxArray();
 }
 
 /*!
@@ -430,7 +437,7 @@ MxArray Bridge::FromMat<Matlab::InheritType>(const cv::Mat& mat) {
  * to unsignd 8-bit value.
  */
 template <>
-cv::Mat Bridge::toMat<Matlab::InheritType>() const {
+cv::Mat Bridge::toMat<matlab::InheritType>() const {
   switch (ptr_.ID()) {
     case mxINT8_CLASS:    return toMat<int8_t>();
     case mxUINT8_CLASS:   return toMat<uint8_t>();
@@ -444,13 +451,13 @@ cv::Mat Bridge::toMat<Matlab::InheritType>() const {
     case mxDOUBLE_CLASS:  return toMat<float>(); //NOTE: OpenCV uses float as native type!
     case mxCHAR_CLASS:    return toMat<int8_t>();
     case mxLOGICAL_CLASS: return toMat<int8_t>();
-    default: error("Attempted to convert from unknown class");
+    default: matlab::error("Attempted to convert from unknown class");
   }
   return cv::Mat();
 }
 
-Bridge& Bridge::operator=(const cv::Mat& mat) { ptr_ = FromMat<Matlab::InheritType>(mat); return *this; }
-cv::Mat Bridge::toMat() const { return toMat<Matlab::InheritType>(); }
+Bridge& Bridge::operator=(const cv::Mat& mat) { ptr_ = FromMat<matlab::InheritType>(mat); return *this; }
+cv::Mat Bridge::toMat() const { return toMat<matlab::InheritType>(); }
 
 
 // ----------------------------------------------------------------------------
@@ -459,10 +466,10 @@ cv::Mat Bridge::toMat() const { return toMat<Matlab::InheritType>(); }
 
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
-  conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
-  conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
-  conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
+void deepCopyAndTranspose(const cv::Mat& in, matlab::MxArray& out) {
+  matlab::conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
+  matlab::conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
+  matlab::conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
   std::vector<cv::Mat> channels;
   cv::split(in, channels);
   for (size_t c = 0; c < out.channels(); ++c) {
@@ -478,10 +485,10 @@ void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
 }
 
 template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
-  conditionalError(in.rows() == static_cast<size_t>(out.rows), "Matrices must have the same number of rows");
-  conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
-  conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
+void deepCopyAndTranspose(const matlab::MxArray& in, cv::Mat& out) {
+  matlab::conditionalError(in.rows() == static_cast<size_t>(out.rows), "Matrices must have the same number of rows");
+  matlab::conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
+  matlab::conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
   std::vector<cv::Mat> channels;
   for (size_t c = 0; c < in.channels(); ++c) {
     cv::Mat outmat;
@@ -498,5 +505,9 @@ void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
   //gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
 }
 
+
+
+} // namespace bridge
+} // namespace cv
 
 #endif
