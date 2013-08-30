@@ -43,15 +43,12 @@
 #ifndef OPENCV_MXARRAY_HPP_
 #define OPENCV_MXARRAY_HPP_
 
+#include <mex.h>
 #include <stdint.h>
 #include <cstdarg>
 #include <string>
 #include <vector>
-#include <algorithm>
 #include <sstream>
-#include <iostream>
-#include <iterator>
-#include <opencv2/core.hpp>
 #if __cplusplus > 201103
 #include <unordered_set>
 typedef std::unordered_set<std::string> StringSet;
@@ -59,8 +56,6 @@ typedef std::unordered_set<std::string> StringSet;
 #include <set>
 typedef std::set<std::string> StringSet;
 #endif
-#include <mex.h>
-#include "transpose.hpp"
 
 /*
  * All recent versions of Matlab ship with the MKL library which contains
@@ -101,20 +96,6 @@ static void conditionalError(bool expr, const std::string& str) {
 static void error(const std::string& str) {
   mexErrMsgTxt(str.c_str());
 }
-
-
-// ----------------------------------------------------------------------------
-//                          PREDECLARATIONS
-// ----------------------------------------------------------------------------
-class MxArray;
-
-template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const cv::Mat& src, MxArray& dst);
-
-template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const MxArray& src, cv::Mat& dst);
-
-
 
 
 // ----------------------------------------------------------------------------
@@ -407,44 +388,6 @@ public:
     return ptr_;
   }
 
-
-  template <typename Scalar>
-  static MxArray FromMat(const cv::Mat& mat) {
-    MxArray arr(mat.rows, mat.cols, mat.channels(), Matlab::Traits<Scalar>::ScalarType);
-    switch (mat.depth()) {
-      case CV_8U:  deepCopyAndTranspose<uint8_t,  Scalar>(mat, arr); break;
-      case CV_8S:  deepCopyAndTranspose<int8_t,   Scalar>(mat, arr); break;
-      case CV_16U: deepCopyAndTranspose<uint16_t, Scalar>(mat, arr); break;
-      case CV_16S: deepCopyAndTranspose<int16_t,  Scalar>(mat, arr); break;
-      case CV_32S: deepCopyAndTranspose<int32_t,  Scalar>(mat, arr); break;
-      case CV_32F: deepCopyAndTranspose<float,    Scalar>(mat, arr); break;
-      case CV_64F: deepCopyAndTranspose<double,   Scalar>(mat, arr); break;
-      default: error("Attempted to convert from unknown class");
-    }
-    return arr;
-  }
-
-  template <typename Scalar>
-  cv::Mat toMat() const { 
-    cv::Mat mat(rows(), cols(), CV_MAKETYPE(cv::DataType<Scalar>::type, channels()));
-    switch (ID()) {
-      case mxINT8_CLASS:    deepCopyAndTranspose<int8_t,   Scalar>(*this, mat); break;
-      case mxUINT8_CLASS:   deepCopyAndTranspose<uint8_t,  Scalar>(*this, mat); break;
-      case mxINT16_CLASS:   deepCopyAndTranspose<int16_t,  Scalar>(*this, mat); break;
-      case mxUINT16_CLASS:  deepCopyAndTranspose<uint16_t, Scalar>(*this, mat); break;
-      case mxINT32_CLASS:   deepCopyAndTranspose<int32_t,  Scalar>(*this, mat); break;
-      case mxUINT32_CLASS:  deepCopyAndTranspose<uint32_t, Scalar>(*this, mat); break;
-      case mxINT64_CLASS:   deepCopyAndTranspose<int64_t,  Scalar>(*this, mat); break;
-      case mxUINT64_CLASS:  deepCopyAndTranspose<uint64_t, Scalar>(*this, mat); break;
-      case mxSINGLE_CLASS:  deepCopyAndTranspose<float,    Scalar>(*this, mat); break;
-      case mxDOUBLE_CLASS:  deepCopyAndTranspose<double,   Scalar>(*this, mat); break;
-      case mxCHAR_CLASS:    deepCopyAndTranspose<char,     Scalar>(*this, mat); break;
-      case mxLOGICAL_CLASS: deepCopyAndTranspose<int8_t,   Scalar>(*this, mat); break;
-      default: error("Attempted to convert from unknown class");
-    }
-    return mat;
-  }
-
   MxArray field(const std::string& name) { return MxArray(mxGetField(ptr_, 0, name.c_str())); }
 
   template <typename Scalar>
@@ -485,6 +428,10 @@ public:
 
 };
 
+
+// ----------------------------------------------------------------------------
+//                           ARGUMENT PARSER
+// ----------------------------------------------------------------------------
 
 /*! @class ArgumentParser
  *  @brief parses inputs to a method and resolves the argument names.
@@ -568,6 +515,8 @@ private:
       : name_(name), Nreq_(Nreq), Nopt_(Nopt), keys_(keys),
       order_(Nreq+Nopt, Nreq+2*Nopt), valid_(true), nparsed_(0), nkeys_(0),
       working_opt_(0), expecting_val_(false), using_named_(false) {}
+    /*! @brief the name of the variant */
+    String name() const { return name_; }
     /*! @brief return the total number of arguments the variant can take */
     size_t size() const { return Nreq_ + Nopt_; }
     /*! @brief has the variant been fulfilled? */
@@ -613,14 +562,12 @@ private:
   void sortArguments(Variant& v, MxArrayVector& in, MxArrayVector& out) {
     // allocate the output array with ALL arguments
     out.resize(v.size());
-    std::copy(v.order().begin(), v.order().end(), std::ostream_iterator<size_t>(std::cout, ", "));
     // reorder the inputs based on the variant ordering
     for (size_t n = 0; n < v.size(); ++n) {
       if (v.order(n) >= in.size()) continue;
       swap(in[v.order(n)], out[n]);
     }
   }
-  MxArrayVector filled_;
   VariantVector variants_;
   String valid_;
   String method_name_;
@@ -668,6 +615,7 @@ public:
    */
   MxArrayVector parse(const MxArrayVector& inputs) {
     // allocate the outputs
+    String variant_string;
     MxArrayVector outputs;
     VariantVector candidates = variants_;
 
@@ -675,25 +623,16 @@ public:
     for (MxArrayVector::const_iterator input = inputs.begin(); input != inputs.end(); ++input) {
       String name = input->isString() ? input->toString() : String();
       for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
-        if (candidate->exist(name)) {
-          mexPrintf("%d\n", candidate->parseNextAsKey(name));
-        } else {
-          mexPrintf("%d\n", candidate->parseNextAsValue());
-        }
+        candidate->exist(name) ? candidate->parseNextAsKey(name) : candidate->parseNextAsValue();
       }
     }
-
-    mexPrintf("We get here!\n");
 
     // make sure the candidates have been fulfilled
     for (VariantVector::iterator candidate = candidates.begin(); candidate < candidates.end(); ++candidate) {
-      if (!candidate->fulfilled()) {
-        candidate = candidates.erase(candidate)--;
-      }
+      if (!candidate->fulfilled()) candidate = candidates.erase(candidate)--;
     }
 
     // if there is not a unique candidate, throw an error
-    String variant_string;
     for (VariantVector::iterator variant = variants_.begin(); variant != variants_.end(); ++variant) {
       variant_string += "\n" + variant->toString(method_name_);
     }
@@ -708,111 +647,10 @@ public:
     }
 
     // Unique candidate!
+    valid_ = candidates[0].name();
     sortArguments(candidates[0], const_cast<MxArrayVector&>(inputs), outputs);
     return outputs;
   }
 };
-
-
-/*!
- * @brief template specialization for inheriting types
- *
- * This template specialization attempts to preserve the best mapping
- * between OpenCV and Matlab types. Matlab uses double types almost universally, so
- * all floating float types are converted to doubles.
- * Unfortunately OpenCV does not have a native logical type, so
- * that gets mapped to an unsigned 8-bit value
- */
-template <>
-MxArray MxArray::FromMat<Matlab::InheritType>(const cv::Mat& mat) {
-  switch (mat.depth()) {
-    case CV_8U:  return FromMat<uint8_t>(mat);
-    case CV_8S:  return FromMat<int8_t>(mat);
-    case CV_16U: return FromMat<uint16_t>(mat);
-    case CV_16S: return FromMat<int16_t>(mat);
-    case CV_32S: return FromMat<int32_t>(mat);
-    case CV_32F: return FromMat<double>(mat); //NOTE: Matlab uses double as native type!
-    case CV_64F: return FromMat<double>(mat);
-    default: error("Attempted to convert from unknown class");
-  }
-  return MxArray();
-}
-
-/*!
- * @brief template specialization for inheriting types
- * 
- * This template specialization attempts to preserve the best mapping
- * between Matlab and OpenCV types. OpenCV has poor support for double precision
- * types, so all floating point types are cast to float. Logicals get cast
- * to unsignd 8-bit value.
- */
-template <>
-cv::Mat MxArray::toMat<Matlab::InheritType>() const {
-  switch (ID()) {
-    case mxINT8_CLASS:    return toMat<int8_t>();
-    case mxUINT8_CLASS:   return toMat<uint8_t>();
-    case mxINT16_CLASS:   return toMat<int16_t>();
-    case mxUINT16_CLASS:  return toMat<uint16_t>();
-    case mxINT32_CLASS:   return toMat<int32_t>();
-    case mxUINT32_CLASS:  return toMat<int32_t>();
-    case mxINT64_CLASS:   return toMat<int64_t>();
-    case mxUINT64_CLASS:  return toMat<int64_t>();
-    case mxSINGLE_CLASS:  return toMat<float>();
-    case mxDOUBLE_CLASS:  return toMat<float>(); //NOTE: OpenCV uses float as native type!
-    case mxCHAR_CLASS:    return toMat<int8_t>();
-    case mxLOGICAL_CLASS: return toMat<int8_t>();
-    default: error("Attempted to convert from unknown class");
-  }
-  return cv::Mat();
-}
-
-
-
-// ----------------------------------------------------------------------------
-//                            MATRIX TRANSPOSE
-// ----------------------------------------------------------------------------
-
-
-template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const cv::Mat& in, MxArray& out) {
-  conditionalError(static_cast<size_t>(in.rows) == out.rows(), "Matrices must have the same number of rows");
-  conditionalError(static_cast<size_t>(in.cols) == out.cols(), "Matrices must have the same number of cols");
-  conditionalError(static_cast<size_t>(in.channels()) == out.channels(), "Matrices must have the same number of channels");
-  std::vector<cv::Mat> channels;
-  cv::split(in, channels);
-  for (size_t c = 0; c < out.channels(); ++c) {
-    cv::transpose(channels[c], channels[c]);
-    cv::Mat outmat(out.cols(), out.rows(), cv::DataType<OutputScalar>::type, 
-      static_cast<void *>(out.real<OutputScalar>() + out.cols()*out.rows()*c));
-    channels[c].convertTo(outmat, cv::DataType<OutputScalar>::type);
-  }
-
-  //const InputScalar* inp = in.ptr<InputScalar>(0);
-  //OutputScalar* outp = out.real<OutputScalar>();
-  //gemt('R', out.rows(), out.cols(), inp, in.step1(), outp, out.rows());
-}
-
-template <typename InputScalar, typename OutputScalar>
-void deepCopyAndTranspose(const MxArray& in, cv::Mat& out) {
-  conditionalError(in.rows() == static_cast<size_t>(out.rows), "Matrices must have the same number of rows");
-  conditionalError(in.cols() == static_cast<size_t>(out.cols), "Matrices must have the same number of cols");
-  conditionalError(in.channels() == static_cast<size_t>(out.channels()), "Matrices must have the same number of channels");
-  std::vector<cv::Mat> channels;
-  for (size_t c = 0; c < in.channels(); ++c) {
-    cv::Mat outmat;
-    cv::Mat inmat(in.cols(), in.rows(), cv::DataType<InputScalar>::type,
-      static_cast<void *>(const_cast<InputScalar *>(in.real<InputScalar>() + in.cols()*in.rows()*c)));
-    inmat.convertTo(outmat, cv::DataType<OutputScalar>::type);
-    cv::transpose(outmat, outmat);
-    channels.push_back(outmat);
-  }
-  cv::merge(channels, out);
-
-  //const InputScalar* inp = in.real<InputScalar>();
-  //OutputScalar* outp = out.ptr<OutputScalar>(0);
-  //gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
-}
-
-
 
 #endif
