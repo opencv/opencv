@@ -27,6 +27,14 @@
 %     camera = cv.VideoCapture();
 %     camera.open('/path/to/file');
 %
+% You can specify optional arguments by name, similar to how python
+% and many builtin Matlab functions work. For example, the cv.dft
+% method used above has an optional 'nonzeroRows' argument. If
+% you want to specify that, but keep the default 'flags' behaviour,
+% simply call the method as:
+%
+%     Xf = cv.dft(X, 'nonzeroRows', 7);
+%
 % <strong>HELP</strong>
 % Each method has its own help file containing information about the
 % arguments, return values, and what operation the method performs. 
