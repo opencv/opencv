@@ -35,7 +35,7 @@ void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% end
   ArgumentParser parser("{{fun.name}}");
   parser.{{ functional.composeVariant(fun) }};
   MxArrayVector sorted = parser.parse(MxArrayVector(prhs, prhs+nrhs));
-  {%endif %}
+  {% endif %}
 
   {% if fun|ninputs or fun|noutputs %}
   // setup

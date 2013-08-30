@@ -244,9 +244,9 @@ public:
   /*!
    * @brief default constructor
    *
-   * Construct a valid 0x0 matrix (so all other methods do not need validity checks
+   * Construct a valid 0x0 matrix (so all other methods do not need validity checks)
    */
-  MxArray() : ptr_(mxCreateDoubleMatrix(1, 1, matlab::Traits<>::Real)), owns_(true) {}
+  MxArray() : ptr_(mxCreateDoubleMatrix(0, 0, matlab::Traits<>::Real)), owns_(true) {}
 
   /*!
    * @brief inheriting constructor
@@ -415,6 +415,7 @@ public:
   }
 
   size_t size() const { return mxGetNumberOfElements(ptr_); }
+  bool empty() const { return size() == 0; }
   size_t rows() const { return mxGetDimensions(ptr_)[0]; }
   size_t cols() const { return mxGetDimensions(ptr_)[1]; }
   size_t channels() const { return (mxGetNumberOfDimensions(ptr_) > 2) ? mxGetDimensions(ptr_)[2] : 1; }

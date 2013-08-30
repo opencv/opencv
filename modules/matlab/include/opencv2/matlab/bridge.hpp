@@ -136,6 +136,11 @@ public:
   Bridge() {}
   virtual ~Bridge() {}
 
+  // --------------------------------------------------------------------------
+  //                         Bridge Properties
+  // --------------------------------------------------------------------------
+  bool empty() const { return ptr_.empty(); }
+
   /*! @brief unpack an object from Matlab into C++
    *
    * this function checks whether the given bridge is derived from an
