@@ -741,7 +741,7 @@ struct RectConvert
     }
 };
 
-void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
+CV_EXPORTS void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, double eps, std::vector<Ncv32u> *weights)
 {
     vector<Rect> rects(hypotheses.size());
     std::transform(hypotheses.begin(), hypotheses.end(), rects.begin(), RectConvert());
@@ -760,7 +760,7 @@ void groupRectangles(std::vector<NcvRect32u> &hypotheses, int groupThreshold, do
     hypotheses.resize(rects.size());
 }
 
-NCVStatus loadFromXML(const std::string &filename,
+CV_EXPORTS NCVStatus loadFromXML(const std::string &filename,
                       HaarClassifierCascadeDescriptor &haar,
                       std::vector<HaarStage64> &haarStages,
                       std::vector<HaarClassifierNode128> &haarClassifierNodes,
