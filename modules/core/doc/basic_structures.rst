@@ -553,7 +553,7 @@ Range
 -----
 .. ocv:class:: Range
 
-Template class specifying a continuous subsequence (slice) of a sequence. 
+Template class specifying a continuous subsequence (slice) of a sequence.
 
 ::
 
@@ -773,7 +773,7 @@ Mat
 ---
 .. ocv:class:: Mat
 
-OpenCV C++ n-dimensional dense array class 
+OpenCV C++ n-dimensional dense array class
 ::
 
     class CV_EXPORTS Mat
@@ -1292,7 +1292,7 @@ The method makes a new header for the specified row span of the matrix. Similarl
 
 Mat::colRange
 -------------
-Creates a matrix header for the specified row span.
+Creates a matrix header for the specified column span.
 
 .. ocv:function:: Mat Mat::colRange(int startcol, int endcol) const
 
@@ -2892,4 +2892,3 @@ The above methods are usually enough for users. If you want to make your own alg
  * Add public virtual method ``AlgorithmInfo* info() const;`` to your class.
  * Add constructor function, ``AlgorithmInfo`` instance and implement the ``info()`` method. The simplest way is to take  http://code.opencv.org/projects/opencv/repository/revisions/master/entry/modules/ml/src/ml_init.cpp as the reference and modify it according to the list of your parameters.
  * Add some public function (e.g. ``initModule_<mymodule>()``) that calls info() of your algorithm and put it into the same source file as ``info()`` implementation. This is to force C++ linker to include this object file into the target application. See ``Algorithm::create()`` for details.
-

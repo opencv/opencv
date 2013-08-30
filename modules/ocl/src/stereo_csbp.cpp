@@ -624,11 +624,11 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     const Scalar zero = Scalar::all(0);
 
     ////////////////////////////////////Init///////////////////////////////////////////////////
-    int rows = left.rows;  
-    int cols = left.cols; 
+    int rows = left.rows;
+    int cols = left.cols;
 
     rthis.levels = min(rthis.levels, int(log((double)rthis.ndisp) / log(2.0)));
-    int levels = rthis.levels; 
+    int levels = rthis.levels;
 
     AutoBuffer<int> buf(levels * 4);
 
@@ -639,10 +639,10 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
 
     cols_pyr[0] = cols;
     rows_pyr[0] = rows;
-    nr_plane_pyr[0] = rthis.nr_plane; 
+    nr_plane_pyr[0] = rthis.nr_plane;
 
     const int n = 64;
-    step_pyr[0] = alignSize(cols * sizeof(T), n) / sizeof(T); 
+    step_pyr[0] = alignSize(cols * sizeof(T), n) / sizeof(T);
     for (int i = 1; i < levels; i++)
     {
         cols_pyr[i] = cols_pyr[i - 1]  / 2;
@@ -688,7 +688,7 @@ static void csbp_operator(StereoConstantSpaceBP &rthis, oclMat u[2], oclMat d[2]
     d[0] = zero;
     r[0] = zero;
     u[0] = zero;
-    disp_selected_pyr[0] = zero; 
+    disp_selected_pyr[0] = zero;
 
     l[1] = zero;
     d[1] = zero;

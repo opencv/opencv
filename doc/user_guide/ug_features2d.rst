@@ -78,7 +78,7 @@ First, we create an instance of a keypoint detector. All detectors inherit the a
     extractor.compute(img1, keypoints1, descriptors1);
     extractor.compute(img2, keypoints2, descriptors2);
 
-We create an instance of descriptor extractor. The most of OpenCV descriptors inherit ``DescriptorExtractor`` abstract interface. Then we compute descriptors for each of the keypoints. The output ``Mat`` of the ``DescriptorExtractor::compute`` method contains a descriptor in a row *i* for each *i*-th keypoint. Note that the method can modify the keypoints vector by removing the keypoints such that a descriptor for them is not defined (usually these are the keypoints near image border). The method makes sure that the ouptut keypoints and descriptors are consistent with each other (so that the number of keypoints is equal to the descriptors row count). :: 
+We create an instance of descriptor extractor. The most of OpenCV descriptors inherit ``DescriptorExtractor`` abstract interface. Then we compute descriptors for each of the keypoints. The output ``Mat`` of the ``DescriptorExtractor::compute`` method contains a descriptor in a row *i* for each *i*-th keypoint. Note that the method can modify the keypoints vector by removing the keypoints such that a descriptor for them is not defined (usually these are the keypoints near image border). The method makes sure that the ouptut keypoints and descriptors are consistent with each other (so that the number of keypoints is equal to the descriptors row count). ::
 
     // matching descriptors
     BruteForceMatcher<L2<float> > matcher;

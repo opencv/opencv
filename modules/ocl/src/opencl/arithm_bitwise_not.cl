@@ -63,7 +63,7 @@ __kernel void arithm_bitwise_not_D0 (__global uchar *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -106,7 +106,7 @@ __kernel void arithm_bitwise_not_D1 (__global char *src1, int src1_step, int src
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -143,7 +143,7 @@ __kernel void arithm_bitwise_not_D2 (__global ushort *src1, int src1_step, int s
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -181,7 +181,7 @@ __kernel void arithm_bitwise_not_D3 (__global short *src1, int src1_step, int sr
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

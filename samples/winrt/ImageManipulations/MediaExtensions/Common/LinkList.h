@@ -13,9 +13,9 @@
 #pragma once
 
 // Notes:
-// 
-// The List class template implements a simple double-linked list. 
-// It uses STL's copy semantics. 
+//
+// The List class template implements a simple double-linked list.
+// It uses STL's copy semantics.
 
 // There are two versions of the Clear() method:
 //  Clear(void) clears the list w/out cleaning up the object.
@@ -90,7 +90,7 @@ public:
     private:
         const Node *pNode;
 
-        POSITION(Node *p) : pNode(p) 
+        POSITION(Node *p) : pNode(p)
         {
         }
     };
@@ -123,7 +123,7 @@ protected:
         }
 
         Node *pAfter = pBefore->next;
-            
+
         pBefore->next = pNode;
         pAfter->prev = pNode;
 
@@ -336,12 +336,12 @@ public:
     }
 
     HRESULT GetItemPos(POSITION pos, T *ppItem)
-    {   
+    {
         if (pos.pNode)
         {
             return GetItem(pos.pNode, ppItem);
         }
-        else 
+        else
         {
             return E_FAIL;
         }
@@ -359,7 +359,7 @@ public:
         }
     }
 
-    // Remove an item at a position. 
+    // Remove an item at a position.
     // The item is returns in ppItem, unless ppItem is nullptr.
     // NOTE: This method invalidates the POSITION object.
     HRESULT Remove(POSITION& pos, T *ppItem)
@@ -390,7 +390,7 @@ public:
 
 class ComAutoRelease
 {
-public: 
+public:
     void operator()(IUnknown *p)
     {
         if (p)
@@ -399,10 +399,10 @@ public:
         }
     }
 };
-        
+
 class MemDelete
 {
-public: 
+public:
     void operator()(void *p)
     {
         if (p)
@@ -416,9 +416,9 @@ public:
 // ComPtrList class
 // Derived class that makes it safer to store COM pointers in the List<> class.
 // It automatically AddRef's the pointers that are inserted onto the list
-// (unless the insertion method fails). 
+// (unless the insertion method fails).
 //
-// T must be a COM interface type. 
+// T must be a COM interface type.
 // example: ComPtrList<IUnknown>
 //
 // NULLABLE: If true, client can insert nullptr pointers. This means GetItem can
@@ -487,7 +487,7 @@ protected:
     HRESULT RemoveItem(Node *pNode, Ptr *ppItem)
     {
         // ppItem can be nullptr, but we need to get the
-        // item so that we can release it. 
+        // item so that we can release it.
 
         // If ppItem is not nullptr, we will AddRef it on the way out.
 

@@ -71,15 +71,15 @@ void reduce(volatile __local int* smem, int val, int tid)
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 128)
-    { 
+    {
         smem[tid] = val += smem[tid + 128];
-    } 
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 64)
-    { 
+    {
         smem[tid] = val += smem[tid + 64];
-    } 
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 32)
@@ -125,15 +125,15 @@ void reduce(__local volatile int* smem, int val, int tid)
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 128)
-    { 
+    {
         smem[tid] = val += smem[tid + 128];
-    } 
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 64)
-    { 
+    {
         smem[tid] = val += smem[tid + 64];
-    } 
+    }
     barrier(CLK_LOCAL_MEM_FENCE);
 
     if (tid < 32)

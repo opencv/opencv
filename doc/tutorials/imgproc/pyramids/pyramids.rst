@@ -259,5 +259,3 @@ Results
   .. image:: images/Pyramids_Tutorial_PyrUp_Result.jpg
      :alt: Pyramids: PyrUp Result
      :align: center
-
-

@@ -118,7 +118,7 @@ inline int divUp(int total, int grain)
 /////////////////////// add subtract multiply divide /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 template<typename T>
-void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
+void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
                     string kernelName, const char **kernelString, void *_scalar, int op_type = 0)
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
@@ -187,12 +187,12 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
             openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
     }
 }
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
                            string kernelName, const char **kernelString, int op_type = 0)
 {
     arithmetic_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL, op_type);
 }
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask, 
+static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask,
                            string kernelName, const char **kernelString, int op_type = 0)
 {
     if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
@@ -2336,7 +2336,7 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
         return;
     }
 
-    CV_Assert((x.type() == y.type() && x.size() == y.size() && x.depth() == CV_32F) || x.depth() == CV_64F);
+    CV_Assert(x.depth() == CV_32F || x.depth() == CV_64F);
     y.create(x.size(), x.type());
     string kernelName = "arithm_pow";
 

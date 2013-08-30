@@ -425,7 +425,7 @@ __kernel void BruteForceMatch_RadiusMatch(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    if (queryIdx < query_rows && trainIdx < train_rows && 
+    if (queryIdx < query_rows && trainIdx < train_rows &&
         convert_float(result) < maxDistance/* && mask(queryIdx, trainIdx)*/)
     {
         unsigned int ind = atom_inc(nMatches + queryIdx);

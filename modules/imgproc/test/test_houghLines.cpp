@@ -146,4 +146,3 @@ void CV_HoughLinesTest::run_test(int type)
 TEST(Imgproc_HoughLines, regression) { CV_StandartHoughLinesTest test; test.safe_run(); }
 
 TEST(Imgproc_HoughLinesP, regression) { CV_ProbabilisticHoughLinesTest test; test.safe_run(); }
-

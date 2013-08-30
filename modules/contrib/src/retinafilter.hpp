@@ -543,7 +543,3 @@ private:
 
 }
 #endif /*RETINACLASSES_H_*/
-
-
-
-

@@ -305,4 +305,3 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
     };
 
 ..
-

@@ -45,13 +45,13 @@ jasper-1.900.1    -   JasPer is a collection of software
                       and manipulation of images.  This software can handle image data in a
                       variety of formats.  One such format supported by JasPer is the JPEG-2000
                       format defined in ISO/IEC 15444-1.
-             
+
                       Copyright (c) 1999-2000 Image Power, Inc.
                       Copyright (c) 1999-2000 The University of British Columbia
                       Copyright (c) 2001-2003 Michael David Adams
 
                       The JasPer license can be found in src/libjasper.
-             
+
                       OpenCV on Windows uses pre-built libjasper library
                       (lib/libjasper*). To get the latest source code,
                       please, visit the project homepage:

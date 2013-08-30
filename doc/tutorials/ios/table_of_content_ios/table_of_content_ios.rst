@@ -69,7 +69,7 @@
 
 .. toctree::
    :hidden:
-   
+
    ../hello/hello
    ../image_manipulation/image_manipulation
    ../video_processing/video_processing

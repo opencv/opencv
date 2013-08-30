@@ -343,9 +343,9 @@ void CvCapture_FFMPEG::close()
 class ImplMutex
 {
 public:
-	ImplMutex() { init(); }
-	~ImplMutex() { destroy(); }
-	
+    ImplMutex() { init(); }
+    ~ImplMutex() { destroy(); }
+
     void init();
     void destroy();
 
@@ -366,7 +366,15 @@ private:
 
 struct ImplMutex::Impl
 {
-    void init() { InitializeCriticalSection(&cs); refcount = 1; }
+    void init()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        ::InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        ::InitializeCriticalSection(&cs);
+#endif
+        refcount = 1;
+    }
     void destroy() { DeleteCriticalSection(&cs); }
 
     void lock() { EnterCriticalSection(&cs); }
@@ -439,14 +447,14 @@ struct ImplMutex::Impl
 
 void ImplMutex::init()
 {
-	impl = (Impl*)malloc(sizeof(Impl));
-	impl->init();
+    impl = (Impl*)malloc(sizeof(Impl));
+    impl->init();
 }
-void ImplMutex::destroy() 
+void ImplMutex::destroy()
 {
-	impl->destroy();
-	free(impl);
-	impl = NULL;
+    impl->destroy();
+    free(impl);
+    impl = NULL;
 }
 void ImplMutex::lock() { impl->lock(); }
 void ImplMutex::unlock() { impl->unlock(); }

@@ -238,4 +238,3 @@ void cv::ocl::StereoBM_OCL::operator() ( const oclMat &left, const oclMat &right
 {
     cv::ocl::stereoBM::operator_(minSSD, leBuf, riBuf, preset, ndisp, winSize, avergeTexThreshold, left, right, disparity);
 }
-

@@ -282,4 +282,4 @@ TEST_F(SuperResolution, BTVL1_OCL)
     cv::ocl::getDevice(infos);
     RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
 }
-#endif 
+#endif

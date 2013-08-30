@@ -40,7 +40,7 @@ Lixin Fan, Jutta Willamowski, Cedric Bray, 2004. ::
 
 BOWTrainer::add
 -------------------
-Adds descriptors to a training set. 
+Adds descriptors to a training set.
 
 .. ocv:function:: void BOWTrainer::add( const Mat& descriptors )
 
@@ -66,7 +66,7 @@ Returns the count of all descriptors stored in the training set.
 
 BOWTrainer::cluster
 -----------------------
-Clusters train descriptors. 
+Clusters train descriptors.
 
 .. ocv:function:: Mat BOWTrainer::cluster() const
 
@@ -116,7 +116,7 @@ Class to compute an image descriptor using the *bag of visual words*. Such a com
     #. Compute descriptors for a given image and its keypoints set.
     #. Find the nearest visual words from the vocabulary for each keypoint descriptor.
     #. Compute the bag-of-words image descriptor as is a normalized histogram of vocabulary words encountered in the image. The ``i``-th bin of the histogram is a frequency of ``i``-th word of the vocabulary in the given image.
-    
+
 The class declaration is the following: ::
 
         class BOWImgDescriptorExtractor
@@ -204,4 +204,3 @@ BOWImgDescriptorExtractor::descriptorType
 Returns an image descriptor type.
 
 .. ocv:function:: int BOWImgDescriptorExtractor::descriptorType() const
-

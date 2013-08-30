@@ -146,4 +146,3 @@ Result
    .. image:: images/Feature_Homography_Result.jpg
       :align: center
       :height: 200pt
-

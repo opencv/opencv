@@ -1695,4 +1695,3 @@ cvMixSegmL2( CvImgObsInfo ** obs_info_array, int num_img, CvEHMM * hmm )
 }
 
 /* End of file */
-

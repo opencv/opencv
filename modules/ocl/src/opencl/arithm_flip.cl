@@ -64,7 +64,7 @@ __kernel void arithm_flip_rows_D0 (__global uchar *src, int src_step, int src_of
     if (x < cols && y < thread_rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -122,7 +122,7 @@ __kernel void arithm_flip_rows_D1 (__global char *src, int src_step, int src_off
     if (x < cols && y < thread_rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -167,7 +167,7 @@ __kernel void arithm_flip_rows_D2 (__global ushort *src, int src_step, int src_o
     if (x < cols && y < thread_rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -212,7 +212,7 @@ __kernel void arithm_flip_rows_D3 (__global short *src, int src_step, int src_of
     if (x < cols && y < thread_rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

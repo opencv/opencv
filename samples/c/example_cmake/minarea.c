@@ -114,4 +114,3 @@ int main( int argc, char** argv )
 #ifdef _EiC
 main(1,"convexhull.c");
 #endif
-

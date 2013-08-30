@@ -378,5 +378,3 @@ void App::handleKey(char key)
         break;
     }
 }
-
-

@@ -62,7 +62,7 @@
 #endif
 
 /////////////////////// Bitonic sort ////////////////////////////
-// ported from 
+// ported from
 // https://github.com/HSA-Libraries/Bolt/blob/master/include/bolt/cl/sort_by_key_kernels.cl
 __kernel
     void bitonicSort
@@ -82,7 +82,7 @@ __kernel
     const int pairDistance = 1 << (stage - passOfStage);
     const int blockWidth   = 2 * pairDistance;
 
-    int leftId = min( (threadId % pairDistance) 
+    int leftId = min( (threadId % pairDistance)
                    + (threadId / pairDistance) * blockWidth, count );
 
     int rightId = min( leftId + pairDistance, count );
@@ -90,7 +90,7 @@ __kernel
     int temp;
 
     const V_T lval = vals[leftId];
-    const V_T rval = vals[rightId]; 
+    const V_T rval = vals[rightId];
 
     const K_T lkey = keys[leftId];
     const K_T rkey = keys[rightId];
@@ -142,7 +142,7 @@ __kernel
 
     int offset   = groupID * wg;
     int same     = 0;
-    
+
     vals      += offset;
     keys      += offset;
     n = (groupID == (numOfGroups-1))? (count - wg*(numOfGroups-1)) : wg;
@@ -163,13 +163,13 @@ __kernel
     for (int j=0;j<n;++j)
     {
         key2  = scratch[j];
-        if(my_comp(key2, key1)) 
+        if(my_comp(key2, key1))
             pos++;//calculate the rank of this element in this work group
-        else 
+        else
         {
             if(my_comp(key1, key2))
                 continue;
-            else 
+            else
             {
                 // key1 and key2 are same
                 same++;
@@ -209,15 +209,15 @@ __kernel
     {
         for(int k=0; k<wg; k++)
         {
-            key2 = keys[j*wg + k]; 
+            key2 = keys[j*wg + k];
             if(my_comp(key1, key2))
                 break;
             else
             {
-                //Increment only if the value is not the same. 
+                //Increment only if the value is not the same.
                 if(my_comp(key2, key1))
                     pos++;
-                else 
+                else
                     same++;
             }
         }
@@ -225,18 +225,18 @@ __kernel
 
     for(int k=0; k<remainder; k++)
     {
-        key2 = keys[(numOfGroups-1)*wg + k]; 
+        key2 = keys[(numOfGroups-1)*wg + k];
         if(my_comp(key1, key2))
             break;
         else
         {
-            //Don't increment if the value is the same. 
+            //Don't increment if the value is the same.
             if(my_comp(key2, key1))
                 pos++;
-            else 
+            else
                 same++;
         }
-    }  
+    }
     for (int j=0; j< same; j++)
     {
         vals[pos + j] = val1;

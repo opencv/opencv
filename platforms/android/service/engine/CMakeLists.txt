@@ -26,19 +26,32 @@ endif()
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${ANDROID_MANIFEST_FILE}" "${OpenCV_BINARY_DIR}/platforms/android/service/engine/.build/${ANDROID_MANIFEST_FILE}"  @ONLY)
 
-link_directories("${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib" "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib" "${ANDROID_SOURCE_TREE}/bin/${ANDROID_ARCH_NAME}")
+link_directories(
+  "${ANDROID_SOURCE_TREE}/out/target/product/generic/system/lib"
+  "${ANDROID_SOURCE_TREE}/out/target/product/${ANDROID_PRODUCT}/system/lib"
+  "${ANDROID_SOURCE_TREE}/bin/${ANDROID_ARCH_NAME}")
+
+file(GLOB engine_files "jni/BinderComponent/*.cpp" "jni/BinderComponent/*.h" "jni/include/*.h")
+set(engine_libs "z" "binder" "log" "utils")
+
+if (TEGRA_DETECTOR)
+  if (ANDROID_NATIVE_API_LEVEL GREATER 8)
+    add_definitions(-DUSE_TEGRA_HW_DETECTOR)
+    list(APPEND engine_libs ${TEGRA_DETECTOR} GLESv2 EGL)
+  else()
+    message(FATAL_ERROR "Tegra detector required native api level 9 or above")
+  endif()
+endif()
 
 # -D__SUPPORT_ARMEABI_FEATURES key is also available
 add_definitions(-DPLATFORM_ANDROID -D__SUPPORT_ARMEABI_V7A_FEATURES -D__SUPPORT_TEGRA3 -D__SUPPORT_MIPS)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions")
-
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-allow-shlib-undefined")
-file(GLOB engine_files "jni/BinderComponent/*.cpp" "jni/BinderComponent/*.h" "jni/include/*.h")
 
-include_directories(jni/BinderComponent jni/include)
+include_directories("jni/BinderComponent" "jni/include")
 include_directories(SYSTEM "${ANDROID_SOURCE_TREE}/frameworks/base/include" "${ANDROID_SOURCE_TREE}/system/core/include")
 add_library(${engine} SHARED ${engine_files})
-target_link_libraries(${engine} z binder log utils)
+target_link_libraries(${engine} ${engine_libs})
 
 set_target_properties(${engine} PROPERTIES
     OUTPUT_NAME ${engine}
@@ -51,7 +64,15 @@ add_custom_command(TARGET ${engine} POST_BUILD COMMAND ${CMAKE_STRIP} --strip-un
 file(GLOB engine_jni_files "jni/JNIWrapper/*.cpp" "jni/JNIWrapper/*.h" "jni/include/*.h")
 list(APPEND engine_jni_files jni/NativeService/CommonPackageManager.cpp jni/NativeService/PackageInfo.cpp)
 
-include_directories(jni/include jni/JNIWrapper jni/NativeService jni/BinderComponent "${ANDROID_SOURCE_TREE}/frameworks/base/include" "${ANDROID_SOURCE_TREE}/system/core/include" "${ANDROID_SOURCE_TREE}/frameworks/base/core/jni")
+include_directories(
+  jni/include jni/JNIWrapper
+  jni/NativeService
+  jni/BinderComponent
+  "${ANDROID_SOURCE_TREE}/frameworks/base/include"
+  "${ANDROID_SOURCE_TREE}/system/core/include"
+  "${ANDROID_SOURCE_TREE}/frameworks/base/core/jni"
+  )
+
 add_library(${engine}_jni SHARED ${engine_jni_files})
 target_link_libraries(${engine}_jni z binder log utils android_runtime ${engine})
 

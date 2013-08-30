@@ -274,5 +274,3 @@ Example: ::
 
     VectorDescriptorMatcher matcher( new SurfDescriptorExtractor,
                                      new BruteForceMatcher<L2<float> > );
-
-

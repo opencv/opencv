@@ -17,7 +17,7 @@ check_include_file(string.h HAVE_STRING_H)
 check_include_file(sys/types.h HAVE_SYS_TYPES_H)
 check_include_file(unistd.h HAVE_UNISTD_H)
 
-if(WIN32)
+if(WIN32 AND NOT HAVE_WINRT)
   set(USE_WIN32_FILEIO 1)
 endif()
 
@@ -79,14 +79,12 @@ set(lib_srcs
     "${CMAKE_CURRENT_BINARY_DIR}/tif_config.h"
     )
 
-if(UNIX)
+if(WIN32 AND NOT HAVE_WINRT)
+  list(APPEND lib_srcs tif_win32.c)
+else()
   list(APPEND lib_srcs tif_unix.c)
 endif()
-
-if(WIN32)
-  list(APPEND lib_srcs tif_win32.c)
-endif(WIN32)
-
+  
 ocv_warnings_disable(CMAKE_C_FLAGS -Wno-unused-but-set-variable -Wmissing-prototypes -Wmissing-declarations -Wundef -Wunused -Wsign-compare
                                    -Wcast-align -Wshadow -Wno-maybe-uninitialized -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast)
 ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-parameter) # clang

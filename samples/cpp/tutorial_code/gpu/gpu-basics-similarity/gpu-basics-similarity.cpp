@@ -424,4 +424,3 @@ Scalar getMSSIM_GPU_optimized( const Mat& i1, const Mat& i2, BufferMSSIM& b)
     }
     return mssim;
 }
-

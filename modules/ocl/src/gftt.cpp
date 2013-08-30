@@ -147,7 +147,7 @@ struct Sorter<SELECTION>
     static void sortCorners_caller(const EigType& eig_tex, oclMat& corners, const int count)
     {
         Context * cxt = Context::getContext();
-        
+
         size_t globalThreads[3] = {count, 1, 1};
         size_t localThreads[3]  = {GROUP_SIZE, 1, 1};
 
@@ -170,7 +170,7 @@ struct Sorter<SELECTION>
 };
 
 int findCorners_caller(
-    const TextureCL& eig, 
+    const TextureCL& eig,
     const float threshold,
     const oclMat& mask,
     oclMat& corners,
@@ -254,7 +254,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::operator ()(const oclMat& image, 
             Sorter<SELECTION>::sortCorners_caller(*eig_tex, tmpCorners_, total);
         }
     }
-    
+
     if (minDistance < 1)
     {
         Rect roi_range(0, 0, maxCorners > 0 ? std::min(maxCorners, total) : total, 1);
@@ -338,15 +338,13 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &poin
     CV_DbgAssert(points.type() == CV_32FC2);
     points_v.resize(points.cols);
     openCLSafeCall(clEnqueueReadBuffer(
-        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()), 
-        reinterpret_cast<cl_mem>(points.data), 
-        CL_TRUE,                                    
-        0, 
-        points.cols * sizeof(Point2f), 
-        &points_v[0], 
-        0, 
-        NULL, 
+        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()),
+        reinterpret_cast<cl_mem>(points.data),
+        CL_TRUE,
+        0,
+        points.cols * sizeof(Point2f),
+        &points_v[0],
+        0,
+        NULL,
         NULL));
 }
-
-

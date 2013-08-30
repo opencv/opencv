@@ -73,7 +73,7 @@ __kernel void arithm_bitwise_binary_with_mask_C1_D0 (
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -118,7 +118,7 @@ __kernel void arithm_bitwise_binary_with_mask_C1_D1 (
     if (x < cols && y < rows)
     {
         x = x << 2;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -163,7 +163,7 @@ __kernel void arithm_bitwise_binary_with_mask_C1_D2 (
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -206,7 +206,7 @@ __kernel void arithm_bitwise_binary_with_mask_C1_D3 (
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -349,7 +349,7 @@ __kernel void arithm_bitwise_binary_with_mask_C2_D0 (
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif
@@ -391,7 +391,7 @@ __kernel void arithm_bitwise_binary_with_mask_C2_D1 (
     if (x < cols && y < rows)
     {
         x = x << 1;
-        
+
 #ifdef dst_align
 #undef dst_align
 #endif

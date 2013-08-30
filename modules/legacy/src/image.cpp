@@ -330,4 +330,3 @@ void CvMatrix::show( const char* window_name )
 
 
 /* End of file. */
-

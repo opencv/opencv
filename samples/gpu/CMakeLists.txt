@@ -2,7 +2,6 @@ SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc ope
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
                                      opencv_superres)
-
 ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
@@ -25,6 +24,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
   endif()
 
+  if(HAVE_OPENCL)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
+  endif()
+
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
   endif()
@@ -39,6 +42,10 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
     if(HAVE_opencv_nonfree)
       target_link_libraries(${the_target} opencv_nonfree)
+    endif()
+
+    if(HAVE_OPENCL)
+      target_link_libraries(${the_target} opencv_ocl)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -74,4 +81,3 @@ if (INSTALL_C_EXAMPLES AND NOT WIN32)
           DESTINATION share/OpenCV/samples/${project}
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
-

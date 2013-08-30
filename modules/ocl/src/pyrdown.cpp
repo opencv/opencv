@@ -113,4 +113,3 @@ void cv::ocl::pyrDown(const oclMat &src, oclMat &dst)
 
     pyrdown_run(src, dst);
 }
-

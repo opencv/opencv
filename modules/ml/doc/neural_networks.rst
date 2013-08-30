@@ -278,4 +278,3 @@ Returns neurons weights of the particular layer.
 .. ocv:function:: double* CvANN_MLP::get_weights(int layer)
 
     :param layer: Index of the particular layer.
-
