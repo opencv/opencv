@@ -475,6 +475,7 @@ public:
  *    if (arguments.variantIs("elementwise")) {
  *      // call elementwise sum()
  *    }
+ * \endcode
  */
 class ArgumentParser {
 private:
@@ -550,12 +551,34 @@ private:
       return valid_;
     }
     String toString(const String& method_name="f") const {
+      int req_begin = 0, req_end = 0, opt_begin = 0, opt_end = 0;
       std::ostringstream s;
+      // f(...)
       s << method_name << "(";
+      // required arguments
+      req_begin = s.str().size();
       for (size_t n = 0; n < Nreq_; ++n) { s << "src" << n+1 << (n != Nreq_-1 ? ", " : ""); }
+      req_end = s.str().size();
       if (Nreq_ && Nopt_) s << ", ";
+      // optional arguments
+      opt_begin = s.str().size();
       for (size_t n = 0; n < keys_.size(); ++n) { s << "'" << keys_[n] << "', " << keys_[n] << (n != Nopt_-1 ? ", " : ""); }
+      opt_end = s.str().size();
       s << ");";
+      if (Nreq_ + Nopt_ == 0) return s.str();
+      // underscores
+      String under = String(req_begin, ' ') + String(req_end-req_begin, '-') 
+                   + String(std::max(opt_begin-req_end,0), ' ') + String(opt_end-opt_begin, '-');
+      s << "\n" << under;
+      // required and optional sets
+      String req_set(req_end-req_begin, ' ');
+      String opt_set(opt_end-opt_begin, ' ');
+      if (!req_set.empty() && req_set.size() < 8) req_set.replace((req_set.size()-3)/2, 3, "req");
+      if (req_set.size() > 7) req_set.replace((req_set.size()-8)/2, 8, "required");
+      if (!opt_set.empty() && opt_set.size() < 8) opt_set.replace((opt_set.size()-3)/2, 3, "opt");
+      if (opt_set.size() > 7) opt_set.replace((opt_set.size()-8)/2, 8, "optional");
+      String set = String(req_begin, ' ') + req_set + String(std::max(opt_begin-req_end,0), ' ') + opt_set;
+      s << "\n" << set;
       return s.str();
     }
   };
