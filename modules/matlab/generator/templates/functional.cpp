@@ -58,6 +58,21 @@
 
 
 /*
+ * composeVariant
+ * compose a variant call for the ArgumentParser
+ */
+{% macro composeVariant(fun) %}
+addVariant("{{ fun.name }}", {{ fun.req|inputs|length }}, {{ fun.opt|inputs|length }}
+{%- if fun.opt|inputs|length %}, {% endif -%}
+{%- for arg in fun.opt|inputs -%}
+  "{{arg.name}}"
+  {%- if not loop.last %}, {% endif -%}
+{% endfor -%}
+)
+{%- endmacro %}
+
+
+/*
  * composeWithExceptionHandler
  * compose a function call wrapped in exception traps
  * This macro takes an input a Method object and composes a function

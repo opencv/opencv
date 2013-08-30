@@ -30,18 +30,20 @@ using namespace bridge;
 void mexFunction(int nlhs, mxArray*{% if fun|noutputs %} plhs[]{% else %}*{% endif %},
                  int nrhs, const mxArray*{% if fun|ninputs %} prhs[]{% else %}*{% endif %}) {
 
-  // assertions
-  conditionalError(nrhs >= {{fun.req|length - fun.req|only|outputs|length}}, "Too few required input arguments specified");
-  conditionalError(nrhs <= {{fun.req|length + fun.opt|length - fun.req|only|outputs|length - fun.opt|only|outputs|length}}, "Too many input arguments specified");
-  conditionalError(nlhs <= {{ fun.rtp|void|not + fun.req|outputs|length + fun.opt|outputs|length}}, "Too many output arguments specified");
+  {% if fun|ninputs %}
+  // parse the inputs
+  ArgumentParser parser("{{fun.name}}");
+  parser.{{ functional.composeVariant(fun) }};
+  MxArrayVector sorted = parser.parse(MxArrayVector(prhs, prhs+nrhs));
+  {%endif %}
 
   {% if fun|ninputs or fun|noutputs %}
   // setup
   {% if fun|ninputs %}
-  std::vector<Bridge> inputs(prhs, prhs+nrhs);
+  BridgeVector inputs(sorted.begin(), sorted.end());
   {% endif -%}
   {%- if fun|noutputs %}
-  std::vector<Bridge> outputs({{fun|noutputs}});
+  BridgeVector outputs({{fun|noutputs}});
   {% endif %}
   {% endif %}
 

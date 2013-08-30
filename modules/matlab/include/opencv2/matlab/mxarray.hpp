@@ -75,6 +75,12 @@ extern "C" {
 #endif
 
 namespace matlab {
+// ----------------------------------------------------------------------------
+//                          PREDECLARATIONS
+// ----------------------------------------------------------------------------
+class MxArray;
+typedef std::vector<MxArray> MxArrayVector;
+
 /*!
  * @brief raise error if condition fails
  *
@@ -476,7 +482,6 @@ private:
   typedef std::string String;
   typedef std::vector<std::string> StringVector;
   typedef std::vector<size_t> IndexVector;
-  typedef std::vector<MxArray> MxArrayVector;
   typedef std::vector<Variant> VariantVector;
 
   /* @class Variant

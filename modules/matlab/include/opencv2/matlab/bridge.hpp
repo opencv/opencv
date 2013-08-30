@@ -73,6 +73,7 @@ typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
 //                          PREDECLARATIONS
 // ----------------------------------------------------------------------------
 class Bridge;
+typedef std::vector<Bridge> BridgeVector;
 
 template <typename InputScalar, typename OutputScalar>
 void deepCopyAndTranspose(const cv::Mat& src, matlab::MxArray& dst);

@@ -59,22 +59,23 @@ The first thing you need to learn how to do is write a mex-file with Matlab cons
 // this automatically includes opencv core.hpp and mex.h)
 #include <opencv2/matlab/bridge.hpp>
 using namespace cv;
-using namespace std;
+using namespace matlab;
+using namespace bridge;
 
 // define the mex gateway
 void mexFunction(int nlhs, mxArray* plhs[],
                  int nrhs, const mxArray* prhs[]) {
 
   // claim the inputs into scoped management
-  MxArrayVector raw_inputs(prhs, prhs+nrhs);
+  MxArrayVector raw(prhs, prhs+nrhs);
 
   // add an argument parser to automatically handle basic options
   ArgumentParser parser("my function");
   parser.addVariant(1, 1, "opt");
-  MxArrayVector parsed_inputs = parser.parse(inputs);
+  MxArrayVector reordered = parser.parse(raw);
 
-  // if we get here, we know the inputs are valid. Unpack...
-  BridgeVector inputs(parsed_inputs);
+  // if we get here, we know the inputs are valid and reordered. Unpack...
+  BridgeVector inputs(reordered.begin(), reordered.end());
   Mat required    = inputs[0].toMat();
   string optional = inputs[1].empty() ? "Default string" : inputs[1].toString();
 
@@ -337,6 +338,37 @@ The MxArray object uses scoped memory management. If you wish to pass an MxArray
 
 ```cpp
 plhs[0] = mat.releaseOwnership();
+```
+
+mxarray.hpp also includes a number of helper utilities that make working in mex-world a little easier. One such utility is the `ArgumentParser`. `ArgumentParser` automatically handles required and optional arguments to a method, and even enables named arguments as used in many core Matlab functions. For example, if you had a function with the following signature:
+
+```cpp
+void f(Mat first, Mat second, Mat mask=Mat(), int dtype=-1);
+```
+
+then you can create an `ArgumentParser` as follows:
+
+```cpp
+ArgumentParser parser("f");
+parser.addVariant(2, 2, "mask", "dtype");
+MxArrayVector inputs = parser.parse(prhs, prhs+nrhs);
+```
+
+and that will make available the following calling syntaxes:
+
+```matlab
+f(first, second);
+f(first, second, mask);
+f(first, second, mask, dtype);
+f(first, second, 'dtype', dtype, 'mask', mask); % optional ordering does not matter
+f(first, second, 'dtype', dtype); % only second optional argument provided
+f(first, second, mask, 'dtype', dtype); % mixture of ordered and named
+```
+
+Further, the output of the `parser.parse()` method will always contain the total number of required and optional arguments that the method can take, with unspecified arguments given by empty matrices. Thus, to check if an optional argument has been given, you can do:
+
+```cpp
+int dtype = inputs[3].empty() ? -1 : inputs[3].scalar<double>();
 ```
 
 **bridge.hpp**  
