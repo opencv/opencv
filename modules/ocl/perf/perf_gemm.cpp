@@ -51,13 +51,14 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> gemmFixture;
 
-PERF_TEST_P(gemmFixture, DISABLED_gemm, OCL_TYPICAL_MAT_SIZES) // TODO not implemented
+PERF_TEST_P(gemmFixture, DISABLED_gemm,
+            ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000)) // TODO not implemented
 {
     const Size srcSize = GetParam();
 
     Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
             src3(srcSize, CV_32FC1), dst(srcSize, CV_32FC1);
-    declare.in(src1, src2, src3).out(dst);
+    declare.in(src1, src2, src3).out(dst).time(srcSize == OCL_SIZE_2000 ? 65 : 8);
     randu(src1, -10.0f, 10.0f);
     randu(src2, -10.0f, 10.0f);
     randu(src3, -10.0f, 10.0f);
