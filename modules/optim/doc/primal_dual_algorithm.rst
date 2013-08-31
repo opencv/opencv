@@ -12,7 +12,7 @@ problems (that is, finding a function to minimize some functional)
 problem, primal-dual algorithm then can be used to perform denoising and this
 is exactly what is implemented.
 
-It should be noted, that this implementation was taken from the July 2013 blog entry [Mordvintsev]_, which also contained 
+It should be noted, that this implementation was taken from the July 2013 blog entry [Mordvintsev]_, which also contained
 (slightly more general) ready-to-use
 source code on Python. Subsequently, that code was rewritten on C++ with the usage of openCV by Vadim Pisarevsky
 at the end of July 2013 and finally it was slightly adapted by later authors.
@@ -38,10 +38,7 @@ into play.
 
     :param result: Here the denoised image will be stored. There is no need to do pre-allocation of storage space, as it will be automatically allocated, if necessary.
 
-    :param lambda: Corresponds to :math:`\lambda` in the formulas above. As it is enlarged, the smooth (blurred) images are treated
-    more favorably than detailed (but maybe more noised) ones. Roughly speaking, as it becomes smaller, the result will be
-    more blur but more sever outliers will be removed.
-    
+    :param lambda: Corresponds to :math:`\lambda` in the formulas above. As it is enlarged, the smooth (blurred) images are treated more favorably than detailed (but maybe more noised) ones. Roughly speaking, as it becomes smaller, the result will be more blur but more sever outliers will be removed.
 
     :param niters: Number of iterations that the algorithm will run. Of course, as more iterations as better, but it is hard to quantitatively refine this statement, so just use the default and increase it if the results are poor.
 
