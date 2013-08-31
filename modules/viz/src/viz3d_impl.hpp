@@ -49,18 +49,14 @@ public:
     void setRepresentationToSurface();
     void setRepresentationToPoints();
     void setRepresentationToWireframe();
-
-
-    // ////////////////////////////////////////////////////////////////////////////////////
-    // All camera methods to refactor into set/getViewwerPose, setCamera()
-    // and 'Camera' class itself with various constructors/fields
     
     void setCamera(const Camera &camera);
     Camera getCamera() const;
 
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
       * \param[in] id the point cloud object id (default: cloud) */
-    void resetCameraViewpoint (const String& id = "cloud");
+    void resetCameraViewpoint(const String& id);
+    void resetCamera();
     
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();

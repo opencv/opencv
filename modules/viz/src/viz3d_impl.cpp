@@ -421,21 +421,21 @@ void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
+void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const String &id)
 {
     vtkSmartPointer<vtkMatrix4x4> camera_pose;
     static WidgetActorMap::iterator it = widget_actor_map_->find (id);
     if (it != widget_actor_map_->end ())
     {
         vtkProp3D *actor = vtkProp3D::SafeDownCast(it->second);
+        CV_Assert("Widget is not 3D." && actor);
         camera_pose = actor->GetUserMatrix();
     }
     else
         return;
 
     // Prevent a segfault
-    if (!camera_pose)
-        return;
+    if (!camera_pose) return;
 
     vtkSmartPointer<vtkCamera> cam = renderer_->GetActiveCamera ();
     cam->SetPosition (camera_pose->GetElement (0, 3),
@@ -453,6 +453,12 @@ void cv::viz::Viz3d::VizImpl::resetCameraViewpoint (const std::string &id)
     renderer_->SetActiveCamera (cam);
     renderer_->ResetCameraClippingRange ();
     renderer_->Render ();
+}
+
+///////////////////////////////////////////////////////////////////////////////////
+void cv::viz::Viz3d::VizImpl::resetCamera()
+{
+    renderer_->ResetCamera();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////

@@ -38,6 +38,9 @@ namespace cv
             Affine3f getViewerPose();
             void setViewerPose(const Affine3f &pose);
             
+            void resetCameraViewpoint (const String &id);
+            void resetCamera();
+            
             void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
             void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
             
