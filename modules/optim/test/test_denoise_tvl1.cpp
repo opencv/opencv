@@ -48,7 +48,6 @@ TEST(Optim_denoise_tvl1, regression_basic){
 
     //cv::imshow("test", images[0]);
     cv::optim::denoise_TVL1(images, res);
-    printf("hello here!\n");
     //cv::imshow("denoised", res);
     //cv::waitKey();
 
