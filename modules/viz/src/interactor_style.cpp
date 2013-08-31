@@ -1,8 +1,5 @@
 #include "precomp.hpp"
-
 #include "interactor_style.h"
-
-//#include <q/visualization/vtk/vtkVertexBufferObjectMapper.h>
 
 using namespace cv;
 
@@ -227,7 +224,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
         {
             for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
             {
-                vtkSmartPointer<vtkActor> apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                vtkActor* apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
                 apart->GetProperty ()->SetRepresentationToPoints ();
             }
         }
@@ -250,15 +247,12 @@ cv::viz::InteractorStyle::OnKeyDown ()
         cam->GetFocalPoint (focal);
         cam->GetPosition (pos);
         cam->GetViewUp (view);
-#ifndef M_PI
-        # define M_PI   3.14159265358979323846     // pi
-#endif
 
         int *win_pos = Interactor->GetRenderWindow ()->GetPosition ();
         int *win_size = Interactor->GetRenderWindow ()->GetSize ();
         ofs_cam << clip[0]  << "," << clip[1]  << "/" << focal[0] << "," << focal[1] << "," << focal[2] << "/" <<
                                pos[0]   << "," << pos[1]   << "," << pos[2]   << "/" << view[0]  << "," << view[1]  << "," << view[2] << "/" <<
-                               cam->GetViewAngle () / 180.0 * M_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
+                               cam->GetViewAngle () / 180.0 * CV_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
                             << endl;
         ofs_cam.close ();
 
@@ -302,7 +296,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
             {
                 for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
                 {
-                    vtkSmartPointer<vtkActor> apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                    vtkActor* apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
                     float psize = apart->GetProperty ()->GetPointSize ();
                     if (psize < 63.0f)
                         apart->GetProperty ()->SetPointSize (psize + 1.0f);
@@ -323,7 +317,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
             {
                 for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
                 {
-                    vtkSmartPointer<vtkActor> apart = static_cast<vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                    vtkActor* apart = static_cast<vtkActor*> (path->GetLastNode ()->GetViewProp ());
                     float psize = apart->GetProperty ()->GetPointSize ();
                     if (psize > 1.0f)
                         apart->GetProperty ()->SetPointSize (psize - 1.0f);
@@ -651,17 +645,8 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward ()
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnTimer ()
 {
-    if (!init_)
-    {
-        std::cout << "[PCLVisualizerInteractorStyle] Interactor style not initialized. Please call Initialize () before continuing.\n" << std::endl;
-        return;
-    }
-
-    if (!renderer_)
-    {
-        std::cout <<  "[PCLVisualizerInteractorStyle] No renderer collection given! Use SetRendererCollection () before continuing." << std::endl;
-        return;
-    }
+    CV_Assert("Interactor style not initialized." && init_);
+    CV_Assert("Renderer has not been set." && renderer_);
     renderer_->Render ();
     Interactor->Render ();
 }
