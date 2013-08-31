@@ -7,7 +7,7 @@
 #define ABSCLIP(val,threshold) MIN(MAX((val),-(threshold)),(threshold))
 
 namespace cv{namespace optim{
-    
+
     class AddFloatToCharScaled{
         public:
             AddFloatToCharScaled(float scale):_scale(scale){}
@@ -91,7 +91,7 @@ namespace cv{namespace optim{
                 float x_new = x_curr[x] + tau*(p_curr[x].y - p_prev[x].y)-tau*s;
                     // X = X2 + theta*(X2 - X)
                 x_curr[x] = x_new + theta*(x_new - x_curr[x]);
-           
+
 
                 for(x = 1; x < cols; x++ )
                 {

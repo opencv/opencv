@@ -41,7 +41,7 @@ TEST(Optim_denoise_tvl1, regression_basic){
 
     const int obs_num=5;
     std::vector<cv::Mat> images(obs_num,cv::Mat());
-    for(int i=0;i<images.size();i++){
+    for(int i=0;i<(int)images.size();i++){
         make_noisy(img,images[i], 20, 0.02,rng);
         //make_spotty(images[i],rng);
     }
