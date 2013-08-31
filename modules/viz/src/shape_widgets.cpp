@@ -27,20 +27,6 @@ cv::viz::LineWidget::LineWidget(const Point3f &pt1, const Point3f &pt2, const Co
     setColor(color);
 }
 
-void cv::viz::LineWidget::setLineWidth(float line_width)
-{
-    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
-    actor->GetProperty()->SetLineWidth(line_width);
-}
-
-float cv::viz::LineWidget::getLineWidth()
-{
-    vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
-    return actor->GetProperty()->GetLineWidth();
-}
-
 template<> cv::viz::LineWidget cv::viz::Widget::cast<cv::viz::LineWidget>()
 {
     Widget3D widget = this->cast<Widget3D>();
@@ -556,12 +542,12 @@ cv::viz::Text3DWidget::Text3DWidget(const String &text, const Point3f &position,
 void cv::viz::Text3DWidget::setText(const String &text)
 {
     vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support text." && actor);
     
     // Update text source
     vtkPolyDataMapper *mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
     vtkVectorText * textSource = vtkVectorText::SafeDownCast(mapper->GetInputConnection(0,0)->GetProducer());
-    CV_Assert(textSource);
+    CV_Assert("This widget does not support text." && textSource);
     
     textSource->SetText(text.c_str());
     textSource->Update();
@@ -570,11 +556,11 @@ void cv::viz::Text3DWidget::setText(const String &text)
 cv::String cv::viz::Text3DWidget::getText() const
 {
     vtkFollower *actor = vtkFollower::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support text." && actor);
     
     vtkPolyDataMapper *mapper = vtkPolyDataMapper::SafeDownCast(actor->GetMapper());
     vtkVectorText * textSource = vtkVectorText::SafeDownCast(mapper->GetInputConnection(0,0)->GetProducer());
-    CV_Assert(textSource);
+    CV_Assert("This widget does not support text." && textSource);
     
     return textSource->GetText();
 }
@@ -615,14 +601,14 @@ template<> cv::viz::TextWidget cv::viz::Widget::cast<cv::viz::TextWidget>()
 void cv::viz::TextWidget::setText(const String &text)
 {
     vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support text." && actor);
     actor->SetInput(text.c_str());
 }
 
 cv::String cv::viz::TextWidget::getText() const
 {
     vtkTextActor *actor = vtkTextActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support text." && actor);
     return actor->GetInput();
 }
 
@@ -671,10 +657,10 @@ void cv::viz::ImageOverlayWidget::setImage(const Mat &image)
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support overlay image." && actor);
     
     vtkImageMapper *mapper = vtkImageMapper::SafeDownCast(actor->GetMapper());
-    CV_Assert(mapper);
+    CV_Assert("This widget does not support overlay image." && mapper);
     
     // Create the vtk image and set its parameters based on input image
     vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();
@@ -821,7 +807,7 @@ void cv::viz::Image3DWidget::setImage(const Mat &image)
     CV_Assert(!image.empty() && image.depth() == CV_8U);
     
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("This widget does not support 3D image." && actor);
     
     // Create the vtk image and set its parameters based on input image
     vtkSmartPointer<vtkImageData> vtk_image = vtkSmartPointer<vtkImageData>::New();

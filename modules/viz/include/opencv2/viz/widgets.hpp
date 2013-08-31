@@ -61,9 +61,6 @@ namespace cv
         {
         public:
             LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
-
-            void setLineWidth(float line_width);
-            float getLineWidth();
         };
 
         class CV_EXPORTS PlaneWidget : public Widget3D

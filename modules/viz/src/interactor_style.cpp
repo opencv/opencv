@@ -152,17 +152,9 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 void
 cv::viz::InteractorStyle::OnKeyDown ()
 {
-    if (!init_)
-    {
-        std::cout << "Interactor style not initialized. Please call Initialize () before continuing" << std::endl;
-        return;
-    }
-
-    if (!renderer_)
-    {
-        std::cout << "No renderer given! Use SetRendererCollection () before continuing." << std::endl;
-        return;
-    }
+    
+    CV_Assert("Interactor style not initialized. Please call Initialize () before continuing" && init_);
+    CV_Assert("No renderer given! Use SetRendererCollection () before continuing." && renderer_);
 
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
 

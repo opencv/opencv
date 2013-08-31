@@ -74,7 +74,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
         reader->Update();
         
         vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput ();
-        CV_Assert(poly_data);
+        CV_Assert("File does not exist or file format is not supported." && poly_data);
         
         vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints ();
         vtkIdType nr_points = mesh_points->GetNumberOfPoints ();

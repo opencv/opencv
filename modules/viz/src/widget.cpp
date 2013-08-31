@@ -40,7 +40,7 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
     reader->SetFileName (file_name.c_str ());
     
     vtkSmartPointer<vtkDataSet> data = reader->GetOutput();
-    CV_Assert(data);
+    CV_Assert("File does not exist or file format is not supported." && data);
 
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
 
@@ -77,7 +77,7 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
 void cv::viz::Widget::setRenderingProperty(int property, double value)
 {
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget type is not supported." && actor);
     
     switch (property)
     {
@@ -118,7 +118,7 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
 double cv::viz::Widget::getRenderingProperty(int property) const
 {
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget type is not supported." && actor);
     
     double value = 0.0;
     switch (property)
@@ -239,7 +239,7 @@ struct cv::viz::Widget3D::MatrixConverter
 void cv::viz::Widget3D::setPose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
     actor->SetUserMatrix (matrix);
@@ -249,7 +249,7 @@ void cv::viz::Widget3D::setPose(const Affine3f &pose)
 void cv::viz::Widget3D::updatePose(const Affine3f &pose)
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
     if (!matrix)
@@ -269,7 +269,7 @@ void cv::viz::Widget3D::updatePose(const Affine3f &pose)
 cv::Affine3f cv::viz::Widget3D::getPose() const
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
     
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
     Matx44f matrix_cv = MatrixConverter::convertToMatx(matrix);
@@ -280,7 +280,7 @@ void cv::viz::Widget3D::setColor(const Color &color)
 {
     // Cast to actor instead of prop3d since prop3d doesn't provide getproperty
     vtkActor *actor = vtkActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget type is not supported." && actor);
     
     Color c = vtkcolor(color);
     actor->GetMapper ()->ScalarVisibilityOff ();
@@ -292,7 +292,7 @@ void cv::viz::Widget3D::setColor(const Color &color)
 template<> cv::viz::Widget3D cv::viz::Widget::cast<cv::viz::Widget3D>()
 {
     vtkProp3D *actor = vtkProp3D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget cannot be cast." && actor);
 
     Widget3D widget;
     WidgetAccessor::setProp(widget, actor);
@@ -305,7 +305,7 @@ template<> cv::viz::Widget3D cv::viz::Widget::cast<cv::viz::Widget3D>()
 void cv::viz::Widget2D::setColor(const Color &color)
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget type is not supported." && actor);
     Color c = vtkcolor(color);
     actor->GetProperty ()->SetColor (c.val);
     actor->Modified ();
@@ -314,7 +314,7 @@ void cv::viz::Widget2D::setColor(const Color &color)
 template<> cv::viz::Widget2D cv::viz::Widget::cast<cv::viz::Widget2D>()
 {
     vtkActor2D *actor = vtkActor2D::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Widget cannot be cast." && actor);
 
     Widget2D widget;
     WidgetAccessor::setProp(widget, actor);

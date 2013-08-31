@@ -119,6 +119,7 @@ private:
             if (event_id == vtkCommand::ExitEvent)
             {
                 viz_->stopped_ = true;
+                viz_->interactor_->GetRenderWindow()->Finalize();
                 viz_->interactor_->TerminateApp ();
             }
         }
@@ -142,12 +143,6 @@ private:
 
     /** \brief The render window interactor style. */
     vtkSmartPointer<InteractorStyle> style_;
-
-    /** \brief Internal list with actor pointers and name IDs for point clouds. */
-//     cv::Ptr<CloudActorMap> cloud_actor_map_;
-
-    /** \brief Internal list with actor pointers and name IDs for shapes. */
-//     cv::Ptr<ShapeActorMap> shape_actor_map_;
     
     /** \brief Internal list with actor pointers and name IDs for all widget actors */
     cv::Ptr<WidgetActorMap> widget_actor_map_;
@@ -155,12 +150,7 @@ private:
     /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
     bool camera_set_;
 
-    bool removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor);
-    bool removeActorFromRenderer (const vtkSmartPointer<vtkActor> &actor);
     bool removeActorFromRenderer (const vtkSmartPointer<vtkProp> &actor);
-
-    //void addActorToRenderer (const vtkSmartPointer<vtkProp> &actor);
-
 
     /** \brief Internal method. Creates a vtk actor from a vtk polydata object.
           * \param[in] data the vtk polydata object to create an actor for

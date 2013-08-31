@@ -34,9 +34,6 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
     /////////////////////////////////////////////////
     interactor_ = vtkSmartPointer <vtkRenderWindowInteractor>::Take (vtkRenderWindowInteractorFixNew ());
 
-    //win_->PointSmoothingOn ();
-    //win_->LineSmoothingOn ();
-    //win_->PolygonSmoothingOn ();
     window_->AlphaBitPlanesOff ();
     window_->PointSmoothingOff ();
     window_->LineSmoothingOff ();
@@ -46,7 +43,6 @@ cv::viz::Viz3d::VizImpl::VizImpl (const std::string &name)
 
     interactor_->SetRenderWindow (window_);
     interactor_->SetInteractorStyle (style_);
-    //interactor_->SetStillUpdateRate (30.0);
     interactor_->SetDesiredUpdateRate (30.0);
 
     // Initialize and create timer, also create window
@@ -119,8 +115,8 @@ void cv::viz::Viz3d::VizImpl::removeWidget(const String &id)
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    CV_Assert(exists);
-    CV_Assert(removeActorFromRenderer (wam_itr->second));
+    CV_Assert("Widget does not exist." && exists);
+    CV_Assert("Widget could not be removed." && removeActorFromRenderer (wam_itr->second));
     widget_actor_map_->erase(wam_itr);
 }
 
@@ -129,7 +125,7 @@ cv::viz::Widget cv::viz::Viz3d::VizImpl::getWidget(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    CV_Assert(exists);
+    CV_Assert("Widget does not exist." && exists);
 
     Widget widget;
     WidgetAccessor::setProp(widget, wam_itr->second);
@@ -141,10 +137,10 @@ void cv::viz::Viz3d::VizImpl::setWidgetPose(const String &id, const Affine3f &po
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    CV_Assert(exists);
+    CV_Assert("Widget does not exist." && exists);
 
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = convertToVtkMatrix(pose.matrix);
     actor->SetUserMatrix (matrix);
@@ -156,10 +152,10 @@ void cv::viz::Viz3d::VizImpl::updateWidgetPose(const String &id, const Affine3f 
 {
     WidgetActorMap::iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    CV_Assert(exists);
+    CV_Assert("Widget does not exist." && exists);
 
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
     if (!matrix)
@@ -180,10 +176,10 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 {
     WidgetActorMap::const_iterator wam_itr = widget_actor_map_->find(id);
     bool exists = wam_itr != widget_actor_map_->end();
-    CV_Assert(exists);
+    CV_Assert("Widget does not exist." && exists);
 
     vtkProp3D *actor = vtkProp3D::SafeDownCast(wam_itr->second);
-    CV_Assert(actor);
+    CV_Assert("Widget is not 3D." && actor);
 
     vtkSmartPointer<vtkMatrix4x4> matrix = actor->GetUserMatrix();
     Matx44f matrix_cv = convertToMatx(matrix);
@@ -252,56 +248,6 @@ void cv::viz::Viz3d::VizImpl::removeAllWidgets()
 {
     widget_actor_map_->clear();
     renderer_->RemoveAllViewProps();
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor)
-{
-    vtkLODActor* actor_to_remove = vtkLODActor::SafeDownCast (actor);
-
-
-
-    // Iterate over all actors in this renderer
-    vtkPropCollection* actors = renderer_->GetViewProps ();
-    actors->InitTraversal ();
-
-    vtkProp* current_actor = NULL;
-    while ((current_actor = actors->GetNextProp ()) != NULL)
-    {
-        if (current_actor != actor_to_remove)
-            continue;
-        renderer_->RemoveActor (actor);
-        //        renderer->Render ();
-        // Found the correct viewport and removed the actor
-        return (true);
-    }
-
-    return false;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-bool cv::viz::Viz3d::VizImpl::removeActorFromRenderer (const vtkSmartPointer<vtkActor> &actor)
-{
-    vtkActor* actor_to_remove = vtkActor::SafeDownCast (actor);
-
-    // Add it to all renderers
-    //rens_->InitTraversal ();
-
-
-        // Iterate over all actors in this renderer
-    vtkPropCollection* actors = renderer_->GetViewProps ();
-    actors->InitTraversal ();
-    vtkProp* current_actor = NULL;
-    while ((current_actor = actors->GetNextProp ()) != NULL)
-    {
-        if (current_actor != actor_to_remove)
-            continue;
-        renderer_->RemoveActor (actor);
-        //        renderer->Render ();
-        // Found the correct viewport and removed the actor
-        return (true);
-    }
-    return false;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

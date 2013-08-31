@@ -298,7 +298,7 @@ struct cv::viz::CloudCollectionWidget::CreateCloudWidget
         }
         
         vtkPolyData *data = vtkPolyData::SafeDownCast(mapper->GetInput());
-        CV_Assert(data);
+        CV_Assert("Cloud Widget without data" && data);
         
         vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
         appendFilter->AddInputConnection(mapper->GetInput()->GetProducerPort());
@@ -357,7 +357,7 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, InputArray _col
     transform_filter->Update();
     
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Incompatible widget type." && actor);
     
     Vec3d minmax(scalars->GetRange());
     CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
@@ -392,7 +392,7 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, const Color &co
     transform_filter->Update();
     
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
-    CV_Assert(actor);
+    CV_Assert("Incompatible widget type." && actor);
     
     Vec3d minmax(scalars->GetRange());
     CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
