@@ -326,18 +326,18 @@ We discuss the main parts of the above code:
       }
       //update the path of the current frame
       fn.assign(nextFrameFilename);
-   
+
    * Note that this example works only on image sequences in which the filename format is <n>.png, where n is the frame number (e.g., 7.png).
- 
+
 Results
 =======
 
 * Given the following input parameters:
 
   .. code-block:: cpp
-  
+
      -vid Video_001.avi
-	 
+
   The output of the program will look as the following:
 
   .. image:: images/Background_Subtraction_Tutorial_Result_1.png
@@ -349,9 +349,9 @@ Results
 * If you want to process a sequence of images, then the '-img' option has to be chosen:
 
   .. code-block:: cpp
-  
+
      -img 111_png/input/1.png
-	 
+
   The output of the program will look as the following:
 
   .. image:: images/Background_Subtraction_Tutorial_Result_2.png
@@ -361,8 +361,8 @@ Results
 * The sequence of images used in this example is part of the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_ dataset and it can be downloaded from the following link `sequence 111 <http://bmc.univ-bpclermont.fr/sites/default/files/videos/learning/111_png.zip>`_ (about 708 MB). Please, note that this example works only on sequences in which the filename format is <n>.png, where n is the frame number (e.g., 7.png).
 
 Evaluation
-==========  
-  
+==========
+
 To quantitatively evaluate the results obtained, we need to:
 
 * Save the output images;
@@ -377,7 +377,7 @@ In order to save the output images, we can use :imwrite:`imwrite <>`. Adding the
      if(!saved) {
        cerr << "Unable to save " << imageToSave << endl;
      }
-	 
+
 Once we have collected the result images, we can compare them with the ground truth data. There exist several publicly available sequences for background subtraction that come with ground truth data. If you decide to use the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_, then the result images can be used as input for the `BMC Wizard <http://bmc.univ-bpclermont.fr/?q=node/7>`_. The wizard can compute different measures about the accuracy of the results.  
 
 References

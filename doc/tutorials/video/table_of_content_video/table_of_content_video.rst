@@ -3,11 +3,11 @@
 *video* module. Video analysis
 -----------------------------------------------------------
 
-Look here in order to find use on your video stream algoritms like: motion extraction, feature tracking and foreground extractions. 
+Look here in order to find use on your video stream algoritms like: motion extraction, feature tracking and foreground extractions.
 
 .. include:: ../../definitions/tocDefinitions.rst
 
-+ 
++
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv
 

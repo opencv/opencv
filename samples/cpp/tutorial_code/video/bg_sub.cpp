@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
     namedWindow("Frame");
     namedWindow("FG Mask MOG");
     namedWindow("FG Mask MOG 2");
-	
+
     //create Background Subtractor objects
     pMOG = createBackgroundSubtractorMOG(); //MOG approach
     pMOG2 = createBackgroundSubtractorMOG2(); //MOG2 approach
