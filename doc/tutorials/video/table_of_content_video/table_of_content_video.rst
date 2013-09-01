@@ -13,15 +13,15 @@ Look here in order to find use on your video stream algoritms like: motion extra
 
   =============== ======================================================
    |BgSub|        **Title:** :ref:`Background_Subtraction`
-  
-                  *Compatibility:* > OpenCV 2.4.5
+
+                  *Compatibility:* > OpenCV 2.4.6
 
                   *Author:* |Author_DomenicoB|
-  
+
                   We will learn how to extract foreground masks from both videos and sequences of images and to show them.
-  
+
   =============== ======================================================
-  
+
   .. |BgSub| image:: images/Background_Subtraction_Tutorial_Cover.jpg
                    :height: 90pt
                    :width:  90pt
@@ -34,4 +34,3 @@ Look here in order to find use on your video stream algoritms like: motion extra
    :hidden:
 
    ../background_subtraction/background_subtraction
-
