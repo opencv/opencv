@@ -254,7 +254,7 @@ bool BundleAdjusterBase::estimate(const std::vector<ImageFeatures> &features,
     for (int i = 0; i < cam_params_.rows; ++i)
     {
         if (cvIsNaN(cam_params_.at<double>(i,0)))
-		{
+        {
             ok = false;
             break;
         }

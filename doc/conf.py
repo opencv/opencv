@@ -402,6 +402,6 @@ extlinks = {
             'cascade_classifier' : ('http://docs.opencv.org/modules/objdetect/doc/cascade_classification.html?highlight=cascadeclassifier#cascadeclassifier%s', None ),
             'cascade_classifier_load' : ('http://docs.opencv.org/modules/objdetect/doc/cascade_classification.html?highlight=load#cascadeclassifier-load%s', None ),
             'cascade_classifier_detect_multiscale' : ('http://docs.opencv.org/modules/objdetect/doc/cascade_classification.html?highlight=detectmultiscale#cascadeclassifier-detectmultiscale%s', None ),
-			'background_subtractor' : ('http://opencv.itseez.com/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractor#backgroundsubtractor%s', None),
-			'video_capture' : ('http://opencv.itseez.com/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture%s', None)
-		   }
+            'background_subtractor' : ('http://docs.opencv.org/modules/video/doc/motion_analysis_and_object_tracking.html?highlight=backgroundsubtractor#backgroundsubtractor%s', None),
+            'video_capture' : ('http://docs.opencv.org/modules/highgui/doc/reading_and_writing_images_and_video.html?highlight=videocapture#videocapture%s', None)
+           }
