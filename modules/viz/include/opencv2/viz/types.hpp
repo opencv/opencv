@@ -39,6 +39,7 @@ namespace cv
             Mat cloud, colors;
             Mat polygons;
 
+            //! Loads mesh from a given ply file
             static cv::viz::Mesh3d loadMesh(const String& file);
             
         private:
@@ -52,14 +53,8 @@ namespace cv
             static const unsigned int Ctrl  = 2;
             static const unsigned int Shift = 4;
 
-            /** \brief Constructor
-              * \param[in] action    true for key was pressed, false for released
-              * \param[in] key_sym   the key-name that caused the action
-              * \param[in] key       the key code that caused the action
-              * \param[in] alt       whether the alt key was pressed at the time where this event was triggered
-              * \param[in] ctrl      whether the ctrl was pressed at the time where this event was triggered
-              * \param[in] shift     whether the shift was pressed at the time where this event was triggered
-              */
+            //! Create a keyboard event
+            //! - Note that action is true if key is pressed, false if released
             KeyboardEvent (bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
 
             bool isAltPressed () const;

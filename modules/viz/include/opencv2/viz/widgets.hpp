@@ -18,11 +18,14 @@ namespace cv
             Widget& operator=(const Widget& other);
             ~Widget();
             
+            //! Create a widget directly from ply file
             static Widget fromPlyFile(const String &file_name);
             
+            //! Rendering properties of this particular widget
             void setRenderingProperty(int property, double value);
             double getRenderingProperty(int property) const;
 
+            //! Casting between widgets
             template<typename _W> _W cast();
         private:
             class Impl;
@@ -120,7 +123,9 @@ namespace cv
         class CV_EXPORTS GridWidget : public Widget3D
         {
         public:
+            //! Creates grid at the origin
             GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            //! Creates grid based on the plane equation
             GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             
         private:
@@ -157,7 +162,9 @@ namespace cv
         class CV_EXPORTS Image3DWidget : public Widget3D
         {
         public:
+            //! Creates 3D image at the origin
             Image3DWidget(const Mat &image, const Size &size);
+            //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
             Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
             
             void setImage(const Mat &image);
@@ -166,11 +173,14 @@ namespace cv
         class CV_EXPORTS CameraPositionWidget : public Widget3D
         {
         public:
+            //! Creates camera coordinate frame (axes) at the origin
             CameraPositionWidget(double scale = 1.0);
+            //! Creates frustum based on the intrinsic marix K at the origin
             CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            //! Creates frustum based on the field of view at the origin
             CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            //! Creates frustum and display given image at the far plane
             CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
-            
         };
         
         class CV_EXPORTS TrajectoryWidget : public Widget3D
@@ -178,9 +188,12 @@ namespace cv
         public:
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
             
+            //! Displays trajectory of the given path either by coordinate frames or polyline
             TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white()); // Camera frustums
+            //! Displays trajectory of the given path by frustums
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            //! Displays trajectory of the given path by frustums
+            TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
             
         private:
             struct ApplyPath;
@@ -196,7 +209,9 @@ namespace cv
         class CV_EXPORTS CloudWidget : public Widget3D
         {
         public:
+            //! Each point in cloud is mapped to a color in colors
             CloudWidget(InputArray cloud, InputArray colors);
+            //! All points in cloud have the same color
             CloudWidget(InputArray cloud, const Color &color = Color::white());
 
         private:
@@ -208,7 +223,9 @@ namespace cv
         public:
             CloudCollectionWidget();
             
+            //! Each point in cloud is mapped to a color in colors
             void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
+            //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
             
         private:
