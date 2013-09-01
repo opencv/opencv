@@ -79,7 +79,6 @@ cv::String cv::viz::Viz3d::getWindowName() const { return impl_->getWindowName()
 void cv::viz::Viz3d::saveScreenshot (const String &file) { impl_->saveScreenshot(file); }
 void cv::viz::Viz3d::setWindowPosition (int x, int y) { impl_->setWindowPosition(x,y); }
 void cv::viz::Viz3d::setFullScreen (bool mode) { impl_->setFullScreen(mode); }
-void cv::viz::Viz3d::setWindowName (const String &name) { impl_->setWindowName(name); }
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 
 void cv::viz::Viz3d::setRenderingProperty(int property, double value, const String &id) { getWidget(id).setRenderingProperty(property, value); }

@@ -69,7 +69,6 @@ public:
     Size getWindowSize() const;
     void setWindowSize (int xw, int yw);
     void setFullScreen (bool mode);
-    void setWindowName (const String &name);
     String getWindowName() const;
     void setBackgroundColor (const Color& color);
 

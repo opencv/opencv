@@ -50,7 +50,6 @@ namespace cv
             void saveScreenshot (const String &file);
             void setWindowPosition (int x, int y);
             void setFullScreen (bool mode);
-            void setWindowName (const String &name);
             void setBackgroundColor(const Color& color = Color::black());
 
             void spin();
