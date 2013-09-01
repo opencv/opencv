@@ -10,22 +10,22 @@ namespace cv{namespace optim{
 
     class AddFloatToCharScaled{
         public:
-            AddFloatToCharScaled(float scale):_scale(scale){}
-            inline float operator()(float a,uchar b){
-                return a+_scale*((float)b);
+            AddFloatToCharScaled(double scale):_scale(scale){}
+            inline double operator()(double a,uchar b){
+                return a+_scale*((double)b);
             }
         private:
-            float _scale;
+            double _scale;
     };
 
     void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda, int niters){
 
         CV_Assert(observations.size()>0 && niters>0 && lambda>0);
 
-        const float L2 = 8.0f, tau = 0.02f, sigma = 1./(L2*tau), theta = 1.f;
-        float clambda = (float)lambda;
-        float s=0;
-        const int workdepth = CV_32F;
+        const double L2 = 8.0, tau = 0.02, sigma = 1./(L2*tau), theta = 1.0;
+        double clambda = (double)lambda;
+        double s=0;
+        const int workdepth = CV_64F;
 
         int i, x, y, rows=observations[0].rows, cols=observations[0].cols,count;
         for(i=1;i<(int)observations.size();i++){
@@ -34,41 +34,41 @@ namespace cv{namespace optim{
 
         Mat X, P = Mat::zeros(rows, cols, CV_MAKETYPE(workdepth, 2));
         observations[0].convertTo(X, workdepth, 1./255);
-        std::vector< Mat_<float> > Rs(observations.size());
+        std::vector< Mat_<double> > Rs(observations.size());
         for(count=0;count<(int)Rs.size();count++){
             Rs[count]=Mat::zeros(rows,cols,workdepth);
         }
 
         for( i = 0; i < niters; i++ )
         {
-            float currsigma = i == 0 ? 1 + sigma : sigma;
+            double currsigma = i == 0 ? 1 + sigma : sigma;
 
             // P_ = P + sigma*nabla(X)
             // P(x,y) = P_(x,y)/max(||P(x,y)||,1)
             for( y = 0; y < rows; y++ )
             {
-                const float* x_curr = X.ptr<float>(y);
-                const float* x_next = X.ptr<float>(std::min(y+1, rows-1));
-                Point2f* p_curr = P.ptr<Point2f>(y);
-                float dx, dy, m;
+                const double* x_curr = X.ptr<double>(y);
+                const double* x_next = X.ptr<double>(std::min(y+1, rows-1));
+                Point2d* p_curr = P.ptr<Point2d>(y);
+                double dx, dy, m;
                 for( x = 0; x < cols-1; x++ )
                 {
                     dx = (x_curr[x+1] - x_curr[x])*currsigma + p_curr[x].x;
                     dy = (x_next[x] - x_curr[x])*currsigma + p_curr[x].y;
-                    m = 1.f/std::max(std::sqrt(dx*dx + dy*dy), 1.f);
+                    m = 1.0/std::max(std::sqrt(dx*dx + dy*dy), 1.0);
                     p_curr[x].x = dx*m;
                     p_curr[x].y = dy*m;
                 }
                 dy = (x_next[x] - x_curr[x])*currsigma + p_curr[x].y;
-                m = 1.f/std::max(std::abs(dy), 1.f);
-                p_curr[x].x = 0.f;
+                m = 1.0/std::max(std::abs(dy), 1.0);
+                p_curr[x].x = 0.0;
                 p_curr[x].y = dy*m;
             }
 
 
             //Rs = clip(Rs + sigma*(X-imgs), -clambda, clambda)
             for(count=0;count<(int)Rs.size();count++){
-                std::transform<MatIterator_<float>,MatConstIterator_<uchar>,MatIterator_<float>,AddFloatToCharScaled>(
+                std::transform<MatIterator_<double>,MatConstIterator_<uchar>,MatIterator_<double>,AddFloatToCharScaled>(
                         Rs[count].begin(),Rs[count].end(),observations[count].begin<uchar>(),
                         Rs[count].begin(),AddFloatToCharScaled(-sigma/255.0));
                 Rs[count]+=sigma*X;
@@ -78,9 +78,9 @@ namespace cv{namespace optim{
 
             for( y = 0; y < rows; y++ )
             {
-                float* x_curr = X.ptr<float>(y);
-                const Point2f* p_curr = P.ptr<Point2f>(y);
-                const Point2f* p_prev = P.ptr<Point2f>(std::max(y - 1, 0));
+                double* x_curr = X.ptr<double>(y);
+                const Point2d* p_curr = P.ptr<Point2d>(y);
+                const Point2d* p_prev = P.ptr<Point2d>(std::max(y - 1, 0));
 
                 // X1 = X + tau*(-nablaT(P))
                 x = 0;
@@ -88,7 +88,7 @@ namespace cv{namespace optim{
                 for(count=0;count<(int)Rs.size();count++){
                     s=s+Rs[count](y,x);
                 }
-                float x_new = x_curr[x] + tau*(p_curr[x].y - p_prev[x].y)-tau*s;
+                double x_new = x_curr[x] + tau*(p_curr[x].y - p_prev[x].y)-tau*s;
                     // X = X2 + theta*(X2 - X)
                 x_curr[x] = x_new + theta*(x_new - x_curr[x]);
 
