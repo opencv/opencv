@@ -8,7 +8,7 @@ void make_noisy(const cv::Mat& img, cv::Mat& noisy, double sigma, double pepper_
     cv::addWeighted(img, 1, noise, 1, -128, noisy);
     cv::randn(noise, cv::Scalar::all(0), cv::Scalar::all(2));
     noise *= 255;
-    cv::randu(mask, 0, round(1./pepper_salt_ratio));
+    cv::randu(mask, 0, cvRound(1./pepper_salt_ratio));
     cv::Mat half = mask.colRange(0, img.cols/2);
     half = cv::Scalar::all(1);
     noise.setTo(128, mask);
