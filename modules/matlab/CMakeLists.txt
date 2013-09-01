@@ -129,6 +129,7 @@ endforeach()
 
 # add extra headers by hand
 list(APPEND opencv_extra_hdrs "core=${OPENCV_MODULE_opencv_core_LOCATION}/include/opencv2/core/base.hpp")
+list(APPEND opencv_extra_hdrs "video=${OPENCV_MODULE_opencv_video_LOCATION}/include/opencv2/video/tracking.hpp")
 
 # pass the OPENCV_CXX_EXTRA_FLAGS through to the mex compiler
 # remove the visibility modifiers, so the mex gateway is visible
