@@ -7,5 +7,3 @@ viz. 3D Visualizer
 	
 	viz3d.rst
 	widget.rst
-	types.rst
-	widget_accessor.rst
