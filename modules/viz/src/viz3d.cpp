@@ -81,8 +81,8 @@ void cv::viz::Viz3d::setWindowPosition (int x, int y) { impl_->setWindowPosition
 void cv::viz::Viz3d::setFullScreen (bool mode) { impl_->setFullScreen(mode); }
 void cv::viz::Viz3d::setBackgroundColor(const Color& color) { impl_->setBackgroundColor(color); }
 
-void cv::viz::Viz3d::setRenderingProperty(int property, double value, const String &id) { getWidget(id).setRenderingProperty(property, value); }
-double cv::viz::Viz3d::getRenderingProperty(int property, const String &id) { return getWidget(id).getRenderingProperty(property); }
+void cv::viz::Viz3d::setRenderingProperty(const String &id, int property, double value) { getWidget(id).setRenderingProperty(property, value); }
+double cv::viz::Viz3d::getRenderingProperty(const String &id, int property) { return getWidget(id).getRenderingProperty(property); }
 
 void cv::viz::Viz3d::setDesiredUpdateRate(double time) { impl_->setDesiredUpdateRate(time); }
 double cv::viz::Viz3d::getDesiredUpdateRate() { return impl_->getDesiredUpdateRate(); }
