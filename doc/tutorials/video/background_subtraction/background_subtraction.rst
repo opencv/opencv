@@ -36,15 +36,15 @@ Code
 In the following you can find the source code. We will let the user chose to process either a video file or a sequence of images.
 
 * Two different methods are used to generate two foreground masks:
-	#. MOG
-	#. MOG2	
+    #. :background_subtractor_mog:`MOG <>`
+    #. :background_subtractor_mog_two:`MOG2 <>`
+
 The results as well as the input data are shown on the screen.
 
 .. code-block:: cpp
 
   //opencv
   #include <opencv2/highgui/highgui.hpp>
-  #include <opencv2/highgui/highgui_c.h>
   #include <opencv2/video/background_segm.hpp>
   //C
   #include <stdio.h>
@@ -146,10 +146,10 @@ The results as well as the input data are shown on the screen.
       stringstream ss;
       rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
                 cv::Scalar(255,255,255), -1);
-      ss << capture.get(CV_CAP_PROP_POS_FRAMES);
+      ss << capture.get(CAP_PROP_POS_FRAMES);
       string frameNumberString = ss.str();
       putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
-              CV_FONT_NORMAL, 0.5 , cv::Scalar(0,0,0));
+              FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
       //show the current frame and the fg masks
       imshow("Frame", frame);
       imshow("FG Mask MOG", fgMaskMOG);
@@ -191,7 +191,7 @@ The results as well as the input data are shown on the screen.
       rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
                 cv::Scalar(255,255,255), -1);
       putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
-              CV_FONT_NORMAL, 0.5 , cv::Scalar(0,0,0));
+              FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
       //show the current frame and the fg masks
       imshow("Frame", frame);
       imshow("FG Mask MOG", fgMaskMOG);
@@ -286,10 +286,10 @@ We discuss the main parts of the above code:
       stringstream ss;
       rectangle(frame, cv::Point(10, 2), cv::Point(100,20),
                 cv::Scalar(255,255,255), -1);
-      ss << capture.get(CV_CAP_PROP_POS_FRAMES);
+      ss << capture.get(CAP_PROP_POS_FRAMES);
       string frameNumberString = ss.str();
       putText(frame, frameNumberString.c_str(), cv::Point(15, 15),
-              CV_FONT_NORMAL, 0.5 , cv::Scalar(0,0,0));
+              FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
 
 #. We are ready to show the current input frame and the results.
 
@@ -347,9 +347,8 @@ Results
      :alt: Background Subtraction - Video File
      :align: center 
 
-* The video file Video_001.avi is part of the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_ data set and it can be downloaded from `here <http://bmc.univ-bpclermont.fr/sites/default/files/videos/evaluation/Video_001.zip>`_.	 
-	 
-	 
+* The video file Video_001.avi is part of the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_ data set and it can be downloaded from the following link `Video_001 <http://bmc.univ-bpclermont.fr/sites/default/files/videos/evaluation/Video_001.zip>`_ (about 32 MB).
+
 * If you want to process a sequence of images, then the '-img' option has to be chosen:
 
   .. code-block:: cpp
@@ -362,7 +361,7 @@ Results
      :alt: Background Subtraction - Image Sequence 
      :align: center 
 
-* The sequence of images used in this example is part of the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_ dataset and it can be downloaded from `here <http://bmc.univ-bpclermont.fr/sites/default/files/videos/learning/111_png.zip>`_. Please, note that this example works only on sequences in which the filename format is <n>.png, where n is the frame number (e.g., 7.png).
+* The sequence of images used in this example is part of the `Background Models Challenge (BMC) <http://bmc.univ-bpclermont.fr/>`_ dataset and it can be downloaded from the following link `sequence 111 <http://bmc.univ-bpclermont.fr/sites/default/files/videos/learning/111_png.zip>`_ (about 708 MB). Please, note that this example works only on sequences in which the filename format is <n>.png, where n is the frame number (e.g., 7.png).
 
 Evaluation
 ==========  
