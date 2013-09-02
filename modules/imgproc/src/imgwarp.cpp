@@ -52,7 +52,7 @@
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
 static IppStatus sts = ippInit();
-#endif 
+#endif
 
 namespace cv
 {
@@ -76,15 +76,15 @@ namespace cv
     {
         if( channels == 1 )
         {
-            switch( depth ) 
-            { 
-            case CV_8U: 
+            switch( depth )
+            {
+            case CV_8U:
                 return ippiSet_8u_C1R((Ipp8u)value[0], (Ipp8u *)dataPointer, step, size) >= 0;
             case CV_16U:
                 return ippiSet_16u_C1R((Ipp16u)value[0], (Ipp16u *)dataPointer, step, size) >= 0;
             case CV_32F:
                 return ippiSet_32f_C1R((Ipp32f)value[0], (Ipp32f *)dataPointer, step, size) >= 0;
-            }  
+            }
         }
         else
         {
@@ -98,7 +98,7 @@ namespace cv
                     return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C3R);
                 case CV_32F:
                     return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C3R);
-                }  
+                }
             }
             else if( channels == 4 )
             {
@@ -110,7 +110,7 @@ namespace cv
                     return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C4R);
                 case CV_32F:
                     return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C4R);
-                } 
+                }
             }
         }
         return false;
@@ -1848,17 +1848,12 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
     int depth = src.depth(), cn = src.channels();
     double scale_x = 1./inv_scale_x, scale_y = 1./inv_scale_y;
     int k, sx, sy, dx, dy;
-    
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    int mode = 
-        interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR :
-        interpolation == INTER_NEAREST ? IPPI_INTER_NN :
-        interpolation == INTER_CUBIC ? IPPI_INTER_CUBIC :
-        interpolation == INTER_AREA && inv_scale_x * inv_scale_y > 1 ? IPPI_INTER_NN :
-        0;
+    int mode = interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
     int type = src.type();
-    ippiResizeSqrPixelFunc ippFunc = 
-        type == CV_8UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C1R : 
+    ippiResizeSqrPixelFunc ippFunc =
+        type == CV_8UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C1R :
         type == CV_8UC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C3R :
         type == CV_8UC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_8u_C4R :
         type == CV_16UC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16u_C1R :
@@ -1869,9 +1864,9 @@ void cv::resize( InputArray _src, OutputArray _dst, Size dsize,
         type == CV_16SC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_16s_C4R :
         type == CV_32FC1 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C1R :
         type == CV_32FC3 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C3R :
-        type == CV_32FC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C4R : 
+        type == CV_32FC4 ? (ippiResizeSqrPixelFunc)ippiResizeSqrPixel_32f_C4R :
         0;
-    if( ippFunc && mode )
+    if( ippFunc && mode != 0 )
     {
         bool ok;
         Range range(0, src.rows);
@@ -3485,12 +3480,12 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
-    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) && 
-        ( channels == 1 || channels == 3 || channels == 4 ) && 
+    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
+        ( channels == 1 || channels == 3 || channels == 4 ) &&
         ( borderType == cv::BORDER_TRANSPARENT || ( borderType == cv::BORDER_CONSTANT ) ) )
     {
         int type = src.type();
-        ippiWarpAffineBackFunc ippFunc = 
+        ippiWarpAffineBackFunc ippFunc =
             type == CV_8UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C1R :
             type == CV_8UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C3R :
             type == CV_8UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C4R :
@@ -3501,10 +3496,10 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
             type == CV_32FC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C3R :
             type == CV_32FC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C4R :
             0;
-        int mode = 
+        int mode =
             flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
             flags == INTER_NEAREST ? IPPI_INTER_NN :
-            flags == INTER_CUBIC ? IPPI_INTER_CUBIC : 
+            flags == INTER_CUBIC ? IPPI_INTER_CUBIC :
             0;
         if( mode && ippFunc )
         {
@@ -3525,7 +3520,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         }
     }
 #endif
-    
+
     for( x = 0; x < dst.cols; x++ )
     {
         adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
@@ -3638,7 +3633,7 @@ class IPPwarpPerspectiveInvoker :
     public ParallelLoopBody
 {
 public:
-    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) : 
+    IPPwarpPerspectiveInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[3][3], int &_interpolation, int &_borderType, const Scalar &_borderValue, ippiWarpPerspectiveBackFunc _func, bool *_ok) :
       ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs), borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
       {
           *ok = true;
@@ -3706,16 +3701,16 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
 
     if( !(flags & WARP_INVERSE_MAP) )
          invert(matM, matM);
-         
+
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     int depth = src.depth();
     int channels = src.channels();
-    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) && 
-        ( channels == 1 || channels == 3 || channels == 4 ) && 
+    if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
+        ( channels == 1 || channels == 3 || channels == 4 ) &&
         ( borderType == cv::BORDER_TRANSPARENT || borderType == cv::BORDER_CONSTANT ) )
     {
         int type = src.type();
-        ippiWarpPerspectiveBackFunc ippFunc = 
+        ippiWarpPerspectiveBackFunc ippFunc =
             type == CV_8UC1 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C1R :
             type == CV_8UC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C3R :
             type == CV_8UC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_8u_C4R :
@@ -3726,10 +3721,10 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
             type == CV_32FC3 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C3R :
             type == CV_32FC4 ? (ippiWarpPerspectiveBackFunc)ippiWarpPerspectiveBack_32f_C4R :
             0;
-        int mode = 
+        int mode =
             flags == INTER_LINEAR ? IPPI_INTER_LINEAR :
             flags == INTER_NEAREST ? IPPI_INTER_NN :
-            flags == INTER_CUBIC ? IPPI_INTER_CUBIC : 
+            flags == INTER_CUBIC ? IPPI_INTER_CUBIC :
             0;
         if( mode && ippFunc )
         {

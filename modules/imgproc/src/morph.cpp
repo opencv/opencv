@@ -1213,11 +1213,10 @@ static bool IPPMorphReplicate(int op, const Mat &src, Mat &dst, const Mat &kerne
 }
 
 static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
-    InputArray _kernel,
-    const Point &anchor, int iterations,
+    const Mat& _kernel, Point anchor, int iterations,
     int borderType, const Scalar &borderValue)
 {
-    Mat src = _src.getMat(), kernel = _kernel.getMat();
+    Mat src = _src.getMat(), kernel = _kernel;
     if( !( src.depth() == CV_8U || src.depth() == CV_32F ) || ( iterations > 1 ) ||
         !( borderType == cv::BORDER_REPLICATE || (borderType == cv::BORDER_CONSTANT && borderValue == morphologyDefaultBorderValue()) )
         || !( op == MORPH_DILATE || op == MORPH_ERODE) )
@@ -1248,9 +1247,6 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
 
     }
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
-    Point normanchor = normalizeAnchor(anchor, ksize);
-
-    CV_Assert( normanchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
 
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
@@ -1265,7 +1261,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     if( !kernel.data )
     {
         ksize = Size(1+iterations*2,1+iterations*2);
-        normanchor = Point(iterations, iterations);
+        anchor = Point(iterations, iterations);
         rectKernel = true;
         iterations = 1;
     }
@@ -1273,7 +1269,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     {
         ksize = Size(ksize.width + (iterations-1)*(ksize.width-1),
              ksize.height + (iterations-1)*(ksize.height-1)),
-        normanchor = Point(normanchor.x*iterations, normanchor.y*iterations);
+        anchor = Point(anchor.x*iterations, anchor.y*iterations);
         kernel = Mat();
         rectKernel = true;
         iterations = 1;
@@ -1283,7 +1279,7 @@ static bool IPPMorphOp(int op, InputArray _src, OutputArray _dst,
     if( iterations > 1 )
         return false;
 
-    return IPPMorphReplicate( op, src, dst, kernel, ksize, normanchor, rectKernel );
+    return IPPMorphReplicate( op, src, dst, kernel, ksize, anchor, rectKernel );
 }
 #endif
 
@@ -1292,17 +1288,18 @@ static void morphOp( int op, InputArray _src, OutputArray _dst,
                      Point anchor, int iterations,
                      int borderType, const Scalar& borderValue )
 {
-
-#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
-    if( IPPMorphOp(op, _src, _dst, _kernel, anchor, iterations, borderType, borderValue) )
-        return;
-#endif
-
-    Mat src = _src.getMat(), kernel = _kernel.getMat();
+    Mat kernel = _kernel.getMat();
     Size ksize = kernel.data ? kernel.size() : Size(3,3);
     anchor = normalizeAnchor(anchor, ksize);
 
     CV_Assert( anchor.inside(Rect(0, 0, ksize.width, ksize.height)) );
+
+#if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
+    if( IPPMorphOp(op, _src, _dst, kernel, anchor, iterations, borderType, borderValue) )
+        return;
+#endif
+
+    Mat src = _src.getMat();
 
     _dst.create( src.size(), src.type() );
     Mat dst = _dst.getMat();
