@@ -164,7 +164,7 @@ createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 
 class CV_EXPORTS_W ExposureAlign : public Algorithm
 {
 public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                                  const std::vector<float>& times, InputArray response) = 0;
 };
 
@@ -173,22 +173,26 @@ public:
 class CV_EXPORTS_W AlignMTB : public ExposureAlign
 {
 public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                                  const std::vector<float>& times, InputArray response) = 0;
 
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst) = 0;
 
     CV_WRAP virtual void calculateShift(InputArray img0, InputArray img1, Point& shift) = 0;
     CV_WRAP virtual void shiftMat(InputArray src, OutputArray dst, const Point shift) = 0;
+    CV_WRAP virtual void computeBitmaps(Mat& img, Mat& tb, Mat& eb) = 0;
 
     CV_WRAP virtual int getMaxBits() const = 0;
     CV_WRAP virtual void setMaxBits(int max_bits) = 0;
 
     CV_WRAP virtual int getExcludeRange() const = 0;
     CV_WRAP virtual void setExcludeRange(int exclude_range) = 0;
+
+    CV_WRAP virtual bool getCut() const = 0;
+    CV_WRAP virtual void setCut(bool value) = 0;
 };
 
-CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4);
+CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4, bool cut = true);
 
 class CV_EXPORTS_W ExposureCalibrate : public Algorithm
 {
@@ -206,9 +210,6 @@ public:
     
     CV_WRAP virtual int getSamples() const = 0;
     CV_WRAP virtual void setSamples(int samples) = 0;
-
-    CV_WRAP virtual bool getTest() const = 0;
-    CV_WRAP virtual void setTest(bool val) = 0;
 };
 
 CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);
@@ -277,6 +278,65 @@ public:
                                  const std::vector<float>& times, InputArray response) = 0;
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
 };
+
+CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
+
+class CV_EXPORTS_W Ghostbuster : public Algorithm
+{
+public:
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
+};
+
+// "Ghost Detection and Removal in High Dynamic Range Images", Sidibe et al., 2009
+
+class CV_EXPORTS_W GhostbusterOrder : public Ghostbuster
+{
+public:
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
+
+    CV_WRAP virtual int getUnderexp() = 0;
+    CV_WRAP virtual void setUnderexp(int value) = 0;
+
+    CV_WRAP virtual int getOverexp() = 0;
+    CV_WRAP virtual void setOverexp(int value) = 0;
+};
+
+CV_EXPORTS_W Ptr<GhostbusterOrder> createGhostbusterOrder(int underexp = 20, int overexp = 240);
+
+// "Fast and Robust High Dynamic Range Image Generation with Camera and Object Movement", Grosch, 2006
+
+class CV_EXPORTS_W GhostbusterPredict : public Ghostbuster
+{
+public:
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times) = 0;
+
+    CV_WRAP virtual int getThreshold() = 0;
+    CV_WRAP virtual void setThreshold(int value) = 0;
+
+    CV_WRAP virtual int getUnderexp() = 0;
+    CV_WRAP virtual void setUnderexp(int value) = 0;
+
+    CV_WRAP virtual int getOverexp() = 0;
+    CV_WRAP virtual void setOverexp(int value) = 0;
+};
+
+CV_EXPORTS_W Ptr<GhostbusterPredict> createGhostbusterPredict(int thresh = 10, int underexp = 20, int overexp = 240);
+
+// "Bitmap Movement Detection: HDR for Dynamic Scenes", Pece, Kautz, 2010
+
+class CV_EXPORTS_W GhostbusterBitmap : public Ghostbuster
+{
+public:
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
+
+    CV_WRAP virtual int getExclude() = 0;
+    CV_WRAP virtual void setExclude(int value) = 0;
+};
+
+CV_EXPORTS_W Ptr<GhostbusterBitmap> createGhostbusterBitmap(int exclude = 4);
 
 } // cv
 

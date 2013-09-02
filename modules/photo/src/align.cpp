@@ -50,25 +50,25 @@ namespace cv
 class AlignMTBImpl : public AlignMTB
 {
 public:
-    AlignMTBImpl(int max_bits, int exclude_range) :
+    AlignMTBImpl(int max_bits, int exclude_range, bool cut) :
         max_bits(max_bits),
         exclude_range(exclude_range),
+        cut(cut),
         name("AlignMTB")
     {
     }
     
-    void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                  const std::vector<float>& times, InputArray response)
     {
         process(src, dst);
     }
 
-    void process(InputArrayOfArrays _src, OutputArray _dst)
+    void process(InputArrayOfArrays _src, std::vector<Mat>& dst)
     {
-        std::vector<Mat> src, dst;
+        std::vector<Mat> src;
         _src.getMatVector(src);
-        _dst.getMatVector(dst);
-
+        
         checkImageDimensions(src);
         dst.resize(src.size());
 
@@ -76,16 +76,40 @@ public:
         dst[pivot] = src[pivot];
         Mat gray_base;
         cvtColor(src[pivot], gray_base, COLOR_RGB2GRAY);
+        std::vector<Point> shifts;
 
         for(size_t i = 0; i < src.size(); i++) {
             if(i == pivot) {
+                shifts.push_back(Point(0, 0));
                 continue;
             }
             Mat gray;
             cvtColor(src[i], gray, COLOR_RGB2GRAY);
             Point shift;
             calculateShift(gray_base, gray, shift);
+            shifts.push_back(shift);
             shiftMat(src[i], dst[i], shift);
+        }
+        if(cut) {
+            Point max(0, 0), min(0, 0);
+            for(size_t i = 0; i < shifts.size(); i++) {
+                if(shifts[i].x > max.x) {
+                    max.x = shifts[i].x;
+                }
+                if(shifts[i].y > max.y) {
+                    max.y = shifts[i].y;
+                }
+                if(shifts[i].x < min.x) {
+                    min.x = shifts[i].x;
+                }
+                if(shifts[i].y < min.y) {
+                    min.y = shifts[i].y;
+                }
+            }
+            Point size = dst[0].size();
+            for(size_t i = 0; i < dst.size(); i++) {
+                dst[i] = dst[i](Rect(max, min + size));
+            }
         }
     }
 
@@ -109,8 +133,8 @@ public:
         
             shift *= 2;
             Mat tb1, tb2, eb1, eb2;
-            computeBitmaps(pyr0[level], tb1, eb1, exclude_range);
-            computeBitmaps(pyr1[level], tb2, eb2, exclude_range);
+            computeBitmaps(pyr0[level], tb1, eb1);
+            computeBitmaps(pyr1[level], tb2, eb2);
 
             int min_err = pyr0[level].total();
             Point new_shift(shift);
@@ -140,12 +164,13 @@ public:
         _dst.create(src.size(), src.type());
         Mat dst = _dst.getMat();
 
-        dst = Mat::zeros(src.size(), src.type());
+        Mat res = Mat::zeros(src.size(), src.type());
         int width = src.cols - abs(shift.x);
         int height = src.rows - abs(shift.y);
         Rect dst_rect(max(shift.x, 0), max(shift.y, 0), width, height);
         Rect src_rect(max(-shift.x, 0), max(-shift.y, 0), width, height);
-        src(src_rect).copyTo(dst(dst_rect));
+        src(src_rect).copyTo(res(dst_rect));
+        res.copyTo(dst);
     }
 
     int getMaxBits() const { return max_bits; }
@@ -154,11 +179,15 @@ public:
     int getExcludeRange() const { return exclude_range; }
     void setExcludeRange(int val) { exclude_range = val; }
 
+    bool getCut() const { return cut; }
+    void setCut(bool val) { cut = val; }
+
     void write(FileStorage& fs) const
     {
         fs << "name" << name
            << "max_bits" << max_bits
-           << "exclude_range" << exclude_range;
+           << "exclude_range" << exclude_range 
+           << "cut" << static_cast<int>(cut);
     }
 
     void read(const FileNode& fn)
@@ -167,11 +196,21 @@ public:
         CV_Assert(n.isString() && String(n) == name);
         max_bits = fn["max_bits"];
         exclude_range = fn["exclude_range"];
+        int cut_val = fn["cut"];
+        cut = static_cast<bool>(cut_val);
+    }
+
+    void computeBitmaps(Mat& img, Mat& tb, Mat& eb)
+    {
+        int median = getMedian(img);
+        compare(img, median, tb, CMP_GT);
+        compare(abs(img - median), exclude_range, eb, CMP_GT);
     }
 
 protected:
     String name;
     int max_bits, exclude_range;
+    bool cut;
 
     void downsample(Mat& src, Mat& dst)
     {
@@ -217,18 +256,289 @@ protected:
         }
         return median;
     }
+};
 
-    void computeBitmaps(Mat& img, Mat& tb, Mat& eb, int exclude_range)
+Ptr<AlignMTB> createAlignMTB(int max_bits, int exclude_range, bool cut)
+{
+    return new AlignMTBImpl(max_bits, exclude_range, cut);
+}
+
+class floatIndexCmp {
+public:
+    floatIndexCmp(std::vector<float> data) :
+      data(data)
     {
-        int median = getMedian(img);
-        compare(img, median, tb, CMP_GT);
-        compare(abs(img - median), exclude_range, eb, CMP_GT);
+    }
+
+    bool operator() (int i,int j) 
+    { 
+        return data[i] < data[j];
+    }
+protected:
+    std::vector<float> data;
+};
+
+class GhostbusterOrderImpl : public GhostbusterOrder
+{
+public:
+    GhostbusterOrderImpl(int underexp, int overexp) :
+      underexp(underexp),
+      overexp(overexp),
+      name("GhostbusterOrder")
+    {
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) 
+    {
+        process(src, dst);
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst)
+    {
+        std::vector<Mat> unsorted_images;
+        src.getMatVector(unsorted_images);
+        checkImageDimensions(unsorted_images);
+
+        std::vector<Mat> images;
+        sortImages(unsorted_images, images);
+
+        int channels = images[0].channels();
+        dst.create(images[0].size(), CV_8U);
+
+        Mat res = Mat::zeros(images[0].size(), CV_8U);
+
+        std::vector<Mat> splitted(channels);
+        split(images[0], splitted);
+        for(int i = 0; i < images.size() - 1; i++) {
+            
+            std::vector<Mat> next_splitted(channels);
+            split(images[i + 1], next_splitted);
+            
+            for(int c = 0; c < channels; c++) {
+                Mat exposed = (splitted[c] >= underexp) & (splitted[c] <= overexp);
+                exposed &= (next_splitted[c] >= underexp) & (next_splitted[c] <= overexp);
+                Mat ghost = (splitted[c] > next_splitted[c]) & exposed;
+                res |= ghost;
+            }
+            splitted = next_splitted;
+        }
+        res.copyTo(dst.getMat());
+    }
+
+    int getUnderexp() {return underexp;}
+    void setUnderexp(int value) {underexp = value;}
+
+    int getOverexp() {return overexp;}
+    void setOverexp(int value) {overexp = value;}
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "overexp" << overexp
+           << "underexp" << underexp;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        overexp = fn["overexp"];
+        underexp = fn["underexp"];
+    }
+
+protected:
+    int overexp, underexp;
+    String name;
+
+    void sortImages(std::vector<Mat>& images, std::vector<Mat>& sorted)
+    {
+        std::vector<int>indices(images.size());
+        std::vector<float>means(images.size());
+        for(size_t i = 0; i < images.size(); i++) {
+            indices[i] = i;
+            means[i] = mean(mean(images[i]))[0];
+        }
+        sort(indices.begin(), indices.end(), floatIndexCmp(means));
+        sorted.resize(images.size());
+        for(size_t i = 0; i < images.size(); i++) {
+            sorted[i] = images[indices[i]];
+        }
     }
 };
 
-CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits, int exclude_range)
+Ptr<GhostbusterOrder> createGhostbusterOrder(int underexp, int overexp)
 {
-    return new AlignMTBImpl(max_bits, exclude_range);
+    return new GhostbusterOrderImpl(underexp, overexp);
+}
+
+class GhostbusterPredictImpl : public GhostbusterPredict
+{
+public:
+    GhostbusterPredictImpl(int thresh, int underexp, int overexp) :
+      thresh(thresh),
+      underexp(underexp),
+      overexp(overexp),
+      name("GhostbusterPredict")
+    {
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response)
+    {
+        std::vector<Mat> images;
+        src.getMatVector(images);
+        checkImageDimensions(images);
+
+        int channels = images[0].channels();
+        dst.create(images[0].size(), CV_8U);
+
+        Mat res = Mat::zeros(images[0].size(), CV_8U);
+
+        Mat radiance;
+        LUT(images[0], response, radiance);
+        std::vector<Mat> splitted(channels);
+        split(radiance, splitted);
+        std::vector<Mat> resp_split(channels);
+        split(response, resp_split);
+        for(int i = 0; i < images.size() - 1; i++) {
+            
+            std::vector<Mat> next_splitted(channels);
+            LUT(images[i + 1], response, radiance);
+            split(radiance, next_splitted);
+            
+            for(int c = 0; c < channels; c++) {
+
+                Mat predicted = splitted[c] / times[i] * times[i + 1];
+
+                Mat low = max(thresh, next_splitted[c]) - thresh;
+                Mat high = min(255 - thresh, next_splitted[c]) + thresh;
+                low.convertTo(low, CV_8U);
+                high.convertTo(high, CV_8U);
+                LUT(low, resp_split[c], low);
+                LUT(high, resp_split[c], high);
+
+                Mat exposed = (splitted[c] >= underexp) & (splitted[c] <= overexp);
+                exposed &= (next_splitted[c] >= underexp) & (next_splitted[c] <= overexp);
+
+                Mat ghost = (low < predicted) & (predicted < high);
+                ghost &= exposed;
+                res |= ghost;
+            }
+            splitted = next_splitted;
+        }
+        res.copyTo(dst.getMat());
+    }
+
+    virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
+    {
+        process(src, dst, times, linearResponse(3));
+    }
+
+    CV_WRAP virtual int getThreshold() {return thresh;}
+    CV_WRAP virtual void setThreshold(int value) {thresh = value;}
+
+    int getUnderexp() {return underexp;}
+    void setUnderexp(int value) {underexp = value;}
+
+    int getOverexp() {return overexp;}
+    void setOverexp(int value) {overexp = value;}
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "overexp" << overexp
+           << "underexp" << underexp
+           << "thresh" << thresh;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        overexp = fn["overexp"];
+        underexp = fn["underexp"];
+        thresh = fn["thresh"];
+    }
+
+protected:
+    int thresh, underexp, overexp;
+    String name;
+};
+
+Ptr<GhostbusterPredict> createGhostbusterPredict(int thresh, int underexp, int overexp)
+{
+    return new GhostbusterPredictImpl(thresh, underexp, overexp);
+}
+
+class GhostbusterBitmapImpl : public GhostbusterBitmap
+{
+public:
+    GhostbusterBitmapImpl(int exclude) :
+      exclude(exclude),
+          name("GhostbusterBitmap")
+    {
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response)
+    {
+        process(src, dst);
+    }
+
+    void process(InputArrayOfArrays src, OutputArray dst)
+    {
+        std::vector<Mat> images;
+        src.getMatVector(images);
+        checkImageDimensions(images);
+
+        int channels = images[0].channels();
+        dst.create(images[0].size(), CV_8U);
+
+        Mat res = Mat::zeros(images[0].size(), CV_8U);
+        
+        Ptr<AlignMTB> MTB = createAlignMTB();
+        MTB->setExcludeRange(exclude);
+
+        for(size_t i = 0; i < images.size(); i++) {
+            Mat gray;
+            if(channels == 1) {
+                gray = images[i];
+            } else {
+                cvtColor(images[i], gray, COLOR_RGB2GRAY);
+            }
+
+            Mat tb, eb;
+            MTB->computeBitmaps(gray, tb, eb);
+            tb &= eb & 1;
+            res += tb;                
+        }
+        res = (res > 0) & (res < images.size());
+        res.copyTo(dst.getMat());
+    }
+
+    int getExclude() {return exclude;}
+    void setExclude(int value) {exclude = value;}
+
+    void write(FileStorage& fs) const
+    {
+        fs << "name" << name
+           << "exclude" << exclude;
+    }
+
+    void read(const FileNode& fn)
+    {
+        FileNode n = fn["name"];
+        CV_Assert(n.isString() && String(n) == name);
+        exclude = fn["exclude"];
+    }
+
+protected:
+    int exclude;
+    String name;
+};
+
+Ptr<GhostbusterBitmap> createGhostbusterBitmap(int exclude)
+{
+    return new GhostbusterBitmapImpl(exclude);
 }
 
 }
+

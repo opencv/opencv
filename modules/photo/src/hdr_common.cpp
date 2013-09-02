@@ -92,4 +92,21 @@ void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
     merge(channels, dst);
 }
 
+Mat linearResponse(int channels)
+{
+    Mat single_response = Mat(256, 1, CV_32F);
+    for(int i = 1; i < 256; i++) {
+        single_response.at<float>(i) = static_cast<float>(i);
+    }
+    single_response.at<float>(0) = static_cast<float>(1);
+
+    std::vector<Mat> splitted(channels);
+    for(int c = 0; c < channels; c++) {
+        splitted[c] = single_response;
+    }
+    Mat result;
+    merge(splitted, result);
+    return result;
+}
+
 };

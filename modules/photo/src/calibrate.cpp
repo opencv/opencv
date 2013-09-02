@@ -55,8 +55,7 @@ public:
         samples(samples),
         lambda(lambda),
         name("CalibrateDebevec"),
-        w(tringleWeights()),
-        test(false)
+        w(tringleWeights())
     {
     }
     
@@ -84,9 +83,6 @@ public:
             for(int i = 0; i < samples; i++) {
 
                 int pos = 3 * (rand() % images[0].total()) + channel;
-                if(test) {
-                    pos = 3 * i + channel;
-                }
                 for(size_t j = 0; j < images.size(); j++) {
 
                     int val = (images[j].ptr() + pos)[0];
@@ -113,9 +109,6 @@ public:
         exp(result, result);
     }
 
-    bool getTest() const { return test; }
-    void setTest(bool val) { test = val; }
-
     int getSamples() const { return samples; }
     void setSamples(int val) { samples = val; }
 
@@ -141,7 +134,6 @@ protected:
     String name;
     int samples;
     float lambda;
-    bool test;
     Mat w;
 };
 
