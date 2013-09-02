@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
-#define __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
+#ifndef __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
+#define __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
 
 namespace cv
 {
@@ -514,4 +514,4 @@ namespace cv
 
 } /* end of namespace cv */
 
-#endif /* __OPENCV_GPU_MATRIX_OPERATIONS_HPP__ */
+#endif /* __OPENCV_OCL_MATRIX_OPERATIONS_HPP__ */

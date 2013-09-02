@@ -143,7 +143,7 @@ Although *Mat* works really well as an image container, it is also a general mat
 
     You cannot initialize the matrix values with this construction. It will only reallocate its matrix data memory if the new size will not fit into the old one.
 
-   + MATLAB style initializer: :basicstructures:`zeros() <mat-zeros>`, :basicstructures:`ones() <mat-ones>`, ::basicstructures:`eyes() <mat-eye>`. Specify size and data type to use:
+   + MATLAB style initializer: :basicstructures:`zeros() <mat-zeros>`, :basicstructures:`ones() <mat-ones>`, :basicstructures:`eye() <mat-eye>`. Specify size and data type to use:
 
      .. literalinclude:: ../../../../samples/cpp/tutorial_code/core/mat_the_basic_image_container/mat_the_basic_image_container.cpp
         :language: cpp

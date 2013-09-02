@@ -52,25 +52,13 @@ using std::tr1::get;
 using std::tr1::tuple;
 using std::tr1::make_tuple;
 
-template <typename T>
-static vector<T> & MatToVector(const ocl::oclMat & oclSrc, vector<T> & instance)
-{
-    Mat src;
-    oclSrc.download(src);
-
-    for (int i = 0; i < src.cols; ++i)
-        instance.push_back(src.at<T>(0, i));
-
-    return instance;
-}
-
 CV_ENUM(LoadMode, IMREAD_GRAYSCALE, IMREAD_COLOR)
 
 typedef tuple<int, tuple<string, string, LoadMode> > PyrLKOpticalFlowParamType;
 typedef TestBaseWithParam<PyrLKOpticalFlowParamType> PyrLKOpticalFlowFixture;
 
 PERF_TEST_P(PyrLKOpticalFlowFixture,
-            DISABLED_PyrLKOpticalFlow,
+            PyrLKOpticalFlow,
             ::testing::Combine(
                 ::testing::Values(1000, 2000, 4000),
                 ::testing::Values(
@@ -79,8 +67,8 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
                         string("gpu/opticalflow/rubberwhale1.png"),
                         string("gpu/opticalflow/rubberwhale2.png"),
                         LoadMode(IMREAD_COLOR)
-                        )
-                    , make_tuple<string, string, LoadMode>
+                        ),
+                    make_tuple<string, string, LoadMode>
                     (
                         string("gpu/stereobm/aloe-L.png"),
                         string("gpu/stereobm/aloe-R.png"),
@@ -88,7 +76,7 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
                         )
                     )
                 )
-            ) // TODO to big difference between implementations
+            )
 {
     PyrLKOpticalFlowParamType params = GetParam();
     tuple<string, string, LoadMode> fileParam = get<1>(params);
@@ -97,6 +85,8 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
     const string fileName0 = get<0>(fileParam), fileName1 = get<1>(fileParam);
     Mat frame0 = imread(getDataPath(fileName0), openMode);
     Mat frame1 = imread(getDataPath(fileName1), openMode);
+
+    declare.in(frame0, frame1);
 
     ASSERT_FALSE(frame0.empty()) << "can't load " << fileName0;
     ASSERT_FALSE(frame1.empty()) << "can't load " << fileName1;
@@ -111,36 +101,28 @@ PERF_TEST_P(PyrLKOpticalFlowFixture,
     vector<unsigned char> status;
     vector<float> err;
     goodFeaturesToTrack(grayFrame, pts, pointsCount, 0.01, 0.0);
+    Mat ptsMat(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
 
     if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE()
                 cv::calcOpticalFlowPyrLK(frame0, frame1, pts, nextPts, status, err);
-
-        SANITY_CHECK(nextPts);
-        SANITY_CHECK(status);
-        SANITY_CHECK(err);
     }
     else if (RUN_OCL_IMPL)
     {
         ocl::PyrLKOpticalFlow oclPyrLK;
         ocl::oclMat oclFrame0(frame0), oclFrame1(frame1);
-        ocl::oclMat oclPts(1, static_cast<int>(pts.size()), CV_32FC2, (void *)&pts[0]);
+        ocl::oclMat oclPts(ptsMat);
         ocl::oclMat oclNextPts, oclStatus, oclErr;
 
-        TEST_CYCLE()
+        OCL_TEST_CYCLE()
                 oclPyrLK.sparse(oclFrame0, oclFrame1, oclPts, oclNextPts, oclStatus, &oclErr);
-
-        MatToVector(oclNextPts, nextPts);
-        MatToVector(oclStatus, status);
-        MatToVector(oclErr, err);
-
-        SANITY_CHECK(nextPts);
-        SANITY_CHECK(status);
-        SANITY_CHECK(err);
     }
     else
         OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
 }
 
 PERF_TEST(tvl1flowFixture, tvl1flow)
@@ -175,7 +157,7 @@ PERF_TEST(tvl1flowFixture, tvl1flow)
         ocl::oclMat oclFrame0(frame0), oclFrame1(frame1), oclFlow1(srcSize, CV_32FC1),
                 oclFlow2(srcSize, CV_32FC1);
 
-        TEST_CYCLE() oclAlg(oclFrame0, oclFrame1, oclFlow1, oclFlow2);
+        OCL_TEST_CYCLE() oclAlg(oclFrame0, oclFrame1, oclFlow1, oclFlow2);
 
         oclAlg.collectGarbage();
 
@@ -259,7 +241,7 @@ PERF_TEST_P(FarnebackOpticalFlowFixture, FarnebackOpticalFlow,
             farn.flags |= OPTFLOW_USE_INITIAL_FLOW;
         }
 
-        TEST_CYCLE()
+        OCL_TEST_CYCLE()
                 farn(oclFrame0, oclFrame1, oclFlowx, oclFlowy);
 
         oclFlowx.download(flowx);

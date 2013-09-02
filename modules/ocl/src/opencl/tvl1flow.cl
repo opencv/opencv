@@ -341,7 +341,8 @@ __kernel void estimateUKernel(__global const float* I1wx, int I1wx_col, int I1wx
     int u1_offset_x,
     int u1_offset_y,
     int u2_offset_x,
-    int u2_offset_y)
+    int u2_offset_y,
+    char calc_error)
 {
 
     //const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -399,9 +400,12 @@ __kernel void estimateUKernel(__global const float* I1wx, int I1wx_col, int I1wx
         u1[(y + u1_offset_y) * u1_step + x + u1_offset_x] = u1NewVal;
         u2[(y + u2_offset_y) * u2_step + x + u2_offset_x] = u2NewVal;
 
-        const float n1 = (u1OldVal - u1NewVal) * (u1OldVal - u1NewVal);
-        const float n2 = (u2OldVal - u2NewVal) * (u2OldVal - u2NewVal);
-        error[y * I1wx_step + x] = n1 + n2;
+        if(calc_error)
+        {
+            const float n1 = (u1OldVal - u1NewVal) * (u1OldVal - u1NewVal);
+            const float n2 = (u2OldVal - u2NewVal) * (u2OldVal - u2NewVal);
+            error[y * I1wx_step + x] = n1 + n2;
+        }
     }
 
 }
