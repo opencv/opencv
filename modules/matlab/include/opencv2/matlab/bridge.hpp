@@ -47,6 +47,7 @@
 #include <vector>
 #include <string>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/calib3d.hpp>
 
 namespace cv {
@@ -62,11 +63,14 @@ typedef std::vector<int> vector_int;
 typedef std::vector<float> vector_float;
 typedef std::vector<cv::String> vector_String;
 typedef std::vector<unsigned char> vector_uchar;
+typedef std::vector<std::vector<char> > vector_vector_char;
+typedef std::vector<std::vector<cv::DMatch> > vector_vector_DMatch;
 typedef std::vector<cv::Rect> vector_Rect;
 typedef std::vector<cv::KeyPoint> vector_KeyPoint;
 typedef cv::Ptr<cv::StereoBM> Ptr_StereoBM;
 typedef cv::Ptr<cv::StereoSGBM> Ptr_StereoSGBM;
 typedef cv::Ptr<cv::FeatureDetector> Ptr_FeatureDetector;
+typedef cv::Ptr<CLAHE> Ptr_CLAHE;
 
 
 // ----------------------------------------------------------------------------
@@ -379,7 +383,16 @@ public:
   vector_uchar toVectorUchar() { return vector_uchar(); }
   operator vector_uchar() { return toVectorUchar(); }
   
-  
+  // ------------------------ vector_vector_char ------------------------------
+  Bridge& operator=(const vector_vector_char& ) { return *this; }
+  vector_vector_char toVectorVectorChar() { return vector_vector_char(); }
+  operator vector_vector_char() { return toVectorVectorChar(); }
+
+  // ------------------------ vector_vector_DMatch ---------------------------
+  Bridge& operator=(const vector_vector_DMatch& ) { return *this; }
+  vector_vector_DMatch toVectorVectorDMatch() { return vector_vector_DMatch(); }
+  operator vector_vector_DMatch() { return toVectorVectorDMatch(); }
+
   
   
   
@@ -402,6 +415,10 @@ public:
   Ptr_FeatureDetector toPtrFeatureDetector() { return Ptr_FeatureDetector(); }
   operator Ptr_FeatureDetector() { return toPtrFeatureDetector(); }
 
+  // ---------------------------   Ptr_CLAHE   --------------------------------
+  Bridge& operator=(const Ptr_CLAHE& ) { return *this; }
+  Ptr_CLAHE toPtrCLAHE() { return Ptr_CLAHE(); }
+  operator Ptr_CLAHE() { return toPtrCLAHE(); }
 }; // class Bridge
 
 
