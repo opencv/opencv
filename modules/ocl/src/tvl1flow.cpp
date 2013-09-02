@@ -172,7 +172,7 @@ namespace ocl_tvl1flow
     void estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
         oclMat &rho_c, oclMat &p11, oclMat &p12,
         oclMat &p21, oclMat &p22, oclMat &u1,
-        oclMat &u2, oclMat &error, float l_t, float theta);
+        oclMat &u2, oclMat &error, float l_t, float theta, char calc_error);
 
     void estimateDualVariables(oclMat &u1, oclMat &u2,
         oclMat &p11, oclMat &p12, oclMat &p21, oclMat &p22, float taut);
@@ -229,17 +229,28 @@ void cv::ocl::OpticalFlowDual_TVL1_OCL::procOneScale(const oclMat &I0, const ocl
         warpBackward(I0, I1, I1x, I1y, u1, u2, I1w, I1wx, I1wy, grad, rho_c);
 
         double error = numeric_limits<double>::max();
+        double prev_error = 0;
         for (int n = 0; error > scaledEpsilon && n < iterations; ++n)
         {
+            // some tweaks to make sum operation less frequently
+            char calc_error = (n & 0x1) && (prev_error < scaledEpsilon);
             estimateU(I1wx, I1wy, grad, rho_c, p11, p12, p21, p22,
-                u1, u2, diff, l_t, static_cast<float>(theta));
-
-            error = ocl::sum(diff)[0];
-
+                      u1, u2, diff, l_t, static_cast<float>(theta), calc_error);
+            if(calc_error)
+            {
+                error = ocl::sum(diff)[0];
+                prev_error = error;
+            }
+            else
+            {
+                error = numeric_limits<double>::max();
+                prev_error -= scaledEpsilon;
+            }
             estimateDualVariables(u1, u2, p11, p12, p21, p22, taut);
 
         }
     }
+
 
 }
 
@@ -348,7 +359,7 @@ void ocl_tvl1flow::estimateDualVariables(oclMat &u1, oclMat &u2, oclMat &p11, oc
 void ocl_tvl1flow::estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
     oclMat &rho_c, oclMat &p11, oclMat &p12,
     oclMat &p21, oclMat &p22, oclMat &u1,
-    oclMat &u2, oclMat &error, float l_t, float theta)
+    oclMat &u2, oclMat &error, float l_t, float theta, char calc_error)
 {
     Context* clCxt = I1wx.clCxt;
 
@@ -401,6 +412,7 @@ void ocl_tvl1flow::estimateU(oclMat &I1wx, oclMat &I1wy, oclMat &grad,
     args.push_back( make_pair( sizeof(cl_int), (void*)&u1_offset_y));
     args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_x));
     args.push_back( make_pair( sizeof(cl_int), (void*)&u2_offset_y));
+    args.push_back( make_pair( sizeof(cl_char), (void*)&calc_error));
 
     openCLExecuteKernel(clCxt, &tvl1flow, kernelName, globalThread, localThread, args, -1, -1);
 }
