@@ -20,6 +20,9 @@ if ("${CONFIGURATION}" MATCHES "Debug")
     return()
 endif()
 
+# -----------------------------------------------------------------------------
+# Compile
+# -----------------------------------------------------------------------------
 # for each generated source file:
 # 1. check if the file has already been compiled
 # 2. attempt compile if required
@@ -29,7 +32,6 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     # strip out the filename
     get_filename_component(FILENAME ${SOURCE_FILE} NAME_WE)
     # compile the source file using mex
-    execute_process(COMMAND echo ${FILENAME})
     if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/+cv/${FILENAME}.${MATLAB_MEXEXT})
         execute_process(
             COMMAND ${MATLAB_MEX_SCRIPT} ${MEX_OPTS} "CXXFLAGS=\$CXXFLAGS ${MEX_CXXFLAGS}" ${MEX_INCLUDE_DIRS_LIST} 
@@ -40,6 +42,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
         )
     endif()
     # TODO: If a mex file fails to compile, should we error out?
+    # TODO: Warnings are currently treated as errors... 
     if (FAILED)
         message(FATAL_ERROR "Failed to compile ${FILENAME}: ${FAILED}")
     endif()
