@@ -91,8 +91,12 @@ function(locate_matlab_root)
   # --- WINDOWS ---
   elseif (WIN32)
 		# search the path to see if Matlab exists there
-		# fingers crossed it is, otherwise we have to start hunting through the registry :/
+    # Contrary to EVERY OTHER REGEX IMPLEMENTATION ON EARTH, cmake returns
+    # the entire input string if no matches for the capture group are found.
 		string(REGEX REPLACE ".*[;=](.*[Mm][Aa][Tt][Ll][Aa][Bb][^;]*)\\\\bin.*" "\\1" MATLAB_ROOT_DIR_ "$ENV{PATH}")
+    if ("${MATLAB_ROOT_DIR_}" STREQUAL "$ENV{PATH}")
+      set(MATLAB_ROOT_DIR_)
+    endif()
 		
 	  # registry-hacking	
     # determine the available Matlab versions
@@ -115,7 +119,7 @@ function(locate_matlab_root)
 		# request the MATLABROOT from the registry
 		foreach(REG_ROOT_ ${REG_ROOTS_})
 			get_filename_component(QUERY_RESPONSE_ [${REG_ROOT_}\\${REG_EXTENSION_}\\${VERSION_};MATLABROOT] ABSOLUTE)
-			if (NOT ${MATLAB_ROOT_DIR_} AND NOT ${QUERY_RESPONSE_} MATCHES "registry$")
+			if ("${MATLAB_ROOT_DIR_}" STREQUAL "" AND NOT ${QUERY_RESPONSE_} MATCHES "registry$")
 				set(MATLAB_ROOT_DIR_ ${QUERY_RESPONSE_})
 			endif()
 		endforeach()
