@@ -53,7 +53,7 @@
 namespace cv {
 namespace bridge {
 
-/* 
+/*
  * Custom typedefs
  * Parsed names from the hdr_parser
  */
@@ -92,7 +92,7 @@ void deepCopyAndTranspose(const matlab::MxArray& src, cv::Mat& dst);
 //                                 BRIDGE
 // ----------------------------------------------------------------------------
 
-/*! 
+/*!
  * @class Bridge
  * @brief Type conversion class for converting OpenCV and native C++ types
  *
@@ -108,7 +108,7 @@ void deepCopyAndTranspose(const matlab::MxArray& src, cv::Mat& dst);
  *    ObjectType toObjectType();
  *
  * The bridging class provides common conversions between OpenCV types,
- * std and stl types to Matlab's mxArray format. By inheriting Bridge, 
+ * std and stl types to Matlab's mxArray format. By inheriting Bridge,
  * you can add your own custom type conversions.
  *
  * Because Matlab uses a homogeneous storage type, all operations are provided
@@ -123,7 +123,7 @@ void deepCopyAndTranspose(const matlab::MxArray& src, cv::Mat& dst);
  *    myObject  --> MyObject
  * this is because the binding generator standardises the calling syntax.
  *
- * Bridge attempts to make as few assumptions as possible, however in 
+ * Bridge attempts to make as few assumptions as possible, however in
  * some cases where 1-to-1 mappings don't exist, some assumptions are necessary.
  * In particular:
  *  - conversion from of a 2-channel Mat to an mxArray will result in a complex
@@ -180,7 +180,7 @@ public:
     matlab::conditionalError(obj, std::string("Object ").append(std::string(name)).append(std::string(" is NULL")));
     return obj;
   }
- 
+
 
   // --------------------------------------------------------------------------
   //                           MATLAB TYPES
@@ -190,8 +190,8 @@ public:
   Bridge(const matlab::MxArray& obj) : ptr_(obj) {}
   Bridge(const mxArray* obj) : ptr_(obj) {}
   matlab::MxArray toMxArray() { return ptr_; }
-  
-  
+
+
   // --------------------------------------------------------------------------
   //                         MATRIX CONVERSIONS
   // --------------------------------------------------------------------------
@@ -216,7 +216,7 @@ public:
   }
 
   template <typename Scalar>
-  cv::Mat toMat() const { 
+  cv::Mat toMat() const {
     cv::Mat mat(ptr_.rows(), ptr_.cols(), CV_MAKETYPE(cv::DataType<Scalar>::type, ptr_.channels()));
     switch (ptr_.ID()) {
       case mxINT8_CLASS:    deepCopyAndTranspose<int8_t,   Scalar>(ptr_, mat); break;
@@ -236,15 +236,15 @@ public:
     return mat;
   }
 
-  
-  
+
+
   // --------------------------------------------------------------------------
   //                         INTEGRAL TYPES
   // --------------------------------------------------------------------------
-  
+
   // --------------------------- string  --------------------------------------
   Bridge& operator=(const std::string& ) { return *this; }
-  std::string toString() { 
+  std::string toString() {
     return ptr_.toString();
   }
   operator std::string() { return toString(); }
@@ -268,11 +268,11 @@ public:
   Bridge& operator=(const int& ) { return *this; }
   int toInt() { return ptr_.scalar<int>(); }
   operator int() { return toInt(); }
-  
-  
-  
-  
-  
+
+
+
+
+
   // --------------------------------------------------------------------------
   //                       CORE OPENCV TYPES
   // --------------------------------------------------------------------------
@@ -281,47 +281,47 @@ public:
   Bridge& operator=(const cv::Point& ) { return *this; }
   cv::Point toPoint() const { return cv::Point(); }
   operator cv::Point() const { return toPoint(); }
-  
+
   // --------------------------   Point2f  ------------------------------------
   Bridge& operator=(const cv::Point2f& ) { return *this; }
   cv::Point2f toPoint2f() const { return cv::Point2f(); }
   operator cv::Point2f() const { return toPoint2f(); }
-  
+
   // --------------------------   Point2d  ------------------------------------
   Bridge& operator=(const cv::Point2d& ) { return *this; }
   cv::Point2d toPoint2d() const { return cv::Point2d(); }
   operator cv::Point2d() const { return toPoint2d(); }
-  
+
   // --------------------------   Size  ---------------------------------------
   Bridge& operator=(const cv::Size& ) { return *this; }
   cv::Size toSize() const { return cv::Size(); }
   operator cv::Size() const { return toSize(); }
-  
+
   // -------------------------- Moments  --------------------------------------
   Bridge& operator=(const cv::Moments& ) { return *this; }
   cv::Moments toMoments() const { return cv::Moments(); }
   operator cv::Moments() const { return toMoments(); }
-  
+
   // --------------------------  Scalar  --------------------------------------
   Bridge& operator=(const cv::Scalar& ) { return *this; }
   cv::Scalar toScalar() { return cv::Scalar(); }
   operator cv::Scalar() { return toScalar(); }
-  
+
   // -------------------------- Rect  -----------------------------------------
   Bridge& operator=(const cv::Rect& ) { return *this; }
   cv::Rect toRect() { return cv::Rect(); }
   operator cv::Rect() { return toRect(); }
-  
+
   // ---------------------- RotatedRect ---------------------------------------
   Bridge& operator=(const cv::RotatedRect& ) { return *this; }
   cv::RotatedRect toRotatedRect() { return cv::RotatedRect(); }
   operator cv::RotatedRect() { return toRotatedRect(); }
-  
+
   // ---------------------- TermCriteria --------------------------------------
   Bridge& operator=(const cv::TermCriteria& ) { return *this; }
   cv::TermCriteria toTermCriteria() { return cv::TermCriteria(); }
   operator cv::TermCriteria() { return toTermCriteria(); }
-  
+
   // ----------------------      RNG     --------------------------------------
   Bridge& operator=(const cv::RNG& ) { return *this; }
   /*! @brief explicit conversion to cv::RNG()
@@ -335,14 +335,14 @@ public:
   }
   operator cv::RNG() { return toRNG(); }
 
-  
-  
-  
+
+
+
 
   // --------------------------------------------------------------------------
   //                       OPENCV VECTOR TYPES
   // --------------------------------------------------------------------------
-  
+
   // -------------------- vector_Mat ------------------------------------------
   Bridge& operator=(const vector_Mat& ) { return *this; }
   vector_Mat toVectorMat() { return vector_Mat(); }
@@ -352,37 +352,37 @@ public:
   Bridge& operator=(const vector_int& ) { return *this; }
   vector_int toVectorInt() { return vector_int(); }
   operator vector_int() { return toVectorInt(); }
-  
+
   // --------------------------- vector_float  --------------------------------
   Bridge& operator=(const vector_float& ) { return *this; }
   vector_float toVectorFloat() { return vector_float(); }
   operator vector_float() { return toVectorFloat(); }
-  
+
   // --------------------------- vector_Rect  ---------------------------------
   Bridge& operator=(const vector_Rect& ) { return *this; }
   vector_Rect toVectorRect() { return vector_Rect(); }
   operator vector_Rect() { return toVectorRect(); }
-  
+
   // --------------------------- vector_KeyPoint  -----------------------------
   Bridge& operator=(const vector_KeyPoint& ) { return *this; }
   vector_KeyPoint toVectorKeyPoint() { return vector_KeyPoint(); }
   operator vector_KeyPoint() { return toVectorKeyPoint(); }
-  
+
   // --------------------------- vector_String  -------------------------------
   Bridge& operator=(const vector_String& ) { return *this; }
   vector_String toVectorString() { return vector_String(); }
   operator vector_String() { return toVectorString(); }
-  
+
   // ------------------------ vector_Point ------------------------------------
   Bridge& operator=(const vector_Point& ) { return *this; }
   vector_Point toVectorPoint() { return vector_Point(); }
   operator vector_Point() { return toVectorPoint(); }
-  
+
   // ------------------------ vector_uchar ------------------------------------
   Bridge& operator=(const vector_uchar& ) { return *this; }
   vector_uchar toVectorUchar() { return vector_uchar(); }
   operator vector_uchar() { return toVectorUchar(); }
-  
+
   // ------------------------ vector_vector_char ------------------------------
   Bridge& operator=(const vector_vector_char& ) { return *this; }
   vector_vector_char toVectorVectorChar() { return vector_vector_char(); }
@@ -393,9 +393,9 @@ public:
   vector_vector_DMatch toVectorVectorDMatch() { return vector_vector_DMatch(); }
   operator vector_vector_DMatch() { return toVectorVectorDMatch(); }
 
-  
-  
-  
+
+
+
   // --------------------------------------------------------------------------
   //                       OPENCV COMPOUND TYPES
   // --------------------------------------------------------------------------
@@ -453,7 +453,7 @@ matlab::MxArray Bridge::FromMat<matlab::InheritType>(const cv::Mat& mat) {
 
 /*!
  * @brief template specialization for inheriting types
- * 
+ *
  * This template specialization attempts to preserve the best mapping
  * between Matlab and OpenCV types. OpenCV has poor support for double precision
  * types, so all floating point types are cast to float. Logicals get cast
@@ -497,7 +497,7 @@ void deepCopyAndTranspose(const cv::Mat& in, matlab::MxArray& out) {
   cv::split(in, channels);
   for (size_t c = 0; c < out.channels(); ++c) {
     cv::transpose(channels[c], channels[c]);
-    cv::Mat outmat(out.cols(), out.rows(), cv::DataType<OutputScalar>::type, 
+    cv::Mat outmat(out.cols(), out.rows(), cv::DataType<OutputScalar>::type,
       static_cast<void *>(out.real<OutputScalar>() + out.cols()*out.rows()*c));
     channels[c].convertTo(outmat, cv::DataType<OutputScalar>::type);
   }
@@ -525,7 +525,7 @@ void deepCopyAndTranspose(const matlab::MxArray& in, cv::Mat& out) {
 
   //const InputScalar* inp = in.real<InputScalar>();
   //OutputScalar* outp = out.ptr<OutputScalar>(0);
-  //gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1()); 
+  //gemt('C', in.rows(), in.cols(), inp, in.rows(), outp, out.step1());
 }
 
 

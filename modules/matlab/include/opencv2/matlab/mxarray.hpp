@@ -59,7 +59,7 @@ typedef std::set<std::string> StringSet;
 
 /*
  * All recent versions of Matlab ship with the MKL library which contains
- * a blas extension called mkl_?omatcopy(). This  defines an out-of-place 
+ * a blas extension called mkl_?omatcopy(). This  defines an out-of-place
  * copy and transpose operation.
  *
  * The mkl library is in ${MATLAB_ROOT}/bin/${MATLAB_MEXEXT}/libmkl...
@@ -225,7 +225,7 @@ private:
   /*!
    * @brief swap all members of this and other
    *
-   * the swap method is used by the assignment and move constructors 
+   * the swap method is used by the assignment and move constructors
    * to swap the members of two MxArrays, leaving both in destructible states
    */
   friend void swap(MxArray& first, MxArray& second) {
@@ -234,7 +234,7 @@ private:
     swap(first.owns_, second.owns_);
   }
 
-  void dealloc() { 
+  void dealloc() {
     if (owns_ && ptr_) { mxDestroyArray(ptr_); ptr_ = NULL; owns_ = false; }
   }
 public:
@@ -255,7 +255,7 @@ public:
    * just encapsulate it
    */
   MxArray(const mxArray* ptr) : ptr_(const_cast<mxArray *>(ptr)), owns_(false) {}
-  MxArray& operator=(const mxArray* ptr) { 
+  MxArray& operator=(const mxArray* ptr) {
     dealloc();
     ptr_ = const_cast<mxArray *>(ptr);
     owns_ = false;
@@ -318,9 +318,9 @@ public:
     return s;
   }
 
-  /*! 
+  /*!
    * @brief destructor
-   * 
+   *
    * The destructor deallocates any data allocated by mxCreate* methods only
    * if the object is owned
    */
@@ -328,7 +328,7 @@ public:
     dealloc();
   }
 
-  /*! 
+  /*!
    * @brief copy constructor
    *
    * All copies are deep copies. If you have a C++11 compatible compiler, prefer
@@ -340,7 +340,7 @@ public:
    * @brief copy-and-swap assignment
    *
    * This assignment operator uses the copy and swap idiom to provide a strong
-   * exception guarantee when swapping two objects. 
+   * exception guarantee when swapping two objects.
    *
    * Note in particular that the other MxArray is passed by value, thus invoking
    * the copy constructor which performs a deep copy of the input. The members of
@@ -370,9 +370,9 @@ public:
    * MxArray is not directly convertible back to mxArray types through assignment
    * because the MxArray may have been allocated on the free store, making it impossible
    * to know whether the returned pointer will be released by someone else or not.
-   * 
+   *
    * Since Matlab requires mxArrays be passed back into the workspace, the only way
-   * to achieve that is through this function, which explicitly releases ownership 
+   * to achieve that is through this function, which explicitly releases ownership
    * of the object, assuming the Matlab interpreter receving the object will delete
    * it at a later time
    *
@@ -394,13 +394,13 @@ public:
 
   template <typename Scalar>
   Scalar* real() { return static_cast<Scalar *>(mxGetData(ptr_)); }
-  
+
   template <typename Scalar>
   Scalar* imag() { return static_cast<Scalar *>(mxGetImagData(ptr_)); }
 
   template <typename Scalar>
   const Scalar* real() const { return static_cast<const Scalar *>(mxGetData(ptr_)); }
-  
+
   template <typename Scalar>
   const Scalar* imag() const { return static_cast<const Scalar *>(mxGetData(ptr_)); }
 
@@ -457,8 +457,8 @@ public:
  *    Mat sum(Mat& A, Mat& B);  % add two matrices
  * \endcode
  *
- * by adding two variants to ArgumentParser, the correct underlying sum 
- * method can be called. If the function call is ambiguous, the 
+ * by adding two variants to ArgumentParser, the correct underlying sum
+ * method can be called. If the function call is ambiguous, the
  * ArgumentParser will fail with an error message.
  *
  * The previous example could be parsed as:
@@ -491,7 +491,7 @@ private:
    *
    * When addVariant() is called on an instance to ArgumentParser, this class
    * holds the the information that decribes that variant. The parse() method
-   * of ArgumentParser then attempts to match a Variant, given a set of 
+   * of ArgumentParser then attempts to match a Variant, given a set of
    * inputs for a method invocation.
    */
   class Variant {
@@ -568,7 +568,7 @@ private:
       s << ");";
       if (Nreq_ + Nopt_ == 0) return s.str();
       // underscores
-      String under = String(req_begin, ' ') + String(req_end-req_begin, '-') 
+      String under = String(req_begin, ' ') + String(req_end-req_begin, '-')
                    + String(std::max(opt_begin-req_end,0), ' ') + String(opt_end-opt_begin, '-');
       s << "\n" << under;
       // required and optional sets
@@ -601,7 +601,7 @@ public:
 
   /*! @brief add a function call variant to the parser
    *
-   * Adds a function-call signature to the parser. The function call *must* be 
+   * Adds a function-call signature to the parser. The function call *must* be
    * unique either in its number of arguments, or in the named-syntax.
    * Currently this function does not check whether that invariant stands true.
    *
@@ -625,9 +625,9 @@ public:
   }
 
   /*! @brief parse a vector of input arguments
-   * 
-   * This method parses a vector of input arguments, attempting to match them 
-   * to a Variant spec. For each input, the method attempts to cull any 
+   *
+   * This method parses a vector of input arguments, attempting to match them
+   * to a Variant spec. For each input, the method attempts to cull any
    * Variants which don't match the given inputs so far.
    *
    * Once all inputs have been parsed, if there is one unique spec remaining,
@@ -635,7 +635,7 @@ public:
    * arguments removed. Any optional arguments that have not been encountered
    * are set to an empty array.
    *
-   * If multiple variants or no variants match the given call, an error 
+   * If multiple variants or no variants match the given call, an error
    * message is emitted
    */
   MxArrayVector parse(const MxArrayVector& inputs) {

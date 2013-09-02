@@ -2,7 +2,7 @@
  * file:   exception.cpp
  * author: Hilton Bristow
  * date:   Wed, 19 Jun 2013 11:15:15
- * 
+ *
  * See LICENCE for full modification and redistribution details.
  * Copyright 2013 The OpenCV Foundation
  */
@@ -10,7 +10,7 @@
 #include <opencv2/core.hpp>
 #include "mex.h"
 
-/* 
+/*
  * exception
  * Gateway routine
  *   nlhs - number of return arguments

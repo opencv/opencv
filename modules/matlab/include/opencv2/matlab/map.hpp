@@ -46,7 +46,7 @@
 namespace matlab {
 #if __cplusplus >= 201103L
 
- // If we have C++11 support, we just want to use unordered_map 
+ // If we have C++11 support, we just want to use unordered_map
 #include <unordered_map>
 template <typename KeyType, typename ValueType>
 using Map = std::unordered_map<KeyType, ValueType>;

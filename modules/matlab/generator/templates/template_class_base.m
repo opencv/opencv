@@ -8,7 +8,7 @@ classdef {{clss.name}} < handle
   properties (SetAccess = private, Hidden = true)
     ptr_ = 0; % handle to the underlying c++ clss instance
   end
-  
+
   methods
     % constructor
     function this = {{clss.name}}(varargin)

@@ -4,7 +4,7 @@ from filters import *
 
 class ParseTree(object):
     """
-    The ParseTree class produces a semantic tree of C++ definitions given 
+    The ParseTree class produces a semantic tree of C++ definitions given
     the output of the CppHeaderParser (from opencv/modules/python/src2/hdr_parser.py)
 
     The full hierarchy is as follows:
@@ -83,7 +83,7 @@ class ParseTree(object):
             methods = []
             constants = []
             for defn in definitions:
-                obj = babel.translate(defn) 
+                obj = babel.translate(defn)
                 if obj is None:
                     continue
                 if type(obj) is Class or obj.clss:
@@ -116,7 +116,7 @@ class ParseTree(object):
 
 class Translator(object):
     """
-    The Translator class does the heavy lifting of translating the nested 
+    The Translator class does the heavy lifting of translating the nested
     list representation of the hdr_parser into individual definitions that
     are inserted into the ParseTree.
     Translator consists of a top-level method: translate()
@@ -126,7 +126,7 @@ class Translator(object):
     """
     def translate(self, defn):
         # --- class ---
-        # classes have 'class' prefixed on their name 
+        # classes have 'class' prefixed on their name
         if 'class' in defn[0].split(' ') or 'struct' in defn[0].split(' '):
             return self.translateClass(defn)
         # --- operators! ---
@@ -151,16 +151,16 @@ class Translator(object):
         name = self.translateName(defn[0])
         clss = self.translateClassName(defn[0])
         rtp  = defn[1]
-        static = True if 'S' in ''.join(defn[2]) else False 
+        static = True if 'S' in ''.join(defn[2]) else False
         args = defn[3]
-        req  = [] 
+        req  = []
         opt = []
         for arg in args:
             if arg:
                 a = self.translateArgument(arg)
                 opt.append(a) if a.default else req.append(a)
         return Method(name, clss, static, '', rtp, False, req, opt)
-            
+
     def translateConstant(self, defn):
         const = True if 'const' in defn[0] else False
         name  = self.translateName(defn[0])
@@ -199,7 +199,7 @@ class Namespace(object):
       |- Constants
       |- Methods
       |- Constants
-    """  
+    """
     def __init__(self, name='', constants=None, classes=None, methods=None):
         self.name = name
         self.constants = constants if constants else []
@@ -254,7 +254,7 @@ class Method(object):
         self.static = static
         self.const = const
         self.namespace = namespace
-        self.rtp = rtp 
+        self.rtp = rtp
         self.req = req if req else []
         self.opt = opt if opt else []
 

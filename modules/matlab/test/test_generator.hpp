@@ -1,4 +1,4 @@
-/* 
+/*
  * a rather innocuous-looking function which is actually
  * part of <cstdlib>, so we can be reasonably sure its
  * definition will be found

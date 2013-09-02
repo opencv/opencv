@@ -52,7 +52,7 @@ void transposeBlock(const size_t M, const size_t N, const InputScalar* src, size
       cache[m+n*4] = src[m+n*lda];
   // copy the destination out of the cache contiguously
   for (size_t m = 0; m < M; ++m)
-    for (size_t n = 0; n < N; ++n) 
+    for (size_t n = 0; n < N; ++n)
       dst[n+m*ldb] = cache[m+n*4];
 }
 

@@ -7,7 +7,7 @@ Build
 -----
 The Matlab code generator is fully integrated into the OpenCV build system. If cmake finds a Matlab installation available on the host system while configuring OpenCV, it will attempt to generate Matlab wrappers for all OpenCV modules. If cmake is having trouble finding your Matlab installation, you can explicitly point it to the root by defining the `MATLAB_ROOT_DIR` variable. For example, on a Mac you could type:
 
-	cmake -DMATLAB_ROOT_DIR=/Applications/MATLAB_R2013a.app ..
+    cmake -DMATLAB_ROOT_DIR=/Applications/MATLAB_R2013a.app ..
 
 
 Install
@@ -44,18 +44,18 @@ to get help on the purpose and call signature of a particular method, or
 
 to get general help regarding the OpenCV bindings. If you ever run into issues with the bindings
 
-	  cv.buildInformation();
-	
+    cv.buildInformation();
+
 will produce a printout of diagnostic information pertaining to your particular build of OS, OpenCV and Matlab. It is useful to submit this information alongside a bug report to the OpenCV team.
 
 Writing your own mex files
 --------------------------
-The Matlab bindings come with a set of utilities to help you quickly write your own mex files using OpenCV definitions. By doing so, you have all the speed and freedom of C++, with the power of OpenCV's math expressions and optimizations. 
+The Matlab bindings come with a set of utilities to help you quickly write your own mex files using OpenCV definitions. By doing so, you have all the speed and freedom of C++, with the power of OpenCV's math expressions and optimizations.
 
 The first thing you need to learn how to do is write a mex-file with Matlab constructs. Following is a brief example:
 
 ```cpp
-// include useful constructs 
+// include useful constructs
 // this automatically includes opencv core.hpp and mex.h)
 #include <opencv2/matlab/bridge.hpp>
 using namespace cv;
@@ -120,7 +120,7 @@ Once a source file has been generated for each OpenCV definition, and type conve
 
 File layout
 -----------
-opencv/modules/matlab (this module)  
+opencv/modules/matlab (this module)
 
 * `CMakeLists.txt` (main cmake configuration file)
 * `README.md` (this file)
@@ -137,8 +137,8 @@ opencv/modules/matlab (this module)
   * `map.hpp` (hash map interface for instance storage and method lookup)
 * `io` (FileStorage interface for .mat files)
 * `test` (generator, compiler and binding test scripts)
-  
-  
+
+
 Call Tree
 ---------
 The cmake call tree can be broken into 3 main components:
@@ -147,22 +147,22 @@ The cmake call tree can be broken into 3 main components:
 2. build time
 3. install time
 
-**Find Matlab (configure)**  
+**Find Matlab (configure)**
 The first thing to do is discover a Matlab installation on the host system. This is handled by the `OpenCVFindMatlab.cmake` in `opencv/cmake`. On Windows machines it searches the registry and path, while on *NIX machines it searches a set of canonical install paths. Once Matlab has been found, a number of variables are defined, such as the path to the mex compiler, the mex libraries, the mex include paths, the architectural extension, etc.
 
-**Test the generator (configure)**  
+**Test the generator (configure)**
 Attempt to produce a source file for a simple definition. This tests whether python and pythonlibs are correctly invoked on the host.
 
-**Test the mex compiler (configure)**  
+**Test the mex compiler (configure)**
 Attempt to compile a simple definition using the mex compiler. A mex file is actually just a shared object with a special exported symbol `_mexFunction` which serves as the entry-point to the function. As such, the mex compiler is just a set of scripts configuring the system compiler. In most cases this is the same as the OpenCV compiler, but *could* be different. The test checks whether the mex and generator includes can be found, the system libraries can be linked and the passed compiler flags are compatible.
 
 If any of the configure time tests fail, the bindings will be disabled, but the main OpenCV configure will continue without error. The configuration summary will contain the block:
 
-	Matlab
-		mex:					/Applications/MATLAB_R2013a.app/bin/mex
-		compiler/generator:		Not working (bindings will not be generated)
-			
-**Generate the sources (build)**  
+  Matlab
+    mex:          /Applications/MATLAB_R2013a.app/bin/mex
+    compiler/generator:    Not working (bindings will not be generated)
+
+**Generate the sources (build)**
 Given a set of modules (the intersection of the OpenCV modules being built and the matlab module optional dependencies), the `CppHeaderParser()` from `opencv/modules/python/src2/hdr_parser.py` will parse the module headers and produce a set of definitions.
 
 The `ParseTree()` from `opencv/modules/matlab/generator/parse_tree.py` takes this set of definitions and refactors them into a semantic tree better suited to templatization. For example, a trivial definition from the header parser may look something like:
@@ -170,22 +170,22 @@ The `ParseTree()` from `opencv/modules/matlab/generator/parse_tree.py` takes thi
 ```python
 [fill, void, ['/S'], [cv::Mat&, mat, '', ['/I', '/O']]]
 ```
-	
+
 The equivalent refactored output will look like:
 
 ```python
-	Function 
-		name   = 'fill'
-		rtype  = 'void'
-		static = True
-		req = 
-			Argument
-				name    = 'mat'
-				type    = 'cv::Mat'
-				ref     = '&'
-				I       = True
-				O       = True
-				default = ''
+  Function
+    name   = 'fill'
+    rtype  = 'void'
+    static = True
+    req =
+      Argument
+        name    = 'mat'
+        type    = 'cv::Mat'
+        ref     = '&'
+        I       = True
+        O       = True
+        default = ''
 ```
 
 The added semantics (Namespace, Class, Function, Argument, name, etc) make it easier for the templating engine to parse, slice and populate definitions.
@@ -194,16 +194,16 @@ Once the definitions have been parsed, `gen_matlab.py` passes each definition to
 
 The generator relies upon a proxy object called `generate.proxy` to determine when the sources are out of date and need to be re-generated.
 
-**Compile the sources (build)**  
-Once the sources have been generated, they are compiled by the mex compiler. The `compile.cmake` script in `opencv/modules/matlab/` takes responsibility for iterating over each source file in `${CMAKE_CURRENT_BUILD_DIR}/src` and compiling it with the passed includes and OpenCV libraries. 
+**Compile the sources (build)**
+Once the sources have been generated, they are compiled by the mex compiler. The `compile.cmake` script in `opencv/modules/matlab/` takes responsibility for iterating over each source file in `${CMAKE_CURRENT_BUILD_DIR}/src` and compiling it with the passed includes and OpenCV libraries.
 
 The flags used to compile the main OpenCV libraries are also forwarded to the mex compiler. So if, for example, you compiled OpenCV with SSE support, the mex bindings will also use SSE. Likewise, if you compile OpenCV in debug mode, the bindings will link to the debug version of the libraries.
 
-Importantly, the mex compiler includes the `mxarray.hpp`, `bridge.hpp` and `map.hpp` files from the `opencv/modules/matlab/include` directory. `mxarray.hpp` defines a `MxArray` class which wraps Matlab's `mxArray*` type in a more friendly OOP-syle interface. `bridge.hpp` defines a `Bridge` class which is able to perform type conversions between Matlab types and std/OpenCV types. It can be extended with new definitions using the plugin interface described in that file. 
+Importantly, the mex compiler includes the `mxarray.hpp`, `bridge.hpp` and `map.hpp` files from the `opencv/modules/matlab/include` directory. `mxarray.hpp` defines a `MxArray` class which wraps Matlab's `mxArray*` type in a more friendly OOP-syle interface. `bridge.hpp` defines a `Bridge` class which is able to perform type conversions between Matlab types and std/OpenCV types. It can be extended with new definitions using the plugin interface described in that file.
 
 The compiler relies upon a proxy object called `compile.proxy` to determine when the generated sources are out of date and need to be re-compiled.
 
-**Install the files (install)**  
+**Install the files (install)**
 At install time, the mex files are put into place at `${CMAKE_INSTALL_PREFIX}/matlab` and their linkages updated.
 
 
@@ -259,32 +259,32 @@ Thus the style and layout of the view is kept separate from the content (model).
 
 File Reference
 --------------
-**gen_matlab.py**  
+**gen_matlab.py**
 gen_matlab has the following call signature:
 
-	gen_matlab.py --hdrparser path/to/hdr_parser/dir
-				  --rstparser path/to/rst_parser/dir
-				  --moduleroot path/to/opencv/modules
-				  --modules core imgproc highgui etc
-				  --extra namespace=/additional/header/to/parse
-				  --outdir /path/to/place/generated/src
-				  
-**build_info.py**  
+  gen_matlab.py --hdrparser path/to/hdr_parser/dir
+          --rstparser path/to/rst_parser/dir
+          --moduleroot path/to/opencv/modules
+          --modules core imgproc highgui etc
+          --extra namespace=/additional/header/to/parse
+          --outdir /path/to/place/generated/src
+
+**build_info.py**
 build_info has the following call signature:
 
-	build_info.py --os operating_system_string
-				  --arch bitness processor
-				  --compiler id version
-				  --mex_arch arch_string
-				  --mex_script /path/to/mex/script
-				  --cxx_flags -list -of -flags -to -passthrough
-				  --opencv_version version_string
-				  --commit commit_hash_if_using_git
-				  --modules core imgproc highgui etc
-				  --configuration Debug/Release
-				  --outdir path/to/place/build/info
+  build_info.py --os operating_system_string
+          --arch bitness processor
+          --compiler id version
+          --mex_arch arch_string
+          --mex_script /path/to/mex/script
+          --cxx_flags -list -of -flags -to -passthrough
+          --opencv_version version_string
+          --commit commit_hash_if_using_git
+          --modules core imgproc highgui etc
+          --configuration Debug/Release
+          --outdir path/to/place/build/info
 
-**parse_tree.py**  
+**parse_tree.py**
 To build a parse tree, first parse a set of headers, then invoke the parse tree to refactor the output:
 
 ```python
@@ -304,20 +304,20 @@ for namespace in parse_tree.namespaces:
     # do stuff
 ```
 
-**mxarray.hpp**  
+**mxarray.hpp**
 mxarray.hpp defines a class called `MxArray` which provides an OOP-style interface for Matlab's homogeneous `mxArray*` type. To create an `MxArray`, you can either inherit an existing array
 
 ```cpp
 MxArray mat(prhs[0]);
 ```
-	
+
 or create a new array
 
 ```cpp
 MxArray mat(5, 5, Matlab::Traits<double>::ScalarType);
 MxArray mat = MxArray::Matrix<double>(5, 5);
 ```
-	
+
 The default constructor allocates a `0 x 0` array. Once you have encapculated an `mxArray*` you can access its properties through member functions:
 
 ```cpp
@@ -371,7 +371,7 @@ Further, the output of the `parser.parse()` method will always contain the total
 int dtype = inputs[3].empty() ? -1 : inputs[3].scalar<double>();
 ```
 
-**bridge.hpp**  
+**bridge.hpp**
 The bridge interface defines a `Bridge` class which provides type conversion between std/OpenCV and Matlab types. A type conversion must provide the following:
 
 ```cpp
@@ -379,5 +379,5 @@ Bridge& operator=(const MyObject&);
 MyObject toMyObject();
 operator MyObject();
 ```
-	
+
 The binding generator will then automatically call the conversion operators (either explicitly or implicitly) if your `MyObject` class is encountered as an input or return from a parsed definition.

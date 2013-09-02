@@ -1,4 +1,4 @@
-/* 
+/*
  * compose
  * compose a function call
  * This macro takes as input a Method object and composes
@@ -11,23 +11,23 @@
   {%- if fun.clss and not fun.constructor -%}inst.{%- else -%} cv:: {%- endif -%}
   {{fun.name}}(
   {#- ----------- Required ------------- -#}
-  {%- for arg in fun.req -%} 
+  {%- for arg in fun.req -%}
     {%- if arg.ref == '*' -%}&{%- endif -%}
-    {{arg.name}} 
+    {{arg.name}}
     {%- if not loop.last %}, {% endif %}
   {% endfor %}
   {#- ----------- Optional ------------- -#}
   {% if fun.req and fun.opt %}, {% endif %}
-  {%- for opt in fun.opt -%} 
+  {%- for opt in fun.opt -%}
     {%- if opt.ref == '*' -%}&{%- endif -%}
-    {{opt.name}} 
+    {{opt.name}}
     {%- if not loop.last -%}, {% endif %}
   {%- endfor -%}
   );
 {%- endmacro %}
 
 
-/* 
+/*
  * composeMatlab
  * compose a Matlab function call
  * This macro takes as input a Method object and composes

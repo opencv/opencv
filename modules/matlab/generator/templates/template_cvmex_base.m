@@ -5,16 +5,16 @@ function mex(varargin)
 %       CV.MEX [options ...] file [file file ...]
 %
 %   Description:
-%       CV.MEX compiles one or more C/C++ source files into a shared-library 
+%       CV.MEX compiles one or more C/C++ source files into a shared-library
 %       called a mex-file. This function is equivalent to the builtin MEX
 %       routine, with the notable exception that it automatically resolves
-%       OpenCV includes, and links in the OpenCV libraries where appropriate. 
+%       OpenCV includes, and links in the OpenCV libraries where appropriate.
 %       It also forwards the flags used to build OpenCV, so architecture-
 %       specific optimizations can be used.
 %
 %       CV.MEX is designed to be used in situations where the source(s) you
 %       are compiling contain OpenCV definitions. In such cases, it streamlines
-%       the finding and including of appropriate OpenCV libraries. 
+%       the finding and including of appropriate OpenCV libraries.
 %
 %   See also: mex
 %

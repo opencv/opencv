@@ -65,7 +65,7 @@ def binaryToDecimal(string):
 
 def formatMatlabConstant(string, table):
     '''
-    Given a string representing a Constant, and a table of all Constants, 
+    Given a string representing a Constant, and a table of all Constants,
     attempt to resolve the Constant into a valid Matlab expression
     For example, the input
       DEPENDENT_VALUE = 1 << FIXED_VALUE
@@ -75,7 +75,7 @@ def formatMatlabConstant(string, table):
     # split the string into expressions
     words = re.split('(\W+)', string)
     # add a 'cv' prefix if an expression is also a key in the lookup table
-    words = ''.join([('cv.'+word if word in table else word) for word in words]) 
+    words = ''.join([('cv.'+word if word in table else word) for word in words])
     # attempt to convert arithmetic expressions and binary/hex to decimal
     words = binaryToDecimal(words)
     # convert any remaining bitshifts to Matlab 'bitshift' methods
@@ -155,11 +155,11 @@ def stripExtraSpaces(text):
     '''Removes superfluous whitespace from a string, including the removal
     of all leading and trailing whitespace'''
     return ' '.join(text.split())
-    
+
 def comment(text, wrap=80, escape='% ', escape_first='', escape_last=''):
     '''comment filter
     Takes a string in text, and wraps it to wrap characters in length with
-    preceding comment escape sequence on each line. escape_first and 
+    preceding comment escape sequence on each line. escape_first and
     escape_last can be used for languages which define block comments.
     Examples:
         C++ inline comment    comment(80, '// ')

@@ -56,7 +56,7 @@ elseif (NOT PYTHONLIBS_FOUND)
     ocv_module_disable(matlab)
     return()
 endif()
-    
+
 
 # If the user built OpenCV as X-bit, but they have a Y-bit version of Matlab,
 # attempting to link to OpenCV during binding generation will fail, since
@@ -89,7 +89,7 @@ ocv_add_module(matlab   BINDINGS
                                  opencv_objdetect opencv_flann opencv_features2d
                                  opencv_photo opencv_video opencv_videostab
                                  opencv_calib opencv_calib3d
-                                 opencv_stitching opencv_superres 
+                                 opencv_stitching opencv_superres
                                  opencv_nonfree
 )
 
@@ -147,14 +147,14 @@ if (NOT MEX_WORKS)
     # attempt to generate a gateway for a function
     message(STATUS "Trying to generate Matlab code")
     execute_process(
-        COMMAND ${PYTHON_EXECUTABLE} 
-                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
+        COMMAND ${PYTHON_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
                 --hdrparser ${HDR_PARSER_PATH}
                 --rstparser ${RST_PARSER_PATH}
                 --extra     "test=${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp"
                 --outdir    ${CMAKE_BINARY_DIR}/junk
         ERROR_VARIABLE GEN_ERROR
-        OUTPUT_QUIET 
+        OUTPUT_QUIET
     )
 
     if (GEN_ERROR)
@@ -207,23 +207,23 @@ file(REMOVE ${GENERATE_PROXY} ${COMPILE_PROXY})
 # call the python executable to generate the Matlab gateways
 add_custom_command(
     OUTPUT ${GENERATE_PROXY}
-    COMMAND ${PYTHON_EXECUTABLE} 
-            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py 
+    COMMAND ${PYTHON_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
             --hdrparser  ${HDR_PARSER_PATH}
             --rstparser  ${RST_PARSER_PATH}
             --moduleroot ${CMAKE_SOURCE_DIR}/modules
             --modules    ${opencv_modules}
-            --extra      ${opencv_extra_hdrs} 
+            --extra      ${opencv_extra_hdrs}
             --outdir     ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/build_info.py
-            --os ${CMAKE_SYSTEM} 
+            --os ${CMAKE_SYSTEM}
             --arch ${ARCH} ${CMAKE_SYSTEM_PROCESSOR}
             --compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
             --mex_arch ${MATLAB_ARCH}
             --mex_script ${MATLAB_MEX_SCRIPT}
             --cxx_flags ${MEX_CXXFLAGS}
-            --opencv_version ${OPENCV_VERSION} 
+            --opencv_version ${OPENCV_VERSION}
             --commit ${GIT_COMMIT}
             --modules ${opencv_modules}
             --configuration "$(Configuration)" ${CMAKE_BUILD_TYPE}

@@ -3,7 +3,7 @@
 classdef OpenCVTest < matlab.unittest.TestCase
 
   methods(Test)
-    
+
     % -------------------------------------------------------------------------
     % EXCEPTIONS
     % Check that errors and exceptions are thrown correctly

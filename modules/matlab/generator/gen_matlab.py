@@ -75,7 +75,7 @@ class MatlabWrapperGenerator(object):
         jtemplate.filters['qualify'] = qualify
         jtemplate.filters['slugify'] = slugify
         jtemplate.filters['only'] = only
-        jtemplate.filters['void'] = void 
+        jtemplate.filters['void'] = void
         jtemplate.filters['not'] = flip
 
         # load the templates
@@ -87,7 +87,7 @@ class MatlabWrapperGenerator(object):
 
         # create the build directory
         output_source_dir  = output_dir+'/src'
-        output_private_dir = output_source_dir+'/private' 
+        output_private_dir = output_source_dir+'/private'
         output_class_dir   = output_dir+'/+cv'
         output_map_dir     = output_dir+'/map'
         if not os.path.isdir(output_source_dir):
@@ -142,7 +142,7 @@ if __name__ == "__main__":
       1. constructs the headers to parse from the module root and list of modules
       2. parses the headers using CppHeaderParser
       3. refactors the definitions using ParseTree
-      4. parses .rst docs using RstParser 
+      4. parses .rst docs using RstParser
       5. populates the templates for classes, function, enums and docs from the
          definitions
 
@@ -156,14 +156,14 @@ if __name__ == "__main__":
                    to produce bindings for. The path to the include directories
                    as well as the namespaces are constructed from the modules
                    and the moduleroot
-    --extra        extra headers explicitly defined to parse. This must be in 
+    --extra        extra headers explicitly defined to parse. This must be in
                    the format "namepsace=/path/to/extra/header.hpp". For example,
                    the core module requires the extra header:
                    "core=/opencv/modules/core/include/opencv2/core/core/base.hpp"
     --outdir       the output directory to put the generated matlab sources. In
                    the OpenCV build this is "${CMAKE_CURRENT_BUILD_DIR}/src"
     """
-   
+
     # parse the input options
     import sys, re, os, time
     from argparse import ArgumentParser
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     parser.add_argument('--rstparser')
     parser.add_argument('--moduleroot', default='', required=False)
     parser.add_argument('--modules', nargs='*', default=[], required=False)
-    parser.add_argument('--extra', nargs='*', default=[], required=False) 
+    parser.add_argument('--extra', nargs='*', default=[], required=False)
     parser.add_argument('--outdir')
     args = parser.parse_args()
 

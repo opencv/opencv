@@ -38,7 +38,7 @@ if __name__ == "__main__":
     same as the builtin mex compiler, with added cv qualification:
       >> cv.mex(..., ...);
     """
-   
+
     # parse the input options
     import sys, re, os, time
     from argparse import ArgumentParser

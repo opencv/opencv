@@ -44,9 +44,9 @@ if __name__ == "__main__":
     given the information passed to this module. build_info.py invokes Jinja2
     on the template_build_info.m template.
     """
-   
+
     # parse the input options
-    import sys, re, os, time 
+    import sys, re, os, time
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument('--os')

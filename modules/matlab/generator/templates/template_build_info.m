@@ -3,7 +3,7 @@ function buildInformation()
 %
 %   Call CV.BUILDINFORMATION() to get a printout of diagonstic information
 %   pertaining to your particular build of the OpenCV Toolbox. If you ever
-%   run into issues with the Toolbox, it is useful to submit this 
+%   run into issues with the Toolbox, it is useful to submit this
 %   information alongside a bug report to the OpenCV team.
 %
 %   Copyright {{ time.strftime("%Y", time.localtime()) }} The OpenCV Foundation
@@ -23,7 +23,7 @@ info = {
 ['  Version:       ' version()]
 ['  Mex extension: ' mexext()]
 '  Architecture:  {{ build.mex_arch }}'
-'  Mex path:      {{ build.mex_script }}' 
+'  Mex path:      {{ build.mex_script }}'
 '  Mex flags:     {{ build.mex_opts | csv(' ') }}'
 '  CXX flags:     {{ build.cxx_flags | csv(' ') | stripExtraSpaces | wordwrap(60, True, '\'\n\'                 ') }}'
 ''
