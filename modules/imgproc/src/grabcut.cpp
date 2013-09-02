@@ -573,3 +573,185 @@ void cv::grabCut( InputArray _img, InputOutputArray _mask, Rect rect,
         estimateSegmentation( graph, mask );
     }
 }
+
+static void initGMMsPlus( const Mat& img, Mat& mask, GMM& bgdGMM, GMM& fgdGMM )
+{
+    const int kMeansItCount = 10;
+    const int kMeansType = KMEANS_PP_CENTERS;
+
+    Mat bgdLabels, fgdLabels;
+	Mat _bgdSamples, _fgdSamples;
+    vector<Vec3f> bgdSamples, fgdSamples;
+
+
+    Point p;
+    for( p.y = 0; p.y < img.rows; p.y++ )
+    {
+        for( p.x = 0; p.x < img.cols; p.x++ )
+        {
+            if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
+                bgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+        }
+    }
+    CV_Assert( !bgdSamples.empty() );
+    _bgdSamples = Mat( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
+    kmeans( _bgdSamples, GMM::componentsCount, bgdLabels,
+            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+ 
+    bgdGMM.initLearning();
+    for( int i = 0; i < (int)bgdSamples.size(); i++ )
+        bgdGMM.addSample( bgdLabels.at<int>(i,0), bgdSamples[i] );
+    bgdGMM.endLearning();
+
+	/*
+		InitThird method:
+		divide the samples inside the rect into 3 groups.
+		the lowest third is considered as FGD while the highest third is conisdered as BGD.
+	*/
+	vector<double> bgd_gmm_values;
+	for( p.y = 0; p.y < img.rows; p.y++ )
+    {
+        for( p.x = 0; p.x < img.cols; p.x++ )
+        {
+			if ( mask.at<uchar>(p) == GC_PR_FGD )
+			{
+				Vec3d color = img.at<Vec3b>(p);
+				bgd_gmm_values.push_back(bgdGMM(color));
+			}
+        }
+    }
+
+	sort(bgd_gmm_values.begin(), bgd_gmm_values.end());
+	double one_third = bgd_gmm_values[bgd_gmm_values.size() / 3];
+	double two_third = bgd_gmm_values[bgd_gmm_values.size() / 3 * 2];
+
+	enum {GC_UNKNOWN = 0x10};
+	for( p.y = 0; p.y < img.rows; p.y++ )
+    {
+        for( p.x = 0; p.x < img.cols; p.x++ )
+        {
+			if ( mask.at<uchar>(p) == GC_PR_FGD )
+			{
+				Vec3d color = img.at<Vec3b>(p);
+				if (bgdGMM(color) < one_third) mask.at<uchar>(p) = GC_PR_FGD;
+				else if (bgdGMM(color) > two_third) mask.at<uchar>(p) = GC_PR_BGD;
+				else mask.at<uchar>(p) |= GC_UNKNOWN;
+			}
+        }
+    }
+
+	// relearning the GMMs
+	bgdSamples.clear();  fgdSamples.clear();
+	bgdLabels.release(); fgdLabels.release();
+
+	for( p.y = 0; p.y < img.rows; p.y++ )
+    {
+        for( p.x = 0; p.x < img.cols; p.x++ )
+        {
+			if ( mask.at<uchar>(p) & GC_UNKNOWN ) mask.at<uchar>(p) ^= GC_UNKNOWN; // ignore the unknown region and toggle it back
+            else if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
+                bgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+            else // GC_FGD | GC_PR_FGD
+                fgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+        }
+    }
+    CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
+    _bgdSamples = Mat( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
+    kmeans( _bgdSamples, GMM::componentsCount, bgdLabels,
+            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+    _fgdSamples = Mat( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
+    kmeans( _fgdSamples, GMM::componentsCount, fgdLabels,
+            TermCriteria( CV_TERMCRIT_ITER, kMeansItCount, 0.0), 0, kMeansType );
+
+    bgdGMM.initLearning();
+    for( int i = 0; i < (int)bgdSamples.size(); i++ )
+        bgdGMM.addSample( bgdLabels.at<int>(i,0), bgdSamples[i] );
+    bgdGMM.endLearning();
+
+    fgdGMM.initLearning();
+    for( int i = 0; i < (int)fgdSamples.size(); i++ )
+        fgdGMM.addSample( fgdLabels.at<int>(i,0), fgdSamples[i] );
+    fgdGMM.endLearning();
+
+	return ;
+}
+
+static void grabCutPlus_( InputArray _img, InputOutputArray _mask, Rect rect,
+                  InputOutputArray _bgdModel, InputOutputArray _fgdModel,
+                  int iterCount, int mode )
+{
+    Mat img = _img.getMat();
+    Mat& mask = _mask.getMatRef();
+    Mat& bgdModel = _bgdModel.getMatRef();
+    Mat& fgdModel = _fgdModel.getMatRef();
+
+    if( img.empty() )
+        CV_Error( CV_StsBadArg, "image is empty" );
+    if( img.type() != CV_8UC3 )
+        CV_Error( CV_StsBadArg, "image mush have CV_8UC3 type" );
+
+    GMM bgdGMM( bgdModel ), fgdGMM( fgdModel );
+	Mat compIdxs( img.size(), CV_32SC1 );
+
+    if( mode == GC_INIT_WITH_RECT || mode == GC_INIT_WITH_MASK )
+    {
+        if( mode == GC_INIT_WITH_RECT )
+            initMaskWithRect( mask, img.size(), rect );
+        else // flag == GC_INIT_WITH_MASK
+            checkMask( img, mask );
+		initGMMsPlus( img, mask, bgdGMM, fgdGMM );
+    }
+
+    if( iterCount <= 0)
+        return;
+
+    if( mode == GC_EVAL )
+        checkMask( img, mask );
+
+    const double gamma = 50;
+    const double lambda = 9*gamma;
+    const double beta = calcBeta( img );
+
+    Mat leftW, upleftW, upW, uprightW;
+    calcNWeights( img, leftW, upleftW, upW, uprightW, beta, gamma );
+
+	/*
+	  for every iteration the GMMs are updated accordingto the newly assigned BGD/FGD
+	*/
+
+    for( int i = 0; i < iterCount; i++ )
+    {
+        GCGraph<double> graph;
+
+        assignGMMsComponents( img, mask, bgdGMM, fgdGMM, compIdxs );
+        learnGMMs( img, mask, compIdxs, bgdGMM, fgdGMM );
+        constructGCGraph(img, mask, bgdGMM, fgdGMM, lambda, leftW, upleftW, upW, uprightW, graph );
+        estimateSegmentation( graph, mask );
+    }
+}
+/*
+  Main grabCutPlus Entry
+  Actually this function trim the input image into the marked rect with a small smapled strip for BGD.
+  The main graph-cut optimization is implemented in grabCutPlus_().
+*/
+void cv::grabCutPlus( InputArray img, InputOutputArray mask, Rect rect,
+                           InputOutputArray bgdModel, InputOutputArray fgdModel,
+                           int iterCount, int mode, int sample_width)
+{
+	if (mode != GC_INIT_WITH_RECT) grabCutPlus_(img, mask, rect, bgdModel, fgdModel, iterCount, mode);
+
+	Rect big_rect(rect.x - sample_width, rect.y - sample_width, 
+					rect.width + sample_width*2, rect.height + sample_width*2);
+
+	big_rect.x = max(0, big_rect.x);
+    big_rect.y = max(0, big_rect.y);
+    big_rect.width  = min(big_rect.width , img.size().width-big_rect.x);
+    big_rect.height = min(big_rect.height, img.size().height-big_rect.y);
+
+	Rect temp_rect(rect.x - big_rect.x, rect.y - big_rect.y, rect.width, rect.height);
+
+	grabCutPlus_( img.getMat()(big_rect), mask.getMat()(big_rect), temp_rect, bgdModel, fgdModel, iterCount, mode );
+
+
+	return ;
+}
