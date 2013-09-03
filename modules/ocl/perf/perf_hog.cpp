@@ -72,7 +72,7 @@ PERF_TEST(HOGFixture, HOG)
         ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
+        OCL_TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
 
         SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }

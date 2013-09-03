@@ -70,7 +70,7 @@ PERF_TEST_P(ConvertToFixture, ConvertTo,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, dstType);
 
-        TEST_CYCLE() oclSrc.convertTo(oclDst, dstType);
+        OCL_TEST_CYCLE() oclSrc.convertTo(oclDst, dstType);
 
         oclDst.download(dst);
 
@@ -105,7 +105,7 @@ PERF_TEST_P(copyToFixture, copyTo,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() oclSrc.copyTo(oclDst);
+        OCL_TEST_CYCLE() oclSrc.copyTo(oclDst);
 
         oclDst.download(dst);
 
@@ -141,7 +141,7 @@ PERF_TEST_P(setToFixture, setTo,
     {
         ocl::oclMat oclSrc(srcSize, type);
 
-        TEST_CYCLE() oclSrc.setTo(val);
+        OCL_TEST_CYCLE() oclSrc.setTo(val);
         oclSrc.download(src);
 
         SANITY_CHECK(src);

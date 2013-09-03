@@ -62,7 +62,7 @@ PERF_TEST_P(cvtColorFixture, cvtColor, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(src.size(), CV_8UC4);
 
-        TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, COLOR_RGBA2GRAY, 4);
+        OCL_TEST_CYCLE() ocl::cvtColor(oclSrc, oclDst, COLOR_RGBA2GRAY, 4);
         oclDst.download(dst);
 
         SANITY_CHECK(dst);

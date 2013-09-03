@@ -70,8 +70,6 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
 
-//#include "opencv2/highgui.hpp"
-
 #define __ATI__
 
 #if defined (HAVE_OPENCL)

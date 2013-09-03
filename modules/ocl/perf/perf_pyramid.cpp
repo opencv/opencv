@@ -70,7 +70,7 @@ PERF_TEST_P(pyrDownFixture, pyrDown,
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
+        OCL_TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -107,7 +107,7 @@ PERF_TEST_P(pyrUpFixture, pyrUp,
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
+        OCL_TEST_CYCLE() ocl::pyrDown(oclSrc, oclDst);
 
         oclDst.download(dst);
 

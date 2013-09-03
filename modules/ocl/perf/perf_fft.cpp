@@ -66,7 +66,7 @@ PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES) // TODO not impleme
     {
         ocl::oclMat oclSrc(src), oclDst;
 
-        TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::dft(oclSrc, oclDst);
 
         oclDst.download(dst);
 

@@ -72,7 +72,7 @@ PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_32F);
 
-        TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR);
+        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR);
 
         oclDst.download(dst);
 
@@ -104,7 +104,7 @@ PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclTempl(templ), oclDst(dstSize, CV_8UC1);
 
-        TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR_NORMED);
+        OCL_TEST_CYCLE() cv::ocl::matchTemplate(oclSrc, oclTempl, oclDst, TM_CCORR_NORMED);
 
         oclDst.download(dst);
 

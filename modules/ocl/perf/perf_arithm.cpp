@@ -76,7 +76,7 @@ PERF_TEST_P(LUTFixture, LUT,
     {
         ocl::oclMat oclSrc(src), oclLut(lut), oclDst(srcSize, dstType);
 
-        TEST_CYCLE() cv::ocl::LUT(oclSrc, oclLut, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::LUT(oclSrc, oclLut, oclDst);
         oclDst.download(dst);
 
         SANITY_CHECK(dst);
@@ -111,7 +111,7 @@ PERF_TEST_P(ExpFixture, Exp, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
-        TEST_CYCLE() cv::ocl::exp(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::exp(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -150,7 +150,7 @@ PERF_TEST_P(LogFixture, Log, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
-        TEST_CYCLE() cv::ocl::log(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::log(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -190,7 +190,7 @@ PERF_TEST_P(AddFixture, Add,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::add(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::add(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -229,7 +229,7 @@ PERF_TEST_P(MulFixture, Mul, ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::multiply(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::multiply(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -275,7 +275,7 @@ PERF_TEST_P(DivFixture, Div,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::divide(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::divide(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -312,7 +312,7 @@ PERF_TEST_P(AbsDiffFixture, Absdiff,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::absdiff(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::absdiff(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -351,7 +351,7 @@ PERF_TEST_P(CartToPolarFixture, CartToPolar, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst1(srcSize, src1.type()), oclDst2(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::cartToPolar(oclSrc1, oclSrc2, oclDst1, oclDst2);
+        OCL_TEST_CYCLE() cv::ocl::cartToPolar(oclSrc1, oclSrc2, oclDst1, oclDst2);
 
         oclDst1.download(dst1);
         oclDst2.download(dst2);
@@ -392,7 +392,7 @@ PERF_TEST_P(PolarToCartFixture, PolarToCart, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst1(srcSize, src1.type()), oclDst2(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::polarToCart(oclSrc1, oclSrc2, oclDst1, oclDst2);
+        OCL_TEST_CYCLE() cv::ocl::polarToCart(oclSrc1, oclSrc2, oclDst1, oclDst2);
 
         oclDst1.download(dst1);
         oclDst2.download(dst2);
@@ -430,7 +430,7 @@ PERF_TEST_P(MagnitudeFixture, Magnitude, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::magnitude(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::magnitude(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -465,7 +465,7 @@ PERF_TEST_P(TransposeFixture, Transpose,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::transpose(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::transpose(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -500,7 +500,7 @@ PERF_TEST_P(FlipFixture, Flip,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::flip(oclSrc, oclDst, 0);
+        OCL_TEST_CYCLE() cv::ocl::flip(oclSrc, oclDst, 0);
 
         oclDst.download(dst);
 
@@ -538,7 +538,7 @@ PERF_TEST_P(minMaxFixture, minMax,
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() cv::ocl::minMax(oclSrc, &min_val, &max_val);
+        OCL_TEST_CYCLE() cv::ocl::minMax(oclSrc, &min_val, &max_val);
 
         ASSERT_GE(max_val, min_val);
         SANITY_CHECK(min_val);
@@ -581,7 +581,7 @@ PERF_TEST_P(minMaxLocFixture, minMaxLoc,
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() cv::ocl::minMaxLoc(oclSrc, &min_val, &max_val, &min_loc, &max_loc);
+        OCL_TEST_CYCLE() cv::ocl::minMaxLoc(oclSrc, &min_val, &max_val, &min_loc, &max_loc);
 
         ASSERT_GE(max_val, min_val);
         SANITY_CHECK(min_val);
@@ -620,7 +620,7 @@ PERF_TEST_P(SumFixture, Sum,
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() result = cv::ocl::sum(oclSrc);
+        OCL_TEST_CYCLE() result = cv::ocl::sum(oclSrc);
 
         SANITY_CHECK(result);
     }
@@ -655,7 +655,7 @@ PERF_TEST_P(countNonZeroFixture, countNonZero,
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() result = cv::ocl::countNonZero(oclSrc);
+        OCL_TEST_CYCLE() result = cv::ocl::countNonZero(oclSrc);
 
         SANITY_CHECK(result);
     }
@@ -688,7 +688,7 @@ PERF_TEST_P(PhaseFixture, Phase, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc1(src1), oclSrc2(src2),
                 oclDst(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::phase(oclSrc1, oclSrc2, oclDst, 1);
+        OCL_TEST_CYCLE() cv::ocl::phase(oclSrc1, oclSrc2, oclDst, 1);
 
         oclDst.download(dst);
 
@@ -725,7 +725,7 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_and,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::bitwise_and(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::bitwise_and(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -760,7 +760,7 @@ PERF_TEST_P(BitwiseAndFixture, bitwise_not,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::bitwise_not(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::bitwise_not(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -795,7 +795,7 @@ PERF_TEST_P(CompareFixture, compare,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, CV_8UC1);
 
-        TEST_CYCLE() cv::ocl::compare(oclSrc1, oclSrc2, oclDst, CMP_EQ);
+        OCL_TEST_CYCLE() cv::ocl::compare(oclSrc1, oclSrc2, oclDst, CMP_EQ);
 
         oclDst.download(dst);
 
@@ -826,7 +826,7 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
-        TEST_CYCLE() cv::ocl::pow(oclSrc, -2.0, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::pow(oclSrc, -2.0, oclDst);
 
         oclDst.download(dst);
 
@@ -858,7 +858,7 @@ PERF_TEST_P(MagnitudeSqrFixture, MagnitudeSqr, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
 
-        TEST_CYCLE() cv::ocl::magnitudeSqr(oclSrc1, oclSrc2, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::magnitudeSqr(oclSrc1, oclSrc2, oclDst);
 
         oclDst.download(dst);
 
@@ -910,7 +910,7 @@ PERF_TEST_P(AddWeightedFixture, AddWeighted,
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::addWeighted(oclSrc1, alpha, oclSrc2, beta, gama, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::addWeighted(oclSrc1, alpha, oclSrc2, beta, gama, oclDst);
 
         oclDst.download(dst);
 
