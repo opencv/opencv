@@ -1396,14 +1396,10 @@ TEST_P(calcHist, Mat)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLAHE
-namespace
-{
-    IMPLEMENT_PARAM_CLASS(ClipLimit, double)
-}
 
-PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
+PARAM_TEST_CASE(CLAHE, cv::Size, double)
 {
-    cv::Size size;
+    cv::Size gridSize;
     double clipLimit;
 
     cv::Mat src;
@@ -1414,22 +1410,22 @@ PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
 
     virtual void SetUp()
     {
-        size = GET_PARAM(0);
+        gridSize = GET_PARAM(0);
         clipLimit = GET_PARAM(1);
 
         cv::RNG &rng = TS::ptr()->get_rng();
-        src = randomMat(rng, size, CV_8UC1, 0, 256, false);
+        src = randomMat(rng, cv::Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
         g_src.upload(src);
     }
 };
 
 TEST_P(CLAHE, Accuracy)
 {
-    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit, gridSize);
     clahe->apply(g_src, g_dst);
     cv::Mat dst(g_dst);
 
-    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit, gridSize);
     clahe_gold->apply(src, dst_gold);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
@@ -1725,10 +1721,10 @@ INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CLAHE, Combine(
-                        Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300)),
-                        Values(0.0, 40.0)));
+INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE, Combine(
+                        Values(cv::Size(4, 4), cv::Size(32, 8), cv::Size(8, 64)),
+                        Values(0.0, 10.0, 62.0, 300.0)));
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
+INSTANTIATE_TEST_CASE_P(Imgproc, ColumnSum, DIFFERENT_SIZES);
 
 #endif // HAVE_OPENCL
