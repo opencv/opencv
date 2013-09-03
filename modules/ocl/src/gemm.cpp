@@ -69,7 +69,7 @@ void cv::ocl::clBlasSetup()
 
 void cv::ocl::clBlasTeardown()
 {
-    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+    //intentionally do nothing
 }
 
 #else
