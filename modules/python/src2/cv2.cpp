@@ -138,6 +138,7 @@ typedef Ptr<TonemapDurand> Ptr_TonemapDurand;
 typedef Ptr<TonemapMantiuk> Ptr_TonemapMantiuk;
 typedef Ptr<AlignMTB> Ptr_AlignMTB;
 typedef Ptr<CalibrateDebevec> Ptr_CalibrateDebevec;
+typedef Ptr<CalibrateRobertson> Ptr_CalibrateRobertson;
 typedef Ptr<MergeDebevec> Ptr_MergeDebevec;
 typedef Ptr<MergeMertens> Ptr_MergeMertens;
 

@@ -79,7 +79,7 @@ void loadExposureSeq(String path, vector<Mat>& images, vector<float>& times = DE
 void loadResponseCSV(String path, Mat& response)
 {
 	response = Mat(256, 1, CV_32FC3);
-    ifstream resp_file(path);
+    ifstream resp_file(path.c_str());
 	for(int i = 0; i < 256; i++) {
 		for(int c = 0; c < 3; c++) {
 			resp_file >> response.at<Vec3f>(i)[c];
