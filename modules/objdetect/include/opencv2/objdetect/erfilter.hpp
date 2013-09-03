@@ -191,7 +191,8 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = N
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
 CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL, 
-                                                  float minProbability = 0.85);
+                                                  float minProbability = 0.5);
 
 }
+
 #endif // _OPENCV_ERFILTER_HPP_
