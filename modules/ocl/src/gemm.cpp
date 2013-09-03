@@ -81,11 +81,14 @@ static Mutex cs;
 
 void cv::ocl::clBlasSetup()
 {
-    AutoLock al(cs);
     if(!clBlasInitialized)
     {
-        openCLSafeCall(clAmdBlasSetup());
-        clBlasInitialized = true;
+        AutoLock al(cs);
+        if(!clBlasInitialized)
+        {
+            openCLSafeCall(clAmdBlasSetup());
+            clBlasInitialized = true;
+        }
     }
 }
 
