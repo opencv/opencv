@@ -39,7 +39,6 @@
 //
 //M*/
 
-
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
@@ -74,9 +73,9 @@ class Cloning
         void transpose(double *mat, double *mat_t,int h,int w);
         void poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result);
         void normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &final, int num);
-        void local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float red, float green, float blue);
+        void local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float red_mul, float green_mul, float blue_mul);
         void illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alpha, float beta);
-        void texture_flatten(Mat &I, Mat &mask, Mat &wmask, Mat &final);
+        void texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold, double high_threhold, int kernel_size, Mat &final);
 };
 
 void Cloning::getGradientx( const Mat &img, Mat &gx)
@@ -94,6 +93,7 @@ void Cloning::getGradientx( const Mat &img, Mat &gx)
                     (float)img.at<uchar>(i,(j+1)*channel+c) - (float)img.at<uchar>(i,j*channel+c);
             }
 }
+
 void Cloning::getGradienty( const Mat &img, Mat &gy)
 {
     int w = img.size().width;
@@ -110,6 +110,7 @@ void Cloning::getGradienty( const Mat &img, Mat &gy)
 
             }
 }
+
 void Cloning::lapx( const Mat &img, Mat &gxx)
 {
     int w = img.size().width;
@@ -125,6 +126,7 @@ void Cloning::lapx( const Mat &img, Mat &gxx)
                     (float)img.at<float>(i,(j+1)*channel+c) - (float)img.at<float>(i,j*channel+c);
             }
 }
+
 void Cloning::lapy( const Mat &img, Mat &gyy)
 {
     int w = img.size().width;
@@ -242,6 +244,7 @@ void Cloning::transpose(double *mat, double *mat_t,int h,int w)
     tmp.release();
 
 }
+
 void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
 {
 
@@ -274,7 +277,6 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
             f_bp[idx] = -4*(int)bound.at<uchar>(i,j) + (int)bound.at<uchar>(i,(j+1)) + (int)bound.at<uchar>(i,(j-1))
                 + (int)bound.at<uchar>(i-1,j) + (int)bound.at<uchar>(i+1,j);
         }
-
 
     Mat diff = Mat(h,w,CV_32FC1);
     for(int i =0;i<h;i++)
@@ -391,7 +393,6 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
     delete [] img_d;
     delete [] gtest;
     delete [] f_bp;
-
 }
 
 void Cloning::init(Mat &I, Mat &wmask)
@@ -486,6 +487,7 @@ void Cloning::calc(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
 
 
 }
+
 void Cloning::normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &final, int num)
 {
     init(I,wmask);
@@ -609,7 +611,8 @@ void Cloning::normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &final, int num)
 
 }
 
-void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float red=1.0, float green=1.0, float blue=1.0)
+void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float red_mul=1.0,
+                                 float green_mul=1.0, float blue_mul=1.0)
 {
     init(I,wmask);
 
@@ -649,12 +652,10 @@ void Cloning::local_color_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, floa
     for(int i=0;i < h; i++)
         for(int j=0; j < w; j++)
         {
-            factor.at<float>(i,j*channel+0) = blue;
-            factor.at<float>(i,j*channel+1) = green;
-            factor.at<float>(i,j*channel+2) = red;
+            factor.at<float>(i,j*channel+0) = blue_mul;
+            factor.at<float>(i,j*channel+1) = green_mul;
+            factor.at<float>(i,j*channel+2) = red_mul;
         }
-
-
 
     for(int i=0;i < h; i++)
         for(int j=0; j < w; j++)
@@ -783,7 +784,8 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alph
 }
 
 
-void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, Mat &final)
+void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold,
+        double high_threshold, int kernel_size, Mat &final)
 {
     init(I,wmask);
 
@@ -807,10 +809,8 @@ void Cloning::texture_flatten(Mat &I, Mat &mask, Mat &wmask, Mat &final)
     I.convertTo(srx32,CV_32FC3,1.0/255.0);
     I.convertTo(sry32,CV_32FC3,1.0/255.0);
 
-
-
     Mat out = Mat(mask.size(),CV_8UC1);
-    Canny( mask, out, 30, 45, 3 );
+    Canny(mask,out,low_threshold,high_threshold,kernel_size);
 
     int channel = mask.channels();
 

@@ -56,17 +56,18 @@ char src[50];
 char dest[50];
 
 int var = 0;
-int flag = 0;
-int flag1 = 0;
+int flag = 0, flag1 = 0, flag4 = 0;
 
-int minx,miny,maxx,maxy,lenx,leny;
-int minxd,minyd,maxxd,maxyd,lenxd,lenyd;
+int minx, miny, maxx, maxy, lenx, leny;
+int minxd, minyd, maxxd, maxyd, lenxd, lenyd;
 
-int channel,num;
+int channel, num, kernel_size;
 
 float alpha,beta;
 
 float red, green, blue;
+
+double low_t, high_t;
 
 void source(int event, int x, int y, int, void*)
 {
@@ -159,7 +160,7 @@ void source(int event, int x, int y, int, void*)
         }
         else if(num == 6)
         {
-            textureFlattening(img0,res1,blend);
+            textureFlattening(img0,res1,blend,low_t,high_t,kernel_size);
             imshow("Texture Flattened", blend);
             waitKey(0);
         }
@@ -176,10 +177,11 @@ void source(int event, int x, int y, int, void*)
 		flag1 = 0;
 		minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
 		imshow("Source", img0);
+        if(num == 1 || num == 2 || num == 3)
+            imshow("Destination",img2);
 		drag = 0;
 	}
 }
-
 
 void destination(int event, int x, int y, int, void*)
 {
@@ -190,6 +192,7 @@ void destination(int event, int x, int y, int, void*)
 	im1 = img2.clone();
 	if (event == EVENT_LBUTTONDOWN)
 	{
+        flag4 = 1;
 		if(flag1 == 1)
 		{
 			point = Point(x, y);
@@ -386,13 +389,11 @@ int main(int argc, char **argv)
         res1 = Mat::zeros(img0.size(),CV_8UC1);
         final = Mat::zeros(img0.size(),CV_8UC3);
 
-
         //////////// source image ///////////////////
 
         namedWindow("Source", 1);
         setMouseCallback("Source", source, NULL);
         imshow("Source", img0);
-
 
     }
     else if(num == 5)
@@ -416,12 +417,20 @@ int main(int argc, char **argv)
         setMouseCallback("Source", source, NULL);
         imshow("Source", img0);
 
-
     }
     else if(num == 6)
     {
         checkfile(s);
 
+        cout << "low_threshold: ";
+        cin >> low_t;
+
+        cout << "high_threshold: ";
+        cin >> high_t;
+        
+        cout << "kernel_size: ";
+        cin >> kernel_size;
+        
         img0 = imread(src);
 
         res1 = Mat::zeros(img0.size(),CV_8UC1);
@@ -434,13 +443,16 @@ int main(int argc, char **argv)
         imshow("Source", img0);
     }
     
+    int flag3 = 0;
+    
     while(true)
     {
         char key = waitKey(0);
 
-        if(key == 'd')
+        if(key == 'd' && flag3 == 0)
         {
             flag1 = 1;
+            flag3 = 1;
             img1 = img0.clone();
             for(int i = var; i < numpts ; i++)
                 pts[i] = point;
@@ -490,13 +502,15 @@ int main(int argc, char **argv)
             }
             var = 0;
             flag1 = 0;
+            flag3 = 0;
+            flag4 = 0;
             minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
             imshow("Source", img0);
             if(num == 1 || num == 2 || num == 3)
                 imshow("Destination",img2);
             drag = 0;
         }
-        else if ((num == 1 || num == 2 || num == 3) && key == 'c' && flag1 == 1)
+        else if ((num == 1 || num == 2 || num == 3) && key == 'c' && flag1 == 1 && flag4 == 1)
         {
             seamlessClone(img0,img2,res1,point,blend,num);
             imshow("Cloned Image", blend);
@@ -516,14 +530,12 @@ int main(int argc, char **argv)
         }
         else if (num == 6 && key == 'c' && flag1 == 1)
         {
-            textureFlattening(img0,res1,blend);
+            textureFlattening(img0,res1,blend,low_t,high_t,kernel_size);
             imshow("Texture Flattened", blend);
             imwrite("cloned.png",blend);
         }
         else if(key == 'q')
             exit(0);
-
     }
-
     waitKey(0);
 }

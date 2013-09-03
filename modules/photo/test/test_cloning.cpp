@@ -100,7 +100,7 @@ TEST(Photo_SeamlessClone_mixed, regression)
 
 TEST(Photo_SeamlessClone_featureExchange, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Feature_Exchange/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Monochrome_Transfer/";
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "destination1.png";
     string original_path3 = folder + "mask.png";
@@ -174,7 +174,7 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     ASSERT_FALSE(mask.empty()) << "Could not load mask image " << original_path2;
 
     Mat result;
-    textureFlattening(source, mask, result);
+    textureFlattening(source, mask, result, 30, 45, 3);
 
     imwrite(folder + "cloned.png", result);
 

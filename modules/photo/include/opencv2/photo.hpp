@@ -68,8 +68,8 @@ enum
 
 enum
 {
-	RECURSIVE_FILTER = 1,
-	NC_FILTER = 2
+	RECURS_FILTER = 1,
+	NORMCONV_FILTER = 2
 };
 
 //! restores the damaged image areas using one of the available intpainting algorithms
@@ -301,17 +301,35 @@ public:
 
 CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
-CV_EXPORTS_W void decolor(InputArray src, OutputArray grayscale, OutputArray color_boost);
+CV_EXPORTS_W void decolor( InputArray src, OutputArray grayscale, OutputArray color_boost);
 
-CV_EXPORTS_W void seamlessClone(InputArray src, InputArray dst, InputArray mask, Point p, OutputArray _blend, int flags);
+CV_EXPORTS_W void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p,
+                                 OutputArray _blend, int flags);
 
-CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, float red = 1.0, float green = 1.0, float blue = 1.0); 
+CV_EXPORTS_W void colorChange(InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0,
+                              float green_mul = 1.0, float blue_mul = 1.0);
 
-CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2, float beta = 0.4);
+CV_EXPORTS_W void illuminationChange(InputArray src, InputArray mask, OutputArray dst,
+                                     float alpha = 0.2, float beta = 0.4);
 
-CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst);
+CV_EXPORTS_W void textureFlattening(InputArray src, InputArray mask, OutputArray dst,
+                                    double low_threshold, double high_threshold,
+                                    int kernel_size);
 
-CV_EXPORTS_W void edgepreservefilter(InputArray _src, OutputArray _dst, int flags = 1, float sigma_h = 60, float sigma_r = 0.4);
+CV_EXPORTS_W void edgePreservingFilter(InputArray src, OutputArray dst, int flags = 1,
+                                       float sigma_s = 60, float sigma_r = 0.4);
+
+CV_EXPORTS_W void detailEnhance(InputArray src, OutputArray dst, float sigma_s = 10,
+                                float sigma_r = 0.15);
+
+CV_EXPORTS_W void pencilSketch(InputArray src, OutputArray dst, OutputArray dst1,
+                               float sigma_s = 60, float sigma_r = 0.07, float shade_factor = 0.02);
+
+CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 60,
+                              float sigma_r = 0.45);
+
+CV_EXPORTS_W void edgeEnhance(InputArray src, OutputArray dst, float sigma_s = 60,
+                              float sigma_r = 0.45);
 
 } // cv
 
