@@ -14,7 +14,7 @@ Use OpenCV for advanced photo processing.
   ============ ==============================================
   |HDR|        **Title:** :ref:`hdrimaging`
 
-               *Compatibility:* TBA
+               *Compatibility:* > OpenCV 3.0
 
                *Author:* Fedor Morozov
 

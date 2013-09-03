@@ -233,6 +233,7 @@ As always, we would be happy to hear your comments and receive your contribution
    video/table_of_content_video/table_of_content_video
    objdetect/table_of_content_objdetect/table_of_content_objdetect
    ml/table_of_content_ml/table_of_content_ml
+   photo/table_of_content_photo/table_of_content_photo
    gpu/table_of_content_gpu/table_of_content_gpu
    contrib/table_of_content_contrib/table_of_content_contrib
    ios/table_of_content_ios/table_of_content_ios
