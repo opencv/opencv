@@ -60,7 +60,7 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
 
     vector<DMatch> matches;
     Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
-    declare.in(query, train).time(srcSize.height == 2000 ? 8 : 4 );
+    declare.in(query, train).time(srcSize.height == 2000 ? 9 : 4 );
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
 
@@ -75,8 +75,12 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
     {
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
+        ocl::oclMat oclTrainIdx, oclDistance;
 
-        TEST_CYCLE() oclMatcher.match(oclQuery, oclTrain, matches);
+        OCL_TEST_CYCLE()
+            oclMatcher.matchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance);
+
+        oclMatcher.matchDownload(oclTrainIdx, oclDistance, matches);
 
         SANITY_CHECK_MATCHES(matches);
     }
@@ -85,7 +89,7 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
 }
 
 PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES)  // TODO too many outliers
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too big difference between implementations
 {
     const Size srcSize = GetParam();
 
@@ -96,11 +100,11 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
 
     declare.in(query, train);
     if (srcSize.height == 2000)
-        declare.time(8);
+        declare.time(9);
 
     if (RUN_PLAIN_IMPL)
     {
-        BFMatcher matcher (NORM_L2);
+        BFMatcher matcher(NORM_L2);
         TEST_CYCLE() matcher.knnMatch(query, train, matches, 2);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
@@ -111,8 +115,12 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
     {
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
         ocl::oclMat oclQuery(query), oclTrain(train);
+        ocl::oclMat oclTrainIdx, oclDistance, oclAllDist;
 
-        TEST_CYCLE() oclMatcher.knnMatch(oclQuery, oclTrain, matches, 2);
+        OCL_TEST_CYCLE()
+                oclMatcher.knnMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclAllDist, 2);
+
+        oclMatcher.knnMatchDownload(oclTrainIdx, oclDistance, matches);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
         SANITY_CHECK_MATCHES(matches0);
@@ -122,8 +130,8 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
         OCL_PERF_ELSE
 }
 
-PERF_TEST_P(BruteForceMatcherFixture, DISABLED_radiusMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too many outliers
+PERF_TEST_P(BruteForceMatcherFixture, radiusMatch,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
@@ -131,15 +139,17 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_radiusMatch,
     vector<vector<DMatch> > matches(2);
     Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
     declare.in(query, train);
-    Mat trainIdx, distance, allDist;
 
     randu(query, 0.0f, 1.0f);
     randu(train, 0.0f, 1.0f);
 
+    if (srcSize.height == 2000)
+        declare.time(9.15);
+
     if (RUN_PLAIN_IMPL)
     {
-        BFMatcher matcher (NORM_L2);
-        TEST_CYCLE() matcher.radiusMatch(query, matches, max_distance);
+        cv::BFMatcher matcher(NORM_L2);
+        TEST_CYCLE() matcher.radiusMatch(query, train, matches, max_distance);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
         SANITY_CHECK_MATCHES(matches0);
@@ -149,8 +159,12 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_radiusMatch,
     {
         ocl::oclMat oclQuery(query), oclTrain(train);
         ocl::BruteForceMatcher_OCL_base oclMatcher(ocl::BruteForceMatcher_OCL_base::L2Dist);
+        ocl::oclMat oclTrainIdx, oclDistance, oclNMatches;
 
-        TEST_CYCLE() oclMatcher.radiusMatch(oclQuery, oclTrain, matches, max_distance);
+        OCL_TEST_CYCLE()
+                oclMatcher.radiusMatchSingle(oclQuery, oclTrain, oclTrainIdx, oclDistance, oclNMatches, max_distance);
+
+        oclMatcher.radiusMatchDownload(oclTrainIdx, oclDistance, oclNMatches, matches);
 
         std::vector<DMatch> & matches0 = matches[0], & matches1 = matches[1];
         SANITY_CHECK_MATCHES(matches0);

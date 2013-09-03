@@ -68,7 +68,7 @@ PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't w
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
-        TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, NORM_INF);
+        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, NORM_INF);
 
         SANITY_CHECK(value);
     }

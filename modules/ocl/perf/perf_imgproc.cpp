@@ -64,7 +64,7 @@ PERF_TEST_P(equalizeHistFixture, equalizeHist, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, src.type());
 
-        TEST_CYCLE() cv::ocl::equalizeHist(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::equalizeHist(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -101,7 +101,7 @@ PERF_TEST_P(CopyMakeBorderFixture, CopyMakeBorder,
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() cv::ocl::copyMakeBorder(oclSrc, oclDst, 7, 5, 5, 7, borderType, cv::Scalar(1.0));
+        OCL_TEST_CYCLE() cv::ocl::copyMakeBorder(oclSrc, oclDst, 7, 5, 5, 7, borderType, cv::Scalar(1.0));
 
         oclDst.download(dst);
 
@@ -141,7 +141,7 @@ PERF_TEST_P(cornerMinEigenValFixture, cornerMinEigenVal,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
-        TEST_CYCLE() cv::ocl::cornerMinEigenVal(oclSrc, oclDst, blockSize, apertureSize, borderType);
+        OCL_TEST_CYCLE() cv::ocl::cornerMinEigenVal(oclSrc, oclDst, blockSize, apertureSize, borderType);
 
         oclDst.download(dst);
 
@@ -178,7 +178,7 @@ PERF_TEST_P(cornerHarrisFixture, cornerHarris,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
-        TEST_CYCLE() cv::ocl::cornerHarris(oclSrc, oclDst, 5, 7, 0.1, borderType);
+        OCL_TEST_CYCLE() cv::ocl::cornerHarris(oclSrc, oclDst, 5, 7, 0.1, borderType);
 
         oclDst.download(dst);
 
@@ -209,7 +209,7 @@ PERF_TEST_P(integralFixture, DISABLED_integral, OCL_TYPICAL_MAT_SIZES) // TODO d
     {
         ocl::oclMat oclSrc(src), oclDst;
 
-        TEST_CYCLE() cv::ocl::integral(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::integral(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -252,7 +252,7 @@ PERF_TEST_P(WarpAffineFixture, WarpAffine,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::warpAffine(oclSrc, oclDst, M, srcSize, interpolation);
+        OCL_TEST_CYCLE() cv::ocl::warpAffine(oclSrc, oclDst, M, srcSize, interpolation);
 
         oclDst.download(dst);
 
@@ -297,7 +297,7 @@ PERF_TEST_P(WarpPerspectiveFixture, WarpPerspective,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
 
-        TEST_CYCLE() cv::ocl::warpPerspective(oclSrc, oclDst, M, srcSize, interpolation);
+        OCL_TEST_CYCLE() cv::ocl::warpPerspective(oclSrc, oclDst, M, srcSize, interpolation);
 
         oclDst.download(dst);
 
@@ -342,7 +342,7 @@ PERF_TEST_P(resizeFixture, resize,
     {
         ocl::oclMat oclSrc(src), oclDst(dstSize, type);
 
-        TEST_CYCLE() cv::ocl::resize(oclSrc, oclDst, Size(), scale, scale, interType);
+        OCL_TEST_CYCLE() cv::ocl::resize(oclSrc, oclDst, Size(), scale, scale, interType);
 
         oclDst.download(dst);
 
@@ -381,7 +381,7 @@ PERF_TEST_P(ThreshFixture, threshold,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8U);
 
-        TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, 50.0, 0.0, threshType);
+        OCL_TEST_CYCLE() cv::ocl::threshold(oclSrc, oclDst, 50.0, 0.0, threshType);
 
         oclDst.download(dst);
 
@@ -611,7 +611,7 @@ PERF_TEST_P(meanShiftFilteringFixture, meanShiftFiltering,
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_8UC4);
 
-        TEST_CYCLE() ocl::meanShiftFiltering(oclSrc, oclDst, sp, sr, crit);
+        OCL_TEST_CYCLE() ocl::meanShiftFiltering(oclSrc, oclDst, sp, sr, crit);
 
         oclDst.download(dst);
 
@@ -706,7 +706,7 @@ PERF_TEST_P(meanShiftProcFixture, meanShiftProc,
         ocl::oclMat oclSrc(src), oclDst1(srcSize, CV_8UC4),
                 oclDst2(srcSize, CV_16SC2);
 
-        TEST_CYCLE() ocl::meanShiftProc(oclSrc, oclDst1, oclDst2, 5, 6, crit);
+        OCL_TEST_CYCLE() ocl::meanShiftProc(oclSrc, oclDst1, oclDst2, 5, 6, crit);
 
         oclDst1.download(dst1);
         oclDst2.download(dst2);
@@ -763,7 +763,7 @@ PERF_TEST_P(remapFixture, remap,
         ocl::oclMat oclSrc(src), oclDst(srcSize, type);
         ocl::oclMat oclXMap(xmap), oclYMap(ymap);
 
-        TEST_CYCLE() cv::ocl::remap(oclSrc, oclDst, oclXMap, oclYMap, interpolation, borderMode);
+        OCL_TEST_CYCLE() cv::ocl::remap(oclSrc, oclDst, oclXMap, oclYMap, interpolation, borderMode);
 
         oclDst.download(dst);
 
@@ -800,7 +800,7 @@ PERF_TEST_P(CLAHEFixture, CLAHE, OCL_TYPICAL_MAT_SIZES)
         ocl::oclMat oclSrc(src), oclDst;
         cv::Ptr<cv::CLAHE> oclClahe = cv::ocl::createCLAHE(clipLimit);
 
-        TEST_CYCLE() oclClahe->apply(oclSrc, oclDst);
+        OCL_TEST_CYCLE() oclClahe->apply(oclSrc, oclDst);
 
         oclDst.download(dst);
 
@@ -845,7 +845,7 @@ PERF_TEST_P(columnSumFixture, columnSum, OCL_TYPICAL_MAT_SIZES)
     {
         ocl::oclMat oclSrc(src), oclDst(srcSize, CV_32FC1);
 
-        TEST_CYCLE() cv::ocl::columnSum(oclSrc, oclDst);
+        OCL_TEST_CYCLE() cv::ocl::columnSum(oclSrc, oclDst);
 
         oclDst.download(dst);
 

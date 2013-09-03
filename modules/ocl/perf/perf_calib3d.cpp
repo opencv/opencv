@@ -48,7 +48,7 @@
 
 ///////////// StereoMatchBM ////////////////////////
 
-PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM) // TODO doesn't work properly
+PERF_TEST(StereoMatchBMFixture, StereoMatchBM)
 {
     Mat left_image = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE);
     Mat right_image = imread(getDataPath("gpu/stereobm/aloe-R.png"), cv::IMREAD_GRAYSCALE);
@@ -69,20 +69,17 @@ PERF_TEST(StereoMatchBMFixture, DISABLED_StereoMatchBM) // TODO doesn't work pro
                 oclDisp(left_image.size(), CV_16SC1);
         ocl::StereoBM_OCL oclBM(0, n_disp, winSize);
 
-        TEST_CYCLE() oclBM(oclLeft, oclRight, oclDisp);
-
-        oclDisp.download(disp);
-
-        SANITY_CHECK(disp);
+        OCL_TEST_CYCLE() oclBM(oclLeft, oclRight, oclDisp);
     }
     else if (RUN_PLAIN_IMPL)
     {
         Ptr<StereoBM> bm = createStereoBM(n_disp, winSize);
 
         TEST_CYCLE() bm->compute(left_image, right_image, disp);
-
-        SANITY_CHECK(disp);
     }
     else
         OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
 }

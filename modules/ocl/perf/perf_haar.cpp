@@ -78,7 +78,7 @@ PERF_TEST(HaarFixture, Haar)
         ASSERT_TRUE(faceCascade.load(getDataPath("gpu/haarcascade/haarcascade_frontalface_alt.xml")))
                 << "can't load haarcascade_frontalface_alt.xml";
 
-        TEST_CYCLE() faceCascade.detectMultiScale(oclImg, faces,
+        OCL_TEST_CYCLE() faceCascade.detectMultiScale(oclImg, faces,
                                      1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(30, 30));
 
         SANITY_CHECK(faces, 4 + 1e-4);

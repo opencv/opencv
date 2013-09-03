@@ -72,7 +72,7 @@ PERF_TEST_P(MomentsFixture, DISABLED_Moments,
     {
         ocl::oclMat oclSrc(src);
 
-        TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
+        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
         cv::HuMoments(mom, dst);
 
         SANITY_CHECK(dst);
