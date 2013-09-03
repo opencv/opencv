@@ -801,7 +801,9 @@ enum
 {
     GC_INIT_WITH_RECT  = 0,
     GC_INIT_WITH_MASK  = 1,
-    GC_EVAL            = 2
+    GC_EVAL            = 2,
+    GC_INIT_WITH_RECT_FULLBOX = GC_INIT_WITH_RECT,
+    GC_INIT_WITH_RECT_THIRDS = 3
 };
 
 //! segments the image using GrabCut algorithm
