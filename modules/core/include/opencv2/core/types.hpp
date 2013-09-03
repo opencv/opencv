@@ -551,18 +551,18 @@ public:
     size_t hash() const;
 
     //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& keypoints,
-                        CV_OUT std::vector<Point2f>& points2f,
-                        const std::vector<int>& keypointIndexes=std::vector<int>());
+    CV_WRAP static void convert(const std::vector<KeyPoint>& keypoints,
+                                CV_OUT std::vector<Point2f>& points2f,
+                                const std::vector<int>& keypointIndexes=std::vector<int>());
     //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& points2f,
-                        CV_OUT std::vector<KeyPoint>& keypoints,
-                        float size=1, float response=1, int octave=0, int class_id=-1);
+    CV_WRAP static void convert(const std::vector<Point2f>& points2f,
+                                CV_OUT std::vector<KeyPoint>& keypoints,
+                                float size=1, float response=1, int octave=0, int class_id=-1);
 
     //! computes overlap for pair of keypoints;
     //! overlap is a ratio between area of keypoint regions intersection and
     //! area of keypoint regions union (now keypoint region is circle)
-    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
+    CV_WRAP static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
 
     CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
     CV_PROP_RW float size; //!< diameter of the meaningful keypoint neighborhood
