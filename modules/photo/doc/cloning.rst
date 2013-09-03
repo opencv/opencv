@@ -39,19 +39,21 @@ colorChange
 -----------
 Given an original color image, two differently colored versions of this image can be mixed seamlessly.
 
-.. ocv:function:: void colorChange( InputArray src, OutputArray dst, float red = 1.0, float green = 1.0, float blue = 1.0)
+.. ocv:function:: void colorChange( InputArray src, InputArray mask, OutputArray dst, float red_mul = 1.0, float green_mul = 1.0, float blue_mul = 1.0)
 
     :param src: Input 8-bit 3-channel image.
 
+    :param mask: Input 8-bit 1 or 3-channel image.
+    
     :param dst: Output image with the same size and type as  ``src`` .
 
-    :param red: R-channel Value
+    :param red_mul: R-channel multiply factor.
     
-    :param green: G-channel Value
+    :param green_mul: G-channel multiply factor.
     
-    :param blue: B-channel Value
+    :param blue_mul: B-channel multiply factor.
 
-RGB values between .5 to 2.5
+Multiplication factor is between .5 to 2.5.
     
 
 illuminationChange
@@ -59,10 +61,12 @@ illuminationChange
 Applying an appropriate non-linear transformation to the gradient field inside the selection and then integrating back with a Poisson
 solver, modifies locally the apparent illumination of an image.
 
-.. ocv:function:: void illuminationChange(InputArray src, OutputArray dst, float alpha = 0.2, float beta = 0.4)
+.. ocv:function:: void illuminationChange(InputArray src, InputArray mask, OutputArray dst, float alpha = 0.2, float beta = 0.4)
 
     :param src: Input 8-bit 3-channel image.
 
+    :param mask: Input 8-bit 1 or 3-channel image.
+    
     :param dst: Output image with the same size and type as  ``src``.
 
     :param alpha: Value ranges between 0-2.
@@ -74,14 +78,21 @@ This is useful to highlight under-exposed foreground objects or to reduce specul
 textureFlattening
 -----------------
 By retaining only the gradients at edge locations, before integrating with the Poisson solver, one washes out the texture of the selected
-region, giving its contents a flat aspect.
+region, giving its contents a flat aspect. Here Canny Edge Detector is used.
 
-.. ocv:function:: void textureFlattening(InputArray src, OutputArray dst)
+.. ocv:function:: void textureFlattening(InputArray src, InputArray mask, OutputArray dst, double low_threshold, double high_threshold, int kernel_size)
 
     :param src: Input 8-bit 3-channel image.
 
+    :param mask: Input 8-bit 1 or 3-channel image.
+    
     :param dst: Output image with the same size and type as  ``src``.
 
+    :param low_threshold: Range from 0 to 100.
+    
+    :param high_threshold: Value > 100.
+    
+    :param kernel_size: The size of the Sobel kernel to be used.
 
 **NOTE:**
 

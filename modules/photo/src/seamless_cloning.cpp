@@ -39,7 +39,6 @@
 //
 //M*/
 
-
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
@@ -55,11 +54,11 @@ using namespace cv;
 
 void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point p, OutputArray _blend, int flags)
 {
-	Mat src  = _src.getMat();
-	Mat dest = _dst.getMat();
-	Mat mask = _mask.getMat();
-	_blend.create(dest.size(), CV_8UC3);
-	Mat blend = _blend.getMat();
+    Mat src  = _src.getMat();
+    Mat dest = _dst.getMat();
+    Mat mask = _mask.getMat();
+    _blend.create(dest.size(), CV_8UC3);
+    Mat blend = _blend.getMat();
 
     int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
     int h = mask.size().height;
@@ -134,14 +133,14 @@ void cv::seamlessClone(InputArray _src, InputArray _dst, InputArray _mask, Point
 
 void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float r, float g, float b)
 {
-	Mat src  = _src.getMat();
-	Mat mask  = _mask.getMat();
-	_dst.create(src.size(), src.type());
-	Mat blend = _dst.getMat();
-	
-	float red = r;
-	float green = g;
-	float blue = b;
+    Mat src  = _src.getMat();
+    Mat mask  = _mask.getMat();
+    _dst.create(src.size(), src.type());
+    Mat blend = _dst.getMat();
+
+    float red = r;
+    float green = g;
+    float blue = b;
 
     Mat gray = Mat::zeros(mask.size(),CV_8UC1);
 
@@ -149,7 +148,7 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
         cvtColor(mask, gray, COLOR_BGR2GRAY );
     else
         gray = mask;
-    
+
     Mat cs_mask = Mat::zeros(src.size(),CV_8UC3);
 
     int channel = 3;
@@ -174,12 +173,12 @@ void cv::colorChange(InputArray _src, InputArray _mask, OutputArray _dst, float 
 void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst, float a, float b)
 {
 
-	Mat src  = _src.getMat();
-	Mat mask  = _mask.getMat();
-	_dst.create(src.size(), src.type());
-	Mat blend = _dst.getMat();
-	float alpha = a;
-	float beta = b;
+    Mat src  = _src.getMat();
+    Mat mask  = _mask.getMat();
+    _dst.create(src.size(), src.type());
+    Mat blend = _dst.getMat();
+    float alpha = a;
+    float beta = b;
 
     Mat gray = Mat::zeros(mask.size(),CV_8UC1);
 
@@ -203,19 +202,20 @@ void cv::illuminationChange(InputArray _src, InputArray _mask, OutputArray _dst,
             }
 
         }
-    
+
     Cloning obj;
     obj.illum_change(src,cs_mask,gray,blend,alpha,beta);
 
 }
 
-void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst)
+void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
+                           double low_threshold, double high_threshold, int kernel_size)
 {
 
-	Mat src  = _src.getMat();
-	Mat mask  = _mask.getMat();
-	_dst.create(src.size(), src.type());
-	Mat blend = _dst.getMat();
+    Mat src  = _src.getMat();
+    Mat mask  = _mask.getMat();
+    _dst.create(src.size(), src.type());
+    Mat blend = _dst.getMat();
 
     Mat gray = Mat::zeros(mask.size(),CV_8UC1);
 
@@ -239,8 +239,8 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst)
             }
 
         }
-	
+
     Cloning obj;
-	obj.texture_flatten(src,cs_mask,gray,blend);
+    obj.texture_flatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
 }
 
