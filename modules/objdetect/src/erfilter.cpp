@@ -805,7 +805,11 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     findContours( region, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0) );
     //TODO check epsilon parameter of approxPolyDP (set empirically) : we want more precission
     //     if the region is very small because otherwise we'll loose all the convexities
+<<<<<<< HEAD
     approxPolyDP( Mat(contours[0]), contour_poly, min(rect.width,rect.height)/17, true );
+=======
+    approxPolyDP( Mat(contours[0]), contour_poly, (float)min(rect.width,rect.height)/17, true );
+>>>>>>> fixed a bug in the calculation of the number of inflexion points feature
 
 
     bool was_convex = false;
