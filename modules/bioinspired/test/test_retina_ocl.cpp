@@ -49,7 +49,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 
-#if defined(HAVE_OPENCV_OCL) && defined(HAVE_OPENCL)
+#if defined(HAVE_OPENCV_OCL)
 
 #include "opencv2/ocl.hpp"
 #define RETINA_ITERATIONS 5

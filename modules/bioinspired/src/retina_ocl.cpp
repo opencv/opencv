@@ -1149,7 +1149,7 @@ void RetinaColor::_initColorSampling()
     // computing photoreceptors local density
     MAKE_OCLMAT_SLICES(_RGBmosaic, 3);
     MAKE_OCLMAT_SLICES(_colorLocalDensity, 3);
-
+    _colorLocalDensity.setTo(0);
     _spatiotemporalLPfilter(_RGBmosaic_slices[0], _colorLocalDensity_slices[0]);
     _spatiotemporalLPfilter(_RGBmosaic_slices[1], _colorLocalDensity_slices[1]);
     _spatiotemporalLPfilter(_RGBmosaic_slices[2], _colorLocalDensity_slices[2]);
