@@ -58,7 +58,7 @@ int  main(int argc, const char * argv[])
     double t = (double)getTickCount();
 
     // Build ER tree and filter with the 1st stage default classifier
-    Ptr<ERFilter> er_filter1 = createERFilterNM1();
+    Ptr<ERFilter> er_filter1 = createERFilterNM1(NULL,1,0.00025,0.13,0.4,true,0.1);
 
     er_filter1->run(grey, regions);
 
@@ -89,7 +89,7 @@ int  main(int argc, const char * argv[])
     t = (double)getTickCount();
 
     // Default second stage classifier
-    Ptr<ERFilter> er_filter2 = createERFilterNM2();
+    Ptr<ERFilter> er_filter2 = createERFilterNM2(NULL,0.3);
     er_filter2->run(grey, regions);
 
     t = (double)getTickCount() - t;
