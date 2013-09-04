@@ -806,10 +806,14 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     //TODO check epsilon parameter of approxPolyDP (set empirically) : we want more precission
     //     if the region is very small because otherwise we'll loose all the convexities
 <<<<<<< HEAD
+<<<<<<< HEAD
     approxPolyDP( Mat(contours[0]), contour_poly, min(rect.width,rect.height)/17, true );
 =======
     approxPolyDP( Mat(contours[0]), contour_poly, (float)min(rect.width,rect.height)/17, true );
 >>>>>>> fixed a bug in the calculation of the number of inflexion points feature
+=======
+    approxPolyDP( Mat(contours[0]), contour_poly, (float)min(rect.width,rect.height)/17, true );
+>>>>>>> removed trailing whitespaces
 
 
     bool was_convex = false;
@@ -1130,7 +1134,10 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
 =======
     Ptr<ERFilterNM> filter = new ERFilterNM();
 
+<<<<<<< HEAD
 >>>>>>> fixed a bug in the non-max-suppression filter procedure
+=======
+>>>>>>> removed trailing whitespaces
     if (cb == NULL)
         filter->setCallback(makePtr<ERClassifierNM1>());
     else
@@ -1166,6 +1173,10 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
     Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> removed trailing whitespaces
     if (cb == NULL)
         filter->setCallback(makePtr<ERClassifierNM2>());
     else
