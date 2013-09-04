@@ -250,19 +250,3 @@ int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& r
 }
 
 } // end namespace
-
-int cvRotatedRectangleIntersection( const CvBox2D* rect1, const CvBox2D* rect2, CvPoint2D32f intersectingRegion[8], int* pointCount )
-{
-    std::vector <cv::Point2f> pts;
-
-    int ret = cv::rotatedRectangleIntersection( *rect1, *rect2, pts );
-
-    for( size_t i=0; i < pts.size(); i++ )
-    {
-        intersectingRegion[i] = pts[i];
-    }
-
-    *pointCount = (int)pts.size();
-
-    return ret;
-}

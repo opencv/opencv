@@ -710,7 +710,7 @@ namespace cv
         //! returns 2D filter with the specified kernel
         // supports CV_8UC1 and CV_8UC4 types
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
-                Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
@@ -1782,7 +1782,7 @@ namespace cv
         };
         //! Returns the sorted result of all the elements in input based on equivalent keys.
         //
-        //  The element unit in the values to be sorted is determined from the data type, 
+        //  The element unit in the values to be sorted is determined from the data type,
         //  i.e., a CV_32FC2 input {a1a2, b1b2} will be considered as two elements, regardless its
         //  matrix dimension.
         //  both keys and values will be sorted inplace

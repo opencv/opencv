@@ -57,6 +57,8 @@
 #include "opencv2/gpuwarping.hpp"
 #include "opencv2/imgproc.hpp"
 
+#include "cvconfig.h"
+
 #include "interpolation.hpp"
 
 #endif

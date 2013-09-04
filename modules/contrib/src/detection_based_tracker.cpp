@@ -892,4 +892,3 @@ const cv::DetectionBasedTracker::Parameters& DetectionBasedTracker::getParameter
 }
 
 #endif
-

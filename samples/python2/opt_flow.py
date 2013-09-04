@@ -85,4 +85,3 @@ if __name__ == '__main__':
                 cur_glitch = img.copy()
             print 'glitch is', ['off', 'on'][show_glitch]
     cv2.destroyAllWindows()
-

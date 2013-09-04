@@ -571,14 +571,14 @@ static void fitLine3D( Point3f * points, int count, int dist,
                 for( j = 0; j < count; j++ )
                     w[j] = 1.f;
             }
-            
+
             /* save the line parameters */
             memcpy( _lineprev, _line, 6 * sizeof( float ));
-            
+
             /* Run again... */
             fitLine3D_wods( points, count, w, _line );
         }
-        
+
         if( err < min_err )
         {
             min_err = err;
@@ -595,27 +595,27 @@ void cv::fitLine( InputArray _points, OutputArray _line, int distType,
                  double param, double reps, double aeps )
 {
     Mat points = _points.getMat();
-    
+
     float linebuf[6]={0.f};
     int npoints2 = points.checkVector(2, -1, false);
     int npoints3 = points.checkVector(3, -1, false);
-    
+
     CV_Assert( npoints2 >= 0 || npoints3 >= 0 );
-    
+
     if( points.depth() != CV_32F || !points.isContinuous() )
     {
         Mat temp;
         points.convertTo(temp, CV_32F);
         points = temp;
     }
-    
+
     if( npoints2 >= 0 )
         fitLine2D( points.ptr<Point2f>(), npoints2, distType,
                    (float)param, (float)reps, (float)aeps, linebuf);
     else
         fitLine3D( points.ptr<Point3f>(), npoints3, distType,
                    (float)param, (float)reps, (float)aeps, linebuf);
-    
+
     Mat(npoints2 >= 0 ? 4 : 6, 1, CV_32F, linebuf).copyTo(_line);
 }
 

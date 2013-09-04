@@ -227,7 +227,7 @@ namespace cv { namespace gpu { namespace cudev
                 //check prune
                 if (weight < -prune)
                 {
-                    weight = 0.0;
+                    weight = 0.0f;
                     nmodes--;
                 }
 

@@ -44,6 +44,7 @@
 #define __OPENCV_GPU_TEST_UTILITY_HPP__
 
 #include <stdexcept>
+#include "cvconfig.h"
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpu.hpp"
 #include "opencv2/highgui.hpp"

@@ -213,7 +213,7 @@ void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
     case COLOR_RGB2YUV:
     {
         CV_Assert(scn == 3 || scn == 4);
-        bidx = code == COLOR_BGR2YUV ? 0 : 2;
+        bidx = code == COLOR_RGB2YUV ? 0 : 2;
         dst.create(sz, CV_MAKETYPE(depth, 3));
         RGB2YUV_caller(src, dst, bidx);
         break;
@@ -222,7 +222,7 @@ void cvtColor_caller(const oclMat &src, oclMat &dst, int code, int dcn)
     case COLOR_YUV2RGB:
     {
         CV_Assert(scn == 3 || scn == 4);
-        bidx = code == COLOR_YUV2BGR ? 0 : 2;
+        bidx = code == COLOR_YUV2RGB ? 0 : 2;
         dst.create(sz, CV_MAKETYPE(depth, 3));
         YUV2RGB_caller(src, dst, bidx);
         break;

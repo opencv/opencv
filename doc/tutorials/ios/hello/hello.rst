@@ -73,4 +73,3 @@ Now we will learn how to write a simple Hello World Application in Xcode using O
 .. image:: images/output.png
      :alt: output
      :align: center
-

@@ -113,4 +113,3 @@ protected:
 };
 
 TEST(Legacy_BruteForceMatcher, accuracy) { CV_BruteForceMatcherTest test; test.safe_run(); }
-

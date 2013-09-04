@@ -1367,4 +1367,3 @@ void cvAddNoise(IplImage* pImg, int noise_type, double Ampl, CvRandState* rnd_st
     cvReleaseImage(&pImgAdd);
 
 }   /* cvAddNoise */
-

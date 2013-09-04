@@ -257,7 +257,7 @@ struct IntersectAreaCounter
     {
         CV_Assert( miny < maxy );
         CV_Assert( dr > FLT_EPSILON );
-        
+
         int temp_bua = bua, temp_bna = bna;
         for( int i = range.begin(); i != range.end(); i++ )
         {

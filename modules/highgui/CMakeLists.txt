@@ -10,7 +10,7 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 ocv_clear_vars(GRFMT_LIBS)
 
 if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIR})
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 
@@ -64,7 +64,6 @@ set(highgui_srcs
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
     src/loadsave.cpp
-    src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
@@ -216,7 +215,7 @@ endif()
 if(HAVE_QUICKTIME)
   list(APPEND highgui_srcs src/cap_qt.cpp)
   list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-elseif(APPLE)
+elseif(HAVE_QTKIT)
   list(APPEND highgui_srcs src/cap_qtkit.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()

@@ -244,4 +244,3 @@ int fftInverse2d(float *x_in, float *x_out, int numRows, int numColls)
     free(x_outTmp);
     return FFT_OK;
 }
-

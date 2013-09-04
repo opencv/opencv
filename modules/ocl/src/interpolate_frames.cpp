@@ -235,4 +235,3 @@ void interpolate::bindImgTex(const oclMat &img, cl_mem &texture)
     }
     texture = bindTexture(img);
 }
-

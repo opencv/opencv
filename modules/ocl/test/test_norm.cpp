@@ -7,11 +7,10 @@
 //  copy or use the software.
 //
 //
-//                           License Agreement
+//                        Intel License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -24,7 +23,7 @@
 //     this list of conditions and the following disclaimer in the documentation
 //     and/or other materials provided with the distribution.
 //
-//   * The name of the copyright holders may not be used to endorse or promote products
+//   * The name of Intel Corporation may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
@@ -41,3 +40,24 @@
 //M*/
 
 #include "test_precomp.hpp"
+
+typedef ::testing::TestWithParam<cv::Size> normFixture;
+
+TEST_P(normFixture, DISABLED_accuracy)
+{
+    const cv::Size srcSize = GetParam();
+
+    cv::Mat src1(srcSize, CV_8UC1), src2(srcSize, CV_8UC1);
+    cv::randu(src1, 0, 2);
+    cv::randu(src2, 0, 2);
+
+    cv::ocl::oclMat oclSrc1(src1), oclSrc2(src2);
+
+    double value = cv::norm(src1, src2, cv::NORM_INF);
+    double oclValue = cv::ocl::norm(oclSrc1, oclSrc2, cv::NORM_INF);
+
+    ASSERT_EQ(value, oclValue);
+}
+
+INSTANTIATE_TEST_CASE_P(oclNormTest, normFixture,
+                        ::testing::Values(cv::Size(500, 500), cv::Size(1000, 1000)));

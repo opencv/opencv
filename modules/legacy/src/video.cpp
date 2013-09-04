@@ -80,5 +80,3 @@ cvDeInterlace( const CvArr* framearr, CvArr* fieldEven, CvArr* fieldOdd )
 }
 
 /* End of file. */
-
-

@@ -99,4 +99,3 @@ private:
     IMFMediaBuffer  *m_pBuffer;
     IMF2DBuffer     *m_p2DBuffer;
 };
-

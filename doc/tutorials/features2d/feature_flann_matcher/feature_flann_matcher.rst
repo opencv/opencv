@@ -28,6 +28,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include "opencv2/core.hpp"
    #include "opencv2/features2d.hpp"
    #include "opencv2/highgui.hpp"
+   #include "opencv2/nonfree.hpp"
 
    using namespace cv;
 

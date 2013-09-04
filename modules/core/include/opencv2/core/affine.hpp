@@ -430,5 +430,3 @@ cv::Affine3<T>::operator Eigen::Transform<T, 3, Eigen::Affine>() const
 #endif /* __cplusplus */
 
 #endif /* __OPENCV_CORE_AFFINE3_HPP__ */
-
-

@@ -81,7 +81,7 @@ The function ``imshow`` displays an image in the specified window. If the window
 
 If window was created with OpenGL support, ``imshow`` also support :ocv:class:`ogl::Buffer` ,  :ocv:class:`ogl::Texture2D` and  :ocv:class:`gpu::GpuMat` as input.
 
-.. note:: This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image.
+.. note:: This function should be followed by ``waitKey`` function which displays the image for specified milliseconds. Otherwise, it won't display the image. For example, ``waitKey(0)`` will display the window infinitely until any keypress (it is suitable for image display). ``waitKey(25)`` will display a frame for 25 ms, after which display will be automatically closed. (If you put it in a loop to read videos, it will display the video frame-by-frame)
 
 
 namedWindow

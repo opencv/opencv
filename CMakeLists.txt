@@ -200,10 +200,6 @@ OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too no
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"                       OFF  IF WIN32 )
 
-# uncategorized options
-# ===================================================
-OCV_OPTION(CMAKE_VERBOSE "Verbose mode" OFF )
-
 
 # ----------------------------------------------------------------------------
 #  Get actual OpenCV version number from sources
@@ -269,10 +265,6 @@ if(DEFINED CMAKE_DEBUG_POSTFIX)
   set(OPENCV_DEBUG_POSTFIX "${CMAKE_DEBUG_POSTFIX}")
 endif()
 
-if(CMAKE_VERBOSE)
-  set(CMAKE_VERBOSE_MAKEFILE 1)
-endif()
-
 
 # ----------------------------------------------------------------------------
 #  Path for build/platform -specific headers
@@ -288,21 +280,10 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
+find_package(Git QUIET)
 
-# don't use FindGit because it requires CMake 2.8.2
-set(git_names git eg) # eg = easy git
-# Prefer .cmd variants on Windows unless running in a Makefile in the MSYS shell
-if(CMAKE_HOST_WIN32)
-  if(NOT CMAKE_GENERATOR MATCHES "MSYS")
-    set(git_names git.cmd git eg.cmd eg)
-  endif()
-endif()
-
-find_host_program(GIT_EXECUTABLE NAMES ${git_names} PATH_SUFFIXES Git/cmd Git/bin DOC "git command line client")
-mark_as_advanced(GIT_EXECUTABLE)
-
-if(GIT_EXECUTABLE)
-  execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --always --dirty --match "2.[0-9].[0-9]*"
+if(GIT_FOUND)
+  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "2.[0-9].[0-9]*"
     WORKING_DIRECTORY "${OpenCV_SOURCE_DIR}"
     OUTPUT_VARIABLE OPENCV_VCSVERSION
     RESULT_VARIABLE GIT_RESULT
@@ -479,6 +460,8 @@ include(cmake/OpenCVGenAndroidMK.cmake)
 # Generate OpenCVСonfig.cmake and OpenCVConfig-version.cmake for cmake projects
 include(cmake/OpenCVGenConfig.cmake)
 
+# Generate Info.plist for the IOS framework
+include(cmake/OpenCVGenInfoPlist.cmake)
 
 # ----------------------------------------------------------------------------
 # Summary:
@@ -631,7 +614,7 @@ status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE N
 # ========================== MEDIA IO ==========================
 status("")
 status("  Media I/O: ")
-status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARY} (ver ${ZLIB_VERSION_STRING})")
+status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})")
 
 if(WITH_JPEG)
   status("    JPEG:"       JPEG_FOUND    THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})"        ELSE "build (ver ${JPEG_LIB_VERSION})")
@@ -736,8 +719,8 @@ if(DEFINED WITH_GIGEAPI)
 endif(DEFINED WITH_GIGEAPI)
 
 if(DEFINED WITH_QUICKTIME)
-  status("    QuickTime:"      WITH_QUICKTIME      THEN YES                                        ELSE NO)
-  status("    QTKit:"          WITH_QUICKTIME      THEN NO                                         ELSE YES)
+  status("    QuickTime:"      HAVE_QUICKTIME      THEN YES                                        ELSE NO)
+  status("    QTKit:"          HAVE_QTKIT          THEN YES                                        ELSE NO)
 endif(DEFINED WITH_QUICKTIME)
 
 if(DEFINED WITH_UNICAP)
@@ -826,15 +809,15 @@ endif()
 # ========================== python ==========================
 status("")
 status("  Python:")
-status("    Interpreter:"     PYTHON_EXECUTABLE   THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_FULL})"         ELSE NO)
+status("    Interpreter:"     PYTHONINTERP_FOUND  THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})"       ELSE NO)
 if(BUILD_opencv_python)
   if(PYTHONLIBS_VERSION_STRING)
     status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES} (ver ${PYTHONLIBS_VERSION_STRING})"   ELSE NO)
   else()
-    status("    Libraries:"   HAVE_opencv_python  THEN  ${PYTHON_LIBRARIES}                                        ELSE NO)
+    status("    Libraries:"   HAVE_opencv_python  THEN  "${PYTHON_LIBRARIES}"                                      ELSE NO)
   endif()
-  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIR THEN "${PYTHON_NUMPY_INCLUDE_DIR} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
-  status("    packages path:" PYTHON_EXECUTABLE        THEN "${PYTHON_PACKAGES_PATH}"                                   ELSE "-")
+  status("    numpy:"         PYTHON_NUMPY_INCLUDE_DIRS THEN "${PYTHON_NUMPY_INCLUDE_DIRS} (ver ${PYTHON_NUMPY_VERSION})" ELSE "NO (Python wrappers can not be generated)")
+  status("    packages path:" PYTHON_EXECUTABLE         THEN "${PYTHON_PACKAGES_PATH}"                                    ELSE "-")
 endif()
 
 # ========================== java ==========================
@@ -882,4 +865,3 @@ ocv_finalize_status()
 if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
   message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
 endif()
-

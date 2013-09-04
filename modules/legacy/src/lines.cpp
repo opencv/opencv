@@ -477,4 +477,3 @@ cvPostWarpImage( int numLines,  /* number of scanlines  */
 }
 
 /* End of file */
-

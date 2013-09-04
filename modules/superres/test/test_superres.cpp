@@ -274,12 +274,16 @@ TEST_F(SuperResolution, BTVL1_GPU)
 {
     RunTest(cv::superres::createSuperResolution_BTVL1_GPU());
 }
+
 #endif
+
 #if defined(HAVE_OPENCV_OCL) && defined(HAVE_OPENCL)
+
 TEST_F(SuperResolution, BTVL1_OCL)
 {
     std::vector<cv::ocl::Info> infos;
     cv::ocl::getDevice(infos);
     RunTest(cv::superres::createSuperResolution_BTVL1_OCL());
 }
-#endif 
+
+#endif

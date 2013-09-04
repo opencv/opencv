@@ -51,14 +51,14 @@ if __name__ == '__main__':
     print __doc__
     try:
         img_fn = sys.argv[1]
-    except: 
+    except:
         img_fn = '../cpp/baboon.jpg'
 
     img = cv2.imread(img_fn)
     if img is None:
         print 'Failed to load image file:', img_fn
         sys.exit(1)
-    
+
     filters = build_filters()
 
     with Timer('running single-threaded'):

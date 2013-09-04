@@ -1886,4 +1886,3 @@ protected:
 };
 
 TEST(Imgproc_Filtering, supportedFormats) { CV_FilterSupportedFormatsTest test; test.safe_run(); }
-

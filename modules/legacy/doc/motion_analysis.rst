@@ -78,5 +78,3 @@ Calculates the optical flow for two images using Lucas-Kanade algorithm.
     :param vely: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
 
 The function computes the flow for every pixel of the first input image using the Lucas and Kanade algorithm [Lucas81]_. The function is obsolete. To track sparse features, use :ocv:func:`calcOpticalFlowPyrLK`. To track all the pixels, use :ocv:func:`calcOpticalFlowFarneback`.
-
-

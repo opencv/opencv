@@ -510,6 +510,32 @@ protected:
             return;
         }
     #endif
+        // Test read and write
+        FileStorage fs( "PCA_store.yml", FileStorage::WRITE );
+        rPCA.write( fs );
+        fs.release();
+
+        PCA lPCA;
+        fs.open( "PCA_store.yml", FileStorage::READ );
+        lPCA.read( fs.root() );
+        err = norm( rPCA.eigenvectors, lPCA.eigenvectors, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
+        err = norm( rPCA.eigenvalues, lPCA.eigenvalues, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
+        err = norm( rPCA.mean, lPCA.mean, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
     }
 };
 

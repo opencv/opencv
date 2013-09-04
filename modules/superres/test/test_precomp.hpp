@@ -56,6 +56,7 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/ts.hpp"
 #include "opencv2/superres.hpp"
+#include "cvconfig.h"
 #include "input_array_utility.hpp"
 
 #endif

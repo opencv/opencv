@@ -57,4 +57,6 @@
 #include "opencv2/gpucodec.hpp"
 #include "opencv2/highgui.hpp"
 
+#include "cvconfig.h"
+
 #endif
