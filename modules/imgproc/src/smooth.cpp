@@ -1951,7 +1951,7 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
         if( ok ) return;
     }
 #endif
-    
+
     vector<float> _color_weight(cn*256);
     vector<float> _space_weight(d*d);
     vector<int> _space_ofs(d*d);
