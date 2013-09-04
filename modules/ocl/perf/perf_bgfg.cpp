@@ -79,7 +79,7 @@ PERF_TEST_P(VideoMOGFixture, Video_MOG,
     const string inputFile = perf::TestBase::getDataPath(get<0>(params));
     const int cn = get<1>(params);
     const float learningRate = static_cast<float>(get<2>(params));
-    
+
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -296,7 +296,7 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, Video_MOG2,
                 mog2(frame, foreground);
         }
         cv::Mat background;
-        TEST_CYCLE() 
+        TEST_CYCLE()
             mog2.getBackgroundImage(background);
 
         SANITY_CHECK(background);
@@ -334,4 +334,3 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, Video_MOG2,
         OCL_PERF_ELSE
 }
 #endif
-
