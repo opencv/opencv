@@ -1858,4 +1858,4 @@ namespace cv
 #  pragma warning( pop)
 #endif
 
-#endif /* __OPENCV_GPU_HPP__ */
+#endif /* __OPENCV_OCL_HPP__ */

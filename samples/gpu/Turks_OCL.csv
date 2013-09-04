@@ -1,0 +1,19 @@
+NAME,DESCRIPTION,ACCURACY,DIFFERENCE,CPU (ms),GPU (ms),SPEEDUP,GPUTOTAL (ms),TOTALSPEEDUP,GPU Min (ms),GPU Max (ms), Standard deviation (ms)
+mog,768x576.avi; channels: 1; learningRate: 0,Pass,0.00,41.543,3.177,13.077,8.804,4.719,2.774,4.097,0.408
+,768x576.avi; channels: 3; learningRate: 0,Pass,0.00,51.060,5.161,9.893,16.798,3.040,3.908,7.387,1.165
+,768x576.avi; channels: 1; learningRate: 0.01,Pass,0.00,127.895,56.418,2.267,63.292,2.021,55.627,58.949,0.886
+,768x576.avi; channels: 3; learningRate: 0.01,Pass,0.00,116.244,60.074,1.935,74.874,1.553,59.768,60.591,0.259
+mog2,768x576.avi; channels: 1,Pass,0.00,63.973,21.280,3.006,31.499,2.031,20.447,22.332,0.537
+,768x576.avi; channels: 3,Pass,0.00,77.223,22.590,3.418,37.380,2.066,22.241,23.121,0.282
+,768x576.avi; channels: 4,Pass,0.00,74.764,23.359,3.201,32.791,2.280,22.625,23.928,0.444
+mog2_GetBackgroundImage,768x576.avi; channels: 3,Pass,0.00,87.346,23.326,3.745,33.537,2.604,22.723,24.371,0.511
+
+Average GPU speedup: 5.068
+exceeded: 8 (100.000%)
+passed: 0 (0.000%)
+failed: 0 (0.000%)
+
+Average GPUTOTAL speedup: 2.539
+exceeded: 8 (100.000%)
+passed: 0 (0.000%)
+failed: 0 (0.000%)
