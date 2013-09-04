@@ -111,4 +111,8 @@ using namespace cv;
             CV_TEST_FAIL_NO_IMPL();
 #endif
 
+#define OCL_TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); ocl::finish(), stopTimer())
+#define OCL_TEST_CYCLE() for(; startTimer(), next(); ocl::finish(), stopTimer())
+#define OCL_TEST_CYCLE_MULTIRUN(runsNum) for(declare.runs(runsNum); startTimer(), next(); stopTimer()) for(int r = 0; r < runsNum; ocl::finish(), ++r)
+
 #endif

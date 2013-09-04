@@ -49,7 +49,7 @@ using namespace perf;
 
 ///////////// Canny ////////////////////////
 
-PERF_TEST(CannyFixture, DISABLED_Canny) // TODO difference between implmentations
+PERF_TEST(CannyFixture, Canny)
 {
     Mat img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE),
             edges(img.size(), CV_8UC1);
@@ -61,17 +61,16 @@ PERF_TEST(CannyFixture, DISABLED_Canny) // TODO difference between implmentation
     {
         ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
 
-        TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
+        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
         oclEdges.download(edges);
-
-        SANITY_CHECK(edges);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() Canny(img, edges, 50.0, 100.0);
-
-        SANITY_CHECK(edges);
     }
     else
         OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
 }

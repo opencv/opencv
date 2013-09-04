@@ -50,6 +50,13 @@ namespace cv
 # pragma warning(disable: 4748)
 #endif
 
+#if defined HAVE_IPP && IPP_VERSION_MAJOR >= 7
+#define USE_IPP_DFT 1
+#else
+#undef USE_IPP_DFT
+#endif
+
+
 /****************************************************************************************\
                                Discrete Fourier Transform
 \****************************************************************************************/
@@ -455,7 +462,7 @@ template<> struct DFT_VecR4<float>
 
 #endif
 
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
 static void ippsDFTFwd_CToC( const Complex<float>* src, Complex<float>* dst,
                              const void* spec, uchar* buf)
 {
@@ -517,7 +524,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
      int nf, const int* factors, const int* itab,
      const Complex<T>* wave, int tab_size,
      const void*
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
      spec
 #endif
      , Complex<T>* buf,
@@ -537,7 +544,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
     T scale = (T)_scale;
     int tab_step;
 
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
     if( spec )
     {
         if( !inv )
@@ -957,7 +964,7 @@ DFT( const Complex<T>* src, Complex<T>* dst, int n,
 template<typename T> static void
 RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
          const Complex<T>* wave, int tab_size, const void*
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
          spec
 #endif
          ,
@@ -968,11 +975,18 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
     int j, n2 = n >> 1;
     dst += complex_output;
 
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
     if( spec )
     {
         ippsDFTFwd_RToPack( src, dst, spec, (uchar*)buf );
-        goto finalize;
+        if( complex_output )
+        {
+            dst[-1] = dst[0];
+            dst[0] = 0;
+            if( (n & 1) == 0 )
+                dst[n] = 0;
+        }
+        return;
     }
 #endif
     assert( tab_size == n );
@@ -1056,15 +1070,11 @@ RealDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         }
     }
 
-#ifdef HAVE_IPP
-finalize:
-#endif
     if( complex_output && (n & 1) == 0 )
     {
         dst[-1] = dst[0];
         dst[0] = 0;
-        if( (n & 1) == 0 )
-            dst[n] = 0;
+        dst[n] = 0;
     }
 }
 
@@ -1076,7 +1086,7 @@ template<typename T> static void
 CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
          const Complex<T>* wave, int tab_size,
          const void*
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
          spec
 #endif
          , Complex<T>* buf,
@@ -1097,7 +1107,7 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         ((T*)src)[1] = src[0];
         src++;
     }
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
     if( spec )
     {
         ippsDFTInv_PackToR( src, dst, spec, (uchar*)buf );
@@ -1225,7 +1235,7 @@ CCSIDFT( const T* src, T* dst, int n, int nf, int* factors, const int* itab,
         }
     }
 
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
 finalize:
 #endif
     if( complex_input )
@@ -1458,7 +1468,7 @@ static void CCSIDFT_64f( const double* src, double* dst, int n, int nf, int* fac
 
 }
 
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
 typedef IppStatus (CV_STDCALL* IppDFTGetSizeFunc)(int, int, IppHintAlgorithm, int*, int*, int*);
 typedef IppStatus (CV_STDCALL* IppDFTInitFunc)(int, int, IppHintAlgorithm, void*, uchar*);
 #endif
@@ -1486,7 +1496,7 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
     int elem_size = (int)src.elemSize1(), complex_elem_size = elem_size*2;
     int factors[34];
     bool inplace_transform = false;
-#ifdef HAVE_IPP
+#ifdef USE_IPP_DFT
     AutoBuffer<uchar> ippbuf;
     int ipp_norm_flag = !(flags & DFT_SCALE) ? 8 : inv ? 2 : 1;
 #endif
@@ -1546,12 +1556,8 @@ void cv::dft( InputArray _src0, OutputArray _dst, int flags, int nonzero_rows )
         }
 
         spec = 0;
-#ifdef HAVE_IPP
-        if(
-#if IPP_VERSION_MAJOR >= 7
-           depth == CV_32F && // IPP 7.x and 8.0 have bug somewhere in double-precision DFT
-#endif
-           len*count >= 64 ) // use IPP DFT if available
+#ifdef USE_IPP_DFT
+        if( len*count >= 64 ) // use IPP DFT if available
         {
             int specsize=0, initsize=0, worksize=0;
             IppDFTGetSizeFunc getSizeFunc = 0;

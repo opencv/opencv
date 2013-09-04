@@ -368,8 +368,8 @@ PERF_TEST_P(ImagePair, OpticalFlowDual_TVL1,
 
         TEST_CYCLE() d_alg(d_frame0, d_frame1, u, v);
 
-        CUDA_SANITY_CHECK(u, 1e-2);
-        CUDA_SANITY_CHECK(v, 1e-2);
+        CUDA_SANITY_CHECK(u, 1e-1);
+        CUDA_SANITY_CHECK(v, 1e-1);
     }
     else
     {

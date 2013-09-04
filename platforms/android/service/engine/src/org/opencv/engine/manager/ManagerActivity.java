@@ -107,6 +107,10 @@ public class ManagerActivity extends Activity
             {
                 HardwarePlatformView.setText("Tegra 3");
             }
+            else if (HardwareDetector.PLATFORM_TEGRA4i == Platfrom)
+            {
+                HardwarePlatformView.setText("Tegra 4i");
+            }
             else
             {
                 HardwarePlatformView.setText("Tegra 4");
