@@ -720,40 +720,18 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
         {
             this_er->max_probability_ancestor = this_er;
             this_er->min_probability_ancestor = this_er;
-            //cout << "This is the root so now min_p is " <<  this_er->probability << " and  max_p is " <<  this_er->probability << endl;
         }
         else
         {
             this_er->max_probability_ancestor = (this_er->probability > parent->max_probability_ancestor->probability)? this_er :  parent->max_probability_ancestor;
 
             this_er->min_probability_ancestor = (this_er->probability < parent->min_probability_ancestor->probability)? this_er :  parent->min_probability_ancestor;
-            //cout << "This is NOT the root so now min_p is " <<  this_er->min_probability_ancestor->probability << " and  max_p is " <<  this_er->max_probability_ancestor->probability << endl;
 
-            /*
             if ( (this_er->max_probability_ancestor->probability > minProbability) && (this_er->max_probability_ancestor->probability - this_er->min_probability_ancestor->probability > minProbabilityDiff))
             {
-                cout << "      local máxima detcected on " <<  this_er->max_probability_ancestor->probability << endl;
-                this_er->max_probability_ancestor->local_maxima = true;
-                this_er->max_probability_ancestor = this_er;
-                this_er->min_probability_ancestor = this_er;
-                cout << "      so now min_p is " <<  this_er->min_probability_ancestor->probability << " and  max_p is " <<  this_er->max_probability_ancestor->probability << endl;
-            }
-            else if ((this_er->min_probability_ancestor->local_maxima) && (this_er->probability > (this_er->min_probability_ancestor->probability))) {
-                cout << "      NO local máxima detcected on " <<  this_er->max_probability_ancestor->probability << endl;
-                cout << "      and min_p was local maxima and this_er->p > min_p" << endl;
-                cout << "      so mark as local maxima  "<<  this_er->max_probability_ancestor << endl;
-                cout << "      and unmark "<< this_er->min_probability_ancestor << endl;
-                this_er->max_probability_ancestor->local_maxima = true;
-                this_er->min_probability_ancestor->local_maxima = false;
-
-            }*/
-            if ( (this_er->max_probability_ancestor->probability > minProbability) && (this_er->max_probability_ancestor->probability - this_er->min_probability_ancestor->probability > minProbabilityDiff))
-            {
-              //cout << "      local máxima detcected on " <<  this_er->max_probability_ancestor->probability << endl;
               this_er->max_probability_ancestor->local_maxima = true;
               if ((this_er->max_probability_ancestor == this_er) && (this_er->parent->local_maxima))
               {
-                //cout << "      local máxima undetcected on " <<  this_er->parent->probability << endl;
                 this_er->parent->local_maxima = false;
               }
             }
