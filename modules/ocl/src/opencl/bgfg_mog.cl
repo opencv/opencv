@@ -134,7 +134,11 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
     __global float* weight, __global T_MEAN_VAR* mean, __global T_MEAN_VAR* var,
     int frame_row, int frame_col, int frame_step, int fgmask_step,
     int weight_step, int mean_step, int var_step,
+<<<<<<< HEAD
+    float varThreshold, float backgroundRatio, int fgmask_offset_x, 
+=======
     float varThreshold, float backgroundRatio, int fgmask_offset_x,
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
     int x = get_global_id(0);
@@ -142,6 +146,10 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
 
     if (x < frame_col && y < frame_row)
     {
+<<<<<<< HEAD
+    
+=======
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
         T_MEAN_VAR pix = cvt(frame[(y + frame_offset_y) * frame_step + (x + frame_offset_x)]);
 
         int kHit = -1;
@@ -178,10 +186,25 @@ __kernel void mog_withoutLearning_kernel(__global T_FRAME* frame, __global uchar
                 }
             }
         }
+<<<<<<< HEAD
+        
+=======
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
         if(kHit < 0 || kHit >= kForeground)
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar) (-1);
         else
             fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar) (0);
+<<<<<<< HEAD
+        
+    }
+}
+
+__kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global uchar* fgmask,
+    __global float* weight, __global float* sortKey, __global T_MEAN_VAR* mean, 
+    __global T_MEAN_VAR* var, int frame_row, int frame_col, int frame_step, int fgmask_step,
+    int weight_step, int sortKey_step, int mean_step, int var_step,
+    float varThreshold, float backgroundRatio, float learningRate, float minVar, 
+=======
     }
 }
 
@@ -190,6 +213,7 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global int* fgm
     __global T_MEAN_VAR* var, int frame_row, int frame_col, int frame_step, int fgmask_step,
     int weight_step, int sortKey_step, int mean_step, int var_step,
     float varThreshold, float backgroundRatio, float learningRate, float minVar,
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     int fgmask_offset_x, int fgmask_offset_y, int frame_offset_x, int frame_offset_y)
 {
     const float w0 = 0.05f;
@@ -199,6 +223,134 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global int* fgm
     int x = get_global_id(0);
     int y = get_global_id(1);
 
+<<<<<<< HEAD
+    if(x < frame_col && y < frame_row)
+    {
+
+        float wsum = 0.0f;
+        int kHit = -1;
+        int kForeground = -1;
+        int k = 0;
+
+        T_MEAN_VAR pix = cvt(frame[(y + frame_offset_y) * frame_step + (x + frame_offset_x)]);
+    
+        for (; k < (NMIXTURES); ++k)
+        {
+            float w = weight[(k * frame_row + y) * weight_step + x];
+            wsum += w;
+
+            if (w < 1.192092896e-07f)
+                break;
+
+            T_MEAN_VAR mu = mean[(k * frame_row + y) * mean_step + x];
+            T_MEAN_VAR _var = var[(k * frame_row + y) * var_step + x];
+
+            T_MEAN_VAR diff = pix - mu;
+
+            if (sqr(diff) < varThreshold * sum(_var))
+            {
+                wsum -= w;
+                float dw = learningRate * (1.0f - w);
+
+                _var = clamp1(_var, learningRate, diff, minVar);
+
+                float sortKey_prev = w / sqr(sum(_var));
+                sortKey[(k * frame_row + y) * sortKey_step + x] = sortKey_prev;
+
+                float weight_prev = w + dw;
+                weight[(k * frame_row + y) * weight_step + x] = weight_prev;
+
+                T_MEAN_VAR mean_prev = mu + learningRate * diff;
+                mean[(k * frame_row + y) * mean_step + x] = mean_prev;
+
+                T_MEAN_VAR var_prev = _var;
+                var[(k * frame_row + y) * var_step + x] = var_prev;
+
+                int k1 = k - 1;
+
+                if (k1 >= 0)
+                {
+                    float sortKey_next = sortKey[(k1 * frame_row + y) * sortKey_step + x];
+                    float weight_next = weight[(k1 * frame_row + y) * weight_step + x];
+                    T_MEAN_VAR mean_next = mean[(k1 * frame_row + y) * mean_step + x];
+                    T_MEAN_VAR var_next = var[(k1 * frame_row + y) * var_step + x];
+
+                    for (; sortKey_next < sortKey_prev && k1 >= 0; --k1)
+                    {
+                        sortKey[(k1 * frame_row + y) * sortKey_step + x] = sortKey_prev;
+                        sortKey[((k1 + 1) * frame_row + y) * sortKey_step + x] = sortKey_next;
+
+                        weight[(k1 * frame_row + y) * weight_step + x] = weight_prev;
+                        weight[((k1 + 1) * frame_row + y) * weight_step + x] = weight_next;
+
+                        mean[(k1 * frame_row + y) * mean_step + x] = mean_prev;
+                        mean[((k1 + 1) * frame_row + y) * mean_step + x] = mean_next;
+
+                        var[(k1 * frame_row + y) * var_step + x] = var_prev;
+                        var[((k1 + 1) * frame_row + y) * var_step + x] = var_next;
+
+                        sortKey_prev = sortKey_next;
+                        sortKey_next = k1 > 0 ? sortKey[((k1 - 1) * frame_row + y) * sortKey_step + x] : 0.0f;
+
+                        weight_prev = weight_next;
+                        weight_next = k1 > 0 ? weight[((k1 - 1) * frame_row + y) * weight_step + x] : 0.0f;
+
+                        mean_prev = mean_next;
+                        mean_next = k1 > 0 ? mean[((k1 - 1) * frame_row + y) * mean_step + x] : (T_MEAN_VAR)F_ZERO;
+
+                        var_prev = var_next;
+                        var_next = k1 > 0 ? var[((k1 - 1) * frame_row + y) * var_step + x] : (T_MEAN_VAR)F_ZERO;
+                    }
+                }
+
+                kHit = k1 + 1;
+                break;
+            }
+        }
+
+        if (kHit < 0)
+        {
+            kHit = k = k < ((NMIXTURES) - 1) ? k : ((NMIXTURES) - 1);
+            wsum += w0 - weight[(k * frame_row + y) * weight_step + x];
+
+            weight[(k * frame_row + y) * weight_step + x] = w0;
+            mean[(k * frame_row + y) * mean_step + x] = pix;
+            #if defined (CN1)
+            var[(k * frame_row + y) * var_step + x] = (T_MEAN_VAR)(var0);
+            #else
+            var[(k * frame_row + y) * var_step + x] = (T_MEAN_VAR)(var0, var0, var0, var0);
+            #endif
+            sortKey[(k * frame_row + y) * sortKey_step + x] = sk0;
+        }
+        else
+        {
+            for( ; k < (NMIXTURES); k++)
+                wsum += weight[(k * frame_row + y) * weight_step + x];
+        }
+
+        float wscale = 1.0f / wsum;
+        wsum = 0;
+        for (k = 0; k < (NMIXTURES); ++k)
+        {
+            float w = weight[(k * frame_row + y) * weight_step + x];
+            wsum += w *= wscale;
+
+            weight[(k * frame_row + y) * weight_step + x] = w;
+            sortKey[(k * frame_row + y) * sortKey_step + x] *= wscale;
+
+            if (wsum > backgroundRatio && kForeground < 0)
+                kForeground = k + 1;
+        }
+        if(kHit >= kForeground)
+            fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar)(-1);
+        else
+            fgmask[(y + fgmask_offset_y) * fgmask_step + (x + fgmask_offset_x)] = (uchar)(0);
+    }
+}
+
+__kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_VAR* mean, __global T_FRAME* dst,
+    int dst_row, int dst_col, int weight_step, int mean_step, int dst_step, 
+=======
     if(x >= frame_col || y >= frame_row) return;
     float wsum = 0.0f;
     int kHit = -1;
@@ -320,6 +472,7 @@ __kernel void mog_withLearning_kernel(__global T_FRAME* frame, __global int* fgm
 
 __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_VAR* mean, __global T_FRAME* dst,
     int dst_row, int dst_col, int weight_step, int mean_step, int dst_step,
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     float backgroundRatio)
 {
     int x = get_global_id(0);
@@ -347,9 +500,15 @@ __kernel void getBackgroundImage_kernel(__global float* weight, __global T_MEAN_
     }
 }
 
+<<<<<<< HEAD
+__kernel void mog2_kernel(__global T_FRAME * frame, __global uchar* fgmask, __global float* weight, __global T_MEAN_VAR * mean,
+        __global uchar* modesUsed, __global float* variance, int frame_row, int frame_col, int frame_step, 
+        int fgmask_step, int weight_step, int mean_step, int modesUsed_step, int var_step, float alphaT, float alpha1, float prune, 
+=======
 __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __global float* weight, __global T_MEAN_VAR * mean,
         __global int* modesUsed, __global float* variance, int frame_row, int frame_col, int frame_step,
         int fgmask_step, int weight_step, int mean_step, int modesUsed_step, int var_step, float alphaT, float alpha1, float prune,
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
         int detectShadows_flag, int fgmask_offset_x, int fgmask_offset_y, int frame_offset_x, int frame_offset_y, __constant con_srtuct_t* constants)
 {
     int x = get_global_id(0);
@@ -501,8 +660,13 @@ __kernel void mog2_kernel(__global T_FRAME * frame, __global int* fgmask, __glob
     }
 }
 
+<<<<<<< HEAD
+__kernel void getBackgroundImage2_kernel(__global uchar* modesUsed, __global float* weight, __global T_MEAN_VAR* mean,
+    __global T_FRAME* dst, float c_TB, int modesUsed_row, int modesUsed_col, int modesUsed_step, int weight_step, 
+=======
 __kernel void getBackgroundImage2_kernel(__global int* modesUsed, __global float* weight, __global T_MEAN_VAR* mean,
     __global T_FRAME* dst, float c_TB, int modesUsed_row, int modesUsed_col, int modesUsed_step, int weight_step,
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     int mean_step, int dst_step, int dst_x, int dst_y)
 {
     int x = get_global_id(0);

@@ -119,7 +119,11 @@ cv::ocl::oclMat createMat_ocl(Size size, int type, bool useRoi)
 }
 
 cv::ocl::oclMat loadMat_ocl(const Mat& m, bool useRoi)
+<<<<<<< HEAD
+{ 
+=======
 {
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     CV_Assert(m.type() == CV_8UC1 || m.type() == CV_8UC3);
     cv::ocl::oclMat d_m;
     d_m = createMat_ocl(m.size(), m.type(), useRoi);
@@ -130,11 +134,19 @@ cv::ocl::oclMat loadMat_ocl(const Mat& m, bool useRoi)
     d_m.locateROI(ls, pt);
 
     Rect roi(pt.x, pt.y, d_m.size().width, d_m.size().height);
+<<<<<<< HEAD
+    
+    cv::ocl::oclMat m_ocl(m);
+
+    cv::ocl::oclMat d_m_roi(d_m, roi);
+    
+=======
 
     cv::ocl::oclMat m_ocl(m);
 
     cv::ocl::oclMat d_m_roi(d_m, roi);
 
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     m_ocl.copyTo(d_m);
     return d_m;
 }

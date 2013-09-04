@@ -43,7 +43,11 @@
 //
 //M*/
 
+<<<<<<< HEAD
+#include "precomp.hpp"
+=======
 #include "test_precomp.hpp"
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
 
 #ifdef HAVE_OPENCL
 
@@ -191,7 +195,11 @@ TEST_P(mog2, getBackgroundImage)
     if (useGray)
         return;
 
+<<<<<<< HEAD
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
+=======
     std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "video/768x576.avi";
+>>>>>>> c42d61e4646d221c32e573c08c229a387074de0b
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
