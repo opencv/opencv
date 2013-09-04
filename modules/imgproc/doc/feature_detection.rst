@@ -598,7 +598,7 @@ Draws two groups of lines in blue and red, counting the non overlapping (mismatc
 
     :param lines2: The second group of lines. They visualized in red color.
 
-    :param image: Optional image, where the lines will be drawn. The image is converted to grayscale before displaying, leaving lines1 and lines2 in the above mentioned colors.
+    :param image: Optional image, where the lines will be drawn. The image should be color in order for lines1 and lines2 to be drawn in the above mentioned colors.
 
 
 

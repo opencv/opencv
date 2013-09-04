@@ -1220,12 +1220,9 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
 
     if (_image.needed())
     {
-        Mat Ig;
-        if (_image.channels() == 1)
-        {
-            cvtColor(_image, _image, CV_GRAY2BGR);
-        }
-        CV_Assert(_image.getMatRef().isContinuous() && I1.isContinuous() && I2.isContinuous());
+        CV_Assert(_image.channels() == 3);
+        Mat img = _image.getMatRef();
+        CV_Assert(img.isContinuous() && I1.isContinuous() && I2.isContinuous());
 
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
@@ -1233,11 +1230,12 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1
             uchar i2 = I2.data[i];
             if (i1 || i2)
             {
-                _image.getMatRef().data[3*i + 1] = 0;
-                if (i1) _image.getMatRef().data[3*i] = 255;
-                else _image.getMatRef().data[3*i] = 0;
-                if (i2) _image.getMatRef().data[3*i + 2] = 255;
-                else _image.getMatRef().data[3*i + 2] = 0;
+                unsigned int base_idx = i * 3;
+                if (i1) img.data[base_idx] = 255;
+                else img.data[base_idx] = 0;
+                img.data[base_idx + 1] = 0;
+                if (i2) img.data[base_idx + 2] = 255;
+                else img.data[base_idx + 2] = 0;
             }
         }
     }
