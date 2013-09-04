@@ -579,7 +579,7 @@ LineSegmentDetector::drawSegments
 ---------------------------------
 Draws the line segments on a given image.
 
-.. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, const InputArray lines)
+.. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, InputArray lines)
 
     :param image: The image, where the liens will be drawn. Should be bigger or equal to the image, where the lines were found.
 
@@ -590,7 +590,7 @@ LineSegmentDetector::compareSegments
 ------------------------------------
 Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
 
-.. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, InputOutputArray _image = noArray())
+.. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray())
 
     :param size: The size of the image, where lines1 and lines2 were found.
 

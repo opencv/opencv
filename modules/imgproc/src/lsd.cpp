@@ -214,7 +214,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    void drawSegments(InputOutputArray _image, const InputArray lines);
+    void drawSegments(InputOutputArray _image, InputArray lines);
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
@@ -226,7 +226,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    int compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, InputOutputArray _image = noArray());
+    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray());
 
 private:
     Mat image;
@@ -335,7 +335,7 @@ private:
  * @param rec       Return: The generated rectangle.
  */
     void region2rect(const std::vector<RegionPoint>& reg, const int reg_size, const double reg_angle,
-                    const double prec, const double p, rect& rec) const;
+                     const double prec, const double p, rect& rec) const;
 
 /**
  * Compute region's angle as the principal inertia axis of the region.
@@ -409,7 +409,7 @@ LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, dou
               _n_bins > 0);
 }
 
-void LineSegmentDetectorImpl::detect(const InputArray _image, OutputArray _lines,
+void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
                 OutputArray _width, OutputArray _prec, OutputArray _nfa)
 {
     Mat_<double> img = _image.getMat();
@@ -1149,7 +1149,7 @@ inline bool LineSegmentDetectorImpl::isAligned(const int& address, const double&
 }
 
 
-void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, const InputArray lines)
+void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray lines)
 {
     CV_Assert(!_image.empty() && (_image.channels() == 1 || _image.channels() == 3));
 
@@ -1185,7 +1185,7 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, const InputA
 }
 
 
-int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2,  InputOutputArray _image)
+int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image)
 {
     Size sz = size;
     if (_image.needed() && _image.size() != size) sz = _image.size();
