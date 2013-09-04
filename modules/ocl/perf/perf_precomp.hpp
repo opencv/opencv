@@ -59,6 +59,7 @@
 #include <vector>
 #include <numeric>
 
+#include "cvconfig.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -93,7 +94,7 @@ using namespace cv;
 
 #ifdef HAVE_OPENCV_GPU
 #define OCL_PERF_ELSE               \
-        if (RUN_GPU_IMPL)          \
+        if (RUN_GPU_IMPL)           \
             CV_TEST_FAIL_NO_IMPL(); \
         else                        \
             CV_TEST_FAIL_NO_IMPL();
