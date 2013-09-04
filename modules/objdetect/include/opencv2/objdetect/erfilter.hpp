@@ -190,8 +190,13 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = P
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
+<<<<<<< HEAD
 CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
                                                   float minProbability = 0.85);
+=======
+CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL,
+                                                  float minProbability = 0.5);
+>>>>>>> fixed a typo error in the default min_Probability param of CreateERFilterNM2
 
 }
 #endif // _OPENCV_ERFILTER_HPP_
