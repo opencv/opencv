@@ -194,7 +194,7 @@ namespace cv { namespace cuda { namespace device
     }
 
     template <typename T>
-    void call_resize_nearest_tex(const PtrStepSz<T>& src, const PtrStepSz<T>& srcWhole, int yoff, int xoff, const PtrStepSz<T>& dst, float fy, float fx)
+    void call_resize_nearest_tex(const PtrStepSz<T>& /*src*/, const PtrStepSz<T>& srcWhole, int yoff, int xoff, const PtrStepSz<T>& dst, float fy, float fx)
     {
         const dim3 block(32, 8);
         const dim3 grid(divUp(dst.cols, block.x), divUp(dst.rows, block.y));
@@ -301,7 +301,7 @@ namespace cv { namespace cuda { namespace device
 
     template <typename T> struct ResizeNearestDispatcher
     {
-        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& srcWhole, int yoff, int xoff, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
+        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& /*srcWhole*/, int /*yoff*/, int /*xoff*/, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
         {
             call_resize_nearest_glob(src, dst, fy, fx, stream);
         }
@@ -339,7 +339,7 @@ namespace cv { namespace cuda { namespace device
 
     template <typename T> struct ResizeLinearDispatcher
     {
-        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& srcWhole, int yoff, int xoff, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
+        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& /*srcWhole*/, int /*yoff*/, int /*xoff*/, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
         {
             call_resize_linear_glob(src, dst, fy, fx, stream);
         }
@@ -377,7 +377,7 @@ namespace cv { namespace cuda { namespace device
 
     template <typename T> struct ResizeCubicDispatcher
     {
-        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& srcWhole, int yoff, int xoff, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
+        static void call(const PtrStepSz<T>& src, const PtrStepSz<T>& /*srcWhole*/, int /*yoff*/, int /*xoff*/, const PtrStepSz<T>& dst, float fy, float fx, cudaStream_t stream)
         {
             call_resize_cubic_glob(src, dst, fy, fx, stream);
         }
