@@ -638,6 +638,48 @@ The keypoint constructors
     :param _class_id: object id
 
 
+KeyPoint::convert
+--------------------
+
+This method converts vector of keypoints to vector of points or the reverse, where each keypoint is assigned the same size and the same orientation.
+
+.. ocv:function:: void KeyPoint::convert(const std::vector<KeyPoint>& keypoints, std::vector<Point2f>& points2f, const std::vector<int>& keypointIndexes=std::vector<int>())
+
+.. ocv:function:: void KeyPoint::convert(const std::vector<Point2f>& points2f, std::vector<KeyPoint>& keypoints, float size=1, float response=1, int octave=0, int class_id=-1)
+
+.. ocv:pyfunction:: cv2.KeyPoint_convert(keypoints[, keypointIndexes]) -> points2f
+
+.. ocv:pyfunction:: cv2.KeyPoint_convert(points2f[, size[, response[, octave[, class_id]]]]) -> keypoints
+
+    :param keypoints: Keypoints obtained from any feature detection algorithm like SIFT/SURF/ORB
+
+    :param points2f: Array of (x,y) coordinates of each keypoint
+
+    :param keypointIndexes: Array of indexes of keypoints to be converted to points. (Acts like a mask to convert only specified keypoints)
+
+    :param _size: keypoint diameter
+
+    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
+
+    :param _octave: pyramid octave in which the keypoint has been detected
+
+    :param _class_id: object id
+
+
+KeyPoint::overlap
+--------------------
+
+This method computes overlap for pair of keypoints. Overlap is the ratio between area of keypoint regions' intersection and area of keypoint regions' union (considering keypoint region as circle). If they don't overlap, we get zero. If they coincide at same location with same size, we get 1.
+
+.. ocv:function:: float KeyPoint::overlap(const KeyPoint& kp1, const KeyPoint& kp2)
+
+.. ocv:pyfunction:: cv2.KeyPoint_overlap(kp1, kp2) -> retval
+
+    :param kp1: First keypoint
+
+    :param kp2: Second keypoint
+
+
 DMatch
 ------
 .. ocv:class:: DMatch
