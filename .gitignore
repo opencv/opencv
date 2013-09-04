@@ -7,3 +7,4 @@ tegra/
 .sw[a-z]
 .*.swp
 tags
+*.autosave
