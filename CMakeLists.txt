@@ -840,6 +840,7 @@ if(BUILD_DOCS)
   endif()
   status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
+  status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
 endif()
 
 # ========================== samples and tests ==========================
