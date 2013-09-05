@@ -1,8 +1,6 @@
 #pragma once
 
 #include <opencv2/viz/types.hpp>
-#include <common.h>
-
 
 namespace cv
 {
