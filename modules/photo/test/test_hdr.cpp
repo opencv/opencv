@@ -202,5 +202,9 @@ TEST(Photo_CalibrateDebevec, regression)
     loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
 	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
 	calibrate->process(images, response, times);
-    checkEqual(expected, response, 1e-3f);
+    Mat diff = abs(response - expected);
+    diff = diff.mul(1.0f / response);
+    double max;
+    minMaxLoc(diff, NULL, &max);
+    ASSERT_FALSE(max > 0.1);
 }
