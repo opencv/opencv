@@ -142,7 +142,7 @@ PARAM_TEST_CASE(mog2, UseGray, DetectShadow, bool)
 
 TEST_P(mog2, Update)
 {
-    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
@@ -175,14 +175,9 @@ TEST_P(mog2, Update)
         mog2_gold(frame, foreground_gold);
 
         if (detectShadow)
-        {
-
-            EXPECT_MAT_SIMILAR(foreground_gold, foreground, 1e-2);
-        }
+            EXPECT_MAT_SIMILAR(foreground_gold, foreground, 15e-3)
         else
-        {
-            EXPECT_MAT_NEAR(foreground_gold, foreground, 0);
-        }
+            EXPECT_MAT_NEAR(foreground_gold, foreground, 0)
     }
 }
 
@@ -191,7 +186,7 @@ TEST_P(mog2, getBackgroundImage)
     if (useGray)
         return;
 
-    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "video/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
