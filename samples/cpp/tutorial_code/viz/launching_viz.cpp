@@ -1,9 +1,19 @@
+/**
+ * @file launching_viz.cpp
+ * @brief Launching visualization window
+ * @author Ozan Cagri Tonkal
+ */
+
 #include <opencv2/viz.hpp>
 #include <iostream>
 
 using namespace cv;
 using namespace std;
 
+/**
+ * @function help
+ * @brief Display instructions to use this tutorial program
+ */
 void help()
 {
     cout
@@ -11,10 +21,13 @@ void help()
     << "This program shows how to launch a 3D visualization window. You can stop event loop to continue executing. "
     << "You can access the same window via its name. You can run event loop for a given period of time. " << endl
     << "Usage:"                                                                     << endl
-    << "./window_demo"                                                              << endl
+    << "./launching_viz"                                                            << endl
     << endl;
 }
 
+/**
+ * @function main
+ */
 int main()
 {
     help();
@@ -41,10 +54,10 @@ int main()
     sameWindow.spinOnce(1, true);
     while(!sameWindow.wasStopped())
     {
-	/// Interact with window
-	
-	/// Event loop for 1 millisecond
-	sameWindow.spinOnce(1, true);
+        /// Interact with window
+        
+        /// Event loop for 1 millisecond
+        sameWindow.spinOnce(1, true);
     }
     
     /// Once more event loop is stopped
