@@ -44,33 +44,62 @@
 //
 //M*/
 #include "perf_precomp.hpp"
-
-///////////// PyrLKOpticalFlow ////////////////////////
-
 using namespace perf;
-using std::tr1::get;
-using std::tr1::tuple;
-using std::tr1::make_tuple;
-
+using namespace std;
+using namespace cv::ocl;
+using namespace cv;
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
-    defined(WIN32) /* assume that we have ffmpeg */
+    defined(WIN32)
 
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
 #else
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
 #endif
 
+static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output, int output_cn)
+{
+    for(int i = 0; i< (int)(input.size()); i++)
+    {
+        if(output_cn == 1)
+            cvtColor(input[i], output[i], COLOR_RGB2GRAY);
+        else
+            cvtColor(input[i], output[i], COLOR_RGB2RGBA);
+    }
+}
+
+static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer, vector<oclMat>& frame_buffer_ocl)
+{
+    cv::Mat frame;
+    std::vector<Mat> frame_buffer_init;
+    int nFrame = (int)frame_buffer.size();
+    for(int i = 0; i < nFrame; i++)
+    {
+        cap >> frame;
+        ASSERT_FALSE(frame.empty());
+        frame_buffer_init.push_back(frame);
+    }
+
+    if(cn == 1)
+        cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
+    else
+        frame_buffer = frame_buffer_init;
+
+    for(int i = 0; i < nFrame; i++)
+        frame_buffer_ocl.push_back(cv::ocl::oclMat(frame_buffer[i]));
+}
+
+///////////// MOG ////////////////////////
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef tuple<string, int, double> VideoMOGParamType;
 typedef TestBaseWithParam<VideoMOGParamType> VideoMOGFixture;
 
-PERF_TEST_P(VideoMOGFixture, Video_MOG,
-            ::testing::Combine(::testing::Values("768x576.avi", "1920x1080.avi"),
+PERF_TEST_P(VideoMOGFixture, MOG,
+            ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
             ::testing::Values(1, 3),
             ::testing::Values(0.0, 0.01)))
 {
@@ -80,108 +109,72 @@ PERF_TEST_P(VideoMOGFixture, Video_MOG,
     const int cn = get<1>(params);
     const float learningRate = static_cast<float>(get<2>(params));
 
+    const int nFrame = 5;
+
+    Mat foreground_cpu;
+    std::vector<Mat> frame_buffer(nFrame);
+    std::vector<oclMat> frame_buffer_ocl;
+
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
-    cv::Mat frame;
-
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    cv::Mat temp;
-    if (cn == 1)
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-    else
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-    cv::swap(temp, frame);
+    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
 
     if(RUN_PLAIN_IMPL)
     {
         cv::BackgroundSubtractorMOG mog;
         cv::Mat foreground;
 
-        mog(frame, foreground, learningRate);
-
-        for (int i = 0; i < 10; ++i)
+        TEST_CYCLE()
         {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-
-            cv::swap(temp, frame);
-
-            TEST_CYCLE()
-            mog(frame, foreground, learningRate);
-
-            SANITY_CHECK(foreground);
+            for (int i = 0; i < nFrame; i++)
+            {
+                mog(frame_buffer[i], foreground, learningRate);
+            }
         }
+        SANITY_CHECK(foreground);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::oclMat d_frame(frame);
         cv::ocl::MOG d_mog;
         cv::ocl::oclMat foreground;
         cv::Mat foreground_h;
-
-        d_mog(d_frame, foreground, learningRate);
-
-        for (int i = 0; i < 10; ++i)
+        OCL_TEST_CYCLE()
         {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-            cv::swap(temp, frame);
-
-            d_frame.upload(frame);
-
-            OCL_TEST_CYCLE()
-            d_mog(d_frame, foreground, learningRate);
-
-            foreground.download(foreground_h);
-            SANITY_CHECK(foreground_h);
+            for (int i = 0; i < nFrame; ++i)
+            {
+                d_mog(frame_buffer_ocl[i], foreground, learningRate);
+            }
         }
+        foreground.download(foreground_h);
+        SANITY_CHECK(foreground_h);
     }else
         OCL_PERF_ELSE
 }
 #endif
 
+///////////// MOG2 ////////////////////////
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef tuple<string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> VideoMOG2Fixture;
 
-PERF_TEST_P(VideoMOG2Fixture, Video_MOG2,
-            ::testing::Combine(::testing::Values("768x576.avi", "1920x1080.avi"),
+PERF_TEST_P(VideoMOG2Fixture, MOG2,
+            ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
             ::testing::Values(1, 3)))
 {
     VideoMOG2ParamType params = GetParam();
 
     const string inputFile = perf::TestBase::getDataPath(get<0>(params));
     const int cn = get<1>(params);
+    int nFrame = 5;
+
+    std::vector<cv::Mat> frame_buffer(nFrame);
+    std::vector<cv::ocl::oclMat> frame_buffer_ocl;
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
-    cv::Mat frame;
-
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    cv::Mat temp;
-    if (cn == 1)
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-    else
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-    cv::swap(temp, frame);
+    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
 
     if(RUN_PLAIN_IMPL)
     {
@@ -189,145 +182,88 @@ PERF_TEST_P(VideoMOG2Fixture, Video_MOG2,
         cv::Mat foreground;
 
         mog2.set("detectShadows", false);
-        mog2(frame, foreground);
 
-        for (int i = 0; i < 10; ++i)
+        TEST_CYCLE()
         {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-
-            cv::swap(temp, frame);
-
-            TEST_CYCLE()
-                mog2(frame, foreground);
-
-            SANITY_CHECK(foreground);
+            for (int i = 0; i < nFrame; i++)
+            {
+                mog2(frame_buffer[i], foreground);
+            }
         }
+        SANITY_CHECK(foreground);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::oclMat d_frame(frame);
         cv::ocl::MOG2 d_mog2;
         cv::ocl::oclMat foreground;
         cv::Mat foreground_h;
 
-        d_mog2(d_frame, foreground);
-
-        for (int i = 0; i < 10; ++i)
+        OCL_TEST_CYCLE()
         {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-            cv::swap(temp, frame);
-
-            d_frame.upload(frame);
-
-            OCL_TEST_CYCLE()
-                d_mog2(d_frame, foreground);
-
-            foreground.download(foreground_h);
-            SANITY_CHECK(foreground_h);
+            for (int i = 0; i < nFrame; i++)
+            {
+                d_mog2(frame_buffer_ocl[i], foreground);
+            }
         }
+        foreground.download(foreground_h);
+        SANITY_CHECK(foreground_h);
     }else
         OCL_PERF_ELSE
 }
 #endif
 
+///////////// MOG2_GetBackgroundImage //////////////////
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef TestBaseWithParam<VideoMOG2ParamType> Video_MOG2GetBackgroundImage;
 
-PERF_TEST_P(Video_MOG2GetBackgroundImage, Video_MOG2,
-            ::testing::Combine(::testing::Values("768x576.avi", "1920x1080.avi"),
+PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
+            ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
             ::testing::Values(1, 3)))
 {
     VideoMOG2ParamType params = GetParam();
 
     const string inputFile = perf::TestBase::getDataPath(get<0>(params));
     const int cn = get<1>(params);
+    int nFrame = 5;
+
+    std::vector<cv::Mat> frame_buffer(nFrame);
+    std::vector<cv::ocl::oclMat> frame_buffer_ocl;
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
-    cv::Mat frame;
-
-    cap >> frame;
-    ASSERT_FALSE(frame.empty());
-
-    cv::Mat temp;
-    if (cn == 1)
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-    else
-        cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-    cv::swap(temp, frame);
+    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
 
     if(RUN_PLAIN_IMPL)
     {
         cv::BackgroundSubtractorMOG2 mog2;
         cv::Mat foreground;
-
-        mog2.set("detectShadows", false);
-        mog2(frame, foreground);
-
-        for (int i = 0; i < 10; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-
-            cv::swap(temp, frame);
-
-            TEST_CYCLE()
-                mog2(frame, foreground);
-        }
         cv::Mat background;
+        mog2.set("detectShadows", false);
         TEST_CYCLE()
+        {
+            for (int i = 0; i < nFrame; i++)
+            {
+                mog2(frame_buffer[i], foreground);
+            }
             mog2.getBackgroundImage(background);
-
+        }
         SANITY_CHECK(background);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::oclMat d_frame(frame);
         cv::ocl::MOG2 d_mog2;
         cv::ocl::oclMat foreground;
         cv::Mat background_h;
-
-        d_mog2(d_frame, foreground);
-
-        for (int i = 0; i < 10; ++i)
-        {
-            cap >> frame;
-            ASSERT_FALSE(frame.empty());
-
-            cv::Mat temp;
-            if (cn == 1)
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2GRAY);
-            else
-                cv::cvtColor(frame, temp, cv::COLOR_BGR2BGRA);
-            cv::swap(temp, frame);
-
-            d_frame.upload(frame);
-            d_mog2(d_frame, foreground);
-        }
         cv::ocl::oclMat background;
-        OCL_TEST_CYCLE()
-            d_mog2.getBackgroundImage(background);
 
+        OCL_TEST_CYCLE()
+        {
+            for (int i = 0; i < nFrame; i++)
+            {
+                d_mog2(frame_buffer_ocl[i], foreground);
+            }
+            d_mog2.getBackgroundImage(background);
+        }
         background.download(background_h);
         SANITY_CHECK(background_h);
     }else
