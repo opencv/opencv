@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+ /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -201,7 +201,6 @@ TEST(Photo_CalibrateDebevec, regression)
 	loadExposureSeq(test_path + "exposures/", images, times);
     loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
 	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-    srand(1);
 	calibrate->process(images, response, times);
     checkEqual(expected, response, 1e-3f);
 }

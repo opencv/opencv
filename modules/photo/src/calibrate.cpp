@@ -43,7 +43,9 @@
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
+//#include "opencv2/highgui.hpp"
 #include "hdr_common.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -51,11 +53,12 @@ namespace cv
 class CalibrateDebevecImpl : public CalibrateDebevec
 {
 public:
-    CalibrateDebevecImpl(int samples, float lambda) :
+    CalibrateDebevecImpl(int samples, float lambda, bool random) :
         samples(samples),
         lambda(lambda),
         name("CalibrateDebevec"),
-        w(tringleWeights())
+        w(tringleWeights()),
+        random(random)
     {
     }
     
@@ -74,18 +77,35 @@ public:
         dst.create(256, 1, CV_32FCC);
         Mat result = dst.getMat();
         
+        std::vector<Point> sample_points;
+        if(random) {
+            for(int i = 0; i < samples; i++) {
+                sample_points.push_back(Point(rand() % images[0].cols, rand() % images[0].rows));
+            }
+        } else {
+            int x_points = sqrt(static_cast<double>(samples) * images[0].cols / images[0].rows);
+            int y_points = samples / x_points;
+            int step_x = images[0].cols / x_points;
+            int step_y = images[0].rows / y_points;
+
+            for(int i = 0, x = step_x / 2; i < x_points; i++, x += step_x) {
+                for(int j = 0, y = step_y; j < y_points; j++, y += step_y) {
+                    sample_points.push_back(Point(x, y));
+                }
+            }
+        }
+
         std::vector<Mat> result_split(channels);
         for(int channel = 0; channel < channels; channel++) {
-            Mat A = Mat::zeros(samples * images.size() + 257, 256 + samples, CV_32F);
+            Mat A = Mat::zeros(sample_points.size() * images.size() + 257, 256 + sample_points.size(), CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
             int eq = 0;
-            for(int i = 0; i < samples; i++) {
+            for(size_t i = 0; i < sample_points.size(); i++) {
 
-                int pos = 3 * (rand() % images[0].total()) + channel;
                 for(size_t j = 0; j < images.size(); j++) {
 
-                    int val = (images[j].ptr() + pos)[0];
+                    int val = images[j].ptr()[3*(sample_points[i].y * images[j].cols + sample_points[j].x) + channel];
                     A.at<float>(eq, val) = w.at<float>(val);
                     A.at<float>(eq, 256 + i) = -w.at<float>(val);
                     B.at<float>(eq, 0) = w.at<float>(val) * log(times[j]);        
@@ -115,11 +135,15 @@ public:
     float getLambda() const { return lambda; }
     void setLambda(float val) { lambda = val; }
 
+    bool getRandom() const { return random; }
+    void setRandom(bool val) { random = val; }
+
     void write(FileStorage& fs) const
     {
         fs << "name" << name
            << "samples" << samples
-           << "lambda" << lambda;
+           << "lambda" << lambda
+           << "random" << static_cast<int>(random);
     }
 
     void read(const FileNode& fn)
@@ -128,18 +152,21 @@ public:
         CV_Assert(n.isString() && String(n) == name);
         samples = fn["samples"];
         lambda = fn["lambda"];
+        int random_val = fn["random"];
+        random = static_cast<bool>(random_val);
     }
 
 protected:
     String name;
     int samples;
     float lambda;
+    bool random;
     Mat w;
 };
 
-Ptr<CalibrateDebevec> createCalibrateDebevec(int samples, float lambda)
+Ptr<CalibrateDebevec> createCalibrateDebevec(int samples, float lambda, bool random)
 {
-    return new CalibrateDebevecImpl(samples, lambda);
+    return new CalibrateDebevecImpl(samples, lambda, random);
 }
 
 class CalibrateRobertsonImpl : public CalibrateRobertson

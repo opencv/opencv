@@ -210,9 +210,12 @@ public:
     
     CV_WRAP virtual int getSamples() const = 0;
     CV_WRAP virtual void setSamples(int samples) = 0;
+
+    CV_WRAP virtual bool getRandom() const = 0;
+    CV_WRAP virtual void setRandom(bool random) = 0;
 };
 
-CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);
+CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, float lambda = 10.0f, bool random = false);
 
 // "Dynamic range improvement through multiple exposures", Robertson et al., 1999
 
