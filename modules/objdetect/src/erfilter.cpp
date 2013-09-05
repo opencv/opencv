@@ -1163,6 +1163,4 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
     filter->setMinProbability(minProbability);
     return (Ptr<ERFilter>)filter;
 }
-
 }
-
