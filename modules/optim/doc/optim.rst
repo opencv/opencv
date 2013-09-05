@@ -8,3 +8,5 @@ optim. Generic numerical optimization
     :maxdepth: 2
 
     linear_programming
+    downhill_simplex_method
+    primal_dual_algorithm
