@@ -1502,12 +1502,15 @@ class CV_EXPORTS BOWImgDescriptorExtractor
 public:
     BOWImgDescriptorExtractor( const Ptr<DescriptorExtractor>& dextractor,
                                const Ptr<DescriptorMatcher>& dmatcher );
+    BOWImgDescriptorExtractor( const Ptr<DescriptorMatcher>& dmatcher );
     virtual ~BOWImgDescriptorExtractor();
 
     void setVocabulary( const Mat& vocabulary );
     const Mat& getVocabulary() const;
     void compute( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& imgDescriptor,
                   std::vector<std::vector<int> >* pointIdxsOfClusters=0, Mat* descriptors=0 );
+    void compute( const Mat& keypointDescriptors, Mat& imgDescriptor,
+                  std::vector<std::vector<int> >* pointIdxsOfClusters=0 );
     // compute() is not constant because DescriptorMatcher::match is not constant
 
     int descriptorSize() const;
@@ -1518,41 +1521,6 @@ protected:
     Ptr<DescriptorExtractor> dextractor;
     Ptr<DescriptorMatcher> dmatcher;
 };
-
-/*
- * Class to match image descriptors using bag of visual words.
- */
-class CV_EXPORTS BOWImgDescriptorMatcher
-{
-public:
-    BOWImgDescriptorMatcher( const Ptr<DescriptorMatcher>& _dmatcher );
-    virtual ~BOWImgDescriptorMatcher();
-
-    /*
-     * Compute the matching of the current descriptor according to the vocabulary.
-     *
-     * vocDescriptor         the descriptors to match
-     * pointIdxsOfClusters   vector of matching
-     */
-    void compute( const Mat & descriptors, Mat& vocDescriptor, std::vector< std::vector< int > > * pointIdxsOfClusters = 0 );
-
-    /*
-     * Set the vocabulary
-     */
-    void setVocabulary( const Mat& vocabulary );
-    const Mat& getVocabulary() const;
-    
-    int descriptorSize() const;
-    int descriptorType() const;
-
-protected:
-    Mat vocabulary;
-    Ptr<DescriptorMatcher> dmatcher;
-
-private:
-    int _type;
-};
-
 
 } /* namespace cv */
 
