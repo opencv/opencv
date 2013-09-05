@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     setNumThreads(8);
 
     Ptr<BackgroundSubtractor> fgbg = createBackgroundSubtractorGMG(20, 0.7);
-    if (fgbg.empty())
+    if (!fgbg)
     {
         std::cerr << "Failed to create BackgroundSubtractor.GMG Algorithm." << std::endl;
         return -1;

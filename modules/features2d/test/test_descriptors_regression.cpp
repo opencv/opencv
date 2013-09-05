@@ -141,7 +141,7 @@ protected:
 
     void emptyDataTest()
     {
-        assert( !dextractor.empty() );
+        assert( dextractor );
 
         // One image.
         Mat image;
@@ -186,7 +186,7 @@ protected:
 
     void regressionTest()
     {
-        assert( !dextractor.empty() );
+        assert( dextractor );
 
         // Read the test image.
         string imgFilename =  string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
@@ -267,7 +267,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( !dextractor )
         {
             ts->printf(cvtest::TS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );

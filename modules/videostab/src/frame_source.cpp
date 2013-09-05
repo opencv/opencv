@@ -111,10 +111,10 @@ VideoFileSource::VideoFileSource(const String &path, bool volatileFrame)
 void VideoFileSource::reset() { impl->reset(); }
 Mat VideoFileSource::nextFrame() { return impl->nextFrame(); }
 
-int VideoFileSource::width() { return ((VideoFileSourceImpl*)impl.obj)->width(); }
-int VideoFileSource::height() { return ((VideoFileSourceImpl*)impl.obj)->height(); }
-int VideoFileSource::count() { return ((VideoFileSourceImpl*)impl.obj)->count(); }
-double VideoFileSource::fps() { return ((VideoFileSourceImpl*)impl.obj)->fps(); }
+int VideoFileSource::width() { return ((VideoFileSourceImpl*)impl.get())->width(); }
+int VideoFileSource::height() { return ((VideoFileSourceImpl*)impl.get())->height(); }
+int VideoFileSource::count() { return ((VideoFileSourceImpl*)impl.get())->count(); }
+double VideoFileSource::fps() { return ((VideoFileSourceImpl*)impl.get())->fps(); }
 
 } // namespace videostab
 } // namespace cv

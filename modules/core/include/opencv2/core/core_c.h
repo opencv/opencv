@@ -1882,13 +1882,13 @@ CV_EXPORTS void insertImageCOI(InputArray coiimg, CvArr* arr, int coi=-1);
 
 
 
-//////// specializied implementations of Ptr::delete_obj() for classic OpenCV types ////////
+////// specialized implementations of DefaultDeleter::operator() for classic OpenCV types //////
 
-template<> CV_EXPORTS void Ptr<CvMat>::delete_obj();
-template<> CV_EXPORTS void Ptr<IplImage>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvMatND>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvSparseMat>::delete_obj();
-template<> CV_EXPORTS void Ptr<CvMemStorage>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvMat>::operator ()(CvMat* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<IplImage>::operator ()(IplImage* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvMatND>::operator ()(CvMatND* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvSparseMat>::operator ()(CvSparseMat* obj) const;
+template<> CV_EXPORTS void DefaultDeleter<CvMemStorage>::operator ()(CvMemStorage* obj) const;
 
 ////////////// convenient wrappers for operating old-style dynamic structures //////////////
 

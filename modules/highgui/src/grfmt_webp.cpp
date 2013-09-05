@@ -90,7 +90,7 @@ bool WebPDecoder::checkSignature(const String & signature) const
 
 ImageDecoder WebPDecoder::newDecoder() const
 {
-    return new WebPDecoder;
+    return makePtr<WebPDecoder>();
 }
 
 bool WebPDecoder::readHeader()
@@ -201,7 +201,7 @@ WebPEncoder::~WebPEncoder() { }
 
 ImageEncoder WebPEncoder::newEncoder() const
 {
-    return new WebPEncoder();
+    return makePtr<WebPEncoder>();
 }
 
 bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)

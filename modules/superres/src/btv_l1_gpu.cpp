@@ -578,7 +578,7 @@ namespace
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_GPU()
 {
-    return new BTVL1_GPU;
+    return makePtr<BTVL1_GPU>();
 }
 
 #endif // HAVE_CUDA

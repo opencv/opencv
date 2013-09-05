@@ -1339,8 +1339,8 @@ icvFindContoursInInterval( const CvArr* src,
     if( contourHeaderSize < (int)sizeof(CvContour))
         CV_Error( CV_StsBadSize, "Contour header size must be >= sizeof(CvContour)" );
 
-    storage00 = cvCreateChildMemStorage(storage);
-    storage01 = cvCreateChildMemStorage(storage);
+    storage00.reset(cvCreateChildMemStorage(storage));
+    storage01.reset(cvCreateChildMemStorage(storage));
 
     CvMat stub, *mat;
 

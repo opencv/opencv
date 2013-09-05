@@ -53,7 +53,6 @@ using cv::Ptr;
 
 CvLevMarq::CvLevMarq()
 {
-    mask = prevParam = param = J = err = JtJ = JtJN = JtErr = JtJV = JtJW = Ptr<CvMat>();
     lambdaLg10 = 0; state = DONE;
     criteria = cvTermCriteria(0,0,0);
     iters = 0;
@@ -62,7 +61,6 @@ CvLevMarq::CvLevMarq()
 
 CvLevMarq::CvLevMarq( int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag )
 {
-    mask = prevParam = param = J = err = JtJ = JtJN = JtErr = JtJV = JtJW = Ptr<CvMat>();
     init(nparams, nerrs, criteria0, _completeSymmFlag);
 }
 
@@ -89,19 +87,19 @@ void CvLevMarq::init( int nparams, int nerrs, CvTermCriteria criteria0, bool _co
 {
     if( !param || param->rows != nparams || nerrs != (err ? err->rows : 0) )
         clear();
-    mask = cvCreateMat( nparams, 1, CV_8U );
+    mask.reset(cvCreateMat( nparams, 1, CV_8U ));
     cvSet(mask, cvScalarAll(1));
-    prevParam = cvCreateMat( nparams, 1, CV_64F );
-    param = cvCreateMat( nparams, 1, CV_64F );
-    JtJ = cvCreateMat( nparams, nparams, CV_64F );
-    JtJN = cvCreateMat( nparams, nparams, CV_64F );
-    JtJV = cvCreateMat( nparams, nparams, CV_64F );
-    JtJW = cvCreateMat( nparams, 1, CV_64F );
-    JtErr = cvCreateMat( nparams, 1, CV_64F );
+    prevParam.reset(cvCreateMat( nparams, 1, CV_64F ));
+    param.reset(cvCreateMat( nparams, 1, CV_64F ));
+    JtJ.reset(cvCreateMat( nparams, nparams, CV_64F ));
+    JtJN.reset(cvCreateMat( nparams, nparams, CV_64F ));
+    JtJV.reset(cvCreateMat( nparams, nparams, CV_64F ));
+    JtJW.reset(cvCreateMat( nparams, 1, CV_64F ));
+    JtErr.reset(cvCreateMat( nparams, 1, CV_64F ));
     if( nerrs > 0 )
     {
-        J = cvCreateMat( nerrs, nparams, CV_64F );
-        err = cvCreateMat( nerrs, 1, CV_64F );
+        J.reset(cvCreateMat( nerrs, nparams, CV_64F ));
+        err.reset(cvCreateMat( nerrs, 1, CV_64F ));
     }
     prevErrNorm = DBL_MAX;
     lambdaLg10 = -3;
@@ -196,7 +194,7 @@ bool CvLevMarq::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, d
 {
     double change;
 
-    CV_Assert( err.empty() );
+    CV_Assert( !err );
     if( state == DONE )
     {
         _param = param;

@@ -83,17 +83,22 @@ First of all, ``std::vector``, ``Mat``, and other data structures used by the fu
     // matrix will be deallocated, since it is not referenced by anyone
     C = C.clone();
 
-You see that the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user data types created without taking automatic memory management into account? For them, OpenCV offers the ``Ptr<>`` template class that is similar to ``std::shared_ptr`` from C++ TR1. So, instead of using plain pointers::
+You see that the use of ``Mat`` and other basic structures is simple. But what about high-level classes or even user
+data types created without taking automatic memory management into account? For them, OpenCV offers the :ocv:class:`Ptr`
+template class that is similar to ``std::shared_ptr`` from C++11. So, instead of using plain pointers::
 
    T* ptr = new T(...);
 
 you can use::
 
-   Ptr<T> ptr = new T(...);
+   Ptr<T> ptr(new T(...));
 
-That is, ``Ptr<T> ptr`` encapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the
-:ocv:class:`Ptr`
-description for details.
+or::
+
+   Ptr<T> ptr = makePtr<T>(...);
+
+``Ptr<T>`` encapsulates a pointer to a ``T`` instance and a reference counter associated with the pointer. See the
+:ocv:class:`Ptr` description for details.
 
 .. _AutomaticAllocation:
 

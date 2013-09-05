@@ -100,7 +100,7 @@ cv::gpu::Stream::Stream()
 #ifndef HAVE_CUDA
     throw_no_cuda();
 #else
-    impl_ = new Impl;
+    impl_ = makePtr<Impl>();
 #endif
 }
 
@@ -182,7 +182,7 @@ void cv::gpu::Stream::enqueueHostCallback(StreamCallback callback, void* userDat
 
 Stream& cv::gpu::Stream::Null()
 {
-    static Stream s(new Impl(0));
+    static Stream s(Ptr<Impl>(new Impl(0)));
     return s;
 }
 
@@ -195,10 +195,6 @@ cv::gpu::Stream::operator bool_type() const
 #endif
 }
 
-template <> void cv::Ptr<Stream::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
 
 ////////////////////////////////////////////////////////////////
 // Stream
@@ -249,7 +245,7 @@ cv::gpu::Event::Event(CreateFlags flags)
     (void) flags;
     throw_no_cuda();
 #else
-    impl_ = new Impl(flags);
+    impl_ = makePtr<Impl>(flags);
 #endif
 }
 
@@ -300,9 +296,4 @@ float cv::gpu::Event::elapsedTime(const Event& start, const Event& end)
     cudaSafeCall( cudaEventElapsedTime(&ms, start.impl_->event, end.impl_->event) );
     return ms;
 #endif
-}
-
-template <> void cv::Ptr<Event::Impl>::delete_obj()
-{
-    if (obj) delete obj;
 }

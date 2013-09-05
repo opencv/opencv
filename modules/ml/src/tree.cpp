@@ -1882,7 +1882,7 @@ double CvDTree::calc_node_dir( CvDTreeNode* node )
 namespace cv
 {
 
-template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj()
+template<> CV_EXPORTS void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const
 {
     fastFree(obj);
 }
@@ -1893,12 +1893,12 @@ DTreeBestSplitFinder::DTreeBestSplitFinder( CvDTree* _tree, CvDTreeNode* _node)
     node = _node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)bestSplit, 0, splitSize);
+    bestSplit.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(bestSplit.get(), 0, splitSize);
     bestSplit->quality = -1;
     bestSplit->condensed_idx = INT_MIN;
-    split = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)split, 0, splitSize);
+    split.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(split.get(), 0, splitSize);
     //haveSplit = false;
 }
 
@@ -1908,10 +1908,10 @@ DTreeBestSplitFinder::DTreeBestSplitFinder( const DTreeBestSplitFinder& finder, 
     node = finder.node;
     splitSize = tree->get_data()->split_heap->elem_size;
 
-    bestSplit = (CvDTreeSplit*)fastMalloc(splitSize);
-    memcpy((CvDTreeSplit*)(bestSplit), (const CvDTreeSplit*)finder.bestSplit, splitSize);
-    split = (CvDTreeSplit*)fastMalloc(splitSize);
-    memset((CvDTreeSplit*)split, 0, splitSize);
+    bestSplit.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memcpy(bestSplit.get(), finder.bestSplit.get(), splitSize);
+    split.reset((CvDTreeSplit*)fastMalloc(splitSize));
+    memset(split.get(), 0, splitSize);
 }
 
 void DTreeBestSplitFinder::operator()(const BlockedRange& range)
@@ -1944,14 +1944,14 @@ void DTreeBestSplitFinder::operator()(const BlockedRange& range)
         }
 
         if( res && bestSplit->quality < split->quality )
-                memcpy( (CvDTreeSplit*)bestSplit, (CvDTreeSplit*)split, splitSize );
+                memcpy( bestSplit.get(), split.get(), splitSize );
     }
 }
 
 void DTreeBestSplitFinder::join( DTreeBestSplitFinder& rhs )
 {
     if( bestSplit->quality < rhs.bestSplit->quality )
-        memcpy( (CvDTreeSplit*)bestSplit, (CvDTreeSplit*)rhs.bestSplit, splitSize );
+        memcpy( bestSplit.get(), rhs.bestSplit.get(), splitSize );
 }
 }
 

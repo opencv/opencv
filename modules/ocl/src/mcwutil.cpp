@@ -246,7 +246,7 @@ namespace cv
 
         Ptr<TextureCL> bindTexturePtr(const oclMat &mat)
         {
-            return Ptr<TextureCL>(new TextureCL(bindTexture(mat), mat.rows, mat.cols, mat.type()));
+            return makePtr<TextureCL>(bindTexture(mat), mat.rows, mat.cols, mat.type());
         }
         void releaseTexture(cl_mem& texture)
         {

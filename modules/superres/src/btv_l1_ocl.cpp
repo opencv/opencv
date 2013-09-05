@@ -743,6 +743,6 @@ namespace
 
 Ptr<SuperResolution> cv::superres::createSuperResolution_BTVL1_OCL()
 {
-    return new BTVL1_OCL;
+    return makePtr<BTVL1_OCL>();
 }
 #endif

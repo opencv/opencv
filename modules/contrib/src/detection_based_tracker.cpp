@@ -128,7 +128,7 @@ cv::DetectionBasedTracker::SeparateDetectionWork::SeparateDetectionWork(Detectio
     stateThread(STATE_THREAD_STOPPED),
     timeWhenDetectingThreadStartedWork(-1)
 {
-    CV_Assert(!_detector.empty());
+    CV_Assert(_detector);
 
     cascadeInThread = _detector;
 
@@ -462,11 +462,11 @@ cv::DetectionBasedTracker::DetectionBasedTracker(cv::Ptr<IDetector> mainDetector
     cascadeForTracking(trackingDetector)
 {
     CV_Assert( (params.maxTrackLifetime >= 0)
-//            && (!mainDetector.empty())
-            && (!trackingDetector.empty()) );
+//            && mainDetector
+            && trackingDetector );
 
-    if (!mainDetector.empty()) {
-        separateDetectionWork = new SeparateDetectionWork(*this, mainDetector);
+    if (mainDetector) {
+        separateDetectionWork.reset(new SeparateDetectionWork(*this, mainDetector));
     }
 
     weightsPositionsSmoothing.push_back(1);
@@ -483,7 +483,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 {
     CV_Assert(imageGray.type()==CV_8UC1);
 
-    if ( (!separateDetectionWork.empty()) && (!separateDetectionWork->isWorking()) ) {
+    if ( separateDetectionWork && !separateDetectionWork->isWorking() ) {
         separateDetectionWork->run();
     }
 
@@ -501,7 +501,7 @@ void DetectionBasedTracker::process(const Mat& imageGray)
 
     std::vector<Rect> rectsWhereRegions;
     bool shouldHandleResult=false;
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         shouldHandleResult = separateDetectionWork->communicateWithDetectingThread(imageGray, rectsWhereRegions);
     }
 
@@ -589,7 +589,7 @@ void cv::DetectionBasedTracker::getObjects(std::vector<ExtObject>& result) const
 
 bool cv::DetectionBasedTracker::run()
 {
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         return separateDetectionWork->run();
     }
     return false;
@@ -597,14 +597,14 @@ bool cv::DetectionBasedTracker::run()
 
 void cv::DetectionBasedTracker::stop()
 {
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         separateDetectionWork->stop();
     }
 }
 
 void cv::DetectionBasedTracker::resetTracking()
 {
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         separateDetectionWork->resetTracking();
     }
     trackedObjects.clear();
@@ -876,11 +876,11 @@ bool cv::DetectionBasedTracker::setParameters(const Parameters& params)
         return false;
     }
 
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         separateDetectionWork->lock();
     }
     parameters=params;
-    if (!separateDetectionWork.empty()) {
+    if (separateDetectionWork) {
         separateDetectionWork->unlock();
     }
     return true;

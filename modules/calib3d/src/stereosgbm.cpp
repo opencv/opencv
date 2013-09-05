@@ -947,11 +947,12 @@ Ptr<StereoSGBM> createStereoSGBM(int minDisparity, int numDisparities, int SADWi
                                  int speckleWindowSize, int speckleRange,
                                  int mode)
 {
-    return new StereoSGBMImpl(minDisparity, numDisparities, SADWindowSize,
-                              P1, P2, disp12MaxDiff,
-                              preFilterCap, uniquenessRatio,
-                              speckleWindowSize, speckleRange,
-                              mode);
+    return Ptr<StereoSGBM>(
+        new StereoSGBMImpl(minDisparity, numDisparities, SADWindowSize,
+                           P1, P2, disp12MaxDiff,
+                           preFilterCap, uniquenessRatio,
+                           speckleWindowSize, speckleRange,
+                           mode));
 }
 
 Rect getValidDisparityROI( Rect roi1, Rect roi2,

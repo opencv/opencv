@@ -60,7 +60,7 @@ namespace videostab
 
 WobbleSuppressorBase::WobbleSuppressorBase() : motions_(0), stabilizationMotions_(0)
 {
-    setMotionEstimator(new KeypointBasedMotionEstimator(new MotionEstimatorRansacL2(MM_HOMOGRAPHY)));
+    setMotionEstimator(makePtr<KeypointBasedMotionEstimator>(makePtr<MotionEstimatorRansacL2>(MM_HOMOGRAPHY)));
 }
 
 

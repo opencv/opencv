@@ -71,8 +71,8 @@ void CV_FramecountTest::run(int)
     {
         string file_path = src_dir+"video/big_buck_bunny."+ext[i];
 
-        cap = cvCreateFileCapture(file_path.c_str());
-        if (cap.empty())
+        cap.reset(cvCreateFileCapture(file_path.c_str()));
+        if (!cap)
         {
             ts->printf(cvtest::TS::LOG, "\nFile information (video %d): \n\nName: big_buck_bunny.%s\nFAILED\n\n", i+1, ext[i].c_str());
             ts->printf(cvtest::TS::LOG, "Error: cannot read source video file.\n");

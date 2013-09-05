@@ -836,10 +836,6 @@ unsigned int cv::ogl::Buffer::bufId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::ogl::Buffer::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // ogl::Texture
@@ -1243,10 +1239,6 @@ unsigned int cv::ogl::Texture2D::texId() const
 #endif
 }
 
-template <> void cv::Ptr<cv::ogl::Texture2D::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // ogl::Arrays

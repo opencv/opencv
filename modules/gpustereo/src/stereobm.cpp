@@ -179,7 +179,7 @@ namespace
 
 Ptr<gpu::StereoBM> cv::gpu::createStereoBM(int numDisparities, int blockSize)
 {
-    return new StereoBMImpl(numDisparities, blockSize);
+    return makePtr<StereoBMImpl>(numDisparities, blockSize);
 }
 
 #endif /* !defined (HAVE_CUDA) */

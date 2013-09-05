@@ -67,8 +67,4 @@ private:
 
 }}}
 
-namespace cv {
-    template <> void Ptr<cv::gpucodec::detail::Thread::Impl>::delete_obj();
-}
-
 #endif // __THREAD_WRAPPERS_HPP__

@@ -256,7 +256,7 @@ namespace
         cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
         {
             char braces[5] = {'\0', '\0', ';', '\0', '\0'};
-            return new FormattedImpl("[", "]", mtx, braces,
+            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
                 mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
@@ -270,7 +270,7 @@ namespace
             char braces[5] = {'[', ']', '\0', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
-            return new FormattedImpl("[", "]", mtx, braces,
+            return cv::makePtr<FormattedImpl>("[", "]", mtx, &*braces,
                 mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
@@ -288,7 +288,8 @@ namespace
             char braces[5] = {'[', ']', '\0', '[', ']'};
             if (mtx.cols == 1)
                 braces[0] = braces[1] = '\0';
-            return new FormattedImpl("array([", cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, braces,
+            return cv::makePtr<FormattedImpl>("array([",
+                cv::format("], type='%s')", numpyTypes[mtx.depth()]), mtx, &*braces,
                 mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
@@ -300,7 +301,8 @@ namespace
         cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
         {
             char braces[5] = {'\0', '\0', '\0', '\0', '\0'};
-            return new FormattedImpl(cv::String(), mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, braces,
+            return cv::makePtr<FormattedImpl>(cv::String(),
+                mtx.rows > 1 ? cv::String("\n") : cv::String(), mtx, &*braces,
                 mtx.cols*mtx.channels() == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
@@ -312,7 +314,7 @@ namespace
         cv::Ptr<cv::Formatted> format(const cv::Mat& mtx) const
         {
             char braces[5] = {'\0', '\0', ',', '\0', '\0'};
-            return new FormattedImpl("{", "}", mtx, braces,
+            return cv::makePtr<FormattedImpl>("{", "}", mtx, &*braces,
                 mtx.cols == 1 || !multiline, mtx.depth() == CV_64F ? prec64f : prec32f );
         }
     };
@@ -330,16 +332,16 @@ namespace cv
         switch(fmt)
         {
             case FMT_MATLAB:
-                return new MatlabFormatter();
+                return makePtr<MatlabFormatter>();
             case FMT_CSV:
-                return new CSVFormatter();
+                return makePtr<CSVFormatter>();
             case FMT_PYTHON:
-                return new PythonFormatter();
+                return makePtr<PythonFormatter>();
             case FMT_NUMPY:
-                return new NumpyFormatter();
+                return makePtr<NumpyFormatter>();
             case FMT_C:
-                return new CFormatter();
+                return makePtr<CFormatter>();
         }
-        return new MatlabFormatter();
+        return makePtr<MatlabFormatter>();
     }
 } // cv
