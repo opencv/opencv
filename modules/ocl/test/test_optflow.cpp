@@ -146,10 +146,10 @@ PARAM_TEST_CASE(TVL1, bool)
 
 TEST_P(TVL1, Accuracy)
 {
-    cv::Mat frame0 = readImage("F:/mcw/opencv/opencv/samples/gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage("../../../opencv/samples/gpu/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
