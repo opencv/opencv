@@ -275,7 +275,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
 
         std::cerr << Mat(clip, false).reshape(1, 1) << "/" << Mat(focal, false).reshape(1, 1) << "/" <<
                      Mat(pose, false).reshape(1, 1) << "/" << Mat(view, false).reshape(1, 1) << "/" <<
-                     cam->GetViewAngle () / 180.0 * M_PI  << "/" <<
+                     cam->GetViewAngle () / 180.0 * CV_PI  << "/" <<
                      Mat(win_size, false).reshape(1,1) << "/" << Mat(win_pos, false).reshape(1,1) << endl;
         break;
     }
