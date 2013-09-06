@@ -271,7 +271,7 @@ namespace
 
 Ptr<cuda::BackgroundSubtractorGMG> cv::cuda::createBackgroundSubtractorGMG(int initializationFrames, double decisionThreshold)
 {
-    return new GMGImpl(initializationFrames, decisionThreshold);
+    return makePtr<GMGImpl>(initializationFrames, decisionThreshold);
 }
 
 #endif

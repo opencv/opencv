@@ -656,7 +656,7 @@ public:
                         Point dstOfs = Point(0,0),
                         bool isolated = false);
     //! returns true if the filter is separable
-    bool isSeparable() const { return (const BaseFilter*)filter2D == 0; }
+    bool isSeparable() const { return !filter2D; }
     //! returns the number
     int remainingInputRows() const;
     int remainingOutputRows() const;

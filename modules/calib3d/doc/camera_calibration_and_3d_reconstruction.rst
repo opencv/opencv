@@ -515,7 +515,7 @@ findCirclesGrid
 -------------------
 Finds centers in the grid of circles.
 
-.. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector() )
+.. ocv:function:: bool findCirclesGrid( InputArray image, Size patternSize, OutputArray centers, int flags=CALIB_CB_SYMMETRIC_GRID, const Ptr<FeatureDetector> &blobDetector = makePtr<SimpleBlobDetector>() )
 
 .. ocv:pyfunction:: cv2.findCirclesGrid(image, patternSize[, centers[, flags[, blobDetector]]]) -> retval, centers
 

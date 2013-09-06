@@ -497,7 +497,7 @@ namespace
 
 Ptr<LookUpTable> cv::cuda::createLookUpTable(InputArray lut)
 {
-    return new LookUpTableImpl(lut);
+    return makePtr<LookUpTableImpl>(lut);
 }
 
 ////////////////////////////////////////////////////////////////////////

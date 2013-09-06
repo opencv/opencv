@@ -209,7 +209,8 @@ namespace
 Ptr<cuda::CornersDetector> cv::cuda::createGoodFeaturesToTrackDetector(int srcType, int maxCorners, double qualityLevel, double minDistance,
                                                                      int blockSize, bool useHarrisDetector, double harrisK)
 {
-    return new GoodFeaturesToTrackDetector(srcType, maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, harrisK);
+    return Ptr<cuda::CornersDetector>(
+        new GoodFeaturesToTrackDetector(srcType, maxCorners, qualityLevel, minDistance, blockSize, useHarrisDetector, harrisK));
 }
 
 #endif /* !defined (HAVE_CUDA) */

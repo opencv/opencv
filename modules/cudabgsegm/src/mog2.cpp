@@ -247,7 +247,7 @@ namespace
 
 Ptr<cuda::BackgroundSubtractorMOG2> cv::cuda::createBackgroundSubtractorMOG2(int history, double varThreshold, bool detectShadows)
 {
-    return new MOG2Impl(history, varThreshold, detectShadows);
+    return makePtr<MOG2Impl>(history, varThreshold, detectShadows);
 }
 
 #endif

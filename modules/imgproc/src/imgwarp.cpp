@@ -3931,8 +3931,8 @@ cvLogPolar( const CvArr* srcarr, CvArr* dstarr,
     ssize = cvGetMatSize(src);
     dsize = cvGetMatSize(dst);
 
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
+    mapy.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {
@@ -4049,8 +4049,8 @@ void cvLinearPolar( const CvArr* srcarr, CvArr* dstarr,
     dsize.width = dst->cols;
     dsize.height = dst->rows;
 
-    mapx = cvCreateMat( dsize.height, dsize.width, CV_32F );
-    mapy = cvCreateMat( dsize.height, dsize.width, CV_32F );
+    mapx.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
+    mapy.reset(cvCreateMat( dsize.height, dsize.width, CV_32F ));
 
     if( !(flags & CV_WARP_INVERSE_MAP) )
     {

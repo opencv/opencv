@@ -1058,7 +1058,7 @@ bool pyopencv_to(PyObject* obj, cv::flann::SearchParams & value, const char * na
 template <typename T>
 bool pyopencv_to(PyObject *o, Ptr<T>& p, const char *name)
 {
-    p = new T();
+    p = makePtr<T>();
     return pyopencv_to(o, *p, name);
 }
 

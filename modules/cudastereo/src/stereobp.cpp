@@ -361,7 +361,7 @@ namespace
 
 Ptr<cuda::StereoBeliefPropagation> cv::cuda::createStereoBeliefPropagation(int ndisp, int iters, int levels, int msg_type)
 {
-    return new StereoBPImpl(ndisp, iters, levels, msg_type);
+    return makePtr<StereoBPImpl>(ndisp, iters, levels, msg_type);
 }
 
 void cv::cuda::StereoBeliefPropagation::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels)

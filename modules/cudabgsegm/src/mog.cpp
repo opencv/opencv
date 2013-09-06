@@ -203,7 +203,7 @@ namespace
 
 Ptr<cuda::BackgroundSubtractorMOG> cv::cuda::createBackgroundSubtractorMOG(int history, int nmixtures, double backgroundRatio, double noiseSigma)
 {
-    return new MOGImpl(history, nmixtures, backgroundRatio, noiseSigma);
+    return makePtr<MOGImpl>(history, nmixtures, backgroundRatio, noiseSigma);
 }
 
 #endif

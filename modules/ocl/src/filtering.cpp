@@ -163,7 +163,7 @@ public:
 
 Ptr<FilterEngine_GPU> cv::ocl::createFilter2D_GPU(const Ptr<BaseFilter_GPU> filter2D)
 {
-    return Ptr<FilterEngine_GPU>(new Filter2DEngine_GPU(filter2D));
+    return makePtr<Filter2DEngine_GPU>(filter2D);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -452,7 +452,7 @@ Ptr<FilterEngine_GPU> cv::ocl::createMorphologyFilter_GPU(int op, int type, cons
 
     Ptr<BaseFilter_GPU> filter2D = getMorphologyFilter_GPU(op, type, kernel, ksize, anchor);
 
-    return Ptr<FilterEngine_GPU>(new MorphologyFilterEngine_GPU(filter2D, iterations));
+    return makePtr<MorphologyFilterEngine_GPU>(filter2D, iterations);
 }
 
 namespace
@@ -690,8 +690,8 @@ Ptr<BaseFilter_GPU> cv::ocl::getLinearFilter_GPU(int srcType, int dstType, const
     normalizeKernel(kernel, gpu_krnl, CV_32FC1);
     normalizeAnchor(norm_archor, ksize);
 
-    return Ptr<BaseFilter_GPU>(new LinearFilter_GPU(ksize, anchor, gpu_krnl, GPUFilter2D_callers[CV_MAT_CN(srcType)],
-                               borderType));
+    return makePtr<LinearFilter_GPU>(ksize, anchor, gpu_krnl, GPUFilter2D_callers[CV_MAT_CN(srcType)],
+        borderType);
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Point &anchor,
@@ -773,7 +773,7 @@ public:
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableFilter_GPU(const Ptr<BaseRowFilter_GPU> &rowFilter,
         const Ptr<BaseColumnFilter_GPU> &columnFilter)
 {
-    return Ptr<FilterEngine_GPU>(new SeparableFilterEngine_GPU(rowFilter, columnFilter));
+    return makePtr<SeparableFilterEngine_GPU>(rowFilter, columnFilter);
 }
 
 /*
@@ -1044,8 +1044,8 @@ Ptr<BaseFilter_GPU> cv::ocl::getBoxFilter_GPU(int srcType, int dstType,
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseFilter_GPU>(new GPUBoxFilter(ksize, anchor,
-                               borderType, FilterBox_callers[(CV_MAT_DEPTH(srcType) == CV_32F)][CV_MAT_CN(srcType)]));
+    return makePtr<GPUBoxFilter>(ksize, anchor,
+        borderType, FilterBox_callers[(CV_MAT_DEPTH(srcType) == CV_32F)][CV_MAT_CN(srcType)]);
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createBoxFilter_GPU(int srcType, int dstType,
@@ -1228,8 +1228,8 @@ Ptr<BaseRowFilter_GPU> cv::ocl::getLinearRowFilter_GPU(int srcType, int /*bufTyp
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseRowFilter_GPU>(new GpuLinearRowFilter(ksize, anchor, mat_kernel,
-                                  gpuFilter1D_callers[CV_MAT_DEPTH(srcType)], bordertype));
+    return makePtr<GpuLinearRowFilter>(ksize, anchor, mat_kernel,
+        gpuFilter1D_callers[CV_MAT_DEPTH(srcType)], bordertype);
 }
 
 namespace
@@ -1397,8 +1397,8 @@ Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int /*bufType*/, in
 
     normalizeAnchor(anchor, ksize);
 
-    return Ptr<BaseColumnFilter_GPU>(new GpuLinearColumnFilter(ksize, anchor, mat_kernel,
-                                     gpuFilter1D_callers[CV_MAT_DEPTH(dstType)], bordertype));
+    return makePtr<GpuLinearColumnFilter>(ksize, anchor, mat_kernel,
+        gpuFilter1D_callers[CV_MAT_DEPTH(dstType)], bordertype);
 }
 
 Ptr<FilterEngine_GPU> cv::ocl::createSeparableLinearFilter_GPU(int srcType, int dstType,

@@ -70,7 +70,7 @@ using namespace cvtest;
 
 namespace cv
 {
-    template<> void Ptr<CvBGStatModel>::delete_obj()
+    template<> void DefaultDeleter<CvBGStatModel>::operator ()(CvBGStatModel* obj) const
     {
         cvReleaseBGStatModel(&obj);
     }

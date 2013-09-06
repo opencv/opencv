@@ -171,7 +171,7 @@ public:
 
         RNG rng((uint64)-1);
 
-        CV_Assert( !cb.empty() );
+        CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
 
         CV_Assert( count >= 0 && count2 == count );
@@ -288,7 +288,7 @@ public:
 
         RNG rng((uint64)-1);
 
-        CV_Assert( !cb.empty() );
+        CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
 
         CV_Assert( count >= 0 && count2 == count );
@@ -397,7 +397,8 @@ Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegis
                                                          double _confidence, int _maxIters)
 {
     CV_Assert( !RANSACPointSetRegistrator_info_auto.name().empty() );
-    return new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters);
+    return Ptr<PointSetRegistrator>(
+        new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters));
 }
 
 
@@ -405,7 +406,8 @@ Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegist
                              int _modelPoints, double _confidence, int _maxIters)
 {
     CV_Assert( !LMeDSPointSetRegistrator_info_auto.name().empty() );
-    return new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters);
+    return Ptr<PointSetRegistrator>(
+        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters));
 }
 
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
@@ -532,5 +534,5 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
 
-    return createRANSACPointSetRegistrator(new Affine3DEstimatorCallback, 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
+    return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
 }

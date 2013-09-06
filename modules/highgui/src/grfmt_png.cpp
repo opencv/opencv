@@ -101,7 +101,7 @@ PngDecoder::~PngDecoder()
 
 ImageDecoder PngDecoder::newDecoder() const
 {
-    return new PngDecoder;
+    return makePtr<PngDecoder>();
 }
 
 void  PngDecoder::close()
@@ -317,7 +317,7 @@ bool  PngEncoder::isFormatSupported( int depth ) const
 
 ImageEncoder PngEncoder::newEncoder() const
 {
-    return new PngEncoder;
+    return makePtr<PngEncoder>();
 }
 
 

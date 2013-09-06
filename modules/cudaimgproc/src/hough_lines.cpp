@@ -196,7 +196,7 @@ namespace
 
 Ptr<HoughLinesDetector> cv::cuda::createHoughLinesDetector(float rho, float theta, int threshold, bool doSort, int maxLines)
 {
-    return new HoughLinesDetectorImpl(rho, theta, threshold, doSort, maxLines);
+    return makePtr<HoughLinesDetectorImpl>(rho, theta, threshold, doSort, maxLines);
 }
 
 #endif /* !defined (HAVE_CUDA) */

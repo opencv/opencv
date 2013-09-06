@@ -26,7 +26,7 @@ public:
             Detector(detector)
     {
         LOGD("CascadeDetectorAdapter::Detect::Detect");
-        CV_Assert(!detector.empty());
+        CV_Assert(detector);
     }
 
     void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
@@ -57,11 +57,11 @@ struct DetectorAgregator
             mainDetector(_mainDetector),
             trackingDetector(_trackingDetector)
     {
-        CV_Assert(!_mainDetector.empty());
-        CV_Assert(!_trackingDetector.empty());
+        CV_Assert(_mainDetector);
+        CV_Assert(_trackingDetector);
 
         DetectionBasedTracker::Parameters DetectorParams;
-        tracker = new DetectionBasedTracker(mainDetector.ptr<DetectionBasedTracker::IDetector>(), trackingDetector.ptr<DetectionBasedTracker::IDetector>(), DetectorParams);
+        tracker = makePtr<DetectionBasedTracker>(mainDetector, trackingDetector, DetectorParams);
     }
 };
 
@@ -77,8 +77,10 @@ JNIEXPORT jlong JNICALL Java_org_opencv_samples_facedetect_DetectionBasedTracker
 
     try
     {
-        cv::Ptr<CascadeDetectorAdapter> mainDetector = new CascadeDetectorAdapter(new CascadeClassifier(stdFileName));
-        cv::Ptr<CascadeDetectorAdapter> trackingDetector = new CascadeDetectorAdapter(new CascadeClassifier(stdFileName));
+        cv::Ptr<CascadeDetectorAdapter> mainDetector = makePtr<CascadeDetectorAdapter>(
+            makePtr<CascadeClassifier>(stdFileName));
+        cv::Ptr<CascadeDetectorAdapter> trackingDetector = makePtr<CascadeDetectorAdapter>(
+            makePtr<CascadeClassifier>(stdFileName));
         result = (jlong)new DetectorAgregator(mainDetector, trackingDetector);
         if (faceSize > 0)
         {

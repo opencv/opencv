@@ -666,12 +666,6 @@ CV_EXPORTS void printShortCudaDeviceInfo(int device);
 
 }} // namespace cv { namespace cuda {
 
-namespace cv {
-
-template <> CV_EXPORTS void Ptr<cv::cuda::Stream::Impl>::delete_obj();
-template <> CV_EXPORTS void Ptr<cv::cuda::Event::Impl>::delete_obj();
-
-}
 
 #include "opencv2/core/cuda.inl.hpp"
 

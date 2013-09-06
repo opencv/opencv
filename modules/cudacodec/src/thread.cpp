@@ -167,9 +167,4 @@ void cv::cudacodec::detail::Thread::sleep(int ms)
 #endif
 }
 
-template <> void cv::Ptr<cv::cudacodec::detail::Thread::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
-
 #endif // HAVE_NVCUVID

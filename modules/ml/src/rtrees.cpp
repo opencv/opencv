@@ -126,7 +126,7 @@ void ForestTreeBestSplitFinder::operator()(const BlockedRange& range)
         }
 
         if( res && bestSplit->quality < split->quality )
-                memcpy( (CvDTreeSplit*)bestSplit, (CvDTreeSplit*)split, splitSize );
+            memcpy( bestSplit.get(), split.get(), splitSize );
     }
 }
 }

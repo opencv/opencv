@@ -50,13 +50,13 @@ static const float WEIGHT_EPS = 1e-5f;
 Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
-        return new Blender();
+        return makePtr<Blender>();
     if (type == FEATHER)
-        return new FeatherBlender();
+        return makePtr<FeatherBlender>();
     if (type == MULTI_BAND)
-        return new MultiBandBlender(try_gpu);
+        return makePtr<MultiBandBlender>(try_gpu);
     CV_Error(Error::StsBadArg, "unsupported blending method");
-    return NULL;
+    return Ptr<Blender>();
 }
 
 

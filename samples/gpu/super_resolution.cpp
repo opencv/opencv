@@ -53,7 +53,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
     }
-    return 0;
+    return Ptr<DenseOpticalFlowExt>();
 }
 #if defined(HAVE_OPENCV_OCL)
 static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
@@ -73,7 +73,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
     else if (name == "brox")
     {
         std::cout<<"brox has not been implemented!\n";
-        return NULL;
+        return Ptr<DenseOpticalFlowExt>();
     }
     else if (name == "pyrlk")
         return createOptFlow_PyrLK_OCL();
@@ -81,7 +81,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name)
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
     }
-    return 0;
+    return Ptr<DenseOpticalFlowExt>();
 }
 #endif
 int main(int argc, const char* argv[])
@@ -197,7 +197,7 @@ int main(int argc, const char* argv[])
             frameSource.release();
         }
     }
-    if (frameSource.empty())
+    if (!frameSource)
         frameSource = createFrameSource_Video(inputVideoName);
 
     // skip first frame, it is usually corrupted

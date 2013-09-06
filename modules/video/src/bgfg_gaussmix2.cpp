@@ -769,7 +769,7 @@ void BackgroundSubtractorMOG2Impl::getBackgroundImage(OutputArray backgroundImag
 Ptr<BackgroundSubtractorMOG2> createBackgroundSubtractorMOG2(int _history, double _varThreshold,
                                                              bool _bShadowDetection)
 {
-    return new BackgroundSubtractorMOG2Impl(_history, (float)_varThreshold, _bShadowDetection);
+    return makePtr<BackgroundSubtractorMOG2Impl>(_history, (float)_varThreshold, _bShadowDetection);
 }
 
 }

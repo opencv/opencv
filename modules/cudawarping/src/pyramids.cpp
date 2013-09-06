@@ -237,7 +237,7 @@ Ptr<ImagePyramid> cv::cuda::createImagePyramid(InputArray img, int nLayers, Stre
     throw_no_cuda();
     return Ptr<ImagePyramid>();
 #else
-    return new ImagePyramidImpl(img, nLayers, stream);
+    return Ptr<ImagePyramid>(new ImagePyramidImpl(img, nLayers, stream));
 #endif
 }
 

@@ -114,19 +114,34 @@ kernel void horizontalAnticausalFilter(
     global float * optr = output +
                           mad24(gid + 1, elements_per_row, - 1 + out_offset / 4);
 
-    float4 result = (float4)(0), out_v4;
+    float4 result_v4 = (float4)(0), out_v4;
+    float result = 0;
     // we assume elements_per_row is multple of 4
-    for(int i = 0; i < elements_per_row / 4; ++i, optr -= 4)
+    for(int i = 0; i < 4; ++ i, -- optr)
+    {
+        if(i < elements_per_row - cols)
+        {
+            *optr = result;
+        }
+        else
+        {
+            result = *optr + _a * result;
+            *optr = result;
+        }
+    }
+    result_v4.x = result;
+    optr -= 3;
+    for(int i = 1; i < elements_per_row / 4; ++i, optr -= 4)
     {
         // shift left, `offset` is type `size_t` so it cannot be negative
-        out_v4   = vload4(0, optr - 3);
+        out_v4 = vload4(0, optr);
 
-        result.w = out_v4.w + _a * result.x;
-        result.z = out_v4.z + _a * result.w;
-        result.y = out_v4.y + _a * result.z;
-        result.x = out_v4.x + _a * result.y;
+        result_v4.w = out_v4.w + _a * result_v4.x;
+        result_v4.z = out_v4.z + _a * result_v4.w;
+        result_v4.y = out_v4.y + _a * result_v4.z;
+        result_v4.x = out_v4.x + _a * result_v4.y;
 
-        vstore4(result, 0, optr - 3);
+        vstore4(result_v4, 0, optr);
     }
 }
 
@@ -207,18 +222,34 @@ kernel void horizontalAnticausalFilter_Irregular(
         buffer + mad24(rows - gid, elements_per_row, -1 + buffer_offset / 4);
 
     float4 buf_v4, out_v4, res_v4 = (float4)(0);
-
-    for(int i = 0; i < elements_per_row / 4; ++i, optr -= 4, bptr -= 4)
+    float result = 0;
+    // we assume elements_per_row is multple of 4
+    for(int i = 0; i < 4; ++ i, -- optr, -- bptr)
     {
-        buf_v4 = vload4(0, bptr - 3);
-        out_v4 = vload4(0, optr - 3);
+        if(i < elements_per_row - cols)
+        {
+            *optr = result;
+        }
+        else
+        {
+            result = *optr + *bptr * result;
+            *optr = result;
+        }
+    }
+    res_v4.x = result;
+    optr -= 3;
+    bptr -= 3;
+    for(int i = 0; i < elements_per_row / 4 - 1; ++i, optr -= 4, bptr -= 4)
+    {
+        buf_v4 = vload4(0, bptr);
+        out_v4 = vload4(0, optr);
 
         res_v4.w = out_v4.w + buf_v4.w * res_v4.x;
         res_v4.z = out_v4.z + buf_v4.z * res_v4.w;
         res_v4.y = out_v4.y + buf_v4.y * res_v4.z;
         res_v4.x = out_v4.x + buf_v4.x * res_v4.y;
 
-        vstore4(res_v4, 0, optr - 3);
+        vstore4(res_v4, 0, optr);
     }
 }
 

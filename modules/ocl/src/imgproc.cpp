@@ -1692,7 +1692,7 @@ namespace cv
 
         cv::Ptr<cv::CLAHE> createCLAHE(double clipLimit, cv::Size tileGridSize)
         {
-            return new CLAHE_Impl(clipLimit, tileGridSize.width, tileGridSize.height);
+            return makePtr<CLAHE_Impl>(clipLimit, tileGridSize.width, tileGridSize.height);
         }
 
         //////////////////////////////////bilateralFilter////////////////////////////////////////////////////

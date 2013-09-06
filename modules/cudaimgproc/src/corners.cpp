@@ -178,12 +178,12 @@ namespace
 
 Ptr<cuda::CornernessCriteria> cv::cuda::createHarrisCorner(int srcType, int blockSize, int ksize, double k, int borderType)
 {
-    return new Harris(srcType, blockSize, ksize, k, borderType);
+    return makePtr<Harris>(srcType, blockSize, ksize, k, borderType);
 }
 
 Ptr<cuda::CornernessCriteria> cv::cuda::createMinEigenValCorner(int srcType, int blockSize, int ksize, int borderType)
 {
-    return new MinEigenVal(srcType, blockSize, ksize, borderType);
+    return makePtr<MinEigenVal>(srcType, blockSize, ksize, borderType);
 }
 
 #endif /* !defined (HAVE_CUDA) */

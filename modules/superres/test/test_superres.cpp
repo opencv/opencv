@@ -59,7 +59,7 @@ private:
 AllignedFrameSource::AllignedFrameSource(const cv::Ptr<cv::superres::FrameSource>& base, int scale) :
     base_(base), scale_(scale)
 {
-    CV_Assert( !base_.empty() );
+    CV_Assert( base_ );
 }
 
 void AllignedFrameSource::nextFrame(cv::OutputArray frame)
@@ -101,7 +101,7 @@ private:
 DegradeFrameSource::DegradeFrameSource(const cv::Ptr<cv::superres::FrameSource>& base, int scale) :
     base_(base), iscale_(1.0 / scale)
 {
-    CV_Assert( !base_.empty() );
+    CV_Assert( base_ );
 }
 
 void addGaussNoise(cv::Mat& image, double sigma)
@@ -229,7 +229,8 @@ void SuperResolution::RunTest(cv::Ptr<cv::superres::SuperResolution> superRes)
     superRes->set("temporalAreaRadius", temporalAreaRadius);
 
     cv::Ptr<cv::superres::FrameSource> goldSource(new AllignedFrameSource(cv::superres::createFrameSource_Video(inputVideoName), scale));
-    cv::Ptr<cv::superres::FrameSource> lowResSource(new DegradeFrameSource(new AllignedFrameSource(cv::superres::createFrameSource_Video(inputVideoName), scale), scale));
+    cv::Ptr<cv::superres::FrameSource> lowResSource(new DegradeFrameSource(
+        cv::makePtr<AllignedFrameSource>(cv::superres::createFrameSource_Video(inputVideoName), scale), scale));
 
     // skip first frame
     cv::Mat frame;
