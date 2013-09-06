@@ -280,7 +280,7 @@ MergeDebevec
 ---------------------------
 .. ocv:class:: MergeDebevec : public ExposureMerge
 
-The resulting HDR image is calculated as weighted average of he exposures considering exposure values and camera response.
+The resulting HDR image is calculated as weighted average of the exposures considering exposure values and camera response.
 
 For more information see [DM97]_.
 
