@@ -58,12 +58,14 @@ namespace cv { namespace gpu { namespace cudev
     void NV12_to_RGB(const PtrStepb decodedFrame, PtrStepSz<uint> interopFrame, cudaStream_t stream = 0);
 }}}
 
+using namespace cv::gpucodec::detail;
+
 namespace
 {
     class VideoReaderImpl : public VideoReader
     {
     public:
-        explicit VideoReaderImpl(const Ptr<detail::VideoSource>& source);
+        explicit VideoReaderImpl(const Ptr<VideoSource>& source);
         ~VideoReaderImpl();
 
         bool nextFrame(OutputArray frame);
@@ -71,11 +73,11 @@ namespace
         FormatInfo format() const;
 
     private:
-        Ptr<detail::VideoSource> videoSource_;
+        Ptr<VideoSource> videoSource_;
 
-        Ptr<detail::FrameQueue> frameQueue_;
-        Ptr<detail::VideoDecoder> videoDecoder_;
-        Ptr<detail::VideoParser> videoParser_;
+        Ptr<FrameQueue> frameQueue_;
+        Ptr<VideoDecoder> videoDecoder_;
+        Ptr<VideoParser> videoParser_;
 
         CUvideoctxlock lock_;
 
@@ -87,7 +89,7 @@ namespace
         return videoSource_->format();
     }
 
-    VideoReaderImpl::VideoReaderImpl(const Ptr<detail::VideoSource>& source) :
+    VideoReaderImpl::VideoReaderImpl(const Ptr<VideoSource>& source) :
         videoSource_(source),
         lock_(0)
     {
@@ -159,7 +161,7 @@ namespace
                     return false;
 
                 // Wait a bit
-                detail::Thread::sleep(1);
+                Thread::sleep(1);
             }
 
             bool isProgressive = displayInfo.progressive_frame != 0;
@@ -212,7 +214,7 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
 {
     CV_Assert( !filename.empty() );
 
-    Ptr<detail::VideoSource> videoSource;
+    Ptr<VideoSource> videoSource;
 
     try
     {
@@ -220,7 +222,7 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
     }
     catch (...)
     {
-        Ptr<RawVideoSource> source(new detail::FFmpegVideoSource(filename));
+        Ptr<RawVideoSource> source(new FFmpegVideoSource(filename));
         videoSource.reset(new RawVideoSourceWrapper(source));
     }
 
@@ -229,7 +231,7 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
 
 Ptr<VideoReader> cv::gpucodec::createVideoReader(const Ptr<RawVideoSource>& source)
 {
-    Ptr<detail::VideoSource> videoSource(new detail::RawVideoSourceWrapper(source));
+    Ptr<VideoSource> videoSource(new RawVideoSourceWrapper(source));
     return makePtr<VideoReaderImpl>(videoSource);
 }
 
