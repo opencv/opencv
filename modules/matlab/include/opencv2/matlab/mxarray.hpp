@@ -46,6 +46,7 @@
 #include <mex.h>
 #include <stdint.h>
 #include <cstdarg>
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <sstream>
