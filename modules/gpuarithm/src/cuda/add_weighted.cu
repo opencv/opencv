@@ -52,6 +52,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::schar;
+using cv::uchar;
+
 namespace arithm
 {
     template <typename T> struct UseDouble_

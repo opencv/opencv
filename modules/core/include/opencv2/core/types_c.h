@@ -99,6 +99,13 @@
 
 #ifdef __cplusplus
 #  include "opencv2/core.hpp"
+
+   using cv::schar;
+   using cv::uchar;
+   using cv::ushort;
+   using cv::uint;
+   using cv::int64;
+   using cv::uint64;
 #endif
 
 /* CvArr* is used to pass arbitrary

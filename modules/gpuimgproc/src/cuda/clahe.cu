@@ -52,6 +52,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace clahe
 {
     __global__ void calcLutKernel(const PtrStepb src, PtrStepb lut,

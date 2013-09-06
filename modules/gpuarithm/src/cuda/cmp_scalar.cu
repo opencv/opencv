@@ -54,6 +54,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::schar;
+using cv::uchar;
+
 namespace arithm
 {
     template <class Op, typename T>

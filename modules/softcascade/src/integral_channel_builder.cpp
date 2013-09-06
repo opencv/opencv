@@ -46,6 +46,8 @@ namespace {
 
 using namespace cv::softcascade;
 
+using cv::uchar;
+
 class HOG6MagLuv : public ChannelFeatureBuilder
 {
     enum {N_CHANNELS = 10};

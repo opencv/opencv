@@ -10,6 +10,9 @@
 
 using namespace perf;
 
+using cv::int64;
+using cv::uint64;
+
 int64 TestBase::timeLimitDefault = 0;
 unsigned int TestBase::iterationsLimitDefault = (unsigned int)(-1);
 int64 TestBase::_timeadjustment = 0;

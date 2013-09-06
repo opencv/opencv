@@ -53,6 +53,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::schar;
+using cv::uchar;
+
 namespace cv { namespace gpu { namespace cudev
 {
     template <typename T> struct TransformFunctorTraits< bit_not<T> > : arithm::ArithmFuncTraits<sizeof(T), sizeof(T)>

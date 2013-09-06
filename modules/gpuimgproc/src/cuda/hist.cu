@@ -50,6 +50,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace hist
 {
     __global__ void histogram256Kernel(const uchar* src, int cols, int rows, size_t step, int* hist)

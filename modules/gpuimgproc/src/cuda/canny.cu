@@ -53,6 +53,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace canny
 {
     struct L1 : binary_function<int, int, float>

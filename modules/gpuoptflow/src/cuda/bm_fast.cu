@@ -50,6 +50,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace optflowbm_fast
 {
     enum

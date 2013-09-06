@@ -42,6 +42,10 @@
 #ifndef _CV_GCGRAPH_H_
 #define _CV_GCGRAPH_H_
 
+#include "opencv2/core/cvdef.h"
+
+using cv::uchar;
+
 template <class TWeight> class GCGraph
 {
 public:

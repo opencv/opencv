@@ -48,6 +48,8 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::uchar;
+
 namespace row_filter
 {
     #define MAX_KERNEL_SIZE 32

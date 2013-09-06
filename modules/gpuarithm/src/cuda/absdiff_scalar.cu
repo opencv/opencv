@@ -53,6 +53,9 @@
 using namespace cv::gpu;
 using namespace cv::gpu::cudev;
 
+using cv::schar;
+using cv::uchar;
+
 namespace arithm
 {
     template <typename T, typename S> struct AbsDiffScalar : unary_function<T, T>
