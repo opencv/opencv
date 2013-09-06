@@ -22,30 +22,31 @@ macro(find_vtk)
       set(HAVE_VTK ON)    
     else ()
       set(HAVE_VTK OFF)
-      message (WARNING "VTK disabled. You are to build OpenCV in STATIC but VTK is SHARED!")
+      message (FATAL_ERROR "VTK disabled. You are to build OpenCV in STATIC but VTK is SHARED!")
     endif ()
   endif()
 endmacro()
 
-find_vtk()
+if (NOT OPENCV_INITIAL_PASS AND DEFINED BUILD_opencv_viz AND BUILD_opencv_viz)
+  find_vtk()
+endif()
 
-if(HAVE_VTK)
+if(DEFINED HAVE_VTK AND HAVE_VTK)
   set(VTK_USE_FILE ${VTK_USE_FILE} CACHE INTERNAL "VTK_USE_FILE")
   include (${VTK_USE_FILE})
   add_definitions(-DHAVE_VTK)
-else()
-  return()
 endif()
-
-
+  
 set(the_description "Viz")
 set(BUILD_opencv_viz_INIT OFF)
 include_directories(src)
 ocv_define_module(viz opencv_core)
 
-if(BUILD_opencv_viz)
+if(DEFINED BUILD_opencv_viz AND BUILD_opencv_viz AND DEFINED HAVE_VTK AND HAVE_VTK)
   target_link_libraries(opencv_viz vtkCommon vtkWidgets vtkFiltering vtkRendering)
   if(APPLE)
-      target_link_libraries(opencv_viz "-framework Cocoa")
+    target_link_libraries(opencv_viz "-framework Cocoa")
   endif()
 endif()
+
+
