@@ -1,8 +1,5 @@
 #include "precomp.hpp"
-
 #include "interactor_style.h"
-
-//#include <q/visualization/vtk/vtkVertexBufferObjectMapper.h>
 
 using namespace cv;
 
@@ -152,17 +149,9 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 void
 cv::viz::InteractorStyle::OnKeyDown ()
 {
-    if (!init_)
-    {
-        std::cout << "Interactor style not initialized. Please call Initialize () before continuing" << std::endl;
-        return;
-    }
-
-    if (!renderer_)
-    {
-        std::cout << "No renderer given! Use SetRendererCollection () before continuing." << std::endl;
-        return;
-    }
+    
+    CV_Assert("Interactor style not initialized. Please call Initialize () before continuing" && init_);
+    CV_Assert("No renderer given! Use SetRendererCollection () before continuing." && renderer_);
 
     FindPokedRenderer (Interactor->GetEventPosition ()[0], Interactor->GetEventPosition ()[1]);
 
@@ -235,7 +224,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
         {
             for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
             {
-                vtkSmartPointer<vtkActor> apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                vtkActor* apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
                 apart->GetProperty ()->SetRepresentationToPoints ();
             }
         }
@@ -258,15 +247,12 @@ cv::viz::InteractorStyle::OnKeyDown ()
         cam->GetFocalPoint (focal);
         cam->GetPosition (pos);
         cam->GetViewUp (view);
-#ifndef M_PI
-        # define M_PI   3.14159265358979323846     // pi
-#endif
 
         int *win_pos = Interactor->GetRenderWindow ()->GetPosition ();
         int *win_size = Interactor->GetRenderWindow ()->GetSize ();
         ofs_cam << clip[0]  << "," << clip[1]  << "/" << focal[0] << "," << focal[1] << "," << focal[2] << "/" <<
                                pos[0]   << "," << pos[1]   << "," << pos[2]   << "/" << view[0]  << "," << view[1]  << "," << view[2] << "/" <<
-                               cam->GetViewAngle () / 180.0 * M_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
+                               cam->GetViewAngle () / 180.0 * CV_PI  << "/" << win_size[0] << "," << win_size[1] << "/" << win_pos[0] << "," << win_pos[1]
                             << endl;
         ofs_cam.close ();
 
@@ -310,7 +296,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
             {
                 for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
                 {
-                    vtkSmartPointer<vtkActor> apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                    vtkActor* apart = reinterpret_cast <vtkActor*> (path->GetLastNode ()->GetViewProp ());
                     float psize = apart->GetProperty ()->GetPointSize ();
                     if (psize < 63.0f)
                         apart->GetProperty ()->SetPointSize (psize + 1.0f);
@@ -331,7 +317,7 @@ cv::viz::InteractorStyle::OnKeyDown ()
             {
                 for (actor->InitPathTraversal (); vtkAssemblyPath* path = actor->GetNextPath (); )
                 {
-                    vtkSmartPointer<vtkActor> apart = static_cast<vtkActor*> (path->GetLastNode ()->GetViewProp ());
+                    vtkActor* apart = static_cast<vtkActor*> (path->GetLastNode ()->GetViewProp ());
                     float psize = apart->GetProperty ()->GetPointSize ();
                     if (psize > 1.0f)
                         apart->GetProperty ()->SetPointSize (psize - 1.0f);
@@ -432,17 +418,17 @@ cv::viz::InteractorStyle::OnKeyDown ()
 
         vtkSmartPointer<vtkCamera> cam = CurrentRenderer->GetActiveCamera ();
 
-        static CloudActorMap::iterator it = actors_->begin ();
+        static WidgetActorMap::iterator it = widget_actor_map_->begin ();
         // it might be that some actors don't have a valid transformation set -> we skip them to avoid a seg fault.
         bool found_transformation = false;
 
-        for (size_t idx = 0; idx < actors_->size (); ++idx, ++it)
+        for (size_t idx = 0; idx < widget_actor_map_->size (); ++idx, ++it)
         {
-            if (it == actors_->end ())
-                it = actors_->begin ();
-
-            const CloudActor& actor = it->second;
-            if (actor.viewpoint_transformation_.GetPointer ())
+            if (it == widget_actor_map_->end ())
+                it = widget_actor_map_->begin ();
+            
+            vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
+            if (actor && actor->GetUserMatrix())
             {
                 found_transformation = true;
                 break;
@@ -452,18 +438,18 @@ cv::viz::InteractorStyle::OnKeyDown ()
         // if a valid transformation was found, use it otherwise fall back to default view point.
         if (found_transformation)
         {
-            const CloudActor& actor = it->second;
-            cam->SetPosition (actor.viewpoint_transformation_->GetElement (0, 3),
-                              actor.viewpoint_transformation_->GetElement (1, 3),
-                              actor.viewpoint_transformation_->GetElement (2, 3));
+            vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
+            cam->SetPosition (actor->GetUserMatrix()->GetElement (0, 3),
+                              actor->GetUserMatrix()->GetElement (1, 3),
+                              actor->GetUserMatrix()->GetElement (2, 3));
 
-            cam->SetFocalPoint (actor.viewpoint_transformation_->GetElement (0, 3) - actor.viewpoint_transformation_->GetElement (0, 2),
-                                actor.viewpoint_transformation_->GetElement (1, 3) - actor.viewpoint_transformation_->GetElement (1, 2),
-                                actor.viewpoint_transformation_->GetElement (2, 3) - actor.viewpoint_transformation_->GetElement (2, 2));
+            cam->SetFocalPoint (actor->GetUserMatrix()->GetElement (0, 3) - actor->GetUserMatrix()->GetElement (0, 2),
+                                actor->GetUserMatrix()->GetElement (1, 3) - actor->GetUserMatrix()->GetElement (1, 2),
+                                actor->GetUserMatrix()->GetElement (2, 3) - actor->GetUserMatrix()->GetElement (2, 2));
 
-            cam->SetViewUp (actor.viewpoint_transformation_->GetElement (0, 1),
-                            actor.viewpoint_transformation_->GetElement (1, 1),
-                            actor.viewpoint_transformation_->GetElement (2, 1));
+            cam->SetViewUp (actor->GetUserMatrix()->GetElement (0, 1),
+                            actor->GetUserMatrix()->GetElement (1, 1),
+                            actor->GetUserMatrix()->GetElement (2, 1));
         }
         else
         {
@@ -473,10 +459,10 @@ cv::viz::InteractorStyle::OnKeyDown ()
         }
 
         // go to the next actor for the next key-press event.
-        if (it != actors_->end ())
+        if (it != widget_actor_map_->end ())
             ++it;
         else
-            it = actors_->begin ();
+            it = widget_actor_map_->begin ();
 
         CurrentRenderer->SetActiveCamera (cam);
         CurrentRenderer->ResetCameraClippingRange ();
@@ -659,17 +645,8 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward ()
 //////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::InteractorStyle::OnTimer ()
 {
-    if (!init_)
-    {
-        std::cout << "[PCLVisualizerInteractorStyle] Interactor style not initialized. Please call Initialize () before continuing.\n" << std::endl;
-        return;
-    }
-
-    if (!renderer_)
-    {
-        std::cout <<  "[PCLVisualizerInteractorStyle] No renderer collection given! Use SetRendererCollection () before continuing." << std::endl;
-        return;
-    }
+    CV_Assert("Interactor style not initialized." && init_);
+    CV_Assert("Renderer has not been set." && renderer_);
     renderer_->Render ();
     Interactor->Render ();
 }

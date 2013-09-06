@@ -65,9 +65,10 @@ namespace cv
         //! takes coordiante frame data and builds transfrom to global coordinate frame
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
-        //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation
+        //! constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation)
         CV_EXPORTS Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir);
 
+        //! retrieves a window by its name
         CV_EXPORTS Viz3d get(const String &window_name);
 
         //! checks float value for Nan
@@ -92,6 +93,7 @@ namespace cv
         template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
         { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
         
+        //! helper class that provides access by name infrastructure
         class CV_EXPORTS VizAccessor
         {
         public:
@@ -102,6 +104,7 @@ namespace cv
             void add(Viz3d window);
             void remove(const String &window_name);
             
+            //! window names automatically have Viz - prefix even though not provided by the users
             static void generateWindowName(const String &window_name, String &output);
             
         private:
@@ -112,8 +115,8 @@ namespace cv
             static bool is_instantiated_;
             static VizMap viz_map_;
         };
-    }
-}
+    } /* namespace viz */
+} /* namespace cv */
 
 
 #endif /* __OPENCV_VIZ_HPP__ */

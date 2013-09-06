@@ -7,7 +7,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
-#include <boost/concept_check.hpp>
 
 namespace cv
 {
@@ -25,18 +24,10 @@ namespace cv
             Viz3d& operator=(const Viz3d&);
             ~Viz3d();
 
-            void setBackgroundColor(const Color& color = Color::black());
-
-            //to refactor
-            bool addPolygonMesh(const Mesh3d& mesh, const String& id = "polygon");
-            bool updatePolygonMesh(const Mesh3d& mesh, const String& id = "polygon");
-            bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
-            bool addPolygon(const Mat& cloud, const Color& color, const String& id = "polygon");
-
-
             void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
             void removeWidget(const String &id);
             Widget getWidget(const String &id) const;
+            void removeAllWidgets();
 
             void setWidgetPose(const String &id, const Affine3f &pose);
             void updateWidgetPose(const String &id, const Affine3f &pose);
@@ -47,13 +38,19 @@ namespace cv
             Affine3f getViewerPose();
             void setViewerPose(const Affine3f &pose);
             
+            void resetCameraViewpoint (const String &id);
+            void resetCamera();
+            
             void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
             void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
             
             Size getWindowSize() const;
             void setWindowSize(const Size &window_size);
-            
             String getWindowName() const;
+            void saveScreenshot (const String &file);
+            void setWindowPosition (int x, int y);
+            void setFullScreen (bool mode);
+            void setBackgroundColor(const Color& color = Color::black());
 
             void spin();
             void spinOnce(int time = 1, bool force_redraw = false);
@@ -61,6 +58,16 @@ namespace cv
 
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
+            
+            void setRenderingProperty(const String &id, int property, double value);
+            double getRenderingProperty(const String &id, int property);
+            
+            void setDesiredUpdateRate(double time);
+            double getDesiredUpdateRate();
+            
+            void setRepresentationToSurface();
+            void setRepresentationToWireframe();
+            void setRepresentationToPoints();
         private:
 
             struct VizImpl;

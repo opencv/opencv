@@ -49,4 +49,3 @@ if(BUILD_opencv_viz)
       target_link_libraries(opencv_viz "-framework Cocoa")
   endif()
 endif()
-

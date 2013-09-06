@@ -16,48 +16,18 @@ public:
 
     VizImpl (const String &name);
     virtual ~VizImpl ();
+    
+    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
+    void removeWidget(const String &id);
+    Widget getWidget(const String &id) const;
+    void removeAllWidgets();
+    
+    void setWidgetPose(const String &id, const Affine3f &pose);
+    void updateWidgetPose(const String &id, const Affine3f &pose);
+    Affine3f getWidgetPose(const String &id) const; 
 
-
-
-
-
-
-
-
-
-    //to refactor
-    bool removePointCloud (const String& id = "cloud");
-    inline bool removePolygonMesh (const String& id = "polygon") { return removePointCloud (id); }
-    bool removeShape (const String& id = "cloud");
-    bool removeText3D (const String& id = "cloud");
-    bool removeAllPointClouds ();
-
-    //create Viz3d::removeAllWidgets()
-    bool removeAllShapes ();
-
-    //to refactor
-    bool addPolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
-    bool updatePolygonMesh (const Mesh3d& mesh, const cv::Mat& mask, const String& id = "polygon");
-    bool addPolylineFromPolygonMesh (const Mesh3d& mesh, const String& id = "polyline");
-
-    // to refactor: Widget3D:: & Viz3d::
-    bool setPointCloudRenderingProperties (int property, double value, const String& id = "cloud");
-    bool getPointCloudRenderingProperties (int property, double &value, const String& id = "cloud");
-    bool setShapeRenderingProperties (int property, double value, const String& id);
-
-    /** \brief Set whether the point cloud is selected or not
-         *  \param[in] selected whether the cloud is selected or not (true = selected)
-         *  \param[in] id the point cloud object id (default: cloud)
-         */
-    // probably should just remove
-    bool setPointCloudSelected (const bool selected, const String& id = "cloud" );
-
-
-
-
-
-
-
+    void setDesiredUpdateRate(double time);
+    double getDesiredUpdateRate();
 
     /** \brief Returns true when the user tried to close the window */
     bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
@@ -76,78 +46,29 @@ public:
         }
     }
 
-
-
-
-
-
-
-
-
-
-    
-    // to refactor
-    bool addPolygon(const cv::Mat& cloud, const Color& color, const String& id = "polygon");
-    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color, bool display_length, const String& id = "arrow");
-    bool addArrow (const Point3f& pt1, const Point3f& pt2, const Color& color_line, const Color& color_text, const String& id = "arrow");
-
-    // Probably remove this
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, const String& id = "PolyData");
-    bool addModelFromPolyData (vtkSmartPointer<vtkPolyData> polydata, vtkSmartPointer<vtkTransform> transform, const String& id = "PolyData");
-
-    // I think this should be moved to 'static Widget Widget::fromPlyFile(const String&)';
-    bool addModelFromPLYFile (const String &filename, const String& id = "PLYModel");
-    bool addModelFromPLYFile (const String &filename, vtkSmartPointer<vtkTransform> transform, const String& id = "PLYModel");
-
-
-    // to implement in Viz3d with shorter name
-    void setRepresentationToSurfaceForAllActors();
-    void setRepresentationToPointsForAllActors();
-    void setRepresentationToWireframeForAllActors();
-
-
-
-
-
-
-
-
-    // ////////////////////////////////////////////////////////////////////////////////////
-    // All camera methods to refactor into set/getViewwerPose, setCamera()
-    // and 'Camera' class itself with various constructors/fields
+    void setRepresentationToSurface();
+    void setRepresentationToPoints();
+    void setRepresentationToWireframe();
     
     void setCamera(const Camera &camera);
     Camera getCamera() const;
 
-    void initCameraParameters (); /** \brief Initialize camera parameters with some default values. */
-    bool cameraParamsSet () const; /** \brief Checks whether the camera parameters were manually loaded from file.*/
-    void updateCamera (); /** \brief Update camera parameters and render. */
-    void resetCamera (); /** \brief Reset camera parameters and render. */
-
     /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
       * \param[in] id the point cloud object id (default: cloud) */
-    void resetCameraViewpoint (const String& id = "cloud");
+    void resetCameraViewpoint(const String& id);
+    void resetCamera();
     
-    //to implement Viz3d set/getViewerPose()
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();
 
     void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
 
-
-
-
-
-
-
-    //to implemnt in Viz3d
     void saveScreenshot (const String &file);
     void setWindowPosition (int x, int y);
     Size getWindowSize() const;
     void setWindowSize (int xw, int yw);
     void setFullScreen (bool mode);
-    void setWindowName (const String &name);
     String getWindowName() const;
     void setBackgroundColor (const Color& color);
 
@@ -156,22 +77,6 @@ public:
 
     void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
     void registerMouseCallback(MouseCallback callback, void* cookie = 0);
-
-
-
-
-
-
-
-
-    //declare above (to move to up)
-    void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
-    void removeWidget(const String &id);
-    Widget getWidget(const String &id) const;
-    
-    void setWidgetPose(const String &id, const Affine3f &pose);
-    void updateWidgetPose(const String &id, const Affine3f &pose);
-    Affine3f getWidgetPose(const String &id) const; 
 
 private:
     vtkSmartPointer<vtkRenderWindowInteractor> interactor_;
@@ -209,6 +114,7 @@ private:
             if (event_id == vtkCommand::ExitEvent)
             {
                 viz_->stopped_ = true;
+                viz_->interactor_->GetRenderWindow()->Finalize();
                 viz_->interactor_->TerminateApp ();
             }
         }
@@ -232,12 +138,6 @@ private:
 
     /** \brief The render window interactor style. */
     vtkSmartPointer<InteractorStyle> style_;
-
-    /** \brief Internal list with actor pointers and name IDs for point clouds. */
-    cv::Ptr<CloudActorMap> cloud_actor_map_;
-
-    /** \brief Internal list with actor pointers and name IDs for shapes. */
-    cv::Ptr<ShapeActorMap> shape_actor_map_;
     
     /** \brief Internal list with actor pointers and name IDs for all widget actors */
     cv::Ptr<WidgetActorMap> widget_actor_map_;
@@ -245,12 +145,7 @@ private:
     /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
     bool camera_set_;
 
-    bool removeActorFromRenderer (const vtkSmartPointer<vtkLODActor> &actor);
-    bool removeActorFromRenderer (const vtkSmartPointer<vtkActor> &actor);
     bool removeActorFromRenderer (const vtkSmartPointer<vtkProp> &actor);
-
-    //void addActorToRenderer (const vtkSmartPointer<vtkProp> &actor);
-
 
     /** \brief Internal method. Creates a vtk actor from a vtk polydata object.
           * \param[in] data the vtk polydata object to create an actor for
@@ -268,10 +163,6 @@ private:
           * generate
           */
     void updateCells (vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
-
-    void allocVtkPolyData (vtkSmartPointer<vtkAppendPolyData> &polydata);
-    void allocVtkPolyData (vtkSmartPointer<vtkPolyData> &polydata);
-    void allocVtkUnstructuredGrid (vtkSmartPointer<vtkUnstructuredGrid> &polydata);
 };
 
 
@@ -280,16 +171,8 @@ namespace cv
 {
     namespace viz
     {
-        //void getTransformationMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternionf& orientation, Eigen::Matrix4f &transformation);
         vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
         cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
-
-        /** \brief Convert origin and orientation to vtkMatrix4x4
-              * \param[in] origin the point cloud origin
-              * \param[in] orientation the point cloud orientation
-              * \param[out] vtk_matrix the resultant VTK 4x4 matrix
-              */
-        void convertToVtkMatrix (const Eigen::Vector4f &origin, const Eigen::Quaternion<float> &orientation, vtkSmartPointer<vtkMatrix4x4> &vtk_matrix);
 
         struct NanFilter
         {
