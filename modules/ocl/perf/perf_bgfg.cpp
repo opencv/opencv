@@ -48,6 +48,8 @@ using namespace perf;
 using namespace std;
 using namespace cv::ocl;
 using namespace cv;
+using std::tr1::tuple;
+using std::tr1::get;
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
@@ -60,6 +62,7 @@ using namespace cv;
 #  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
 #endif
 
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output, int output_cn)
 {
     for(int i = 0; i< (int)(input.size()); i++)
@@ -70,8 +73,8 @@ static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output, int output_cn)
             cvtColor(input[i], output[i], COLOR_RGB2RGBA);
     }
 }
-
-static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer, vector<oclMat>& frame_buffer_ocl)
+//prepare data for CPU
+static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer)
 {
     cv::Mat frame;
     std::vector<Mat> frame_buffer_init;
@@ -87,11 +90,14 @@ static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer, ve
         cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
     else
         frame_buffer = frame_buffer_init;
-
-    for(int i = 0; i < nFrame; i++)
+}
+//copy CPU data to GPU
+static void prepareData(vector<Mat>& frame_buffer, vector<oclMat>& frame_buffer_ocl)
+{
+    for(int i = 0; i < (int)frame_buffer.size(); i++)
         frame_buffer_ocl.push_back(cv::ocl::oclMat(frame_buffer[i]));
 }
-
+#endif
 ///////////// MOG ////////////////////////
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
@@ -118,15 +124,16 @@ PERF_TEST_P(VideoMOGFixture, MOG,
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
-    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
+    prepareData(cap, cn, frame_buffer);
 
+    cv::Mat foreground;
+    cv::ocl::oclMat foreground_d;
     if(RUN_PLAIN_IMPL)
     {
-        cv::BackgroundSubtractorMOG mog;
-        cv::Mat foreground;
-
         TEST_CYCLE()
         {
+            cv::BackgroundSubtractorMOG mog;
+            foreground.release();
             for (int i = 0; i < nFrame; i++)
             {
                 mog(frame_buffer[i], foreground, learningRate);
@@ -135,18 +142,19 @@ PERF_TEST_P(VideoMOGFixture, MOG,
         SANITY_CHECK(foreground);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::MOG d_mog;
-        cv::ocl::oclMat foreground;
-        cv::Mat foreground_h;
+        prepareData(frame_buffer, frame_buffer_ocl);
+        CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
         OCL_TEST_CYCLE()
         {
+            cv::ocl::MOG d_mog;
+            foreground_d.release();
             for (int i = 0; i < nFrame; ++i)
             {
-                d_mog(frame_buffer_ocl[i], foreground, learningRate);
+                d_mog(frame_buffer_ocl[i], foreground_d, learningRate);
             }
         }
-        foreground.download(foreground_h);
-        SANITY_CHECK(foreground_h);
+        foreground_d.download(foreground);
+        SANITY_CHECK(foreground);
     }else
         OCL_PERF_ELSE
 }
@@ -173,18 +181,18 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
 
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
-
-    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
+    prepareData(cap, cn, frame_buffer);
+    cv::Mat foreground;
+    cv::ocl::oclMat foreground_d;
 
     if(RUN_PLAIN_IMPL)
     {
-        cv::BackgroundSubtractorMOG2 mog2;
-        cv::Mat foreground;
-
-        mog2.set("detectShadows", false);
-
         TEST_CYCLE()
         {
+            cv::BackgroundSubtractorMOG2 mog2;
+            mog2.set("detectShadows", false);
+            foreground.release();
+
             for (int i = 0; i < nFrame; i++)
             {
                 mog2(frame_buffer[i], foreground);
@@ -193,19 +201,19 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
         SANITY_CHECK(foreground);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::MOG2 d_mog2;
-        cv::ocl::oclMat foreground;
-        cv::Mat foreground_h;
-
+        prepareData(frame_buffer, frame_buffer_ocl);
+        CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
         OCL_TEST_CYCLE()
         {
+            cv::ocl::MOG2 d_mog2;
+            foreground_d.release();
             for (int i = 0; i < nFrame; i++)
             {
-                d_mog2(frame_buffer_ocl[i], foreground);
+                d_mog2(frame_buffer_ocl[i], foreground_d);
             }
         }
-        foreground.download(foreground_h);
-        SANITY_CHECK(foreground_h);
+        foreground_d.download(foreground);
+        SANITY_CHECK(foreground);
     }else
         OCL_PERF_ELSE
 }
@@ -218,7 +226,7 @@ typedef TestBaseWithParam<VideoMOG2ParamType> Video_MOG2GetBackgroundImage;
 
 PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
             ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
-            ::testing::Values(1, 3)))
+            ::testing::Values(3)))
 {
     VideoMOG2ParamType params = GetParam();
 
@@ -232,16 +240,21 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
-    prepareData(cap, cn, frame_buffer, frame_buffer_ocl);
+    prepareData(cap, cn, frame_buffer);
+
+    cv::Mat foreground;
+    cv::Mat background;
+    cv::ocl::oclMat foreground_d;
+    cv::ocl::oclMat background_d;
 
     if(RUN_PLAIN_IMPL)
     {
-        cv::BackgroundSubtractorMOG2 mog2;
-        cv::Mat foreground;
-        cv::Mat background;
-        mog2.set("detectShadows", false);
         TEST_CYCLE()
         {
+            cv::BackgroundSubtractorMOG2 mog2;
+            mog2.set("detectShadows", false);
+            foreground.release();
+            background.release();
             for (int i = 0; i < nFrame; i++)
             {
                 mog2(frame_buffer[i], foreground);
@@ -251,21 +264,21 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
         SANITY_CHECK(background);
     }else if(RUN_OCL_IMPL)
     {
-        cv::ocl::MOG2 d_mog2;
-        cv::ocl::oclMat foreground;
-        cv::Mat background_h;
-        cv::ocl::oclMat background;
-
+        prepareData(frame_buffer, frame_buffer_ocl);
+        CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
         OCL_TEST_CYCLE()
         {
+            cv::ocl::MOG2 d_mog2;
+            foreground_d.release();
+            background_d.release();
             for (int i = 0; i < nFrame; i++)
             {
-                d_mog2(frame_buffer_ocl[i], foreground);
+                d_mog2(frame_buffer_ocl[i], foreground_d);
             }
-            d_mog2.getBackgroundImage(background);
+            d_mog2.getBackgroundImage(background_d);
         }
-        background.download(background_h);
-        SANITY_CHECK(background_h);
+        background_d.download(background);
+        SANITY_CHECK(background);
     }else
         OCL_PERF_ELSE
 }
