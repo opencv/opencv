@@ -2148,7 +2148,7 @@ typedef CvANN_MLP NeuralNet_MLP;
 typedef CvGBTreesParams GradientBoostingTreeParams;
 typedef CvGBTrees GradientBoostingTrees;
 
-template<> CV_EXPORTS void Ptr<CvDTreeSplit>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvDTreeSplit>::operator ()(CvDTreeSplit* obj) const;
 
 CV_EXPORTS bool initModule_ml(void);
 }

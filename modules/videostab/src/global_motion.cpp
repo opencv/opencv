@@ -671,9 +671,9 @@ Mat ToFileMotionWriter::estimate(const Mat &frame0, const Mat &frame1, bool *ok)
 KeypointBasedMotionEstimator::KeypointBasedMotionEstimator(Ptr<MotionEstimatorBase> estimator)
     : ImageMotionEstimatorBase(estimator->motionModel()), motionEstimator_(estimator)
 {
-    setDetector(new GoodFeaturesToTrackDetector());
-    setOpticalFlowEstimator(new SparsePyrLkOptFlowEstimator());
-    setOutlierRejector(new NullOutlierRejector());
+    setDetector(makePtr<GoodFeaturesToTrackDetector>());
+    setOpticalFlowEstimator(makePtr<SparsePyrLkOptFlowEstimator>());
+    setOutlierRejector(makePtr<NullOutlierRejector>());
 }
 
 
@@ -708,7 +708,7 @@ Mat KeypointBasedMotionEstimator::estimate(const Mat &frame0, const Mat &frame1,
 
     // perform outlier rejection
 
-    IOutlierRejector *outlRejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    IOutlierRejector *outlRejector = outlierRejector_.get();
     if (!dynamic_cast<NullOutlierRejector*>(outlRejector))
     {
         pointsPrev_.swap(pointsPrevGood_);
@@ -745,7 +745,7 @@ KeypointBasedMotionEstimatorGpu::KeypointBasedMotionEstimatorGpu(Ptr<MotionEstim
     detector_ = gpu::createGoodFeaturesToTrackDetector(CV_8UC1);
 
     CV_Assert(gpu::getCudaEnabledDeviceCount() > 0);
-    setOutlierRejector(new NullOutlierRejector());
+    setOutlierRejector(makePtr<NullOutlierRejector>());
 }
 
 
@@ -784,7 +784,7 @@ Mat KeypointBasedMotionEstimatorGpu::estimate(const gpu::GpuMat &frame0, const g
 
     // perform outlier rejection
 
-    IOutlierRejector *rejector = static_cast<IOutlierRejector*>(outlierRejector_);
+    IOutlierRejector *rejector = outlierRejector_.get();
     if (!dynamic_cast<NullOutlierRejector*>(rejector))
     {
         outlierRejector_->process(frame0.size(), hostPointsPrev_, hostPoints_, rejectionStatus_);

@@ -74,7 +74,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 {
-    return new EmptyFrameSource;
+    return makePtr<EmptyFrameSource>();
 }
 
 //////////////////////////////////////////////////////
@@ -186,12 +186,12 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
 Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 {
-    return new CameraFrameSource(deviceId);
+    return makePtr<CameraFrameSource>(deviceId);
 }
 
 #endif // HAVE_OPENCV_HIGHGUI
@@ -257,7 +257,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
 #endif // HAVE_OPENCV_GPUCODEC

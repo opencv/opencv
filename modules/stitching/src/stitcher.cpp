@@ -53,34 +53,34 @@ Stitcher Stitcher::createDefault(bool try_use_gpu)
     stitcher.setPanoConfidenceThresh(1);
     stitcher.setWaveCorrection(true);
     stitcher.setWaveCorrectKind(detail::WAVE_CORRECT_HORIZ);
-    stitcher.setFeaturesMatcher(new detail::BestOf2NearestMatcher(try_use_gpu));
-    stitcher.setBundleAdjuster(new detail::BundleAdjusterRay());
+    stitcher.setFeaturesMatcher(makePtr<detail::BestOf2NearestMatcher>(try_use_gpu));
+    stitcher.setBundleAdjuster(makePtr<detail::BundleAdjusterRay>());
 
 #ifdef HAVE_OPENCV_GPU
     if (try_use_gpu && gpu::getCudaEnabledDeviceCount() > 0)
     {
 #ifdef HAVE_OPENCV_NONFREE
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinderGpu());
+        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinderGpu>());
 #else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
 #endif
-        stitcher.setWarper(new SphericalWarperGpu());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinderGpu());
+        stitcher.setWarper(makePtr<SphericalWarperGpu>());
+        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinderGpu>());
     }
     else
 #endif
     {
 #ifdef HAVE_OPENCV_NONFREE
-        stitcher.setFeaturesFinder(new detail::SurfFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::SurfFeaturesFinder>());
 #else
-        stitcher.setFeaturesFinder(new detail::OrbFeaturesFinder());
+        stitcher.setFeaturesFinder(makePtr<detail::OrbFeaturesFinder>());
 #endif
-        stitcher.setWarper(new SphericalWarper());
-        stitcher.setSeamFinder(new detail::GraphCutSeamFinder(detail::GraphCutSeamFinderBase::COST_COLOR));
+        stitcher.setWarper(makePtr<SphericalWarper>());
+        stitcher.setSeamFinder(makePtr<detail::GraphCutSeamFinder>(detail::GraphCutSeamFinderBase::COST_COLOR));
     }
 
-    stitcher.setExposureCompensator(new detail::BlocksGainCompensator());
-    stitcher.setBlender(new detail::MultiBandBlender(try_use_gpu));
+    stitcher.setExposureCompensator(makePtr<detail::BlocksGainCompensator>());
+    stitcher.setBlender(makePtr<detail::MultiBandBlender>(try_use_gpu));
 
     return stitcher;
 }

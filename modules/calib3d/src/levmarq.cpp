@@ -95,7 +95,7 @@ public:
         int ptype = param0.type();
 
         CV_Assert( (param0.cols == 1 || param0.rows == 1) && (ptype == CV_32F || ptype == CV_64F));
-        CV_Assert( !cb.empty() );
+        CV_Assert( cb );
 
         int lx = param0.rows + param0.cols - 1;
         param0.convertTo(x, CV_64F);
@@ -220,7 +220,7 @@ CV_INIT_ALGORITHM(LMSolverImpl, "LMSolver",
 Ptr<LMSolver> createLMSolver(const Ptr<LMSolver::Callback>& cb, int maxIters)
 {
     CV_Assert( !LMSolverImpl_info_auto.name().empty() );
-    return new LMSolverImpl(cb, maxIters);
+    return makePtr<LMSolverImpl>(cb, maxIters);
 }
 
 }

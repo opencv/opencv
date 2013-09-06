@@ -70,7 +70,7 @@ void  BmpDecoder::close()
 
 ImageDecoder BmpDecoder::newDecoder() const
 {
-    return new BmpDecoder;
+    return makePtr<BmpDecoder>();
 }
 
 bool  BmpDecoder::readHeader()
@@ -496,7 +496,7 @@ BmpEncoder::~BmpEncoder()
 
 ImageEncoder BmpEncoder::newEncoder() const
 {
-    return new BmpEncoder;
+    return makePtr<BmpEncoder>();
 }
 
 bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )

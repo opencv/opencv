@@ -85,13 +85,12 @@ void CvEM::read( CvFileStorage* fs, CvFileNode* node )
 
 void CvEM::write( CvFileStorage* _fs, const char* name ) const
 {
-    FileStorage fs = _fs;
+    FileStorage fs(_fs, false);
     if(name)
         fs << name << "{";
     emObj.write(fs);
     if(name)
         fs << "}";
-    fs.fs.obj = 0;
 }
 
 double CvEM::calcLikelihood( const Mat &input_sample ) const

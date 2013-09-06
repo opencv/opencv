@@ -366,7 +366,7 @@ namespace
 
 Ptr<gpu::StereoConstantSpaceBP> cv::gpu::createStereoConstantSpaceBP(int ndisp, int iters, int levels, int nr_plane, int msg_type)
 {
-    return new StereoCSBPImpl(ndisp, iters, levels, nr_plane, msg_type);
+    return makePtr<StereoCSBPImpl>(ndisp, iters, levels, nr_plane, msg_type);
 }
 
 void cv::gpu::StereoConstantSpaceBP::estimateRecommendedParams(int width, int height, int& ndisp, int& iters, int& levels, int& nr_plane)

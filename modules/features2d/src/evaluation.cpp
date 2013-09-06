@@ -461,7 +461,7 @@ void cv::evaluateFeatureDetector( const Mat& img1, const Mat& img2, const Mat& H
     keypoints1 = _keypoints1 != 0 ? _keypoints1 : &buf1;
     keypoints2 = _keypoints2 != 0 ? _keypoints2 : &buf2;
 
-    if( (keypoints1->empty() || keypoints2->empty()) && fdetector.empty() )
+    if( (keypoints1->empty() || keypoints2->empty()) && !fdetector )
         CV_Error( Error::StsBadArg, "fdetector must not be empty when keypoints1 or keypoints2 is empty" );
 
     if( keypoints1->empty() )
@@ -575,7 +575,7 @@ void cv::evaluateGenericDescriptorMatcher( const Mat& img1, const Mat& img2, con
     if( keypoints1.empty() )
         CV_Error( Error::StsBadArg, "keypoints1 must not be empty" );
 
-    if( matches1to2->empty() && dmatcher.empty() )
+    if( matches1to2->empty() && !dmatcher )
         CV_Error( Error::StsBadArg, "dmatch must not be empty when matches1to2 is empty" );
 
     bool computeKeypoints2ByPrj = keypoints2.empty();

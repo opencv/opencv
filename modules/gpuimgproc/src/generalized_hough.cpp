@@ -554,7 +554,7 @@ namespace
 
 Ptr<GeneralizedHoughBallard> cv::gpu::createGeneralizedHoughBallard()
 {
-    return new GeneralizedHoughBallardImpl;
+    return makePtr<GeneralizedHoughBallardImpl>();
 }
 
 // GeneralizedHoughGuil
@@ -900,7 +900,7 @@ namespace
 
 Ptr<GeneralizedHoughGuil> cv::gpu::createGeneralizedHoughGuil()
 {
-    return new GeneralizedHoughGuilImpl;
+    return makePtr<GeneralizedHoughGuilImpl>();
 }
 
 #endif /* !defined (HAVE_CUDA) */

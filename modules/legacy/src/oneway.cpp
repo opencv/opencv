@@ -1736,7 +1736,7 @@ namespace cv{
     {
         std::vector<KeyPoint> features;
         Ptr<FeatureDetector> surf_extractor = FeatureDetector::create("SURF");
-        if( surf_extractor.empty() )
+        if( !surf_extractor )
             CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
         surf_extractor->set("hessianThreshold", 1.0);
         //printf("Extracting SURF features...");
@@ -2186,7 +2186,7 @@ namespace cv{
     {
         clear();
 
-        if( _base.empty() )
+        if( !_base )
             base = _base;
 
         params = _params;
@@ -2197,16 +2197,17 @@ namespace cv{
         GenericDescriptorMatcher::clear();
 
         prevTrainCount = 0;
-        if( !base.empty() )
+        if( base )
             base->clear();
     }
 
     void OneWayDescriptorMatcher::train()
     {
-        if( base.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
+        if( !base || prevTrainCount < (int)trainPointCollection.keypointCount() )
         {
-            base = new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
-                                              params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale );
+            base.reset(
+                new OneWayDescriptorObject( params.patchSize, params.poseCount, params.pcaFilename,
+                                            params.trainPath, params.trainImagesList, params.minScale, params.maxScale, params.stepScale ));
 
             base->Allocate( (int)trainPointCollection.keypointCount() );
             prevTrainCount = (int)trainPointCollection.keypointCount();
@@ -2270,8 +2271,9 @@ namespace cv{
 
     void OneWayDescriptorMatcher::read( const FileNode &fn )
     {
-        base = new OneWayDescriptorObject( params.patchSize, params.poseCount, String (), String (), String (),
-                                          params.minScale, params.maxScale, params.stepScale );
+        base.reset(
+            new OneWayDescriptorObject( params.patchSize, params.poseCount, String (), String (), String (),
+                                        params.minScale, params.maxScale, params.stepScale ));
         base->Read (fn);
     }
 
@@ -2282,12 +2284,12 @@ namespace cv{
 
     bool OneWayDescriptorMatcher::empty() const
     {
-        return base.empty() || base->empty();
+        return !base || base->empty();
     }
 
     Ptr<GenericDescriptorMatcher> OneWayDescriptorMatcher::clone( bool emptyTrainData ) const
     {
-        OneWayDescriptorMatcher* matcher = new OneWayDescriptorMatcher( params );
+        Ptr<OneWayDescriptorMatcher> matcher = makePtr<OneWayDescriptorMatcher>( params );
 
         if( !emptyTrainData )
         {
