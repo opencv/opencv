@@ -81,7 +81,7 @@ PARAM_TEST_CASE(mog, UseGray, LearningRate, bool)
 
 TEST_P(mog, Update)
 {
-    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/768x576.avi";
+    std::string inputFile = string(cvtest::TS::ptr()->get_data_path()) + "gpu/video/768x576.avi";
     cv::VideoCapture cap(inputFile);
     ASSERT_TRUE(cap.isOpened());
 
