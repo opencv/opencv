@@ -45,7 +45,6 @@
 #include "opencv2/imgproc.hpp"
 //#include "opencv2/highgui.hpp"
 #include "hdr_common.hpp"
-#include <iostream>
 
 namespace cv
 {
@@ -74,7 +73,7 @@ public:
         int channels = images[0].channels();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
-        dst.create(256, 1, CV_32FCC);
+        dst.create(LDR_SIZE, 1, CV_32FCC);
         Mat result = dst.getMat();
         
         std::vector<Point> sample_points;
@@ -97,7 +96,7 @@ public:
 
         std::vector<Mat> result_split(channels);
         for(int channel = 0; channel < channels; channel++) {
-            Mat A = Mat::zeros(sample_points.size() * images.size() + 257, 256 + sample_points.size(), CV_32F);
+            Mat A = Mat::zeros(sample_points.size() * images.size() + LDR_SIZE + 1, LDR_SIZE + sample_points.size(), CV_32F);
             Mat B = Mat::zeros(A.rows, 1, CV_32F);
 
             int eq = 0;
@@ -107,12 +106,12 @@ public:
 
                     int val = images[j].ptr()[3*(sample_points[i].y * images[j].cols + sample_points[j].x) + channel];
                     A.at<float>(eq, val) = w.at<float>(val);
-                    A.at<float>(eq, 256 + i) = -w.at<float>(val);
+                    A.at<float>(eq, LDR_SIZE + i) = -w.at<float>(val);
                     B.at<float>(eq, 0) = w.at<float>(val) * log(times[j]);        
                     eq++;
                 }
             }
-            A.at<float>(eq, 128) = 1;
+            A.at<float>(eq, LDR_SIZE / 2) = 1;
             eq++;
 
             for(int i = 0; i < 254; i++) {
@@ -123,7 +122,7 @@ public:
             }
             Mat solution;
             solve(A, B, solution, DECOMP_SVD);
-            solution.rowRange(0, 256).copyTo(result_split[channel]);
+            solution.rowRange(0, LDR_SIZE).copyTo(result_split[channel]);
         }
         merge(result_split, result);
         exp(result, result);
@@ -192,20 +191,14 @@ public:
         int channels = images[0].channels();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
 
-        dst.create(256, 1, CV_32FCC);
+        dst.create(LDR_SIZE, 1, CV_32FCC);
         Mat response = dst.getMat();
-        
-        response = Mat::zeros(256, 1, CV_32FCC);
-        for(int i = 0; i < 256; i++) {
-            for(int c = 0; c < channels; c++) {
-                response.at<Vec3f>(i)[c] = i / 128.0;
-            }
-        }
+        response = linearResponse(3) / (LDR_SIZE / 2.0f);
 
-        Mat card = Mat::zeros(256, 1, CV_32FCC);
-        for(int i = 0; i < images.size(); i++) {
+        Mat card = Mat::zeros(LDR_SIZE, 1, CV_32FCC);
+        for(size_t i = 0; i < images.size(); i++) {
            uchar *ptr = images[i].ptr();
-           for(int pos = 0; pos < images[i].total(); pos++) {
+           for(size_t pos = 0; pos < images[i].total(); pos++) {
                for(int c = 0; c < channels; c++, ptr++) {
                    card.at<Vec3f>(*ptr)[c] += 1;
                }
@@ -213,42 +206,33 @@ public:
         }
         card = 1.0 / card;
 
+        Ptr<MergeRobertson> merge = createMergeRobertson();        
         for(int iter = 0; iter < max_iter; iter++) {
 
-            Scalar channel_err(0, 0, 0);
-            Mat radiance = Mat::zeros(images[0].size(), CV_32FCC);
-            Mat wsum = Mat::zeros(images[0].size(), CV_32FCC);
-            for(int i = 0; i < images.size(); i++) {
-                Mat im, w;
-                LUT(images[i], weight, w);
-                LUT(images[i], response, im);
+            radiance = Mat::zeros(images[0].size(), CV_32FCC);
+            merge->process(images, radiance, times, response);
 
-                Mat err_mat;
-                pow(im - times[i] * radiance, 2.0f, err_mat);
-                err_mat = w.mul(err_mat);
-                channel_err += sum(err_mat);
-
-                radiance += times[i] * w.mul(im);
-                wsum += pow(times[i], 2) * w;
-            }
-            float err = (channel_err[0] + channel_err[1] + channel_err[2]) / (channels * radiance.total());
-            radiance = radiance.mul(1 / wsum);
-
-            float* rad_ptr = radiance.ptr<float>();
-            response = Mat::zeros(256, 1, CV_32FC3);
-            for(int i = 0; i < images.size(); i++) {
+            Mat new_response = Mat::zeros(LDR_SIZE, 1, CV_32FC3);
+            for(size_t i = 0; i < images.size(); i++) {
                 uchar *ptr = images[i].ptr();
-                for(int pos = 0; pos < images[i].total(); pos++) {
+                float* rad_ptr = radiance.ptr<float>();
+                for(size_t pos = 0; pos < images[i].total(); pos++) {
                     for(int c = 0; c < channels; c++, ptr++, rad_ptr++) {
-                        response.at<Vec3f>(*ptr)[c] += times[i] * *rad_ptr;
+                        new_response.at<Vec3f>(*ptr)[c] += times[i] * *rad_ptr;
                     }
                 }
             }
-            response = response.mul(card);
+            new_response = new_response.mul(card);
             for(int c = 0; c < 3; c++) {
-                for(int i = 0; i < 256; i++) {
-                    response.at<Vec3f>(i)[c] /= response.at<Vec3f>(128)[c];
+                float middle = new_response.at<Vec3f>(LDR_SIZE / 2)[c];
+                for(int i = 0; i < LDR_SIZE; i++) {
+                    new_response.at<Vec3f>(i)[c] /= middle;
                 }
+            }
+            float diff = sum(sum(abs(new_response - response)))[0] / channels;
+            new_response.copyTo(response);
+            if(diff < threshold) {
+                break;
             }
         }
     }
@@ -258,6 +242,8 @@ public:
 
     float getThreshold() const { return threshold; }
     void setThreshold(float val) { threshold = val; }
+
+    Mat getRadiance() const { return radiance; }
 
     void write(FileStorage& fs) const
     {
@@ -278,7 +264,7 @@ protected:
     String name;
     int max_iter;
     float threshold;
-    Mat weight;
+    Mat weight, radiance;
 };
 
 Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter, float threshold)

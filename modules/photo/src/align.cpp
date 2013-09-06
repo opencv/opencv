@@ -243,14 +243,14 @@ protected:
     {
         int channels = 0;
         Mat hist; 
-        int hist_size = 256;
-        float range[] = {0, 256} ;
+        int hist_size = LDR_SIZE;
+        float range[] = {0, LDR_SIZE} ;
         const float* ranges[] = {range};
         calcHist(&img, 1, &channels, Mat(), hist, 1, &hist_size, ranges);
         float *ptr = hist.ptr<float>();
         int median = 0, sum = 0;
         int thresh = img.total() / 2;
-        while(sum < thresh && median < 256) {
+        while(sum < thresh && median < LDR_SIZE) {
             sum += static_cast<int>(ptr[median]);
             median++;
         }
@@ -309,7 +309,7 @@ public:
 
         std::vector<Mat> splitted(channels);
         split(images[0], splitted);
-        for(int i = 0; i < images.size() - 1; i++) {
+        for(size_t i = 0; i < images.size() - 1; i++) {
             
             std::vector<Mat> next_splitted(channels);
             split(images[i + 1], next_splitted);
@@ -399,7 +399,7 @@ public:
         split(radiance, splitted);
         std::vector<Mat> resp_split(channels);
         split(response, resp_split);
-        for(int i = 0; i < images.size() - 1; i++) {
+        for(size_t i = 0; i < images.size() - 1; i++) {
             
             std::vector<Mat> next_splitted(channels);
             LUT(images[i + 1], response, radiance);
@@ -430,7 +430,9 @@ public:
 
     virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
     {
-        process(src, dst, times, linearResponse(3));
+        Mat response = linearResponse(3);
+        response.at<Vec3f>(0) = response.at<Vec3f>(1);
+        process(src, dst, times, response);
     }
 
     CV_WRAP virtual int getThreshold() {return thresh;}

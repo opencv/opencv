@@ -43,7 +43,6 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "hdr_common.hpp"
-#include <iostream>
 
 namespace cv
 {
@@ -77,9 +76,10 @@ public:
 
         if(response.empty()) {
             response = linearResponse(channels);
+            response.at<Vec3f>(0) = response.at<Vec3f>(1);
         }
         log(response, response);
-        CV_Assert(response.rows == 256 && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
                   response.channels() == channels);
 
         Mat exp_values(times);
@@ -312,9 +312,9 @@ public:
 
         Mat response = input_response.getMat();
         if(response.empty()) {
-            response = linearResponse(channels) / 128.0f;
+            response = linearResponse(channels) / (LDR_SIZE / 2.0f);
         }
-        CV_Assert(response.rows == 256 && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
                   response.channels() == channels);
     
         result = Mat::zeros(images[0].size(), CV_32FCC);

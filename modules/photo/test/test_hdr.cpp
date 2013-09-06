@@ -187,7 +187,22 @@ TEST(Photo_MergeDebevec, regression)
 	Mat result, expected;
 	loadImage(test_path + "merge/debevec.exr", expected);
 	merge->process(images, result, times, response);
-	imwrite("test.exr", result);
+	checkEqual(expected, result, 1e-2f);
+}
+
+TEST(Photo_MergeRobertson, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	loadExposureSeq(test_path + "exposures/", images, times);
+
+	Ptr<MergeRobertson> merge = createMergeRobertson();
+
+	Mat result, expected;
+	loadImage(test_path + "merge/robertson.exr", expected);
+	merge->process(images, result, times);
 	checkEqual(expected, result, 1e-2f);
 }
 
@@ -207,4 +222,19 @@ TEST(Photo_CalibrateDebevec, regression)
     double max;
     minMaxLoc(diff, NULL, &max);
     ASSERT_FALSE(max > 0.1);
+}
+
+TEST(Photo_CalibrateRobertson, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	Mat response, expected;
+	loadExposureSeq(test_path + "exposures/", images, times);
+    loadResponseCSV(test_path + "calibrate/robertson.csv", expected);
+
+	Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
+	calibrate->process(images, response, times);
+    checkEqual(expected, response, 1e-3f);
 }

@@ -80,6 +80,8 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
                                                     float h = 3, float hColor = 3,
                                                     int templateWindowSize = 7, int searchWindowSize = 21);
 
+enum { LDR_SIZE = 256 };
+
 class CV_EXPORTS_W Tonemap : public Algorithm
 {
 public:
@@ -227,9 +229,11 @@ public:
     
     CV_WRAP virtual float getThreshold() const = 0;
     CV_WRAP virtual void setThreshold(float threshold) = 0;
+    
+    CV_WRAP virtual Mat getRadiance() const = 0;
 };
 
-CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int samples = 50, float lambda = 10.0f);
+CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter = 30, float threshold = 0.01f);
 
 class CV_EXPORTS_W ExposureMerge : public Algorithm
 {
