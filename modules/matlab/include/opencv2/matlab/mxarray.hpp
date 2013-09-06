@@ -107,7 +107,6 @@ static void error(const std::string& str) {
 // ----------------------------------------------------------------------------
 class DefaultTraits {};
 class InheritType {};
-static const int Dynamic = -1;
 
 template<typename _Tp = DefaultTraits> class Traits {
 public:
