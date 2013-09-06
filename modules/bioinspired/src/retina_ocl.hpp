@@ -160,13 +160,14 @@ public:
     };
 
 protected:
-    cv::ocl::oclMat _filterOutput;
-    cv::ocl::oclMat _localBuffer;
 
     int _NBrows;
     int _NBcols;
     unsigned int _halfNBrows;
     unsigned int _halfNBcolumns;
+
+    cv::ocl::oclMat _filterOutput;
+    cv::ocl::oclMat _localBuffer;
 
     std::valarray <float>_filteringCoeficientsTable;
     float _v0;
