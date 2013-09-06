@@ -99,9 +99,9 @@ namespace
         cuSafeCall( cuCtxGetCurrent(&ctx) );
         cuSafeCall( cuvidCtxLockCreate(&lock_, ctx) );
 
-        frameQueue_ = new detail::FrameQueue;
-        videoDecoder_ = new detail::VideoDecoder(videoSource_->format(), lock_);
-        videoParser_ = new detail::VideoParser(videoDecoder_, frameQueue_);
+        frameQueue_.reset(new FrameQueue);
+        videoDecoder_.reset(new VideoDecoder(videoSource_->format(), lock_));
+        videoParser_.reset(new VideoParser(videoDecoder_, frameQueue_));
 
         videoSource_->setVideoParser(videoParser_);
         videoSource_->start();
@@ -216,21 +216,21 @@ Ptr<VideoReader> cv::gpucodec::createVideoReader(const String& filename)
 
     try
     {
-        videoSource = new detail::CuvidVideoSource(filename);
+        videoSource.reset(new CuvidVideoSource(filename));
     }
     catch (...)
     {
         Ptr<RawVideoSource> source(new detail::FFmpegVideoSource(filename));
-        videoSource = new detail::RawVideoSourceWrapper(source);
+        videoSource.reset(new RawVideoSourceWrapper(source));
     }
 
-    return new VideoReaderImpl(videoSource);
+    return makePtr<VideoReaderImpl>(videoSource);
 }
 
 Ptr<VideoReader> cv::gpucodec::createVideoReader(const Ptr<RawVideoSource>& source)
 {
     Ptr<detail::VideoSource> videoSource(new detail::RawVideoSourceWrapper(source));
-    return new VideoReaderImpl(videoSource);
+    return makePtr<VideoReaderImpl>(videoSource);
 }
 
 #endif // HAVE_NVCUVID
