@@ -54,7 +54,7 @@ using namespace cv;
 cv::Mat cvcloud_load()
 {
     cv::Mat cloud(1, 20000, CV_32FC3);
-        std::ifstream ifs("d:/cloud_dragon.ply");
+        std::ifstream ifs("/Users/nerei/cloud_dragon.ply");
 
     std::string str;
     for(size_t i = 0; i < 11; ++i)
@@ -72,7 +72,7 @@ TEST(Viz_viz3d, accuracy)
     cv::Mat cloud = cvcloud_load();
     cv::Mat colors(cloud.size(), CV_8UC3, cv::Scalar(0, 255, 0));
     cv::Mat normals(cloud.size(), cloud.type(), cv::Scalar(0, 10, 0));
-    //cv::viz::Mesh3d::Ptr mesh = cv::viz::Mesh3d::mesh_load("d:/horse.ply");
+    //cv::viz::Mesh3d::Ptr mesh = cv::viz::Mesh3d::mesh_load("/Users/nerei/horse.ply");
 
     const Vec4d data[] = { Vec4d(0.0, 0.0, 0.0, 0.0), Vec4d(1.0, 1.0, 1.0, 1.0), cv::Vec4d(0.0, 2.0, 0.0, 0.0), cv::Vec4d(3.0, 4.0, 1.0, 1.0) };
     cv::Mat points(1, sizeof(data)/sizeof(data[0]), CV_64FC4, (void*)data);
@@ -133,7 +133,7 @@ TEST(Viz_viz3d, accuracy)
 //     viz.showWidget("polyline", plw);
 //     lw = v.getWidget("polyline").cast<viz::LineWidget>();
     
-    viz::Mesh3d mesh = cv::viz::Mesh3d::loadMesh("horse.ply");
+    viz::Mesh3d mesh = cv::viz::Mesh3d::loadMesh("/Users/nerei/horse.ply");
     
     viz::MeshWidget mw(mesh);
 //     viz.showWidget("mesh", mw);
@@ -146,7 +146,7 @@ TEST(Viz_viz3d, accuracy)
               0, 657, 240, 
               0, 0, 1);
     
-    viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
+    //viz::CameraPositionWidget cpw(Vec3f(0.5, 0.5, 3.0), Vec3f(0.0,0.0,0.0), Vec3f(0.0,-1.0,0.0), 0.5);
     viz::CameraPositionWidget cpw2(0.5);
     viz::CameraPositionWidget frustum(K, 2.0, viz::Color::green());
 //     viz::CameraPositionWidget frustum2(K, 4.0, viz::Color::red());
@@ -170,7 +170,7 @@ TEST(Viz_viz3d, accuracy)
     trajectory.push_back(Affine3f().translate(Vec3f(2.0,0.5,0.0)));
     trajectory.push_back(Affine3f(0.5, 0.0, 0.0, Vec3f(1.0,0.0,1.0)));
 //     
-    viz.showWidget("trajectory1", viz::TrajectoryWidget(trajectory, viz::Color(0,255,255), true, 0.5));
+    //viz.showWidget("trajectory1", viz::TrajectoryWidget(trajectory, viz::Color(0,255,255), true, 0.5));
     viz.showWidget("trajectory2", viz::TrajectoryWidget(trajectory, K, 1.0, viz::Color(255,0,255)));
     
     

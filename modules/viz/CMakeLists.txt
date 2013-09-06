@@ -12,7 +12,7 @@ macro(find_qvtk)
 endmacro()
 
 macro(find_vtk)
-  find_package(VTK 5.8.0 REQUIRED)
+  find_package(VTK 5.10.0 REQUIRED)
   if(VTK_FOUND)
     if (BUILD_SHARED_LIBS OR (NOT BUILD_SHARED_LIBS AND NOT VTK_BUILD_SHARED_LIBS))
       find_qvtk()
