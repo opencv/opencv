@@ -126,7 +126,7 @@ cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
     VizMap::iterator vm_itr = viz_map_.find(name);
     bool exists = vm_itr != viz_map_.end();
     if (exists) return vm_itr->second;
-    else return viz_map_.insert(VizPair(window_name, Viz3d(window_name))).first->second;
+    else return Viz3d(window_name);
 }
 
 void cv::viz::VizAccessor::add(Viz3d window)
@@ -135,7 +135,7 @@ void cv::viz::VizAccessor::add(Viz3d window)
     VizMap::iterator vm_itr = viz_map_.find(window_name);
     bool exists = vm_itr != viz_map_.end();
     if (exists) return ;
-    viz_map_.insert(std::pair<String,Viz3d>(window_name, window));
+    viz_map_.insert(VizPair(window_name, window));
 }
 
 void cv::viz::VizAccessor::remove(const String &window_name)

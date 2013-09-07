@@ -101,8 +101,6 @@ namespace cv
             static void release();
             
             Viz3d get(const String &window_name);
-            void add(Viz3d window);
-            void remove(const String &window_name);
             
             //! window names automatically have Viz - prefix even though not provided by the users
             static void generateWindowName(const String &window_name, String &output);
@@ -111,9 +109,14 @@ namespace cv
             VizAccessor(); // Singleton
             ~VizAccessor();
             
+            void add(Viz3d window);
+            void remove(const String &window_name);
+            
             static VizAccessor * instance_;
             static bool is_instantiated_;
             static VizMap viz_map_;
+            
+            friend class Viz3d;
         };
     } /* namespace viz */
 } /* namespace cv */
