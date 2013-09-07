@@ -63,14 +63,11 @@ using std::tr1::get;
 #endif
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
-static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output, int output_cn)
+static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output)
 {
     for(int i = 0; i< (int)(input.size()); i++)
     {
-        if(output_cn == 1)
-            cvtColor(input[i], output[i], COLOR_RGB2GRAY);
-        else
-            cvtColor(input[i], output[i], COLOR_RGB2RGBA);
+        cvtColor(input[i], output[i], COLOR_RGB2GRAY);
     }
 }
 //prepare data for CPU
@@ -87,7 +84,7 @@ static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer)
     }
 
     if(cn == 1)
-        cvtFrameFmt(frame_buffer_init, frame_buffer, 1);
+        cvtFrameFmt(frame_buffer_init, frame_buffer);
     else
         frame_buffer = frame_buffer_init;
 }
