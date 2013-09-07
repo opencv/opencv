@@ -44,6 +44,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
+#include <opencv2/calib3d.hpp>
 
 #include <fstream>
 #include <string>
@@ -100,6 +101,7 @@ TEST(Viz_viz3d, accuracy)
     viz::CoordinateSystemWidget csw;
     viz::TextWidget tw("TEST", Point(100, 100), 20);
     viz::CloudWidget pcw(cloud, colors);
+//     pcw.setRenderingProperty(VIZ_LINE_WIDTH));
     viz::CloudWidget pcw2(cloud, viz::Color::magenta());
     
 //     viz.showWidget("line", lw);
@@ -135,7 +137,7 @@ TEST(Viz_viz3d, accuracy)
     
     viz::Mesh3d mesh = cv::viz::Mesh3d::loadMesh("/Users/nerei/horse.ply");
     
-    viz::MeshWidget mw(mesh);
+//     viz::MeshWidget mw(mesh);
 //     viz.showWidget("mesh", mw);
     
     Mat img = imread("opencv.png");
@@ -173,6 +175,7 @@ TEST(Viz_viz3d, accuracy)
     //viz.showWidget("trajectory1", viz::TrajectoryWidget(trajectory, viz::Color(0,255,255), true, 0.5));
     viz.showWidget("trajectory2", viz::TrajectoryWidget(trajectory, K, 1.0, viz::Color(255,0,255)));
     
+//     cv::Rodrigues2(Vec3f(), Mat());
     
     
 //     viz.showWidget("trajectory1", viz::TrajectoryWidget(trajectory/*, viz::Color::yellow()*/));

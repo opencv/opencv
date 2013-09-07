@@ -76,6 +76,13 @@
 #undef __DEPRECATED_DISABLED__
 #endif
 
+namespace cv
+{
+    namespace viz
+    {
+        typedef std::map<std::string, vtkSmartPointer<vtkProp> > WidgetActorMap;
+    }
+}
 
 #include "viz3d_impl.hpp"
 #include <opencv2/core.hpp>

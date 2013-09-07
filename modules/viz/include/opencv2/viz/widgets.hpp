@@ -7,6 +7,34 @@ namespace cv
     namespace viz
     {
         /////////////////////////////////////////////////////////////////////////////
+        /// Widget rendering properties
+        enum RenderingProperties
+        {
+            VIZ_POINT_SIZE,
+            VIZ_OPACITY,
+            VIZ_LINE_WIDTH,
+            VIZ_FONT_SIZE,
+            VIZ_COLOR,
+            VIZ_REPRESENTATION,
+            VIZ_IMMEDIATE_RENDERING,
+            VIZ_SHADING
+        };
+
+        enum RenderingRepresentationProperties
+        {
+            REPRESENTATION_POINTS,
+            REPRESENTATION_WIREFRAME,
+            REPRESENTATION_SURFACE
+        };
+
+        enum ShadingRepresentationProperties
+        {
+            SHADING_FLAT,
+            SHADING_GOURAUD,
+            SHADING_PHONG
+        };
+        
+        /////////////////////////////////////////////////////////////////////////////
         /// The base class for all widgets
         class CV_EXPORTS Widget
         {

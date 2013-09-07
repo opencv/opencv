@@ -81,6 +81,9 @@ TriangleWidget::TriangleWidget(const Point3f &pt1, const Point3f &pt2, const Poi
     
     // Store this actor in the widget in order that visualizer can access it
     viz::WidgetAccessor::setProp(*this, actor);
+    
+    // Set the color of the widget. This has to be called after WidgetAccessor.
+    setColor(color);
 }
 
 /**
@@ -94,7 +97,7 @@ int main()
     viz::Viz3d myWindow("Creating Widgets");
     
     /// Create a triangle widget
-    TriangleWidget tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0));
+    TriangleWidget tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0), viz::Color::red());
     
     /// Show widget in the visualizer window
     myWindow.showWidget("TRIANGLE", tw);

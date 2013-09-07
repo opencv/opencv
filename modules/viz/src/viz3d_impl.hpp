@@ -2,8 +2,6 @@
 
 #include <opencv2/viz.hpp>
 #include "interactor_style.h"
-#include "viz_types.h"
-#include "common.h"
 
 struct cv::viz::Viz3d::VizImpl
 {
