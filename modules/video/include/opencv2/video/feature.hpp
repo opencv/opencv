@@ -49,8 +49,8 @@
 #include <time.h>
 
 /*
- * TODO This is a copy from apps/traincascade/
- * TODO Changed CvHaarEvaluator based on MIL implementation
+ * TODO This implementation is based on apps/traincascade/
+ * TODO Changed CvHaarEvaluator based on ADABOOSTING implementation (Grabner et al.)
  */
 
 namespace cv
@@ -62,10 +62,8 @@ namespace cv
 #define CC_FEATURE_PARAMS "featureParams"
 #define CC_MAX_CAT_COUNT  "maxCatCount"
 #define CC_FEATURE_SIZE   "featSize"
-#define CC_MODE        "mode"
-#define CC_MODE_BASIC  "BASIC"
-#define CC_MODE_CORE   "CORE"
-#define CC_MODE_ALL    "ALL"
+#define CC_NUM_FEATURES   "numFeat"
+#define CC_ISINTEGRAL "isIntegral"
 #define CC_RECTS       "rects"
 #define CC_TILTED      "tilted"
 #define CC_RECT "rect"
@@ -161,7 +159,7 @@ class CvFeatureEvaluator
   virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
   virtual void setImage( const Mat& img, uchar clsLabel, int idx );
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const = 0;
-  virtual float operator()( int featureIdx, int sampleIdx ) const = 0;
+  virtual float operator()( int featureIdx, int sampleIdx ) = 0;
   static Ptr<CvFeatureEvaluator> create( int type );
 
   int getNumFeatures() const
@@ -197,18 +195,8 @@ class CvFeatureEvaluator
 class CvHaarFeatureParams : public CvFeatureParams
 {
  public:
-  enum
-  {
-    BASIC = 0,
-    CORE = 1,
-    ALL = 2
-  };
-  /* 0 - BASIC = Viola
-   *  1 - CORE  = All upright
-   *  2 - ALL   = All features */
 
   CvHaarFeatureParams();
-  CvHaarFeatureParams( int _mode );
 
   virtual void init( const CvFeatureParams& fp );
   virtual void write( FileStorage &fs ) const;
@@ -219,17 +207,86 @@ class CvHaarFeatureParams : public CvFeatureParams
   virtual bool scanAttr( const std::string prm, const std::string val );
 
   int mode;
+  bool isIntegral;
 };
 
 class CvHaarEvaluator : public CvFeatureEvaluator
 {
  public:
+
+  class EstimatedGaussDistribution
+  {
+   public:
+
+    EstimatedGaussDistribution();
+    EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma );
+    virtual ~EstimatedGaussDistribution();
+    void update( float value );  //, float timeConstant = -1.0);
+    float getMean();
+    float getSigma();
+    void setValues( float mean, float sigma );
+
+   private:
+
+    float m_mean;
+    float m_sigma;
+    float m_P_mean;
+    float m_P_sigma;
+    float m_R_mean;
+    float m_R_sigma;
+  };
+
+  class FeatureHaar
+  {
+
+   public:
+
+    FeatureHaar( Size patchSize );
+    void getInitialDistribution( CvHaarEvaluator::EstimatedGaussDistribution *distribution );
+    bool eval( const Mat& image, Rect ROI, float* result );
+    float getResponse();
+    int getNumAreas();
+    const std::vector<int>& getWeights() const;
+    const std::vector<Rect>& getAreas() const;
+    void write( FileStorage &fs ) const
+    {
+    }
+    ;
+
+   private:
+    int m_type;
+    int m_numAreas;
+    std::vector<int> m_weights;
+    float m_initMean;
+    float m_initSigma;
+    void generateRandomFeature( Size imageSize );
+    float getSum( const Mat& image, Rect imgROI );
+    std::vector<Rect> m_areas;  // areas within the patch over which to compute the feature
+    cv::Size m_initSize;  // size of the patch used during training
+    cv::Size m_curSize;  // size of the patches currently under investigation
+    float m_scaleFactorHeight;  // scaling factor in vertical direction
+    float m_scaleFactorWidth;  // scaling factor in horizontal direction
+    std::vector<Rect> m_scaleAreas;  // areas after scaling
+    std::vector<float> m_scaleWeights;  // weights after scaling
+    float m_response;
+
+  };
+
   virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
-  virtual void setImage( const Mat& img, uchar clsLabel, int idx );
-  virtual float operator()( int featureIdx, int sampleIdx ) const;
+  virtual void setImage( const Mat& img, uchar clsLabel = 0, int idx = 1 );
+  virtual float operator()( int featureIdx, int sampleIdx );
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
-  void writeFeature( FileStorage &fs, int fi ) const;  // for old file fornat
+  void writeFeature( FileStorage &fs, int fi ) const;  // for old file format
+  std::vector<CvHaarEvaluator::FeatureHaar> getFeatures() const;
+  inline CvHaarEvaluator::FeatureHaar& getFeatures( int idx )
+  {
+    return features[idx];
+  }
+  void setWinSize( Size patchSize );
+  Size setWinSize() const;
  protected:
+  bool isIntegral;
+
   /* TODO Added from MIL implementation */
   Mat _ii_img;
   void compute_integral( const cv::Mat & img, std::vector<cv::Mat_<float> > & ii_imgs )
@@ -249,65 +306,9 @@ class CvHaarEvaluator : public CvFeatureEvaluator
 
   virtual void generateFeatures( int numFeatures );
 
-  class Feature
-  {
-   public:
-    Feature();
-    Feature( int offset, bool _tilted, int x0, int y0, int w0, int h0, float wt0, int x1, int y1, int w1, int h1, float wt1, int x2 = 0, int y2 = 0,
-             int w2 = 0, int h2 = 0, float wt2 = 0.0F );
-    float calc( const Mat &sum, const Mat &tilted, size_t y ) const;
-    void write( FileStorage &fs ) const;
-
-    bool tilted;
-    struct
-    {
-      Rect r;
-      float weight;
-    } rect[CV_HAAR_FEATURE_MAX];
-
-    struct
-    {
-      int p0, p1, p2, p3;
-    } fastRect[CV_HAAR_FEATURE_MAX];
-  };
-
-  std::vector<Feature> features;
+  std::vector<FeatureHaar> features;
   Mat sum; /* sum images (each row represents image) */
-  Mat tilted; /* tilted sum images (each row represents image) */
-  Mat normfactor; /* normalization factor */
 };
-
-inline float CvHaarEvaluator::operator()( int featureIdx, int /*sampleIdx*/) const
-{
-  /* TODO Added from MIL implementation */
-  // float nf = normfactor.at<float>(0, sampleIdx);
-  //return !nf ? 0.0f : (features[featureIdx].calc( sum, tilted, sampleIdx)/nf);
-  return features[featureIdx].calc( _ii_img, Mat(), 0 );
-}
-
-inline float CvHaarEvaluator::Feature::calc( const Mat &_sum, const Mat &/*_tilted*/, size_t /*y*/) const
-{
-  /* TODO Added from MIL implementation */
-  Mat_<float> ii_img( _sum );
-  cv::Rect r;
-  float ret = 0.0f;
-
-  for ( int k = 0; k < CV_HAAR_FEATURE_MAX; k++ )
-  {
-    r = rect[k].r;
-    ret += rect[k].weight
-        * ( ii_img( r.y + r.height, r.x + r.width ) + ii_img( r.y, r.x ) - ii_img( r.y + r.height, r.x ) - ii_img( r.y, r.x + r.width ) );  ///_rsums[k];
-  }
-
-  return (float) ( ret );
-  //return 0;
-  /* const int* img = tilted ? _tilted.ptr<int>((int)y) : _sum.ptr<int>((int)y);
-   float ret = rect[0].weight * (img[fastRect[0].p0] - img[fastRect[0].p1] - img[fastRect[0].p2] + img[fastRect[0].p3] ) +
-   rect[1].weight * (img[fastRect[1].p0] - img[fastRect[1].p1] - img[fastRect[1].p2] + img[fastRect[1].p3] );
-   if( rect[2].weight != 0.0f )
-   ret += rect[2].weight * (img[fastRect[2].p0] - img[fastRect[2].p1] - img[fastRect[2].p2] + img[fastRect[2].p3] );
-   return ret;*/
-}
 
 struct CvHOGFeatureParams : public CvFeatureParams
 {
@@ -322,7 +323,7 @@ class CvHOGEvaluator : public CvFeatureEvaluator
   }
   virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
   virtual void setImage( const Mat& img, uchar clsLabel, int idx );
-  virtual float operator()( int varIdx, int sampleIdx ) const;
+  virtual float operator()( int varIdx, int sampleIdx );
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
  protected:
   virtual void generateFeatures();
@@ -349,7 +350,7 @@ class CvHOGEvaluator : public CvFeatureEvaluator
   std::vector<Mat> hist;
 };
 
-inline float CvHOGEvaluator::operator()( int varIdx, int sampleIdx ) const
+inline float CvHOGEvaluator::operator()( int varIdx, int sampleIdx )
 {
   int featureIdx = varIdx / ( N_BINS * N_CELLS );
   int componentIdx = varIdx % ( N_BINS * N_CELLS );
@@ -389,7 +390,7 @@ class CvLBPEvaluator : public CvFeatureEvaluator
   }
   virtual void init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize );
   virtual void setImage( const Mat& img, uchar clsLabel, int idx );
-  virtual float operator()( int featureIdx, int sampleIdx ) const
+  virtual float operator()( int featureIdx, int sampleIdx )
   {
     return (float) features[featureIdx].calc( sum, sampleIdx );
   }

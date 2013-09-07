@@ -535,7 +535,10 @@ class CV_EXPORTS_W TrackerStateEstimatorMILBoosting : public TrackerStateEstimat
     /**
      * \brief Destructor
      */
-    ~TrackerMILTargetState(){};
+    ~TrackerMILTargetState()
+    {
+    }
+    ;
 
     /**
      * setters and getters
@@ -708,7 +711,7 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
     Params();
     int numFeatures;  // # of rects
     Size rectSize;    // rect size
-
+    bool isIntegral;
   };
 
   TrackerFeatureHAAR( const TrackerFeatureHAAR::Params &parameters = TrackerFeatureHAAR::Params() );
@@ -745,7 +748,6 @@ class CV_EXPORTS_W TrackerFeatureLBP : public TrackerFeature
   bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
 };
-
 
 } /* namespace cv */
 

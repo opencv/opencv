@@ -52,23 +52,9 @@ namespace cv
 {
 
 /*
- * TODO This is a copy from apps/traincascade/
- * TODO Changed CvHaarEvaluator based on MIL implementation
+ * TODO This implementation is based on apps/traincascade/
+ * TODO Changed CvHaarEvaluator based on ADABOOSTING implementation (Grabner et al.)
  */
-
-float calcNormFactor( const Mat& sum, const Mat& sqSum )
-{
-  CV_DbgAssert( sum.cols > 3 && sqSum.rows > 3 );
-  Rect normrect( 1, 1, sum.cols - 3, sum.rows - 3 );
-  size_t p0, p1, p2, p3;
-  CV_SUM_OFFSETS( p0, p1, p2, p3, normrect, sum.step1() )
-  double area = normrect.width * normrect.height;
-  const int *sp = (const int*) sum.data;
-  int valSum = sp[p0] - sp[p1] - sp[p2] + sp[p3];
-  const double *sqp = (const double *) sqSum.data;
-  double valSqSum = sqp[p0] - sqp[p1] - sqp[p2] + sqp[p3];
-  return (float) sqrt( (double) ( area * valSqSum - (double) valSum * valSum ) );
-}
 
 CvParams::CvParams() :
     name( "params" )
@@ -91,7 +77,7 @@ bool CvParams::scanAttr( const std::string, const std::string )
 CvFeatureParams::CvFeatureParams() :
     maxCatCount( 0 ),
     featSize( 1 ),
-    numFeatures( 0 )
+    numFeatures( 1 )
 {
   name = CC_FEATURE_PARAMS;
 }
@@ -100,12 +86,14 @@ void CvFeatureParams::init( const CvFeatureParams& fp )
 {
   maxCatCount = fp.maxCatCount;
   featSize = fp.featSize;
+  numFeatures = fp.numFeatures;
 }
 
 void CvFeatureParams::write( FileStorage &fs ) const
 {
   fs << CC_MAX_CAT_COUNT << maxCatCount;
   fs << CC_FEATURE_SIZE << featSize;
+  fs << CC_NUM_FEATURES << numFeatures;
 }
 
 bool CvFeatureParams::read( const FileNode &node )
@@ -114,6 +102,7 @@ bool CvFeatureParams::read( const FileNode &node )
     return false;
   maxCatCount = node[CC_MAX_CAT_COUNT];
   featSize = node[CC_FEATURE_SIZE];
+  numFeatures = node[CC_NUM_FEATURES];
   return ( maxCatCount >= 0 && featSize >= 1 );
 }
 
@@ -130,15 +119,17 @@ void CvFeatureEvaluator::init( const CvFeatureParams *_featureParams, int _maxSa
   CV_Assert( _maxSampleCount > 0 );
   featureParams = (CvFeatureParams *) _featureParams;
   winSize = _winSize;
-  numFeatures = 0;
+  numFeatures = _featureParams->numFeatures;
   cls.create( (int) _maxSampleCount, 1, CV_32FC1 );
   generateFeatures();
 }
 
 void CvFeatureEvaluator::setImage( const Mat &img, uchar clsLabel, int idx )
 {
-  CV_Assert( img.cols == winSize.width );
-  CV_Assert( img.rows == winSize.height );
+  winSize.width = img.cols;
+  winSize.height = img.rows;
+  //CV_Assert( img.cols == winSize.width );
+  //CV_Assert( img.rows == winSize.height );
   CV_Assert( idx < cls.rows );
   cls.ptr<float>( idx )[0] = clsLabel;
 }
@@ -150,30 +141,22 @@ Ptr<CvFeatureEvaluator> CvFeatureEvaluator::create( int type )
          type == CvFeatureParams::HOG ? Ptr<CvFeatureEvaluator>( new CvHOGEvaluator ) : Ptr<CvFeatureEvaluator>();
 }
 
-CvHaarFeatureParams::CvHaarFeatureParams() :
-    mode( BASIC )
+CvHaarFeatureParams::CvHaarFeatureParams()
 {
   name = HFP_NAME;
-}
-
-CvHaarFeatureParams::CvHaarFeatureParams( int _mode ) :
-    mode( _mode )
-{
-  name = HFP_NAME;
+  isIntegral = false;
 }
 
 void CvHaarFeatureParams::init( const CvFeatureParams& fp )
 {
   CvFeatureParams::init( fp );
-  mode = ( (const CvHaarFeatureParams&) fp ).mode;
+  isIntegral = ( (const CvHaarFeatureParams&) fp ).isIntegral;
 }
 
 void CvHaarFeatureParams::write( FileStorage &fs ) const
 {
   CvFeatureParams::write( fs );
-  String modeStr = mode == BASIC ? CC_MODE_BASIC : mode == CORE ? CC_MODE_CORE : mode == ALL ? CC_MODE_ALL : String();
-  CV_Assert( !modeStr.empty() );
-  fs << CC_MODE << modeStr;
+  fs << CC_ISINTEGRAL << isIntegral;
 }
 
 bool CvHaarFeatureParams::read( const FileNode &node )
@@ -181,40 +164,31 @@ bool CvHaarFeatureParams::read( const FileNode &node )
   if( !CvFeatureParams::read( node ) )
     return false;
 
-  FileNode rnode = node[CC_MODE];
+  FileNode rnode = node[CC_ISINTEGRAL];
   if( !rnode.isString() )
     return false;
   String modeStr;
   rnode >> modeStr;
-  mode = !modeStr.compare( CC_MODE_BASIC ) ? BASIC : !modeStr.compare( CC_MODE_CORE ) ? CORE : !modeStr.compare( CC_MODE_ALL ) ? ALL : -1;
+  isIntegral = !modeStr.compare( "0" ) ? false : !true;
   return ( mode >= 0 );
 }
 
 void CvHaarFeatureParams::printDefaults() const
 {
   CvFeatureParams::printDefaults();
-  std::cout << "  [-mode <" CC_MODE_BASIC << "(default) | " << CC_MODE_CORE << " | " << CC_MODE_ALL << std::endl;
+  std::cout << "isIntegral: false" << std::endl;
 }
 
 void CvHaarFeatureParams::printAttrs() const
 {
   CvFeatureParams::printAttrs();
-  std::string mode_str = mode == BASIC ? CC_MODE_BASIC : mode == CORE ? CC_MODE_CORE : mode == ALL ? CC_MODE_ALL : 0;
+  std::string mode_str = isIntegral == true ? "true" : "false";
   std::cout << "mode: " << mode_str << std::endl;
 }
 
 bool CvHaarFeatureParams::scanAttr( const std::string prmName, const std::string val )
 {
-  if( !CvFeatureParams::scanAttr( prmName, val ) )
-  {
-    if( !prmName.compare( "-mode" ) )
-    {
-      mode = !val.compare( CC_MODE_CORE ) ? CORE : !val.compare( CC_MODE_ALL ) ? ALL : !val.compare( CC_MODE_BASIC ) ? BASIC : -1;
-      if( mode == -1 )
-        return false;
-    }
-    return false;
-  }
+
   return true;
 }
 
@@ -222,26 +196,30 @@ bool CvHaarFeatureParams::scanAttr( const std::string prmName, const std::string
 
 void CvHaarEvaluator::init( const CvFeatureParams *_featureParams, int _maxSampleCount, Size _winSize )
 {
-  CV_Assert( _maxSampleCount > 0 );
   int cols = ( _winSize.width + 1 ) * ( _winSize.height + 1 );
-  sum.create( (int) _maxSampleCount, cols, CV_32SC1 );
-  tilted.create( (int) _maxSampleCount, cols, CV_32SC1 );
-  normfactor.create( 1, (int) _maxSampleCount, CV_32FC1 );
-  CvFeatureEvaluator::init( _featureParams, _maxSampleCount, _winSize );
+  sum.create( (int) 1, cols, CV_32SC1 );
+  isIntegral = ( (CvHaarFeatureParams*) _featureParams )->isIntegral;
+  CvFeatureEvaluator::init( _featureParams, 1, _winSize );
 }
 
-void CvHaarEvaluator::setImage( const Mat& img, uchar clsLabel, int idx )
+void CvHaarEvaluator::setImage( const Mat& img, uchar /*clsLabel*/, int /*idx*/)
 {
-  CV_DbgAssert( !sum.empty() && !tilted.empty() && !normfactor.empty() );
-  CvFeatureEvaluator::setImage( img, clsLabel, idx );
-  Mat innSum( winSize.height + 1, winSize.width + 1, sum.type(), sum.ptr<int>( (int) idx ) );
-  Mat innTilted( winSize.height + 1, winSize.width + 1, tilted.type(), tilted.ptr<int>( (int) idx ) );
-  Mat innSqSum;
-  integral( img, innSum, innSqSum, innTilted );
-  normfactor.ptr<float>( 0 )[idx] = calcNormFactor( innSum, innSqSum );
-  std::vector<Mat_<float> > ii_imgs;
-  compute_integral( img, ii_imgs );
-  _ii_img = ii_imgs[0];
+  CV_DbgAssert( !sum.empty() );
+
+  winSize.width = img.cols;
+  winSize.height = img.rows;
+
+  CvFeatureEvaluator::setImage( img, 1, 0 );
+  if( !isIntegral )
+  {
+    std::vector<Mat_<float> > ii_imgs;
+    compute_integral( img, ii_imgs );
+    _ii_img = ii_imgs[0];
+  }
+  else
+  {
+    _ii_img = img;
+  }
 }
 
 void CvHaarEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) const
@@ -251,207 +229,662 @@ void CvHaarEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) co
 
 void CvHaarEvaluator::writeFeature( FileStorage &fs, int fi ) const
 {
-  CV_DbgAssert( fi < (int)features.size() );
-  features[fi].write( fs );
+
+}
+
+void CvHaarEvaluator::generateFeatures()
+{
+  generateFeatures( featureParams->numFeatures );
 }
 
 void CvHaarEvaluator::generateFeatures( int nFeatures )
 {
-  int mode = ( (const CvHaarFeatureParams*) ( (CvFeatureParams*) featureParams ) )->mode;
   int offset = winSize.width + 1;
-  bool isTilted = false;
-  if( mode == CvHaarFeatureParams::ALL )
-    isTilted = true;
-
-  RNG rng = RNG( uint64( TIME( 0 ) ) );
 
   for ( int i = 0; i < nFeatures; i++ )
   {
-    //generates new HAAR feature
-    int x0 = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
-    int y0 = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
-    int w0 = rng.uniform( 1, ( winSize.width - x0 - 2 ) );
-    int h0 = rng.uniform( 1, ( winSize.height - y0 - 2 ) );
-    float wt0 = rng.uniform( -1.f, 1.f );
-
-    int x1 = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
-    int y1 = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
-    int w1 = rng.uniform( 1, ( winSize.width - x1 - 2 ) );
-    int h1 = rng.uniform( 1, ( winSize.height - y1 - 2 ) );
-    float wt1 = rng.uniform( -1.f, 1.f );
-
-    int x2 = rng.uniform( 0, (uint) ( winSize.width - 3 ) );
-    int y2 = rng.uniform( 0, (uint) ( winSize.height - 3 ) );
-    int w2 = rng.uniform( 1, ( winSize.width - x2 - 2 ) );
-    int h2 = rng.uniform( 1, ( winSize.height - y2 - 2 ) );
-    float wt2 = rng.uniform( -1.f, 1.f );
-
-    features.push_back( Feature( offset, isTilted, x0, y0, w0, h0, wt0, x1, y1, w1, h1, wt1, x2, y2, w2, h2, wt2 ) );
+    CvHaarEvaluator::FeatureHaar feature( Size( winSize.width, winSize.height ) );
+    features.push_back( feature );
   }
 
 }
-void CvHaarEvaluator::generateFeatures()
+
+std::vector<CvHaarEvaluator::FeatureHaar> CvHaarEvaluator::getFeatures() const
 {
-  if( featureParams->numFeatures != 0 )
+  return features;
+}
+
+float CvHaarEvaluator::operator()( int featureIdx, int /*sampleIdx*/)
+{
+  /* TODO Added from MIL implementation */
+  //return features[featureIdx].calc( _ii_img, Mat(), 0 );
+  float res;
+  features.at( featureIdx ).eval( _ii_img, Rect( 0, 0, winSize.width, winSize.height ), &res );
+  return res;
+}
+
+void CvHaarEvaluator::setWinSize( Size patchSize )
+{
+  winSize.width = patchSize.width;
+  winSize.height = patchSize.height;
+}
+
+Size CvHaarEvaluator::setWinSize() const
+{
+  return Size( winSize.width, winSize.height );
+}
+
+#define INITSIGMA( numAreas ) ( static_cast<float>( sqrt( 256.0f*256.0f / 12.0f * (numAreas) ) ) );
+
+CvHaarEvaluator::FeatureHaar::FeatureHaar( Size patchSize )
+{
+  try
   {
-    generateFeatures( featureParams->numFeatures );
+    generateRandomFeature( patchSize );
   }
-  else
+  catch ( ... )
   {
-    int mode = ( (const CvHaarFeatureParams*) ( (CvFeatureParams*) featureParams ) )->mode;
-    int offset = winSize.width + 1;
-    for ( int x = 0; x < winSize.width; x++ )
+    throw;
+  }
+}
+
+void CvHaarEvaluator::FeatureHaar::generateRandomFeature( Size patchSize )
+{
+  cv::Point2i position;
+  Size baseDim;
+  Size sizeFactor;
+  int area;
+
+  Size minSize = Size( 3, 3 );
+  int minArea = 9;
+
+  bool valid = false;
+  while ( !valid )
+  {
+    //chosse position and scale
+    position.y = rand() % ( patchSize.height );
+    position.x = rand() % ( patchSize.width );
+
+    baseDim.width = (int) ( ( 1 - sqrt( 1 - (float) rand() / RAND_MAX ) ) * patchSize.width );
+    baseDim.height = (int) ( ( 1 - sqrt( 1 - (float) rand() / RAND_MAX ) ) * patchSize.height );
+
+    //select types
+    //float probType[11] = {0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0909f, 0.0950f};
+    float probType[11] =
+    { 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
+    float prob = (float) rand() / RAND_MAX;
+
+    if( prob < probType[0] )
     {
-      for ( int y = 0; y < winSize.height; y++ )
+      //check if feature is valid
+      sizeFactor.height = 2;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 1;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+
+      valid = true;
+
+    }
+    else if( prob < probType[0] + probType[1] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 2;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 2;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 4;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 3;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = 2 * baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + 3 * baseDim.height;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 4;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 3;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = 2 * baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 3 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 2;
+      sizeFactor.width = 2;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 5;
+      m_numAreas = 4;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = -1;
+      m_weights[3] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_areas[3].y = position.y + baseDim.height;
+      m_areas[3].x = position.x + baseDim.width;
+      m_areas[3].height = baseDim.height;
+      m_areas[3].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 6;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -9;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = 3 * baseDim.height;
+      m_areas[0].width = 3 * baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = -8 * 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 7;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height * 2;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+
+      if( area < minArea )
+        continue;
+
+      m_type = 8;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 2 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 9;
+      m_numAreas = 2;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -2;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = 3 * baseDim.height;
+      m_areas[0].width = 3 * baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_initMean = 0;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob
+        < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] + probType[9] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 3;
+      sizeFactor.width = 1;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 10;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x;
+      m_areas[1].y = position.y + baseDim.height;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y + baseDim.height * 2;
+      m_areas[2].x = position.x;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else if( prob
+        < probType[0] + probType[1] + probType[2] + probType[3] + probType[4] + probType[5] + probType[6] + probType[7] + probType[8] + probType[9]
+            + probType[10] )
+    {
+      //check if feature is valid
+      sizeFactor.height = 1;
+      sizeFactor.width = 3;
+      if( position.y + baseDim.height * sizeFactor.height >= patchSize.height || position.x + baseDim.width * sizeFactor.width >= patchSize.width )
+        continue;
+      area = baseDim.height * sizeFactor.height * baseDim.width * sizeFactor.width;
+      if( area < minArea )
+        continue;
+
+      m_type = 11;
+      m_numAreas = 3;
+      m_weights.resize( m_numAreas );
+      m_weights[0] = 1;
+      m_weights[1] = -1;
+      m_weights[2] = 1;
+      m_areas.resize( m_numAreas );
+      m_areas[0].x = position.x;
+      m_areas[0].y = position.y;
+      m_areas[0].height = baseDim.height;
+      m_areas[0].width = baseDim.width;
+      m_areas[1].x = position.x + baseDim.width;
+      m_areas[1].y = position.y;
+      m_areas[1].height = baseDim.height;
+      m_areas[1].width = baseDim.width;
+      m_areas[2].y = position.y;
+      m_areas[2].x = position.x + 2 * baseDim.width;
+      m_areas[2].height = baseDim.height;
+      m_areas[2].width = baseDim.width;
+      m_initMean = 128;
+      m_initSigma = INITSIGMA( m_numAreas );
+      valid = true;
+    }
+    else
+    CV_Assert( false );
+  }
+
+  m_initSize = patchSize;
+  m_curSize = m_initSize;
+  m_scaleFactorWidth = m_scaleFactorHeight = 1.0f;
+  m_scaleAreas.resize( m_numAreas );
+  m_scaleWeights.resize( m_numAreas );
+  for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+  {
+    m_scaleAreas[curArea] = m_areas[curArea];
+    m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( m_areas[curArea].width * m_areas[curArea].height );
+  }
+}
+
+bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
+{
+  *result = 0.0f;
+
+// define the minimum size
+  Size minSize = Size( 3, 3 );
+
+// printf("in eval %d = %d\n",curSize.width,ROI.width );
+
+  if( m_curSize.width != ROI.width || m_curSize.height != ROI.height )
+  {
+    m_curSize = cv::Size( ROI.width, ROI.height );
+    if( ! ( m_initSize == m_curSize ) )
+    {
+      m_scaleFactorHeight = (float) m_curSize.height / m_initSize.height;
+      m_scaleFactorWidth = (float) m_curSize.width / m_initSize.width;
+
+      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
       {
-        for ( int dx = 1; dx <= winSize.width; dx++ )
+        m_scaleAreas[curArea].height = (int) floor( (float) m_areas[curArea].height * m_scaleFactorHeight + 0.5f );
+        m_scaleAreas[curArea].width = (int) floor( (float) m_areas[curArea].width * m_scaleFactorWidth + 0.5f );
+
+        if( m_scaleAreas[curArea].height < minSize.height || m_scaleAreas[curArea].width < minSize.width )
         {
-          for ( int dy = 1; dy <= winSize.height; dy++ )
-          {
-            // haar_x2
-            if( ( x + dx * 2 <= winSize.width ) && ( y + dy <= winSize.height ) )
-            {
-              features.push_back( Feature( offset, false, x, y, dx * 2, dy, -1, x + dx, y, dx, dy, +2 ) );
-            }
-            // haar_y2
-            if( ( x + dx <= winSize.width ) && ( y + dy * 2 <= winSize.height ) )
-            {
-              features.push_back( Feature( offset, false, x, y, dx, dy * 2, -1, x, y + dy, dx, dy, +2 ) );
-            }
-            // haar_x3
-            if( ( x + dx * 3 <= winSize.width ) && ( y + dy <= winSize.height ) )
-            {
-              features.push_back( Feature( offset, false, x, y, dx * 3, dy, -1, x + dx, y, dx, dy, +3 ) );
-            }
-            // haar_y3
-            if( ( x + dx <= winSize.width ) && ( y + dy * 3 <= winSize.height ) )
-            {
-              features.push_back( Feature( offset, false, x, y, dx, dy * 3, -1, x, y + dy, dx, dy, +3 ) );
-            }
-            if( mode != CvHaarFeatureParams::BASIC )
-            {
-              // haar_x4
-              if( ( x + dx * 4 <= winSize.width ) && ( y + dy <= winSize.height ) )
-              {
-                features.push_back( Feature( offset, false, x, y, dx * 4, dy, -1, x + dx, y, dx * 2, dy, +2 ) );
-              }
-              // haar_y4
-              if( ( x + dx <= winSize.width ) && ( y + dy * 4 <= winSize.height ) )
-              {
-                features.push_back( Feature( offset, false, x, y, dx, dy * 4, -1, x, y + dy, dx, dy * 2, +2 ) );
-              }
-            }
-            // x2_y2
-            if( ( x + dx * 2 <= winSize.width ) && ( y + dy * 2 <= winSize.height ) )
-            {
-              features.push_back( Feature( offset, false, x, y, dx * 2, dy * 2, -1, x, y, dx, dy, +2, x + dx, y + dy, dx, dy, +2 ) );
-            }
-            if( mode != CvHaarFeatureParams::BASIC )
-            {
-              if( ( x + dx * 3 <= winSize.width ) && ( y + dy * 3 <= winSize.height ) )
-              {
-                features.push_back( Feature( offset, false, x, y, dx * 3, dy * 3, -1, x + dx, y + dy, dx, dy, +9 ) );
-              }
-            }
-            if( mode == CvHaarFeatureParams::ALL )
-            {
-              // tilted haar_x2
-              if( ( x + 2 * dx <= winSize.width ) && ( y + 2 * dx + dy <= winSize.height ) && ( x - dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx * 2, dy, -1, x, y, dx, dy, +2 ) );
-              }
-              // tilted haar_y2
-              if( ( x + dx <= winSize.width ) && ( y + dx + 2 * dy <= winSize.height ) && ( x - 2 * dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx, 2 * dy, -1, x, y, dx, dy, +2 ) );
-              }
-              // tilted haar_x3
-              if( ( x + 3 * dx <= winSize.width ) && ( y + 3 * dx + dy <= winSize.height ) && ( x - dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx * 3, dy, -1, x + dx, y + dx, dx, dy, +3 ) );
-              }
-              // tilted haar_y3
-              if( ( x + dx <= winSize.width ) && ( y + dx + 3 * dy <= winSize.height ) && ( x - 3 * dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx, 3 * dy, -1, x - dy, y + dy, dx, dy, +3 ) );
-              }
-              // tilted haar_x4
-              if( ( x + 4 * dx <= winSize.width ) && ( y + 4 * dx + dy <= winSize.height ) && ( x - dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx * 4, dy, -1, x + dx, y + dx, dx * 2, dy, +2 ) );
-              }
-              // tilted haar_y4
-              if( ( x + dx <= winSize.width ) && ( y + dx + 4 * dy <= winSize.height ) && ( x - 4 * dy >= 0 ) )
-              {
-                features.push_back( Feature( offset, true, x, y, dx, 4 * dy, -1, x - dy, y + dy, dx, 2 * dy, +2 ) );
-              }
-            }
-          }
+          m_scaleFactorWidth = 0.0f;
+          return false;
         }
+
+        m_scaleAreas[curArea].x = (int) floor( (float) m_areas[curArea].x * m_scaleFactorWidth + 0.5f );
+        m_scaleAreas[curArea].y = (int) floor( (float) m_areas[curArea].y * m_scaleFactorHeight + 0.5f );
+        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_scaleAreas[curArea].width ) * ( m_scaleAreas[curArea].height ) );
+      }
+    }
+    else
+    {
+      m_scaleFactorWidth = m_scaleFactorHeight = 1.0f;
+      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+      {
+        m_scaleAreas[curArea] = m_areas[curArea];
+        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_areas[curArea].width ) * ( m_areas[curArea].height ) );
       }
     }
   }
-  numFeatures = (int) features.size();
+  /*else
+   {
+   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+   {
+   m_scaleAreas[curArea] = m_areas[curArea];
+   m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( m_areas[curArea].width * m_areas[curArea].height );
+   }
+   }*/
+
+  if( m_scaleFactorWidth == 0.0f )
+    return false;
+
+  for ( int curArea = 0; curArea < m_numAreas; curArea++ )
+  {
+    *result += (float) getSum( image,
+                               Rect( m_scaleAreas[curArea].x, m_scaleAreas[curArea].y, m_scaleAreas[curArea].width, m_scaleAreas[curArea].height ) )
+        * m_scaleWeights[curArea];
+  }
+
+  /*
+   if( image->getUseVariance() )
+   {
+   float variance = (float) image->getVariance( ROI );
+   *result /= variance;
+   }
+   */
+
+  m_response = *result;
+
+  return true;
 }
 
-CvHaarEvaluator::Feature::Feature()
+float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
 {
-  tilted = false;
-  rect[0].r = rect[1].r = rect[2].r = Rect( 0, 0, 0, 0 );
-  rect[0].weight = rect[1].weight = rect[2].weight = 0;
+// left upper Origin
+  int OriginX = imageROI.x;
+  int OriginY = imageROI.y;
+
+// Check and fix width and height
+  int Width = imageROI.width;
+  int Height = imageROI.height;
+
+  if( OriginX + Width >= image.cols - 1 )
+    Width = ( image.cols - 1 ) - OriginX;
+  if( OriginY + Height >= image.rows - 1 )
+    Height = ( image.rows - 1 ) - OriginY;
+
+  int value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX ) - image.at<int>( OriginY, OriginX + Width )
+      - image.at<int>( OriginY + Height, OriginX );
+
+  return value;
 }
 
-CvHaarEvaluator::Feature::Feature( int offset, bool _tilted, int x0, int y0, int w0, int h0, float wt0, int x1, int y1, int w1, int h1, float wt1,
-                                   int x2, int y2, int w2, int h2, float wt2 )
+void CvHaarEvaluator::FeatureHaar::getInitialDistribution( EstimatedGaussDistribution* distribution )
 {
-  tilted = _tilted;
-
-  rect[0].r.x = x0;
-  rect[0].r.y = y0;
-  rect[0].r.width = w0;
-  rect[0].r.height = h0;
-  rect[0].weight = wt0;
-
-  rect[1].r.x = x1;
-  rect[1].r.y = y1;
-  rect[1].r.width = w1;
-  rect[1].r.height = h1;
-  rect[1].weight = wt1;
-
-  rect[2].r.x = x2;
-  rect[2].r.y = y2;
-  rect[2].r.width = w2;
-  rect[2].r.height = h2;
-  rect[2].weight = wt2;
-
-  if( !tilted )
-  {
-    for ( int j = 0; j < CV_HAAR_FEATURE_MAX; j++ )
-    {
-      if( rect[j].weight == 0.0F )
-        break;
-      CV_SUM_OFFSETS( fastRect[j].p0, fastRect[j].p1, fastRect[j].p2, fastRect[j].p3, rect[j].r, offset )
-    }
-  }
-  else
-  {
-    for ( int j = 0; j < CV_HAAR_FEATURE_MAX; j++ )
-    {
-      if( rect[j].weight == 0.0F )
-        break;
-      CV_TILTED_OFFSETS( fastRect[j].p0, fastRect[j].p1, fastRect[j].p2, fastRect[j].p3, rect[j].r, offset )
-    }
-  }
+  distribution->setValues( m_initMean, m_initSigma );
 }
 
-void CvHaarEvaluator::Feature::write( FileStorage &fs ) const
+float CvHaarEvaluator::FeatureHaar::getResponse()
 {
-  fs << CC_RECTS << "[";
-  for ( int ri = 0; ri < CV_HAAR_FEATURE_MAX && rect[ri].r.width != 0; ++ri )
-  {
-    fs << "[:" << rect[ri].r.x << rect[ri].r.y << rect[ri].r.width << rect[ri].r.height << rect[ri].weight << "]";
-  }
-  fs << "]" << CC_TILTED << tilted;
+  return m_response;
+}
+
+int CvHaarEvaluator::FeatureHaar::getNumAreas()
+{
+  return m_numAreas;
+}
+
+const std::vector<int>& CvHaarEvaluator::FeatureHaar::getWeights() const
+{
+  return m_weights;
+}
+
+const std::vector<Rect>& CvHaarEvaluator::FeatureHaar::getAreas() const
+{
+  return m_areas;
+}
+
+CvHaarEvaluator::EstimatedGaussDistribution::EstimatedGaussDistribution()
+{
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = 1000;
+  this->m_R_mean = 0.01f;
+  this->m_P_sigma = 1000;
+  this->m_R_sigma = 0.01f;
+}
+
+CvHaarEvaluator::EstimatedGaussDistribution::EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma )
+{
+  m_mean = 0;
+  m_sigma = 1;
+  this->m_P_mean = P_mean;
+  this->m_R_mean = R_mean;
+  this->m_P_sigma = P_sigma;
+  this->m_R_sigma = R_sigma;
+}
+
+CvHaarEvaluator::EstimatedGaussDistribution::~EstimatedGaussDistribution()
+{
+}
+
+void CvHaarEvaluator::EstimatedGaussDistribution::update( float value )
+{
+//update distribution (mean and sigma) using a kalman filter for each
+
+  float K;
+  float minFactor = 0.001f;
+
+//mean
+
+  K = m_P_mean / ( m_P_mean + m_R_mean );
+  if( K < minFactor )
+    K = minFactor;
+
+  m_mean = K * value + ( 1.0f - K ) * m_mean;
+  m_P_mean = m_P_mean * m_R_mean / ( m_P_mean + m_R_mean );
+
+  K = m_P_sigma / ( m_P_sigma + m_R_sigma );
+  if( K < minFactor )
+    K = minFactor;
+
+  float tmp_sigma = K * ( m_mean - value ) * ( m_mean - value ) + ( 1.0f - K ) * m_sigma * m_sigma;
+  m_P_sigma = m_P_sigma * m_R_mean / ( m_P_sigma + m_R_sigma );
+
+  m_sigma = static_cast<float>( sqrt( tmp_sigma ) );
+  if( m_sigma <= 1.0f )
+    m_sigma = 1.0f;
+
+}
+
+void CvHaarEvaluator::EstimatedGaussDistribution::setValues( float mean, float sigma )
+{
+  this->m_mean = mean;
+  this->m_sigma = sigma;
+}
+
+float CvHaarEvaluator::EstimatedGaussDistribution::getMean()
+{
+  return m_mean;
+}
+
+float CvHaarEvaluator::EstimatedGaussDistribution::getSigma()
+{
+  return m_sigma;
 }
 
 CvHOGFeatureParams::CvHOGFeatureParams()
