@@ -10,14 +10,14 @@ namespace cv
         /// Widget rendering properties
         enum RenderingProperties
         {
-            VIZ_POINT_SIZE,
-            VIZ_OPACITY,
-            VIZ_LINE_WIDTH,
-            VIZ_FONT_SIZE,
-            VIZ_COLOR,
-            VIZ_REPRESENTATION,
-            VIZ_IMMEDIATE_RENDERING,
-            VIZ_SHADING
+            POINT_SIZE,
+            OPACITY,
+            LINE_WIDTH,
+            FONT_SIZE,
+            COLOR,
+            REPRESENTATION,
+            IMMEDIATE_RENDERING,
+            SHADING
         };
 
         enum RenderingRepresentationProperties
