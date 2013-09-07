@@ -6,6 +6,7 @@
 
 #include <opencv2/viz.hpp>
 #include <iostream>
+#include <fstream>
 
 using namespace cv;
 using namespace std;
@@ -22,8 +23,30 @@ void help()
     << "how to use makeCameraPose and Viz3d::setViewerPose. You can observe the scene "
     << "from camera point of view (C) or global point of view (G)"                    << endl
     << "Usage:"                                                                       << endl
-    << "./coordinate_frame [ G | C ]"                                                 << endl
+    << "./transformations [ G | C ]"                                                 << endl
     << endl;
+}
+
+/**
+ * @function cvcloud_load
+ * @brief load bunny.ply
+ */
+Mat cvcloud_load()
+{
+    Mat cloud(1, 1889, CV_32FC3);
+    ifstream ifs("bunny.ply");
+
+    string str;
+    for(size_t i = 0; i < 12; ++i)
+        getline(ifs, str);
+
+    Point3f* data = cloud.ptr<cv::Point3f>();
+    float dummy1, dummy2;
+    for(size_t i = 0; i < 1889; ++i)
+        ifs >> data[i].x >> data[i].y >> data[i].z >> dummy1 >> dummy2;
+    
+    cloud *= 5.0f;
+    return cloud;
 }
 
 /**
@@ -48,20 +71,23 @@ int main(int argn, char **argv)
     myWindow.showWidget("Coordinate Widget", viz::CoordinateSystemWidget());
     
     /// Let's assume camera has the following properties
-    Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f, 3.0f, 2.0f), cam_y_dir(-1.0,0.0,0.0);
+    Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
+    
     /// We can get the pose of the cam using makeCameraPose
     Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
+    
     /// We can get the transformation matrix from camera coordinate system to global using
     /// - makeTransformToGlobal. We need the axes of the camera
     Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.0f,-1.0f,0.0f), Vec3f(-1.0f,0.0f,0.0f), Vec3f(0.0f,0.0f,-1.0f), cam_pos);
     
     /// Create a cloud widget.
-    viz::SphereWidget sphere_widget(Point3f(0.0,0.0,0.0), 0.5, 10, viz::Color::red());
+    Mat bunny_cloud = cvcloud_load();
+    viz::CloudWidget cloud_widget(bunny_cloud, viz::Color::green());
     
     /// Pose of the widget in camera frame
-    Affine3f sphere_pose = Affine3f().translate(Vec3f(0.0f,0.0f,3.0f));
+    Affine3f cloud_pose = Affine3f().translate(Vec3f(0.0f,0.0f,3.0f));
     /// Pose of the widget in global frame
-    Affine3f sphere_pose_global = transform * sphere_pose;
+    Affine3f cloud_pose_global = transform * cloud_pose;
     
     /// Visualize camera frame
     if (!camera_pov)
@@ -73,7 +99,7 @@ int main(int argn, char **argv)
     }
     
     /// Visualize widget
-    myWindow.showWidget("sphere", sphere_widget, sphere_pose_global);
+    myWindow.showWidget("bunny", cloud_widget, cloud_pose_global);
     
     /// Set the viewer pose to that of camera
     if (camera_pov)
