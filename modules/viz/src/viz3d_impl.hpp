@@ -44,9 +44,7 @@ public:
         }
     }
 
-    void setRepresentationToSurface();
-    void setRepresentationToPoints();
-    void setRepresentationToWireframe();
+    void setRepresentation(int representation);
     
     void setCamera(const Camera &camera);
     Camera getCamera() const;

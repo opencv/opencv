@@ -65,9 +65,7 @@ namespace cv
             void setDesiredUpdateRate(double time);
             double getDesiredUpdateRate();
             
-            void setRepresentationToSurface();
-            void setRepresentationToWireframe();
-            void setRepresentationToPoints();
+            void setRepresentation(int representation);
         private:
 
             struct VizImpl;

@@ -87,6 +87,4 @@ double cv::viz::Viz3d::getRenderingProperty(const String &id, int property) { re
 void cv::viz::Viz3d::setDesiredUpdateRate(double time) { impl_->setDesiredUpdateRate(time); }
 double cv::viz::Viz3d::getDesiredUpdateRate() { return impl_->getDesiredUpdateRate(); }
 
-void cv::viz::Viz3d::setRepresentationToSurface() { impl_->setRepresentationToSurface(); }
-void cv::viz::Viz3d::setRepresentationToWireframe() { impl_->setRepresentationToWireframe(); }
-void cv::viz::Viz3d::setRepresentationToPoints() { impl_->setRepresentationToPoints(); }
+void cv::viz::Viz3d::setRepresentation(int representation) { impl_->setRepresentation(representation); }

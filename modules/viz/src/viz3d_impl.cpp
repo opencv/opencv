@@ -464,33 +464,32 @@ void cv::viz::Viz3d::VizImpl::resetCamera()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToSurface()
+void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
 {
     vtkActorCollection * actors = renderer_->GetActors();
     actors->InitTraversal();
     vtkActor * actor;
-    while ((actor = actors->GetNextActor()) != NULL)
-        actor->GetProperty()->SetRepresentationToSurface();
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToPoints()
-{
-    vtkActorCollection * actors = renderer_->GetActors();
-    actors->InitTraversal();
-    vtkActor * actor;
-    while ((actor = actors->GetNextActor()) != NULL)
-        actor->GetProperty()->SetRepresentationToPoints();
-}
-
-///////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setRepresentationToWireframe()
-{
-    vtkActorCollection * actors = renderer_->GetActors();
-    actors->InitTraversal();
-    vtkActor *actor;
-    while ((actor = actors->GetNextActor()) != NULL)
-        actor->GetProperty()->SetRepresentationToWireframe();
+    switch (representation)
+    {
+        case REPRESENTATION_POINTS: 
+        {
+            while ((actor = actors->GetNextActor()) != NULL)
+                actor->GetProperty()->SetRepresentationToPoints();
+            break;
+        }
+        case REPRESENTATION_SURFACE: 
+        {
+            while ((actor = actors->GetNextActor()) != NULL)
+                actor->GetProperty()->SetRepresentationToSurface();
+            break;
+        }
+        case REPRESENTATION_WIREFRAME: 
+        {
+            while ((actor = actors->GetNextActor()) != NULL)
+                actor->GetProperty()->SetRepresentationToWireframe();
+            break;
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
