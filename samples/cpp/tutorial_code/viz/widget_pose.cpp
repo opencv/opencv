@@ -1,6 +1,6 @@
 /**
- * @file creating_widgets.cpp
- * @brief Creating custom widgets using VTK
+ * @file widget_pose.cpp
+ * @brief Setting pose of a widget
  * @author Ozan Cagri Tonkal
  */
 
@@ -20,9 +20,9 @@ void help()
     cout
     << "--------------------------------------------------------------------------"   << endl
     << "This program shows how to visualize a cube rotated around (1,1,1) and shifted "
-    << "using Rodrigues matrix."                                                      << endl
+    << "using Rodrigues vector."                                                      << endl
     << "Usage:"                                                                       << endl
-    << "./coordinate_frame"                                                           << endl
+    << "./widget_pose"                                                                << endl
     << endl;
 }
 
