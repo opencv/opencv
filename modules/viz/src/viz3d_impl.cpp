@@ -189,10 +189,10 @@ cv::Affine3f cv::viz::Viz3d::VizImpl::getWidgetPose(const String &id) const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::setDesiredUpdateRate(double time)
+void cv::viz::Viz3d::VizImpl::setDesiredUpdateRate(double rate)
 {
     if (interactor_)
-        interactor_->SetDesiredUpdateRate(time);
+        interactor_->SetDesiredUpdateRate(rate);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////

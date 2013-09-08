@@ -521,21 +521,32 @@ template<> cv::viz::GridWidget cv::viz::Widget::cast<cv::viz::GridWidget>()
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// text3D widget implementation
 
-cv::viz::Text3DWidget::Text3DWidget(const String &text, const Point3f &position, double text_scale, const Color &color)
+cv::viz::Text3DWidget::Text3DWidget(const String &text, const Point3f &position, double text_scale, bool face_camera, const Color &color)
 {
-    vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New ();
-    textSource->SetText (text.c_str());
-    textSource->Update ();
+    vtkSmartPointer<vtkVectorText> textSource = vtkSmartPointer<vtkVectorText>::New();
+    textSource->SetText(text.c_str());
+    textSource->Update();
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New ();
-    mapper->SetInputConnection (textSource->GetOutputPort ());
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection (textSource->GetOutputPort());
     
-    vtkSmartPointer<vtkFollower> actor = vtkSmartPointer<vtkFollower>::New ();
-    actor->SetMapper (mapper);
-    actor->SetPosition (position.x, position.y, position.z);
-    actor->SetScale (text_scale);
+    if (face_camera)
+    {
+        vtkSmartPointer<vtkFollower> actor = vtkSmartPointer<vtkFollower>::New();
+        actor->SetMapper(mapper);
+        actor->SetPosition(position.x, position.y, position.z);
+        actor->SetScale(text_scale);
+        WidgetAccessor::setProp(*this, actor);
+    }
+    else
+    {
+        vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        actor->SetPosition(position.x, position.y, position.z);
+        actor->SetScale(text_scale);
+        WidgetAccessor::setProp(*this, actor);
+    }
     
-    WidgetAccessor::setProp(*this, actor);
     setColor(color);
 }
 

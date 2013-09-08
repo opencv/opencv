@@ -24,7 +24,7 @@ public:
     void updateWidgetPose(const String &id, const Affine3f &pose);
     Affine3f getWidgetPose(const String &id) const; 
 
-    void setDesiredUpdateRate(double time);
+    void setDesiredUpdateRate(double rate);
     double getDesiredUpdateRate();
 
     /** \brief Returns true when the user tried to close the window */

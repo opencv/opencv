@@ -14,7 +14,6 @@ namespace cv
             OPACITY,
             LINE_WIDTH,
             FONT_SIZE,
-            COLOR,
             REPRESENTATION,
             IMMEDIATE_RENDERING,
             SHADING
@@ -162,7 +161,7 @@ namespace cv
         class CV_EXPORTS Text3DWidget : public Widget3D
         {
         public:
-            Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, const Color &color = Color::white());
+            Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
