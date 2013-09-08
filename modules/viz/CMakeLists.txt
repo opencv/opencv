@@ -12,7 +12,7 @@ macro(find_qvtk)
 endmacro()
 
 macro(find_vtk)
-  find_package(VTK 5.10.0 REQUIRED)
+  find_package(VTK 5.10.0)
   if(NOT VTK_FOUND)
     find_package(VTK 6.0.0 REQUIRED)
   endif()
