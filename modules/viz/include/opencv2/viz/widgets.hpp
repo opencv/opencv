@@ -206,6 +206,11 @@ namespace cv
             CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
             CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            //! Creates frustum and display given image at the far plane
+            CameraPositionWidget(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            
+        private:
+            struct ProjectImage;
         };
         
         class CV_EXPORTS TrajectoryWidget : public Widget3D
