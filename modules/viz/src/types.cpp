@@ -1,3 +1,51 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+// Authors:
+//  * Ozan Tonkal, ozantonkal@gmail.com
+//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
+//
+//  OpenCV Viz module is complete rewrite of
+//  PCL visualization module (www.pointclouds.org)
+//
+//M*/
+
 #include "precomp.hpp"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -23,8 +71,8 @@ cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::KeyboardEvent
 
-cv::viz::KeyboardEvent::KeyboardEvent (bool _action, const std::string& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
-  : action_ (_action), modifiers_ (0), key_code_(key), key_sym_ (_key_sym)
+cv::viz::KeyboardEvent::KeyboardEvent(bool _action, const std::string& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
+  : action_(_action), modifiers_(0), key_code_(key), key_sym_(_key_sym)
 {
   if (alt)
     modifiers_ = Alt;
@@ -36,18 +84,18 @@ cv::viz::KeyboardEvent::KeyboardEvent (bool _action, const std::string& _key_sym
     modifiers_ |= Shift;
 }
 
-bool cv::viz::KeyboardEvent::isAltPressed () const { return (modifiers_ & Alt) != 0; }
-bool cv::viz::KeyboardEvent::isCtrlPressed () const { return (modifiers_ & Ctrl) != 0; }
-bool cv::viz::KeyboardEvent::isShiftPressed () const { return (modifiers_ & Shift) != 0; }
-unsigned char cv::viz::KeyboardEvent::getKeyCode () const { return key_code_; }
-const cv::String& cv::viz::KeyboardEvent::getKeySym () const { return key_sym_; }
-bool cv::viz::KeyboardEvent::keyDown () const { return action_; }
-bool cv::viz::KeyboardEvent::keyUp () const { return !action_; }
+bool cv::viz::KeyboardEvent::isAltPressed() const { return (modifiers_ & Alt) != 0; }
+bool cv::viz::KeyboardEvent::isCtrlPressed() const { return (modifiers_ & Ctrl) != 0; }
+bool cv::viz::KeyboardEvent::isShiftPressed() const { return (modifiers_ & Shift) != 0; }
+unsigned char cv::viz::KeyboardEvent::getKeyCode() const { return key_code_; }
+const cv::String& cv::viz::KeyboardEvent::getKeySym() const { return key_sym_; }
+bool cv::viz::KeyboardEvent::keyDown() const { return action_; }
+bool cv::viz::KeyboardEvent::keyUp() const { return !action_; }
 
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::MouseEvent
 
-cv::viz::MouseEvent::MouseEvent (const Type& _type, const MouseButton& _button, const Point& _p,  bool alt, bool ctrl, bool shift)
+cv::viz::MouseEvent::MouseEvent(const Type& _type, const MouseButton& _button, const Point& _p,  bool alt, bool ctrl, bool shift)
     : type(_type), button(_button), pointer(_p), key_state(0)
 {
     if (alt)
@@ -73,19 +121,19 @@ struct cv::viz::Mesh3d::loadMeshImpl
         reader->SetFileName(file.c_str());
         reader->Update();
         
-        vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput ();
+        vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
         CV_Assert("File does not exist or file format is not supported." && poly_data);
         
-        vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints ();
-        vtkIdType nr_points = mesh_points->GetNumberOfPoints ();
+        vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
+        vtkIdType nr_points = mesh_points->GetNumberOfPoints();
 
         mesh.cloud.create(1, nr_points, CV_32FC3);
 
         Vec3f *mesh_cloud = mesh.cloud.ptr<Vec3f>();
-        for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
+        for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
         {
             Vec3d point;
-            mesh_points->GetPoint (i, point.val);
+            mesh_points->GetPoint(i, point.val);
             mesh_cloud[i] = point;
         }
 
@@ -94,15 +142,15 @@ struct cv::viz::Mesh3d::loadMeshImpl
         if (poly_data->GetPointData())
             poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
               
-        if (poly_colors && (poly_colors->GetNumberOfComponents () == 3))
+        if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
         {
             mesh.colors.create(1, nr_points, CV_8UC3);
             Vec3b *mesh_colors = mesh.colors.ptr<cv::Vec3b>();
 
-            for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints (); i++)
+            for (vtkIdType i = 0; i < mesh_points->GetNumberOfPoints(); i++)
             {
                 Vec3b point_color;
-                poly_colors->GetTupleValue (i, point_color.val);
+                poly_colors->GetTupleValue(i, point_color.val);
 
                 std::swap(point_color[0], point_color[2]); // RGB -> BGR
                 mesh_colors[i] = point_color;
@@ -114,17 +162,17 @@ struct cv::viz::Mesh3d::loadMeshImpl
         // Now handle the polygons
         vtkIdType* cell_points;
         vtkIdType nr_cell_points;
-        vtkCellArray * mesh_polygons = poly_data->GetPolys ();
-        mesh_polygons->InitTraversal ();
+        vtkCellArray * mesh_polygons = poly_data->GetPolys();
+        mesh_polygons->InitTraversal();
         
         mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
         
         int* polygons = mesh.polygons.ptr<int>();
-        while (mesh_polygons->GetNextCell (nr_cell_points, cell_points))
+        while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
         {
             *polygons++ = nr_cell_points;
             for (int i = 0; i < nr_cell_points; ++i)
-                *polygons++ = static_cast<int> (cell_points[i]);
+                *polygons++ = static_cast<int>(cell_points[i]);
         }
 
         return mesh;

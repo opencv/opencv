@@ -1,4 +1,53 @@
-#pragma once
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  By downloading, copying, installing or using the software you agree to this license.
+//  If you do not agree to this license, do not download, install,
+//  copy or use the software.
+//
+//
+//                           License Agreement
+//                For Open Source Computer Vision Library
+//
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Third party copyrights are property of their respective owners.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted provided that the following conditions are met:
+//
+//   * Redistribution's of source code must retain the above copyright notice,
+//     this list of conditions and the following disclaimer.
+//
+//   * Redistribution's in binary form must reproduce the above copyright notice,
+//     this list of conditions and the following disclaimer in the documentation
+//     and/or other materials provided with the distribution.
+//
+//   * The name of the copyright holders may not be used to endorse or promote products
+//     derived from this software without specific prior written permission.
+//
+// This software is provided by the copyright holders and contributors "as is" and
+// any express or implied warranties, including, but not limited to, the implied
+// warranties of merchantability and fitness for a particular purpose are disclaimed.
+// In no event shall the Intel Corporation or contributors be liable for any direct,
+// indirect, incidental, special, exemplary, or consequential damages
+// (including, but not limited to, procurement of substitute goods or services;
+// loss of use, data, or profits; or business interruption) however caused
+// and on any theory of liability, whether in contract, strict liability,
+// or tort (including negligence or otherwise) arising in any way out of
+// the use of this software, even if advised of the possibility of such damage.
+//
+// Authors:
+//  * Ozan Tonkal, ozantonkal@gmail.com
+//  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
+//
+//  OpenCV Viz module is complete rewrite of
+//  PCL visualization module (www.pointclouds.org)
+//
+//M*/
+
+#ifndef __OPENCV_VIZ_VIZ3D_IMPL_HPP__
+#define __OPENCV_VIZ_VIZ3D_IMPL_HPP__
 
 #include <opencv2/viz.hpp>
 #include "interactor_style.h"
@@ -12,8 +61,8 @@ public:
     
     int ref_counter;
 
-    VizImpl (const String &name);
-    virtual ~VizImpl ();
+    VizImpl(const String &name);
+    virtual ~VizImpl();
     
     void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
     void removeWidget(const String &id);
@@ -28,19 +77,19 @@ public:
     double getDesiredUpdateRate();
 
     /** \brief Returns true when the user tried to close the window */
-    bool wasStopped () const { if (interactor_ != NULL) return (stopped_); else return true; }
+    bool wasStopped() const { if (interactor_ != NULL) return (stopped_); else return true; }
 
     /** \brief Set the stopped flag back to false */
-    void resetStoppedFlag () { if (interactor_ != NULL) stopped_ = false; }
+    void resetStoppedFlag() { if (interactor_ != NULL) stopped_ = false; }
 
     /** \brief Stop the interaction and close the visualizaton window. */
-    void close ()
+    void close()
     {
         stopped_ = true;
         if (interactor_) 
         {
             interactor_->GetRenderWindow()->Finalize();
-            interactor_->TerminateApp (); // This tends to close the window...
+            interactor_->TerminateApp(); // This tends to close the window...
         }
     }
 
@@ -49,8 +98,7 @@ public:
     void setCamera(const Camera &camera);
     Camera getCamera() const;
 
-    /** \brief Reset the camera direction from {0, 0, 0} to the center_{x, y, z} of a given dataset.
-      * \param[in] id the point cloud object id (default: cloud) */
+    /** \brief Reset the camera to a given widget */
     void resetCameraViewpoint(const String& id);
     void resetCamera();
     
@@ -60,16 +108,16 @@ public:
     void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
     void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
 
-    void saveScreenshot (const String &file);
-    void setWindowPosition (int x, int y);
+    void saveScreenshot(const String &file);
+    void setWindowPosition(int x, int y);
     Size getWindowSize() const;
-    void setWindowSize (int xw, int yw);
-    void setFullScreen (bool mode);
+    void setWindowSize(int xw, int yw);
+    void setFullScreen(bool mode);
     String getWindowName() const;
-    void setBackgroundColor (const Color& color);
+    void setBackgroundColor(const Color& color);
 
-    void spin ();
-    void spinOnce (int time = 1, bool force_redraw = false);
+    void spin();
+    void spinOnce(int time = 1, bool force_redraw = false);
 
     void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
     void registerMouseCallback(MouseCallback callback, void* cookie = 0);
@@ -88,12 +136,12 @@ private:
             if (event_id != vtkCommand::TimerEvent)
                 return;
 
-            int timer_id = *reinterpret_cast<int*> (call_data);
+            int timer_id = *reinterpret_cast<int*>(call_data);
             if (timer_id != right_timer_id)
                 return;
 
             // Stop vtk loop and send notification to app to wake it up
-            viz_->interactor_->TerminateApp ();
+            viz_->interactor_->TerminateApp();
         }
         int right_timer_id;
         VizImpl* viz_;
@@ -101,17 +149,17 @@ private:
 
     struct ExitCallback : public vtkCommand
     {
-        static ExitCallback* New ()
+        static ExitCallback* New()
         {
             return new ExitCallback;
         }
-        virtual void Execute (vtkObject*, unsigned long event_id, void*)
+        virtual void Execute(vtkObject*, unsigned long event_id, void*)
         {
             if (event_id == vtkCommand::ExitEvent)
             {
                 viz_->stopped_ = true;
                 viz_->interactor_->GetRenderWindow()->Finalize();
-                viz_->interactor_->TerminateApp ();
+                viz_->interactor_->TerminateApp();
             }
         }
         VizImpl* viz_;
@@ -141,14 +189,14 @@ private:
     /** \brief Boolean that holds whether or not the camera parameters were manually initialized*/
     bool camera_set_;
 
-    bool removeActorFromRenderer (const vtkSmartPointer<vtkProp> &actor);
+    bool removeActorFromRenderer(const vtkSmartPointer<vtkProp> &actor);
 
     /** \brief Internal method. Creates a vtk actor from a vtk polydata object.
           * \param[in] data the vtk polydata object to create an actor for
           * \param[out] actor the resultant vtk actor object
           * \param[in] use_scalars set scalar properties to the mapper if it exists in the data. Default: true.
           */
-    void createActorFromVTKDataSet (const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars = true);
+    void createActorFromVTKDataSet(const vtkSmartPointer<vtkDataSet> &data, vtkSmartPointer<vtkLODActor> &actor, bool use_scalars = true);
 
     /** \brief Updates a set of cells (vtkIdTypeArray) if the number of points in a cloud changes
           * \param[out] cells the vtkIdTypeArray object (set of cells) to update
@@ -158,7 +206,7 @@ private:
           * \param[in] nr_points the number of points in the new cloud. This dictates how many cells we need to
           * generate
           */
-    void updateCells (vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
+    void updateCells(vtkSmartPointer<vtkIdTypeArray> &cells, vtkSmartPointer<vtkIdTypeArray> &initcells, vtkIdType nr_points);
 };
 
 
@@ -167,7 +215,7 @@ namespace cv
 {
     namespace viz
     {
-        vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix (const cv::Matx44f &m);
+        vtkSmartPointer<vtkMatrix4x4> convertToVtkMatrix(const cv::Matx44f &m);
         cv::Matx44f convertToMatx(const vtkSmartPointer<vtkMatrix4x4>& vtk_matrix);
 
         struct NanFilter
@@ -186,12 +234,12 @@ namespace cv
                     int s_chs = source.channels();
                     int m_chs = nan_mask.channels();
 
-                    for(int y = 0; y < source.rows; ++y)
+                    for (int y = 0; y < source.rows; ++y)
                     {
                         const _Tp* srow = source.ptr<_Tp>(y);
                         const _Msk* mrow = nan_mask.ptr<_Msk>(y);
 
-                        for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+                        for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
                             if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
                                 *output++ = _Out(srow);
                     }
@@ -207,12 +255,12 @@ namespace cv
                     int s_chs = source.channels();
                     int m_chs = nan_mask.channels();
 
-                    for(int y = 0; y < source.rows; ++y)
+                    for (int y = 0; y < source.rows; ++y)
                     {
                         const _Tp* srow = source.ptr<_Tp>(y);
                         const _Msk* mrow = nan_mask.ptr<_Msk>(y);
 
-                        for(int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
+                        for (int x = 0; x < source.cols; ++x, srow += s_chs, mrow += m_chs)
                             if (!isNan(mrow[0]) && !isNan(mrow[1]) && !isNan(mrow[2]))
                             {
                                 *output = _Out(srow);
@@ -338,6 +386,6 @@ namespace cv
             }
         };
     }
-
 }
 
+#endif

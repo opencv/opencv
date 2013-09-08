@@ -38,7 +38,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 // Authors:
-//  * Ozan Tonkal
+//  * Ozan Tonkal, ozantonkal@gmail.com
 //  * Anatoly Baksheev, Itseez Inc.  myname.mysurname <> mycompany.com
 //
 //  OpenCV Viz module is complete rewrite of
@@ -49,11 +49,9 @@
 #ifndef __OPENCV_VIZ_HPP__
 #define __OPENCV_VIZ_HPP__
 
-
 #include <opencv2/viz/types.hpp>
 #include <opencv2/viz/widgets.hpp>
 #include <opencv2/viz/viz3d.hpp>
-
 
 namespace cv
 {
@@ -121,6 +119,4 @@ namespace cv
     } /* namespace viz */
 } /* namespace cv */
 
-
 #endif /* __OPENCV_VIZ_HPP__ */
-
