@@ -74,7 +74,11 @@ TriangleWidget::TriangleWidget(const Point3f &pt1, const Point3f &pt2, const Poi
     
     // Create mapper and actor
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(polyData);
+#else
+    mapper->SetInputData(polyData);
+#endif
     
     vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
     actor->SetMapper(mapper);

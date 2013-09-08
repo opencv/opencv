@@ -93,7 +93,11 @@ cv::viz::Widget cv::viz::Widget::fromPlyFile(const String &file_name)
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(data);
+#else
+    mapper->SetInputData(data);
+#endif
 
     vtkSmartPointer<vtkDataArray> scalars = data->GetPointData()->GetScalars();
     if (scalars)
@@ -183,9 +187,13 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
                         vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+#if VTK_MAJOR_VERSION <= 5
                         normals->SetInput(actor->GetMapper()->GetInput());
+#else
+                        normals->SetInputData(actor->GetMapper()->GetInput());
+#endif
                         normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInput(normals->GetOutput());
+                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
                     }
                     actor->GetProperty()->SetInterpolationToGouraud();
                     break;
@@ -195,9 +203,13 @@ void cv::viz::Widget::setRenderingProperty(int property, double value)
                     if (!actor->GetMapper()->GetInput()->GetPointData()->GetNormals())
                     {
                         vtkSmartPointer<vtkPolyDataNormals> normals = vtkSmartPointer<vtkPolyDataNormals>::New();
+#if VTK_MAJOR_VERSION <= 5
                         normals->SetInput(actor->GetMapper()->GetInput());
+#else
+                        normals->SetInputData(actor->GetMapper()->GetInput());
+#endif
                         normals->Update();
-                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInput(normals->GetOutput());
+                        vtkDataSetMapper::SafeDownCast(actor->GetMapper())->SetInputConnection(normals->GetOutputPort());
                     }
                     actor->GetProperty()->SetInterpolationToPhong();
                     break;

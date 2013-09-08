@@ -325,7 +325,11 @@ void cv::viz::Viz3d::VizImpl::createActorFromVTKDataSet(const vtkSmartPointer<vt
         actor = vtkSmartPointer<vtkLODActor>::New();
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(data);
+#else
+    mapper->SetInputData(data);
+#endif
 
     if (use_scalars)
     {

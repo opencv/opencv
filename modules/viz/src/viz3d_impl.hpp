@@ -369,9 +369,13 @@ namespace cv
             {
                 // Create the vtk image
                 output->SetDimensions(image.cols, image.rows, 1);
+#if VTK_MAJOR_VERSION <= 5
                 output->SetNumberOfScalarComponents(image.channels());
                 output->SetScalarTypeToUnsignedChar();
                 output->AllocateScalars();
+#else
+                output->AllocateScalars(VTK_UNSIGNED_CHAR, image.channels());
+#endif
                 
                 int i_chs = image.channels();
                 if (i_chs > 1)

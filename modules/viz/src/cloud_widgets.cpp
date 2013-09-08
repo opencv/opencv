@@ -175,7 +175,11 @@ cv::viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     polydata->GetPointData()->SetScalars(scalars);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(polydata);
+#else
+    mapper->SetInputData(polydata);
+#endif
 
     Vec3d minmax(scalars->GetRange());
     mapper->SetScalarRange(minmax.val);
@@ -206,7 +210,11 @@ cv::viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     vtkSmartPointer<vtkPolyData> polydata = CreateCloudWidget::create(cloud, nr_points);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(polydata);
+#else
+    mapper->SetInputData(polydata);
+#endif
 
     bool interpolation = (polydata && polydata->GetNumberOfCells() != polydata->GetNumberOfVerts());
 
@@ -327,7 +335,11 @@ struct cv::viz::CloudCollectionWidget::CreateCloudWidget
         {
             // This is the first cloud
             vtkSmartPointer<vtkDataSetMapper> mapper_new = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
             mapper_new->SetInputConnection(poly_data->GetProducerPort());
+#else
+            mapper_new->SetInputData(poly_data);
+#endif
 
             mapper_new->SetScalarRange(minmax.val);
             mapper_new->SetScalarModeToUsePointData();
@@ -349,8 +361,13 @@ struct cv::viz::CloudCollectionWidget::CreateCloudWidget
         CV_Assert("Cloud Widget without data" && data);
         
         vtkSmartPointer<vtkAppendPolyData> appendFilter = vtkSmartPointer<vtkAppendPolyData>::New();
+#if VTK_MAJOR_VERSION <= 5
         appendFilter->AddInputConnection(mapper->GetInput()->GetProducerPort());
         appendFilter->AddInputConnection(poly_data->GetProducerPort());
+#else
+        appendFilter->AddInputData(data);
+        appendFilter->AddInputData(poly_data);
+#endif
         mapper->SetInputConnection(appendFilter->GetOutputPort());
         
         // Update the number of cloud points
@@ -401,7 +418,11 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, InputArray _col
     
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transform_filter->SetTransform(transform);
+#if VTK_MAJOR_VERSION <= 5
     transform_filter->SetInputConnection(polydata->GetProducerPort());
+#else
+    transform_filter->SetInputData(polydata);
+#endif
     transform_filter->Update();
     
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -436,7 +457,11 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, const Color &co
     
     vtkSmartPointer<vtkTransformPolyDataFilter> transform_filter = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
     transform_filter->SetTransform(transform);
+#if VTK_MAJOR_VERSION <= 5
     transform_filter->SetInputConnection(polydata->GetProducerPort());
+#else
+    transform_filter->SetInputData(polydata);
+#endif
     transform_filter->Update();
     
     vtkLODActor *actor = vtkLODActor::SafeDownCast(WidgetAccessor::getProp(*this));
@@ -571,7 +596,11 @@ cv::viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _n
     polyData->SetLines(lines);
 
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(polyData);
+#else
+    mapper->SetInputData(polyData);
+#endif
     mapper->SetColorModeToMapScalars();
     mapper->SetScalarModeToUsePointData();
 
@@ -707,7 +736,6 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
         poly_grid->Allocate(1, 1);
         poly_grid->InsertNextCell(polygon->GetCellType(), polygon->GetPointIds());
         poly_grid->SetPoints(points);
-        poly_grid->Update();
         
         if (scalars)
             poly_grid->GetPointData()->SetScalars(scalars);
@@ -724,7 +752,11 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
     actor->GetProperty()->ShadingOff();
     
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
+#if VTK_MAJOR_VERSION <= 5
     mapper->SetInput(data);
+#else
+    mapper->SetInputData(data);
+#endif
     mapper->ImmediateModeRenderingOff();
     
     vtkIdType numberOfCloudPoints = nr_points * 0.1;

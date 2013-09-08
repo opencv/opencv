@@ -74,7 +74,11 @@ You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/
         
         // Create mapper and actor
         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    #if VTK_MAJOR_VERSION <= 5
         mapper->SetInput(polyData);
+    #else
+        mapper->SetInputData(polyData);
+    #endif
         
         vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
