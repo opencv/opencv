@@ -587,6 +587,7 @@ namespace cv
 
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
+        CV_EXPORTS void setIdentity(oclMat& src, double val);
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
@@ -1846,6 +1847,37 @@ namespace cv
             oclMat mean_;
 
             oclMat bgmodelUsedModes_; //keep track of number of modes per pixel
+        };
+
+        /*!***************Kalman Filter*************!*/
+        class CV_EXPORTS KalmanFilter
+        {
+        public:
+            KalmanFilter();
+            //! the full constructor taking the dimensionality of the state, of the measurement and of the control vector
+            KalmanFilter(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F);
+            //! re-initializes Kalman filter. The previous content is destroyed.
+            void init(int dynamParams, int measureParams, int controlParams=0, int type=CV_32F);
+
+            const oclMat& predict(const oclMat& control=oclMat());
+            const oclMat& correct(const oclMat& measurement);
+
+            oclMat statePre;           //!< predicted state (x'(k)): x(k)=A*x(k-1)+B*u(k)
+            oclMat statePost;          //!< corrected state (x(k)): x(k)=x'(k)+K(k)*(z(k)-H*x'(k))
+            oclMat transitionMatrix;   //!< state transition matrix (A)
+            oclMat controlMatrix;      //!< control matrix (B) (not used if there is no control)
+            oclMat measurementMatrix;  //!< measurement matrix (H)
+            oclMat processNoiseCov;    //!< process noise covariance matrix (Q)
+            oclMat measurementNoiseCov;//!< measurement noise covariance matrix (R)
+            oclMat errorCovPre;        //!< priori error estimate covariance matrix (P'(k)): P'(k)=A*P(k-1)*At + Q)*/
+            oclMat gain;               //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
+            oclMat errorCovPost;       //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
+        private:
+            oclMat temp1;
+            oclMat temp2;
+            oclMat temp3;
+            oclMat temp4;
+            oclMat temp5;
         };
     }
 }
