@@ -100,8 +100,8 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
             float c = cov[j*3+2]*0.5f;
             dst[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
         }
-    }
     #endif
+    }
 }
 
 
@@ -159,8 +159,8 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
             float c = cov[j*3+2];
             dst[j] = (float)(a*c - b*b - k*(a + c)*(a + c));
         }
-    }
     #endif
+    }
 }
 
 
