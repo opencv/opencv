@@ -69,7 +69,7 @@ void cv::gpucodec::detail::RawVideoSourceWrapper::start()
 {
     stop_ = false;
     hasError_ = false;
-    thread_ = new Thread(readLoop, this);
+    thread_.reset(new Thread(readLoop, this));
 }
 
 void cv::gpucodec::detail::RawVideoSourceWrapper::stop()

@@ -484,7 +484,7 @@ cv::ogl::Buffer::Buffer(int arows, int acols, int atype, unsigned int abufId, bo
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(abufId, autoRelease);
+    impl_.reset(new Impl(abufId, autoRelease));
     rows_ = arows;
     cols_ = acols;
     type_ = atype;
@@ -500,7 +500,7 @@ cv::ogl::Buffer::Buffer(Size asize, int atype, unsigned int abufId, bool autoRel
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(abufId, autoRelease);
+    impl_.reset(new Impl(abufId, autoRelease));
     rows_ = asize.height;
     cols_ = asize.width;
     type_ = atype;
@@ -529,7 +529,7 @@ cv::ogl::Buffer::Buffer(InputArray arr, Target target, bool autoRelease) : rows_
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             const GLsizeiptr asize = mat.rows * mat.cols * mat.elemSize();
-            impl_ = new Impl(asize, mat.data, target, autoRelease);
+            impl_.reset(new Impl(asize, mat.data, target, autoRelease));
             rows_ = mat.rows;
             cols_ = mat.cols;
             type_ = mat.type();
@@ -552,7 +552,7 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
     if (rows_ != arows || cols_ != acols || type_ != atype)
     {
         const GLsizeiptr asize = arows * acols * CV_ELEM_SIZE(atype);
-        impl_ = new Impl(asize, 0, target, autoRelease);
+        impl_.reset(new Impl(asize, 0, target, autoRelease));
         rows_ = arows;
         cols_ = acols;
         type_ = atype;
@@ -563,7 +563,7 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
 void cv::ogl::Buffer::release()
 {
 #ifdef HAVE_OPENGL
-    if (*impl_.refcount == 1)
+    if (impl_)
         impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
@@ -968,7 +968,7 @@ cv::ogl::Texture2D::Texture2D(int arows, int acols, Format aformat, unsigned int
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(atexId, autoRelease);
+    impl_.reset(new Impl(atexId, autoRelease));
     rows_ = arows;
     cols_ = acols;
     format_ = aformat;
@@ -984,7 +984,7 @@ cv::ogl::Texture2D::Texture2D(Size asize, Format aformat, unsigned int atexId, b
     (void) autoRelease;
     throw_no_ogl();
 #else
-    impl_ = new Impl(atexId, autoRelease);
+    impl_.reset(new Impl(atexId, autoRelease));
     rows_ = asize.height;
     cols_ = asize.width;
     format_ = aformat;
@@ -1024,7 +1024,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
         {
             ogl::Buffer buf = arr.getOGlBuffer();
             buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
+            impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
             ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             break;
         }
@@ -1037,7 +1037,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
                 GpuMat dmat = arr.getGpuMat();
                 ogl::Buffer buf(dmat, ogl::Buffer::PIXEL_UNPACK_BUFFER);
                 buf.bind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-                impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease);
+                impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], 0, autoRelease));
                 ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
             #endif
 
@@ -1049,7 +1049,7 @@ cv::ogl::Texture2D::Texture2D(InputArray arr, bool autoRelease) : rows_(0), cols
             Mat mat = arr.getMat();
             CV_Assert( mat.isContinuous() );
             ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-            impl_ = new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease);
+            impl_.reset(new Impl(internalFormats[cn], asize.width, asize.height, srcFormats[cn], gl_types[depth], mat.data, autoRelease));
             break;
         }
     }
@@ -1072,7 +1072,7 @@ void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoR
     if (rows_ != arows || cols_ != acols || format_ != aformat)
     {
         ogl::Buffer::unbind(ogl::Buffer::PIXEL_UNPACK_BUFFER);
-        impl_ = new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease);
+        impl_.reset(new Impl(aformat, acols, arows, aformat, gl::FLOAT, 0, autoRelease));
         rows_ = arows;
         cols_ = acols;
         format_ = aformat;
@@ -1083,7 +1083,7 @@ void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoR
 void cv::ogl::Texture2D::release()
 {
 #ifdef HAVE_OPENGL
-    if (*impl_.refcount == 1)
+    if (impl_)
         impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
