@@ -2,16 +2,12 @@
 #include <climits>
 #include <algorithm>
 #include <cstdarg>
+#include <debug.hpp>
 
 namespace cv{namespace optim{
 using std::vector;
 
 #ifdef ALEX_DEBUG
-#define dprintf(x) printf x
-static void print_matrix(const Mat& x){
-    print(x);
-    printf("\n");
-}
 static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::vector<int> N,const std::vector<int> B){
     printf("\tprint simplex state\n");
 
@@ -32,8 +28,6 @@ static void print_simplex_state(const Mat& c,const Mat& b,double v,const std::ve
     printf("\n");
 }
 #else
-#define dprintf(x)
-#define print_matrix(x)
 #define print_simplex_state(c,b,v,N,B)
 #endif
 
