@@ -475,56 +475,6 @@ TEST_P(equalizeHist, Mat)
 }
 
 
-
-
-
-////////////////////////////////bilateralFilter////////////////////////////////////////////
-
-struct bilateralFilter : ImgprocTestBase {};
-
-TEST_P(bilateralFilter, Mat)
-{
-    double sigmacolor = 50.0;
-    int radius = 9;
-    int d = 2 * radius + 1;
-    double sigmaspace = 20.0;
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-
-    if (mat1.depth() != CV_8U || mat1.type() != dst.type())
-    {
-        cout << "Unsupported type" << endl;
-        EXPECT_DOUBLE_EQ(0.0, 0.0);
-    }
-    else
-    {
-        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
-            for(int j = 0; j < LOOP_TIMES; j++)
-            {
-                random_roi();
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
-                {
-                    continue;
-                }
-                //if((dstx>=radius) && (dsty >= radius) && (dstx+cldst_roi.cols+radius <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+radius <= cldst_roi.wholerows))
-                //{
-                //	dst_roi.adjustROI(radius, radius, radius, radius);
-                //	cldst_roi.adjustROI(radius, radius, radius, radius);
-                //}
-                //else
-                //{
-                //	continue;
-                //}
-
-                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-                Near(1.);
-            }
-    }
-}
-
-
-
 ////////////////////////////////copyMakeBorder////////////////////////////////////////////
 
 struct CopyMakeBorder : ImgprocTestBase {};
@@ -1614,21 +1564,6 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
                             ONE_TYPE(CV_8UC1),
                             NULL_TYPE,
                             ONE_TYPE(CV_8UC1),
-                            NULL_TYPE,
-                            NULL_TYPE,
-                            Values(false))); // Values(false) is the reserved parameter
-
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, bilateralFilter, Combine(
-//	ONE_TYPE(CV_8UC1),
-//	NULL_TYPE,
-//	ONE_TYPE(CV_8UC1),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, bilateralFilter, Combine(
-                            Values(CV_8UC1, CV_8UC3),
-                            NULL_TYPE,
-                            Values(CV_8UC1, CV_8UC3),
                             NULL_TYPE,
                             NULL_TYPE,
                             Values(false))); // Values(false) is the reserved parameter
