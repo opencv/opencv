@@ -412,6 +412,28 @@ http://www.dai.ed.ac.uk/CVonline/LOCAL\_COPIES/MANDUCHI1/Bilateral\_Filtering.ht
 This filter does not work inplace.
 
 
+adaptiveBilateralFilter
+-----------------------
+Applies the adaptive bilateral filter to an image.
+
+.. ocv:function:: void adaptiveBilateralFilter( InputArray src, OutputArray dst, Size ksize, double sigmaSpace, Point anchor=Point(-1, -1), int borderType=BORDER_DEFAULT )
+
+.. ocv:pyfunction:: cv2.adaptiveBilateralFilter(src, ksize, sigmaSpace[, dst[, anchor[, borderType]]]) -> dst
+
+    :param src: Source 8-bit, 1-channel or 3-channel image.
+
+    :param dst: Destination image of the same size and type as  ``src`` .
+
+    :param ksize: filter kernel size.
+
+    :param sigmaSpace: Filter sigma in the coordinate space. It has similar meaning with ``sigmaSpace`` in ``bilateralFilter``.
+
+    :param anchor: anchor point; default value ``Point(-1,-1)`` means that the anchor is at the kernel center. Only default value is supported now.
+
+    :param borderType: border mode used to extrapolate pixels outside of the image.
+
+The function applies adaptive bilateral filtering to the input image. This filter is similar to ``bilateralFilter``, in that dissimilarity from and distance to the center pixel is punished. Instead of using ``sigmaColor``, we employ the variance of pixel values in the neighbourhood.
+
 
 
 blur
