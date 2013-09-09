@@ -629,7 +629,7 @@ Ptr<Convolution> cv::gpu::createConvolution(Size user_block_size)
     CV_Error(Error::StsNotImplemented, "The library was build without CUFFT");
     return Ptr<Convolution>();
 #else
-    return new ConvolutionImpl(user_block_size);
+    return makePtr<ConvolutionImpl>(user_block_size);
 #endif
 }
 

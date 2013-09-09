@@ -436,9 +436,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, double f
 
     Mat E;
     if( method == RANSAC )
-        createRANSACPointSetRegistrator(new EMEstimatorCallback, 5, threshold, prob)->run(points1, points2, E, _mask);
+        createRANSACPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, threshold, prob)->run(points1, points2, E, _mask);
     else
-        createLMeDSPointSetRegistrator(new EMEstimatorCallback, 5, prob)->run(points1, points2, E, _mask);
+        createLMeDSPointSetRegistrator(makePtr<EMEstimatorCallback>(), 5, prob)->run(points1, points2, E, _mask);
 
     return E;
 }

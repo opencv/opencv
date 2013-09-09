@@ -283,12 +283,6 @@ CV_EXPORTS void setGlDevice(int device = 0);
 
 }}
 
-namespace cv {
-
-template <> CV_EXPORTS void Ptr<cv::ogl::Buffer::Impl>::delete_obj();
-template <> CV_EXPORTS void Ptr<cv::ogl::Texture2D::Impl>::delete_obj();
-
-}
 
 ////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////

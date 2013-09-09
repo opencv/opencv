@@ -622,29 +622,29 @@ cv::Ptr<cv::BaseRowFilter> cv::getRowSumFilter(int srcType, int sumType, int ksi
         anchor = ksize/2;
 
     if( sdepth == CV_8U && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowSum<uchar, int>(ksize, anchor));
+        return makePtr<RowSum<uchar, int> >(ksize, anchor);
     if( sdepth == CV_8U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowSum<uchar, double>(ksize, anchor));
+        return makePtr<RowSum<uchar, double> >(ksize, anchor);
     if( sdepth == CV_16U && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowSum<ushort, int>(ksize, anchor));
+        return makePtr<RowSum<ushort, int> >(ksize, anchor);
     if( sdepth == CV_16U && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowSum<ushort, double>(ksize, anchor));
+        return makePtr<RowSum<ushort, double> >(ksize, anchor);
     if( sdepth == CV_16S && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowSum<short, int>(ksize, anchor));
+        return makePtr<RowSum<short, int> >(ksize, anchor);
     if( sdepth == CV_32S && ddepth == CV_32S )
-        return Ptr<BaseRowFilter>(new RowSum<int, int>(ksize, anchor));
+        return makePtr<RowSum<int, int> >(ksize, anchor);
     if( sdepth == CV_16S && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowSum<short, double>(ksize, anchor));
+        return makePtr<RowSum<short, double> >(ksize, anchor);
     if( sdepth == CV_32F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowSum<float, double>(ksize, anchor));
+        return makePtr<RowSum<float, double> >(ksize, anchor);
     if( sdepth == CV_64F && ddepth == CV_64F )
-        return Ptr<BaseRowFilter>(new RowSum<double, double>(ksize, anchor));
+        return makePtr<RowSum<double, double> >(ksize, anchor);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of source format (=%d), and buffer format (=%d)",
         srcType, sumType));
 
-    return Ptr<BaseRowFilter>(0);
+    return Ptr<BaseRowFilter>();
 }
 
 
@@ -658,33 +658,33 @@ cv::Ptr<cv::BaseColumnFilter> cv::getColumnSumFilter(int sumType, int dstType, i
         anchor = ksize/2;
 
     if( ddepth == CV_8U && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, uchar>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, uchar> >(ksize, anchor, scale);
     if( ddepth == CV_8U && sdepth == CV_64F )
-        return Ptr<BaseColumnFilter>(new ColumnSum<double, uchar>(ksize, anchor, scale));
+        return makePtr<ColumnSum<double, uchar> >(ksize, anchor, scale);
     if( ddepth == CV_16U && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, ushort>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, ushort> >(ksize, anchor, scale);
     if( ddepth == CV_16U && sdepth == CV_64F )
-        return Ptr<BaseColumnFilter>(new ColumnSum<double, ushort>(ksize, anchor, scale));
+        return makePtr<ColumnSum<double, ushort> >(ksize, anchor, scale);
     if( ddepth == CV_16S && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, short>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, short> >(ksize, anchor, scale);
     if( ddepth == CV_16S && sdepth == CV_64F )
-        return Ptr<BaseColumnFilter>(new ColumnSum<double, short>(ksize, anchor, scale));
+        return makePtr<ColumnSum<double, short> >(ksize, anchor, scale);
     if( ddepth == CV_32S && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, int>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, int> >(ksize, anchor, scale);
     if( ddepth == CV_32F && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, float>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, float> >(ksize, anchor, scale);
     if( ddepth == CV_32F && sdepth == CV_64F )
-        return Ptr<BaseColumnFilter>(new ColumnSum<double, float>(ksize, anchor, scale));
+        return makePtr<ColumnSum<double, float> >(ksize, anchor, scale);
     if( ddepth == CV_64F && sdepth == CV_32S )
-        return Ptr<BaseColumnFilter>(new ColumnSum<int, double>(ksize, anchor, scale));
+        return makePtr<ColumnSum<int, double> >(ksize, anchor, scale);
     if( ddepth == CV_64F && sdepth == CV_64F )
-        return Ptr<BaseColumnFilter>(new ColumnSum<double, double>(ksize, anchor, scale));
+        return makePtr<ColumnSum<double, double> >(ksize, anchor, scale);
 
     CV_Error_( CV_StsNotImplemented,
         ("Unsupported combination of sum format (=%d), and destination format (=%d)",
         sumType, dstType));
 
-    return Ptr<BaseColumnFilter>(0);
+    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -703,8 +703,8 @@ cv::Ptr<cv::FilterEngine> cv::createBoxFilter( int srcType, int dstType, Size ks
     Ptr<BaseColumnFilter> columnFilter = getColumnSumFilter(sumType,
         dstType, ksize.height, anchor.y, normalize ? 1./(ksize.width*ksize.height) : 1);
 
-    return Ptr<FilterEngine>(new FilterEngine(Ptr<BaseFilter>(0), rowFilter, columnFilter,
-           srcType, dstType, sumType, borderType ));
+    return makePtr<FilterEngine>(Ptr<BaseFilter>(), rowFilter, columnFilter,
+           srcType, dstType, sumType, borderType );
 }
 
 

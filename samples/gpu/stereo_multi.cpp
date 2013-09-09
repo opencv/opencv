@@ -291,11 +291,11 @@ StereoMultiGpuStream::StereoMultiGpuStream()
 {
     gpu::setDevice(0);
     d_algs[0] = gpu::createStereoBM(256);
-    streams[0] = new Stream;
+    streams[0] = makePtr<Stream>();
 
     gpu::setDevice(1);
     d_algs[1] = gpu::createStereoBM(256);
-    streams[1] = new Stream;
+    streams[1] = makePtr<Stream>();
 }
 
 StereoMultiGpuStream::~StereoMultiGpuStream()

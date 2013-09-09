@@ -179,7 +179,6 @@ ERFilterNM::ERFilterNM()
     minProbabilityDiff = 1.;
     num_accepted_regions = 0;
     num_rejected_regions = 0;
-    classifier = NULL;
 }
 
 // the key method. Takes image on input, vector of ERStat is output for the first stage,
@@ -632,9 +631,10 @@ void ERFilterNM::er_merge(ERStat *parent, ERStat *child)
         child->probability = classifier->eval(*child);
     }
 
-    if ( ((classifier!=NULL)?(child->probability >= minProbability):true) &&
+    if ( (((classifier!=NULL)?(child->probability >= minProbability):true)||(nonMaxSuppression)) &&
          ((child->area >= (minArea*region_mask.rows*region_mask.cols)) &&
-          (child->area <= (maxArea*region_mask.rows*region_mask.cols))) )
+          (child->area <= (maxArea*region_mask.rows*region_mask.cols)) &&
+          (child->rect.width > 2) && (child->rect.height > 2)) )
     {
 
         num_accepted_regions++;
@@ -700,18 +700,24 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
 
     regions->back().parent = parent;
     if (prev != NULL)
+    {
       prev->next = &(regions->back());
+    }
     else if (parent != NULL)
       parent->child = &(regions->back());
 
     ERStat *old_prev = NULL;
     ERStat *this_er  = &regions->back();
 
+    if (this_er->parent == NULL)
+    {
+       this_er->probability = 0;
+    }
+
     if (nonMaxSuppression)
     {
         if (this_er->parent == NULL)
         {
-            this_er->probability = 0; //TODO this makes sense in order to select at least one region in short tree's but is it really necessary?
             this_er->max_probability_ancestor = this_er;
             this_er->min_probability_ancestor = this_er;
         }
@@ -723,15 +729,22 @@ ERStat* ERFilterNM::er_save( ERStat *er, ERStat *parent, ERStat *prev )
 
             if ( (this_er->max_probability_ancestor->probability > minProbability) && (this_er->max_probability_ancestor->probability - this_er->min_probability_ancestor->probability > minProbabilityDiff))
             {
-
-                this_er->max_probability_ancestor->local_maxima = true;
-                //TODO check here if the last local_maxima can be also suppressed, is the following correct?
-                //if (this_er->min_probability_ancestor->local_maxima)
-                //  this_er->min_probability_ancestor->local_maxima = false;
-
-                this_er->max_probability_ancestor = this_er;
-                this_er->min_probability_ancestor = this_er;
+              this_er->max_probability_ancestor->local_maxima = true;
+              if ((this_er->max_probability_ancestor == this_er) && (this_er->parent->local_maxima))
+              {
+                this_er->parent->local_maxima = false;
+              }
             }
+            else if (this_er->probability < this_er->parent->probability)
+            {
+              this_er->min_probability_ancestor = this_er;
+            }
+            else if (this_er->probability > this_er->parent->probability)
+            {
+              this_er->max_probability_ancestor = this_er;
+            }
+
+
         }
     }
 
@@ -770,8 +783,7 @@ ERStat* ERFilterNM::er_tree_filter ( InputArray image, ERStat * stat, ERStat *pa
     findContours( region, contours, hierarchy, RETR_TREE, CHAIN_APPROX_NONE, Point(0, 0) );
     //TODO check epsilon parameter of approxPolyDP (set empirically) : we want more precission
     //     if the region is very small because otherwise we'll loose all the convexities
-    approxPolyDP( Mat(contours[0]), contour_poly, max(rect.width,rect.height)/25, true );
-
+    approxPolyDP( Mat(contours[0]), contour_poly, (float)min(rect.width,rect.height)/17, true );
 
     bool was_convex = false;
     int  num_inflexion_points = 0;
@@ -1085,10 +1097,10 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     CV_Assert( (thresholdDelta >= 0) && (thresholdDelta <= 128) );
     CV_Assert( (minProbabilityDiff >= 0.) && (minProbabilityDiff <= 1.) );
 
-    Ptr<ERFilterNM> filter = new ERFilterNM();
+    Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
     if (cb == NULL)
-        filter->setCallback(new ERClassifierNM1());
+        filter->setCallback(makePtr<ERClassifierNM1>());
     else
         filter->setCallback(cb);
 
@@ -1119,16 +1131,14 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     CV_Assert( (minProbability >= 0.) && (minProbability <= 1.) );
 
-    Ptr<ERFilterNM> filter = new ERFilterNM();
-
+    Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
     if (cb == NULL)
-        filter->setCallback(new ERClassifierNM2());
+        filter->setCallback(makePtr<ERClassifierNM2>());
     else
         filter->setCallback(cb);
 
     filter->setMinProbability(minProbability);
     return (Ptr<ERFilter>)filter;
 }
-
 }

@@ -725,7 +725,7 @@ namespace
 
 Ptr<gpu::BackgroundSubtractorFGD> cv::gpu::createBackgroundSubtractorFGD(const FGDParams& params)
 {
-    return new FGDImpl(params);
+    return makePtr<FGDImpl>(params);
 }
 
 #endif // HAVE_CUDA

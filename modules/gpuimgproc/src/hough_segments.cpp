@@ -177,7 +177,7 @@ namespace
 
 Ptr<HoughSegmentDetector> cv::gpu::createHoughSegmentDetector(float rho, float theta, int minLineLength, int maxLineGap, int maxLines)
 {
-    return new HoughSegmentDetectorImpl(rho, theta, minLineLength, maxLineGap, maxLines);
+    return makePtr<HoughSegmentDetectorImpl>(rho, theta, minLineLength, maxLineGap, maxLines);
 }
 
 #endif /* !defined (HAVE_CUDA) */

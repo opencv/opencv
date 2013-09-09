@@ -1040,9 +1040,6 @@ const oclMat &MagnoRetinaFilter::runFilter(const oclMat &OPL_ON, const oclMat &O
         x##_slices[_SLICE_INDEX_] = x(getROI(_SLICE_INDEX_));\
     }
 
-static float _LMStoACr1Cr2[] = {1.0,  1.0, 0.0,  1.0, -1.0, 0.0,  -0.5, -0.5, 1.0};
-static float _LMStoLab[] = {0.5774f, 0.5774f, 0.5774f, 0.4082f, 0.4082f, -0.8165f, 0.7071f, -0.7071f, 0.f};
-
 RetinaColor::RetinaColor(const unsigned int NBrows, const unsigned int NBcolumns, const int samplingMethod)
     : BasicRetinaFilter(NBrows, NBcolumns, 3),
       _RGBmosaic(NBrows * 3, NBcolumns, CV_32FC1),
@@ -1149,7 +1146,7 @@ void RetinaColor::_initColorSampling()
     // computing photoreceptors local density
     MAKE_OCLMAT_SLICES(_RGBmosaic, 3);
     MAKE_OCLMAT_SLICES(_colorLocalDensity, 3);
-
+    _colorLocalDensity.setTo(0);
     _spatiotemporalLPfilter(_RGBmosaic_slices[0], _colorLocalDensity_slices[0]);
     _spatiotemporalLPfilter(_RGBmosaic_slices[1], _colorLocalDensity_slices[1]);
     _spatiotemporalLPfilter(_RGBmosaic_slices[2], _colorLocalDensity_slices[2]);
@@ -1639,10 +1636,10 @@ void RetinaFilter::_processRetinaParvoMagnoMapping()
 }
 }  /* namespace ocl */
 
-Ptr<Retina> createRetina_OCL(Size getInputSize){ return new ocl::RetinaOCLImpl(getInputSize); }
+Ptr<Retina> createRetina_OCL(Size getInputSize){ return makePtr<ocl::RetinaOCLImpl>(getInputSize); }
 Ptr<Retina> createRetina_OCL(Size getInputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght)
 {
-    return new ocl::RetinaOCLImpl(getInputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+    return makePtr<ocl::RetinaOCLImpl>(getInputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
 }
 
 }  /* namespace bioinspired */

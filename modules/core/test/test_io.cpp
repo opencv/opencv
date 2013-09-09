@@ -270,16 +270,16 @@ protected:
 
             cvRelease((void**)&m_nd);
 
-            Ptr<CvSparseMat> m_s = (CvSparseMat*)fs["test_sparse_mat"].readObj();
-            Ptr<CvSparseMat> _test_sparse_ = cvCreateSparseMat(test_sparse_mat);
-            Ptr<CvSparseMat> _test_sparse = (CvSparseMat*)cvClone(_test_sparse_);
+            Ptr<CvSparseMat> m_s((CvSparseMat*)fs["test_sparse_mat"].readObj());
+            Ptr<CvSparseMat> _test_sparse_(cvCreateSparseMat(test_sparse_mat));
+            Ptr<CvSparseMat> _test_sparse((CvSparseMat*)cvClone(_test_sparse_));
             SparseMat m_s2;
             fs["test_sparse_mat"] >> m_s2;
-            Ptr<CvSparseMat> _m_s2 = cvCreateSparseMat(m_s2);
+            Ptr<CvSparseMat> _m_s2(cvCreateSparseMat(m_s2));
 
             if( !m_s || !CV_IS_SPARSE_MAT(m_s) ||
-               !cvTsCheckSparse(m_s, _test_sparse,0) ||
-               !cvTsCheckSparse(_m_s2, _test_sparse,0))
+               !cvTsCheckSparse(m_s, _test_sparse, 0) ||
+               !cvTsCheckSparse(_m_s2, _test_sparse, 0))
             {
                 ts->printf( cvtest::TS::LOG, "the read sparse matrix is not correct\n" );
                 ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_OUTPUT );

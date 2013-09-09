@@ -186,7 +186,7 @@ public:
     //! the full constructor that opens file storage for reading or writing
     CV_WRAP FileStorage(const String& source, int flags, const String& encoding=String());
     //! the constructor that takes pointer to the C FileStorage structure
-    FileStorage(CvFileStorage* fs);
+    FileStorage(CvFileStorage* fs, bool owning=true);
     //! the destructor. calls release()
     virtual ~FileStorage();
 
@@ -209,9 +209,9 @@ public:
     CV_WRAP FileNode operator[](const char* nodename) const;
 
     //! returns pointer to the underlying C FileStorage structure
-    CvFileStorage* operator *() { return fs; }
+    CvFileStorage* operator *() { return fs.get(); }
     //! returns pointer to the underlying C FileStorage structure
-    const CvFileStorage* operator *() const { return fs; }
+    const CvFileStorage* operator *() const { return fs.get(); }
     //! writes one or more numbers of the specified format to the currently written structure
     void writeRaw( const String& fmt, const uchar* vec, size_t len );
     //! writes the registered C structure (CvMat, CvMatND, CvSeq). See cvWrite()
@@ -226,7 +226,7 @@ public:
     int state; //!< the writer state
 };
 
-template<> CV_EXPORTS void Ptr<CvFileStorage>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvFileStorage>::operator ()(CvFileStorage* obj) const;
 
 /*!
  File Storage Node class

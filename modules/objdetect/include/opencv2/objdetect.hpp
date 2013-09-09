@@ -141,7 +141,7 @@ public:
     static Ptr<FeatureEvaluator> create(int type);
 };
 
-template<> CV_EXPORTS void Ptr<CvHaarClassifierCascade>::delete_obj();
+template<> CV_EXPORTS void DefaultDeleter<CvHaarClassifierCascade>::operator ()(CvHaarClassifierCascade* obj) const;
 
 enum { CASCADE_DO_CANNY_PRUNING    = 1,
        CASCADE_SCALE_IMAGE         = 2,

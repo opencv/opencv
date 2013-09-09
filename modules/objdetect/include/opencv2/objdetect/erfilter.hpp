@@ -171,9 +171,9 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = NULL,
-                                                  int thresholdDelta = 1, float minArea = 0.000025,
-                                                  float maxArea = 0.13, float minProbability = 0.2,
+CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
+                                                  int thresholdDelta = 1, float minArea = 0.00025,
+                                                  float maxArea = 0.13, float minProbability = 0.4,
                                                   bool nonMaxSuppression = true,
                                                   float minProbabilityDiff = 0.1);
 
@@ -190,8 +190,8 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = N
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = NULL,
-                                                  float minProbability = 0.85);
+CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
+                                                  float minProbability = 0.3);
 
 }
 #endif // _OPENCV_ERFILTER_HPP_

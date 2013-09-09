@@ -1626,7 +1626,7 @@ CV_PerimeterAreaSliceTest::~CV_PerimeterAreaSliceTest() {}
 
 void CV_PerimeterAreaSliceTest::run( int )
 {
-    Ptr<CvMemStorage> storage = cvCreateMemStorage();
+    Ptr<CvMemStorage> storage(cvCreateMemStorage());
     RNG& rng = theRNG();
     const double min_r = 90, max_r = 120;
 

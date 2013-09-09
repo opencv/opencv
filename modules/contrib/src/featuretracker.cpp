@@ -54,7 +54,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
     {
     case CvFeatureTrackerParams::SIFT:
         dd = Algorithm::create<Feature2D>("Feature2D.SIFT");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SIFT support");
         dd->set("nOctaveLayers", 5);
         dd->set("contrastThreshold", 0.04);
@@ -62,7 +62,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         break;
     case CvFeatureTrackerParams::SURF:
         dd = Algorithm::create<Feature2D>("Feature2D.SURF");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SURF support");
         dd->set("hessianThreshold", 400);
         dd->set("nOctaves", 3);
@@ -73,7 +73,7 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
         break;
     }
 
-    matcher = new BFMatcher(NORM_L2);
+    matcher = makePtr<BFMatcher>(int(NORM_L2));
 }
 
 CvFeatureTracker::~CvFeatureTracker()

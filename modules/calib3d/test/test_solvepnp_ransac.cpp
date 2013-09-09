@@ -276,7 +276,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     {
         // limit concurrency to get determenistic result
         cv::theRNG().state = 20121010;
-        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec1, tvec1);
     }
 
@@ -295,7 +295,7 @@ TEST(DISABLED_Calib3d_SolvePnPRansac, concurrency)
     {
         // single thread again
         cv::theRNG().state = 20121010;
-        cv::Ptr<tbb::task_scheduler_init> one_thread = new tbb::task_scheduler_init(1);
+        tbb::task_scheduler_init one_thread(1);
         solvePnPRansac(object, image, camera_mat, dist_coef, rvec2, tvec2);
     }
 

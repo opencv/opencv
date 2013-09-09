@@ -134,7 +134,7 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1_OCL,
     superRes_ocl->set("temporalAreaRadius", temporalAreaRadius);
     superRes_ocl->set("opticalFlow", opticalFlowOcl);
 
-    superRes_ocl->setInput(new OneFrameSource_OCL(frame_ocl));
+    superRes_ocl->setInput(makePtr<OneFrameSource_OCL>(frame_ocl));
 
     ocl::oclMat dst_ocl;
     superRes_ocl->nextFrame(dst_ocl);

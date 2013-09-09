@@ -62,7 +62,7 @@ protected:
     virtual void run(int)
     {
         cv::initModule_features2d();
-        CV_Assert(!detector.empty());
+        CV_Assert(detector);
         string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
 
         // Read the test image.

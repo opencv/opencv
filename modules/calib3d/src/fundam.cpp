@@ -307,7 +307,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     if( ransacReprojThreshold <= 0 )
         ransacReprojThreshold = defaultRANSACReprojThreshold;
 
-    Ptr<PointSetRegistrator::Callback> cb = new HomographyEstimatorCallback;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<HomographyEstimatorCallback>();
 
     if( method == 0 || npoints == 4 )
     {
@@ -334,7 +334,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
             Mat H8(8, 1, CV_64F, H.ptr<double>());
-            createLMSolver(new HomographyRefineCallback(src, dst), 10)->run(H8);
+            createLMSolver(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
     }
 
@@ -686,7 +686,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     if( npoints < 7 )
         return Mat();
 
-    Ptr<PointSetRegistrator::Callback> cb = new FMEstimatorCallback;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<FMEstimatorCallback>();
     int result;
 
     if( npoints == 7 || method == FM_8POINT )

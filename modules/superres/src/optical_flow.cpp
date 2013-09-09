@@ -169,7 +169,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback()
 {
-    return new Farneback;
+    return makePtr<Farneback>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -258,7 +258,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Simple()
 {
-    return new Simple;
+    return makePtr<Simple>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -337,7 +337,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1()
 {
-    return new DualTVL1;
+    return makePtr<DualTVL1>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -503,7 +503,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Brox_GPU()
 {
-    return new Brox_GPU;
+    return makePtr<Brox_GPU>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -562,7 +562,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_GPU()
 {
-    return new PyrLK_GPU;
+    return makePtr<PyrLK_GPU>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -636,7 +636,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_GPU()
 {
-    return new Farneback_GPU;
+    return makePtr<Farneback_GPU>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -714,7 +714,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_GPU()
 {
-    return new DualTVL1_GPU;
+    return makePtr<DualTVL1_GPU>();
 }
 
 #endif // HAVE_OPENCV_GPUOPTFLOW
@@ -827,7 +827,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_PyrLK_OCL()
 {
-    return new PyrLK_OCL;
+    return makePtr<PyrLK_OCL>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -906,7 +906,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_DualTVL1_OCL()
 {
-    return new DualTVL1_OCL;
+    return makePtr<DualTVL1_OCL>();
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -980,7 +980,7 @@ namespace
 
 Ptr<DenseOpticalFlowExt> cv::superres::createOptFlow_Farneback_OCL()
 {
-    return new FarneBack_OCL;
+    return makePtr<FarneBack_OCL>();
 }
 
 #endif

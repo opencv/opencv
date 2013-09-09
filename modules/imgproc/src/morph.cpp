@@ -857,42 +857,42 @@ cv::Ptr<cv::BaseRowFilter> cv::getMorphologyRowFilter(int op, int type, int ksiz
     if( op == MORPH_ERODE )
     {
         if( depth == CV_8U )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<uchar>,
-                                      ErodeRowVec8u>(ksize, anchor));
+            return makePtr<MorphRowFilter<MinOp<uchar>,
+                                      ErodeRowVec8u> >(ksize, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<ushort>,
-                                      ErodeRowVec16u>(ksize, anchor));
+            return makePtr<MorphRowFilter<MinOp<ushort>,
+                                      ErodeRowVec16u> >(ksize, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<short>,
-                                      ErodeRowVec16s>(ksize, anchor));
+            return makePtr<MorphRowFilter<MinOp<short>,
+                                      ErodeRowVec16s> >(ksize, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<float>,
-                                      ErodeRowVec32f>(ksize, anchor));
+            return makePtr<MorphRowFilter<MinOp<float>,
+                                      ErodeRowVec32f> >(ksize, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MinOp<double>,
-                                      ErodeRowVec64f>(ksize, anchor));
+            return makePtr<MorphRowFilter<MinOp<double>,
+                                      ErodeRowVec64f> >(ksize, anchor);
     }
     else
     {
         if( depth == CV_8U )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<uchar>,
-                                      DilateRowVec8u>(ksize, anchor));
+            return makePtr<MorphRowFilter<MaxOp<uchar>,
+                                      DilateRowVec8u> >(ksize, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<ushort>,
-                                      DilateRowVec16u>(ksize, anchor));
+            return makePtr<MorphRowFilter<MaxOp<ushort>,
+                                      DilateRowVec16u> >(ksize, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<short>,
-                                      DilateRowVec16s>(ksize, anchor));
+            return makePtr<MorphRowFilter<MaxOp<short>,
+                                      DilateRowVec16s> >(ksize, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<float>,
-                                      DilateRowVec32f>(ksize, anchor));
+            return makePtr<MorphRowFilter<MaxOp<float>,
+                                      DilateRowVec32f> >(ksize, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseRowFilter>(new MorphRowFilter<MaxOp<double>,
-                                      DilateRowVec64f>(ksize, anchor));
+            return makePtr<MorphRowFilter<MaxOp<double>,
+                                      DilateRowVec64f> >(ksize, anchor);
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseRowFilter>(0);
+    return Ptr<BaseRowFilter>();
 }
 
 cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
@@ -904,42 +904,42 @@ cv::Ptr<cv::BaseColumnFilter> cv::getMorphologyColumnFilter(int op, int type, in
     if( op == MORPH_ERODE )
     {
         if( depth == CV_8U )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<uchar>,
-                                         ErodeColumnVec8u>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MinOp<uchar>,
+                                         ErodeColumnVec8u> >(ksize, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<ushort>,
-                                         ErodeColumnVec16u>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MinOp<ushort>,
+                                         ErodeColumnVec16u> >(ksize, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<short>,
-                                         ErodeColumnVec16s>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MinOp<short>,
+                                         ErodeColumnVec16s> >(ksize, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<float>,
-                                         ErodeColumnVec32f>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MinOp<float>,
+                                         ErodeColumnVec32f> >(ksize, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MinOp<double>,
-                                         ErodeColumnVec64f>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MinOp<double>,
+                                         ErodeColumnVec64f> >(ksize, anchor);
     }
     else
     {
         if( depth == CV_8U )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<uchar>,
-                                         DilateColumnVec8u>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MaxOp<uchar>,
+                                         DilateColumnVec8u> >(ksize, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<ushort>,
-                                         DilateColumnVec16u>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MaxOp<ushort>,
+                                         DilateColumnVec16u> >(ksize, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<short>,
-                                         DilateColumnVec16s>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MaxOp<short>,
+                                         DilateColumnVec16s> >(ksize, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<float>,
-                                         DilateColumnVec32f>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MaxOp<float>,
+                                         DilateColumnVec32f> >(ksize, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseColumnFilter>(new MorphColumnFilter<MaxOp<double>,
-                                         DilateColumnVec64f>(ksize, anchor));
+            return makePtr<MorphColumnFilter<MaxOp<double>,
+                                         DilateColumnVec64f> >(ksize, anchor);
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseColumnFilter>(0);
+    return Ptr<BaseColumnFilter>();
 }
 
 
@@ -952,32 +952,32 @@ cv::Ptr<cv::BaseFilter> cv::getMorphologyFilter(int op, int type, InputArray _ke
     if( op == MORPH_ERODE )
     {
         if( depth == CV_8U )
-            return Ptr<BaseFilter>(new MorphFilter<MinOp<uchar>, ErodeVec8u>(kernel, anchor));
+            return makePtr<MorphFilter<MinOp<uchar>, ErodeVec8u> >(kernel, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseFilter>(new MorphFilter<MinOp<ushort>, ErodeVec16u>(kernel, anchor));
+            return makePtr<MorphFilter<MinOp<ushort>, ErodeVec16u> >(kernel, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseFilter>(new MorphFilter<MinOp<short>, ErodeVec16s>(kernel, anchor));
+            return makePtr<MorphFilter<MinOp<short>, ErodeVec16s> >(kernel, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseFilter>(new MorphFilter<MinOp<float>, ErodeVec32f>(kernel, anchor));
+            return makePtr<MorphFilter<MinOp<float>, ErodeVec32f> >(kernel, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseFilter>(new MorphFilter<MinOp<double>, ErodeVec64f>(kernel, anchor));
+            return makePtr<MorphFilter<MinOp<double>, ErodeVec64f> >(kernel, anchor);
     }
     else
     {
         if( depth == CV_8U )
-            return Ptr<BaseFilter>(new MorphFilter<MaxOp<uchar>, DilateVec8u>(kernel, anchor));
+            return makePtr<MorphFilter<MaxOp<uchar>, DilateVec8u> >(kernel, anchor);
         if( depth == CV_16U )
-            return Ptr<BaseFilter>(new MorphFilter<MaxOp<ushort>, DilateVec16u>(kernel, anchor));
+            return makePtr<MorphFilter<MaxOp<ushort>, DilateVec16u> >(kernel, anchor);
         if( depth == CV_16S )
-            return Ptr<BaseFilter>(new MorphFilter<MaxOp<short>, DilateVec16s>(kernel, anchor));
+            return makePtr<MorphFilter<MaxOp<short>, DilateVec16s> >(kernel, anchor);
         if( depth == CV_32F )
-            return Ptr<BaseFilter>(new MorphFilter<MaxOp<float>, DilateVec32f>(kernel, anchor));
+            return makePtr<MorphFilter<MaxOp<float>, DilateVec32f> >(kernel, anchor);
         if( depth == CV_64F )
-            return Ptr<BaseFilter>(new MorphFilter<MaxOp<double>, DilateVec64f>(kernel, anchor));
+            return makePtr<MorphFilter<MaxOp<double>, DilateVec64f> >(kernel, anchor);
     }
 
     CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
-    return Ptr<BaseFilter>(0);
+    return Ptr<BaseFilter>();
 }
 
 
@@ -1020,8 +1020,8 @@ cv::Ptr<cv::FilterEngine> cv::createMorphologyFilter( int op, int type, InputArr
                                        depth == CV_32F ? (double)-FLT_MAX : -DBL_MAX);
     }
 
-    return Ptr<FilterEngine>(new FilterEngine(filter2D, rowFilter, columnFilter,
-                                              type, type, type, _rowBorderType, _columnBorderType, borderValue ));
+    return makePtr<FilterEngine>(filter2D, rowFilter, columnFilter,
+                                 type, type, type, _rowBorderType, _columnBorderType, borderValue );
 }
 
 

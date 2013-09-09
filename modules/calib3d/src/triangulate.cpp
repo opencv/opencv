@@ -240,32 +240,32 @@ cvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points1
     }
 
     // Make sure F uses double precision
-    F = cvCreateMat(3,3,CV_64FC1);
+    F.reset(cvCreateMat(3,3,CV_64FC1));
     cvConvert(F_, F);
 
     // Make sure points1 uses double precision
-    points1 = cvCreateMat(points1_->rows,points1_->cols,CV_64FC2);
+    points1.reset(cvCreateMat(points1_->rows,points1_->cols,CV_64FC2));
     cvConvert(points1_, points1);
 
     // Make sure points2 uses double precision
-    points2 = cvCreateMat(points2_->rows,points2_->cols,CV_64FC2);
+    points2.reset(cvCreateMat(points2_->rows,points2_->cols,CV_64FC2));
     cvConvert(points2_, points2);
 
-    tmp33 = cvCreateMat(3,3,CV_64FC1);
-    tmp31 = cvCreateMat(3,1,CV_64FC1), tmp31_2 = cvCreateMat(3,1,CV_64FC1);
-    T1i = cvCreateMat(3,3,CV_64FC1), T2i = cvCreateMat(3,3,CV_64FC1);
-    R1 = cvCreateMat(3,3,CV_64FC1), R2 = cvCreateMat(3,3,CV_64FC1);
-    TFT = cvCreateMat(3,3,CV_64FC1), TFTt = cvCreateMat(3,3,CV_64FC1), RTFTR = cvCreateMat(3,3,CV_64FC1);
-    U = cvCreateMat(3,3,CV_64FC1);
-    S = cvCreateMat(3,3,CV_64FC1);
-    V = cvCreateMat(3,3,CV_64FC1);
-    e1 = cvCreateMat(3,1,CV_64FC1), e2 = cvCreateMat(3,1,CV_64FC1);
+    tmp33.reset(cvCreateMat(3,3,CV_64FC1));
+    tmp31.reset(cvCreateMat(3,1,CV_64FC1)), tmp31_2.reset(cvCreateMat(3,1,CV_64FC1));
+    T1i.reset(cvCreateMat(3,3,CV_64FC1)), T2i.reset(cvCreateMat(3,3,CV_64FC1));
+    R1.reset(cvCreateMat(3,3,CV_64FC1)), R2.reset(cvCreateMat(3,3,CV_64FC1));
+    TFT.reset(cvCreateMat(3,3,CV_64FC1)), TFTt.reset(cvCreateMat(3,3,CV_64FC1)), RTFTR.reset(cvCreateMat(3,3,CV_64FC1));
+    U.reset(cvCreateMat(3,3,CV_64FC1));
+    S.reset(cvCreateMat(3,3,CV_64FC1));
+    V.reset(cvCreateMat(3,3,CV_64FC1));
+    e1.reset(cvCreateMat(3,1,CV_64FC1)), e2.reset(cvCreateMat(3,1,CV_64FC1));
 
     double x1, y1, x2, y2;
     double scale;
     double f1, f2, a, b, c, d;
-    polynomial = cvCreateMat(1,7,CV_64FC1);
-    result = cvCreateMat(1,6,CV_64FC2);
+    polynomial.reset(cvCreateMat(1,7,CV_64FC1));
+    result.reset(cvCreateMat(1,6,CV_64FC2));
     double t_min, s_val, t, s;
     for (int p = 0; p < points1->cols; ++p) {
         // Replace F by T2-t * F * T1-t

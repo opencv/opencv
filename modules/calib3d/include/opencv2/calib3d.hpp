@@ -180,7 +180,7 @@ CV_EXPORTS_W void drawChessboardCorners( InputOutputArray image, Size patternSiz
 //! finds circles' grid pattern of the specified size in the image
 CV_EXPORTS_W bool findCirclesGrid( InputArray image, Size patternSize,
                                    OutputArray centers, int flags = CALIB_CB_SYMMETRIC_GRID,
-                                   const Ptr<FeatureDetector> &blobDetector = new SimpleBlobDetector());
+                                   const Ptr<FeatureDetector> &blobDetector = makePtr<SimpleBlobDetector>());
 
 //! finds intrinsic and extrinsic camera parameters from several fews of a known calibration pattern.
 CV_EXPORTS_W double calibrateCamera( InputArrayOfArrays objectPoints,

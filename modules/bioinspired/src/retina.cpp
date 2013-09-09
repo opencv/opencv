@@ -295,8 +295,10 @@ private:
 };
 
 // smart pointers allocation :
-Ptr<Retina> createRetina(Size inputSize){ return new RetinaImpl(inputSize); }
-Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){return new RetinaImpl(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);}
+Ptr<Retina> createRetina(Size inputSize){ return makePtr<RetinaImpl>(inputSize); }
+Ptr<Retina> createRetina(Size inputSize, const bool colorMode, int colorSamplingMethod, const bool useRetinaLogSampling, const double reductionFactor, const double samplingStrenght){
+    return makePtr<RetinaImpl>(inputSize, colorMode, colorSamplingMethod, useRetinaLogSampling, reductionFactor, samplingStrenght);
+}
 
 
 // RetinaImpl code
