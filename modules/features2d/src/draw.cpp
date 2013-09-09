@@ -202,8 +202,8 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     {
         if( matchesMask.empty() || matchesMask[m] )
         {
-            int i1 = matches1to2[m].queryIdx;
-            int i2 = matches1to2[m].trainIdx;
+            int i1 = matches1to2[m].trainIdx;
+            int i2 = matches1to2[m].queryIdx;
             CV_Assert(i1 >= 0 && i1 < static_cast<int>(keypoints1.size()));
             CV_Assert(i2 >= 0 && i2 < static_cast<int>(keypoints2.size()));
 
@@ -231,8 +231,8 @@ void drawMatches( const Mat& img1, const vector<KeyPoint>& keypoints1,
     {
         for( size_t j = 0; j < matches1to2[i].size(); j++ )
         {
-            int i1 = matches1to2[i][j].queryIdx;
-            int i2 = matches1to2[i][j].trainIdx;
+            int i1 = matches1to2[i][j].trainIdx;
+            int i2 = matches1to2[i][j].queryIdx;
             if( matchesMask.empty() || matchesMask[i][j] )
             {
                 const KeyPoint &kp1 = keypoints1[i1], &kp2 = keypoints2[i2];
