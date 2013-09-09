@@ -1152,19 +1152,17 @@ void  get_gradient_magnitude(Mat& _grey_img, Mat& _gradient_magnitude);
 
 void get_gradient_magnitude(Mat& _grey_img, Mat& _gradient_magnitude)
 {
-    Mat C = Mat_<double>(_grey_img);
+    Mat C = Mat_<float>(_grey_img);
 
-    Mat kernel = (Mat_<double>(1,3) << -1,0,1);
+    Mat kernel = (Mat_<float>(1,3) << -1,0,1);
     Mat grad_x;
     filter2D(C, grad_x, -1, kernel, Point(-1,-1), 0, BORDER_DEFAULT);
 
-    Mat kernel2 = (Mat_<double>(3,1) << -1,0,1);
+    Mat kernel2 = (Mat_<float>(3,1) << -1,0,1);
     Mat grad_y;
     filter2D(C, grad_y, -1, kernel2, Point(-1,-1), 0, BORDER_DEFAULT);
 
-    for(int i=0; i<grad_x.rows; i++)
-        for(int j=0; j<grad_x.cols; j++)
-            _gradient_magnitude.at<double>(i,j) = sqrt(pow(grad_x.at<double>(i,j),2)+pow(grad_y.at<double>(i,j),2));
+    magnitude( grad_x, grad_y, _gradient_magnitude);
 }
 
 
@@ -1216,7 +1214,7 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
 
         Mat grey;
         cvtColor(src, grey, COLOR_RGB2GRAY);
-        Mat gradient_magnitude = Mat_<double>(grey.size());
+        Mat gradient_magnitude = Mat_<float>(grey.size());
         get_gradient_magnitude( grey, gradient_magnitude);
         gradient_magnitude.convertTo(gradient_magnitude, CV_8UC1);
 
@@ -1248,7 +1246,7 @@ void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode
 
         Mat grey;
         cvtColor(src, grey, COLOR_RGB2GRAY);
-        Mat gradient_magnitude = Mat_<double>(grey.size());
+        Mat gradient_magnitude = Mat_<float>(grey.size());
         get_gradient_magnitude( grey, gradient_magnitude);
         gradient_magnitude.convertTo(gradient_magnitude, CV_8UC1);
 
