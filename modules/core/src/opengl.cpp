@@ -563,6 +563,8 @@ void cv::ogl::Buffer::create(int arows, int acols, int atype, Target target, boo
 void cv::ogl::Buffer::release()
 {
 #ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
     cols_ = 0;
@@ -1081,6 +1083,8 @@ void cv::ogl::Texture2D::create(int arows, int acols, Format aformat, bool autoR
 void cv::ogl::Texture2D::release()
 {
 #ifdef HAVE_OPENGL
+    if (impl_)
+        impl_->setAutoRelease(true);
     impl_ = Impl::empty();
     rows_ = 0;
     cols_ = 0;
