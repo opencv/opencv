@@ -92,7 +92,7 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
                 _mm_storeu_ps(dst + j, a);
             }
         }
-    #endif
+    #else
         for( ; j < size.width; j++ )
         {
             float a = cov[j*3]*0.5f;
@@ -101,6 +101,7 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
             dst[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
         }
     }
+    #endif
 }
 
 
@@ -149,7 +150,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
                 _mm_storeu_ps(dst + j, a);
             }
         }
-    #endif
+    #else
 
         for( ; j < size.width; j++ )
         {
@@ -159,6 +160,7 @@ calcHarris( const Mat& _cov, Mat& _dst, double k )
             dst[j] = (float)(a*c - b*b - k*(a + c)*(a + c));
         }
     }
+    #endif
 }
 
 
