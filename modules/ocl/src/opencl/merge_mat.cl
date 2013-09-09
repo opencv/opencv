@@ -204,7 +204,7 @@ __kernel void merge_vector_C2_D4(__global int *mat_dst,  int dst_step,  int dst_
         int src0 = *((__global int *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
         int src1 = *((__global int *)((__global uchar *)mat_src1 + src1_index + (x << 2)));
 
-        *((__global int2 *)((__global uchar *)mat_dst  + dst_index + (x << 4))) = (int2)(src0, src1);
+        *((__global int2 *)((__global uchar *)mat_dst  + dst_index + (x << 3))) = (int2)(src0, src1);
     }
 }
 __kernel void merge_vector_C2_D5(__global float *mat_dst,  int dst_step,  int dst_offset,
@@ -224,7 +224,7 @@ __kernel void merge_vector_C2_D5(__global float *mat_dst,  int dst_step,  int ds
         float src0 = *((__global float *)((__global uchar *)mat_src0 + src0_index + (x << 2)));
         float src1 = *((__global float *)((__global uchar *)mat_src1 + src1_index + (x << 2)));
 
-        *((__global float2 *)((__global uchar *)mat_dst  + dst_index + (x << 4))) = (float2)(src0, src1);
+        *((__global float2 *)((__global uchar *)mat_dst  + dst_index + (x << 3))) = (float2)(src0, src1);
     }
 }
 
