@@ -122,6 +122,8 @@ Decrements the reference counter and destroys the buffer object if needed.
 
 .. ocv:function:: void ogl::Buffer::release()
 
+The function will call `setAutoRelease(true)` .
+
 
 
 ogl::Buffer::setAutoRelease
@@ -322,6 +324,8 @@ ogl::Texture2D::release
 Decrements the reference counter and destroys the texture object if needed.
 
 .. ocv:function:: void ogl::Texture2D::release()
+
+The function will call `setAutoRelease(true)` .
 
 
 
