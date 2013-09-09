@@ -96,7 +96,7 @@ TEST_P(Kalman, Accuracy)
     kalman_filter_ocl.correct(Sample);
     //ocl end
 
-    //cpu start 
+    //cpu start
     cv::KalmanFilter kalman_filter_cpu;
 
     kalman_filter_cpu.init(Dim, Dim);
@@ -144,4 +144,3 @@ TEST_P(Kalman, Accuracy)
 INSTANTIATE_TEST_CASE_P(OCL_Video, Kalman, Combine(Values(3, 7), Values(30)));
 
 #endif // HAVE_OPENCL
-

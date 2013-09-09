@@ -48,7 +48,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-KalmanFilter::KalmanFilter() 
+KalmanFilter::KalmanFilter()
 {
 
 }
@@ -66,7 +66,7 @@ void KalmanFilter::init(int DP, int MP, int CP, int type)
 
     statePre.create(DP, 1, type);
     statePre.setTo(Scalar::all(0));
-    
+
     statePost.create(DP, 1, type);
     statePost.setTo(Scalar::all(0));
 
@@ -111,7 +111,7 @@ CV_EXPORTS const oclMat& KalmanFilter::predict(const oclMat& control)
     gemm(transitionMatrix, statePost, 1, oclMat(), 0, statePre);
     oclMat temp;
 
-    if(control.data) 
+    if(control.data)
         gemm(controlMatrix, control, 1, statePre, 1, statePre);
     gemm(transitionMatrix, errorCovPost, 1, oclMat(), 0, temp1);
     gemm(temp1, transitionMatrix, 1, processNoiseCov, 1, errorCovPre, GEMM_2_T);
