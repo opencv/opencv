@@ -49,6 +49,23 @@ using namespace perf;
 
 ///////////// HOG////////////////////////
 
+struct RectLess :
+        public std::binary_function<cv::Rect, cv::Rect, bool>
+{
+    bool operator()(const cv::Rect& a,
+        const cv::Rect& b) const
+    {
+        if (a.x != b.x)
+            return a.x < b.x;
+        else if (a.y != b.y)
+            return a.y < b.y;
+        else if (a.width != b.width)
+            return a.width < b.width;
+        else
+            return a.height < b.height;
+    }
+};
+
 PERF_TEST(HOGFixture, HOG)
 {
     Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
@@ -64,6 +81,7 @@ PERF_TEST(HOGFixture, HOG)
 
         TEST_CYCLE() hog.detectMultiScale(src, found_locations);
 
+        std::sort(found_locations.begin(), found_locations.end(), RectLess());
         SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
     else if (RUN_OCL_IMPL)
@@ -74,6 +92,7 @@ PERF_TEST(HOGFixture, HOG)
 
         OCL_TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
 
+        std::sort(found_locations.begin(), found_locations.end(), RectLess());
         SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
     else
