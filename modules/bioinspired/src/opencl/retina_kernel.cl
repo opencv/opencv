@@ -126,7 +126,7 @@ kernel void horizontalAnticausalFilter(
         {
             result = *optr + _a * result;
         }
-		*optr = result;
+        *optr = result;
     }
     result_v4.x = result;
     optr -= 3;
@@ -229,7 +229,7 @@ kernel void horizontalAnticausalFilter_Irregular(
         {
             result = *optr + *bptr * result;
         }
-		*optr = result;
+        *optr = result;
     }
     res_v4.x = result;
     optr -= 3;
