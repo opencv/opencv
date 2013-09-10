@@ -108,6 +108,13 @@ ClfMilBoost::ClfMilBoost()
   _numsamples = 0;
 }
 
+ClfMilBoost::~ClfMilBoost()
+{
+  _selectors.clear();
+  for ( size_t i = 0; i < _weakclf.size(); i++ )
+    delete _weakclf.at( i );
+}
+
 void ClfMilBoost::init( const ClfMilBoost::Params &parameters )
 {
   _myParams = parameters;
@@ -275,14 +282,14 @@ void ClfOnlineStump::init()
   _trained = false;
 }
 
-void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>& /*posw*/, const Mat_<float>& /*negw*/ )
+void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>& /*posw*/, const Mat_<float>& /*negw*/)
 {
   //std::cout << " ClfOnlineStump::update" << _ind << std::endl;
   float posmu = 0.0, negmu = 0.0;
   if( posx.cols > 0 )
-    posmu = float(mean( posx.col( _ind ) )[0]);
+    posmu = float( mean( posx.col( _ind ) )[0] );
   if( negx.cols > 0 )
-    negmu = float(mean( negx.col( _ind ) )[0]);
+    negmu = float( mean( negx.col( _ind ) )[0] );
 
   if( _trained )
   {
@@ -290,13 +297,13 @@ void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>
     {
       _mu1 = ( _lRate * _mu1 + ( 1 - _lRate ) * posmu );
       cv::Mat diff = posx.col( _ind ) - _mu1;
-      _sig1 = _lRate * _sig1 + ( 1 - _lRate ) * float(mean( diff.mul( diff ) )[0]);
+      _sig1 = _lRate * _sig1 + ( 1 - _lRate ) * float( mean( diff.mul( diff ) )[0] );
     }
     if( negx.cols > 0 )
     {
       _mu0 = ( _lRate * _mu0 + ( 1 - _lRate ) * negmu );
       cv::Mat diff = negx.col( _ind ) - _mu0;
-      _sig0 = _lRate * _sig0 + ( 1 - _lRate ) * float(mean( diff.mul( diff ) )[0]);
+      _sig0 = _lRate * _sig0 + ( 1 - _lRate ) * float( mean( diff.mul( diff ) )[0] );
     }
 
     _q = ( _mu1 - _mu0 ) / 2;
@@ -317,7 +324,7 @@ void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>
       _mu1 = posmu;
       cv::Scalar scal_mean, scal_std_dev;
       cv::meanStdDev( posx.col( _ind ), scal_mean, scal_std_dev );
-      _sig1 = float(scal_std_dev[0]) * float(scal_std_dev[0]) + 1e-9f;
+      _sig1 = float( scal_std_dev[0] ) * float( scal_std_dev[0] ) + 1e-9f;
     }
 
     if( negx.cols > 0 )
@@ -325,7 +332,7 @@ void ClfOnlineStump::update( const Mat& posx, const Mat& negx, const Mat_<float>
       _mu0 = negmu;
       cv::Scalar scal_mean, scal_std_dev;
       cv::meanStdDev( negx.col( _ind ), scal_mean, scal_std_dev );
-      _sig0 = float(scal_std_dev[0]) * float(scal_std_dev[0]) + 1e-9f;
+      _sig0 = float( scal_std_dev[0] ) * float( scal_std_dev[0] ) + 1e-9f;
     }
 
     _q = ( _mu1 - _mu0 ) / 2;

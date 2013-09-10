@@ -6,13 +6,13 @@
 using namespace std;
 using namespace cv;
 
-Mat image;
-Rect boundingBox;
-bool paused;
-bool selectObject = false;
-bool startSelection = false;
+static Mat image;
+static Rect boundingBox;
+static bool paused;
+static bool selectObject = false;
+static bool startSelection = false;
 
-const char* keys =
+static const char* keys =
 { "{@tracker_algorithm | | tracker algorithm }"
     "{@video_name        | | video name        }" };
 
@@ -128,7 +128,7 @@ int main( int argc, char** argv )
       else if( initialized )
       {
         //updates the tracker
-        if( tracker->update( image, boundingBox ) )
+        if( tracker->update( frame, boundingBox ) )
         {
           rectangle( image, boundingBox, Scalar( 255, 0, 0 ), 2, 1 );
         }
@@ -136,7 +136,7 @@ int main( int argc, char** argv )
       imshow( "Tracking API", image );
     }
 
-    char c = (char) waitKey( 10 );
+    char c = (char) waitKey( 2 );
     if( c == 'q' )
       break;
     if( c == 'p' )

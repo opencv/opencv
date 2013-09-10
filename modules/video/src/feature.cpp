@@ -42,12 +42,6 @@
 #include "precomp.hpp"
 #include "opencv2/video/feature.hpp"
 
-#ifdef _WIN32
-#define TIME( arg ) (((double) clock()) / CLOCKS_PER_SEC)
-#else
-#define TIME( arg ) (time( arg ))
-#endif
-
 namespace cv
 {
 
@@ -701,61 +695,9 @@ bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* resu
 {
   *result = 0.0f;
 
-// define the minimum size
-  Size minSize = Size( 3, 3 );
-
-// printf("in eval %d = %d\n",curSize.width,ROI.width );
-
-  if( m_curSize.width != ROI.width || m_curSize.height != ROI.height )
-  {
-    m_curSize = cv::Size( ROI.width, ROI.height );
-    if( ! ( m_initSize == m_curSize ) )
-    {
-      m_scaleFactorHeight = (float) m_curSize.height / m_initSize.height;
-      m_scaleFactorWidth = (float) m_curSize.width / m_initSize.width;
-
-      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
-      {
-        m_scaleAreas[curArea].height = (int) floor( (float) m_areas[curArea].height * m_scaleFactorHeight + 0.5f );
-        m_scaleAreas[curArea].width = (int) floor( (float) m_areas[curArea].width * m_scaleFactorWidth + 0.5f );
-
-        if( m_scaleAreas[curArea].height < minSize.height || m_scaleAreas[curArea].width < minSize.width )
-        {
-          m_scaleFactorWidth = 0.0f;
-          return false;
-        }
-
-        m_scaleAreas[curArea].x = (int) floor( (float) m_areas[curArea].x * m_scaleFactorWidth + 0.5f );
-        m_scaleAreas[curArea].y = (int) floor( (float) m_areas[curArea].y * m_scaleFactorHeight + 0.5f );
-        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_scaleAreas[curArea].width ) * ( m_scaleAreas[curArea].height ) );
-      }
-    }
-    else
-    {
-      m_scaleFactorWidth = m_scaleFactorHeight = 1.0f;
-      for ( int curArea = 0; curArea < m_numAreas; curArea++ )
-      {
-        m_scaleAreas[curArea] = m_areas[curArea];
-        m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( ( m_areas[curArea].width ) * ( m_areas[curArea].height ) );
-      }
-    }
-  }
-  /*else
-   {
-   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
-   {
-   m_scaleAreas[curArea] = m_areas[curArea];
-   m_scaleWeights[curArea] = (float) m_weights[curArea] / (float) ( m_areas[curArea].width * m_areas[curArea].height );
-   }
-   }*/
-
-  if( m_scaleFactorWidth == 0.0f )
-    return false;
-
   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
   {
-    *result += (float) getSum( image,
-                               Rect( m_scaleAreas[curArea].x, m_scaleAreas[curArea].y, m_scaleAreas[curArea].width, m_scaleAreas[curArea].height ) )
+    *result += (float) getSum( image, Rect( m_areas[curArea].x, m_areas[curArea].y, m_areas[curArea].width, m_areas[curArea].height ) )
         * m_scaleWeights[curArea];
   }
 
@@ -787,8 +729,18 @@ float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
   if( OriginY + Height >= image.rows - 1 )
     Height = ( image.rows - 1 ) - OriginY;
 
-  int value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX ) - image.at<int>( OriginY, OriginX + Width )
-      - image.at<int>( OriginY + Height, OriginX );
+  float value = 0;
+  int depth = image.depth();
+
+  if( depth == CV_8U || depth == CV_32S )
+    value = image.at<int>( OriginY + Height, OriginX + Width ) + image.at<int>( OriginY, OriginX ) - image.at<int>( OriginY, OriginX + Width )
+        - image.at<int>( OriginY + Height, OriginX );
+  else if( depth == CV_64F )
+    value = image.at<double>( OriginY + Height, OriginX + Width ) + image.at<double>( OriginY, OriginX )
+        - image.at<double>( OriginY, OriginX + Width ) - image.at<double>( OriginY + Height, OriginX );
+  else if( depth == CV_32F )
+    value = image.at<float>( OriginY + Height, OriginX + Width ) + image.at<float>( OriginY, OriginX ) - image.at<float>( OriginY, OriginX + Width )
+        - image.at<float>( OriginY + Height, OriginX );
 
   return value;
 }
@@ -808,7 +760,7 @@ int CvHaarEvaluator::FeatureHaar::getNumAreas()
   return m_numAreas;
 }
 
-const std::vector<int>& CvHaarEvaluator::FeatureHaar::getWeights() const
+const std::vector<float>& CvHaarEvaluator::FeatureHaar::getWeights() const
 {
   return m_weights;
 }

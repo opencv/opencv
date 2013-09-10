@@ -66,6 +66,7 @@ class ClfMilBoost
   };
 
   ClfMilBoost();
+  ~ClfMilBoost();
   void init( const ClfMilBoost::Params &parameters = ClfMilBoost::Params() );
   void update( const Mat& posx, const Mat& negx );
   std::vector<float> classify( const Mat& x, bool logR = true );

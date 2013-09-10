@@ -246,7 +246,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     bool eval( const Mat& image, Rect ROI, float* result );
     float getResponse();
     int getNumAreas();
-    const std::vector<int>& getWeights() const;
+    const std::vector<float>& getWeights() const;
     const std::vector<Rect>& getAreas() const;
     void write( FileStorage &fs ) const
     {
@@ -256,7 +256,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
    private:
     int m_type;
     int m_numAreas;
-    std::vector<int> m_weights;
+    std::vector<float> m_weights;
     float m_initMean;
     float m_initSigma;
     void generateRandomFeature( Size imageSize );
@@ -284,6 +284,17 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   }
   void setWinSize( Size patchSize );
   Size setWinSize() const;
+  virtual void generateFeatures();
+
+
+  /**
+   * TODO new method
+   * \brief Overload the original generateFeatures in order to limit the number of the features
+   * @param numFeatures Number of the features
+   */
+
+  virtual void generateFeatures( int numFeatures );
+
  protected:
   bool isIntegral;
 
@@ -296,15 +307,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     split( ii_img, ii_imgs );
   }
 
-  virtual void generateFeatures();
 
-  /**
-   * TODO new method
-   * \brief Overload the original generateFeatures in order to limit the number of the features
-   * @param numFeatures Number of the features
-   */
-
-  virtual void generateFeatures( int numFeatures );
 
   std::vector<FeatureHaar> features;
   Mat sum; /* sum images (each row represents image) */
