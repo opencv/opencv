@@ -333,13 +333,13 @@ PERF_TEST_P(BilateralFixture, Bilateral,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params), d = 7;
-    double sigmacolor = 50.0, sigmaspace = 50.0;
+    const double sigmacolor = 50.0, sigmaspace = 50.0;
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
-    if (srcSize == OCL_SIZE_4000 && type == CV_8UC3)
-        declare.time(8);
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(type == CV_8UC3 ? 8 : 4.5);
 
     if (RUN_OCL_IMPL)
     {
@@ -372,14 +372,16 @@ PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
-    double sigmaspace = 10.0;
-    Size ksize(9,9);
+    const double sigmaspace = 10.0;
+    Size ksize(9, 9);
 
     Mat src(srcSize, type), dst(srcSize, type);
     declare.in(src, WARMUP_RNG).out(dst);
 
     if (srcSize == OCL_SIZE_4000)
-        declare.time(15);
+        declare.time(type == CV_8UC3 ? 46 : 28);
+    else if (srcSize == OCL_SIZE_2000)
+        declare.time(type == CV_8UC3 ? 11 : 7);
 
     if (RUN_OCL_IMPL)
     {
@@ -389,7 +391,7 @@ PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst, 1.);
+        SANITY_CHECK(dst, 1.0);
     }
     else if (RUN_PLAIN_IMPL)
     {
