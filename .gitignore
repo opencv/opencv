@@ -8,3 +8,4 @@ tegra/
 .*.swp
 tags
 Thumbs.db
+*.autosave

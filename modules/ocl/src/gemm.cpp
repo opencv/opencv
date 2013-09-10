@@ -46,15 +46,61 @@
 #include <iomanip>
 #include "precomp.hpp"
 
+namespace cv { namespace ocl {
+
+// used for clAmdBlas library to avoid redundant setup/teardown
+void clBlasSetup();
+void clBlasTeardown();
+
+}} /* namespace cv { namespace ocl */
+
+
 #if !defined HAVE_CLAMDBLAS
 void cv::ocl::gemm(const oclMat&, const oclMat&, double,
                    const oclMat&, double, oclMat&, int)
 {
     CV_Error(Error::StsNotImplemented, "OpenCL BLAS is not implemented");
 }
+
+void cv::ocl::clBlasSetup()
+{
+    CV_Error(CV_StsNotImplemented, "OpenCL BLAS is not implemented");
+}
+
+void cv::ocl::clBlasTeardown()
+{
+    //intentionally do nothing
+}
+
 #else
 #include "clAmdBlas.h"
 using namespace cv;
+
+static bool clBlasInitialized = false;
+static Mutex cs;
+
+void cv::ocl::clBlasSetup()
+{
+    if(!clBlasInitialized)
+    {
+        AutoLock al(cs);
+        if(!clBlasInitialized)
+        {
+            openCLSafeCall(clAmdBlasSetup());
+            clBlasInitialized = true;
+        }
+    }
+}
+
+void cv::ocl::clBlasTeardown()
+{
+    AutoLock al(cs);
+    if(clBlasInitialized)
+    {
+        clAmdBlasTeardown();
+        clBlasInitialized = false;
+    }
+}
 
 void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
                    const oclMat &src3, double beta, oclMat &dst, int flags)
@@ -71,7 +117,8 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
         dst.create(src1.rows, src2.cols, src1.type());
         dst.setTo(Scalar::all(0));
     }
-    openCLSafeCall( clAmdBlasSetup() );
+
+    clBlasSetup();
 
     const clAmdBlasTranspose transA = (cv::GEMM_1_T & flags) ? clAmdBlasTrans : clAmdBlasNoTrans;
     const clAmdBlasTranspose transB = (cv::GEMM_2_T & flags) ? clAmdBlasTrans : clAmdBlasNoTrans;
@@ -156,6 +203,5 @@ void cv::ocl::gemm(const oclMat &src1, const oclMat &src2, double alpha,
     }
     break;
     }
-    clAmdBlasTeardown();
 }
 #endif
