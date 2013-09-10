@@ -251,7 +251,7 @@ namespace cvtest
 
     int CV_BilateralFilterTest::validate_test_results(int test_case_index)
     {
-        static const double eps = 1;
+        static const double eps = 4;
 
         Mat reference_dst, reference_src;
         if (_src.depth() == CV_32F)

@@ -475,56 +475,6 @@ TEST_P(equalizeHist, Mat)
 }
 
 
-
-
-
-////////////////////////////////bilateralFilter////////////////////////////////////////////
-
-struct bilateralFilter : ImgprocTestBase {};
-
-TEST_P(bilateralFilter, Mat)
-{
-    double sigmacolor = 50.0;
-    int radius = 9;
-    int d = 2 * radius + 1;
-    double sigmaspace = 20.0;
-    int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    //const char *borderstr[] = {"BORDER_CONSTANT", "BORDER_REPLICATE", "BORDER_REFLECT", "BORDER_WRAP", "BORDER_REFLECT_101"};
-
-    if (mat1.depth() != CV_8U || mat1.type() != dst.type())
-    {
-        cout << "Unsupported type" << endl;
-        EXPECT_DOUBLE_EQ(0.0, 0.0);
-    }
-    else
-    {
-        for(size_t i = 0; i < sizeof(bordertype) / sizeof(int); i++)
-            for(int j = 0; j < LOOP_TIMES; j++)
-            {
-                random_roi();
-                if(((bordertype[i] != cv::BORDER_CONSTANT) && (bordertype[i] != cv::BORDER_REPLICATE) && (mat1_roi.cols <= radius)) || (mat1_roi.cols <= radius) || (mat1_roi.rows <= radius) || (mat1_roi.rows <= radius))
-                {
-                    continue;
-                }
-                //if((dstx>=radius) && (dsty >= radius) && (dstx+cldst_roi.cols+radius <=cldst_roi.wholecols) && (dsty+cldst_roi.rows+radius <= cldst_roi.wholerows))
-                //{
-                //	dst_roi.adjustROI(radius, radius, radius, radius);
-                //	cldst_roi.adjustROI(radius, radius, radius, radius);
-                //}
-                //else
-                //{
-                //	continue;
-                //}
-
-                cv::bilateralFilter(mat1_roi, dst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-                cv::ocl::bilateralFilter(clmat1_roi, cldst_roi, d, sigmacolor, sigmaspace, bordertype[i] | cv::BORDER_ISOLATED);
-                Near(1.);
-            }
-    }
-}
-
-
-
 ////////////////////////////////copyMakeBorder////////////////////////////////////////////
 
 struct CopyMakeBorder : ImgprocTestBase {};
@@ -1396,14 +1346,10 @@ TEST_P(calcHist, Mat)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLAHE
-namespace
-{
-    IMPLEMENT_PARAM_CLASS(ClipLimit, double)
-}
 
-PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
+PARAM_TEST_CASE(CLAHE, cv::Size, double)
 {
-    cv::Size size;
+    cv::Size gridSize;
     double clipLimit;
 
     cv::Mat src;
@@ -1414,22 +1360,22 @@ PARAM_TEST_CASE(CLAHE, cv::Size, ClipLimit)
 
     virtual void SetUp()
     {
-        size = GET_PARAM(0);
+        gridSize = GET_PARAM(0);
         clipLimit = GET_PARAM(1);
 
         cv::RNG &rng = TS::ptr()->get_rng();
-        src = randomMat(rng, size, CV_8UC1, 0, 256, false);
+        src = randomMat(rng, cv::Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
         g_src.upload(src);
     }
 };
 
 TEST_P(CLAHE, Accuracy)
 {
-    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe = cv::ocl::createCLAHE(clipLimit, gridSize);
     clahe->apply(g_src, g_dst);
     cv::Mat dst(g_dst);
 
-    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit);
+    cv::Ptr<cv::CLAHE> clahe_gold = cv::createCLAHE(clipLimit, gridSize);
     clahe_gold->apply(src, dst_gold);
 
     EXPECT_MAT_NEAR(dst_gold, dst, 1.0);
@@ -1622,21 +1568,6 @@ INSTANTIATE_TEST_CASE_P(ImgprocTestBase, equalizeHist, Combine(
                             NULL_TYPE,
                             Values(false))); // Values(false) is the reserved parameter
 
-//INSTANTIATE_TEST_CASE_P(ImgprocTestBase, bilateralFilter, Combine(
-//	ONE_TYPE(CV_8UC1),
-//	NULL_TYPE,
-//	ONE_TYPE(CV_8UC1),
-//	NULL_TYPE,
-//	NULL_TYPE,
-//	Values(false))); // Values(false) is the reserved parameter
-INSTANTIATE_TEST_CASE_P(ImgprocTestBase, bilateralFilter, Combine(
-                            Values(CV_8UC1, CV_8UC3),
-                            NULL_TYPE,
-                            Values(CV_8UC1, CV_8UC3),
-                            NULL_TYPE,
-                            NULL_TYPE,
-                            Values(false))); // Values(false) is the reserved parameter
-
 
 INSTANTIATE_TEST_CASE_P(ImgprocTestBase, CopyMakeBorder, Combine(
                             Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
@@ -1725,10 +1656,10 @@ INSTANTIATE_TEST_CASE_P(histTestBase, calcHist, Combine(
                             ONE_TYPE(CV_32SC1) //no use
                         ));
 
-INSTANTIATE_TEST_CASE_P(ImgProc, CLAHE, Combine(
-                        Values(cv::Size(128, 128), cv::Size(113, 113), cv::Size(1300, 1300)),
-                        Values(0.0, 40.0)));
+INSTANTIATE_TEST_CASE_P(Imgproc, CLAHE, Combine(
+                        Values(cv::Size(4, 4), cv::Size(32, 8), cv::Size(8, 64)),
+                        Values(0.0, 10.0, 62.0, 300.0)));
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, ColumnSum, DIFFERENT_SIZES);
+INSTANTIATE_TEST_CASE_P(Imgproc, ColumnSum, DIFFERENT_SIZES);
 
 #endif // HAVE_OPENCL

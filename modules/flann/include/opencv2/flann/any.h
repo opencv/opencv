@@ -257,8 +257,7 @@ public:
     const T& cast() const
     {
         if (policy->type() != typeid(T)) throw anyimpl::bad_any_cast();
-        void* obj = const_cast<void*>(object);
-        T* r = reinterpret_cast<T*>(policy->get_value(&obj));
+        T* r = reinterpret_cast<T*>(policy->get_value(const_cast<void **>(&object)));
         return *r;
     }
 

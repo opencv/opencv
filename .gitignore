@@ -9,3 +9,4 @@ tegra/
 tags
 build/
 Thumbs.db
+*.autosave

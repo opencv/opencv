@@ -164,7 +164,7 @@ TEST_P(TVL1, DISABLED_Accuracy) // TODO implementations of TV1 in video module a
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
 }
-INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(true, false));
+INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(false, true));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
