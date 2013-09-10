@@ -57,60 +57,63 @@ using namespace std;
 
 PARAM_TEST_CASE(PyrBase, MatType, int)
 {
-    int type;
+    int depth;
     int channels;
+
     Mat dst_cpu;
     oclMat gdst;
+
     virtual void SetUp()
     {
-        type = GET_PARAM(0);
+        depth = GET_PARAM(0);
         channels = GET_PARAM(1);
     }
-
 };
 
 /////////////////////// PyrDown //////////////////////////
-struct PyrDown : PyrBase {};
+
+typedef PyrBase PyrDown;
 
 TEST_P(PyrDown, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        Mat src = randomMat(size, CV_MAKETYPE(depth, channels));
         oclMat gsrc(src);
 
         pyrDown(src, dst_cpu);
         pyrDown(gsrc, gdst);
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), type == CV_32F ? 1e-4f : 1.0f);
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), depth == CV_32F ? 1e-4f : 1.0f);
     }
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrDown, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
+                            Values(1, 3, 4)));
 
 /////////////////////// PyrUp //////////////////////////
 
-struct PyrUp : PyrBase {};
+typedef PyrBase PyrUp;
 
 TEST_P(PyrUp, Accuracy)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         Size size(MWIDTH, MHEIGHT);
-        Mat src = randomMat(size, CV_MAKETYPE(type, channels));
+        Mat src = randomMat(size, CV_MAKETYPE(depth, channels));
         oclMat gsrc(src);
 
         pyrUp(src, dst_cpu);
         pyrUp(gsrc, gdst);
 
-        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (type == CV_32F ? 1e-4f : 1.0));
+        EXPECT_MAT_NEAR(dst_cpu, Mat(gdst), (depth == CV_32F ? 1e-4f : 1.0));
     }
-
 }
 
 
-INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, testing::Combine(
-                            Values(CV_8U, CV_32F), Values(1, 3, 4)));
+INSTANTIATE_TEST_CASE_P(OCL_ImgProc, PyrUp, Combine(
+                            Values(CV_8U, CV_16U, CV_16S, CV_32F),
+                            Values(1, 3, 4)));
 #endif // HAVE_OPENCL
