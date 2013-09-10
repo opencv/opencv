@@ -40,7 +40,7 @@ Code
    * Display the detected circle in a window.
 
    .. |TutorialHoughCirclesSimpleDownload| replace:: here
-   .. _TutorialHoughCirclesSimpleDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/houghlines.cpp
+   .. _TutorialHoughCirclesSimpleDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/houghcircles.cpp
    .. |TutorialHoughCirclesFancyDownload| replace:: here
    .. _TutorialHoughCirclesFancyDownload: http://code.opencv.org/projects/opencv/repository/revisions/master/raw/samples/cpp/tutorial_code/ImgTrans/HoughCircle_Demo.cpp
 

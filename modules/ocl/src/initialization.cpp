@@ -65,6 +65,7 @@ namespace cv
     namespace ocl
     {
         extern void fft_teardown();
+        extern void clBlasTeardown();
         /*
          * The binary caching system to eliminate redundant program source compilation.
          * Strictly, this is not a cache because we do not implement evictions right now.
@@ -1058,6 +1059,7 @@ namespace cv
         void Info::release()
         {
             fft_teardown();
+            clBlasTeardown();
             impl->release();
             impl = new Impl;
             DeviceName.clear();
@@ -1067,6 +1069,7 @@ namespace cv
         Info::~Info()
         {
             fft_teardown();
+            clBlasTeardown();
             impl->release();
         }
 
