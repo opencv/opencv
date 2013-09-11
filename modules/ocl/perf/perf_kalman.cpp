@@ -83,7 +83,7 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
         OCL_TEST_CYCLE()
         {
             cv::ocl::KalmanFilter kalman_ocl;
-            kalman_ocl.init(dim, dim); 
+            kalman_ocl.init(dim, dim);
             kalman_ocl.correct(dsample);
             kalman_ocl.predict();
             kalman_ocl.statePre.download(statePre_);
