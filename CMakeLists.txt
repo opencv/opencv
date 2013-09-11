@@ -280,7 +280,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
-find_package(Git QUIET)
+find_host_package(Git QUIET)
 
 if(GIT_FOUND)
   execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "2.[0-9].[0-9]*"
