@@ -321,3 +321,82 @@ PERF_TEST_P(filter2DFixture, filter2D,
     else
         OCL_PERF_ELSE
 }
+
+///////////// Bilateral////////////////////////
+
+typedef Size_MatType BilateralFixture;
+
+PERF_TEST_P(BilateralFixture, Bilateral,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params), d = 7;
+    double sigmacolor = 50.0, sigmaspace = 50.0;
+
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (srcSize == OCL_SIZE_4000 && type == CV_8UC3)
+        declare.time(8);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::bilateralFilter(oclSrc, oclDst, d, sigmacolor, sigmaspace);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::bilateralFilter(src, dst, d, sigmacolor, sigmaspace);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}
+
+///////////// adaptiveBilateral////////////////////////
+
+typedef Size_MatType adaptiveBilateralFixture;
+
+PERF_TEST_P(adaptiveBilateralFixture, adaptiveBilateral,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM(CV_8UC1, CV_8UC3)))
+{
+    const Size_MatType_t params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int type = get<1>(params);
+    double sigmaspace = 10.0;
+    Size ksize(9,9);
+
+    Mat src(srcSize, type), dst(srcSize, type);
+    declare.in(src, WARMUP_RNG).out(dst);
+
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(15);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src), oclDst(srcSize, type);
+
+        OCL_TEST_CYCLE() cv::ocl::adaptiveBilateralFilter(oclSrc, oclDst, ksize, sigmaspace);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst, 1.);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() cv::adaptiveBilateralFilter(src, dst, ksize, sigmaspace);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}

@@ -162,7 +162,7 @@ ocl::bilateralFilter
 --------------------
 Returns void
 
-.. ocv:function:: void ocl::bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT)
+.. ocv:function:: void ocl::bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT)
 
     :param src: The source image
 

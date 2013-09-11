@@ -72,6 +72,9 @@ double checkNorm(const cv::Mat &m);
 double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
 double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
+//oclMat create
+cv::ocl::oclMat createMat_ocl(cv::Size size, int type, bool useRoi = false);
+cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \

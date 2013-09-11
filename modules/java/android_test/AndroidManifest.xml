@@ -3,7 +3,7 @@
       package="org.opencv.test"
       android:versionCode="1"
       android:versionName="1.0">
-    
+
     <uses-sdk android:minSdkVersion="8" />
 
     <!-- We add an application tag here just so that we can indicate that
@@ -20,7 +20,7 @@
     <instrumentation android:name="org.opencv.test.OpenCVTestRunner"
                      android:targetPackage="org.opencv.test"
                      android:label="Tests for org.opencv"/>
-    
+
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />

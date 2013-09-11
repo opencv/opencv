@@ -43,6 +43,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #include "perf_precomp.hpp"
 
 using namespace perf;
@@ -51,7 +52,9 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> dftFixture;
 
-PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES) // TODO not implemented
+#ifdef HAVE_CLAMDFFT
+
+PERF_TEST_P(dftFixture, dft, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
@@ -70,7 +73,7 @@ PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES) // TODO not impleme
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 1.5);
     }
     else if (RUN_PLAIN_IMPL)
     {
@@ -81,3 +84,5 @@ PERF_TEST_P(dftFixture, DISABLED_dft, OCL_TYPICAL_MAT_SIZES) // TODO not impleme
     else
         OCL_PERF_ELSE
 }
+
+#endif
