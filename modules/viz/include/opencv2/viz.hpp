@@ -57,9 +57,6 @@ namespace cv
 {
     namespace viz
     {   
-        typedef std::map<String, Viz3d> VizMap;
-        typedef std::pair<String, Viz3d> VizPair;
-        
         //! takes coordiante frame data and builds transfrom to global coordinate frame
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
@@ -112,7 +109,9 @@ namespace cv
             
             static VizAccessor * instance_;
             static bool is_instantiated_;
-            static VizMap viz_map_;
+            
+            struct VizAccessorImpl;
+            static VizAccessorImpl * impl_;
             
             friend class Viz3d;
         };

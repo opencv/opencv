@@ -134,6 +134,16 @@ namespace cv
 }
 
 #include "viz3d_impl.hpp"
+
+namespace cv
+{
+    namespace viz
+    {
+        typedef std::map<std::string, Viz3d> VizMap;
+        typedef std::pair<std::string, Viz3d> VizPair;
+    }
+}
+
 #include <opencv2/core.hpp>
 #include <opencv2/viz.hpp>
 #include <opencv2/viz/types.hpp>

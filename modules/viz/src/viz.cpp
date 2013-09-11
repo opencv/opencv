@@ -138,11 +138,23 @@ namespace cv
 
 cv::viz::VizAccessor * cv::viz::VizAccessor::instance_ = 0;
 bool cv::viz::VizAccessor::is_instantiated_ = false;
-cv::viz::VizMap cv::viz::VizAccessor::viz_map_;
+cv::viz::VizAccessor::VizAccessorImpl * cv::viz::VizAccessor::impl_ = 0;
 
-cv::viz::VizAccessor::VizAccessor() {}
+struct cv::viz::VizAccessor::VizAccessorImpl
+{
+    cv::viz::VizMap viz_map;
+};
 
-cv::viz::VizAccessor::~VizAccessor() {}
+cv::viz::VizAccessor::VizAccessor() { impl_ = new cv::viz::VizAccessor::VizAccessorImpl;}
+
+cv::viz::VizAccessor::~VizAccessor() 
+{ 
+    if(impl_) 
+    {
+        delete impl_;
+        impl_ = 0;
+    }
+}
 
 cv::viz::VizAccessor & cv::viz::VizAccessor::getInstance()
 {
@@ -170,8 +182,8 @@ cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
     String name;
     generateWindowName(window_name, name);
 
-    VizMap::iterator vm_itr = viz_map_.find(name);
-    bool exists = vm_itr != viz_map_.end();
+    VizMap::iterator vm_itr = impl_->viz_map.find(name);
+    bool exists = vm_itr != impl_->viz_map.end();
     if (exists) return vm_itr->second;
     else return Viz3d(window_name);
 }
@@ -179,10 +191,10 @@ cv::viz::Viz3d cv::viz::VizAccessor::get(const String & window_name)
 void cv::viz::VizAccessor::add(Viz3d window)
 {
     String window_name = window.getWindowName();
-    VizMap::iterator vm_itr = viz_map_.find(window_name);
-    bool exists = vm_itr != viz_map_.end();
+    VizMap::iterator vm_itr = impl_->viz_map.find(window_name);
+    bool exists = vm_itr != impl_->viz_map.end();
     if (exists) return ;
-    viz_map_.insert(VizPair(window_name, window));
+    impl_->viz_map.insert(VizPair(window_name, window));
 }
 
 void cv::viz::VizAccessor::remove(const String &window_name)
@@ -191,10 +203,10 @@ void cv::viz::VizAccessor::remove(const String &window_name)
     String name;
     generateWindowName(window_name, name);
     
-    VizMap::iterator vm_itr = viz_map_.find(name);
-    bool exists = vm_itr != viz_map_.end();
+    VizMap::iterator vm_itr = impl_->viz_map.find(name);
+    bool exists = vm_itr != impl_->viz_map.end();
     if (!exists) return ;
-    viz_map_.erase(vm_itr);
+    impl_->viz_map.erase(vm_itr);
 }
 
 void cv::viz::VizAccessor::generateWindowName(const String &window_name, String &output)
