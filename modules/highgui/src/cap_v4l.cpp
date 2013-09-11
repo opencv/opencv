@@ -1273,7 +1273,7 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            int readresult = read_frame_v412(capture);
+            int readresult = read_frame_v4l2(capture);
             if (readresult == 2){
                 return 0;
             }
