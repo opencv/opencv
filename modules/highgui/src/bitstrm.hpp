@@ -44,6 +44,7 @@
 #define _BITSTRM_H_
 
 #include <stdio.h>
+#include <cstddef>
 
 namespace cv
 {
@@ -51,9 +52,9 @@ namespace cv
 enum
 {
     RBS_THROW_EOS=-123,  // <end of stream> exception code
-    RBS_THROW_FORB=-124,  // <forrbidden huffman code> exception code
-    RBS_HUFF_FORB=2047,  // forrbidden huffman code "value"
-    RBS_BAD_HEADER=-125 // invalid header
+    RBS_THROW_FORB=-124, // <forbidden huffman code> exception code
+    RBS_HUFF_FORB=2047,  // forbidden huffman code "value"
+    RBS_BAD_HEADER=-125  // invalid header
 };
 
 typedef unsigned long ulong;
@@ -70,20 +71,20 @@ public:
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
-    void          setPos( int pos );
-    int           getPos();
+    void          setPos( ptrdiff_t pos );
+    ptrdiff_t     getPos();
     void          skip( int bytes );
 
 protected:
 
-    bool    m_allocated;
-    uchar*  m_start;
-    uchar*  m_end;
-    uchar*  m_current;
-    FILE*   m_file;
-    int     m_block_size;
-    int     m_block_pos;
-    bool    m_is_opened;
+    bool      m_allocated;
+    uchar*    m_start;
+    uchar*    m_end;
+    uchar*    m_current;
+    FILE*     m_file;
+    size_t    m_block_size;
+    ptrdiff_t m_block_pos;
+    bool      m_is_opened;
 
     virtual void  readBlock();
     virtual void  release();
@@ -99,7 +100,7 @@ public:
     virtual ~RLByteStream();
 
     int     getByte();
-    int     getBytes( void* buffer, int count );
+    int     getBytes( void* buffer, ptrdiff_t count );
     int     getWord();
     int     getDWord();
 };
