@@ -1245,38 +1245,6 @@ const float* CvSVM::get_support_vector(int i) const
     return sv && (unsigned)i < (unsigned)sv_total ? sv[i] : 0;
 }
 
-void CvSVM::get_svm_detector( std::vector< float > & detector ) const
-{
-    CV_Assert( var_all > 0 &&
-               sv_total > 0 &&
-               sv != 0 &&
-               decision_func != 0 &&
-               decision_func->alpha != 0 &&
-               decision_func->sv_count == sv_total );
-    float svi = 0.f;
-
-    detector.clear(); //clear stuff in vector.
-    detector.reserve( var_all + 1 ); //reserve place for memory efficiency.
-
-    /**
-     * detector^i = \sum_j support_vector_j^i * \alpha_j
-     * detector^dim = -\rho
-     */
-    for( int i = 0 ; i < var_all ; ++i )
-    {
-        svi = 0.f;
-        for( int j = 0 ; j < sv_total ; ++j )
-        {
-            if( decision_func->sv_index != NULL ) // sometime the sv_index isn't store on YML/XML.
-                svi += (float)( sv[decision_func->sv_index[j]][i] * decision_func->alpha[ j ] );
-            else
-                svi += (float)( sv[j][i] * decision_func->alpha[ j ] );
-        }
-        detector.push_back( svi );
-    }
-    detector.push_back( (float)-decision_func->rho );
-}
-
 bool CvSVM::set_params( const CvSVMParams& _params )
 {
     bool ok = false;

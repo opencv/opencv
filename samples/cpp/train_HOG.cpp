@@ -11,22 +11,64 @@ using namespace cv;
 using namespace std;
 
 
+void get_svm_detector(const SVM& svm, vector< float > & hog_detector )
+{
+    // get the number of variables
+    const int var_all = svm.get_var_count();
+    // get the number of support vectors
+    const int sv_total = svm.get_support_vector_count();
+    // get the decision function
+    const CvSVMDecisionFunc* decision_func = svm.get_decision_function();
+    // get the support vectors
+    const float** sv = &(svm.get_support_vector(0)); 
+
+    CV_Assert( var_all > 0 &&
+        sv_total > 0 &&
+        decision_func != 0 &&
+        decision_func->alpha != 0 &&
+        decision_func->sv_count == sv_total );
+    
+    float svi = 0.f;
+
+    hog_detector.clear(); //clear stuff in vector.
+    hog_detector.reserve( var_all + 1 ); //reserve place for memory efficiency.
+
+     /**
+    * hog_detector^i = \sum_j support_vector_j^i * \alpha_j
+    * hog_detector^dim = -\rho
+    */
+   for( int i = 0 ; i < var_all ; ++i )
+    {
+        svi = 0.f;
+        for( int j = 0 ; j < sv_total ; ++j )
+        {
+            if( decision_func->sv_index != NULL ) // sometime the sv_index isn't store on YML/XML.
+                svi += (float)( sv[decision_func->sv_index[j]][i] * decision_func->alpha[ j ] );
+            else
+                svi += (float)( sv[j][i] * decision_func->alpha[ j ] );
+        }
+        hog_detector.push_back( svi );
+    }
+    hog_detector.push_back( (float)-decision_func->rho );
+}
+
+
 /*
- * Convert training/testing set to be used by OpenCV Machine Learning algorithms.
- * TrainData is a matrix of size (#samples x max(#cols,#rows) per samples), in 32FC1.
- * Transposition of samples are made if needed.
- */
+* Convert training/testing set to be used by OpenCV Machine Learning algorithms.
+* TrainData is a matrix of size (#samples x max(#cols,#rows) per samples), in 32FC1.
+* Transposition of samples are made if needed.
+*/
 void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData )
 {
-	//--Convert data
+    //--Convert data
     const int rows = (int)train_samples.size();
     const int cols = (int)std::max( train_samples[0].cols, train_samples[0].rows );
     cv::Mat tmp(1, cols, CV_32FC1); //< used for transposition if needed
-	trainData = cv::Mat(rows, cols, CV_32FC1 );
-	auto& itr = train_samples.begin();
-	auto& end = train_samples.end();
-	for( int i = 0 ; itr != end ; ++itr, ++i )
-	{
+    trainData = cv::Mat(rows, cols, CV_32FC1 );
+    auto& itr = train_samples.begin();
+    auto& end = train_samples.end();
+    for( int i = 0 ; itr != end ; ++itr, ++i )
+    {
         CV_Assert( itr->cols == 1 ||
             itr->rows == 1 );
         if( itr->cols == 1 )
@@ -38,7 +80,7 @@ void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainD
         {
             itr->copyTo( trainData.row( i ) );
         }
-	}
+    }
 }
 
 void load_images( const string & prefix, const string & filename, vector< Mat > & img_lst )
@@ -52,7 +94,7 @@ void load_images( const string & prefix, const string & filename, vector< Mat > 
         cerr << "Unable to open the list of images from " << filename << " filename." << endl;
         exit( -1 );
     }
-    
+
     while( 1 )
     {
         getline( file, line );
@@ -102,12 +144,12 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
     float zoomFac = 3;
     Mat visu;
     resize(color_origImg, visu, Size(color_origImg.cols*zoomFac, color_origImg.rows*zoomFac));
- 
+
     int blockSize       = 16;
     int cellSize        = 8;
     int gradientBinSize = 9;
     float radRangeForOneBin = CV_PI/(float)gradientBinSize; // dividing 180° into 9 bins, how large (in rad) is one bin?
- 
+
     // prepare data structure: 9 orientation / gradient strenghts for each cell
     int cells_in_x_dir = DIMX / cellSize;
     int cells_in_y_dir = DIMY / cellSize;
@@ -122,22 +164,22 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
         {
             gradientStrengths[y][x] = new float[gradientBinSize];
             cellUpdateCounter[y][x] = 0;
- 
+
             for (int bin=0; bin<gradientBinSize; bin++)
                 gradientStrengths[y][x][bin] = 0.0;
         }
     }
- 
+
     // nr of blocks = nr of cells - 1
     // since there is a new block on each cell (overlapping blocks!) but the last one
     int blocks_in_x_dir = cells_in_x_dir - 1;
     int blocks_in_y_dir = cells_in_y_dir - 1;
- 
+
     // compute gradient strengths per cell
     int descriptorDataIdx = 0;
     int cellx = 0;
     int celly = 0;
- 
+
     for (int blockx=0; blockx<blocks_in_x_dir; blockx++)
     {
         for (int blocky=0; blocky<blocks_in_y_dir; blocky++)            
@@ -155,37 +197,37 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
                     cellx++;
                     celly++;
                 }
- 
+
                 for (int bin=0; bin<gradientBinSize; bin++)
                 {
                     float gradientStrength = descriptorValues[ descriptorDataIdx ];
                     descriptorDataIdx++;
- 
+
                     gradientStrengths[celly][cellx][bin] += gradientStrength;
- 
+
                 } // for (all bins)
- 
- 
+
+
                 // note: overlapping blocks lead to multiple updates of this sum!
                 // we therefore keep track how often a cell was updated,
                 // to compute average gradient strengths
                 cellUpdateCounter[celly][cellx]++;
- 
+
             } // for (all cells)
- 
- 
+
+
         } // for (all block x pos)
     } // for (all block y pos)
- 
- 
+
+
     // compute average gradient strengths
     for (int celly=0; celly<cells_in_y_dir; celly++)
     {
         for (int cellx=0; cellx<cells_in_x_dir; cellx++)
         {
- 
+
             float NrUpdatesForThisCell = (float)cellUpdateCounter[celly][cellx];
- 
+
             // compute average gradient strenghts for each gradient bin direction
             for (int bin=0; bin<gradientBinSize; bin++)
             {
@@ -193,7 +235,7 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
             }
         }
     }
- 
+
     // draw cells
     for (int celly=0; celly<cells_in_y_dir; celly++)
     {
@@ -201,58 +243,58 @@ Mat get_hogdescriptor_visu(Mat& color_origImg, vector<float>& descriptorValues, 
         {
             int drawX = cellx * cellSize;
             int drawY = celly * cellSize;
- 
+
             int mx = drawX + cellSize/2;
             int my = drawY + cellSize/2;
- 
+
             rectangle(visu, Point(drawX*zoomFac,drawY*zoomFac), Point((drawX+cellSize)*zoomFac,(drawY+cellSize)*zoomFac), CV_RGB(100,100,100), 1);
- 
+
             // draw in each cell all 9 gradient strengths
             for (int bin=0; bin<gradientBinSize; bin++)
             {
                 float currentGradStrength = gradientStrengths[celly][cellx][bin];
- 
+
                 // no line to draw?
                 if (currentGradStrength==0)
                     continue;
- 
+
                 float currRad = bin * radRangeForOneBin + radRangeForOneBin/2;
- 
+
                 float dirVecX = cos( currRad );
                 float dirVecY = sin( currRad );
                 float maxVecLen = cellSize/2;
                 float scale = 2.5; // just a visualization scale, to see the lines better
- 
+
                 // compute line coordinates
                 float x1 = mx - dirVecX * currentGradStrength * maxVecLen * scale;
                 float y1 = my - dirVecY * currentGradStrength * maxVecLen * scale;
                 float x2 = mx + dirVecX * currentGradStrength * maxVecLen * scale;
                 float y2 = my + dirVecY * currentGradStrength * maxVecLen * scale;
- 
+
                 // draw gradient visualization
                 line(visu, Point(x1*zoomFac,y1*zoomFac), Point(x2*zoomFac,y2*zoomFac), CV_RGB(0,255,0), 1);
- 
+
             } // for (all bins)
- 
+
         } // for (cellx)
     } // for (celly)
- 
- 
+
+
     // don't forget to free memory allocated by helper data structures!
     for (int y=0; y<cells_in_y_dir; y++)
     {
-      for (int x=0; x<cells_in_x_dir; x++)
-      {
-           delete[] gradientStrengths[y][x];            
-      }
-      delete[] gradientStrengths[y];
-      delete[] cellUpdateCounter[y];
+        for (int x=0; x<cells_in_x_dir; x++)
+        {
+            delete[] gradientStrengths[y][x];            
+        }
+        delete[] gradientStrengths[y];
+        delete[] cellUpdateCounter[y];
     }
     delete[] gradientStrengths;
     delete[] cellUpdateCounter;
- 
+
     return visu;
- 
+
 } // get_hogdescriptor_visu
 
 void compute_hog( const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size )
@@ -322,7 +364,7 @@ void test_it( const Size & size )
     Scalar reference( 0, 255, 0 );
     Scalar trained( 0, 0, 255 );
     Mat img, draw;
-    SVM svm;
+    MySVM svm;
     HOGDescriptor hog;
     HOGDescriptor my_hog;
     my_hog.winSize = size;
@@ -333,7 +375,7 @@ void test_it( const Size & size )
     svm.load( "my_people_detector.yml" );
     // Set the trained svm to my_hog
     vector< float > hog_detector;
-    svm.get_svm_detector( hog_detector );
+    get_svm_detector( svm, hog_detector );
     my_hog.setSVMDetector( hog_detector );
     // Set the people detector.
     hog.setSVMDetector( hog.getDefaultPeopleDetector() );
@@ -344,7 +386,7 @@ void test_it( const Size & size )
         cerr << "Unable to open the device 0" << endl;
         exit( -1 );
     }
-    
+
     while( true )
     {
         video >> img;
@@ -352,7 +394,7 @@ void test_it( const Size & size )
             break;
 
         draw = img.clone();
-        
+
         locations.clear();
         hog.detectMultiScale( img, locations );
         draw_locations( draw, locations, reference );
@@ -373,8 +415,8 @@ int main( int argc, char** argv )
     if( argc != 4 )
     {
         cout << "Wrong number of parameters." << endl
-             << "Usage: " << argv[0] << " pos_dir pos.lst neg_dir neg.lst" << endl
-             << "example: " << argv[0] << " /INRIA_dataset/ Train/pos.lst /INRIA_dataset/ Train/neg.lst" << endl;
+            << "Usage: " << argv[0] << " pos_dir pos.lst neg_dir neg.lst" << endl
+            << "example: " << argv[0] << " /INRIA_dataset/ Train/pos.lst /INRIA_dataset/ Train/neg.lst" << endl;
         exit( -1 );
     }
     vector< Mat > pos_lst;

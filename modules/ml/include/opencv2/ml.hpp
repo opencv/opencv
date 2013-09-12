@@ -518,8 +518,7 @@ public:
     virtual CvSVMParams get_params() const { return params; };
     CV_WRAP virtual void clear();
 
-    // return a single vector for HOG detector.
-    virtual void get_svm_detector( std::vector< float > & detector ) const;
+    virtual const CvSVMDecisionFunc* get_decision_function() const { return decision_func; }
 
     static CvParamGrid get_default_grid( int param_id );
 
