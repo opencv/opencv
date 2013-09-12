@@ -61,6 +61,11 @@ namespace cv
         extern const char *pyr_up;
         void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst)
         {
+            int depth = src.depth(), channels = src.channels();
+
+            CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F);
+            CV_Assert(channels == 1 || channels == 3 || channels == 4);
+
             dst.create(src.rows * 2, src.cols * 2, src.type());
 
             Context *clCxt = src.clCxt;

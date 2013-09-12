@@ -46,18 +46,18 @@
 //
 //M*/
 
-//#pragma OPENCL EXTENSION cl_amd_printf : enable
-
 uchar get_valid_uchar(float data)
 {
     return (uchar)(data <= 255 ? data : data > 0 ? 255 : 0);
 }
+
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_8UC1  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C1_D0(__global uchar* src,__global uchar* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C1_D0(__global uchar* src, __global uchar* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -144,15 +144,15 @@ __kernel void pyrUp_C1_D0(__global uchar* src,__global uchar* dst,
 
     if ((x < dstCols) && (y < dstRows))
         dst[x + y * dstStep] = convert_uchar_sat_rte(4.0f * sum);
-
 }
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_16UC1  /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C1_D2(__global ushort* src,__global ushort* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C1_D2(__global ushort* src, __global ushort* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -245,16 +245,116 @@ __kernel void pyrUp_C1_D2(__global ushort* src,__global ushort* dst,
     sum = sum + 0.0625f * s_dstPatch[2 + tidy + 2][get_local_id(0)];
 
     if ((x < dstCols) && (y < dstRows))
-        dst[x + y * dstStep] = convert_short_sat_rte(4.0f * sum);
+        dst[x + y * dstStep] = convert_ushort_sat_rte(4.0f * sum);
+}
 
+///////////////////////////////////////////////////////////////////////
+//////////////////////////  CV_16SC1  /////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+__kernel void pyrUp_C1_D3(__global short* src, __global short* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
+{
+    const int x = get_global_id(0);
+    const int y = get_global_id(1);
+
+    __local float s_srcPatch[10][10];
+    __local float s_dstPatch[20][16];
+
+    srcStep = srcStep >> 1;
+    dstStep = dstStep >> 1;
+    srcOffset = srcOffset >> 1;
+    dstOffset = dstOffset >> 1;
+
+    if( get_local_id(0) < 10 && get_local_id(1) < 10 )
+    {
+        int srcx = (int)(get_group_id(0) * get_local_size(0) / 2 + get_local_id(0)) - 1;
+        int srcy = (int)(get_group_id(1) * get_local_size(1) / 2 + get_local_id(1)) - 1;
+
+        srcx = abs(srcx);
+        srcx = min(srcCols - 1,srcx);
+
+        srcy = abs(srcy);
+        srcy = min(srcRows -1 ,srcy);
+
+        s_srcPatch[get_local_id(1)][get_local_id(0)] = (float)(src[srcx + srcy * srcStep]);
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float sum = 0;
+
+    const int evenFlag = (int)((get_local_id(0) & 1) == 0);
+    const int oddFlag = (int)((get_local_id(0) & 1) != 0);
+    const bool eveny = ((get_local_id(1) & 1) == 0);
+    const int tidx = get_local_id(0);
+
+    if (eveny)
+    {
+        sum = sum + (evenFlag * 0.0625f) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx - 2) >> 1)];
+        sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx - 1) >> 1)];
+        sum = sum + (evenFlag * 0.375f ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx    ) >> 1)];
+        sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx + 1) >> 1)];
+        sum = sum + (evenFlag * 0.0625f) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx + 2) >> 1)];
+    }
+
+    s_dstPatch[2 + get_local_id(1)][get_local_id(0)] = sum;
+
+    if (get_local_id(1) < 2)
+    {
+        sum = 0;
+
+        if (eveny)
+        {
+            sum = sum + (evenFlag * 0.0625f) * s_srcPatch[0][1 + ((tidx - 2) >> 1)];
+            sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[0][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * 0.375f ) * s_srcPatch[0][1 + ((tidx    ) >> 1)];
+            sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[0][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * 0.0625f) * s_srcPatch[0][1 + ((tidx + 2) >> 1)];
+        }
+
+        s_dstPatch[get_local_id(1)][get_local_id(0)] = sum;
+    }
+
+    if (get_local_id(1) > 13)
+    {
+        sum = 0;
+
+        if (eveny)
+        {
+            sum = sum + (evenFlag * 0.0625f) * s_srcPatch[9][1 + ((tidx - 2) >> 1)];
+            sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[9][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * 0.375f ) * s_srcPatch[9][1 + ((tidx    ) >> 1)];
+            sum = sum + ( oddFlag * 0.25f  ) * s_srcPatch[9][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * 0.0625f) * s_srcPatch[9][1 + ((tidx + 2) >> 1)];
+        }
+        s_dstPatch[4 + get_local_id(1)][get_local_id(0)] = sum;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    sum = 0;
+
+    const int tidy = get_local_id(1);
+
+    sum = sum + 0.0625f * s_dstPatch[2 + tidy - 2][get_local_id(0)];
+    sum = sum + 0.25f   * s_dstPatch[2 + tidy - 1][get_local_id(0)];
+    sum = sum + 0.375f  * s_dstPatch[2 + tidy    ][get_local_id(0)];
+    sum = sum + 0.25f   * s_dstPatch[2 + tidy + 1][get_local_id(0)];
+    sum = sum + 0.0625f * s_dstPatch[2 + tidy + 2][get_local_id(0)];
+
+    if ((x < dstCols) && (y < dstRows))
+        dst[x + y * dstStep] = convert_short_sat_rte(4.0f * sum);
 }
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_32FC1  /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C1_D5(__global float* src,__global float* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C1_D5(__global float* src, __global float* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -346,15 +446,15 @@ __kernel void pyrUp_C1_D5(__global float* src,__global float* dst,
 
     if ((x < dstCols) && (y < dstRows))
         dst[x + y * dstStep] = (float)(4.0f * sum);
-
 }
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_8UC4  //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C4_D0(__global uchar4* src, __global uchar4* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -451,17 +551,16 @@ __kernel void pyrUp_C4_D0(__global uchar4* src,__global uchar4* dst,
     sum = sum + co3 * s_dstPatch[2 + tidy + 2][tidx];
 
     if ((x < dstCols) && (y < dstRows))
-    {
         dst[x + y * dstStep] = convert_uchar4_sat_rte(4.0f * sum);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_16UC4 //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C4_D2(__global ushort4* src, __global ushort4* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -560,17 +659,123 @@ __kernel void pyrUp_C4_D2(__global ushort4* src,__global ushort4* dst,
     sum = sum + co3 * s_dstPatch[2 + tidy + 2][get_local_id(0)];
 
     if ((x < dstCols) && (y < dstRows))
-    {
         dst[x + y * dstStep] = convert_ushort4_sat_rte(4.0f * sum);
+}
+
+///////////////////////////////////////////////////////////////////////
+//////////////////////////  CV_16SC4 //////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+
+__kernel void pyrUp_C4_D3(__global short4* src, __global short4* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
+{
+    const int x = get_global_id(0);
+    const int y = get_global_id(1);
+
+    __local float4 s_srcPatch[10][10];
+    __local float4 s_dstPatch[20][16];
+
+    srcOffset >>= 3;
+    dstOffset >>= 3;
+    srcStep >>= 3;
+    dstStep >>= 3;
+
+    if( get_local_id(0) < 10 && get_local_id(1) < 10 )
+    {
+        int srcx = (int)(get_group_id(0) * get_local_size(0) / 2 + get_local_id(0)) - 1;
+        int srcy = (int)(get_group_id(1) * get_local_size(1) / 2 + get_local_id(1)) - 1;
+
+        srcx = abs(srcx);
+        srcx = min(srcCols - 1,srcx);
+
+        srcy = abs(srcy);
+        srcy = min(srcRows -1 ,srcy);
+
+        s_srcPatch[get_local_id(1)][get_local_id(0)] = convert_float4(src[srcx + srcy * srcStep]);
     }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    float4 sum = (float4)(0,0,0,0);
+
+    const float4 evenFlag = (float4)((get_local_id(0) & 1) == 0);
+    const float4 oddFlag = (float4)((get_local_id(0) & 1) != 0);
+    const bool  eveny = ((get_local_id(1) & 1) == 0);
+    const int tidx = get_local_id(0);
+
+    float4 co1 = (float4)(0.375f, 0.375f, 0.375f, 0.375f);
+    float4 co2 = (float4)(0.25f, 0.25f, 0.25f, 0.25f);
+    float4 co3 = (float4)(0.0625f, 0.0625f, 0.0625f, 0.0625f);
+
+
+    if(eveny)
+    {
+        sum = sum + ( evenFlag* co3 ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx - 2) >> 1)];
+        sum = sum + ( oddFlag * co2 ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx - 1) >> 1)];
+        sum = sum + ( evenFlag* co1 ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx    ) >> 1)];
+        sum = sum + ( oddFlag * co2 ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx + 1) >> 1)];
+        sum = sum + ( evenFlag* co3 ) * s_srcPatch[1 + (get_local_id(1) >> 1)][1 + ((tidx + 2) >> 1)];
+
+    }
+
+    s_dstPatch[2 + get_local_id(1)][get_local_id(0)] = sum;
+
+    if (get_local_id(1) < 2)
+    {
+        sum = 0;
+
+        if (eveny)
+        {
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[0][1 + ((tidx - 2) >> 1)];
+            sum = sum + (oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * co1 ) * s_srcPatch[0][1 + ((tidx    ) >> 1)];
+            sum = sum + (oddFlag * co2  ) * s_srcPatch[0][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * co3 ) * s_srcPatch[0][1 + ((tidx + 2) >> 1)];
+        }
+
+        s_dstPatch[get_local_id(1)][get_local_id(0)] = sum;
+    }
+
+    if (get_local_id(1) > 13)
+    {
+        sum = 0;
+
+        if (eveny)
+        {
+            sum = sum + (evenFlag * co3) * s_srcPatch[9][1 + ((tidx - 2) >> 1)];
+            sum = sum + ( oddFlag * co2) * s_srcPatch[9][1 + ((tidx - 1) >> 1)];
+            sum = sum + (evenFlag * co1) * s_srcPatch[9][1 + ((tidx    ) >> 1)];
+            sum = sum + ( oddFlag * co2) * s_srcPatch[9][1 + ((tidx + 1) >> 1)];
+            sum = sum + (evenFlag * co3) * s_srcPatch[9][1 + ((tidx + 2) >> 1)];
+
+        }
+        s_dstPatch[4 + get_local_id(1)][get_local_id(0)] = sum;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    sum = 0;
+
+    const int tidy = get_local_id(1);
+
+    sum = sum + co3 * s_dstPatch[2 + tidy - 2][get_local_id(0)];
+    sum = sum + co2 * s_dstPatch[2 + tidy - 1][get_local_id(0)];
+    sum = sum + co1 * s_dstPatch[2 + tidy    ][get_local_id(0)];
+    sum = sum + co2 * s_dstPatch[2 + tidy + 1][get_local_id(0)];
+    sum = sum + co3 * s_dstPatch[2 + tidy + 2][get_local_id(0)];
+
+    if ((x < dstCols) && (y < dstRows))
+        dst[x + y * dstStep] = convert_short4_sat_rte(4.0f * sum);
 }
 
 ///////////////////////////////////////////////////////////////////////
 //////////////////////////  CV_32FC4 //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////
-__kernel void pyrUp_C4_D5(__global float4* src,__global float4* dst,
-                          int srcRows,int dstRows,int srcCols,int dstCols,
-                          int srcOffset,int dstOffset,int srcStep,int dstStep)
+
+__kernel void pyrUp_C4_D5(__global float4* src, __global float4* dst,
+                          int srcRows, int dstRows, int srcCols, int dstCols,
+                          int srcOffset, int dstOffset, int srcStep, int dstStep)
 {
     const int x = get_global_id(0);
     const int y = get_global_id(1);
@@ -667,7 +872,5 @@ __kernel void pyrUp_C4_D5(__global float4* src,__global float4* dst,
     sum = sum + co3 * s_dstPatch[2 + tidy + 2][tidx];
 
     if ((x < dstCols) && (y < dstRows))
-    {
         dst[x + y * dstStep] = 4.0f * sum;
-    }
 }
