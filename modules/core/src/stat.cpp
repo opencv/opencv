@@ -1607,13 +1607,15 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     int depth = src.depth(), cn = src.channels();
 
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
+               normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src.total();
     int rows = src.size[0], cols = (int)(total_size/rows);
-    if( src.dims == 2 || (src.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)
+    if( (src.dims == 2 || (src.isContinuous() && mask.isContinuous()))
+        && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) )
     {
         IppiSize sz = { cols, rows };
@@ -1900,8 +1902,10 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
                 ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
         size_t total_size = src1.total();
         int rows = src1.size[0], cols = (int)(total_size/rows);
-        if( src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)
-            && (normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) )
+        if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+            && cols > 0 && (size_t)rows*cols == total_size
+            && (normType == NORM_INF || normType == NORM_L1 ||
+                normType == NORM_L2 || normType == NORM_L2SQR) )
         {
             IppiSize sz = { cols, rows };
             int type = src1.type();
@@ -1974,13 +1978,15 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
 
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
+               normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
     size_t total_size = src1.total();
     int rows = src1.size[0], cols = (int)(total_size/rows);
-    if( src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)
+    if( (src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous()))
+        && cols > 0 && (size_t)rows*cols == total_size
         && (normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) )
     {
         IppiSize sz = { cols, rows };

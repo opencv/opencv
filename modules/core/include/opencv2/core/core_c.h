@@ -1129,7 +1129,7 @@ CVAPI(void)   cvSetRemove( CvSet* set_header, int index );
    NULL is returned */
 CV_INLINE CvSetElem* cvGetSetElem( const CvSet* set_header, int idx )
 {
-    CvSetElem* elem = (CvSetElem*)cvGetSeqElem( (CvSeq*)set_header, idx );
+    CvSetElem* elem = (CvSetElem*)(void *)cvGetSeqElem( (CvSeq*)set_header, idx );
     return elem && CV_IS_SET_ELEM( elem ) ? elem : 0;
 }
 

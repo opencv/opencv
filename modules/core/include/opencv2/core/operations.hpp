@@ -3147,10 +3147,10 @@ inline FileNodeIterator FileNode::end() const
 }
 
 inline FileNode FileNodeIterator::operator *() const
-{ return FileNode(fs, (const CvFileNode*)reader.ptr); }
+{ return FileNode(fs, (const CvFileNode*)(void*)reader.ptr); }
 
 inline FileNode FileNodeIterator::operator ->() const
-{ return FileNode(fs, (const CvFileNode*)reader.ptr); }
+{ return FileNode(fs, (const CvFileNode*)(void*)reader.ptr); }
 
 template<typename _Tp> static inline FileNodeIterator& operator >> (FileNodeIterator& it, _Tp& value)
 { read( *it, value, _Tp()); return ++it; }

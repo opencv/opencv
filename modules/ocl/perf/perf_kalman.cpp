@@ -15,9 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Dachuan Zhao, dachuan@multicorewareinc.com
-//		Yao Wang, yao@multicorewareinc.com
-//
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -32,7 +31,7 @@
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
-// This software is provided by the copyright holders and contributors "as is" and
+// This software is provided by the copyright holders and contributors as is and
 // any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
@@ -44,61 +43,51 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
-
-using namespace cv;
-using namespace cv::ocl;
+#include "perf_precomp.hpp"
+using namespace perf;
 using namespace std;
+using namespace cv::ocl;
+using namespace cv;
+using std::tr1::tuple;
+using std::tr1::get;
+///////////// Kalman Filter ////////////////////////
 
-using std::cout;
-using std::endl;
+typedef tuple<int> KalmanFilterType;
+typedef TestBaseWithParam<KalmanFilterType> KalmanFilterFixture;
 
-namespace cv
+PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
+            ::testing::Values(1000, 1500))
 {
-    namespace ocl
+    KalmanFilterType params = GetParam();
+    const int dim = get<0>(params);
+
+    cv::Mat sample(dim, 1, CV_32FC1), dresult;
+    randu(sample, -1, 1);
+
+    cv::Mat statePre_;
+
+    if(RUN_PLAIN_IMPL)
     {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *pyr_down;
-
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-/////////////////////// add subtract multiply divide /////////////////////////
-//////////////////////////////////////////////////////////////////////////////
-static void pyrdown_run(const oclMat &src, const oclMat &dst)
-{
-
-    CV_Assert(src.type() == dst.type());
-    CV_Assert(src.depth() != CV_8S);
-
-    Context  *clCxt = src.clCxt;
-    string kernelName = "pyrDown";
-
-    size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { src.cols, dst.rows, 1};
-
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols));
-
-    openCLExecuteKernel(clCxt, &pyr_down, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
-}
-//////////////////////////////////////////////////////////////////////////////
-// pyrDown
-
-void cv::ocl::pyrDown(const oclMat &src, oclMat &dst)
-{
-    int depth = src.depth(), channels = src.channels();
-    CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F);
-    CV_Assert(channels == 1 || channels == 3 || channels == 4);
-
-    dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
-
-    pyrdown_run(src, dst);
+        cv::KalmanFilter kalman;
+        TEST_CYCLE()
+        {
+            kalman.init(dim, dim);
+            kalman.correct(sample);
+            kalman.predict();
+        }
+        statePre_ = kalman.statePre;
+    }else if(RUN_OCL_IMPL)
+    {
+        cv::ocl::oclMat dsample(sample);
+        cv::ocl::KalmanFilter kalman_ocl;
+        OCL_TEST_CYCLE()
+        {
+            kalman_ocl.init(dim, dim);
+            kalman_ocl.correct(dsample);
+            kalman_ocl.predict();
+        }
+        kalman_ocl.statePre.download(statePre_);
+    }else
+        OCL_PERF_ELSE
+    SANITY_CHECK(statePre_);
 }

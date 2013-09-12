@@ -1236,10 +1236,10 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    //set timestamp in capture struct to be timestamp of most recent frame
    capture->timestamp = buf.timestamp;
 
-   return 2;
+   return 1;
 }
 
-static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
+static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     unsigned int count;
 
     count = 1;
@@ -1273,13 +1273,8 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            int readresult = read_frame_v412(capture);
-            if (readresult == 2){
-                return 0;
-            }
-            if (readresult){
-                return 1;
-            }
+            if (read_frame_v4l2 (capture))
+                break;
         }
     }
 }
@@ -1359,10 +1354,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
      {
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        if(!mainloop_v4l2(capture)){
-            fprintf( stderr, "HIGHGUI ERROR: V4L: Could not capture image.\n");
-            return 0;
-        }
+        mainloop_v4l2(capture);
      }
 #endif
 
@@ -1374,10 +1366,9 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
 
    if (V4L2_SUPPORT == 1)
    {
-        if(!mainloop_v4l2(capture)){
-            fprintf( stderr, "HIGHGUI ERROR: V4L: Could not capture image.\n");
-            return 0;
-        }
+
+     mainloop_v4l2(capture);
+
    }
 #endif /* HAVE_CAMV4L2 */
 #if defined(HAVE_CAMV4L) && defined(HAVE_CAMV4L2)
