@@ -48,8 +48,8 @@
 #ifndef __OPENCV_VERSION_HPP__
 #define __OPENCV_VERSION_HPP__
 
-#define CV_VERSION_EPOCH    2
-#define CV_VERSION_MAJOR    9
+#define CV_VERSION_EPOCH    3
+#define CV_VERSION_MAJOR    0
 #define CV_VERSION_MINOR    0
 #define CV_VERSION_REVISION 0
 #define CV_VERSION_STATUS   "-dev"
