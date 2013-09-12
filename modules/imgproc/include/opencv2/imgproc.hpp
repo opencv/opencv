@@ -1452,8 +1452,8 @@ CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
 //! computes the minimal enclosing triangle for a convex polygon defined by at least three points
-CV_EXPORTS_W void minEnclosingTriangle( const std::vector<Point2f> &convexPolygon,
-                                        CV_OUT std::vector<Point2f> &triangle, CV_OUT double& area );
+CV_EXPORTS_W void minEnclosingTriangle( InputArray convexPolygon,
+                                        CV_OUT OutputArray triangle, CV_OUT double& area );
 
 //! matches two contours using one of the available algorithms
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,

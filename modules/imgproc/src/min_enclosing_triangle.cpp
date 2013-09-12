@@ -94,9 +94,8 @@
 #define VALIDATION_SIDE_B_TANGENT   1
 #define VALIDATION_SIDES_FLUSH      2
 
-// Constant values
+// Threshold value for geometrical comparisons
 
-#define PI      3.14159265358979323846264338327950288419716939937510
 #define EPSILON 1E-5
 
 
@@ -157,6 +156,10 @@ static bool areOnTheSameSideOfLine(const cv::Point2f &p1, const cv::Point2f &p2,
 
 static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const cv::Point2f &c);
 
+static void copyConvexPolygon(cv::InputArray convexPolygon);
+
+static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle, cv::OutputArray triangle);
+
 static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b);
 
 static double distanceFromPointToLine(const cv::Point2f &a, const cv::Point2f &linePointB,
@@ -166,6 +169,8 @@ static bool findGammaIntersectionPoints(unsigned int polygonPointIndex, const cv
                                         const cv::Point2f &side1EndVertex, const cv::Point2f &side2StartVertex,
                                         const cv::Point2f &side2EndVertex, cv::Point2f &intersectionPoint1,
                                         cv::Point2f &intersectionPoint2);
+
+static void findMinEnclosingTriangle(std::vector<cv::Point2f> &triangle, double& area);
 
 static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area);
 
@@ -262,12 +267,42 @@ static void updateSidesCA();
 * @param triangle       Minimum area triangle enclosing the given polygon
 * @param area           Area of the minimum area enclosing triangle
 */
-void cv::minEnclosingTriangle( const std::vector<Point2f> &convexPolygon,
-                               CV_OUT std::vector<Point2f> &triangle, CV_OUT double& area ) {
-    // Check if the polygon is convex and is a k-gon with k > 3
-    CV_Assert(isContourConvex(convexPolygon) && (convexPolygon.size() > 3));
+void cv::minEnclosingTriangle(cv::InputArray convexPolygon,
+                              CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
+    std::vector<cv::Point2f> resultingTriangle;
 
-    polygon = convexPolygon;
+    copyConvexPolygon(convexPolygon);
+    findMinEnclosingTriangle(resultingTriangle, area);
+    copyResultingTriangle(resultingTriangle, triangle);
+}
+
+
+/////////////////////////////// Helper functions definition //////////////////////////////
+
+
+//! Copy the provided convex polygon to the global variable "polygon"
+/*!
+* @param convexPolygon The provided convex polygon
+*/
+static void copyConvexPolygon(cv::InputArray convexPolygon) {
+    cv::Mat convexPolygonMat = convexPolygon.getMat();
+
+    convexPolygonMat.copyTo(polygon);
+}
+
+//! Find the minimum enclosing triangle and its area for the given polygon
+/*!
+* The overall complexity of the algorithm is theta(n) where "n" represents the number
+* of vertices in the convex polygon
+*
+* @param convexPolygon  Convex polygon defined by at least three points
+* @param triangle       Minimum area triangle enclosing the given polygon
+* @param area           Area of the minimum area enclosing triangle
+*/
+static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double& area) {
+    // Check if the polygon is convex and is a k-gon with k > 3
+    CV_Assert(isContourConvex(polygon) && (polygon.size() > 3));
+
     area = std::numeric_limits<double>::max();
 
     // Clear all points previously stored in the vector
@@ -278,9 +313,11 @@ void cv::minEnclosingTriangle( const std::vector<Point2f> &convexPolygon,
     findMinimumAreaEnclosingTriangle(triangle, area);
 }
 
-
-/////////////////////////////// Helper functions definition //////////////////////////////
-
+//! Copy resultingTriangle to the OutputArray triangle
+static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle,
+                                  cv::OutputArray triangle) {
+    cv::Mat(resultingTriangle).convertTo(triangle, triangle.fixedType() ? triangle.type() : CV_32F);
+}
 
 //! Initialisation function
 static void initialise() {
@@ -847,7 +884,7 @@ static double angleOfLineWrtOxAxis(const cv::Point2f &a, const cv::Point2f &b) {
     double y = b.y - a.y;
     double x = b.x - a.x;
 
-    double angle = (std::atan2(y, x) * 180 / PI);
+    double angle = (std::atan2(y, x) * 180 / CV_PI);
 
     return (angle < 0) ? (angle + 360)
                        : angle;
