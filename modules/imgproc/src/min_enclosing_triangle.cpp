@@ -170,6 +170,9 @@ static bool findGammaIntersectionPoints(unsigned int polygonPointIndex, const cv
                                         const cv::Point2f &side2EndVertex, cv::Point2f &intersectionPoint1,
                                         cv::Point2f &intersectionPoint2);
 
+static void findMinEnclosingTriangle(cv::InputArray points,
+                                     CV_OUT cv::OutputArray triangle, CV_OUT double& area);
+
 static void findMinEnclosingTriangle(std::vector<cv::Point2f> &triangle, double& area);
 
 static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area);
@@ -262,15 +265,39 @@ static void updateSidesCA();
 
 //! Find the minimum enclosing triangle and its area for the given set of points
 /*!
-* The overall complexity of the algorithm is theta(n) where "n" represents the number
-* of vertices in the convex hull of the points
-*
 * @param points         Set of points
-* @param triangle       Minimum area triangle enclosing the given polygon
+* @param triangle       Minimum area triangle enclosing the given set of points
 * @param area           Area of the minimum area enclosing triangle
 */
 void cv::minEnclosingTriangle(cv::InputArray points,
                               CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
+    findMinEnclosingTriangle(points, triangle, area);
+}
+
+//! Find the minimum enclosing triangle and its area for the given set of points
+/*!
+* @param points         Set of points
+* @param triangle       Minimum area triangle enclosing the given set of points
+*/
+void cv::minEnclosingTriangle(cv::InputArray points,
+                              CV_OUT cv::OutputArray triangle) {
+    double area;
+
+    findMinEnclosingTriangle(points, triangle, area);
+}
+
+
+/////////////////////////////// Helper functions definition //////////////////////////////
+
+
+//! Find the minimum enclosing triangle and its area
+/*!
+* @param points         Set of points
+* @param triangle       Minimum area triangle enclosing the given set of points
+* @param area           Area of the minimum area enclosing triangle
+*/
+static void findMinEnclosingTriangle(cv::InputArray points,
+                                     CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
     std::vector<cv::Point2f> resultingTriangle;
 
     CV_Assert(triangle.depth() == CV_32F);
@@ -279,10 +306,6 @@ void cv::minEnclosingTriangle(cv::InputArray points,
     findMinEnclosingTriangle(resultingTriangle, area);
     copyResultingTriangle(resultingTriangle, triangle);
 }
-
-
-/////////////////////////////// Helper functions definition //////////////////////////////
-
 
 //! Create the convex hull of the given set of points
 /*!
@@ -319,12 +342,20 @@ static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double
 }
 
 //! Copy resultingTriangle to the OutputArray triangle
+/*!
+* @param resultingTriangle  Minimum area triangle enclosing the given polygon found by the algorithm
+* @param triangle           Minimum area triangle enclosing the given polygon return to the user
+*/
 static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle,
                                   cv::OutputArray triangle) {
     cv::Mat(resultingTriangle).convertTo(triangle, triangle.fixedType() ? triangle.type() : CV_32F);
 }
 
 //! Initialisation function
+/*!
+* @param triangle       Minimum area triangle enclosing the given polygon
+* @param area           Area of the minimum area enclosing triangle
+*/
 static void initialise(std::vector<cv::Point2f> &triangle, double &area) {
     nrOfPoints = static_cast<unsigned int>(polygon.size());
     area = std::numeric_limits<double>::max();

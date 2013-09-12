@@ -44,9 +44,8 @@ int main( int /*argc*/, char** /*argv*/ )
 
         // Find the minimum area enclosing triangle
         vector<Point2f> triangle;
-        double area;
 
-        minEnclosingTriangle(points, triangle, area);
+        minEnclosingTriangle(points, triangle);
 
         // Find the minimum area enclosing circle
         Point2f center, vtx[4];

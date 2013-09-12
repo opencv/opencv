@@ -1453,6 +1453,10 @@ CV_EXPORTS_W void minEnclosingCircle( InputArray points,
 
 //! computes the minimal enclosing triangle for a set of points
 CV_EXPORTS_W void minEnclosingTriangle( InputArray points,
+                                        CV_OUT OutputArray triangle );
+
+//! computes the minimal enclosing triangle for a set of points
+CV_EXPORTS_W void minEnclosingTriangle( InputArray points,
                                         CV_OUT OutputArray triangle, CV_OUT double& area );
 
 //! matches two contours using one of the available algorithms
