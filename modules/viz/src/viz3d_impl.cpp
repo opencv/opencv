@@ -382,6 +382,9 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
     active_camera.SetUserTransform(transform);
     transform->Delete();
+    
+    renderer_->ResetCameraClippingRange();
+    renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -418,6 +421,9 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
     camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
     camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
     camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
+    
+    renderer_->ResetCameraClippingRange();
+    renderer_->Render();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
