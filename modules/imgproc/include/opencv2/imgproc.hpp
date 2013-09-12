@@ -1451,8 +1451,8 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
-//! computes the minimal enclosing triangle for a convex polygon defined by at least three points
-CV_EXPORTS_W void minEnclosingTriangle( InputArray convexPolygon,
+//! computes the minimal enclosing triangle for a set of points
+CV_EXPORTS_W void minEnclosingTriangle( InputArray points,
                                         CV_OUT OutputArray triangle, CV_OUT double& area );
 
 //! matches two contours using one of the available algorithms

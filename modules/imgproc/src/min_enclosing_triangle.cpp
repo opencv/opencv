@@ -156,9 +156,9 @@ static bool areOnTheSameSideOfLine(const cv::Point2f &p1, const cv::Point2f &p2,
 
 static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const cv::Point2f &c);
 
-static void copyConvexPolygon(cv::InputArray convexPolygon);
-
 static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle, cv::OutputArray triangle);
+
+static void createConvexHull(cv::InputArray points);
 
 static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b);
 
@@ -184,7 +184,7 @@ static double height(const cv::Point2f &polygonPoint);
 
 static double height(unsigned int polygonPointIndex);
 
-static void initialise();
+static void initialise(std::vector<cv::Point2f> &triangle, double &area);
 
 static unsigned int intersects(double angleGammaAndPoint, unsigned int polygonPointIndex);
 
@@ -240,6 +240,8 @@ static double oppositeAngle(double angle);
 
 static unsigned int predecessor(unsigned int index);
 
+static void returnMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area);
+
 static void searchForBTangency();
 
 static int sign(double number);
@@ -258,20 +260,20 @@ static void updateSidesCA();
 ///////////////////////////////////// Main functions /////////////////////////////////////
 
 
-//! Find the minimum enclosing triangle and its area for the given polygon
+//! Find the minimum enclosing triangle and its area for the given set of points
 /*!
 * The overall complexity of the algorithm is theta(n) where "n" represents the number
-* of vertices in the convex polygon
+* of vertices in the convex hull of the points
 *
-* @param convexPolygon  Convex polygon defined by at least three points
+* @param points         Set of points
 * @param triangle       Minimum area triangle enclosing the given polygon
 * @param area           Area of the minimum area enclosing triangle
 */
-void cv::minEnclosingTriangle(cv::InputArray convexPolygon,
+void cv::minEnclosingTriangle(cv::InputArray points,
                               CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
     std::vector<cv::Point2f> resultingTriangle;
 
-    copyConvexPolygon(convexPolygon);
+    createConvexHull(points);
     findMinEnclosingTriangle(resultingTriangle, area);
     copyResultingTriangle(resultingTriangle, triangle);
 }
@@ -280,37 +282,35 @@ void cv::minEnclosingTriangle(cv::InputArray convexPolygon,
 /////////////////////////////// Helper functions definition //////////////////////////////
 
 
-//! Copy the provided convex polygon to the global variable "polygon"
+//! Create the convex hull of the given set of points
 /*!
-* @param convexPolygon The provided convex polygon
+* @param points The provided set of points
 */
-static void copyConvexPolygon(cv::InputArray convexPolygon) {
-    cv::Mat convexPolygonMat = convexPolygon.getMat();
+static void createConvexHull(cv::InputArray points) {
+    cv::Mat pointsMat = points.getMat();
 
-    convexPolygonMat.copyTo(polygon);
+    CV_Assert((pointsMat.checkVector(2) > 0) &&
+              ((pointsMat.depth() == CV_32F) || (pointsMat.depth() == CV_32S)));
+
+    convexHull(points, polygon, true, true);
 }
 
-//! Find the minimum enclosing triangle and its area for the given polygon
+//! Find the minimum enclosing triangle and its area
 /*!
 * The overall complexity of the algorithm is theta(n) where "n" represents the number
 * of vertices in the convex polygon
 *
-* @param convexPolygon  Convex polygon defined by at least three points
 * @param triangle       Minimum area triangle enclosing the given polygon
 * @param area           Area of the minimum area enclosing triangle
 */
 static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double& area) {
-    // Check if the polygon is convex and is a k-gon with k > 3
-    CV_Assert(isContourConvex(polygon) && (polygon.size() > 3));
+    initialise(triangle, area);
 
-    area = std::numeric_limits<double>::max();
-
-    // Clear all points previously stored in the vector
-    triangle.clear();
-
-    initialise();
-
-    findMinimumAreaEnclosingTriangle(triangle, area);
+    if (polygon.size() > 3) {
+        findMinimumAreaEnclosingTriangle(triangle, area);
+    } else {
+        returnMinimumAreaEnclosingTriangle(triangle, area);
+    }
 }
 
 //! Copy resultingTriangle to the OutputArray triangle
@@ -320,9 +320,14 @@ static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTrian
 }
 
 //! Initialisation function
-static void initialise() {
+static void initialise(std::vector<cv::Point2f> &triangle, double &area) {
     nrOfPoints = static_cast<unsigned int>(polygon.size());
+    area = std::numeric_limits<double>::max();
 
+    // Clear all points previously stored in the vector
+    triangle.clear();
+
+    // Initialise the values of the indices for the algorithm
     a = 1;
     b = 2;
     c = 0;
@@ -351,6 +356,19 @@ static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle,
             updateMinimumAreaEnclosingTriangle(triangle, area);
         }
     }
+}
+
+//! Return the minimum area enclosing (pseudo-)triangle in case the convex polygon has at most three points
+/*!
+* @param triangle   Minimum area triangle enclosing the given polygon
+* @param area       Area of the minimum area enclosing triangle
+*/
+static void returnMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
+    for (int i = 0; i < 3; i++) {
+        triangle.push_back(polygon[i % nrOfPoints]);
+    }
+
+    area = areaOfTriangle(triangle[0], triangle[1], triangle[2]);
 }
 
 //! Advance b to the right chain
