@@ -63,32 +63,31 @@ PERF_TEST_P(KalmanFilterFixture, KalmanFilter,
 
     cv::Mat sample(dim, 1, CV_32FC1), dresult;
     randu(sample, -1, 1);
-    cv::ocl::oclMat dsample(sample);
 
     cv::Mat statePre_;
 
     if(RUN_PLAIN_IMPL)
     {
+        cv::KalmanFilter kalman;
         TEST_CYCLE()
         {
-            cv::KalmanFilter kalman;
             kalman.init(dim, dim);
             kalman.correct(sample);
             kalman.predict();
-            statePre_ = kalman.statePre;
         }
-        SANITY_CHECK(statePre_);
+        statePre_ = kalman.statePre;
     }else if(RUN_OCL_IMPL)
     {
+        cv::ocl::oclMat dsample(sample);
+        cv::ocl::KalmanFilter kalman_ocl;
         OCL_TEST_CYCLE()
         {
-            cv::ocl::KalmanFilter kalman_ocl;
             kalman_ocl.init(dim, dim);
             kalman_ocl.correct(dsample);
             kalman_ocl.predict();
-            kalman_ocl.statePre.download(statePre_);
         }
-        SANITY_CHECK(statePre_);
+        kalman_ocl.statePre.download(statePre_);
     }else
         OCL_PERF_ELSE
+    SANITY_CHECK(statePre_);
 }
