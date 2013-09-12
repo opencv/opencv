@@ -22,11 +22,12 @@
 #      - OpenCV_INCLUDE_DIRS             : The OpenCV include directories.
 #      - OpenCV_COMPUTE_CAPABILITIES     : The version of compute capability
 #      - OpenCV_ANDROID_NATIVE_API_LEVEL : Minimum required level of Android API
-#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION@"
+#      - OpenCV_VERSION                  : The version of this OpenCV build: "@OPENCV_VERSION_PLAIN@"
 #      - OpenCV_VERSION_MAJOR            : Major version part of OpenCV_VERSION: "@OPENCV_VERSION_MAJOR@"
 #      - OpenCV_VERSION_MINOR            : Minor version part of OpenCV_VERSION: "@OPENCV_VERSION_MINOR@"
 #      - OpenCV_VERSION_PATCH            : Patch version part of OpenCV_VERSION: "@OPENCV_VERSION_PATCH@"
 #      - OpenCV_VERSION_TWEAK            : Tweak version part of OpenCV_VERSION: "@OPENCV_VERSION_TWEAK@"
+#      - OpenCV_VERSION_STATUS           : Development status of this build: "@OPENCV_VERSION_STATUS@"
 #
 #    Advanced variables:
 #      - OpenCV_SHARED
@@ -96,11 +97,12 @@ mark_as_advanced(FORCE OpenCV_LIB_DIR_OPT OpenCV_LIB_DIR_DBG OpenCV_3RDPARTY_LIB
 # ======================================================
 #  Version variables:
 # ======================================================
-SET(OpenCV_VERSION @OPENCV_VERSION@)
+SET(OpenCV_VERSION @OPENCV_VERSION_PLAIN@)
 SET(OpenCV_VERSION_MAJOR  @OPENCV_VERSION_MAJOR@)
 SET(OpenCV_VERSION_MINOR  @OPENCV_VERSION_MINOR@)
 SET(OpenCV_VERSION_PATCH  @OPENCV_VERSION_PATCH@)
 SET(OpenCV_VERSION_TWEAK  @OPENCV_VERSION_TWEAK@)
+SET(OpenCV_VERSION_STATUS "@OPENCV_VERSION_STATUS@")
 
 # ====================================================================
 # Link libraries: e.g.   libopencv_core.so, opencv_imgproc220d.lib, etc...
