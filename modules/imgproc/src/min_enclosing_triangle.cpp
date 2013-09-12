@@ -273,6 +273,8 @@ void cv::minEnclosingTriangle(cv::InputArray points,
                               CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
     std::vector<cv::Point2f> resultingTriangle;
 
+    CV_Assert(triangle.getMat().depth() == CV_32F);
+
     createConvexHull(points);
     findMinEnclosingTriangle(resultingTriangle, area);
     copyResultingTriangle(resultingTriangle, triangle);
@@ -288,11 +290,14 @@ void cv::minEnclosingTriangle(cv::InputArray points,
 */
 static void createConvexHull(cv::InputArray points) {
     cv::Mat pointsMat = points.getMat();
+    std::vector<cv::Point2f> pointsVector;
 
     CV_Assert((pointsMat.checkVector(2) > 0) &&
               ((pointsMat.depth() == CV_32F) || (pointsMat.depth() == CV_32S)));
 
-    convexHull(points, polygon, true, true);
+    pointsMat.convertTo(pointsVector, CV_32F);
+
+    convexHull(pointsVector, polygon, true, true);
 }
 
 //! Find the minimum enclosing triangle and its area
