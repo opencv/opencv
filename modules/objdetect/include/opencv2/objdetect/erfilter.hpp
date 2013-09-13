@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include <vector>
 #include <deque>
+#include <string>
 
 namespace cv
 {
@@ -163,7 +164,8 @@ public:
     local minimum is greater than minProbabilityDiff).
 
     \param  cb                Callback with the classifier.
-                              if omitted tries to load a default classifier from file trained_classifierNM1.xml
+                              default classifier can be implicitly load with function loadClassifierNM1()
+                              from file in samples/cpp/trained_classifierNM1.xml
     \param  thresholdDelta    Threshold step in subsequent thresholds when extracting the component tree
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
@@ -171,7 +173,7 @@ public:
     \param  nonMaxSuppression Whenever non-maximum suppression is done over the branch probabilities
     \param  minProbability    The minimum probability difference between local maxima and local minima ERs
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
+CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb,
                                                   int thresholdDelta = 1, float minArea = 0.00025,
                                                   float maxArea = 0.13, float minProbability = 0.4,
                                                   bool nonMaxSuppression = true,
@@ -187,11 +189,29 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = P
     additional features: hole area ratio, convex hull ratio, and number of outer inflexion points.
 
     \param  cb             Callback with the classifier
-                           if omitted tries to load a default classifier from file trained_classifierNM2.xml
+                           default classifier can be implicitly load with function loadClassifierNM2()
+                           from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
-CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
+CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb,
                                                   float minProbability = 0.3);
+
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
+*/
+
+CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
+*/
+
+CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
 
 
 // computeNMChannels operation modes
