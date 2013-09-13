@@ -82,7 +82,7 @@ protected:
     uchar*  m_current;
     FILE*   m_file;
     int     m_block_size;
-    size_t  m_block_pos;
+    long    m_block_pos;
     bool    m_is_opened;
 
     virtual void  readBlock();
@@ -99,7 +99,7 @@ public:
     virtual ~RLByteStream();
 
     int     getByte();
-    int     getBytes(void* buffer, size_t count );
+    int     getBytes( void* buffer, size_t count );
     int     getWord();
     int     getDWord();
 };
