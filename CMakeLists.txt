@@ -43,6 +43,7 @@ if(DEFINED CMAKE_BUILD_TYPE)
 endif()
 
 project(OpenCV CXX C)
+
 include(cmake/OpenCVUtils.cmake)
 
 # ----------------------------------------------------------------------------
@@ -360,6 +361,7 @@ include(cmake/OpenCVFindLibsPerf.cmake)
 # ----------------------------------------------------------------------------
 #  Detect other 3rd-party libraries/tools
 # ----------------------------------------------------------------------------
+
 # --- LATEX for pdf documentation ---
 if(BUILD_DOCS)
   include(cmake/OpenCVFindLATEX.cmake)
@@ -835,7 +837,6 @@ status("")
 status("  Matlab:")
 status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
 if (MATLAB_FOUND)
-  get_property(MEX_WORKS GLOBAL PROPERTY MEX_WORKS)
   status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
 endif()
 

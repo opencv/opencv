@@ -187,7 +187,6 @@ if (NOT MEX_WORKS)
 endif()
 
 # if we make it here, mex works!
-set_property(GLOBAL PROPERTY MEX_WORKS TRUE)
 set(MEX_WORKS True CACHE BOOL ADVANCED)
 
 
