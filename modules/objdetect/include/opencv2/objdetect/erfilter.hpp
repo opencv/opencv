@@ -47,6 +47,7 @@
 #include "opencv2/core.hpp"
 #include <vector>
 #include <deque>
+#include <string>
 
 namespace cv
 {
@@ -164,7 +165,7 @@ public:
 
     \param  cb                Callback with the classifier.
                               if omitted tries to load a default classifier from file trained_classifierNM1.xml
-                              default classifier can be implicitly load with function getDefaultClassifierNM1()
+                              default classifier can be implicitly load with function loadClassifierNM1()
     \param  thresholdDelta    Threshold step in subsequent thresholds when extracting the component tree
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
@@ -189,7 +190,7 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = P
 
     \param  cb             Callback with the classifier
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
-                           default classifier can be implicitly load with function getDefaultClassifierNM2()
+                           default classifier can be implicitly load with function loadClassifierNM2()
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
 CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
@@ -198,21 +199,19 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = P
 
 /*!
     Allow to implicitly load the default classifier when creating an ERFilter object.
-    The function takes no parameters and returns a pointer to ERFilter::Callback.
-    The dafault classifier is loaded from file trained_classifierNM1.xml
-    if it's found in current directory.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
 
-CV_EXPORTS Ptr<ERFilter::Callback> getDefaultClassifierNM1();
+CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename);
 
 /*!
     Allow to implicitly load the default classifier when creating an ERFilter object.
-    The function takes no parameters and returns a pointer to ERFilter::Callback.
-    The dafault classifier is loaded from file trained_classifierNM2.xml
-    if it's found in current directory.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
 */
 
-CV_EXPORTS Ptr<ERFilter::Callback> getDefaultClassifierNM2();
+CV_EXPORTS Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename);
 
 
 // computeNMChannels operation modes
