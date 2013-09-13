@@ -1142,6 +1142,29 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
     return (Ptr<ERFilter>)filter;
 }
 
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes no parameters and returns a pointer to ERFilter::Callback.
+    The dafault classifier is loaded from file trained_classifierNM1.xml
+    if it's found in current directory.
+*/
+Ptr<ERFilter::Callback> getDefaultClassifierNM1()
+
+{
+    return makePtr<ERClassifierNM1>();
+}
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes no parameters and returns a pointer to ERFilter::Callback.
+    The dafault classifier is loaded from file trained_classifierNM2.xml
+    if it's found in current directory.
+*/
+Ptr<ERFilter::Callback> getDefaultClassifierNM2()
+{
+    return makePtr<ERClassifierNM2>();
+}
+
 
 /* ------------------------------------------------------------------------------------*/
 /* -------------------------------- Compute Channels NM -------------------------------*/

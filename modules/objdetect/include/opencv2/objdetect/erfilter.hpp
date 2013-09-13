@@ -164,6 +164,7 @@ public:
 
     \param  cb                Callback with the classifier.
                               if omitted tries to load a default classifier from file trained_classifierNM1.xml
+                              default classifier can be implicitly load with function getDefaultClassifierNM1()
     \param  thresholdDelta    Threshold step in subsequent thresholds when extracting the component tree
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
@@ -188,10 +189,30 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = P
 
     \param  cb             Callback with the classifier
                            if omitted tries to load a default classifier from file trained_classifierNM2.xml
+                           default classifier can be implicitly load with function getDefaultClassifierNM2()
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
 CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
                                                   float minProbability = 0.3);
+
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes no parameters and returns a pointer to ERFilter::Callback.
+    The dafault classifier is loaded from file trained_classifierNM1.xml
+    if it's found in current directory.
+*/
+
+CV_EXPORTS Ptr<ERFilter::Callback> getDefaultClassifierNM1();
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes no parameters and returns a pointer to ERFilter::Callback.
+    The dafault classifier is loaded from file trained_classifierNM2.xml
+    if it's found in current directory.
+*/
+
+CV_EXPORTS Ptr<ERFilter::Callback> getDefaultClassifierNM2();
 
 
 // computeNMChannels operation modes
