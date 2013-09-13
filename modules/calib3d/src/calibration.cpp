@@ -1748,6 +1748,8 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
         if( !(flags & CV_CALIB_RATIONAL_MODEL) )
             flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
+        if( !(flags & CV_CALIB_THIN_PRISM_MODEL) )
+            flags |= CV_CALIB_FIX_S1_S2_S3_S4;
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
             imask[0] = imask[NINTRINSIC] = 0;
         if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
