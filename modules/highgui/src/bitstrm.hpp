@@ -81,7 +81,7 @@ protected:
     uchar*  m_end;
     uchar*  m_current;
     FILE*   m_file;
-    size_t  m_block_size;
+    int     m_block_size;
     size_t  m_block_pos;
     bool    m_is_opened;
 
