@@ -48,6 +48,7 @@
 #include "precomp.hpp"
 #include "opencv2/imgproc/imgproc_c.h"
 #include "opencv2/photo/photo_c.h"
+#include <queue>
 
 #undef CV_MAT_ELEM_PTR_FAST
 #define CV_MAT_ELEM_PTR_FAST( mat, row, col, pix_size )  \
@@ -67,134 +68,18 @@ min4( float a, float b, float c, float d )
 #define INSIDE 2  //unknown
 #define CHANGE 3  //servise
 
-typedef struct CvHeapElem
+class CvHeapElem
 {
+    public:
+
+    CvHeapElem(int _i, int _j, float _T) : T(_T), i(_i), j(_j) {}
+
+    bool operator>(const CvHeapElem& rhs) const {
+        return T > rhs.T;
+    }
+
     float T;
     int i,j;
-    struct CvHeapElem* prev;
-    struct CvHeapElem* next;
-}
-CvHeapElem;
-
-
-class CvPriorityQueueFloat
-{
-protected:
-    CvHeapElem *mem,*empty,*head,*tail;
-    int num,in;
-
-public:
-    bool Init( const CvMat* f )
-    {
-        int i,j;
-        for( i = num = 0; i < f->rows; i++ )
-        {
-            for( j = 0; j < f->cols; j++ )
-                num += CV_MAT_ELEM(*f,uchar,i,j)!=0;
-        }
-        if (num<=0) return false;
-        mem = (CvHeapElem*)cvAlloc((num+2)*sizeof(CvHeapElem));
-        if (mem==NULL) return false;
-
-        head       = mem;
-        head->i    = head->j = -1;
-        head->prev = NULL;
-        head->next = mem+1;
-        head->T    = -FLT_MAX;
-        empty      = mem+1;
-        for (i=1; i<=num; i++) {
-            mem[i].prev   = mem+i-1;
-            mem[i].next   = mem+i+1;
-            mem[i].i      = -1;
-            mem[i].T      = FLT_MAX;
-        }
-        tail       = mem+i;
-        tail->i    = tail->j = -1;
-        tail->prev = mem+i-1;
-        tail->next = NULL;
-        tail->T    = FLT_MAX;
-        return true;
-    }
-
-    bool Add(const CvMat* f) {
-        int i,j;
-        for (i=0; i<f->rows; i++) {
-            for (j=0; j<f->cols; j++) {
-                if (CV_MAT_ELEM(*f,uchar,i,j)!=0) {
-                    if (!Push(i,j,0)) return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    bool Push(int i, int j, float T) {
-        CvHeapElem *tmp=empty,*add=empty;
-        if (empty==tail) return false;
-        while (tmp->prev->T>T) tmp = tmp->prev;
-        if (tmp!=empty) {
-            add->prev->next = add->next;
-            add->next->prev = add->prev;
-            empty = add->next;
-            add->prev = tmp->prev;
-            add->next = tmp;
-            add->prev->next = add;
-            add->next->prev = add;
-        } else {
-            empty = empty->next;
-        }
-        add->i = i;
-        add->j = j;
-        add->T = T;
-        in++;
-        //      printf("push i %3d  j %3d  T %12.4e  in %4d\n",i,j,T,in);
-        return true;
-    }
-
-    bool Pop(int *i, int *j) {
-        CvHeapElem *tmp=head->next;
-        if (empty==tmp) return false;
-        *i = tmp->i;
-        *j = tmp->j;
-        tmp->prev->next = tmp->next;
-        tmp->next->prev = tmp->prev;
-        tmp->prev = empty->prev;
-        tmp->next = empty;
-        tmp->prev->next = tmp;
-        tmp->next->prev = tmp;
-        empty = tmp;
-        in--;
-        //      printf("pop  i %3d  j %3d  T %12.4e  in %4d\n",tmp->i,tmp->j,tmp->T,in);
-        return true;
-    }
-
-    bool Pop(int *i, int *j, float *T) {
-        CvHeapElem *tmp=head->next;
-        if (empty==tmp) return false;
-        *i = tmp->i;
-        *j = tmp->j;
-        *T = tmp->T;
-        tmp->prev->next = tmp->next;
-        tmp->next->prev = tmp->prev;
-        tmp->prev = empty->prev;
-        tmp->next = empty;
-        tmp->prev->next = tmp;
-        tmp->next->prev = tmp;
-        empty = tmp;
-        in--;
-        //      printf("pop  i %3d  j %3d  T %12.4e  in %4d\n",tmp->i,tmp->j,tmp->T,in);
-        return true;
-    }
-
-    CvPriorityQueueFloat(void) {
-        num=in=0;
-        mem=empty=head=tail=NULL;
-    }
-
-    ~CvPriorityQueueFloat(void)
-    {
-        cvFree( &mem );
-    }
 };
 
 inline float VectorScalMult(CvPoint2D32f v1,CvPoint2D32f v2) {
@@ -236,11 +121,15 @@ static float FastMarching_solve(int i1,int j1,int i2,int j2, const CvMat* f, con
 
 
 static void
-icvCalcFMM(const CvMat *f, CvMat *t, CvPriorityQueueFloat *Heap, bool negate) {
+icvCalcFMM(const CvMat *f, CvMat *t, std::priority_queue<CvHeapElem, std::vector<CvHeapElem>, std::greater<CvHeapElem> >& queue, bool negate) {
    int i, j, ii = 0, jj = 0, q;
    float dist;
 
-   while (Heap->Pop(&ii,&jj)) {
+   while (!queue.empty()) {
+      const CvHeapElem& top = queue.top();
+      ii = top.i;
+      jj = top.j;
+      queue.pop();
 
       unsigned known=(negate)?CHANGE:KNOWN;
       CV_MAT_ELEM(*f,uchar,ii,jj) = (uchar)known;
@@ -260,7 +149,7 @@ icvCalcFMM(const CvMat *f, CvMat *t, CvPriorityQueueFloat *Heap, bool negate) {
                         FastMarching_solve(i+1,j,i,j+1,f,t));
             CV_MAT_ELEM(*t,float,i,j) = dist;
             CV_MAT_ELEM(*f,uchar,i,j) = BAND;
-            Heap->Push(i,j,dist);
+            queue.push(CvHeapElem(i,j,dist));
          }
       }
    }
@@ -279,13 +168,17 @@ icvCalcFMM(const CvMat *f, CvMat *t, CvPriorityQueueFloat *Heap, bool negate) {
 
 
 static void
-icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueueFloat *Heap ) {
+icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, std::priority_queue<CvHeapElem, std::vector<CvHeapElem>, std::greater<CvHeapElem> >& queue ) {
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
    float dist;
 
    if (CV_MAT_CN(out->type)==3) {
 
-      while (Heap->Pop(&ii,&jj)) {
+      while (!queue.empty()) {
+         const CvHeapElem& top = queue.top();
+         ii = top.i;
+         jj = top.j;
+         queue.pop();
 
          CV_MAT_ELEM(*f,uchar,ii,jj) = KNOWN;
          for(q=0; q<4; q++) {
@@ -390,14 +283,18 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
-               Heap->Push(i,j,dist);
+               queue.push(CvHeapElem(i,j,dist));
             }
          }
       }
 
    } else if (CV_MAT_CN(out->type)==1) {
 
-      while (Heap->Pop(&ii,&jj)) {
+      while (!queue.empty()) {
+         const CvHeapElem& top = queue.top();
+         ii = top.i;
+         jj = top.j;
+         queue.pop();
 
          CV_MAT_ELEM(*f,uchar,ii,jj) = KNOWN;
          for(q=0; q<4; q++) {
@@ -502,7 +399,7 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
-               Heap->Push(i,j,dist);
+               queue.push(CvHeapElem(i,j,dist));
             }
          }
       }
@@ -511,13 +408,17 @@ icvTeleaInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQu
 
 
 static void
-icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueueFloat *Heap) {
+icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, std::priority_queue<CvHeapElem, std::vector<CvHeapElem>, std::greater<CvHeapElem> >& queue) {
    int i = 0, j = 0, ii = 0, jj = 0, k, l, q, color = 0;
    float dist;
 
    if (CV_MAT_CN(out->type)==3) {
 
-      while (Heap->Pop(&ii,&jj)) {
+      while (!queue.empty()) {
+         const CvHeapElem& top = queue.top();
+         ii = top.i;
+         jj = top.j;
+         queue.pop();
 
          CV_MAT_ELEM(*f,uchar,ii,jj) = KNOWN;
          for(q=0; q<4; q++) {
@@ -598,14 +499,18 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
-               Heap->Push(i,j,dist);
+               queue.push(CvHeapElem(i,j,dist));
             }
          }
       }
 
    } else if (CV_MAT_CN(out->type)==1) {
 
-      while (Heap->Pop(&ii,&jj)) {
+      while (!queue.empty()) {
+         const CvHeapElem& top = queue.top();
+         ii = top.i;
+         jj = top.j;
+         queue.pop();
 
          CV_MAT_ELEM(*f,uchar,ii,jj) = KNOWN;
          for(q=0; q<4; q++) {
@@ -686,7 +591,7 @@ icvNSInpaintFMM(const CvMat *f, CvMat *t, CvMat *out, int range, CvPriorityQueue
                }
 
                CV_MAT_ELEM(*f,uchar,i,j) = BAND;
-               Heap->Push(i,j,dist);
+               queue.push(CvHeapElem(i,j,dist));
             }
          }
       }
@@ -729,7 +634,7 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
            double inpaintRange, int flags )
 {
     cv::Ptr<CvMat> mask, band, f, t, out;
-    cv::Ptr<CvPriorityQueueFloat> Heap, Out;
+    std::priority_queue< CvHeapElem, std::vector<CvHeapElem>, std::greater<CvHeapElem> > queue, Out;
     cv::Ptr<IplConvKernel> el_cross, el_range;
 
     CvMat input_hdr, mask_hdr, output_hdr;
@@ -772,13 +677,17 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
     cvSet(f,cvScalar(KNOWN,0,0,0));
     cvSet(t,cvScalar(1.0e6f,0,0,0));
     cvDilate(mask,band,el_cross,1);   // image with narrow band
-    Heap=cv::makePtr<CvPriorityQueueFloat>();
-    if (!Heap->Init(band))
+    if(cvCountNonZero(band) <= 0)
         return;
     cvSub(band,mask,band,NULL);
     SET_BORDER1_C1(band,uchar,0);
-    if (!Heap->Add(band))
-        return;
+    for (int i=0; i<band->rows; i++) {
+        for (int j=0; j<band->cols; j++) {
+            if (CV_MAT_ELEM(*band,uchar,i,j)!=0) {
+                queue.push(CvHeapElem(i,j,0));
+            }
+        }
+    }
     cvSet(f,cvScalar(BAND,0,0,0),band);
     cvSet(f,cvScalar(INSIDE,0,0,0),mask);
     cvSet(t,cvScalar(0,0,0,0),band);
@@ -790,18 +699,22 @@ cvInpaint( const CvArr* _input_img, const CvArr* _inpaint_mask, CvArr* _output_i
             range,range,CV_SHAPE_RECT,NULL));
         cvDilate(mask,out,el_range,1);
         cvSub(out,mask,out,NULL);
-        Out=cv::makePtr<CvPriorityQueueFloat>();
-        if (!Out->Init(out))
+        if(cvCountNonZero(out) <= 0)
             return;
-        if (!Out->Add(band))
-            return;
+        for (int i=0; i<band->rows; i++) {
+            for (int j=0; j<band->cols; j++) {
+                if (CV_MAT_ELEM(*band,uchar,i,j)!=0) {
+                    Out.push(CvHeapElem(i,j,0));
+                }
+            }
+        }
         cvSub(out,band,out,NULL);
         SET_BORDER1_C1(out,uchar,0);
         icvCalcFMM(out,t,Out,true);
-        icvTeleaInpaintFMM(mask,t,output_img,range,Heap);
+        icvTeleaInpaintFMM(mask,t,output_img,range,queue);
     }
     else if (flags == cv::INPAINT_NS) {
-        icvNSInpaintFMM(mask,t,output_img,range,Heap);
+        icvNSInpaintFMM(mask,t,output_img,range,queue);
     } else {
         CV_Error( cv::Error::StsBadArg, "The flags argument must be one of CV_INPAINT_TELEA or CV_INPAINT_NS" );
     }
