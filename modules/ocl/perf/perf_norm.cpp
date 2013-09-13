@@ -53,7 +53,7 @@ using std::tr1::get;
 
 typedef TestBaseWithParam<Size> normFixture;
 
-PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't work properly
+PERF_TEST_P(normFixture, norm, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
     const std::string impl = getSelectedImpl();
@@ -63,6 +63,8 @@ PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't w
     declare.in(src1, src2);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(8);
 
     if (RUN_OCL_IMPL)
     {

@@ -1201,7 +1201,20 @@ TEST_P(AddWeighted, Mat)
     }
 }
 
+////////////////////////////////norm/////////////////////////////////////////////////
+struct Norm : ArithmTestBase {};
 
+TEST_P(Norm, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        double cpures = cv::norm(mat1_roi, mat2_roi);
+        double gpures = cv::ocl::norm(gmat1, gmat2);
+        EXPECT_NEAR(cpures, gpures, .1);
+    }
+}
 
 
 //********test****************
@@ -1310,6 +1323,8 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
                             Values(CV_8UC1, CV_32SC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
-
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(
+    Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
+    Values(false))); // Values(false) is the reserved parameter
 
 #endif // HAVE_OPENCL
