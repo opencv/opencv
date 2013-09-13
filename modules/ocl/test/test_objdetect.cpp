@@ -239,11 +239,8 @@ TEST_P(Haar, FaceDetect)
 TEST_P(Haar, FaceDetectUseBuf)
 {
     ocl::OclCascadeClassifierBuf cascadebuf;
-    if(!cascadebuf.load(cascadeName))
-    {
-        std::cout << "ERROR: Could not load classifier cascade for FaceDetectUseBuf!" << std::endl;
-        return;
-    }
+    ASSERT_TRUE(cascadebuf.load(cascadeName)) << "could not load classifier cascade for FaceDetectUseBuf!";
+
     cascadebuf.detectMultiScale(d_img, oclfaces,  1.1, 3,
                                 flags,
                                 Size(30, 30), Size(0, 0));
