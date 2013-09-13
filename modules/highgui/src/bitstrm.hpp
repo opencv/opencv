@@ -71,7 +71,7 @@ public:
     virtual void  close();
     bool          isOpened();
     void          setPos( size_t pos );
-    size_t getPos();
+    size_t        getPos();
     void          skip( int bytes );
 
 protected:

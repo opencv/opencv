@@ -225,9 +225,9 @@ int RLByteStream::getBytes( void* buffer, size_t count )
 
         for(;;)
         {
-            l = (size_t)(m_end - m_current); //bytes still to be read
-            if( l > count ) l = count; //I'll only read up to count
-            if( l > 0 ) break; //l is supposed to be negative??
+            l = (size_t)(m_end - m_current);
+            if( l > count ) l = count;
+            if( l > 0 ) break;
             readBlock();
         }
         memcpy( data, m_current, l );
