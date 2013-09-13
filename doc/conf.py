@@ -28,6 +28,16 @@ sys.path.insert(0, os.path.abspath('.'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.pngmath', 'sphinx.ext.ifconfig', 'sphinx.ext.todo', 'sphinx.ext.extlinks', 'ocv', 'sphinx.ext.doctest']
+
+have_plantuml_ext = False
+if tags.has('plantuml'):
+  try:
+    import sphinxcontrib.plantuml
+    extensions.append("sphinxcontrib.plantuml")
+    have_plantuml_ext = True
+  except ImportError:
+    print "No module sphinxcontrib.plantuml found, sphinx will not render UML diagrams"
+
 doctest_test_doctest_blocks = 'block'
 
 # Add any paths that contain templates here, relative to this directory.
@@ -78,6 +88,9 @@ release += version_status
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = ['doc/tutorials/definitions']
+
+if not have_plantuml_ext:
+  exclude_patterns.append('**/uml/*')
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None
