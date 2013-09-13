@@ -193,5 +193,28 @@ CV_EXPORTS Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb = P
 CV_EXPORTS Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb = Ptr<ERFilter::Callback>(),
                                                   float minProbability = 0.3);
 
+
+// computeNMChannels operation modes
+enum { ERFILTER_NM_RGBLGrad = 0,
+       ERFILTER_NM_IHSGrad  = 1
+     };
+
+/*!
+    Compute the different channels to be processed independently in the N&M algorithm
+    Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
+
+    In N&M algorithm, the combination of intensity (I), hue (H), saturation (S), and gradient
+    magnitude channels (Grad) are used in order to obtain high localization recall.
+    This implementation also provides an alternative combination of red (R), green (G), blue (B),
+    lightness (L), and gradient magnitude (Grad).
+
+    \param  _src           Source image. Must be RGB CV_8UC3.
+    \param  _channels      Output vector<Mat> where computed channels are stored.
+    \param  _mode          Mode of operation. Currently the only available options are
+                           ERFILTER_NM_RGBLGrad (by default) and ERFILTER_NM_IHSGrad.
+
+*/
+CV_EXPORTS void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode = ERFILTER_NM_RGBLGrad);
+
 }
 #endif // _OPENCV_ERFILTER_HPP_
