@@ -96,6 +96,7 @@ enum
 };
 
 CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
+CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
 }}// cv
 
 #endif
