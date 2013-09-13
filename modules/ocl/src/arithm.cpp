@@ -871,7 +871,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
     absdiff(src1, src2, tmp);
     switch(normType)
     {
-    case NORM_INF:      
+    case NORM_INF:
         double minValue;
         minMax(tmp, &minValue, &result);
         break;
