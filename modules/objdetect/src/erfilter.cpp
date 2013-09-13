@@ -1056,8 +1056,8 @@ double ERClassifierNM2::eval(const ERStat& stat)
     local minimum is greater than minProbabilityDiff).
 
     \param  cb                Callback with the classifier.
-                              if omitted tries to load a default classifier from file trained_classifierNM1.xml
                               default classifier can be implicitly load with function loadClassifierNM1()
+                              from file in samples/cpp/trained_classifierNM1.xml
     \param  thresholdDelta    Threshold step in subsequent thresholds when extracting the component tree
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
@@ -1077,12 +1077,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
 
     Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
-    if (cb == NULL)
-        filter->setCallback(makePtr<ERClassifierNM1>("trained_classifierNM1.xml"));
-    else 
-        filter->setCallback(cb);
-    
-
+    filter->setCallback(cb);
 
     filter->setThresholdDelta(thresholdDelta);
     filter->setMinArea(minArea);
@@ -1103,8 +1098,8 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     additional features: hole area ratio, convex hull ratio, and number of outer inflexion points.
 
     \param  cb             Callback with the classifier
-                           if omitted tries to load a default classifier from file trained_classifierNM2.xml
                            default classifier can be implicitly load with function loadClassifierNM1()
+                           from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
 Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProbability)
@@ -1114,10 +1109,7 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
-    if (cb == NULL)
-        filter->setCallback(makePtr<ERClassifierNM2>("trained_classifierNM2.xml"));
-    else
-        filter->setCallback(cb);
+    filter->setCallback(cb);
 
     filter->setMinProbability(minProbability);
     return (Ptr<ERFilter>)filter;
