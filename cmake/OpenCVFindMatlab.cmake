@@ -15,7 +15,7 @@
 #                         mexwin32, mexwin64,  mexglx, mexa64, mexmac,
 #                         mexmaci,  mexmaci64, mexsol, mexs64
 #   MATLAB_ARCH:        The installation architecture. It is **usually**
-#                       the MEXEXT with the preceding "mex" removed, 
+#                       the MEXEXT with the preceding "mex" removed,
 #                       though it's different for linux distros.
 #
 # There doesn't appear to be an elegant way to detect all versions of Matlab
@@ -187,9 +187,9 @@ if (NOT MATLAB_FOUND)
   if (MATLAB_ROOT_DIR)
     locate_matlab_components(${MATLAB_ROOT_DIR})
   endif()
-  find_package_handle_standard_args(Matlab DEFAULT_MSG 
+  find_package_handle_standard_args(Matlab DEFAULT_MSG
                                            MATLAB_MEX_SCRIPT   MATLAB_INCLUDE_DIRS
-                                           MATLAB_ROOT_DIR     MATLAB_LIBRARIES   
-                                           MATLAB_LIBRARY_DIRS MATLAB_MEXEXT 
+                                           MATLAB_ROOT_DIR     MATLAB_LIBRARIES
+                                           MATLAB_LIBRARY_DIRS MATLAB_MEXEXT
                                            MATLAB_ARCH         MATLAB_BIN)
 endif()
