@@ -1,0 +1,34 @@
+#ifndef __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__
+#define __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__
+
+#ifdef HAVE_OPENCL
+
+#if defined __APPLE__ && !defined(IOS)
+#include <OpenCL/cl.h>
+#else
+
+@CL_REMAP_ORIGIN@
+
+#if defined __APPLE__
+#include <OpenCL/cl.h>
+#else
+#include <CL/cl.h>
+#endif
+
+@CL_REMAP_DYNAMIC@
+
+#ifndef CL_RUNTIME_EXPORT
+#if (defined(BUILD_SHARED_LIBS) || defined(OPENCV_OCL_SHARED)) && (defined WIN32 || defined _WIN32 || defined WINCE)
+#define CL_RUNTIME_EXPORT __declspec(dllimport)
+#else
+#define CL_RUNTIME_EXPORT
+#endif
+#endif
+
+@CL_FN_DECLARATIONS@
+
+#endif
+
+#endif
+
+#endif // __OPENCV_OCL_CL_RUNTIME_OPENCL_HPP__

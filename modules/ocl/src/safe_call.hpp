@@ -46,11 +46,7 @@
 #ifndef __OPENCV_OPENCL_SAFE_CALL_HPP__
 #define __OPENCV_OPENCL_SAFE_CALL_HPP__
 
-#if defined __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
+#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 
 #if defined(__GNUC__)
 #define openCLSafeCall(expr)  ___openCLSafeCall(expr, __FILE__, __LINE__, __func__)
