@@ -46,14 +46,14 @@ int main()
     int num;
     cin >> num;
     cout << endl;
-    
+
     if(num == 1)
     {
         string folder =  "cloning/Normal_Cloning/";
         string original_path1 = folder + "source1.png";
         string original_path2 = folder + "destination1.png";
         string original_path3 = folder + "mask.png";
-        
+
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat destination = imread(original_path2, IMREAD_COLOR);
         Mat mask = imread(original_path3, IMREAD_COLOR);
@@ -63,7 +63,7 @@ int main()
             cout << "Could not load source image " << original_path1 << endl;
             exit(0);
         }
-        if(destination.empty()) 
+        if(destination.empty())
         {
             cout << "Could not load destination image " << original_path2 << endl;
             exit(0);
@@ -78,24 +78,24 @@ int main()
         Point p;
         p.x = 400;
         p.y = 100;
-        
+
         seamlessClone(source, destination, mask, p, result, 1);
-        
+
         imshow("Output",result);
         imwrite(folder + "cloned.png", result);
     }
     else if(num == 2)
-    { 
+    {
         string folder = "cloning/Mixed_Cloning/";
         string original_path1 = folder + "source1.png";
         string original_path2 = folder + "destination1.png";
         string original_path3 = folder + "mask.png";
-        
+
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat destination = imread(original_path2, IMREAD_COLOR);
         Mat mask = imread(original_path3, IMREAD_COLOR);
 
-        if(source.empty()) 
+        if(source.empty())
         {
             cout << "Could not load source image " << original_path1 << endl;
             exit(0);
@@ -105,7 +105,7 @@ int main()
             cout << "Could not load destination image " << original_path2 << endl;
             exit(0);
         }
-        if(mask.empty()) 
+        if(mask.empty())
         {
             cout << "Could not load mask image " << original_path3 << endl;
             exit(0);
@@ -115,7 +115,7 @@ int main()
         Point p;
         p.x = destination.size().width/2;
         p.y = destination.size().height/2;
-        
+
         seamlessClone(source, destination, mask, p, result, 2);
 
         imshow("Output",result);
@@ -137,12 +137,12 @@ int main()
             cout << "Could not load source image " << original_path1 << endl;
             exit(0);
         }
-        if(destination.empty()) 
+        if(destination.empty())
         {
             cout << "Could not load destination image " << original_path2 << endl;
             exit(0);
         }
-        if(mask.empty()) 
+        if(mask.empty())
         {
             cout << "Could not load mask image " << original_path3 << endl;
             exit(0);
@@ -152,7 +152,7 @@ int main()
         Point p;
         p.x = destination.size().width/2;
         p.y = destination.size().height/2;
-        
+
         seamlessClone(source, destination, mask, p, result, 3);
 
         imshow("Output",result);
@@ -179,7 +179,7 @@ int main()
         }
 
         Mat result;
-        
+
         colorChange(source, mask, result, 1.5, .5, .5);
 
         imshow("Output",result);
@@ -194,7 +194,7 @@ int main()
         Mat source = imread(original_path1, IMREAD_COLOR);
         Mat mask = imread(original_path2, IMREAD_COLOR);
 
-        if(source.empty()) 
+        if(source.empty())
         {
             cout << "Could not load source image " << original_path1 << endl;
             exit(0);
@@ -206,7 +206,7 @@ int main()
         }
 
         Mat result;
-        
+
         illuminationChange(source, mask, result, .2, .4);
 
         imshow("Output",result);
@@ -233,7 +233,7 @@ int main()
         }
 
         Mat result;
-        
+
         textureFlattening(source, mask, result, 30, 45, 3);
 
         imshow("Output",result);

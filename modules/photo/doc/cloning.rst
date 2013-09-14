@@ -9,16 +9,16 @@ Image editing tasks concern either global changes (color/intensity corrections, 
 Here we are interested in achieving local changes, ones that are restricted to a region manually selected (ROI), in a seamless and effortless manner.
 The extent of the changes ranges from slight distortions to complete replacement by novel content.
 
-.. ocv:function:: void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p, OutputArray result, int flags)
+.. ocv:function:: void seamlessClone( InputArray src, InputArray dst, InputArray mask, Point p, OutputArray blend, int flags)
 
     :param src: Input 8-bit 3-channel image.
 
     :param dst: Input 8-bit 3-channel image.
-    
+
     :param mask: Input 8-bit 1 or 3-channel image.
-    
-    :param Point: Point in dst image where object is placed.
-    
+
+    :param p: Point in dst image where object is placed.
+
     :param result: Output image with the same size and type as ``dst``.
 
     :param flags: Cloning method that could be one of the following:
@@ -29,7 +29,7 @@ The extent of the changes ranges from slight distortions to complete replacement
                                  masking might be time consuming and often leaves an undesirable halo. Seamless
                                  cloning, even averaged with the original image, is not effective. Mixed seamless
                                  cloning based on a loose selection proves effective.
-            
+
             * **FEATURE_EXCHANGE**     Feature exchange allows the user to replace easily certain
                                        features of one object by alternative features.
 
@@ -44,17 +44,17 @@ Given an original color image, two differently colored versions of this image ca
     :param src: Input 8-bit 3-channel image.
 
     :param mask: Input 8-bit 1 or 3-channel image.
-    
+
     :param dst: Output image with the same size and type as  ``src`` .
 
     :param red_mul: R-channel multiply factor.
-    
+
     :param green_mul: G-channel multiply factor.
-    
+
     :param blue_mul: B-channel multiply factor.
 
 Multiplication factor is between .5 to 2.5.
-    
+
 
 illuminationChange
 ------------------
@@ -66,11 +66,11 @@ solver, modifies locally the apparent illumination of an image.
     :param src: Input 8-bit 3-channel image.
 
     :param mask: Input 8-bit 1 or 3-channel image.
-    
+
     :param dst: Output image with the same size and type as  ``src``.
 
     :param alpha: Value ranges between 0-2.
-    
+
     :param beta: Value ranges between 0-2.
 
 This is useful to highlight under-exposed foreground objects or to reduce specular reflections.
@@ -85,13 +85,13 @@ region, giving its contents a flat aspect. Here Canny Edge Detector is used.
     :param src: Input 8-bit 3-channel image.
 
     :param mask: Input 8-bit 1 or 3-channel image.
-    
+
     :param dst: Output image with the same size and type as  ``src``.
 
     :param low_threshold: Range from 0 to 100.
-    
+
     :param high_threshold: Value > 100.
-    
+
     :param kernel_size: The size of the Sobel kernel to be used.
 
 **NOTE:**

@@ -52,9 +52,6 @@ Point* pts = new Point[100];
 Point* pts2 = new Point[100];
 Point* pts_diff = new Point[100];
 
-char src[50];
-char dest[50];
-
 int var = 0;
 int flag = 0, flag1 = 0, flag4 = 0;
 
@@ -76,39 +73,38 @@ void checkfile(char*);
 void source(int event, int x, int y, int, void*)
 {
 
-	if (event == EVENT_LBUTTONDOWN && !drag)
-	{
-		if(flag1 == 0)
-		{
-			if(var==0)
-				img1 = img0.clone();
-			point = Point(x, y);
-			circle(img1,point,2,Scalar(0, 0, 255),-1, 8, 0);
-			pts[var] = point;
-			var++;
-			drag  = 1;
-			if(var>1)
-				line(img1,pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
+    if (event == EVENT_LBUTTONDOWN && !drag)
+    {
+        if(flag1 == 0)
+        {
+            if(var==0)
+                img1 = img0.clone();
+            point = Point(x, y);
+            circle(img1,point,2,Scalar(0, 0, 255),-1, 8, 0);
+            pts[var] = point;
+            var++;
+            drag  = 1;
+            if(var>1)
+                line(img1,pts[var-2], point, Scalar(0, 0, 255), 2, 8, 0);
 
-			imshow("Source", img1);
-		}
-	}
+            imshow("Source", img1);
+        }
+    }
 
+    if (event == EVENT_LBUTTONUP && drag)
+    {
+        imshow("Source", img1);
 
-	if (event == EVENT_LBUTTONUP && drag)
-	{
-		imshow("Source", img1);
+        drag = 0;
+    }
+    if (event == EVENT_RBUTTONDOWN)
+    {
+        flag1 = 1;
+        img1 = img0.clone();
+        for(int i = var; i < numpts ; i++)
+            pts[i] = point;
 
-		drag = 0;
-	}
-	if (event == EVENT_RBUTTONDOWN)
-	{
-		flag1 = 1;
-		img1 = img0.clone();
-		for(int i = var; i < numpts ; i++)
-			pts[i] = point;
-
-		if(var!=0)
+        if(var!=0)
         {
             const Point* pts3[1] = {&pts[0]};
             polylines( img1, pts3, &numpts,1, 1, Scalar(0,0,0), 2, 8, 0);
@@ -169,67 +165,67 @@ void source(int event, int x, int y, int, void*)
             waitKey(0);
         }
 
-	}
-	if (event == EVENT_MBUTTONDOWN)
-	{
-		for(int i = 0; i < numpts ; i++)
-		{
-			pts[i].x=0;
-			pts[i].y=0;
-		}
-		var = 0;
-		flag1 = 0;
-		minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
-		imshow("Source", img0);
+    }
+    if (event == EVENT_MBUTTONDOWN)
+    {
+        for(int i = 0; i < numpts ; i++)
+        {
+            pts[i].x=0;
+            pts[i].y=0;
+        }
+        var = 0;
+        flag1 = 0;
+        minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
+        imshow("Source", img0);
         if(num == 1 || num == 2 || num == 3)
             imshow("Destination",img2);
-		drag = 0;
-	}
+        drag = 0;
+    }
 }
 
 void destination(int event, int x, int y, int, void*)
 {
 
-	Mat im1;
-	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
-	im1 = img2.clone();
-	if (event == EVENT_LBUTTONDOWN)
-	{
+    Mat im1;
+    minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+    im1 = img2.clone();
+    if (event == EVENT_LBUTTONDOWN)
+    {
         flag4 = 1;
-		if(flag1 == 1)
-		{
-			point = Point(x, y);
+        if(flag1 == 1)
+        {
+            point = Point(x, y);
 
             for(int i=0;i<var;i++)
             {
                 pts2[i].x = point.x + pts_diff[i].x;
                 pts2[i].y = point.y + pts_diff[i].y;
             }
-            
+
             for(int i=var;i<numpts;i++)
             {
                 pts2[i].x = point.x + pts_diff[0].x;
                 pts2[i].y = point.y + pts_diff[0].y;
             }
 
-			const Point* pts5[1] = {&pts2[0]};
-			polylines( im1, pts5, &numpts,1, 1, Scalar(0,0,255), 2, 8, 0);
+            const Point* pts5[1] = {&pts2[0]};
+            polylines( im1, pts5, &numpts,1, 1, Scalar(0,0,255), 2, 8, 0);
 
-			destx = x;
-			desty = y;
+            destx = x;
+            desty = y;
 
-			imshow("Destination", im1);
-		}
-	}
-	if (event == EVENT_RBUTTONUP)
-	{
-		for(int i=0;i<flag;i++)
-		{
-			minxd = min(minxd,pts2[i].x);
-			maxxd = max(maxxd,pts2[i].x);
-			minyd = min(minyd,pts2[i].y);
-			maxyd = max(maxyd,pts2[i].y);
-		}
+            imshow("Destination", im1);
+        }
+    }
+    if (event == EVENT_RBUTTONUP)
+    {
+        for(int i=0;i<flag;i++)
+        {
+            minxd = min(minxd,pts2[i].x);
+            maxxd = max(maxxd,pts2[i].x);
+            minyd = min(minyd,pts2[i].y);
+            maxyd = max(maxyd,pts2[i].y);
+        }
 
         if(maxxd > im1.size().width || maxyd > im1.size().height || minxd < 0 || minyd < 0)
         {
@@ -254,7 +250,7 @@ void destination(int event, int x, int y, int, void*)
 
         if(num == 1 || num == 2 || num == 3)
         {
-            seamlessClone(img0,img2,res1,point,blend,num);        
+            seamlessClone(img0,img2,res1,point,blend,num);
             imshow("Cloned Image", blend);
             imwrite("cloned.png",blend);
             waitKey(0);
@@ -302,12 +298,11 @@ int main()
     cin >> num;
     cout << endl;
 
-    char s[]="Source";
-    char d[]="Destination";
-
     minx = INT_MAX; miny = INT_MAX; maxx = INT_MIN; maxy = INT_MIN;
 
     minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
+
+    int flag3 = 0;
 
     if(num == 1 || num == 2 || num == 3)
     {
@@ -315,12 +310,12 @@ int main()
         string src,dest;
         cout << "Enter Source Image: ";
         cin >> src;
-       
+
         cout << "Enter Destination Image: ";
         cin >> dest;
 
         img0 = imread(src);
-        
+
         img2 = imread(dest);
 
         if(!img0.data)
@@ -333,7 +328,7 @@ int main()
             cout << "Destination Image does not exist" << endl;
             exit(0);
         }
-        
+
         channel = img0.channels();
 
         res = Mat::zeros(img2.size(),CV_8UC1);
@@ -358,7 +353,7 @@ int main()
         string src;
         cout << "Enter Source Image: ";
         cin >> src;
-        
+
         cout << "Enter RGB values: " << endl;
         cout << "Red: ";
         cin >> red;
@@ -428,10 +423,10 @@ int main()
 
         cout << "high_threshold: ";
         cin >> high_t;
-        
+
         cout << "kernel_size: ";
         cin >> kernel_size;
-        
+
         img0 = imread(src);
 
         if(!img0.data)
@@ -439,7 +434,7 @@ int main()
             cout << "Source Image does not exist" << endl;
             exit(0);
         }
-        
+
         res1 = Mat::zeros(img0.size(),CV_8UC1);
         final = Mat::zeros(img0.size(),CV_8UC3);
 
@@ -449,12 +444,15 @@ int main()
         setMouseCallback("Source", source, NULL);
         imshow("Source", img0);
     }
-    
-    int flag3 = 0;
-    
-    while(true)
+    else
     {
-        char key = waitKey(0);
+        cout << "Wrong Option Choosen" << endl;
+        exit(0);
+    }
+
+    for(;;)
+    {
+        char key = (char) waitKey(0);
 
         if(key == 'd' && flag3 == 0)
         {

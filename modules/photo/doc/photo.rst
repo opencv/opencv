@@ -10,3 +10,6 @@ photo. Computational Photography
     inpainting
     denoising
     hdr_imaging
+    decolor
+    cloning
+    npr

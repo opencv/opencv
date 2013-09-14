@@ -41,7 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
 #include "math.h"
 #include <vector>
 #include <limits>
@@ -124,12 +123,12 @@ void Decolor::init()
 vector<double> Decolor::product(vector < vector<int> > &comb, vector <double> &initRGB)
 {
     vector <double> res;
-    float dp;
+    double dp;
     for (unsigned int i=0;i<comb.size();i++)
     {
-        dp = 0.0f;
+        dp = 0.0;
         for(int j=0;j<3;j++)
-            dp += comb[i][j] * initRGB[j];
+            dp = dp + (comb[i][j] * initRGB[j]);
         res.push_back(dp);
     }
     return res;
@@ -413,14 +412,14 @@ void Decolor::wei_update_matrix(vector < vector <double> > &poly, vector <double
 
     for(unsigned int i =0;i<poly.size();i++)
         for(unsigned int j=0;j<poly[0].size();j++)
-            P.at<float>(i,j) = poly[i][j];
+            P.at<float>(i,j) = (float) poly[i][j];
 
-    Mat P_trans = P.t();    
+    Mat P_trans = P.t();
     Mat B = Mat(poly.size(),poly[0].size(), CV_32FC1);
     for(unsigned int i =0;i < poly.size();i++)
     {
         for(unsigned int j=0;j<Cg.size();j++)
-            B.at<float>(i,j) = poly[i][j]*Cg[j];
+            B.at<float>(i,j) = (float) (poly[i][j] * Cg[j]);
     }
 
     A = P*P_trans;
@@ -486,14 +485,14 @@ void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
                             Gray.at<float>(i,j)=Gray.at<float>(i,j) +
-                                wei[kk]*pow(red.at<float>(i,j),r)*pow(green.at<float>(i,j),g)*
+                                (float) wei[kk]*pow(red.at<float>(i,j),r)*pow(green.at<float>(i,j),g)*
                                 pow(blue.at<float>(i,j),b);
 
                     kk=kk+1;
                 }
 
-    double minval = INT_MAX;
-    double maxval = INT_MIN;
+    float minval = INT_MAX;
+    float maxval = INT_MIN;
 
     for(int i=0;i<h;i++)
         for(int j =0;j<w;j++)

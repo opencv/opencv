@@ -125,7 +125,7 @@ TEST(Photo_SeamlessClone_featureExchange, regression)
 
 TEST(Photo_SeamlessClone_colorChange, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/Color_Change/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "cloning/color_change/";
     string original_path1 = folder + "source1.png";
     string original_path2 = folder + "mask.png";
 
@@ -179,4 +179,3 @@ TEST(Photo_SeamlessClone_textureFlattening, regression)
     imwrite(folder + "cloned.png", result);
 
 }
-
