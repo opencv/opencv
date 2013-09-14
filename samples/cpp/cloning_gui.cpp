@@ -190,7 +190,6 @@ void source(int event, int x, int y, int, void*)
 void destination(int event, int x, int y, int, void*)
 {
 
-
 	Mat im1;
 	minxd = INT_MAX; minyd = INT_MAX; maxxd = INT_MIN; maxyd = INT_MIN;
 	im1 = img2.clone();
@@ -250,7 +249,6 @@ void destination(int event, int x, int y, int, void*)
                 }
             }
 
-
         const Point* pts6[1] = {&pts2[0]};
         fillPoly(res, pts6, &numpts, 1, Scalar(255, 255, 255), 8, 0);
 
@@ -272,40 +270,6 @@ void destination(int event, int x, int y, int, void*)
     }
 
     im1.release();
-}
-
-void checkfile(char *file)
-{
-    while(1)
-    {
-        printf("Enter %s Image: ",file);
-        if(!strcmp(file,"Source"))
-        {
-            cin >> src;
-            if(access( src, F_OK ) != -1 )
-            {
-                break;
-            }
-            else
-            {
-                printf("Image doesn't exist\n");
-            }
-        }
-        else if(!strcmp(file,"Destination"))
-        {
-            cin >> dest;
-
-            if(access( dest, F_OK ) != -1 )
-            {   
-                break;
-            }
-            else
-            {
-                printf("Image doesn't exist\n");
-            }
-
-        }
-    }
 }
 
 int main()
@@ -348,13 +312,28 @@ int main()
     if(num == 1 || num == 2 || num == 3)
     {
 
-        checkfile(s);
-        checkfile(d);
+        string src,dest;
+        cout << "Enter Source Image: ";
+        cin >> src;
+       
+        cout << "Enter Destination Image: ";
+        cin >> dest;
 
         img0 = imread(src);
-
+        
         img2 = imread(dest);
 
+        if(!img0.data)
+        {
+            cout << "Source Image does not exist" << endl;
+            exit(0);
+        }
+        if(!img2.data)
+        {
+            cout << "Destination Image does not exist" << endl;
+            exit(0);
+        }
+        
         channel = img0.channels();
 
         res = Mat::zeros(img2.size(),CV_8UC1);
@@ -376,8 +355,10 @@ int main()
     }
     else if(num == 4)
     {
-        checkfile(s);
-
+        string src;
+        cout << "Enter Source Image: ";
+        cin >> src;
+        
         cout << "Enter RGB values: " << endl;
         cout << "Red: ";
         cin >> red;
@@ -389,6 +370,12 @@ int main()
         cin >> blue;
 
         img0 = imread(src);
+
+        if(!img0.data)
+        {
+            cout << "Source Image does not exist" << endl;
+            exit(0);
+        }
 
         res1 = Mat::zeros(img0.size(),CV_8UC1);
         final = Mat::zeros(img0.size(),CV_8UC3);
@@ -402,7 +389,9 @@ int main()
     }
     else if(num == 5)
     {
-        checkfile(s);
+        string src;
+        cout << "Enter Source Image: ";
+        cin >> src;
 
         cout << "alpha: ";
         cin >> alpha;
@@ -411,6 +400,12 @@ int main()
         cin >> beta;
 
         img0 = imread(src);
+
+        if(!img0.data)
+        {
+            cout << "Source Image does not exist" << endl;
+            exit(0);
+        }
 
         res1 = Mat::zeros(img0.size(),CV_8UC1);
         final = Mat::zeros(img0.size(),CV_8UC3);
@@ -424,7 +419,9 @@ int main()
     }
     else if(num == 6)
     {
-        checkfile(s);
+        string src;
+        cout << "Enter Source Image: ";
+        cin >> src;
 
         cout << "low_threshold: ";
         cin >> low_t;
@@ -437,6 +434,12 @@ int main()
         
         img0 = imread(src);
 
+        if(!img0.data)
+        {
+            cout << "Source Image does not exist" << endl;
+            exit(0);
+        }
+        
         res1 = Mat::zeros(img0.size(),CV_8UC1);
         final = Mat::zeros(img0.size(),CV_8UC3);
 
