@@ -65,4 +65,3 @@ TEST(Photo_Decolor, regression)
         imwrite(folder + "color_boost.png",color_boost);
 
 }
-

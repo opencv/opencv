@@ -50,7 +50,7 @@ using namespace std;
 
 TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Smoothing/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);
@@ -66,7 +66,7 @@ TEST(Photo_NPR_EdgePreserveSmoothing_RecursiveFilter, regression)
 
 TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Smoothing/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);
@@ -82,7 +82,7 @@ TEST(Photo_NPR_EdgePreserveSmoothing_NormConvFilter, regression)
 
 TEST(Photo_NPR_DetailEnhance, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Detail_Enhance/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);
@@ -98,7 +98,7 @@ TEST(Photo_NPR_DetailEnhance, regression)
 
 TEST(Photo_NPR_PencilSketch, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Pencil_Sketch/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);
@@ -115,7 +115,7 @@ TEST(Photo_NPR_PencilSketch, regression)
 
 TEST(Photo_NPR_Stylization, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Stylization/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);
@@ -131,7 +131,7 @@ TEST(Photo_NPR_Stylization, regression)
 
 TEST(Photo_NPR_EdgeEnhance, regression)
 {
-    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/Edge_Enhance/";
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "npr/";
     string original_path = folder + "test1.png";
 
     Mat source = imread(original_path, IMREAD_COLOR);

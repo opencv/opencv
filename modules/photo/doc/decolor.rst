@@ -17,4 +17,3 @@ Transforms a color image to a grayscale image. It is a basic tool in digital pri
     :param color_boost: Output 8-bit 3-channel image.
 
 This function is to be applied on color images.
-

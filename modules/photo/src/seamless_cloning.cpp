@@ -41,9 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
 #include <iostream>
 #include <stdlib.h>
 
@@ -243,4 +240,3 @@ void cv::textureFlattening(InputArray _src, InputArray _mask, OutputArray _dst,
     Cloning obj;
     obj.texture_flatten(src,cs_mask,gray,low_threshold,high_threshold,kernel_size,blend);
 }
-

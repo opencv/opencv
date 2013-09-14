@@ -41,9 +41,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/core.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <complex>
@@ -162,7 +159,7 @@ void Cloning::dst(double *gtest, double *gfinal,int h,int w)
         for(int j=0,r=1;j<h;j++,r++)
         {
             idx = j*w+i;
-            temp.at<float>(r,0) = gtest[idx];
+            temp.at<float>(r,0) = (float) gtest[idx];
         }
 
         temp.at<float>(h+1,0)=0.0;
@@ -170,7 +167,7 @@ void Cloning::dst(double *gtest, double *gfinal,int h,int w)
         for(int j=h-1, r=h+2;j>=0;j--,r++)
         {
             idx = j*w+i;
-            temp.at<float>(r,0) = -1*gtest[idx];
+            temp.at<float>(r,0) = (float) (-1.0 * gtest[idx]);
         }
 
         merge(planes, 2, complex1);
@@ -179,7 +176,7 @@ void Cloning::dst(double *gtest, double *gfinal,int h,int w)
 
         Mat planes1[] = {Mat::zeros(complex1.size(), CV_32F), Mat::zeros(complex1.size(), CV_32F)};
 
-        split(complex1, planes1); 
+        split(complex1, planes1);
 
         std::complex<double> two_i = std::sqrt(std::complex<double>(-1));
 
@@ -187,7 +184,7 @@ void Cloning::dst(double *gtest, double *gfinal,int h,int w)
 
         for(int c=1,z=0;c<h+1;c++,z++)
         {
-            res.at<float>(z,0) = planes1[1].at<float>(c,0)/fac;
+            res.at<float>(z,0) = (float) (planes1[1].at<float>(c,0)/fac);
         }
 
         for(int q=0,z=0;q<h;q++,z++)
@@ -222,14 +219,14 @@ void Cloning::transpose(double *mat, double *mat_t,int h,int w)
 {
 
     Mat tmp = Mat(h,w,CV_32FC1);
-    unsigned long int idx; 
+    unsigned long int idx;
     for(int i = 0 ; i < h;i++)
     {
         for(int j = 0 ; j < w; j++)
         {
 
             idx = i*(w) + j;
-            tmp.at<float>(i,j) = mat[idx];
+            tmp.at<float>(i,j) = (float) mat[idx];
         }
     }
     Mat tmp_t = tmp.t();
@@ -264,7 +261,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
     for(int i =1;i<h-1;i++)
         for(int j=1;j<w-1;j++)
         {
-            bound.at<uchar>(i,j) = 0.0;
+            bound.at<uchar>(i,j) = 0;
         }
 
     double *f_bp = new double[h*w];
@@ -284,7 +281,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
         for(int j=0;j<w;j++)
         {
             idx = i*w+j;
-            diff.at<float>(i,j) = (lap.at<float>(i,j) - f_bp[idx]);
+            diff.at<float>(i,j) = (float) (lap.at<float>(i,j) - f_bp[idx]);
         }
     }
 
@@ -336,7 +333,6 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
         gfinal_t[idx] = gfinal_t[idx]/denom[idx];
     }
 
-
     idst(gfinal_t,f3,h-2,w-2);
 
     transpose(f3,f3_t,h-2,w-2);
@@ -350,7 +346,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
         for(int j = 0 ; j < w; j++)
         {
             idx = i*w + j;
-            img_d[idx] = (double)img.at<uchar>(i,j);	
+            img_d[idx] = (double)img.at<uchar>(i,j);
         }
     }
     for(int i = 1 ; i < h-1;i++)
@@ -358,7 +354,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
         for(int j = 1 ; j < w-1; j++)
         {
             idx = i*w + j;
-            img_d[idx] = 0.0;	
+            img_d[idx] = 0.0;
         }
     }
     for(int i = 1,id1=0 ; i < h-1;i++,id1++)
@@ -367,7 +363,7 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
         {
             idx = i*w + j;
             idx1= id1*(w-2) + id2;
-            img_d[idx] = f3_t[idx1];	
+            img_d[idx] = f3_t[idx1];
         }
     }
 
@@ -379,9 +375,9 @@ void Cloning::poisson_solver(const Mat &img, Mat &gxx , Mat &gyy, Mat &result)
             if(img_d[idx] < 0.0)
                 result.at<uchar>(i,j) = 0;
             else if(img_d[idx] > 255.0)
-                result.at<uchar>(i,j) = 255.0;
+                result.at<uchar>(i,j) = 255;
             else
-                result.at<uchar>(i,j) = img_d[idx];	
+                result.at<uchar>(i,j) = (uchar) img_d[idx];
         }
     }
 
@@ -410,8 +406,8 @@ void Cloning::init(Mat &I, Mat &wmask)
     for(int i=0;i<I.size().height;i++)
         for(int j=0;j<I.size().width;j++)
         {
-            r_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+0); 
-            g_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+1); 
+            r_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+0);
+            g_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+1);
             b_channel.at<uchar>(i,j) = I.at<uchar>(i,j*3+2);
         }
 
@@ -453,8 +449,8 @@ void Cloning::calc(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
     for(int i=0;i<I.size().height;i++)
         for(int j=0;j<I.size().width;j++)
         {
-            rx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+0); 
-            gx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+1); 
+            rx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+0);
+            gx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+1);
             bx_channel.at<float>(i,j) = gxx.at<float>(i,j*3+2);
         }
 
@@ -465,8 +461,8 @@ void Cloning::calc(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
     for(int i=0;i<I.size().height;i++)
         for(int j=0;j<I.size().width;j++)
         {
-            ry_channel.at<float>(i,j) = gyy.at<float>(i,j*3+0); 
-            gy_channel.at<float>(i,j) = gyy.at<float>(i,j*3+1); 
+            ry_channel.at<float>(i,j) = gyy.at<float>(i,j*3+0);
+            gy_channel.at<float>(i,j) = gyy.at<float>(i,j*3+1);
             by_channel.at<float>(i,j) = gyy.at<float>(i,j*3+2);
         }
 
@@ -474,17 +470,9 @@ void Cloning::calc(Mat &I, Mat &gx, Mat &gy, Mat &sx, Mat &sy)
     resultg = Mat(I.size(),CV_8UC1);
     resultb = Mat(I.size(),CV_8UC1);
 
-    clock_t tic = clock();
-
-
     poisson_solver(r_channel,rx_channel, ry_channel,resultr);
     poisson_solver(g_channel,gx_channel, gy_channel,resultg);
     poisson_solver(b_channel,bx_channel, by_channel,resultb);
-
-    clock_t toc = clock();
-
-    printf("Execution time: %f seconds\n", (double)(toc - tic) / CLOCKS_PER_SEC);
-
 
 }
 
@@ -562,8 +550,8 @@ void Cloning::normal_clone(Mat &I, Mat &mask, Mat &wmask, Mat &final, int num)
         for(int i=0;i<mask.size().height;i++)
             for(int j=0;j<mask.size().width;j++)
             {
-                gray8.at<uchar>(i,j*3+0) = gray.at<uchar>(i,j); 
-                gray8.at<uchar>(i,j*3+1) = gray.at<uchar>(i,j); 
+                gray8.at<uchar>(i,j*3+0) = gray.at<uchar>(i,j);
+                gray8.at<uchar>(i,j*3+1) = gray.at<uchar>(i,j);
                 gray8.at<uchar>(i,j*3+2) = gray.at<uchar>(i,j);
             }
 

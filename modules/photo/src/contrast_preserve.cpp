@@ -42,8 +42,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/photo.hpp"
-#include "opencv2/imgproc.hpp"
-#include <opencv2/highgui.hpp>
 #include "math.h"
 #include <vector>
 #include <limits>
@@ -53,21 +51,21 @@
 using namespace std;
 using namespace cv;
 
-double norm(double);
+double norm_m(double);
 
-double norm(double E)
+double norm_m(double E)
 {
-    return (sqrt(pow(E,2)));
+    return sqrt(pow(E,2));
 }
 
-void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
+void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
 {
     Mat I = _src.getMat();
     _dst.create(I.size(), CV_8UC1);
     Mat dst = _dst.getMat();
 
-    _boost.create(I.size(), CV_8UC3);
-    Mat color_boost = _boost.getMat();
+    _color_boost.create(I.size(), CV_8UC3);
+    Mat color_boost = _color_boost.getMat();
 
     if(!I.data )
     {
@@ -82,7 +80,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 
     int maxIter = 15;
     int iterCount = 0;
-    float tol = .0001;
+    double tol = .0001;
     double E = 0;
     double pre_E = std::numeric_limits<double>::infinity();
 
@@ -113,7 +111,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
 
     //////////////////////////////// main loop starting ////////////////////////////////////////
 
-    while(norm(E-pre_E) > tol)
+    while(norm_m(E-pre_E) > tol)
     {
         iterCount +=1;
         pre_E = E;
@@ -223,7 +221,7 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _boost)
     for(int i =0;i<h1;i++)
         for(int j=0;j<w1;j++)
         {
-            l.at<uchar>(i,j) = 255.0*Gray.at<float>(i,j);
+            l.at<uchar>(i,j) = dst.at<uchar>(i,j);
         }
 
     for(int i =0;i<h1;i++)
