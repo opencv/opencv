@@ -88,14 +88,14 @@ GtkWidget*     cvImageWidgetNew      (int flags);
 void           cvImageWidgetSetImage(CvImageWidget * widget, const CvArr *arr);
 
 // standard GTK object macros
-#define CV_IMAGE_WIDGET(obj)          GTK_CHECK_CAST (obj, cvImageWidget_get_type (), CvImageWidget)
+#define CV_IMAGE_WIDGET(obj)          G_TYPE_CHECK_INSTANCE_CAST (obj, cvImageWidget_get_type (), CvImageWidget)
 #define CV_IMAGE_WIDGET_CLASS(klass)  GTK_CHECK_CLASS_CAST (klass, cvImageWidget_get_type (), CvImageWidgetClass)
-#define CV_IS_IMAGE_WIDGET(obj)       GTK_CHECK_TYPE (obj, cvImageWidget_get_type ())
+#define CV_IS_IMAGE_WIDGET(obj)       G_TYPE_CHECK_INSTANCE_TYPE (obj, cvImageWidget_get_type ())
 
 /////////////////////////////////////////////////////////////////////////////
 // Private API ////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////
-GtkType        cvImageWidget_get_type (void);
+GType        cvImageWidget_get_type (void);
 
 static GtkWidgetClass * parent_class = NULL;
 
@@ -135,7 +135,7 @@ cvImageWidgetNew (int flags)
 {
   CvImageWidget *image_widget;
 
-  image_widget = CV_IMAGE_WIDGET( gtk_type_new (cvImageWidget_get_type ()) );
+  image_widget = CV_IMAGE_WIDGET( gtk_widget_new (cvImageWidget_get_type (), NULL) );
   image_widget->original_image = 0;
   image_widget->scaled_image = 0;
   image_widget->flags = flags | CV_WINDOW_NO_IMAGE;
@@ -153,7 +153,7 @@ cvImageWidget_realize (GtkWidget *widget)
   g_return_if_fail (widget != NULL);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
 
-  GTK_WIDGET_SET_FLAGS (widget, GTK_REALIZED);
+  gtk_widget_set_realized(widget, true);
 
   attributes.x = widget->allocation.x;
   attributes.y = widget->allocation.y;
@@ -270,7 +270,7 @@ cvImageWidget_size_allocate (GtkWidget     *widget,
       cvResize( image_widget->original_image, image_widget->scaled_image, CV_INTER_AREA );
   }
 
-  if (GTK_WIDGET_REALIZED (widget))
+  if (gtk_widget_get_realized (widget))
     {
       image_widget = CV_IMAGE_WIDGET (widget);
 
@@ -321,7 +321,7 @@ static void cvImageWidget_class_init (CvImageWidgetClass * klass)
   object_class = (GtkObjectClass*) klass;
   widget_class = (GtkWidgetClass*) klass;
 
-  parent_class = GTK_WIDGET_CLASS( gtk_type_class (gtk_widget_get_type ()) );
+  parent_class = GTK_WIDGET_CLASS( g_type_class_peek (gtk_widget_get_type ()) );
 
   object_class->destroy = cvImageWidget_destroy;
 
@@ -341,24 +341,18 @@ cvImageWidget_init (CvImageWidget *image_widget)
     image_widget->flags=0;
 }
 
-GtkType cvImageWidget_get_type (void){
-  static GtkType image_type = 0;
+GType cvImageWidget_get_type (void){
+  static GType image_type = 0;
 
   if (!image_type)
     {
-      static const GtkTypeInfo image_info =
-      {
-        (gchar*)"CvImageWidget",
-        sizeof (CvImageWidget),
-        sizeof (CvImageWidgetClass),
-        (GtkClassInitFunc) cvImageWidget_class_init,
-        (GtkObjectInitFunc) cvImageWidget_init,
-        /* reserved_1 */ NULL,
-        /* reserved_1 */ NULL,
-        (GtkClassInitFunc) NULL
-      };
-
-      image_type = gtk_type_unique (GTK_TYPE_WIDGET, &image_info);
+      image_type = g_type_register_static_simple( GTK_TYPE_WIDGET,
+                           (gchar*) "CvImageWidget",
+                           sizeof(CvImageWidgetClass),
+                           (GClassInitFunc) cvImageWidget_class_init,
+                           sizeof(CvImageWidget),
+                           (GInstanceInitFunc) cvImageWidget_init,
+                           (GTypeFlags)NULL);
     }
 
   return image_type;
@@ -854,18 +848,18 @@ CV_IMPL int cvNamedWindow( const char* name, int flags )
     //
     // configure event handlers
     // TODO -- move this to CvImageWidget ?
-    gtk_signal_connect( GTK_OBJECT(window->frame), "key-press-event",
-                        GTK_SIGNAL_FUNC(icvOnKeyPress), window );
-    gtk_signal_connect( GTK_OBJECT(window->widget), "button-press-event",
-                        GTK_SIGNAL_FUNC(icvOnMouse), window );
-    gtk_signal_connect( GTK_OBJECT(window->widget), "button-release-event",
-                        GTK_SIGNAL_FUNC(icvOnMouse), window );
-    gtk_signal_connect( GTK_OBJECT(window->widget), "motion-notify-event",
-                        GTK_SIGNAL_FUNC(icvOnMouse), window );
-    gtk_signal_connect( GTK_OBJECT(window->frame), "delete-event",
-                        GTK_SIGNAL_FUNC(icvOnClose), window );
-    gtk_signal_connect( GTK_OBJECT(window->widget), "expose-event",
-                        GTK_SIGNAL_FUNC(cvImageWidget_expose), window );
+    g_signal_connect( window->frame, "key-press-event",
+                        G_CALLBACK(icvOnKeyPress), window );
+    g_signal_connect( window->widget, "button-press-event",
+                        G_CALLBACK(icvOnMouse), window );
+    g_signal_connect( window->widget, "button-release-event",
+                        G_CALLBACK(icvOnMouse), window );
+    g_signal_connect( window->widget, "motion-notify-event",
+                        G_CALLBACK(icvOnMouse), window );
+    g_signal_connect( window->frame, "delete-event",
+                        G_CALLBACK(icvOnClose), window );
+    g_signal_connect( window->widget, "expose-event",
+                        G_CALLBACK(cvImageWidget_expose), window );
 
     gtk_widget_add_events (window->widget, GDK_BUTTON_RELEASE_MASK | GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK) ;
 
@@ -1225,7 +1219,7 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
         GtkWidget* hscale_box = gtk_hbox_new( FALSE, 10 );
         GtkWidget* hscale_label = gtk_label_new( trackbar_name );
         GtkWidget* hscale = gtk_hscale_new_with_range( 0, count, 1 );
-        gtk_range_set_update_policy( GTK_RANGE(hscale), GTK_UPDATE_CONTINUOUS );
+        //gtk_range_set_update_policy( GTK_RANGE(hscale), GTK_UPDATE_CONTINUOUS );
         gtk_scale_set_digits( GTK_SCALE(hscale), 0 );
         //gtk_scale_set_value_pos( hscale, GTK_POS_TOP );
         gtk_scale_set_draw_value( GTK_SCALE(hscale), TRUE );
@@ -1256,8 +1250,8 @@ icvCreateTrackbar( const char* trackbar_name, const char* window_name,
     trackbar->notify = on_notify;
     trackbar->notify2 = on_notify2;
     trackbar->userdata = userdata;
-    gtk_signal_connect( GTK_OBJECT(trackbar->widget), "value-changed",
-                        GTK_SIGNAL_FUNC(icvOnTrackbar), trackbar );
+    g_signal_connect( trackbar->widget, "value-changed",
+                        G_CALLBACK(icvOnTrackbar), trackbar );
 
     // queue a widget resize to trigger a window resize to
     // compensate for the addition of trackbars
