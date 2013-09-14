@@ -28,18 +28,15 @@ using namespace cv;
 
 int main(int argc, char* argv[])
 {
-    int num,type;
-
-    int flag = 0;
-
-    Mat I = imread(argv[1]);
-
-
     if(argc < 2)
     {
         cout << "usage: " << argv[0] << " <Input image> "  << endl;
         exit(0);
     }
+
+    int num,type;
+
+    Mat I = imread(argv[1]);
 
     if(!I.data)
     {

@@ -69,6 +69,10 @@ float red, green, blue;
 
 double low_t, high_t;
 
+void source(int, int, int, int, void*);
+void destination(int, int, int, int, void*);
+void checkfile(char*);
+
 void source(int event, int x, int y, int, void*)
 {
 
@@ -304,7 +308,7 @@ void checkfile(char *file)
     }
 }
 
-int main(int argc, char **argv)
+int main()
 {
     cout << endl;
     cout << "Cloning Module" << endl;
