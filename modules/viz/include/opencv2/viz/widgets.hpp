@@ -134,173 +134,173 @@ namespace cv
             void setColor(const Color &color);
         };
 
-        class CV_EXPORTS LineWidget : public Widget3D
+        class CV_EXPORTS WLine : public Widget3D
         {
         public:
-            LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
+            WLine(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS PlaneWidget : public Widget3D
+        class CV_EXPORTS WPlane : public Widget3D
         {
         public:
-            PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
-            PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+            WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
+            WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
         private:
             struct SetSizeImpl;
         };
 
-        class CV_EXPORTS SphereWidget : public Widget3D
+        class CV_EXPORTS WSphere : public Widget3D
         {
         public:
-            SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
+            WSphere(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS ArrowWidget : public Widget3D
+        class CV_EXPORTS WArrow : public Widget3D
         {
         public:
-            ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
+            WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS CircleWidget : public Widget3D
+        class CV_EXPORTS WCircle : public Widget3D
         {
         public:
-            CircleWidget(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+            WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS CylinderWidget : public Widget3D
+        class CV_EXPORTS WCylinder : public Widget3D
         {
         public:
-            CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+            WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS CubeWidget : public Widget3D
+        class CV_EXPORTS WCube : public Widget3D
         {
         public:
-            CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
+            WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
         };
 
-        class CV_EXPORTS CoordinateSystemWidget : public Widget3D
+        class CV_EXPORTS WCoordinateSystem : public Widget3D
         {
         public:
-            CoordinateSystemWidget(double scale = 1.0);
+            WCoordinateSystem(double scale = 1.0);
         };
 
-        class CV_EXPORTS PolyLineWidget : public Widget3D
+        class CV_EXPORTS WPolyLine : public Widget3D
         {
         public:
-            PolyLineWidget(InputArray points, const Color &color = Color::white());
+            WPolyLine(InputArray points, const Color &color = Color::white());
 
         private:
             struct CopyImpl;
         };
 
-        class CV_EXPORTS GridWidget : public Widget3D
+        class CV_EXPORTS WGrid : public Widget3D
         {
         public:
             //! Creates grid at the origin
-            GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             //! Creates grid based on the plane equation
-            GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+            WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             
         private:
             struct GridImpl;
         
         };
 
-        class CV_EXPORTS Text3DWidget : public Widget3D
+        class CV_EXPORTS WText3D : public Widget3D
         {
         public:
-            Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, bool face_camera = true, const Color &color = Color::white());
+            WText3D(const String &text, const Point3f &position, double text_scale = 1.0, bool face_camera = true, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
         };
 
-        class CV_EXPORTS TextWidget : public Widget2D
+        class CV_EXPORTS WText : public Widget2D
         {
         public:
-            TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
+            WText(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
 
             void setText(const String &text);
             String getText() const;
         };
         
-        class CV_EXPORTS ImageOverlayWidget : public Widget2D
+        class CV_EXPORTS WImageOverlay : public Widget2D
         {
         public:
-            ImageOverlayWidget(const Mat &image, const Rect &rect);
+            WImageOverlay(const Mat &image, const Rect &rect);
             
             void setImage(const Mat &image);
         };
         
-        class CV_EXPORTS Image3DWidget : public Widget3D
+        class CV_EXPORTS WImage3D : public Widget3D
         {
         public:
             //! Creates 3D image at the origin
-            Image3DWidget(const Mat &image, const Size &size);
+            WImage3D(const Mat &image, const Size &size);
             //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-            Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
+            WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
             
             void setImage(const Mat &image);
         };
         
-        class CV_EXPORTS CameraPositionWidget : public Widget3D
+        class CV_EXPORTS WCameraPosition : public Widget3D
         {
         public:
             //! Creates camera coordinate frame (axes) at the origin
-            CameraPositionWidget(double scale = 1.0);
+            WCameraPosition(double scale = 1.0);
             //! Creates frustum based on the intrinsic marix K at the origin
-            CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum based on the field of view at the origin
-            CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
-            CameraPositionWidget(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+            WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
             
         private:
             struct ProjectImage;
         };
         
-        class CV_EXPORTS TrajectoryWidget : public Widget3D
+        class CV_EXPORTS WTrajectory : public Widget3D
         {
         public:
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
             
             //! Displays trajectory of the given path either by coordinate frames or polyline
-            TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+            WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
             //! Displays trajectory of the given path by frustums
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+            WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
-            TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+            WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
             
         private:
             struct ApplyPath;
         };
         
-        class CV_EXPORTS SpheresTrajectoryWidget : public Widget3D
+        class CV_EXPORTS WSpheresTrajectory: public Widget3D
         {
         public:
-            SpheresTrajectoryWidget(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021,
+            WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021,
                                     double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white());
         };
 
-        class CV_EXPORTS CloudWidget : public Widget3D
+        class CV_EXPORTS WCloud: public Widget3D
         {
         public:
             //! Each point in cloud is mapped to a color in colors
-            CloudWidget(InputArray cloud, InputArray colors);
+            WCloud(InputArray cloud, InputArray colors);
             //! All points in cloud have the same color
-            CloudWidget(InputArray cloud, const Color &color = Color::white());
+            WCloud(InputArray cloud, const Color &color = Color::white());
 
         private:
             struct CreateCloudWidget;
         };
 
-        class CV_EXPORTS CloudCollectionWidget : public Widget3D
+        class CV_EXPORTS WCloudCollection : public Widget3D
         {
         public:
-            CloudCollectionWidget();
+            WCloudCollection();
             
             //! Each point in cloud is mapped to a color in colors
             void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
@@ -311,19 +311,19 @@ namespace cv
             struct CreateCloudWidget;
         };
         
-        class CV_EXPORTS CloudNormalsWidget : public Widget3D
+        class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
-            CloudNormalsWidget(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
+            WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
 
         private:
             struct ApplyCloudNormals;
         };
         
-        class CV_EXPORTS MeshWidget : public Widget3D
+        class CV_EXPORTS WMesh : public Widget3D
         {
         public:
-            MeshWidget(const Mesh3d &mesh);
+            WMesh(const Mesh3d &mesh);
             
         private:
             struct CopyImpl;
@@ -331,27 +331,27 @@ namespace cv
 
         template<> CV_EXPORTS Widget2D Widget::cast<Widget2D>();
         template<> CV_EXPORTS Widget3D Widget::cast<Widget3D>();
-        template<> CV_EXPORTS LineWidget Widget::cast<LineWidget>();
-        template<> CV_EXPORTS PlaneWidget Widget::cast<PlaneWidget>();
-        template<> CV_EXPORTS SphereWidget Widget::cast<SphereWidget>();
-        template<> CV_EXPORTS CylinderWidget Widget::cast<CylinderWidget>();
-        template<> CV_EXPORTS ArrowWidget Widget::cast<ArrowWidget>();
-        template<> CV_EXPORTS CircleWidget Widget::cast<CircleWidget>();
-        template<> CV_EXPORTS CubeWidget Widget::cast<CubeWidget>();
-        template<> CV_EXPORTS CoordinateSystemWidget Widget::cast<CoordinateSystemWidget>();
-        template<> CV_EXPORTS PolyLineWidget Widget::cast<PolyLineWidget>();
-        template<> CV_EXPORTS GridWidget Widget::cast<GridWidget>();
-        template<> CV_EXPORTS Text3DWidget Widget::cast<Text3DWidget>();
-        template<> CV_EXPORTS TextWidget Widget::cast<TextWidget>();
-        template<> CV_EXPORTS ImageOverlayWidget Widget::cast<ImageOverlayWidget>();
-        template<> CV_EXPORTS Image3DWidget Widget::cast<Image3DWidget>();
-        template<> CV_EXPORTS CameraPositionWidget Widget::cast<CameraPositionWidget>();
-        template<> CV_EXPORTS TrajectoryWidget Widget::cast<TrajectoryWidget>();
-        template<> CV_EXPORTS SpheresTrajectoryWidget Widget::cast<SpheresTrajectoryWidget>();
-        template<> CV_EXPORTS CloudWidget Widget::cast<CloudWidget>();
-        template<> CV_EXPORTS CloudCollectionWidget Widget::cast<CloudCollectionWidget>();
-        template<> CV_EXPORTS CloudNormalsWidget Widget::cast<CloudNormalsWidget>();
-        template<> CV_EXPORTS MeshWidget Widget::cast<MeshWidget>();
+        template<> CV_EXPORTS WLine Widget::cast<WLine>();
+        template<> CV_EXPORTS WPlane Widget::cast<WPlane>();
+        template<> CV_EXPORTS WSphere Widget::cast<WSphere>();
+        template<> CV_EXPORTS WCylinder Widget::cast<WCylinder>();
+        template<> CV_EXPORTS WArrow Widget::cast<WArrow>();
+        template<> CV_EXPORTS WCircle Widget::cast<WCircle>();
+        template<> CV_EXPORTS WCube Widget::cast<WCube>();
+        template<> CV_EXPORTS WCoordinateSystem Widget::cast<WCoordinateSystem>();
+        template<> CV_EXPORTS WPolyLine Widget::cast<WPolyLine>();
+        template<> CV_EXPORTS WGrid Widget::cast<WGrid>();
+        template<> CV_EXPORTS WText3D Widget::cast<WText3D>();
+        template<> CV_EXPORTS WText Widget::cast<WText>();
+        template<> CV_EXPORTS WImageOverlay Widget::cast<WImageOverlay>();
+        template<> CV_EXPORTS WImage3D Widget::cast<WImage3D>();
+        template<> CV_EXPORTS WCameraPosition Widget::cast<WCameraPosition>();
+        template<> CV_EXPORTS WTrajectory Widget::cast<WTrajectory>();
+        template<> CV_EXPORTS WSpheresTrajectory Widget::cast<WSpheresTrajectory>();
+        template<> CV_EXPORTS WCloud Widget::cast<WCloud>();
+        template<> CV_EXPORTS WCloudCollection Widget::cast<WCloudCollection>();
+        template<> CV_EXPORTS WCloudNormals Widget::cast<WCloudNormals>();
+        template<> CV_EXPORTS WMesh Widget::cast<WMesh>();
 
     } /* namespace viz */
 } /* namespace cv */

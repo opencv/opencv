@@ -37,16 +37,16 @@ You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/
         viz::Viz3d myWindow("Coordinate Frame");
         
         /// Add coordinate axes
-        myWindow.showWidget("Coordinate Widget", viz::CoordinateSystemWidget());
+        myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
         
         /// Add line to represent (1,1,1) axis
-        viz::LineWidget axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
-        axis.setRenderingProperty(viz::VIZ_LINE_WIDTH, 4.0);
+        viz::WLine axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
+        axis.setRenderingProperty(viz::LINE_WIDTH, 4.0);
         myWindow.showWidget("Line Widget", axis);
         
         /// Construct a cube widget
-        viz::CubeWidget cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
-        cube_widget.setRenderingProperty(viz::VIZ_LINE_WIDTH, 4.0);
+        viz::WCube cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
+        cube_widget.setRenderingProperty(viz::LINE_WIDTH, 4.0);
             
         /// Display widget (update if already displayed)
         myWindow.showWidget("Cube Widget", cube_widget); 
@@ -97,15 +97,15 @@ Here is the general structure of the program:
 .. code-block:: cpp
 
     /// Add coordinate axes
-    myWindow.showWidget("Coordinate Widget", viz::CoordinateSystemWidget());
+    myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
     
 * Display a line representing the axis (1,1,1).
 
 .. code-block:: cpp
 
     /// Add line to represent (1,1,1) axis
-    viz::LineWidget axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
-    axis.setRenderingProperty(viz::VIZ_LINE_WIDTH, 4.0);
+    viz::WLine axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
+    axis.setRenderingProperty(viz::LINE_WIDTH, 4.0);
     myWindow.showWidget("Line Widget", axis);
     
 * Construct a cube.
@@ -113,8 +113,8 @@ Here is the general structure of the program:
 .. code-block:: cpp
 
     /// Construct a cube widget
-    viz::CubeWidget cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
-    cube_widget.setRenderingProperty(viz::VIZ_LINE_WIDTH, 4.0);
+    viz::WCube cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
+    cube_widget.setRenderingProperty(viz::LINE_WIDTH, 4.0);
     myWindow.showWidget("Cube Widget", cube_widget); 
     
 * Create rotation matrix from rodrigues vector

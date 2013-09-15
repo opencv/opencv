@@ -37,15 +37,15 @@ int main()
     viz::Viz3d myWindow("Coordinate Frame");
     
     /// Add coordinate axes
-    myWindow.showWidget("Coordinate Widget", viz::CoordinateSystemWidget());
+    myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
     
     /// Add line to represent (1,1,1) axis
-    viz::LineWidget axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
+    viz::WLine axis(Point3f(-1.0f,-1.0f,-1.0f), Point3f(1.0f,1.0f,1.0f));
     axis.setRenderingProperty(viz::LINE_WIDTH, 4.0);
     myWindow.showWidget("Line Widget", axis);
     
     /// Construct a cube widget
-    viz::CubeWidget cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
+    viz::WCube cube_widget(Point3f(0.5,0.5,0.0), Point3f(0.0,0.0,-0.5), true, viz::Color::blue());
     cube_widget.setRenderingProperty(viz::LINE_WIDTH, 4.0);
     myWindow.showWidget("Cube Widget", cube_widget); 
     

@@ -14,7 +14,7 @@ and modify the widget without re-adding the widget.
 
     ...
     /// Create a cloud widget
-    viz::CloudWidget cw(cloud, viz::Color::red());
+    viz::WCloud cw(cloud, viz::Color::red());
     /// Display it in a window
     myWindow.showWidget("CloudWidget1", cw);
     /// Modify it, and it will be modified in the window.
@@ -118,9 +118,9 @@ Casts a widget to another.
 .. code-block:: cpp
 
     // Create a sphere widget
-    viz::SphereWidget sw(Point3f(0.0f,0.0f,0.0f), 0.5f);
+    viz::WSphere sw(Point3f(0.0f,0.0f,0.0f), 0.5f);
     // Cast sphere widget to cloud widget
-    viz::CloudWidget cw = sw.cast<viz::CloudWidget>();
+    viz::WCloud cw = sw.cast<viz::WCloud>();
 
 .. note:: 3D Widgets can only be cast to 3D Widgets. 2D Widgets can only be cast to 2D Widgets.
 
@@ -231,100 +231,100 @@ Sets the color of the widget.
 
     :param color: color of type :ocv:class:`Color`
 
-viz::LineWidget
----------------
-.. ocv:class:: LineWidget
+viz::WLine
+----------
+.. ocv:class:: WLine
 
 This 3D Widget defines a finite line. ::
 
-    class CV_EXPORTS LineWidget : public Widget3D
+    class CV_EXPORTS WLine : public Widget3D
     {
     public:
-        LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
+        WLine(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white());
     };
     
-viz::LineWidget::LineWidget
----------------------------
-Constructs a LineWidget.
+viz::WLine::WLine
+-----------------
+Constructs a WLine.
 
-.. ocv:function:: LineWidget(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white())
+.. ocv:function:: WLine(const Point3f &pt1, const Point3f &pt2, const Color &color = Color::white())
 
     :param pt1: Start point of the line.
     :param pt2: End point of the line.
     :param color: :ocv:class:`Color` of the line.
     
-viz::PlaneWidget
-----------------
-.. ocv:class:: PlaneWidget
+viz::WPlane
+-----------
+.. ocv:class:: WPlane
 
 This 3D Widget defines a finite plane. ::
 
-    class CV_EXPORTS PlaneWidget : public Widget3D
+    class CV_EXPORTS WPlane : public Widget3D
     {
     public:
-        PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
-        PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
+        WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white());
+        WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white());
     private:
         /* hidden */
     };
     
-viz::PlaneWidget::PlaneWidget
------------------------------
-Constructs a PlaneWidget.
+viz::WPlane::WPlane
+-------------------
+Constructs a WPlane.
 
-.. ocv:function:: PlaneWidget(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white())
+.. ocv:function:: WPlane(const Vec4f& coefs, double size = 1.0, const Color &color = Color::white())
     
     :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
     :param size: Size of the plane.
     :param color: :ocv:class:`Color` of the plane.
 
-.. ocv:function:: PlaneWidget(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white())
+.. ocv:function:: WPlane(const Vec4f& coefs, const Point3f& pt, double size = 1.0, const Color &color = Color::white())
 
     :param coefs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
     :param pt: Position of the plane.
     :param size: Size of the plane.
     :param color: :ocv:class:`Color` of the plane.
     
-viz::SphereWidget
------------------
-.. ocv:class:: SphereWidget
+viz::WSphere
+------------
+.. ocv:class:: WSphere
 
 This 3D Widget defines a sphere. ::
 
-    class CV_EXPORTS SphereWidget : public Widget3D
+    class CV_EXPORTS WSphere : public Widget3D
     {
     public:
-        SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white())
+        WSphere(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white())
     };
 
-viz::SphereWidget::SphereWidget
--------------------------------
-Constructs a SphereWidget.
+viz::WSphere::WSphere
+---------------------
+Constructs a WSphere.
 
-.. ocv:function:: SphereWidget(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white())
+.. ocv:function:: WSphere(const cv::Point3f &center, float radius, int sphere_resolution = 10, const Color &color = Color::white())
 
     :param center: Center of the sphere.
     :param radius: Radius of the sphere.
     :param sphere_resolution: Resolution of the sphere.
     :param color: :ocv:class:`Color` of the sphere.
 
-viz::ArrowWidget
+viz::WArrow
 ----------------
-.. ocv:class:: ArrowWidget
+.. ocv:class:: WArrow
 
 This 3D Widget defines an arrow. ::
 
-    class CV_EXPORTS ArrowWidget : public Widget3D
+    class CV_EXPORTS WArrow : public Widget3D
     {
     public:
-        ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
+        WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white());
     };
     
-viz::ArrowWidget::ArrowWidget
+viz::WArrow::WArrow
 -----------------------------
-Constructs an ArrowWidget.
+Constructs an WArrow.
 
-.. ocv:function:: ArrowWidget(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white())
+.. ocv:function:: WArrow(const Point3f& pt1, const Point3f& pt2, double thickness = 0.03, const Color &color = Color::white())
 
     :param pt1: Start point of the arrow.
     :param pt2: End point of the arrow.
@@ -333,46 +333,46 @@ Constructs an ArrowWidget.
     
 Arrow head is located at the end point of the arrow.
     
-viz::CircleWidget
+viz::WCircle
 -----------------
-.. ocv:class:: CircleWidget
+.. ocv:class:: WCircle
 
 This 3D Widget defines a circle. ::
 
-    class CV_EXPORTS CircleWidget : public Widget3D
+    class CV_EXPORTS WCircle : public Widget3D
     {
     public:
-        CircleWidget(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
+        WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white());
     };
     
-viz::CircleWidget::CircleWidget
+viz::WCircle::WCircle
 -------------------------------
-Constructs a CircleWidget.
+Constructs a WCircle.
 
-.. ocv:function:: CircleWidget(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white())
+.. ocv:function:: WCircle(const Point3f& pt, double radius, double thickness = 0.01, const Color &color = Color::white())
 
     :param pt: Center of the circle.
     :param radius: Radius of the circle.
     :param thickness: Thickness of the circle.
     :param color: :ocv:class:`Color` of the circle.
     
-viz::CylinderWidget
--------------------
-.. ocv:class:: CylinderWidget
+viz::WCylinder
+--------------
+.. ocv:class:: WCylinder
 
 This 3D Widget defines a cylinder. ::
 
-    class CV_EXPORTS CylinderWidget : public Widget3D
+    class CV_EXPORTS WCylinder : public Widget3D
     {
     public:
-        CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
+        WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white());
     };
 
-viz::CylinderWidget::CylinderWidget
+viz::WCylinder::WCylinder
 -----------------------------------
-Constructs a CylinderWidget.
+Constructs a WCylinder.
 
-.. ocv:function:: CylinderWidget(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white())
+.. ocv:function:: WCylinder(const Point3f& pt_on_axis, const Point3f& axis_direction, double radius, int numsides = 30, const Color &color = Color::white())
 
     :param pt_on_axis: A point on the axis of the cylinder.
     :param axis_direction: Direction of the axis of the cylinder.
@@ -380,23 +380,23 @@ Constructs a CylinderWidget.
     :param numsides: Resolution of the cylinder.
     :param color: :ocv:class:`Color` of the cylinder.
     
-viz::CubeWidget
----------------
-.. ocv:class:: CubeWidget
+viz::WCube
+----------
+.. ocv:class:: WCube
 
 This 3D Widget defines a cube. ::
 
-    class CV_EXPORTS CubeWidget : public Widget3D
+    class CV_EXPORTS WCube : public Widget3D
     {
     public:
-        CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
+        WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white());
     };
     
-viz::CubeWidget::CubeWidget
+viz::WCube::WCube
 ---------------------------
-Constructs a CudeWidget.
+Constructs a WCube.
 
-.. ocv:function:: CubeWidget(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white())
+.. ocv:function:: WCube(const Point3f& pt_min, const Point3f& pt_max, bool wire_frame = true, const Color &color = Color::white())
 
     :param pt_min: Specifies minimum point of the bounding box.
     :param pt_max: Specifies maximum point of the bounding box.
@@ -407,104 +407,104 @@ Constructs a CudeWidget.
     :alt: Cube Widget
     :align: center
     
-viz::CoordinateSystemWidget
----------------------------
-.. ocv:class:: CoordinateSystemWidget
+viz::WCoordinateSystem
+----------------------
+.. ocv:class:: WCoordinateSystem
 
 This 3D Widget represents a coordinate system. ::
 
-    class CV_EXPORTS CoordinateSystemWidget : public Widget3D
+    class CV_EXPORTS WCoordinateSystem : public Widget3D
     {
     public:
-        CoordinateSystemWidget(double scale = 1.0);
+        WCoordinateSystem(double scale = 1.0);
     };
     
-viz::CoordinateSystemWidget::CoordinateSystemWidget
+viz::WCoordinateSystem::WCoordinateSystem
 ---------------------------------------------------
-Constructs a CoordinateSystemWidget.
+Constructs a WCoordinateSystem.
 
-.. ocv:function:: CoordinateSystemWidget(double scale = 1.0)
+.. ocv:function:: WCoordinateSystem(double scale = 1.0)
 
     :param scale: Determines the size of the axes.
     
-viz::PolyLineWidget
--------------------
-.. ocv:class:: PolyLineWidget
+viz::WPolyLine
+--------------
+.. ocv:class:: WPolyLine
 
 This 3D Widget defines a poly line. ::
 
-    class CV_EXPORTS PolyLineWidget : public Widget3D
+    class CV_EXPORTS WPolyLine : public Widget3D
     {
     public:
-        PolyLineWidget(InputArray points, const Color &color = Color::white());
+        WPolyLine(InputArray points, const Color &color = Color::white());
 
     private:
         /* hidden */
     };
 
-viz::PolyLineWidget::PolyLineWidget
+viz::WPolyLine::WPolyLine
 -----------------------------------
-Constructs a PolyLineWidget.
+Constructs a WPolyLine.
 
-.. ocv:function:: PolyLineWidget(InputArray points, const Color &color = Color::white())
+.. ocv:function:: WPolyLine(InputArray points, const Color &color = Color::white())
     
     :param points: Point set.
     :param color: :ocv:class:`Color` of the poly line.
     
-viz::GridWidget
----------------
-.. ocv:class:: GridWidget
+viz::WGrid
+----------
+.. ocv:class:: WGrid
 
 This 3D Widget defines a grid. ::
 
-    class CV_EXPORTS GridWidget : public Widget3D
+    class CV_EXPORTS WGrid : public Widget3D
     {
     public:
         //! Creates grid at the origin
-        GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+        WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
         //! Creates grid based on the plane equation
-        GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
+        WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
     private:
         /* hidden */
     };
     
-viz::GridWidget::GridWidget
+viz::WGrid::WGrid
 ---------------------------
-Constructs a GridWidget.
+Constructs a WGrid.
 
-.. ocv:function:: GridWidget(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
+.. ocv:function:: WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
 
     :param dimensions: Number of columns and rows, respectively.
     :param spacing: Size of each column and row, respectively.
     :param color: :ocv:class:`Color` of the grid.
     
-.. ocv:function:  GridWidget(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
+.. ocv:function:  WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white())
     
     :param coeffs: Plane coefficients as in (A,B,C,D) where Ax + By + Cz + D = 0.
     :param dimensions: Number of columns and rows, respectively.
     :param spacing: Size of each column and row, respectively.
     :param color: :ocv:class:`Color` of the grid.
     
-viz::Text3DWidget
------------------
-.. ocv:class:: Text3DWidget
+viz::WText3D
+------------
+.. ocv:class:: WText3D
 
 This 3D Widget represents 3D text. The text always faces the camera. ::
 
-    class CV_EXPORTS Text3DWidget : public Widget3D
+    class CV_EXPORTS WText3D : public Widget3D
     {
     public:
-        Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white());
+        WText3D(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white());
 
         void setText(const String &text);
         String getText() const;
     };
     
-viz::Text3DWidget::Text3DWidget
+viz::WText3D::WText3D
 -------------------------------
-Constructs a Text3DWidget.
+Constructs a WText3D.
 
-.. ocv:function:: Text3DWidget(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white())
+.. ocv:function:: WText3D(const String &text, const Point3f &position, double text_scale = 1.0, double face_camera = true, const Color &color = Color::white())
 
     :param text: Text content of the widget.
     :param position: Position of the text.
@@ -512,126 +512,84 @@ Constructs a Text3DWidget.
     :param face_camera: If true, text always faces the camera.
     :param color: :ocv:class:`Color` of the text.
     
-viz::Text3DWidget::setText
---------------------------
+viz::WText3D::setText
+---------------------
 Sets the text content of the widget.
 
 .. ocv:function:: void setText(const String &text)
 
     :param text: Text content of the widget.
 
-viz::Text3DWidget::getText
---------------------------
+viz::WText3D::getText
+---------------------
 Returns the current text content of the widget.
 
 .. ocv:function:: String getText() const
 
-viz::TextWidget
----------------
-.. ocv:class:: TextWidget
+viz::WText
+----------
+.. ocv:class:: WText
 
 This 2D Widget represents text overlay. ::
 
-    class CV_EXPORTS TextWidget : public Widget2D
+    class CV_EXPORTS WText : public Widget2D
     {
     public:
-        TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
+        WText(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white());
 
         void setText(const String &text);
         String getText() const;
     };
     
-viz::TextWidget::TextWidget
----------------------------
-Constructs a TextWidget.
+viz::WText::WText
+-----------------
+Constructs a WText.
 
-.. ocv:function:: TextWidget(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white())
+.. ocv:function:: WText(const String &text, const Point2i &pos, int font_size = 10, const Color &color = Color::white())
 
     :param text: Text content of the widget.
     :param pos: Position of the text.
     :param font_size: Font size.
     :param color: :ocv:class:`Color` of the text.
     
-viz::TextWidget::setText
-------------------------
+viz::WText::setText
+-------------------
 Sets the text content of the widget.
 
 .. ocv:function:: void setText(const String &text)
 
     :param text: Text content of the widget.
 
-viz::TextWidget::getText
-------------------------
+viz::WText::getText
+-------------------
 Returns the current text content of the widget.
 
 .. ocv:function:: String getText() const
 
-viz::ImageOverlayWidget
------------------------
-.. ocv:class:: ImageOverlayWidget
+viz::WImageOverlay
+------------------
+.. ocv:class:: WImageOverlay
 
 This 2D Widget represents an image overlay. ::
 
-    class CV_EXPORTS ImageOverlayWidget : public Widget2D
+    class CV_EXPORTS WImageOverlay : public Widget2D
     {
     public:
-        ImageOverlayWidget(const Mat &image, const Rect &rect);
+        WImageOverlay(const Mat &image, const Rect &rect);
         
         void setImage(const Mat &image);
     };
     
-viz::ImageOverlayWidget::ImageOverlayWidget
--------------------------------------------
-Constructs an ImageOverlayWidget.
+viz::WImageOverlay::WImageOverlay
+---------------------------------
+Constructs an WImageOverlay.
 
-.. ocv:function:: ImageOverlayWidget(const Mat &image, const Rect &rect)
+.. ocv:function:: WImageOverlay(const Mat &image, const Rect &rect)
 
     :param image: BGR or Gray-Scale image.
     :param rect: Image is scaled and positioned based on rect.
     
-viz::ImageOverlayWidget::setImage
----------------------------------
-Sets the image content of the widget.
-
-.. ocv:function:: void setImage(const Mat &image)
-
-    :param image: BGR or Gray-Scale image.
-    
-viz::Image3DWidget
-------------------
-.. ocv:class:: Image3DWidget
-
-This 3D Widget represents an image in 3D space. ::
-
-    class CV_EXPORTS Image3DWidget : public Widget3D
-    {
-    public:
-        //! Creates 3D image at the origin
-        Image3DWidget(const Mat &image, const Size &size);
-        //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
-        Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
-        
-        void setImage(const Mat &image);
-    };
-
-viz::Image3DWidget::Image3DWidget
----------------------------------
-Constructs an Image3DWidget.
-
-.. ocv:function:: Image3DWidget(const Mat &image, const Size &size)
-    
-    :param image: BGR or Gray-Scale image.
-    :param size: Size of the image.
-    
-.. ocv:function:: Image3DWidget(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size)
-
-    :param position: Position of the image.
-    :param normal: Normal of the plane that represents the image.
-    :param up_vector: Determines orientation of the image.
-    :param image: BGR or Gray-Scale image.
-    :param size: Size of the image.
-    
-viz::Image3DWidget::setImage
+viz::WImageOverlay::setImage
 ----------------------------
 Sets the image content of the widget.
 
@@ -639,34 +597,76 @@ Sets the image content of the widget.
 
     :param image: BGR or Gray-Scale image.
     
-viz::CameraPositionWidget
--------------------------
-.. ocv:class:: CameraPositionWidget
+viz::WImage3D
+-------------
+.. ocv:class:: WImage3D
+
+This 3D Widget represents an image in 3D space. ::
+
+    class CV_EXPORTS WImage3D : public Widget3D
+    {
+    public:
+        //! Creates 3D image at the origin
+        WImage3D(const Mat &image, const Size &size);
+        //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
+        WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
+        
+        void setImage(const Mat &image);
+    };
+
+viz::WImage3D::WImage3D
+-----------------------
+Constructs an WImage3D.
+
+.. ocv:function:: WImage3D(const Mat &image, const Size &size)
+    
+    :param image: BGR or Gray-Scale image.
+    :param size: Size of the image.
+    
+.. ocv:function:: WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size)
+
+    :param position: Position of the image.
+    :param normal: Normal of the plane that represents the image.
+    :param up_vector: Determines orientation of the image.
+    :param image: BGR or Gray-Scale image.
+    :param size: Size of the image.
+    
+viz::WImage3D::setImage
+-----------------------
+Sets the image content of the widget.
+
+.. ocv:function:: void setImage(const Mat &image)
+
+    :param image: BGR or Gray-Scale image.
+    
+viz::WCameraPosition
+--------------------
+.. ocv:class:: WCameraPosition
 
 This 3D Widget represents camera position in a scene by its axes or viewing frustum. ::
 
-    class CV_EXPORTS CameraPositionWidget : public Widget3D
+    class CV_EXPORTS WCameraPosition : public Widget3D
     {
     public:
         //! Creates camera coordinate frame (axes) at the origin
-        CameraPositionWidget(double scale = 1.0);
+        WCameraPosition(double scale = 1.0);
         //! Creates frustum based on the intrinsic marix K at the origin
-        CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
         //! Creates frustum based on the field of view at the origin
-        CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
         //! Creates frustum and display given image at the far plane
-        CameraPositionWidget(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
+        WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
     };
     
-viz::CameraPositionWidget::CameraPositionWidget
------------------------------------------------
-Constructs a CameraPositionWidget.
+viz::WCameraPosition::WCameraPosition
+-------------------------------------
+Constructs a WCameraPosition.
 
 - **Display camera coordinate frame.**
 
-    .. ocv:function:: CameraPositionWidget(double scale = 1.0)
+    .. ocv:function:: WCameraPosition(double scale = 1.0)
 
         Creates camera coordinate frame at the origin.
         
@@ -676,7 +676,7 @@ Constructs a CameraPositionWidget.
 
 - **Display the viewing frustum.**
 
-    .. ocv:function:: CameraPositionWidget(const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
 
         :param K: Intrinsic matrix of the camera.
         :param scale: Scale of the frustum.
@@ -684,7 +684,7 @@ Constructs a CameraPositionWidget.
         
         Creates viewing frustum of the camera based on its intrinsic matrix K.
     
-    .. ocv:function:: CameraPositionWidget(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
 
         :param fov: Field of view of the camera (horizontal, vertical).
         :param scale: Scale of the frustum.
@@ -698,7 +698,7 @@ Constructs a CameraPositionWidget.
 
 - **Display image on the far plane of the viewing frustum.**
 
-    .. ocv:function:: CameraPositionWidget(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white())
 
         :param K: Intrinsic matrix of the camera.
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
@@ -707,7 +707,7 @@ Constructs a CameraPositionWidget.
         
         Creates viewing frustum of the camera based on its intrinsic matrix K, and displays image on the far end plane.
 
-    .. ocv:function:: CameraPositionWidget(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white())
+    .. ocv:function:: WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white())
 
         :param fov: Field of view of the camera (horizontal, vertical).
         :param img: BGR or Gray-Scale image that is going to be displayed on the far plane of the frustum.
@@ -720,33 +720,33 @@ Constructs a CameraPositionWidget.
         :alt: Camera viewing frustum with image
         :align: center
 
-viz::TrajectoryWidget
----------------------
-.. ocv:class:: TrajectoryWidget
+viz::WTrajectory
+----------------
+.. ocv:class:: WTrajectory
 
 This 3D Widget represents a trajectory. ::
 
-    class CV_EXPORTS TrajectoryWidget : public Widget3D
+    class CV_EXPORTS WTrajectory : public Widget3D
     {
     public:
         enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
         
         //! Displays trajectory of the given path either by coordinate frames or polyline
-        TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
+        WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
         //! Displays trajectory of the given path by frustums
-        TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
+        WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
         //! Displays trajectory of the given path by frustums
-        TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
+        WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
         
     private:
         /* hidden */
     };
     
-viz::TrajectoryWidget::TrajectoryWidget
----------------------------------------
-Constructs a TrajectoryWidget.
+viz::WTrajectory::WTrajectory
+-----------------------------
+Constructs a WTrajectory.
 
-.. ocv:function:: TrajectoryWidget(const std::vector<Affine3f> &path, int display_mode = TrajectoryWidget::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0)
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0)
 
     :param path: List of poses on a trajectory.
     :param display_mode: Display mode. This can be DISPLAY_PATH, DISPLAY_FRAMES, DISPLAY_PATH & DISPLAY_FRAMES.
@@ -759,7 +759,7 @@ Constructs a TrajectoryWidget.
     * DISPLAY_FRAMES : Displays coordinate frames at each pose.
     * DISPLAY_PATH & DISPLAY_FRAMES : Displays both poly line and coordinate frames.
     
-.. ocv:function:: TrajectoryWidget(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param K: Intrinsic matrix of the camera.
@@ -768,7 +768,7 @@ Constructs a TrajectoryWidget.
     
     Displays frustums at each pose of the trajectory.
     
-.. ocv:function:: TrajectoryWidget(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
+.. ocv:function:: WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white())
 
     :param path: List of poses on a trajectory.
     :param fov: Field of view of the camera (horizontal, vertical).
@@ -777,26 +777,26 @@ Constructs a TrajectoryWidget.
     
     Displays frustums at each pose of the trajectory.
 
-viz::SpheresTrajectoryWidget
-----------------------------
-.. ocv:class:: SpheresTrajectoryWidget
+viz::WSpheresTrajectory
+-----------------------
+.. ocv:class:: WSpheresTrajectory
 
 This 3D Widget represents a trajectory using spheres and lines, where spheres represent the positions of the camera, and lines
 represent the direction from previous position to the current. ::
 
-    class CV_EXPORTS SpheresTrajectoryWidget : public Widget3D
+    class CV_EXPORTS WSpheresTrajectory : public Widget3D
     {
     public:
-        SpheresTrajectoryWidget(const std::vector<Affine3f> &path, float line_length = 0.05f, 
+        WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, 
                     double init_sphere_radius = 0.021, sphere_radius = 0.007, 
                     Color &line_color = Color::white(), const Color &sphere_color = Color::white());
     };
     
-viz::SpheresTrajectoryWidget::SpheresTrajectoryWidget
------------------------------------------------------
-Constructs a SpheresTrajectoryWidget.
+viz::WSpheresTrajectory::WSpheresTrajectory
+-------------------------------------------
+Constructs a WSpheresTrajectory.
 
-.. ocv:function:: SpheresTrajectoryWidget(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021, double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
+.. ocv:function:: WSpheresTrajectory(const std::vector<Affine3f> &path, float line_length = 0.05f, double init_sphere_radius = 0.021, double sphere_radius = 0.007, const Color &line_color = Color::white(), const Color &sphere_color = Color::white())
     
     :param path: List of poses on a trajectory.
     :param line_length: Length of the lines.
@@ -805,36 +805,36 @@ Constructs a SpheresTrajectoryWidget.
     :param line_color: :ocv:class:`Color` of the lines.
     :param sphere_color: :ocv:class:`Color` of the spheres.
     
-viz::CloudWidget
-----------------
-.. ocv:class:: CloudWidget
+viz::WCloud
+-----------
+.. ocv:class:: WCloud
 
 This 3D Widget defines a point cloud. ::
 
-    class CV_EXPORTS CloudWidget : public Widget3D
+    class CV_EXPORTS WCloud : public Widget3D
     {
     public:
         //! Each point in cloud is mapped to a color in colors
-        CloudWidget(InputArray cloud, InputArray colors);
+        WCloud(InputArray cloud, InputArray colors);
         //! All points in cloud have the same color
-        CloudWidget(InputArray cloud, const Color &color = Color::white());
+        WCloud(InputArray cloud, const Color &color = Color::white());
 
     private:
         /* hidden */
     };
     
-viz::CloudWidget::CloudWidget
------------------------------
-Constructs a CloudWidget.
+viz::WCloud::WCloud
+-------------------
+Constructs a WCloud.
 
-.. ocv:function:: CloudWidget(InputArray cloud, InputArray colors)
+.. ocv:function:: WCloud(InputArray cloud, InputArray colors)
 
     :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param colors: Set of colors. It has to be of the same size with cloud.
     
     Points in the cloud belong to mask when they are set to (NaN, NaN, NaN). 
 
-.. ocv:function:: CloudWidget(InputArray cloud, const Color &color = Color::white())
+.. ocv:function:: WCloud(InputArray cloud, const Color &color = Color::white())
     
     :param cloud: Set of points which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param color: A single :ocv:class:`Color` for the whole cloud.
@@ -843,16 +843,16 @@ Constructs a CloudWidget.
     
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
 
-viz::CloudCollectionWidget
---------------------------
-.. ocv:class:: CloudCollectionWidget
+viz::WCloudCollection
+---------------------
+.. ocv:class:: WCloudCollection
 
 This 3D Widget defines a collection of clouds. ::
 
-    class CV_EXPORTS CloudCollectionWidget : public Widget3D
+    class CV_EXPORTS WCloudCollection : public Widget3D
     {
     public:
-        CloudCollectionWidget();
+        WCloudCollection();
         
         //! Each point in cloud is mapped to a color in colors
         void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
@@ -863,14 +863,14 @@ This 3D Widget defines a collection of clouds. ::
         /* hidden */
     };
     
-viz::CloudCollectionWidget::CloudCollectionWidget
--------------------------------------------------
-Constructs a CloudCollectionWidget.
+viz::WCloudCollection::WCloudCollection
+---------------------------------------
+Constructs a WCloudCollection.
 
-.. ocv:function:: CloudCollectionWidget()
+.. ocv:function:: WCloudCollection()
 
-viz::CloudCollectionWidget::addCloud
-------------------------------------
+viz::WCloudCollection::addCloud
+-------------------------------
 Adds a cloud to the collection.
 
 .. ocv:function:: void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity())
@@ -891,26 +891,26 @@ Adds a cloud to the collection.
 
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
     
-viz::CloudNormalsWidget
------------------------
-.. ocv:class:: CloudNormalsWidget
+viz::WCloudNormals
+------------------
+.. ocv:class:: WCloudNormals
 
 This 3D Widget represents normals of a point cloud. ::
 
-    class CV_EXPORTS CloudNormalsWidget : public Widget3D
+    class CV_EXPORTS WCloudNormals : public Widget3D
     {
     public:
-        CloudNormalsWidget(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
+        WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white());
 
     private:
         /* hidden */
     };
     
-viz::CloudNormalsWidget::CloudNormalsWidget
--------------------------------------------
-Constructs a CloudNormalsWidget.
+viz::WCloudNormals::WCloudNormals
+---------------------------------
+Constructs a WCloudNormals.
 
-.. ocv:function:: CloudNormalsWidget(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white())
+.. ocv:function:: WCloudNormals(InputArray cloud, InputArray normals, int level = 100, float scale = 0.02f, const Color &color = Color::white())
     
     :param cloud: Point set which can be of type: ``CV_32FC3``, ``CV_32FC4``, ``CV_64FC3``, ``CV_64FC4``.
     :param normals: A set of normals that has to be of same type with cloud.
@@ -920,26 +920,26 @@ Constructs a CloudNormalsWidget.
     
 .. note:: In case there are four channels in the cloud, fourth channel is ignored.
     
-viz::MeshWidget
----------------
-.. ocv:class:: MeshWidget
+viz::WMesh
+----------
+.. ocv:class:: WMesh
 
 This 3D Widget defines a mesh. ::
     
-    class CV_EXPORTS MeshWidget : public Widget3D
+    class CV_EXPORTS WMesh : public Widget3D
     {
     public:
-        MeshWidget(const Mesh3d &mesh);
+        WMesh(const Mesh3d &mesh);
         
     private:
         /* hidden */
     };
     
-viz::MeshWidget::MeshWidget
----------------------------
-Constructs a MeshWidget.
+viz::WMesh::WMesh
+-----------------
+Constructs a WMesh.
 
-.. ocv:function:: MeshWidget(const Mesh3d &mesh)
+.. ocv:function:: WMesh(const Mesh3d &mesh)
 
     :param mesh: :ocv:class:`Mesh3d` object that will be displayed.
 

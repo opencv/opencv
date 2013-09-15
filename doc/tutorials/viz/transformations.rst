@@ -67,7 +67,7 @@ You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/
         viz::Viz3d myWindow("Coordinate Frame");
         
         /// Add coordinate axes
-        myWindow.showWidget("Coordinate Widget", viz::CoordinateSystemWidget());
+        myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
         
         /// Let's assume camera has the following properties
         Point3f cam_pos(3.0f,3.0f,3.0f), cam_focal_point(3.0f,3.0f,2.0f), cam_y_dir(-1.0f,0.0f,0.0f);
@@ -81,7 +81,7 @@ You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/
         
         /// Create a cloud widget.
         Mat bunny_cloud = cvcloud_load();
-        viz::CloudWidget cloud_widget(bunny_cloud, viz::Color::green());
+        viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
         
         /// Pose of the widget in camera frame
         Affine3f cloud_pose = Affine3f().translate(Vec3f(0.0f,0.0f,3.0f));
@@ -91,8 +91,8 @@ You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/
         /// Visualize camera frame
         if (!camera_pov)
         {
-            viz::CameraPositionWidget cpw(0.5); // Coordinate axes
-            viz::CameraPositionWidget cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+            viz::WCameraPosition cpw(0.5); // Coordinate axes
+            viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
             myWindow.showWidget("CPW", cpw, cam_pose);
             myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
         }
@@ -147,7 +147,7 @@ Here is the general structure of the program:
 
     /// Create a cloud widget.
     Mat bunny_cloud = cvcloud_load();
-    viz::CloudWidget cloud_widget(bunny_cloud, viz::Color::green());
+    viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
     
 * Given the pose in camera coordinate system, estimate the global pose.
     
@@ -165,8 +165,8 @@ Here is the general structure of the program:
     /// Visualize camera frame
     if (!camera_pov)
     {
-        viz::CameraPositionWidget cpw(0.5); // Coordinate axes
-        viz::CameraPositionWidget cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+        viz::WCameraPosition cpw(0.5); // Coordinate axes
+        viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
         myWindow.showWidget("CPW", cpw, cam_pose);
         myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
     }

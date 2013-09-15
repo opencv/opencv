@@ -59,7 +59,7 @@ namespace cv
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Point Cloud Widget implementation
 
-struct cv::viz::CloudWidget::CreateCloudWidget
+struct cv::viz::WCloud::CreateCloudWidget
 {
     static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
     {
@@ -146,7 +146,7 @@ struct cv::viz::CloudWidget::CreateCloudWidget
     }
 };
 
-cv::viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
+cv::viz::WCloud::WCloud(InputArray _cloud, InputArray _colors)
 {
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
@@ -201,7 +201,7 @@ cv::viz::CloudWidget::CloudWidget(InputArray _cloud, InputArray _colors)
     WidgetAccessor::setProp(*this, actor);
 }
 
-cv::viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
+cv::viz::WCloud::WCloud(InputArray _cloud, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
@@ -233,16 +233,16 @@ cv::viz::CloudWidget::CloudWidget(InputArray _cloud, const Color &color)
     setColor(color);
 }
 
-template<> cv::viz::CloudWidget cv::viz::Widget::cast<cv::viz::CloudWidget>()
+template<> cv::viz::WCloud cv::viz::Widget::cast<cv::viz::WCloud>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<CloudWidget&>(widget);
+    return static_cast<WCloud&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Collection Widget implementation
 
-struct cv::viz::CloudCollectionWidget::CreateCloudWidget
+struct cv::viz::WCloudCollection::CreateCloudWidget
 {
     static inline vtkSmartPointer<vtkPolyData> create(const Mat &cloud, vtkIdType &nr_points)
     {
@@ -376,14 +376,14 @@ struct cv::viz::CloudCollectionWidget::CreateCloudWidget
     }
 };
 
-cv::viz::CloudCollectionWidget::CloudCollectionWidget()
+cv::viz::WCloudCollection::WCloudCollection()
 {
     // Just create the actor
     vtkSmartPointer<vtkLODActor> actor = vtkSmartPointer<vtkLODActor>::New();
     WidgetAccessor::setProp(*this, actor);
 }
 
-void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, InputArray _colors, const Affine3f &pose)
+void cv::viz::WCloudCollection::addCloud(InputArray _cloud, InputArray _colors, const Affine3f &pose)
 {
     Mat cloud = _cloud.getMat();
     Mat colors = _colors.getMat();
@@ -432,7 +432,7 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, InputArray _col
     CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
 }
 
-void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)
+void cv::viz::WCloudCollection::addCloud(InputArray _cloud, const Color &color, const Affine3f &pose)
 {
     Mat cloud = _cloud.getMat();
     CV_Assert(cloud.type() == CV_32FC3 || cloud.type() == CV_64FC3 || cloud.type() == CV_32FC4 || cloud.type() == CV_64FC4);
@@ -471,16 +471,16 @@ void cv::viz::CloudCollectionWidget::addCloud(InputArray _cloud, const Color &co
     CreateCloudWidget::createMapper(actor, transform_filter->GetOutput(), minmax);
 }
 
-template<> cv::viz::CloudCollectionWidget cv::viz::Widget::cast<cv::viz::CloudCollectionWidget>()
+template<> cv::viz::WCloudCollection cv::viz::Widget::cast<cv::viz::WCloudCollection>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<CloudCollectionWidget&>(widget);
+    return static_cast<WCloudCollection&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Cloud Normals Widget implementation
 
-struct cv::viz::CloudNormalsWidget::ApplyCloudNormals
+struct cv::viz::WCloudNormals::ApplyCloudNormals
 {
     template<typename _Tp>
     struct Impl
@@ -555,7 +555,7 @@ struct cv::viz::CloudNormalsWidget::ApplyCloudNormals
     }
 };
 
-cv::viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
+cv::viz::WCloudNormals::WCloudNormals(InputArray _cloud, InputArray _normals, int level, float scale, const Color &color)
 {
     Mat cloud = _cloud.getMat();
     Mat normals = _normals.getMat();
@@ -610,16 +610,16 @@ cv::viz::CloudNormalsWidget::CloudNormalsWidget(InputArray _cloud, InputArray _n
     setColor(color);
 }
 
-template<> cv::viz::CloudNormalsWidget cv::viz::Widget::cast<cv::viz::CloudNormalsWidget>()
+template<> cv::viz::WCloudNormals cv::viz::Widget::cast<cv::viz::WCloudNormals>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<CloudNormalsWidget&>(widget);
+    return static_cast<WCloudNormals&>(widget);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 /// Mesh Widget implementation
 
-struct cv::viz::MeshWidget::CopyImpl
+struct cv::viz::WMesh::CopyImpl
 {
     template<typename _Tp>
     static Vec<_Tp, 3> * copy(const Mat &source, Vec<_Tp, 3> *output, int *look_up, const Mat &nan_mask)
@@ -648,7 +648,7 @@ struct cv::viz::MeshWidget::CopyImpl
     }
 };
 
-cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
+cv::viz::WMesh::WMesh(const Mesh3d &mesh)
 {
     CV_Assert(mesh.cloud.rows == 1 && (mesh.cloud.type() == CV_32FC3 || mesh.cloud.type() == CV_64FC3 || mesh.cloud.type() == CV_32FC4 || mesh.cloud.type() == CV_64FC4));
     CV_Assert(mesh.colors.empty() || (mesh.colors.type() == CV_8UC3 && mesh.cloud.size() == mesh.colors.size()));
@@ -766,8 +766,8 @@ cv::viz::MeshWidget::MeshWidget(const Mesh3d &mesh)
     WidgetAccessor::setProp(*this, actor);
 }
 
-template<> CV_EXPORTS cv::viz::MeshWidget cv::viz::Widget::cast<cv::viz::MeshWidget>()
+template<> CV_EXPORTS cv::viz::WMesh cv::viz::Widget::cast<cv::viz::WMesh>()
 {
     Widget3D widget = this->cast<Widget3D>();
-    return static_cast<MeshWidget&>(widget);
+    return static_cast<WMesh&>(widget);
 }

@@ -39,17 +39,17 @@ void help()
  * @class TriangleWidget
  * @brief Defining our own 3D Triangle widget
  */
-class TriangleWidget : public viz::Widget3D
+class WTriangle : public viz::Widget3D
 {
     public:
-        TriangleWidget(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white()); 
+        WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white()); 
 };
 
 /**
  * @function TriangleWidget::TriangleWidget
  * @brief Constructor
  */
-TriangleWidget::TriangleWidget(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color)
+WTriangle::WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color)
 {
     // Create a triangle
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
@@ -101,7 +101,7 @@ int main()
     viz::Viz3d myWindow("Creating Widgets");
     
     /// Create a triangle widget
-    TriangleWidget tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0), viz::Color::red());
+    WTriangle tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0), viz::Color::red());
     
     /// Show widget in the visualizer window
     myWindow.showWidget("TRIANGLE", tw);
