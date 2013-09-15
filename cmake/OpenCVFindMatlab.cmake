@@ -66,6 +66,8 @@ function(locate_matlab_root)
       if (MATLAB_ROOT_DIR_)
         # sort in order from highest to lowest
         # normally it's in the format MATLAB_R[20XX][A/B]
+        # TODO: numerical rather than lexicographic sort. However,
+        # CMake does not support floating-point MATH(EXPR ...) at this time.
         list(SORT MATLAB_ROOT_DIR_)
         list(REVERSE MATLAB_ROOT_DIR_)
         list(GET MATLAB_ROOT_DIR_ 0 MATLAB_ROOT_DIR_)
