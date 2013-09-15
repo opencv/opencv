@@ -125,15 +125,13 @@ endfunction()
 # sets the variable MATLAB_FOUND to TRUE
 function(locate_matlab_components MATLAB_ROOT_DIR)
   # get the mex extension
-  if (UNIX)
-    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT_)
-  elseif (WIN32)
-    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext.bat OUTPUT_VARIABLE MATLAB_MEXEXT_)
-  endif()
+  find_file(MATLAB_MEXEXT_SCRIPT_ NAMES mexext mexext.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
+  execute_process(COMMAND ${MATLAB_MEXEXT_SCRIPT_}
+                  OUTPUT_VARIABLE MATLAB_MEXEXT_
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
   if (NOT MATLAB_MEXEXT_)
     return()
   endif()
-  string(STRIP ${MATLAB_MEXEXT_} MATLAB_MEXEXT_)
 
   # map the mexext to an architecture extension
   set(ARCHITECTURES_ "maci64" "maci" "glnxa64" "glnx64" "sol64" "sola64" "win32" "win64" )
