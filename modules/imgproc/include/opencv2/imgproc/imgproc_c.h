@@ -378,7 +378,7 @@ CVAPI(CvBox2D)  cvMinAreaRect2( const CvArr* points,
                                 CvMemStorage* storage CV_DEFAULT(NULL));
 
 /* Finds minimum enclosing triangle for a set of points */
-CVAPI(int)  cvMinEnclosingTriangle( const CvArr* points,
+CVAPI(void) cvMinEnclosingTriangle( const CvArr* points,
                                     CvArr* triangle, double* area );
 
 /* Finds minimum enclosing circle for a set of points */
