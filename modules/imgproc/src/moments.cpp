@@ -48,12 +48,12 @@ static void completeMomentState( Moments* moments )
 {
     double cx = 0, cy = 0;
     double mu20, mu11, mu02;
-
+    double inv_m00 = 0.0;
     assert( moments != 0 );
 
     if( fabs(moments->m00) > DBL_EPSILON )
     {
-        double inv_m00 = 1. / moments->m00;
+        inv_m00 = 1. / moments->m00;
         cx = moments->m10 * inv_m00;
         cy = moments->m01 * inv_m00;
     }
@@ -78,6 +78,14 @@ static void completeMomentState( Moments* moments )
     moments->mu12 = moments->m12 - cy * (mu11 + cy * moments->m10) - cx * mu02;
     // mu03 = m03 - cy*(3*mu02 + cy*m01)
     moments->mu03 = moments->m03 - cy * (3 * mu02 + cy * moments->m01);
+
+
+    double inv_sqrt_m00 = std::sqrt(std::abs(inv_m00));
+    double s2 = inv_m00*inv_m00, s3 = s2*inv_sqrt_m00;
+
+    moments->nu20 = moments->mu20*s2; moments->nu11 = moments->mu11*s2; moments->nu02 = moments->mu02*s2;
+    moments->nu30 = moments->mu30*s3; moments->nu21 = moments->mu21*s3; moments->nu12 = moments->mu12*s3; moments->nu03 = moments->mu03*s3;
+
 }
 
 
@@ -151,7 +159,7 @@ static Moments contourMoments( const Mat& contour )
     if( fabs(a00) > FLT_EPSILON )
     {
         double db1_2, db1_6, db1_12, db1_24, db1_20, db1_60;
-        
+
         if( a00 > 0 )
         {
             db1_2 = 0.5;
@@ -354,25 +362,6 @@ Moments::Moments( double _m00, double _m10, double _m01, double _m20, double _m1
     nu30 = mu30*s3; nu21 = mu21*s3; nu12 = mu12*s3; nu03 = mu03*s3;
 }
 
-Moments::Moments( const CvMoments& m )
-{
-    *this = Moments(m.m00, m.m10, m.m01, m.m20, m.m11, m.m02, m.m30, m.m21, m.m12, m.m03);
-}
-
-Moments::operator CvMoments() const
-{
-    CvMoments m;
-    m.m00 = m00; m.m10 = m10; m.m01 = m01;
-    m.m20 = m20; m.m11 = m11; m.m02 = m02;
-    m.m30 = m30; m.m21 = m21; m.m12 = m12; m.m03 = m03;
-    m.mu20 = mu20; m.mu11 = mu11; m.mu02 = mu02;
-    m.mu30 = mu30; m.mu21 = mu21; m.mu12 = mu12; m.mu03 = mu03;
-    double am00 = std::abs(m00);
-    m.inv_sqrt_m00 = am00 > DBL_EPSILON ? 1./std::sqrt(am00) : 0;
-
-    return m;
-}
-
 }
 
 
@@ -475,7 +464,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
         }
     }
-    
+
     completeMomentState( &m );
     return m;
 }

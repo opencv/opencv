@@ -41,6 +41,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/calib3d.hpp"
 #include <stdio.h>
 
 namespace cv
@@ -389,7 +390,7 @@ void LDetector::getMostStable2D(const Mat& image, std::vector<KeyPoint>& keypoin
 
     if( (int)keypoints.size() > maxPoints )
     {
-        sort(keypoints, CmpKeypointScores());
+        std::sort(keypoints.begin(), keypoints.end(), CmpKeypointScores());
         keypoints.resize(maxPoints);
     }
 }
@@ -602,7 +603,7 @@ void LDetector::operator()(const std::vector<Mat>& pyr, std::vector<KeyPoint>& k
 
     if( maxCount > 0 && keypoints.size() > (size_t)maxCount )
     {
-        sort(keypoints, CmpKeypointScores());
+        std::sort(keypoints.begin(), keypoints.end(), CmpKeypointScores());
         keypoints.resize(maxCount);
     }
 }
@@ -617,9 +618,9 @@ void LDetector::read(const FileNode& objnode)
     clusteringDistance = (int)objnode["clustering-distance"];
 }
 
-void LDetector::write(FileStorage& fs, const std::string& name) const
+void LDetector::write(FileStorage& fs, const String& name) const
 {
-    WriteStructContext ws(fs, name, CV_NODE_MAP);
+    internal::WriteStructContext ws(fs, name, CV_NODE_MAP);
 
     fs << "radius" << radius
     << "threshold" << threshold
@@ -707,9 +708,9 @@ FernClassifier::FernClassifier(const std::vector<std::vector<Point2f> >& points,
 }
 
 
-void FernClassifier::write(FileStorage& fs, const std::string& objname) const
+void FernClassifier::write(FileStorage& fs, const String& objname) const
 {
-    WriteStructContext ws(fs, objname, CV_NODE_MAP);
+    internal::WriteStructContext ws(fs, objname, CV_NODE_MAP);
 
     cv::write(fs, "nstructs", nstructs);
     cv::write(fs, "struct-size", structSize);
@@ -718,7 +719,7 @@ void FernClassifier::write(FileStorage& fs, const std::string& objname) const
     cv::write(fs, "compression-method", compressionMethod);
     cv::write(fs, "patch-size", patchSize.width);
     {
-        WriteStructContext wsf(fs, "features", CV_NODE_SEQ + CV_NODE_FLOW);
+        internal::WriteStructContext wsf(fs, "features", CV_NODE_SEQ + CV_NODE_FLOW);
         int i, nfeatures = (int)features.size();
         for( i = 0; i < nfeatures; i++ )
         {
@@ -727,7 +728,7 @@ void FernClassifier::write(FileStorage& fs, const std::string& objname) const
         }
     }
     {
-        WriteStructContext wsp(fs, "posteriors", CV_NODE_SEQ + CV_NODE_FLOW);
+        internal::WriteStructContext wsp(fs, "posteriors", CV_NODE_SEQ + CV_NODE_FLOW);
         cv::write(fs, posteriors);
     }
 }
@@ -1228,7 +1229,7 @@ nstructs(_nstructs), structSize(_structSize), nviews(_nviews),
 compressionMethod(_compressionMethod), patchGenerator(_patchGenerator)
 {}
 
-FernDescriptorMatcher::Params::Params( const std::string& _filename )
+FernDescriptorMatcher::Params::Params( const String& _filename )
 {
     filename = _filename;
 }
@@ -1239,7 +1240,7 @@ FernDescriptorMatcher::FernDescriptorMatcher( const Params& _params )
     params = _params;
     if( !params.filename.empty() )
     {
-        classifier = new FernClassifier;
+        classifier = makePtr<FernClassifier>();
         FileStorage fs(params.filename, FileStorage::READ);
         if( fs.isOpened() )
             classifier->read( fs.getFirstTopLevelNode() );
@@ -1259,7 +1260,7 @@ void FernDescriptorMatcher::clear()
 
 void FernDescriptorMatcher::train()
 {
-    if( classifier.empty() || prevTrainCount < (int)trainPointCollection.keypointCount() )
+    if( !classifier || prevTrainCount < (int)trainPointCollection.keypointCount() )
     {
         assert( params.filename.empty() );
 
@@ -1267,9 +1268,10 @@ void FernDescriptorMatcher::train()
         for( size_t imgIdx = 0; imgIdx < trainPointCollection.imageCount(); imgIdx++ )
             KeyPoint::convert( trainPointCollection.getKeypoints((int)imgIdx), points[imgIdx] );
 
-        classifier = new FernClassifier( points, trainPointCollection.getImages(), std::vector<std::vector<int> >(), 0, // each points is a class
-                                        params.patchSize, params.signatureSize, params.nstructs, params.structSize,
-                                        params.nviews, params.compressionMethod, params.patchGenerator );
+        classifier.reset(
+            new FernClassifier( points, trainPointCollection.getImages(), std::vector<std::vector<int> >(), 0, // each points is a class
+                                params.patchSize, params.signatureSize, params.nstructs, params.structSize,
+                                params.nviews, params.compressionMethod, params.patchGenerator ));
     }
 }
 
@@ -1383,12 +1385,12 @@ void FernDescriptorMatcher::write( FileStorage& fs ) const
 
 bool FernDescriptorMatcher::empty() const
 {
-    return classifier.empty() || classifier->empty();
+    return !classifier || classifier->empty();
 }
 
 Ptr<GenericDescriptorMatcher> FernDescriptorMatcher::clone( bool emptyTrainData ) const
 {
-    FernDescriptorMatcher* matcher = new FernDescriptorMatcher( params );
+    Ptr<FernDescriptorMatcher> matcher = makePtr<FernDescriptorMatcher>( params );
     if( !emptyTrainData )
     {
         CV_Error( CV_StsNotImplemented, "deep clone dunctionality is not implemented, because "
@@ -1476,12 +1478,12 @@ void PlanarObjectDetector::read(const FileNode& node)
 }
 
 
-void PlanarObjectDetector::write(FileStorage& fs, const std::string& objname) const
+void PlanarObjectDetector::write(FileStorage& fs, const String& objname) const
 {
-    WriteStructContext ws(fs, objname, CV_NODE_MAP);
+    internal::WriteStructContext ws(fs, objname, CV_NODE_MAP);
 
     {
-        WriteStructContext wsroi(fs, "model-roi", CV_NODE_SEQ + CV_NODE_FLOW);
+        internal::WriteStructContext wsroi(fs, "model-roi", CV_NODE_SEQ + CV_NODE_FLOW);
         cv::write(fs, modelROI.x);
         cv::write(fs, modelROI.y);
         cv::write(fs, modelROI.width);

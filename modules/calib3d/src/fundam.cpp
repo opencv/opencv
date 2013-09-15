@@ -181,12 +181,12 @@ public:
                     LtL[j][k] += Lx[j]*Lx[k] + Ly[j]*Ly[k];
         }
         completeSymm( _LtL );
-        
+
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
         _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
-        
+
         return 1;
     }
 
@@ -259,6 +259,8 @@ public:
                 Jptr[8] = Jptr[9] = Jptr[10] = 0.;
                 Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
                 Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
+
+                Jptr += 16;
             }
         }
 
@@ -292,7 +294,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
         {
             npoints = p.checkVector(3, -1, false);
             if( npoints < 0 )
-                CV_Error(CV_StsBadArg, "The input arrays should be 2D or 3D point sets");
+                CV_Error(Error::StsBadArg, "The input arrays should be 2D or 3D point sets");
             if( npoints == 0 )
                 return Mat();
             convertPointsFromHomogeneous(p, p);
@@ -305,7 +307,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     if( ransacReprojThreshold <= 0 )
         ransacReprojThreshold = defaultRANSACReprojThreshold;
 
-    Ptr<PointSetRegistrator::Callback> cb = new HomographyEstimatorCallback;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<HomographyEstimatorCallback>();
 
     if( method == 0 || npoints == 4 )
     {
@@ -317,7 +319,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
     else if( method == LMEDS )
         result = createLMeDSPointSetRegistrator(cb, 4, confidence, maxIters)->run(src, dst, H, tempMask);
     else
-        CV_Error(CV_StsBadArg, "Unknown estimation method");
+        CV_Error(Error::StsBadArg, "Unknown estimation method");
 
     if( result && npoints > 4 )
     {
@@ -332,7 +334,7 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
             Mat H8(8, 1, CV_64F, H.ptr<double>());
-            createLMSolver(new HomographyRefineCallback(src, dst), 10)->run(H8);
+            createLMSolver(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
         }
     }
 
@@ -475,7 +477,7 @@ static int run7Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     return n;
 }
 
-    
+
 static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
 {
     double a[9*9], w[9], v[9*9];
@@ -585,11 +587,11 @@ static int run8Point( const Mat& _m1, const Mat& _m2, Mat& _fmatrix )
     gemm( T2, F0, 1., 0, 0., TF, GEMM_1_T );
     F0 = Mat(3, 3, CV_64F, fmatrix);
     gemm( TF, T1, 1., 0, 0., F0, 0 );
-    
+
     // make F(3,3) = 1
     if( fabs(F0.at<double>(2,2)) > FLT_EPSILON )
         F0 *= 1./F0.at<double>(2,2);
-    
+
     return 1;
 }
 
@@ -671,7 +673,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
         {
             npoints = p.checkVector(3, -1, false);
             if( npoints < 0 )
-                CV_Error(CV_StsBadArg, "The input arrays should be 2D or 3D point sets");
+                CV_Error(Error::StsBadArg, "The input arrays should be 2D or 3D point sets");
             if( npoints == 0 )
                 return Mat();
             convertPointsFromHomogeneous(p, p);
@@ -684,7 +686,7 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     if( npoints < 7 )
         return Mat();
 
-    Ptr<PointSetRegistrator::Callback> cb = new FMEstimatorCallback;
+    Ptr<PointSetRegistrator::Callback> cb = makePtr<FMEstimatorCallback>();
     int result;
 
     if( npoints == 7 || method == FM_8POINT )
@@ -739,7 +741,7 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
     {
         npoints = points.checkVector(3);
         if( npoints < 0 )
-            CV_Error( CV_StsBadArg, "The input should be a 2D or 3D point set");
+            CV_Error( Error::StsBadArg, "The input should be a 2D or 3D point set");
         Mat temp;
         convertPointsFromHomogeneous(points, temp);
         points = temp;
@@ -893,7 +895,7 @@ void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 
@@ -974,7 +976,7 @@ void cv::convertPointsToHomogeneous( InputArray _src, OutputArray _dst )
         }
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 

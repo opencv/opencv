@@ -305,23 +305,8 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
         mapPtr[3] = (float) sin(new_theta);
         mapPtr[1] = -mapPtr[3];
     }
-
 }
 
-CV_IMPL double cvFindTransformECC (const CvArr* _image1, const CvArr* _image2,
-                                   CvMat* _map_matrix,
-                                   const int motionType,
-                                   const CvTermCriteria _criteria)
-{
-
-    Mat image1 = cvarrToMat(_image1);
-    Mat image2 = cvarrToMat(_image2);
-    Mat map_matrix = cvarrToMat(_map_matrix);
-    double cc = cv::findTransformECC(image1, image2, map_matrix, motionType,
-        TermCriteria(TermCriteria::EPS+TermCriteria::COUNT, _criteria.max_iter, _criteria.epsilon));
-
-    return cc;
-}
 
 double cv::findTransformECC(InputArray templateImage,
                             InputArray inputImage,
@@ -340,14 +325,14 @@ double cv::findTransformECC(InputArray templateImage,
 
 
     if( ! (src.type()==dst.type()))
-        CV_Error( CV_StsUnmatchedFormats, "Both input images must have the same data type" );
+        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
 
     //accept only 1-channel images
     if( src.type() != CV_8UC1 && src.type()!= CV_32FC1)
-        CV_Error( CV_StsUnsupportedFormat, "Images must have 8uC1 or 32fC1 type");
+        CV_Error( Error::StsUnsupportedFormat, "Images must have 8uC1 or 32fC1 type");
 
     if( map.type() != CV_32FC1)
-        CV_Error( CV_StsUnsupportedFormat, "warpMatrix must be single-channel floating-point matrix");
+        CV_Error( Error::StsUnsupportedFormat, "warpMatrix must be single-channel floating-point matrix");
 
     CV_Assert (map.cols == 3);
     CV_Assert (map.rows == 2 || map.rows ==3);
@@ -443,8 +428,8 @@ double cv::findTransformECC(InputArray templateImage,
     Mat deltaP = Mat(numberOfParameters, 1, CV_32F);//transformation parameter correction
     Mat error = Mat(hs, ws, CV_32F);//error as 2D matrix
 
-    const int imageFlags = CV_INTER_LINEAR+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP;
-    const int maskFlags  = CV_INTER_NN+CV_WARP_FILL_OUTLIERS+CV_WARP_INVERSE_MAP;
+    const int imageFlags = INTER_LINEAR  + WARP_INVERSE_MAP;
+    const int maskFlags  = INTER_NEAREST + WARP_INVERSE_MAP;
 
 
     // iteratively update map_matrix
@@ -519,7 +504,7 @@ double cv::findTransformECC(InputArray templateImage,
         if (lambda_d <= 0.0)
         {
             rho = -1;
-            CV_Error(CV_StsNoConv, "The algorithm stopped before its convergence. The correlation is going to be minimized. Images may be uncorrelated or non-overlapped");
+            CV_Error(Error::StsNoConv, "The algorithm stopped before its convergence. The correlation is going to be minimized. Images may be uncorrelated or non-overlapped");
 
         }
         const double lambda = (lambda_n/lambda_d);

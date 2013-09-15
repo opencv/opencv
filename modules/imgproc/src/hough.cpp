@@ -56,7 +56,10 @@ struct LinePolar
 struct hough_cmp_gt
 {
     hough_cmp_gt(const int* _aux) : aux(_aux) {}
-    bool operator()(int l1, int l2) const { return aux[l1] > aux[l2]; }
+    bool operator()(int l1, int l2) const
+    {
+        return aux[l1] > aux[l2] || (aux[l1] == aux[l2] && l1 < l2);
+    }
     const int* aux;
 };
 
@@ -128,7 +131,7 @@ HoughLinesStandard( const Mat& img, float rho, float theta,
         }
 
     // stage 3. sort the detected lines by accumulator value
-    cv::sort(_sort_buf, hough_cmp_gt(accum));
+    std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
     linesMax = std::min(linesMax, (int)_sort_buf.size());
@@ -763,21 +766,21 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     float idp, dr;
     CvSeqReader reader;
 
-    edges = cvCreateMat( img->rows, img->cols, CV_8UC1 );
+    edges.reset(cvCreateMat( img->rows, img->cols, CV_8UC1 ));
     cvCanny( img, edges, MAX(canny_threshold/2,1), canny_threshold, 3 );
 
-    dx = cvCreateMat( img->rows, img->cols, CV_16SC1 );
-    dy = cvCreateMat( img->rows, img->cols, CV_16SC1 );
+    dx.reset(cvCreateMat( img->rows, img->cols, CV_16SC1 ));
+    dy.reset(cvCreateMat( img->rows, img->cols, CV_16SC1 ));
     cvSobel( img, dx, 1, 0, 3 );
     cvSobel( img, dy, 0, 1, 3 );
 
     if( dp < 1.f )
         dp = 1.f;
     idp = 1.f/dp;
-    accum = cvCreateMat( cvCeil(img->rows*idp)+2, cvCeil(img->cols*idp)+2, CV_32SC1 );
+    accum.reset(cvCreateMat( cvCeil(img->rows*idp)+2, cvCeil(img->cols*idp)+2, CV_32SC1 ));
     cvZero(accum);
 
-    storage = cvCreateMemStorage();
+    storage.reset(cvCreateMemStorage());
     nz = cvCreateSeq( CV_32SC2, sizeof(CvSeq), sizeof(CvPoint), storage );
     centers = cvCreateSeq( CV_32SC1, sizeof(CvSeq), sizeof(int), storage );
 
@@ -863,7 +866,7 @@ icvHoughCirclesGradient( CvMat* img, float dp, float min_dist,
     cvClearSeq( centers );
     cvSeqPushMulti( centers, &sort_buf[0], center_count );
 
-    dist_buf = cvCreateMat( 1, nz_count, CV_32FC1 );
+    dist_buf.reset(cvCreateMat( 1, nz_count, CV_32FC1 ));
     ddata = dist_buf->data.fl;
 
     dr = dp;
@@ -1057,7 +1060,7 @@ void cv::HoughCircles( InputArray _image, OutputArray _circles,
                        double param1, double param2,
                        int minRadius, int maxRadius )
 {
-    Ptr<CvMemStorage> storage = cvCreateMemStorage(STORAGE_SIZE);
+    Ptr<CvMemStorage> storage(cvCreateMemStorage(STORAGE_SIZE));
     Mat image = _image.getMat();
     CvMat c_image = image;
     CvSeq* seq = cvHoughCircles( &c_image, storage, method,

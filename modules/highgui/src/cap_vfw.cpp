@@ -406,7 +406,7 @@ bool CvCaptureCAM_VFW::open( int wIndex )
         fourcc = (DWORD)-1;
 
         memset( &caps, 0, sizeof(caps));
-        capDriverGetCaps( hWndC, &caps, sizeof(&caps));
+        capDriverGetCaps( hWndC, &caps, sizeof(caps));
         ::MoveWindow( hWndC, 0, 0, 320, 240, TRUE );
         capSetUserData( hWndC, (size_t)this );
         capSetCallbackOnFrame( hWndC, frameCallback );
@@ -613,8 +613,10 @@ bool CvVideoWriter_VFW::open( const char* filename, int _fourcc, double _fps, Cv
             close();
             return false;
         }
+        return true;
     }
-    return true;
+    else
+        return false;
 }
 
 

@@ -35,6 +35,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/contrib/compat.hpp"
 
 CvFuzzyPoint::CvFuzzyPoint(double _x, double _y)
 {
@@ -380,6 +381,7 @@ void CvFuzzyMeanShiftTracker::SearchWindow::initDepthValues(IplImage *maskImage,
                 {
                     if (*depthData)
                     {
+                        d = *depthData;
                         m1 += d;
                         if (d < mind)
                             mind = d;
@@ -719,4 +721,3 @@ void CvFuzzyMeanShiftTracker::track(IplImage *maskImage, IplImage *depthMap, int
                 searchMode = tsTracking;
     }
 };
-

@@ -1,5 +1,6 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <stdio.h>
 
@@ -49,7 +50,7 @@ int main( int argc, const char** argv )
         return -1;
     }
     cedge.create(image.size(), image.type());
-    cvtColor(image, gray, CV_BGR2GRAY);
+    cvtColor(image, gray, COLOR_BGR2GRAY);
 
     // Create a window
     namedWindow("Edge map", 1);

@@ -15,8 +15,6 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 .. ocv:cfunction:: void cvCanny( const CvArr* image, CvArr* edges, double threshold1, double threshold2, int aperture_size=3 )
 
-.. ocv:pyoldfunction:: cv.Canny(image, edges, threshold1, threshold2, aperture_size=3) -> None
-
     :param image: single-channel 8-bit input image.
 
     :param edges: output edge map; it has the same size and type as  ``image`` .
@@ -32,7 +30,11 @@ Finds edges in an image using the [Canny86]_ algorithm.
 The function finds edges in the input image ``image`` and marks them in the output map ``edges`` using the Canny algorithm. The smallest value between ``threshold1`` and ``threshold2`` is used for edge linking. The largest value is used to find initial segments of strong edges. See
 http://en.wikipedia.org/wiki/Canny_edge_detector
 
+.. note::
 
+   * An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.cpp
+
+   * (Python) An example on using the canny edge detector can be found at opencv_source_code/samples/cpp/edge.py
 
 cornerEigenValsAndVecs
 ----------------------
@@ -43,8 +45,6 @@ Calculates eigenvalues and eigenvectors of image blocks for corner detection.
 .. ocv:pyfunction:: cv2.cornerEigenValsAndVecs(src, blockSize, ksize[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvCornerEigenValsAndVecs( const CvArr* image, CvArr* eigenvv, int block_size, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.CornerEigenValsAndVecs(image, eigenvv, blockSize, aperture_size=3) -> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -85,19 +85,19 @@ The output of the function can be used for robust edge or corner detection.
     :ocv:func:`cornerHarris`,
     :ocv:func:`preCornerDetect`
 
+.. note::
 
+   * (Python) An example on how to use eigenvectors and eigenvalues to estimate image texture flow direction can be found at opencv_source_code/samples/python2/texture_flow.py
 
 cornerHarris
 ------------
-Harris edge detector.
+Harris corner detector.
 
 .. ocv:function:: void cornerHarris( InputArray src, OutputArray dst, int blockSize, int ksize, double k, int borderType=BORDER_DEFAULT )
 
 .. ocv:pyfunction:: cv2.cornerHarris(src, blockSize, ksize, k[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvCornerHarris( const CvArr* image, CvArr* harris_responce, int block_size, int aperture_size=3, double k=0.04 )
-
-.. ocv:pyoldfunction:: cv.CornerHarris(image, harris_dst, blockSize, aperture_size=3, k=0.04) -> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -111,7 +111,7 @@ Harris edge detector.
 
     :param borderType: Pixel extrapolation method. See  :ocv:func:`borderInterpolate` .
 
-The function runs the Harris edge detector on the image. Similarly to
+The function runs the Harris corner detector on the image. Similarly to
 :ocv:func:`cornerMinEigenVal` and
 :ocv:func:`cornerEigenValsAndVecs` , for each pixel
 :math:`(x, y)` it calculates a
@@ -136,8 +136,6 @@ Calculates the minimal eigenvalue of gradient matrices for corner detection.
 .. ocv:pyfunction:: cv2.cornerMinEigenVal(src, blockSize[, dst[, ksize[, borderType]]]) -> dst
 
 .. ocv:cfunction:: void cvCornerMinEigenVal( const CvArr* image, CvArr* eigenval, int block_size, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.CornerMinEigenVal(image, eigenval, blockSize, aperture_size=3) -> None
 
     :param src: Input single-channel 8-bit or floating-point image.
 
@@ -165,8 +163,6 @@ Refines the corner locations.
 .. ocv:pyfunction:: cv2.cornerSubPix(image, corners, winSize, zeroZone, criteria) -> corners
 
 .. ocv:cfunction:: void cvFindCornerSubPix( const CvArr* image, CvPoint2D32f* corners, int count, CvSize win, CvSize zero_zone, CvTermCriteria criteria )
-
-.. ocv:pyoldfunction:: cv.FindCornerSubPix(image, corners, win, zero_zone, criteria) -> corners
 
     :param image: Input image.
 
@@ -227,8 +223,6 @@ Determines strong corners on an image.
 .. ocv:pyfunction:: cv2.goodFeaturesToTrack(image, maxCorners, qualityLevel, minDistance[, corners[, mask[, blockSize[, useHarrisDetector[, k]]]]]) -> corners
 
 .. ocv:cfunction:: void cvGoodFeaturesToTrack( const CvArr* image, CvArr* eig_image, CvArr* temp_image, CvPoint2D32f* corners, int* corner_count, double quality_level, double min_distance, const CvArr* mask=NULL, int block_size=3, int use_harris=0, double k=0.04 )
-
-.. ocv:pyoldfunction:: cv.GoodFeaturesToTrack(image, eigImage, tempImage, cornerCount, qualityLevel, minDistance, mask=None, blockSize=3, useHarris=0, k=0.04) -> cornerCount
 
     :param image: Input 8-bit or floating-point 32-bit, single-channel image.
 
@@ -318,8 +312,8 @@ The function finds circles in a grayscale image using a modification of the Houg
 
 Example: ::
 
-    #include <cv.h>
-    #include <highgui.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
     #include <math.h>
 
     using namespace cv;
@@ -329,11 +323,11 @@ Example: ::
         Mat img, gray;
         if( argc != 2 && !(img=imread(argv[1], 1)).data)
             return -1;
-        cvtColor(img, gray, CV_BGR2GRAY);
+        cvtColor(img, gray, COLOR_BGR2GRAY);
         // smooth it, otherwise a lot of false circles may be detected
         GaussianBlur( gray, gray, Size(9, 9), 2, 2 );
         vector<Vec3f> circles;
-        HoughCircles(gray, circles, CV_HOUGH_GRADIENT,
+        HoughCircles(gray, circles, HOUGH_GRADIENT,
                      2, gray->rows/4, 200, 100 );
         for( size_t i = 0; i < circles.size(); i++ )
         {
@@ -356,6 +350,9 @@ Example: ::
     :ocv:func:`fitEllipse`,
     :ocv:func:`minEnclosingCircle`
 
+.. note::
+
+   * An example using the Hough circle detector can be found at opencv_source_code/samples/cpp/houghcircles.cpp
 
 HoughLines
 ----------
@@ -366,8 +363,6 @@ Finds lines in a binary image using the standard Hough transform.
 .. ocv:pyfunction:: cv2.HoughLines(image, rho, theta, threshold[, lines[, srn[, stn]]]) -> lines
 
 .. ocv:cfunction:: CvSeq* cvHoughLines2( CvArr* image, void* line_storage, int method, double rho, double theta, int threshold, double param1=0, double param2=0 )
-
-.. ocv:pyoldfunction:: cv.HoughLines2(image, storage, method, rho, theta, threshold, param1=0, param2=0)-> lines
 
     :param image: 8-bit, single-channel binary source image. The image may be modified by the function.
 
@@ -412,6 +407,10 @@ Finds lines in a binary image using the standard Hough transform.
 The function implements the standard or standard multi-scale Hough transform algorithm for line detection.  See http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm for a good explanation of Hough transform.
 See also the example in :ocv:func:`HoughLinesP` description.
 
+.. note::
+
+   * An example using the Hough line detector can be found at opencv_source_code/samples/cpp/houghlines.cpp
+
 HoughLinesP
 -----------
 Finds line segments in a binary image using the probabilistic Hough transform.
@@ -440,9 +439,8 @@ The function implements the probabilistic Hough transform algorithm for line det
     /* This is a standalone program. Pass an image name as the first parameter
     of the program.  Switch between standard and probabilistic Hough transform
     by changing "#if 1" to "#if 0" and back */
-    #include <cv.h>
-    #include <highgui.h>
-    #include <math.h>
+    #include <opencv2/imgproc.hpp>
+    #include <opencv2/highgui.hpp>
 
     using namespace cv;
 
@@ -453,7 +451,7 @@ The function implements the probabilistic Hough transform algorithm for line det
             return -1;
 
         Canny( src, dst, 50, 200, 3 );
-        cvtColor( dst, color_dst, CV_GRAY2BGR );
+        cvtColor( dst, color_dst, COLOR_GRAY2BGR );
 
     #if 0
         vector<Vec2f> lines;
@@ -498,6 +496,110 @@ And this is the output of the above program in case of the probabilistic Hough t
 
 .. image:: pics/houghp.png
 
+.. seealso::
+
+    :ocv:class:`LineSegmentDetector`
+
+
+
+LineSegmentDetector
+-------------------
+Line segment detector class, following the algorithm described at [Rafael12]_.
+
+.. ocv:class:: LineSegmentDetector : public Algorithm
+
+
+createLineSegmentDetectorPtr
+----------------------------
+Creates a smart pointer to a LineSegmentDetector object and initializes it.
+
+.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
+
+    :param _refine: The way found lines will be refined:
+
+        * **LSD_REFINE_NONE** - No refinement applied.
+
+        * **LSD_REFINE_STD**  - Standard refinement is applied. E.g. breaking arches into smaller straighter line approximations.
+
+        * **LSD_REFINE_ADV**  - Advanced refinement. Number of false alarms is calculated, lines are refined through increase of precision, decrement in size, etc.
+
+    :param scale: The scale of the image that will be used to find the lines. Range (0..1].
+
+    :param sigma_scale: Sigma for Gaussian filter. It is computed as sigma = _sigma_scale/_scale.
+
+    :param quant: Bound to the quantization error on the gradient norm.
+
+    :param ang_th: Gradient angle tolerance in degrees.
+
+    :param log_eps: Detection threshold: -log10(NFA) > log_eps. Used only when advancent refinement is chosen.
+
+    :param density_th: Minimal density of aligned region points in the enclosing rectangle.
+
+    :param n_bins: Number of bins in pseudo-ordering of gradient modulus.
+
+The LineSegmentDetector algorithm is defined using the standard values. Only advanced users may want to edit those, as to tailor it for their own application.
+
+
+LineSegmentDetector::detect
+---------------------------
+Finds lines in the input image. See the lsd_lines.cpp sample for possible usage.
+
+.. ocv:function:: void LineSegmentDetector::detect(const InputArray _image, OutputArray _lines, OutputArray width = noArray(), OutputArray prec = noArray(), OutputArray nfa = noArray())
+
+    :param _image A grayscale (CV_8UC1) input image.
+        If only a roi needs to be selected, use ::
+        lsd_ptr->detect(image(roi), lines, ...);
+        lines += Scalar(roi.x, roi.y, roi.x, roi.y);
+
+    :param lines: A vector of Vec4i elements specifying the beginning and ending point of a line. Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end. Returned lines are strictly oriented depending on the gradient.
+
+    :param width: Vector of widths of the regions, where the lines are found. E.g. Width of line.
+
+    :param prec: Vector of precisions with which the lines are found.
+
+    :param nfa: Vector containing number of false alarms in the line region, with precision of 10%. The bigger the value, logarithmically better the detection.
+
+        * -1 corresponds to 10 mean false alarms
+
+        * 0 corresponds to 1 mean false alarm
+
+        * 1 corresponds to 0.1 mean false alarms
+
+    This vector will be calculated only when the objects type is LSD_REFINE_ADV.
+
+This is the output of the default parameters of the algorithm on the above shown image.
+
+.. image:: pics/building_lsd.png
+
+.. note::
+
+   * An example using the LineSegmentDetector can be found at opencv_source_code/samples/cpp/lsd_lines.cpp
+
+LineSegmentDetector::drawSegments
+---------------------------------
+Draws the line segments on a given image.
+
+.. ocv:function:: void LineSegmentDetector::drawSegments(InputOutputArray _image, InputArray lines)
+
+    :param image: The image, where the liens will be drawn. Should be bigger or equal to the image, where the lines were found.
+
+    :param lines: A vector of the lines that needed to be drawn.
+
+
+LineSegmentDetector::compareSegments
+------------------------------------
+Draws two groups of lines in blue and red, counting the non overlapping (mismatching) pixels.
+
+.. ocv:function:: int LineSegmentDetector::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray())
+
+    :param size: The size of the image, where lines1 and lines2 were found.
+
+    :param lines1: The first group of lines that needs to be drawn. It is visualized in blue color.
+
+    :param lines2: The second group of lines. They visualized in red color.
+
+    :param image: Optional image, where the lines will be drawn. The image should be color in order for lines1 and lines2 to be drawn in the above mentioned colors.
+
 
 
 preCornerDetect
@@ -509,8 +611,6 @@ Calculates a feature map for corner detection.
 .. ocv:pyfunction:: cv2.preCornerDetect(src, ksize[, dst[, borderType]]) -> dst
 
 .. ocv:cfunction:: void cvPreCornerDetect( const CvArr* image, CvArr* corners, int aperture_size=3 )
-
-.. ocv:pyoldfunction:: cv.PreCornerDetect(image, corners, apertureSize=3)-> None
 
     :param src: Source single-channel 8-bit of floating-point image.
 
@@ -546,3 +646,5 @@ The corners can be found as local maximums of the functions, as shown below: ::
 .. [Shi94] J. Shi and C. Tomasi. *Good Features to Track*. Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 593-600, June 1994.
 
 .. [Yuen90] Yuen, H. K. and Princen, J. and Illingworth, J. and Kittler, J., *Comparative study of Hough transform methods for circle finding*. Image Vision Comput. 8 1, pp 71–77 (1990)
+
+.. [Rafael12] Rafael Grompone von Gioi, Jérémie Jakubowicz, Jean-Michel Morel, and Gregory Randall, LSD: a Line Segment Detector, Image Processing On Line, vol. 2012. http://dx.doi.org/10.5201/ipol.2012.gjmr-lsd

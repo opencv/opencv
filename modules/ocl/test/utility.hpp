@@ -41,6 +41,8 @@
 
 #ifndef __OPENCV_TEST_UTILITY_HPP__
 #define __OPENCV_TEST_UTILITY_HPP__
+#include "opencv2/core.hpp"
+
 #define LOOP_TIMES 1
 #define MWIDTH 256
 #define MHEIGHT 256
@@ -55,13 +57,12 @@ cv::Mat randomMat(cv::Size size, int type, double minVal = 0.0, double maxVal = 
 
 void showDiff(cv::InputArray gold, cv::InputArray actual, double eps);
 
-//! return true if device supports specified feature and gpu module was built with support the feature.
-//bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
+// This function test if gpu_rst matches cpu_rst.
+// If the two vectors are not equal, it will return the difference in vector size
+// Else it will return (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
+// The smaller, the better matched
+double checkRectSimilarity(cv::Size sz, std::vector<cv::Rect>& ob1, std::vector<cv::Rect>& ob2);
 
-//! return all devices compatible with current gpu module build.
-//const std::vector<cv::ocl::DeviceInfo>& devices();
-//! return all devices compatible with current gpu module build which support specified feature.
-//std::vector<cv::ocl::DeviceInfo> devices(cv::gpu::FeatureSet feature);
 
 //! read image from testdata folder.
 cv::Mat readImage(const std::string &fileName, int flags = cv::IMREAD_COLOR);
@@ -71,25 +72,28 @@ double checkNorm(const cv::Mat &m);
 double checkNorm(const cv::Mat &m1, const cv::Mat &m2);
 double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 
+//oclMat create
+cv::ocl::oclMat createMat_ocl(cv::Size size, int type, bool useRoi = false);
+cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
 }
 
-/*#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
+#define EXPECT_MAT_NEAR(mat1, mat2, eps) \
 { \
    ASSERT_EQ(mat1.type(), mat2.type()); \
    ASSERT_EQ(mat1.size(), mat2.size()); \
    EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
-}*/
-
+}
+/*
 #define EXPECT_MAT_NEAR(mat1, mat2, eps,s) \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
     ASSERT_EQ(mat1.size(), mat2.size()); \
     EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps)<<s; \
 }
-
+*/
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \
@@ -130,30 +134,21 @@ private:
 
 void PrintTo(const Inverse &useRoi, std::ostream *os);
 
-CV_ENUM(CmpCode, cv::CMP_EQ, cv::CMP_GT, cv::CMP_GE, cv::CMP_LT, cv::CMP_LE, cv::CMP_NE)
-
-CV_ENUM(NormCode, cv::NORM_INF, cv::NORM_L1, cv::NORM_L2, cv::NORM_TYPE_MASK, cv::NORM_RELATIVE, cv::NORM_MINMAX)
-
 enum {FLIP_BOTH = 0, FLIP_X = 1, FLIP_Y = -1};
 CV_ENUM(FlipCode, FLIP_BOTH, FLIP_X, FLIP_Y)
 
-CV_ENUM(ReduceOp, CV_REDUCE_SUM, CV_REDUCE_AVG, CV_REDUCE_MAX, CV_REDUCE_MIN)
+CV_ENUM(CmpCode, CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE)
+CV_ENUM(NormCode, NORM_INF, NORM_L1, NORM_L2, NORM_TYPE_MASK, NORM_RELATIVE, NORM_MINMAX)
+CV_ENUM(ReduceOp, REDUCE_SUM, REDUCE_AVG, REDUCE_MAX, REDUCE_MIN)
+CV_ENUM(MorphOp, MORPH_OPEN, MORPH_CLOSE, MORPH_GRADIENT, MORPH_TOPHAT, MORPH_BLACKHAT)
+CV_ENUM(ThreshOp, THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV)
+CV_ENUM(Interpolation, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC)
+CV_ENUM(Border, BORDER_REFLECT101, BORDER_REPLICATE, BORDER_CONSTANT, BORDER_REFLECT, BORDER_WRAP)
+CV_ENUM(TemplateMethod, TM_SQDIFF, TM_SQDIFF_NORMED, TM_CCORR, TM_CCORR_NORMED, TM_CCOEFF, TM_CCOEFF_NORMED)
 
-CV_FLAGS(GemmFlags, cv::GEMM_1_T, cv::GEMM_2_T, cv::GEMM_3_T);
-
-CV_ENUM(MorphOp, cv::MORPH_OPEN, cv::MORPH_CLOSE, cv::MORPH_GRADIENT, cv::MORPH_TOPHAT, cv::MORPH_BLACKHAT)
-
-CV_ENUM(ThreshOp, cv::THRESH_BINARY, cv::THRESH_BINARY_INV, cv::THRESH_TRUNC, cv::THRESH_TOZERO, cv::THRESH_TOZERO_INV)
-
-CV_ENUM(Interpolation, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC)
-
-CV_ENUM(Border, cv::BORDER_REFLECT101, cv::BORDER_REPLICATE, cv::BORDER_CONSTANT, cv::BORDER_REFLECT, cv::BORDER_WRAP)
-
-CV_FLAGS(WarpFlags, cv::INTER_NEAREST, cv::INTER_LINEAR, cv::INTER_CUBIC, cv::WARP_INVERSE_MAP)
-
-CV_ENUM(TemplateMethod, cv::TM_SQDIFF, cv::TM_SQDIFF_NORMED, cv::TM_CCORR, cv::TM_CCORR_NORMED, cv::TM_CCOEFF, cv::TM_CCOEFF_NORMED)
-
-CV_FLAGS(DftFlags, cv::DFT_INVERSE, cv::DFT_SCALE, cv::DFT_ROWS, cv::DFT_COMPLEX_OUTPUT, cv::DFT_REAL_OUTPUT)
+CV_FLAGS(GemmFlags, GEMM_1_T, GEMM_2_T, GEMM_3_T);
+CV_FLAGS(WarpFlags, INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, WARP_INVERSE_MAP)
+CV_FLAGS(DftFlags, DFT_INVERSE, DFT_SCALE, DFT_ROWS, DFT_COMPLEX_OUTPUT, DFT_REAL_OUTPUT)
 
 void  run_perf_test();
 

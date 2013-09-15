@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import os, sys, fnmatch, re
 
@@ -83,11 +83,15 @@ def get_cv2_object(name):
     elif name == "DescriptorExtractor":
         return cv2.DescriptorExtractor_create("ORB"), name
     elif name == "BackgroundSubtractor":
-        return cv2.BackgroundSubtractorMOG(), name
+        return cv2.createBackgroundSubtractorMOG(), name
     elif name == "StatModel":
         return cv2.KNearest(), name
     else:
-        return getattr(cv2, name)(), name
+        try:
+            obj = getattr(cv2, name)()
+        except AttributeError:
+            obj = getattr(cv2, "create" + name)()
+        return obj, name
 
 def compareSignatures(f, s):
     # function names
@@ -197,9 +201,9 @@ def process_module(module, path):
             hdrlist.append(os.path.join(root, filename))
 
     if module == "gpu":
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "cuda_devptrs.hpp"))
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpumat.hpp"))
-        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "stream_accessor.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu_types.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu.hpp"))
+        hdrlist.append(os.path.join(path, "..", "core", "include", "opencv2", "core", "gpu_stream_accessor.hpp"))
 
     decls = []
     for hname in hdrlist:

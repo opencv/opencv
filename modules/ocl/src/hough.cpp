@@ -73,7 +73,7 @@ namespace
 
         int totalCount = 0;
         int err = CL_SUCCESS;
-        cl_mem counter = clCreateBuffer(src.clCxt->impl->clContext,
+        cl_mem counter = clCreateBuffer((cl_context)src.clCxt->oclContext(),
                                         CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
                                         &totalCount,
@@ -98,7 +98,7 @@ namespace
         args.push_back( std::make_pair( sizeof(cl_mem)  , (void *)&counter ));
 
         openCLExecuteKernel(src.clCxt, &imgproc_hough, "buildPointList", globalThreads, localThreads, args, -1, -1);
-        openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
+        openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)src.clCxt->oclCommandQueue(), counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
         openCLSafeCall(clReleaseMemObject(counter));
 
         return totalCount;
@@ -143,7 +143,7 @@ namespace
     {
         int totalCount = 0;
         int err = CL_SUCCESS;
-        cl_mem counter = clCreateBuffer(accum.clCxt->impl->clContext,
+        cl_mem counter = clCreateBuffer((cl_context)accum.clCxt->oclContext(),
                                         CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
                                         &totalCount,
@@ -169,7 +169,7 @@ namespace
 
         openCLExecuteKernel(accum.clCxt, &imgproc_hough, "buildCentersList", globalThreads, localThreads, args, -1, -1);
 
-        openCLSafeCall(clEnqueueReadBuffer(accum.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
+        openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)accum.clCxt->oclCommandQueue(), counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
         openCLSafeCall(clReleaseMemObject(counter));
 
         return totalCount;
@@ -182,14 +182,14 @@ namespace
     {
         int totalCount = 0;
         int err = CL_SUCCESS;
-        cl_mem counter = clCreateBuffer(circles.clCxt->impl->clContext,
+        cl_mem counter = clCreateBuffer((cl_context)circles.clCxt->oclContext(),
                                         CL_MEM_COPY_HOST_PTR,
                                         sizeof(int),
                                         &totalCount,
                                         &err);
         openCLSafeCall(err);
 
-        const size_t blkSizeX = circles.clCxt->impl->maxWorkGroupSize;
+        const size_t blkSizeX = circles.clCxt->maxWorkGroupSize();
         size_t localThreads[3] = { blkSizeX, 1, 1 };
 
         const size_t glbSizeX = centersCount * blkSizeX;
@@ -216,7 +216,7 @@ namespace
 
         openCLExecuteKernel(circles.clCxt, &imgproc_hough, "circlesAccumRadius", globalThreads, localThreads, args, -1, -1);
 
-        openCLSafeCall(clEnqueueReadBuffer(circles.clCxt->impl->clCmdQueue, counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
+        openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)circles.clCxt->oclCommandQueue(), counter, CL_TRUE, 0, sizeof(int), &totalCount, 0, NULL, NULL));
 
         openCLSafeCall(clReleaseMemObject(counter));
 
@@ -242,7 +242,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
     CV_Assert(src.type() == CV_8UC1);
     CV_Assert(src.cols < std::numeric_limits<unsigned short>::max());
     CV_Assert(src.rows < std::numeric_limits<unsigned short>::max());
-    CV_Assert(method == CV_HOUGH_GRADIENT);
+    CV_Assert(method == HOUGH_GRADIENT);
     CV_Assert(dp > 0);
     CV_Assert(minRadius > 0 && maxRadius > minRadius);
     CV_Assert(cannyThreshold > 0);
@@ -283,7 +283,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
         unsigned int* oldBuf = oldBuf_;
         unsigned int* newBuf = newBuf_;
 
-        openCLSafeCall(clEnqueueReadBuffer(buf.centers.clCxt->impl->clCmdQueue,
+        openCLSafeCall(clEnqueueReadBuffer((cl_command_queue)buf.centers.clCxt->oclCommandQueue(),
                                            (cl_mem)buf.centers.data,
                                            CL_TRUE,
                                            0,
@@ -357,7 +357,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
             }
         }
 
-        openCLSafeCall(clEnqueueWriteBuffer(buf.centers.clCxt->impl->clCmdQueue,
+        openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)buf.centers.clCxt->oclCommandQueue(),
                                             (cl_mem)buf.centers.data,
                                             CL_TRUE,
                                             0,
@@ -385,7 +385,7 @@ void cv::ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& 
 void cv::ocl::HoughCirclesDownload(const oclMat& d_circles, cv::OutputArray h_circles_)
 {
     // FIX ME: garbage values are copied!
-    CV_Error(CV_StsNotImplemented, "HoughCirclesDownload is not implemented");
+    CV_Error(Error::StsNotImplemented, "HoughCirclesDownload is not implemented");
 
     if (d_circles.empty())
     {

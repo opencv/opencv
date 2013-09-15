@@ -46,6 +46,13 @@ MACRO(_PCH_GET_COMPILE_FLAGS _out_compile_flags)
             LIST(APPEND ${_out_compile_flags} "-fPIC")
         ENDIF()
 
+        GET_TARGET_PROPERTY(_target_definitions ${_PCH_current_target} COMPILE_DEFINITIONS)
+        if(_target_definitions)
+          foreach(_def ${_target_definitions})
+            LIST(APPEND ${_out_compile_flags} "-D${_def}")
+          endforeach()
+        endif()
+
     ELSE()
         ## TODO ... ? or does it work out of the box
     ENDIF()
@@ -272,12 +279,9 @@ ENDMACRO(ADD_PRECOMPILED_HEADER)
 MACRO(GET_NATIVE_PRECOMPILED_HEADER _targetName _input)
 
     if(CMAKE_GENERATOR MATCHES "^Visual.*$")
-        SET(_dummy_str "#include \"${_input}\"\n"
-"// This is required to suppress LNK4221.  Very annoying.\n"
-"void *g_${_targetName}Dummy = 0\;\n")
+        set(_dummy_str "#include \"${_input}\"\n")
 
-        # Use of cxx extension for generated files (as Qt does)
-        SET(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cxx)
+        set(${_targetName}_pch ${CMAKE_CURRENT_BINARY_DIR}/${_targetName}_pch.cpp)
         if(EXISTS ${${_targetName}_pch})
             # Check if contents is the same, if not rewrite
             # todo
@@ -337,11 +341,7 @@ ENDMACRO(ADD_NATIVE_PRECOMPILED_HEADER)
 
 macro(ocv_add_precompiled_header_to_target the_target pch_header)
   if(PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS AND EXISTS "${pch_header}")
-    if(CMAKE_GENERATOR MATCHES Visual)
-      string(REGEX REPLACE "hpp$" "cpp" ${the_target}_pch "${pch_header}")
-      add_native_precompiled_header(${the_target} ${pch_header})
-      unset(${the_target}_pch)
-    elseif(CMAKE_GENERATOR MATCHES Xcode)
+    if(CMAKE_GENERATOR MATCHES "^Visual" OR CMAKE_GENERATOR MATCHES Xcode)
       add_native_precompiled_header(${the_target} ${pch_header})
     elseif(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_GENERATOR MATCHES "Makefiles|Ninja")
       add_precompiled_header(${the_target} ${pch_header})

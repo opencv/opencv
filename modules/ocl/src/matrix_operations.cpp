@@ -73,6 +73,7 @@ namespace cv
     }
 }
 
+
 ////////////////////////////////////////////////////////////////////////
 // convert_C3C4
 static void convert_C3C4(const cl_mem &src, oclMat &dst)
@@ -80,7 +81,7 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
     int dstStep_in_pixel = dst.step1() / dst.oclchannels();
     int pixel_end = dst.wholecols * dst.wholerows - 1;
     Context *clCxt = dst.clCxt;
-    std::string kernelName = "convertC3C4";
+    String kernelName = "convertC3C4";
     char compile_option[32];
     switch(dst.depth())
     {
@@ -106,7 +107,7 @@ static void convert_C3C4(const cl_mem &src, oclMat &dst)
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src));
@@ -128,7 +129,7 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
     int srcStep_in_pixel = src.step1() / src.oclchannels();
     int pixel_end = src.wholecols * src.wholerows - 1;
     Context *clCxt = src.clCxt;
-    std::string kernelName = "convertC4C3";
+    String kernelName = "convertC4C3";
     char compile_option[32];
     switch(src.depth())
     {
@@ -154,7 +155,7 @@ static void convert_C4C3(const oclMat &src, cl_mem &dst)
         sprintf(compile_option, "-D GENTYPE4=double4");
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -177,53 +178,70 @@ void cv::ocl::oclMat::upload(const Mat &m)
     Size wholeSize;
     Point ofs;
     m.locateROI(wholeSize, ofs);
-    //   int type = m.type();
-    //   if(m.oclchannels() == 3)
-    //{
-    //	type = CV_MAKETYPE(m.depth(), 4);
-    //}
-    create(wholeSize, m.type());
-
     if(m.channels() == 3)
     {
+        create(wholeSize, m.type());
         int pitch = wholeSize.width * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
-                                     (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
-        openCLVerifyCall(err);
+        cl_mem temp;
+        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP){
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
+            openCLVerifyCall(err);
+            openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step,
+                           wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+        }
+        else{
+            temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE|CL_MEM_USE_HOST_PTR,
+                                  (pitch * wholeSize.height + tail_padding - 1) / tail_padding * tail_padding, m.datastart, &err);
+            openCLVerifyCall(err);
+        }
 
-        openCLMemcpy2D(clCxt, temp, pitch, m.datastart, m.step, wholeSize.width * m.elemSize(), wholeSize.height, clMemcpyHostToDevice, 3);
+
         convert_C3C4(temp, *this);
-        //int* cputemp=new int[wholeSize.height*wholeSize.width * 3];
-        //int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, temp, CL_TRUE,
-        //						0, wholeSize.height*wholeSize.width * 3* sizeof(int), cputemp, 0, NULL, NULL));
-        //openCLSafeCall(clEnqueueReadBuffer(clCxt->impl->clCmdQueue, (cl_mem)data, CL_TRUE,
-        //						0, this->step*this->wholerows, cpudata, 0, NULL, NULL));
-        //for(int i=0;i<wholeSize.height;i++)
-        //{
-        //	int *a = cputemp+i*wholeSize.width * 3,*b = cpudata + i*this->step/sizeof(int);
-        //	for(int j=0;j<wholeSize.width;j++)
-        //	{
-        //		if((a[3*j] != b[4*j])||(a[3*j+1] != b[4*j+1])||(a[3*j+2] != b[4*j+2]))
-        //			printf("rows=%d,cols=%d,cputtemp=%d,%d,%d;cpudata=%d,%d,%d\n",
-        //			i,j,a[3*j],a[3*j+1],a[3*j+2],b[4*j],b[4*j+1],b[4*j+2]);
-        //	}
-        //}
-        //delete []cputemp;
-        //delete []cpudata;
         openCLSafeCall(clReleaseMemObject(temp));
     }
     else
     {
-        openCLMemcpy2D(clCxt, data, step, m.datastart, m.step, wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
+        // try to use host ptr
+        createEx(wholeSize, m.type(), gDeviceMemRW, gDeviceMemType, m.datastart);
+        if(gDeviceMemType!=DEVICE_MEM_UHP && gDeviceMemType!=DEVICE_MEM_CHP)
+            openCLMemcpy2D(clCxt, data, step, m.datastart, m.step,
+                           wholeSize.width * elemSize(), wholeSize.height, clMemcpyHostToDevice);
     }
 
     rows = m.rows;
     cols = m.cols;
     offset = ofs.y * step + ofs.x * elemSize();
-    //download_channels = m.channels();
+}
+
+cv::ocl::oclMat::operator cv::_InputArray()
+{
+    _InputArray newInputArray;
+    newInputArray.flags = cv::_InputArray::OCL_MAT;
+    newInputArray.obj   = reinterpret_cast<void *>(this);
+    return newInputArray;
+}
+
+cv::ocl::oclMat::operator cv::_OutputArray()
+{
+    _OutputArray newOutputArray;
+    newOutputArray.flags = cv::_InputArray::OCL_MAT;
+    newOutputArray.obj   = reinterpret_cast<void *>(this);
+    return newOutputArray;
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(InputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
+}
+
+cv::ocl::oclMat& cv::ocl::getOclMatRef(OutputArray src)
+{
+    CV_Assert(src.flags & cv::_InputArray::OCL_MAT);
+    return *reinterpret_cast<oclMat*>(src.obj);
 }
 
 void cv::ocl::oclMat::download(cv::Mat &m) const
@@ -241,7 +259,7 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
         int pitch = wholecols * 3 * m.elemSize1();
         int tail_padding = m.elemSize1() * 3072;
         int err;
-        cl_mem temp = clCreateBuffer(clCxt->impl->clContext, CL_MEM_READ_WRITE,
+        cl_mem temp = clCreateBuffer((cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE,
                                      (pitch * wholerows + tail_padding - 1) / tail_padding * tail_padding, 0, &err);
         openCLVerifyCall(err);
 
@@ -285,7 +303,7 @@ inline int divUp(int total, int grain)
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
-static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, std::string kernelName)
+static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask, String kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols &&
                   src.rows == dst.rows && src.cols == dst.cols
@@ -293,7 +311,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
 
     std::vector<std::pair<size_t , const void *> > args;
 
-    std::string string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
+    String string_types[4][7] = {{"uchar", "char", "ushort", "short", "int", "float", "double"},
         {"uchar2", "char2", "ushort2", "short2", "int2", "float2", "double2"},
         {"uchar3", "char3", "ushort3", "short3", "int3", "float3", "double3"},
         {"uchar4", "char4", "ushort4", "short4", "int4", "float4", "double4"}
@@ -352,10 +370,10 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 ///////////////////////////////////////////////////////////////////////////
 static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
-    std::string kernelName = "convert_to_S";
+    String kernelName = "convert_to_S";
     std::stringstream idxStr;
     idxStr << src.depth();
-    kernelName += idxStr.str();
+    kernelName = kernelName + idxStr.str().c_str();
     float alpha_f = alpha, beta_f = beta;
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     std::vector<std::pair<size_t , const void *> > args;
@@ -421,7 +439,7 @@ oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
     setTo(s);
     return *this;
 }
-static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std::string kernelName)
+static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, String kernelName)
 {
     std::vector<std::pair<size_t , const void *> > args;
 
@@ -464,7 +482,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_8S:
@@ -483,7 +501,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_16U:
@@ -502,7 +520,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_16S:
@@ -521,7 +539,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_32S:
@@ -547,7 +565,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_32F:
@@ -566,7 +584,7 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_64F:
@@ -585,18 +603,23 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
             args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
 #ifdef CL_VERSION_1_2
-    if(dst.offset == 0 && dst.cols == dst.wholecols)
+    //this enables backwards portability to
+    //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
+    if(Context::getContext()->supportsFeature(Context::CL_VER_1_2) &&
+        dst.offset == 0 && dst.cols == dst.wholecols)
     {
-        clEnqueueFillBuffer(dst.clCxt->impl->clCmdQueue, (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
+        clEnqueueFillBuffer((cl_command_queue)dst.clCxt->oclCommandQueue(),
+            (cl_mem)dst.data, args[0].second, args[0].first, 0, dst.step * dst.rows, 0, NULL, NULL);
     }
     else
+#endif
     {
         args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -604,20 +627,11 @@ static void set_to_withoutmask_run(const oclMat &dst, const Scalar &scalar, std:
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
         args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
         openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                            localThreads, args, -1, -1, compile_option);
+            localThreads, args, -1, -1, compile_option);
     }
-#else
-    args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.rows ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&step_in_pixel ));
-    args.push_back( std::make_pair( sizeof(cl_int) , (void *)&offset_in_pixel));
-    openCLExecuteKernel(dst.clCxt , &operator_setTo, kernelName, globalThreads,
-                        localThreads, args, -1, -1, compile_option);
-#endif
 }
 
-static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, std::string kernelName)
+static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const oclMat &mask, String kernelName)
 {
     CV_DbgAssert( dst.rows == mask.rows && dst.cols == mask.cols);
     std::vector<std::pair<size_t , const void *> > args;
@@ -656,7 +670,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_uchar4) , (void *)&val.uval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_8S:
@@ -675,7 +689,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_char4) , (void *)&val.cval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_16U:
@@ -694,7 +708,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_ushort4) , (void *)&val.usval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_16S:
@@ -713,7 +727,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_short4) , (void *)&val.shval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_32S:
@@ -732,7 +746,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_int4) , (void *)&val.ival ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_32F:
@@ -751,7 +765,7 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_float4) , (void *)&val.fval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     case CV_64F:
@@ -770,11 +784,11 @@ static void set_to_withmask_run(const oclMat &dst, const Scalar &scalar, const o
             args.push_back( std::make_pair( sizeof(cl_double4) , (void *)&val.dval ));
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "unsupported channels");
+            CV_Error(Error::StsUnsupportedFormat, "unsupported channels");
         }
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat, "unknown depth");
+        CV_Error(Error::StsUnsupportedFormat, "unknown depth");
     }
     args.push_back( std::make_pair( sizeof(cl_mem) , (void *)&dst.data ));
     args.push_back( std::make_pair( sizeof(cl_int) , (void *)&dst.cols ));
@@ -824,13 +838,8 @@ oclMat &cv::ocl::oclMat::setTo(const Scalar &scalar, const oclMat &mask)
 oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 {
     if( new_rows != 0 && new_rows != rows)
-
     {
-
-        CV_Error( CV_StsBadFunc,
-
-                  "oclMat's number of rows can not be changed for current version" );
-
+        CV_Error( Error::StsBadFunc, "oclMat's number of rows can not be changed for current version" );
     }
 
     oclMat hdr = *this;
@@ -863,13 +872,13 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
         if (!isContinuous())
 
-            CV_Error(CV_BadStep, "The matrix is not continuous, thus its number of rows can not be changed");
+            CV_Error(Error::BadStep, "The matrix is not continuous, thus its number of rows can not be changed");
 
 
 
         if ((unsigned)new_rows > (unsigned)total_size)
 
-            CV_Error(CV_StsOutOfRange, "Bad new number of rows");
+            CV_Error(Error::StsOutOfRange, "Bad new number of rows");
 
 
 
@@ -879,7 +888,7 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
         if (total_width * new_rows != total_size)
 
-            CV_Error(CV_StsBadArg, "The total number of matrix elements is not divisible by the new number of rows");
+            CV_Error(Error::StsBadArg, "The total number of matrix elements is not divisible by the new number of rows");
 
 
 
@@ -897,7 +906,7 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
     if (new_width * new_cn != total_width)
 
-        CV_Error(CV_BadNumChannels, "The total width is not divisible by the new number of channels");
+        CV_Error(Error::BadNumChannels, "The total width is not divisible by the new number of channels");
 
 
 
@@ -913,9 +922,10 @@ oclMat cv::ocl::oclMat::reshape(int new_cn, int new_rows) const
 
 }
 
-void cv::ocl::oclMat::createEx(Size size, int type, DevMemRW rw_type, DevMemType mem_type)
+void cv::ocl::oclMat::createEx(Size size, int type,
+                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
-    createEx(size.height, size.width, type, rw_type, mem_type);
+    createEx(size.height, size.width, type, rw_type, mem_type, hptr);
 }
 
 void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
@@ -923,16 +933,12 @@ void cv::ocl::oclMat::create(int _rows, int _cols, int _type)
     createEx(_rows, _cols, _type, gDeviceMemRW, gDeviceMemType);
 }
 
-void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type, DevMemType mem_type)
+void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type,
+                               DevMemRW rw_type, DevMemType mem_type, void* hptr)
 {
     clCxt = Context::getContext();
     /* core logic */
-    _type &= TYPE_MASK;
-    //download_channels = CV_MAT_CN(_type);
-    //if(download_channels==3)
-    //{
-    //	_type = CV_MAKE_TYPE((CV_MAT_DEPTH(_type)),4);
-    //}
+    _type &= Mat::TYPE_MASK;
     if( rows == _rows && cols == _cols && type() == _type && data )
         return;
     if( data )
@@ -948,8 +954,8 @@ void cv::ocl::oclMat::createEx(int _rows, int _cols, int _type, DevMemRW rw_type
         size_t esz = elemSize();
 
         void *dev_ptr;
-        openCLMallocPitchEx(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols), rows, rw_type, mem_type);
-        //openCLMallocPitch(clCxt,&dev_ptr, &step, esz * cols, rows);
+        openCLMallocPitch(clCxt, &dev_ptr, &step, GPU_MATRIX_MALLOC_STEP(esz * cols),
+                            rows, rw_type, mem_type, hptr);
 
         if (esz * cols == step)
             flags |= Mat::CONTINUOUS_FLAG;

@@ -50,13 +50,13 @@ static const float WEIGHT_EPS = 1e-5f;
 Ptr<Blender> Blender::createDefault(int type, bool try_gpu)
 {
     if (type == NO)
-        return new Blender();
+        return makePtr<Blender>();
     if (type == FEATHER)
-        return new FeatherBlender();
+        return makePtr<FeatherBlender>();
     if (type == MULTI_BAND)
-        return new MultiBandBlender(try_gpu);
-    CV_Error(CV_StsBadArg, "unsupported blending method");
-    return NULL;
+        return makePtr<MultiBandBlender>(try_gpu);
+    CV_Error(Error::StsBadArg, "unsupported blending method");
+    return Ptr<Blender>();
 }
 
 
@@ -187,12 +187,14 @@ Rect FeatherBlender::createWeightMaps(const std::vector<Mat> &masks, const std::
 MultiBandBlender::MultiBandBlender(int try_gpu, int num_bands, int weight_type)
 {
     setNumBands(num_bands);
-#ifdef HAVE_OPENCV_GPU
+
+#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     can_use_gpu_ = try_gpu && gpu::getCudaEnabledDeviceCount();
 #else
-    (void)try_gpu;
+    (void) try_gpu;
     can_use_gpu_ = false;
 #endif
+
     CV_Assert(weight_type == CV_32F || weight_type == CV_16S);
     weight_type_ = weight_type;
 }
@@ -425,7 +427,7 @@ void normalizeUsingWeightMap(const Mat& weight, Mat& src)
 void createWeightMap(const Mat &mask, float sharpness, Mat &weight)
 {
     CV_Assert(mask.type() == CV_8U);
-    distanceTransform(mask, weight, CV_DIST_L1, 3);
+    distanceTransform(mask, weight, DIST_L1, 3);
     threshold(weight * sharpness, weight, 1.f, 1.f, THRESH_TRUNC);
 }
 
@@ -489,7 +491,7 @@ void createLaplacePyr(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 
 void createLaplacePyrGpu(const Mat &img, int num_levels, std::vector<Mat> &pyr)
 {
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     pyr.resize(num_levels + 1);
 
     std::vector<gpu::GpuMat> gpu_pyr(num_levels + 1);
@@ -529,7 +531,7 @@ void restoreImageFromLaplacePyr(std::vector<Mat> &pyr)
 
 void restoreImageFromLaplacePyrGpu(std::vector<Mat> &pyr)
 {
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING)
     if (pyr.empty())
         return;
 

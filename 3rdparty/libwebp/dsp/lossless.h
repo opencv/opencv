@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Image transforms and color space conversion methods for lossless decoder.
@@ -33,6 +35,13 @@ void VP8LInverseTransform(const struct VP8LTransform* const transform,
                           int row_start, int row_end,
                           const uint32_t* const in, uint32_t* const out);
 
+// Similar to the static method ColorIndexInverseTransform() that is part of
+// lossless.c, but used only for alpha decoding. It takes uint8_t (rather than
+// uint32_t) arguments for 'src' and 'dst'.
+void VP8LColorIndexInverseTransformAlpha(
+    const struct VP8LTransform* const transform, int y_start, int y_end,
+    const uint8_t* src, uint8_t* dst);
+
 // Subtracts green from blue and red channels.
 void VP8LSubtractGreenFromBlueAndRed(uint32_t* argb_data, int num_pixs);
 
@@ -59,10 +68,20 @@ static WEBP_INLINE uint32_t VP8LSubSampleSize(uint32_t size,
   return (size + (1 << sampling_bits) - 1) >> sampling_bits;
 }
 
-// Faster logarithm for integers, with the property of log2(0) == 0.
-float VP8LFastLog2(int v);
+// Faster logarithm for integers. Small values use a look-up table.
+#define LOG_LOOKUP_IDX_MAX 256
+extern const float kLog2Table[LOG_LOOKUP_IDX_MAX];
+extern const float kSLog2Table[LOG_LOOKUP_IDX_MAX];
+extern float VP8LFastLog2Slow(int v);
+extern float VP8LFastSLog2Slow(int v);
+static WEBP_INLINE float VP8LFastLog2(int v) {
+  return (v < LOG_LOOKUP_IDX_MAX) ? kLog2Table[v] : VP8LFastLog2Slow(v);
+}
 // Fast calculation of v * log2(v) for integer input.
-static WEBP_INLINE float VP8LFastSLog2(int v) { return VP8LFastLog2(v) * v; }
+static WEBP_INLINE float VP8LFastSLog2(int v) {
+  return (v < LOG_LOOKUP_IDX_MAX) ? kSLog2Table[v] : VP8LFastSLog2Slow(v);
+}
+
 
 // In-place difference of each component with mod 256.
 static WEBP_INLINE uint32_t VP8LSubPixels(uint32_t a, uint32_t b) {
@@ -72,6 +91,9 @@ static WEBP_INLINE uint32_t VP8LSubPixels(uint32_t a, uint32_t b) {
       0xff00ff00u + (a & 0x00ff00ffu) - (b & 0x00ff00ffu);
   return (alpha_and_green & 0xff00ff00u) | (red_and_blue & 0x00ff00ffu);
 }
+
+void VP8LBundleColorMap(const uint8_t* const row, int width,
+                        int xbits, uint32_t* const dst);
 
 //------------------------------------------------------------------------------
 

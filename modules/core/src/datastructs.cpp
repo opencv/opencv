@@ -40,6 +40,12 @@
 //M*/
 #include "precomp.hpp"
 
+/* default alignment for dynamic data strucutures, resided in storages. */
+#define  CV_STRUCT_ALIGN    ((int)sizeof(double))
+
+/* default storage block size */
+#define  CV_STORAGE_BLOCK_SIZE   ((1<<16) - 128)
+
 #define ICV_FREE_PTR(storage)  \
     ((schar*)(storage)->top + (storage)->block_size - (storage)->free_space)
 

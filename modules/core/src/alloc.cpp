@@ -94,9 +94,20 @@ void fastFree(void* ptr)
 #define STAT(stmt)
 
 #ifdef WIN32
+#if (_WIN32_WINNT >= 0x0602)
+#include <synchapi.h>
+#endif
+
 struct CriticalSection
 {
-    CriticalSection() { InitializeCriticalSection(&cs); }
+    CriticalSection()
+    {
+#if (_WIN32_WINNT >= 0x0600)
+        InitializeCriticalSectionEx(&cs, 1000, 0);
+#else
+        InitializeCriticalSection(&cs);
+#endif
+    }
     ~CriticalSection() { DeleteCriticalSection(&cs); }
     void lock() { EnterCriticalSection(&cs); }
     void unlock() { LeaveCriticalSection(&cs); }
@@ -681,11 +692,6 @@ void fastFree( void* ptr )
 
 #endif //CV_USE_SYSTEM_MALLOC
 
-}
-
-CV_IMPL void cvSetMemoryManager( CvAllocFunc, CvFreeFunc, void * )
-{
-    CV_Error( -1, "Custom memory allocator is not supported" );
 }
 
 CV_IMPL void* cvAlloc( size_t size )

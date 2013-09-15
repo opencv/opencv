@@ -28,6 +28,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
    #include "opencv2/core.hpp"
    #include "opencv2/features2d.hpp"
    #include "opencv2/highgui.hpp"
+   #include "opencv2/nonfree.hpp"
 
    using namespace cv;
 
@@ -85,7 +86,7 @@ This tutorial code's is shown lines below. You can also download it from `here <
      std::vector< DMatch > good_matches;
 
      for( int i = 0; i < descriptors_1.rows; i++ )
-     { if( matches[i].distance < 2*min_dist )
+     { if( matches[i].distance <= 2*min_dist )
        { good_matches.push_back( matches[i]); }
      }
 
@@ -127,6 +128,3 @@ Result
    .. image:: images/Feature_FlannMatcher_Keypoints_Result.jpg
       :align: center
       :height: 250pt
-
-
-

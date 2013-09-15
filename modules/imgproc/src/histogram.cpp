@@ -43,10 +43,6 @@
 namespace cv
 {
 
-template<> void Ptr<CvHistogram>::delete_obj()
-{ cvReleaseHist(&obj); }
-
-
 ////////////////// Helper functions //////////////////////
 
 static const size_t OUT_OF_RANGE = (size_t)1 << (sizeof(size_t)*8 - 2);
@@ -270,6 +266,8 @@ public:
     }
 
 private:
+    calcHist1D_Invoker operator=(const calcHist1D_Invoker&);
+
     T* p_[one];
     uchar* mask_;
     int step_[one];
@@ -342,6 +340,8 @@ public:
     }
 
 private:
+    calcHist2D_Invoker operator=(const calcHist2D_Invoker&);
+
     T* p_[two];
     uchar* mask_;
     int step_[two];
@@ -432,6 +432,8 @@ public:
     }
 
 private:
+    calcHist3D_Invoker operator=(const calcHist3D_Invoker&);
+
     T* p_[three];
     uchar* mask_;
     int step_[three];
@@ -771,8 +773,7 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
 #ifdef HAVE_TBB
             calcHist1D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size[0], dims, imsize);
             parallel_for(BlockedRange(0, imsize.height), body);
-            return;
-#endif
+#else
             double a = uniranges[0], b = uniranges[1];
             int sz = size[0], d0 = deltas[0], step0 = deltas[1];
             const T* p0 = (const T*)ptrs[0];
@@ -795,14 +796,15 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                                 ((int*)H)[idx]++;
                         }
             }
+#endif //HAVE_TBB
+            return;
         }
         else if( dims == 2 )
         {
 #ifdef HAVE_TBB
             calcHist2D_Invoker<T> body(_ptrs, _deltas, hist, _uniranges, size, dims, imsize, hstep);
             parallel_for(BlockedRange(0, imsize.height), body);
-            return;
-#endif
+#else
             double a0 = uniranges[0], b0 = uniranges[1], a1 = uniranges[2], b1 = uniranges[3];
             int sz0 = size[0], sz1 = size[1];
             int d0 = deltas[0], step0 = deltas[1],
@@ -831,6 +833,8 @@ calcHist_( std::vector<uchar*>& _ptrs, const std::vector<int>& _deltas,
                                 ((int*)(H + hstep0*idx0))[idx1]++;
                         }
             }
+#endif //HAVE_TBB
+            return;
         }
         else if( dims == 3 )
         {
@@ -1974,7 +1978,7 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     double result = 0;
     int j, len = (int)it.size;
 
-    CV_Assert( H1.type() == H2.type() && H1.type() == CV_32F );
+    CV_Assert( H1.type() == H2.type() && H1.depth() == CV_32F );
 
     double s1 = 0, s2 = 0, s11 = 0, s12 = 0, s22 = 0;
 
@@ -1984,14 +1988,14 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
     {
         const float* h1 = (const float*)it.planes[0].data;
         const float* h2 = (const float*)it.planes[1].data;
-        len = it.planes[0].rows*it.planes[0].cols;
+        len = it.planes[0].rows*it.planes[0].cols*H1.channels();
 
-        if( method == CV_COMP_CHISQR )
+        if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT))
         {
             for( j = 0; j < len; j++ )
             {
                 double a = h1[j] - h2[j];
-                double b = h1[j];
+                double b = (method == CV_COMP_CHISQR) ? h1[j] : h1[j] + h2[j];
                 if( fabs(b) > DBL_EPSILON )
                     result += a*a/b;
             }
@@ -2030,7 +2034,9 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
             CV_Error( CV_StsBadArg, "Unknown comparison method" );
     }
 
-    if( method == CV_COMP_CORREL )
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
+    else if( method == CV_COMP_CORREL )
     {
         size_t total = H1.total();
         double scale = 1./total;
@@ -2059,13 +2065,13 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
         CV_Assert( H1.size(i) == H2.size(i) );
 
     const SparseMat *PH1 = &H1, *PH2 = &H2;
-    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR )
+    if( PH1->nzcount() > PH2->nzcount() && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
         std::swap(PH1, PH2);
 
     SparseMatConstIterator it = PH1->begin();
     int N1 = (int)PH1->nzcount(), N2 = (int)PH2->nzcount();
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( i = 0; i < N1; i++, ++it )
         {
@@ -2073,7 +2079,7 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
             const SparseMat::Node* node = it.node();
             float v2 = PH2->value<float>(node->idx, (size_t*)&node->hashval);
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2141,6 +2147,9 @@ double cv::compareHist( const SparseMat& H1, const SparseMat& H2, int method )
     }
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
+
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
 
     return result;
 }
@@ -2456,7 +2465,8 @@ cvCompareHist( const CvHistogram* hist1,
 
     if( !CV_IS_SPARSE_MAT(hist1->bins) )
     {
-        cv::Mat H1((const CvMatND*)hist1->bins), H2((const CvMatND*)hist2->bins);
+        cv::Mat H1 = cv::cvarrToMat(hist1->bins);
+        cv::Mat H2 = cv::cvarrToMat(hist2->bins);
         return cv::compareHist(H1, H2, method);
     }
 
@@ -2480,13 +2490,13 @@ cvCompareHist( const CvHistogram* hist1,
     CvSparseMatIterator iterator;
     CvSparseNode *node1, *node2;
 
-    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR )
+    if( mat1->heap->active_count > mat2->heap->active_count && method != CV_COMP_CHISQR && method != CV_COMP_CHISQR_ALT)
     {
         CvSparseMat* t;
         CV_SWAP( mat1, mat2, t );
     }
 
-    if( method == CV_COMP_CHISQR )
+    if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT) )
     {
         for( node1 = cvInitSparseMatIterator( mat1, &iterator );
              node1 != 0; node1 = cvGetNextSparseNode( &iterator ))
@@ -2495,7 +2505,7 @@ cvCompareHist( const CvHistogram* hist1,
             uchar* node2_data = cvPtrND( mat2, CV_NODE_IDX(mat1,node1), 0, 0, &node1->hashval );
             double v2 = node2_data ? *(float*)node2_data : 0.f;
             double a = v1 - v2;
-            double b = v1;
+            double b = (method == CV_COMP_CHISQR) ? v1 : v1 + v2;
             if( fabs(b) > DBL_EPSILON )
                 result += a*a/b;
         }
@@ -2585,6 +2595,9 @@ cvCompareHist( const CvHistogram* hist1,
     else
         CV_Error( CV_StsBadArg, "Unknown comparison method" );
 
+    if( method == CV_COMP_CHISQR_ALT )
+        result *= 2;
+
     return result;
 }
 
@@ -2604,7 +2617,7 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
     int size1[CV_MAX_DIM];
     bool is_sparse = CV_IS_SPARSE_MAT(src->bins);
     int dims1 = cvGetDims( src->bins, size1 );
-    
+
     if( dst && (is_sparse == CV_IS_SPARSE_MAT(dst->bins)))
     {
         int size2[CV_MAX_DIM];
@@ -2613,14 +2626,14 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
         if( dims1 == dims2 )
         {
             int i;
-            
+
             for( i = 0; i < dims1; i++ )
             {
                 if( size1[i] != size2[i] )
                     break;
             }
-                   
-	        eq = (i == dims1);
+
+            eq = (i == dims1);
         }
     }
 
@@ -2635,19 +2648,19 @@ cvCopyHist( const CvHistogram* src, CvHistogram** _dst )
     {
         float* ranges[CV_MAX_DIM];
         float** thresh = 0;
-        
+
         if( CV_IS_UNIFORM_HIST( src ))
         {
             for( int i = 0; i < dims1; i++ )
                 ranges[i] = (float*)src->thresh[i];
-                
+
             thresh = ranges;
         }
         else
         {
             thresh = src->thresh2;
         }
-            
+
         cvSetHistBinRanges( dst, thresh, CV_IS_UNIFORM_HIST(src));
     }
 
@@ -2758,7 +2771,7 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask,
                       H, cvGetDims(hist->bins), H.size, ranges, uniform, accumulate != 0 );
     }
@@ -2768,7 +2781,8 @@ cvCalcArrHist( CvArr** img, CvHistogram* hist, int accumulate, const CvArr* mask
 
         if( !accumulate )
             cvZero( hist->bins );
-        cv::SparseMat sH(sparsemat);
+        cv::SparseMat sH;
+        sparsemat->copyToSparseMat(sH);
         cv::calcHist( &images[0], (int)images.size(), 0, _mask, sH, sH.dims(),
                       sH.dims() > 0 ? sH.hdr->size : 0, ranges, uniform, accumulate != 0, true );
 
@@ -2820,13 +2834,14 @@ cvCalcArrBackProject( CvArr** img, CvArr* dst, const CvHistogram* hist )
 
     if( !CV_IS_SPARSE_HIST(hist) )
     {
-        cv::Mat H((const CvMatND*)hist->bins);
+        cv::Mat H = cv::cvarrToMat(hist->bins);
         cv::calcBackProject( &images[0], (int)images.size(),
                             0, H, _dst, ranges, 1, uniform );
     }
     else
     {
-        cv::SparseMat sH((const CvSparseMat*)hist->bins);
+        cv::SparseMat sH;
+        ((const CvSparseMat*)hist->bins)->copyToSparseMat(sH);
         cv::calcBackProject( &images[0], (int)images.size(),
                              0, sH, _dst, ranges, 1, uniform );
     }
@@ -2986,29 +3001,23 @@ cvCalcProbDensity( const CvHistogram* hist, const CvHistogram* hist_mask,
     }
 }
 
-class EqualizeHistCalcHist_Invoker
+class EqualizeHistCalcHist_Invoker : public cv::ParallelLoopBody
 {
 public:
     enum {HIST_SZ = 256};
 
-#ifdef HAVE_TBB
-    typedef tbb::mutex* MutextPtr;
-#else
-    typedef void* MutextPtr;
-#endif
-
-    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, MutextPtr histogramLock)
+    EqualizeHistCalcHist_Invoker(cv::Mat& src, int* histogram, cv::Mutex* histogramLock)
         : src_(src), globalHistogram_(histogram), histogramLock_(histogramLock)
     { }
 
-    void operator()( const cv::BlockedRange& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const
     {
         int localHistogram[HIST_SZ] = {0, };
 
         const size_t sstep = src_.step;
 
         int width = src_.cols;
-        int height = rowRange.end() - rowRange.begin();
+        int height = rowRange.end - rowRange.start;
 
         if (src_.isContinuous())
         {
@@ -3016,7 +3025,7 @@ public:
             height = 1;
         }
 
-        for (const uchar* ptr = src_.ptr<uchar>(rowRange.begin()); height--; ptr += sstep)
+        for (const uchar* ptr = src_.ptr<uchar>(rowRange.start); height--; ptr += sstep)
         {
             int x = 0;
             for (; x <= width - 4; x += 4)
@@ -3031,9 +3040,7 @@ public:
                 localHistogram[ptr[x]]++;
         }
 
-#ifdef HAVE_TBB
-        tbb::mutex::scoped_lock lock(*histogramLock_);
-#endif
+        cv::AutoLock lock(*histogramLock_);
 
         for( int i = 0; i < HIST_SZ; i++ )
             globalHistogram_[i] += localHistogram[i];
@@ -3041,12 +3048,7 @@ public:
 
     static bool isWorthParallel( const cv::Mat& src )
     {
-#ifdef HAVE_TBB
         return ( src.total() >= 640*480 );
-#else
-        (void)src;
-        return false;
-#endif
     }
 
 private:
@@ -3054,10 +3056,10 @@ private:
 
     cv::Mat& src_;
     int* globalHistogram_;
-    MutextPtr histogramLock_;
+    cv::Mutex* histogramLock_;
 };
 
-class EqualizeHistLut_Invoker
+class EqualizeHistLut_Invoker : public cv::ParallelLoopBody
 {
 public:
     EqualizeHistLut_Invoker( cv::Mat& src, cv::Mat& dst, int* lut )
@@ -3066,13 +3068,13 @@ public:
           lut_(lut)
     { }
 
-    void operator()( const cv::BlockedRange& rowRange ) const
+    void operator()( const cv::Range& rowRange ) const
     {
         const size_t sstep = src_.step;
         const size_t dstep = dst_.step;
 
         int width = src_.cols;
-        int height = rowRange.end() - rowRange.begin();
+        int height = rowRange.end - rowRange.start;
         int* lut = lut_;
 
         if (src_.isContinuous() && dst_.isContinuous())
@@ -3081,8 +3083,8 @@ public:
             height = 1;
         }
 
-        const uchar* sptr = src_.ptr<uchar>(rowRange.begin());
-        uchar* dptr = dst_.ptr<uchar>(rowRange.begin());
+        const uchar* sptr = src_.ptr<uchar>(rowRange.start);
+        uchar* dptr = dst_.ptr<uchar>(rowRange.start);
 
         for (; height--; sptr += sstep, dptr += dstep)
         {
@@ -3111,12 +3113,7 @@ public:
 
     static bool isWorthParallel( const cv::Mat& src )
     {
-#ifdef HAVE_TBB
         return ( src.total() >= 640*480 );
-#else
-        (void)src;
-        return false;
-#endif
     }
 
 private:
@@ -3143,23 +3140,18 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     if(src.empty())
         return;
 
-#ifdef HAVE_TBB
-    tbb::mutex histogramLockInstance;
-    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = &histogramLockInstance;
-#else
-    EqualizeHistCalcHist_Invoker::MutextPtr histogramLock = 0;
-#endif
+    Mutex histogramLockInstance;
 
     const int hist_sz = EqualizeHistCalcHist_Invoker::HIST_SZ;
     int hist[hist_sz] = {0,};
     int lut[hist_sz];
 
-    EqualizeHistCalcHist_Invoker calcBody(src, hist, histogramLock);
+    EqualizeHistCalcHist_Invoker calcBody(src, hist, &histogramLockInstance);
     EqualizeHistLut_Invoker      lutBody(src, dst, lut);
-    cv::BlockedRange heightRange(0, src.rows);
+    cv::Range heightRange(0, src.rows);
 
     if(EqualizeHistCalcHist_Invoker::isWorthParallel(src))
-        parallel_for(heightRange, calcBody);
+        parallel_for_(heightRange, calcBody);
     else
         calcBody(heightRange);
 
@@ -3183,10 +3175,12 @@ void cv::equalizeHist( InputArray _src, OutputArray _dst )
     }
 
     if(EqualizeHistLut_Invoker::isWorthParallel(src))
-        parallel_for(heightRange, lutBody);
+        parallel_for_(heightRange, lutBody);
     else
         lutBody(heightRange);
 }
+
+// ----------------------------------------------------------------------
 
 /* Implementation of RTTI and Generic Functions for CvHistogram */
 #define CV_TYPE_NAME_HIST "opencv-hist"
@@ -3339,4 +3333,3 @@ CvType hist_type( CV_TYPE_NAME_HIST, icvIsHist, (CvReleaseFunc)cvReleaseHist,
                   icvReadHist, icvWriteHist, (CvCloneFunc)icvCloneHist );
 
 /* End of file. */
-

@@ -39,15 +39,16 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
+using std::cout;
+using std::endl;
 
 void print_info()
 {
@@ -73,14 +74,12 @@ void print_info()
 #endif
 
 }
-std::string workdir;
 int main(int argc, char **argv)
 {
-    TS::ptr()->init("ocl");
+    TS::ptr()->init(".");
     InitGoogleTest(&argc, argv);
     const char *keys =
         "{ h | false              | print help message }"
-		"{ w | ../../../samples/c/| set working directory i.e. -w=C:\\}"
         "{ t | gpu                | set device type:i.e. -t=cpu or gpu}"
         "{ p | 0                  | set platform id i.e. -p=0}"
         "{ d | 0                  | set device id i.e. -d=0}";
@@ -88,12 +87,11 @@ int main(int argc, char **argv)
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<string>("h")=="true")
     {
-        cout << "Avaible options besides goole test option:" << endl;
+        cout << "Available options besides google test options:" << endl;
         cmd.printMessage();
         return 0;
     }
-    workdir = cmd.get<string>("w");
-    string type = cmd.get<string>("t");
+    string type = cmd.get<String>("t");
     unsigned int pid = cmd.get<unsigned int>("p");
     int device = cmd.get<int>("d");
 
@@ -115,10 +113,11 @@ int main(int argc, char **argv)
         std::cout << "platform invalid\n";
         return -1;
     }
-    if(pid != 0 || device != 0)
-    {
-        setDevice(oclinfo[pid], device);
-    }
+
+    setDevice(oclinfo[pid], device);
+    setBinaryDiskCache(CACHE_UPDATE);
+
+    cout << "Platform name:" << oclinfo[pid].PlatformName << endl;
     cout << "Device type:" << type << endl << "Device name:" << oclinfo[pid].DeviceName[device] << endl;
     return RUN_ALL_TESTS();
 }

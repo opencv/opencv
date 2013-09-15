@@ -1,8 +1,10 @@
 SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
                                      opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
-                                     opencv_nonfree opencv_softcascade)
-
+                                     opencv_nonfree opencv_softcascade opencv_superres
+                                     opencv_gpuarithm opencv_gpufilters opencv_gpuwarping opencv_gpuimgproc
+                                     opencv_gpufeatures2d opencv_gpuoptflow opencv_gpubgsegm
+                                     opencv_gpustereo opencv_gpulegacy)
 ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
@@ -17,8 +19,20 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
     )
 
+  if(HAVE_opencv_nonfree)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
+  endif()
+
+  if(HAVE_opencv_gpucodec)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpucodec/include")
+  endif()
+
   if(HAVE_CUDA)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
+  endif()
+
+  if(HAVE_OPENCL)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/ocl/include")
   endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
@@ -33,6 +47,21 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     add_executable(${the_target} ${srcs})
 
     target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+
+    if(HAVE_CUDA)
+        target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
+    endif()
+
+    if(HAVE_opencv_nonfree)
+      target_link_libraries(${the_target} opencv_nonfree)
+    endif()
+    if(HAVE_opencv_gpucodec)
+      target_link_libraries(${the_target} opencv_gpucodec)
+    endif()
+
+    if(HAVE_OPENCL)
+      target_link_libraries(${the_target} opencv_ocl)
+    endif()
 
     set_target_properties(${the_target} PROPERTIES
       OUTPUT_NAME "${project}-example-${name}"
@@ -67,4 +96,3 @@ if (INSTALL_C_EXAMPLES AND NOT WIN32)
           DESTINATION share/OpenCV/samples/${project}
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
-

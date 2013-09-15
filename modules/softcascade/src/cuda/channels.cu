@@ -40,28 +40,10 @@
 //
 //M*/
 
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
+#include "opencv2/core/cuda/common.hpp"
 
-namespace cv { namespace softcascade { namespace internal {
-void error(const char *error_string, const char *file, const int line, const char *func);
-}}}
-#if defined(__GNUC__)
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__, __func__)
-#else /* defined(__CUDACC__) || defined(__MSVC__) */
-    #define cudaSafeCall(expr)  ___cudaSafeCall(expr, __FILE__, __LINE__)
-#endif
-
-static inline void ___cudaSafeCall(cudaError_t err, const char *file, const int line, const char *func = "")
-{
-    if (cudaSuccess != err) cv::softcascade::internal::error(cudaGetErrorString(err), file, line, func);
-}
-
-__host__ __device__ __forceinline__ int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
-
-namespace cv { namespace softcascade { namespace device
+namespace cv { namespace softcascade { namespace cudev
 {
     typedef unsigned int uint;
     typedef unsigned short ushort;
@@ -393,7 +375,7 @@ namespace cv { namespace softcascade { namespace device
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::gpu::cudev::divUp(integral.cols, block.x), 1);
 
             shfl_integral_vertical<<<grid, block, 0, stream>>>(integral);
             cudaSafeCall( cudaGetLastError() );
@@ -478,7 +460,7 @@ namespace cv { namespace softcascade { namespace device
 
         {
             const dim3 block(32, 8);
-            const dim3 grid(divUp(integral.cols, block.x), 1);
+            const dim3 grid(cv::gpu::cudev::divUp(integral.cols, block.x), 1);
 
             shfl_integral_vertical<<<grid, block, 0, stream>>>((cv::gpu::PtrStepSz<unsigned int>)buffer, integral);
             cudaSafeCall( cudaGetLastError() );
@@ -518,7 +500,7 @@ namespace cv { namespace softcascade { namespace device
     void transform(const cv::gpu::PtrStepSz<uchar3>& bgr, cv::gpu::PtrStepSzb gray)
     {
         const dim3 block(32, 8);
-        const dim3 grid(divUp(bgr.cols, block.x), divUp(bgr.rows, block.y));
+        const dim3 grid(cv::gpu::cudev::divUp(bgr.cols, block.x), cv::gpu::cudev::divUp(bgr.rows, block.y));
         device_transform<<<grid, block>>>(bgr, gray);
         cudaSafeCall(cudaDeviceSynchronize());
     }

@@ -11,7 +11,7 @@ You can store and then restore various OpenCV data structures to/from XML (http:
 
 Use the following procedure to write something to XML or YAML:
  #. Create new :ocv:class:`FileStorage` and open it for writing. It can be done with a single call to :ocv:func:`FileStorage::FileStorage` constructor that takes a filename, or you can use the default constructor and then call :ocv:func:`FileStorage::open`. Format of the file (XML or YAML) is determined from the filename extension (".xml" and ".yml"/".yaml", respectively)
- #. Write all the data you want using the streaming operator ``>>``, just like in the case of STL streams.
+ #. Write all the data you want using the streaming operator ``<<``, just like in the case of STL streams.
  #. Close the file using :ocv:func:`FileStorage::release`. ``FileStorage`` destructor also closes the file.
 
 Here is an example: ::
@@ -91,6 +91,10 @@ Several things can be noted by looking at the sample code and the output:
  *
    In YAML (but not XML), mappings and sequences can be written in a compact Python-like inline form. In the sample above matrix elements, as well as each feature, including its lbp value, is stored in such inline form. To store a mapping/sequence in a compact form, put ":" after the opening character, e.g. use **"{:"** instead of **"{"** and **"[:"** instead of **"["**. When the data is written to XML, those extra ":" are ignored.
 
+.. note::
+
+   * A complete example using the FileStorage interface can be found at opencv_source_code/samples/cpp/filestorage.cpp
+
 
 Reading data from a file storage.
 ---------------------------------
@@ -113,7 +117,7 @@ Here is how to read the file created by the code sample above: ::
     // first method: use (type) operator on FileNode.
     int frameCount = (int)fs2["frameCount"];
 
-    std::string date;
+    String date;
     // second method: use FileNode::operator >>
     fs2["calibrationDate"] >> date;
 
@@ -156,7 +160,7 @@ The constructors.
 
 .. ocv:function:: FileStorage::FileStorage()
 
-.. ocv:function:: FileStorage::FileStorage(const string& source, int flags, const string& encoding=string())
+.. ocv:function:: FileStorage::FileStorage(const String& source, int flags, const String& encoding=String())
 
     :param source: Name of the file to open or the text string to read the data from. Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively). Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``. If both ``FileStorage::WRITE`` and ``FileStorage::MEMORY`` flags are specified, ``source`` is used just to specify the output file format (e.g. ``mydata.xml``, ``.yml`` etc.).
 
@@ -179,7 +183,18 @@ FileStorage::open
 -----------------
 Opens a file.
 
-.. ocv:function:: bool FileStorage::open(const string& filename, int flags, const string& encoding=string())
+.. ocv:function:: bool FileStorage::open(const String& filename, int flags, const String& encoding=String())
+
+    :param filename: Name of the file to open or the text string to read the data from.
+                     Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively).
+                     Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``.
+                     If both ``FileStorage::WRITE`` and ``FileStorage::MEMORY`` flags are specified, ``source``
+                     is used just to specify the output file format (e.g. ``mydata.xml``, ``.yml`` etc.).
+
+    :param flags: Mode of operation. See FileStorage constructor for more details.
+
+    :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.
+
 
 See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
 
@@ -208,7 +223,7 @@ FileStorage::releaseAndGetString
 --------------------------------
 Closes the file and releases all the memory buffers.
 
-.. ocv:function:: string FileStorage::releaseAndGetString()
+.. ocv:function:: String FileStorage::releaseAndGetString()
 
 Call this method after all I/O operations with the storage are finished. If the storage was opened for writing data and ``FileStorage::WRITE`` was specified
 
@@ -237,7 +252,7 @@ FileStorage::operator[]
 -----------------------
 Returns the specified element of the top-level mapping.
 
-.. ocv:function:: FileNode FileStorage::operator[](const string& nodename) const
+.. ocv:function:: FileNode FileStorage::operator[](const String& nodename) const
 
 .. ocv:function:: FileNode FileStorage::operator[](const char* nodename) const
 
@@ -261,7 +276,7 @@ FileStorage::writeRaw
 ---------------------
 Writes multiple numbers.
 
-.. ocv:function:: void FileStorage::writeRaw( const string& fmt, const uchar* vec, size_t len )
+.. ocv:function:: void FileStorage::writeRaw( const String& fmt, const uchar* vec, size_t len )
 
      :param fmt: Specification of each array element that has the following format  ``([count]{'u'|'c'|'w'|'s'|'i'|'f'|'d'})...`` where the characters correspond to fundamental C++ types:
 
@@ -293,7 +308,7 @@ FileStorage::writeObj
 ---------------------
 Writes the registered C structure (CvMat, CvMatND, CvSeq).
 
-.. ocv:function:: void FileStorage::writeObj( const string& name, const void* obj )
+.. ocv:function:: void FileStorage::writeObj( const String& name, const void* obj )
 
     :param name: Name of the written object.
 
@@ -306,7 +321,7 @@ FileStorage::getDefaultObjectName
 ---------------------------------
 Returns the normalized object name for the specified name of a file.
 
-.. ocv:function:: static string FileStorage::getDefaultObjectName(const string& filename)
+.. ocv:function:: static String FileStorage::getDefaultObjectName(const String& filename)
 
    :param filename: Name of a file
 
@@ -383,7 +398,7 @@ FileNode::operator[]
 --------------------
 Returns element of a mapping node or a sequence node.
 
-.. ocv:function:: FileNode FileNode::operator[](const string& nodename) const
+.. ocv:function:: FileNode FileNode::operator[](const String& nodename) const
 
 .. ocv:function:: FileNode FileNode::operator[](const char* nodename) const
 
@@ -507,7 +522,7 @@ FileNode::name
 --------------
 Returns the node name.
 
-.. ocv:function:: string FileNode::name() const
+.. ocv:function:: String FileNode::name() const
 
     :returns: The node name or an empty string if the node is nameless.
 
@@ -548,11 +563,11 @@ Returns the node content as double.
     :returns: The node content as double.
 
 
-FileNode::operator std::string
+FileNode::operator String
 ------------------------------
 Returns the node content as text string.
 
-.. ocv:function:: FileNode::operator std::string() const
+.. ocv:function:: FileNode::operator String() const
 
     :returns: The node content as a text string.
 
@@ -588,7 +603,7 @@ FileNode::readRaw
 -----------------
 Reads node elements to the buffer with the specified format.
 
-.. ocv:function:: void FileNode::readRaw( const string& fmt, uchar* vec, size_t len ) const
+.. ocv:function:: void FileNode::readRaw( const String& fmt, uchar* vec, size_t len ) const
 
     :param fmt: Specification of each array element. It has the same format as in :ocv:func:`FileStorage::writeRaw`.
 
@@ -692,7 +707,7 @@ FileNodeIterator::readRaw
 -------------------------
 Reads node elements to the buffer with the specified format.
 
-.. ocv:function:: FileNodeIterator& FileNodeIterator::readRaw( const string& fmt, uchar* vec, size_t maxCount=(size_t)INT_MAX )
+.. ocv:function:: FileNodeIterator& FileNodeIterator::readRaw( const String& fmt, uchar* vec, size_t maxCount=(size_t)INT_MAX )
 
     :param fmt: Specification of each array element. It has the same format as in :ocv:func:`FileStorage::writeRaw`.
 

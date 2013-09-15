@@ -26,7 +26,7 @@ IndexParams::IndexParams()
 }
 
 template<typename T>
-T getParam(const IndexParams& _p, const std::string& key, const T& defaultVal=T())
+T getParam(const IndexParams& _p, const String& key, const T& defaultVal=T())
 {
     ::cvflann::IndexParams& p = get_params(_p);
     ::cvflann::IndexParams::const_iterator it = p.find(key);
@@ -36,49 +36,49 @@ T getParam(const IndexParams& _p, const std::string& key, const T& defaultVal=T(
 }
 
 template<typename T>
-void setParam(IndexParams& _p, const std::string& key, const T& value)
+void setParam(IndexParams& _p, const String& key, const T& value)
 {
     ::cvflann::IndexParams& p = get_params(_p);
     p[key] = value;
 }
 
-std::string IndexParams::getString(const std::string& key, const std::string& defaultVal) const
+String IndexParams::getString(const String& key, const String& defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
-int IndexParams::getInt(const std::string& key, int defaultVal) const
+int IndexParams::getInt(const String& key, int defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
-double IndexParams::getDouble(const std::string& key, double defaultVal) const
+double IndexParams::getDouble(const String& key, double defaultVal) const
 {
     return getParam(*this, key, defaultVal);
 }
 
 
-void IndexParams::setString(const std::string& key, const std::string& value)
+void IndexParams::setString(const String& key, const String& value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setInt(const std::string& key, int value)
+void IndexParams::setInt(const String& key, int value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setDouble(const std::string& key, double value)
+void IndexParams::setDouble(const String& key, double value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setFloat(const std::string& key, float value)
+void IndexParams::setFloat(const String& key, float value)
 {
     setParam(*this, key, value);
 }
 
-void IndexParams::setBool(const std::string& key, bool value)
+void IndexParams::setBool(const String& key, bool value)
 {
     setParam(*this, key, value);
 }
@@ -88,9 +88,9 @@ void IndexParams::setAlgorithm(int value)
     setParam(*this, "algorithm", (cvflann::flann_algorithm_t)value);
 }
 
-void IndexParams::getAll(std::vector<std::string>& names,
+void IndexParams::getAll(std::vector<String>& names,
             std::vector<int>& types,
-            std::vector<std::string>& strValues,
+            std::vector<String>& strValues,
             std::vector<double>& numValues) const
 {
     names.clear();
@@ -106,7 +106,7 @@ void IndexParams::getAll(std::vector<std::string>& names,
         names.push_back(it->first);
         try
         {
-            std::string val = it->second.cast<std::string>();
+            String val = it->second.cast<String>();
             types.push_back(CV_USRTYPE1);
             strValues.push_back(val);
             numValues.push_back(-1);
@@ -285,9 +285,9 @@ LshIndexParams::LshIndexParams(int table_number, int key_size, int multi_probe_l
     p["multi_probe_level"] = multi_probe_level;
 }
 
-SavedIndexParams::SavedIndexParams(const std::string& _filename)
+SavedIndexParams::SavedIndexParams(const String& _filename)
 {
-    std::string filename = _filename;
+    String filename = _filename;
     ::cvflann::IndexParams& p = get_params(*this);
 
     p["algorithm"] = FLANN_INDEX_SAVED;
@@ -312,9 +312,9 @@ buildIndex_(void*& index, const Mat& data, const IndexParams& params, const Dist
 {
     typedef typename Distance::ElementType ElementType;
     if(DataType<ElementType>::type != data.type())
-        CV_Error_(CV_StsUnsupportedFormat, ("type=%d\n", data.type()));
+        CV_Error_(Error::StsUnsupportedFormat, ("type=%d\n", data.type()));
     if(!data.isContinuous())
-        CV_Error(CV_StsBadArg, "Only continuous arrays are supported");
+        CV_Error(Error::StsBadArg, "Only continuous arrays are supported");
 
     ::cvflann::Matrix<ElementType> dataset((ElementType*)data.data, data.rows, data.cols);
     IndexType* _index = new IndexType(dataset, get_params(params), dist);
@@ -357,7 +357,7 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
     algo = getParam<flann_algorithm_t>(params, "algorithm", FLANN_INDEX_LINEAR);
     if( algo == FLANN_INDEX_SAVED )
     {
-        load(_data, getParam<std::string>(params, "filename", std::string()));
+        load(_data, getParam<String>(params, "filename", String()));
         return;
     }
 
@@ -400,7 +400,7 @@ void Index::build(InputArray _data, const IndexParams& params, flann_distance_t 
         break;
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
 }
 
@@ -453,7 +453,7 @@ void Index::release()
             break;
 #endif
         default:
-            CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+            CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     index = 0;
 }
@@ -585,7 +585,7 @@ void Index::knnSearch(InputArray _query, OutputArray _indices,
         break;
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
 }
 
@@ -599,7 +599,7 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
     createIndicesDists( _indices, _dists, indices, dists, query.rows, maxResults, INT_MAX, dtype );
 
     if( algo == FLANN_INDEX_LSH )
-        CV_Error( CV_StsNotImplemented, "LSH index does not support radiusSearch operation" );
+        CV_Error( Error::StsNotImplemented, "LSH index does not support radiusSearch operation" );
 
     switch( distType )
     {
@@ -623,7 +623,7 @@ int Index::radiusSearch(InputArray _query, OutputArray _indices,
         return runRadiusSearch< ::cvflann::KL_Divergence<float> >(index, query, indices, dists, radius, params);
 #endif
     default:
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     return -1;
 }
@@ -654,11 +654,11 @@ template<typename Distance> void saveIndex(const Index* index0, const void* inde
     saveIndex_< ::cvflann::Index<Distance> >(index0, index, fout);
 }
 
-void Index::save(const std::string& filename) const
+void Index::save(const String& filename) const
 {
     FILE* fout = fopen(filename.c_str(), "wb");
     if (fout == NULL)
-        CV_Error_( CV_StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );
+        CV_Error_( Error::StsError, ("Can not open file %s for writing FLANN index\n", filename.c_str()) );
 
     switch( distType )
     {
@@ -691,7 +691,7 @@ void Index::save(const std::string& filename) const
     default:
         fclose(fout);
         fout = 0;
-        CV_Error(CV_StsBadArg, "Unknown/unsupported distance type");
+        CV_Error(Error::StsBadArg, "Unknown/unsupported distance type");
     }
     if( fout )
         fclose(fout);
@@ -720,7 +720,7 @@ bool loadIndex(Index* index0, void*& index, const Mat& data, FILE* fin, const Di
     return loadIndex_<Distance, ::cvflann::Index<Distance> >(index0, index, data, fin, dist);
 }
 
-bool Index::load(InputArray _data, const std::string& filename)
+bool Index::load(InputArray _data, const String& filename)
 {
     Mat data = _data.getMat();
     bool ok = true;

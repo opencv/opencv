@@ -71,7 +71,7 @@ int main( int, char** argv )
   }
 
   /// Display
-  namedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
+  namedWindow("calcHist Demo", WINDOW_AUTOSIZE );
   imshow("calcHist Demo", histImage );
 
   waitKey(0);

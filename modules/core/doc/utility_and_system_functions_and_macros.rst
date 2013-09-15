@@ -76,7 +76,6 @@ Calculates the angle of a 2D vector in degrees.
 .. ocv:pyfunction:: cv2.fastAtan2(y, x) -> retval
 
 .. ocv:cfunction:: float cvFastArctan(float y, float x)
-.. ocv:pyoldfunction:: cv.FastArctan(y, x)-> float
 
     :param x: x-coordinate of the vector.
 
@@ -95,8 +94,6 @@ Computes the cube root of an argument.
 
 .. ocv:cfunction:: float cvCbrt( float value )
 
-.. ocv:pyoldfunction:: cv.Cbrt(value)-> float
-
     :param val: A function argument.
 
 The function ``cubeRoot`` computes :math:`\sqrt[3]{\texttt{val}}`. Negative arguments are handled correctly. NaN and Inf are not handled. The accuracy approaches the maximum possible accuracy for single-precision data.
@@ -107,7 +104,6 @@ Ceil
 Rounds floating-point number to the nearest integer not smaller than the original.
 
 .. ocv:cfunction:: int cvCeil(double value)
-.. ocv:pyoldfunction:: cv.Ceil(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -123,7 +119,6 @@ Floor
 Rounds floating-point number to the nearest integer not larger than the original.
 
 .. ocv:cfunction:: int cvFloor(double value)
-.. ocv:pyoldfunction:: cv.Floor(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -139,7 +134,6 @@ Round
 Rounds floating-point number to the nearest integer
 
 .. ocv:cfunction:: int cvRound(double value)
-.. ocv:pyoldfunction:: cv.Round(value) -> int
 
     :param value: floating-point number. If the value is outside of ``INT_MIN`` ... ``INT_MAX`` range, the result is not defined.
 
@@ -149,7 +143,6 @@ IsInf
 Determines if the argument is Infinity.
 
 .. ocv:cfunction:: int cvIsInf(double value)
-.. ocv:pyoldfunction:: cv.IsInf(value)-> int
 
         :param value: The input floating-point value
 
@@ -160,7 +153,6 @@ IsNaN
 Determines if the argument is Not A Number.
 
 .. ocv:cfunction:: int cvIsNaN(double value)
-.. ocv:pyoldfunction:: cv.IsNaN(value)-> int
 
         :param value: The input floating-point value
 
@@ -172,6 +164,8 @@ CV_Assert
 Checks a condition at runtime and throws exception if it fails
 
 .. ocv:function:: CV_Assert(expr)
+
+    :param expr: Expression for check.
 
 The macros ``CV_Assert`` (and ``CV_DbgAssert``) evaluate the specified expression. If it is 0, the macros raise an error (see :ocv:func:`error` ). The macro ``CV_Assert`` checks the condition in both Debug and Release configurations while ``CV_DbgAssert`` is only retained in the Debug configuration.
 
@@ -188,7 +182,13 @@ Signals an error and raises an exception.
 
     :param status: Error code. Normally, it is a negative value. The list of pre-defined error codes can be found in  ``cxerror.h`` .
 
+    :param func_name: The function name where error occurs.
+
     :param err_msg: Text of the error message.
+
+    :param file_name: The file name where error occurs.
+
+    :param line: The line number where error occurs.
 
     :param args: ``printf`` -like formatted error message in parentheses.
 
@@ -218,19 +218,19 @@ Exception class passed to an error. ::
     public:
         // various constructors and the copy operation
         Exception() { code = 0; line = 0; }
-        Exception(int _code, const string& _err,
-                  const string& _func, const string& _file, int _line);
+        Exception(int _code, const String& _err,
+                  const String& _func, const String& _file, int _line);
         Exception(const Exception& exc);
         Exception& operator = (const Exception& exc);
 
         // the error code
         int code;
         // the error text message
-        string err;
+        String err;
         // function name where the error happened
-        string func;
+        String func;
         // the source file name where the error happened
-        string file;
+        String file;
         // the source file line where the error happened
         int line;
     };
@@ -249,6 +249,7 @@ Allocates an aligned memory buffer.
 .. ocv:cfunction:: void* cvAlloc( size_t size )
 
     :param size: Allocated buffer size.
+    :param bufSize: Allocated buffer size.
 
 The function allocates the buffer of the specified size and returns it. When the buffer size is 16 bytes or more, the returned buffer is aligned to 16 bytes.
 
@@ -272,7 +273,7 @@ format
 ------
 Returns a text string formatted using the ``printf``\ -like expression.
 
-.. ocv:function:: string format( const char* fmt, ... )
+.. ocv:function:: String format( const char* fmt, ... )
 
     :param fmt: ``printf`` -compatible formatting specifiers.
 
@@ -284,7 +285,7 @@ getBuildInformation
 -------------------
 Returns full configuration time cmake output.
 
-.. ocv:function:: const std::string& getBuildInformation()
+.. ocv:function:: const String& getBuildInformation()
 
 Returned value is raw cmake output including version control system revision, compiler version, compiler flags, enabled modules and third party libraries, etc. Output format depends on target architecture.
 

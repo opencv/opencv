@@ -94,7 +94,7 @@ size_t TiffDecoder::signatureLength() const
     return 4;
 }
 
-bool TiffDecoder::checkSignature( const std::string& signature ) const
+bool TiffDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 4 &&
         (memcmp(signature.c_str(), fmtSignTiffII, 4) == 0 ||
@@ -108,7 +108,7 @@ int TiffDecoder::normalizeChannelsNumber(int channels) const
 
 ImageDecoder TiffDecoder::newDecoder() const
 {
-    return new TiffDecoder;
+    return makePtr<TiffDecoder>();
 }
 
 bool TiffDecoder::readHeader()
@@ -400,7 +400,7 @@ TiffEncoder::~TiffEncoder()
 
 ImageEncoder TiffEncoder::newEncoder() const
 {
-    return new TiffEncoder;
+    return makePtr<TiffEncoder>();
 }
 
 bool TiffEncoder::isFormatSupported( int depth ) const

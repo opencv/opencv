@@ -2,10 +2,11 @@
 #include <vector>
 #include <sstream>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/video/video.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/video.hpp"
+#include "opencv2/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -21,9 +22,9 @@ inline T mapVal(T x, T a, T b, T c, T d)
 static void colorizeFlow(const Mat &u, const Mat &v, Mat &dst)
 {
     double uMin, uMax;
-    minMaxLoc(u, &uMin, &uMax, 0, 0);
+    cv::minMaxLoc(u, &uMin, &uMax, 0, 0);
     double vMin, vMax;
-    minMaxLoc(v, &vMin, &vMax, 0, 0);
+    cv::minMaxLoc(v, &vMin, &vMax, 0, 0);
     uMin = ::abs(uMin); uMax = ::abs(uMax);
     vMin = ::abs(vMin); vMax = ::abs(vMax);
     float dMax = static_cast<float>(::max(::max(uMin, uMax), ::max(vMin, vMax)));

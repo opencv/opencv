@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Rescaling functions
@@ -20,7 +22,7 @@ extern "C" {
 #endif
 
 #define RFIX 30
-#define MULT_FIX(x,y) (((int64_t)(x) * (y) + (1 << (RFIX - 1))) >> RFIX)
+#define MULT_FIX(x, y) (((int64_t)(x) * (y) + (1 << (RFIX - 1))) >> RFIX)
 
 void WebPRescalerInit(WebPRescaler* const wrk, int src_width, int src_height,
                       uint8_t* const dst, int dst_width, int dst_height,

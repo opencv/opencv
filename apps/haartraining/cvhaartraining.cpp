@@ -1088,7 +1088,7 @@ CvIntHaarClassifier* icvCreateCARTStageClassifier( CvHaarTrainingData* data,
                 numpos++;
             }
         }
-        icvSort_32f( eval.data.fl, numpos, 0 );
+        std::sort(eval.data.fl, eval.data.fl + numpos);
         threshold = eval.data.fl[(int) ((1.0F - minhitrate) * numpos)];
 
         numneg = 0;
@@ -2291,7 +2291,7 @@ static CvMat* icvGetUsedValues( CvHaarTrainingData* training_data,
             feature_idx->data.i[total++] = cart->compidx[j];
         }
     }
-    icvSort_32s( feature_idx->data.i, total, 0 );
+    std::sort(feature_idx->data.i, feature_idx->data.i + total);
 
     last = 0;
     for( i = 1; i < total; i++ )
@@ -2676,7 +2676,7 @@ void cvCreateTreeCascadeClassifier( const char* dirname,
 
                     CvSplit* curSplit;
                     CV_CALL( curSplit = (CvSplit*) cvAlloc( sizeof( *curSplit ) ) );
-                    CV_ZERO_OBJ( curSplit );
+                    memset(curSplit, 0, sizeof(*curSplit));
 
                     if( last_split ) last_split->next = curSplit;
                     else first_split = curSplit;

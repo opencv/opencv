@@ -45,6 +45,7 @@
 
 #include "opencv2/core.hpp"
 #include "warpers.hpp" // Make your IDE see declarations
+#include <limits>
 
 namespace cv {
 namespace detail {

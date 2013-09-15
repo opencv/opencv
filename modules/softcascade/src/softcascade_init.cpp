@@ -58,27 +58,9 @@ CV_INIT_ALGORITHM(SCascade, "CascadeDetector.SCascade",
 
 bool initModule_softcascade(void)
 {
-    Ptr<Algorithm> sc = createSCascade();
-    Ptr<Algorithm> sc1 = createDetector();
+    Ptr<Algorithm> sc = createSCascade_ptr_hidden();
+    Ptr<Algorithm> sc1 = createDetector_ptr_hidden();
     return (sc1->info() != 0) && (sc->info() != 0);
-}
-
-namespace internal {
-void error(const char *error_string, const char *file, const int line, const char *func)
-{
-    int code = CV_GpuApiCallError;
-
-    if (std::uncaught_exception())
-    {
-        const char* errorStr = cvErrorStr(code);
-        const char* function = func ? func : "unknown function";
-
-        std::cerr << "OpenCV Error: " << errorStr << "(" << error_string << ") in " << function << ", file " << file << ", line " << line;
-        std::cerr.flush();
-    }
-    else
-        cv::error( cv::Exception(code, error_string, func, file, line) );
-}
 }
 
 } }

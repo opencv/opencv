@@ -2,7 +2,10 @@
 .DS_Store
 refman.rst
 OpenCV4Tegra/
+tegra/
 *.user
 .sw[a-z]
 .*.swp
 tags
+Thumbs.db
+*.autosave

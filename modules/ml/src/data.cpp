@@ -170,8 +170,13 @@ int CvMLData::read_csv(const char* filename)
 
     // skip header lines
     for( int i = 0; i < header_lines_number; i++ )
+    {
         if( fgets( buf, M, file ) == 0 )
+        {
+            fclose(file);
             return -1;
+        }
+    }
 
     // read the first data line and determine the number of variables
     if( !fgets_chomp( buf, M, file ))
@@ -285,7 +290,7 @@ const CvMat* CvMLData::get_missing() const
     return missing;
 }
 
-const std::map<std::string, int>& CvMLData::get_class_labels_map() const
+const std::map<cv::String, int>& CvMLData::get_class_labels_map() const
 {
     return class_map;
 }

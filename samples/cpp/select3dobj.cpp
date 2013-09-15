@@ -8,10 +8,11 @@
  *
  */
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/calib3d/calib3d.hpp"
-#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/core.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/calib3d.hpp"
+#include "opencv2/highgui.hpp"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -147,25 +148,25 @@ static Rect extract3DBox(const Mat& frame, Mat& shownFrame, Mat& selectedObjFram
     if( shownFrame.data )
     {
         if( nobjpt == 1 )
-            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, LINE_AA);
         else if( nobjpt == 2 )
         {
-            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, CV_AA);
-            circle(shownFrame, imgpt[1], 3, Scalar(0,255,0), -1, CV_AA);
-            line(shownFrame, imgpt[0], imgpt[1], Scalar(0,255,0), 3, CV_AA);
+            circle(shownFrame, imgpt[0], 3, Scalar(0,255,0), -1, LINE_AA);
+            circle(shownFrame, imgpt[1], 3, Scalar(0,255,0), -1, LINE_AA);
+            line(shownFrame, imgpt[0], imgpt[1], Scalar(0,255,0), 3, LINE_AA);
         }
         else if( nobjpt == 3 )
             for( int i = 0; i < 4; i++ )
             {
-                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, CV_AA);
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4], Scalar(0,255,0), 3, LINE_AA);
             }
         else
             for( int i = 0; i < 8; i++ )
             {
-                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, CV_AA);
-                line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, CV_AA);
+                circle(shownFrame, imgpt[i], 3, Scalar(0,255,0), -1, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[(i+1)%4 + (i/4)*4], Scalar(0,255,0), 3, LINE_AA);
+                line(shownFrame, imgpt[i], imgpt[i%4], Scalar(0,255,0), 3, LINE_AA);
             }
     }
 
@@ -211,11 +212,11 @@ static int select3DBox(const string& windowname, const string& selWinName, const
     for(;;)
     {
         float Z = 0.f;
-        bool dragging = (mouse.buttonState & CV_EVENT_FLAG_LBUTTON) != 0;
+        bool dragging = (mouse.buttonState & EVENT_FLAG_LBUTTON) != 0;
         int npt = nobjpt;
 
-        if( (mouse.event == CV_EVENT_LBUTTONDOWN ||
-             mouse.event == CV_EVENT_LBUTTONUP ||
+        if( (mouse.event == EVENT_LBUTTONDOWN ||
+             mouse.event == EVENT_LBUTTONUP ||
              dragging) && nobjpt < 4 )
         {
             Point2f m = mouse.pt;
@@ -258,9 +259,9 @@ static int select3DBox(const string& windowname, const string& selWinName, const
             }
             box[npt] = image2plane(imgpt[npt], R, tvec, cameraMatrix, npt<3 ? 0 : Z);
 
-            if( (npt == 0 && mouse.event == CV_EVENT_LBUTTONDOWN) ||
+            if( (npt == 0 && mouse.event == EVENT_LBUTTONDOWN) ||
                (npt > 0 && norm(box[npt] - box[npt-1]) > eps &&
-                mouse.event == CV_EVENT_LBUTTONUP) )
+                mouse.event == EVENT_LBUTTONUP) )
             {
                 nobjpt++;
                 if( nobjpt < 4 )

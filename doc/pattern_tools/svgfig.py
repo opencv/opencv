@@ -1,4 +1,4 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 # svgfig.py copyright (C) 2008 Jim Pivarski <jpivarski@gmail.com>
 #
@@ -3667,4 +3667,3 @@ class YErrorBars:
             output.append(LineAxis(x, start, x, end, start, end, bars, False, False, **self.attr).SVG(trans))
 
         return output
-

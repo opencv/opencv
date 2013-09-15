@@ -1,5 +1,3 @@
-#define CV_NO_BACKWARD_COMPATIBILITY
-
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include <stdlib.h>
@@ -37,9 +35,9 @@ static void OpenClose(int, void*)
     int an = n > 0 ? n : -n;
     Mat element = getStructuringElement(element_shape, Size(an*2+1, an*2+1), Point(an, an) );
     if( n < 0 )
-        morphologyEx(src, dst, CV_MOP_OPEN, element);
+        morphologyEx(src, dst, MORPH_OPEN, element);
     else
-        morphologyEx(src, dst, CV_MOP_CLOSE, element);
+        morphologyEx(src, dst, MORPH_CLOSE, element);
     imshow("Open/Close",dst);
 }
 
@@ -79,7 +77,7 @@ int main( int argc, char** argv )
 
         OpenClose(open_close_pos, 0);
         ErodeDilate(erode_dilate_pos, 0);
-        c = cvWaitKey(0);
+        c = waitKey();
 
         if( (char)c == 27 )
             break;

@@ -41,6 +41,7 @@
 
 #include "test_precomp.hpp"
 #include "test_chessboardgenerator.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 #include <iostream>
 
@@ -734,5 +735,3 @@ protected:
 TEST(Calib3d_CalibrateCamera_C, badarg) { CV_CameraCalibrationBadArgTest test; test.safe_run(); }
 TEST(Calib3d_Rodrigues_C, badarg) { CV_Rodrigues2BadArgTest test; test.safe_run(); }
 TEST(Calib3d_ProjectPoints_C, badarg) { CV_ProjectPoints2BadArgTest test; test.safe_run(); }
-
-

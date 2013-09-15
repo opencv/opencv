@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 '''
 This module contains some common routines used by other samples.
 '''
@@ -69,8 +71,8 @@ def mtx2rvec(R):
     return axis * np.arctan2(s, c)
 
 def draw_str(dst, (x, y), s):
-    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.CV_AA)
-    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.CV_AA)
+    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0), thickness = 2, lineType=cv2.LINE_AA)
+    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 class Sketcher:
     def __init__(self, windowname, dests, colors_func):
@@ -215,4 +217,3 @@ def draw_keypoints(vis, keypoints, color = (0, 255, 255)):
     for kp in keypoints:
             x, y = kp.pt
             cv2.circle(vis, (int(x), int(y)), 2, color)
-

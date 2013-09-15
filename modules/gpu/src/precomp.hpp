@@ -7,7 +7,7 @@
 //  copy or use the software.
 //
 //
-//                          License Agreement
+//                           License Agreement
 //                For Open Source Computer Vision Library
 //
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
@@ -43,106 +43,18 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#if defined _MSC_VER && _MSC_VER >= 1200
-    #pragma warning( disable: 4251 4710 4711 4514 4996 )
-#endif
-
-#ifdef HAVE_CVCONFIG_H
-    #include "cvconfig.h"
-#endif
-
-#include <cstring>
-#include <iostream>
-#include <limits>
-#include <vector>
-#include <algorithm>
-#include <sstream>
-#include <exception>
-#include <iterator>
-#include <functional>
-#include <utility>
-#include <deque>
-#include <stdexcept>
-#include <memory>
-#include <string>
-
 #include "opencv2/gpu.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/gpuarithm.hpp"
+#include "opencv2/gpuwarping.hpp"
 #include "opencv2/calib3d.hpp"
-#include "opencv2/core/internal.hpp"
-#include "opencv2/video.hpp"
+#include "opencv2/objdetect.hpp"
 
-#if defined WIN32 || defined WINCE
-    #include <windows.h>
-    #undef small
-    #undef min
-    #undef max
-    #undef abs
+#include "opencv2/core/private.gpu.hpp"
+
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPULEGACY
+#  include "opencv2/gpulegacy/private.hpp"
 #endif
-
-#define OPENCV_GPU_UNUSED(x) (void)x
-
-#ifdef HAVE_CUDA
-
-    #include <cuda.h>
-    #include <cuda_runtime.h>
-    #include <npp.h>
-
-    #ifdef HAVE_CUFFT
-        #include <cufft.h>
-    #endif
-
-    #ifdef HAVE_CUBLAS
-        #include <cublas.h>
-    #endif
-
-    #ifdef HAVE_NVCUVID
-        #include <nvcuvid.h>
-
-        #ifdef WIN32
-            #include <NVEncoderAPI.h>
-        #endif
-    #endif
-
-    #include "internal_shared.hpp"
-    #include "opencv2/core/stream_accessor.hpp"
-
-    #include "nvidia/core/NCV.hpp"
-    #include "nvidia/NPP_staging/NPP_staging.hpp"
-    #include "nvidia/NCVHaarObjectDetection.hpp"
-    #include "nvidia/NCVBroxOpticalFlow.hpp"
-
-    #define CUDART_MINIMUM_REQUIRED_VERSION 4010
-    #define NPP_MINIMUM_REQUIRED_VERSION 4100
-
-    #if (CUDART_VERSION < CUDART_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient Cuda Runtime library version, please update it."
-    #endif
-
-    #if (NPP_VERSION_MAJOR * 1000 + NPP_VERSION_MINOR * 100 + NPP_VERSION_BUILD < NPP_MINIMUM_REQUIRED_VERSION)
-        #error "Insufficient NPP version, please update it."
-    #endif
-
-    #if defined(CUDA_ARCH_BIN_OR_PTX_10)
-        #error "OpenCV GPU module doesn't support NVIDIA compute capability 1.0"
-    #endif
-
-    static inline void throw_nogpu() { CV_Error(CV_StsNotImplemented, "The called functionality is disabled for current build or platform"); }
-
-#else /* defined(HAVE_CUDA) */
-
-    static inline void throw_nogpu() { CV_Error(CV_GpuNotSupported, "The library is compiled without GPU support"); }
-
-#endif /* defined(HAVE_CUDA) */
-
-
-namespace cv { namespace gpu
-{
-    // Converts CPU border extrapolation mode into GPU internal analogue.
-    // Returns true if the GPU analogue exists, false otherwise.
-    bool tryConvertToGpuBorderType(int cpuBorderType, int& gpuBorderType);
-
-}}
 
 #endif /* __OPENCV_PRECOMP_H__ */

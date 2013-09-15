@@ -269,9 +269,15 @@ else(ANDROID)
 endif(ANDROID)
 
 # step 5: build native part
+
+# workarounding lack of `__attribute__ ((visibility("default")))` in jni_md.h/JNIEXPORT
+string(REPLACE "-fvisibility=hidden" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_sources} ${generated_cpp_sources}
                                  ${copied_files}
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
+set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+
 if(BUILD_FAT_JAVA_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   list(REMOVE_ITEM __deps ${the_module} opencv_ts)
@@ -281,7 +287,14 @@ if(BUILD_FAT_JAVA_LIB)
   if(__extradeps)
     list(REMOVE_ITEM __deps ${__extradeps})
   endif()
-  target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive ${__extradeps} ${OPENCV_LINKER_LIBS})
+  if(APPLE)
+    foreach(_dep ${__deps})
+      target_link_libraries(${the_module} -Wl,-force_load "${_dep}")
+    endforeach()
+  else()
+    target_link_libraries(${the_module} -Wl,-whole-archive ${__deps} -Wl,-no-whole-archive)
+  endif()
+  target_link_libraries(${the_module} ${__extradeps} ${OPENCV_LINKER_LIBS})
 else()
   target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_LINKER_LIBS})
 endif()

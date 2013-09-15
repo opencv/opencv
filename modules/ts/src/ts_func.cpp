@@ -2,6 +2,10 @@
 #include <float.h>
 #include <limits.h>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "tegra.hpp"
+#endif
+
 using namespace cv;
 
 namespace cvtest
@@ -71,7 +75,7 @@ int randomType(RNG& rng, int typeMask, int minChannels, int maxChannels)
 {
     int channels = rng.uniform(minChannels, maxChannels+1);
     int depth = 0;
-    CV_Assert((typeMask & DEPTH_MASK_ALL) != 0);
+    CV_Assert((typeMask & _OutputArray::DEPTH_MASK_ALL) != 0);
     for(;;)
     {
         depth = rng.uniform(CV_8U, CV_64F+1);
@@ -272,10 +276,13 @@ convertTo(const _Tp* src, void* dst, int dtype, size_t total, double alpha, doub
     }
 }
 
-void convert(const Mat& src, Mat& dst, int dtype, double alpha, double beta)
+void convert(const Mat& src, cv::OutputArray _dst, int dtype, double alpha, double beta)
 {
+    if (dtype < 0) dtype = _dst.depth();
+
     dtype = CV_MAKETYPE(CV_MAT_DEPTH(dtype), src.channels());
-    dst.create(src.dims, &src.size[0], dtype);
+    _dst.create(src.dims, &src.size[0], dtype);
+    Mat dst = _dst.getMat();
     if( alpha == 0 )
     {
         set( dst, Scalar::all(beta) );
@@ -642,7 +649,7 @@ void erode(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     }
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMaxVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -699,7 +706,7 @@ void dilate(const Mat& _src, Mat& dst, const Mat& _kernel, Point anchor,
     }
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMinVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -775,7 +782,7 @@ void filter2D(const Mat& _src, Mat& dst, int ddepth, const Mat& kernel,
     CV_Assert( kernel.type() == CV_32F || kernel.type() == CV_64F );
     if( anchor == Point(-1,-1) )
         anchor = Point(kernel.cols/2, kernel.rows/2);
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
         borderValue = getMinVal(src.depth());
     copyMakeBorder(_src, src, anchor.y, kernel.rows - anchor.y - 1,
                    anchor.x, kernel.cols - anchor.x - 1,
@@ -827,11 +834,11 @@ static int borderInterpolate( int p, int len, int borderType )
 {
     if( (unsigned)p < (unsigned)len )
         ;
-    else if( borderType == IPL_BORDER_REPLICATE )
+    else if( borderType == BORDER_REPLICATE )
         p = p < 0 ? 0 : len - 1;
-    else if( borderType == IPL_BORDER_REFLECT || borderType == IPL_BORDER_REFLECT_101 )
+    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
     {
-        int delta = borderType == IPL_BORDER_REFLECT_101;
+        int delta = borderType == BORDER_REFLECT_101;
         if( len == 1 )
             return 0;
         do
@@ -843,17 +850,17 @@ static int borderInterpolate( int p, int len, int borderType )
         }
         while( (unsigned)p >= (unsigned)len );
     }
-    else if( borderType == IPL_BORDER_WRAP )
+    else if( borderType == BORDER_WRAP )
     {
         if( p < 0 )
             p -= ((p-len+1)/len)*len;
         if( p >= len )
             p %= len;
     }
-    else if( borderType == IPL_BORDER_CONSTANT )
+    else if( borderType == BORDER_CONSTANT )
         p = -1;
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+        CV_Error( Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 
@@ -865,7 +872,7 @@ void copyMakeBorder(const Mat& src, Mat& dst, int top, int bottom, int left, int
     int i, j, k, esz = (int)src.elemSize();
     int width = src.cols*esz, width1 = dst.cols*esz;
 
-    if( borderType == IPL_BORDER_CONSTANT )
+    if( borderType == BORDER_CONSTANT )
     {
         vector<uchar> valvec((src.cols + left + right)*esz);
         uchar* val = &valvec[0];
@@ -1301,7 +1308,7 @@ double norm(const Mat& src, int normType, const Mat& mask)
             result = norm_((const double*)sptr, total, cn, normType, result, mptr);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     if( normType0 == NORM_L2 )
@@ -1379,7 +1386,7 @@ double norm(const Mat& src1, const Mat& src2, int normType, const Mat& mask)
             result = norm_((const double*)sptr1, (const double*)sptr2, total, cn, normType, result, mptr);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     if( normType0 == NORM_L2 )
@@ -1438,7 +1445,7 @@ double crossCorr(const Mat& src1, const Mat& src2)
             result += crossCorr_((const double*)sptr1, (const double*)sptr2, total);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         };
     }
     return result;
@@ -1571,7 +1578,7 @@ compare_(const _Tp* src1, const _Tp* src2, uchar* dst, size_t total, int cmpop)
             dst[i] = src1[i] > src2[i] ? 255 : 0;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown comparison operation");
+        CV_Error(Error::StsBadArg, "Unknown comparison operation");
     }
 }
 
@@ -1607,7 +1614,7 @@ compareS_(const _Tp* src1, _WTp value, uchar* dst, size_t total, int cmpop)
             dst[i] = src1[i] > value ? 255 : 0;
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown comparison operation");
+        CV_Error(Error::StsBadArg, "Unknown comparison operation");
     }
 }
 
@@ -1654,7 +1661,7 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
             compare_((const double*)sptr1, (const double*)sptr2, dptr, total, cmpop);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -1701,7 +1708,7 @@ void compare(const Mat& src, double value, Mat& dst, int cmpop)
             compareS_((const double*)sptr, value, dptr, total, cmpop);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -1833,7 +1840,7 @@ bool cmpUlps(const Mat& src1, const Mat& src2, int imaxDiff, double* _realmaxdif
             realmaxdiff = cmpUlpsFlt_((const int64*)sptr1, (const int64*)sptr2, total, imaxDiff, startidx, idx);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
 
         if(_realmaxdiff)
@@ -1922,7 +1929,7 @@ int check( const Mat& a, double fmin, double fmax, vector<int>* _idx )
                 checkFlt_((const double*)aptr, total, fmin, fmax, startidx, idx);
                 break;
             default:
-                CV_Error(CV_StsUnsupportedFormat, "");
+                CV_Error(Error::StsUnsupportedFormat, "");
         }
 
         if( idx != 0 )
@@ -2341,7 +2348,7 @@ void transform( const Mat& src, Mat& dst, const Mat& transmat, const Mat& _shift
             transform_((const double*)sptr, (double*)dptr, total, scn, dcn, mat);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2398,7 +2405,7 @@ static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
             minmax_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2466,7 +2473,7 @@ static void minmax(const Mat& src1, double val, Mat& dst, char op)
             minmax_((const double*)sptr1, saturate_cast<double>(val), (double*)dptr, total, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2538,7 +2545,7 @@ static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, double scale, cha
             muldiv_((const double*)sptr1, (const double*)sptr2, (double*)dptr, total, scale, op);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 }
@@ -2623,7 +2630,7 @@ Scalar mean(const Mat& src, const Mat& mask)
             mean_((const double*)sptr, mptr, total, cn, sum, nz);
             break;
         default:
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(Error::StsUnsupportedFormat, "");
         }
     }
 
@@ -2860,7 +2867,7 @@ static void writeElems(std::ostream& out, const void* data, int nelems, int dept
         out.precision(pp);
     }
     else
-        CV_Error(CV_StsUnsupportedFormat, "");
+        CV_Error(Error::StsUnsupportedFormat, "");
 }
 
 
@@ -2934,16 +2941,77 @@ MatComparator::operator()(const char* expr1, const char* expr2,
     << "'" << expr2 << "': " << MatPart(m2part, border > 0 ? &loc : 0) << ".\n";
 }
 
+void printVersionInfo(bool useStdOut)
+{
+    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
+    if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
+
+    std::string buildInfo( cv::getBuildInformation() );
+
+    size_t pos1 = buildInfo.find("Version control");
+    size_t pos2 = buildInfo.find('\n', pos1);
+    if(pos1 != std::string::npos && pos2 != std::string::npos)
+    {
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_vcs_version", ver);
+        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
+    }
+
+    pos1 = buildInfo.find("inner version");
+    pos2 = buildInfo.find('\n', pos1);
+    if(pos1 != std::string::npos && pos2 != std::string::npos)
+    {
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
+        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
+    }
+
+    const char* parallel_framework = currentParallelFramework();
+
+    if (parallel_framework) {
+        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
+        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
+    }
+
+    std::string cpu_features;
+
+#if CV_SSE
+    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
+#endif
+#if CV_SSE2
+    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
+#endif
+#if CV_SSE3
+    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
+#endif
+#if CV_SSSE3
+    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
+#endif
+#if CV_SSE4_1
+    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
+#endif
+#if CV_SSE4_2
+    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
+#endif
+#if CV_AVX
+    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
+#endif
+#if CV_NEON
+    cpu_features += " neon"; // NEON is currently not checked at runtime
+#endif
+
+    cpu_features.erase(0, 1); // erase initial space
+
+    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
+    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    const char * tegra_optimization = tegra::isDeviceSupported() ? "enabled" : "disabled";
+    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
+    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
+#endif
 }
 
-void cvTsConvert( const CvMat* src, CvMat* dst )
-{
-    Mat _src = cvarrToMat(src), _dst = cvarrToMat(dst);
-    cvtest::convert(_src, _dst, _dst.depth());
-}
-
-void cvTsZero( CvMat* dst, const CvMat* mask )
-{
-    Mat _dst = cvarrToMat(dst), _mask = mask ? cvarrToMat(mask) : Mat();
-    cvtest::set(_dst, Scalar::all(0), _mask);
 }

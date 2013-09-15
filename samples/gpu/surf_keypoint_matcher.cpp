@@ -1,9 +1,14 @@
 #include <iostream>
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_NONFREE
+
 #include "opencv2/core/core.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
+#include "opencv2/nonfree/gpu.hpp"
 
 using namespace std;
 using namespace cv;
@@ -28,12 +33,12 @@ int main(int argc, char* argv[])
     {
         if (string(argv[i]) == "--left")
         {
-            img1.upload(imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE));
+            img1.upload(imread(argv[++i], IMREAD_GRAYSCALE));
             CV_Assert(!img1.empty());
         }
         else if (string(argv[i]) == "--right")
         {
-            img2.upload(imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE));
+            img2.upload(imread(argv[++i], IMREAD_GRAYSCALE));
             CV_Assert(!img2.empty());
         }
         else if (string(argv[i]) == "--help")
@@ -81,3 +86,13 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
+#else
+
+int main()
+{
+    std::cerr << "OpenCV was built without nonfree module" << std::endl;
+    return 0;
+}
+
+#endif

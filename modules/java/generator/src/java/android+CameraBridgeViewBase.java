@@ -15,6 +15,7 @@ import android.content.DialogInterface;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -44,14 +45,22 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
     protected int mFrameHeight;
     protected int mMaxHeight;
     protected int mMaxWidth;
+    protected float mScale = 0;
     protected int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
-    protected int mCameraIndex = -1;
+    protected int mCameraIndex = CAMERA_ID_ANY;
     protected boolean mEnabled;
     protected FpsMeter mFpsMeter = null;
+
+    public static final int CAMERA_ID_ANY   = -1;
+    public static final int CAMERA_ID_BACK  = 99;
+    public static final int CAMERA_ID_FRONT = 98;
 
     public CameraBridgeViewBase(Context context, int cameraId) {
         super(context);
         mCameraIndex = cameraId;
+        getHolder().addCallback(this);
+        mMaxWidth = MAX_UNSPECIFIED;
+        mMaxHeight = MAX_UNSPECIFIED;
     }
 
     public CameraBridgeViewBase(Context context, AttributeSet attrs) {
@@ -69,6 +78,15 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         getHolder().addCallback(this);
         mMaxWidth = MAX_UNSPECIFIED;
         mMaxHeight = MAX_UNSPECIFIED;
+        styledAttrs.recycle();
+    }
+
+    /**
+     * Sets the camera index
+     * @param cameraIndex new camera index
+     */
+    public void setCameraIndex(int cameraIndex) {
+        this.mCameraIndex = cameraIndex;
     }
 
     public interface CvCameraViewListener {
@@ -149,8 +167,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         public void setFrameFormat(int format) {
             mPreviewFormat = format;
         }
-
-        private CvCameraViewListenerAdapter() {}
 
         private int mPreviewFormat = Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGBA;
         private CvCameraViewListener mOldStyleListener;
@@ -389,7 +405,22 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             Canvas canvas = getHolder().lockCanvas();
             if (canvas != null) {
                 canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
-                canvas.drawBitmap(mCacheBitmap, (canvas.getWidth() - mCacheBitmap.getWidth()) / 2, (canvas.getHeight() - mCacheBitmap.getHeight()) / 2, null);
+                Log.d(TAG, "mStretch value: " + mScale);
+
+                if (mScale != 0) {
+                    canvas.drawBitmap(mCacheBitmap, new Rect(0,0,mCacheBitmap.getWidth(), mCacheBitmap.getHeight()),
+                         new Rect((int)((canvas.getWidth() - mScale*mCacheBitmap.getWidth()) / 2),
+                         (int)((canvas.getHeight() - mScale*mCacheBitmap.getHeight()) / 2),
+                         (int)((canvas.getWidth() - mScale*mCacheBitmap.getWidth()) / 2 + mScale*mCacheBitmap.getWidth()),
+                         (int)((canvas.getHeight() - mScale*mCacheBitmap.getHeight()) / 2 + mScale*mCacheBitmap.getHeight())), null);
+                } else {
+                     canvas.drawBitmap(mCacheBitmap, new Rect(0,0,mCacheBitmap.getWidth(), mCacheBitmap.getHeight()),
+                         new Rect((canvas.getWidth() - mCacheBitmap.getWidth()) / 2,
+                         (canvas.getHeight() - mCacheBitmap.getHeight()) / 2,
+                         (canvas.getWidth() - mCacheBitmap.getWidth()) / 2 + mCacheBitmap.getWidth(),
+                         (canvas.getHeight() - mCacheBitmap.getHeight()) / 2 + mCacheBitmap.getHeight()), null);
+                }
+
                 if (mFpsMeter != null) {
                     mFpsMeter.measure();
                     mFpsMeter.draw(canvas, 20, 30);

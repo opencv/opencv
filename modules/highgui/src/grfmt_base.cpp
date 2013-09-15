@@ -54,7 +54,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_buf_supported = false;
 }
 
-bool BaseImageDecoder::setSource( const std::string& filename )
+bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;
     m_buf.release();
@@ -65,7 +65,7 @@ bool BaseImageDecoder::setSource( const Mat& buf )
 {
     if( !m_buf_supported )
         return false;
-    m_filename = std::string();
+    m_filename = String();
     m_buf = buf;
     return true;
 }
@@ -75,7 +75,7 @@ size_t BaseImageDecoder::signatureLength() const
     return m_signature.size();
 }
 
-bool BaseImageDecoder::checkSignature( const std::string& signature ) const
+bool BaseImageDecoder::checkSignature( const String& signature ) const
 {
     size_t len = signatureLength();
     return signature.size() >= len && memcmp( signature.c_str(), m_signature.c_str(), len ) == 0;
@@ -96,12 +96,12 @@ bool  BaseImageEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U;
 }
 
-std::string BaseImageEncoder::getDescription() const
+String BaseImageEncoder::getDescription() const
 {
     return m_description;
 }
 
-bool BaseImageEncoder::setDestination( const std::string& filename )
+bool BaseImageEncoder::setDestination( const String& filename )
 {
     m_filename = filename;
     m_buf = 0;
@@ -114,7 +114,7 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
         return false;
     m_buf = &buf;
     m_buf->clear();
-    m_filename = std::string();
+    m_filename = String();
     return true;
 }
 
@@ -127,7 +127,7 @@ void BaseImageEncoder::throwOnEror() const
 {
     if(!m_last_error.empty())
     {
-        std::string msg = "Raw image encoder error: " + m_last_error;
+        String msg = "Raw image encoder error: " + m_last_error;
         CV_Error( CV_BadImageSize, msg.c_str() );
     }
 }

@@ -48,13 +48,13 @@ namespace detail {
 Ptr<ExposureCompensator> ExposureCompensator::createDefault(int type)
 {
     if (type == NO)
-        return new NoExposureCompensator();
+        return makePtr<NoExposureCompensator>();
     if (type == GAIN)
-        return new GainCompensator();
+        return makePtr<GainCompensator>();
     if (type == GAIN_BLOCKS)
-        return new BlocksGainCompensator();
-    CV_Error(CV_StsBadArg, "unsupported exposure compensation method");
-    return NULL;
+        return makePtr<BlocksGainCompensator>();
+    CV_Error(Error::StsBadArg, "unsupported exposure compensation method");
+    return Ptr<ExposureCompensator>();
 }
 
 

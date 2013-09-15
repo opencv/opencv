@@ -1179,4 +1179,3 @@ CvBlobTracker* cvCreateBlobTrackerMSPF()
 {
     return cvCreateBlobTrackerList(cvCreateBlobTrackerOneMSPF);
 }
-

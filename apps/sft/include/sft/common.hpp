@@ -44,6 +44,7 @@
 #define __SFT_COMMON_HPP__
 
 #include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
 #include <opencv2/softcascade.hpp>
 
 namespace cv {using namespace softcascade;}
@@ -53,7 +54,7 @@ namespace sft
     using cv::Mat;
     struct ICF;
 
-    typedef std::string   string;
+    typedef cv::String   string;
 
     typedef std::vector<ICF>           Icfvector;
     typedef std::vector<sft::string>   svector;

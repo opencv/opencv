@@ -71,7 +71,7 @@ cv::viz::Color cv::viz::Color::gray()    { return Color(128, 128, 128); }
 ////////////////////////////////////////////////////////////////////
 /// cv::viz::KeyboardEvent
 
-cv::viz::KeyboardEvent::KeyboardEvent(bool _action, const std::string& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
+cv::viz::KeyboardEvent::KeyboardEvent(bool _action, const String& _key_sym, unsigned char key, bool alt, bool ctrl, bool shift)
   : action_(_action), modifiers_(0), key_code_(key), key_sym_(_key_sym)
 {
   if (alt)
@@ -223,11 +223,13 @@ cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
     double bottom = near * (proj(1,2)-1) / proj(1,1);
     double top = 2.0 * near / proj(1,1) + bottom;
     
-    if (fabs(left-right) < std::numeric_limits<double>::epsilon()) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
+    double epsilon = 2.2204460492503131e-16;
+    
+    if (fabs(left-right) < epsilon) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
     else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
     focal_[0] = -near * principal_point_[0] / left;
     
-    if (fabs(top-bottom) < std::numeric_limits<double>::epsilon()) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f; 
+    if (fabs(top-bottom) < epsilon) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f; 
     else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
     focal_[1] = near * principal_point_[1] / top;
     

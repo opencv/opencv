@@ -43,7 +43,10 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
+
+using namespace cv;
+
 #ifdef HAVE_OPENCL
 
 //#define MAT_DEBUG
@@ -100,7 +103,7 @@ PARAM_TEST_CASE(CvtColor, cv::Size, MatDepth)
     cv::cvtColor(src, dst_gold, CVTCODE(name));\
     cv::Mat dst_mat;\
     dst.download(dst_mat);\
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");\
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);\
 }
 
 //add new ones here using macro
@@ -141,7 +144,7 @@ TEST_P(CvtColor_Gray2RGB, Accuracy)
     cv::cvtColor(src, dst_gold, code);
     cv::Mat dst_mat;
     dst.download(dst_mat);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
 }
 
 
@@ -171,7 +174,7 @@ TEST_P(CvtColor_YUV420, Accuracy)
     cv::Mat dst_mat;
     dst.download(dst_mat);
     MAT_DIFF(dst_mat, dst_gold);
-    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5, "");
+    EXPECT_MAT_NEAR(dst_gold, dst_mat, 1e-5);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor, testing::Combine(
@@ -181,13 +184,13 @@ INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor, testing::Combine(
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_YUV420, testing::Combine(
                             testing::Values(cv::Size(128, 45), cv::Size(46, 132), cv::Size(1024, 1023)),
-                            testing::Values((int)CV_YUV2RGBA_NV12, (int)CV_YUV2BGRA_NV12, (int)CV_YUV2RGB_NV12, (int)CV_YUV2BGR_NV12)
+                            testing::Values((int)COLOR_YUV2RGBA_NV12, (int)COLOR_YUV2BGRA_NV12, (int)COLOR_YUV2RGB_NV12, (int)COLOR_YUV2BGR_NV12)
                         ));
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, CvtColor_Gray2RGB, testing::Combine(
                             DIFFERENT_SIZES,
                             testing::Values(MatDepth(CV_8U), MatDepth(CV_16U), MatDepth(CV_32F)),
-                            testing::Values((int)CV_GRAY2BGR, (int)CV_GRAY2BGRA, (int)CV_GRAY2RGB, (int)CV_GRAY2RGBA)
+                            testing::Values((int)COLOR_GRAY2BGR, (int)COLOR_GRAY2BGRA, (int)COLOR_GRAY2RGB, (int)COLOR_GRAY2RGBA)
                         ));
 }
 #endif

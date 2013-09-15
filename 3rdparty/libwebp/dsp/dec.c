@@ -1,8 +1,10 @@
 // Copyright 2010 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Speed-critical decoding functions.
@@ -426,11 +428,16 @@ static void HE8uv(uint8_t *dst) {    // horizontal
 }
 
 // helper for chroma-DC predictions
-static WEBP_INLINE void Put8x8uv(uint64_t v, uint8_t* dst) {
+static WEBP_INLINE void Put8x8uv(uint8_t value, uint8_t* dst) {
   int j;
+#ifndef WEBP_REFERENCE_IMPLEMENTATION
+  const uint64_t v = (uint64_t)value * 0x0101010101010101ULL;
   for (j = 0; j < 8; ++j) {
     *(uint64_t*)(dst + j * BPS) = v;
   }
+#else
+  for (j = 0; j < 8; ++j) memset(dst + j * BPS, value, 8);
+#endif
 }
 
 static void DC8uv(uint8_t *dst) {     // DC
@@ -439,7 +446,7 @@ static void DC8uv(uint8_t *dst) {     // DC
   for (i = 0; i < 8; ++i) {
     dc0 += dst[i - BPS] + dst[-1 + i * BPS];
   }
-  Put8x8uv((uint64_t)((dc0 >> 4) * 0x0101010101010101ULL), dst);
+  Put8x8uv(dc0 >> 4, dst);
 }
 
 static void DC8uvNoLeft(uint8_t *dst) {   // DC with no left samples
@@ -448,7 +455,7 @@ static void DC8uvNoLeft(uint8_t *dst) {   // DC with no left samples
   for (i = 0; i < 8; ++i) {
     dc0 += dst[i - BPS];
   }
-  Put8x8uv((uint64_t)((dc0 >> 3) * 0x0101010101010101ULL), dst);
+  Put8x8uv(dc0 >> 3, dst);
 }
 
 static void DC8uvNoTop(uint8_t *dst) {  // DC with no top samples
@@ -457,11 +464,11 @@ static void DC8uvNoTop(uint8_t *dst) {  // DC with no top samples
   for (i = 0; i < 8; ++i) {
     dc0 += dst[-1 + i * BPS];
   }
-  Put8x8uv((uint64_t)((dc0 >> 3) * 0x0101010101010101ULL), dst);
+  Put8x8uv(dc0 >> 3, dst);
 }
 
 static void DC8uvNoTopLeft(uint8_t *dst) {    // DC with nothing
-  Put8x8uv(0x8080808080808080ULL, dst);
+  Put8x8uv(0x80, dst);
 }
 
 //------------------------------------------------------------------------------

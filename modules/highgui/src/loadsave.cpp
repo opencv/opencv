@@ -58,35 +58,35 @@ struct ImageCodecInitializer
 {
     ImageCodecInitializer()
     {
-        decoders.push_back( new BmpDecoder );
-        encoders.push_back( new BmpEncoder );
+        decoders.push_back( makePtr<BmpDecoder>() );
+        encoders.push_back( makePtr<BmpEncoder>() );
     #ifdef HAVE_JPEG
-        decoders.push_back( new JpegDecoder );
-        encoders.push_back( new JpegEncoder );
+        decoders.push_back( makePtr<JpegDecoder>() );
+        encoders.push_back( makePtr<JpegEncoder>() );
     #endif
     #ifdef HAVE_WEBP
-        decoders.push_back( new WebPDecoder );
-        encoders.push_back( new WebPEncoder );
+        decoders.push_back( makePtr<WebPDecoder>() );
+        encoders.push_back( makePtr<WebPEncoder>() );
     #endif
-        decoders.push_back( new SunRasterDecoder );
-        encoders.push_back( new SunRasterEncoder );
-        decoders.push_back( new PxMDecoder );
-        encoders.push_back( new PxMEncoder );
+        decoders.push_back( makePtr<SunRasterDecoder>() );
+        encoders.push_back( makePtr<SunRasterEncoder>() );
+        decoders.push_back( makePtr<PxMDecoder>() );
+        encoders.push_back( makePtr<PxMEncoder>() );
     #ifdef HAVE_TIFF
-        decoders.push_back( new TiffDecoder );
+        decoders.push_back( makePtr<TiffDecoder>() );
     #endif
-        encoders.push_back( new TiffEncoder );
+        encoders.push_back( makePtr<TiffEncoder>() );
     #ifdef HAVE_PNG
-        decoders.push_back( new PngDecoder );
-        encoders.push_back( new PngEncoder );
+        decoders.push_back( makePtr<PngDecoder>() );
+        encoders.push_back( makePtr<PngEncoder>() );
     #endif
     #ifdef HAVE_JASPER
-        decoders.push_back( new Jpeg2KDecoder );
-        encoders.push_back( new Jpeg2KEncoder );
+        decoders.push_back( makePtr<Jpeg2KDecoder>() );
+        encoders.push_back( makePtr<Jpeg2KEncoder>() );
     #endif
     #ifdef HAVE_OPENEXR
-        decoders.push_back( new ExrDecoder );
-        encoders.push_back( new ExrEncoder );
+        decoders.push_back( makePtr<ExrDecoder>() );
+        encoders.push_back( makePtr<ExrEncoder>() );
     #endif
     }
 
@@ -96,7 +96,7 @@ struct ImageCodecInitializer
 
 static ImageCodecInitializer codecs;
 
-static ImageDecoder findDecoder( const std::string& filename )
+static ImageDecoder findDecoder( const String& filename )
 {
     size_t i, maxlen = 0;
     for( i = 0; i < codecs.decoders.size(); i++ )
@@ -108,8 +108,8 @@ static ImageDecoder findDecoder( const std::string& filename )
     FILE* f= fopen( filename.c_str(), "rb" );
     if( !f )
         return ImageDecoder();
-    std::string signature(maxlen, ' ');
-    maxlen = fread( &signature[0], 1, maxlen, f );
+    String signature(maxlen, ' ');
+    maxlen = fread( (void*)signature.c_str(), 1, maxlen, f );
     fclose(f);
     signature = signature.substr(0, maxlen);
 
@@ -137,8 +137,8 @@ static ImageDecoder findDecoder( const Mat& buf )
 
     size_t bufSize = buf.rows*buf.cols*buf.elemSize();
     maxlen = std::min(maxlen, bufSize);
-    std::string signature(maxlen, ' ');
-    memcpy( &signature[0], buf.data, maxlen );
+    String signature(maxlen, ' ');
+    memcpy( (void*)signature.c_str(), buf.data, maxlen );
 
     for( i = 0; i < codecs.decoders.size(); i++ )
     {
@@ -149,7 +149,7 @@ static ImageDecoder findDecoder( const Mat& buf )
     return ImageDecoder();
 }
 
-static ImageEncoder findEncoder( const std::string& _ext )
+static ImageEncoder findEncoder( const String& _ext )
 {
     if( _ext.size() <= 1 )
         return ImageEncoder();
@@ -163,7 +163,7 @@ static ImageEncoder findEncoder( const std::string& _ext )
 
     for( size_t i = 0; i < codecs.encoders.size(); i++ )
     {
-        std::string description = codecs.encoders[i]->getDescription();
+        String description = codecs.encoders[i]->getDescription();
         const char* descr = strchr( description.c_str(), '(' );
 
         while( descr )
@@ -191,14 +191,14 @@ static ImageEncoder findEncoder( const std::string& _ext )
 enum { LOAD_CVMAT=0, LOAD_IMAGE=1, LOAD_MAT=2 };
 
 static void*
-imread_( const std::string& filename, int flags, int hdrtype, Mat* mat=0 )
+imread_( const String& filename, int flags, int hdrtype, Mat* mat=0 )
 {
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
 
     ImageDecoder decoder = findDecoder(filename);
-    if( decoder.empty() )
+    if( !decoder )
         return 0;
     decoder->setSource(filename);
     if( !decoder->readHeader() )
@@ -253,14 +253,14 @@ imread_( const std::string& filename, int flags, int hdrtype, Mat* mat=0 )
         hdrtype == LOAD_IMAGE ? (void*)image : (void*)mat;
 }
 
-Mat imread( const std::string& filename, int flags )
+Mat imread( const String& filename, int flags )
 {
     Mat img;
     imread_( filename, flags, LOAD_MAT, &img );
     return img;
 }
 
-static bool imwrite_( const std::string& filename, const Mat& image,
+static bool imwrite_( const String& filename, const Mat& image,
                       const std::vector<int>& params, bool flipv )
 {
     Mat temp;
@@ -269,7 +269,7 @@ static bool imwrite_( const std::string& filename, const Mat& image,
     CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
 
     ImageEncoder encoder = findEncoder( filename );
-    if( encoder.empty() )
+    if( !encoder )
         CV_Error( CV_StsError, "could not find a writer for the specified extension" );
 
     if( !encoder->isFormatSupported(image.depth()) )
@@ -292,7 +292,7 @@ static bool imwrite_( const std::string& filename, const Mat& image,
     return code;
 }
 
-bool imwrite( const std::string& filename, InputArray _img,
+bool imwrite( const String& filename, InputArray _img,
               const std::vector<int>& params )
 {
     Mat img = _img.getMat();
@@ -306,10 +306,10 @@ imdecode_( const Mat& buf, int flags, int hdrtype, Mat* mat=0 )
     IplImage* image = 0;
     CvMat *matrix = 0;
     Mat temp, *data = &temp;
-    std::string filename;
+    String filename;
 
     ImageDecoder decoder = findDecoder(buf);
-    if( decoder.empty() )
+    if( !decoder )
         return 0;
 
     if( !decoder->setSource(buf) )
@@ -400,7 +400,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     return *dst;
 }
 
-bool imencode( const std::string& ext, InputArray _image,
+bool imencode( const String& ext, InputArray _image,
                std::vector<uchar>& buf, const std::vector<int>& params )
 {
     Mat image = _image.getMat();
@@ -409,7 +409,7 @@ bool imencode( const std::string& ext, InputArray _image,
     CV_Assert( channels == 1 || channels == 3 || channels == 4 );
 
     ImageEncoder encoder = findEncoder( ext );
-    if( encoder.empty() )
+    if( !encoder )
         CV_Error( CV_StsError, "could not find encoder for the specified extension" );
 
     if( !encoder->isFormatSupported(image.depth()) )
@@ -429,7 +429,7 @@ bool imencode( const std::string& ext, InputArray _image,
     }
     else
     {
-        std::string filename = tempfile();
+        String filename = tempfile();
         code = encoder->setDestination(filename);
         CV_Assert( code );
 

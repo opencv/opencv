@@ -231,7 +231,7 @@ void CV_FeatureDetectorTest::regressionTest()
 
 void CV_FeatureDetectorTest::run( int /*start_from*/ )
 {
-    if( fdetector.empty() )
+    if( !fdetector )
     {
         ts->printf( cvtest::TS::LOG, "Feature detector is empty.\n" );
         ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -275,12 +275,16 @@ static Mat readMatFromBin( const string& filename )
         size_t elements_read4 = fread( (void*)&dataSize, sizeof(int), 1, f );
         CV_Assert(elements_read1 == 1 && elements_read2 == 1 && elements_read3 == 1 && elements_read4 == 1);
 
-        uchar* data = (uchar*)cvAlloc(dataSize);
-        size_t elements_read = fread( (void*)data, 1, dataSize, f );
+        size_t step = dataSize / rows / CV_ELEM_SIZE(type);
+        CV_Assert(step >= (size_t)cols);
+
+        Mat m = Mat( rows, step, type).colRange(0, cols);
+
+        size_t elements_read = fread( m.ptr(), 1, dataSize, f );
         CV_Assert(elements_read == (size_t)(dataSize));
         fclose(f);
 
-        return Mat( rows, cols, type, data );
+        return m;
     }
     return Mat();
 }
@@ -402,7 +406,7 @@ protected:
             double t = (double)getTickCount();
             dextractor->compute( img, keypoints, calcDescriptors );
             t = getTickCount() - t;
-            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)cvGetTickFrequency()*1000.)/calcDescriptors.rows );
+            ts->printf(cvtest::TS::LOG, "\nAverage time of computing one descriptor = %g ms.\n", t/((double)getTickFrequency()*1000.)/calcDescriptors.rows );
 
             if( calcDescriptors.rows != (int)keypoints.size() )
             {
@@ -460,7 +464,7 @@ protected:
     void run(int)
     {
         createDescriptorExtractor();
-        if( dextractor.empty() )
+        if( !dextractor )
         {
             ts->printf(cvtest::TS::LOG, "Descriptor extractor is empty.\n");
             ts->set_failed_test_info( cvtest::TS::FAIL_INVALID_TEST_DATA );
@@ -1097,7 +1101,7 @@ protected:
     void run(int)
     {
         Ptr<Feature2D> f = Algorithm::create<Feature2D>("Feature2D." + fname);
-        if(f.empty())
+        if(!f)
             return;
         string path = string(ts->get_data_path()) + "detectors_descriptors_evaluation/planar/";
         string imgname1 = path + "box.png";
@@ -1145,3 +1149,76 @@ protected:
 
 TEST(Features2d_SIFTHomographyTest, regression) { CV_DetectPlanarTest test("SIFT", 80); test.safe_run(); }
 TEST(Features2d_SURFHomographyTest, regression) { CV_DetectPlanarTest test("SURF", 80); test.safe_run(); }
+
+class FeatureDetectorUsingMaskTest : public cvtest::BaseTest
+{
+public:
+    FeatureDetectorUsingMaskTest(const Ptr<FeatureDetector>& featureDetector) :
+        featureDetector_(featureDetector)
+    {
+        CV_Assert(featureDetector_);
+    }
+
+protected:
+
+    void run(int)
+    {
+        const int nStepX = 2;
+        const int nStepY = 2;
+
+        const string imageFilename = string(ts->get_data_path()) + "/features2d/tsukuba.png";
+
+        Mat image = imread(imageFilename);
+        if(image.empty())
+        {
+            ts->printf(cvtest::TS::LOG, "Image %s can not be read.\n", imageFilename.c_str());
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+            return;
+        }
+
+        Mat mask(image.size(), CV_8U);
+
+        const int stepX = image.size().width / nStepX;
+        const int stepY = image.size().height / nStepY;
+
+        vector<KeyPoint> keyPoints;
+        vector<Point2f> points;
+        for(int i=0; i<nStepX; ++i)
+            for(int j=0; j<nStepY; ++j)
+            {
+
+                mask.setTo(0);
+                Rect whiteArea(i * stepX, j * stepY, stepX, stepY);
+                mask(whiteArea).setTo(255);
+
+                featureDetector_->detect(image, keyPoints, mask);
+                KeyPoint::convert(keyPoints, points);
+
+                for(size_t k=0; k<points.size(); ++k)
+                {
+                    if ( !whiteArea.contains(points[k]) )
+                    {
+                        ts->printf(cvtest::TS::LOG, "The feature point is outside of the mask.");
+                        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+                        return;
+                    }
+                }
+            }
+
+        ts->set_failed_test_info( cvtest::TS::OK );
+    }
+
+    Ptr<FeatureDetector> featureDetector_;
+};
+
+TEST(Features2d_SIFT_using_mask, regression)
+{
+    FeatureDetectorUsingMaskTest test(Algorithm::create<FeatureDetector>("Feature2D.SIFT"));
+    test.safe_run();
+}
+
+TEST(DISABLED_Features2d_SURF_using_mask, regression)
+{
+    FeatureDetectorUsingMaskTest test(Algorithm::create<FeatureDetector>("Feature2D.SURF"));
+    test.safe_run();
+}

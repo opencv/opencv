@@ -460,7 +460,7 @@ public class CoreTest extends OpenCVTestCase {
         Mat eigenVals = new Mat();
         Mat eigenVecs = new Mat();
 
-        Core.eigen(src, true, eigenVals, eigenVecs);
+        Core.eigen(src, eigenVals, eigenVecs);
 
         Mat expectedEigenVals = new Mat(3, 1, CvType.CV_32FC1) {
             {
@@ -491,20 +491,6 @@ public class CoreTest extends OpenCVTestCase {
 
         Point truth[] = {
                 new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(5, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
-                new Point(4, 6),
                 new Point(4, 6)
         };
         assertArrayPointsEquals(truth, pts.toArray(), EPS);
@@ -1111,18 +1097,6 @@ public class CoreTest extends OpenCVTestCase {
         Core.LUT(grayRnd, lut, dst);
 
         assertMatEqual(gray255, dst);
-    }
-
-    public void testLUTMatMatMatInt() {
-        Mat lut = new Mat(1, 256, CvType.CV_8UC1);
-        // TODO: ban this overload
-        try
-        {
-            Core.LUT(grayRnd, lut, dst, 1);
-            fail("Last parameter for LUT was not supported");
-        } catch (CvException e) {
-            // expected
-        }
     }
 
     public void testMagnitude() {
@@ -1839,9 +1813,9 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testRandShuffleMat() {
-        Mat original = new Mat(1, 5, CvType.CV_32F) {
+        Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
-                put(0, 0, 7, 5, 2, 8, 1);
+                put(0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
             }
         };
         Mat shuffled = original.clone();
@@ -1857,9 +1831,9 @@ public class CoreTest extends OpenCVTestCase {
     }
 
     public void testRandShuffleMatDouble() {
-        Mat original = new Mat(1, 5, CvType.CV_32F) {
+        Mat original = new Mat(1, 10, CvType.CV_32F) {
             {
-                put(0, 0, 7, 5, 2, 8, 1);
+                put(0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
             }
         };
         Mat shuffled = original.clone();
@@ -2266,6 +2240,37 @@ public class CoreTest extends OpenCVTestCase {
 
         assertMatEqual(Mat.eye(5, 3, CvType.CV_8U), dst);
 
+    }
+
+    public void testCopyMakeBorderMatMatIntIntIntIntInt() {
+        Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
+        int border = 2;
+
+        Core.copyMakeBorder(src, dst, border, border, border, border, Core.BORDER_REPLICATE);
+
+        truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testCopyMakeBorderMatMatIntIntIntIntIntScalar() {
+        Mat src = new Mat(2, 2, CvType.CV_32F, new Scalar(1));
+
+        Scalar value = new Scalar(0);
+        int border = 2;
+
+        Core.copyMakeBorder(src, dst, border, border, border, border, Core.BORDER_REPLICATE, value);
+        // TODO_: write better test (use Core.BORDER_CONSTANT)
+
+        truth = new Mat(6, 6, CvType.CV_32F, new Scalar(1));
+        assertMatEqual(truth, dst, EPS);
+    }
+
+    public void testBorderInterpolate() {
+        float val1 = Core.borderInterpolate(100, 150, Core.BORDER_REFLECT_101);
+        assertEquals(100f, val1);
+
+        float val2 = Core.borderInterpolate(-5, 10, Core.BORDER_WRAP);
+        assertEquals(5f, val2);
     }
 
 }

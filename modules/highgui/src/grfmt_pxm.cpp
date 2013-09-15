@@ -107,7 +107,7 @@ size_t PxMDecoder::signatureLength() const
     return 3;
 }
 
-bool PxMDecoder::checkSignature( const std::string& signature ) const
+bool PxMDecoder::checkSignature( const String& signature ) const
 {
     return signature.size() >= 3 && signature[0] == 'P' &&
            '1' <= signature[1] && signature[1] <= '6' &&
@@ -116,7 +116,7 @@ bool PxMDecoder::checkSignature( const std::string& signature ) const
 
 ImageDecoder PxMDecoder::newDecoder() const
 {
-    return new PxMDecoder;
+    return makePtr<PxMDecoder>();
 }
 
 void  PxMDecoder::close()
@@ -357,7 +357,7 @@ PxMEncoder::~PxMEncoder()
 
 ImageEncoder  PxMEncoder::newEncoder() const
 {
-    return new PxMEncoder;
+    return makePtr<PxMEncoder>();
 }
 
 

@@ -12,7 +12,6 @@ set(prefix      "${CMAKE_INSTALL_PREFIX}")
 set(exec_prefix "\${prefix}")
 set(libdir      "") #TODO: need link paths for OpenCV_EXTRA_COMPONENTS
 set(includedir  "\${prefix}/${OPENCV_INCLUDE_INSTALL_PATH}")
-set(VERSION     ${OPENCV_VERSION})
 
 if(CMAKE_BUILD_TYPE MATCHES "Release")
   set(ocv_optkind OPT)

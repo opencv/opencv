@@ -14,8 +14,8 @@ public class MatOfFloat extends Mat {
 
     protected MatOfFloat(long addr) {
         super(addr);
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incompatible Mat");
         //FIXME: do we need release() here?
     }
 
@@ -25,8 +25,8 @@ public class MatOfFloat extends Mat {
 
     public MatOfFloat(Mat m) {
         super(m, Range.all());
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incompatible Mat");
         //FIXME: do we need release() here?
     }
 

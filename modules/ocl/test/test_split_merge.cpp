@@ -12,6 +12,7 @@
 //
 // Copyright (C) 2010-2012, Institute Of Software Chinese Academy Of Science, all rights reserved.
 // Copyright (C) 2010-2012, Advanced Micro Devices, Inc., all rights reserved.
+// Copyright (C) 2010-2012, Multicoreware, Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
@@ -43,7 +44,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -87,7 +88,7 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
 
     //dst mat with roi
     cv::Mat dst_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
 
@@ -112,10 +113,6 @@ PARAM_TEST_CASE(MergeTestBase, MatType, int)
         mat4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst  = randomMat(rng, size, CV_MAKETYPE(type, channels), 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -205,12 +202,7 @@ TEST_P(Merge, Accuracy)
         cv::merge(dev_src, dst_roi);
         cv::ocl::merge(dev_gsrc, gdst);
 
-        cv::Mat cpu_dst;
-        gdst_whole.download(cpu_dst);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,src1x =%d,src1y=%d,src2x =%d,src2y=%d,src3x =%d,src3y=%d,src4x =%d,src4y=%d,dstx=%d,dsty=%d", roicols, roirows, src1x, src1y, src2x , src2y, src3x , src3y, src4x , src4y, dstx, dsty);
-
-        EXPECT_MAT_NEAR(dst, cpu_dst, 0.0, sss);
+        EXPECT_MAT_NEAR(dst, Mat(gdst_whole), 0.0);
     }
 }
 
@@ -252,7 +244,7 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
     cv::Mat dst2_roi;
     cv::Mat dst3_roi;
     cv::Mat dst4_roi;
-    //std::vector<cv::ocl::Info> oclinfo;
+
     //ocl dst mat for testing
     cv::ocl::oclMat gdst1_whole;
     cv::ocl::oclMat gdst2_whole;
@@ -280,10 +272,6 @@ PARAM_TEST_CASE(SplitTestBase, MatType, int)
         dst3 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
         dst4 = randomMat(rng, size, CV_MAKETYPE(type, 1), 5, 16, false);
 
-        //int devnums = getDevice(oclinfo, OPENCV_DEFAULT_OPENCL_DEVICE);
-        //CV_Assert(devnums > 0);
-        ////if you want to use undefault device, set it here
-        ////setDevice(oclinfo[0]);
     }
 
     void random_roi()
@@ -356,28 +344,17 @@ TEST_P(Split, Accuracy)
         cv::split(mat_roi, dev_dst);
         cv::ocl::split(gmat, dev_gdst);
 
-        cv::Mat cpu_dst1;
-        cv::Mat cpu_dst2;
-        cv::Mat cpu_dst3;
-        cv::Mat cpu_dst4;
-        gdst1_whole.download(cpu_dst1);
-        gdst2_whole.download(cpu_dst2);
-        gdst3_whole.download(cpu_dst3);
-        gdst4_whole.download(cpu_dst4);
-        char sss[1024];
-        sprintf(sss, "roicols=%d,roirows=%d,dst1x =%d,dsty=%d,dst2x =%d,dst2y=%d,dst3x =%d,dst3y=%d,dst4x =%d,dst4y=%d,srcx=%d,srcy=%d", roicols, roirows, dst1x , dst1y, dst2x , dst2y, dst3x , dst3y, dst4x , dst4y, srcx, srcy);
-
         if(channels >= 1)
-            EXPECT_MAT_NEAR(dst1, cpu_dst1, 0.0, sss);
+            EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), 0.0);
 
         if(channels >= 2)
-            EXPECT_MAT_NEAR(dst2, cpu_dst2, 0.0, sss);
+            EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), 0.0);
 
         if(channels >= 3)
-            EXPECT_MAT_NEAR(dst3, cpu_dst3, 0.0, sss);
+            EXPECT_MAT_NEAR(dst3, Mat(gdst3_whole), 0.0);
 
         if(channels >= 4)
-            EXPECT_MAT_NEAR(dst4, cpu_dst4, 0.0, sss);
+            EXPECT_MAT_NEAR(dst4, Mat(gdst4_whole), 0.0);
     }
 }
 

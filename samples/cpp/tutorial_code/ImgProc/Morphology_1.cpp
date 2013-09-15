@@ -37,9 +37,9 @@ int main( int, char** argv )
     { return -1; }
 
   /// Create windows
-  namedWindow( "Erosion Demo", CV_WINDOW_AUTOSIZE );
-  namedWindow( "Dilation Demo", CV_WINDOW_AUTOSIZE );
-  cvMoveWindow( "Dilation Demo", src.cols, 0 );
+  namedWindow( "Erosion Demo", WINDOW_AUTOSIZE );
+  namedWindow( "Dilation Demo", WINDOW_AUTOSIZE );
+  moveWindow( "Dilation Demo", src.cols, 0 );
 
   /// Create Erosion Trackbar
   createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Erosion Demo",

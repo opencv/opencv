@@ -43,12 +43,29 @@
 //
 //M*/
 
-#include "mcwutil.hpp"
+#include "precomp.hpp"
 
-#if defined (HAVE_OPENCL)
-#ifndef CL_VERSION_1_2
-#define CL_VERSION_1_2 0
+#ifdef __GNUC__
+#if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 402
+#define GCC_DIAG_STR(s) #s
+#define GCC_DIAG_JOINSTR(x,y) GCC_DIAG_STR(x ## y)
+# define GCC_DIAG_DO_PRAGMA(x) _Pragma (#x)
+# define GCC_DIAG_PRAGMA(x) GCC_DIAG_DO_PRAGMA(GCC diagnostic x)
+# if ((__GNUC__ * 100) + __GNUC_MINOR__) >= 406
+#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(push) \
+GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
+#  define GCC_DIAG_ON(x) GCC_DIAG_PRAGMA(pop)
+# else
+#  define GCC_DIAG_OFF(x) GCC_DIAG_PRAGMA(ignored GCC_DIAG_JOINSTR(-W,x))
+#  define GCC_DIAG_ON(x)  GCC_DIAG_PRAGMA(warning GCC_DIAG_JOINSTR(-W,x))
+# endif
+#else
+# define GCC_DIAG_OFF(x)
+# define GCC_DIAG_ON(x)
 #endif
+#endif /* __GNUC__ */
+
+using namespace std;
 
 namespace cv
 {
@@ -61,9 +78,9 @@ namespace cv
         }
 
         // provide additional methods for the user to interact with the command queue after a task is fired
-        static void openCLExecuteKernel_2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernel_2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                                   int depth, char *build_options, FLUSH_MODE finish_mode)
+                                   int depth, const char *build_options, FLUSH_MODE finish_mode)
         {
             //construct kernel name
             //The rule is functionName_Cn_Dn, C represent Channels, D Represent DataType Depth, n represent an integer number
@@ -73,7 +90,7 @@ namespace cv
                 idxStr << "_C" << channels;
             if(depth != -1)
                 idxStr << "_D" << depth;
-            kernelName += idxStr.str();
+            kernelName = kernelName + idxStr.str().c_str();
 
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, build_options);
@@ -90,15 +107,15 @@ namespace cv
             for(size_t i = 0; i < args.size(); i ++)
                 openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 
-            openCLSafeCall(clEnqueueNDRangeKernel(clCxt->impl->clCmdQueue, kernel, 3, NULL, globalThreads,
+            openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 3, NULL, globalThreads,
                                                   localThreads, 0, NULL, NULL));
 
             switch(finish_mode)
             {
             case CLFINISH:
-                clFinish(clCxt->impl->clCmdQueue);
+                clFinish((cl_command_queue)clCxt->oclCommandQueue());
             case CLFLUSH:
-                clFlush(clCxt->impl->clCmdQueue);
+                clFlush((cl_command_queue)clCxt->oclCommandQueue());
                 break;
             case DISABLE:
             default:
@@ -107,29 +124,32 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode)
         {
             openCLExecuteKernel2(clCxt, source, kernelName, globalThreads, localThreads, args,
                                  channels, depth, NULL, finish_mode);
         }
-        void openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName,
+        void openCLExecuteKernel2(Context *clCxt , const char **source, String kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
-                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, char *build_options, FLUSH_MODE finish_mode)
+                                  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options, FLUSH_MODE finish_mode)
 
         {
             openCLExecuteKernel_2(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth,
                                   build_options, finish_mode);
         }
 
-       cl_mem bindTexture(const oclMat &mat)
+#ifdef __GNUC__
+        GCC_DIAG_OFF(deprecated-declarations)
+#endif
+        cl_mem bindTexture(const oclMat &mat)
         {
             cl_mem texture;
             cl_image_format format;
             int err;
             int depth    = mat.depth();
-            int channels = mat.channels();
+            int channels = mat.oclchannels();
 
             switch(depth)
             {
@@ -143,7 +163,7 @@ namespace cv
                 format.image_channel_data_type = CL_FLOAT;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image forma is not supported");
                 break;
             }
             switch(channels)
@@ -158,61 +178,76 @@ namespace cv
                 format.image_channel_order     = CL_RGBA;
                 break;
             default:
-                throw std::exception();
+                CV_Error(-1, "Image format is not supported");
                 break;
             }
-#if CL_VERSION_1_2
-            cl_image_desc desc;
-            desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
-            desc.image_width      = mat.cols;
-            desc.image_height     = mat.rows;
-            desc.image_depth      = 0;
-            desc.image_array_size = 1;
-            desc.image_row_pitch  = 0;
-            desc.image_slice_pitch = 0;
-            desc.buffer           = NULL;
-            desc.num_mip_levels   = 0;
-            desc.num_samples      = 0;
-            texture = clCreateImage(mat.clCxt->impl->clContext, CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
-#else
-            texture = clCreateImage2D(
-                mat.clCxt->impl->clContext,
-                CL_MEM_READ_WRITE,
-                &format,
-                mat.cols,
-                mat.rows,
-                0,
-                NULL,
-                &err);
+#ifdef CL_VERSION_1_2
+            //this enables backwards portability to
+            //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
+            if(Context::getContext()->supportsFeature(Context::CL_VER_1_2))
+            {
+                cl_image_desc desc;
+                desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
+                desc.image_width      = mat.cols;
+                desc.image_height     = mat.rows;
+                desc.image_depth      = 0;
+                desc.image_array_size = 1;
+                desc.image_row_pitch  = 0;
+                desc.image_slice_pitch = 0;
+                desc.buffer           = NULL;
+                desc.num_mip_levels   = 0;
+                desc.num_samples      = 0;
+                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
+            }
+            else
 #endif
+            {
+                texture = clCreateImage2D(
+                    (cl_context)mat.clCxt->oclContext(),
+                    CL_MEM_READ_WRITE,
+                    &format,
+                    mat.cols,
+                    mat.rows,
+                    0,
+                    NULL,
+                    &err);
+            }
             size_t origin[] = { 0, 0, 0 };
             size_t region[] = { mat.cols, mat.rows, 1 };
 
             cl_mem devData;
             if (mat.cols * mat.elemSize() != mat.step)
             {
-                devData = clCreateBuffer(mat.clCxt->impl->clContext, CL_MEM_READ_ONLY, mat.cols * mat.rows
+                devData = clCreateBuffer((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_ONLY, mat.cols * mat.rows
                     * mat.elemSize(), NULL, NULL);
                 const size_t regin[3] = {mat.cols * mat.elemSize(), mat.rows, 1};
-                clEnqueueCopyBufferRect(mat.clCxt->impl->clCmdQueue, (cl_mem)mat.data, devData, origin, origin,
+                clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
             }
             else
             {
                 devData = (cl_mem)mat.data;
             }
 
-            clEnqueueCopyBufferToImage(mat.clCxt->impl->clCmdQueue, devData, texture, 0, origin, region, 0, NULL, 0);
+            clEnqueueCopyBufferToImage((cl_command_queue)mat.clCxt->oclCommandQueue(), devData, texture, 0, origin, region, 0, NULL, 0);
             if ((mat.cols * mat.elemSize() != mat.step))
             {
-                clFinish(mat.clCxt->impl->clCmdQueue);
+                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
                 clReleaseMemObject(devData);
             }
 
             openCLSafeCall(err);
             return texture;
         }
+#ifdef __GNUC__
+        GCC_DIAG_ON(deprecated-declarations)
+#endif
 
+        Ptr<TextureCL> bindTexturePtr(const oclMat &mat)
+        {
+            return makePtr<TextureCL>(bindTexture(mat), mat.rows, mat.cols, mat.type());
+        }
         void releaseTexture(cl_mem& texture)
         {
             openCLFree(texture);
@@ -230,6 +265,7 @@ namespace cv
             try
             {
                 cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
+                finish();
                 _support = true;
             }
             catch (const cv::Exception& e)
@@ -250,4 +286,3 @@ namespace cv
     }//namespace ocl
 
 }//namespace cv
-#endif

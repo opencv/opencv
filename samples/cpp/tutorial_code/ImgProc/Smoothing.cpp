@@ -31,7 +31,7 @@ int display_dst( int delay );
  */
 int main( void )
 {
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
 
   /// Load the source image
   src = imread( "../images/lena.png", 1 );
@@ -89,7 +89,7 @@ int display_caption( const char* caption )
   dst = Mat::zeros( src.size(), src.type() );
   putText( dst, caption,
            Point( src.cols/4, src.rows/2),
-           CV_FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
+           FONT_HERSHEY_COMPLEX, 1, Scalar(255, 255, 255) );
 
   imshow( window_name, dst );
   int c = waitKey( DELAY_CAPTION );

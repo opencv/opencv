@@ -86,23 +86,23 @@ void FeatureDetector::removeInvalidPoints( const Mat& mask, std::vector<KeyPoint
     KeyPointsFilter::runByPixelsMask( keypoints, mask );
 }
 
-Ptr<FeatureDetector> FeatureDetector::create( const std::string& detectorType )
+Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
 {
     if( detectorType.find("Grid") == 0 )
     {
-        return new GridAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<GridAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Grid"))));
     }
 
     if( detectorType.find("Pyramid") == 0 )
     {
-        return new PyramidAdaptedFeatureDetector(FeatureDetector::create(
+        return makePtr<PyramidAdaptedFeatureDetector>(FeatureDetector::create(
                                 detectorType.substr(strlen("Pyramid"))));
     }
 
     if( detectorType.find("Dynamic") == 0 )
     {
-        return new DynamicAdaptedFeatureDetector(AdjusterAdapter::create(
+        return makePtr<DynamicAdaptedFeatureDetector>(AdjusterAdapter::create(
                                 detectorType.substr(strlen("Dynamic"))));
     }
 
@@ -128,7 +128,7 @@ GFTTDetector::GFTTDetector( int _nfeatures, double _qualityLevel,
 void GFTTDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask) const
 {
     Mat grayImage = image;
-    if( image.type() != CV_8U ) cvtColor( image, grayImage, CV_BGR2GRAY );
+    if( image.type() != CV_8U ) cvtColor( image, grayImage, COLOR_BGR2GRAY );
 
     std::vector<Point2f> corners;
     goodFeaturesToTrack( grayImage, corners, nfeatures, qualityLevel, minDistance, mask,
@@ -190,7 +190,7 @@ GridAdaptedFeatureDetector::GridAdaptedFeatureDetector( const Ptr<FeatureDetecto
 
 bool GridAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
 struct ResponseComparator
@@ -212,7 +212,7 @@ static void keepStrongest( int N, std::vector<KeyPoint>& keypoints )
 }
 
 namespace {
-class GridAdaptedFeatureDetectorInvoker
+class GridAdaptedFeatureDetectorInvoker : public ParallelLoopBody
 {
 private:
     int gridRows_, gridCols_;
@@ -221,29 +221,24 @@ private:
     const Mat& image_;
     const Mat& mask_;
     const Ptr<FeatureDetector>& detector_;
-#ifdef HAVE_TBB
-    tbb::mutex* kptLock_;
-#endif
+    Mutex* kptLock_;
 
     GridAdaptedFeatureDetectorInvoker& operator=(const GridAdaptedFeatureDetectorInvoker&); // to quiet MSVC
 
 public:
 
-    GridAdaptedFeatureDetectorInvoker(const Ptr<FeatureDetector>& detector, const Mat& image, const Mat& mask, std::vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols
-#ifdef HAVE_TBB
-        , tbb::mutex* kptLock
-#endif
-        ) : gridRows_(gridRows), gridCols_(gridCols), maxPerCell_(maxPerCell),
-            keypoints_(keypoints), image_(image), mask_(mask), detector_(detector)
-#ifdef HAVE_TBB
-            , kptLock_(kptLock)
-#endif
+    GridAdaptedFeatureDetectorInvoker(const Ptr<FeatureDetector>& detector, const Mat& image, const Mat& mask,
+                                      std::vector<KeyPoint>& keypoints, int maxPerCell, int gridRows, int gridCols,
+                                      cv::Mutex* kptLock)
+        : gridRows_(gridRows), gridCols_(gridCols), maxPerCell_(maxPerCell),
+          keypoints_(keypoints), image_(image), mask_(mask), detector_(detector),
+          kptLock_(kptLock)
     {
     }
 
-    void operator() (const BlockedRange& range) const
+    void operator() (const Range& range) const
     {
-        for (int i = range.begin(); i < range.end(); ++i)
+        for (int i = range.start; i < range.end; ++i)
         {
             int celly = i / gridCols_;
             int cellx = i - celly * gridCols_;
@@ -268,9 +263,8 @@ public:
                 it->pt.x += col_range.start;
                 it->pt.y += row_range.start;
             }
-#ifdef HAVE_TBB
-            tbb::mutex::scoped_lock join_keypoints(*kptLock_);
-#endif
+
+            cv::AutoLock join_keypoints(*kptLock_);
             keypoints_.insert( keypoints_.end(), sub_keypoints.begin(), sub_keypoints.end() );
         }
     }
@@ -287,13 +281,9 @@ void GridAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPo
     keypoints.reserve(maxTotalKeypoints);
     int maxPerCell = maxTotalKeypoints / (gridRows * gridCols);
 
-#ifdef HAVE_TBB
-    tbb::mutex kptLock;
-    cv::parallel_for(cv::BlockedRange(0, gridRows * gridCols),
+    cv::Mutex kptLock;
+    cv::parallel_for_(cv::Range(0, gridRows * gridCols),
         GridAdaptedFeatureDetectorInvoker(detector, image, mask, keypoints, maxPerCell, gridRows, gridCols, &kptLock));
-#else
-    GridAdaptedFeatureDetectorInvoker(detector, image, mask, keypoints, maxPerCell, gridRows, gridCols)(cv::BlockedRange(0, gridRows * gridCols));
-#endif
 }
 
 /*
@@ -305,7 +295,7 @@ PyramidAdaptedFeatureDetector::PyramidAdaptedFeatureDetector( const Ptr<FeatureD
 
 bool PyramidAdaptedFeatureDetector::empty() const
 {
-    return detector.empty() || (FeatureDetector*)detector->empty();
+    return !detector || detector->empty();
 }
 
 void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask ) const
@@ -346,7 +336,7 @@ void PyramidAdaptedFeatureDetector::detectImpl( const Mat& image, std::vector<Ke
             src = dst;
 
             if( !mask.empty() )
-                resize( dilated_mask, src_mask, src.size(), 0, 0, CV_INTER_AREA );
+                resize( dilated_mask, src_mask, src.size(), 0, 0, INTER_AREA );
         }
     }
 

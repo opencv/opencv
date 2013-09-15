@@ -220,6 +220,10 @@ static inline bool isInitializer(const MatExpr& e) { return e.op == &g_MatOp_Ini
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+MatOp::MatOp() {}
+MatOp::~MatOp() {}
+
+
 bool MatOp::elementWise(const MatExpr& /*expr*/) const
 {
     return false;
@@ -320,7 +324,7 @@ void MatOp::augAssignXor(const MatExpr& expr, Mat& m) const
 {
     Mat temp;
     expr.op->assign(expr, temp);
-    m /= temp;
+    m ^= temp;
 }
 
 

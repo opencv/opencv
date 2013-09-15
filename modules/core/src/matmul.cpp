@@ -1725,19 +1725,29 @@ diagtransform_64f(const double* src, double* dst, const double* m, int len, int 
 
 typedef void (*TransformFunc)( const uchar* src, uchar* dst, const uchar* m, int, int, int );
 
-static TransformFunc transformTab[] =
+static TransformFunc getTransformFunc(int depth)
 {
-    (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
-    (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
-    (TransformFunc)transform_64f, 0
-};
+    static TransformFunc transformTab[] =
+    {
+        (TransformFunc)transform_8u, (TransformFunc)transform_8s, (TransformFunc)transform_16u,
+        (TransformFunc)transform_16s, (TransformFunc)transform_32s, (TransformFunc)transform_32f,
+        (TransformFunc)transform_64f, 0
+    };
 
-static TransformFunc diagTransformTab[] =
+    return transformTab[depth];
+}
+
+static TransformFunc getDiagTransformFunc(int depth)
 {
-    (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
-    (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
-    (TransformFunc)diagtransform_64f, 0
-};
+    static TransformFunc diagTransformTab[] =
+    {
+        (TransformFunc)diagtransform_8u, (TransformFunc)diagtransform_8s, (TransformFunc)diagtransform_16u,
+        (TransformFunc)diagtransform_16s, (TransformFunc)diagtransform_32s, (TransformFunc)diagtransform_32f,
+        (TransformFunc)diagtransform_64f, 0
+    };
+
+    return diagTransformTab[depth];
+}
 
 }
 
@@ -1800,7 +1810,7 @@ void cv::transform( InputArray _src, OutputArray _dst, InputArray _mtx )
         }
     }
 
-    TransformFunc func = isDiag ? diagTransformTab[depth] : transformTab[depth];
+    TransformFunc func = isDiag ? getDiagTransformFunc(depth): getTransformFunc(depth);
     CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src, &dst, 0};
@@ -2308,11 +2318,6 @@ double cv::Mahalanobis( InputArray _v1, InputArray _v2, InputArray _icovar )
     return std::sqrt(result);
 }
 
-double cv::Mahalonobis( InputArray _v1, InputArray _v2, InputArray _icovar )
-{
-    return Mahalanobis(_v1, _v2, _icovar);
-}
-
 /****************************************************************************************\
 *                                        MulTransposed                                   *
 \****************************************************************************************/
@@ -2766,19 +2771,24 @@ static double dotProd_64f(const double* src1, const double* src2, int len)
 
 typedef double (*DotProdFunc)(const uchar* src1, const uchar* src2, int len);
 
-static DotProdFunc dotProdTab[] =
+static DotProdFunc getDotProdFunc(int depth)
 {
-    (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
-    (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-    (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
-    (DotProdFunc)dotProd_64f, 0
-};
+    static DotProdFunc dotProdTab[] =
+    {
+        (DotProdFunc)GET_OPTIMIZED(dotProd_8u), (DotProdFunc)GET_OPTIMIZED(dotProd_8s),
+        (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
+        (DotProdFunc)dotProd_32s, (DotProdFunc)GET_OPTIMIZED(dotProd_32f),
+        (DotProdFunc)dotProd_64f, 0
+    };
+
+    return dotProdTab[depth];
+}
 
 double Mat::dot(InputArray _mat) const
 {
     Mat mat = _mat.getMat();
     int cn = channels();
-    DotProdFunc func = dotProdTab[depth()];
+    DotProdFunc func = getDotProdFunc(depth());
     CV_Assert( mat.type() == type() && mat.size == size && func != 0 );
 
     if( isContinuous() && mat.isContinuous() )
@@ -2857,6 +2867,7 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
     {
         CV_Assert( _mean.size() == mean_sz );
         _mean.convertTo(mean, ctype);
+        covar_flags |= CV_COVAR_USE_AVG;
     }
 
     calcCovarMatrix( data, covar, mean, covar_flags, ctype );
@@ -2898,6 +2909,57 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, int maxComp
         eigenvectors = eigenvectors.rowRange(0,out_count).clone();
     }
     return *this;
+}
+
+void PCA::write(FileStorage& fs ) const
+{
+    CV_Assert( fs.isOpened() );
+
+    fs << "name" << "PCA";
+    fs << "vectors" << eigenvectors;
+    fs << "values" << eigenvalues;
+    fs << "mean" << mean;
+}
+
+void PCA::read(const FileNode& fs)
+{
+    CV_Assert( !fs.empty() );
+    String name = (String)fs["name"];
+    CV_Assert( name == "PCA" );
+
+    cv::read(fs["vectors"], eigenvectors);
+    cv::read(fs["values"], eigenvalues);
+    cv::read(fs["mean"], mean);
+}
+
+template <typename T>
+int computeCumulativeEnergy(const Mat& eigenvalues, double retainedVariance)
+{
+    CV_DbgAssert( eigenvalues.type() == DataType<T>::type );
+
+    Mat g(eigenvalues.size(), DataType<T>::type);
+
+    for(int ig = 0; ig < g.rows; ig++)
+    {
+        g.at<T>(ig, 0) = 0;
+        for(int im = 0; im <= ig; im++)
+        {
+            g.at<T>(ig,0) += eigenvalues.at<T>(im,0);
+        }
+    }
+
+    int L;
+
+    for(L = 0; L < eigenvalues.rows; L++)
+    {
+        double energy = g.at<T>(L, 0) / g.at<T>(g.rows - 1, 0);
+        if(energy > retainedVariance)
+            break;
+    }
+
+    L = std::max(2, L);
+
+    return L;
 }
 
 PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double retainedVariance)
@@ -2976,26 +3038,11 @@ PCA& PCA::operator()(InputArray _data, InputArray __mean, int flags, double reta
     }
 
     // compute the cumulative energy content for each eigenvector
-    Mat g(eigenvalues.size(), ctype);
-
-    for(int ig = 0; ig < g.rows; ig++)
-    {
-        g.at<float>(ig,0) = 0;
-        for(int im = 0; im <= ig; im++)
-        {
-            g.at<float>(ig,0) += eigenvalues.at<float>(im,0);
-        }
-    }
-
     int L;
-    for(L = 0; L < eigenvalues.rows; L++)
-    {
-        double energy = g.at<float>(L, 0) / g.at<float>(g.rows - 1, 0);
-        if(energy > retainedVariance)
-            break;
-    }
-
-    L = std::max(2, L);
+    if (ctype == CV_32F)
+        L = computeCumulativeEnergy<float>(eigenvalues, retainedVariance);
+    else
+        L = computeCumulativeEnergy<double>(eigenvalues, retainedVariance);
 
     // use clone() to physically copy the data and thus deallocate the original matrices
     eigenvalues = eigenvalues.rowRange(0,L).clone();

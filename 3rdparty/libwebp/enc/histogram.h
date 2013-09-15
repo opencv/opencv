@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Author: Jyrki Alakuijala (jyrki@google.com)
@@ -79,22 +81,6 @@ double VP8LHistogramEstimateBits(const VP8LHistogram* const p);
 // This function estimates the cost in bits excluding the bits needed to
 // represent the entropy code itself.
 double VP8LHistogramEstimateBitsBulk(const VP8LHistogram* const p);
-
-static WEBP_INLINE void VP8LHistogramAdd(VP8LHistogram* const p,
-                                         const VP8LHistogram* const a) {
-  int i;
-  for (i = 0; i < PIX_OR_COPY_CODES_MAX; ++i) {
-    p->literal_[i] += a->literal_[i];
-  }
-  for (i = 0; i < NUM_DISTANCE_CODES; ++i) {
-    p->distance_[i] += a->distance_[i];
-  }
-  for (i = 0; i < 256; ++i) {
-    p->red_[i] += a->red_[i];
-    p->blue_[i] += a->blue_[i];
-    p->alpha_[i] += a->alpha_[i];
-  }
-}
 
 static WEBP_INLINE int VP8LHistogramNumCodes(const VP8LHistogram* const p) {
   return 256 + NUM_LENGTH_CODES +

@@ -1,6 +1,7 @@
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/contrib/contrib.hpp"
+#include <opencv2/core/utility.hpp>
+#include "opencv2/imgproc.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/contrib.hpp"
 
 #include <iostream>
 
@@ -40,7 +41,7 @@ int main( int argc, const char** argv )
         return -1;
     }
     Mat cimg;
-    cvtColor(img, cimg, CV_GRAY2BGR);
+    cvtColor(img, cimg, COLOR_GRAY2BGR);
 
     // if the image and the template are not edge maps but normal grayscale images,
     // you might want to uncomment the lines below to produce the maps. You can also

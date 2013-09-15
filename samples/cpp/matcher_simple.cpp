@@ -23,8 +23,8 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Mat img1 = imread(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Mat img2 = imread(argv[2], CV_LOAD_IMAGE_GRAYSCALE);
+    Mat img1 = imread(argv[1], IMREAD_GRAYSCALE);
+    Mat img2 = imread(argv[2], IMREAD_GRAYSCALE);
     if(img1.empty() || img2.empty())
     {
         printf("Can't read one of the images\n");

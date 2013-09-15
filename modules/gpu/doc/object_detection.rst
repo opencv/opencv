@@ -62,7 +62,12 @@ The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detec
 
 Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
+.. note::
 
+   * An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/cpp/peopledetect.cpp
+   * A GPU example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/gpu/hog.cpp
+
+   * (Python) An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/python2/peopledetect.py
 
 gpu::HOGDescriptor::HOGDescriptor
 -------------------------------------
@@ -209,11 +214,11 @@ Cascade classifier class used for object detection. Supports HAAR and LBP cascad
     {
     public:
             CascadeClassifier_GPU();
-            CascadeClassifier_GPU(const string& filename);
+            CascadeClassifier_GPU(const String& filename);
             ~CascadeClassifier_GPU();
 
             bool empty() const;
-            bool load(const string& filename);
+            bool load(const String& filename);
             void release();
 
             /* Returns number of detected objects */
@@ -229,13 +234,16 @@ Cascade classifier class used for object detection. Supports HAAR and LBP cascad
             Size getClassifierSize() const;
     };
 
+.. note::
 
+   * A cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier.cpp
+   * A Nvidea API specific cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
 
 gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 -----------------------------------------------------
 Loads the classifier from a file. Cascade type is detected automatically by constructor parameter.
 
-.. ocv:function:: gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const string& filename)
+.. ocv:function:: gpu::CascadeClassifier_GPU::CascadeClassifier_GPU(const String& filename)
 
     :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported for HAAR and only new type of OpenCV XML cascade supported for LBP.
 
@@ -253,7 +261,7 @@ gpu::CascadeClassifier_GPU::load
 ------------------------------------
 Loads the classifier from a file. The previous content is destroyed.
 
-.. ocv:function:: bool gpu::CascadeClassifier_GPU::load(const string& filename)
+.. ocv:function:: bool gpu::CascadeClassifier_GPU::load(const String& filename)
 
     :param filename: Name of the file from which the classifier is loaded. Only the old ``haar`` classifier (trained by the ``haar`` training application) and NVIDIA's ``nvbin`` are supported for HAAR and only new type of OpenCV XML cascade supported for LBP.
 

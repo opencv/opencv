@@ -298,6 +298,7 @@ enum
     CV_CAP_UNICAP   =600,   // Unicap drivers
 
     CV_CAP_DSHOW    =700,   // DirectShow (via videoInput)
+    CV_CAP_MSMF     =1400,  // Microsoft Media Foundation (via videoInput)
 
     CV_CAP_PVAPI    =800,   // PvAPI, Prosilica GigE SDK
 
@@ -305,6 +306,8 @@ enum
     CV_CAP_OPENNI_ASUS =910,   // OpenNI (for Asus Xtion)
 
     CV_CAP_ANDROID  =1000,  // Android
+    CV_CAP_ANDROID_BACK =CV_CAP_ANDROID+99, // Android back camera
+    CV_CAP_ANDROID_FRONT =CV_CAP_ANDROID+98, // Android front camera
 
     CV_CAP_XIAPI    =1100,   // XIMEA Camera API
 
@@ -556,9 +559,11 @@ CVAPI(int)    cvGetCaptureDomain( CvCapture* capture);
 /* "black box" video file writer structure */
 typedef struct CvVideoWriter CvVideoWriter;
 
+#define CV_FOURCC_MACRO(c1, c2, c3, c4) (((c1) & 255) + (((c2) & 255) << 8) + (((c3) & 255) << 16) + (((c4) & 255) << 24))
+
 CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 {
-    return (c1 & 255) + ((c2 & 255) << 8) + ((c3 & 255) << 16) + ((c4 & 255) << 24);
+    return CV_FOURCC_MACRO(c1, c2, c3, c4);
 }
 
 #define CV_FOURCC_PROMPT -1  /* Open Codec Selection Dialog (Windows only) */
@@ -568,9 +573,6 @@ CV_INLINE int CV_FOURCC(char c1, char c2, char c3, char c4)
 CVAPI(CvVideoWriter*) cvCreateVideoWriter( const char* filename, int fourcc,
                                            double fps, CvSize frame_size,
                                            int is_color CV_DEFAULT(1));
-
-//CVAPI(CvVideoWriter*) cvCreateImageSequenceWriter( const char* filename,
-//                                                   int is_color CV_DEFAULT(1));
 
 /* write frame to video file */
 CVAPI(int) cvWriteFrame( CvVideoWriter* writer, const IplImage* image );

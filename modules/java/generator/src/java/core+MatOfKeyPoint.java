@@ -3,7 +3,7 @@ package org.opencv.core;
 import java.util.Arrays;
 import java.util.List;
 
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.KeyPoint;
 
 public class MatOfKeyPoint extends Mat {
     // 32FC7
@@ -16,8 +16,8 @@ public class MatOfKeyPoint extends Mat {
 
     protected MatOfKeyPoint(long addr) {
         super(addr);
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incompatible Mat");
         //FIXME: do we need release() here?
     }
 
@@ -27,8 +27,8 @@ public class MatOfKeyPoint extends Mat {
 
     public MatOfKeyPoint(Mat m) {
         super(m, Range.all());
-        if(checkVector(_channels, _depth) < 0 )
-            throw new IllegalArgumentException("Incomatible Mat");
+        if( !empty() && checkVector(_channels, _depth) < 0 )
+            throw new IllegalArgumentException("Incompatible Mat");
         //FIXME: do we need release() here?
     }
 

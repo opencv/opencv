@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -47,13 +47,13 @@ using namespace cv::gpu;
 
 #if !defined HAVE_CUDA || defined(CUDA_DISABLER)
 
-void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_nogpu(); }
+void cv::gpu::compactPoints(GpuMat&, GpuMat&, const GpuMat&) { throw_no_cuda(); }
 void cv::gpu::calcWobbleSuppressionMaps(
-        int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_nogpu(); }
+        int, int, int, Size, const Mat&, const Mat&, GpuMat&, GpuMat&) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace device { namespace globmotion {
+namespace cv { namespace gpu { namespace cudev { namespace globmotion {
 
     int compactPoints(int N, float *points0, float *points1, const uchar *mask);
 
@@ -70,7 +70,7 @@ void cv::gpu::compactPoints(GpuMat &points0, GpuMat &points1, const GpuMat &mask
     CV_Assert(points0.cols == mask.cols && points1.cols == mask.cols);
 
     int npoints = points0.cols;
-    int remaining = cv::gpu::device::globmotion::compactPoints(
+    int remaining = cv::gpu::cudev::globmotion::compactPoints(
             npoints, (float*)points0.data, (float*)points1.data, mask.data);
 
     points0 = points0.colRange(0, remaining);
@@ -88,7 +88,7 @@ void cv::gpu::calcWobbleSuppressionMaps(
     mapx.create(size, CV_32F);
     mapy.create(size, CV_32F);
 
-    cv::gpu::device::globmotion::calcWobbleSuppressionMaps(
+    cv::gpu::cudev::globmotion::calcWobbleSuppressionMaps(
                 left, idx, right, size.width, size.height,
                 ml.ptr<float>(), mr.ptr<float>(), mapx, mapy);
 }

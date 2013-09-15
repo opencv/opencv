@@ -23,8 +23,8 @@ import org.opencv.core.Point3;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.features2d.DMatch;
-import org.opencv.features2d.KeyPoint;
+import org.opencv.core.DMatch;
+import org.opencv.core.KeyPoint;
 import org.opencv.highgui.Highgui;
 
 public class OpenCVTestCase extends TestCase {
@@ -97,7 +97,7 @@ public class OpenCVTestCase extends TestCase {
         super.setUp();
 
         try {
-            System.loadLibrary("opencv_java");
+            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
         } catch (SecurityException e) {
             System.out.println(e.toString());
             System.exit(-1);

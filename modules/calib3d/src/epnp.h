@@ -2,6 +2,7 @@
 #define epnp_h
 
 #include "precomp.hpp"
+#include "opencv2/core/core_c.h"
 
 class epnp {
  public:

@@ -11,6 +11,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core/utility.hpp"
 
 #include <stdio.h>
 
@@ -66,8 +67,8 @@ int main(int argc, char** argv)
     bool no_display = false;
     float scale = 1.f;
 
-    Ptr<StereoMatcher> bm = createStereoBM(16,9);
-    Ptr<StereoMatcher> sgbm = createStereoSGBM(0,16,3);
+    Ptr<StereoBM> bm = createStereoBM(16,9);
+    Ptr<StereoSGBM> sgbm = createStereoSGBM(0,16,3);
     StereoVar var;
 
     for( int i = 1; i < argc; i++ )
@@ -177,7 +178,7 @@ int main(int argc, char** argv)
     if( intrinsic_filename )
     {
         // reading intrinsic parameters
-        FileStorage fs(intrinsic_filename, CV_STORAGE_READ);
+        FileStorage fs(intrinsic_filename, FileStorage::READ);
         if(!fs.isOpened())
         {
             printf("Failed to open file %s\n", intrinsic_filename);
@@ -193,7 +194,7 @@ int main(int argc, char** argv)
         M1 *= scale;
         M2 *= scale;
 
-        fs.open(extrinsic_filename, CV_STORAGE_READ);
+        fs.open(extrinsic_filename, FileStorage::READ);
         if(!fs.isOpened())
         {
             printf("Failed to open file %s\n", extrinsic_filename);
@@ -220,33 +221,33 @@ int main(int argc, char** argv)
 
     numberOfDisparities = numberOfDisparities > 0 ? numberOfDisparities : ((img_size.width/8) + 15) & -16;
 
-    //bm->set("roi1", roi1);
-    //bm->set("roi2", roi2);
-    bm->set("preFilterCap", 31);
-    bm->set("SADWindowSize", SADWindowSize > 0 ? SADWindowSize : 9);
-    bm->set("minDisparity", 0);
-    bm->set("numDisparities", numberOfDisparities);
-    bm->set("textureThreshold", 10);
-    bm->set("uniquenessRatio", 15);
-    bm->set("speckleWindowSize", 100);
-    bm->set("speckleRange", 32);
-    bm->set("disp12MaxDiff", 1);
+    bm->setROI1(roi1);
+    bm->setROI2(roi2);
+    bm->setPreFilterCap(31);
+    bm->setBlockSize(SADWindowSize > 0 ? SADWindowSize : 9);
+    bm->setMinDisparity(0);
+    bm->setNumDisparities(numberOfDisparities);
+    bm->setTextureThreshold(10);
+    bm->setUniquenessRatio(15);
+    bm->setSpeckleWindowSize(100);
+    bm->setSpeckleRange(32);
+    bm->setDisp12MaxDiff(1);
 
-    sgbm->set("preFilterCap", 63);
+    sgbm->setPreFilterCap(63);
     int sgbmWinSize = SADWindowSize > 0 ? SADWindowSize : 3;
-    sgbm->set("SADWindowSize", sgbmWinSize);
+    sgbm->setBlockSize(sgbmWinSize);
 
     int cn = img1.channels();
 
-    sgbm->set("P1", 8*cn*sgbmWinSize*sgbmWinSize);
-    sgbm->set("P2", 32*cn*sgbmWinSize*sgbmWinSize);
-    sgbm->set("minDisparity", 0);
-    sgbm->set("numDisparities", numberOfDisparities);
-    sgbm->set("uniquenessRatio", 10);
-    sgbm->set("speckleWindowSize", 100);
-    sgbm->set("speckleRange", 32);
-    sgbm->set("disp12MaxDiff", 1);
-    sgbm->set("fullDP", alg == STEREO_HH);
+    sgbm->setP1(8*cn*sgbmWinSize*sgbmWinSize);
+    sgbm->setP2(32*cn*sgbmWinSize*sgbmWinSize);
+    sgbm->setMinDisparity(0);
+    sgbm->setNumDisparities(numberOfDisparities);
+    sgbm->setUniquenessRatio(10);
+    sgbm->setSpeckleWindowSize(100);
+    sgbm->setSpeckleRange(32);
+    sgbm->setDisp12MaxDiff(1);
+    sgbm->setMode(alg == STEREO_HH ? StereoSGBM::MODE_HH : StereoSGBM::MODE_SGBM);
 
     var.levels = 3;                                 // ignored with USE_AUTO_PARAMS
     var.pyrScale = 0.5;                             // ignored with USE_AUTO_PARAMS

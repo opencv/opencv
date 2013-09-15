@@ -188,13 +188,13 @@ public class Calib3dTest extends OpenCVTestCase {
         assertTrue(!corners.empty());
     }
 
-    public void testFindCirclesGridDefaultMatSizeMat() {
+    public void testFindCirclesGridMatSizeMat() {
         int size = 300;
         Mat img = new Mat(size, size, CvType.CV_8U);
         img.setTo(new Scalar(255));
         Mat centers = new Mat();
 
-        assertFalse(Calib3d.findCirclesGridDefault(img, new Size(5, 5), centers));
+        assertFalse(Calib3d.findCirclesGrid(img, new Size(5, 5), centers));
 
         for (int i = 0; i < 5; i++)
             for (int j = 0; j < 5; j++) {
@@ -202,20 +202,20 @@ public class Calib3dTest extends OpenCVTestCase {
                 Core.circle(img, pt, 10, new Scalar(0), -1);
             }
 
-        assertTrue(Calib3d.findCirclesGridDefault(img, new Size(5, 5), centers));
+        assertTrue(Calib3d.findCirclesGrid(img, new Size(5, 5), centers));
 
         assertEquals(25, centers.rows());
         assertEquals(1, centers.cols());
         assertEquals(CvType.CV_32FC2, centers.type());
     }
 
-    public void testFindCirclesGridDefaultMatSizeMatInt() {
+    public void testFindCirclesGridMatSizeMatInt() {
         int size = 300;
         Mat img = new Mat(size, size, CvType.CV_8U);
         img.setTo(new Scalar(255));
         Mat centers = new Mat();
 
-        assertFalse(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
+        assertFalse(Calib3d.findCirclesGrid(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
                 | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
 
         int step = size * 2 / 15;
@@ -227,7 +227,7 @@ public class Calib3dTest extends OpenCVTestCase {
                 Core.circle(img, pt, 10, new Scalar(0), -1);
             }
 
-        assertTrue(Calib3d.findCirclesGridDefault(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
+        assertTrue(Calib3d.findCirclesGrid(img, new Size(3, 5), centers, Calib3d.CALIB_CB_CLUSTERING
                 | Calib3d.CALIB_CB_ASYMMETRIC_GRID));
 
         assertEquals(15, centers.rows());
@@ -584,5 +584,19 @@ public class Calib3dTest extends OpenCVTestCase {
 
     public void testValidateDisparityMatMatIntIntInt() {
         fail("Not yet implemented");
+    }
+
+    public void testComputeCorrespondEpilines()
+    {
+        Mat fundamental = new Mat(3, 3, CvType.CV_64F);
+        fundamental.put(0, 0, 0, -0.577, 0.288, 0.577, 0, 0.288, -0.288, -0.288, 0);
+        MatOfPoint2f left = new MatOfPoint2f();
+        left.alloc(1);
+        left.put(0, 0, 2, 3); //add(new Point(x, y));
+        Mat lines = new Mat();
+        Mat truth = new Mat(1, 1, CvType.CV_32FC3);
+        truth.put(0, 0, -0.70735186, 0.70686162, -0.70588124);
+        Calib3d.computeCorrespondEpilines(left, 1, fundamental, lines);
+        assertMatEqual(truth, lines, EPS);
     }
 }

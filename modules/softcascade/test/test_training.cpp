@@ -53,7 +53,7 @@ namespace {
 
 using namespace cv::softcascade;
 
-typedef vector<string> svector;
+typedef vector<cv::String> svector;
 class ScaledDataset : public Dataset
 {
 public:

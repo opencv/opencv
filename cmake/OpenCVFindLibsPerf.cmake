@@ -27,7 +27,7 @@ endif(WITH_CUDA)
 # --- Eigen ---
 if(WITH_EIGEN)
   find_path(EIGEN_INCLUDE_PATH "Eigen/Core"
-            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432 
+            PATHS /usr/local /opt /usr $ENV{EIGEN_ROOT}/include ENV ProgramFiles ENV ProgramW6432
             PATH_SUFFIXES include/eigen3 include/eigen2 Eigen/include/eigen3 Eigen/include/eigen2
             DOC "The path to Eigen3/Eigen2 headers"
             CMAKE_FIND_ROOT_PATH_BOTH)
@@ -88,8 +88,9 @@ endif()
 # --- OpenMP ---
 if(NOT HAVE_TBB AND NOT HAVE_CSTRIPES)
   set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/omptest.cpp")
-  FILE(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
-  TRY_COMPILE(HAVE_OPENMP "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp" "${_fname}")
+  file(WRITE "${_fname}" "#ifndef _OPENMP\n#error\n#endif\nint main() { return 0; }\n")
+  try_compile(HAVE_OPENMP "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
 else()
   set(HAVE_OPENMP 0)
 endif()
@@ -104,8 +105,9 @@ endif()
 # --- Concurrency ---
 if(MSVC AND NOT HAVE_TBB AND NOT HAVE_CSTRIPES AND NOT HAVE_OPENMP)
   set(_fname "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/concurrencytest.cpp")
-  FILE(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
-  TRY_COMPILE(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp" "${_fname}")
+  file(WRITE "${_fname}" "#if _MSC_VER < 1600\n#error\n#endif\nint main() { return 0; }\n")
+  try_compile(HAVE_CONCURRENCY "${CMAKE_BINARY_DIR}" "${_fname}")
+  file(REMOVE "${_fname}")
 else()
   set(HAVE_CONCURRENCY 0)
 endif()

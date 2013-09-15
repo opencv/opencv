@@ -1,7 +1,7 @@
-#/usr/bin/env python
+#!/usr/bin/env python
 
 import os, sys, re, string, fnmatch
-allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl", "softcascade"]
+allmodules = ["core", "flann", "imgproc", "ml", "highgui", "video", "features2d", "calib3d", "objdetect", "legacy", "contrib", "gpu", "androidcamera", "java", "python", "stitching", "ts", "photo", "nonfree", "videostab", "ocl", "softcascade", "superres"]
 verbose = False
 show_warnings = True
 show_errors = True
@@ -79,8 +79,6 @@ class DeclarationParser(object):
             return "C"
         if line.startswith(".. ocv:pyfunction::"):
             return "Python2"
-        if line.startswith(".. ocv:pyoldfunction::"):
-            return "Python1"
         if line.startswith(".. ocv:jfunction::"):
             return "Java"
         return None
@@ -380,7 +378,7 @@ class RstParser(object):
 
     @classmethod
     def parse_namespace(cls, func, section_name):
-        known_namespaces = ["cv", "gpu", "flann"]
+        known_namespaces = ["cv", "gpu", "flann", "superres"]
         l = section_name.strip()
         for namespace in known_namespaces:
             if l.startswith(namespace + "::"):

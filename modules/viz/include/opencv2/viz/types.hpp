@@ -55,8 +55,6 @@
 
 namespace cv
 {
-    typedef std::string String;
-
     namespace viz
     {
         class CV_EXPORTS Color : public Scalar
@@ -104,7 +102,7 @@ namespace cv
 
             //! Create a keyboard event
             //! - Note that action is true if key is pressed, false if released
-            KeyboardEvent(bool action, const std::string& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
+            KeyboardEvent(bool action, const String& key_sym, unsigned char key, bool alt, bool ctrl, bool shift);
 
             bool isAltPressed() const;
             bool isCtrlPressed() const;

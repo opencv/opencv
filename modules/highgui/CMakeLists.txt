@@ -9,13 +9,12 @@ ocv_add_module(highgui opencv_imgproc OPTIONAL opencv_androidcamera)
 
 ocv_clear_vars(GRFMT_LIBS)
 
-if(WITH_PNG OR WITH_TIFF OR WITH_OPENEXR)
-  ocv_include_directories(${ZLIB_INCLUDE_DIR})
+if(HAVE_PNG OR HAVE_TIFF OR HAVE_OPENEXR)
+  ocv_include_directories(${ZLIB_INCLUDE_DIRS})
   list(APPEND GRFMT_LIBS ${ZLIB_LIBRARIES})
 endif()
 
-if(WITH_JPEG)
-  add_definitions(-DHAVE_JPEG)
+if(HAVE_JPEG)
   ocv_include_directories(${JPEG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
@@ -26,27 +25,23 @@ if(WITH_WEBP)
   list(APPEND GRFMT_LIBS ${WEBP_LIBRARIES})
 endif()
 
-if(WITH_PNG)
-  add_definitions(-DHAVE_PNG)
+if(HAVE_PNG)
   add_definitions(${PNG_DEFINITIONS})
   ocv_include_directories(${PNG_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${PNG_LIBRARIES})
 endif()
 
-if(WITH_TIFF)
-  add_definitions(-DHAVE_TIFF)
+if(HAVE_TIFF)
   ocv_include_directories(${TIFF_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${TIFF_LIBRARIES})
 endif()
 
-if(WITH_JASPER)
-  add_definitions(-DHAVE_JASPER)
+if(HAVE_JASPER)
   ocv_include_directories(${JASPER_INCLUDE_DIR})
   list(APPEND GRFMT_LIBS ${JASPER_LIBRARIES})
 endif()
 
-if(WITH_OPENEXR)
-  add_definitions(-DHAVE_OPENEXR)
+if(HAVE_OPENEXR)
   include_directories(SYSTEM ${OPENEXR_INCLUDE_PATHS})
   list(APPEND GRFMT_LIBS ${OPENEXR_LIBRARIES})
 endif()
@@ -69,51 +64,73 @@ set(highgui_srcs
     src/cap_images.cpp
     src/cap_ffmpeg.cpp
     src/loadsave.cpp
-    src/precomp.cpp
     src/utils.cpp
     src/window.cpp
     )
 
 file(GLOB highgui_ext_hdrs "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
 
-if(HAVE_QT)
+if(HAVE_QT5)
+  set(CMAKE_AUTOMOC ON)
+  set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
+  QT5_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
+  list(APPEND highgui_srcs src/window_QT.cpp src/window_QT.h ${_RCC_OUTFILES})
+
+  foreach(dt5_dep Core Gui Widgets Test Concurrent)
+    add_definitions(${Qt5${dt5_dep}_DEFINITIONS})
+    include_directories(${Qt5${dt5_dep}_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt5${dt5_dep}_LIBRARIES})
+  endforeach()
+
+  if(HAVE_QT_OPENGL)
+    add_definitions(${Qt5OpenGL_DEFINITIONS})
+    include_directories(${Qt5OpenGL_INCLUDE_DIRS})
+    list(APPEND HIGHGUI_LIBRARIES ${Qt5OpenGL_LIBRARIES})
+  endif()
+
+elseif(HAVE_QT)
   if (HAVE_QT_OPENGL)
     set(QT_USE_QTOPENGL TRUE)
   endif()
   include(${QT_USE_FILE})
 
-  if(QT_INCLUDE_DIR)
-    ocv_include_directories(${QT_INCLUDE_DIR})
-  endif()
-
   QT4_ADD_RESOURCES(_RCC_OUTFILES src/window_QT.qrc)
   QT4_WRAP_CPP(_MOC_OUTFILES src/window_QT.h)
 
-  list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES} ${QT_QTTEST_LIBRARY})
+  list(APPEND HIGHGUI_LIBRARIES ${QT_LIBRARIES})
   list(APPEND highgui_srcs src/window_QT.cpp ${_MOC_OUTFILES} ${_RCC_OUTFILES})
   ocv_check_flag_support(CXX -Wno-missing-declarations _have_flag)
   if(${_have_flag})
     set_source_files_properties(${_RCC_OUTFILES} PROPERTIES COMPILE_FLAGS -Wno-missing-declarations)
   endif()
-elseif(WIN32)
+elseif(HAVE_WIN32UI)
   list(APPEND highgui_srcs src/window_w32.cpp)
 elseif(HAVE_GTK)
   list(APPEND highgui_srcs src/window_gtk.cpp)
-elseif(APPLE)
-  if(WITH_CARBON)
-    add_definitions(-DHAVE_CARBON=1)
-    list(APPEND highgui_srcs src/window_carbon.cpp)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
-  elseif(NOT IOS)
-    add_definitions(-DHAVE_COCOA=1)
-    list(APPEND highgui_srcs src/window_cocoa.mm)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
-  endif()
+elseif(HAVE_CARBON)
+  list(APPEND highgui_srcs src/window_carbon.cpp)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime")
+elseif(HAVE_COCOA)
+  list(APPEND highgui_srcs src/window_cocoa.mm)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Cocoa")
 endif()
 
-if(WIN32)
-  list(APPEND highgui_srcs src/cap_vfw.cpp src/cap_cmu.cpp src/cap_dshow.cpp)
-endif(WIN32)
+if(WIN32 AND NOT ARM)
+  list(APPEND highgui_srcs src/cap_cmu.cpp)
+endif()
+
+if (WIN32 AND HAVE_DSHOW)
+  list(APPEND highgui_srcs src/cap_dshow.cpp)
+endif()
+
+if (WIN32 AND HAVE_MSMF)
+  list(APPEND highgui_srcs src/cap_msmf.cpp)
+endif()
+
+if (WIN32 AND HAVE_VFW)
+  list(APPEND highgui_srcs src/cap_vfw.cpp)
+endif()
 
 if(HAVE_XINE)
   list(APPEND highgui_srcs src/cap_xine.cpp)
@@ -158,7 +175,11 @@ if(HAVE_XIMEA)
   if(XIMEA_LIBRARY_DIR)
     link_directories(${XIMEA_LIBRARY_DIR})
   endif()
-  list(APPEND HIGHGUI_LIBRARIES m3api)
+  if(CMAKE_CL_64)
+    list(APPEND HIGHGUI_LIBRARIES m3apiX64)
+  else()
+    list(APPEND HIGHGUI_LIBRARIES m3api)
+  endif()
 endif(HAVE_XIMEA)
 
 if(HAVE_FFMPEG)
@@ -172,6 +193,7 @@ endif(HAVE_FFMPEG)
 
 if(HAVE_PVAPI)
   add_definitions(-DHAVE_PVAPI)
+  add_definitions(${PVAPI_DEFINITIONS})
   ocv_include_directories(${PVAPI_INCLUDE_PATH})
   set(highgui_srcs src/cap_pvapi.cpp ${highgui_srcs})
   list(APPEND HIGHGUI_LIBRARIES ${PVAPI_LIBRARY})
@@ -185,30 +207,29 @@ if(HAVE_GIGE_API)
   list(APPEND highgui_srcs src/cap_giganetix.cpp)
 endif(HAVE_GIGE_API)
 
-if(WITH_AVFOUNDATION)
-  add_definitions(-DHAVE_AVFOUNDATION=1)
+if(HAVE_AVFOUNDATION)
   list(APPEND highgui_srcs src/cap_avfoundation.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework AVFoundation" "-framework QuartzCore")
-elseif(APPLE)
-  add_definitions(-DHAVE_QUICKTIME=1)
-  if(WITH_QUICKTIME)
-    list(APPEND highgui_srcs src/cap_qt.cpp)
-    list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
-  else()
-    list(APPEND highgui_srcs src/cap_qtkit.mm)
-    list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
-  endif()
+endif()
+
+if(HAVE_QUICKTIME)
+  list(APPEND highgui_srcs src/cap_qt.cpp)
+  list(APPEND HIGHGUI_LIBRARIES "-framework Carbon" "-framework QuickTime" "-framework CoreFoundation" "-framework QuartzCore")
+elseif(HAVE_QTKIT)
+  list(APPEND highgui_srcs src/cap_qtkit.mm)
+  list(APPEND HIGHGUI_LIBRARIES "-framework QTKit" "-framework QuartzCore" "-framework AppKit")
 endif()
 
 if(IOS)
   add_definitions(-DHAVE_IOS=1)
-  list(APPEND highgui_srcs src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
+  list(APPEND highgui_srcs src/ios_conversions.mm src/cap_ios_abstract_camera.mm src/cap_ios_photo_camera.mm src/cap_ios_video_camera.mm)
   list(APPEND HIGHGUI_LIBRARIES "-framework Accelerate" "-framework AVFoundation" "-framework CoreGraphics" "-framework CoreImage" "-framework CoreMedia" "-framework CoreVideo" "-framework QuartzCore" "-framework AssetsLibrary")
 endif()
 
 if(WIN32)
   link_directories("${OpenCV_SOURCE_DIR}/3rdparty/lib") # for ffmpeg wrapper only
   include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include") # for directshow in VS2005 and multi-monitor support on MinGW
+  include_directories(AFTER SYSTEM "${OpenCV_SOURCE_DIR}/3rdparty/include/ffmpeg_") # for tests
 endif()
 
 if(UNIX)
@@ -271,11 +292,6 @@ if(WIN32 AND WITH_FFMPEG)
   set(ffmpeg_bare_name_ver "opencv_ffmpeg${OPENCV_DLLVERSION}${FFMPEG_SUFFIX}.dll")
   set(ffmpeg_path "${OpenCV_SOURCE_DIR}/3rdparty/ffmpeg/${ffmpeg_bare_name}")
 
-  #if(MSVC AND CMAKE_VERSION VERSION_GREATER "2.8.2")
-  #  add_custom_command(TARGET ${the_module} POST_BUILD
-  #                     COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/$<CONFIGURATION>/${ffmpeg_bare_name_ver}"
-  #                     COMMENT "Copying ${ffmpeg_path} to the output directory")
-  #else
   if(MSVC_IDE)
     add_custom_command(TARGET ${the_module} POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy "${ffmpeg_path}" "${EXECUTABLE_OUTPUT_PATH}/Release/${ffmpeg_bare_name_ver}"

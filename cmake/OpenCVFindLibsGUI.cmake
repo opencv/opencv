@@ -2,13 +2,39 @@
 #  Detect 3rd-party GUI libraries
 # ----------------------------------------------------------------------------
 
+#--- Win32 UI ---
+ocv_clear_vars(HAVE_WIN32UI)
+if(WITH_WIN32UI)
+  try_compile(HAVE_WIN32UI
+    "${OpenCV_BINARY_DIR}"
+    "${OpenCV_SOURCE_DIR}/cmake/checks/win32uitest.cpp"
+    CMAKE_FLAGS "-DLINK_LIBRARIES:STRING=user32;gdi32")
+endif()
+
 # --- QT4 ---
-ocv_clear_vars(HAVE_QT)
+ocv_clear_vars(HAVE_QT HAVE_QT5)
 if(WITH_QT)
-  find_package(Qt4)
-  if(QT4_FOUND)
-    set(HAVE_QT TRUE)
-    add_definitions(-DHAVE_QT) # We need to define the macro this way, using cvconfig.h does not work
+  if(NOT WITH_QT EQUAL 4)
+    find_package(Qt5Core)
+    find_package(Qt5Gui)
+    find_package(Qt5Widgets)
+    find_package(Qt5Test)
+    find_package(Qt5Concurrent)
+    if(Qt5Core_FOUND AND Qt5Gui_FOUND AND Qt5Widgets_FOUND AND Qt5Test_FOUND AND Qt5Concurrent_FOUND)
+      set(HAVE_QT5 ON)
+      set(HAVE_QT  ON)
+      find_package(Qt5OpenGL)
+      if(Qt5OpenGL_FOUND)
+        set(QT_QTOPENGL_FOUND ON)
+      endif()
+    endif()
+  endif()
+
+  if(NOT HAVE_QT)
+    find_package(Qt4 REQUIRED QtCore QtGui QtTest)
+    if(QT4_FOUND)
+      set(HAVE_QT TRUE)
+    endif()
   endif()
 endif()
 
@@ -25,17 +51,25 @@ endif()
 # --- OpenGl ---
 ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL)
 if(WITH_OPENGL)
-  if(WIN32 OR QT_QTOPENGL_FOUND OR HAVE_GTKGLEXT)
+  if(WITH_WIN32UI OR (HAVE_QT AND QT_QTOPENGL_FOUND) OR HAVE_GTKGLEXT)
     find_package (OpenGL QUIET)
     if(OPENGL_FOUND)
       set(HAVE_OPENGL TRUE)
       list(APPEND OPENCV_LINKER_LIBS ${OPENGL_LIBRARIES})
       if(QT_QTOPENGL_FOUND)
         set(HAVE_QT_OPENGL TRUE)
-        add_definitions(-DHAVE_QT_OPENGL)
       else()
         ocv_include_directories(${OPENGL_INCLUDE_DIR})
       endif()
     endif()
   endif()
 endif(WITH_OPENGL)
+
+# --- Carbon & Cocoa ---
+if(APPLE)
+  if(WITH_CARBON)
+    set(HAVE_CARBON YES)
+  elseif(NOT IOS)
+    set(HAVE_COCOA YES)
+  endif()
+endif()

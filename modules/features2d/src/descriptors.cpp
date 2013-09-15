@@ -40,6 +40,7 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
 namespace cv
 {
@@ -92,16 +93,22 @@ void DescriptorExtractor::removeBorderKeypoints( std::vector<KeyPoint>& keypoint
     KeyPointsFilter::runByImageBorder( keypoints, imageSize, borderSize );
 }
 
-Ptr<DescriptorExtractor> DescriptorExtractor::create(const std::string& descriptorExtractorType)
+Ptr<DescriptorExtractor> DescriptorExtractor::create(const String& descriptorExtractorType)
 {
     if( descriptorExtractorType.find("Opponent") == 0 )
     {
-        size_t pos = std::string("Opponent").size();
-        std::string type = descriptorExtractorType.substr(pos);
-        return new OpponentColorDescriptorExtractor(DescriptorExtractor::create(type));
+        size_t pos = String("Opponent").size();
+        String type = descriptorExtractorType.substr(pos);
+        return makePtr<OpponentColorDescriptorExtractor>(DescriptorExtractor::create(type));
     }
 
     return Algorithm::create<DescriptorExtractor>("Feature2D." + descriptorExtractorType);
+}
+
+
+CV_WRAP void Feature2D::compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const
+{
+   DescriptorExtractor::compute(image, keypoints, descriptors);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -112,13 +119,13 @@ Ptr<DescriptorExtractor> DescriptorExtractor::create(const std::string& descript
 OpponentColorDescriptorExtractor::OpponentColorDescriptorExtractor( const Ptr<DescriptorExtractor>& _descriptorExtractor ) :
         descriptorExtractor(_descriptorExtractor)
 {
-    CV_Assert( !descriptorExtractor.empty() );
+    CV_Assert( descriptorExtractor );
 }
 
 static void convertBGRImageToOpponentColorSpace( const Mat& bgrImage, std::vector<Mat>& opponentChannels )
 {
     if( bgrImage.type() != CV_8UC3 )
-        CV_Error( CV_StsBadArg, "input image must be an BGR image of type CV_8UC3" );
+        CV_Error( Error::StsBadArg, "input image must be an BGR image of type CV_8UC3" );
 
     // Prepare opponent color space storage matrices.
     opponentChannels.resize( 3 );
@@ -242,7 +249,7 @@ int OpponentColorDescriptorExtractor::descriptorType() const
 
 bool OpponentColorDescriptorExtractor::empty() const
 {
-    return descriptorExtractor.empty() || (DescriptorExtractor*)(descriptorExtractor)->empty();
+    return !descriptorExtractor || descriptorExtractor->empty();
 }
 
 }

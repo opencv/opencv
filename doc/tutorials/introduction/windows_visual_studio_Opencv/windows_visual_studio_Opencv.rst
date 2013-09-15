@@ -52,7 +52,7 @@ Use for example the *OpenCV_Debug* name. Then by selecting the sheet :menuselect
 
 .. code-block:: bash
 
-   $(OPENCV_DIR)\include
+   $(OPENCV_DIR)\..\..\include
 
 .. image:: images/PropertySheetOpenCVInclude.jpg
    :alt: Add the include dir like this.
@@ -64,7 +64,7 @@ Next go to the :menuselection:`Linker --> General` and under the *"Additional Li
 
 .. code-block:: bash
 
-   $(OPENCV_DIR)\libs
+   $(OPENCV_DIR)\lib
 
 .. image:: images/PropertySheetOpenCVLib.jpg
    :alt: Add the library folder like this.
@@ -86,7 +86,7 @@ The names of the libraries are as follow:
 
    opencv_(The Name of the module)(The version Number of the library you use)d.lib
 
-A full list, for the currently latest trunk version would contain:
+A full list, for the latest version would contain:
 
 .. code-block:: bash
 

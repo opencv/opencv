@@ -19,7 +19,8 @@ PERF_TEST_P(Size_MatType, erode, TYPICAL_MATS_MORPH)
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() erode(src, dst, noArray());
+    int runs = (sz.width <= 320) ? 15 : 1;
+    TEST_CYCLE_MULTIRUN(runs) erode(src, dst, noArray());
 
     SANITY_CHECK(dst);
 }

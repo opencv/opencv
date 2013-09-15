@@ -56,7 +56,7 @@ FarnebackPolyExp( const Mat& src, Mat& dst, int n, double sigma )
 {
     int k, x, y;
 
-    assert( src.type() == CV_32FC1 );
+    CV_Assert( src.type() == CV_32FC1 );
     int width = src.cols;
     int height = src.rows;
     AutoBuffer<float> kbuf(n*6 + 3), _row((width + n*2)*3);
@@ -627,7 +627,7 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         {
             img[i]->convertTo(fimg, CV_32F);
             GaussianBlur(fimg, fimg, Size(smooth_sz, smooth_sz), sigma, sigma);
-            resize( fimg, I, Size(width, height), CV_INTER_LINEAR );
+            resize( fimg, I, Size(width, height), INTER_LINEAR );
             FarnebackPolyExp( I, R[i], poly_n, poly_sigma );
         }
 
@@ -644,18 +644,3 @@ void cv::calcOpticalFlowFarneback( InputArray _prev0, InputArray _next0,
         prevFlow = flow;
     }
 }
-
-
-CV_IMPL void cvCalcOpticalFlowFarneback(
-            const CvArr* _prev, const CvArr* _next,
-            CvArr* _flow, double pyr_scale, int levels,
-            int winsize, int iterations, int poly_n,
-            double poly_sigma, int flags )
-{
-    cv::Mat prev = cv::cvarrToMat(_prev), next = cv::cvarrToMat(_next);
-    cv::Mat flow = cv::cvarrToMat(_flow);
-    CV_Assert( flow.size() == prev.size() && flow.type() == CV_32FC2 );
-    cv::calcOpticalFlowFarneback( prev, next, flow, pyr_scale, levels,
-        winsize, iterations, poly_n, poly_sigma, flags );
-}
-

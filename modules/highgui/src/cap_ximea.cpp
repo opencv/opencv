@@ -20,25 +20,24 @@ public:
     virtual IplImage* retrieveFrame(int);
     virtual int getCaptureDomain() { return CV_CAP_XIAPI; } // Return the type of the capture object: CV_CAP_VFW, etc...
 
-protected:
+private:
     void init();
     void errMsg(const char* msg, int errNum);
+    void resetCvImage();
+    int  getBpp();
     IplImage* frame;
 
     HANDLE    hmv;
     DWORD     numDevices;
-    XI_IMG    image;
-    int       width;
-    int       height;
-    int       format;
     int       timeout;
+    XI_IMG    image;
 };
 
 /**********************************************************************************/
 
 CvCapture* cvCreateCameraCapture_XIMEA( int index )
 {
-     CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
+    CvCaptureCAM_XIMEA* capture = new CvCaptureCAM_XIMEA;
 
     if( capture->open( index ))
         return capture;
@@ -53,6 +52,8 @@ void CvCaptureCAM_XIMEA::init()
 {
     xiGetNumberDevices( &numDevices);
     hmv = NULL;
+    frame = NULL;
+    timeout = 0;
     memset(&image, 0, sizeof(XI_IMG));
 }
 
@@ -61,6 +62,8 @@ void CvCaptureCAM_XIMEA::init()
 // Initialize camera input
 bool CvCaptureCAM_XIMEA::open( int wIndex )
 {
+#define HandleXiResult(res) if (res!=XI_OK)  goto error;
+
     int mvret = XI_OK;
 
     if(numDevices == 0)
@@ -74,25 +77,42 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
 
     // always use auto exposure/gain
     mvret = xiSetParamInt( hmv, XI_PRM_AEAG, 1);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
-    // always use auto white ballance
-    mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
-    if(mvret != XI_OK) goto error;
-
+    int width = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
+    int height = 0;
     mvret = xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
-    if(mvret != XI_OK) goto error;
+    HandleXiResult(mvret);
 
-    // default image format RGB24
-    format = XI_RGB24;
-    mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, format);
-    if(mvret != XI_OK) goto error;
+    int isColor = 0;
+    mvret = xiGetParamInt(hmv, XI_PRM_IMAGE_IS_COLOR, &isColor);
+    HandleXiResult(mvret);
 
-    // allocate frame buffer for RGB24 image
-    frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
+    if(isColor)	// for color cameras
+    {
+        // default image format RGB24
+        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_RGB24);
+        HandleXiResult(mvret);
+
+        // always use auto white ballance for color cameras
+        mvret = xiSetParamInt( hmv, XI_PRM_AUTO_WB, 1);
+        HandleXiResult(mvret);
+
+        // allocate frame buffer for RGB24 image
+        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 3);
+    }
+    else // for mono cameras
+    {
+        // default image format MONO8
+        mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, XI_MONO8);
+        HandleXiResult(mvret);
+
+        // allocate frame buffer for MONO8 image
+        frame = cvCreateImage(cvSize( width, height), IPL_DEPTH_8U, 1);
+    }
 
     //default capture timeout 10s
     timeout = 10000;
@@ -103,10 +123,10 @@ bool CvCaptureCAM_XIMEA::open( int wIndex )
         errMsg("StartAcquisition XI_DEVICE failed", mvret);
         goto error;
     }
-
     return true;
 
 error:
+    errMsg("Open XI_DEVICE failed", mvret);
     xiCloseDevice(hmv);
     hmv = NULL;
     return false;
@@ -116,18 +136,22 @@ error:
 
 void CvCaptureCAM_XIMEA::close()
 {
+    if(frame)
+        cvReleaseImage(&frame);
+
     if(hmv)
     {
         xiStopAcquisition(hmv);
         xiCloseDevice(hmv);
-        hmv = NULL;
     }
+    hmv = NULL;
 }
 
 /**********************************************************************************/
 
 bool CvCaptureCAM_XIMEA::grabFrame()
 {
+    memset(&image, 0, sizeof(XI_IMG));
     image.size = sizeof(XI_IMG);
     int mvret = xiGetImage( hmv, timeout, &image);
 
@@ -151,36 +175,52 @@ bool CvCaptureCAM_XIMEA::grabFrame()
 IplImage* CvCaptureCAM_XIMEA::retrieveFrame(int)
 {
     // update cvImage after format has changed
-    if( (int)image.width != width || (int)image.height != height || image.frm != (XI_IMG_FORMAT)format)
-    {
-        cvReleaseImage(&frame);
-        switch( image.frm)
-        {
-        case XI_MONO8  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 1); break;
-        case XI_MONO16 : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_16U, 1); break;
-        case XI_RGB24  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 3); break;
-        case XI_RGB32  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 4); break;
-        default :
-            return frame;
-        }
-        // update global image format
-        format = image.frm;
-        width = image.width;
-        height = image.height;
-    }
+    resetCvImage();
 
     // copy pixel data
     switch( image.frm)
     {
-    case XI_MONO8  : memcpy( frame->imageData, image.bp, image.width*image.height); break;
-    case XI_MONO16 : memcpy( frame->imageData, image.bp, image.width*image.height*sizeof(WORD)); break;
-    case XI_RGB24  : memcpy( frame->imageData, image.bp, image.width*image.height*3); break;
-    case XI_RGB32  : memcpy( frame->imageData, image.bp, image.width*image.height*sizeof(DWORD)); break;
+    case XI_MONO8       :
+    case XI_RAW8        : memcpy( frame->imageData, image.bp, image.width*image.height); break;
+    case XI_MONO16      :
+    case XI_RAW16       : memcpy( frame->imageData, image.bp, image.width*image.height*sizeof(WORD)); break;
+    case XI_RGB24       :
+    case XI_RGB_PLANAR  : memcpy( frame->imageData, image.bp, image.width*image.height*3); break;
+    case XI_RGB32       : memcpy( frame->imageData, image.bp, image.width*image.height*4); break;
     default: break;
     }
     return frame;
 }
 
+/**********************************************************************************/
+
+void CvCaptureCAM_XIMEA::resetCvImage()
+{
+    int width = 0, height = 0, format = 0;
+    xiGetParamInt( hmv, XI_PRM_WIDTH, &width);
+    xiGetParamInt( hmv, XI_PRM_HEIGHT, &height);
+    xiGetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, &format);
+
+    if( (int)image.width != width || (int)image.height != height || image.frm != (XI_IMG_FORMAT)format)
+    {
+        if(frame) cvReleaseImage(&frame);
+        frame = NULL;
+
+        switch( image.frm)
+        {
+        case XI_MONO8       :
+        case XI_RAW8        : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 1); break;
+        case XI_MONO16      :
+        case XI_RAW16       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_16U, 1); break;
+        case XI_RGB24       :
+        case XI_RGB_PLANAR  : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 3); break;
+        case XI_RGB32       : frame = cvCreateImage(cvSize( image.width, image.height), IPL_DEPTH_8U, 4); break;
+        default :
+            return;
+        }
+    }
+    cvZero(frame);
+}
 /**********************************************************************************/
 
 double CvCaptureCAM_XIMEA::getProperty( int property_id )
@@ -238,20 +278,14 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
     switch(property_id)
     {
     // OCV parameters
-    case CV_CAP_PROP_FRAME_WIDTH  : mvret = xiSetParamInt( hmv, XI_PRM_WIDTH, ival);
-        if(mvret == XI_OK) width = ival;
-        break;
-    case CV_CAP_PROP_FRAME_HEIGHT : mvret = xiSetParamInt( hmv, XI_PRM_HEIGHT, ival);
-        if(mvret == XI_OK) height = ival;
-        break;
+    case CV_CAP_PROP_FRAME_WIDTH  : mvret = xiSetParamInt( hmv, XI_PRM_WIDTH, ival); break;
+    case CV_CAP_PROP_FRAME_HEIGHT : mvret = xiSetParamInt( hmv, XI_PRM_HEIGHT, ival); break;
     case CV_CAP_PROP_FPS          : mvret = xiSetParamFloat( hmv, XI_PRM_FRAMERATE, fval); break;
     case CV_CAP_PROP_GAIN         : mvret = xiSetParamFloat( hmv, XI_PRM_GAIN, fval); break;
     case CV_CAP_PROP_EXPOSURE     : mvret = xiSetParamInt( hmv, XI_PRM_EXPOSURE, ival); break;
     // XIMEA camera properties
     case CV_CAP_PROP_XI_DOWNSAMPLING  : mvret = xiSetParamInt( hmv, XI_PRM_DOWNSAMPLING, ival); break;
-    case CV_CAP_PROP_XI_DATA_FORMAT   : mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, ival);
-        if(mvret == XI_OK) format = ival;
-        break;
+    case CV_CAP_PROP_XI_DATA_FORMAT   : mvret = xiSetParamInt( hmv, XI_PRM_IMAGE_DATA_FORMAT, ival); break;
     case CV_CAP_PROP_XI_OFFSET_X      : mvret = xiSetParamInt( hmv, XI_PRM_OFFSET_X, ival); break;
     case CV_CAP_PROP_XI_OFFSET_Y      : mvret = xiSetParamInt( hmv, XI_PRM_OFFSET_Y, ival); break;
     case CV_CAP_PROP_XI_TRG_SOURCE    : mvret = xiSetParamInt( hmv, XI_PRM_TRG_SOURCE, ival); break;
@@ -288,12 +322,30 @@ bool CvCaptureCAM_XIMEA::setProperty( int property_id, double value )
 void CvCaptureCAM_XIMEA::errMsg(const char* msg, int errNum)
 {
 #if defined WIN32 || defined _WIN32
-    char buf[512];
+    char buf[512]="";
     sprintf( buf, "%s : %d\n", msg, errNum);
     OutputDebugString(buf);
 #else
     fprintf(stderr, "%s : %d\n", msg, errNum);
 #endif
+}
+
+/**********************************************************************************/
+
+int  CvCaptureCAM_XIMEA::getBpp()
+{
+    switch( image.frm)
+    {
+    case XI_MONO8       :
+    case XI_RAW8        : return 1;
+    case XI_MONO16      :
+    case XI_RAW16       : return 2;
+    case XI_RGB24       :
+    case XI_RGB_PLANAR  : return 3;
+    case XI_RGB32       : return 4;
+    default :
+        return 0;
+    }
 }
 
 /**********************************************************************************/

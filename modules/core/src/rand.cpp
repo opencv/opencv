@@ -54,6 +54,8 @@
     #undef min
     #undef max
     #undef abs
+#else
+    #include <pthread.h>
 #endif
 
 #if defined __SSE2__ || (defined _M_IX86_FP && 2 == _M_IX86_FP)
@@ -726,33 +728,54 @@ void RNG::fill( InputOutputArray _mat, int disttype,
 }
 
 #ifdef WIN32
+
+
+#ifdef HAVE_WINRT
+// using C++11 thread attribute for local thread data
+__declspec( thread ) RNG* rng = NULL;
+
+ void deleteThreadRNGData()
+ {
+    if (rng)
+        delete rng;
+}
+
+RNG& theRNG()
+{
+    if (!rng)
+    {
+        rng =  new RNG;
+    }
+    return *rng;
+}
+#else
 #ifdef WINCE
 #	define TLS_OUT_OF_INDEXES ((DWORD)0xFFFFFFFF)
 #endif
 static DWORD tlsRNGKey = TLS_OUT_OF_INDEXES;
 
-void deleteThreadRNGData()
-{
-    if( tlsRNGKey != TLS_OUT_OF_INDEXES )
-        delete (RNG*)TlsGetValue( tlsRNGKey );
+ void deleteThreadRNGData()
+ {
+     if( tlsRNGKey != TLS_OUT_OF_INDEXES )
+         delete (RNG*)TlsGetValue( tlsRNGKey );
 }
 
 RNG& theRNG()
 {
     if( tlsRNGKey == TLS_OUT_OF_INDEXES )
     {
-        tlsRNGKey = TlsAlloc();
-        CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
+       tlsRNGKey = TlsAlloc();
+       CV_Assert(tlsRNGKey != TLS_OUT_OF_INDEXES);
     }
     RNG* rng = (RNG*)TlsGetValue( tlsRNGKey );
     if( !rng )
     {
-        rng = new RNG;
-        TlsSetValue( tlsRNGKey, rng );
+       rng = new RNG;
+       TlsSetValue( tlsRNGKey, rng );
     }
     return *rng;
 }
-
+#endif //HAVE_WINRT
 #else
 
 static pthread_key_t tlsRNGKey = 0;
@@ -859,11 +882,6 @@ void cv::randShuffle( InputOutputArray _dst, double iterFactor, RNG* _rng )
     RandShuffleFunc func = tab[dst.elemSize()];
     CV_Assert( func != 0 );
     func( dst, rng, iterFactor );
-}
-
-void cv::randShuffle_( InputOutputArray _dst, double iterFactor )
-{
-    randShuffle(_dst, iterFactor);
 }
 
 CV_IMPL void

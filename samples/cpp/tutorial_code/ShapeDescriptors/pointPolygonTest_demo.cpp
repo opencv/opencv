@@ -71,13 +71,11 @@ int main( void )
 
   /// Create Window and show your results
   const char* source_window = "Source";
-  namedWindow( source_window, CV_WINDOW_AUTOSIZE );
+  namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, src );
-  namedWindow( "Distance", CV_WINDOW_AUTOSIZE );
+  namedWindow( "Distance", WINDOW_AUTOSIZE );
   imshow( "Distance", drawing );
 
   waitKey(0);
   return(0);
 }
-
-

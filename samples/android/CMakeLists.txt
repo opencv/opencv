@@ -9,13 +9,15 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wmissing-declarations)
 add_subdirectory(15-puzzle)
 add_subdirectory(face-detection)
 add_subdirectory(image-manipulations)
+add_subdirectory(camera-calibration)
 add_subdirectory(color-blob-detection)
-
 add_subdirectory(tutorial-1-camerapreview)
 add_subdirectory(tutorial-2-mixedprocessing)
 add_subdirectory(tutorial-3-cameracontrol)
 
-#hello-android sample
+add_subdirectory(native-activity)
+
+# hello-android sample
 if(HAVE_opencv_highgui)
   ocv_include_modules_recurse(opencv_highgui opencv_core)
   add_executable(hello-android hello-android/main.cpp)

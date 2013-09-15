@@ -8,64 +8,9 @@ between different algorithms solving the same problem. All objects that implemen
 inherit the
 :ocv:class:`FeatureDetector` interface.
 
-KeyPoint
---------
-.. ocv:class:: KeyPoint
+.. note::
 
-  Data structure for salient point detectors.
-
-  .. ocv:member:: Point2f pt
-
-     coordinates of the keypoint
-
-  .. ocv:member:: float size
-
-     diameter of the meaningful keypoint neighborhood
-
-  .. ocv:member:: float angle
-
-     computed orientation of the keypoint (-1 if not applicable). Its possible values are in a range [0,360) degrees. It is measured relative to image coordinate system (y-axis is directed downward), ie in clockwise.
-
-  .. ocv:member:: float response
-
-     the response by which the most strong keypoints have been selected. Can be used for further sorting or subsampling
-
-  .. ocv:member:: int octave
-
-     octave (pyramid layer) from which the keypoint has been extracted
-
-  .. ocv:member:: int class_id
-
-     object id that can be used to clustered keypoints by an object they belong to
-
-KeyPoint::KeyPoint
-------------------
-The keypoint constructors
-
-.. ocv:function:: KeyPoint::KeyPoint()
-
-.. ocv:function:: KeyPoint::KeyPoint(Point2f _pt, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
-
-.. ocv:function:: KeyPoint::KeyPoint(float x, float y, float _size, float _angle=-1, float _response=0, int _octave=0, int _class_id=-1)
-
-.. ocv:pyfunction:: cv2.KeyPoint([x, y, _size[, _angle[, _response[, _octave[, _class_id]]]]]) -> <KeyPoint object>
-
-    :param x: x-coordinate of the keypoint
-
-    :param y: y-coordinate of the keypoint
-
-    :param _pt: x & y coordinates of the keypoint
-
-    :param _size: keypoint diameter
-
-    :param _angle: keypoint orientation
-
-    :param _response: keypoint detector response on the keypoint (that is, strength of the keypoint)
-
-    :param _octave: pyramid octave in which the keypoint has been detected
-
-    :param _class_id: object id
-
+   * An example explaining keypoint detection can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
 
 FeatureDetector
 ---------------
@@ -88,7 +33,7 @@ Abstract base class for 2D image feature detectors. ::
         virtual void read(const FileNode&);
         virtual void write(FileStorage&) const;
 
-        static Ptr<FeatureDetector> create( const string& detectorType );
+        static Ptr<FeatureDetector> create( const String& detectorType );
 
     protected:
     ...
@@ -101,6 +46,8 @@ Detects keypoints in an image (first variant) or image set (second variant).
 .. ocv:function:: void FeatureDetector::detect( const Mat& image, vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const
 
 .. ocv:function:: void FeatureDetector::detect( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, const vector<Mat>& masks=vector<Mat>() ) const
+
+.. ocv:pyfunction:: cv2.FeatureDetector_create.detect(image[, mask]) -> keypoints
 
     :param image: Image.
 
@@ -116,7 +63,9 @@ FeatureDetector::create
 -----------------------
 Creates a feature detector by its name.
 
-.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const string& detectorType )
+.. ocv:function:: Ptr<FeatureDetector> FeatureDetector::create( const String& detectorType )
+
+.. ocv:pyfunction:: cv2.FeatureDetector_create(detectorType) -> retval
 
     :param detectorType: Feature detector type.
 
@@ -220,7 +169,7 @@ StarFeatureDetector
 -------------------
 .. ocv:class:: StarFeatureDetector : public FeatureDetector
 
-The class implements the keypoint detector introduced by K. Konolige, synonym of ``StarDetector``.  ::
+The class implements the keypoint detector introduced by [Agrawal08]_, synonym of ``StarDetector``.  ::
 
     class StarFeatureDetector : public FeatureDetector
     {
@@ -233,6 +182,9 @@ The class implements the keypoint detector introduced by K. Konolige, synonym of
     protected:
         ...
     };
+
+.. [Agrawal08] Agrawal, M., Konolige, K., & Blas, M. R. (2008). Censure: Center surround extremas for realtime feature detection and matching. In Computer Vision–ECCV 2008 (pp. 102-115). Springer Berlin Heidelberg.
+
 
 DenseFeatureDetector
 --------------------
@@ -439,7 +391,7 @@ Class providing an interface for adjusting parameters of a feature detector. Thi
         virtual void tooMany(int max, int n_detected) = 0;
         virtual bool good() const = 0;
         virtual Ptr<AdjusterAdapter> clone() const = 0;
-        static Ptr<AdjusterAdapter> create( const string& detectorType );
+        static Ptr<AdjusterAdapter> create( const String& detectorType );
      };
 
 
@@ -500,7 +452,7 @@ AdjusterAdapter::create
 -----------------------
 Creates an adjuster adapter by name
 
-.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const string& detectorType )
+.. ocv:function:: Ptr<AdjusterAdapter> AdjusterAdapter::create( const String& detectorType )
 
     Creates an adjuster adapter by name ``detectorType``. The detector name is the same as in :ocv:func:`FeatureDetector::create`, but now supports ``"FAST"``, ``"STAR"``, and ``"SURF"`` only.
 

@@ -44,7 +44,6 @@
 #define __OPENCV_VIDEOSTAB_GLOBAL_MOTION_HPP__
 
 #include <vector>
-#include <string>
 #include <fstream>
 #include "opencv2/core.hpp"
 #include "opencv2/features2d.hpp"
@@ -53,8 +52,8 @@
 #include "opencv2/videostab/motion_core.hpp"
 #include "opencv2/videostab/outlier_rejection.hpp"
 
-#ifdef HAVE_OPENCV_GPU
-  #include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_GPUIMGPROC
+#  include "opencv2/gpuimgproc.hpp"
 #endif
 
 namespace cv
@@ -146,7 +145,7 @@ private:
 class CV_EXPORTS FromFileMotionReader : public ImageMotionEstimatorBase
 {
 public:
-    FromFileMotionReader(const std::string &path);
+    FromFileMotionReader(const String &path);
 
     virtual Mat estimate(const Mat &frame0, const Mat &frame1, bool *ok = 0);
 
@@ -157,7 +156,7 @@ private:
 class CV_EXPORTS ToFileMotionWriter : public ImageMotionEstimatorBase
 {
 public:
-    ToFileMotionWriter(const std::string &path, Ptr<ImageMotionEstimatorBase> estimator);
+    ToFileMotionWriter(const String &path, Ptr<ImageMotionEstimatorBase> estimator);
 
     virtual void setMotionModel(MotionModel val) { motionEstimator_->setMotionModel(val); }
     virtual MotionModel motionModel() const { return motionEstimator_->motionModel(); }
@@ -200,7 +199,8 @@ private:
     std::vector<Point2f> pointsPrevGood_, pointsGood_;
 };
 
-#ifdef HAVE_OPENCV_GPU
+#if defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
+
 class CV_EXPORTS KeypointBasedMotionEstimatorGpu : public ImageMotionEstimatorBase
 {
 public:
@@ -217,7 +217,7 @@ public:
 
 private:
     Ptr<MotionEstimatorBase> motionEstimator_;
-    gpu::GoodFeaturesToTrackDetector_GPU detector_;
+    Ptr<gpu::CornersDetector> detector_;
     SparsePyrLkOptFlowEstimatorGpu optFlowEstimator_;
     Ptr<IOutlierRejector> outlierRejector_;
 
@@ -229,7 +229,8 @@ private:
     std::vector<Point2f> hostPointsPrevTmp_, hostPointsTmp_;
     std::vector<uchar> rejectionStatus_;
 };
-#endif
+
+#endif // defined(HAVE_OPENCV_GPUIMGPROC) && defined(HAVE_OPENCV_GPU) && defined(HAVE_OPENCV_GPUOPTFLOW)
 
 CV_EXPORTS Mat getMotion(int from, int to, const std::vector<Mat> &motions);
 

@@ -389,7 +389,7 @@ int showRootFilterBoxes(IplImage *image,
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cvShowImage("Initial image", image);
+    cv::imshow("Initial image", cv::cvarrToMat(image));
 #endif
     return LATENT_SVM_OK;
 }
@@ -445,7 +445,7 @@ int showPartFilterBoxes(IplImage *image,
         }
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cvShowImage("Initial image", image);
+    cv::imshow("Initial image", cv::cvarrToMat(image));
 #endif
     return LATENT_SVM_OK;
 }
@@ -481,7 +481,7 @@ int showBoxes(IplImage *img,
                     color, thickness, line_type, shift);
     }
 #ifdef HAVE_OPENCV_HIGHGUI
-    cvShowImage("Initial image", img);
+    cv::imshow("Initial image", cv::cvarrToMat(img));
 #endif
     return LATENT_SVM_OK;
 }
@@ -582,7 +582,6 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
     // For each component perform searching
     for (i = 0; i < kComponents; i++)
     {
-#ifdef HAVE_TBB
         int error = searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
             b[i], maxXBorder, maxYBorder, scoreThreshold,
             &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
@@ -598,13 +597,6 @@ int searchObjectThresholdSomeComponents(const CvLSVMFeaturePyramid *H,
             free(partsDisplacementArr);
             return LATENT_SVM_SEARCH_OBJECT_FAILED;
         }
-#else
-    (void)numThreads;
-        searchObjectThreshold(H, &(filters[componentIndex]), kPartFilters[i],
-            b[i], maxXBorder, maxYBorder, scoreThreshold,
-            &(pointsArr[i]), &(levelsArr[i]), &(kPointsArr[i]),
-            &(scoreArr[i]), &(partsDisplacementArr[i]));
-#endif
         estimateBoxes(pointsArr[i], levelsArr[i], kPointsArr[i],
             filters[componentIndex]->sizeX, filters[componentIndex]->sizeY, &(oppPointsArr[i]));
         componentIndex += (kPartFilters[i] + 1);

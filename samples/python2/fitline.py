@@ -42,7 +42,7 @@ def sample_line(p1, p2, n, noise=0.0):
     t = np.random.rand(n,1)
     return p1 + (p2-p1)*t + np.random.normal(size=(n, 2))*noise
 
-dist_func_names = it.cycle('CV_DIST_L2 CV_DIST_L1 CV_DIST_L12 CV_DIST_FAIR CV_DIST_WELSCH CV_DIST_HUBER'.split())
+dist_func_names = it.cycle('DIST_L2 DIST_L1 DIST_L12 DIST_FAIR DIST_WELSCH DIST_HUBER'.split())
 cur_func_name = dist_func_names.next()
 
 def update(_=None):
@@ -63,7 +63,7 @@ def update(_=None):
             cv2.circle(img, toint(p), 2, (255, 255, 255), -1)
         for p in outliers:
             cv2.circle(img, toint(p), 2, (64, 64, 255), -1)
-        func = getattr(cv2.cv, cur_func_name)
+        func = getattr(cv2, cur_func_name)
         vx, vy, cx, cy = cv2.fitLine(np.float32(points), func, 0, 0.01, 0.01)
         cv2.line(img, (int(cx-vx*w), int(cy-vy*w)), (int(cx+vx*w), int(cy+vy*w)), (0, 0, 255))
 

@@ -1,3 +1,4 @@
+#include <opencv2/core/utility.hpp>
 #include <opencv2/gpu.hpp>
 #include <opencv2/softcascade.hpp>
 #include <opencv2/highgui.hpp>

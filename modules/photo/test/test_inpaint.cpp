@@ -78,14 +78,14 @@ void CV_InpaintTest::run( int )
     mask.convertTo(inv_mask, CV_8UC3, -1.0, 255.0);
 
     Mat mask1ch;
-    cv::cvtColor(mask, mask1ch, CV_BGR2GRAY);
+    cv::cvtColor(mask, mask1ch, COLOR_BGR2GRAY);
 
     Mat test = orig.clone();
     test.setTo(Scalar::all(255), mask1ch);
 
     Mat res1, res2;
-    inpaint( test, mask1ch, res1, 5, CV_INPAINT_NS );
-    inpaint( test, mask1ch, res2, 5, CV_INPAINT_TELEA );
+    inpaint( test, mask1ch, res1, 5, INPAINT_NS );
+    inpaint( test, mask1ch, res2, 5, INPAINT_TELEA );
 
     Mat diff1, diff2;
     absdiff( orig, res1, diff1 );

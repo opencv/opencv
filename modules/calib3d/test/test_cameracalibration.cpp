@@ -40,6 +40,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/calib3d/calib3d_c.h"
 
 #include <limits>
 

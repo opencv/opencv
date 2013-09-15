@@ -16,10 +16,16 @@ find_host_program(ANT_EXECUTABLE NAMES ${ANT_NAME})
 
 if(ANT_EXECUTABLE)
   execute_process(COMMAND ${ANT_EXECUTABLE} -version
+    RESULT_VARIABLE ANT_ERROR_LEVEL
     OUTPUT_VARIABLE ANT_VERSION_FULL
     OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" ANT_VERSION "${ANT_VERSION_FULL}")
-  set(ANT_VERSION "${ANT_VERSION}" CACHE INTERNAL "Detected ant vesion")
+  if (ANT_ERROR_LEVEL)
+    unset(ANT_EXECUTABLE)
+    unset(ANT_EXECUTABLE CACHE)
+  else()
+    string(REGEX MATCH "[0-9]+.[0-9]+.[0-9]+" ANT_VERSION "${ANT_VERSION_FULL}")
+    set(ANT_VERSION "${ANT_VERSION}" CACHE INTERNAL "Detected ant vesion")
 
-  message(STATUS "Found apache ant ${ANT_VERSION}: ${ANT_EXECUTABLE}")
+    message(STATUS "Found apache ant ${ANT_VERSION}: ${ANT_EXECUTABLE}")
+  endif()
 endif()

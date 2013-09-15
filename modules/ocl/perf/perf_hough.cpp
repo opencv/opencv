@@ -40,7 +40,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
 #ifdef HAVE_OPENCL
 
@@ -80,18 +80,18 @@ PERF_TEST_P(Size_Dp_MinDist, OCL_HoughCircles,
 
         cv::circle(src, center, radius, cv::Scalar::all(255), -1);
     }
-    
+
     cv::ocl::oclMat ocl_src(src);
     cv::ocl::oclMat ocl_circles;
 
     declare.time(10.0).iterations(25);
-    
+
     TEST_CYCLE()
     {
-        cv::ocl::HoughCircles(ocl_src, ocl_circles, CV_HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+        cv::ocl::HoughCircles(ocl_src, ocl_circles, HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
     }
-    
-    cv::Mat circles(ocl_circles);    
+
+    cv::Mat circles(ocl_circles);
     SANITY_CHECK(circles);
 }
 

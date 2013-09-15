@@ -48,7 +48,6 @@
 # undef HAVE_TBB
 #endif
 
-#include <iostream>
 #include <queue>
 
 #ifndef i386
@@ -66,7 +65,7 @@
 
 #include "XnCppWrapper.h"
 
-const std::string XMLConfig =
+const cv::String XMLConfig =
 "<OpenNI>"
         "<Licenses>"
         "<License vendor=\"PrimeSense\" key=\"0KOIk2JeIBYClPWVnMoRKn5cdY4=\"/>"
@@ -558,8 +557,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.Init();
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -568,17 +566,16 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.EnumerateProductionTrees( XN_NODE_TYPE_DEVICE, NULL, devicesList, 0 );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate production trees: %s\n", xnGetStatusString(status));
         return;
     }
 
     // Chose device according to index
     xn::NodeInfoList::Iterator it = devicesList.Begin();
-        for( int i = 0; i < index && it!=devicesList.End(); ++i ) it++;
+    for( int i = 0; i < index && it!=devicesList.End(); ++i ) it++;
         if ( it == devicesList.End() )
         {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed device with index " << index << std::endl;
+            fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed device with index %d\n", index);
             return;
         }
 
@@ -586,8 +583,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.CreateProductionTree( deviceNode, productionNode );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create production tree: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -595,8 +591,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.RunXmlScript( XMLConfig.c_str(), scriptNode );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to run xml script: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -606,20 +601,18 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.EnumerateExistingNodes( depthList, XN_NODE_TYPE_DEPTH );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate depth generators: %s\n", xnGetStatusString(status));
         return;
     }
     if( depthList.IsEmpty() )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now." << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : The device doesn't have depth generator. Such devices aren't supported now.\n");
         return;
     }
     status = depthGenerator.Create( context );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create depth generator: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -628,8 +621,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.EnumerateExistingNodes( imageList, XN_NODE_TYPE_IMAGE );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to enumerate image generators: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -638,8 +630,7 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
         status = imageGenerator.Create( context );
         if( status != XN_STATUS_OK )
         {
-            std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: "
-                      <<  std::string(xnGetStatusString(status)) << std::endl;
+            fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to create image generator: %s\n", xnGetStatusString(status));
             return;
         }
     }
@@ -666,14 +657,13 @@ CvCapture_OpenNI::CvCapture_OpenNI( int index )
     status = context.StartGeneratingAll();
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to start generating OpenNI data: %s\n", xnGetStatusString(status));
         return;
     }
 
     if( !readCamerasParams() )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters\n");
         return;
     }
 
@@ -697,8 +687,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
     status = context.Init();
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to initialize the context: %s\n", xnGetStatusString(status));
         return;
     }
 
@@ -706,8 +695,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
     status = context.OpenFileRecording( filename, productionNode );
     if( status != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Failed to open input file (" << filename << "): "
-                  << std::string(xnGetStatusString(status)) << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Failed to open input file (%s): %s\n", filename, xnGetStatusString(status));
         return;
     }
 
@@ -716,7 +704,7 @@ CvCapture_OpenNI::CvCapture_OpenNI(const char * filename)
 
     if( !readCamerasParams() )
     {
-        std::cerr << "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::CvCapture_OpenNI : Could not read cameras parameters\n");
         return;
     }
 
@@ -736,7 +724,7 @@ bool CvCapture_OpenNI::readCamerasParams()
     XnDouble pixelSize = 0;
     if( depthGenerator.GetRealProperty( "ZPPS", pixelSize ) != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read pixel size!" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::readCamerasParams : Could not read pixel size!\n");
         return false;
     }
 
@@ -747,13 +735,13 @@ bool CvCapture_OpenNI::readCamerasParams()
     XnUInt64 zeroPlanDistance; // in mm
     if( depthGenerator.GetIntProperty( "ZPD", zeroPlanDistance ) != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read virtual plane distance!" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::readCamerasParams : Could not read virtual plane distance!\n");
         return false;
     }
 
     if( depthGenerator.GetRealProperty( "LDDIS", baseline ) != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read base line!" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::readCamerasParams : Could not read base line!\n");
         return false;
     }
 
@@ -765,13 +753,13 @@ bool CvCapture_OpenNI::readCamerasParams()
 
     if( depthGenerator.GetIntProperty( "ShadowValue", shadowValue ) != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read property \"ShadowValue\"!" << std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::readCamerasParams : Could not read property \"ShadowValue\"!\n");
         return false;
     }
 
     if( depthGenerator.GetIntProperty("NoSampleValue", noSampleValue ) != XN_STATUS_OK )
     {
-        std::cerr << "CvCapture_OpenNI::readCamerasParams : Could not read property \"NoSampleValue\"!" <<std::endl;
+        fprintf(stderr, "CvCapture_OpenNI::readCamerasParams : Could not read property \"NoSampleValue\"!\n");
         return false;
     }
 
@@ -861,11 +849,7 @@ double CvCapture_OpenNI::getCommonProperty( int propIdx )
         propValue = maxTimeDuration;
         break;
     default :
-    {
-        std::stringstream ss;
-        ss << "Such parameter (propIdx=" << propIdx << ") isn't supported for getting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for getting.\n", propIdx) );
     }
 
     return propValue;
@@ -922,11 +906,7 @@ bool CvCapture_OpenNI::setCommonProperty( int propIdx, double propValue )
             approxSyncGrabber->setMaxTimeDuration(maxTimeDuration);
         break;
     default:
-    {
-        std::stringstream ss;
-        ss << "Such parameter (propIdx=" << propIdx << ") isn't supported for setting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Such parameter (propIdx=%d) isn't supported for setting.\n", propIdx) );
     }
 
     return isSet;
@@ -977,11 +957,7 @@ double CvCapture_OpenNI::getDepthGeneratorProperty( int propIdx )
         propValue = depthGenerator.GetFrameID();
         break;
     default :
-    {
-        std::stringstream ss;
-        ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Depth generator does not support such parameter (propIdx=%d) for getting.\n", propIdx) );
     }
 
     return propValue;
@@ -1009,12 +985,12 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
                         {
                             XnStatus status = depthGenerator.GetAlternativeViewPointCap().SetViewPoint(imageGenerator);
                             if( status != XN_STATUS_OK )
-                                std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
+                                fprintf(stderr, "CvCapture_OpenNI::setDepthGeneratorProperty : %s\n", xnGetStatusString(status));
                             else
                                 isSet = true;
                         }
                         else
-                            std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : Unsupported viewpoint." << std::endl;
+                            fprintf(stderr, "CvCapture_OpenNI::setDepthGeneratorProperty : Unsupported viewpoint.\n");
                     }
                     else
                         isSet = true;
@@ -1024,18 +1000,14 @@ bool CvCapture_OpenNI::setDepthGeneratorProperty( int propIdx, double propValue 
             {
                 XnStatus status = depthGenerator.GetAlternativeViewPointCap().ResetViewPoint();
                 if( status != XN_STATUS_OK )
-                    std::cerr << "CvCapture_OpenNI::setDepthGeneratorProperty : " << xnGetStatusString(status) << std::endl;
+                    fprintf(stderr, "CvCapture_OpenNI::setDepthGeneratorProperty : %s\n", xnGetStatusString(status));
                 else
                     isSet = true;
             }
         }
         break;
     default:
-    {
-        std::stringstream ss;
-        ss << "Depth generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Depth generator does not support such parameter (propIdx=%d) for setting.\n", propIdx) );
     }
 
     return isSet;
@@ -1073,11 +1045,7 @@ double CvCapture_OpenNI::getImageGeneratorProperty( int propIdx )
         propValue = imageGenerator.GetFrameID();
         break;
     default :
-    {
-        std::stringstream ss;
-        ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for getting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for getting.\n", propIdx) );
     }
 
     return propValue;
@@ -1128,17 +1096,13 @@ bool CvCapture_OpenNI::setImageGeneratorProperty( int propIdx, double propValue 
 
         XnStatus status = imageGenerator.SetMapOutputMode( mode );
         if( status != XN_STATUS_OK )
-            std::cerr << "CvCapture_OpenNI::setImageGeneratorProperty : " << xnGetStatusString(status) << std::endl;
+            fprintf(stderr, "CvCapture_OpenNI::setImageGeneratorProperty : %s\n", xnGetStatusString(status));
         else
             isSet = true;
         break;
     }
     default:
-    {
-        std::stringstream ss;
-        ss << "Image generator does not support such parameter (propIdx=" << propIdx << ") for setting.\n";
-        CV_Error( CV_StsBadArg, ss.str().c_str() );
-    }
+        CV_Error( CV_StsBadArg, cv::format("Image generator does not support such parameter (propIdx=%d) for setting.\n", propIdx) );
     }
 
     return isSet;

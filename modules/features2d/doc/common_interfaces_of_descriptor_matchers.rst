@@ -9,34 +9,11 @@ that are represented as vectors in a multidimensional space. All objects that im
 descriptor matchers inherit the
 :ocv:class:`DescriptorMatcher` interface.
 
-DMatch
-------
-.. ocv:struct:: DMatch
+.. note::
 
-Class for matching keypoint descriptors: query descriptor index,
-train descriptor index, train image index, and distance between descriptors. ::
-
-    struct DMatch
-    {
-        DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1),
-                   distance(std::numeric_limits<float>::max()) {}
-        DMatch( int _queryIdx, int _trainIdx, float _distance ) :
-                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1),
-                distance(_distance) {}
-        DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
-                queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx),
-                distance(_distance) {}
-
-        int queryIdx; // query descriptor index
-        int trainIdx; // train descriptor index
-        int imgIdx;   // train image index
-
-        float distance;
-
-        // less is better
-        bool operator<( const DMatch &m ) const;
-    };
-
+   * An example explaining keypoint matching can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor matching evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
+   * An example on one to many image matching can be found at opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
 DescriptorMatcher
 -----------------
@@ -88,7 +65,7 @@ with an image set. ::
 
         virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-        static Ptr<DescriptorMatcher> create( const string& descriptorMatcherType );
+        static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 
     protected:
         vector<Mat> trainDescCollection;
@@ -217,7 +194,7 @@ For each query descriptor, finds the training descriptors not farther than the s
 
     :param compactResult: Parameter used when the mask (or masks) is not empty. If  ``compactResult``  is false, the  ``matches``  vector has the same size as  ``queryDescriptors``  rows. If  ``compactResult``  is true, the  ``matches``  vector does not contain matches for fully masked-out query descriptors.
 
-    :param maxDistance: Threshold for the distance between matched descriptors.
+    :param maxDistance: Threshold for the distance between matched descriptors. Distance means here metric distance (e.g. Hamming distance), not the distance between coordinates (which is measured in Pixels)!
 
 For each query descriptor, the methods find such training descriptors that the distance between the query descriptor and the training descriptor is equal or smaller than ``maxDistance``. Found matches are returned in the distance increasing order.
 
@@ -237,7 +214,7 @@ DescriptorMatcher::create
 -----------------------------
 Creates a descriptor matcher of a given type with the default parameters (using default constructor).
 
-.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const string& descriptorMatcherType )
+.. ocv:function:: Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 
     :param descriptorMatcherType: Descriptor matcher type. Now the following matcher types are supported:
 
@@ -299,4 +276,3 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
     };
 
 ..
-

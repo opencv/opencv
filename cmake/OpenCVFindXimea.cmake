@@ -9,6 +9,7 @@
 #
 # Created: 5 Aug 2011 by Marian Zajko (marian.zajko@ximea.com)
 # Updated: 25 June 2012 by Igor Kuzmin (parafin@ximea.com)
+# Updated: 22 October 2012 by Marian Zajko (marian.zajko@ximea.com)
 #
 
 set(XIMEA_FOUND)
@@ -19,10 +20,14 @@ if(WIN32)
   # Try to find the XIMEA API path in registry.
   GET_FILENAME_COMPONENT(XIMEA_PATH "[HKEY_CURRENT_USER\\Software\\XIMEA\\CamSupport\\API;Path]" ABSOLUTE)
 
-  if(EXISTS XIMEA_PATH)
+  if(EXISTS ${XIMEA_PATH})
     set(XIMEA_FOUND 1)
     # set LIB folders
-    set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x86")
+    if(CMAKE_CL_64)
+      set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x64")
+    else()
+      set(XIMEA_LIBRARY_DIR "${XIMEA_PATH}/x86")
+    endif()
   else()
     set(XIMEA_FOUND 0)
   endif()
@@ -39,4 +44,3 @@ endif()
 mark_as_advanced(FORCE XIMEA_FOUND)
 mark_as_advanced(FORCE XIMEA_PATH)
 mark_as_advanced(FORCE XIMEA_LIBRARY_DIR)
-

@@ -75,3 +75,7 @@ add_custom_command(OUTPUT "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar
 
 add_custom_target(${PROJECT_NAME} ALL SOURCES "${opencv_test_java_bin_dir}/build/jar/opencv-test.jar")
 add_dependencies(${PROJECT_NAME} ${the_module})
+
+if(ENABLE_SOLUTION_FOLDERS)
+  set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tests accuracy")
+endif()

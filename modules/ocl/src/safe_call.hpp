@@ -47,7 +47,7 @@
 #define __OPENCV_OPENCL_SAFE_CALL_HPP__
 
 #if defined __APPLE__
-#include <OpenCL/OpenCL.h>
+#include <OpenCL/opencl.h>
 #else
 #include <CL/cl.h>
 #endif
@@ -65,19 +65,12 @@ namespace cv
 {
     namespace ocl
     {
-        enum openCLMemcpyKind
-        {
-            clMemcpyHostToDevice = 0,
-            clMemcpyDeviceToHost,
-            clMemcpyDeviceToDevice
-        };
-        void error( const char *error_string, const char *file, const int line, const char *func = "");
         const char *getOpenCLErrorString( int err );
 
         static inline void ___openCLSafeCall(int err, const char *file, const int line, const char *func = "")
         {
             if( CL_SUCCESS != err)
-                cv::ocl::error(getOpenCLErrorString(err), file, line, func);
+                cv::error(Error::OpenCLApiCallError, getOpenCLErrorString(err), func, file, line);
         }
     }
 }

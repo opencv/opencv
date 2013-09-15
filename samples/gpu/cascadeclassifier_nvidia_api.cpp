@@ -8,26 +8,37 @@
 #include <cstdio>
 #include "opencv2/gpu/gpu.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 
 #ifdef HAVE_CUDA
-#include "NCVHaarObjectDetection.hpp"
+#include "opencv2/gpulegacy.hpp"
 #endif
 
 using namespace std;
 using namespace cv;
 
 
-#if !defined(HAVE_CUDA)
+#if !defined(HAVE_CUDA) || defined(__arm__)
+
 int main( int, const char** )
 {
-    cout << "Please compile the library with CUDA support" << endl;
-    return -1;
+#if !defined(HAVE_CUDA)
+    std::cout << "CUDA support is required (CMake key 'WITH_CUDA' must be true)." << std::endl;
+#endif
+
+#if defined(__arm__)
+    std::cout << "Unsupported for ARM CUDA library." << std::endl;
+#endif
+
+    return 0;
 }
+
 #else
 
 
 const Size2i preferredVideoFrameSize(640, 480);
-const string wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
+const cv::String wndTitle = "NVIDIA Computer Vision :: Haar Classifiers Cascade";
 
 
 static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss)
@@ -40,15 +51,15 @@ static void matPrint(Mat &img, int lineOffsY, Scalar fontColor, const string &ss
     Point org;
     org.x = 1;
     org.y = 3 * fontSize.height * (lineOffsY + 1) / 2;
-    putText(img, ss, org, fontFace, fontScale, CV_RGB(0,0,0), 5*fontThickness/2, 16);
+    putText(img, ss, org, fontFace, fontScale, Scalar(0,0,0), 5*fontThickness/2, 16);
     putText(img, ss, org, fontFace, fontScale, fontColor, fontThickness, 16);
 }
 
 
 static void displayState(Mat &canvas, bool bHelp, bool bGpu, bool bLargestFace, bool bFilter, double fps)
 {
-    Scalar fontColorRed = CV_RGB(255,0,0);
-    Scalar fontColorNV  = CV_RGB(118,185,0);
+    Scalar fontColorRed(0,0,255);
+    Scalar fontColorNV(0,185,118);
 
     ostringstream ss;
     ss << "FPS = " << setprecision(1) << fixed << fps;
@@ -286,7 +297,7 @@ int main(int argc, const char** argv)
     do
     {
         Mat gray;
-        cvtColor((image.empty() ? frame : image), gray, CV_BGR2GRAY);
+        cvtColor((image.empty() ? frame : image), gray, cv::COLOR_BGR2GRAY);
 
         //
         // process
@@ -334,12 +345,12 @@ int main(int argc, const char** argv)
 
         avgTime = (Ncv32f)ncvEndQueryTimerMs(timer);
 
-        cvtColor(gray, frameDisp, CV_GRAY2BGR);
+        cvtColor(gray, frameDisp, cv::COLOR_GRAY2BGR);
         displayState(frameDisp, bHelpScreen, bUseGPU, bLargestObject, bFilterRects, 1000.0f / avgTime);
         imshow(wndTitle, frameDisp);
 
         //handle input
-        switch (cvWaitKey(3))
+        switch (cv::waitKey(3))
         {
         case ' ':
             bUseGPU = !bUseGPU;
@@ -372,7 +383,7 @@ int main(int argc, const char** argv)
         }
     } while (!bQuit);
 
-    cvDestroyWindow(wndTitle.c_str());
+    cv::destroyWindow(wndTitle);
 
     return 0;
 }

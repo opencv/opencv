@@ -53,7 +53,7 @@ namespace cv
 int RANSACUpdateNumIters( double p, double ep, int modelPoints, int maxIters )
 {
     if( modelPoints <= 0 )
-        CV_Error( CV_StsOutOfRange, "the number of model points should be positive" );
+        CV_Error( Error::StsOutOfRange, "the number of model points should be positive" );
 
     p = MAX(p, 0.);
     p = MIN(p, 1.);
@@ -154,7 +154,7 @@ public:
                 continue;
             break;
         }
-        
+
         return i == modelPoints && iters < maxAttempts;
     }
 
@@ -171,7 +171,7 @@ public:
 
         RNG rng((uint64)-1);
 
-        CV_Assert( !cb.empty() );
+        CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
 
         CV_Assert( count >= 0 && count2 == count );
@@ -235,7 +235,7 @@ public:
                 }
             }
         }
-        
+
         if( maxGoodCount > 0 )
         {
             if( bestMask.data != bestMask0.data )
@@ -250,7 +250,7 @@ public:
         }
         else
             _model.release();
-        
+
         return result;
     }
 
@@ -266,9 +266,6 @@ public:
     double confidence;
     int maxIters;
 };
-
-
-static CV_IMPLEMENT_QSORT( sortDistances, int, CV_LT )
 
 class LMeDSPointSetRegistrator : public RANSACPointSetRegistrator
 {
@@ -291,7 +288,7 @@ public:
 
         RNG rng((uint64)-1);
 
-        CV_Assert( !cb.empty() );
+        CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
 
         CV_Assert( count >= 0 && count2 == count );
@@ -347,7 +344,7 @@ public:
                 else
                     errf = err;
                 CV_Assert( errf.isContinuous() && errf.type() == CV_32F && (int)errf.total() == count );
-                sortDistances( (int*)errf.data, count, 0 );
+                std::sort((int*)errf.data, (int*)errf.data + count);
 
                 double median = count % 2 != 0 ?
                 errf.at<float>(count/2) : (errf.at<float>(count/2-1) + errf.at<float>(count/2))*0.5;
@@ -359,7 +356,7 @@ public:
                 }
             }
         }
-        
+
         if( minMedian < DBL_MAX )
         {
             sigma = 2.5*1.4826*(1 + 5./(count - modelPoints))*std::sqrt(minMedian);
@@ -378,7 +375,7 @@ public:
         }
         else
             _model.release();
-        
+
         return result;
     }
 
@@ -400,7 +397,8 @@ Ptr<PointSetRegistrator> createRANSACPointSetRegistrator(const Ptr<PointSetRegis
                                                          double _confidence, int _maxIters)
 {
     CV_Assert( !RANSACPointSetRegistrator_info_auto.name().empty() );
-    return new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters);
+    return Ptr<PointSetRegistrator>(
+        new RANSACPointSetRegistrator(_cb, _modelPoints, _threshold, _confidence, _maxIters));
 }
 
 
@@ -408,7 +406,8 @@ Ptr<PointSetRegistrator> createLMeDSPointSetRegistrator(const Ptr<PointSetRegist
                              int _modelPoints, double _confidence, int _maxIters)
 {
     CV_Assert( !LMeDSPointSetRegistrator_info_auto.name().empty() );
-    return new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters);
+    return Ptr<PointSetRegistrator>(
+        new LMeDSPointSetRegistrator(_cb, _modelPoints, _confidence, _maxIters));
 }
 
 class Affine3DEstimatorCallback : public PointSetRegistrator::Callback
@@ -534,7 +533,6 @@ int cv::estimateAffine3D(InputArray _from, InputArray _to,
     const double epsilon = DBL_EPSILON;
     param1 = param1 <= 0 ? 3 : param1;
     param2 = (param2 < epsilon) ? 0.99 : (param2 > 1 - epsilon) ? 0.99 : param2;
-    
-    return createRANSACPointSetRegistrator(new Affine3DEstimatorCallback, 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
-}
 
+    return createRANSACPointSetRegistrator(makePtr<Affine3DEstimatorCallback>(), 4, param1, param2)->run(dFrom, dTo, _out, _inliers);
+}

@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -42,112 +43,34 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include "perf_precomp.hpp"
 
-#include "precomp.hpp"
-#include <iomanip>
-#ifdef HAVE_OPENCL
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
+using namespace perf;
 
-#ifndef MWC_TEST_UTILITY
-#define MWC_TEST_UTILITY
+///////////// Canny ////////////////////////
 
-// Param class
-#ifndef IMPLEMENT_PARAM_CLASS
-#define IMPLEMENT_PARAM_CLASS(name, type) \
-class name \
-    { \
-    public: \
-    name ( type arg = type ()) : val_(arg) {} \
-    operator type () const {return val_;} \
-    private: \
-    type val_; \
-    }; \
-    inline void PrintTo( name param, std::ostream* os) \
-    { \
-    *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
-    }
-
-IMPLEMENT_PARAM_CLASS(Channels, int)
-#endif // IMPLEMENT_PARAM_CLASS
-#endif // MWC_TEST_UTILITY
-
-////////////////////////////////////////////////////////
-// Canny1
-extern std::string workdir;
-IMPLEMENT_PARAM_CLASS(AppertureSize, int);
-IMPLEMENT_PARAM_CLASS(L2gradient, bool);
-
-PARAM_TEST_CASE(Canny1, AppertureSize, L2gradient)
+PERF_TEST(CannyFixture, Canny)
 {
-    int apperture_size;
-    bool useL2gradient;
-    //std::vector<cv::ocl::Info> oclinfo;
+    Mat img = imread(getDataPath("gpu/stereobm/aloe-L.png"), cv::IMREAD_GRAYSCALE),
+            edges(img.size(), CV_8UC1);
+    ASSERT_TRUE(!img.empty()) << "can't open aloe-L.png";
 
-    virtual void SetUp()
+    declare.in(img).out(edges);
+
+    if (RUN_OCL_IMPL)
     {
-        apperture_size = GET_PARAM(0);
-        useL2gradient = GET_PARAM(1);
+        ocl::oclMat oclImg(img), oclEdges(img.size(), CV_8UC1);
 
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
+        OCL_TEST_CYCLE() ocl::Canny(oclImg, oclEdges, 50.0, 100.0);
+        oclEdges.download(edges);
     }
-};
-
-TEST_P(Canny1, Performance)
-{
-    cv::Mat img = readImage(workdir + "fruits.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    double low_thresh = 100.0;
-    double high_thresh = 150.0;
-
-    cv::Mat edges_gold;
-    cv::ocl::oclMat edges;
-
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-
-    double t1 = 0;
-    double t2 = 0;
-    for(int j = 0; j < LOOP_TIMES + 1; j ++)
+    else if (RUN_PLAIN_IMPL)
     {
-
-        t1 = (double)cvGetTickCount();//gpu start1
-
-        cv::ocl::oclMat ocl_img = cv::ocl::oclMat(img);//upload
-
-        t2 = (double)cvGetTickCount(); //kernel
-        cv::ocl::Canny(ocl_img, edges, low_thresh, high_thresh, apperture_size, useL2gradient);
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        cv::Mat cpu_dst;
-        edges.download (cpu_dst);//download
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-
-        totalgputick_kernel = t2 + totalgputick_kernel;
-
+        TEST_CYCLE() Canny(img, edges, 50.0, 100.0);
     }
+    else
+        OCL_PERF_ELSE
 
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-
+    int value = 0;
+    SANITY_CHECK(value);
 }
-
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Canny1, testing::Combine(
-                            testing::Values(AppertureSize(3), AppertureSize(5)),
-                            testing::Values(L2gradient(false), L2gradient(true))));
-
-
-
-#endif  //Have opencl

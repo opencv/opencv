@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // main entry for the lossless encoder.
@@ -37,7 +39,8 @@ extern "C" {
 static int CompareColors(const void* p1, const void* p2) {
   const uint32_t a = *(const uint32_t*)p1;
   const uint32_t b = *(const uint32_t*)p2;
-  return (a < b) ? -1 : (a > b) ? 1 : 0;
+  assert(a != b);
+  return (a < b) ? -1 : 1;
 }
 
 // If number of colors in the image is less than or equal to MAX_PALETTE_SIZE,
@@ -85,7 +88,7 @@ static int AnalyzeAndCreatePalette(const WebPPicture* const pic,
     argb += pic->argb_stride;
   }
 
-  // TODO(skal): could we reuse in_use[] to speed up ApplyPalette()?
+  // TODO(skal): could we reuse in_use[] to speed up EncodePalette()?
   num_colors = 0;
   for (i = 0; i < (int)(sizeof(in_use) / sizeof(in_use[0])); ++i) {
     if (in_use[i]) {
@@ -220,7 +223,7 @@ static int GetHuffBitLengthsAndCodes(
   }
 
   // Create Huffman trees.
-  for (i = 0; i < histogram_image_size; ++i) {
+  for (i = 0; ok && (i < histogram_image_size); ++i) {
     HuffmanTreeCode* const codes = &huffman_codes[5 * i];
     VP8LHistogram* const histo = histogram_image->histograms[i];
     ok = ok && VP8LCreateHuffmanTree(histo->literal_, 15, codes + 0);
@@ -231,7 +234,11 @@ static int GetHuffBitLengthsAndCodes(
   }
 
  End:
-  if (!ok) free(mem_buf);
+  if (!ok) {
+    free(mem_buf);
+    // If one VP8LCreateHuffmanTree() above fails, we need to clean up behind.
+    memset(huffman_codes, 0, 5 * histogram_image_size * sizeof(*huffman_codes));
+  }
   return ok;
 }
 
@@ -406,9 +413,10 @@ static int StoreHuffmanCode(VP8LBitWriter* const bw,
 }
 
 static void WriteHuffmanCode(VP8LBitWriter* const bw,
-                             const HuffmanTreeCode* const code, int index) {
-  const int depth = code->code_lengths[index];
-  const int symbol = code->codes[index];
+                             const HuffmanTreeCode* const code,
+                             int code_index) {
+  const int depth = code->code_lengths[code_index];
+  const int symbol = code->codes[code_index];
   VP8LWriteBits(bw, depth, symbol);
 }
 
@@ -557,6 +565,9 @@ static int EncodeImageInternal(VP8LBitWriter* const bw,
       !GetHuffBitLengthsAndCodes(histogram_image, huffman_codes)) {
     goto Error;
   }
+  // Free combined histograms.
+  free(histogram_image);
+  histogram_image = NULL;
 
   // Color Cache parameters.
   VP8LWriteBits(bw, 1, use_color_cache);
@@ -576,10 +587,10 @@ static int EncodeImageInternal(VP8LBitWriter* const bw,
       uint32_t i;
       if (histogram_argb == NULL) goto Error;
       for (i = 0; i < histogram_image_xysize; ++i) {
-        const int index = histogram_symbols[i] & 0xffff;
-        histogram_argb[i] = 0xff000000 | (index << 8);
-        if (index >= max_index) {
-          max_index = index + 1;
+        const int symbol_index = histogram_symbols[i] & 0xffff;
+        histogram_argb[i] = 0xff000000 | (symbol_index << 8);
+        if (symbol_index >= max_index) {
+          max_index = symbol_index + 1;
         }
       }
       histogram_image_size = max_index;
@@ -603,9 +614,6 @@ static int EncodeImageInternal(VP8LBitWriter* const bw,
       ClearHuffmanTreeIfOnlyOneSymbol(codes);
     }
   }
-  // Free combined histograms.
-  free(histogram_image);
-  histogram_image = NULL;
 
   // Store actual literals.
   StoreImageToBitMask(bw, width, histogram_bits, &refs,
@@ -613,7 +621,7 @@ static int EncodeImageInternal(VP8LBitWriter* const bw,
   ok = 1;
 
  Error:
-  if (!ok) free(histogram_image);
+  free(histogram_image);
 
   VP8LClearBackwardRefs(&refs);
   if (huffman_codes != NULL) {
@@ -711,13 +719,6 @@ static int ApplyCrossColorFilter(const VP8LEncoder* const enc,
 
 // -----------------------------------------------------------------------------
 
-static void PutLE32(uint8_t* const data, uint32_t val) {
-  data[0] = (val >>  0) & 0xff;
-  data[1] = (val >>  8) & 0xff;
-  data[2] = (val >> 16) & 0xff;
-  data[3] = (val >> 24) & 0xff;
-}
-
 static WebPEncodingError WriteRiffHeader(const WebPPicture* const pic,
                                          size_t riff_size, size_t vp8l_size) {
   uint8_t riff[RIFF_HEADER_SIZE + CHUNK_HEADER_SIZE + VP8L_SIGNATURE_SIZE] = {
@@ -812,60 +813,93 @@ static WebPEncodingError AllocateTransformBuffer(VP8LEncoder* const enc,
   return err;
 }
 
-// Bundles multiple (2, 4 or 8) pixels into a single pixel.
-// Returns the new xsize.
-static void BundleColorMap(const WebPPicture* const pic,
-                           int xbits, uint32_t* bundled_argb, int xs) {
-  int y;
-  const int bit_depth = 1 << (3 - xbits);
-  uint32_t code = 0;
-  const uint32_t* argb = pic->argb;
-  const int width = pic->width;
-  const int height = pic->height;
-
-  for (y = 0; y < height; ++y) {
-    int x;
-    for (x = 0; x < width; ++x) {
-      const int mask = (1 << xbits) - 1;
-      const int xsub = x & mask;
-      if (xsub == 0) {
-        code = 0;
-      }
-      // TODO(vikasa): simplify the bundling logic.
-      code |= (argb[x] & 0xff00) << (bit_depth * xsub);
-      bundled_argb[y * xs + (x >> xbits)] = 0xff000000 | code;
+static void ApplyPalette(uint32_t* src, uint32_t* dst,
+                         uint32_t src_stride, uint32_t dst_stride,
+                         const uint32_t* palette, int palette_size,
+                         int width, int height, int xbits, uint8_t* row) {
+  int i, x, y;
+  int use_LUT = 1;
+  for (i = 0; i < palette_size; ++i) {
+    if ((palette[i] & 0xffff00ffu) != 0) {
+      use_LUT = 0;
+      break;
     }
-    argb += pic->argb_stride;
+  }
+
+  if (use_LUT) {
+    int inv_palette[MAX_PALETTE_SIZE] = { 0 };
+    for (i = 0; i < palette_size; ++i) {
+      const int color = (palette[i] >> 8) & 0xff;
+      inv_palette[color] = i;
+    }
+    for (y = 0; y < height; ++y) {
+      for (x = 0; x < width; ++x) {
+        const int color = (src[x] >> 8) & 0xff;
+        row[x] = inv_palette[color];
+      }
+      VP8LBundleColorMap(row, width, xbits, dst);
+      src += src_stride;
+      dst += dst_stride;
+    }
+  } else {
+    // Use 1 pixel cache for ARGB pixels.
+    uint32_t last_pix = palette[0];
+    int last_idx = 0;
+    for (y = 0; y < height; ++y) {
+      for (x = 0; x < width; ++x) {
+        const uint32_t pix = src[x];
+        if (pix != last_pix) {
+          for (i = 0; i < palette_size; ++i) {
+            if (pix == palette[i]) {
+              last_idx = i;
+              last_pix = pix;
+              break;
+            }
+          }
+        }
+        row[x] = last_idx;
+      }
+      VP8LBundleColorMap(row, width, xbits, dst);
+      src += src_stride;
+      dst += dst_stride;
+    }
   }
 }
 
 // Note: Expects "enc->palette_" to be set properly.
 // Also, "enc->palette_" will be modified after this call and should not be used
 // later.
-static WebPEncodingError ApplyPalette(VP8LBitWriter* const bw,
-                                      VP8LEncoder* const enc, int quality) {
+static WebPEncodingError EncodePalette(VP8LBitWriter* const bw,
+                                       VP8LEncoder* const enc, int quality) {
   WebPEncodingError err = VP8_ENC_OK;
-  int i, x, y;
+  int i;
   const WebPPicture* const pic = enc->pic_;
-  uint32_t* argb = pic->argb;
+  uint32_t* src = pic->argb;
+  uint32_t* dst;
   const int width = pic->width;
   const int height = pic->height;
   uint32_t* const palette = enc->palette_;
   const int palette_size = enc->palette_size_;
+  uint8_t* row = NULL;
+  int xbits;
 
   // Replace each input pixel by corresponding palette index.
-  for (y = 0; y < height; ++y) {
-    for (x = 0; x < width; ++x) {
-      const uint32_t pix = argb[x];
-      for (i = 0; i < palette_size; ++i) {
-        if (pix == palette[i]) {
-          argb[x] = 0xff000000u | (i << 8);
-          break;
-        }
-      }
-    }
-    argb += pic->argb_stride;
+  // This is done line by line.
+  if (palette_size <= 4) {
+    xbits = (palette_size <= 2) ? 3 : 2;
+  } else {
+    xbits = (palette_size <= 16) ? 1 : 0;
   }
+
+  err = AllocateTransformBuffer(enc, VP8LSubSampleSize(width, xbits), height);
+  if (err != VP8_ENC_OK) goto Error;
+  dst = enc->argb_;
+
+  row = WebPSafeMalloc((uint64_t)width, sizeof(*row));
+  if (row == NULL) return VP8_ENC_ERROR_OUT_OF_MEMORY;
+
+  ApplyPalette(src, dst, pic->argb_stride, enc->current_width_,
+               palette, palette_size, width, height, xbits, row);
 
   // Save palette to bitstream.
   VP8LWriteBits(bw, 1, TRANSFORM_PRESENT);
@@ -880,32 +914,17 @@ static WebPEncodingError ApplyPalette(VP8LBitWriter* const bw,
     goto Error;
   }
 
-  if (palette_size <= 16) {
-    // Image can be packed (multiple pixels per uint32_t).
-    int xbits = 1;
-    if (palette_size <= 2) {
-      xbits = 3;
-    } else if (palette_size <= 4) {
-      xbits = 2;
-    }
-    err = AllocateTransformBuffer(enc, VP8LSubSampleSize(width, xbits), height);
-    if (err != VP8_ENC_OK) goto Error;
-    BundleColorMap(pic, xbits, enc->argb_, enc->current_width_);
-  }
-
  Error:
+  free(row);
   return err;
 }
 
 // -----------------------------------------------------------------------------
 
-static int GetHistoBits(const WebPConfig* const config,
-                        const WebPPicture* const pic) {
-  const int width = pic->width;
-  const int height = pic->height;
+static int GetHistoBits(int method, int use_palette, int width, int height) {
   const uint64_t hist_size = sizeof(VP8LHistogram);
   // Make tile size a function of encoding method (Range: 0 to 6).
-  int histo_bits = 7 - config->method;
+  int histo_bits = (use_palette ? 9 : 7) - method;
   while (1) {
     const uint64_t huff_image_size = VP8LSubSampleSize(width, histo_bits) *
                                      VP8LSubSampleSize(height, histo_bits) *
@@ -917,13 +936,14 @@ static int GetHistoBits(const WebPConfig* const config,
          (histo_bits > MAX_HUFFMAN_BITS) ? MAX_HUFFMAN_BITS : histo_bits;
 }
 
-static void InitEncParams(VP8LEncoder* const enc) {
+static void FinishEncParams(VP8LEncoder* const enc) {
   const WebPConfig* const config = enc->config_;
-  const WebPPicture* const picture = enc->pic_;
+  const WebPPicture* const pic = enc->pic_;
   const int method = config->method;
   const float quality = config->quality;
+  const int use_palette = enc->use_palette_;
   enc->transform_bits_ = (method < 4) ? 5 : (method > 4) ? 3 : 4;
-  enc->histo_bits_ = GetHistoBits(config, picture);
+  enc->histo_bits_ = GetHistoBits(method, use_palette, pic->width, pic->height);
   enc->cache_bits_ = (quality <= 25.f) ? 0 : 7;
 }
 
@@ -965,8 +985,6 @@ WebPEncodingError VP8LEncodeStream(const WebPConfig* const config,
     goto Error;
   }
 
-  InitEncParams(enc);
-
   // ---------------------------------------------------------------------------
   // Analyze image (entropy, num_palettes etc)
 
@@ -975,8 +993,10 @@ WebPEncodingError VP8LEncodeStream(const WebPConfig* const config,
     goto Error;
   }
 
+  FinishEncParams(enc);
+
   if (enc->use_palette_) {
-    err = ApplyPalette(bw, enc, quality);
+    err = EncodePalette(bw, enc, quality);
     if (err != VP8_ENC_OK) goto Error;
     // Color cache is disabled for palette.
     enc->cache_bits_ = 0;

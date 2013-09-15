@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -44,25 +44,25 @@
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_nogpu(); }
-size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_nogpu(); return 0; }
-size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_nogpu(); return 0; }
-double cv::gpu::HOGDescriptor::getWinSigma() const { throw_nogpu(); return 0; }
-bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_nogpu(); return false; }
-void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_nogpu(); }
-std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_nogpu(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_nogpu(); return std::vector<float>(); }
-std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_nogpu(); return std::vector<float>(); }
-void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_nogpu(); }
-void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_nogpu(); }
+cv::gpu::HOGDescriptor::HOGDescriptor(Size, Size, Size, Size, int, double, double, bool, int) { throw_no_cuda(); }
+size_t cv::gpu::HOGDescriptor::getDescriptorSize() const { throw_no_cuda(); return 0; }
+size_t cv::gpu::HOGDescriptor::getBlockHistogramSize() const { throw_no_cuda(); return 0; }
+double cv::gpu::HOGDescriptor::getWinSigma() const { throw_no_cuda(); return 0; }
+bool cv::gpu::HOGDescriptor::checkDetectorSize() const { throw_no_cuda(); return false; }
+void cv::gpu::HOGDescriptor::setSVMDetector(const std::vector<float>&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::detect(const GpuMat&, std::vector<Point>&, double, Size, Size) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, double, int) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::computeBlockHistograms(const GpuMat&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat&, Size, GpuMat&, int) { throw_no_cuda(); }
+std::vector<float> cv::gpu::HOGDescriptor::getDefaultPeopleDetector() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector48x96() { throw_no_cuda(); return std::vector<float>(); }
+std::vector<float> cv::gpu::HOGDescriptor::getPeopleDetector64x128() { throw_no_cuda(); return std::vector<float>(); }
+void cv::gpu::HOGDescriptor::computeConfidence(const GpuMat&, std::vector<Point>&, double, Size, Size, std::vector<Point>&, std::vector<double>&) { throw_no_cuda(); }
+void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat&, std::vector<Rect>&, double, Size, Size, std::vector<HOGConfidence>&, int) { throw_no_cuda(); }
 
 #else
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     namespace hog
     {
@@ -102,7 +102,7 @@ namespace cv { namespace gpu { namespace device
     }
 }}}
 
-using namespace ::cv::gpu::device;
+using namespace ::cv::gpu::cudev;
 
 cv::gpu::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_, Size cell_size_,
                                       int nbins_, double win_sigma_, double threshold_L2hys_, bool gamma_correction_, int nlevels_)
@@ -260,7 +260,7 @@ void cv::gpu::HOGDescriptor::getDescriptors(const GpuMat& img, Size win_stride, 
                                     win_stride.height, win_stride.width, img.rows, img.cols, block_hists.ptr<float>(), descriptors);
         break;
     default:
-        CV_Error(CV_StsBadArg, "Unknown descriptor format");
+        CV_Error(cv::Error::StsBadArg, "Unknown descriptor format");
     }
 }
 
@@ -351,7 +351,7 @@ void cv::gpu::HOGDescriptor::computeConfidenceMultiScale(const GpuMat& img, std:
 
         Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());
@@ -443,7 +443,7 @@ void cv::gpu::HOGDescriptor::detectMultiScale(const GpuMat& img, std::vector<Rec
         detect(smaller_img, locations, hit_threshold, win_stride, padding);
         Size scaled_win_size(cvRound(win_size.width * scale), cvRound(win_size.height * scale));
         for (size_t j = 0; j < locations.size(); j++)
-            all_candidates.push_back(Rect(Point2d((CvPoint)locations[j]) * scale, scaled_win_size));
+            all_candidates.push_back(Rect(Point2d(locations[j]) * scale, scaled_win_size));
     }
 
     found_locations.assign(all_candidates.begin(), all_candidates.end());

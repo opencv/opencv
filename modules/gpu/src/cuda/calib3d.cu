@@ -42,12 +42,12 @@
 
 #if !defined CUDA_DISABLER
 
-#include "opencv2/gpu/device/common.hpp"
-#include "opencv2/gpu/device/transform.hpp"
-#include "opencv2/gpu/device/functional.hpp"
-#include "opencv2/gpu/device/reduce.hpp"
+#include "opencv2/core/cuda/common.hpp"
+#include "opencv2/core/cuda/transform.hpp"
+#include "opencv2/core/cuda/functional.hpp"
+#include "opencv2/core/cuda/reduce.hpp"
 
-namespace cv { namespace gpu { namespace device
+namespace cv { namespace gpu { namespace cudev
 {
     #define SOLVE_PNP_RANSAC_MAX_NUM_ITERS 200
 
@@ -67,8 +67,8 @@ namespace cv { namespace gpu { namespace device
                         crot1.x * p.x + crot1.y * p.y + crot1.z * p.z + ctransl.y,
                         crot2.x * p.x + crot2.y * p.y + crot2.z * p.z + ctransl.z);
             }
-            __device__ __forceinline__ TransformOp() {}
-            __device__ __forceinline__ TransformOp(const TransformOp&) {}
+            __host__ __device__ __forceinline__ TransformOp() {}
+            __host__ __device__ __forceinline__ TransformOp(const TransformOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall(cudaMemcpyToSymbol(crot1, rot + 3, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(crot2, rot + 6, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
-            cv::gpu::device::transform(src, dst, TransformOp(), WithOutMask(), stream);
+            cv::gpu::cudev::transform(src, dst, TransformOp(), WithOutMask(), stream);
         }
     } // namespace transform_points
 
@@ -106,8 +106,8 @@ namespace cv { namespace gpu { namespace device
                         (cproj0.x * t.x + cproj0.y * t.y) / t.z + cproj0.z,
                         (cproj1.x * t.x + cproj1.y * t.y) / t.z + cproj1.z);
             }
-            __device__ __forceinline__ ProjectOp() {}
-            __device__ __forceinline__ ProjectOp(const ProjectOp&) {}
+            __host__ __device__ __forceinline__ ProjectOp() {}
+            __host__ __device__ __forceinline__ ProjectOp(const ProjectOp&) {}
         };
 
         void call(const PtrStepSz<float3> src, const float* rot,
@@ -120,7 +120,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall(cudaMemcpyToSymbol(ctransl, transl, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj0, proj, sizeof(float) * 3));
             cudaSafeCall(cudaMemcpyToSymbol(cproj1, proj + 3, sizeof(float) * 3));
-            cv::gpu::device::transform(src, dst, ProjectOp(), WithOutMask(), stream);
+            cv::gpu::cudev::transform(src, dst, ProjectOp(), WithOutMask(), stream);
         }
     } // namespace project_points
 
@@ -187,7 +187,7 @@ namespace cv { namespace gpu { namespace device
             cudaSafeCall( cudaDeviceSynchronize() );
         }
     } // namespace solvepnp_ransac
-}}} // namespace cv { namespace gpu { namespace device
+}}} // namespace cv { namespace gpu { namespace cudev
 
 
 #endif /* CUDA_DISABLER */

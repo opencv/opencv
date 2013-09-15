@@ -44,7 +44,6 @@
 #define __OPENCV_VIDEOSTAB_FRAME_SOURCE_HPP__
 
 #include <vector>
-#include <string>
 #include "opencv2/core.hpp"
 
 namespace cv
@@ -70,7 +69,7 @@ public:
 class CV_EXPORTS VideoFileSource : public IFrameSource
 {
 public:
-    VideoFileSource(const std::string &path, bool volatileFrame = false);
+    VideoFileSource(const String &path, bool volatileFrame = false);
 
     virtual void reset();
     virtual Mat nextFrame();

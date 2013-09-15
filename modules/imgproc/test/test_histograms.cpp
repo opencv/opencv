@@ -630,7 +630,8 @@ void CV_MinMaxHistTest::run_func(void)
 {
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h((CvSparseMat*)hist[0]->bins);
+        cv::SparseMat h;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h);
         double _min_val = 0, _max_val = 0;
         cv::minMaxLoc(h, &_min_val, &_max_val, min_idx, max_idx );
         min_val = (float)_min_val;
@@ -727,10 +728,11 @@ void CV_NormHistTest::run_func(void)
 {
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h((CvSparseMat*)hist[0]->bins);
+        cv::SparseMat h;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h);
         cv::normalize(h, h, factor, CV_L1);
         cvReleaseSparseMat((CvSparseMat**)&hist[0]->bins);
-        hist[0]->bins = (CvSparseMat*)h;
+        hist[0]->bins = cvCreateSparseMat(h);
     }
     else
         cvNormalizeHist( hist[0], factor );
@@ -946,7 +948,7 @@ int CV_ThreshHistTest::validate_test_results( int /*test_case_idx*/ )
 class CV_CompareHistTest : public CV_BaseHistTest
 {
 public:
-    enum { MAX_METHOD = 4 };
+    enum { MAX_METHOD = 5 };
 
     CV_CompareHistTest();
 protected:
@@ -978,8 +980,9 @@ void CV_CompareHistTest::run_func(void)
     int k;
     if( hist_type != CV_HIST_ARRAY && test_cpp )
     {
-        cv::SparseMat h0((CvSparseMat*)hist[0]->bins);
-        cv::SparseMat h1((CvSparseMat*)hist[1]->bins);
+        cv::SparseMat h0, h1;
+        ((CvSparseMat*)hist[0]->bins)->copyToSparseMat(h0);
+        ((CvSparseMat*)hist[1]->bins)->copyToSparseMat(h1);
         for( k = 0; k < MAX_METHOD; k++ )
             result[k] = cv::compareHist(h0, h1, k);
     }
@@ -1011,6 +1014,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
                 result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+            if( fabs(v0 + v1) > DBL_EPSILON )
+                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
             s0 += v0;
             s1 += v1;
             sq0 += v0*v0;
@@ -1036,6 +1041,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             result0[CV_COMP_INTERSECT] += MIN(v0,v1);
             if( fabs(v0) > DBL_EPSILON )
                 result0[CV_COMP_CHISQR] += (v0 - v1)*(v0 - v1)/v0;
+            if( fabs(v0 + v1) > DBL_EPSILON )
+                result0[CV_COMP_CHISQR_ALT] += (v0 - v1)*(v0 - v1)/(v0 + v1);
             s0 += v0;
             sq0 += v0*v0;
             result0[CV_COMP_BHATTACHARYYA] += sqrt(v0*v1);
@@ -1049,6 +1056,8 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             sq1 += v1*v1;
         }
     }
+
+    result0[CV_COMP_CHISQR_ALT] *= 2;
 
     t = (sq0 - s0*s0/total_size)*(sq1 - s1*s1/total_size);
     result0[CV_COMP_CORREL] = fabs(t) > DBL_EPSILON ?
@@ -1064,6 +1073,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
         double v = result[i], v0 = result0[i];
         const char* method_name =
             i == CV_COMP_CHISQR ? "Chi-Square" :
+            i == CV_COMP_CHISQR_ALT ? "Alternative Chi-Square" :
             i == CV_COMP_CORREL ? "Correlation" :
             i == CV_COMP_INTERSECT ? "Intersection" :
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" : "Unknown";

@@ -13,8 +13,6 @@ Calculates all of the moments up to the third order of a polygon or rasterized s
 
 .. ocv:cfunction:: void cvMoments( const CvArr* arr, CvMoments* moments, int binary=0 )
 
-.. ocv:pyoldfunction:: cv.Moments(arr, binary=0) -> moments
-
     :param array: Raster image (single-channel, 8-bit or floating-point 2D array) or an array ( :math:`1 \times N`  or  :math:`N \times 1` ) of 2D points (``Point``  or  ``Point2f`` ).
 
     :param binaryImage: If it is true, all non-zero image pixels are treated as 1's. The parameter is used for images only.
@@ -98,8 +96,6 @@ Calculates seven Hu invariants.
 
 .. ocv:cfunction:: void cvGetHuMoments( CvMoments* moments, CvHuMoments* hu_moments )
 
-.. ocv:pyoldfunction:: cv.GetHuMoments(moments) -> hu
-
     :param moments: Input moments computed with  :ocv:func:`moments` .
     :param hu: Output Hu invariants.
 
@@ -163,8 +159,6 @@ Finds contours in a binary image.
 
 .. ocv:cfunction:: int cvFindContours( CvArr* image, CvMemStorage* storage, CvSeq** first_contour, int header_size=sizeof(CvContour), int mode=CV_RETR_LIST, int method=CV_CHAIN_APPROX_SIMPLE, CvPoint offset=cvPoint(0,0) )
 
-.. ocv:pyoldfunction:: cv.FindContours(image, storage, mode=CV_RETR_LIST, method=CV_CHAIN_APPROX_SIMPLE, offset=(0, 0)) -> contours
-
     :param image: Source, an 8-bit single-channel image. Non-zero pixels are treated as 1's. Zero pixels remain 0's, so the image is treated as  ``binary`` . You can use  :ocv:func:`compare` ,  :ocv:func:`inRange` ,  :ocv:func:`threshold` ,  :ocv:func:`adaptiveThreshold` ,  :ocv:func:`Canny` , and others to create a binary image out of a grayscale or color one. The function modifies the  ``image``  while extracting the contours.
 
     :param contours: Detected contours. Each contour is stored as a vector of points.
@@ -197,6 +191,14 @@ The function retrieves contours from the binary image using the algorithm
 .. note:: Source ``image`` is modified by this function. Also, the function does not take into account 1-pixel border of the image (it's filled with 0's and used for neighbor analysis in the algorithm), therefore the contours touching the image border will be clipped.
 
 .. note:: If you use the new Python interface then the ``CV_`` prefix has to be omitted in contour retrieval mode and contour approximation method parameters (for example, use ``cv2.RETR_LIST`` and ``cv2.CHAIN_APPROX_NONE`` parameters). If you use the old Python interface then these parameters have the ``CV_`` prefix (for example, use ``cv.CV_RETR_LIST`` and ``cv.CV_CHAIN_APPROX_NONE``).
+
+.. note::
+
+   * An example using the findContour functionality can be found at opencv_source_code/samples/cpp/contours2.cpp
+   * An example using findContours to clean up a background segmentation result at opencv_source_code/samples/cpp/segment_objects.cpp
+
+   * (Python) An example using the findContour functionality can be found at opencv_source/samples/python2/contours.py
+   * (Python) An example of detecting squares in an image can be found at opencv_source/samples/python2/squares.py
 
 
 approxPolyDP
@@ -243,8 +245,6 @@ Approximates Freeman chain(s) with a polygonal curve.
 
 .. ocv:cfunction:: CvSeq* cvApproxChains( CvSeq* src_seq, CvMemStorage* storage, int method=CV_CHAIN_APPROX_SIMPLE, double parameter=0, int minimal_perimeter=0, int recursive=0 )
 
-.. ocv:pyoldfunction:: cv.ApproxChains(src_seq, storage, method=CV_CHAIN_APPROX_SIMPLE, parameter=0, minimal_perimeter=0, recursive=0)-> contours
-
     :param src_seq: Pointer to the approximated Freeman chain that can refer to other chains.
 
     :param storage: Storage location for the resulting polylines.
@@ -270,8 +270,6 @@ Calculates a contour perimeter or a curve length.
 
 .. ocv:cfunction:: double cvArcLength( const void* curve, CvSlice slice=CV_WHOLE_SEQ, int is_closed=-1 )
 
-.. ocv:pyoldfunction:: cv.ArcLength(curve, slice=CV_WHOLE_SEQ, isClosed=-1) -> float
-
     :param curve: Input vector of 2D points, stored in ``std::vector`` or ``Mat``.
 
     :param closed: Flag indicating whether the curve is closed or not.
@@ -289,7 +287,6 @@ Calculates the up-right bounding rectangle of a point set.
 .. ocv:pyfunction:: cv2.boundingRect(points) -> retval
 
 .. ocv:cfunction:: CvRect cvBoundingRect( CvArr* points, int update=0 )
-.. ocv:pyoldfunction:: cv.BoundingRect(points, update=0)-> CvRect
 
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
@@ -307,8 +304,6 @@ Calculates a contour area.
 .. ocv:pyfunction:: cv2.contourArea(contour[, oriented]) -> retval
 
 .. ocv:cfunction:: double cvContourArea( const CvArr* contour, CvSlice slice=CV_WHOLE_SEQ, int oriented=0 )
-
-.. ocv:pyoldfunction:: cv.ContourArea(contour, slice=CV_WHOLE_SEQ) -> float
 
     :param contour: Input vector of 2D points (contour vertices), stored in ``std::vector`` or ``Mat``.
 
@@ -349,15 +344,13 @@ Finds the convex hull of a point set.
 
 .. ocv:cfunction:: CvSeq* cvConvexHull2( const CvArr* input, void* hull_storage=NULL, int orientation=CV_CLOCKWISE, int return_points=0 )
 
-.. ocv:pyoldfunction:: cv.ConvexHull2(points, storage, orientation=CV_CLOCKWISE, return_points=0) -> convexHull
-
     :param points: Input 2D point set, stored in ``std::vector`` or ``Mat``.
 
     :param hull: Output convex hull. It is either an integer vector of indices or vector of points. In the first case, the ``hull`` elements are 0-based indices of the convex hull points in the original array (since the set of convex hull points is a subset of the original point set). In the second case, ``hull`` elements are the convex hull points themselves.
 
     :param hull_storage: Output memory storage in the old API (``cvConvexHull2`` returns a sequence containing the convex hull points or their indices).
 
-    :param clockwise: Orientation flag. If it is true, the output convex hull is oriented clockwise. Otherwise, it is oriented counter-clockwise. The usual screen coordinate system is assumed so that the origin is at the top-left corner, x axis is oriented to the right, and y axis is oriented downwards.
+    :param clockwise: Orientation flag. If it is true, the output convex hull is oriented clockwise. Otherwise, it is oriented counter-clockwise. The assumed coordinate system has its X axis pointing to the right, and its Y axis pointing upwards.
 
     :param orientation: Convex hull orientation parameter in the old API, ``CV_CLOCKWISE`` or ``CV_COUNTERCLOCKWISE``.
 
@@ -367,6 +360,10 @@ The functions find the convex hull of a 2D point set using the Sklansky's algori
 [Sklansky82]_
 that has
 *O(N logN)* complexity in the current implementation. See the OpenCV sample ``convexhull.cpp`` that demonstrates the usage of different function variants.
+
+.. note::
+
+   * An example using the convexHull functionality can be found at opencv_source_code/samples/cpp/convexhull.cpp
 
 
 convexityDefects
@@ -378,8 +375,6 @@ Finds the convexity defects of a contour.
 .. ocv:pyfunction:: cv2.convexityDefects(contour, convexhull[, convexityDefects]) -> convexityDefects
 
 .. ocv:cfunction:: CvSeq* cvConvexityDefects(  const CvArr* contour, const CvArr* convexhull, CvMemStorage* storage=NULL )
-
-.. ocv:pyoldfunction:: cv.ConvexityDefects(contour, convexhull, storage)-> convexityDefects
 
     :param contour: Input contour.
 
@@ -412,7 +407,6 @@ Fits an ellipse around a set of 2D points.
 .. ocv:pyfunction:: cv2.fitEllipse(points) -> retval
 
 .. ocv:cfunction:: CvBox2D cvFitEllipse2( const CvArr* points )
-.. ocv:pyoldfunction:: cv.FitEllipse2(points)-> Box2D
 
     :param points: Input 2D point set, stored in:
 
@@ -424,6 +418,11 @@ Fits an ellipse around a set of 2D points.
 
 The function calculates the ellipse that fits (in a least-squares sense) a set of 2D points best of all. It returns the rotated rectangle in which the ellipse is inscribed. The algorithm [Fitzgibbon95]_ is used.
 
+.. note::
+
+   * An example using the fitEllipse technique can be found at opencv_source_code/samples/cpp/fitellipse.cpp
+
+
 fitLine
 -----------
 Fits a line to a 2D or 3D point set.
@@ -433,8 +432,6 @@ Fits a line to a 2D or 3D point set.
 .. ocv:pyfunction:: cv2.fitLine(points, distType, param, reps, aeps[, line]) -> line
 
 .. ocv:cfunction:: void cvFitLine( const CvArr* points, int dist_type, double param, double reps, double aeps, float* line )
-
-.. ocv:pyoldfunction:: cv.FitLine(points, dist_type, param, reps, aeps) -> line
 
     :param points: Input vector of 2D or 3D points, stored in ``std::vector<>`` or ``Mat``.
 
@@ -496,6 +493,9 @@ http://en.wikipedia.org/wiki/M-estimator
 :math:`w_i` are adjusted to be inversely proportional to
 :math:`\rho(r_i)` .
 
+.. Sample code:
+
+   * (Python) An example of robust line fitting can be found at opencv_source_code/samples/python2/fitline.py
 
 
 isContourConvex
@@ -507,7 +507,6 @@ Tests a contour convexity.
 .. ocv:pyfunction:: cv2.isContourConvex(contour) -> retval
 
 .. ocv:cfunction:: int cvCheckContourConvexity( const CvArr* contour )
-.. ocv:pyoldfunction:: cv.CheckContourConvexity(contour)-> int
 
     :param contour: Input vector of 2D points, stored in:
 
@@ -531,8 +530,6 @@ Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 .. ocv:cfunction:: CvBox2D cvMinAreaRect2( const CvArr* points, CvMemStorage* storage=NULL )
 
-.. ocv:pyoldfunction:: cv.MinAreaRect2(points, storage=None) -> Box2D
-
     :param points: Input vector of 2D points, stored in:
 
         * ``std::vector<>`` or ``Mat`` (C++ interface)
@@ -545,6 +542,24 @@ The function calculates and returns the minimum-area bounding rectangle (possibl
 
 
 
+boxPoints
+-----------
+Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
+
+.. ocv:function:: void boxPoints(RotatedRect box, OutputArray points)
+
+.. ocv:pyfunction:: cv2.boxPoints(box[, points]) -> points
+
+.. ocv:cfunction:: void cvBoxPoints( CvBox2D box, CvPoint2D32f pt[4] )
+
+    :param box: The input rotated rectangle. It may be the output of .. ocv:function:: minAreaRect.
+
+    :param points: The output array of four vertices of rectangles.
+
+The function finds the four vertices of a rotated rectangle. This function is useful to draw the rectangle. In C++, instead of using this function, you can directly use box.points() method. Please visit the `tutorial on bounding rectangle <http://docs.opencv.org/doc/tutorials/imgproc/shapedescriptors/bounding_rects_circles/bounding_rects_circles.html#bounding-rects-circles>`_ for more information.
+
+
+
 minEnclosingCircle
 ----------------------
 Finds a circle of the minimum area enclosing a 2D point set.
@@ -554,8 +569,6 @@ Finds a circle of the minimum area enclosing a 2D point set.
 .. ocv:pyfunction:: cv2.minEnclosingCircle(points) -> center, radius
 
 .. ocv:cfunction:: int cvMinEnclosingCircle( const CvArr* points, CvPoint2D32f* center, float* radius )
-
-.. ocv:pyoldfunction:: cv.MinEnclosingCircle(points)-> (int, center, radius)
 
     :param points: Input vector of 2D points, stored in:
 
@@ -582,7 +595,6 @@ Compares two shapes.
 .. ocv:pyfunction:: cv2.matchShapes(contour1, contour2, method, parameter) -> retval
 
 .. ocv:cfunction:: double cvMatchShapes( const void* object1, const void* object2, int method, double parameter=0 )
-.. ocv:pyoldfunction:: cv.MatchShapes(object1, object2, method, parameter=0) -> float
 
     :param object1: First contour or grayscale image.
 
@@ -637,7 +649,6 @@ Performs a point-in-contour test.
 .. ocv:pyfunction:: cv2.pointPolygonTest(contour, pt, measureDist) -> retval
 
 .. ocv:cfunction:: double cvPointPolygonTest( const CvArr* contour, CvPoint2D32f pt, int measure_dist )
-.. ocv:pyoldfunction:: cv.PointPolygonTest(contour, pt, measure_dist) -> float
 
     :param contour: Input contour.
 

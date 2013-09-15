@@ -1,8 +1,10 @@
 // Copyright 2010 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // YUV->RGB conversion function
@@ -15,7 +17,7 @@
 extern "C" {
 #endif
 
-enum { YUV_HALF = 1 << (YUV_FIX - 1) };
+#ifdef WEBP_YUV_USE_TABLE
 
 int16_t VP8kVToR[256], VP8kUToB[256];
 int32_t VP8kVToG[256], VP8kUToG[256];
@@ -33,6 +35,7 @@ void VP8YUVInit(void) {
   if (done) {
     return;
   }
+#ifndef USE_YUVj
   for (i = 0; i < 256; ++i) {
     VP8kVToR[i] = (89858 * (i - 128) + YUV_HALF) >> YUV_FIX;
     VP8kUToG[i] = -22014 * (i - 128) + YUV_HALF;
@@ -44,8 +47,28 @@ void VP8YUVInit(void) {
     VP8kClip[i - YUV_RANGE_MIN] = clip(k, 255);
     VP8kClip4Bits[i - YUV_RANGE_MIN] = clip((k + 8) >> 4, 15);
   }
+#else
+  for (i = 0; i < 256; ++i) {
+    VP8kVToR[i] = (91881 * (i - 128) + YUV_HALF) >> YUV_FIX;
+    VP8kUToG[i] = -22554 * (i - 128) + YUV_HALF;
+    VP8kVToG[i] = -46802 * (i - 128);
+    VP8kUToB[i] = (116130 * (i - 128) + YUV_HALF) >> YUV_FIX;
+  }
+  for (i = YUV_RANGE_MIN; i < YUV_RANGE_MAX; ++i) {
+    const int k = i;
+    VP8kClip[i - YUV_RANGE_MIN] = clip(k, 255);
+    VP8kClip4Bits[i - YUV_RANGE_MIN] = clip((k + 8) >> 4, 15);
+  }
+#endif
+
   done = 1;
 }
+
+#else
+
+void VP8YUVInit(void) {}
+
+#endif  // WEBP_YUV_USE_TABLE
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }    // extern "C"

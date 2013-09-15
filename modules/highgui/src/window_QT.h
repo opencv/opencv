@@ -48,13 +48,13 @@
 #endif
 
 #include <QAbstractEventDispatcher>
-#include <QtGui/QApplication>
+#include <QApplication>
 #include <QFile>
 #include <QPushButton>
-#include <QtGui/QGraphicsView>
+#include <QGraphicsView>
 #include <QSizePolicy>
 #include <QInputDialog>
-#include <QtGui/QBoxLayout>
+#include <QBoxLayout>
 #include <QSettings>
 #include <qtimer.h>
 #include <QtConcurrentRun>
@@ -78,7 +78,7 @@
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QMenu>
-#include <QtTest/QTest>
+#include <QTest>
 
 //start private enum
 enum { CV_MODE_NORMAL = 0, CV_MODE_OPENGL = 1 };
@@ -522,7 +522,6 @@ private:
 
     CvMat* image2Draw_mat;
     QImage image2Draw_qt;
-    QImage image2Draw_qt_resized;
     int nbChannelOriginImage;
 
     //for mouse callback

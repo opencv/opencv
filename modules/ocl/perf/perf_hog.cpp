@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Peng Xiao, pengxiao@multicorewareinc.com
+//    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -42,125 +43,39 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include "perf_precomp.hpp"
 
-#include "precomp.hpp"
-#include <iomanip>
+using namespace perf;
 
-#ifdef HAVE_OPENCL
+///////////// HOG////////////////////////
 
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
-extern std::string workdir;
-
-#ifndef MWC_TEST_UTILITY
-#define MWC_TEST_UTILITY
-
-// Param class
-#ifndef IMPLEMENT_PARAM_CLASS
-#define IMPLEMENT_PARAM_CLASS(name, type) \
-class name \
-    { \
-    public: \
-    name ( type arg = type ()) : val_(arg) {} \
-    operator type () const {return val_;} \
-    private: \
-    type val_; \
-    }; \
-    inline void PrintTo( name param, std::ostream* os) \
-    { \
-    *os << #name <<  "(" << testing::PrintToString(static_cast< type >(param)) << ")"; \
-    }
-
-#endif // IMPLEMENT_PARAM_CLASS
-#endif // MWC_TEST_UTILITY
-
-IMPLEMENT_PARAM_CLASS(WinSizw48, bool);
-
-PARAM_TEST_CASE(HOG, WinSizw48, bool)
+PERF_TEST(HOGFixture, HOG)
 {
-    bool is48;
-    vector<float> detector;
-    virtual void SetUp()
+    Mat src = imread(getDataPath("gpu/hog/road.png"), cv::IMREAD_GRAYSCALE);
+    ASSERT_TRUE(!src.empty()) << "can't open input image road.png";
+
+    vector<cv::Rect> found_locations;
+    declare.in(src).time(5);
+
+    if (RUN_PLAIN_IMPL)
     {
-        is48 = GET_PARAM(0);
-        if(is48)
-        {
-            detector = cv::ocl::HOGDescriptor::getPeopleDetector48x96();
-        }
-        else
-        {
-            detector = cv::ocl::HOGDescriptor::getPeopleDetector64x128();
-        }
+        HOGDescriptor hog;
+        hog.setSVMDetector(hog.getDefaultPeopleDetector());
+
+        TEST_CYCLE() hog.detectMultiScale(src, found_locations);
+
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
-};
-
-TEST_P(HOG, Performance)
-{
-    cv::Mat img = readImage(workdir + "lena.jpg", cv::IMREAD_GRAYSCALE);
-    ASSERT_FALSE(img.empty());
-
-    // define HOG related arguments
-    float scale = 1.05f;
-    //int nlevels = 13;
-    int gr_threshold = 8;
-    float hit_threshold = 1.4f;
-    //bool hit_threshold_auto = true;
-
-    int win_width = is48 ? 48 : 64;
-    int win_stride_width = 8;
-    int win_stride_height = 8;
-
-    bool gamma_corr = true;
-
-    Size win_size(win_width, win_width * 2); //(64, 128) or (48, 96)
-    Size win_stride(win_stride_width, win_stride_height);
-
-    cv::ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
-
-    gpu_hog.setSVMDetector(detector);
-
-    double totalgputick = 0;
-    double totalgputick_kernel = 0;
-
-    double t1 = 0;
-    double t2 = 0;
-    for(int j = 0; j < LOOP_TIMES + 1; j ++)
+    else if (RUN_OCL_IMPL)
     {
-        t1 = (double)cvGetTickCount();//gpu start1
+        ocl::HOGDescriptor ocl_hog;
+        ocl_hog.setSVMDetector(ocl_hog.getDefaultPeopleDetector());
+        ocl::oclMat oclSrc(src);
 
-        ocl::oclMat d_src(img);//upload
+        OCL_TEST_CYCLE() ocl_hog.detectMultiScale(oclSrc, found_locations);
 
-        t2 = (double)cvGetTickCount(); //kernel
-
-        vector<Rect> found;
-        gpu_hog.detectMultiScale(d_src, found, hit_threshold, win_stride,
-                                 Size(0, 0), scale, gr_threshold);
-
-        t2 = (double)cvGetTickCount() - t2;//kernel
-
-        // no download time for HOG
-
-        t1 = (double)cvGetTickCount() - t1;//gpu end1
-
-        if(j == 0)
-            continue;
-
-        totalgputick = t1 + totalgputick;
-
-        totalgputick_kernel = t2 + totalgputick_kernel;
-
+        SANITY_CHECK(found_locations, 1 + DBL_EPSILON);
     }
-
-    cout << "average gpu runtime is  " << totalgputick / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-    cout << "average gpu runtime without data transfer is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
+    else
+        OCL_PERF_ELSE
 }
-
-
-INSTANTIATE_TEST_CASE_P(GPU_ObjDetect, HOG, testing::Combine(testing::Values(WinSizw48(false), WinSizw48(true)), testing::Values(false)));
-
-#endif  //Have opencl

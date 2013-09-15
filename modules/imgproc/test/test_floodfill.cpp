@@ -259,16 +259,17 @@ cvTsFloodFill( CvMat* _img, CvPoint seed_pt, CvScalar new_val,
     if( CV_MAT_DEPTH(_img->type) == CV_8U || CV_MAT_DEPTH(_img->type) == CV_32S )
     {
         tmp = cvCreateMat( rows, cols, CV_MAKETYPE(CV_32F,CV_MAT_CN(_img->type)) );
-        cvTsConvert(_img, tmp);
+        cvtest::convert(cvarrToMat(_img), cvarrToMat(tmp), -1);
     }
 
     mask = cvCreateMat( rows + 2, cols + 2, CV_16UC1 );
 
     if( _mask )
-        cvTsConvert( _mask, mask );
+        cvtest::convert(cvarrToMat(_mask), cvarrToMat(mask), -1);
     else
     {
-        cvTsZero( mask );
+        Mat m_mask = cvarrToMat(mask);
+        cvtest::set( m_mask, Scalar::all(0), Mat() );
         cvRectangle( mask, cvPoint(0,0), cvPoint(mask->cols-1,mask->rows-1), Scalar::all(1.), 1, 8, 0 );
     }
 
@@ -481,7 +482,7 @@ _exit_:
     if( tmp != _img )
     {
         if( !mask_only )
-            cvTsConvert(tmp, _img);
+            cvtest::convert(cvarrToMat(tmp), cvarrToMat(_img), -1);
         cvReleaseMat( &tmp );
     }
 

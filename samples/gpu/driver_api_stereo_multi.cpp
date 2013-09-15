@@ -13,7 +13,19 @@
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/gpu/gpu.hpp"
 
-#if !defined(HAVE_CUDA) || !defined(HAVE_TBB)
+#ifdef HAVE_TBB
+#  include "tbb/tbb_stddef.h"
+#  if TBB_VERSION_MAJOR*100 + TBB_VERSION_MINOR >= 202
+#    include "tbb/tbb.h"
+#    include "tbb/task.h"
+#    undef min
+#    undef max
+#  else
+#    undef HAVE_TBB
+#  endif
+#endif
+
+#if !defined(HAVE_CUDA) || !defined(HAVE_TBB) || defined(__arm__)
 
 int main()
 {
@@ -25,6 +37,10 @@ int main()
     std::cout << "TBB support is required (CMake key 'WITH_TBB' must be true).\n";
 #endif
 
+#if defined(__arm__)
+    std::cout << "Unsupported for ARM CUDA library." << std::endl;
+#endif
+
     return 0;
 }
 
@@ -32,7 +48,6 @@ int main()
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include "opencv2/core/internal.hpp" // For TBB wrappers
 
 using namespace std;
 using namespace cv;
@@ -70,11 +85,8 @@ void inline contextOff()
 // GPUs data
 GpuMat d_left[2];
 GpuMat d_right[2];
-StereoBM_GPU* bm[2];
+Ptr<gpu::StereoBM> bm[2];
 GpuMat d_result[2];
-
-// CPU result
-Mat result;
 
 static void printHelp()
 {
@@ -116,12 +128,12 @@ int main(int argc, char** argv)
     {
         if (string(argv[i]) == "--left")
         {
-            left = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            left = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!left.empty());
         }
         else if (string(argv[i]) == "--right")
         {
-            right = imread(argv[++i], CV_LOAD_IMAGE_GRAYSCALE);
+            right = imread(argv[++i], cv::IMREAD_GRAYSCALE);
             CV_Assert(!right.empty());
         }
         else if (string(argv[i]) == "--help")
@@ -150,19 +162,19 @@ int main(int argc, char** argv)
     contextOn(0);
     d_left[0].upload(left.rowRange(0, left.rows / 2));
     d_right[0].upload(right.rowRange(0, right.rows / 2));
-    bm[0] = new StereoBM_GPU();
+    bm[0] = gpu::createStereoBM();
     contextOff();
 
     // Split source images for processing on the GPU #1
     contextOn(1);
     d_left[1].upload(left.rowRange(left.rows / 2, left.rows));
     d_right[1].upload(right.rowRange(right.rows / 2, right.rows));
-    bm[1] = new StereoBM_GPU();
+    bm[1] = gpu::createStereoBM();
     contextOff();
 
     // Execute calculation in two threads using two GPUs
     int devices[] = {0, 1};
-    parallel_do(devices, devices + 2, Worker());
+    tbb::parallel_do(devices, devices + 2, Worker());
 
     // Release the first GPU resources
     contextOn(0);
@@ -170,7 +182,7 @@ int main(int argc, char** argv)
     d_left[0].release();
     d_right[0].release();
     d_result[0].release();
-    delete bm[0];
+    bm[0].release();
     contextOff();
 
     // Release the second GPU resources
@@ -179,7 +191,7 @@ int main(int argc, char** argv)
     d_left[1].release();
     d_right[1].release();
     d_result[1].release();
-    delete bm[1];
+    bm[1].release();
     contextOff();
 
     waitKey();
@@ -192,8 +204,7 @@ void Worker::operator()(int device_id) const
 {
     contextOn(device_id);
 
-    bm[device_id]->operator()(d_left[device_id], d_right[device_id],
-                              d_result[device_id]);
+    bm[device_id]->compute(d_left[device_id], d_right[device_id], d_result[device_id]);
 
     std::cout << "GPU #" << device_id << " (" << DeviceInfo().name()
         << "): finished\n";

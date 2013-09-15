@@ -56,19 +56,42 @@ namespace
 
     struct DIR
     {
+#ifdef HAVE_WINRT
+        WIN32_FIND_DATAW data;
+#else
         WIN32_FIND_DATA data;
+#endif
         HANDLE handle;
         dirent ent;
+#ifdef HAVE_WINRT
+        DIR() {};
+        ~DIR()
+        {
+            if (ent.d_name)
+                delete[] ent.d_name;
+        }
+#endif
     };
 
     DIR* opendir(const char* path)
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-        dir->handle = ::FindFirstFileA((std::string(path) + "\\*").c_str(), &dir->data);
+#ifdef HAVE_WINRT
+        cv::String full_path = cv::String(path) + "\\*";
+        wchar_t wfull_path[MAX_PATH];
+        size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        dir->handle = ::FindFirstFileExW(wfull_path, FindExInfoStandard,
+                        &dir->data, FindExSearchNameMatch, NULL, 0);
+#else
+        dir->handle = ::FindFirstFileExA((cv::String(path) + "\\*").c_str(),
+            FindExInfoStandard, &dir->data, FindExSearchNameMatch, NULL, 0);
+#endif
         if(dir->handle == INVALID_HANDLE_VALUE)
         {
             /*closedir will do all cleanup*/
+            delete dir;
             return 0;
         }
         return dir;
@@ -76,12 +99,26 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
+#ifdef HAVE_WINRT
         if (dir->ent.d_name != 0)
         {
-            if (::FindNextFile(dir->handle, &dir->data) != TRUE)
+            if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
+                return 0;
+        }
+        size_t asize = wcstombs(NULL, dir->data.cFileName, 0);
+        CV_Assert((asize != 0) && (asize != (size_t)-1));
+        char* aname = new char[asize+1];
+        aname[asize] = 0;
+        wcstombs(aname, dir->data.cFileName, asize);
+        dir->ent.d_name = aname;
+#else
+        if (dir->ent.d_name != 0)
+        {
+            if (::FindNextFileA(dir->handle, &dir->data) != TRUE)
                 return 0;
         }
         dir->ent.d_name = dir->data.cFileName;
+#endif
         return &dir->ent;
     }
 
@@ -100,22 +137,34 @@ const char dir_separators[] = "/";
 const char native_separator = '/';
 #endif
 
-static bool isDir(const std::string& path, DIR* dir)
+static bool isDir(const cv::String& path, DIR* dir)
 {
 #if defined WIN32 || defined _WIN32 || defined WINCE
     DWORD attributes;
+    BOOL status = TRUE;
     if (dir)
         attributes = dir->data.dwFileAttributes;
     else
-        attributes = ::GetFileAttributes(path.c_str());
-
-    return (attributes != INVALID_FILE_ATTRIBUTES) && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+    {
+        WIN32_FILE_ATTRIBUTE_DATA all_attrs;
+#ifdef HAVE_WINRT
+        wchar_t wpath[MAX_PATH];
+        size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        status = ::GetFileAttributesExW(wpath, GetFileExInfoStandard, &all_attrs);
 #else
-    struct stat stat_buf;
-    stat( path.c_str(), &stat_buf);
-    int is_dir = S_ISDIR( stat_buf.st_mode);
-    (void)dir;
+        status = ::GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &all_attrs);
+#endif
+        attributes = all_attrs.dwFileAttributes;
+    }
 
+    return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+#else
+    (void)dir;
+    struct stat stat_buf;
+    if (0 != stat( path.c_str(), &stat_buf))
+        return false;
+    int is_dir = S_ISDIR( stat_buf.st_mode);
     return is_dir != 0;
 #endif
 }
@@ -168,10 +217,11 @@ static bool wildcmp(const char *string, const char *wild)
     return *wild == 0;
 }
 
-static void glob_rec(const std::string& directory, const std::string& wildchart, std::vector<std::string>& result, bool recursive)
+static void glob_rec(const cv::String& directory, const cv::String& wildchart, std::vector<cv::String>& result, bool recursive)
 {
     DIR *dir;
     struct dirent *ent;
+
     if ((dir = opendir (directory.c_str())) != 0)
     {
         /* find all the files and directories within directory */
@@ -183,7 +233,7 @@ static void glob_rec(const std::string& directory, const std::string& wildchart,
                 if((name[0] == 0) || (name[0] == '.' && name[1] == 0) || (name[0] == '.' && name[1] == '.' && name[2] == 0))
                     continue;
 
-                std::string path = directory + native_separator + name;
+                cv::String path = directory + native_separator + name;
 
                 if (isDir(path, dir))
                 {
@@ -207,14 +257,13 @@ static void glob_rec(const std::string& directory, const std::string& wildchart,
     else CV_Error(CV_StsObjectNotFound, cv::format("could not open directory: %s", directory.c_str()));
 }
 
-void cv::glob(std::string pattern, std::vector<std::string>& result, bool recursive)
+void cv::glob(String pattern, std::vector<String>& result, bool recursive)
 {
     result.clear();
-    std::string path, wildchart;
+    String path, wildchart;
 
     if (isDir(pattern, 0))
     {
-        printf("WE ARE HERE: %s\n", pattern.c_str());
         if(strchr(dir_separators, pattern[pattern.size() - 1]) != 0)
         {
             path = pattern.substr(0, pattern.size() - 1);
@@ -227,7 +276,7 @@ void cv::glob(std::string pattern, std::vector<std::string>& result, bool recurs
     else
     {
         size_t pos = pattern.find_last_of(dir_separators);
-        if (pos == std::string::npos)
+        if (pos == String::npos)
         {
             wildchart = pattern;
             path = ".";

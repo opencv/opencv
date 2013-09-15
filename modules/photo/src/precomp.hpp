@@ -43,10 +43,8 @@
 #ifndef __OPENCV_PRECOMP_H__
 #define __OPENCV_PRECOMP_H__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-
+#include "opencv2/core/private.hpp"
+#include "opencv2/core/utility.hpp"
 #include "opencv2/photo.hpp"
 
 #ifdef HAVE_TEGRA_OPTIMIZATION

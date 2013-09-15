@@ -15,5 +15,3 @@ stitching. Images stitching
     seam_estimation
     exposure_compensation
     blenders
-
-

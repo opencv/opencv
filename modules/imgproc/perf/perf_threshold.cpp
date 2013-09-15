@@ -15,7 +15,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
                 testing::Values(CV_8UC1, CV_16SC1),
-                testing::ValuesIn(ThreshType::all())
+                ThreshType::all()
                 )
             )
 {
@@ -32,7 +32,7 @@ PERF_TEST_P(Size_MatType_ThreshType, threshold,
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    int runs = (sz.width <= 640) ? 8 : 1;
+    int runs = (sz.width <= 640) ? 40 : 1;
     TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, thresh, maxval, threshType);
 
     SANITY_CHECK(dst);
@@ -51,7 +51,8 @@ PERF_TEST_P(Size_Only, threshold_otsu, testing::Values(TYPICAL_MAT_SIZES))
 
     declare.in(src, WARMUP_RNG).out(dst);
 
-    TEST_CYCLE() threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
+    int runs = 15;
+    TEST_CYCLE_MULTIRUN(runs) threshold(src, dst, 0, maxval, THRESH_BINARY|THRESH_OTSU);
 
     SANITY_CHECK(dst);
 }
@@ -65,8 +66,8 @@ typedef perf::TestBaseWithParam<Size_AdaptThreshType_AdaptThreshMethod_BlockSize
 PERF_TEST_P(Size_AdaptThreshType_AdaptThreshMethod_BlockSize, adaptiveThreshold,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::ValuesIn(AdaptThreshType::all()),
-                testing::ValuesIn(AdaptThreshMethod::all()),
+                AdaptThreshType::all(),
+                AdaptThreshMethod::all(),
                 testing::Values(3, 5)
                 )
             )

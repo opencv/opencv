@@ -30,7 +30,7 @@ static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
     erode(temp, temp, Mat(), Point(-1,-1), niters*2);
     dilate(temp, temp, Mat(), Point(-1,-1), niters);
 
-    findContours( temp, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+    findContours( temp, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE );
 
     dst = Mat::zeros(img.size(), CV_8UC3);
 
@@ -53,7 +53,7 @@ static void refineSegments(const Mat& img, Mat& mask, Mat& dst)
         }
     }
     Scalar color( 0, 0, 255 );
-    drawContours( dst, contours, largestComp, color, CV_FILLED, 8, hierarchy );
+    drawContours( dst, contours, largestComp, color, FILLED, LINE_8, hierarchy );
 }
 
 
@@ -87,15 +87,15 @@ int main(int argc, char** argv)
     namedWindow("video", 1);
     namedWindow("segmented", 1);
 
-    BackgroundSubtractorMOG bgsubtractor;
-    bgsubtractor.set("noiseSigma", 10);
+    Ptr<BackgroundSubtractorMOG> bgsubtractor=createBackgroundSubtractorMOG();
+    bgsubtractor->setNoiseSigma(10);
 
     for(;;)
     {
         cap >> tmp_frame;
         if( !tmp_frame.data )
             break;
-        bgsubtractor(tmp_frame, bgmask, update_bg_model ? -1 : 0);
+        bgsubtractor->apply(tmp_frame, bgmask, update_bg_model ? -1 : 0);
         //CvMat _bgmask = bgmask;
         //cvSegmentFGMask(&_bgmask);
         refineSegments(tmp_frame, bgmask, out_frame);

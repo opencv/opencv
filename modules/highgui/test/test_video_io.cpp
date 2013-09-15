@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/highgui.hpp"
+#include "opencv2/highgui/highgui_c.h"
 
 using namespace cv;
 using namespace std;
@@ -54,26 +54,55 @@ string fourccToString(int fourcc)
     return format("%c%c%c%c", fourcc & 255, (fourcc >> 8) & 255, (fourcc >> 16) & 255, (fourcc >> 24) & 255);
 }
 
+#ifdef HAVE_MSMF
 const VideoFormat g_specific_fmt_list[] =
 {
-    VideoFormat("avi", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("avi", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("avi", CV_FOURCC('M', 'J', 'P', 'G')),
-    //VideoFormat("avi", CV_FOURCC('I', 'Y', 'U', 'V')),
-    VideoFormat("mkv", CV_FOURCC('X', 'V', 'I', 'D')),
-    VideoFormat("mkv", CV_FOURCC('M', 'P', 'E', 'G')),
-    VideoFormat("mkv", CV_FOURCC('M', 'J', 'P', 'G')),
-
-    VideoFormat("mov", CV_FOURCC('m', 'p', '4', 'v')),
+        /*VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', '2', '5')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', '5', '0')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'c', ' ')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'h', '1')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 'h', 'd')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 's', 'd')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('d', 'v', 's', 'l')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('H', '2', '6', '3')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('M', '4', 'S', '2')),
+        VideoFormat("avi", CV_FOURCC_MACRO('M', 'J', 'P', 'G')),
+        VideoFormat("mp4", CV_FOURCC_MACRO('M', 'P', '4', 'S')),
+        VideoFormat("mp4", CV_FOURCC_MACRO('M', 'P', '4', 'V')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'P', '4', '3')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'P', 'G', '1')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '1')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('M', 'S', 'S', '2')),*/
+#if !defined(_M_ARM)
+        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '1')),
+        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '2')),
+#endif
+        VideoFormat("wmv", CV_FOURCC_MACRO('W', 'M', 'V', '3')),
+        VideoFormat("avi", CV_FOURCC_MACRO('H', '2', '6', '4')),
+        //VideoFormat("wmv", CV_FOURCC_MACRO('W', 'V', 'C', '1')),
+        VideoFormat()
+};
+#else
+const VideoFormat g_specific_fmt_list[] =
+{
+    VideoFormat("avi", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("avi", VideoWriter::fourcc('M', 'J', 'P', 'G')),
+    //VideoFormat("avi", VideoWriter::fourcc('I', 'Y', 'U', 'V')),
+    VideoFormat("mkv", VideoWriter::fourcc('X', 'V', 'I', 'D')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'P', 'E', 'G')),
+    VideoFormat("mkv", VideoWriter::fourcc('M', 'J', 'P', 'G')),
+    VideoFormat("mov", VideoWriter::fourcc('m', 'p', '4', 'v')),
     VideoFormat()
 };
+#endif
 
 }
 
 class CV_HighGuiTest : public cvtest::BaseTest
 {
 protected:
-    void ImageTest(const string& dir);
+    void ImageTest (const string& dir);
     void VideoTest (const string& dir, const cvtest::VideoFormat& fmt);
     void SpecificImageTest (const string& dir);
     void SpecificVideoTest (const string& dir, const cvtest::VideoFormat& fmt);
@@ -242,19 +271,19 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
 
     for(;;)
     {
-        IplImage * img = cvQueryFrame( cap );
+        IplImage* img = cvQueryFrame( cap );
 
         if (!img)
             break;
 
-        frames.push_back(Mat(img).clone());
+        frames.push_back(cv::cvarrToMat(img, true));
 
-        if (writer == 0)
+        if (writer == NULL)
         {
             writer = cvCreateVideoWriter(tmp_name.c_str(), fmt.fourcc, 24, cvGetSize(img));
-            if (writer == 0)
+            if (writer == NULL)
             {
-                ts->printf(ts->LOG, "can't create writer (with fourcc : %d)\n",
+                ts->printf(ts->LOG, "can't create writer (with fourcc : %s)\n",
                            cvtest::fourccToString(fmt.fourcc).c_str());
                 cvReleaseCapture( &cap );
                 ts->set_failed_test_info(ts->FAIL_MISMATCH);
@@ -285,20 +314,27 @@ void CV_HighGuiTest::VideoTest(const string& dir, const cvtest::VideoFormat& fmt
             break;
 
         Mat img = frames[i];
-        Mat img1(ipl1);
+        Mat img1 = cv::cvarrToMat(ipl1);
 
         double psnr = PSNR(img1, img);
         if (psnr < thresDbell)
         {
-            printf("Too low psnr = %gdb\n", psnr);
-            // imwrite("img.png", img);
-            // imwrite("img1.png", img1);
+            ts->printf(ts->LOG, "Too low frame %d psnr = %gdb\n", i, psnr);
             ts->set_failed_test_info(ts->FAIL_MISMATCH);
+
+            //imwrite("original.png", img);
+            //imwrite("after_test.png", img1);
+            //Mat diff;
+            //absdiff(img, img1, diff);
+            //imwrite("diff.png", diff);
+
             break;
         }
     }
 
+    printf("Before saved release for %s\n", tmp_name.c_str());
     cvReleaseCapture( &saved );
+    printf("After release\n");
 
     ts->printf(ts->LOG, "end test function : ImagesVideo \n");
 }
@@ -416,7 +452,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     for( size_t i = 0; i < IMAGE_COUNT; ++i )
     {
         string file_path = format("%s../python/images/QCIF_%02d.bmp", dir.c_str(), i);
-        Mat img = imread(file_path, CV_LOAD_IMAGE_COLOR);
+        Mat img = imread(file_path, IMREAD_COLOR);
 
         if (img.empty())
         {
@@ -442,7 +478,7 @@ void CV_HighGuiTest::SpecificVideoTest(const string& dir, const cvtest::VideoFor
     writer.release();
     VideoCapture cap(video_file);
 
-    size_t FRAME_COUNT = (size_t)cap.get(CV_CAP_PROP_FRAME_COUNT);
+    size_t FRAME_COUNT = (size_t)cap.get(CAP_PROP_FRAME_COUNT);
 
     if (FRAME_COUNT != IMAGE_COUNT )
     {

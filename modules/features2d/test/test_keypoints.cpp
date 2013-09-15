@@ -62,7 +62,7 @@ protected:
     virtual void run(int)
     {
         cv::initModule_features2d();
-        CV_Assert(!detector.empty());
+        CV_Assert(detector);
         string imgFilename = string(ts->get_data_path()) + FEATURES2D_DIR + "/" + IMAGE_FILENAME;
 
         // Read the test image.
@@ -166,5 +166,3 @@ TEST(Features2d_Detector_Keypoints_Dense, validation)
     CV_FeatureDetectorKeypointsTest test(Algorithm::create<FeatureDetector>("Feature2D.Dense"));
     test.safe_run();
 }
-
-

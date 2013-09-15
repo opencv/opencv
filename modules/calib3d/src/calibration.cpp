@@ -41,6 +41,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/calib3d/calib3d_c.h"
 #include <stdio.h>
 #include <iterator>
 
@@ -566,7 +568,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         (objectPoints->rows == count && CV_MAT_CN(objectPoints->type)*objectPoints->cols == 3) ||
         (objectPoints->rows == 3 && CV_MAT_CN(objectPoints->type) == 1 && objectPoints->cols == count)))
     {
-        matM = cvCreateMat( objectPoints->rows, objectPoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(objectPoints->type)) );
+        matM.reset(cvCreateMat( objectPoints->rows, objectPoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(objectPoints->type)) ));
         cvConvert(objectPoints, matM);
     }
     else
@@ -582,7 +584,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
         (imagePoints->rows == count && CV_MAT_CN(imagePoints->type)*imagePoints->cols == 2) ||
         (imagePoints->rows == 2 && CV_MAT_CN(imagePoints->type) == 1 && imagePoints->cols == count)))
     {
-        _m = cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) );
+        _m.reset(cvCreateMat( imagePoints->rows, imagePoints->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(imagePoints->type)) ));
         cvConvert(imagePoints, _m);
     }
     else
@@ -662,10 +664,10 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
         if( CV_MAT_TYPE(dpdr->type) == CV_64FC1 )
         {
-            _dpdr = cvCloneMat(dpdr);
+            _dpdr.reset(cvCloneMat(dpdr));
         }
         else
-            _dpdr = cvCreateMat( 2*count, 3, CV_64FC1 );
+            _dpdr.reset(cvCreateMat( 2*count, 3, CV_64FC1 ));
         dpdr_p = _dpdr->data.db;
         dpdr_step = _dpdr->step/sizeof(dpdr_p[0]);
     }
@@ -680,10 +682,10 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
         if( CV_MAT_TYPE(dpdt->type) == CV_64FC1 )
         {
-            _dpdt = cvCloneMat(dpdt);
+            _dpdt.reset(cvCloneMat(dpdt));
         }
         else
-            _dpdt = cvCreateMat( 2*count, 3, CV_64FC1 );
+            _dpdt.reset(cvCreateMat( 2*count, 3, CV_64FC1 ));
         dpdt_p = _dpdt->data.db;
         dpdt_step = _dpdt->step/sizeof(dpdt_p[0]);
     }
@@ -697,10 +699,10 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
         if( CV_MAT_TYPE(dpdf->type) == CV_64FC1 )
         {
-            _dpdf = cvCloneMat(dpdf);
+            _dpdf.reset(cvCloneMat(dpdf));
         }
         else
-            _dpdf = cvCreateMat( 2*count, 2, CV_64FC1 );
+            _dpdf.reset(cvCreateMat( 2*count, 2, CV_64FC1 ));
         dpdf_p = _dpdf->data.db;
         dpdf_step = _dpdf->step/sizeof(dpdf_p[0]);
     }
@@ -714,10 +716,10 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
         if( CV_MAT_TYPE(dpdc->type) == CV_64FC1 )
         {
-            _dpdc = cvCloneMat(dpdc);
+            _dpdc.reset(cvCloneMat(dpdc));
         }
         else
-            _dpdc = cvCreateMat( 2*count, 2, CV_64FC1 );
+            _dpdc.reset(cvCreateMat( 2*count, 2, CV_64FC1 ));
         dpdc_p = _dpdc->data.db;
         dpdc_step = _dpdc->step/sizeof(dpdc_p[0]);
     }
@@ -734,10 +736,10 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
 
         if( CV_MAT_TYPE(dpdk->type) == CV_64FC1 )
         {
-            _dpdk = cvCloneMat(dpdk);
+            _dpdk.reset(cvCloneMat(dpdk));
         }
         else
-            _dpdk = cvCreateMat( dpdk->rows, dpdk->cols, CV_64FC1 );
+            _dpdk.reset(cvCreateMat( dpdk->rows, dpdk->cols, CV_64FC1 ));
         dpdk_p = _dpdk->data.db;
         dpdk_step = _dpdk->step/sizeof(dpdk_p[0]);
     }
@@ -824,7 +826,7 @@ CV_IMPL void cvProjectPoints2( const CvMat* objectPoints,
                             dpdk_p[dpdk_step+7] = fy*y*cdist*(-icdist2)*icdist2*r6;
                             if( _dpdk->cols > 8 )
                             {
-                                dpdk_p[8] = fx*r2; //s1 
+                                dpdk_p[8] = fx*r2; //s1
                                 dpdk_p[9] = fx*r4; //s2
                                 dpdk_p[10] = 0;//s3
                                 dpdk_p[11] = 0;//s4
@@ -948,8 +950,8 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
         CV_IS_MAT(A) && CV_IS_MAT(rvec) && CV_IS_MAT(tvec) );
 
     count = MAX(objectPoints->cols, objectPoints->rows);
-    matM = cvCreateMat( 1, count, CV_64FC3 );
-    _m = cvCreateMat( 1, count, CV_64FC2 );
+    matM.reset(cvCreateMat( 1, count, CV_64FC3 ));
+    _m.reset(cvCreateMat( 1, count, CV_64FC2 ));
 
     cvConvertPointsHomogeneous( objectPoints, matM );
     cvConvertPointsHomogeneous( imagePoints, _m );
@@ -961,8 +963,8 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
     CV_Assert( (CV_MAT_DEPTH(tvec->type) == CV_64F || CV_MAT_DEPTH(tvec->type) == CV_32F) &&
         (tvec->rows == 1 || tvec->cols == 1) && tvec->rows*tvec->cols*CV_MAT_CN(tvec->type) == 3 );
 
-    _mn = cvCreateMat( 1, count, CV_64FC2 );
-    _Mxy = cvCreateMat( 1, count, CV_64FC2 );
+    _mn.reset(cvCreateMat( 1, count, CV_64FC2 ));
+    _Mxy.reset(cvCreateMat( 1, count, CV_64FC2 ));
 
     // normalize image points
     // (unapply the intrinsic matrix transformation and distortion)
@@ -1053,7 +1055,7 @@ CV_IMPL void cvFindExtrinsicCameraParams2( const CvMat* objectPoints,
             CvPoint3D64f* M = (CvPoint3D64f*)matM->data.db;
             CvPoint2D64f* mn = (CvPoint2D64f*)_mn->data.db;
 
-            matL = cvCreateMat( 2*count, 12, CV_64F );
+            matL.reset(cvCreateMat( 2*count, 12, CV_64F ));
             L = matL->data.db;
 
             for( i = 0; i < count; i++, L += 24 )
@@ -1160,11 +1162,11 @@ CV_IMPL void cvInitIntrinsicParams2D( const CvMat* objectPoints,
     if( objectPoints->rows != 1 || imagePoints->rows != 1 )
         CV_Error( CV_StsBadSize, "object points and image points must be a single-row matrices" );
 
-    matA = cvCreateMat( 2*nimages, 2, CV_64F );
-    _b = cvCreateMat( 2*nimages, 1, CV_64F );
+    matA.reset(cvCreateMat( 2*nimages, 2, CV_64F ));
+    _b.reset(cvCreateMat( 2*nimages, 1, CV_64F ));
     a[2] = (imageSize.width - 1)*0.5;
     a[5] = (imageSize.height - 1)*0.5;
-    _allH = cvCreateMat( nimages, 9, CV_64F );
+    _allH.reset(cvCreateMat( nimages, 9, CV_64F ));
 
     // extract vanishing points in order to obtain initial value for the focal length
     for( i = 0, pos = 0; i < nimages; i++, pos += ni )
@@ -1254,7 +1256,7 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     //when the thin prism model is used the distortion coefficients matrix must have 12 parameters
     if((flags & CV_CALIB_THIN_PRISM_MODEL) && (distCoeffs->cols*distCoeffs->rows != 12))
         CV_Error( CV_StsBadArg, "Thin prism model must have 12 parameters in the distortion matrix" );
-    
+
     nimages = npoints->rows*npoints->cols;
     npstep = npoints->rows == 1 ? 1 : npoints->step/CV_ELEM_SIZE(npoints->type);
 
@@ -1308,16 +1310,16 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         total += ni;
     }
 
-    matM = cvCreateMat( 1, total, CV_64FC3 );
-    _m = cvCreateMat( 1, total, CV_64FC2 );
+    matM.reset(cvCreateMat( 1, total, CV_64FC3 ));
+    _m.reset(cvCreateMat( 1, total, CV_64FC2 ));
 
     cvConvertPointsHomogeneous( objectPoints, matM );
     cvConvertPointsHomogeneous( imagePoints, _m );
 
     nparams = NINTRINSIC + nimages*6;
-    _Ji = cvCreateMat( maxPoints*2, NINTRINSIC, CV_64FC1 );
-    _Je = cvCreateMat( maxPoints*2, 6, CV_64FC1 );
-    _err = cvCreateMat( maxPoints*2, 1, CV_64FC1 );
+    _Ji.reset(cvCreateMat( maxPoints*2, NINTRINSIC, CV_64FC1 ));
+    _Je.reset(cvCreateMat( maxPoints*2, 6, CV_64FC1 ));
+    _err.reset(cvCreateMat( maxPoints*2, 1, CV_64FC1 ));
     cvZero( _Ji );
 
     _k = cvMat( distCoeffs->rows, distCoeffs->cols, CV_MAKETYPE(CV_64F,CV_MAT_CN(distCoeffs->type)), k);
@@ -1636,12 +1638,12 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                         CvTermCriteria termCrit,
                         int flags )
 {
-    const int NINTRINSIC = 12;
+    const int NINTRINSIC = 16;
     Ptr<CvMat> npoints, err, J_LR, Je, Ji, imagePoints[2], objectPoints, RT0;
     CvLevMarq solver;
     double reprojErr = 0;
 
-    double A[2][9], dk[2][8]={{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}}, rlr[9];
+    double A[2][9], dk[2][12]={{0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0,0,0,0,0}}, rlr[9];
     CvMat K[2], Dist[2], om_LR, T_LR;
     CvMat R_LR = cvMat(3, 3, CV_64F, rlr);
     int i, k, p, ni = 0, ofs, nimages, pointsTotal, maxPoints = 0;
@@ -1660,7 +1662,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                CV_MAT_TYPE(_npoints->type) == CV_32SC1 );
 
     nimages = _npoints->cols + _npoints->rows - 1;
-    npoints = cvCreateMat( _npoints->rows, _npoints->cols, _npoints->type );
+    npoints.reset(cvCreateMat( _npoints->rows, _npoints->cols, _npoints->type ));
     cvCopy( _npoints, npoints );
 
     for( i = 0, pointsTotal = 0; i < nimages; i++ )
@@ -1669,8 +1671,8 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         pointsTotal += npoints->data.i[i];
     }
 
-    objectPoints = cvCreateMat( _objectPoints->rows, _objectPoints->cols,
-                                CV_64FC(CV_MAT_CN(_objectPoints->type)));
+    objectPoints.reset(cvCreateMat( _objectPoints->rows, _objectPoints->cols,
+                                    CV_64FC(CV_MAT_CN(_objectPoints->type))));
     cvConvert( _objectPoints, objectPoints );
     cvReshape( objectPoints, objectPoints, 3, 1 );
 
@@ -1687,9 +1689,9 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                 (_imagePoints1->rows == 1 && _imagePoints1->cols == pointsTotal && cn == 2)) );
 
         K[k] = cvMat(3,3,CV_64F,A[k]);
-        Dist[k] = cvMat(1,8,CV_64F,dk[k]);
+        Dist[k] = cvMat(1,12,CV_64F,dk[k]);
 
-        imagePoints[k] = cvCreateMat( points->rows, points->cols, CV_64FC(CV_MAT_CN(points->type)));
+        imagePoints[k].reset(cvCreateMat( points->rows, points->cols, CV_64FC(CV_MAT_CN(points->type))));
         cvConvert( points, imagePoints[k] );
         cvReshape( imagePoints[k], imagePoints[k], 2, 1 );
 
@@ -1727,10 +1729,10 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
 
     recomputeIntrinsics = (flags & CV_CALIB_FIX_INTRINSIC) == 0;
 
-    err = cvCreateMat( maxPoints*2, 1, CV_64F );
-    Je = cvCreateMat( maxPoints*2, 6, CV_64F );
-    J_LR = cvCreateMat( maxPoints*2, 6, CV_64F );
-    Ji = cvCreateMat( maxPoints*2, NINTRINSIC, CV_64F );
+    err.reset(cvCreateMat( maxPoints*2, 1, CV_64F ));
+    Je.reset(cvCreateMat( maxPoints*2, 6, CV_64F ));
+    J_LR.reset(cvCreateMat( maxPoints*2, 6, CV_64F ));
+    Ji.reset(cvCreateMat( maxPoints*2, NINTRINSIC, CV_64F ));
     cvZero( Ji );
 
     // we optimize for the inter-camera R(3),t(3), then, optionally,
@@ -1738,7 +1740,7 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
     nparams = 6*(nimages+1) + (recomputeIntrinsics ? NINTRINSIC*2 : 0);
 
     // storage for initial [om(R){i}|t{i}] (in order to compute the median for each component)
-    RT0 = cvCreateMat( 6, nimages, CV_64F );
+    RT0.reset(cvCreateMat( 6, nimages, CV_64F ));
 
     solver.init( nparams, 0, termCrit );
     if( recomputeIntrinsics )
@@ -1746,6 +1748,8 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
         uchar* imask = solver.mask->data.ptr + nparams - NINTRINSIC*2;
         if( !(flags & CV_CALIB_RATIONAL_MODEL) )
             flags |= CV_CALIB_FIX_K4 | CV_CALIB_FIX_K5 | CV_CALIB_FIX_K6;
+        if( !(flags & CV_CALIB_THIN_PRISM_MODEL) )
+            flags |= CV_CALIB_FIX_S1_S2_S3_S4;
         if( flags & CV_CALIB_FIX_ASPECT_RATIO )
             imask[0] = imask[NINTRINSIC] = 0;
         if( flags & CV_CALIB_FIX_FOCAL_LENGTH )
@@ -1766,6 +1770,13 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
             imask[10] = imask[NINTRINSIC+10] = 0;
         if( flags & CV_CALIB_FIX_K6 )
             imask[11] = imask[NINTRINSIC+11] = 0;
+        if( flags & CV_CALIB_FIX_S1_S2_S3_S4 )
+        {
+            imask[12] = imask[NINTRINSIC+12] = 0;
+            imask[13] = imask[NINTRINSIC+13] = 0;
+            imask[14] = imask[NINTRINSIC+14] = 0;
+            imask[15] = imask[NINTRINSIC+15] = 0;
+        }
     }
 
     /*
@@ -1840,6 +1851,10 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
             iparam[4] = dk[k][0]; iparam[5] = dk[k][1]; iparam[6] = dk[k][2];
             iparam[7] = dk[k][3]; iparam[8] = dk[k][4]; iparam[9] = dk[k][5];
             iparam[10] = dk[k][6]; iparam[11] = dk[k][7];
+            iparam[12] = dk[k][8];
+            iparam[13] = dk[k][9];
+            iparam[14] = dk[k][10];
+            iparam[15] = dk[k][11];
         }
 
     om_LR = cvMat(3, 1, CV_64F, solver.param->data.db);
@@ -1906,6 +1921,10 @@ double cvStereoCalibrate( const CvMat* _objectPoints, const CvMat* _imagePoints1
                 dk[k][5] = iparam[k*NINTRINSIC+9];
                 dk[k][6] = iparam[k*NINTRINSIC+10];
                 dk[k][7] = iparam[k*NINTRINSIC+11];
+                dk[k][8] = iparam[k*NINTRINSIC+12];
+                dk[k][9] = iparam[k*NINTRINSIC+13];
+                dk[k][10] = iparam[k*NINTRINSIC+14];
+                dk[k][11] = iparam[k*NINTRINSIC+15];
             }
         }
 
@@ -2078,7 +2097,7 @@ icvGetRectangles( const CvMat* cameraMatrix, const CvMat* distCoeffs,
 {
     const int N = 9;
     int x, y, k;
-    cv::Ptr<CvMat> _pts = cvCreateMat(1, N*N, CV_32FC2);
+    cv::Ptr<CvMat> _pts(cvCreateMat(1, N*N, CV_32FC2));
     CvPoint2D32f* pts = (CvPoint2D32f*)(_pts->data.ptr);
 
     for( y = k = 0; y < N; y++ )
@@ -2437,10 +2456,10 @@ CV_IMPL int cvStereoRectifyUncalibrated(
 
     npoints = _points1->rows * _points1->cols * CV_MAT_CN(_points1->type) / 2;
 
-    _m1 = cvCreateMat( _points1->rows, _points1->cols, CV_64FC(CV_MAT_CN(_points1->type)) );
-    _m2 = cvCreateMat( _points2->rows, _points2->cols, CV_64FC(CV_MAT_CN(_points2->type)) );
-    _lines1 = cvCreateMat( 1, npoints, CV_64FC3 );
-    _lines2 = cvCreateMat( 1, npoints, CV_64FC3 );
+    _m1.reset(cvCreateMat( _points1->rows, _points1->cols, CV_64FC(CV_MAT_CN(_points1->type)) ));
+    _m2.reset(cvCreateMat( _points2->rows, _points2->cols, CV_64FC(CV_MAT_CN(_points2->type)) ));
+    _lines1.reset(cvCreateMat( 1, npoints, CV_64FC3 ));
+    _lines2.reset(cvCreateMat( 1, npoints, CV_64FC3 ));
 
     cvConvert( F0, &F );
 
@@ -2688,7 +2707,7 @@ void cv::reprojectImageTo3D( InputArray _disparity,
             for( x = 0; x < cols*3; x++ )
             {
                 int ival = cvRound(dptr[x]);
-                dptr0[x] = CV_CAST_16S(ival);
+                dptr0[x] = cv::saturate_cast<short>(ival);
             }
         }
         else if( dtype == CV_32SC3 )

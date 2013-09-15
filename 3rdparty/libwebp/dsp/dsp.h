@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 //   Speed-critical functions.
@@ -49,8 +51,6 @@ extern VP8CPUInfo VP8GetCPUInfo;
 //------------------------------------------------------------------------------
 // Encoding
 
-int VP8GetAlpha(const int histo[]);
-
 // Transforms
 // VP8Idct: Does one of two inverse transforms. If do_two is set, the transforms
 //          will be done for (ref, in, dst) and (ref + 4, in + 16, dst + 4).
@@ -85,10 +85,11 @@ typedef int (*VP8QuantizeBlock)(int16_t in[16], int16_t out[16],
                                 int n, const struct VP8Matrix* const mtx);
 extern VP8QuantizeBlock VP8EncQuantizeBlock;
 
-// Compute susceptibility based on DCT-coeff histograms:
-// the higher, the "easier" the macroblock is to compress.
-typedef int (*VP8CHisto)(const uint8_t* ref, const uint8_t* pred,
-                         int start_block, int end_block);
+// Collect histogram for susceptibility calculation and accumulate in histo[].
+struct VP8Histogram;
+typedef void (*VP8CHisto)(const uint8_t* ref, const uint8_t* pred,
+                          int start_block, int end_block,
+                          struct VP8Histogram* const histo);
 extern const int VP8DspScan[16 + 4 + 4];
 extern VP8CHisto VP8CollectHistogram;
 
@@ -104,7 +105,7 @@ extern VP8DecIdct2 VP8Transform;
 extern VP8DecIdct VP8TransformUV;
 extern VP8DecIdct VP8TransformDC;
 extern VP8DecIdct VP8TransformDCUV;
-extern void (*VP8TransformWHT)(const int16_t* in, int16_t* out);
+extern VP8WHT VP8TransformWHT;
 
 // *dst is the destination block, with stride BPS. Boundary samples are
 // assumed accessible when needed.
@@ -159,6 +160,9 @@ extern WebPUpsampleLinePairFunc WebPUpsamplers[/* MODE_LAST */];
 // Initializes SSE2 version of the fancy upsamplers.
 void WebPInitUpsamplersSSE2(void);
 
+// NEON version
+void WebPInitUpsamplersNEON(void);
+
 #endif    // FANCY_UPSAMPLING
 
 // Point-sampling methods.
@@ -200,6 +204,7 @@ extern void (*WebPApplyAlphaMultiply4444)(
 void WebPInitPremultiply(void);
 
 void WebPInitPremultiplySSE2(void);   // should not be called directly.
+void WebPInitPremultiplyNEON(void);
 
 //------------------------------------------------------------------------------
 

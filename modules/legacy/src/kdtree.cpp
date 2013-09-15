@@ -117,10 +117,10 @@ class CvKDTreeWrap : public CvFeatureTree {
            CvMat* results) {
     int rn = results->rows * results->cols;
     std::vector<int> inbounds;
-    dispatch_cvtype(mat, ((__treetype*)data)->
-        find_ortho_range((typename __treetype::scalar_type*)bounds_min->data.ptr,
+    assert(CV_MAT_DEPTH(mat->type) == CV_32F || CV_MAT_DEPTH(mat->type) == CV_64F);
+    ((__treetype*)data)->find_ortho_range((typename __treetype::scalar_type*)bounds_min->data.ptr,
              (typename __treetype::scalar_type*)bounds_max->data.ptr,
-             inbounds));
+             inbounds);
     std::copy(inbounds.begin(),
         inbounds.begin() + std::min((int)inbounds.size(), rn),
         (int*) results->data.ptr);
@@ -172,7 +172,7 @@ public:
       CV_Error(CV_StsUnsupportedFormat, "dist must be CV_64FC1");
 
     if (CV_MAT_TYPE(type()) != CV_MAT_TYPE(desc->type)) {
-      tmp_desc = cvCreateMat(desc->rows, desc->cols, type());
+      tmp_desc.reset(cvCreateMat(desc->rows, desc->cols, type()));
       cvConvert(desc, tmp_desc);
       desc = tmp_desc;
     }

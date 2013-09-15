@@ -321,10 +321,18 @@ cv::viz::InteractorStyle::OnKeyDown()
         Vec2i win_pos(Interactor->GetRenderWindow()->GetPosition());
         Vec2i win_size(Interactor->GetRenderWindow()->GetSize());
 
-        std::cerr << Mat(clip, false).reshape(1, 1) << "/" << Mat(focal, false).reshape(1, 1) << "/" <<
-                     Mat(pose, false).reshape(1, 1) << "/" << Mat(view, false).reshape(1, 1) << "/" <<
-                     cam->GetViewAngle () / 180.0 * CV_PI  << "/" <<
-                     Mat(win_size, false).reshape(1,1) << "/" << Mat(win_pos, false).reshape(1,1) << endl;
+        cv::print(Mat(clip, false).reshape(1, 1));
+        std::cout << "/";
+        cv::print(Mat(focal, false).reshape(1, 1));
+        std::cout << "/";
+        cv::print(Mat(pose, false).reshape(1, 1));
+        std::cout << "/";
+        cv::print(Mat(view, false).reshape(1, 1));
+        std::cout << "/" << cam->GetViewAngle () / 180.0 * CV_PI;
+        cv::print(Mat(win_size, false).reshape(1, 1));
+        std::cout << "/";
+        cv::print(Mat(win_pos, false).reshape(1, 1));
+        std::cout << std::endl;
         break;
     }
     case '=':

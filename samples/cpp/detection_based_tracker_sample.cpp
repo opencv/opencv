@@ -1,10 +1,10 @@
 #if defined(__linux__) || defined(LINUX) || defined(__APPLE__) || defined(ANDROID)
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/objdetect/objdetect.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/objdetect.hpp>
 #include "opencv2/contrib/detection_based_tracker.hpp"
 
 #include <vector>
@@ -67,7 +67,7 @@ class CascadeDetectorAdapter: public DetectionBasedTracker::IDetector
         CascadeDetectorAdapter(cv::Ptr<cv::CascadeClassifier> detector):
             Detector(detector)
         {
-            CV_Assert(!detector.empty());
+            CV_Assert(detector);
         }
 
         void detect(const cv::Mat &Image, std::vector<cv::Rect> &objects)
@@ -117,11 +117,11 @@ static int test_FaceDetector(int argc, char *argv[])
     }
 
     std::string cascadeFrontalfilename=cascadefile;
-    cv::Ptr<cv::CascadeClassifier> cascade = new cv::CascadeClassifier(cascadeFrontalfilename);
-    cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = new CascadeDetectorAdapter(cascade);
+    cv::Ptr<cv::CascadeClassifier> cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> MainDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
-    cascade = new cv::CascadeClassifier(cascadeFrontalfilename);
-    cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = new CascadeDetectorAdapter(cascade);
+    cascade = makePtr<cv::CascadeClassifier>(cascadeFrontalfilename);
+    cv::Ptr<DetectionBasedTracker::IDetector> TrackingDetector = makePtr<CascadeDetectorAdapter>(cascade);
 
     DetectionBasedTracker::Parameters params;
     DetectionBasedTracker fd(MainDetector, TrackingDetector, params);
@@ -144,7 +144,7 @@ static int test_FaceDetector(int argc, char *argv[])
         LOGD("\n\nSTEP n=%d        from prev step %f ms\n", n, t_ms);
         m=images[n-1];
         CV_Assert(! m.empty());
-        cvtColor(m, gray, CV_BGR2GRAY);
+        cvtColor(m, gray, COLOR_BGR2GRAY);
 
         fd.process(gray);
 

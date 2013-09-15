@@ -22,13 +22,13 @@
 //
 //   * Redistribution's in binary form must reproduce the above copyright notice,
 //     this list of conditions and the following disclaimer in the documentation
-//     and/or other GpuMaterials provided with the distribution.
+//     and/or other materials provided with the distribution.
 //
 //   * The name of the copyright holders may not be used to endorse or promote products
 //     derived from this software without specific prior written permission.
 //
 // This software is provided by the copyright holders and contributors "as is" and
-// any express or bpied warranties, including, but not limited to, the bpied
+// any express or implied warranties, including, but not limited to, the implied
 // warranties of merchantability and fitness for a particular purpose are disclaimed.
 // In no event shall the Intel Corporation or contributors be liable for any direct,
 // indirect, incidental, special, exemplary, or consequential damages
@@ -44,7 +44,11 @@
 
 #ifdef HAVE_CUDA
 
-#if CUDA_VERSION >= 5000
+#include <cuda_runtime.h>
+
+#if CUDART_VERSION >= 5000
+
+using namespace cvtest;
 
 struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
 {
@@ -59,20 +63,21 @@ struct Async : testing::TestWithParam<cv::gpu::DeviceInfo>
         cv::gpu::DeviceInfo devInfo = GetParam();
         cv::gpu::setDevice(devInfo.deviceID());
 
+        src = cv::gpu::CudaMem(cv::gpu::CudaMem::PAGE_LOCKED);
+
         cv::Mat m = randomMat(cv::Size(128, 128), CV_8UC1);
-        src.create(m.size(), m.type(), cv::gpu::CudaMem::ALLOC_PAGE_LOCKED);
-        m.copyTo(src.createMatHeader());
+        m.copyTo(src);
     }
 };
 
-void checkMemSet(cv::gpu::Stream&, int status, void* userData)
+void checkMemSet(int status, void* userData)
 {
     ASSERT_EQ(cudaSuccess, status);
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::Mat src = test->src;
-    cv::Mat dst = test->dst;
+    cv::gpu::CudaMem src = test->src;
+    cv::gpu::CudaMem dst = test->dst;
 
     cv::Mat dst_gold = cv::Mat::zeros(src.size(), src.type());
 
@@ -85,8 +90,8 @@ GPU_TEST_P(Async, MemSet)
 
     d_dst.upload(src);
 
-    stream.enqueueMemSet(d_dst, cv::Scalar::all(0));
-    stream.enqueueDownload(d_dst, dst);
+    d_dst.setTo(cv::Scalar::all(0), stream);
+    d_dst.download(dst, stream);
 
     Async* test = this;
     stream.enqueueHostCallback(checkMemSet, test);
@@ -94,17 +99,17 @@ GPU_TEST_P(Async, MemSet)
     stream.waitForCompletion();
 }
 
-void checkConvert(cv::gpu::Stream&, int status, void* userData)
+void checkConvert(int status, void* userData)
 {
     ASSERT_EQ(cudaSuccess, status);
 
     Async* test = reinterpret_cast<Async*>(userData);
 
-    cv::Mat src = test->src;
-    cv::Mat dst = test->dst;
+    cv::gpu::CudaMem src = test->src;
+    cv::gpu::CudaMem dst = test->dst;
 
     cv::Mat dst_gold;
-    src.convertTo(dst_gold, CV_32S);
+    src.createMatHeader().convertTo(dst_gold, CV_32S);
 
     ASSERT_MAT_NEAR(dst_gold, dst, 0);
 }
@@ -113,9 +118,9 @@ GPU_TEST_P(Async, Convert)
 {
     cv::gpu::Stream stream;
 
-    stream.enqueueUpload(src, d_src);
-    stream.enqueueConvert(d_src, d_dst, CV_32S);
-    stream.enqueueDownload(d_dst, dst);
+    d_src.upload(src, stream);
+    d_src.convertTo(d_dst, CV_32S, stream);
+    d_dst.download(dst, stream);
 
     Async* test = this;
     stream.enqueueHostCallback(checkConvert, test);
@@ -125,6 +130,6 @@ GPU_TEST_P(Async, Convert)
 
 INSTANTIATE_TEST_CASE_P(GPU_Stream, Async, ALL_DEVICES);
 
-#endif
+#endif // CUDART_VERSION >= 5000
 
 #endif // HAVE_CUDA

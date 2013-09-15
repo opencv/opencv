@@ -1,16 +1,12 @@
 #ifndef __OPENCV_GTESTCV_HPP__
 #define __OPENCV_GTESTCV_HPP__
 
-#ifdef HAVE_CVCONFIG_H
-#include "cvconfig.h"
-#endif
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#ifdef BUILD_SHARED_LIBS
-#define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#endif
-#endif
-
+#include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
+
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
+#endif
 
 #ifdef _MSC_VER
 #pragma warning( disable: 4127 )
@@ -36,6 +32,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+#include "opencv2/core/utility.hpp"
 
 namespace cvtest
 {
@@ -93,7 +90,7 @@ CV_EXPORTS void add(const Mat& a, double alpha, const Mat& b, double beta,
 CV_EXPORTS void multiply(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 CV_EXPORTS void divide(const Mat& a, const Mat& b, Mat& c, double alpha=1);
 
-CV_EXPORTS void convert(const Mat& src, Mat& dst, int dtype, double alpha=1, double beta=0);
+CV_EXPORTS void convert(const Mat& src, cv::OutputArray dst, int dtype, double alpha=1, double beta=0);
 CV_EXPORTS void copy(const Mat& src, Mat& dst, const Mat& mask=Mat(), bool invertMask=false);
 CV_EXPORTS void set(Mat& dst, const Scalar& gamma, const Mat& mask=Mat());
 
@@ -110,9 +107,9 @@ CV_EXPORTS void  patchZeros( Mat& mat, double level );
 
 CV_EXPORTS void transpose(const Mat& src, Mat& dst);
 CV_EXPORTS void erode(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-1),
-                      int borderType=IPL_BORDER_CONSTANT, const Scalar& borderValue=Scalar());
+                      int borderType=0, const Scalar& borderValue=Scalar());
 CV_EXPORTS void dilate(const Mat& src, Mat& dst, const Mat& _kernel, Point anchor=Point(-1,-1),
-                       int borderType=IPL_BORDER_CONSTANT, const Scalar& borderValue=Scalar());
+                       int borderType=0, const Scalar& borderValue=Scalar());
 CV_EXPORTS void filter2D(const Mat& src, Mat& dst, int ddepth, const Mat& kernel,
                          Point anchor, double delta, int borderType,
                          const Scalar& borderValue=Scalar());
@@ -478,26 +475,10 @@ protected:
     virtual int run_test_case( int expected_code, const string& descr );
     virtual void run_func(void) = 0;
     int test_case_idx;
-    int progress;
-    double t, freq;
 
     template<class F>
     int run_test_case( int expected_code, const string& _descr, F f)
     {
-        double new_t = (double)cv::getTickCount(), dt;
-        if( test_case_idx < 0 )
-        {
-            test_case_idx = 0;
-            progress = 0;
-            dt = 0;
-        }
-        else
-        {
-            dt = (new_t - t)/(freq*1000);
-            t = new_t;
-        }
-        progress = update_progress(progress, test_case_idx, 0, dt);
-
         int errcount = 0;
         bool thrown = false;
         const char* descr = _descr.c_str() ? _descr.c_str() : "";
@@ -554,27 +535,24 @@ namespace cvtest
 CV_EXPORTS void fillGradient(Mat& img, int delta = 5);
 CV_EXPORTS void smoothBorder(Mat& img, const Scalar& color, int delta = 3);
 
+CV_EXPORTS void printVersionInfo(bool useStdOut = true);
 } //namespace cvtest
-
-// fills c with zeros
-CV_EXPORTS void cvTsZero( CvMat* c, const CvMat* mask=0 );
-
-// copies a to b (whole matrix or only the selected region)
-CV_EXPORTS void cvTsCopy( const CvMat* a, CvMat* b, const CvMat* mask=0 );
-
-// converts one array to another
-CV_EXPORTS void  cvTsConvert( const CvMat* src, CvMat* dst );
-
-CV_EXPORTS void cvTsGEMM( const CvMat* a, const CvMat* b, double alpha,
-                         const CvMat* c, double beta, CvMat* d, int flags );
 
 #define CV_TEST_MAIN(resourcesubdir) \
 int main(int argc, char **argv) \
 { \
     cvtest::TS::ptr()->init(resourcesubdir); \
     ::testing::InitGoogleTest(&argc, argv); \
+    cvtest::printVersionInfo();\
     return RUN_ALL_TESTS(); \
 }
+
+// This usually only makes sense in perf tests with several implementations,
+// some of which are not available.
+#define CV_TEST_FAIL_NO_IMPL() do { \
+    ::testing::Test::RecordProperty("custom_status", "noimpl"); \
+    FAIL() << "No equivalent implementation."; \
+} while (0)
 
 #endif
 

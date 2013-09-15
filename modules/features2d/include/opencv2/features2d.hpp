@@ -46,72 +46,15 @@
 #include "opencv2/core.hpp"
 #include "opencv2/flann/miniflann.hpp"
 
-#ifdef __cplusplus
-#include <limits>
-
 namespace cv
 {
 
 CV_EXPORTS bool initModule_features2d();
 
-/*!
- The Keypoint Class
-
- The class instance stores a keypoint, i.e. a point feature found by one of many available keypoint detectors, such as
- Harris corner detector, cv::FAST, cv::StarDetector, cv::SURF, cv::SIFT, cv::LDetector etc.
-
- The keypoint is characterized by the 2D position, scale
- (proportional to the diameter of the neighborhood that needs to be taken into account),
- orientation and some other parameters. The keypoint neighborhood is then analyzed by another algorithm that builds a descriptor
- (usually represented as a feature vector). The keypoints representing the same object in different images can then be matched using
- cv::KDTree or another method.
-*/
-class CV_EXPORTS_W_SIMPLE KeyPoint
-{
-public:
-    //! the default constructor
-    CV_WRAP KeyPoint() : pt(0,0), size(0), angle(-1), response(0), octave(0), class_id(-1) {}
-    //! the full constructor
-    KeyPoint(Point2f _pt, float _size, float _angle=-1,
-            float _response=0, int _octave=0, int _class_id=-1)
-            : pt(_pt), size(_size), angle(_angle),
-            response(_response), octave(_octave), class_id(_class_id) {}
-    //! another form of the full constructor
-    CV_WRAP KeyPoint(float x, float y, float _size, float _angle=-1,
-            float _response=0, int _octave=0, int _class_id=-1)
-            : pt(x, y), size(_size), angle(_angle),
-            response(_response), octave(_octave), class_id(_class_id) {}
-
-    size_t hash() const;
-
-    //! converts vector of keypoints to vector of points
-    static void convert(const std::vector<KeyPoint>& keypoints,
-                        CV_OUT std::vector<Point2f>& points2f,
-                        const std::vector<int>& keypointIndexes=std::vector<int>());
-    //! converts vector of points to the vector of keypoints, where each keypoint is assigned the same size and the same orientation
-    static void convert(const std::vector<Point2f>& points2f,
-                        CV_OUT std::vector<KeyPoint>& keypoints,
-                        float size=1, float response=1, int octave=0, int class_id=-1);
-
-    //! computes overlap for pair of keypoints;
-    //! overlap is a ratio between area of keypoint regions intersection and
-    //! area of keypoint regions union (now keypoint region is circle)
-    static float overlap(const KeyPoint& kp1, const KeyPoint& kp2);
-
-    CV_PROP_RW Point2f pt; //!< coordinates of the keypoints
-    CV_PROP_RW float size; //!< diameter of the meaningful keypoint neighborhood
-    CV_PROP_RW float angle; //!< computed orientation of the keypoint (-1 if not applicable);
-                            //!< it's in [0,360) degrees and measured relative to
-                            //!< image coordinate system, ie in clockwise.
-    CV_PROP_RW float response; //!< the response by which the most strong keypoints have been selected. Can be used for the further sorting or subsampling
-    CV_PROP_RW int octave; //!< octave (pyramid layer) from which the keypoint has been extracted
-    CV_PROP_RW int class_id; //!< object class (if the keypoints need to be clustered by an object they belong to)
-};
-
-//! writes vector of keypoints to the file storage
-CV_EXPORTS void write(FileStorage& fs, const std::string& name, const std::vector<KeyPoint>& keypoints);
-//! reads vector of keypoints from the specified file storage node
-CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
+// //! writes vector of keypoints to the file storage
+// CV_EXPORTS void write(FileStorage& fs, const String& name, const std::vector<KeyPoint>& keypoints);
+// //! reads vector of keypoints from the specified file storage node
+// CV_EXPORTS void read(const FileNode& node, CV_OUT std::vector<KeyPoint>& keypoints);
 
 /*
  * A class filters a vector of keypoints.
@@ -179,7 +122,7 @@ public:
     CV_WRAP virtual bool empty() const;
 
     // Create feature detector by detector name.
-    CV_WRAP static Ptr<FeatureDetector> create( const std::string& detectorType );
+    CV_WRAP static Ptr<FeatureDetector> create( const String& detectorType );
 
 protected:
     virtual void detectImpl( const Mat& image, std::vector<KeyPoint>& keypoints, const Mat& mask=Mat() ) const = 0;
@@ -229,7 +172,7 @@ public:
 
     CV_WRAP virtual bool empty() const;
 
-    CV_WRAP static Ptr<DescriptorExtractor> create( const std::string& descriptorExtractorType );
+    CV_WRAP static Ptr<DescriptorExtractor> create( const String& descriptorExtractorType );
 
 protected:
     virtual void computeImpl( const Mat& image, std::vector<KeyPoint>& keypoints, Mat& descriptors ) const = 0;
@@ -263,8 +206,10 @@ public:
                                      OutputArray descriptors,
                                      bool useProvidedKeypoints=false ) const = 0;
 
+    CV_WRAP void compute( const Mat& image, CV_OUT CV_IN_OUT std::vector<KeyPoint>& keypoints, CV_OUT Mat& descriptors ) const;
+
     // Create feature detector and descriptor extractor by name.
-    CV_WRAP static Ptr<Feature2D> create( const std::string& name );
+    CV_WRAP static Ptr<Feature2D> create( const String& name );
 };
 
 /*!
@@ -590,11 +535,11 @@ protected:
 };
 
 
-class CV_EXPORTS GFTTDetector : public FeatureDetector
+class CV_EXPORTS_W GFTTDetector : public FeatureDetector
 {
 public:
-    GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
-                  int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
+                          int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
     AlgorithmInfo* info() const;
 
 protected:
@@ -701,7 +646,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=0,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=Ptr<FeatureDetector>(),
                                         int maxTotalKeypoints=1000,
                                         int gridRows=4, int gridCols=4 );
 
@@ -765,7 +710,7 @@ public:
 
     virtual Ptr<AdjusterAdapter> clone() const = 0;
 
-    static Ptr<AdjusterAdapter> create( const std::string& detectorType );
+    static Ptr<AdjusterAdapter> create( const String& detectorType );
 };
 /** \brief an adaptively adjusting detector that iteratively detects until the desired number
  * of features are detected.
@@ -1016,7 +961,7 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
-template<int cellsize> struct CV_EXPORTS HammingMultilevel
+template<int cellsize> struct HammingMultilevel
 {
     enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
@@ -1025,33 +970,6 @@ template<int cellsize> struct CV_EXPORTS HammingMultilevel
     ResultType operator()( const unsigned char* a, const unsigned char* b, int size ) const
     {
         return normHamming(a, b, size, cellsize);
-    }
-};
-
-/****************************************************************************************\
-*                                      DMatch                                            *
-\****************************************************************************************/
-/*
- * Struct for matching: query descriptor index, train descriptor index, train image index and distance between descriptors.
- */
-struct CV_EXPORTS_W_SIMPLE DMatch
-{
-    CV_WRAP DMatch() : queryIdx(-1), trainIdx(-1), imgIdx(-1), distance(FLT_MAX) {}
-    CV_WRAP DMatch( int _queryIdx, int _trainIdx, float _distance ) :
-            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(-1), distance(_distance) {}
-    CV_WRAP DMatch( int _queryIdx, int _trainIdx, int _imgIdx, float _distance ) :
-            queryIdx(_queryIdx), trainIdx(_trainIdx), imgIdx(_imgIdx), distance(_distance) {}
-
-    CV_PROP_RW int queryIdx; // query descriptor index
-    CV_PROP_RW int trainIdx; // train descriptor index
-    CV_PROP_RW int imgIdx;   // train image index
-
-    CV_PROP_RW float distance;
-
-    // less is better
-    bool operator<( const DMatch &m ) const
-    {
-        return distance < m.distance;
     }
 };
 
@@ -1141,7 +1059,7 @@ public:
     // but with empty train data.
     virtual Ptr<DescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-    CV_WRAP static Ptr<DescriptorMatcher> create( const std::string& descriptorMatcherType );
+    CV_WRAP static Ptr<DescriptorMatcher> create( const String& descriptorMatcherType );
 protected:
     /*
      * Class to work with descriptors from several images as with one merged matrix.
@@ -1225,8 +1143,8 @@ protected:
 class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
-                       const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
+                       const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
     virtual void add( const std::vector<Mat>& descriptors );
     virtual void clear();
@@ -1367,8 +1285,8 @@ public:
     // but with empty train data.
     virtual Ptr<GenericDescriptorMatcher> clone( bool emptyTrainData=false ) const = 0;
 
-    static Ptr<GenericDescriptorMatcher> create( const std::string& genericDescritptorMatcherType,
-                                                 const std::string &paramsFilename=std::string() );
+    static Ptr<GenericDescriptorMatcher> create( const String& genericDescritptorMatcherType,
+                                                 const String &paramsFilename=String() );
 
 protected:
     // In fact the matching is implemented only by the following two methods. These methods suppose
@@ -1486,15 +1404,15 @@ CV_EXPORTS_W void drawKeypoints( const Mat& image, const std::vector<KeyPoint>& 
                                const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 // Draws matches of keypints from two images on output image.
-CV_EXPORTS void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+CV_EXPORTS_W void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
                              const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                             const std::vector<DMatch>& matches1to2, Mat& outImg,
+                             const std::vector<DMatch>& matches1to2, CV_OUT Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
 
-CV_EXPORTS void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
                              const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                             const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
+                             const std::vector<std::vector<DMatch> >& matches1to2, CV_OUT Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 
@@ -1603,8 +1521,4 @@ protected:
 
 } /* namespace cv */
 
-#endif /* __cplusplus */
-
 #endif
-
-/* End of file. */

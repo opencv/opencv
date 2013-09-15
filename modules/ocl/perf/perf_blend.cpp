@@ -16,6 +16,7 @@
 //
 // @Authors
 //    Fangfang Bai, fangfang@multicorewareinc.com
+//    Jin Ma,       jin@multicorewareinc.com
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -43,80 +44,71 @@
 //
 //M*/
 
-#include "precomp.hpp"
-#include <iomanip>
+#include "perf_precomp.hpp"
 
-#ifdef HAVE_OPENCL
-using namespace cv;
-using namespace cv::ocl;
-using namespace cvtest;
-using namespace testing;
-using namespace std;
+using namespace perf;
 
-PARAM_TEST_CASE(Blend, MatType, int)
+///////////// blend ////////////////////////
+
+template <typename T>
+static void blendLinearGold(const cv::Mat &img1, const cv::Mat &img2,
+                            const cv::Mat &weights1, const cv::Mat &weights2,
+                            cv::Mat &result_gold)
 {
-    int type;
-    int channels;
-    std::vector<cv::ocl::Info> oclinfo;
+    result_gold.create(img1.size(), img1.type());
 
-    virtual void SetUp()
+    int cn = img1.channels();
+
+    for (int y = 0; y < img1.rows; ++y)
     {
+        const float *weights1_row = weights1.ptr<float>(y);
+        const float *weights2_row = weights2.ptr<float>(y);
+        const T *img1_row = img1.ptr<T>(y);
+        const T *img2_row = img2.ptr<T>(y);
+        T *result_gold_row = result_gold.ptr<T>(y);
 
-        type = GET_PARAM(0);
-        channels = GET_PARAM(1);
-        //int devnums = getDevice(oclinfo);
-        //CV_Assert(devnums > 0);
-        //cv::ocl::setBinpath(CLBINPATH);
-    }
-};
-
-TEST_P(Blend, Performance)
-{
-    cv::Size size(MWIDTH, MHEIGHT);
-    cv::Mat img1_host = randomMat(size, CV_MAKETYPE(type, channels), 0, type == CV_8U ? 255.0 : 1.0);
-    cv::Mat img2_host = randomMat(size, CV_MAKETYPE(type, channels), 0, type == CV_8U ? 255.0 : 1.0);
-    cv::Mat weights1 = randomMat(size, CV_32F, 0, 1);
-    cv::Mat weights2 = randomMat(size, CV_32F, 0, 1);
-    cv::ocl::oclMat gimg1(size, CV_MAKETYPE(type, channels)), gimg2(size, CV_MAKETYPE(type, channels)), gweights1(size, CV_32F), gweights2(size, CV_32F);
-    cv::ocl::oclMat gdst(size, CV_MAKETYPE(type, channels));
-
-
-    double totalgputick_all = 0;
-    double totalgputick_kernel = 0;
-    double t1 = 0;
-    double t2 = 0;
-
-    for (int j = 0; j < LOOP_TIMES + 1; j ++) //LOOP_TIMES=100
-    {
-        t1 = (double)cvGetTickCount();
-        cv::ocl::oclMat gimg1 = cv::ocl::oclMat(img1_host);
-        cv::ocl::oclMat gimg2 = cv::ocl::oclMat(img2_host);
-        cv::ocl::oclMat gweights1 = cv::ocl::oclMat(weights1);
-        cv::ocl::oclMat gweights2 = cv::ocl::oclMat(weights1);
-
-        t2 = (double)cvGetTickCount();
-        cv::ocl::blendLinear(gimg1, gimg2, gweights1, gweights2, gdst);
-        t2 = (double)cvGetTickCount() - t2;
-
-        cv::Mat m;
-        gdst.download(m);
-        t1 = (double)cvGetTickCount() - t1;
-
-        if (j == 0)
+        for (int x = 0; x < img1.cols * cn; ++x)
         {
-            continue;
+            int x1 = x * cn;
+            float w1 = weights1_row[x];
+            float w2 = weights2_row[x];
+            result_gold_row[x] = static_cast<T>((img1_row[x1] * w1
+                                                 + img2_row[x1] * w2) / (w1 + w2 + 1e-5f));
         }
-
-        totalgputick_all = t1 + totalgputick_all;
-        totalgputick_kernel = t2 + totalgputick_kernel;
-    };
-
-    cout << "average gpu total  runtime is  " << totalgputick_all / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
-    cout << "average gpu runtime without data transfering  is  " << totalgputick_kernel / ((double)cvGetTickFrequency()* LOOP_TIMES * 1000.) << "ms" << endl;
-
+    }
 }
 
-INSTANTIATE_TEST_CASE_P(GPU_ImgProc, Blend, Combine(
-                            Values(CV_8U, CV_32F), Values(1, 4)));
-#endif
+typedef TestBaseWithParam<Size> blendLinearFixture;
+
+PERF_TEST_P(blendLinearFixture, blendLinear, OCL_TYPICAL_MAT_SIZES)
+{
+    const Size srcSize = GetParam();
+    const int type = CV_8UC1;
+
+    Mat src1(srcSize, type), src2(srcSize, CV_8UC1), dst;
+    Mat weights1(srcSize, CV_32FC1), weights2(srcSize, CV_32FC1);
+
+    declare.in(src1, src2, WARMUP_RNG);
+    randu(weights1, 0.0f, 1.0f);
+    randu(weights2, 0.0f, 1.0f);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst;
+        ocl::oclMat oclWeights1(weights1), oclWeights2(weights2);
+
+        OCL_TEST_CYCLE() cv::ocl::blendLinear(oclSrc1, oclSrc2, oclWeights1, oclWeights2, oclDst);
+
+        oclDst.download(dst);
+
+        SANITY_CHECK(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        TEST_CYCLE() blendLinearGold<uchar>(src1, src2, weights1, weights2, dst);
+
+        SANITY_CHECK(dst);
+    }
+    else
+        OCL_PERF_ELSE
+}

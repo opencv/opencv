@@ -80,6 +80,35 @@ foreach(m ${OPENCV_MODULE_${the_module}_DEPS})
   endforeach()
 endforeach()
 
+
+macro(ios_include_3party_libs)
+  foreach(l ${ARGN})
+    add_dependencies(${the_module} ${l})
+    string(REGEX REPLACE "<MODULE_NAME>" "${l}" objpath1 "${CMAKE_BINARY_DIR}/3rdparty/${l}/${objpath0}")
+    file(GLOB sources ${CMAKE_SOURCE_DIR}/3rdparty/${l}/*.c)
+    foreach(srcname ${sources})
+      if(IS_ABSOLUTE "${srcname}")
+        file(RELATIVE_PATH srcname "${CMAKE_SOURCE_DIR}/3rdparty/${l}" "${srcname}")
+      endif()
+
+      string(REPLACE ".." "__" srcname "${srcname}")
+      get_filename_component(srcname_we ${srcname} NAME_WE)
+      string(REGEX REPLACE <SRC_NAME_WE> "${srcname_we}" objpath2 "${objpath1}")
+      string(REGEX REPLACE <RELATIVE_SRC_NAME> "${srcname}" objpath3 "${objpath2}")
+
+      list(APPEND objlist "\"${objpath3}\"")
+    endforeach() # (srcname ${sources})
+  endforeach()
+endmacro()
+
+if(IOS AND WITH_PNG)
+  ios_include_3party_libs(zlib libpng)
+endif()
+
+if(IOS AND WITH_JPEG)
+  ios_include_3party_libs(libjpeg)
+endif()
+
 string(REPLACE ";" " " objlist "${objlist}")
 
 if(have_cfg)

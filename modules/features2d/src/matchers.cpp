@@ -40,8 +40,8 @@
 //M*/
 
 #include "precomp.hpp"
+#include <limits>
 
-#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 2
 #include <Eigen/Array>
 #endif
@@ -113,7 +113,7 @@ void DescriptorMatcher::DescriptorCollection::set( const std::vector<Mat>& descr
         dim = descriptors[0].cols;
         type = descriptors[0].type();
     }
-    assert( dim > 0 );
+    CV_Assert( dim > 0 );
 
     int count = startIdxs[imageCount-1] + descriptors[imageCount-1].rows;
 
@@ -326,7 +326,7 @@ BFMatcher::BFMatcher( int _normType, bool _crossCheck )
 
 Ptr<DescriptorMatcher> BFMatcher::clone( bool emptyTrainData ) const
 {
-    BFMatcher* matcher = new BFMatcher(normType, crossCheck);
+    Ptr<BFMatcher> matcher = makePtr<BFMatcher>(normType, crossCheck);
     if( !emptyTrainData )
     {
         matcher->trainDescCollection.resize(trainDescCollection.size());
@@ -456,36 +456,36 @@ void BFMatcher::radiusMatchImpl( const Mat& queryDescriptors, std::vector<std::v
 /*
  * Factory function for DescriptorMatcher creating
  */
-Ptr<DescriptorMatcher> DescriptorMatcher::create( const std::string& descriptorMatcherType )
+Ptr<DescriptorMatcher> DescriptorMatcher::create( const String& descriptorMatcherType )
 {
-    DescriptorMatcher* dm = 0;
+    Ptr<DescriptorMatcher> dm;
     if( !descriptorMatcherType.compare( "FlannBased" ) )
     {
-        dm = new FlannBasedMatcher();
+        dm = makePtr<FlannBasedMatcher>();
     }
     else if( !descriptorMatcherType.compare( "BruteForce" ) ) // L2
     {
-        dm = new BFMatcher(NORM_L2);
+        dm = makePtr<BFMatcher>(int(NORM_L2)); // anonymous enums can't be template parameters
     }
     else if( !descriptorMatcherType.compare( "BruteForce-SL2" ) ) // Squared L2
     {
-        dm = new BFMatcher(NORM_L2SQR);
+        dm = makePtr<BFMatcher>(int(NORM_L2SQR));
     }
     else if( !descriptorMatcherType.compare( "BruteForce-L1" ) )
     {
-        dm = new BFMatcher(NORM_L1);
+        dm = makePtr<BFMatcher>(int(NORM_L1));
     }
     else if( !descriptorMatcherType.compare("BruteForce-Hamming") ||
              !descriptorMatcherType.compare("BruteForce-HammingLUT") )
     {
-        dm = new BFMatcher(NORM_HAMMING);
+        dm = makePtr<BFMatcher>(int(NORM_HAMMING));
     }
     else if( !descriptorMatcherType.compare("BruteForce-Hamming(2)") )
     {
-        dm = new BFMatcher(NORM_HAMMING2);
+        dm = makePtr<BFMatcher>(int(NORM_HAMMING2));
     }
     else
-        CV_Error( CV_StsBadArg, "Unknown matcher name" );
+        CV_Error( Error::StsBadArg, "Unknown matcher name" );
 
     return dm;
 }
@@ -497,8 +497,8 @@ Ptr<DescriptorMatcher> DescriptorMatcher::create( const std::string& descriptorM
 FlannBasedMatcher::FlannBasedMatcher( const Ptr<flann::IndexParams>& _indexParams, const Ptr<flann::SearchParams>& _searchParams )
     : indexParams(_indexParams), searchParams(_searchParams), addedDescCount(0)
 {
-    CV_Assert( !_indexParams.empty() );
-    CV_Assert( !_searchParams.empty() );
+    CV_Assert( _indexParams );
+    CV_Assert( _searchParams );
 }
 
 void FlannBasedMatcher::add( const std::vector<Mat>& descriptors )
@@ -522,17 +522,17 @@ void FlannBasedMatcher::clear()
 
 void FlannBasedMatcher::train()
 {
-    if( flannIndex.empty() || mergedDescriptors.size() < addedDescCount )
+    if( !flannIndex || mergedDescriptors.size() < addedDescCount )
     {
         mergedDescriptors.set( trainDescCollection );
-        flannIndex = new flann::Index( mergedDescriptors.getDescriptors(), *indexParams );
+        flannIndex = makePtr<flann::Index>( mergedDescriptors.getDescriptors(), *indexParams );
     }
 }
 
 void FlannBasedMatcher::read( const FileNode& fn)
 {
-     if (indexParams.empty())
-         indexParams = new flann::IndexParams();
+     if (!indexParams)
+         indexParams = makePtr<flann::IndexParams>();
 
      FileNode ip = fn["indexParams"];
      CV_Assert(ip.type() == FileNode::SEQ);
@@ -540,7 +540,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)ip.size(); ++i)
      {
         CV_Assert(ip[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)ip[i]["name"];
+        String _name =  (String)ip[i]["name"];
         int type =  (int)ip[i]["type"];
 
         switch(type)
@@ -559,7 +559,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             indexParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            indexParams->setString(_name, (std::string) ip[i]["value"]);
+            indexParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             indexParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -570,8 +570,8 @@ void FlannBasedMatcher::read( const FileNode& fn)
         };
      }
 
-     if (searchParams.empty())
-         searchParams = new flann::SearchParams();
+     if (!searchParams)
+         searchParams = makePtr<flann::SearchParams>();
 
      FileNode sp = fn["searchParams"];
      CV_Assert(sp.type() == FileNode::SEQ);
@@ -579,7 +579,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
      for(int i = 0; i < (int)sp.size(); ++i)
      {
         CV_Assert(sp[i].type() == FileNode::MAP);
-        std::string _name =  (std::string)sp[i]["name"];
+        String _name =  (String)sp[i]["name"];
         int type =  (int)sp[i]["type"];
 
         switch(type)
@@ -598,7 +598,7 @@ void FlannBasedMatcher::read( const FileNode& fn)
             searchParams->setDouble(_name, (double) ip[i]["value"]);
             break;
         case CV_USRTYPE1:
-            searchParams->setString(_name, (std::string) ip[i]["value"]);
+            searchParams->setString(_name, (String) ip[i]["value"]);
             break;
         case CV_MAKETYPE(CV_USRTYPE1,2):
             searchParams->setBool(_name, (int) ip[i]["value"] != 0);
@@ -618,9 +618,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (indexParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          indexParams->getAll(names, types, strValues, numValues);
@@ -669,9 +669,9 @@ void FlannBasedMatcher::write( FileStorage& fs) const
 
      if (searchParams)
      {
-         std::vector<std::string> names;
+         std::vector<String> names;
          std::vector<int> types;
-         std::vector<std::string> strValues;
+         std::vector<String> strValues;
          std::vector<double> numValues;
 
          searchParams->getAll(names, types, strValues, numValues);
@@ -725,10 +725,10 @@ bool FlannBasedMatcher::isMaskSupported() const
 
 Ptr<DescriptorMatcher> FlannBasedMatcher::clone( bool emptyTrainData ) const
 {
-    FlannBasedMatcher* matcher = new FlannBasedMatcher(indexParams, searchParams);
+    Ptr<FlannBasedMatcher> matcher = makePtr<FlannBasedMatcher>(indexParams, searchParams);
     if( !emptyTrainData )
     {
-        CV_Error( CV_StsNotImplemented, "deep clone functionality is not implemented, because "
+        CV_Error( Error::StsNotImplemented, "deep clone functionality is not implemented, because "
                   "Flann::Index has not copy constructor or clone method ");
         //matcher->flannIndex;
         matcher->addedDescCount = addedDescCount;
@@ -1060,13 +1060,13 @@ bool GenericDescriptorMatcher::empty() const
 /*
  * Factory function for GenericDescriptorMatch creating
  */
-Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const std::string& genericDescritptorMatcherType,
-                                                                const std::string &paramsFilename )
+Ptr<GenericDescriptorMatcher> GenericDescriptorMatcher::create( const String& genericDescritptorMatcherType,
+                                                                const String &paramsFilename )
 {
     Ptr<GenericDescriptorMatcher> descriptorMatcher =
         Algorithm::create<GenericDescriptorMatcher>("DescriptorMatcher." + genericDescritptorMatcherType);
 
-    if( !paramsFilename.empty() && !descriptorMatcher.empty() )
+    if( !paramsFilename.empty() && descriptorMatcher )
     {
         FileStorage fs = FileStorage( paramsFilename, FileStorage::READ );
         if( fs.isOpened() )
@@ -1086,7 +1086,7 @@ VectorDescriptorMatcher::VectorDescriptorMatcher( const Ptr<DescriptorExtractor>
                                                   const Ptr<DescriptorMatcher>& _matcher )
                                 : extractor( _extractor ), matcher( _matcher )
 {
-    CV_Assert( !extractor.empty() && !matcher.empty() );
+    CV_Assert( extractor && matcher );
 }
 
 VectorDescriptorMatcher::~VectorDescriptorMatcher()
@@ -1152,14 +1152,14 @@ void VectorDescriptorMatcher::write (FileStorage& fs) const
 
 bool VectorDescriptorMatcher::empty() const
 {
-    return extractor.empty() || extractor->empty() ||
-           matcher.empty() || matcher->empty();
+    return !extractor || extractor->empty() ||
+           !matcher || matcher->empty();
 }
 
 Ptr<GenericDescriptorMatcher> VectorDescriptorMatcher::clone( bool emptyTrainData ) const
 {
     // TODO clone extractor
-    return new VectorDescriptorMatcher( extractor, matcher->clone(emptyTrainData) );
+    return makePtr<VectorDescriptorMatcher>( extractor, matcher->clone(emptyTrainData) );
 }
 
 }

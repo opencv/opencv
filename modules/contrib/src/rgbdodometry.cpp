@@ -54,7 +54,6 @@
 #include <iostream>
 #include <limits>
 
-#include "opencv2/core/internal.hpp"
 #if defined(HAVE_EIGEN) && EIGEN_WORLD_VERSION == 3
 #  ifdef ANDROID
      template <typename Scalar> Scalar log2(Scalar v) { return std::log(v)/std::log(Scalar(2)); }
@@ -423,7 +422,7 @@ bool computeKsi( int transformType,
         computeCFuncPtr = computeC_Translation;
     }
     else
-        CV_Error( CV_StsBadFlag, "Unsupported value of transformation type flag.");
+        CV_Error(Error::StsBadFlag, "Unsupported value of transformation type flag.");
 
     Mat C( correspsCount, Cwidth, CV_64FC1 );
     Mat dI_dt( correspsCount, 1, CV_64FC1 );

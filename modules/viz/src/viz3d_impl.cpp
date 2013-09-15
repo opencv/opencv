@@ -59,7 +59,7 @@ vtkRenderWindowInteractor* vtkRenderWindowInteractorFixNew()
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-cv::viz::Viz3d::VizImpl::VizImpl(const std::string &name)
+cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
     :  style_(vtkSmartPointer<cv::viz::InteractorStyle>::New())
     , widget_actor_map_(new WidgetActorMap)
     , s_lastDone_(0.0)
@@ -252,7 +252,7 @@ double cv::viz::Viz3d::VizImpl::getDesiredUpdateRate()
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-void cv::viz::Viz3d::VizImpl::saveScreenshot(const std::string &file) { style_->saveScreenshot(file); }
+void cv::viz::Viz3d::VizImpl::saveScreenshot(const String &file) { style_->saveScreenshot(file.c_str()); }
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::registerMouseCallback(MouseCallback callback, void* cookie)

@@ -33,6 +33,7 @@
 #   <add extra installation rules>
 #   ocv_add_accuracy_tests(<extra dependencies>)
 #   ocv_add_perf_tests(<extra dependencies>)
+#   ocv_add_samples(<extra dependencies>)
 #
 #
 # If module have no "extra" then you can define it in one line:
@@ -303,7 +304,7 @@ macro(ocv_glob_modules)
   # collect modules
   set(OPENCV_INITIAL_PASS ON)
   foreach(__path ${ARGN})
-    ocv_get_real_path(__path "${__path}")
+    get_filename_component(__path "${__path}" ABSOLUTE)
 
     list(FIND __directories_observed "${__path}" __pathIdx)
     if(__pathIdx GREATER -1)
@@ -315,7 +316,7 @@ macro(ocv_glob_modules)
     if(__ocvmodules)
       list(SORT __ocvmodules)
       foreach(mod ${__ocvmodules})
-        ocv_get_real_path(__modpath "${__path}/${mod}")
+        get_filename_component(__modpath "${__path}/${mod}" ABSOLUTE)
         if(EXISTS "${__modpath}/CMakeLists.txt")
 
           list(FIND __directories_observed "${__modpath}" __pathIdx)
@@ -432,20 +433,32 @@ macro(ocv_glob_module_sources)
   file(GLOB lib_hdrs     "include/opencv2/*.hpp" "include/opencv2/${name}/*.hpp" "include/opencv2/${name}/*.h")
   file(GLOB lib_hdrs_detail "include/opencv2/${name}/detail/*.hpp" "include/opencv2/${name}/detail/*.h")
 
-  file(GLOB lib_device_srcs "src/cuda/*.cu")
-  set(device_objs "")
-  set(lib_device_hdrs "")
+  file(GLOB lib_cuda_srcs "src/cuda/*.cu")
+  set(cuda_objs "")
+  set(lib_cuda_hdrs "")
 
-  if (HAVE_CUDA AND lib_device_srcs)
+  if(HAVE_CUDA AND lib_cuda_srcs)
     ocv_include_directories(${CUDA_INCLUDE_DIRS})
-    file(GLOB lib_device_hdrs "src/cuda/*.hpp")
+    file(GLOB lib_cuda_hdrs "src/cuda/*.hpp")
 
-    ocv_cuda_compile(device_objs ${lib_device_srcs} ${lib_device_hdrs})
-    source_group("Src\\Cuda"      FILES ${lib_device_srcs} ${lib_device_hdrs})
+    ocv_cuda_compile(cuda_objs ${lib_cuda_srcs} ${lib_cuda_hdrs})
+    source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
+  endif()
+
+  file(GLOB cl_kernels "src/opencl/*.cl")
+
+  if(HAVE_OPENCL AND cl_kernels)
+    ocv_include_directories(${OPENCL_INCLUDE_DIRS})
+    add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp"
+      COMMAND ${CMAKE_COMMAND} -DCL_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opencl" -DOUTPUT="${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp" -P "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake"
+      DEPENDS ${cl_kernels} "${OpenCV_SOURCE_DIR}/cmake/cl2cpp.cmake")
+    source_group("Src\\OpenCL" FILES ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
+    list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/kernels.cpp")
   endif()
 
   ocv_set_module_sources(${ARGN} HEADERS ${lib_hdrs} ${lib_hdrs_detail}
-                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${device_objs} ${lib_device_srcs} ${lib_device_hdrs})
+                                 SOURCES ${lib_srcs} ${lib_int_hdrs} ${cuda_objs} ${lib_cuda_srcs} ${lib_cuda_hdrs})
 
   source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
@@ -458,12 +471,27 @@ endmacro()
 #   ocv_create_module(<extra link dependencies>)
 #   ocv_create_module(SKIP_LINK)
 macro(ocv_create_module)
-  add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES})
+  # The condition we ought to be testing here is whether ocv_add_precompiled_headers will
+  # be called at some point in the future. We can't look into the future, though,
+  # so this will have to do.
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/precomp.hpp")
+    get_native_precompiled_header(${the_module} precomp.hpp)
+  endif()
+
+  add_library(${the_module} ${OPENCV_MODULE_TYPE} ${OPENCV_MODULE_${the_module}_HEADERS} ${OPENCV_MODULE_${the_module}_SOURCES}
+    "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h" "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/opencv2/opencv_modules.hpp"
+    ${${the_module}_pch})
+  if(NOT the_module STREQUAL opencv_ts)
+    set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
+  endif()
 
   if(NOT "${ARGN}" STREQUAL "SKIP_LINK")
     target_link_libraries(${the_module} ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULE_${the_module}_DEPS_EXT} ${OPENCV_LINKER_LIBS} ${IPP_LIBS} ${ARGN})
     if (HAVE_CUDA)
       target_link_libraries(${the_module} ${CUDA_LIBRARIES} ${CUDA_npp_LIBRARY})
+    endif()
+    if(HAVE_OPENCL AND OPENCL_LIBRARIES)
+      target_link_libraries(${the_module} ${OPENCL_LIBRARIES})
     endif()
   endif()
 
@@ -492,7 +520,8 @@ macro(ocv_create_module)
     )
   endif()
 
-  if(BUILD_SHARED_LIBS)
+  if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
+      OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
     if(MSVC)
       set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
     else()
@@ -517,7 +546,7 @@ macro(ocv_create_module)
   if(OPENCV_MODULE_${the_module}_HEADERS AND ";${OPENCV_MODULES_PUBLIC};" MATCHES ";${the_module};")
     foreach(hdr ${OPENCV_MODULE_${the_module}_HEADERS})
       string(REGEX REPLACE "^.*opencv2/" "opencv2/" hdr2 "${hdr}")
-      if(hdr2 MATCHES "^(opencv2/.*)/[^/]+.h(..)?$")
+      if(NOT hdr2 MATCHES "opencv2/${the_module}/private.*" AND hdr2 MATCHES "^(opencv2/?.*)/[^/]+.h(..)?$" )
         install(FILES ${hdr} DESTINATION "${OPENCV_INCLUDE_INSTALL_PATH}/${CMAKE_MATCH_1}" COMPONENT main)
       endif()
     endforeach()
@@ -553,6 +582,7 @@ macro(ocv_define_module module_name)
 
   ocv_add_accuracy_tests()
   ocv_add_perf_tests()
+  ocv_add_samples()
 endmacro()
 
 # ensures that all passed modules are available
@@ -620,7 +650,9 @@ function(ocv_add_perf_tests)
         set(OPENCV_PERF_${the_module}_SOURCES ${perf_srcs} ${perf_hdrs})
       endif()
 
-      add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES})
+      get_native_precompiled_header(${the_target} perf_precomp.hpp)
+
+      add_executable(${the_target} ${OPENCV_PERF_${the_module}_SOURCES} ${${the_target}_pch})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${perf_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_perf_tests ${the_target})
 
@@ -636,9 +668,6 @@ function(ocv_add_perf_tests)
 
       ocv_add_precompiled_headers(${the_target})
 
-      if (PYTHON_EXECUTABLE)
-        add_dependencies(perf ${the_target})
-      endif()
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
@@ -671,7 +700,9 @@ function(ocv_add_accuracy_tests)
         set(OPENCV_TEST_${the_module}_SOURCES ${test_srcs} ${test_hdrs})
       endif()
 
-      add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES})
+      get_native_precompiled_header(${the_target} test_precomp.hpp)
+
+      add_executable(${the_target} ${OPENCV_TEST_${the_module}_SOURCES} ${${the_target}_pch})
       target_link_libraries(${the_target} ${OPENCV_MODULE_${the_module}_DEPS} ${test_deps} ${OPENCV_LINKER_LIBS})
       add_dependencies(opencv_tests ${the_target})
 
@@ -693,6 +724,48 @@ function(ocv_add_accuracy_tests)
     else(OCV_DEPENDENCIES_FOUND)
       # TODO: warn about unsatisfied dependencies
     endif(OCV_DEPENDENCIES_FOUND)
+  endif()
+endfunction()
+
+function(ocv_add_samples)
+  set(samples_path "${CMAKE_CURRENT_SOURCE_DIR}/samples")
+  string(REGEX REPLACE "^opencv_" "" module_id ${the_module})
+
+  if(BUILD_EXAMPLES AND EXISTS "${samples_path}")
+    set(samples_deps ${the_module} ${OPENCV_MODULE_${the_module}_DEPS} opencv_highgui ${ARGN})
+    ocv_check_dependencies(${samples_deps})
+
+    if(OCV_DEPENDENCIES_FOUND)
+      file(GLOB sample_sources "${samples_path}/*.cpp")
+      ocv_include_modules(${OPENCV_MODULE_${the_module}_DEPS})
+
+      foreach(source ${sample_sources})
+        get_filename_component(name "${source}" NAME_WE)
+        set(the_target "example_${module_id}_${name}")
+
+        add_executable(${the_target} "${source}")
+        target_link_libraries(${the_target} ${samples_deps})
+
+        set_target_properties(${the_target} PROPERTIES PROJECT_LABEL "(sample) ${name}")
+
+        if(ENABLE_SOLUTION_FOLDERS)
+          set_target_properties(${the_target} PROPERTIES
+            OUTPUT_NAME "${module_id}-example-${name}"
+            FOLDER "samples/${module_id}")
+        endif()
+
+        if(WIN32)
+          install(TARGETS ${the_target} RUNTIME DESTINATION "samples/${module_id}" COMPONENT main)
+        endif()
+      endforeach()
+    endif()
+  endif()
+
+  if(INSTALL_C_EXAMPLES AND NOT WIN32 AND EXISTS "${samples_path}")
+    file(GLOB sample_files "${samples_path}/*")
+    install(FILES ${sample_files}
+            DESTINATION share/OpenCV/samples/${module_id}
+            PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
   endif()
 endfunction()
 

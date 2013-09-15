@@ -33,13 +33,13 @@ const Scalar BLUE = Scalar(255,0,0);
 const Scalar LIGHTBLUE = Scalar(255,255,160);
 const Scalar GREEN = Scalar(0,255,0);
 
-const int BGD_KEY = CV_EVENT_FLAG_CTRLKEY;
-const int FGD_KEY = CV_EVENT_FLAG_SHIFTKEY;
+const int BGD_KEY = EVENT_FLAG_CTRLKEY;
+const int FGD_KEY = EVENT_FLAG_SHIFTKEY;
 
 static void getBinMask( const Mat& comMask, Mat& binMask )
 {
     if( comMask.empty() || comMask.type()!=CV_8UC1 )
-        CV_Error( CV_StsBadArg, "comMask is empty or has incorrect type (not CV_8UC1)" );
+        CV_Error( Error::StsBadArg, "comMask is empty or has incorrect type (not CV_8UC1)" );
     if( binMask.empty() || binMask.rows!=comMask.rows || binMask.cols!=comMask.cols )
         binMask.create( comMask.size(), CV_8UC1 );
     binMask = comMask & 1;
@@ -132,7 +132,7 @@ void GCApplication::showImage() const
 
 void GCApplication::setRectInMask()
 {
-    assert( !mask.empty() );
+    CV_Assert( !mask.empty() );
     mask.setTo( GC_BGD );
     rect.x = max(0, rect.x);
     rect.y = max(0, rect.y);
@@ -176,7 +176,7 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
     // TODO add bad args check
     switch( event )
     {
-    case CV_EVENT_LBUTTONDOWN: // set rect or GC_BGD(GC_FGD) labels
+    case EVENT_LBUTTONDOWN: // set rect or GC_BGD(GC_FGD) labels
         {
             bool isb = (flags & BGD_KEY) != 0,
                  isf = (flags & FGD_KEY) != 0;
@@ -189,7 +189,7 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
                 lblsState = IN_PROCESS;
         }
         break;
-    case CV_EVENT_RBUTTONDOWN: // set GC_PR_BGD(GC_PR_FGD) labels
+    case EVENT_RBUTTONDOWN: // set GC_PR_BGD(GC_PR_FGD) labels
         {
             bool isb = (flags & BGD_KEY) != 0,
                  isf = (flags & FGD_KEY) != 0;
@@ -197,13 +197,13 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
                 prLblsState = IN_PROCESS;
         }
         break;
-    case CV_EVENT_LBUTTONUP:
+    case EVENT_LBUTTONUP:
         if( rectState == IN_PROCESS )
         {
             rect = Rect( Point(rect.x, rect.y), Point(x,y) );
             rectState = SET;
             setRectInMask();
-            assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
+            CV_Assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
             showImage();
         }
         if( lblsState == IN_PROCESS )
@@ -213,7 +213,7 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
             showImage();
         }
         break;
-    case CV_EVENT_RBUTTONUP:
+    case EVENT_RBUTTONUP:
         if( prLblsState == IN_PROCESS )
         {
             setLblsInMask(flags, Point(x,y), true);
@@ -221,11 +221,11 @@ void GCApplication::mouseClick( int event, int x, int y, int flags, void* )
             showImage();
         }
         break;
-    case CV_EVENT_MOUSEMOVE:
+    case EVENT_MOUSEMOVE:
         if( rectState == IN_PROCESS )
         {
             rect = Rect( Point(rect.x, rect.y), Point(x,y) );
-            assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
+            CV_Assert( bgdPxls.empty() && fgdPxls.empty() && prBgdPxls.empty() && prFgdPxls.empty() );
             showImage();
         }
         else if( lblsState == IN_PROCESS )
@@ -296,15 +296,15 @@ int main( int argc, char** argv )
     help();
 
     const string winName = "image";
-    cvNamedWindow( winName.c_str(), CV_WINDOW_AUTOSIZE );
-    cvSetMouseCallback( winName.c_str(), on_mouse, 0 );
+    namedWindow( winName.c_str(), WINDOW_AUTOSIZE );
+    setMouseCallback( winName.c_str(), on_mouse, 0 );
 
     gcapp.setImageAndWinName( image, winName );
     gcapp.showImage();
 
     for(;;)
     {
-        int c = cvWaitKey(0);
+        int c = waitKey();
         switch( (char) c )
         {
         case '\x1b':
@@ -331,6 +331,6 @@ int main( int argc, char** argv )
     }
 
 exit_main:
-    cvDestroyWindow( winName.c_str() );
+    destroyWindow( winName.c_str() );
     return 0;
 }

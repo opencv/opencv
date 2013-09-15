@@ -44,8 +44,7 @@
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
-// #include <opencv2/gpu/device/common.hpp>
-#include "opencv2/core/cuda_devptrs.hpp"
+#include "opencv2/core/gpu_types.hpp"
 #include "cuda_runtime_api.h"
 
 #if defined __CUDACC__
@@ -55,7 +54,7 @@
 #endif
 
 
-namespace cv { namespace softcascade { namespace device {
+namespace cv { namespace softcascade { namespace cudev {
 
 typedef unsigned char uchar;
 typedef unsigned int uint;
@@ -63,14 +62,14 @@ typedef unsigned short ushort;
 
 struct Octave
 {
+    float scale;
+    ushort2 size;
     ushort index;
     ushort stages;
     ushort shrinkage;
-    ushort2 size;
-    float scale;
 
     Octave(const ushort i, const ushort s, const ushort sh, const ushort2 sz, const float sc)
-    : index(i), stages(s), shrinkage(sh), size(sz), scale(sc) {}
+    : scale(sc), size(sz), index(i), stages(s), shrinkage(sh) {}
 };
 
 struct Level
@@ -111,7 +110,7 @@ struct Detection
 
     Detection(){}
     __device_inline__ Detection(int _x, int _y, uchar _w, uchar _h, float c)
-    : x(_x), y(_y), w(_w), h(_h), confidence(c), kind(0) {};
+    : x(static_cast<ushort>(_x)), y(static_cast<ushort>(_y)), w(_w), h(_h), confidence(c), kind(0) {};
 };
 
 struct GK107PolicyX4

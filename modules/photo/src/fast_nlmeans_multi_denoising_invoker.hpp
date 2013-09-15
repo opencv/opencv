@@ -43,9 +43,6 @@
 #define __OPENCV_FAST_NLMEANS_MULTI_DENOISING_INVOKER_HPP__
 
 #include "precomp.hpp"
-#include <opencv2/core.hpp>
-#include <opencv2/core/internal.hpp>
-#include <opencv2/imgproc.hpp>
 #include <limits>
 
 #include "fast_nlmeans_denoising_invoker_commons.hpp"
@@ -54,13 +51,13 @@
 using namespace cv;
 
 template <typename T>
-struct FastNlMeansMultiDenoisingInvoker {
+struct FastNlMeansMultiDenoisingInvoker : ParallelLoopBody {
     public:
         FastNlMeansMultiDenoisingInvoker(
             const std::vector<Mat>& srcImgs, int imgToDenoiseIndex, int temporalWindowSize,
             Mat& dst, int template_window_size, int search_window_size, const float h);
 
-        void operator() (const BlockedRange& range) const;
+        void operator() (const Range& range) const;
 
     private:
         void operator= (const FastNlMeansMultiDenoisingInvoker&);
@@ -174,9 +171,9 @@ FastNlMeansMultiDenoisingInvoker<T>::FastNlMeansMultiDenoisingInvoker(
 }
 
 template <class T>
-void FastNlMeansMultiDenoisingInvoker<T>::operator() (const BlockedRange& range) const {
-    int row_from = range.begin();
-    int row_to = range.end() - 1;
+void FastNlMeansMultiDenoisingInvoker<T>::operator() (const Range& range) const {
+    int row_from = range.start;
+    int row_to = range.end - 1;
 
     Array3d<int> dist_sums(temporal_window_size_, search_window_size_, search_window_size_);
 

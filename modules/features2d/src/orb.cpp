@@ -240,7 +240,7 @@ static void computeOrbDescriptor(const KeyPoint& kpt,
         }
     }
     else
-        CV_Error( CV_StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
+        CV_Error( Error::StsBadSize, "Wrong WTA_K. It can be only 2, 3 or 4." );
 
     #undef GET_VALUE
 }
@@ -738,7 +738,7 @@ void ORB::operator()( InputArray _image, InputArray _mask, std::vector<KeyPoint>
 
     Mat image = _image.getMat(), mask = _mask.getMat();
     if( image.type() != CV_8UC1 )
-        cvtColor(_image, image, CV_BGR2GRAY);
+        cvtColor(_image, image, COLOR_BGR2GRAY);
 
     int levelsNum = this->nlevels;
 

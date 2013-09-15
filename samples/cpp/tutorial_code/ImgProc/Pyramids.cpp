@@ -40,7 +40,7 @@ int main( void )
   dst = tmp;
 
   /// Create window
-  namedWindow( window_name, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_name, WINDOW_AUTOSIZE );
   imshow( window_name, dst );
 
   /// Loop
@@ -66,10 +66,3 @@ int main( void )
 
    return 0;
 }
-
-
-
-
-
-
-

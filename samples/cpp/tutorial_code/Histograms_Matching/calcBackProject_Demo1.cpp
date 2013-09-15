@@ -28,7 +28,7 @@ int main( int, char** argv )
   /// Read the image
   src = imread( argv[1], 1 );
   /// Transform it to HSV
-  cvtColor( src, hsv, CV_BGR2HSV );
+  cvtColor( src, hsv, COLOR_BGR2HSV );
 
   /// Use only the Hue value
   hue.create( hsv.size(), hsv.depth() );
@@ -37,7 +37,7 @@ int main( int, char** argv )
 
   /// Create Trackbar to enter the number of bins
   const char* window_image = "Source image";
-  namedWindow( window_image, CV_WINDOW_AUTOSIZE );
+  namedWindow( window_image, WINDOW_AUTOSIZE );
   createTrackbar("* Hue  bins: ", window_image, &bins, 180, Hist_and_Backproj );
   Hist_and_Backproj(0, 0);
 
