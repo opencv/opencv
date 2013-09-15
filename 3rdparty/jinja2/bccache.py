@@ -21,7 +21,7 @@ import tempfile
 import fnmatch
 from hashlib import sha1
 from jinja2.utils import open_if_exists
-from jinja2._compat import BytesIO, pickle, PY2
+from jinja2._compat import BytesIO, pickle, PY2, text_type
 
 
 # marshal works better on 3.x, one hack less required
@@ -160,7 +160,7 @@ class BytecodeCache(object):
         hash = sha1(name.encode('utf-8'))
         if filename is not None:
             filename = '|' + filename
-            if isinstance(filename, unicode):
+            if isinstance(filename, text_type):
                 filename = filename.encode('utf-8')
             hash.update(filename)
         return hash.hexdigest()

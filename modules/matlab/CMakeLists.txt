@@ -97,7 +97,8 @@ ocv_add_module(matlab   BINDINGS
 execute_process(COMMAND git log -1 --pretty=%H OUTPUT_VARIABLE GIT_COMMIT ERROR_QUIET)
 string(REGEX REPLACE "(\r?\n)+$" "" GIT_COMMIT "${GIT_COMMIT}")
 
-# set the path to the C++ header and doc parser
+# set the path to the C++ header and doc parser, and template engine
+set(JINJA2_PATH ${CMAKE_SOURCE_DIR}/3rdparty)
 set(HDR_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/python/src2)
 set(RST_PARSER_PATH ${CMAKE_SOURCE_DIR}/modules/java/generator)
 
@@ -149,6 +150,7 @@ if (NOT MEX_WORKS)
     execute_process(
         COMMAND ${PYTHON_EXECUTABLE}
                 ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
+                --jinja2    ${JINJA2_PATH}
                 --hdrparser ${HDR_PARSER_PATH}
                 --rstparser ${RST_PARSER_PATH}
                 --extra     "test=${CMAKE_CURRENT_SOURCE_DIR}/test/test_generator.hpp"
@@ -208,6 +210,7 @@ add_custom_command(
     OUTPUT ${GENERATE_PROXY}
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/gen_matlab.py
+            --jinja2     ${JINJA2_PATH}
             --hdrparser  ${HDR_PARSER_PATH}
             --rstparser  ${RST_PARSER_PATH}
             --moduleroot ${CMAKE_SOURCE_DIR}/modules
@@ -216,24 +219,26 @@ add_custom_command(
             --outdir     ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/build_info.py
-            --os ${CMAKE_SYSTEM}
-            --arch ${ARCH} ${CMAKE_SYSTEM_PROCESSOR}
-            --compiler ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
-            --mex_arch ${MATLAB_ARCH}
-            --mex_script ${MATLAB_MEX_SCRIPT}
-            --cxx_flags ${MEX_CXXFLAGS}
+            --jinja2         ${JINJA2_PATH}
+            --os             ${CMAKE_SYSTEM}
+            --arch           ${ARCH} ${CMAKE_SYSTEM_PROCESSOR}
+            --compiler       ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}
+            --mex_arch       ${MATLAB_ARCH}
+            --mex_script     ${MATLAB_MEX_SCRIPT}
+            --cxx_flags      ${MEX_CXXFLAGS}
             --opencv_version ${OPENCV_VERSION}
-            --commit ${GIT_COMMIT}
-            --modules ${opencv_modules}
-            --configuration "$(Configuration)" ${CMAKE_BUILD_TYPE}
-            --outdir ${CMAKE_CURRENT_BINARY_DIR}
+            --commit         ${GIT_COMMIT}
+            --modules        ${opencv_modules}
+            --configuration  "$(Configuration)" ${CMAKE_BUILD_TYPE}
+            --outdir         ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
+            --jinja2 ${JINJA2_PATH}
             --opts="${MEX_OPTS}"
             --include_dirs="${MEX_INCLUDE_DIRS}"
             --lib_dir=${MEX_LIB_DIR}
             --libs="${MEX_LIBS}"
-            --flags ${MEX_CXXFLAGS}
+            --flags  ${MEX_CXXFLAGS}
             --outdir ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/test/help.m ${CMAKE_CURRENT_BINARY_DIR}/+cv
     COMMAND ${CMAKE_COMMAND} -E touch ${GENERATE_PROXY}
@@ -291,6 +296,7 @@ install(CODE
     "execute_process(
     COMMAND ${PYTHON_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/generator/cvmex.py
+            --jinja2 ${JINJA2_PATH}
             --opts=${MEX_OPTS}
             --include_dirs=-I${CMAKE_INSTALL_PREFIX}/${OPENCV_INCLUDE_INSTALL_PATH}
             --lib_dir=-L${CMAKE_INSTALL_PREFIX}/${OPENCV_LIB_INSTALL_PATH}

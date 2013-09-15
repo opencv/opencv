@@ -49,6 +49,7 @@ if __name__ == "__main__":
     import sys, re, os, time
     from argparse import ArgumentParser
     parser = ArgumentParser()
+    parser.add_argument('--jinja2')
     parser.add_argument('--os')
     parser.add_argument('--arch', nargs=2)
     parser.add_argument('--compiler', nargs='+')
@@ -62,6 +63,9 @@ if __name__ == "__main__":
     parser.add_argument('--configuration')
     parser.add_argument('--outdir')
     build = parser.parse_args()
+
+    # add jinja to the path
+    sys.path.append(build.jinja2)
 
     from filters import *
     from jinja2 import Environment, FileSystemLoader

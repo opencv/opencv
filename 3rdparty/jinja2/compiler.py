@@ -16,7 +16,7 @@ from jinja2.nodes import EvalContext
 from jinja2.visitor import NodeVisitor
 from jinja2.exceptions import TemplateAssertionError
 from jinja2.utils import Markup, concat, escape
-from jinja2._compat import range_type, text_type, string_types, \
+from jinja2._compat import range_type, next, text_type, string_types, \
      iteritems, NativeStringIO, imap
 
 
@@ -949,16 +949,9 @@ class CodeGenerator(NodeVisitor):
             self.indent()
 
         if node.with_context:
-            self.writeline('include_context = template.new_context('
-                           'context.parent, True, locals())')
-            self.writeline('for name, context_blocks in context.'
-                           'blocks.%s():' % dict_item_iter)
-            self.indent()
-            self.writeline('include_context.blocks.setdefault('
-                           'name, [])[0:0] = context_blocks')
-            self.outdent()
             self.writeline('for event in template.root_render_func('
-                           'include_context):')
+                           'template.new_context(context.parent, True, '
+                           'locals())):')
         else:
             self.writeline('for event in template.module._body_stream:')
 

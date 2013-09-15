@@ -125,7 +125,11 @@ endfunction()
 # sets the variable MATLAB_FOUND to TRUE
 function(locate_matlab_components MATLAB_ROOT_DIR)
   # get the mex extension
-  execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT_)
+  if (UNIX)
+    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext OUTPUT_VARIABLE MATLAB_MEXEXT_)
+  elseif (WIN32)
+    execute_process(COMMAND ${MATLAB_ROOT_DIR}/bin/mexext.bat OUTPUT_VARIABLE MATLAB_MEXEXT_)
+  endif()
   if (NOT MATLAB_MEXEXT_)
     return()
   endif()
@@ -154,7 +158,7 @@ function(locate_matlab_components MATLAB_ROOT_DIR)
   find_path(MATLAB_INCLUDE_DIRS_ mex.h ${MATLAB_ROOT_DIR}/extern/include)
 
   # get the mex shell script
-  find_program(MATLAB_MEX_SCRIPT_ NAMES mex PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
+  find_program(MATLAB_MEX_SCRIPT_ NAMES mex mex.bat PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)
 
   # get the Matlab executable
   find_program(MATLAB_BIN_ NAMES matlab PATHS ${MATLAB_ROOT_DIR}/bin NO_DEFAULT_PATH)

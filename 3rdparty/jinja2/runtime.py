@@ -14,7 +14,7 @@ from jinja2.utils import Markup, soft_unicode, escape, missing, concat, \
      internalcode, object_type_repr
 from jinja2.exceptions import UndefinedError, TemplateRuntimeError, \
      TemplateNotFound
-from jinja2._compat import imap, text_type, iteritems, \
+from jinja2._compat import next, imap, text_type, iteritems, \
      implements_iterator, implements_to_string, string_types, PY2
 
 
@@ -497,6 +497,15 @@ class Undefined(object):
     __float__ = __complex__ = __pow__ = __rpow__ = \
         _fail_with_undefined_error
 
+    def __eq__(self, other):
+        return type(self) is type(other)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return id(type(self))
+
     def __str__(self):
         return u''
 
@@ -563,7 +572,8 @@ class StrictUndefined(Undefined):
     """
     __slots__ = ()
     __iter__ = __str__ = __len__ = __nonzero__ = __eq__ = \
-        __ne__ = __bool__ = Undefined._fail_with_undefined_error
+        __ne__ = __bool__ = __hash__ = \
+        Undefined._fail_with_undefined_error
 
 
 # remove remaining slots attributes, after the metaclass did the magic they

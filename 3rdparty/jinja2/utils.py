@@ -11,9 +11,8 @@
 import re
 import errno
 from collections import deque
-from threading import Lock
 from jinja2._compat import text_type, string_types, implements_iterator, \
-     url_quote
+     allocate_lock, url_quote
 
 
 _word_split_re = re.compile(r'(\s+)')
@@ -310,7 +309,7 @@ class LRUCache(object):
         self._popleft = self._queue.popleft
         self._pop = self._queue.pop
         self._remove = self._queue.remove
-        self._wlock = Lock()
+        self._wlock = allocate_lock()
         self._append = self._queue.append
 
     def __getstate__(self):

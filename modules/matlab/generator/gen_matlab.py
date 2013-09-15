@@ -168,6 +168,7 @@ if __name__ == "__main__":
     import sys, re, os, time
     from argparse import ArgumentParser
     parser = ArgumentParser()
+    parser.add_argument('--jinja2')
     parser.add_argument('--hdrparser')
     parser.add_argument('--rstparser')
     parser.add_argument('--moduleroot', default='', required=False)
@@ -177,6 +178,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # add the hdr_parser and rst_parser modules to the path
+    sys.path.append(args.jinja2)
     sys.path.append(args.hdrparser)
     sys.path.append(args.rstparser)
 

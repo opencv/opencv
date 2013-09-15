@@ -29,6 +29,7 @@ KEEP_TRAILING_NEWLINE = False
 
 # default filters, tests and namespace
 from jinja2.filters import FILTERS as DEFAULT_FILTERS
+from jinja2.tests import TESTS as DEFAULT_TESTS
 DEFAULT_NAMESPACE = {
     'range':        range_type,
     'dict':         lambda **kw: kw,

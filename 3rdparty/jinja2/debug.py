@@ -12,10 +12,10 @@
 """
 import sys
 import traceback
-from types import TracebackType, CodeType
+from types import TracebackType
 from jinja2.utils import missing, internal_code
 from jinja2.exceptions import TemplateSyntaxError
-from jinja2._compat import iteritems, reraise
+from jinja2._compat import iteritems, reraise, code_type
 
 # on pypy we can take advantage of transparent proxies
 try:
@@ -245,11 +245,11 @@ def fake_exc_info(exc_info, filename, lineno):
                 location = 'block "%s"' % function[6:]
             else:
                 location = 'template'
-        code = CodeType(0, code.co_nlocals, code.co_stacksize,
-                        code.co_flags, code.co_code, code.co_consts,
-                        code.co_names, code.co_varnames, filename,
-                        location, code.co_firstlineno,
-                        code.co_lnotab, (), ())
+        code = code_type(0, code.co_nlocals, code.co_stacksize,
+                         code.co_flags, code.co_code, code.co_consts,
+                         code.co_names, code.co_varnames, filename,
+                         location, code.co_firstlineno,
+                         code.co_lnotab, (), ())
     except:
         pass
 

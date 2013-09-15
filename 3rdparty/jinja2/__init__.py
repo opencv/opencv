@@ -27,13 +27,13 @@
     :license: BSD, see LICENSE for more details.
 """
 __docformat__ = 'restructuredtext en'
-__version__ = '2.8-dev'
+__version__ = '2.7.1'
 
 # high level interface
 from jinja2.environment import Environment, Template
 
 # loaders
-from jinja2.loaders import BaseLoader, FileSystemLoader, \
+from jinja2.loaders import BaseLoader, FileSystemLoader, PackageLoader, \
      DictLoader, FunctionLoader, PrefixLoader, ChoiceLoader, \
      ModuleLoader
 
@@ -58,7 +58,7 @@ from jinja2.utils import Markup, escape, clear_caches, \
 
 __all__ = [
     'Environment', 'Template', 'BaseLoader', 'FileSystemLoader',
-    'DictLoader', 'FunctionLoader', 'PrefixLoader',
+    'PackageLoader', 'DictLoader', 'FunctionLoader', 'PrefixLoader',
     'ChoiceLoader', 'BytecodeCache', 'FileSystemBytecodeCache',
     'MemcachedBytecodeCache', 'Undefined', 'DebugUndefined',
     'StrictUndefined', 'TemplateError', 'UndefinedError', 'TemplateNotFound',

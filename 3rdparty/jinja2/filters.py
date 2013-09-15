@@ -18,7 +18,7 @@ from jinja2.utils import Markup, escape, pformat, urlize, soft_unicode, \
      unicode_urlencode
 from jinja2.runtime import Undefined
 from jinja2.exceptions import FilterArgumentError
-from jinja2._compat import imap, string_types, text_type, iteritems
+from jinja2._compat import next, imap, string_types, text_type, iteritems
 
 
 _word_re = re.compile(r'\w+(?u)')
@@ -183,10 +183,10 @@ def do_title(s):
     uppercase letters, all remaining characters are lowercase.
     """
     rv = []
-    for item in re.compile(r'([-\s]+)(?u)').split(soft_unicode(s)):
+    for item in re.compile(r'([-\s]+)(?u)').split(s):
         if not item:
             continue
-        rv.append(item[0].upper() + item[1:])
+        rv.append(item[0].upper() + item[1:].lower())
     return ''.join(rv)
 
 
@@ -842,14 +842,13 @@ def do_map(*args, **kwargs):
 
 @contextfilter
 def do_select(*args, **kwargs):
-    """Filters a sequence of objects by appying a test to the object and only
-    selecting the ones with the test succeeding.
+    """Filters a sequence of objects by appying a test to either the object
+    or the attribute and only selecting the ones with the test succeeding.
 
     Example usage:
 
     .. sourcecode:: jinja
 
-        {{ numbers|select("odd") }}
         {{ numbers|select("odd") }}
 
     .. versionadded:: 2.7
@@ -859,8 +858,8 @@ def do_select(*args, **kwargs):
 
 @contextfilter
 def do_reject(*args, **kwargs):
-    """Filters a sequence of objects by appying a test to the object and
-    rejecting the ones with the test succeeding.
+    """Filters a sequence of objects by appying a test to either the object
+    or the attribute and rejecting the ones with the test succeeding.
 
     Example usage:
 
@@ -875,8 +874,8 @@ def do_reject(*args, **kwargs):
 
 @contextfilter
 def do_selectattr(*args, **kwargs):
-    """Filters a sequence of objects by appying a test to an attribute of an
-    object and only selecting the ones with the test succeeding.
+    """Filters a sequence of objects by appying a test to either the object
+    or the attribute and only selecting the ones with the test succeeding.
 
     Example usage:
 
@@ -892,8 +891,8 @@ def do_selectattr(*args, **kwargs):
 
 @contextfilter
 def do_rejectattr(*args, **kwargs):
-    """Filters a sequence of objects by appying a test to an attribute of an
-    object or the attribute and rejecting the ones with the test succeeding.
+    """Filters a sequence of objects by appying a test to either the object
+    or the attribute and rejecting the ones with the test succeeding.
 
     .. sourcecode:: jinja
 

@@ -20,7 +20,7 @@ from operator import itemgetter
 from collections import deque
 from jinja2.exceptions import TemplateSyntaxError
 from jinja2.utils import LRUCache
-from jinja2._compat import iteritems, implements_iterator, text_type, \
+from jinja2._compat import next, iteritems, implements_iterator, text_type, \
      intern
 
 

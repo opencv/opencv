@@ -192,6 +192,71 @@ class FileSystemLoader(BaseLoader):
         return sorted(found)
 
 
+class PackageLoader(BaseLoader):
+    """Load templates from python eggs or packages.  It is constructed with
+    the name of the python package and the path to the templates in that
+    package::
+
+        loader = PackageLoader('mypackage', 'views')
+
+    If the package path is not given, ``'templates'`` is assumed.
+
+    Per default the template encoding is ``'utf-8'`` which can be changed
+    by setting the `encoding` parameter to something else.  Due to the nature
+    of eggs it's only possible to reload templates if the package was loaded
+    from the file system and not a zip file.
+    """
+
+    def __init__(self, package_name, package_path='templates',
+                 encoding='utf-8'):
+        from pkg_resources import DefaultProvider, ResourceManager, \
+                                  get_provider
+        provider = get_provider(package_name)
+        self.encoding = encoding
+        self.manager = ResourceManager()
+        self.filesystem_bound = isinstance(provider, DefaultProvider)
+        self.provider = provider
+        self.package_path = package_path
+
+    def get_source(self, environment, template):
+        pieces = split_template_path(template)
+        p = '/'.join((self.package_path,) + tuple(pieces))
+        if not self.provider.has_resource(p):
+            raise TemplateNotFound(template)
+
+        filename = uptodate = None
+        if self.filesystem_bound:
+            filename = self.provider.get_resource_filename(self.manager, p)
+            mtime = path.getmtime(filename)
+            def uptodate():
+                try:
+                    return path.getmtime(filename) == mtime
+                except OSError:
+                    return False
+
+        source = self.provider.get_resource_string(self.manager, p)
+        return source.decode(self.encoding), filename, uptodate
+
+    def list_templates(self):
+        path = self.package_path
+        if path[:2] == './':
+            path = path[2:]
+        elif path == '.':
+            path = ''
+        offset = len(path)
+        results = []
+        def _walk(path):
+            for filename in self.provider.resource_listdir(path):
+                fullname = path + '/' + filename
+                if self.provider.resource_isdir(fullname):
+                    _walk(fullname)
+                else:
+                    results.append(fullname[offset:].lstrip('/'))
+        _walk(path)
+        results.sort()
+        return results
+
+
 class DictLoader(BaseLoader):
     """Loads a template from a python dict.  It's passed a dict of unicode
     strings bound to template names.  This loader is useful for unittesting:

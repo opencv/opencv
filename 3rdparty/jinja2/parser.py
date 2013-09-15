@@ -11,10 +11,10 @@
 from jinja2 import nodes
 from jinja2.exceptions import TemplateSyntaxError, TemplateAssertionError
 from jinja2.lexer import describe_token, describe_token_expr
-from jinja2._compat import imap
+from jinja2._compat import next, imap
 
 
-#: statements that callinto
+#: statements that callinto 
 _statement_keywords = frozenset(['for', 'if', 'block', 'extends', 'print',
                                  'macro', 'include', 'from', 'import',
                                  'set'])
