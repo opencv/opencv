@@ -113,7 +113,7 @@ TrackerSamplerCSC::TrackerSamplerCSC( const TrackerSamplerCSC::Params &parameter
 {
   className = "CSC";
   mode = MODE_INIT_POS;
-  rng = RNG( uint64(  TIME( 0 ) ) );
+  rng = RNG( uint64( TIME( 0 ) ) );
 
 }
 

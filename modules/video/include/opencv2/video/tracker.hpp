@@ -455,6 +455,7 @@ class CV_EXPORTS_W TrackerModel
   Ptr<TrackerStateEstimator> stateEstimator;
   ConfidenceMap currentConfidenceMap;
   Trajectory trajectory;
+  int maxCMLength;
 
   virtual void modelEstimationImpl( const std::vector<Mat>& responses ) = 0;
   virtual void modelUpdateImpl() = 0;
@@ -718,16 +719,51 @@ class CV_EXPORTS_W TrackerFeatureHAAR : public TrackerFeature
 
   ~TrackerFeatureHAAR();
 
+  /**
+   * \brief Compute the features only for the selected indices in the images collection
+   * \param selFeatures indices of selected features
+   * \param images        The images.
+   * \param response      Computed features.
+   */
+  bool extractSelected( const std::vector<int> selFeatures, const std::vector<Mat>& images, Mat& response );
+
   void selection( Mat& response, int npoints );
 
- protected:
+  /**
+   * \brief get the list of mean/sigma
+   * \return the list of mean/sigma
+   */
+  std::vector<std::pair<float, float> >& getMeanSigmaPairs();
 
+  /**
+   * \brief swap the feature in position source with the feature in position target
+   * \param source The source position
+   * \param target The target position
+   */
+  bool swapFeature( int source, int target );
+
+  /**
+   * \brief swap the feature in position id with the feature input
+   * \param id The position
+   * \param feature The feature
+   */
+  bool swapFeature( int id, CvHaarEvaluator::FeatureHaar& feature );
+
+  /**
+   * \brief get the feature
+   * \param id The position
+   * \return the feature in position id
+   */
+  CvHaarEvaluator::FeatureHaar& getFeatureAt( int id );
+
+ protected:
   bool computeImpl( const std::vector<Mat>& images, Mat& response );
 
  private:
 
   Params params;
   Ptr<CvHaarEvaluator> featureEvaluator;
+  std::vector<std::pair<float, float> > meanSigmaPairs;
 };
 
 /**

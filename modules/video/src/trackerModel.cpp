@@ -51,6 +51,7 @@ namespace cv
 TrackerModel::TrackerModel()
 {
   stateEstimator = 0;
+  maxCMLength = 1;
 }
 
 TrackerModel::~TrackerModel()
@@ -89,6 +90,16 @@ void TrackerModel::modelUpdate()
 {
   modelUpdateImpl();
 
+  if( maxCMLength != -1 && confidenceMaps.size() >= maxCMLength - 1 )
+  {
+    int l = maxCMLength / 2;
+    confidenceMaps.erase( confidenceMaps.begin(), confidenceMaps.begin() + l );
+  }
+  if( maxCMLength != -1 && trajectory.size() >= maxCMLength - 1 )
+  {
+    int l = maxCMLength / 2;
+    trajectory.erase( trajectory.begin(), trajectory.begin() + l );
+  }
   confidenceMaps.push_back( currentConfidenceMap );
   stateEstimator->update( confidenceMaps );
 

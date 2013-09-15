@@ -216,6 +216,11 @@ void CvHaarEvaluator::setImage( const Mat& img, uchar /*clsLabel*/, int /*idx*/)
   }
 }
 
+std::vector<std::pair<float, float> >& CvHaarEvaluator::getMeanSigmaPairs()
+{
+  return meanSigmaPairs;
+}
+
 void CvHaarEvaluator::writeFeatures( FileStorage &fs, const Mat& featureMap ) const
 {
   _writeFeatures( features, fs, featureMap );
@@ -239,6 +244,7 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
   {
     CvHaarEvaluator::FeatureHaar feature( Size( winSize.width, winSize.height ) );
     features.push_back( feature );
+    meanSigmaPairs.push_back( std::make_pair( feature.getInitMean(), feature.getInitSigma() ) );
   }
 
 }
@@ -280,6 +286,16 @@ CvHaarEvaluator::FeatureHaar::FeatureHaar( Size patchSize )
   {
     throw;
   }
+}
+
+float CvHaarEvaluator::FeatureHaar::getInitMean() const
+{
+  return m_initMean;
+}
+
+float CvHaarEvaluator::FeatureHaar::getInitSigma() const
+{
+  return m_initSigma;
 }
 
 void CvHaarEvaluator::FeatureHaar::generateRandomFeature( Size patchSize )
@@ -745,11 +761,6 @@ float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
   return value;
 }
 
-void CvHaarEvaluator::FeatureHaar::getInitialDistribution( EstimatedGaussDistribution* distribution )
-{
-  distribution->setValues( m_initMean, m_initSigma );
-}
-
 float CvHaarEvaluator::FeatureHaar::getResponse()
 {
   return m_response;
@@ -768,75 +779,6 @@ const std::vector<float>& CvHaarEvaluator::FeatureHaar::getWeights() const
 const std::vector<Rect>& CvHaarEvaluator::FeatureHaar::getAreas() const
 {
   return m_areas;
-}
-
-CvHaarEvaluator::EstimatedGaussDistribution::EstimatedGaussDistribution()
-{
-  m_mean = 0;
-  m_sigma = 1;
-  this->m_P_mean = 1000;
-  this->m_R_mean = 0.01f;
-  this->m_P_sigma = 1000;
-  this->m_R_sigma = 0.01f;
-}
-
-CvHaarEvaluator::EstimatedGaussDistribution::EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma )
-{
-  m_mean = 0;
-  m_sigma = 1;
-  this->m_P_mean = P_mean;
-  this->m_R_mean = R_mean;
-  this->m_P_sigma = P_sigma;
-  this->m_R_sigma = R_sigma;
-}
-
-CvHaarEvaluator::EstimatedGaussDistribution::~EstimatedGaussDistribution()
-{
-}
-
-void CvHaarEvaluator::EstimatedGaussDistribution::update( float value )
-{
-//update distribution (mean and sigma) using a kalman filter for each
-
-  float K;
-  float minFactor = 0.001f;
-
-//mean
-
-  K = m_P_mean / ( m_P_mean + m_R_mean );
-  if( K < minFactor )
-    K = minFactor;
-
-  m_mean = K * value + ( 1.0f - K ) * m_mean;
-  m_P_mean = m_P_mean * m_R_mean / ( m_P_mean + m_R_mean );
-
-  K = m_P_sigma / ( m_P_sigma + m_R_sigma );
-  if( K < minFactor )
-    K = minFactor;
-
-  float tmp_sigma = K * ( m_mean - value ) * ( m_mean - value ) + ( 1.0f - K ) * m_sigma * m_sigma;
-  m_P_sigma = m_P_sigma * m_R_mean / ( m_P_sigma + m_R_sigma );
-
-  m_sigma = static_cast<float>( sqrt( tmp_sigma ) );
-  if( m_sigma <= 1.0f )
-    m_sigma = 1.0f;
-
-}
-
-void CvHaarEvaluator::EstimatedGaussDistribution::setValues( float mean, float sigma )
-{
-  this->m_mean = mean;
-  this->m_sigma = sigma;
-}
-
-float CvHaarEvaluator::EstimatedGaussDistribution::getMean()
-{
-  return m_mean;
-}
-
-float CvHaarEvaluator::EstimatedGaussDistribution::getSigma()
-{
-  return m_sigma;
 }
 
 CvHOGFeatureParams::CvHOGFeatureParams()

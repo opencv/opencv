@@ -214,35 +214,12 @@ class CvHaarEvaluator : public CvFeatureEvaluator
 {
  public:
 
-  class EstimatedGaussDistribution
-  {
-   public:
-
-    EstimatedGaussDistribution();
-    EstimatedGaussDistribution( float P_mean, float R_mean, float P_sigma, float R_sigma );
-    virtual ~EstimatedGaussDistribution();
-    void update( float value );  //, float timeConstant = -1.0);
-    float getMean();
-    float getSigma();
-    void setValues( float mean, float sigma );
-
-   private:
-
-    float m_mean;
-    float m_sigma;
-    float m_P_mean;
-    float m_P_sigma;
-    float m_R_mean;
-    float m_R_sigma;
-  };
-
   class FeatureHaar
   {
 
    public:
 
     FeatureHaar( Size patchSize );
-    void getInitialDistribution( CvHaarEvaluator::EstimatedGaussDistribution *distribution );
     bool eval( const Mat& image, Rect ROI, float* result );
     float getResponse();
     int getNumAreas();
@@ -252,6 +229,8 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     {
     }
     ;
+    float getInitMean() const;
+    float getInitSigma() const;
 
    private:
     int m_type;
@@ -285,7 +264,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   void setWinSize( Size patchSize );
   Size setWinSize() const;
   virtual void generateFeatures();
-
+  std::vector<std::pair<float, float> >& getMeanSigmaPairs();
 
   /**
    * TODO new method
@@ -307,9 +286,8 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     split( ii_img, ii_imgs );
   }
 
-
-
   std::vector<FeatureHaar> features;
+  std::vector<std::pair<float, float> > meanSigmaPairs;
   Mat sum; /* sum images (each row represents image) */
 };
 

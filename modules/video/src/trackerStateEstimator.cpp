@@ -96,8 +96,8 @@ String TrackerStateEstimator::getClassName() const
 /**
  * TrackerStateEstimatorMILBoosting::TrackerMILTargetState
  */
-TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int width, int height,
-                                                                                bool foreground, const Mat& features )
+TrackerStateEstimatorMILBoosting::TrackerMILTargetState::TrackerMILTargetState( const Point2f& position, int width, int height, bool foreground,
+                                                                                const Mat& features )
 {
   setTargetPosition( position );
   setTargetWidth( width );
@@ -151,7 +151,7 @@ uint TrackerStateEstimatorMILBoosting::max_idx( const std::vector<float> &v )
   return (uint) ( findPtr - beginPtr );
 }
 
-Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& /*confidenceMaps*/ )
+Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
   //run ClfMilBoost classify in order to compute next location
   if( currentConfidenceMap.empty() )
@@ -259,7 +259,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorSVM::estimateImpl( const std::vecto
   return confidenceMaps.back().back().first;
 }
 
-void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/ )
+void TrackerStateEstimatorSVM::updateImpl( std::vector<ConfidenceMap>& /*confidenceMaps*/)
 {
 
 }
