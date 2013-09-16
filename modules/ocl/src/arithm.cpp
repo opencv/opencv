@@ -108,13 +108,6 @@ namespace cv
     }
 }
 
-//////////////////////////////////////////////////////////////////////////
-//////////////////common/////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////// add subtract multiply divide /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -150,10 +143,7 @@ void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -226,10 +216,7 @@ static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, 
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -338,10 +325,7 @@ void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, 
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -397,10 +381,7 @@ static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelN
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -515,10 +496,8 @@ static void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, str
     int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols  + offset_cols, vector_length);
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
+
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -945,10 +924,7 @@ static void arithmetic_flip_rows_run(const oclMat &src, oclMat &dst, string kern
     int rows = divUp(dst.rows, 2);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -993,10 +969,7 @@ static void arithmetic_flip_cols_run(const oclMat &src, oclMat &dst, string kern
     int rows = isVertical ?  divUp(dst.rows, 2) : dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -1156,10 +1129,7 @@ static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernel
     int depth = dst.depth();
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(dst.cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
@@ -1201,13 +1171,9 @@ static void arithmetic_magnitude_phase_run(const oclMat &src1, const oclMat &src
     size_t vector_length = 1;
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-    int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
@@ -1252,13 +1218,9 @@ static void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat 
     size_t vector_length = 1;
     int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-    int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -1283,15 +1245,9 @@ void cv::ocl::phase(const oclMat &x, const oclMat &y, oclMat &Angle , bool angle
     Angle.create(x.size(), x.type());
     string kernelName = angleInDegrees ? "arithm_phase_indegrees" : "arithm_phase_inradians";
     if(angleInDegrees)
-    {
         arithmetic_phase_run(x, y, Angle, kernelName, &arithm_phase);
-        //cout<<"1"<<endl;
-    }
     else
-    {
         arithmetic_phase_run(x, y, Angle, kernelName, &arithm_phase);
-        //cout<<"2"<<endl;
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1311,13 +1267,9 @@ static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, o
     int depth = src1.depth();
 
     int cols = src1.cols * channels;
-    int rows = src1.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, src1.rows, 1 };
 
     int tmp = angleInDegrees ? 1 : 0;
     vector<pair<size_t , const void *> > args;
@@ -1333,7 +1285,7 @@ static void arithmetic_cartToPolar_run(const oclMat &src1, const oclMat &src2, o
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst_cart.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_cart.step ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_cart.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&tmp ));
 
@@ -1369,10 +1321,7 @@ static void arithmetic_ptc_run(const oclMat &src1, const oclMat &src2, oclMat &d
     int rows = src2.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, rows, 1 };
 
     int tmp = angleInDegrees ? 1 : 0;
     vector<pair<size_t , const void *> > args;
@@ -1632,10 +1581,7 @@ static void bitwise_run(const oclMat &src1, oclMat &dst, string kernelName, cons
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -1678,10 +1624,7 @@ void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string ker
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -1739,10 +1682,7 @@ static void bitwise_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -1800,10 +1740,7 @@ void bitwise_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst,
     int cols = divUp(dst.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2096,10 +2033,7 @@ static void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
     int cols = divUp(src.cols + offset_cols, vector_length);
 
     size_t localThreads[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalThreads[3] = { divUp(cols, TILE_DIM) *localThreads[0],
-                                divUp(src.rows, TILE_DIM) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, src.rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
@@ -2154,10 +2088,7 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1};
 
     int dst_step1 = dst.cols * dst.elemSize();
     int src1_step = (int) src1.step;
@@ -2220,10 +2151,7 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, const oclMat &src2, oclMat &dst)
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2268,10 +2196,7 @@ void cv::ocl::magnitudeSqr(const oclMat &src1, oclMat &dst)
     int cols = divUp(dst.cols * channels + offset_cols, vector_length);
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(dst.rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
@@ -2303,10 +2228,7 @@ static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, rows, 1 };
 
     int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;

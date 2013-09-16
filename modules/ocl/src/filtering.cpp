@@ -70,20 +70,10 @@ extern const char *filtering_adaptive_bilateral;
 
 namespace
 {
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
-}
-
-namespace
-{
 inline void normalizeAnchor(int &anchor, int ksize)
 {
     if (anchor < 0)
-    {
         anchor = ksize >> 1;
-    }
 
     CV_Assert(0 <= anchor && anchor < ksize);
 }
@@ -97,9 +87,7 @@ inline void normalizeAnchor(Point &anchor, const Size &ksize)
 inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
 {
     if (roi == Rect(0, 0, -1, -1))
-    {
         roi = Rect(0, 0, src_size.width, src_size.height);
-    }
 
     CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
     CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
@@ -112,10 +100,7 @@ inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8
     int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
 
     if (nDivisor)
-    {
         *nDivisor = scale;
-    }
-
     Mat temp(kernel.size(), type);
     kernel.convertTo(temp, type, scale);
     Mat cont_krnl = temp.reshape(1, 1);
@@ -125,9 +110,7 @@ inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8
         int count = cont_krnl.cols >> 1;
 
         for (int i = 0; i < count; ++i)
-        {
             std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
-        }
     }
 
     gpu_krnl.upload(cont_krnl);
@@ -627,8 +610,6 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const oclMat &mat_kernel
     int localWidth = localThreads[0] + paddingPixels;
     int localHeight = localThreads[1] + paddingPixels;
 
-    // 260 = divup((localThreads[0] + filterWidth * 2), 4) * 4
-    // 6   = (ROWS_PER_GROUP_WHICH_IS_4 + filterWidth * 2)
     size_t localMemSize = ksize_3x3 ? 260 * 6 * src.elemSize() : (localWidth * localHeight) * src.elemSize();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 4, 4, 4},

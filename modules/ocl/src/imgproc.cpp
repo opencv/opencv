@@ -1518,11 +1518,6 @@ namespace cv
         // CLAHE
         namespace clahe
         {
-            inline int divUp(int total, int grain)
-            {
-                return (total + grain - 1) / grain * grain;
-            }
-
             static void calcLut(const oclMat &src, oclMat &dst,
                 const int tilesX, const int tilesY, const cv::Size tileSize,
                 const int clipLimit, const float lutScale)
@@ -1546,9 +1541,7 @@ namespace cv
                 size_t globalThreads[3] = { tilesX * localThreads[0], tilesY * localThreads[1], 1 };
                 bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
                 if (is_cpu)
-                {
                     openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, (char*)" -D CPU");
-                }
                 else
                 {
                     cl_kernel kernel = openCLGetKernelFromSource(Context::getContext(), &imgproc_clahe, kernelName);
@@ -1583,7 +1576,7 @@ namespace cv
 
                 String kernelName = "transform";
                 size_t localThreads[3]  = { 32, 8, 1 };
-                size_t globalThreads[3] = { divUp(src.cols, localThreads[0]), divUp(src.rows, localThreads[1]), 1 };
+                size_t globalThreads[3] = { src.cols, src.rows, 1 };
 
                 openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1);
             }
@@ -1801,10 +1794,7 @@ namespace cv
     }
 }
 //////////////////////////////////convolve////////////////////////////////////////////////////
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
+
 static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src.depth() == CV_32FC1);
@@ -1826,10 +1816,7 @@ static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, st
     int rows = dst.rows;
 
     size_t localThreads[3]  = { 16, 16, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) *localThreads[0],
-                                divUp(rows, localThreads[1]) *localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, rows, 1 };
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));

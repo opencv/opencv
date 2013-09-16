@@ -73,11 +73,6 @@ oclMat gKer;
 
 float ig[4];
 
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
-
 inline void setGaussianBlurKernel(const float *c_gKer, int ksizeHalf)
 {
     cv::Mat t_gKer(1, ksizeHalf + 1, CV_32FC1, const_cast<float *>(c_gKer));
@@ -88,7 +83,7 @@ static void gaussianBlurOcl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("gaussianBlur");
     size_t localThreads[3] = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(src.cols, localThreads[0]) * localThreads[0], src.rows, 1 };
+    size_t globalThreads[3] = { src.cols, src.rows, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * sizeof(float);
 
     CV_Assert(dst.size() == src.size());
@@ -138,10 +133,7 @@ static void updateMatricesOcl(const oclMat &flowx, const oclMat &flowy, const oc
 {
     string kernelName("updateMatrices");
     size_t localThreads[3] = { 32, 8, 1 };
-    size_t globalThreads[3] = { divUp(flowx.cols, localThreads[0]) * localThreads[0],
-                                divUp(flowx.rows, localThreads[1]) * localThreads[1],
-                                1
-                              };
+    size_t globalThreads[3] = { flowx.cols, flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&M.data));
@@ -166,7 +158,7 @@ static void boxFilter5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
     string kernelName("boxFilter5");
     int height = src.rows / 5;
     size_t localThreads[3] = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(src.cols, localThreads[0]) * localThreads[0], height, 1 };
+    size_t globalThreads[3] = { src.cols, height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -188,10 +180,7 @@ static void updateFlowOcl(const oclMat &M, oclMat &flowx, oclMat &flowy)
     string kernelName("updateFlow");
     int cols = divUp(flowx.cols, 4);
     size_t localThreads[3] = { 32, 8, 1 };
-    size_t globalThreads[3] = { divUp(cols, localThreads[0]) * localThreads[0],
-                                divUp(flowx.rows, localThreads[1]) * localThreads[0],
-                                1
-                              };
+    size_t globalThreads[3] = { cols, flowx.rows, 1 };
 
     std::vector< std::pair<size_t, const void *> > args;
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&flowx.data));
@@ -211,9 +200,8 @@ static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
 {
     string kernelName("gaussianBlur5");
     int height = src.rows / 5;
-    int width = src.cols;
     size_t localThreads[3] = { 256, 1, 1 };
-    size_t globalThreads[3] = { divUp(width, localThreads[0]) * localThreads[0], height, 1 };
+    size_t globalThreads[3] = { src.cols, height, 1 };
     int smem_size = (localThreads[0] + 2*ksizeHalf) * 5 * sizeof(float);
 
     std::vector< std::pair<size_t, const void *> > args;
@@ -222,7 +210,7 @@ static void gaussianBlur5Ocl(const oclMat &src, int ksizeHalf, oclMat &dst)
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&gKer.data));
     args.push_back(std::make_pair(smem_size, (void *)NULL));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&height));
-    args.push_back(std::make_pair(sizeof(cl_int), (void *)&width));
+    args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.cols));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst.step));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.step));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&ksizeHalf));
