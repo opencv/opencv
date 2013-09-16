@@ -1403,6 +1403,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
     }
     if( !(flags & CV_CALIB_RATIONAL_MODEL) )
         flags |= CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5 + CV_CALIB_FIX_K6;
+    if( !(flags & CV_CALIB_THIN_PRISM_MODEL))
+        flags |= CALIB_FIX_S1_S2_S3_S4;
     if( flags & CV_CALIB_FIX_K1 )
         mask[4] = 0;
     if( flags & CV_CALIB_FIX_K2 )
@@ -1415,8 +1417,6 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
         mask[10] = 0;
     if( flags & CV_CALIB_FIX_K6 )
         mask[11] = 0;
-    if(!(flags & CV_CALIB_THIN_PRISM_MODEL))
-        flags |= CALIB_FIX_S1_S2_S3_S4;
 
     if(flags & CALIB_FIX_S1_S2_S3_S4)
     {
@@ -3026,6 +3026,7 @@ static Mat prepareDistCoeffs(Mat& distCoeffs0, int rtype)
     if( distCoeffs0.size() == Size(1, 4) ||
        distCoeffs0.size() == Size(1, 5) ||
        distCoeffs0.size() == Size(1, 8) ||
+       distCoeffs0.size() == Size(1, 12) ||
        distCoeffs0.size() == Size(4, 1) ||
        distCoeffs0.size() == Size(5, 1) ||
        distCoeffs0.size() == Size(8, 1) ||
