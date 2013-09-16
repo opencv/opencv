@@ -115,13 +115,13 @@ protected:
  International Conference Pattern Recognition, UK, August, 2004.
  http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
 */
-class CV_EXPORTS BackgroundSubtractorMOG2 : public BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorMOG2 : public BackgroundSubtractor
 {
 public:
     //! the default constructor
-    BackgroundSubtractorMOG2();
+    CV_WRAP BackgroundSubtractorMOG2();
     //! the full constructor that takes the length of the history, the number of gaussian mixtures, the background ratio parameter and the noise strength
-    BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
+    CV_WRAP BackgroundSubtractorMOG2(int history,  float varThreshold, bool bShadowDetection=true);
     //! the destructor
     virtual ~BackgroundSubtractorMOG2();
     //! the update operator
@@ -197,10 +197,10 @@ protected:
  * Variable-Lighting Conditions for a Responsive Audio Art Installation," A. Godbehere,
  * A. Matsukawa, K. Goldberg, American Control Conference, Montreal, June 2012.
  */
-class CV_EXPORTS BackgroundSubtractorGMG: public cv::BackgroundSubtractor
+class CV_EXPORTS_W BackgroundSubtractorGMG: public cv::BackgroundSubtractor
 {
 public:
-    BackgroundSubtractorGMG();
+    CV_WRAP BackgroundSubtractorGMG();
     virtual ~BackgroundSubtractorGMG();
     virtual AlgorithmInfo* info() const;
 
