@@ -50,8 +50,7 @@ using namespace cv;
 using std::tr1::tuple;
 using std::tr1::get;
 ////////////////////////////////// K-NEAREST NEIGHBOR ////////////////////////////////////
-static void genData(Mat& trainData, Size size, 
-                    Mat& trainLabel = Mat().setTo(Scalar::all(0)), int nClasses = 0)
+static void genData(Mat& trainData, Size size, Mat& trainLabel = Mat().setTo(Scalar::all(0)), int nClasses = 0)
 {
     trainData.create(size, CV_32FC1);
     randu(trainData, 1.0, 100.0);
