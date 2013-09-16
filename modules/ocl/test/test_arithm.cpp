@@ -1206,12 +1206,13 @@ struct Norm : ArithmTestBase {};
 
 TEST_P(Norm, Mat)
 {
+    bool isRelative = GET_PARAM(1);
     for(int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        double cpures = cv::norm(mat1_roi, mat2_roi);
-        double gpures = cv::ocl::norm(gmat1, gmat2);
+        double cpures = cv::norm(mat1_roi, mat2_roi, isRelative ? NORM_L2|NORM_RELATIVE : NORM_L1);
+        double gpures = cv::ocl::norm(gmat1, gmat2, isRelative ? NORM_L2|NORM_RELATIVE : NORM_L1);
         EXPECT_NEAR(cpures, gpures, .1);
     }
 }
@@ -1325,6 +1326,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
 
 INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(
     Values(CV_8UC1, CV_8UC4, CV_32FC1, CV_32FC4),
-    Values(false))); // Values(false) is the reserved parameter
+    Values(true, false))); // relative or not
 
 #endif // HAVE_OPENCL

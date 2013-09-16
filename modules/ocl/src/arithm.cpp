@@ -865,6 +865,8 @@ double cv::ocl::norm(const oclMat &src1, int normType)
 double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 {
     bool isRelative = (normType & NORM_RELATIVE) != 0;
+    normType &= 7;
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
     double result = 0;
     oclMat tmp;
     Scalar r;
