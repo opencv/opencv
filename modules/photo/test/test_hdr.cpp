@@ -205,7 +205,7 @@ TEST(Photo_MergeRobertson, regression)
 	Ptr<MergeRobertson> merge = createMergeRobertson();
 
 	Mat result, expected;
-	loadImage(test_path + "merge/robertson.exr", expected);
+	loadImage(test_path + "merge/robertson.hdr", expected);
 	merge->process(images, result, times);
     Ptr<Tonemap> map = createTonemap();
     map->process(result, result);
