@@ -7851,4 +7851,60 @@
       <x>0</x>
       <y>239</y>
       <val>0.</val></rng2></statePre_></KalmanFilterFixture_KalmanFilter--KalmanFilter---1500->
+ <!-- resumed -->
+
+<KNNFixture_KNN--KNN---1000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>718</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>826</y>
+      <val>0.</val></rng2></best_label></KNNFixture_KNN--KNN---1000->
+<KNNFixture_KNN--KNN---2000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>1999</y>
+      <val>1.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>231</y>
+      <val>1.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>1628</y>
+      <val>1.</val></rng2></best_label></KNNFixture_KNN--KNN---2000->
+<KNNFixture_KNN--KNN---4000->
+  <best_label>
+    <kind>65536</kind>
+    <type>5</type>
+    <min>0.</min>
+    <max>1.</max>
+    <last>
+      <x>0</x>
+      <y>3999</y>
+      <val>0.</val></last>
+    <rng1>
+      <x>0</x>
+      <y>3599</y>
+      <val>0.</val></rng1>
+    <rng2>
+      <x>0</x>
+      <y>1433</y>
+      <val>1.</val></rng2></best_label></KNNFixture_KNN--KNN---4000->
 </opencv_storage>
