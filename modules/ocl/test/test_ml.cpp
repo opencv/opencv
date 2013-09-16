@@ -85,7 +85,7 @@ PARAM_TEST_CASE(KNN, int, Size, int, bool)
 TEST_P(KNN, Accuracy)
 {
     Mat trainData, trainLabels;
-    const int trainDataRow = 500; 
+    const int trainDataRow = 500;
     genTrainData(trainData, trainDataRow, trainDataCol, trainLabels, nClass);
 
     Mat testData, testLabels;

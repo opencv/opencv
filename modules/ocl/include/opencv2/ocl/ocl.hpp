@@ -1894,9 +1894,7 @@ namespace cv
         {
         public:
             KNearestNeighbour();
-            
             ~KNearestNeighbour();
-            
             KNearestNeighbour(const Mat& trainData, const Mat& labels,
                 const Mat& sampleIdx = Mat().setTo(Scalar::all(0)), bool isRegression = false, int max_k = 32);
 

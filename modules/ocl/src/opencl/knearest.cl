@@ -51,9 +51,9 @@
 
 #define CV_SWAP(a,b,t) ((t) = (a), (a) = (b), (b) = (t))
 ///////////////////////////////////// find_nearest //////////////////////////////////////
-__kernel void knn_find_nearest(__global float* sample, int sample_row, int sample_col, int sample_step, 
-                               int k, __global float* samples_ocl, int sample_ocl_row, int sample_ocl_step, 
-                               __global float* _results, int _results_step, int _regression, int K1, 
+__kernel void knn_find_nearest(__global float* sample, int sample_row, int sample_col, int sample_step,
+                               int k, __global float* samples_ocl, int sample_ocl_row, int sample_ocl_step,
+                               __global float* _results, int _results_step, int _regression, int K1,
                                int sample_ocl_col, int nThreads, __local float* nr)
 {
     int k1 = 0;
@@ -133,12 +133,12 @@ __kernel void knn_find_nearest(__global float* sample, int sample_row, int sampl
     {
     case true:
         {
-            TYPE s; 
+            TYPE s;
 #ifdef DOUBLE_SUPPORT
             s = 0.0;
 #else
             s = 0.0f;
-#endif  
+#endif
             for(j = 0; j < K1; j++)
                 s += nr[j * nThreads + threadY];
 
