@@ -185,8 +185,12 @@ TEST(Photo_MergeDebevec, regression)
 	Ptr<MergeDebevec> merge = createMergeDebevec();
 
 	Mat result, expected;
-	loadImage(test_path + "merge/debevec.exr", expected);
+	loadImage(test_path + "merge/debevec.hdr", expected);
 	merge->process(images, result, times, response);
+    Ptr<Tonemap> map = createTonemap();
+    map->process(result, result);
+    map->process(expected, expected);
+
 	checkEqual(expected, result, 1e-2f);
 }
 
@@ -203,6 +207,9 @@ TEST(Photo_MergeRobertson, regression)
 	Mat result, expected;
 	loadImage(test_path + "merge/robertson.exr", expected);
 	merge->process(images, result, times);
+    Ptr<Tonemap> map = createTonemap();
+    map->process(result, result);
+    map->process(expected, expected);
 	checkEqual(expected, result, 1e-2f);
 }
 
