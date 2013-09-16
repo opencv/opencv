@@ -450,7 +450,8 @@ float* CvSVMSolver_ocl::get_row_base( int i, bool* _existed, Mat& src )
     return row->data;
 }
 
-void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
+#ifndef HAVE_CLAMDBLAS
+static void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
     string kernelName = "svm_sigmod";
@@ -489,7 +490,7 @@ void matmul_sigmod(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int 
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1, double degree1, bool flag)
+static void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1, double degree1, bool flag)
 {
     Context *clCxt = Context::getContext();
     string kernelName = "svm_poly";
@@ -537,7 +538,7 @@ void matmul_poly(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int sr
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
-void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
+static void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int src2_cols, int var_count, double alpha1, double beta1)
 {
     Context *clCxt = Context::getContext();
     string kernelName = "svm_linear";
@@ -576,7 +577,9 @@ void matmul_linear(oclMat & src, oclMat & src2, oclMat & dst, int src_rows, int 
     }
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1);
 }
-void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, int src2_cols, int var_count, double gamma1, bool flag)
+#endif // #ifndef HAVE_CLAMDBLAS
+
+static void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, int src2_cols, int var_count, double gamma1, bool flag)
 {
 
     Context *clCxt = Context::getContext();
@@ -621,6 +624,7 @@ void matmul_rbf(oclMat& src, oclMat& src_e, oclMat& dst, int src_rows, int src2_
 
     openCLExecuteKernel(clCxt, &svm, kernelName, globalThreads, localThreads, args, -1, -1, build_options);
 }
+
 float CvSVM_OCL::predict(const CvMat* samples, CV_OUT CvMat* results) const
 {
     int var_count = get_var_count();
@@ -1169,7 +1173,7 @@ void CvSVMKernel_ocl::calc_sigmoid( int vcount, const int row_idx, Qfloat* resul
 }
 CvSVM_OCL::CvSVM_OCL()
 {
-    CvSVM::CvSVM();
+    CvSVM();
 }
 
 CvSVM_OCL::CvSVM_OCL( const Mat& _train_data, const Mat& _responses,
