@@ -155,3 +155,78 @@ PERF_TEST_P(setToFixture, setTo,
     else
         OCL_PERF_ELSE
 }
+
+/////////////////// upload ///////////////////////////
+
+typedef tuple<Size, int, int> uploadParams;
+typedef TestBaseWithParam<uploadParams> uploadFixture;
+
+PERF_TEST_P(uploadFixture, DISABLED_upload,
+            testing::Combine(
+                OCL_TYPICAL_MAT_SIZES,
+                testing::Range(CV_8U, CV_64F),
+                testing::Range(1, 5)))
+{
+    const uploadParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), cn = get<2>(params);
+    const int type = CV_MAKE_TYPE(depth, cn);
+
+    Mat src(srcSize, type), dst;
+    declare.in(src, WARMUP_RNG);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclDst;
+
+        for(; startTimer(), next(); ocl::finish(), stopTimer(), oclDst.release())
+            oclDst.upload(src);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        for(; startTimer(), next(); ocl::finish(), stopTimer(), dst.release())
+            dst = src.clone();
+    }
+    else
+        OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
+}
+
+/////////////////// download ///////////////////////////
+
+typedef TestBaseWithParam<uploadParams> downloadFixture;
+
+PERF_TEST_P(downloadFixture, DISABLED_download,
+            testing::Combine(
+                OCL_TYPICAL_MAT_SIZES,
+                testing::Range(CV_8U, CV_64F),
+                testing::Range(1, 5)))
+{
+    const uploadParams params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int depth = get<1>(params), cn = get<2>(params);
+    const int type = CV_MAKE_TYPE(depth, cn);
+
+    Mat src(srcSize, type), dst;
+    declare.in(src, WARMUP_RNG);
+
+    if (RUN_OCL_IMPL)
+    {
+        ocl::oclMat oclSrc(src);
+
+        for(; startTimer(), next(); ocl::finish(), stopTimer(), dst.release())
+            oclSrc.download(dst);
+    }
+    else if (RUN_PLAIN_IMPL)
+    {
+        for(; startTimer(), next(); ocl::finish(), stopTimer(), dst.release())
+            dst = src.clone();
+    }
+    else
+        OCL_PERF_ELSE
+
+    int value = 0;
+    SANITY_CHECK(value);
+}
