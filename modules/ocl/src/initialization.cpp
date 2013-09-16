@@ -1028,6 +1028,13 @@ namespace cv
             }
         }
 
+        unsigned long queryLocalMemInfo()
+        {
+            Info::Impl* impl = Context::getContext()->impl;
+            cl_ulong local_memory_size = 0;
+            clGetDeviceInfo(impl->devices[impl->devnum], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), (void*)&local_memory_size, 0);
+            return local_memory_size;
+        }
         size_t Context::computeUnits()
         {
             return impl->maxComputeUnits;
