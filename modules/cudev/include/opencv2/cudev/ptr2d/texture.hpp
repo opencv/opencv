@@ -52,6 +52,40 @@
 #include "gpumat.hpp"
 #include "traits.hpp"
 
+namespace
+{
+    template <typename T> struct CvCudevTextureRef
+    {
+        typedef texture<T, cudaTextureType2D, cudaReadModeElementType> TexRef;
+
+        static TexRef ref;
+
+        __host__ static void bind(const cv::cudev::GlobPtrSz<T>& mat,
+                                  bool normalizedCoords = false,
+                                  cudaTextureFilterMode filterMode = cudaFilterModePoint,
+                                  cudaTextureAddressMode addressMode = cudaAddressModeClamp)
+        {
+            ref.normalized = normalizedCoords;
+            ref.filterMode = filterMode;
+            ref.addressMode[0] = addressMode;
+            ref.addressMode[1] = addressMode;
+            ref.addressMode[2] = addressMode;
+
+            cudaChannelFormatDesc desc = cudaCreateChannelDesc<T>();
+
+            CV_CUDEV_SAFE_CALL( cudaBindTexture2D(0, &ref, mat.data, &desc, mat.cols, mat.rows, mat.step) );
+        }
+
+        __host__ static void unbind()
+        {
+            CV_CUDEV_SAFE_CALL( cudaUnbindTexture(ref) );
+        }
+    };
+
+    template <typename T>
+    typename CvCudevTextureRef<T>::TexRef CvCudevTextureRef<T>::ref;
+}
+
 namespace cv { namespace cudev {
 
 template <typename T> struct TexturePtr
@@ -63,79 +97,73 @@ template <typename T> struct TexturePtr
 
     __device__ __forceinline__ T operator ()(float y, float x) const
     {
+    #if CV_CUDEV_ARCH < 300
+        // Use the texture reference
+        return tex2D(CvCudevTextureRef<T>::ref, x, y);
+    #else
+        // Use the texture object
         return tex2D<T>(texObj, x, y);
+    #endif
     }
 };
 
 template <typename T> struct Texture : TexturePtr<T>
 {
     int rows, cols;
+    bool cc30;
 
     __host__ explicit Texture(const GlobPtrSz<T>& mat,
                               bool normalizedCoords = false,
                               cudaTextureFilterMode filterMode = cudaFilterModePoint,
                               cudaTextureAddressMode addressMode = cudaAddressModeClamp)
     {
-        CV_Assert( deviceSupports(FEATURE_SET_COMPUTE_30) );
+        cc30 = deviceSupports(FEATURE_SET_COMPUTE_30);
 
         rows = mat.rows;
         cols = mat.cols;
 
-        cudaResourceDesc texRes;
-        std::memset(&texRes, 0, sizeof(texRes));
-        texRes.resType = cudaResourceTypePitch2D;
-        texRes.res.pitch2D.devPtr = mat.data;
-        texRes.res.pitch2D.height = mat.rows;
-        texRes.res.pitch2D.width = mat.cols;
-        texRes.res.pitch2D.pitchInBytes = mat.step;
-        texRes.res.pitch2D.desc = cudaCreateChannelDesc<T>();
+        if (cc30)
+        {
+            // Use the texture object
+            cudaResourceDesc texRes;
+            std::memset(&texRes, 0, sizeof(texRes));
+            texRes.resType = cudaResourceTypePitch2D;
+            texRes.res.pitch2D.devPtr = mat.data;
+            texRes.res.pitch2D.height = mat.rows;
+            texRes.res.pitch2D.width = mat.cols;
+            texRes.res.pitch2D.pitchInBytes = mat.step;
+            texRes.res.pitch2D.desc = cudaCreateChannelDesc<T>();
 
-        cudaTextureDesc texDescr;
-        std::memset(&texDescr, 0, sizeof(texDescr));
-        texDescr.addressMode[0] = addressMode;
-        texDescr.addressMode[1] = addressMode;
-        texDescr.addressMode[2] = addressMode;
-        texDescr.filterMode = filterMode;
-        texDescr.readMode = cudaReadModeElementType;
-        texDescr.normalizedCoords = normalizedCoords;
+            cudaTextureDesc texDescr;
+            std::memset(&texDescr, 0, sizeof(texDescr));
+            texDescr.normalizedCoords = normalizedCoords;
+            texDescr.filterMode = filterMode;
+            texDescr.addressMode[0] = addressMode;
+            texDescr.addressMode[1] = addressMode;
+            texDescr.addressMode[2] = addressMode;
+            texDescr.readMode = cudaReadModeElementType;
 
-        CV_CUDEV_SAFE_CALL( cudaCreateTextureObject(&this->texObj, &texRes, &texDescr, 0) );
-    }
-
-    __host__ explicit Texture(const GpuMat_<T>& mat,
-                              bool normalizedCoords = false,
-                              cudaTextureFilterMode filterMode = cudaFilterModePoint,
-                              cudaTextureAddressMode addressMode = cudaAddressModeClamp)
-    {
-        CV_Assert( deviceSupports(FEATURE_SET_COMPUTE_30) );
-
-        rows = mat.rows;
-        cols = mat.cols;
-
-        cudaResourceDesc texRes;
-        std::memset(&texRes, 0, sizeof(texRes));
-        texRes.resType = cudaResourceTypePitch2D;
-        texRes.res.pitch2D.devPtr = mat.data;
-        texRes.res.pitch2D.height = mat.rows;
-        texRes.res.pitch2D.width = mat.cols;
-        texRes.res.pitch2D.pitchInBytes = mat.step;
-        texRes.res.pitch2D.desc = cudaCreateChannelDesc<T>();
-
-        cudaTextureDesc texDescr;
-        std::memset(&texDescr, 0, sizeof(texDescr));
-        texDescr.addressMode[0] = addressMode;
-        texDescr.addressMode[1] = addressMode;
-        texDescr.addressMode[2] = addressMode;
-        texDescr.filterMode = filterMode;
-        texDescr.readMode = cudaReadModeElementType;
-        texDescr.normalizedCoords = normalizedCoords;
-
-        CV_CUDEV_SAFE_CALL( cudaCreateTextureObject(&this->texObj, &texRes, &texDescr, 0) );
+            CV_CUDEV_SAFE_CALL( cudaCreateTextureObject(&this->texObj, &texRes, &texDescr, 0) );
+        }
+        else
+        {
+            // Use the texture reference
+            CvCudevTextureRef<T>::bind(mat, normalizedCoords, filterMode, addressMode);
+        }
     }
 
     __host__ ~Texture()
     {
-        cudaDestroyTextureObject(this->texObj);
+        if (cc30)
+        {
+            // Use the texture object
+            cudaDestroyTextureObject(this->texObj);
+        }
+        else
+        {
+            // Use the texture reference
+            CvCudevTextureRef<T>::unbind();
+        }
     }
 };
 
