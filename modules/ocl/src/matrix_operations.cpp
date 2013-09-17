@@ -307,11 +307,6 @@ void cv::ocl::oclMat::download(cv::Mat &m) const
     m.adjustROI(-ofs.y, ofs.y + rows - wholerows, -ofs.x, ofs.x + cols - wholecols);
 }
 
-/////////////////////common//////////////////////////////////////
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
 ///////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// CopyTo /////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
@@ -331,11 +326,7 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
     char compile_option[32];
     sprintf(compile_option, "-D GENTYPE=%s", string_types[dst.oclchannels() - 1][dst.depth()].c_str());
     size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3];
-
-    globalThreads[0] = divUp(dst.cols, localThreads[0]) * localThreads[0];
-    globalThreads[1] = divUp(dst.rows, localThreads[1]) * localThreads[1];
-    globalThreads[2] = 1;
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
     int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
     int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
