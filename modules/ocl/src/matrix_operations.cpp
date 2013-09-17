@@ -382,40 +382,50 @@ void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 ///////////////////////////////////////////////////////////////////////////
 static void convert_run(const oclMat &src, oclMat &dst, double alpha, double beta)
 {
-    string kernelName = "convert_to_S";
-    stringstream idxStr;
-    idxStr << src.depth();
-    kernelName += idxStr.str();
+    string kernelName = "convert_to";
     float alpha_f = alpha, beta_f = beta;
+    int sdepth = src.depth(), ddepth = dst.depth();
+    int sstep1 = (int)src.step1(), dstep1 = (int)dst.step1();
+    int cols1 = src.cols * src.oclchannels();
+
+    char buildOptions[150], convertString[50];
+    const char * typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    sprintf(convertString, "convert_%s_sat_rte", typeMap[ddepth]);
+    sprintf(buildOptions, "-D srcT=%s -D dstT=%s -D convertToDstType=%s", typeMap[sdepth],
+            typeMap[ddepth], CV_32F == ddepth || ddepth == CV_64F ? "" : convertString);
+
     CV_DbgAssert(src.rows == dst.rows && src.cols == dst.cols);
     vector<pair<size_t , const void *> > args;
-    size_t localThreads[3] = {16, 16, 1};
-    size_t globalThreads[3];
-    globalThreads[0] = (dst.cols + localThreads[0] - 1) / localThreads[0] * localThreads[0];
-    globalThreads[1] = (dst.rows + localThreads[1] - 1) / localThreads[1] * localThreads[1];
-    globalThreads[2] = 1;
-    int dststep_in_pixel = dst.step / dst.elemSize(), dstoffset_in_pixel = dst.offset / dst.elemSize();
-    int srcstep_in_pixel = src.step / src.elemSize(), srcoffset_in_pixel = src.offset / src.elemSize();
-    if(dst.type() == CV_8UC1)
-    {
-        globalThreads[0] = ((dst.cols + 4) / 4 + localThreads[0]) / localThreads[0] * localThreads[0];
-    }
+
+    size_t localThreads[3] = { 16, 16, 1 };
+    size_t globalThreads[3] = { divUp(cols1, localThreads[0]) * localThreads[0],
+                                divUp(dst.rows, localThreads[1]) * localThreads[1], 1 };
+
+    int doffset1 = dst.offset / dst.elemSize1();
+    int soffset1 = src.offset / src.elemSize1();
+
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data ));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src.cols ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols1 ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcstep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&srcoffset_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dststep_in_pixel ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dstoffset_in_pixel ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&sstep1 ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&soffset1 ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&dstep1 ));
+    args.push_back( make_pair( sizeof(cl_int) , (void *)&doffset1 ));
     args.push_back( make_pair( sizeof(cl_float) , (void *)&alpha_f ));
     args.push_back( make_pair( sizeof(cl_float) , (void *)&beta_f ));
+
     openCLExecuteKernel(dst.clCxt , &operator_convertTo, kernelName, globalThreads,
-                        localThreads, args, dst.oclchannels(), dst.depth());
+                        localThreads, args, -1, -1, buildOptions);
 }
 void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double beta ) const
 {
-    //cout << "cv::ocl::oclMat::convertTo()" << endl;
+    if (!clCxt->supportsFeature(Context::CL_DOUBLE) &&
+            (depth() == CV_64F || dst.depth() == CV_64F))
+    {
+        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        return;
+    }
 
     bool noScale = fabs(alpha - 1) < std::numeric_limits<double>::epsilon()
                    && fabs(beta) < std::numeric_limits<double>::epsilon();
@@ -425,7 +435,6 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
     else
         rtype = CV_MAKETYPE(CV_MAT_DEPTH(rtype), channels());
 
-    //int scn = channels();
     int sdepth = depth(), ddepth = CV_MAT_DEPTH(rtype);
     if( sdepth == ddepth && noScale )
     {
@@ -447,7 +456,6 @@ void cv::ocl::oclMat::convertTo( oclMat &dst, int rtype, double alpha, double be
 ///////////////////////////////////////////////////////////////////////////
 oclMat &cv::ocl::oclMat::operator = (const Scalar &s)
 {
-    //cout << "cv::ocl::oclMat::=" << endl;
     setTo(s);
     return *this;
 }
