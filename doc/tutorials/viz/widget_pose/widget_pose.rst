@@ -17,7 +17,7 @@ In this tutorial you will learn how to
 Code
 ====
 
-You can download the code from `here <../../../../samples/cpp/tutorial_code/viz/widget_pose.cpp>`_.
+You can download the code from :download:`here <../../../../samples/cpp/tutorial_code/viz/widget_pose.cpp>`.
 
 .. code-block:: cpp
 

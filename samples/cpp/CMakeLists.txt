@@ -28,9 +28,6 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   if(HAVE_opencv_gpufilters)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpufilters/include")
   endif()
-  if(HAVE_opencv_viz)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/viz/include")
-  endif()
 
   if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
@@ -57,10 +54,6 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
     if("${srcs}" MATCHES "gpu/")
       target_link_libraries(${the_target} opencv_gpuarithm opencv_gpufilters)
-    endif()
-    
-    if(HAVE_opencv_viz)
-      target_link_libraries(${the_target} opencv_viz)
     endif()
 
     set_target_properties(${the_target} PROPERTIES
@@ -90,9 +83,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
   
-  if(NOT HAVE_opencv_viz)
-    ocv_list_filterout(cpp_samples "viz")
-  endif()
+  ocv_list_filterout(cpp_samples "viz")
 
   foreach(sample_filename ${cpp_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
