@@ -247,6 +247,16 @@ struct IPPInitializer
 };
 
 IPPInitializer ippInitializer;
+
+bool checkIPPSupport(void)
+{
+    return ippInit() == ippStsNoErr;
+}
+#else
+bool checkIPPSupport(void)
+{
+    return false;
+}
 #endif
 
 volatile bool USE_SSE2 = featuresEnabled.have[CV_CPU_SSE2];

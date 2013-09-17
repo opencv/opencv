@@ -288,6 +288,9 @@ CV_EXPORTS_W int64 getCPUTickCount();
 */
 CV_EXPORTS_W bool checkHardwareSupport(int feature);
 
+//! initilaizes and returns true if IPP was initialized correctly
+CV_EXPORTS_W bool checkIPPSupport();
+
 //! returns the number of CPUs (including hyper-threading)
 CV_EXPORTS_W int getNumberOfCPUs();
 
