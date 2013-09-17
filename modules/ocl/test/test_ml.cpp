@@ -71,7 +71,6 @@ PARAM_TEST_CASE(KNN, int, Size, int, bool)
     int testDataRow;
     int nClass;
     bool regression;
-    bool updateBase;
     virtual void SetUp()
     {
         k = GET_PARAM(0);
