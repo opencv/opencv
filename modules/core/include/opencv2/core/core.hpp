@@ -339,6 +339,7 @@ template<typename _Tp> static inline _Tp* alignPtr(_Tp* ptr, int n=(int)sizeof(_
 */
 static inline size_t alignSize(size_t sz, int n)
 {
+    assert((n & (n - 1)) == 0); // n is a power of 2
     return (sz + n-1) & -n;
 }
 
