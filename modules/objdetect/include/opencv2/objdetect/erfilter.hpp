@@ -236,5 +236,28 @@ enum { ERFILTER_NM_RGBLGrad = 0,
 */
 CV_EXPORTS void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode = ERFILTER_NM_RGBLGrad);
 
+
+/*!
+    Find groups of Extremal Regions that are organized as text blocks. This function implements
+    the grouping algorithm described in:
+    Gomez L. and Karatzas D.: Multi-script Text Extraction from Natural Scenes, ICDAR 2013.
+    Notice that this implementation constrains the results to horizontally-aligned text and
+    latin script (since ERFilter classifiers are trained only for latin script detection).
+
+    The algorithm combines two different clustering techniques in a single parameter-free procedure
+    to detect groups of regions organized as text. The maximally meaningful groups are fist detected
+    in several feature spaces, where each feature space is a combination of proximity information
+    (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.),
+    thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to
+    combine all these hypotheses to get the final estimate. Each of the resulting groups are finally
+    heuristically validated in order to assest if they form a valid horizontally-aligned text block.
+
+    \param  src            Vector of sinle channel images CV_8UC1 from wich the regions were extracted.
+    \param  regions        Vector of ER's retreived from the ERFilter algorithm from each channel
+    \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
+*/
+CV_EXPORTS void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
+                                                   std::vector<Rect> &groups);
+
 }
 #endif // _OPENCV_ERFILTER_HPP_
