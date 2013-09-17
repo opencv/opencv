@@ -124,8 +124,8 @@ TEST(Viz_viz3d, accuracy)
     int row_max = img.rows/downSample;
     int col_max = img.cols/downSample;
     
-    cv::Mat clouds[img.cols/downSample];
-    cv::Mat colors[img.cols/downSample];
+    cv::Mat *clouds = new cv::Mat[img.cols/downSample];
+    cv::Mat *colors = new cv::Mat[img.cols/downSample];
     
     for (int col = 0; col < col_max; ++col)
     {
