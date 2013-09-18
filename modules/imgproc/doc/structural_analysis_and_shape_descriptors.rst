@@ -572,7 +572,7 @@ Finds a triangle of minimum area enclosing a 2D point set.
 
 .. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> triangle, area
 
-.. ocv:cfunction:: int cvMinEnclosingTriangle( const CvArr* points, CvArr* triangle, double* area )
+.. ocv:cfunction:: void cvMinEnclosingTriangle( const CvArr* points, CvArr* triangle, double* area )
 
     :param points: Input vector of 2D points with depth ``CV_32S`` or ``CV_32F``, stored in:
 
