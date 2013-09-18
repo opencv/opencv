@@ -679,6 +679,16 @@ namespace cv
             CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= clCxt->impl->maxWorkGroupSize );
         }
 
+        static inline size_t roundUp(size_t sz, size_t n)
+        {
+            // we don't assume that n is a power of 2 (see alignSize)
+            // equal to divUp(sz, n) * n
+            size_t t = sz + n - 1;
+            size_t rem = t % n;
+            size_t result = t - rem;
+            return result;
+        }
+
 #ifdef PRINT_KERNEL_RUN_TIME
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
@@ -702,9 +712,9 @@ namespace cv
 
             if ( localThreads != NULL)
             {
-                globalThreads[0] = alignSize(globalThreads[0], localThreads[0]);
-                globalThreads[1] = alignSize(globalThreads[1], localThreads[1]);
-                globalThreads[2] = alignSize(globalThreads[2], localThreads[2]);
+                globalThreads[0] = roundUp(globalThreads[0], localThreads[0]);
+                globalThreads[1] = roundUp(globalThreads[1], localThreads[1]);
+                globalThreads[2] = roundUp(globalThreads[2], localThreads[2]);
 
                 cv::ocl::openCLVerifyKernel(clCxt, kernel, localThreads);
             }
