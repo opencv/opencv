@@ -100,34 +100,40 @@
 /////////////////////////////////// Global variables /////////////////////////////////////
 
 
-static unsigned int validationFlag;
+namespace minEnclosingTriangle {
 
-static cv::Point2f vertexA;
-static cv::Point2f vertexB;
-static cv::Point2f vertexC;
+static unsigned int G_validationFlag;
 
-static cv::Point2f sideAStartVertex;
-static cv::Point2f sideAEndVertex;
+static cv::Point2f G_vertexA;
+static cv::Point2f G_vertexB;
+static cv::Point2f G_vertexC;
 
-static cv::Point2f sideBStartVertex;
-static cv::Point2f sideBEndVertex;
+static cv::Point2f G_sideAStartVertex;
+static cv::Point2f G_sideAEndVertex;
 
-static cv::Point2f sideCStartVertex;
-static cv::Point2f sideCEndVertex;
+static cv::Point2f G_sideBStartVertex;
+static cv::Point2f G_sideBEndVertex;
 
-static double triangleArea;
+static cv::Point2f G_sideCStartVertex;
+static cv::Point2f G_sideCEndVertex;
 
-static unsigned int a;
-static unsigned int b;
-static unsigned int c;
+static double G_triangleArea;
 
-static unsigned int nrOfPoints;
+static unsigned int G_a;
+static unsigned int G_b;
+static unsigned int G_c;
 
-static std::vector<cv::Point2f> polygon;
+static unsigned int G_nrOfPoints;
+
+static std::vector<cv::Point2f> G_polygon;
+
+};
 
 
 ////////////////////////////// Helper functions declarations /////////////////////////////
 
+
+namespace minEnclosingTriangle {
 
 static void advance(unsigned int &index);
 
@@ -257,6 +263,8 @@ static void updateSidesBA();
 
 static void updateSidesCA();
 
+};
+
 
 ///////////////////////////////////// Main functions /////////////////////////////////////
 
@@ -269,7 +277,7 @@ static void updateSidesCA();
 */
 void cv::minEnclosingTriangle(cv::InputArray points,
                               CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
-    findMinEnclosingTriangle(points, triangle, area);
+    minEnclosingTriangle::findMinEnclosingTriangle(points, triangle, area);
 }
 
 //! Find the minimum enclosing triangle and its area for the given set of points
@@ -281,12 +289,14 @@ void cv::minEnclosingTriangle(cv::InputArray points,
                               CV_OUT cv::OutputArray triangle) {
     double area;
 
-    findMinEnclosingTriangle(points, triangle, area);
+    minEnclosingTriangle::findMinEnclosingTriangle(points, triangle, area);
 }
 
 
 /////////////////////////////// Helper functions definition //////////////////////////////
 
+
+namespace minEnclosingTriangle {
 
 //! Find the minimum enclosing triangle and its area
 /*!
@@ -316,7 +326,7 @@ static void createConvexHull(cv::InputArray points) {
 
     pointsMat.convertTo(pointsVector, CV_32F);
 
-    convexHull(pointsVector, polygon, true, true);
+    convexHull(pointsVector, G_polygon, true, true);
 }
 
 //! Find the minimum enclosing triangle and its area
@@ -327,10 +337,10 @@ static void createConvexHull(cv::InputArray points) {
 * @param triangle       Minimum area triangle enclosing the given polygon
 * @param area           Area of the minimum area enclosing triangle
 */
-static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double &area) {
+static void findMinEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
     initialise(triangle, area);
 
-    if (polygon.size() > 3) {
+    if (G_polygon.size() > 3) {
         findMinimumAreaEnclosingTriangle(triangle, area);
     } else {
         returnMinimumAreaEnclosingTriangle(triangle, area);
@@ -353,16 +363,16 @@ static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTrian
 * @param area           Area of the minimum area enclosing triangle
 */
 static void initialise(std::vector<cv::Point2f> &triangle, double &area) {
-    nrOfPoints = static_cast<unsigned int>(polygon.size());
+    G_nrOfPoints = static_cast<unsigned int>(G_polygon.size());
     area = std::numeric_limits<double>::max();
 
     // Clear all points previously stored in the vector
     triangle.clear();
 
     // Initialise the values of the indices for the algorithm
-    a = 1;
-    b = 2;
-    c = 0;
+    G_a = 1;
+    G_b = 2;
+    G_c = 0;
 }
 
 //! Find the minimum area enclosing triangle for the given polygon
@@ -371,7 +381,7 @@ static void initialise(std::vector<cv::Point2f> &triangle, double &area) {
 * @param area       Area of the minimum area enclosing triangle
 */
 static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
-    for (c = 0; c < nrOfPoints; c++) {
+    for (G_c = 0; G_c < G_nrOfPoints; G_c++) {
         advanceBToRightChain();
         moveAIfLowAndBIfHigh();
         searchForBTangency();
@@ -397,7 +407,7 @@ static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle,
 */
 static void returnMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
     for (int i = 0; i < 3; i++) {
-        triangle.push_back(polygon[i % nrOfPoints]);
+        triangle.push_back(G_polygon[i % G_nrOfPoints]);
     }
 
     area = areaOfTriangle(triangle[0], triangle[1], triangle[2]);
@@ -408,8 +418,8 @@ static void returnMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangl
 * See paper [2] for more details
 */
 static void advanceBToRightChain() {
-    while (greaterOrEqual(height(successor(b)), height(b))) {
-        advance(b);
+    while (greaterOrEqual(height(successor(G_b)), height(G_b))) {
+        advance(G_b);
     }
 }
 
@@ -420,11 +430,11 @@ static void advanceBToRightChain() {
 static void moveAIfLowAndBIfHigh() {
     cv::Point2f gammaOfA;
 
-    while(height(b) > height(a)) {
-        if ((gamma(a, gammaOfA)) && (intersectsBelow(gammaOfA, b))) {
-            advance(b);
+    while(height(G_b) > height(G_a)) {
+        if ((gamma(G_a, gammaOfA)) && (intersectsBelow(gammaOfA, G_b))) {
+            advance(G_b);
         } else {
-            advance(a);
+            advance(G_a);
         }
     }
 }
@@ -436,9 +446,9 @@ static void moveAIfLowAndBIfHigh() {
 static void searchForBTangency() {
     cv::Point2f gammaOfB;
 
-    while (((gamma(b, gammaOfB)) && (intersectsBelow(gammaOfB, b))) &&
-           (greaterOrEqual(height(b), height(predecessor(a))))) {
-        advance(b);
+    while (((gamma(G_b, gammaOfB)) && (intersectsBelow(gammaOfB, G_b))) &&
+           (greaterOrEqual(height(G_b), height(predecessor(G_a))))) {
+        advance(G_b);
     }
 }
 
@@ -449,7 +459,8 @@ static void searchForBTangency() {
 static bool isNotBTangency() {
     cv::Point2f gammaOfB;
 
-    if (((gamma(b, gammaOfB)) && (intersectsAbove(gammaOfB, b))) || (height(b) < height(predecessor(a)))) {
+    if (((gamma(G_b, gammaOfB)) && (intersectsAbove(gammaOfB, G_b))) ||
+        (height(G_b) < height(predecessor(G_a)))) {
         return true;
     }
 
@@ -462,11 +473,11 @@ static bool isNotBTangency() {
 * Side A will have as start and end vertices the polygon points "a" and "a-1"
 */
 static void updateSidesCA() {
-    sideCStartVertex = polygon[predecessor(c)];
-    sideCEndVertex = polygon[c];
+    G_sideCStartVertex = G_polygon[predecessor(G_c)];
+    G_sideCEndVertex = G_polygon[G_c];
 
-    sideAStartVertex = polygon[predecessor(a)];
-    sideAEndVertex = polygon[a];
+    G_sideAStartVertex = G_polygon[predecessor(G_a)];
+    G_sideAEndVertex = G_polygon[G_a];
 }
 
 //! Update sides B and possibly A if tangency for side B was not obtained
@@ -475,20 +486,20 @@ static void updateSidesCA() {
 */
 static void updateSidesBA() {
     // Side B is flush with edge [b, b-1]
-    sideBStartVertex = polygon[predecessor(b)];
-    sideBEndVertex = polygon[b];
+    G_sideBStartVertex = G_polygon[predecessor(G_b)];
+    G_sideBEndVertex = G_polygon[G_b];
 
     // Find middle point of side B
     cv::Point2f sideBMiddlePoint;
 
     if ((middlePointOfSideB(sideBMiddlePoint)) &&
-        (height(sideBMiddlePoint) < height(predecessor(a)))) {
-        sideAStartVertex = polygon[predecessor(a)];
-        sideAEndVertex = findVertexCOnSideB();
+        (height(sideBMiddlePoint) < height(predecessor(G_a)))) {
+        G_sideAStartVertex = G_polygon[predecessor(G_a)];
+        G_sideAEndVertex = findVertexCOnSideB();
 
-        validationFlag = VALIDATION_SIDE_A_TANGENT;
+        G_validationFlag = VALIDATION_SIDE_A_TANGENT;
     } else {
-        validationFlag = VALIDATION_SIDES_FLUSH;
+        G_validationFlag = VALIDATION_SIDES_FLUSH;
     }
 }
 
@@ -497,13 +508,13 @@ static void updateSidesBA() {
 * See paper [2] for more details
 */
 static void updateSideB() {
-    if (!gamma(b, sideBStartVertex)) {
+    if (!gamma(G_b, G_sideBStartVertex)) {
         CV_Error(cv::Error::StsInternal, ERR_SIDE_B_GAMMA);
     }
 
-    sideBEndVertex = polygon[b];
+    G_sideBEndVertex = G_polygon[G_b];
 
-    validationFlag = VALIDATION_SIDE_B_TANGENT;
+    G_validationFlag = VALIDATION_SIDE_B_TANGENT;
 }
 
 //! Update the triangle vertices after all sides were set and check if a local minimal triangle was found or not
@@ -511,9 +522,12 @@ static void updateSideB() {
 * See paper [2] for more details
 */
 static bool isLocalMinimalTriangle() {
-    if ((!lineIntersection(sideAStartVertex, sideAEndVertex, sideBStartVertex, sideBEndVertex, vertexC)) ||
-        (!lineIntersection(sideAStartVertex, sideAEndVertex, sideCStartVertex, sideCEndVertex, vertexB)) ||
-        (!lineIntersection(sideBStartVertex, sideBEndVertex, sideCStartVertex, sideCEndVertex, vertexA))) {
+    if ((!lineIntersection(G_sideAStartVertex, G_sideAEndVertex,
+                           G_sideBStartVertex, G_sideBEndVertex, G_vertexC)) ||
+        (!lineIntersection(G_sideAStartVertex, G_sideAEndVertex,
+                           G_sideCStartVertex, G_sideCEndVertex, G_vertexB)) ||
+        (!lineIntersection(G_sideBStartVertex, G_sideBEndVertex,
+                           G_sideCStartVertex, G_sideCEndVertex, G_vertexA))) {
         return false;
     }
 
@@ -527,19 +541,19 @@ static bool isLocalMinimalTriangle() {
 * See paper [2] for more details
 */
 static bool isValidMinimalTriangle() {
-    cv::Point2f midpointSideA = middlePoint(vertexB, vertexC);
-    cv::Point2f midpointSideB = middlePoint(vertexA, vertexC);
-    cv::Point2f midpointSideC = middlePoint(vertexA, vertexB);
+    cv::Point2f midpointSideA = middlePoint(G_vertexB, G_vertexC);
+    cv::Point2f midpointSideB = middlePoint(G_vertexA, G_vertexC);
+    cv::Point2f midpointSideC = middlePoint(G_vertexA, G_vertexB);
 
-    bool sideAValid = (validationFlag == VALIDATION_SIDE_A_TANGENT)
-                        ? (areEqualPoints(midpointSideA, polygon[predecessor(a)]))
-                        : (isPointOnLineSegment(midpointSideA, sideAStartVertex, sideAEndVertex));
+    bool sideAValid = (G_validationFlag == VALIDATION_SIDE_A_TANGENT)
+                        ? (areEqualPoints(midpointSideA, G_polygon[predecessor(G_a)]))
+                        : (isPointOnLineSegment(midpointSideA, G_sideAStartVertex, G_sideAEndVertex));
 
-    bool sideBValid = (validationFlag == VALIDATION_SIDE_B_TANGENT)
-                          ? (areEqualPoints(midpointSideB, polygon[b]))
-                          : (isPointOnLineSegment(midpointSideB, sideBStartVertex, sideBEndVertex));
+    bool sideBValid = (G_validationFlag == VALIDATION_SIDE_B_TANGENT)
+                          ? (areEqualPoints(midpointSideB, G_polygon[G_b]))
+                          : (isPointOnLineSegment(midpointSideB, G_sideBStartVertex, G_sideBEndVertex));
 
-    bool sideCValid = isPointOnLineSegment(midpointSideC, sideCStartVertex, sideCEndVertex);
+    bool sideCValid = isPointOnLineSegment(midpointSideC, G_sideCStartVertex, G_sideCEndVertex);
 
     return (sideAValid && sideBValid && sideCValid);
 }
@@ -550,16 +564,16 @@ static bool isValidMinimalTriangle() {
 * @param area       Area of the minimum area triangle enclosing the given polygon
 */
 static void updateMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
-    triangleArea = areaOfTriangle(vertexA, vertexB, vertexC);
+    G_triangleArea = areaOfTriangle(G_vertexA, G_vertexB, G_vertexC);
 
-    if (triangleArea < area) {
+    if (G_triangleArea < area) {
         triangle.clear();
 
-        triangle.push_back(vertexA);
-        triangle.push_back(vertexB);
-        triangle.push_back(vertexC);
+        triangle.push_back(G_vertexA);
+        triangle.push_back(G_vertexB);
+        triangle.push_back(G_vertexC);
 
-        area = triangleArea;
+        area = G_triangleArea;
     }
 }
 
@@ -567,8 +581,8 @@ static void updateMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangl
 static bool middlePointOfSideB(cv::Point2f& middlePointOfSideB) {
     cv::Point2f vertexA, vertexC;
 
-    if ((!lineIntersection(sideBStartVertex, sideBEndVertex, sideCStartVertex, sideCEndVertex, vertexA)) ||
-        (!lineIntersection(sideBStartVertex, sideBEndVertex, sideAStartVertex, sideAEndVertex, vertexC))) {
+    if ((!lineIntersection(G_sideBStartVertex, G_sideBEndVertex, G_sideCStartVertex, G_sideCEndVertex, vertexA)) ||
+        (!lineIntersection(G_sideBStartVertex, G_sideBEndVertex, G_sideAStartVertex, G_sideAEndVertex, vertexC))) {
         return false;
     }
 
@@ -586,7 +600,7 @@ static bool middlePointOfSideB(cv::Point2f& middlePointOfSideB) {
 * @param polygonPointIndex Index of the polygon point which is considered when determining the line
 */
 static bool intersectsBelow(const cv::Point2f &gammaPoint, unsigned int polygonPointIndex) {
-    double angleOfGammaAndPoint = angleOfLineWrtOxAxis(polygon[polygonPointIndex], gammaPoint);
+    double angleOfGammaAndPoint = angleOfLineWrtOxAxis(G_polygon[polygonPointIndex], gammaPoint);
 
     return (intersects(angleOfGammaAndPoint, polygonPointIndex) == INTERSECTS_BELOW);
 }
@@ -600,7 +614,7 @@ static bool intersectsBelow(const cv::Point2f &gammaPoint, unsigned int polygonP
 * @param polygonPointIndex Index of the polygon point which is considered when determining the line
 */
 static bool intersectsAbove(const cv::Point2f &gammaPoint, unsigned int polygonPointIndex) {
-    double angleOfGammaAndPoint = angleOfLineWrtOxAxis(gammaPoint, polygon[polygonPointIndex]);
+    double angleOfGammaAndPoint = angleOfLineWrtOxAxis(gammaPoint, G_polygon[polygonPointIndex]);
 
     return (intersects(angleOfGammaAndPoint, polygonPointIndex) == INTERSECTS_ABOVE);
 }
@@ -611,12 +625,12 @@ static bool intersectsAbove(const cv::Point2f &gammaPoint, unsigned int polygonP
 * @param polygonPointIndex      Index of the polygon point which is considered when determining the line
 */
 static unsigned int intersects(double angleGammaAndPoint, unsigned int polygonPointIndex) {
-    double anglePointPredecessor = angleOfLineWrtOxAxis(polygon[predecessor(polygonPointIndex)],
-                                                        polygon[polygonPointIndex]);
-    double anglePointSuccessor   = angleOfLineWrtOxAxis(polygon[successor(polygonPointIndex)],
-                                                        polygon[polygonPointIndex]);
-    double angleFlushEdge        = angleOfLineWrtOxAxis(polygon[predecessor(c)],
-                                                        polygon[c]);
+    double anglePointPredecessor = angleOfLineWrtOxAxis(G_polygon[predecessor(polygonPointIndex)],
+                                                        G_polygon[polygonPointIndex]);
+    double anglePointSuccessor   = angleOfLineWrtOxAxis(G_polygon[successor(polygonPointIndex)],
+                                                        G_polygon[polygonPointIndex]);
+    double angleFlushEdge        = angleOfLineWrtOxAxis(G_polygon[predecessor(G_c)],
+                                                        G_polygon[G_c]);
 
     if (isFlushAngleBtwPredAndSucc(angleFlushEdge, anglePointPredecessor, anglePointSuccessor)) {
         if ((isGammaAngleBtw(angleGammaAndPoint, anglePointPredecessor, angleFlushEdge)) ||
@@ -678,14 +692,15 @@ static bool gamma(unsigned int polygonPointIndex, cv::Point2f &gammaPoint) {
     cv::Point2f intersectionPoint1, intersectionPoint2;
 
     // Get intersection points if they exist
-    if (!findGammaIntersectionPoints(polygonPointIndex, polygon[a], polygon[predecessor(a)], polygon[c],
-                                     polygon[predecessor(c)], intersectionPoint1, intersectionPoint2)) {
+    if (!findGammaIntersectionPoints(polygonPointIndex, G_polygon[G_a], G_polygon[predecessor(G_a)],
+                                     G_polygon[G_c], G_polygon[predecessor(G_c)],
+                                     intersectionPoint1, intersectionPoint2)) {
         return false;
     }
 
     // Select the point which is on the same side of line C as the polygon
-    if (areOnTheSameSideOfLine(intersectionPoint1, polygon[successor(c)],
-                               polygon[c], polygon[predecessor(c)])) {
+    if (areOnTheSameSideOfLine(intersectionPoint1, G_polygon[successor(G_c)],
+                               G_polygon[G_c], G_polygon[predecessor(G_c)])) {
         gammaPoint = intersectionPoint1;
     } else {
         gammaPoint = intersectionPoint2;
@@ -810,14 +825,15 @@ static cv::Point2f findVertexCOnSideB() {
     cv::Point2f intersectionPoint1, intersectionPoint2;
 
     // Get intersection points if they exist
-    if (!findGammaIntersectionPoints(predecessor(a), sideBStartVertex, sideBEndVertex, sideCStartVertex,
-                                     sideCEndVertex, intersectionPoint1, intersectionPoint2)) {
+    if (!findGammaIntersectionPoints(predecessor(G_a), G_sideBStartVertex, G_sideBEndVertex,
+                                     G_sideCStartVertex, G_sideCEndVertex,
+                                     intersectionPoint1, intersectionPoint2)) {
         CV_Error(cv::Error::StsInternal, ERR_VERTEX_C_ON_SIDE_B);
     }
 
     // Select the point which is on the same side of line C as the polygon
-    if (areOnTheSameSideOfLine(intersectionPoint1, polygon[successor(c)],
-                               polygon[c], polygon[predecessor(c)])) {
+    if (areOnTheSameSideOfLine(intersectionPoint1, G_polygon[successor(G_c)],
+                               G_polygon[G_c], G_polygon[predecessor(G_c)])) {
         return intersectionPoint1;
     } else {
         return intersectionPoint2;
@@ -831,8 +847,8 @@ static cv::Point2f findVertexCOnSideB() {
 * @param polygonPoint Polygon point
 */
 static double height(const cv::Point2f &polygonPoint) {
-    cv::Point2f pointC = polygon[c];
-    cv::Point2f pointCPredecessor = polygon[predecessor(c)];
+    cv::Point2f pointC = G_polygon[G_c];
+    cv::Point2f pointCPredecessor = G_polygon[predecessor(G_c)];
 
     return distanceFromPointToLine(polygonPoint, pointC, pointCPredecessor);
 }
@@ -844,10 +860,10 @@ static double height(const cv::Point2f &polygonPoint) {
 * @param polygonPointIndex Index of the polygon point
 */
 static double height(unsigned int polygonPointIndex) {
-    cv::Point2f pointC = polygon[c];
-    cv::Point2f pointCPredecessor = polygon[predecessor(c)];
+    cv::Point2f pointC = G_polygon[G_c];
+    cv::Point2f pointCPredecessor = G_polygon[predecessor(G_c)];
 
-    cv::Point2f polygonPoint = polygon[polygonPointIndex];
+    cv::Point2f polygonPoint = G_polygon[polygonPointIndex];
 
     return distanceFromPointToLine(polygonPoint, pointC, pointCPredecessor);
 }
@@ -868,7 +884,7 @@ static void advance(unsigned int &index) {
 * @param index Index of the point
 */
 static unsigned int successor(unsigned int index) {
-    return ((index + 1) % nrOfPoints);
+    return ((index + 1) % G_nrOfPoints);
 }
 
 //! Return the predecessor of the provided point index
@@ -879,7 +895,7 @@ static unsigned int successor(unsigned int index) {
 * @param index Index of the point
 */
 static unsigned int predecessor(unsigned int index) {
-    return (index == 0) ? (nrOfPoints - 1)
+    return (index == 0) ? (G_nrOfPoints - 1)
                         : (index - 1);
 }
 
@@ -1293,6 +1309,8 @@ static bool greaterOrEqual(double number1, double number2) {
 static bool lessOrEqual(double number1, double number2) {
     return ((number1 < number2) || (almostEqual(number1, number2)));
 }
+
+};
 
 
 ////////////////////////////////////////////// C API ///////////////////////////////////////////
