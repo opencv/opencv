@@ -239,7 +239,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    cv::initModule_nonfree();
+    initModule_nonfree();
 
     bool isWarpPerspective = argc == 7;
     double ransacReprojThreshold = -1;

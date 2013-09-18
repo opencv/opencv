@@ -7,6 +7,7 @@
 #include <cstdio>
 
 using namespace cv;
+using namespace std;
 
 static void help()
 {

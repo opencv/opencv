@@ -45,6 +45,7 @@
 #include <opencv2/legacy/legacy.hpp>
 
 using namespace cv;
+using namespace std;
 
 static void help( char** argv )
 {
@@ -77,9 +78,9 @@ int main( int argc, char** argv ) {
         return -1;
     }
 
-    std::vector<KeyPoint> keypointsA, keypointsB;
+    vector<KeyPoint> keypointsA, keypointsB;
     Mat descriptorsA, descriptorsB;
-    std::vector<DMatch> matches;
+    vector<DMatch> matches;
 
     // DETECTION
     // Any openCV detector such as
@@ -103,20 +104,20 @@ int main( int argc, char** argv ) {
     detector.detect( imgA, keypointsA );
     detector.detect( imgB, keypointsB );
     t = ((double)getTickCount() - t)/getTickFrequency();
-    std::cout << "detection time [s]: " << t/1.0 << std::endl;
+    cout << "detection time [s]: " << t/1.0 << std::endl;
 
     // extract
     t = (double)getTickCount();
     extractor.compute( imgA, keypointsA, descriptorsA );
     extractor.compute( imgB, keypointsB, descriptorsB );
     t = ((double)getTickCount() - t)/getTickFrequency();
-    std::cout << "extraction time [s]: " << t << std::endl;
+    cout << "extraction time [s]: " << t << std::endl;
 
     // match
     t = (double)getTickCount();
     matcher.match(descriptorsA, descriptorsB, matches);
     t = ((double)getTickCount() - t)/getTickFrequency();
-    std::cout << "matching time [s]: " << t << std::endl;
+    cout << "matching time [s]: " << t << std::endl;
 
     // Draw matches
     Mat imgMatch;

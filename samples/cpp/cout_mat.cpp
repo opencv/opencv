@@ -1,7 +1,7 @@
 /*
  *
- * cvout_sample just demonstrates the serial out capabilities of cv::Mat
- *  That is, cv::Mat M(...); cout << M;  Now works.
+ * cvout_sample just demonstrates the serial out capabilities of Mat
+ *  That is, Mat M(...); cout << M;  Now works.
  *
  */
 
@@ -15,8 +15,8 @@ static void help()
 {
     cout
     << "\n------------------------------------------------------------------\n"
-    << " This program shows the serial out capabilities of cv::Mat\n"
-    << "That is, cv::Mat M(...); cout << M;  Now works.\n"
+    << " This program shows the serial out capabilities of Mat\n"
+    << "That is, Mat M(...); cout << M;  Now works.\n"
     << "Output can be formated to OpenCV, python, numpy, csv and C styles"
     << "Usage:\n"
     << "./cvout_sample\n"

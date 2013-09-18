@@ -296,8 +296,8 @@ int main( int argc, char** argv )
     help();
 
     const string winName = "image";
-    cvNamedWindow( winName.c_str(), CV_WINDOW_AUTOSIZE );
-    cvSetMouseCallback( winName.c_str(), on_mouse, 0 );
+    namedWindow( winName.c_str(), CV_WINDOW_AUTOSIZE );
+    setMouseCallback( winName.c_str(), on_mouse, 0 );
 
     gcapp.setImageAndWinName( image, winName );
     gcapp.showImage();
@@ -331,6 +331,5 @@ int main( int argc, char** argv )
     }
 
 exit_main:
-    cvDestroyWindow( winName.c_str() );
     return 0;
 }
