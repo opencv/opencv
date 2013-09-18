@@ -181,7 +181,7 @@ if(HAVE_FFMPEG)
     list(APPEND HIGHGUI_LIBRARIES ${BZIP2_LIBRARIES})
   endif()
   if(APPLE)
-    list(APPEND HIGHGUI_LIBRARIES "-framework VideoDecodeAcceleration" bz2)
+    list(APPEND HIGHGUI_LIBRARIES "-framework VideoDecodeAcceleration" bz2 -lmp3lame -lfaac -liconv -lx264 -lxvidcore)
   endif()
 endif(HAVE_FFMPEG)
 
