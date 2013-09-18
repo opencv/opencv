@@ -80,6 +80,8 @@ CV_EXPORTS_W void fastNlMeansDenoisingColoredMulti( InputArrayOfArrays srcImgs, 
                                                     float h = 3, float hColor = 3,
                                                     int templateWindowSize = 7, int searchWindowSize = 21);
 
+enum { LDR_SIZE = 256 };
+
 class CV_EXPORTS_W Tonemap : public Algorithm
 {
 public:
@@ -164,7 +166,7 @@ createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 
 class CV_EXPORTS_W ExposureAlign : public Algorithm
 {
 public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                                  const std::vector<float>& times, InputArray response) = 0;
 };
 
@@ -173,22 +175,26 @@ public:
 class CV_EXPORTS_W AlignMTB : public ExposureAlign
 {
 public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                                  const std::vector<float>& times, InputArray response) = 0;
 
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArrayOfArrays dst) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst) = 0;
 
     CV_WRAP virtual void calculateShift(InputArray img0, InputArray img1, Point& shift) = 0;
     CV_WRAP virtual void shiftMat(InputArray src, OutputArray dst, const Point shift) = 0;
+    CV_WRAP virtual void computeBitmaps(Mat& img, Mat& tb, Mat& eb) = 0;
 
     CV_WRAP virtual int getMaxBits() const = 0;
     CV_WRAP virtual void setMaxBits(int max_bits) = 0;
 
     CV_WRAP virtual int getExcludeRange() const = 0;
     CV_WRAP virtual void setExcludeRange(int exclude_range) = 0;
+
+    CV_WRAP virtual bool getCut() const = 0;
+    CV_WRAP virtual void setCut(bool value) = 0;
 };
 
-CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4);
+CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4, bool cut = true);
 
 class CV_EXPORTS_W ExposureCalibrate : public Algorithm
 {
@@ -206,9 +212,12 @@ public:
     
     CV_WRAP virtual int getSamples() const = 0;
     CV_WRAP virtual void setSamples(int samples) = 0;
+
+    CV_WRAP virtual bool getRandom() const = 0;
+    CV_WRAP virtual void setRandom(bool random) = 0;
 };
 
-CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f);
+CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, float lambda = 10.0f, bool random = false);
 
 // "Dynamic range improvement through multiple exposures", Robertson et al., 1999
 
@@ -220,9 +229,11 @@ public:
     
     CV_WRAP virtual float getThreshold() const = 0;
     CV_WRAP virtual void setThreshold(float threshold) = 0;
+    
+    CV_WRAP virtual Mat getRadiance() const = 0;
 };
 
-CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int samples = 50, float lambda = 10.0f);
+CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter = 30, float threshold = 0.01f);
 
 class CV_EXPORTS_W ExposureMerge : public Algorithm
 {
@@ -274,6 +285,8 @@ public:
                                  const std::vector<float>& times, InputArray response) = 0;
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
 };
+
+CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
 } // cv
 

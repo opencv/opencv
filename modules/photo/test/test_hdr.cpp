@@ -1,4 +1,4 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
+ /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
@@ -185,9 +185,33 @@ TEST(Photo_MergeDebevec, regression)
 	Ptr<MergeDebevec> merge = createMergeDebevec();
 
 	Mat result, expected;
-	loadImage(test_path + "merge/debevec.exr", expected);
+	loadImage(test_path + "merge/debevec.hdr", expected);
 	merge->process(images, result, times, response);
-	imwrite("test.exr", result);
+
+    Ptr<Tonemap> map = createTonemap();
+    map->process(result, result);
+    map->process(expected, expected);
+
+	checkEqual(expected, result, 1e-2f);
+}
+
+TEST(Photo_MergeRobertson, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	loadExposureSeq(test_path + "exposures/", images, times);
+
+	Ptr<MergeRobertson> merge = createMergeRobertson();
+
+	Mat result, expected;
+	loadImage(test_path + "merge/robertson.hdr", expected);
+	merge->process(images, result, times);
+    Ptr<Tonemap> map = createTonemap();
+    map->process(result, result);
+    map->process(expected, expected);
+
 	checkEqual(expected, result, 1e-2f);
 }
 
@@ -201,7 +225,26 @@ TEST(Photo_CalibrateDebevec, regression)
 	loadExposureSeq(test_path + "exposures/", images, times);
     loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
 	Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-    srand(1);
+
+	calibrate->process(images, response, times);
+    Mat diff = abs(response - expected);
+    diff = diff.mul(1.0f / response);
+    double max;
+    minMaxLoc(diff, NULL, &max);
+    ASSERT_FALSE(max > 0.1);
+}
+
+TEST(Photo_CalibrateRobertson, regression)
+{
+	string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+
+	vector<Mat> images;
+	vector<float> times;
+	Mat response, expected;
+	loadExposureSeq(test_path + "exposures/", images, times);
+    loadResponseCSV(test_path + "calibrate/robertson.csv", expected);
+
+	Ptr<CalibrateRobertson> calibrate = createCalibrateRobertson();
 	calibrate->process(images, response, times);
     checkEqual(expected, response, 1e-3f);
 }

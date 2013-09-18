@@ -192,16 +192,30 @@ Helper function, that shift Mat filling new regions with zeros.
     :param dst: result image
     
     :param shift: shift value
+
+AlignMTB::computeBitmaps
+---------------------------
+Computes median threshold and exclude bitmaps of given image.
+    
+.. ocv:function:: void computeBitmaps(Mat& img, Mat& tb, Mat& eb)
+
+    :param img: input image
+    
+    :param tb: median threshold bitmap
+    
+    :param eb: exclude bitmap
     
 createAlignMTB
 ---------------------------
 Creates AlignMTB object
 
-.. ocv:function:: Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4)
+.. ocv:function:: Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4, bool cut = true)
     
     :param max_bits: logarithm to the base 2 of maximal shift in each dimension. Values of 5 and 6 are usually good enough (31 and 63 pixels shift respectively).
     
     :param exclude_range: range for exclusion bitmap that is constructed to suppress noise around the median value.
+    
+    :param cut: if true cuts images, otherwise fills the new regions with zeros.
     
 ExposureCalibrate
 ---------------------------
@@ -234,11 +248,32 @@ createCalibrateDebevec
 ---------------------------
 Creates CalibrateDebevec object
 
-.. ocv:function:: Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 50, float lambda = 10.0f)
+.. ocv:function:: createCalibrateDebevec(int samples = 70, float lambda = 10.0f, bool random = false)
 
     :param samples: number of pixel locations to use
     
     :param lambda: smoothness term weight. Greater values produce smoother results, but can alter the response.
+    
+    :param random: if true sample pixel locations are chosen at random, otherwise the form a rectangular grid.
+    
+CalibrateRobertson
+---------------------------
+.. ocv:class:: CalibrateRobertson : public ExposureCalibrate
+
+Inverse camera response function is extracted for each brightness value by minimizing an objective function as linear system.
+This algorithm uses all image pixels.
+
+For more information see [RB99]_.
+
+createCalibrateRobertson
+---------------------------
+Creates CalibrateRobertson object
+
+.. ocv:function:: createCalibrateRobertson(int max_iter = 30, float threshold = 0.01f)
+
+    :param max_iter: maximal number of Gauss-Seidel solver iterations.
+    
+    :param threshold: target difference between results of two successive steps of the minimization.
     
 ExposureMerge
 ---------------------------
@@ -264,7 +299,7 @@ MergeDebevec
 ---------------------------
 .. ocv:class:: MergeDebevec : public ExposureMerge
 
-The resulting HDR image is calculated as weighted average of he exposures considering exposure values and camera response.
+The resulting HDR image is calculated as weighted average of the exposures considering exposure values and camera response.
 
 For more information see [DM97]_.
 
@@ -296,7 +331,6 @@ Short version of process, that doesn't take extra arguments.
    
     :param dst: result image
 
-
 createMergeMertens
 ---------------------------
 Creates MergeMertens object
@@ -308,6 +342,20 @@ Creates MergeMertens object
     :param saturation_weight: saturation measure weight
     
     :param exposure_weight: well-exposedness measure weight
+
+MergeRobertson
+---------------------------
+.. ocv:class:: MergeRobertson : public ExposureMerge
+
+The resulting HDR image is calculated as weighted average of the exposures considering exposure values and camera response.
+
+For more information see [RB99]_.
+
+createMergeRobertson
+---------------------------
+Creates MergeRobertson object
+
+.. ocv:function:: Ptr<MergeRobertson> createMergeRobertson()
     
 References
 ==========
@@ -327,3 +375,5 @@ References
 .. [DM97] P. Debevec, J. Malik, "Recovering High Dynamic Range Radiance Maps from Photographs", Proceedings OF ACM SIGGRAPH, 1997, 369 - 378.
 
 .. [MK07] T. Mertens, J. Kautz, F. Van Reeth, "Exposure Fusion", Proceedings of the 15th Pacific Conference on Computer Graphics and Applications, 2007, 382 - 390.
+
+.. [RB99]  M. Robertson , S. Borman , R. Stevenson , "Dynamic range improvement through multiple exposures ", Proceedings of the Int. Conf. on Image Processing , 1999, 159 - 163.

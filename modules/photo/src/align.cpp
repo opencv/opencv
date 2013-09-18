@@ -50,25 +50,25 @@ namespace cv
 class AlignMTBImpl : public AlignMTB
 {
 public:
-    AlignMTBImpl(int max_bits, int exclude_range) :
+    AlignMTBImpl(int max_bits, int exclude_range, bool cut) :
         max_bits(max_bits),
         exclude_range(exclude_range),
+        cut(cut),
         name("AlignMTB")
     {
     }
     
-    void process(InputArrayOfArrays src, OutputArrayOfArrays dst,
+    void process(InputArrayOfArrays src, std::vector<Mat>& dst,
                  const std::vector<float>& times, InputArray response)
     {
         process(src, dst);
     }
 
-    void process(InputArrayOfArrays _src, OutputArray _dst)
+    void process(InputArrayOfArrays _src, std::vector<Mat>& dst)
     {
-        std::vector<Mat> src, dst;
+        std::vector<Mat> src;
         _src.getMatVector(src);
-        _dst.getMatVector(dst);
-
+        
         checkImageDimensions(src);
         dst.resize(src.size());
 
@@ -76,16 +76,40 @@ public:
         dst[pivot] = src[pivot];
         Mat gray_base;
         cvtColor(src[pivot], gray_base, COLOR_RGB2GRAY);
+        std::vector<Point> shifts;
 
         for(size_t i = 0; i < src.size(); i++) {
             if(i == pivot) {
+                shifts.push_back(Point(0, 0));
                 continue;
             }
             Mat gray;
             cvtColor(src[i], gray, COLOR_RGB2GRAY);
             Point shift;
             calculateShift(gray_base, gray, shift);
+            shifts.push_back(shift);
             shiftMat(src[i], dst[i], shift);
+        }
+        if(cut) {
+            Point max(0, 0), min(0, 0);
+            for(size_t i = 0; i < shifts.size(); i++) {
+                if(shifts[i].x > max.x) {
+                    max.x = shifts[i].x;
+                }
+                if(shifts[i].y > max.y) {
+                    max.y = shifts[i].y;
+                }
+                if(shifts[i].x < min.x) {
+                    min.x = shifts[i].x;
+                }
+                if(shifts[i].y < min.y) {
+                    min.y = shifts[i].y;
+                }
+            }
+            Point size = dst[0].size();
+            for(size_t i = 0; i < dst.size(); i++) {
+                dst[i] = dst[i](Rect(max, min + size));
+            }
         }
     }
 
@@ -109,8 +133,8 @@ public:
         
             shift *= 2;
             Mat tb1, tb2, eb1, eb2;
-            computeBitmaps(pyr0[level], tb1, eb1, exclude_range);
-            computeBitmaps(pyr1[level], tb2, eb2, exclude_range);
+            computeBitmaps(pyr0[level], tb1, eb1);
+            computeBitmaps(pyr1[level], tb2, eb2);
 
             int min_err = pyr0[level].total();
             Point new_shift(shift);
@@ -140,12 +164,13 @@ public:
         _dst.create(src.size(), src.type());
         Mat dst = _dst.getMat();
 
-        dst = Mat::zeros(src.size(), src.type());
+        Mat res = Mat::zeros(src.size(), src.type());
         int width = src.cols - abs(shift.x);
         int height = src.rows - abs(shift.y);
         Rect dst_rect(max(shift.x, 0), max(shift.y, 0), width, height);
         Rect src_rect(max(-shift.x, 0), max(-shift.y, 0), width, height);
-        src(src_rect).copyTo(dst(dst_rect));
+        src(src_rect).copyTo(res(dst_rect));
+        res.copyTo(dst);
     }
 
     int getMaxBits() const { return max_bits; }
@@ -154,11 +179,15 @@ public:
     int getExcludeRange() const { return exclude_range; }
     void setExcludeRange(int val) { exclude_range = val; }
 
+    bool getCut() const { return cut; }
+    void setCut(bool val) { cut = val; }
+
     void write(FileStorage& fs) const
     {
         fs << "name" << name
            << "max_bits" << max_bits
-           << "exclude_range" << exclude_range;
+           << "exclude_range" << exclude_range 
+           << "cut" << static_cast<int>(cut);
     }
 
     void read(const FileNode& fn)
@@ -167,11 +196,21 @@ public:
         CV_Assert(n.isString() && String(n) == name);
         max_bits = fn["max_bits"];
         exclude_range = fn["exclude_range"];
+        int cut_val = fn["cut"];
+        cut = static_cast<bool>(cut_val);
+    }
+
+    void computeBitmaps(Mat& img, Mat& tb, Mat& eb)
+    {
+        int median = getMedian(img);
+        compare(img, median, tb, CMP_GT);
+        compare(abs(img - median), exclude_range, eb, CMP_GT);
     }
 
 protected:
     String name;
     int max_bits, exclude_range;
+    bool cut;
 
     void downsample(Mat& src, Mat& dst)
     {
@@ -204,31 +243,25 @@ protected:
     {
         int channels = 0;
         Mat hist; 
-        int hist_size = 256;
-        float range[] = {0, 256} ;
+        int hist_size = LDR_SIZE;
+        float range[] = {0, LDR_SIZE} ;
         const float* ranges[] = {range};
         calcHist(&img, 1, &channels, Mat(), hist, 1, &hist_size, ranges);
         float *ptr = hist.ptr<float>();
         int median = 0, sum = 0;
         int thresh = img.total() / 2;
-        while(sum < thresh && median < 256) {
+        while(sum < thresh && median < LDR_SIZE) {
             sum += static_cast<int>(ptr[median]);
             median++;
         }
         return median;
     }
-
-    void computeBitmaps(Mat& img, Mat& tb, Mat& eb, int exclude_range)
-    {
-        int median = getMedian(img);
-        compare(img, median, tb, CMP_GT);
-        compare(abs(img - median), exclude_range, eb, CMP_GT);
-    }
 };
 
-CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits, int exclude_range)
+Ptr<AlignMTB> createAlignMTB(int max_bits, int exclude_range, bool cut)
 {
-    return new AlignMTBImpl(max_bits, exclude_range);
+    return new AlignMTBImpl(max_bits, exclude_range, cut);
 }
 
 }
+

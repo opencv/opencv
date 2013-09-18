@@ -61,21 +61,22 @@ void checkImageDimensions(const std::vector<Mat>& images)
 
 Mat tringleWeights()
 {
-    Mat w(256, 1, CV_32F);
-    for(int i = 0; i < 256; i++) {
-        w.at<float>(i) = i < 128 ? i + 1.0f : 256.0f - i;
+    Mat w(LDR_SIZE, 1, CV_32F);
+    int half = LDR_SIZE / 2;
+    for(int i = 0; i < LDR_SIZE; i++) {
+        w.at<float>(i) = i < half ? i + 1.0f : LDR_SIZE - i;
     }
     return w;
 }
 
 Mat RobertsonWeights()
 {
-    Mat weight(256, 1, CV_32FC3);
-    for(int i = 0; i < 256; i++) {
-        float value = exp(-4.0f * pow(i - 127.5f, 2.0f) / pow(127.5f, 2.0f));
-        for(int c = 0; c < 3; c++) {
-            weight.at<Vec3f>(i)[c] = value;
-        }
+    Mat weight(LDR_SIZE, 1, CV_32FC3);
+    float q = (LDR_SIZE - 1) / 4.0f;
+    for(int i = 0; i < LDR_SIZE; i++) {
+        float value = i / q - 2.0f;
+        value = exp(-value * value);
+        weight.at<Vec3f>(i) = Vec3f::all(value);
     }
     return weight;
 }
@@ -90,6 +91,15 @@ void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
         channels[i] = channels[i].mul(new_lum);
     }
     merge(channels, dst);
+}
+
+Mat linearResponse(int channels)
+{
+    Mat response = Mat(LDR_SIZE, 1, CV_MAKETYPE(CV_32F, channels));
+    for(int i = 0; i < LDR_SIZE; i++) {
+        response.at<Vec3f>(i) = Vec3f::all(i);
+    }
+    return response;
 }
 
 };

@@ -43,7 +43,6 @@
 #include "opencv2/photo.hpp"
 #include "opencv2/imgproc.hpp"
 #include "hdr_common.hpp"
-#include <iostream>
 
 namespace cv
 {
@@ -77,9 +76,10 @@ public:
 
         if(response.empty()) {
             response = linearResponse(channels);
+            response.at<Vec3f>(0) = response.at<Vec3f>(1);
         }
         log(response, response);
-        CV_Assert(response.rows == 256 && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
                   response.channels() == channels);
 
         Mat exp_values(times);
@@ -125,23 +125,6 @@ public:
 protected:
     String name;
     Mat weights;
-
-    Mat linearResponse(int channels)
-    {
-        Mat single_response = Mat(256, 1, CV_32F);
-        for(int i = 1; i < 256; i++) {
-            single_response.at<float>(i) = static_cast<float>(i);
-        }
-        single_response.at<float>(0) = static_cast<float>(1);
-
-        std::vector<Mat> splitted(channels);
-        for(int c = 0; c < channels; c++) {
-            splitted[c] = single_response;
-        }
-        Mat result;
-        merge(splitted, result);
-        return result;
-    }
 };
 
 Ptr<MergeDebevec> createMergeDebevec()
@@ -329,9 +312,9 @@ public:
 
         Mat response = input_response.getMat();
         if(response.empty()) {
-            response = linearResponse(channels);
+            response = linearResponse(channels) / (LDR_SIZE / 2.0f);
         }
-        CV_Assert(response.rows == 256 && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
                   response.channels() == channels);
     
         result = Mat::zeros(images[0].size(), CV_32FCC);
@@ -355,17 +338,6 @@ public:
 protected:
     String name;
     Mat weight;
-
-    Mat linearResponse(int channels)
-    {
-        Mat response = Mat::zeros(256, 1, CV_32FC3);
-        for(int i = 0; i < 256; i++) {
-            for(int c = 0; c < 3; c++) {
-                response.at<Vec3f>(i)[c] = static_cast<float>(i) / 128.0f;
-            }
-        }
-        return response;
-    }
 };
 
 Ptr<MergeRobertson> createMergeRobertson()
