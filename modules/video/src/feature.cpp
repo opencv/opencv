@@ -249,7 +249,7 @@ void CvHaarEvaluator::generateFeatures( int nFeatures )
 
 }
 
-std::vector<CvHaarEvaluator::FeatureHaar> CvHaarEvaluator::getFeatures() const
+const std::vector<CvHaarEvaluator::FeatureHaar>& CvHaarEvaluator::getFeatures() const
 {
   return features;
 }
@@ -707,8 +707,9 @@ void CvHaarEvaluator::FeatureHaar::generateRandomFeature( Size patchSize )
   }
 }
 
-bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* result )
+bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* result ) const
 {
+
   *result = 0.0f;
 
   for ( int curArea = 0; curArea < m_numAreas; curArea++ )
@@ -725,12 +726,10 @@ bool CvHaarEvaluator::FeatureHaar::eval( const Mat& image, Rect ROI, float* resu
    }
    */
 
-  m_response = *result;
-
   return true;
 }
 
-float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
+float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI ) const
 {
 // left upper Origin
   int OriginX = imageROI.x;
@@ -759,11 +758,6 @@ float CvHaarEvaluator::FeatureHaar::getSum( const Mat& image, Rect imageROI )
         - image.at<float>( OriginY + Height, OriginX );
 
   return value;
-}
-
-float CvHaarEvaluator::FeatureHaar::getResponse()
-{
-  return m_response;
 }
 
 int CvHaarEvaluator::FeatureHaar::getNumAreas()

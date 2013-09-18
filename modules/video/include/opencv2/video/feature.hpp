@@ -220,8 +220,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
    public:
 
     FeatureHaar( Size patchSize );
-    bool eval( const Mat& image, Rect ROI, float* result );
-    float getResponse();
+    bool eval( const Mat& image, Rect ROI, float* result ) const;
     int getNumAreas();
     const std::vector<float>& getWeights() const;
     const std::vector<Rect>& getAreas() const;
@@ -239,7 +238,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     float m_initMean;
     float m_initSigma;
     void generateRandomFeature( Size imageSize );
-    float getSum( const Mat& image, Rect imgROI );
+    float getSum( const Mat& image, Rect imgROI ) const;
     std::vector<Rect> m_areas;  // areas within the patch over which to compute the feature
     cv::Size m_initSize;  // size of the patch used during training
     cv::Size m_curSize;  // size of the patches currently under investigation
@@ -247,7 +246,6 @@ class CvHaarEvaluator : public CvFeatureEvaluator
     float m_scaleFactorWidth;  // scaling factor in horizontal direction
     std::vector<Rect> m_scaleAreas;  // areas after scaling
     std::vector<float> m_scaleWeights;  // weights after scaling
-    float m_response;
 
   };
 
@@ -256,7 +254,7 @@ class CvHaarEvaluator : public CvFeatureEvaluator
   virtual float operator()( int featureIdx, int sampleIdx );
   virtual void writeFeatures( FileStorage &fs, const Mat& featureMap ) const;
   void writeFeature( FileStorage &fs, int fi ) const;  // for old file format
-  std::vector<CvHaarEvaluator::FeatureHaar> getFeatures() const;
+  const std::vector<CvHaarEvaluator::FeatureHaar>& getFeatures() const;
   inline CvHaarEvaluator::FeatureHaar& getFeatures( int idx )
   {
     return features[idx];
