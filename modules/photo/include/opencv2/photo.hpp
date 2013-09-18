@@ -288,63 +288,6 @@ public:
 
 CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();
 
-class CV_EXPORTS_W Ghostbuster : public Algorithm
-{
-public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
-};
-
-// "Ghost Detection and Removal in High Dynamic Range Images", Sidibe et al., 2009
-
-class CV_EXPORTS_W GhostbusterOrder : public Ghostbuster
-{
-public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
-
-    CV_WRAP virtual int getUnderexp() = 0;
-    CV_WRAP virtual void setUnderexp(int value) = 0;
-
-    CV_WRAP virtual int getOverexp() = 0;
-    CV_WRAP virtual void setOverexp(int value) = 0;
-};
-
-CV_EXPORTS_W Ptr<GhostbusterOrder> createGhostbusterOrder(int underexp = 20, int overexp = 240);
-
-// "Fast and Robust High Dynamic Range Image Generation with Camera and Object Movement", Grosch, 2006
-
-class CV_EXPORTS_W GhostbusterPredict : public Ghostbuster
-{
-public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times) = 0;
-
-    CV_WRAP virtual int getThreshold() = 0;
-    CV_WRAP virtual void setThreshold(int value) = 0;
-
-    CV_WRAP virtual int getUnderexp() = 0;
-    CV_WRAP virtual void setUnderexp(int value) = 0;
-
-    CV_WRAP virtual int getOverexp() = 0;
-    CV_WRAP virtual void setOverexp(int value) = 0;
-};
-
-CV_EXPORTS_W Ptr<GhostbusterPredict> createGhostbusterPredict(int thresh = 10, int underexp = 20, int overexp = 240);
-
-// "Bitmap Movement Detection: HDR for Dynamic Scenes", Pece, Kautz, 2010
-
-class CV_EXPORTS_W GhostbusterBitmap : public Ghostbuster
-{
-public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times, Mat response) = 0;
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
-
-    CV_WRAP virtual int getExclude() = 0;
-    CV_WRAP virtual void setExclude(int value) = 0;
-};
-
-CV_EXPORTS_W Ptr<GhostbusterBitmap> createGhostbusterBitmap(int exclude = 4);
-
 } // cv
 
 #endif
