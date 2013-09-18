@@ -21,9 +21,9 @@
 //  THE IMPLEMENTATION OF THE MODULES IS BASED ON THE FOLLOWING PAPERS:
 //
 //  [1] V. Klee and M. C. Laskowski, “Finding the smallest triangles containing a given convex
-//  polygon,” Journal of Algorithms, vol. 6, no. 3, pp. 359–375, Sep. 1985.
+//  polygon”, Journal of Algorithms, vol. 6, no. 3, pp. 359–375, Sep. 1985.
 //  [2] J. O’Rourke, A. Aggarwal, S. Maddila, and M. Baldwin, “An optimal algorithm for finding
-//  minimal enclosing triangles,” Journal of Algorithms, vol. 7, no. 2, pp. 258–269, Jun. 1986.
+//  minimal enclosing triangles”, Journal of Algorithms, vol. 7, no. 2, pp. 258–269, Jun. 1986.
 //
 //  The overall complexity of the algorithm is theta(n) where "n" represents the number
 //  of vertices in the convex polygon.
@@ -35,6 +35,7 @@
 //
 // Copyright (C) 2000, Intel Corporation, all rights reserved.
 // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
+// Copyright (C) 2013, Ovidiu Parvu, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -79,14 +80,11 @@
 #define INTERSECTS_BELOW        1
 #define INTERSECTS_ABOVE        2
 #define INTERSECTS_CRITICAL     3
-#define INTERSECTS_LIMIT        4
 
 // Error messages
 
-#define ERR_MIDPOINT_SIDE_B     "The position of the middle point of side B could not be determined."
 #define ERR_SIDE_B_GAMMA        "The position of side B could not be determined, because gamma(b) could not be computed."
 #define ERR_VERTEX_C_ON_SIDE_B  "The position of the vertex C on side B could not be determined, because the considered lines do not intersect."
-#define ERR_TRIANGLE_VERTICES   "The position of the triangle vertices could not be determined, because the sides of the triangle do not intersect."
 
 // Possible values for validation flag
 
@@ -94,7 +92,7 @@
 #define VALIDATION_SIDE_B_TANGENT   1
 #define VALIDATION_SIDES_FLUSH      2
 
-// Threshold value for geometrical comparisons
+// Threshold value for comparisons
 
 #define EPSILON 1E-5
 
@@ -171,9 +169,9 @@ static bool findGammaIntersectionPoints(unsigned int polygonPointIndex, const cv
                                         cv::Point2f &intersectionPoint2);
 
 static void findMinEnclosingTriangle(cv::InputArray points,
-                                     CV_OUT cv::OutputArray triangle, CV_OUT double& area);
+                                     CV_OUT cv::OutputArray triangle, CV_OUT double &area);
 
-static void findMinEnclosingTriangle(std::vector<cv::Point2f> &triangle, double& area);
+static void findMinEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area);
 
 static void findMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area);
 
@@ -270,7 +268,7 @@ static void updateSidesCA();
 * @param area           Area of the minimum area enclosing triangle
 */
 void cv::minEnclosingTriangle(cv::InputArray points,
-                              CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
+                              CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
     findMinEnclosingTriangle(points, triangle, area);
 }
 
@@ -297,10 +295,8 @@ void cv::minEnclosingTriangle(cv::InputArray points,
 * @param area           Area of the minimum area enclosing triangle
 */
 static void findMinEnclosingTriangle(cv::InputArray points,
-                                     CV_OUT cv::OutputArray triangle, CV_OUT double& area) {
+                                     CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
     std::vector<cv::Point2f> resultingTriangle;
-
-    CV_Assert(triangle.depth() == CV_32F);
 
     createConvexHull(points);
     findMinEnclosingTriangle(resultingTriangle, area);
@@ -331,7 +327,7 @@ static void createConvexHull(cv::InputArray points) {
 * @param triangle       Minimum area triangle enclosing the given polygon
 * @param area           Area of the minimum area enclosing triangle
 */
-static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double& area) {
+static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double &area) {
     initialise(triangle, area);
 
     if (polygon.size() > 3) {
@@ -344,11 +340,11 @@ static void findMinEnclosingTriangle( std::vector<cv::Point2f> &triangle, double
 //! Copy resultingTriangle to the OutputArray triangle
 /*!
 * @param resultingTriangle  Minimum area triangle enclosing the given polygon found by the algorithm
-* @param triangle           Minimum area triangle enclosing the given polygon return to the user
+* @param triangle           Minimum area triangle enclosing the given polygon returned to the user
 */
 static void copyResultingTriangle(const std::vector<cv::Point2f> &resultingTriangle,
                                   cv::OutputArray triangle) {
-    cv::Mat(resultingTriangle).convertTo(triangle, triangle.fixedType() ? triangle.type() : CV_32F);
+    cv::Mat(resultingTriangle).copyTo(triangle);
 }
 
 //! Initialisation function
@@ -422,9 +418,9 @@ static void advanceBToRightChain() {
 * See paper [2] for more details
 */
 static void moveAIfLowAndBIfHigh() {
-    while(height(b) > height(a)) {
-        cv::Point2f gammaOfA;
+    cv::Point2f gammaOfA;
 
+    while(height(b) > height(a)) {
         if ((gamma(a, gammaOfA)) && (intersectsBelow(gammaOfA, b))) {
             advance(b);
         } else {
@@ -550,8 +546,8 @@ static bool isValidMinimalTriangle() {
 
 //! Update the current minimum area enclosing triangle if the newly obtained one has a smaller area
 /*!
-* @param minimumAreaEnclosingTriangle      Minimum area triangle enclosing the given polygon
-* @param minimumAreaEnclosingTriangleArea  Area of the minimum area triangle enclosing the given polygon
+* @param triangle   Minimum area triangle enclosing the given polygon
+* @param area       Area of the minimum area triangle enclosing the given polygon
 */
 static void updateMinimumAreaEnclosingTriangle(std::vector<cv::Point2f> &triangle, double &area) {
     triangleArea = areaOfTriangle(vertexA, vertexB, vertexC);
@@ -611,7 +607,7 @@ static bool intersectsAbove(const cv::Point2f &gammaPoint, unsigned int polygonP
 
 //! Check if/where the line determined by gammaPoint and polygon[polygonPointIndex] intersects the polygon
 /*!
-* @param angleGammaAndPoint     Angle between gammaPoint and polygon[polygonPointIndex]
+* @param angleGammaAndPoint     Angle determined by gammaPoint and polygon[polygonPointIndex] wrt Ox axis
 * @param polygonPointIndex      Index of the polygon point which is considered when determining the line
 */
 static unsigned int intersects(double angleGammaAndPoint, unsigned int polygonPointIndex) {
@@ -671,7 +667,7 @@ static unsigned int intersectsAboveOrBelow(unsigned int succPredIndex, unsigned 
 * to 2 * height(p), we can have two possible (x y) lines.
 *
 * Therefore, we will compute two intersection points between the lines (x y) and (a a-1) and take the
-* point which is closest to point polygon[a].
+* point which is on the same side of line (c c-1) as the polygon.
 *
 * See paper [2] and formula for distance from point to a line for more details
 *
@@ -706,7 +702,7 @@ static bool gamma(unsigned int polygonPointIndex, cv::Point2f &gammaPoint) {
 * @param side2StartVertex      Start vertex for side 2
 * @param side2EndVertex        End vertex for side 2
 * @param intersectionPoint1    First intersection point between one pair of lines
-* @param intersectionPoint2    Second intersection point between another pair of lines
+* @param intersectionPoint2    Second intersection point between other pair of lines
 */
 static bool findGammaIntersectionPoints(unsigned int polygonPointIndex, const cv::Point2f &side1StartVertex,
                                         const cv::Point2f &side1EndVertex, const cv::Point2f &side2StartVertex,
@@ -806,7 +802,7 @@ static std::vector<double> lineEquationParameters(const cv::Point2f& p, const cv
 * to 2 * height(a-1), we can have two possible (x y) lines.
 *
 * Therefore, we will compute two intersection points between the lines (x y) and (b b-1) and take the
-* point which is closest to point polygon[b].
+* point which is on the same side of line (c c-1) as the polygon.
 *
 * See paper [2] and formula for distance from point to a line for more details
 */
@@ -1014,6 +1010,7 @@ static double oppositeAngle(double angle) {
 *            sqrt(((x_c - x_b)^2) + ((y_c - y_b)^2))
 *
 * Reference: http://mathworld.wolfram.com/Point-LineDistance2-Dimensional.html
+* (Last access: 15.09.2013)
 *
 * @param a             Point from which the distance is measures
 * @param linePointB    One of the points determining the line
@@ -1029,7 +1026,8 @@ static double distanceFromPointToLine(const cv::Point2f &a, const cv::Point2f &l
     double nominator = std::abs((term1 * term2) - (term3 * term4));
     double denominator = std::sqrt((term1 * term1) + (term4 * term4));
 
-    return (nominator / denominator);
+    return (denominator != 0) ? (nominator / denominator)
+                              : 0;
 }
 
 //! Compute the distance between two points
@@ -1048,8 +1046,8 @@ static double distanceBtwPoints(const cv::Point2f &a, const cv::Point2f &b) {
 //! Compute the area of a triangle defined by three points
 /*!
 * The area is computed using the determinant method.
-* An example is presented at http://demonstrations.wolfram.com/TheAreaOfATriangleUsingADeterminant/
-* (Last access: 10.07.2013)
+* An example is depicted at http://demonstrations.wolfram.com/TheAreaOfATriangleUsingADeterminant/
+* (Last access: 15.09.2013)
 *
 * @param a Point a
 * @param b Point b
@@ -1070,10 +1068,10 @@ static double areaOfTriangle(const cv::Point2f &a, const cv::Point2f &b, const c
 * @param b Point b
 */
 static cv::Point2f middlePoint(const cv::Point2f &a, const cv::Point2f &b) {
-    double middleX = (double)((a.x + b.x) / 2);
-    double middleY = (double)((a.y + b.y) / 2);
+    double middleX = static_cast<double>((a.x + b.x) / 2);
+    double middleY = static_cast<double>((a.y + b.y) / 2);
 
-    return cv::Point2f((float) middleX, (float) middleY);
+    return cv::Point2f(static_cast<float>(middleX), static_cast<float>(middleY));
 }
 
 //! Determine the intersection point of two lines, if this point exists
@@ -1084,12 +1082,12 @@ static cv::Point2f middlePoint(const cv::Point2f &a, const cv::Point2f &b) {
 *      A1x + B1x = C1
 *      A2x + B2x = C2
 *
-* If det (= A1xB2 - A2xB1) == 0, then lines are parallel
+* If det (= A1*B2 - A2*B1) == 0, then lines are parallel
 *                                else they intersect
 *
 * If they intersect, then let us denote the intersection point with P(x, y) where:
-*      x = (C1xB2 - C2xB1) / (det)
-*      y = (C2xA1 - C1xA2) / (det)
+*      x = (C1*B2 - C2*B1) / (det)
+*      y = (C2*A1 - C1*A2) / (det)
 *
 * @param a1 A1
 * @param b1 B1
@@ -1104,8 +1102,8 @@ static bool lineIntersection(double a1, double b1, double c1, double a2, double 
     double det = (a1 * b2) - (a2 * b1);
 
     if (!(almostEqual(det, 0))) {
-        intersection.x = (float)(((c1 * b2) - (c2 * b1)) / (det));
-        intersection.y = (float)(((c2 * a1) - (c1 * a2)) / (det));
+        intersection.x = static_cast<float>(((c1 * b2) - (c2 * b1)) / (det));
+        intersection.y = static_cast<float>(((c2 * a1) - (c1 * a2)) / (det));
 
         return true;
     }
@@ -1124,12 +1122,12 @@ static bool lineIntersection(double a1, double b1, double c1, double a2, double 
 *      A1x + B1x = C1
 *      A2x + B2x = C2
 *
-* If det (= A1xB2 - A2xB1) == 0, then lines are parallel
+* If det (= A1*B2 - A2*B1) == 0, then lines are parallel
 *                                else they intersect
 *
 * If they intersect, then let us denote the intersection point with P(x, y) where:
-*      x = (C1xB2 - C2xB1) / (det)
-*      y = (C2xA1 - C1xA2) / (det)
+*      x = (C1*B2 - C2*B1) / (det)
+*      y = (C2*A1 - C1*A2) / (det)
 *
 * @param a1 First point for determining the first line
 * @param b1 Second point for determining the first line
@@ -1150,8 +1148,8 @@ static bool lineIntersection(const cv::Point2f &a1, const cv::Point2f &b1, const
     double det = (A1 * B2) - (A2 * B1);
 
     if (!almostEqual(det, 0)) {
-        intersection.x = (float)(((C1 * B2) - (C2 * B1)) / (det));
-        intersection.y = (float)(((C2 * A1) - (C1 * A2)) / (det));
+        intersection.x = static_cast<float>(((C1 * B2) - (C2 * B1)) / (det));
+        intersection.y = static_cast<float>(((C2 * A1) - (C1 * A2)) / (det));
 
         return true;
     }
@@ -1314,8 +1312,9 @@ cvMinEnclosingTriangle( const CvArr* _points, CvArr* _triangle, double* _area ) 
 
     cv::minEnclosingTriangle(points, triangle, area);
 
-    if (_area)
+    if (_area) {
         *_area = area;
+    }
 }
 
 /* End of file. */
