@@ -228,7 +228,11 @@ template <> __device__ __forceinline__ int saturate_cast<int>(float v)
 }
 template <> __device__ __forceinline__ int saturate_cast<int>(double v)
 {
+#if CV_CUDEV_ARCH >= 130
     return __double2int_rn(v);
+#else
+    return saturate_cast<int>((float) v);
+#endif
 }
 
 template <> __device__ __forceinline__ uint saturate_cast<uint>(schar v)
@@ -256,7 +260,11 @@ template <> __device__ __forceinline__ uint saturate_cast<uint>(float v)
 }
 template <> __device__ __forceinline__ uint saturate_cast<uint>(double v)
 {
+#if CV_CUDEV_ARCH >= 130
     return __double2uint_rn(v);
+#else
+    return saturate_cast<uint>((float) v);
+#endif
 }
 
 }}
