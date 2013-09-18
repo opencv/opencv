@@ -1887,6 +1887,11 @@ namespace cv
             oclMat temp4;
             oclMat temp5;
         };
+
+        static inline size_t divUp(size_t total, size_t grain)
+        {
+            return (total + grain - 1) / grain;
+        }
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200

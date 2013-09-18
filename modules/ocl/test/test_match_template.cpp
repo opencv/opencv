@@ -52,8 +52,6 @@
 
 IMPLEMENT_PARAM_CLASS(TemplateSize, cv::Size);
 
-const char *TEMPLATE_METHOD_NAMES[6] = {"TM_SQDIFF", "TM_SQDIFF_NORMED", "TM_CCORR", "TM_CCORR_NORMED", "TM_CCOEFF", "TM_CCOEFF_NORMED"};
-
 #define MTEMP_SIZES testing::Values(cv::Size(128, 256), cv::Size(1024, 768))
 
 PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMethod)
@@ -74,12 +72,6 @@ PARAM_TEST_CASE(MatchTemplate8U, cv::Size, TemplateSize, Channels, TemplateMetho
 
 TEST_P(MatchTemplate8U, Accuracy)
 {
-
-    std::cout << "Method: " << TEMPLATE_METHOD_NAMES[method] << std::endl;
-    std::cout << "Image Size: (" << size.width << ", " << size.height << ")" << std::endl;
-    std::cout << "Template Size: (" << templ_size.width << ", " << templ_size.height << ")" << std::endl;
-    std::cout << "Channels: " << cn << std::endl;
-
     cv::Mat image = randomMat(size, CV_MAKETYPE(CV_8U, cn));
     cv::Mat templ = randomMat(templ_size, CV_MAKETYPE(CV_8U, cn));
 
@@ -101,7 +93,6 @@ PARAM_TEST_CASE(MatchTemplate32F, cv::Size, TemplateSize, Channels, TemplateMeth
     cv::Size templ_size;
     int cn;
     int method;
-    //std::vector<cv::ocl::Info> oclinfo;
 
     virtual void SetUp()
     {
