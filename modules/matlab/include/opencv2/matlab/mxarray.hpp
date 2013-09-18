@@ -113,7 +113,7 @@ template<typename _Tp = DefaultTraits> class Traits {
 public:
   static const mxClassID ScalarType = mxUNKNOWN_CLASS;
   static const mxComplexity Complex = mxCOMPLEX;
-  static const mxComplexity Real    = mxCOMPLEX;
+  static const mxComplexity Real    = mxREAL;
   static std::string ToString()  { return "Unknown/Unsupported"; }
 };
 // bool
@@ -249,6 +249,16 @@ public:
   MxArray() : ptr_(mxCreateDoubleMatrix(0, 0, matlab::Traits<>::Real)), owns_(true) {}
 
   /*!
+   * @brief destructor
+   *
+   * The destructor deallocates any data allocated by mxCreate* methods only
+   * if the object is owned
+   */
+  virtual ~MxArray() {
+    dealloc();
+  }
+
+  /*!
    * @brief inheriting constructor
    *
    * Inherit an mxArray from Matlab. Don't claim ownership of the array,
@@ -267,7 +277,8 @@ public:
    *
    * This constructor explicitly creates an MxArray of the given size and type.
    */
-  MxArray(size_t m, size_t n, size_t k, mxClassID id, mxComplexity com = matlab::Traits<>::Real) : owns_(true) {
+  MxArray(size_t m, size_t n, size_t k, mxClassID id, mxComplexity com = matlab::Traits<>::Real)
+      : ptr_(NULL), owns_(true) {
     mwSize dims[] = { static_cast<mwSize>(m), static_cast<mwSize>(n), static_cast<mwSize>(k) };
     ptr_ = mxCreateNumericArray(3, dims, id, com);
   }
@@ -316,16 +327,6 @@ public:
     MxArray s(1, 1, 1, matlab::Traits<ScalarType>::ScalarType);
     s.real<ScalarType>()[0] = value;
     return s;
-  }
-
-  /*!
-   * @brief destructor
-   *
-   * The destructor deallocates any data allocated by mxCreate* methods only
-   * if the object is owned
-   */
-  virtual ~MxArray() {
-    dealloc();
   }
 
   /*!
