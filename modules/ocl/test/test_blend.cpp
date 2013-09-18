@@ -42,7 +42,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 using namespace cv;

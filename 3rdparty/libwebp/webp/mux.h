@@ -1,8 +1,10 @@
 // Copyright 2011 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 //  RIFF container manipulation for WEBP images.
@@ -53,26 +55,26 @@ extern "C" {
 
 #define WEBP_MUX_ABI_VERSION 0x0100        // MAJOR(8b) + MINOR(8b)
 
+// Note: forward declaring enumerations is not allowed in (strict) C and C++,
+// the types are left here for reference.
+// typedef enum WebPMuxError WebPMuxError;
+// typedef enum WebPChunkId WebPChunkId;
 typedef struct WebPMux WebPMux;   // main opaque object.
-#if !(defined(__cplusplus) || defined(c_plusplus))
-typedef enum WebPMuxError WebPMuxError;
-typedef enum WebPChunkId WebPChunkId;
-#endif
 typedef struct WebPMuxFrameInfo WebPMuxFrameInfo;
 typedef struct WebPMuxAnimParams WebPMuxAnimParams;
 
 // Error codes
-enum WebPMuxError {
+typedef enum WebPMuxError {
   WEBP_MUX_OK                 =  1,
   WEBP_MUX_NOT_FOUND          =  0,
   WEBP_MUX_INVALID_ARGUMENT   = -1,
   WEBP_MUX_BAD_DATA           = -2,
   WEBP_MUX_MEMORY_ERROR       = -3,
   WEBP_MUX_NOT_ENOUGH_DATA    = -4
-};
+} WebPMuxError;
 
 // IDs for different types of chunks.
-enum WebPChunkId {
+typedef enum WebPChunkId {
   WEBP_CHUNK_VP8X,     // VP8X
   WEBP_CHUNK_ICCP,     // ICCP
   WEBP_CHUNK_ANIM,     // ANIM
@@ -84,7 +86,7 @@ enum WebPChunkId {
   WEBP_CHUNK_XMP,      // XMP
   WEBP_CHUNK_UNKNOWN,  // Other chunks.
   WEBP_CHUNK_NIL
-};
+} WebPChunkId;
 
 //------------------------------------------------------------------------------
 

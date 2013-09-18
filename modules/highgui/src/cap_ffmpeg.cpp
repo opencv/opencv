@@ -85,6 +85,16 @@ private:
     icvInitFFMPEG()
     {
     #if defined WIN32 || defined _WIN32
+    # ifdef HAVE_WINRT
+        const wchar_t* module_name = L"opencv_ffmpeg"
+            CVAUX_STRW(CV_MAJOR_VERSION) CVAUX_STRW(CV_MINOR_VERSION) CVAUX_STRW(CV_SUBMINOR_VERSION)
+        #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
+            L"_64"
+        #endif
+            L".dll";
+
+        icvFFOpenCV = LoadPackagedLibrary( module_name, 0 );
+    # else
         const char* module_name = "opencv_ffmpeg"
             CVAUX_STR(CV_MAJOR_VERSION) CVAUX_STR(CV_MINOR_VERSION) CVAUX_STR(CV_SUBMINOR_VERSION)
         #if (defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __x86_64__)
@@ -93,6 +103,8 @@ private:
             ".dll";
 
         icvFFOpenCV = LoadLibrary( module_name );
+    # endif
+
         if( icvFFOpenCV )
         {
             icvCreateFileCapture_FFMPEG_p =
@@ -209,11 +221,7 @@ CvCapture* cvCreateFileCapture_FFMPEG_proxy(const char * filename)
     if( result->open( filename ))
         return result;
     delete result;
-#ifdef HAVE_VFW
-    return cvCreateFileCapture_VFW(filename);
-#else
     return 0;
-#endif
 }
 
 class CvVideoWriter_FFMPEG_proxy :
@@ -263,9 +271,5 @@ CvVideoWriter* cvCreateVideoWriter_FFMPEG_proxy( const char* filename, int fourc
     if( result->open( filename, fourcc, fps, frameSize, isColor != 0 ))
         return result;
     delete result;
-#ifdef HAVE_VFW
-     return cvCreateVideoWriter_VFW(filename, fourcc, fps, frameSize, isColor);
- #else
     return 0;
-#endif
 }

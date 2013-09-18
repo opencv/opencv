@@ -670,6 +670,10 @@ public:
     //! reconstructs the original vector from the projection
     void backProject(InputArray vec, OutputArray result) const;
 
+    //! write and load PCA matrix
+    void write(FileStorage& fs ) const;
+    void read(const FileNode& fs);
+
     Mat eigenvectors; //!< eigenvectors of the covariation matrix
     Mat eigenvalues; //!< eigenvalues of the covariation matrix
     Mat mean; //!< mean value subtracted before the projection and added after the back projection

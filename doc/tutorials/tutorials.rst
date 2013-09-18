@@ -171,17 +171,17 @@ As always, we would be happy to hear your comments and receive your contribution
                  :width:  80pt
                  :alt: gpu icon
 
-*  :ref:`Table-Of-Content-Contrib`
+*  :ref:`Table-Of-Content-Bioinspired`
 
    .. tabularcolumns:: m{100pt} m{300pt}
    .. cssclass:: toctableopencv
 
-   =========== =======================================================
-   |Contrib|       Discover additional contribution to OpenCV.
+   ============= =======================================================
+   |Bioinspired|       Algorithms inspired from biological models.
 
-   =========== =======================================================
+   ============= =======================================================
 
-   .. |Contrib| image:: images/retina.jpg
+   .. |Bioinspired| image:: images/retina.jpg
                  :height: 80pt
                  :width:  80pt
                  :alt: gpu icon
@@ -235,6 +235,6 @@ As always, we would be happy to hear your comments and receive your contribution
    ml/table_of_content_ml/table_of_content_ml
    photo/table_of_content_photo/table_of_content_photo
    gpu/table_of_content_gpu/table_of_content_gpu
-   contrib/table_of_content_contrib/table_of_content_contrib
+   bioinspired/table_of_content_bioinspired/table_of_content_bioinspired
    ios/table_of_content_ios/table_of_content_ios
    general/table_of_content_general/table_of_content_general

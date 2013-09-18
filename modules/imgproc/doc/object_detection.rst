@@ -73,3 +73,6 @@ image patch:
 After the function finishes the comparison, the best matches can be found as global minimums (when ``CV_TM_SQDIFF`` was used) or maximums (when ``CV_TM_CCORR`` or ``CV_TM_CCOEFF`` was used) using the
 :ocv:func:`minMaxLoc` function. In case of a color image, template summation in the numerator and each sum in the denominator is done over all of the channels and separate mean values are used for each channel. That is, the function can take a color template and a color image. The result will still be a single-channel image, which is easier to analyze.
 
+.. note::
+
+   * (Python) An example on how to match mouse selected regions in an image can be found at opencv_source_code/samples/python2/mouse_and_match.py

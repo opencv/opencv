@@ -180,8 +180,8 @@ namespace cv
 
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
-        // compiled OpenCL program to be cached to the path automatically as "path/*.clb" 
-        // binary file, which will be reused when the OpenCV executable is started again. 
+        // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
+        // binary file, which will be reused when the OpenCV executable is started again.
         //
         // Caching mode is controlled by the following enums
         // Notes
@@ -198,7 +198,7 @@ namespace cv
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
-        //! set where binary cache to be saved to 
+        //! set where binary cache to be saved to
         CV_EXPORTS void setBinpath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
@@ -245,6 +245,11 @@ namespace cv
             operator Mat() const;
             void download(cv::Mat &m) const;
 
+            //! convert to _InputArray
+            operator _InputArray();
+
+            //! convert to _OutputArray
+            operator _OutputArray();
 
             //! returns a new oclMatrix header for the specified row
             oclMat row(int y) const;
@@ -386,6 +391,9 @@ namespace cv
             int wholecols;
         };
 
+        // convert InputArray/OutputArray to oclMat references
+        CV_EXPORTS oclMat& getOclMatRef(InputArray src);
+        CV_EXPORTS oclMat& getOclMatRef(OutputArray src);
 
         ///////////////////// mat split and merge /////////////////////////////////
         //! Compose a multi-channel array from several single-channel arrays
@@ -505,28 +513,21 @@ namespace cv
         CV_EXPORTS void calcHist(const oclMat &mat_src, oclMat &mat_hist);
         //! only 8UC1 and 256 bins is supported now
         CV_EXPORTS void equalizeHist(const oclMat &mat_src, oclMat &mat_dst);
-        
+
         //! only 8UC1 is supported now
-        class CV_EXPORTS CLAHE
-        {
-        public:
-            virtual void apply(const oclMat &src, oclMat &dst) = 0;
+        CV_EXPORTS Ptr<cv::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
 
-            virtual void setClipLimit(double clipLimit) = 0;
-            virtual double getClipLimit() const = 0;
-
-            virtual void setTilesGridSize(Size tileGridSize) = 0;
-            virtual Size getTilesGridSize() const = 0;
-
-            virtual void collectGarbage() = 0;
-
-            virtual ~CLAHE() {}
-        };
-        CV_EXPORTS Ptr<cv::ocl::CLAHE> createCLAHE(double clipLimit = 40.0, Size tileGridSize = Size(8, 8));
-        
         //! bilateralFilter
         // supports 8UC1 8UC4
-        CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT);
+        CV_EXPORTS void bilateralFilter(const oclMat& src, oclMat& dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT);
+
+        //! Applies an adaptive bilateral filter to the input image
+        //  This is not truly a bilateral filter. Instead of using user provided fixed parameters,
+        //  the function calculates a constant at each window based on local standard deviation,
+        //  and use this constant to do filtering.
+        //  supports 8UC1 8UC3
+        CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
+
         //! computes exponent of each matrix element (b = e**a)
         // supports only CV_32FC1 type
         CV_EXPORTS void exp(const oclMat &a, oclMat &b);
@@ -717,7 +718,7 @@ namespace cv
         //! returns 2D filter with the specified kernel
         // supports CV_8UC1 and CV_8UC4 types
         CV_EXPORTS Ptr<BaseFilter_GPU> getLinearFilter_GPU(int srcType, int dstType, const Mat &kernel, const Size &ksize,
-                Point anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
+                const Point &anchor = Point(-1, -1), int borderType = BORDER_DEFAULT);
 
         //! returns the non-separable linear filter engine
         CV_EXPORTS Ptr<FilterEngine_GPU> createLinearFilter_GPU(int srcType, int dstType, const Mat &kernel,
@@ -860,62 +861,29 @@ namespace cv
         CV_EXPORTS void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &Dx, oclMat &Dy,
             int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT);
 
+
+        /////////////////////////////////// ML ///////////////////////////////////////////
+
+        //! Compute closest centers for each lines in source and lable it after center's index
+        // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
+        CV_EXPORTS void distanceToCenters(oclMat &dists, oclMat &labels, const oclMat &src, const oclMat &centers);
+
+        //!Does k-means procedure on GPU
+        // supports CV_32FC1/CV_32FC2/CV_32FC4 data type
+        CV_EXPORTS double kmeans(const oclMat &src, int K, oclMat &bestLabels,
+                                     TermCriteria criteria, int attemps, int flags, oclMat &centers);
+
+
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////CascadeClassifier//////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#if 0
         class CV_EXPORTS OclCascadeClassifier : public  cv::CascadeClassifier
         {
         public:
-            OclCascadeClassifier() {};
-            ~OclCascadeClassifier() {};
-
-            CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
-                                        int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0));
-        };
-#endif
-
-#if 0
-        class CV_EXPORTS OclCascadeClassifierBuf : public  cv::CascadeClassifier
-        {
-        public:
-            OclCascadeClassifierBuf() :
-                m_flags(0), initialized(false), m_scaleFactor(0), buffers(NULL) {}
-
-            ~OclCascadeClassifierBuf() { release(); }
-
             void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
                                   double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
                                   Size minSize = Size(), Size maxSize = Size());
-            void release();
-
-        private:
-            void Init(const int rows, const int cols, double scaleFactor, int flags,
-                      const int outputsz, const size_t localThreads[],
-                      Size minSize, Size maxSize);
-            void CreateBaseBufs(const int datasize, const int totalclassifier, const int flags, const int outputsz);
-            void CreateFactorRelatedBufs(const int rows, const int cols, const int flags,
-                                         const double scaleFactor, const size_t localThreads[],
-                                         Size minSize, Size maxSize);
-            void GenResult(CV_OUT std::vector<cv::Rect>& faces, const std::vector<cv::Rect> &rectList, const std::vector<int> &rweights);
-
-            int m_rows;
-            int m_cols;
-            int m_flags;
-            int m_loopcount;
-            int m_nodenum;
-            bool findBiggestObject;
-            bool initialized;
-            double m_scaleFactor;
-            Size m_minSize;
-            Size m_maxSize;
-            std::vector<Size> sizev;
-            std::vector<float> scalev;
-            oclMat gimg1, gsum, gsqsum;
-            void * buffers;
         };
-#endif
 
         /////////////////////////////// Pyramid /////////////////////////////////////
         CV_EXPORTS void pyrDown(const oclMat &src, oclMat &dst);
@@ -1546,6 +1514,45 @@ namespace cv
 
             bool isDeviceArch11_;
         };
+
+        class CV_EXPORTS FarnebackOpticalFlow
+        {
+        public:
+            FarnebackOpticalFlow();
+
+            int numLevels;
+            double pyrScale;
+            bool fastPyramids;
+            int winSize;
+            int numIters;
+            int polyN;
+            double polySigma;
+            int flags;
+
+            void operator ()(const oclMat &frame0, const oclMat &frame1, oclMat &flowx, oclMat &flowy);
+
+            void releaseMemory();
+
+        private:
+            void prepareGaussian(
+                int n, double sigma, float *g, float *xg, float *xxg,
+                double &ig11, double &ig03, double &ig33, double &ig55);
+
+            void setPolynomialExpansionConsts(int n, double sigma);
+
+            void updateFlow_boxFilter(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat &flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            void updateFlow_gaussianBlur(
+                const oclMat& R0, const oclMat& R1, oclMat& flowx, oclMat& flowy,
+                oclMat& M, oclMat &bufM, int blockSize, bool updateMatrices);
+
+            oclMat frames_[2];
+            oclMat pyrLevel_[2], M_, bufM_, R_[2], blurredFrame_[2];
+            std::vector<oclMat> pyramid0_, pyramid1_;
+        };
+
         //////////////// build warping maps ////////////////////
         //! builds plane warping maps
         CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat &R, const Mat &T, float scale, oclMat &map_x, oclMat &map_y);
@@ -1772,6 +1779,180 @@ namespace cv
 
             oclMat diff_buf;
             oclMat norm_buf;
+        };
+        // current supported sorting methods
+        enum
+        {
+            SORT_BITONIC,   // only support power-of-2 buffer size
+            SORT_SELECTION, // cannot sort duplicate keys
+            SORT_MERGE,
+            SORT_RADIX      // only support signed int/float keys(CV_32S/CV_32F)
+        };
+        //! Returns the sorted result of all the elements in input based on equivalent keys.
+        //
+        //  The element unit in the values to be sorted is determined from the data type,
+        //  i.e., a CV_32FC2 input {a1a2, b1b2} will be considered as two elements, regardless its
+        //  matrix dimension.
+        //  both keys and values will be sorted inplace
+        //  Key needs to be single channel oclMat.
+        //
+        //  Example:
+        //  input -
+        //    keys   = {2,    3,   1}   (CV_8UC1)
+        //    values = {10,5, 4,3, 6,2} (CV_8UC2)
+        //  sortByKey(keys, values, SORT_SELECTION, false);
+        //  output -
+        //    keys   = {1,    2,   3}   (CV_8UC1)
+        //    values = {6,2, 10,5, 4,3} (CV_8UC2)
+        void CV_EXPORTS sortByKey(oclMat& keys, oclMat& values, int method, bool isGreaterThan = false);
+        /*!Base class for MOG and MOG2!*/
+        class CV_EXPORTS BackgroundSubtractor
+        {
+        public:
+            //! the virtual destructor
+            virtual ~BackgroundSubtractor();
+            //! the update operator that takes the next video frame and returns the current foreground mask as 8-bit binary image.
+            virtual void operator()(const oclMat& image, oclMat& fgmask, float learningRate);
+
+            //! computes a background image
+            virtual void getBackgroundImage(oclMat& backgroundImage) const = 0;
+        };
+                /*!
+        Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm
+
+        The class implements the following algorithm:
+        "An improved adaptive background mixture model for real-time tracking with shadow detection"
+        P. KadewTraKuPong and R. Bowden,
+        Proc. 2nd European Workshp on Advanced Video-Based Surveillance Systems, 2001."
+        http://personal.ee.surrey.ac.uk/Personal/R.Bowden/publications/avbs01/avbs01.pdf
+        */
+        class CV_EXPORTS MOG: public cv::ocl::BackgroundSubtractor
+        {
+        public:
+            //! the default constructor
+            MOG(int nmixtures = -1);
+
+            //! re-initiaization method
+            void initialize(Size frameSize, int frameType);
+
+            //! the update operator
+            void operator()(const oclMat& frame, oclMat& fgmask, float learningRate = 0.f);
+
+            //! computes a background image which are the mean of all background gaussians
+            void getBackgroundImage(oclMat& backgroundImage) const;
+
+            //! releases all inner buffers
+            void release();
+
+            int history;
+            float varThreshold;
+            float backgroundRatio;
+            float noiseSigma;
+
+        private:
+            int nmixtures_;
+
+            Size frameSize_;
+            int frameType_;
+            int nframes_;
+
+            oclMat weight_;
+            oclMat sortKey_;
+            oclMat mean_;
+            oclMat var_;
+        };
+
+        /*!
+        The class implements the following algorithm:
+        "Improved adaptive Gausian mixture model for background subtraction"
+        Z.Zivkovic
+        International Conference Pattern Recognition, UK, August, 2004.
+        http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf
+        */
+        class CV_EXPORTS MOG2: public cv::ocl::BackgroundSubtractor
+        {
+        public:
+            //! the default constructor
+            MOG2(int nmixtures = -1);
+
+            //! re-initiaization method
+            void initialize(Size frameSize, int frameType);
+
+            //! the update operator
+            void operator()(const oclMat& frame, oclMat& fgmask, float learningRate = -1.0f);
+
+            //! computes a background image which are the mean of all background gaussians
+            void getBackgroundImage(oclMat& backgroundImage) const;
+
+            //! releases all inner buffers
+            void release();
+
+            // parameters
+            // you should call initialize after parameters changes
+
+            int history;
+
+            //! here it is the maximum allowed number of mixture components.
+            //! Actual number is determined dynamically per pixel
+            float varThreshold;
+            // threshold on the squared Mahalanobis distance to decide if it is well described
+            // by the background model or not. Related to Cthr from the paper.
+            // This does not influence the update of the background. A typical value could be 4 sigma
+            // and that is varThreshold=4*4=16; Corresponds to Tb in the paper.
+
+            /////////////////////////
+            // less important parameters - things you might change but be carefull
+            ////////////////////////
+
+            float backgroundRatio;
+            // corresponds to fTB=1-cf from the paper
+            // TB - threshold when the component becomes significant enough to be included into
+            // the background model. It is the TB=1-cf from the paper. So I use cf=0.1 => TB=0.
+            // For alpha=0.001 it means that the mode should exist for approximately 105 frames before
+            // it is considered foreground
+            // float noiseSigma;
+            float varThresholdGen;
+
+            //correspondts to Tg - threshold on the squared Mahalan. dist. to decide
+            //when a sample is close to the existing components. If it is not close
+            //to any a new component will be generated. I use 3 sigma => Tg=3*3=9.
+            //Smaller Tg leads to more generated components and higher Tg might make
+            //lead to small number of components but they can grow too large
+            float fVarInit;
+            float fVarMin;
+            float fVarMax;
+
+            //initial variance  for the newly generated components.
+            //It will will influence the speed of adaptation. A good guess should be made.
+            //A simple way is to estimate the typical standard deviation from the images.
+            //I used here 10 as a reasonable value
+            // min and max can be used to further control the variance
+            float fCT; //CT - complexity reduction prior
+            //this is related to the number of samples needed to accept that a component
+            //actually exists. We use CT=0.05 of all the samples. By setting CT=0 you get
+            //the standard Stauffer&Grimson algorithm (maybe not exact but very similar)
+
+            //shadow detection parameters
+            bool bShadowDetection; //default 1 - do shadow detection
+            unsigned char nShadowDetection; //do shadow detection - insert this value as the detection result - 127 default value
+            float fTau;
+            // Tau - shadow threshold. The shadow is detected if the pixel is darker
+            //version of the background. Tau is a threshold on how much darker the shadow can be.
+            //Tau= 0.5 means that if pixel is more than 2 times darker then it is not shadow
+            //See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
+
+        private:
+            int nmixtures_;
+
+            Size frameSize_;
+            int frameType_;
+            int nframes_;
+
+            oclMat weight_;
+            oclMat variance_;
+            oclMat mean_;
+
+            oclMat bgmodelUsedModes_; //keep track of number of modes per pixel
         };
     }
 }

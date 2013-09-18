@@ -121,15 +121,24 @@ namespace cv
         body(range);
     }
 #endif
+
+    // Returns a static string if there is a parallel framework,
+    // NULL otherwise.
+    CV_EXPORTS const char* currentParallelFramework();
 } //namespace cv
 
 #define CV_INIT_ALGORITHM(classname, algname, memberinit) \
-    static ::cv::Algorithm* create##classname##_hidden() \
+    static inline ::cv::Algorithm* create##classname##_hidden() \
     { \
         return new classname; \
     } \
     \
-    static ::cv::AlgorithmInfo& classname##_info() \
+    static inline ::cv::Ptr< ::cv::Algorithm> create##classname##_ptr_hidden() \
+    { \
+        return ::cv::makePtr<classname>(); \
+    } \
+    \
+    static inline ::cv::AlgorithmInfo& classname##_info() \
     { \
         static ::cv::AlgorithmInfo classname##_info_var(algname, create##classname##_hidden); \
         return classname##_info_var; \

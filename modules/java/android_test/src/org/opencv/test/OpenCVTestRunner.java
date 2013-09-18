@@ -17,8 +17,6 @@ import android.util.Log;
 
 /**
  * This only class is Android specific.
- *
- * @see <a href="http://opencv.itseez.com">OpenCV</a>
  */
 
 public class OpenCVTestRunner extends InstrumentationTestRunner {

@@ -52,30 +52,30 @@ TEST(Calib3d_Affine3f, accuracy)
 
     cv::Mat expected;
     cv::Rodrigues(rvec, expected);
-    
-    
+
+
     ASSERT_EQ(0, norm(cv::Mat(affine.matrix, false).colRange(0, 3).rowRange(0, 3) != expected));
     ASSERT_EQ(0, norm(cv::Mat(affine.linear()) != expected));
-    
-    
+
+
     cv::Matx33d R = cv::Matx33d::eye();
-    
+
     double angle = 50;
     R.val[0] = R.val[4] = std::cos(CV_PI*angle/180.0);
     R.val[3] = std::sin(CV_PI*angle/180.0);
     R.val[1] = -R.val[3];
-    
-    
+
+
     cv::Affine3d affine1(cv::Mat(cv::Vec3d(0.2, 0.5, 0.3)).reshape(1, 1), cv::Vec3d(4, 5, 6));
     cv::Affine3d affine2(R, cv::Vec3d(1, 1, 0.4));
-    
+
     cv::Affine3d result = affine1.inv() * affine2;
-    
+
     expected = cv::Mat(affine1.matrix.inv(cv::DECOMP_SVD)) * cv::Mat(affine2.matrix, false);
-    
+
 
     cv::Mat diff;
     cv::absdiff(expected, result.matrix, diff);
-    
+
     ASSERT_LT(cv::norm(diff, cv::NORM_INF), 1e-15);
 }

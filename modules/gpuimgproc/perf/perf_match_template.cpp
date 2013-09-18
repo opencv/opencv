@@ -76,7 +76,9 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate8U,
         const cv::gpu::GpuMat d_templ(templ);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::matchTemplate(d_image, d_templ, dst, method);
+        cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+
+        TEST_CYCLE() alg->match(d_image, d_templ, dst);
 
         GPU_SANITY_CHECK(dst, 1e-5, ERROR_RELATIVE);
     }
@@ -116,7 +118,9 @@ PERF_TEST_P(Sz_TemplateSz_Cn_Method, MatchTemplate32F,
         const cv::gpu::GpuMat d_templ(templ);
         cv::gpu::GpuMat dst;
 
-        TEST_CYCLE() cv::gpu::matchTemplate(d_image, d_templ, dst, method);
+        cv::Ptr<cv::gpu::TemplateMatching> alg = cv::gpu::createTemplateMatching(image.type(), method);
+
+        TEST_CYCLE() alg->match(d_image, d_templ, dst);
 
         GPU_SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
     }

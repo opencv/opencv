@@ -11,6 +11,12 @@ CvKNearest
 
 The class implements K-Nearest Neighbors model as described in the beginning of this section.
 
+.. note::
+
+   * (Python) An example of digit recognition using KNearest can be found at opencv_source/samples/python2/digits.py
+   * (Python) An example of grid search digit recognition using KNearest can be found at opencv_source/samples/python2/digits_adjust.py
+   * (Python) An example of video digit recognition using KNearest can be found at opencv_source/samples/python2/digits_video.py
+
 CvKNearest::CvKNearest
 ----------------------
 Default and training constructors.
@@ -188,5 +194,3 @@ The sample below (currently using the obsolete ``CvMat`` structures) demonstrate
         cvReleaseMat( &trainData );
         return 0;
     }
-
-

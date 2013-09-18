@@ -510,6 +510,32 @@ protected:
             return;
         }
     #endif
+        // Test read and write
+        FileStorage fs( "PCA_store.yml", FileStorage::WRITE );
+        rPCA.write( fs );
+        fs.release();
+
+        PCA lPCA;
+        fs.open( "PCA_store.yml", FileStorage::READ );
+        lPCA.read( fs.root() );
+        err = norm( rPCA.eigenvectors, lPCA.eigenvectors, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
+        err = norm( rPCA.eigenvalues, lPCA.eigenvalues, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
+        err = norm( rPCA.mean, lPCA.mean, CV_RELATIVE_L2 );
+        if( err > 0 )
+        {
+            ts->printf( cvtest::TS::LOG, "bad accuracy of write/load functions (YML); err = %f\n", err );
+            ts->set_failed_test_info( cvtest::TS::FAIL_BAD_ACCURACY );
+        }
     }
 };
 
@@ -643,7 +669,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         cvSetReal3D(&matA, idx1[0], idx1[1], idx1[2], -val0);
         cvSetND(&matB, idx0, val1);
         cvSet3D(&matB, idx1[0], idx1[1], idx1[2], -val1);
-        Ptr<CvMatND> matC = cvCloneMatND(&matB);
+        Ptr<CvMatND> matC(cvCloneMatND(&matB));
 
         if( A.at<float>(idx0[0], idx0[1], idx0[2]) != val0 ||
            A.at<float>(idx1[0], idx1[1], idx1[2]) != -val0 ||
@@ -736,7 +762,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
             }
         }
 
-        Ptr<CvSparseMat> M2 = cvCreateSparseMat(M);
+        Ptr<CvSparseMat> M2(cvCreateSparseMat(M));
         MatND Md;
         M.copyTo(Md);
         SparseMat M3; SparseMat(Md).convertTo(M3, Md.type(), 2);

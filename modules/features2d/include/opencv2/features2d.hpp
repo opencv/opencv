@@ -535,11 +535,11 @@ protected:
 };
 
 
-class CV_EXPORTS GFTTDetector : public FeatureDetector
+class CV_EXPORTS_W GFTTDetector : public FeatureDetector
 {
 public:
-    GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
-                  int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
+    CV_WRAP GFTTDetector( int maxCorners=1000, double qualityLevel=0.01, double minDistance=1,
+                          int blockSize=3, bool useHarrisDetector=false, double k=0.04 );
     AlgorithmInfo* info() const;
 
 protected:
@@ -646,7 +646,7 @@ public:
      * gridRows            Grid rows count.
      * gridCols            Grid column count.
      */
-    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=0,
+    CV_WRAP GridAdaptedFeatureDetector( const Ptr<FeatureDetector>& detector=Ptr<FeatureDetector>(),
                                         int maxTotalKeypoints=1000,
                                         int gridRows=4, int gridCols=4 );
 
@@ -961,7 +961,7 @@ struct CV_EXPORTS Hamming
 
 typedef Hamming HammingLUT;
 
-template<int cellsize> struct CV_EXPORTS HammingMultilevel
+template<int cellsize> struct HammingMultilevel
 {
     enum { normType = NORM_HAMMING + (cellsize>1) };
     typedef unsigned char ValueType;
@@ -1143,8 +1143,8 @@ protected:
 class CV_EXPORTS_W FlannBasedMatcher : public DescriptorMatcher
 {
 public:
-    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=new flann::KDTreeIndexParams(),
-                       const Ptr<flann::SearchParams>& searchParams=new flann::SearchParams() );
+    CV_WRAP FlannBasedMatcher( const Ptr<flann::IndexParams>& indexParams=makePtr<flann::KDTreeIndexParams>(),
+                       const Ptr<flann::SearchParams>& searchParams=makePtr<flann::SearchParams>() );
 
     virtual void add( const std::vector<Mat>& descriptors );
     virtual void clear();
@@ -1404,15 +1404,15 @@ CV_EXPORTS_W void drawKeypoints( const Mat& image, const std::vector<KeyPoint>& 
                                const Scalar& color=Scalar::all(-1), int flags=DrawMatchesFlags::DEFAULT );
 
 // Draws matches of keypints from two images on output image.
-CV_EXPORTS void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+CV_EXPORTS_W void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
                              const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                             const std::vector<DMatch>& matches1to2, Mat& outImg,
+                             const std::vector<DMatch>& matches1to2, CV_OUT Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<char>& matchesMask=std::vector<char>(), int flags=DrawMatchesFlags::DEFAULT );
 
-CV_EXPORTS void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
+CV_EXPORTS_AS(drawMatchesKnn) void drawMatches( const Mat& img1, const std::vector<KeyPoint>& keypoints1,
                              const Mat& img2, const std::vector<KeyPoint>& keypoints2,
-                             const std::vector<std::vector<DMatch> >& matches1to2, Mat& outImg,
+                             const std::vector<std::vector<DMatch> >& matches1to2, CV_OUT Mat& outImg,
                              const Scalar& matchColor=Scalar::all(-1), const Scalar& singlePointColor=Scalar::all(-1),
                              const std::vector<std::vector<char> >& matchesMask=std::vector<std::vector<char> >(), int flags=DrawMatchesFlags::DEFAULT );
 

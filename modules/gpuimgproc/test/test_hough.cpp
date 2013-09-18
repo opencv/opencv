@@ -94,11 +94,13 @@ GPU_TEST_P(HoughLines, Accuracy)
     cv::Mat src(size, CV_8UC1);
     generateLines(src);
 
+    cv::Ptr<cv::gpu::HoughLinesDetector> hough = cv::gpu::createHoughLinesDetector(rho, theta, threshold);
+
     cv::gpu::GpuMat d_lines;
-    cv::gpu::HoughLines(loadMat(src, useRoi), d_lines, rho, theta, threshold);
+    hough->detect(loadMat(src, useRoi), d_lines);
 
     std::vector<cv::Vec2f> lines;
-    cv::gpu::HoughLinesDownload(d_lines, lines);
+    hough->downloadResults(d_lines, lines);
 
     cv::Mat dst(size, CV_8UC1);
     drawLines(dst, lines);
@@ -148,11 +150,13 @@ GPU_TEST_P(HoughCircles, Accuracy)
     cv::Mat src(size, CV_8UC1);
     drawCircles(src, circles_gold, true);
 
+    cv::Ptr<cv::gpu::HoughCirclesDetector> houghCircles = cv::gpu::createHoughCirclesDetector(dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+
     cv::gpu::GpuMat d_circles;
-    cv::gpu::HoughCircles(loadMat(src, useRoi), d_circles, cv::HOUGH_GRADIENT, dp, minDist, cannyThreshold, votesThreshold, minRadius, maxRadius);
+    houghCircles->detect(loadMat(src, useRoi), d_circles);
 
     std::vector<cv::Vec3f> circles;
-    cv::gpu::HoughCirclesDownload(d_circles, circles);
+    d_circles.download(circles);
 
     ASSERT_FALSE(circles.empty());
 
@@ -189,7 +193,7 @@ PARAM_TEST_CASE(GeneralizedHough, cv::gpu::DeviceInfo, UseRoi)
 {
 };
 
-GPU_TEST_P(GeneralizedHough, POSITION)
+GPU_TEST_P(GeneralizedHough, Ballard)
 {
     const cv::gpu::DeviceInfo devInfo = GET_PARAM(0);
     cv::gpu::setDevice(devInfo.deviceID());
@@ -214,16 +218,16 @@ GPU_TEST_P(GeneralizedHough, POSITION)
         templ.copyTo(imageROI);
     }
 
-    cv::Ptr<cv::gpu::GeneralizedHough_GPU> hough = cv::gpu::GeneralizedHough_GPU::create(cv::GeneralizedHough::GHT_POSITION);
-    hough->set("votesThreshold", 200);
+    cv::Ptr<cv::GeneralizedHoughBallard> alg = cv::gpu::createGeneralizedHoughBallard();
+    alg->setVotesThreshold(200);
 
-    hough->setTemplate(loadMat(templ, useRoi));
+    alg->setTemplate(loadMat(templ, useRoi));
 
     cv::gpu::GpuMat d_pos;
-    hough->detect(loadMat(image, useRoi), d_pos);
+    alg->detect(loadMat(image, useRoi), d_pos);
 
     std::vector<cv::Vec4f> pos;
-    hough->download(d_pos, pos);
+    d_pos.download(pos);
 
     ASSERT_EQ(gold_count, pos.size());
 

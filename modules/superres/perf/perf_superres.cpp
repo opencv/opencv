@@ -153,14 +153,14 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
         superRes->set("temporalAreaRadius", temporalAreaRadius);
         superRes->set("opticalFlow", opticalFlow);
 
-        superRes->setInput(new OneFrameSource_GPU(GpuMat(frame)));
+        superRes->setInput(makePtr<OneFrameSource_GPU>(GpuMat(frame)));
 
         GpuMat dst;
         superRes->nextFrame(dst);
 
         TEST_CYCLE_N(10) superRes->nextFrame(dst);
 
-        GPU_SANITY_CHECK(dst);
+        GPU_SANITY_CHECK(dst, 2);
     }
     else
     {
@@ -171,7 +171,7 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1,
         superRes->set("temporalAreaRadius", temporalAreaRadius);
         superRes->set("opticalFlow", opticalFlow);
 
-        superRes->setInput(new OneFrameSource_CPU(frame));
+        superRes->setInput(makePtr<OneFrameSource_CPU>(frame));
 
         Mat dst;
         superRes->nextFrame(dst);

@@ -59,4 +59,7 @@
 #include "opencv2/gpubgsegm.hpp"
 #include "opencv2/video.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+#include "cvconfig.h"
+
 #endif

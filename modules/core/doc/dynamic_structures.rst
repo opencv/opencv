@@ -1580,4 +1580,3 @@ Gathers all node pointers to a single sequence.
     :param storage: Container for the sequence
 
 The function puts pointers of all nodes reachable from  ``first`` into a single sequence. The pointers are written sequentially in the depth-first order.
-

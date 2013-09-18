@@ -1683,4 +1683,3 @@ icvPoint7( int *ml, int *mr, double *F, int *amount )
 
     return error;
 }                               /* icvPoint7 */
-

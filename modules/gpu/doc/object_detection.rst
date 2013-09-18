@@ -62,7 +62,12 @@ The class implements Histogram of Oriented Gradients ([Dalal2005]_) object detec
 
 Interfaces of all methods are kept similar to the ``CPU HOG`` descriptor and detector analogues as much as possible.
 
+.. note::
 
+   * An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/cpp/peopledetect.cpp
+   * A GPU example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/gpu/hog.cpp
+
+   * (Python) An example applying the HOG descriptor for people detection can be found at opencv_source_code/samples/python2/peopledetect.py
 
 gpu::HOGDescriptor::HOGDescriptor
 -------------------------------------
@@ -229,7 +234,10 @@ Cascade classifier class used for object detection. Supports HAAR and LBP cascad
             Size getClassifierSize() const;
     };
 
+.. note::
 
+   * A cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier.cpp
+   * A Nvidea API specific cascade classifier example can be found at opencv_source_code/samples/gpu/cascadeclassifier_nvidia_api.cpp
 
 gpu::CascadeClassifier_GPU::CascadeClassifier_GPU
 -----------------------------------------------------

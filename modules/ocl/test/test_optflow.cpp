@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 #include <iomanip>
 
 #ifdef HAVE_OPENCL
@@ -52,10 +52,6 @@ using namespace cv;
 using namespace cv::ocl;
 using namespace cvtest;
 using namespace testing;
-using namespace std;
-
-extern string workdir;
-
 
 //////////////////////////////////////////////////////
 // GoodFeaturesToTrack
@@ -75,7 +71,7 @@ PARAM_TEST_CASE(GoodFeaturesToTrack, MinDistance)
 
 TEST_P(GoodFeaturesToTrack, Accuracy)
 {
-    cv::Mat frame = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame.empty());
 
     int maxCorners = 1000;
@@ -89,7 +85,7 @@ TEST_P(GoodFeaturesToTrack, Accuracy)
     ASSERT_FALSE(d_pts.empty());
 
     std::vector<cv::Point2f> pts(d_pts.cols);
-    
+
     detector.downloadPoints(d_pts, pts);
 
     std::vector<cv::Point2f> pts_gold;
@@ -129,7 +125,7 @@ TEST_P(GoodFeaturesToTrack, EmptyCorners)
     ASSERT_TRUE(corners.empty());
 }
 
-INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack, 
+INSTANTIATE_TEST_CASE_P(OCL_Video, GoodFeaturesToTrack,
     testing::Values(MinDistance(0.0), MinDistance(3.0)));
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,12 +140,12 @@ PARAM_TEST_CASE(TVL1, bool)
 
 };
 
-TEST_P(TVL1, Accuracy)
+TEST_P(TVL1, DISABLED_Accuracy) // TODO implementations of TV1 in video module are different in 2.4 and master branches
 {
-    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
     ASSERT_FALSE(frame1.empty());
 
     cv::ocl::OpticalFlowDual_TVL1_OCL d_alg;
@@ -168,7 +164,7 @@ TEST_P(TVL1, Accuracy)
     EXPECT_MAT_SIMILAR(gold[0], d_flowx, 3e-3);
     EXPECT_MAT_SIMILAR(gold[1], d_flowy, 3e-3);
 }
-INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(true, false));
+INSTANTIATE_TEST_CASE_P(OCL_Video, TVL1, Values(false, true));
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,10 +184,10 @@ PARAM_TEST_CASE(Sparse, bool, bool)
 
 TEST_P(Sparse, Mat)
 {
-    cv::Mat frame0 = readImage(workdir + "../gpu/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame0.empty());
 
-    cv::Mat frame1 = readImage(workdir + "../gpu/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", useGray ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
     ASSERT_FALSE(frame1.empty());
 
     cv::Mat gray_frame;
@@ -272,6 +268,77 @@ TEST_P(Sparse, Mat)
 INSTANTIATE_TEST_CASE_P(OCL_Video, Sparse, Combine(
     Values(false, true),
     Values(false, true)));
+//////////////////////////////////////////////////////
+// FarnebackOpticalFlow
+
+namespace
+{
+    IMPLEMENT_PARAM_CLASS(PyrScale, double)
+        IMPLEMENT_PARAM_CLASS(PolyN, int)
+        CV_FLAGS(FarnebackOptFlowFlags, 0, OPTFLOW_FARNEBACK_GAUSSIAN)
+        IMPLEMENT_PARAM_CLASS(UseInitFlow, bool)
+}
+
+PARAM_TEST_CASE(Farneback, PyrScale, PolyN, FarnebackOptFlowFlags, UseInitFlow)
+{
+    double pyrScale;
+    int polyN;
+    int flags;
+    bool useInitFlow;
+
+    virtual void SetUp()
+    {
+        pyrScale = GET_PARAM(0);
+        polyN = GET_PARAM(1);
+        flags = GET_PARAM(2);
+        useInitFlow = GET_PARAM(3);
+    }
+};
+
+TEST_P(Farneback, Accuracy)
+{
+    cv::Mat frame0 = readImage("gpu/opticalflow/rubberwhale1.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame0.empty());
+
+    cv::Mat frame1 = readImage("gpu/opticalflow/rubberwhale2.png", cv::IMREAD_GRAYSCALE);
+    ASSERT_FALSE(frame1.empty());
+
+    double polySigma = polyN <= 5 ? 1.1 : 1.5;
+
+    cv::ocl::FarnebackOpticalFlow farn;
+    farn.pyrScale = pyrScale;
+    farn.polyN = polyN;
+    farn.polySigma = polySigma;
+    farn.flags = flags;
+
+    cv::ocl::oclMat d_flowx, d_flowy;
+    farn(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
+
+    cv::Mat flow;
+    if (useInitFlow)
+    {
+        cv::Mat flowxy[] = {cv::Mat(d_flowx), cv::Mat(d_flowy)};
+        cv::merge(flowxy, 2, flow);
+
+        farn.flags |= cv::OPTFLOW_USE_INITIAL_FLOW;
+        farn(oclMat(frame0), oclMat(frame1), d_flowx, d_flowy);
+    }
+
+    cv::calcOpticalFlowFarneback(
+        frame0, frame1, flow, farn.pyrScale, farn.numLevels, farn.winSize,
+        farn.numIters, farn.polyN, farn.polySigma, farn.flags);
+
+    std::vector<cv::Mat> flowxy;
+    cv::split(flow, flowxy);
+
+    EXPECT_MAT_SIMILAR(flowxy[0], d_flowx, 0.1);
+    EXPECT_MAT_SIMILAR(flowxy[1], d_flowy, 0.1);
+}
+
+INSTANTIATE_TEST_CASE_P(OCL_Video, Farneback, testing::Combine(
+    testing::Values(PyrScale(0.3), PyrScale(0.5), PyrScale(0.8)),
+    testing::Values(PolyN(5), PolyN(7)),
+    testing::Values(FarnebackOptFlowFlags(0), FarnebackOptFlowFlags(cv::OPTFLOW_FARNEBACK_GAUSSIAN)),
+    testing::Values(UseInitFlow(false), UseInitFlow(true))));
 
 #endif // HAVE_OPENCL
-

@@ -4,12 +4,8 @@
 #include "opencv2/core/cvdef.h"
 #include <stdarg.h> // for va_list
 
-#include "cvconfig.h"
-
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#ifdef BUILD_SHARED_LIBS
-#define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#endif
+#ifdef HAVE_WINRT
+    #pragma warning(disable:4447) // Disable warning 'main' signature found without threading model
 #endif
 
 #ifdef _MSC_VER
@@ -550,6 +546,13 @@ int main(int argc, char **argv) \
     cvtest::printVersionInfo();\
     return RUN_ALL_TESTS(); \
 }
+
+// This usually only makes sense in perf tests with several implementations,
+// some of which are not available.
+#define CV_TEST_FAIL_NO_IMPL() do { \
+    ::testing::Test::RecordProperty("custom_status", "noimpl"); \
+    FAIL() << "No equivalent implementation."; \
+} while (0)
 
 #endif
 

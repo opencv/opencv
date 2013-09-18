@@ -11,75 +11,39 @@
 using namespace std;
 using namespace cv;
 
-bool help_showed = false;
-
-class Args
-{
-public:
-    Args();
-    static Args read(int argc, char** argv);
-
-    string src;
-    bool src_is_video;
-    bool src_is_camera;
-    int camera_id;
-
-    bool write_video;
-    string dst_video;
-    double dst_video_fps;
-
-    bool make_gray;
-
-    bool resize_src;
-    int width, height;
-
-    double scale;
-    int nlevels;
-    int gr_threshold;
-
-    double hit_threshold;
-    bool hit_threshold_auto;
-
-    int win_width;
-    int win_stride_width, win_stride_height;
-
-    bool gamma_corr;
-};
-
 class App
 {
 public:
-    App(const Args& s);
+    App(CommandLineParser& cmd);
     void run();
-
     void handleKey(char key);
-
     void hogWorkBegin();
     void hogWorkEnd();
     string hogWorkFps() const;
-
     void workBegin();
     void workEnd();
     string workFps() const;
-
     string message() const;
+
 
 // This function test if gpu_rst matches cpu_rst.
 // If the two vectors are not equal, it will return the difference in vector size
-// Else if will return 
+// Else if will return
 // (total diff of each cpu and gpu rects covered pixels)/(total cpu rects covered pixels)
-    double checkRectSimilarity(Size sz, 
-                               std::vector<Rect>& cpu_rst, 
+    double checkRectSimilarity(Size sz,
+                               std::vector<Rect>& cpu_rst,
                                std::vector<Rect>& gpu_rst);
 private:
     App operator=(App&);
 
-    Args args;
+    //Args args;
     bool running;
-
     bool use_gpu;
     bool make_gray;
     double scale;
+    double resize_scale;
+    int win_width;
+    int win_stride_width, win_stride_height;
     int gr_threshold;
     int nlevels;
     double hit_threshold;
@@ -87,179 +51,112 @@ private:
 
     int64 hog_work_begin;
     double hog_work_fps;
-
     int64 work_begin;
     double work_fps;
-};
 
-static void printHelp()
-{
-    cout << "Histogram of Oriented Gradients descriptor and detector sample.\n"
-         << "\nUsage: hog_gpu\n"
-         << "  (<image>|--video <vide>|--camera <camera_id>) # frames source\n"
-         << "  [--make_gray <true/false>] # convert image to gray one or not\n"
-         << "  [--resize_src <true/false>] # do resize of the source image or not\n"
-         << "  [--width <int>] # resized image width\n"
-         << "  [--height <int>] # resized image height\n"
-         << "  [--hit_threshold <double>] # classifying plane distance threshold (0.0 usually)\n"
-         << "  [--scale <double>] # HOG window scale factor\n"
-         << "  [--nlevels <int>] # max number of HOG window scales\n"
-         << "  [--win_width <int>] # width of the window (48 or 64)\n"
-         << "  [--win_stride_width <int>] # distance by OX axis between neighbour wins\n"
-         << "  [--win_stride_height <int>] # distance by OY axis between neighbour wins\n"
-         << "  [--gr_threshold <int>] # merging similar rects constant\n"
-         << "  [--gamma_correct <int>] # do gamma correction or not\n"
-         << "  [--write_video <bool>] # write video or not\n"
-         << "  [--dst_video <path>] # output video path\n"
-         << "  [--dst_video_fps <double>] # output video fps\n";
-    help_showed = true;
-}
+    string img_source;
+    string vdo_source;
+    string output;
+    int camera_id;
+    bool write_once;
+};
 
 int main(int argc, char** argv)
 {
+    const char* keys =
+        "{ h |  help    | false          | print help message }"
+        "{ i |  input   |                | specify input image}"
+        "{ c | camera   | -1             | enable camera capturing }"
+        "{ v | video    |                | use video as input }"
+        "{ g |  gray    | false          | convert image to gray one or not}"
+        "{ s |  scale   | 1.0            | resize the image before detect}"
+        "{ l |larger_win| false          | use 64x128 window}"
+        "{ o |  output  |                | specify output path when input is images}";
+    CommandLineParser cmd(argc, argv, keys);
+    App app(cmd);
     try
     {
-        if (argc < 2)
-            printHelp();
-        Args args = Args::read(argc, argv);
-        if (help_showed)
-            return -1;
-        App app(args);
         app.run();
     }
-    catch (const Exception& e) { return cout << "error: "  << e.what() << endl, 1; }
-    catch (const exception& e) { return cout << "error: "  << e.what() << endl, 1; }
-    catch(...) { return cout << "unknown exception" << endl, 1; }
+    catch (const Exception& e)
+    {
+        return cout << "error: "  << e.what() << endl, 1;
+    }
+    catch (const exception& e)
+    {
+        return cout << "error: "  << e.what() << endl, 1;
+    }
+    catch(...)
+    {
+        return cout << "unknown exception" << endl, 1;
+    }
     return 0;
 }
 
-
-Args::Args()
+App::App(CommandLineParser& cmd)
 {
-    src_is_video = false;
-    src_is_camera = false;
-    camera_id = 0;
-
-    write_video = false;
-    dst_video_fps = 24.;
-
-    make_gray = false;
-
-    resize_src = false;
-    width = 640;
-    height = 480;
-
-    scale = 1.05;
-    nlevels = 13;
-    gr_threshold = 8;
-    hit_threshold = 1.4;
-    hit_threshold_auto = true;
-
-    win_width = 48;
-    win_stride_width = 8;
-    win_stride_height = 8;
-
-    gamma_corr = true;
-}
-
-
-Args Args::read(int argc, char** argv)
-{
-    Args args;
-    for (int i = 1; i < argc; i++)
-    {
-        if (string(argv[i]) == "--make_gray") args.make_gray = (string(argv[++i]) == "true");
-        else if (string(argv[i]) == "--resize_src") args.resize_src = (string(argv[++i]) == "true");
-        else if (string(argv[i]) == "--width") args.width = atoi(argv[++i]);
-        else if (string(argv[i]) == "--height") args.height = atoi(argv[++i]);
-        else if (string(argv[i]) == "--hit_threshold")
-        {
-            args.hit_threshold = atof(argv[++i]);
-            args.hit_threshold_auto = false;
-        }
-        else if (string(argv[i]) == "--scale") args.scale = atof(argv[++i]);
-        else if (string(argv[i]) == "--nlevels") args.nlevels = atoi(argv[++i]);
-        else if (string(argv[i]) == "--win_width") args.win_width = atoi(argv[++i]);
-        else if (string(argv[i]) == "--win_stride_width") args.win_stride_width = atoi(argv[++i]);
-        else if (string(argv[i]) == "--win_stride_height") args.win_stride_height = atoi(argv[++i]);
-        else if (string(argv[i]) == "--gr_threshold") args.gr_threshold = atoi(argv[++i]);
-        else if (string(argv[i]) == "--gamma_correct") args.gamma_corr = (string(argv[++i]) == "true");
-        else if (string(argv[i]) == "--write_video") args.write_video = (string(argv[++i]) == "true");
-        else if (string(argv[i]) == "--dst_video") args.dst_video = argv[++i];
-        else if (string(argv[i]) == "--dst_video_fps") args.dst_video_fps = atof(argv[++i]);
-        else if (string(argv[i]) == "--help") printHelp();
-        else if (string(argv[i]) == "--video") { args.src = argv[++i]; args.src_is_video = true; }
-        else if (string(argv[i]) == "--camera") { args.camera_id = atoi(argv[++i]); args.src_is_camera = true; }
-        else if (args.src.empty()) args.src = argv[i];
-        else throw runtime_error((string("unknown key: ") + argv[i]));
-    }
-    return args;
-}
-
-
-App::App(const Args& s)
-{
-    args = s;
     cout << "\nControls:\n"
          << "\tESC - exit\n"
          << "\tm - change mode GPU <-> CPU\n"
          << "\tg - convert image to gray or not\n"
+         << "\to - save output image once, or switch on/off video save\n"
          << "\t1/q - increase/decrease HOG scale\n"
          << "\t2/w - increase/decrease levels count\n"
          << "\t3/e - increase/decrease HOG group threshold\n"
          << "\t4/r - increase/decrease hit threshold\n"
          << endl;
 
+
     use_gpu = true;
-    make_gray = args.make_gray;
-    scale = args.scale;
-    gr_threshold = args.gr_threshold;
-    nlevels = args.nlevels;
+    make_gray = cmd.get<bool>("g");
+    resize_scale = cmd.get<double>("s");
+    win_width = cmd.get<bool>("l") == true ? 64 : 48;
+    vdo_source = cmd.get<string>("v");
+    img_source = cmd.get<string>("i");
+    output = cmd.get<string>("o");
+    camera_id = cmd.get<int>("c");
 
-    if (args.hit_threshold_auto)
-        args.hit_threshold = args.win_width == 48 ? 1.4 : 0.;
-    hit_threshold = args.hit_threshold;
+    win_stride_width = 8;
+    win_stride_height = 8;
+    gr_threshold = 8;
+    nlevels = 13;
+    hit_threshold = win_width == 48 ? 1.4 : 0.;
+    scale = 1.05;
+    gamma_corr = true;
+    write_once = false;
 
-    gamma_corr = args.gamma_corr;
-
-    if (args.win_width != 64 && args.win_width != 48)
-        args.win_width = 64;
-
-    cout << "Scale: " << scale << endl;
-    if (args.resize_src)
-        cout << "Resized source: (" << args.width << ", " << args.height << ")\n";
     cout << "Group threshold: " << gr_threshold << endl;
     cout << "Levels number: " << nlevels << endl;
-    cout << "Win width: " << args.win_width << endl;
-    cout << "Win stride: (" << args.win_stride_width << ", " << args.win_stride_height << ")\n";
+    cout << "Win width: " << win_width << endl;
+    cout << "Win stride: (" << win_stride_width << ", " << win_stride_height << ")\n";
     cout << "Hit threshold: " << hit_threshold << endl;
     cout << "Gamma correction: " << gamma_corr << endl;
     cout << endl;
 }
 
-
 void App::run()
 {
-    std::vector<ocl::Info> oclinfo;
+    vector<ocl::Info> oclinfo;
     ocl::getDevice(oclinfo);
     running = true;
-    cv::VideoWriter video_writer;
+    VideoWriter video_writer;
 
-    Size win_size(args.win_width, args.win_width * 2); //(64, 128) or (48, 96)
-    Size win_stride(args.win_stride_width, args.win_stride_height);
+    Size win_size(win_width, win_width * 2);
+    Size win_stride(win_stride_width, win_stride_height);
 
     // Create HOG descriptors and detectors here
     vector<float> detector;
     if (win_size == Size(64, 128))
-        detector = cv::ocl::HOGDescriptor::getPeopleDetector64x128();
+        detector = ocl::HOGDescriptor::getPeopleDetector64x128();
     else
-        detector = cv::ocl::HOGDescriptor::getPeopleDetector48x96();
+        detector = ocl::HOGDescriptor::getPeopleDetector48x96();
 
-    cv::ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::ocl::HOGDescriptor::DEFAULT_NLEVELS);
-    cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
-                              HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
+
+    ocl::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
+                               ocl::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
+                               ocl::HOGDescriptor::DEFAULT_NLEVELS);
+    HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
+                          HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
     cpu_hog.setSVMDetector(detector);
 
@@ -268,29 +165,29 @@ void App::run()
         VideoCapture vc;
         Mat frame;
 
-        if (args.src_is_video)
+        if (vdo_source!="")
         {
-            vc.open(args.src.c_str());
+            vc.open(vdo_source.c_str());
             if (!vc.isOpened())
-                throw runtime_error(string("can't open video file: " + args.src));
+                throw runtime_error(string("can't open video file: " + vdo_source));
             vc >> frame;
         }
-        else if (args.src_is_camera)
+        else if (camera_id != -1)
         {
-            vc.open(args.camera_id);
+            vc.open(camera_id);
             if (!vc.isOpened())
             {
                 stringstream msg;
-                msg << "can't open camera: " << args.camera_id;
+                msg << "can't open camera: " << camera_id;
                 throw runtime_error(msg.str());
             }
             vc >> frame;
         }
         else
         {
-            frame = imread(args.src);
+            frame = imread(img_source);
             if (frame.empty())
-                throw runtime_error(string("can't open image file: " + args.src));
+                throw runtime_error(string("can't open image file: " + img_source));
         }
 
         Mat img_aux, img, img_to_show;
@@ -308,13 +205,15 @@ void App::run()
             else frame.copyTo(img_aux);
 
             // Resize image
-            if (args.resize_src) resize(img_aux, img, Size(args.width, args.height));
+            if (abs(scale-1.0)>0.001)
+            {
+                Size sz((int)((double)img_aux.cols/resize_scale), (int)((double)img_aux.rows/resize_scale));
+                resize(img_aux, img, sz);
+            }
             else img = img_aux;
             img_to_show = img;
-
             gpu_hog.nlevels = nlevels;
             cpu_hog.nlevels = nlevels;
-
             vector<Rect> found;
 
             // Perform HOG classification
@@ -331,14 +230,15 @@ void App::run()
                     vector<Rect> ref_rst;
                     cvtColor(img, img, COLOR_BGRA2BGR);
                     cpu_hog.detectMultiScale(img, ref_rst, hit_threshold, win_stride,
-                                              Size(0, 0), scale, gr_threshold-2);
+                                             Size(0, 0), scale, gr_threshold-2);
                     double accuracy = checkRectSimilarity(img.size(), ref_rst, found);
-                    cout << "\naccuracy value: " << accuracy << endl;           
-                } 
-           }
+                    cout << "\naccuracy value: " << accuracy << endl;
+                }
+            }
             else cpu_hog.detectMultiScale(img, found, hit_threshold, win_stride,
-                                          Size(0, 0), scale, gr_threshold);
+                                              Size(0, 0), scale, gr_threshold);
             hogWorkEnd();
+
 
             // Draw positive classified windows
             for (size_t i = 0; i < found.size(); i++)
@@ -354,32 +254,38 @@ void App::run()
             putText(img_to_show, "FPS (HOG only): " + hogWorkFps(), Point(5, 65), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             putText(img_to_show, "FPS (total): " + workFps(), Point(5, 105), FONT_HERSHEY_SIMPLEX, 1., Scalar(255, 100, 0), 2);
             imshow("opencv_gpu_hog", img_to_show);
-
-            if (args.src_is_video || args.src_is_camera) vc >> frame;
+            if (vdo_source!="" || camera_id!=-1) vc >> frame;
 
             workEnd();
 
-            if (args.write_video)
+            if (output!="" && write_once)
             {
-                if (!video_writer.isOpened())
+                if (img_source!="")     // wirte image
                 {
-                    video_writer.open(args.dst_video, VideoWriter::fourcc('x','v','i','d'), args.dst_video_fps,
-                                      img_to_show.size(), true);
-                    if (!video_writer.isOpened())
-                        throw std::runtime_error("can't create video writer");
+                    write_once = false;
+                    imwrite(output, img_to_show);
                 }
+                else                    //write video
+                {
+                    if (!video_writer.isOpened())
+                    {
+                        video_writer.open(output, VideoWriter::fourcc('x','v','i','d'), 24,
+                                          img_to_show.size(), true);
+                        if (!video_writer.isOpened())
+                            throw std::runtime_error("can't create video writer");
+                    }
 
-                if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
-                else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
+                    if (make_gray) cvtColor(img_to_show, img, COLOR_GRAY2BGR);
+                    else cvtColor(img_to_show, img, COLOR_BGRA2BGR);
 
-                video_writer << img;
+                    video_writer << img;
+                }
             }
 
             handleKey((char)waitKey(3));
         }
     }
 }
-
 
 void App::handleKey(char key)
 {
@@ -439,11 +345,18 @@ void App::handleKey(char key)
         gamma_corr = !gamma_corr;
         cout << "Gamma correction: " << gamma_corr << endl;
         break;
+    case 'o':
+    case 'O':
+        write_once = !write_once;
+        break;
     }
 }
 
 
-inline void App::hogWorkBegin() { hog_work_begin = getTickCount(); }
+inline void App::hogWorkBegin()
+{
+    hog_work_begin = getTickCount();
+}
 
 inline void App::hogWorkEnd()
 {
@@ -459,8 +372,10 @@ inline string App::hogWorkFps() const
     return ss.str();
 }
 
-
-inline void App::workBegin() { work_begin = getTickCount(); }
+inline void App::workBegin()
+{
+    work_begin = getTickCount();
+}
 
 inline void App::workEnd()
 {
@@ -476,8 +391,9 @@ inline string App::workFps() const
     return ss.str();
 }
 
-double App::checkRectSimilarity(Size sz, 
-                                std::vector<Rect>& ob1, 
+
+double App::checkRectSimilarity(Size sz,
+                                std::vector<Rect>& ob1,
                                 std::vector<Rect>& ob2)
 {
     double final_test_result = 0.0;
@@ -485,19 +401,25 @@ double App::checkRectSimilarity(Size sz,
     size_t sz2 = ob2.size();
 
     if(sz1 != sz2)
+    {
         return sz1 > sz2 ? (double)(sz1 - sz2) : (double)(sz2 - sz1);
+    }
     else
     {
+        if(sz1==0 && sz2==0)
+            return 0;
         cv::Mat cpu_result(sz, CV_8UC1);
         cpu_result.setTo(0);
 
+
         for(vector<Rect>::const_iterator r = ob1.begin(); r != ob1.end(); r++)
-        {      
+        {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
             cpu_result.copyTo(cpu_result);
         }
         int cpu_area = cv::countNonZero(cpu_result > 0);
+
 
         cv::Mat gpu_result(sz, CV_8UC1);
         gpu_result.setTo(0);
@@ -511,10 +433,10 @@ double App::checkRectSimilarity(Size sz,
         cv::Mat result_;
         multiply(cpu_result, gpu_result, result_);
         int result = cv::countNonZero(result_ > 0);
-
-        final_test_result = 1.0 - (double)result/(double)cpu_area;
+        if(cpu_area!=0 && result!=0)
+            final_test_result = 1.0 - (double)result/(double)cpu_area;
+        else if(cpu_area==0 && result!=0)
+            final_test_result = -1;
     }
     return final_test_result;
-
 }
-

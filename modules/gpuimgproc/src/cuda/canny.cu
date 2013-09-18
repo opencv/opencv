@@ -43,7 +43,7 @@
 #if !defined CUDA_DISABLER
 
 #include <utility>
-#include <algorithm>//std::swap
+#include <algorithm>
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/emulation.hpp"
 #include "opencv2/core/cuda/transform.hpp"

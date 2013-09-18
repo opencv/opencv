@@ -90,4 +90,3 @@ void goodFeaturesToTrack_Demo( int, void* )
   namedWindow( source_window, WINDOW_AUTOSIZE );
   imshow( source_window, copy );
 }
-

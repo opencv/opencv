@@ -48,10 +48,10 @@ The structure of package contents looks as follows:
 
 ::
 
-    OpenCV-2.4.5-android-sdk
+    OpenCV-2.4.6-android-sdk
     |_ apk
-    |   |_ OpenCV_2.4.5_binary_pack_armv7a.apk
-    |   |_ OpenCV_2.4.5_Manager_2.7_XXX.apk
+    |   |_ OpenCV_2.4.6_binary_pack_armv7a.apk
+    |   |_ OpenCV_2.4.6_Manager_2.9_XXX.apk
     |
     |_ doc
     |_ samples
@@ -98,7 +98,7 @@ The structure of package contents looks as follows:
 * :file:`doc` folder contains various OpenCV documentation in PDF format.
   It's also available online at http://docs.opencv.org.
 
-  .. note:: The most recent docs (nightly build) are at http://docs.opencv.org/trunk/.
+  .. note:: The most recent docs (nightly build) are at http://docs.opencv.org/2.4.
             Generally, it's more up-to-date, but can refer to not-yet-released functionality.
 
 .. TODO: I'm not sure that this is the best place to talk about OpenCV Manager
@@ -157,10 +157,10 @@ Get the OpenCV4Android SDK
 
    .. code-block:: bash
 
-      unzip ~/Downloads/OpenCV-2.4.5-android-sdk.zip
+      unzip ~/Downloads/OpenCV-2.4.6-android-sdk.zip
 
-.. |opencv_android_bin_pack| replace:: :file:`OpenCV-2.4.5-android-sdk.zip`
-.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.5/OpenCV-2.4.5-android-sdk.zip/download
+.. |opencv_android_bin_pack| replace:: :file:`OpenCV-2.4.6-android-sdk.zip`
+.. _opencv_android_bin_pack_url: http://sourceforge.net/projects/opencvlibrary/files/opencv-android/2.4.6/OpenCV-2.4.6-android-sdk.zip/download
 .. |opencv_android_bin_pack_url| replace:: |opencv_android_bin_pack|
 .. |seven_zip| replace:: 7-Zip
 .. _seven_zip: http://www.7-zip.org/
@@ -295,7 +295,7 @@ Well, running samples from Eclipse is very simple:
   .. code-block:: sh
     :linenos:
 
-    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.5_Manager_2.7_armv7a-neon.apk
+    <Android SDK path>/platform-tools/adb install <OpenCV4Android SDK path>/apk/OpenCV_2.4.6_Manager_2.9_armv7a-neon.apk
 
   .. note:: ``armeabi``, ``armv7a-neon``, ``arm7a-neon-android8``, ``mips`` and ``x86`` stand for
             platform targets:

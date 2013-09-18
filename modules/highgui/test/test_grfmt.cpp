@@ -284,6 +284,98 @@ TEST(Highgui_ImreadVSCvtColor, regression)
     EXPECT_LT(actual_avg_diff, MAX_MEAN_DIFF);
     EXPECT_LT(actual_maxval, MAX_ABS_DIFF);
 }
+
+//Test OpenCV issue 3075 is solved
+class CV_GrfmtReadPNGColorPaletteWithAlphaTest : public cvtest::BaseTest
+{
+public:
+    void run(int)
+    {
+        try
+        {
+            // First Test : Read PNG with alpha, imread flag -1
+            Mat img = imread(string(ts->get_data_path()) + "readwrite/color_palette_alpha.png",-1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 4);
+
+            unsigned char* img_data = (unsigned char*)img.data;
+
+            // Verification first pixel is red in BGRA
+            ASSERT_TRUE(img_data[0] == 0x00);
+            ASSERT_TRUE(img_data[1] == 0x00);
+            ASSERT_TRUE(img_data[2] == 0xFF);
+            ASSERT_TRUE(img_data[3] == 0xFF);
+
+            // Verification second pixel is red in BGRA
+            ASSERT_TRUE(img_data[4] == 0x00);
+            ASSERT_TRUE(img_data[5] == 0x00);
+            ASSERT_TRUE(img_data[6] == 0xFF);
+            ASSERT_TRUE(img_data[7] == 0xFF);
+
+            // Second Test : Read PNG without alpha, imread flag -1
+            img = imread(string(ts->get_data_path()) + "readwrite/color_palette_no_alpha.png",-1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 3);
+
+            img_data = (unsigned char*)img.data;
+
+            // Verification first pixel is red in BGR
+            ASSERT_TRUE(img_data[0] == 0x00);
+            ASSERT_TRUE(img_data[1] == 0x00);
+            ASSERT_TRUE(img_data[2] == 0xFF);
+
+            // Verification second pixel is red in BGR
+            ASSERT_TRUE(img_data[3] == 0x00);
+            ASSERT_TRUE(img_data[4] == 0x00);
+            ASSERT_TRUE(img_data[5] == 0xFF);
+
+            // Third Test : Read PNG with alpha, imread flag 1
+            img = imread(string(ts->get_data_path()) + "readwrite/color_palette_alpha.png",1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 3);
+
+            img_data = (unsigned char*)img.data;
+
+            // Verification first pixel is red in BGR
+            ASSERT_TRUE(img_data[0] == 0x00);
+            ASSERT_TRUE(img_data[1] == 0x00);
+            ASSERT_TRUE(img_data[2] == 0xFF);
+
+            // Verification second pixel is red in BGR
+            ASSERT_TRUE(img_data[3] == 0x00);
+            ASSERT_TRUE(img_data[4] == 0x00);
+            ASSERT_TRUE(img_data[5] == 0xFF);
+
+            // Fourth Test : Read PNG without alpha, imread flag 1
+            img = imread(string(ts->get_data_path()) + "readwrite/color_palette_no_alpha.png",1);
+            if (img.empty()) ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+
+            ASSERT_TRUE(img.channels() == 3);
+
+            img_data = (unsigned char*)img.data;
+
+            // Verification first pixel is red in BGR
+            ASSERT_TRUE(img_data[0] == 0x00);
+            ASSERT_TRUE(img_data[1] == 0x00);
+            ASSERT_TRUE(img_data[2] == 0xFF);
+
+            // Verification second pixel is red in BGR
+            ASSERT_TRUE(img_data[3] == 0x00);
+            ASSERT_TRUE(img_data[4] == 0x00);
+            ASSERT_TRUE(img_data[5] == 0xFF);
+        }
+        catch(...)
+        {
+            ts->set_failed_test_info(cvtest::TS::FAIL_EXCEPTION);
+    }
+        ts->set_failed_test_info(cvtest::TS::OK);
+    }
+};
+
+TEST(Highgui_Image, read_png_color_palette_with_alpha) { CV_GrfmtReadPNGColorPaletteWithAlphaTest test; test.safe_run(); }
 #endif
 
 #ifdef HAVE_JPEG
@@ -387,11 +479,15 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
 TEST(Highgui_WebP, encode_decode_lossy_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
+<<<<<<< HEAD
     string input = string(ts.get_data_path()) + "/../cv/shared/lena.png";
+=======
+    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+>>>>>>> 99a43257d5912ff215016e1cf5f4e0c2a934b72f
     cv::Mat img = cv::imread(input);
     ASSERT_FALSE(img.empty());
 
-    for(int q = 100; q>=0; q-=10)
+    for(int q = 100; q>=0; q-=20)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_WEBP_QUALITY);
@@ -402,7 +498,34 @@ TEST(Highgui_WebP, encode_decode_lossy_webp)
         cv::Mat img_webp = cv::imread(output);
         remove(output.c_str());
         EXPECT_FALSE(img_webp.empty());
+        EXPECT_EQ(3,   img_webp.channels());
+        EXPECT_EQ(512, img_webp.cols);
+        EXPECT_EQ(512, img_webp.rows);
     }
+}
+
+TEST(Highgui_WebP, encode_decode_with_alpha_webp)
+{
+    cvtest::TS& ts = *cvtest::TS::ptr();
+    std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
+    cv::Mat img = cv::imread(input);
+    ASSERT_FALSE(img.empty());
+
+    std::vector<cv::Mat> imgs;
+    cv::split(img, imgs);
+    imgs.push_back(cv::Mat(imgs[0]));
+    imgs[imgs.size() - 1] = cv::Scalar::all(128);
+    cv::merge(imgs, img);
+
+    string output = cv::tempfile(".webp");
+
+    EXPECT_NO_THROW(cv::imwrite(output, img));
+    cv::Mat img_webp = cv::imread(output);
+    remove(output.c_str());
+    EXPECT_FALSE(img_webp.empty());
+    EXPECT_EQ(4,   img_webp.channels());
+    EXPECT_EQ(512, img_webp.cols);
+    EXPECT_EQ(512, img_webp.rows);
 }
 
 #endif

@@ -6,7 +6,7 @@ if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL "Debug")
   ocv_module_disable(python)
 endif()
 
-if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIR)
+if(ANDROID OR IOS OR NOT PYTHONLIBS_FOUND OR NOT PYTHON_NUMPY_INCLUDE_DIRS)
   ocv_module_disable(python)
 endif()
 
@@ -15,7 +15,7 @@ ocv_add_module(python BINDINGS opencv_core opencv_flann opencv_imgproc opencv_vi
 
 ocv_module_include_directories(
     "${PYTHON_INCLUDE_PATH}"
-    "${PYTHON_NUMPY_INCLUDE_DIR}"
+    ${PYTHON_NUMPY_INCLUDE_DIRS}
     "${CMAKE_CURRENT_SOURCE_DIR}/src2"
     )
 
@@ -79,6 +79,10 @@ set_target_properties(${the_module} PROPERTIES
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_module} PROPERTIES FOLDER "bindings")
+endif()
+
+if(MSVC)
+    add_definitions(-DCVAPI_EXPORTS)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT ENABLE_NOISY_WARNINGS)

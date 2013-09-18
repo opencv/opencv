@@ -216,6 +216,10 @@ Detects objects of different sizes in the input image. The detected objects are 
 
 The function is parallelized with the TBB library.
 
+.. note::
+
+   * (Python) A face detection example using cascade classifiers can be found at opencv_source_code/samples/python2/facedetect.py
+
 
 CascadeClassifier::setImage
 -------------------------------

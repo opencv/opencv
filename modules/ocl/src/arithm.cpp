@@ -2337,7 +2337,7 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
         return;
     }
 
-    CV_Assert((x.type() == y.type() && x.size() == y.size() && x.depth() == CV_32F) || x.depth() == CV_64F);
+    CV_Assert(x.depth() == CV_32F || x.depth() == CV_64F);
     y.create(x.size(), x.type());
     String kernelName = "arithm_pow";
 

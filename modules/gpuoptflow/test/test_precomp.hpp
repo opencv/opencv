@@ -59,4 +59,6 @@
 #include "opencv2/gpuoptflow.hpp"
 #include "opencv2/video.hpp"
 
+#include "cvconfig.h"
+
 #endif

@@ -3,12 +3,21 @@ Feature Detection and Description
 
 .. highlight:: cpp
 
+.. note::
+
+   * An example explaining keypoint detection and description can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+
 FAST
 ----
 Detects corners using the FAST algorithm
 
 .. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression=true )
 .. ocv:function:: void FAST( InputArray image, vector<KeyPoint>& keypoints, int threshold, bool nonmaxSupression, int type )
+
+.. ocv:pyfunction:: cv2.FastFeatureDetector([, threshold[, nonmaxSuppression]]) -> <FastFeatureDetector object>
+.. ocv:pyfunction:: cv2.FastFeatureDetector(threshold, nonmaxSuppression, type) -> <FastFeatureDetector object>
+.. ocv:pyfunction:: cv2.FastFeatureDetector.detect(image[, mask]) -> keypoints
+
 
     :param image: grayscale image where keypoints (corners) are detected.
 
@@ -21,6 +30,9 @@ Detects corners using the FAST algorithm
     :param type: one of the three neighborhoods as defined in the paper: ``FastFeatureDetector::TYPE_9_16``, ``FastFeatureDetector::TYPE_7_12``, ``FastFeatureDetector::TYPE_5_8``
 
 Detects corners using the FAST algorithm by [Rosten06]_.
+
+..note:: In Python API, types are given as ``cv2.FAST_FEATURE_DETECTOR_TYPE_5_8``, ``cv2.FAST_FEATURE_DETECTOR_TYPE_7_12`` and  ``cv2.FAST_FEATURE_DETECTOR_TYPE_9_16``. For corner detection, use ``cv2.FAST.detect()`` method.
+
 
 .. [Rosten06] E. Rosten. Machine Learning for High-speed Corner Detection, 2006.
 
@@ -50,6 +62,10 @@ Maximally stable extremal region extractor. ::
 The class encapsulates all the parameters of the MSER extraction algorithm (see
 http://en.wikipedia.org/wiki/Maximally_stable_extremal_regions). Also see http://code.opencv.org/projects/opencv/wiki/MSER for useful comments and parameters description.
 
+.. note::
+
+   * (Python) A complete example showing the use of the MSER detector can be found at opencv_source_code/samples/python2/mser.py
+
 
 ORB
 ---
@@ -64,6 +80,9 @@ ORB::ORB
 The ORB constructor
 
 .. ocv:function:: ORB::ORB(int nfeatures = 500, float scaleFactor = 1.2f, int nlevels = 8, int edgeThreshold = 31, int firstLevel = 0, int WTA_K=2, int scoreType=ORB::HARRIS_SCORE, int patchSize=31)
+
+.. ocv:pyfunction:: cv2.ORB([, nfeatures[, scaleFactor[, nlevels[, edgeThreshold[, firstLevel[, WTA_K[, scoreType[, patchSize]]]]]]]]) -> <ORB object>
+
 
     :param nfeatures: The maximum number of features to retain.
 
@@ -87,6 +106,11 @@ Finds keypoints in an image and computes their descriptors
 
 .. ocv:function:: void ORB::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false ) const
 
+.. ocv:pyfunction:: cv2.ORB.detect(image[, mask]) -> keypoints
+.. ocv:pyfunction:: cv2.ORB.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+.. ocv:pyfunction:: cv2.ORB.detectAndCompute(image, mask[, descriptors[, useProvidedKeypoints]]) -> keypoints, descriptors
+
+
     :param image: The input 8-bit grayscale image.
 
     :param mask: The operation mask.
@@ -96,6 +120,7 @@ Finds keypoints in an image and computes their descriptors
     :param descriptors: The output descriptors. Pass ``cv::noArray()`` if you do not need it.
 
     :param useProvidedKeypoints: If it is true, then the method will use the provided vector of keypoints instead of detecting them.
+
 
 BRISK
 -----
@@ -111,6 +136,8 @@ The BRISK constructor
 
 .. ocv:function:: BRISK::BRISK(int thresh=30, int octaves=3, float patternScale=1.0f)
 
+.. ocv:pyfunction:: cv2.BRISK([, thresh[, octaves[, patternScale]]]) -> <BRISK object>
+
     :param thresh: FAST/AGAST detection threshold score.
 
     :param octaves: detection octaves. Use 0 to do single scale.
@@ -122,6 +149,8 @@ BRISK::BRISK
 The BRISK constructor for a custom pattern
 
 .. ocv:function:: BRISK::BRISK(std::vector<float> &radiusList, std::vector<int> &numberList, float dMax=5.85f, float dMin=8.2f, std::vector<int> indexChange=std::vector<int>())
+
+.. ocv:pyfunction:: cv2.BRISK(radiusList, numberList[, dMax[, dMin[, indexChange]]]) -> <BRISK object>
 
     :param radiusList: defines the radii (in pixels) where the samples around a keypoint are taken (for keypoint scale 1).
 
@@ -138,6 +167,10 @@ BRISK::operator()
 Finds keypoints in an image and computes their descriptors
 
 .. ocv:function:: void BRISK::operator()(InputArray image, InputArray mask, vector<KeyPoint>& keypoints, OutputArray descriptors, bool useProvidedKeypoints=false ) const
+
+.. ocv:pyfunction:: cv2.BRISK.detect(image[, mask]) -> keypoints
+.. ocv:pyfunction:: cv2.BRISK.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+.. ocv:pyfunction:: cv2.BRISK.detectAndCompute(image, mask[, descriptors[, useProvidedKeypoints]]) -> keypoints, descriptors
 
     :param image: The input 8-bit grayscale image.
 
@@ -156,6 +189,10 @@ FREAK
 Class implementing the FREAK (*Fast Retina Keypoint*) keypoint descriptor, described in [AOV12]_. The algorithm propose a novel keypoint descriptor inspired by the human visual system and more precisely the retina, coined Fast Retina Key- point (FREAK). A cascade of binary strings is computed by efficiently comparing image intensities over a retinal sampling pattern. FREAKs are in general faster to compute with lower memory load and also more robust than SIFT, SURF or BRISK. They are competitive alternatives to existing keypoints in particular for embedded applications.
 
 .. [AOV12] A. Alahi, R. Ortiz, and P. Vandergheynst. FREAK: Fast Retina Keypoint. In IEEE Conference on Computer Vision and Pattern Recognition, 2012. CVPR 2012 Open Source Award Winner.
+
+.. note::
+
+   * An example on how to use the FREAK descriptor can be found at opencv_source_code/samples/cpp/freak_demo.cpp
 
 FREAK::FREAK
 ------------

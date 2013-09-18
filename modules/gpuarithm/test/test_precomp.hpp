@@ -51,11 +51,15 @@
 #ifndef __OPENCV_TEST_PRECOMP_HPP__
 #define __OPENCV_TEST_PRECOMP_HPP__
 
+#include <functional>
+
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/gpu_test.hpp"
 
 #include "opencv2/gpuarithm.hpp"
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
+
+#include "cvconfig.h"
 
 #endif

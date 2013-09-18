@@ -54,23 +54,26 @@ CvFeatureTracker::CvFeatureTracker(CvFeatureTrackerParams _params) :
     {
     case CvFeatureTrackerParams::SIFT:
         dd = Algorithm::create<Feature2D>("Feature2D.SIFT");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SIFT support");
         dd->set("nOctaveLayers", 5);
         dd->set("contrastThreshold", 0.04);
         dd->set("edgeThreshold", 10.7);
+        break;
     case CvFeatureTrackerParams::SURF:
         dd = Algorithm::create<Feature2D>("Feature2D.SURF");
-        if( dd.empty() )
+        if( !dd )
             CV_Error(CV_StsNotImplemented, "OpenCV has been compiled without SURF support");
         dd->set("hessianThreshold", 400);
         dd->set("nOctaves", 3);
         dd->set("nOctaveLayers", 4);
+        break;
     default:
         CV_Error(CV_StsBadArg, "Unknown feature type");
+        break;
     }
 
-    matcher = new BFMatcher(NORM_L2);
+    matcher = makePtr<BFMatcher>(int(NORM_L2));
 }
 
 CvFeatureTracker::~CvFeatureTracker()
@@ -218,4 +221,3 @@ Point2f CvFeatureTracker::getTrackingCenter()
     center.y = (float)(prev_center.y + prev_trackwindow.height/2.0);
     return center;
 }
-

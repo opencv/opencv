@@ -159,7 +159,7 @@ static Moments contourMoments( const Mat& contour )
     if( fabs(a00) > FLT_EPSILON )
     {
         double db1_2, db1_6, db1_12, db1_24, db1_20, db1_60;
-        
+
         if( a00 > 0 )
         {
             db1_2 = 0.5;
@@ -464,7 +464,7 @@ cv::Moments cv::moments( InputArray _src, bool binary )
             m.m03 += mom[9] + y * (3. * mom[5] + y * (3. * mom[2] + ym));
         }
     }
-    
+
     completeMomentState( &m );
     return m;
 }

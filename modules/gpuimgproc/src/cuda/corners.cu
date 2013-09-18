@@ -48,6 +48,10 @@
 #include "opencv2/core/cuda/saturate_cast.hpp"
 #include "opencv2/core/cuda/border_interpolate.hpp"
 
+#include "opencv2/opencv_modules.hpp"
+
+#ifdef HAVE_OPENCV_GPUFILTERS
+
 namespace cv { namespace gpu { namespace cudev
 {
     namespace imgproc
@@ -271,4 +275,6 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-#endif
+#endif // HAVE_OPENCV_GPUFILTERS
+
+#endif // CUDA_DISABLER

@@ -51,7 +51,6 @@
     and png2bmp sample from libpng distribution (Copyright (C) 1999-2001 MIYASAKA Masaru)
 \****************************************************************************************/
 
-#undef HAVE_UNISTD_H //to avoid redefinition
 #ifndef _LFS64_LARGEFILE
 #  define _LFS64_LARGEFILE 0
 #endif
@@ -102,7 +101,7 @@ PngDecoder::~PngDecoder()
 
 ImageDecoder PngDecoder::newDecoder() const
 {
-    return new PngDecoder;
+    return makePtr<PngDecoder>();
 }
 
 void  PngDecoder::close()
@@ -172,7 +171,9 @@ bool  PngDecoder::readHeader()
                 if( !m_buf.empty() || m_f )
                 {
                     png_uint_32 wdth, hght;
-                    int bit_depth, color_type;
+                    int bit_depth, color_type, num_trans=0;
+                    png_bytep trans;
+                    png_color_16p trans_values;
 
                     png_read_info( png_ptr, info_ptr );
 
@@ -188,15 +189,22 @@ bool  PngDecoder::readHeader()
                     {
                         switch(color_type)
                         {
-                           case PNG_COLOR_TYPE_RGB:
-                           case PNG_COLOR_TYPE_PALETTE:
-                               m_type = CV_8UC3;
-                               break;
-                          case PNG_COLOR_TYPE_RGB_ALPHA:
-                               m_type = CV_8UC4;
-                               break;
-                          default:
-                               m_type = CV_8UC1;
+                            case PNG_COLOR_TYPE_RGB:
+                                m_type = CV_8UC3;
+                                break;
+                            case PNG_COLOR_TYPE_PALETTE:
+                                png_get_tRNS( png_ptr, info_ptr, &trans, &num_trans, &trans_values);
+                                //Check if there is a transparency value in the palette
+                                if ( num_trans > 0 )
+                                    m_type = CV_8UC4;
+                                else
+                                    m_type = CV_8UC3;
+                                break;
+                            case PNG_COLOR_TYPE_RGB_ALPHA:
+                                m_type = CV_8UC4;
+                                break;
+                            default:
+                                m_type = CV_8UC1;
                         }
                         if( bit_depth == 16 )
                             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
@@ -269,6 +277,7 @@ bool  PngDecoder::readData( Mat& img )
             else
                 png_set_rgb_to_gray( png_ptr, 1, 0.299, 0.587 ); // RGB->Gray
 
+            png_set_interlace_handling( png_ptr );
             png_read_update_info( png_ptr, info_ptr );
 
             for( y = 0; y < m_height; y++ )
@@ -308,7 +317,7 @@ bool  PngEncoder::isFormatSupported( int depth ) const
 
 ImageEncoder PngEncoder::newEncoder() const
 {
-    return new PngEncoder;
+    return makePtr<PngEncoder>();
 }
 
 

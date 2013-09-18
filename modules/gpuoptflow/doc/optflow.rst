@@ -3,6 +3,10 @@ Optical Flow
 
 .. highlight:: cpp
 
+.. note::
+
+   * A general optical flow example can be found at opencv_source_code/samples/gpu/optical_flow.cpp
+   * A general optical flow example using the Nvidia API can be found at opencv_source_code/samples/gpu/opticalflow_nvidia_api.cpp
 
 
 gpu::BroxOpticalFlow
@@ -44,6 +48,9 @@ Class computing the optical flow for two images using Brox et al Optical Flow al
         GpuMat buf;
     };
 
+.. note::
+
+   * An example illustrating the Brox et al optical flow algorithm can be found at opencv_source_code/samples/gpu/brox_optical_flow.cpp
 
 
 gpu::FarnebackOpticalFlow
@@ -138,6 +145,9 @@ The class can calculate an optical flow for a sparse feature set or dense optica
 
 .. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
 
+.. note::
+
+   * An example of the Lucas Kanade optical flow algorithm can be found at opencv_source_code/samples/gpu/pyrlk_optical_flow.cpp
 
 
 gpu::PyrLKOpticalFlow::sparse

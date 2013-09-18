@@ -9,6 +9,11 @@ that are represented as vectors in a multidimensional space. All objects that im
 descriptor matchers inherit the
 :ocv:class:`DescriptorMatcher` interface.
 
+.. note::
+
+   * An example explaining keypoint matching can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor matching evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_matcher_evaluation.cpp
+   * An example on one to many image matching can be found at opencv_source_code/samples/cpp/matching_to_many_images.cpp
 
 DescriptorMatcher
 -----------------
@@ -271,4 +276,3 @@ Flann-based descriptor matcher. This matcher trains :ocv:class:`flann::Index_` o
     };
 
 ..
-

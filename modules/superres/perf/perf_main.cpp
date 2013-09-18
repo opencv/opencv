@@ -44,4 +44,11 @@
 
 using namespace perf;
 
-CV_PERF_TEST_MAIN(superres, printCudaInfo())
+static const char * impls[] = {
+#ifdef HAVE_CUDA
+    "cuda",
+#endif
+    "plain"
+};
+
+CV_PERF_TEST_MAIN_WITH_IMPLS(superres, impls, printCudaInfo())

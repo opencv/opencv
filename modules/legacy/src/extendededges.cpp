@@ -263,7 +263,3 @@ CvSeq* icvCutContourRaster( CvSeq* current, CvMemStorage* storage, IplImage* ima
 
 */
 #endif /* WIN32 */
-
-
-
-

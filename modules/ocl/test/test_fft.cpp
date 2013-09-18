@@ -43,7 +43,7 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "test_precomp.hpp"
 using namespace std;
 #ifdef HAVE_CLAMDFFT
 ////////////////////////////////////////////////////////////////////////////
@@ -132,7 +132,7 @@ TEST_P(MulSpectrums, Simple)
     cv::Mat c_gold;
     cv::mulSpectrums(a, b, c_gold, flag, ccorr);
 
-    EXPECT_MAT_NEAR(c_gold, c, 1e-2, "");
+    EXPECT_MAT_NEAR(c_gold, c, 1e-2);
 }
 
 TEST_P(MulSpectrums, Scaled)
@@ -146,7 +146,7 @@ TEST_P(MulSpectrums, Scaled)
     cv::mulSpectrums(a, b, c_gold, flag, ccorr);
     c_gold.convertTo(c_gold, c_gold.type(), scale);
 
-    EXPECT_MAT_NEAR(c_gold, c, 1e-2, "");
+    EXPECT_MAT_NEAR(c_gold, c, 1e-2);
 }
 
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MulSpectrums, testing::Combine(
@@ -230,7 +230,7 @@ TEST_P(Convolve_DFT, Accuracy)
     cv::Mat dst_gold;
     convolveDFT(src, kernel, dst_gold, ccorr);
 
-    EXPECT_MAT_NEAR(dst, dst_gold, 1e-1, "");
+    EXPECT_MAT_NEAR(dst, dst_gold, 1e-1);
 }
 #define DIFFERENT_CONVOLVE_SIZES testing::Values(cv::Size(251, 257), cv::Size(113, 113), cv::Size(200, 480), cv::Size(1300, 1300))
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, Convolve_DFT, testing::Combine(

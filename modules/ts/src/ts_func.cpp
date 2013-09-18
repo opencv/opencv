@@ -2,6 +2,10 @@
 #include <float.h>
 #include <limits.h>
 
+#ifdef HAVE_TEGRA_OPTIMIZATION
+#include "tegra.hpp"
+#endif
+
 using namespace cv;
 
 namespace cvtest
@@ -2939,28 +2943,75 @@ MatComparator::operator()(const char* expr1, const char* expr2,
 
 void printVersionInfo(bool useStdOut)
 {
-    ::testing::Test::RecordProperty("CV_VERSION", CV_VERSION);
+    ::testing::Test::RecordProperty("cv_version", CV_VERSION);
     if(useStdOut) std::cout << "OpenCV version: " << CV_VERSION << std::endl;
 
     std::string buildInfo( cv::getBuildInformation() );
 
     size_t pos1 = buildInfo.find("Version control");
-    size_t pos2 = buildInfo.find("\n", pos1);\
+    size_t pos2 = buildInfo.find('\n', pos1);
     if(pos1 != std::string::npos && pos2 != std::string::npos)
     {
-        std::string ver( buildInfo.substr(pos1, pos2-pos1) );
-        ::testing::Test::RecordProperty("Version_control", ver);
-        if(useStdOut) std::cout << ver << std::endl;
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_vcs_version", ver);
+        if (useStdOut) std::cout << "OpenCV VCS version: " << ver << std::endl;
     }
 
     pos1 = buildInfo.find("inner version");
-    pos2 = buildInfo.find("\n", pos1);\
+    pos2 = buildInfo.find('\n', pos1);
     if(pos1 != std::string::npos && pos2 != std::string::npos)
     {
-        std::string ver( buildInfo.substr(pos1, pos2-pos1) );
-        ::testing::Test::RecordProperty("inner_version", ver);
-        if(useStdOut) std::cout << ver << std::endl;
+        size_t value_start = buildInfo.rfind(' ', pos2) + 1;
+        std::string ver( buildInfo.substr(value_start, pos2 - value_start) );
+        ::testing::Test::RecordProperty("cv_inner_vcs_version", ver);
+        if(useStdOut) std::cout << "Inner VCS version: " << ver << std::endl;
     }
+
+    const char* parallel_framework = currentParallelFramework();
+
+    if (parallel_framework) {
+        ::testing::Test::RecordProperty("cv_parallel_framework", parallel_framework);
+        if (useStdOut) std::cout << "Parallel framework: " << parallel_framework << std::endl;
+    }
+
+    std::string cpu_features;
+
+#if CV_SSE
+    if (checkHardwareSupport(CV_CPU_SSE)) cpu_features += " sse";
+#endif
+#if CV_SSE2
+    if (checkHardwareSupport(CV_CPU_SSE2)) cpu_features += " sse2";
+#endif
+#if CV_SSE3
+    if (checkHardwareSupport(CV_CPU_SSE3)) cpu_features += " sse3";
+#endif
+#if CV_SSSE3
+    if (checkHardwareSupport(CV_CPU_SSSE3)) cpu_features += " ssse3";
+#endif
+#if CV_SSE4_1
+    if (checkHardwareSupport(CV_CPU_SSE4_1)) cpu_features += " sse4.1";
+#endif
+#if CV_SSE4_2
+    if (checkHardwareSupport(CV_CPU_SSE4_2)) cpu_features += " sse4.2";
+#endif
+#if CV_AVX
+    if (checkHardwareSupport(CV_CPU_AVX)) cpu_features += " avx";
+#endif
+#if CV_NEON
+    cpu_features += " neon"; // NEON is currently not checked at runtime
+#endif
+
+    cpu_features.erase(0, 1); // erase initial space
+
+    ::testing::Test::RecordProperty("cv_cpu_features", cpu_features);
+    if (useStdOut) std::cout << "CPU features: " << cpu_features << std::endl;
+
+#ifdef HAVE_TEGRA_OPTIMIZATION
+    const char * tegra_optimization = tegra::isDeviceSupported() ? "enabled" : "disabled";
+    ::testing::Test::RecordProperty("cv_tegra_optimization", tegra_optimization);
+    if (useStdOut) std::cout << "Tegra optimization: " << tegra_optimization << std::endl;
+#endif
 }
 
 }

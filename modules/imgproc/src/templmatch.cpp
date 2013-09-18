@@ -248,6 +248,8 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
     CV_Assert( (img.depth() == CV_8U || img.depth() == CV_32F) &&
                img.type() == templ.type() );
 
+    CV_Assert( img.rows >= templ.rows && img.cols >= templ.cols);
+
     Size corrSize(img.cols - templ.cols + 1, img.rows - templ.rows + 1);
     _result.create(corrSize, CV_32F);
     Mat result = _result.getMat();

@@ -64,13 +64,11 @@
 #undef OPENCV_NOSTL
 
 #include "opencv2/imgproc.hpp"
-#include "opencv2/objdetect.hpp"
+#include "opencv2/objdetect/objdetect_c.h"
 #include "opencv2/ocl.hpp"
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/private.hpp"
-
-//#include "opencv2/highgui.hpp"
 
 #define __ATI__
 

@@ -54,77 +54,59 @@ namespace cv { namespace gpu {
 
 //! DST[x,y] = SRC[xmap[x,y],ymap[x,y]]
 //! supports only CV_32FC1 map type
-CV_EXPORTS void remap(const GpuMat& src, GpuMat& dst, const GpuMat& xmap, const GpuMat& ymap,
+CV_EXPORTS void remap(InputArray src, OutputArray dst, InputArray xmap, InputArray ymap,
                       int interpolation, int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(),
                       Stream& stream = Stream::Null());
 
 //! resizes the image
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC, INTER_AREA
-CV_EXPORTS void resize(const GpuMat& src, GpuMat& dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
+CV_EXPORTS void resize(InputArray src, OutputArray dst, Size dsize, double fx=0, double fy=0, int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
 //! warps the image using affine transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpAffine(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
+CV_EXPORTS void warpAffine(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
     int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
 
-CV_EXPORTS void buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+CV_EXPORTS void buildWarpAffineMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
 //! warps the image using perspective transformation
 //! Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
-CV_EXPORTS void warpPerspective(const GpuMat& src, GpuMat& dst, const Mat& M, Size dsize, int flags = INTER_LINEAR,
+CV_EXPORTS void warpPerspective(InputArray src, OutputArray dst, InputArray M, Size dsize, int flags = INTER_LINEAR,
     int borderMode = BORDER_CONSTANT, Scalar borderValue = Scalar(), Stream& stream = Stream::Null());
 
-CV_EXPORTS void buildWarpPerspectiveMaps(const Mat& M, bool inverse, Size dsize, GpuMat& xmap, GpuMat& ymap, Stream& stream = Stream::Null());
+CV_EXPORTS void buildWarpPerspectiveMaps(InputArray M, bool inverse, Size dsize, OutputArray xmap, OutputArray ymap, Stream& stream = Stream::Null());
 
 //! builds plane warping maps
-CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, const Mat &T, float scale,
-                                   GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+CV_EXPORTS void buildWarpPlaneMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, InputArray T, float scale,
+                                   OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
 
 //! builds cylindrical warping maps
-CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                         GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+CV_EXPORTS void buildWarpCylindricalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale,
+                                         OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
 
 //! builds spherical warping maps
-CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, const Mat &K, const Mat& R, float scale,
-                                       GpuMat& map_x, GpuMat& map_y, Stream& stream = Stream::Null());
+CV_EXPORTS void buildWarpSphericalMaps(Size src_size, Rect dst_roi, InputArray K, InputArray R, float scale,
+                                       OutputArray map_x, OutputArray map_y, Stream& stream = Stream::Null());
 
 //! rotates an image around the origin (0,0) and then shifts it
 //! supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC
 //! supports 1, 3 or 4 channels images with CV_8U, CV_16U or CV_32F depth
-CV_EXPORTS void rotate(const GpuMat& src, GpuMat& dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
+CV_EXPORTS void rotate(InputArray src, OutputArray dst, Size dsize, double angle, double xShift = 0, double yShift = 0,
                        int interpolation = INTER_LINEAR, Stream& stream = Stream::Null());
 
 //! smoothes the source image and downsamples it
-CV_EXPORTS void pyrDown(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS void pyrDown(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
 //! upsamples the source image and then smoothes it
-CV_EXPORTS void pyrUp(const GpuMat& src, GpuMat& dst, Stream& stream = Stream::Null());
+CV_EXPORTS void pyrUp(InputArray src, OutputArray dst, Stream& stream = Stream::Null());
 
-class CV_EXPORTS ImagePyramid
+class CV_EXPORTS ImagePyramid : public Algorithm
 {
 public:
-    inline ImagePyramid() : nLayers_(0) {}
-    inline ImagePyramid(const GpuMat& img, int nLayers, Stream& stream = Stream::Null())
-    {
-        build(img, nLayers, stream);
-    }
-
-    void build(const GpuMat& img, int nLayers, Stream& stream = Stream::Null());
-
-    void getLayer(GpuMat& outImg, Size outRoi, Stream& stream = Stream::Null()) const;
-
-    inline void release()
-    {
-        layer0_.release();
-        pyramid_.clear();
-        nLayers_ = 0;
-    }
-
-private:
-    GpuMat layer0_;
-    std::vector<GpuMat> pyramid_;
-    int nLayers_;
+    virtual void getLayer(OutputArray outImg, Size outRoi, Stream& stream = Stream::Null()) const = 0;
 };
+
+CV_EXPORTS Ptr<ImagePyramid> createImagePyramid(InputArray img, int nLayers = -1, Stream& stream = Stream::Null());
 
 }} // namespace cv { namespace gpu {
 

@@ -11,7 +11,7 @@ You can store and then restore various OpenCV data structures to/from XML (http:
 
 Use the following procedure to write something to XML or YAML:
  #. Create new :ocv:class:`FileStorage` and open it for writing. It can be done with a single call to :ocv:func:`FileStorage::FileStorage` constructor that takes a filename, or you can use the default constructor and then call :ocv:func:`FileStorage::open`. Format of the file (XML or YAML) is determined from the filename extension (".xml" and ".yml"/".yaml", respectively)
- #. Write all the data you want using the streaming operator ``>>``, just like in the case of STL streams.
+ #. Write all the data you want using the streaming operator ``<<``, just like in the case of STL streams.
  #. Close the file using :ocv:func:`FileStorage::release`. ``FileStorage`` destructor also closes the file.
 
 Here is an example: ::
@@ -90,6 +90,10 @@ Several things can be noted by looking at the sample code and the output:
 
  *
    In YAML (but not XML), mappings and sequences can be written in a compact Python-like inline form. In the sample above matrix elements, as well as each feature, including its lbp value, is stored in such inline form. To store a mapping/sequence in a compact form, put ":" after the opening character, e.g. use **"{:"** instead of **"{"** and **"[:"** instead of **"["**. When the data is written to XML, those extra ":" are ignored.
+
+.. note::
+
+   * A complete example using the FileStorage interface can be found at opencv_source_code/samples/cpp/filestorage.cpp
 
 
 Reading data from a file storage.
@@ -180,6 +184,17 @@ FileStorage::open
 Opens a file.
 
 .. ocv:function:: bool FileStorage::open(const String& filename, int flags, const String& encoding=String())
+
+    :param filename: Name of the file to open or the text string to read the data from.
+                     Extension of the file (``.xml`` or ``.yml``/``.yaml``) determines its format (XML or YAML respectively).
+                     Also you can append ``.gz`` to work with compressed files, for example ``myHugeMatrix.xml.gz``.
+                     If both ``FileStorage::WRITE`` and ``FileStorage::MEMORY`` flags are specified, ``source``
+                     is used just to specify the output file format (e.g. ``mydata.xml``, ``.yml`` etc.).
+
+    :param flags: Mode of operation. See FileStorage constructor for more details.
+
+    :param encoding: Encoding of the file. Note that UTF-16 XML encoding is not supported currently and you should use 8-bit encoding instead of it.
+
 
 See description of parameters in :ocv:func:`FileStorage::FileStorage`. The method calls :ocv:func:`FileStorage::release` before opening the file.
 

@@ -1,8 +1,10 @@
 // Copyright 2012 Google Inc. All Rights Reserved.
 //
-// This code is licensed under the same terms as WebM:
-//  Software License Agreement:  http://www.webmproject.org/license/software/
-//  Additional IP Rights Grant:  http://www.webmproject.org/license/additional/
+// Use of this source code is governed by a BSD-style license
+// that can be found in the COPYING file in the root of the source
+// tree. An additional intellectual property rights grant can be found
+// in the file PATENTS. All contributing project authors may
+// be found in the AUTHORS file in the root of the source tree.
 // -----------------------------------------------------------------------------
 //
 // Author: Jyrki Alakuijala (jyrki@google.com)
@@ -142,9 +144,10 @@ static void HashChainInsert(HashChain* const p,
 }
 
 static void GetParamsForHashChainFindCopy(int quality, int xsize,
-                                          int* window_size, int* iter_pos,
-                                          int* iter_limit) {
+                                          int cache_bits, int* window_size,
+                                          int* iter_pos, int* iter_limit) {
   const int iter_mult = (quality < 27) ? 1 : 1 + ((quality - 27) >> 4);
+  const int iter_neg = -iter_mult * (quality >> 1);
   // Limit the backward-ref window size for lower qualities.
   const int max_window_size = (quality > 50) ? WINDOW_SIZE
                             : (quality > 25) ? (xsize << 8)
@@ -152,77 +155,74 @@ static void GetParamsForHashChainFindCopy(int quality, int xsize,
   assert(xsize > 0);
   *window_size = (max_window_size > WINDOW_SIZE) ? WINDOW_SIZE
                : max_window_size;
-  *iter_pos = 5 + (quality >> 3);
-  *iter_limit = -quality * iter_mult;
+  *iter_pos = 8 + (quality >> 3);
+  // For lower entropy images, the rigourous search loop in HashChainFindCopy
+  // can be relaxed.
+  *iter_limit = (cache_bits > 0) ? iter_neg : iter_neg / 2;
 }
 
 static int HashChainFindCopy(const HashChain* const p,
-                             int base_position, int xsize,
+                             int base_position, int xsize_signed,
                              const uint32_t* const argb, int maxlen,
                              int window_size, int iter_pos, int iter_limit,
                              int* const distance_ptr,
                              int* const length_ptr) {
-  const uint64_t hash_code = GetPixPairHash64(&argb[base_position]);
-  int prev_length = 0;
-  int64_t best_val = 0;
-  int best_length = 0;
-  int best_distance = 0;
   const uint32_t* const argb_start = argb + base_position;
+  uint64_t best_val = 0;
+  uint32_t best_length = 1;
+  uint32_t best_distance = 0;
+  const uint32_t xsize = (uint32_t)xsize_signed;
   const int min_pos =
       (base_position > window_size) ? base_position - window_size : 0;
   int pos;
-
   assert(xsize > 0);
-  for (pos = p->hash_to_first_index_[hash_code];
+  for (pos = p->hash_to_first_index_[GetPixPairHash64(argb_start)];
        pos >= min_pos;
        pos = p->chain_[pos]) {
-    int64_t val;
-    int curr_length;
+    uint64_t val;
+    uint32_t curr_length;
+    uint32_t distance;
     if (iter_pos < 0) {
       if (iter_pos < iter_limit || best_val >= 0xff0000) {
         break;
       }
     }
     --iter_pos;
-    if (best_length != 0 &&
-        argb[pos + best_length - 1] != argb_start[best_length - 1]) {
+    if (argb[pos + best_length - 1] != argb_start[best_length - 1]) {
       continue;
     }
     curr_length = FindMatchLength(argb + pos, argb_start, maxlen);
-    if (curr_length < prev_length) {
+    if (curr_length < best_length) {
       continue;
     }
-    val = 65536 * curr_length;
+    distance = (uint32_t)(base_position - pos);
+    val = curr_length << 16;
     // Favoring 2d locality here gives savings for certain images.
-    if (base_position - pos < 9 * xsize) {
-      const int y = (base_position - pos) / xsize;
-      int x = (base_position - pos) % xsize;
-      if (x > xsize / 2) {
+    if (distance < 9 * xsize) {
+      const uint32_t y = distance / xsize;
+      uint32_t x = distance % xsize;
+      if (x > (xsize >> 1)) {
         x = xsize - x;
       }
-      if (x <= 7 && x >= -8) {
+      if (x <= 7) {
+        val += 9 * 9 + 9 * 9;
         val -= y * y + x * x;
-      } else {
-        val -= 9 * 9 + 9 * 9;
       }
-    } else {
-      val -= 9 * 9 + 9 * 9;
     }
     if (best_val < val) {
-      prev_length = curr_length;
       best_val = val;
       best_length = curr_length;
-      best_distance = base_position - pos;
+      best_distance = distance;
       if (curr_length >= MAX_LENGTH) {
         break;
       }
-      if ((best_distance == 1 || best_distance == xsize) &&
+      if ((best_distance == 1 || distance == xsize) &&
           best_length >= 128) {
         break;
       }
     }
   }
-  *distance_ptr = best_distance;
+  *distance_ptr = (int)best_distance;
   *length_ptr = best_length;
   return (best_length >= MIN_LENGTH);
 }
@@ -284,8 +284,8 @@ static int BackwardReferencesHashChain(int xsize, int ysize,
   if (!HashChainInit(hash_chain, pix_count)) goto Error;
 
   refs->size = 0;
-  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
-                                &iter_limit);
+  GetParamsForHashChainFindCopy(quality, xsize, cache_bits,
+                                &window_size, &iter_pos, &iter_limit);
   for (i = 0; i < pix_count; ) {
     // Alternative#1: Code the pixels starting at 'i' using backward reference.
     int offset = 0;
@@ -510,8 +510,8 @@ static int BackwardReferencesHashChainDistanceOnly(
   // We loop one pixel at a time, but store all currently best points to
   // non-processed locations from this point.
   dist_array[0] = 0;
-  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
-                                &iter_limit);
+  GetParamsForHashChainFindCopy(quality, xsize, cache_bits,
+                                &window_size, &iter_pos, &iter_limit);
   for (i = 0; i < pix_count; ++i) {
     double prev_cost = 0.0;
     int shortmax;
@@ -645,8 +645,8 @@ static int BackwardReferencesHashChainFollowChosenPath(
   }
 
   refs->size = 0;
-  GetParamsForHashChainFindCopy(quality, xsize, &window_size, &iter_pos,
-                                &iter_limit);
+  GetParamsForHashChainFindCopy(quality, xsize, cache_bits,
+                                &window_size, &iter_pos, &iter_limit);
   for (ix = 0; ix < chosen_path_size; ++ix, ++size) {
     int offset = 0;
     int len = 0;
@@ -785,7 +785,9 @@ int VP8LGetBackwardReferences(int width, int height,
     *best = refs_lz77;   // default guess: lz77 is better
     VP8LClearBackwardRefs(&refs_rle);
     if (try_lz77_trace_backwards) {
-      const int recursion_level = (num_pix < 320 * 200) ? 1 : 0;
+      // Set recursion level for large images using a color cache.
+      const int recursion_level =
+          (num_pix < 320 * 200) && (cache_bits > 0) ? 1 : 0;
       VP8LBackwardRefs refs_trace;
       if (!VP8LBackwardRefsAlloc(&refs_trace, num_pix)) {
         goto End;

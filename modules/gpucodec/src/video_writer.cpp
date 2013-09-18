@@ -908,12 +908,12 @@ Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const String& fileName, Size fr
 
 Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, SurfaceFormat format)
 {
-    return new VideoWriterImpl(encoderCallback, frameSize, fps, format);
+    return makePtr<VideoWriterImpl>(encoderCallback, frameSize, fps, format);
 }
 
 Ptr<VideoWriter> cv::gpucodec::createVideoWriter(const Ptr<EncoderCallBack>& encoderCallback, Size frameSize, double fps, const EncoderParams& params, SurfaceFormat format)
 {
-    return new VideoWriterImpl(encoderCallback, frameSize, fps, params, format);
+    return makePtr<VideoWriterImpl>(encoderCallback, frameSize, fps, params, format);
 }
 
 #endif // !defined HAVE_CUDA || !defined WIN32

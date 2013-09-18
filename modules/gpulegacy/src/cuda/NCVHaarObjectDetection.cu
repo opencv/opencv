@@ -2138,8 +2138,8 @@ static NCVStatus loadFromXML(const cv::String &filename,
     haarClassifierNodes.resize(0);
     haarFeatures.resize(0);
 
-    cv::Ptr<CvHaarClassifierCascade> oldCascade = (CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0);
-    if (oldCascade.empty())
+    cv::Ptr<CvHaarClassifierCascade> oldCascade((CvHaarClassifierCascade*)cvLoad(filename.c_str(), 0, 0, 0));
+    if (!oldCascade)
     {
         return NCV_HAAR_XML_LOADING_EXCEPTION;
     }

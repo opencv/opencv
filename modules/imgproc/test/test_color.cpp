@@ -1690,7 +1690,7 @@ TEST(Imgproc_ColorBayer, regression)
     Mat given = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_input.png", IMREAD_GRAYSCALE);
     Mat gold = imread(string(ts->get_data_path()) + "/cvtcolor/bayer_gold.png", IMREAD_UNCHANGED);
     Mat result;
-    
+
     CV_Assert(given.data != NULL && gold.data != NULL);
 
     cvtColor(given, result, CV_BayerBG2GRAY);

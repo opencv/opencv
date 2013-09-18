@@ -151,9 +151,9 @@ Returns void
     :param temp1: Convolution kernel, a single-channel floating point matrix. The size is not greater than the  ``image`` size. The type is the same as  ``image``.
 
     :param result: The destination image
-    
+
     :param ccorr: Flags to evaluate cross-correlation instead of convolution.
-    
+
     :param buf: Optional buffer to avoid extra memory allocations and to adjust some specific parameters. See :ocv:struct:`ocl::ConvolveBuf`.
 
 Convolves an image with the kernel. Supports only CV_32FC1 data types and do not support ROI.
@@ -162,7 +162,7 @@ ocl::bilateralFilter
 --------------------
 Returns void
 
-.. ocv:function:: void ocl::bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpave, int borderType=BORDER_DEFAULT)
+.. ocv:function:: void ocl::bilateralFilter(const oclMat &src, oclMat &dst, int d, double sigmaColor, double sigmaSpace, int borderType=BORDER_DEFAULT)
 
     :param src: The source image
 

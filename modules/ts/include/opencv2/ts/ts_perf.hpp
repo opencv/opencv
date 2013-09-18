@@ -1,14 +1,6 @@
 #ifndef __OPENCV_TS_PERF_HPP__
 #define __OPENCV_TS_PERF_HPP__
 
-#include "cvconfig.h"
-
-#ifndef GTEST_CREATE_SHARED_LIBRARY
-#  ifdef BUILD_SHARED_LIBS
-#    define GTEST_LINKED_AS_SHARED_LIBRARY 1
-#  endif
-#endif
-
 #include "opencv2/core.hpp"
 #include "ts_gtest.h"
 
@@ -218,8 +210,7 @@ public:
   static bool targetDevice();
 };
 
-# define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
-
+#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *
@@ -261,7 +252,11 @@ public:
     TestBase();
 
     static void Init(int argc, const char* const argv[]);
+    static void Init(const std::vector<std::string> & availableImpls,
+                     int argc, const char* const argv[]);
+    static void RecordRunParameters();
     static std::string getDataPath(const std::string& relativePath);
+    static std::string getSelectedImpl();
 
 protected:
     virtual void PerfTestBody() = 0;
@@ -474,16 +469,37 @@ CV_EXPORTS void PrintTo(const Size& sz, ::std::ostream* os);
     INSTANTIATE_TEST_CASE_P(/*none*/, fixture##_##name, params);\
     void fixture##_##name::PerfTestBody()
 
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
+#define CV_PERF_TEST_MAIN_INTERNALS_ARGS(...)	\
+    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/
+#else
+#define CV_PERF_TEST_MAIN_INTERNALS_ARGS(...)	\
+    __VA_ARGS__;
+#endif
 
-#define CV_PERF_TEST_MAIN(testsuitname, ...) \
-int main(int argc, char **argv)\
-{\
-    while (++argc >= (--argc,-1)) {__VA_ARGS__; break;} /*this ugly construction is needed for VS 2005*/\
-    ::perf::Regression::Init(#testsuitname);\
-    ::perf::TestBase::Init(argc, argv);\
+#define CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, ...)	\
+    CV_PERF_TEST_MAIN_INTERNALS_ARGS(__VA_ARGS__) \
+    ::perf::Regression::Init(#modulename);\
+    ::perf::TestBase::Init(std::vector<std::string>(impls, impls + sizeof impls / sizeof *impls),\
+                           argc, argv);\
     ::testing::InitGoogleTest(&argc, argv);\
     cvtest::printVersionInfo();\
-    return RUN_ALL_TESTS();\
+    ::testing::Test::RecordProperty("cv_module_name", #modulename);\
+    ::perf::TestBase::RecordRunParameters();\
+    return RUN_ALL_TESTS();
+
+// impls must be an array, not a pointer; "plain" should always be one of the implementations
+#define CV_PERF_TEST_MAIN_WITH_IMPLS(modulename, impls, ...) \
+int main(int argc, char **argv)\
+{\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, impls, __VA_ARGS__)\
+}
+
+#define CV_PERF_TEST_MAIN(modulename, ...) \
+int main(int argc, char **argv)\
+{\
+    const char * plain_only[] = { "plain" };\
+    CV_PERF_TEST_MAIN_INTERNALS(modulename, plain_only, __VA_ARGS__)\
 }
 
 #define TEST_CYCLE_N(n) for(declare.iterations(n); startTimer(), next(); stopTimer())

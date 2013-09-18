@@ -957,7 +957,7 @@ void CvCascadeBoostTree::write( FileStorage &fs, const Mat& featureMap )
     int subsetN = (maxCatCount + 31)/32;
     queue<CvDTreeNode*> internalNodesQueue;
     int size = (int)pow( 2.f, (float)ensemble->get_params().max_depth);
-    Ptr<float> leafVals = new float[size];
+    std::vector<float> leafVals(size);
     int leafValIdx = 0;
     int internalNodeIdx = 1;
     CvDTreeNode* tempNode;

@@ -116,7 +116,7 @@ bool PxMDecoder::checkSignature( const String& signature ) const
 
 ImageDecoder PxMDecoder::newDecoder() const
 {
-    return new PxMDecoder;
+    return makePtr<PxMDecoder>();
 }
 
 void  PxMDecoder::close()
@@ -357,7 +357,7 @@ PxMEncoder::~PxMEncoder()
 
 ImageEncoder  PxMEncoder::newEncoder() const
 {
-    return new PxMEncoder;
+    return makePtr<PxMEncoder>();
 }
 
 

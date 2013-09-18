@@ -3,7 +3,11 @@ Stereo Correspondence
 
 .. highlight:: cpp
 
+.. note::
 
+   * A basic stereo matching example can be found at opencv_source_code/samples/gpu/stereo_match.cpp
+   * A stereo matching example using several GPU's can be found at opencv_source_code/samples/gpu/stereo_multi.cpp
+   * A stereo matching example using several GPU's and driver API can be found at opencv_source_code/samples/gpu/driver_api_stereo_multi.cpp
 
 gpu::StereoBM
 -------------

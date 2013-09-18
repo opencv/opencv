@@ -167,9 +167,4 @@ void cv::gpucodec::detail::Thread::sleep(int ms)
 #endif
 }
 
-template <> void cv::Ptr<cv::gpucodec::detail::Thread::Impl>::delete_obj()
-{
-    if (obj) delete obj;
-}
-
 #endif // HAVE_NVCUVID

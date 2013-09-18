@@ -153,7 +153,7 @@ static void doIteration( const Mat& img1, Mat& img2, bool isWarpPerspective,
     {
         cout << "< Evaluate descriptor matcher..." << endl;
         vector<Point2f> curve;
-        Ptr<GenericDescriptorMatcher> gdm = new VectorDescriptorMatcher( descriptorExtractor, descriptorMatcher );
+        Ptr<GenericDescriptorMatcher> gdm = makePtr<VectorDescriptorMatcher>( descriptorExtractor, descriptorMatcher );
         evaluateGenericDescriptorMatcher( img1, img2, H12, keypoints1, keypoints2, 0, 0, curve, gdm );
 
         Point2f firstPoint = *curve.begin();
@@ -253,7 +253,7 @@ int main(int argc, char** argv)
     int mactherFilterType = getMatcherFilterType( argv[4] );
     bool eval = !isWarpPerspective ? false : (atoi(argv[6]) == 0 ? false : true);
     cout << ">" << endl;
-    if( detector.empty() || descriptorExtractor.empty() || descriptorMatcher.empty()  )
+    if( !detector || !descriptorExtractor || !descriptorMatcher )
     {
         cout << "Can not create detector or descriptor exstractor or descriptor matcher of given types" << endl;
         return -1;

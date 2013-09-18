@@ -41,8 +41,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
-#define __OPENCV_GPU_MATRIX_OPERATIONS_HPP__
+#ifndef __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
+#define __OPENCV_OCL_MATRIX_OPERATIONS_HPP__
 
 namespace cv
 {
@@ -211,8 +211,8 @@ namespace cv
         {
             flags &= roi.width < m.cols ? ~Mat::CONTINUOUS_FLAG : -1;
             offset += roi.y * step + roi.x * elemSize();
-            CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.cols &&
-                       0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.rows );
+            CV_Assert( 0 <= roi.x && 0 <= roi.width && roi.x + roi.width <= m.wholecols &&
+                       0 <= roi.y && 0 <= roi.height && roi.y + roi.height <= m.wholerows );
             if( refcount )
                 CV_XADD(refcount, 1);
             if( rows <= 0 || cols <= 0 )
@@ -514,4 +514,4 @@ namespace cv
 
 } /* end of namespace cv */
 
-#endif /* __OPENCV_GPU_MATRIX_OPERATIONS_HPP__ */
+#endif /* __OPENCV_OCL_MATRIX_OPERATIONS_HPP__ */

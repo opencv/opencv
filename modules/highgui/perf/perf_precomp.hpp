@@ -19,8 +19,10 @@
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_VFW)
     /*defined(HAVE_OPENNI) too specialized */ \
 
@@ -32,8 +34,10 @@
 #if /*defined(HAVE_XINE)       || */\
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_QTKIT)        || \
     defined(HAVE_AVFOUNDATION) || \
     defined(HAVE_FFMPEG)       || \
+    defined(HAVE_MSMF)         || \
     defined(HAVE_VFW)
 #  define BUILD_WITH_VIDEO_OUTPUT_SUPPORT 1
 #else

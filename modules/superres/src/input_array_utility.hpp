@@ -45,6 +45,9 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/gpu.hpp"
+#ifdef HAVE_OPENCV_OCL
+#include "opencv2/ocl.hpp"
+#endif
 
 namespace cv
 {
@@ -57,6 +60,10 @@ namespace cv
 
         CV_EXPORTS Mat convertToType(const Mat& src, int type, Mat& buf0, Mat& buf1);
         CV_EXPORTS gpu::GpuMat convertToType(const gpu::GpuMat& src, int type, gpu::GpuMat& buf0, gpu::GpuMat& buf1);
+
+#ifdef HAVE_OPENCV_OCL
+        CV_EXPORTS ocl::oclMat convertToType(const ocl::oclMat& src, int type, ocl::oclMat& buf0, ocl::oclMat& buf1);
+#endif
     }
 }
 

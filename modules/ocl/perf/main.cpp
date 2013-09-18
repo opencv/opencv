@@ -40,118 +40,56 @@
 //
 //M*/
 
-#include "precomp.hpp"
+#include "perf_precomp.hpp"
 
-int main(int argc, const char *argv[])
+const char * impls[] =
 {
-    vector<ocl::Info> oclinfo;
-    int num_devices = getDevice(oclinfo);
+    IMPL_OCL,
+    IMPL_PLAIN,
+#ifdef HAVE_OPENCV_GPU
+    IMPL_GPU
+#endif
+};
 
-    if (num_devices < 1)
-    {
-        cerr << "no device found\n";
-        return -1;
-    }
-
-    int devidx = 0;
-
-    for (size_t i = 0; i < oclinfo.size(); i++)
-    {
-        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++)
-        {
-            printf("device %d: %s\n", devidx++, oclinfo[i].DeviceName[j].c_str());
-        }
-    }
-
-    const char *keys =
-        "{ h help    | false | print help message }"
-        "{ f filter  |       | filter for test }"
-        "{ w workdir |       | set working directory }"
-        "{ l list    | false | show all tests }"
-        "{ d device  | 0     | device id }"
-        "{ i iters   | 10    | iteration count }"
-        "{ m warmup  | 1     | gpu warm up iteration count}"
-        "{ t xtop    | 1.1	  | xfactor top boundary}"
-        "{ b xbottom | 0.9	  | xfactor bottom boundary}"
-        "{ v verify  | false | only run gpu once to verify if problems occur}";
+int main(int argc, char ** argv)
+{
+    const char * keys =
+        "{ h help     | false              | print help message }"
+        "{ t type     | gpu                | set device type:cpu or gpu}"
+        "{ p platform | 0                  | set platform id }"
+        "{ d device   | 0                  | set device id }";
 
     CommandLineParser cmd(argc, argv, keys);
-
     if (cmd.has("help"))
     {
-        cout << "Avaible options:" << endl;
+        cout << "Available options besides google test option:" << endl;
         cmd.printMessage();
         return 0;
     }
 
+    string type = cmd.get<string>("type");
+    unsigned int pid = cmd.get<unsigned int>("platform");
     int device = cmd.get<int>("device");
 
-    if (device < 0 || device >= num_devices)
+    int flag = type == "cpu" ? cv::ocl::CVCL_DEVICE_TYPE_CPU :
+                               cv::ocl::CVCL_DEVICE_TYPE_GPU;
+
+    std::vector<cv::ocl::Info> oclinfo;
+    int devnums = cv::ocl::getDevice(oclinfo, flag);
+    if (devnums <= device || device < 0)
     {
-        cerr << "Invalid device ID" << endl;
+        std::cout << "device invalid\n";
         return -1;
     }
 
-    if (cmd.get<bool>("verify"))
+    if (pid >= oclinfo.size())
     {
-        TestSystem::instance().setNumIters(1);
-        TestSystem::instance().setGPUWarmupIters(0);
-        TestSystem::instance().setCPUIters(0);
+        std::cout << "platform invalid\n";
+        return -1;
     }
 
-    devidx = 0;
+    cv::ocl::setDevice(oclinfo[pid], device);
+    cv::ocl::setBinaryDiskCache(cv::ocl::CACHE_UPDATE);
 
-    for (size_t i = 0; i < oclinfo.size(); i++)
-    {
-        for (size_t j = 0; j < oclinfo[i].DeviceName.size(); j++, devidx++)
-        {
-            if (device == devidx)
-            {
-                ocl::setDevice(oclinfo[i], (int)j);
-                TestSystem::instance().setRecordName(oclinfo[i].DeviceName[j]);
-                printf("\nuse %d: %s\n", devidx, oclinfo[i].DeviceName[j].c_str());
-                goto END_DEV;
-            }
-        }
-    }
-
-END_DEV:
-
-    string filter = cmd.get<string>("filter");
-    string workdir = cmd.get<string>("workdir");
-    bool list = cmd.has("list");
-    int iters = cmd.get<int>("iters");
-    int wu_iters = cmd.get<int>("warmup");
-    double x_top = cmd.get<double>("xtop");
-    double x_bottom = cmd.get<double>("xbottom");
-
-    TestSystem::instance().setTopThreshold(x_top);
-    TestSystem::instance().setBottomThreshold(x_bottom);
-
-    if (!filter.empty())
-    {
-        TestSystem::instance().setTestFilter(filter);
-    }
-
-    if (!workdir.empty())
-    {
-        if (workdir[workdir.size() - 1] != '/' && workdir[workdir.size() - 1] != '\\')
-        {
-            workdir += '/';
-        }
-
-        TestSystem::instance().setWorkingDir(workdir);
-    }
-
-    if (list)
-    {
-        TestSystem::instance().setListMode(true);
-    }
-
-    TestSystem::instance().setNumIters(iters);
-    TestSystem::instance().setGPUWarmupIters(wu_iters);
-
-    TestSystem::instance().run();
-
-    return 0;
+    CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
 }

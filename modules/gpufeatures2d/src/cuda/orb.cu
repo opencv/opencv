@@ -197,8 +197,8 @@ namespace cv { namespace gpu { namespace cudev
                 if (threadIdx.x == 0)
                 {
                     float kp_dir = ::atan2f((float)m_01, (float)m_10);
-                    kp_dir += (kp_dir < 0) * (2.0f * CV_PI);
-                    kp_dir *= 180.0f / CV_PI;
+                    kp_dir += (kp_dir < 0) * (2.0f * CV_PI_F);
+                    kp_dir *= 180.0f / CV_PI_F;
 
                     angle[ptidx] = kp_dir;
                 }
@@ -349,7 +349,7 @@ namespace cv { namespace gpu { namespace cudev
             if (ptidx < npoints && descidx < dsize)
             {
                 float angle = angle_[ptidx];
-                angle *= (float)(CV_PI / 180.f);
+                angle *= (float)(CV_PI_F / 180.f);
 
                 float sina, cosa;
                 ::sincosf(angle, &sina, &cosa);

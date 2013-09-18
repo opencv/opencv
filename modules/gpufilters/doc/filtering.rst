@@ -5,7 +5,9 @@ Image Filtering
 
 Functions and classes described in this section are used to perform various linear or non-linear filtering operations on 2D images.
 
+.. note::
 
+   * An example containing all basic morphology operators like erode and dilate can be found at opencv_source_code/samples/gpu/morphology.cpp
 
 gpu::Filter
 -----------

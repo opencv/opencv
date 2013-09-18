@@ -238,5 +238,3 @@ void cv::fastNlMeansDenoisingColoredMulti( InputArrayOfArrays _srcImgs, OutputAr
 
     cvtColor(dst_lab, dst, COLOR_Lab2LBGR);
 }
-
-

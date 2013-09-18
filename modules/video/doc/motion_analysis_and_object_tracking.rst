@@ -41,6 +41,13 @@ Calculates an optical flow for a sparse feature set using the iterative Lucas-Ka
 
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See [Bouguet00]_. The function is parallelized with the TBB library.
 
+.. note::
+
+   * An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/cpp/lkdemo.cpp
+
+   * (Python) An example using the Lucas-Kanade optical flow algorithm can be found at opencv_source_code/samples/python2/lk_track.py
+   * (Python) An example using the Lucas-Kanade tracker for homography matching can be found at opencv_source_code/samples/python2/lk_homography.py
+
 buildOpticalFlowPyramid
 -----------------------
 Constructs the image pyramid which can be passed to :ocv:func:`calcOpticalFlowPyrLK`.
@@ -108,6 +115,11 @@ The function finds an optical flow for each ``prev`` pixel using the [Farneback2
 
     \texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])
 
+.. note::
+
+   * An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/cpp/fback.cpp
+
+   * (Python) An example using the optical flow algorithm described by Gunnar Farneback can be found at opencv_source_code/samples/python2/opt_flow.py
 
 estimateRigidTransform
 --------------------------
@@ -157,6 +169,8 @@ findTransformECC
 Finds the geometric transform (warp) between two images in terms of the ECC criterion [EP08]_.
 
 .. ocv:function:: double findTransformECC( InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix, int motionType=MOTION_AFFINE, TermCriteria criteria=TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001))
+
+.. ocv:pyfunction:: cv2.findTransformECC(templateImage, inputImage, warpMatrix[, motionType[, criteria]]) -> retval, warpMatrix
 
     :param templateImage: single-channel template image; ``CV_8U`` or ``CV_32F`` array.
 
@@ -270,7 +284,9 @@ In fact,
 :ocv:func:`fastAtan2` and
 :ocv:func:`phase` are used so that the computed angle is measured in degrees and covers the full range 0..360. Also, the ``mask`` is filled to indicate pixels where the computed angle is valid.
 
+.. note::
 
+   * (Python) An example on how to perform a motion template technique can be found at opencv_source_code/samples/python2/motempl.py
 
 calcGlobalOrientation
 -------------------------
@@ -352,7 +368,9 @@ First, it finds an object center using
 
 See the OpenCV sample ``camshiftdemo.c`` that tracks colored objects.
 
+.. note::
 
+   * (Python) A sample explaining the camshift tracking algorithm can be found at opencv_source_code/samples/python2/camshift.py
 
 meanShift
 ---------
@@ -380,7 +398,9 @@ The function implements the iterative object search algorithm. It takes the inpu
 :ocv:func:`contourArea` ), and rendering the  remaining contours with
 :ocv:func:`drawContours` .
 
+.. note::
 
+   * A mean-shift tracking sample can be found at opencv_source_code/samples/cpp/camshiftdemo.cpp
 
 KalmanFilter
 ------------
@@ -391,7 +411,9 @@ KalmanFilter
 The class implements a standard Kalman filter
 http://en.wikipedia.org/wiki/Kalman_filter, [Welch95]_. However, you can modify ``transitionMatrix``, ``controlMatrix``, and ``measurementMatrix`` to get an extended Kalman filter functionality. See the OpenCV sample ``kalman.cpp`` .
 
+.. note::
 
+   * An example using the standard Kalman filter can be found at opencv_source_code/samples/cpp/kalman.cpp
 
 
 KalmanFilter::KalmanFilter
@@ -678,6 +700,166 @@ Sets the shadow threshold
 .. ocv:function:: void BackgroundSubtractorMOG2::setShadowThreshold(double threshold)
 
 
+BackgroundSubtractorGMG
+------------------------
+Background Subtractor module based on the algorithm given in [Gold2012]_.
+
+.. ocv:class:: BackgroundSubtractorGMG : public BackgroundSubtractor
+
+
+createBackgroundSubtractorGMG
+-----------------------------------
+Creates a GMG Background Subtractor
+
+.. ocv:function:: Ptr<BackgroundSubtractorGMG> createBackgroundSubtractorGMG(int initializationFrames=120, double decisionThreshold=0.8)
+
+.. ocv:pyfunction:: cv2.createBackgroundSubtractorGMG([, initializationFrames[, decisionThreshold]]) -> retval
+
+    :param initializationFrames: number of frames used to initialize the background models.
+
+    :param decisionThreshold: Threshold value, above which it is marked foreground, else background.
+
+
+BackgroundSubtractorGMG::getNumFrames
+---------------------------------------
+Returns the number of frames used to initialize background model.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getNumFrames() const
+
+
+BackgroundSubtractorGMG::setNumFrames
+---------------------------------------
+Sets the number of frames used to initialize background model.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setNumFrames(int nframes)
+
+
+BackgroundSubtractorGMG::getDefaultLearningRate
+--------------------------------------------------
+Returns the learning rate of the algorithm. It lies between 0.0 and 1.0. It determines how quickly features are "forgotten" from histograms.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getDefaultLearningRate() const
+
+
+BackgroundSubtractorGMG::setDefaultLearningRate
+--------------------------------------------------
+Sets the learning rate of the algorithm.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setDefaultLearningRate(double lr)
+
+
+BackgroundSubtractorGMG::getDecisionThreshold
+--------------------------------------------------
+Returns the value of decision threshold. Decision value is the value above which pixel is determined to be FG.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getDecisionThreshold() const
+
+
+BackgroundSubtractorGMG::setDecisionThreshold
+--------------------------------------------------
+Sets the value of decision threshold.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setDecisionThreshold(double thresh)
+
+
+BackgroundSubtractorGMG::getMaxFeatures
+--------------------------------------------------
+Returns total number of distinct colors to maintain in histogram.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getMaxFeatures() const
+
+
+BackgroundSubtractorGMG::setMaxFeatures
+--------------------------------------------------
+Sets total number of distinct colors to maintain in histogram.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMaxFeatures(int maxFeatures)
+
+
+BackgroundSubtractorGMG::getQuantizationLevels
+--------------------------------------------------
+Returns the parameter used for quantization of color-space. It is the number of discrete levels in each channel to be used in histograms.
+
+.. ocv:function:: int BackgroundSubtractorGMG::getQuantizationLevels() const
+
+
+BackgroundSubtractorGMG::setQuantizationLevels
+--------------------------------------------------
+Sets the parameter used for quantization of color-space
+
+.. ocv:function:: void BackgroundSubtractorGMG::setQuantizationLevels(int nlevels)
+
+
+BackgroundSubtractorGMG::getSmoothingRadius
+--------------------------------------------------
+Returns the kernel radius used for morphological operations
+
+.. ocv:function:: int BackgroundSubtractorGMG::getSmoothingRadius() const
+
+
+BackgroundSubtractorGMG::setSmoothingRadius
+--------------------------------------------------
+Sets the kernel radius used for morphological operations
+
+.. ocv:function:: void BackgroundSubtractorGMG::setSmoothingRadius(int radius)
+
+
+BackgroundSubtractorGMG::getUpdateBackgroundModel
+--------------------------------------------------
+Returns the status of background model update
+
+.. ocv:function:: bool BackgroundSubtractorGMG::getUpdateBackgroundModel() const
+
+
+BackgroundSubtractorGMG::setUpdateBackgroundModel
+--------------------------------------------------
+Sets the status of background model update
+
+.. ocv:function:: void BackgroundSubtractorGMG::setUpdateBackgroundModel(bool update)
+
+
+BackgroundSubtractorGMG::getMinVal
+--------------------------------------------------
+Returns the minimum value taken on by pixels in image sequence. Usually 0.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getMinVal() const
+
+
+BackgroundSubtractorGMG::setMinVal
+--------------------------------------------------
+Sets the minimum value taken on by pixels in image sequence.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMinVal(double val)
+
+
+BackgroundSubtractorGMG::getMaxVal
+--------------------------------------------------
+Returns the maximum value taken on by pixels in image sequence. e.g. 1.0 or 255.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getMaxVal() const
+
+
+BackgroundSubtractorGMG::setMaxVal
+--------------------------------------------------
+Sets the maximum value taken on by pixels in image sequence.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setMaxVal(double val)
+
+
+BackgroundSubtractorGMG::getBackgroundPrior
+--------------------------------------------------
+Returns the prior probability that each individual pixel is a background pixel.
+
+.. ocv:function:: double BackgroundSubtractorGMG::getBackgroundPrior() const
+
+
+BackgroundSubtractorGMG::setBackgroundPrior
+--------------------------------------------------
+Sets the prior probability that each individual pixel is a background pixel.
+
+.. ocv:function:: void BackgroundSubtractorGMG::setBackgroundPrior(double bgprior)
+
+
 calcOpticalFlowSF
 -----------------
 Calculate an optical flow using "SimpleFlow" algorithm.
@@ -690,7 +872,7 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
     :param next: Second 8-bit 3-channel image of the same size as ``prev``
 
-    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2`` 
+    :param flow: computed flow image that has the same size as ``prev`` and type ``CV_32FC2``
 
     :param layers: Number of layers
 
@@ -720,7 +902,9 @@ Calculate an optical flow using "SimpleFlow" algorithm.
 
 See [Tao2012]_. And site of project - http://graphics.berkeley.edu/papers/Tao-SAN-2012-05/.
 
+.. note::
 
+   * An example using the simpleFlow algorithm can be found at opencv_source_code/samples/cpp/simpleflow_demo.cpp
 
 createOptFlow_DualTVL1
 ----------------------
@@ -812,6 +996,8 @@ Releases all inner buffers.
 
 .. [Zach2007] C. Zach, T. Pock and H. Bischof. "A Duality Based Approach for Realtime TV-L1 Optical Flow", In Proceedings of Pattern Recognition (DAGM), Heidelberg, Germany, pp. 214-223, 2007
 
-.. [Zivkovic2004] Z. Zivkovic. Improved adaptive Gausian mixture model for background subtraction*, International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
+.. [Zivkovic2004] Z. Zivkovic. "Improved adaptive Gausian mixture model for background subtraction", International Conference Pattern Recognition, UK, August, 2004, http://www.zoranz.net/Publications/zivkovic2004ICPR.pdf. The code is very fast and performs also shadow detection. Number of Gausssian components is adapted per pixel.
 
 .. [Zivkovic2006] Z.Zivkovic, F. van der Heijden. "Efficient Adaptive Density Estimation per Image Pixel for the Task of Background Subtraction", Pattern Recognition Letters, vol. 27, no. 7, pages 773-780, 2006.
+
+.. [Gold2012] Andrew B. Godbehere, Akihiro Matsukawa, Ken Goldberg, "Visual Tracking of Human Visitors under Variable-Lighting Conditions for a Responsive Audio Art Installation", American Control Conference, Montreal, June 2012.

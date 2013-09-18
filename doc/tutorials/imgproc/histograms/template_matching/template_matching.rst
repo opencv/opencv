@@ -369,4 +369,3 @@ Results
 
    .. image:: images/Template_Matching_Image_Result.jpg
             :align: center
-

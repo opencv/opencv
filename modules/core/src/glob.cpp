@@ -56,19 +56,42 @@ namespace
 
     struct DIR
     {
+#ifdef HAVE_WINRT
+        WIN32_FIND_DATAW data;
+#else
         WIN32_FIND_DATA data;
+#endif
         HANDLE handle;
         dirent ent;
+#ifdef HAVE_WINRT
+        DIR() {};
+        ~DIR()
+        {
+            if (ent.d_name)
+                delete[] ent.d_name;
+        }
+#endif
     };
 
     DIR* opendir(const char* path)
     {
         DIR* dir = new DIR;
         dir->ent.d_name = 0;
-        dir->handle = ::FindFirstFileA((cv::String(path) + "\\*").c_str(), &dir->data);
+#ifdef HAVE_WINRT
+        cv::String full_path = cv::String(path) + "\\*";
+        wchar_t wfull_path[MAX_PATH];
+        size_t copied = mbstowcs(wfull_path, full_path.c_str(), MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        dir->handle = ::FindFirstFileExW(wfull_path, FindExInfoStandard,
+                        &dir->data, FindExSearchNameMatch, NULL, 0);
+#else
+        dir->handle = ::FindFirstFileExA((cv::String(path) + "\\*").c_str(),
+            FindExInfoStandard, &dir->data, FindExSearchNameMatch, NULL, 0);
+#endif
         if(dir->handle == INVALID_HANDLE_VALUE)
         {
             /*closedir will do all cleanup*/
+            delete dir;
             return 0;
         }
         return dir;
@@ -76,12 +99,26 @@ namespace
 
     dirent* readdir(DIR* dir)
     {
+#ifdef HAVE_WINRT
         if (dir->ent.d_name != 0)
         {
-            if (::FindNextFile(dir->handle, &dir->data) != TRUE)
+            if (::FindNextFileW(dir->handle, &dir->data) != TRUE)
+                return 0;
+        }
+        size_t asize = wcstombs(NULL, dir->data.cFileName, 0);
+        CV_Assert((asize != 0) && (asize != (size_t)-1));
+        char* aname = new char[asize+1];
+        aname[asize] = 0;
+        wcstombs(aname, dir->data.cFileName, asize);
+        dir->ent.d_name = aname;
+#else
+        if (dir->ent.d_name != 0)
+        {
+            if (::FindNextFileA(dir->handle, &dir->data) != TRUE)
                 return 0;
         }
         dir->ent.d_name = dir->data.cFileName;
+#endif
         return &dir->ent;
     }
 
@@ -104,12 +141,24 @@ static bool isDir(const cv::String& path, DIR* dir)
 {
 #if defined WIN32 || defined _WIN32 || defined WINCE
     DWORD attributes;
+    BOOL status = TRUE;
     if (dir)
         attributes = dir->data.dwFileAttributes;
     else
-        attributes = ::GetFileAttributes(path.c_str());
+    {
+        WIN32_FILE_ATTRIBUTE_DATA all_attrs;
+#ifdef HAVE_WINRT
+        wchar_t wpath[MAX_PATH];
+        size_t copied = mbstowcs(wpath, path.c_str(), MAX_PATH);
+        CV_Assert((copied != MAX_PATH) && (copied != (size_t)-1));
+        status = ::GetFileAttributesExW(wpath, GetFileExInfoStandard, &all_attrs);
+#else
+        status = ::GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &all_attrs);
+#endif
+        attributes = all_attrs.dwFileAttributes;
+    }
 
-    return (attributes != INVALID_FILE_ATTRIBUTES) && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+    return status && ((attributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
 #else
     (void)dir;
     struct stat stat_buf;

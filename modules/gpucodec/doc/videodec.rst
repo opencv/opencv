@@ -11,6 +11,9 @@ Video reader interface.
 
 .. ocv:class:: gpucodec::VideoReader
 
+.. note::
+
+   * An example on how to use the videoReader class can be found at opencv_source_code/samples/gpu/video_reader.cpp
 
 
 gpucodec::VideoReader::nextFrame

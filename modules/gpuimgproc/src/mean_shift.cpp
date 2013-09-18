@@ -47,13 +47,13 @@ using namespace cv::gpu;
 
 #if !defined (HAVE_CUDA) || defined (CUDA_DISABLER)
 
-void cv::gpu::meanShiftFiltering(const GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
-void cv::gpu::meanShiftProc(const GpuMat&, GpuMat&, GpuMat&, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::meanShiftFiltering(InputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
+void cv::gpu::meanShiftProc(InputArray, OutputArray, OutputArray, int, int, TermCriteria, Stream&) { throw_no_cuda(); }
 
 #else /* !defined (HAVE_CUDA) */
 
 ////////////////////////////////////////////////////////////////////////
-// meanShiftFiltering_GPU
+// meanShiftFiltering
 
 namespace cv { namespace gpu { namespace cudev
 {
@@ -63,27 +63,26 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::meanShiftFiltering(const GpuMat& src, GpuMat& dst, int sp, int sr, TermCriteria criteria, Stream& stream)
+void cv::gpu::meanShiftFiltering(InputArray _src, OutputArray _dst, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
     using namespace ::cv::gpu::cudev::imgproc;
 
-    if( src.empty() )
-        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
+    GpuMat src = _src.getGpuMat();
 
-    if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+    CV_Assert( src.type() == CV_8UC4 );
 
-    dst.create( src.size(), CV_8UC4 );
+    _dst.create(src.size(), CV_8UC4);
+    GpuMat dst = _dst.getGpuMat();
 
-    if( !(criteria.type & TermCriteria::MAX_ITER) )
+    if (!(criteria.type & TermCriteria::MAX_ITER))
         criteria.maxCount = 5;
 
     int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
 
-    float eps;
-    if( !(criteria.type & TermCriteria::EPS) )
-        eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);
+    if (!(criteria.type & TermCriteria::EPS))
+        criteria.epsilon = 1.f;
+
+    float eps = (float) std::max(criteria.epsilon, 0.0);
 
     meanShiftFiltering_gpu(src, dst, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
 }
@@ -99,28 +98,29 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-void cv::gpu::meanShiftProc(const GpuMat& src, GpuMat& dstr, GpuMat& dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
+void cv::gpu::meanShiftProc(InputArray _src, OutputArray _dstr, OutputArray _dstsp, int sp, int sr, TermCriteria criteria, Stream& stream)
 {
     using namespace ::cv::gpu::cudev::imgproc;
 
-    if( src.empty() )
-        CV_Error( cv::Error::StsBadArg, "The input image is empty" );
+    GpuMat src = _src.getGpuMat();
 
-    if( src.depth() != CV_8U || src.channels() != 4 )
-        CV_Error( cv::Error::StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
+    CV_Assert( src.type() == CV_8UC4 );
 
-    dstr.create( src.size(), CV_8UC4 );
-    dstsp.create( src.size(), CV_16SC2 );
+    _dstr.create(src.size(), CV_8UC4);
+    _dstsp.create(src.size(), CV_16SC2);
 
-    if( !(criteria.type & TermCriteria::MAX_ITER) )
+    GpuMat dstr = _dstr.getGpuMat();
+    GpuMat dstsp = _dstsp.getGpuMat();
+
+    if (!(criteria.type & TermCriteria::MAX_ITER))
         criteria.maxCount = 5;
 
     int maxIter = std::min(std::max(criteria.maxCount, 1), 100);
 
-    float eps;
-    if( !(criteria.type & TermCriteria::EPS) )
-        eps = 1.f;
-    eps = (float)std::max(criteria.epsilon, 0.0);
+    if (!(criteria.type & TermCriteria::EPS))
+        criteria.epsilon = 1.f;
+
+    float eps = (float) std::max(criteria.epsilon, 0.0);
 
     meanShiftProc_gpu(src, dstr, dstsp, sp, sr, maxIter, eps, StreamAccessor::getStream(stream));
 }

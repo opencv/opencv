@@ -74,7 +74,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Empty()
 {
-    return new EmptyFrameSource;
+    return makePtr<EmptyFrameSource>();
 }
 
 //////////////////////////////////////////////////////
@@ -118,10 +118,22 @@ namespace
         {
             vc_ >> _frame.getMatRef();
         }
-        else
+        else if(_frame.kind() == _InputArray::GPU_MAT)
         {
             vc_ >> frame_;
             arrCopy(frame_, _frame);
+        }
+        else if(_frame.kind() == _InputArray::OCL_MAT)
+        {
+            vc_ >> frame_;
+            if(!frame_.empty())
+            {
+                arrCopy(frame_, _frame);
+            }
+        }
+        else
+        {
+            //should never get here
         }
     }
 
@@ -174,12 +186,12 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
 Ptr<FrameSource> cv::superres::createFrameSource_Camera(int deviceId)
 {
-    return new CameraFrameSource(deviceId);
+    return makePtr<CameraFrameSource>(deviceId);
 }
 
 #endif // HAVE_OPENCV_HIGHGUI
@@ -245,7 +257,7 @@ namespace
 
 Ptr<FrameSource> cv::superres::createFrameSource_Video_GPU(const String& fileName)
 {
-    return new VideoFrameSource(fileName);
+    return makePtr<VideoFrameSource>(fileName);
 }
 
 #endif // HAVE_OPENCV_GPUCODEC

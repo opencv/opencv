@@ -449,15 +449,15 @@ _AccTp normInf(const _Tp* a, const _Tp* b, int n)
 
 ////////////////// forward declarations for important OpenCV types //////////////////
 
-template<typename _Tp, int cn> class CV_EXPORTS Vec;
-template<typename _Tp, int m, int n> class CV_EXPORTS Matx;
+template<typename _Tp, int cn> class Vec;
+template<typename _Tp, int m, int n> class Matx;
 
-template<typename _Tp> class CV_EXPORTS Complex;
-template<typename _Tp> class CV_EXPORTS Point_;
-template<typename _Tp> class CV_EXPORTS Point3_;
-template<typename _Tp> class CV_EXPORTS Size_;
-template<typename _Tp> class CV_EXPORTS Rect_;
-template<typename _Tp> class CV_EXPORTS Scalar_;
+template<typename _Tp> class Complex;
+template<typename _Tp> class Point_;
+template<typename _Tp> class Point3_;
+template<typename _Tp> class Size_;
+template<typename _Tp> class Rect_;
+template<typename _Tp> class Scalar_;
 
 class CV_EXPORTS RotatedRect;
 class CV_EXPORTS Range;
@@ -472,16 +472,16 @@ class CV_EXPORTS MatExpr;
 class CV_EXPORTS SparseMat;
 typedef Mat MatND;
 
-template<typename _Tp> class CV_EXPORTS Mat_;
-template<typename _Tp> class CV_EXPORTS SparseMat_;
+template<typename _Tp> class Mat_;
+template<typename _Tp> class SparseMat_;
 
 class CV_EXPORTS MatConstIterator;
 class CV_EXPORTS SparseMatIterator;
 class CV_EXPORTS SparseMatConstIterator;
-template<typename _Tp> class CV_EXPORTS MatIterator_;
-template<typename _Tp> class CV_EXPORTS MatConstIterator_;
-template<typename _Tp> class CV_EXPORTS SparseMatIterator_;
-template<typename _Tp> class CV_EXPORTS SparseMatConstIterator_;
+template<typename _Tp> class MatIterator_;
+template<typename _Tp> class MatConstIterator_;
+template<typename _Tp> class SparseMatIterator_;
+template<typename _Tp> class SparseMatConstIterator_;
 
 namespace ogl
 {
@@ -496,6 +496,11 @@ namespace gpu
     class CV_EXPORTS CudaMem;
     class CV_EXPORTS Stream;
     class CV_EXPORTS Event;
+}
+
+namespace cudev
+{
+    template <typename _Tp> class GpuMat_;
 }
 
 } // cv

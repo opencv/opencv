@@ -9,7 +9,10 @@ represented as vectors in a multidimensional space. All objects that implement t
 descriptor extractors inherit the
 :ocv:class:`DescriptorExtractor` interface.
 
+.. note::
 
+   * An example explaining keypoint extraction can be found at opencv_source_code/samples/cpp/descriptor_extractor_matcher.cpp
+   * An example on descriptor evaluation can be found at opencv_source_code/samples/cpp/detector_descriptor_evaluation.cpp
 
 DescriptorExtractor
 -------------------
@@ -57,6 +60,8 @@ Computes the descriptors for a set of keypoints detected in an image (first vari
 
 .. ocv:function:: void DescriptorExtractor::compute( const vector<Mat>& images, vector<vector<KeyPoint> >& keypoints, vector<Mat>& descriptors ) const
 
+.. ocv:pyfunction:: cv2.DescriptorExtractor_create.compute(image, keypoints[, descriptors]) -> keypoints, descriptors
+
     :param image: Image.
 
     :param images: Image set.
@@ -72,15 +77,18 @@ Creates a descriptor extractor by name.
 
 .. ocv:function:: Ptr<DescriptorExtractor>  DescriptorExtractor::create( const String& descriptorExtractorType )
 
+.. ocv:pyfunction:: cv2.DescriptorExtractor_create(descriptorExtractorType) -> retval
+
     :param descriptorExtractorType: Descriptor extractor type.
 
 The current implementation supports the following types of a descriptor extractor:
 
  * ``"SIFT"`` -- :ocv:class:`SIFT`
  * ``"SURF"`` -- :ocv:class:`SURF`
- * ``"ORB"`` -- :ocv:class:`ORB`
- * ``"BRISK"`` -- :ocv:class:`BRISK`
  * ``"BRIEF"`` -- :ocv:class:`BriefDescriptorExtractor`
+ * ``"BRISK"`` -- :ocv:class:`BRISK`
+ * ``"ORB"`` -- :ocv:class:`ORB`
+ * ``"FREAK"`` -- :ocv:class:`FREAK`
 
 A combined format is also supported: descriptor extractor adapter name ( ``"Opponent"`` --
 :ocv:class:`OpponentColorDescriptorExtractor` ) + descriptor extractor name (see above),
@@ -137,4 +145,6 @@ Strecha C., Fua P. *BRIEF: Binary Robust Independent Elementary Features* ,
         ...
     };
 
+.. note::
 
+   * A complete BRIEF extractor sample can be found at opencv_source_code/samples/cpp/brief_match_test.cpp

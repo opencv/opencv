@@ -58,7 +58,7 @@ cv::softcascade::ChannelsProcessor::ChannelsProcessor() { throw_no_cuda(); }
  cv::softcascade::ChannelsProcessor::~ChannelsProcessor() { throw_no_cuda(); }
 
 cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int, const int, const int)
-{ throw_no_cuda(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(0); }
+{ throw_no_cuda(); return cv::Ptr<cv::softcascade::ChannelsProcessor>(); }
 
 #else
 
@@ -200,7 +200,7 @@ struct cv::softcascade::SCascade::Fields
             }
 
             fns = fns[SC_TREES];
-            if (fn.empty()) return false;
+            if (fn.empty()) return 0;
 
             // for each stage (~ decision tree with H = 2)
             FileNodeIterator st = fns.begin(), st_end = fns.end();
@@ -594,7 +594,7 @@ private:
 cv::Ptr<cv::softcascade::ChannelsProcessor> cv::softcascade::ChannelsProcessor::create(const int s, const int b, const int m)
 {
     CV_Assert((m && SEPARABLE));
-    return cv::Ptr<cv::softcascade::ChannelsProcessor>(new SeparablePreprocessor(s, b));
+    return makePtr<SeparablePreprocessor>(s, b);
 }
 
 cv::softcascade::ChannelsProcessor::ChannelsProcessor() { }
