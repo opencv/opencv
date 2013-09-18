@@ -716,4 +716,3 @@ Creates a Kinect Camera.
 .. ocv:function:: static Camera KinectCamera(const Size &window_size)
 
     :param window_size: Size of the window. This together with intrinsic matrix of a Kinect Camera determines the field of view.
-

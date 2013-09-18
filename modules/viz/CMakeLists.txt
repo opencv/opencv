@@ -55,5 +55,3 @@ if(DEFINED BUILD_opencv_viz AND BUILD_opencv_viz AND DEFINED HAVE_VTK AND HAVE_V
     target_link_libraries(opencv_viz "-framework Cocoa")
   endif()
 endif()
-
-

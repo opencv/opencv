@@ -942,7 +942,3 @@ Constructs a WMesh.
 .. ocv:function:: WMesh(const Mesh3d &mesh)
 
     :param mesh: :ocv:class:`Mesh3d` object that will be displayed.
-
-
-
-
