@@ -393,6 +393,9 @@ if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
 endif()
 
+# --- Matlab/Octave ---
+include(cmake/OpenCVFindMatlab.cmake)
+
 # ----------------------------------------------------------------------------
 # Solution folders:
 # ----------------------------------------------------------------------------
@@ -828,6 +831,14 @@ if(NOT ANDROID)
   status("    JNI:"         JNI_INCLUDE_DIRS    THEN "${JNI_INCLUDE_DIRS}"                                       ELSE NO)
 endif()
 status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
+
+# ========================= matlab =========================
+status("")
+status("  Matlab:")
+status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+if (MATLAB_FOUND)
+  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+endif()
 
 # ========================== documentation ==========================
 if(BUILD_DOCS)
