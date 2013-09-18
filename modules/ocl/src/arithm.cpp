@@ -68,6 +68,7 @@ namespace cv
         extern const char *arithm_sum;
         extern const char *arithm_2_mat;
         extern const char *arithm_sum_3;
+        extern const char *arithm_max;
         extern const char *arithm_minMax;
         extern const char *arithm_minMax_mask;
         extern const char *arithm_minMaxLoc;
@@ -85,6 +86,7 @@ namespace cv
         extern const char *arithm_compare_ne;
         extern const char *arithm_mul;
         extern const char *arithm_div;
+        extern const char *arithm_abs;
         extern const char *arithm_absdiff;
         extern const char *arithm_transpose;
         extern const char *arithm_flip;
@@ -468,6 +470,35 @@ void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
     string kernelName =  "arithm_s_div";
     arithmetic_scalar_run(src, dst, kernelName, &arithm_div, scalar);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////  abs ///////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+void cv::ocl::abs(const oclMat &src, oclMat &dst)
+{
+    CV_Assert( src.depth() == CV_32FC1 ); // right now, only one channel float is supported
+
+    dst.create( src.size(), src.type() );
+
+    using namespace std;
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
+
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols ));
+
+    Context  *clCxt = src.clCxt;
+
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { src.cols, src.rows, 1 };
+
+    openCLExecuteKernel(clCxt, &arithm_abs, std::string("arithm_abs_C1_D5"), globalThreads, localThreads, args, -1, -1, "");
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  Absdiff ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -689,6 +720,38 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
         mean.val[i] = (double)p[i] / (src.cols * src.rows);
         stddev.val[i] = std::sqrt(std::max((double) q[i] / (src.cols * src.rows) - mean.val[i] * mean.val[i] , 0.));
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////// (min,) max  ////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//TODO: ocl::min
+void cv::ocl::max(const oclMat &src1, const oclMat &src2, oclMat &dst)
+{
+    CV_Assert( src1.depth() == CV_32FC1 ); // right now, only one channel float is supported
+    CV_Assert( src2.depth() == CV_32FC1 );
+
+    dst.create( cv::Size( min(src1.cols, src2.cols), min(src1.rows, src2.rows) ), CV_32FC1 );
+
+    using namespace std;
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
+
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.cols ));
+
+    Context  *clCxt = dst.clCxt;
+
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+
+    openCLExecuteKernel(clCxt, &arithm_max, std::string("arithm_max_C1_D5"), globalThreads, localThreads, args, -1, -1, "");
 }
 
 //////////////////////////////////////////////////////////////////////////////

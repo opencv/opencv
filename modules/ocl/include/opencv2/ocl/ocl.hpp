@@ -458,6 +458,9 @@ namespace cv
         // supports  CV_8UC1, 8UC4, 8SC4, 16UC2, 16SC2, 32SC1 and 32FC1.(the same as cuda)
         CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
 
+        //! computes element-wise absolute values (dst = abs(src))
+        // supports CV_32FC1 only
+        CV_EXPORTS void abs(const oclMat &src, oclMat &dst);
         //! computes element-wise absolute difference of two arrays (c = abs(a - b))
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void absdiff(const oclMat &a, const oclMat &b, oclMat &c);
@@ -490,9 +493,12 @@ namespace cv
         CV_EXPORTS Scalar absSum(const oclMat &m);
         CV_EXPORTS Scalar sqrSum(const oclMat &m);
 
+        //! computes maximum of src1 and src2 element-wise
+        // supports only CV_32FC1 type
+        CV_EXPORTS void max(const oclMat &src1, const oclMat &src2, oclMat &dst);
+
         //! finds global minimum and maximum array elements and returns their values
         // support all C1 types
-
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
         CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
