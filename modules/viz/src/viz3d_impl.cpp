@@ -125,7 +125,7 @@ cv::viz::Viz3d::VizImpl::VizImpl(const String &name)
 /////////////////////////////////////////////////////////////////////////////////////////////
 cv::viz::Viz3d::VizImpl::~VizImpl()
 {
-    if (interactor_) 
+    if (interactor_)
         interactor_->DestroyTimer(timer_id_);
     if (renderer_) renderer_->Clear();
 }
@@ -368,11 +368,11 @@ void cv::viz::Viz3d::VizImpl::setBackgroundColor(const Color& color)
 void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
-    
+
     // Set the intrinsic parameters of the camera
     window_->SetSize(camera.getWindowSize().width, camera.getWindowSize().height);
     double aspect_ratio = static_cast<double>(camera.getWindowSize().width)/static_cast<double>(camera.getWindowSize().height);
-    
+
     Matx44f proj_mat;
     camera.computeProjectionMatrix(proj_mat);
     // Use the intrinsic parameters of the camera to simulate more realistically
@@ -382,7 +382,7 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
     transform->SetMatrix(convertToVtkMatrix(proj_mat * old_proj_mat.inv()));
     active_camera.SetUserTransform(transform);
     transform->Delete();
-    
+
     renderer_->ResetCameraClippingRange();
     renderer_->Render();
 }
@@ -391,11 +391,11 @@ void cv::viz::Viz3d::VizImpl::setCamera(const Camera &camera)
 cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 {
     vtkCamera& active_camera = *renderer_->GetActiveCamera();
-    
+
     Size window_size(renderer_->GetRenderWindow()->GetSize()[0],
                      renderer_->GetRenderWindow()->GetSize()[1]);
     double aspect_ratio = static_cast<double>(window_size.width) / static_cast<double>(window_size.height);
-    
+
     Matx44f proj_matrix = convertToMatx(active_camera.GetProjectionTransformMatrix(aspect_ratio, -1.0f, 1.0f));
     Camera camera(proj_matrix, window_size);
     return camera;
@@ -405,7 +405,7 @@ cv::viz::Camera cv::viz::Viz3d::VizImpl::getCamera() const
 void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
 {
     vtkCamera& camera = *renderer_->GetActiveCamera();
-        
+
     // Position = extrinsic translation
     cv::Vec3f pos_vec = pose.translation();
 
@@ -417,11 +417,11 @@ void cv::viz::Viz3d::VizImpl::setViewerPose(const Affine3f &pose)
     // Compute the new focal point
     cv::Vec3f z_axis(0.f, 0.f, 1.f);
     cv::Vec3f focal_vec = pos_vec + rotation * z_axis;
-    
+
     camera.SetPosition(pos_vec[0], pos_vec[1], pos_vec[2]);
     camera.SetFocalPoint(focal_vec[0], focal_vec[1], focal_vec[2]);
     camera.SetViewUp(up_vec[0], up_vec[1], up_vec[2]);
-    
+
     renderer_->ResetCameraClippingRange();
     renderer_->Render();
 }
@@ -465,10 +465,10 @@ void cv::viz::Viz3d::VizImpl::convertToWindowCoordinates(const Point3d &pt, Poin
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 void cv::viz::Viz3d::VizImpl::converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction)
-{    
+{
     Vec4d world_pt;
     vtkInteractorObserver::ComputeDisplayToWorld(renderer_, window_coord.x, window_coord.y, window_coord.z, world_pt.val);
-     
+
     vtkCamera &active_camera = *renderer_->GetActiveCamera();
     Vec3d cam_pos;
     active_camera.GetPosition(cam_pos.val);
@@ -525,19 +525,19 @@ void cv::viz::Viz3d::VizImpl::setRepresentation(int representation)
     vtkActor * actor;
     switch (representation)
     {
-        case REPRESENTATION_POINTS: 
+        case REPRESENTATION_POINTS:
         {
             while ((actor = actors->GetNextActor()) != NULL)
                 actor->GetProperty()->SetRepresentationToPoints();
             break;
         }
-        case REPRESENTATION_SURFACE: 
+        case REPRESENTATION_SURFACE:
         {
             while ((actor = actors->GetNextActor()) != NULL)
                 actor->GetProperty()->SetRepresentationToSurface();
             break;
         }
-        case REPRESENTATION_WIREFRAME: 
+        case REPRESENTATION_WIREFRAME:
         {
             while ((actor = actors->GetNextActor()) != NULL)
                 actor->GetProperty()->SetRepresentationToWireframe();

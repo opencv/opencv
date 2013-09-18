@@ -56,7 +56,7 @@
 namespace cv
 {
     namespace viz
-    {   
+    {
         //! takes coordiante frame data and builds transfrom to global coordinate frame
         CV_EXPORTS Affine3f makeTransformToGlobal(const Vec3f& axis_x, const Vec3f& axis_y, const Vec3f& axis_z, const Vec3f& origin = Vec3f::all(0));
 
@@ -87,32 +87,32 @@ namespace cv
         //! checks point for Nans
         template<typename _Tp> inline bool isNan(const Point3_<_Tp>& p)
         { return isNan(p.x) || isNan(p.y) || isNan(p.z); }
-        
+
         //! helper class that provides access by name infrastructure
         class CV_EXPORTS VizAccessor
         {
         public:
             static VizAccessor & getInstance();
             static void release();
-            
+
             Viz3d get(const String &window_name);
-            
+
             //! window names automatically have Viz - prefix even though not provided by the users
             static void generateWindowName(const String &window_name, String &output);
-            
+
         private:
             VizAccessor(); // Singleton
             ~VizAccessor();
-            
+
             void add(Viz3d window);
             void remove(const String &window_name);
-            
+
             static VizAccessor * instance_;
             static bool is_instantiated_;
-            
+
             struct VizAccessorImpl;
             static VizAccessorImpl * impl_;
-            
+
             friend class Viz3d;
         };
     } /* namespace viz */

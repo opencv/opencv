@@ -72,7 +72,7 @@ cv::Affine3f cv::viz::makeCameraPose(const Vec3f& position, const Vec3f& focal_p
     Vec3f n = normalize(focal_point - position);
     Vec3f u = normalize(y_dir.cross(n));
     Vec3f v = n.cross(u);
-    
+
     Matx44f pose_mat = Matx44f::zeros();
     pose_mat(0,0) = u[0];
     pose_mat(0,1) = u[1];
@@ -147,9 +147,9 @@ struct cv::viz::VizAccessor::VizAccessorImpl
 
 cv::viz::VizAccessor::VizAccessor() { impl_ = new cv::viz::VizAccessor::VizAccessorImpl;}
 
-cv::viz::VizAccessor::~VizAccessor() 
-{ 
-    if(impl_) 
+cv::viz::VizAccessor::~VizAccessor()
+{
+    if(impl_)
     {
         delete impl_;
         impl_ = 0;
@@ -202,7 +202,7 @@ void cv::viz::VizAccessor::remove(const String &window_name)
     // Add the prefix Viz
     String name;
     generateWindowName(window_name, name);
-    
+
     VizMap::iterator vm_itr = impl_->viz_map.find(name);
     bool exists = vm_itr != impl_->viz_map.end();
     if (!exists) return ;
@@ -214,7 +214,7 @@ void cv::viz::VizAccessor::generateWindowName(const String &window_name, String 
     output = "Viz";
     // Already is Viz
     if (window_name == output) return;
-    
+
     String prefixed = output + " - ";
     if (window_name.substr(0, prefixed.length()) == prefixed) output = window_name; // Already has "Viz - "
     else if (window_name.substr(0, output.length()) == output) output = prefixed + window_name; // Doesn't have prefix

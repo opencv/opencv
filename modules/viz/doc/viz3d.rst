@@ -4,7 +4,7 @@ Viz
 .. highlight:: cpp
 
 This section describes 3D visualization window as well as classes and methods
-that are used to interact with it. 
+that are used to interact with it.
 
 3D visualization window (see :ocv:class:`Viz3d`) is used to display widgets (see :ocv:class:`Widget`), and it provides
 several methods to interact with scene and widgets.
@@ -21,17 +21,17 @@ Takes coordinate frame data and builds transform to global coordinate frame.
     :param origin: Origin of the coordinate frame in global coordinate frame.
 
 This function returns affine transform that describes transformation between global coordinate frame and a given coordinate frame.
-    
+
 viz::makeCameraPose
 -------------------
 Constructs camera pose from position, focal_point and up_vector (see gluLookAt() for more infromation).
-        
+
 .. ocv:function:: Affine3f makeCameraPose(const Vec3f& position, const Vec3f& focal_point, const Vec3f& y_dir)
 
     :param position: Position of the camera in global coordinate frame.
     :param focal_point: Focal point of the camera in global coordinate frame.
     :param y_dir: Up vector of the camera in global coordinate frame.
-    
+
 This function returns pose of the camera in global coordinate frame.
 
 viz::get
@@ -41,15 +41,15 @@ Retrieves a window by its name.
 .. ocv:function:: Viz3d get(const String &window_name)
 
     :param window_name: Name of the window that is to be retrieved.
-    
-This function returns a :ocv:class:`Viz3d` object with the given name. 
+
+This function returns a :ocv:class:`Viz3d` object with the given name.
 
 .. note:: If the window with that name already exists, that window is returned. Otherwise, new window is created with the given name, and it is returned.
 
 .. note:: Window names are automatically prefixed by "Viz - " if it is not done by the user.
 
           .. code-block:: cpp
-          
+
                 /// window and window_2 are the same windows.
                 viz::Viz3d window   = viz::get("myWindow");
                 viz::Viz3d window_2 = viz::get("Viz - myWindow");
@@ -75,7 +75,7 @@ Checks **point** for nan
     .. ocv:function:: bool isNan(const Point3_<_Tp>& p)
 
         :param p: return true if **any** of the elements of the point is *nan*.
-        
+
 viz::VizAccessor
 ----------------
 .. ocv:class:: VizAccessor
@@ -87,16 +87,16 @@ A singleton class that provides access by name infrastructure for 3D visualizati
     public:
         static VizAccessor & getInstance();
         static void release();
-        
+
         Viz3d get(const String &window_name);
-        
+
         //! window names automatically have Viz - prefix even though not provided by the users
         static void generateWindowName(const String &window_name, String &output);
-        
+
     private:
         /* hidden */
     };
-    
+
 viz::VizAccessor::getInstance
 -----------------------------
 Returns the single instance of VizAccessor.
@@ -116,15 +116,15 @@ Retrieves a window by its name.
 .. ocv:function:: Viz3d get(const String &window_name)
 
     :param window_name: Name of the window that is to be retrieved.
-    
-This function returns a :ocv:class:`Viz3d` object with the given name. 
+
+This function returns a :ocv:class:`Viz3d` object with the given name.
 
 .. note:: If the window with that name already exists, that window is returned. Otherwise, new window is created with the given name, and it is returned.
 
 .. note:: Window names are automatically prefixed by "Viz - " if it is not done by the user.
 
           .. code-block:: cpp
-          
+
                 /// window and window_2 are the same windows.
                 viz::Viz3d window   = viz::get("myWindow");
                 viz::Viz3d window_2 = viz::get("Viz - myWindow");
@@ -134,7 +134,7 @@ viz::VizAccessor::generateWindowName
 Generates a window name by prefixing "Viz - " if it has not already been prefixed.
 
 .. ocv:function:: static void generateWindowName(const String &window_name, String &output)
-    
+
     :param window_name: Window name
     :param output: Prefixed window name
 
@@ -164,18 +164,18 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
         void setWidgetPose(const String &id, const Affine3f &pose);
         void updateWidgetPose(const String &id, const Affine3f &pose);
         Affine3f getWidgetPose(const String &id) const;
-        
+
         void setCamera(const Camera &camera);
         Camera getCamera() const;
         Affine3f getViewerPose();
         void setViewerPose(const Affine3f &pose);
-        
+
         void resetCameraViewpoint (const String &id);
         void resetCamera();
-        
+
         void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
         void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
-        
+
         Size getWindowSize() const;
         void setWindowSize(const Size &window_size);
         String getWindowName() const;
@@ -190,13 +190,13 @@ The Viz3d class represents a 3D visualizer window. This class is implicitly shar
 
         void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
         void registerMouseCallback(MouseCallback callback, void* cookie = 0);
-        
+
         void setRenderingProperty(const String &id, int property, double value);
         double getRenderingProperty(const String &id, int property);
-        
+
         void setDesiredUpdateRate(double rate);
         double getDesiredUpdateRate();
-        
+
         void setRepresentation(int representation);
     private:
         /* hidden */
@@ -219,7 +219,7 @@ Shows a widget in the window.
     :param id: A unique id for the widget.
     :param widget: The widget to be displayed in the window.
     :param pose: Pose of the widget.
-    
+
 viz::Viz3d::removeWidget
 ------------------------
 Removes a widget from the window.
@@ -227,17 +227,17 @@ Removes a widget from the window.
 .. ocv:function:: void removeWidget(const String &id)
 
     :param id: The id of the widget that will be removed.
-    
+
 viz::Viz3d::getWidget
 ---------------------
 Retrieves a widget from the window. A widget is implicitly shared;
-that is, if the returned widget is modified, the changes will be 
+that is, if the returned widget is modified, the changes will be
 immediately visible in the window.
 
 .. ocv:function:: Widget getWidget(const String &id) const
 
     :param id: The id of the widget that will be returned.
-    
+
 viz::Viz3d::removeAllWidgets
 ----------------------------
 Removes all widgets from the window.
@@ -305,7 +305,7 @@ Resets camera viewpoint to a 3D widget in the scene.
 .. ocv:function:: void resetCameraViewpoint (const String &id)
 
     :param pose: Id of a 3D widget.
-    
+
 viz::Viz3d::resetCamera
 -----------------------
 Resets camera.
@@ -320,7 +320,7 @@ Transforms a point in world coordinate system to window coordinate system.
 
     :param pt: Point in world coordinate system.
     :param window_coord: Output point in window coordinate system.
-    
+
 viz::Viz3d::converTo3DRay
 -------------------------
 Transforms a point in window coordinate system to a 3D ray in world coordinate system.
@@ -330,7 +330,7 @@ Transforms a point in window coordinate system to a 3D ray in world coordinate s
     :param window_coord: Point in window coordinate system.
     :param origin: Output origin of the ray.
     :param direction: Output direction of the ray.
-    
+
 viz::Viz3d::getWindowSize
 -------------------------
 Returns the current size of the window.
@@ -344,7 +344,7 @@ Sets the size of the window.
 .. ocv:function:: void setWindowSize(const Size &window_size)
 
     :param window_size: New size of the window.
-    
+
 viz::Viz3d::getWindowName
 -------------------------
 Returns the name of the window which has been set in the constructor.
@@ -358,7 +358,7 @@ Saves screenshot of the current scene.
 .. ocv:function:: void saveScreenshot(const String &file)
 
     :param file: Name of the file.
-    
+
 viz::Viz3d::setWindowPosition
 -----------------------------
 Sets the position of the window in the screen.
@@ -367,7 +367,7 @@ Sets the position of the window in the screen.
 
     :param x: x coordinate of the window
     :param y: y coordinate of the window
-    
+
 viz::Viz3d::setFullScreen
 -------------------------
 Sets or unsets full-screen rendering mode.
@@ -375,7 +375,7 @@ Sets or unsets full-screen rendering mode.
 .. ocv:function:: void setFullScreen(bool mode)
 
     :param mode: If true, window will use full-screen mode.
-    
+
 viz::Viz3d::setBackgroundColor
 ------------------------------
 Sets background color.
@@ -411,7 +411,7 @@ Sets keyboard handler.
 
     :param callback: Keyboard callback ``(void (*KeyboardCallbackFunction(const KeyboardEvent&, void*))``.
     :param cookie: The optional parameter passed to the callback.
-    
+
 viz::Viz3d::registerMouseCallback
 ---------------------------------
 Sets mouse handler.
@@ -430,9 +430,9 @@ Sets rendering property of a widget.
     :param id: Id of the widget.
     :param property: Property that will be modified.
     :param value: The new value of the property.
-    
+
     **Rendering property** can be one of the following:
-    
+
     * **POINT_SIZE**
     * **OPACITY**
     * **LINE_WIDTH**
@@ -441,14 +441,14 @@ Sets rendering property of a widget.
         * **REPRESENTATION_POINTS**
         * **REPRESENTATION_WIREFRAME**
         * **REPRESENTATION_SURFACE**
-    * **IMMEDIATE_RENDERING**: 
+    * **IMMEDIATE_RENDERING**:
         * Turn on immediate rendering by setting the value to ``1``.
         * Turn off immediate rendering by setting the value to ``0``.
     * **SHADING**: Expected values are
         * **SHADING_FLAT**
         * **SHADING_GOURAUD**
         * **SHADING_PHONG**
-    
+
 viz::Viz3d::getRenderingProperty
 --------------------------------
 Returns rendering property of a widget.
@@ -457,9 +457,9 @@ Returns rendering property of a widget.
 
     :param id: Id of the widget.
     :param property: Property.
-    
+
     **Rendering property** can be one of the following:
-    
+
     * **POINT_SIZE**
     * **OPACITY**
     * **LINE_WIDTH**
@@ -468,7 +468,7 @@ Returns rendering property of a widget.
         * **REPRESENTATION_POINTS**
         * **REPRESENTATION_WIREFRAME**
         * **REPRESENTATION_SURFACE**
-    * **IMMEDIATE_RENDERING**: 
+    * **IMMEDIATE_RENDERING**:
         * Turn on immediate rendering by setting the value to ``1``.
         * Turn off immediate rendering by setting the value to ``0``.
     * **SHADING**: Expected values are
@@ -483,7 +483,7 @@ Sets desired update rate of the window.
 .. ocv:function:: void setDesiredUpdateRate(double rate)
 
     :param rate: Desired update rate. The default is 30.
-    
+
 viz::Viz3d::getDesiredUpdateRate
 --------------------------------
 Returns desired update rate of the window.
@@ -497,11 +497,11 @@ Sets geometry representation of the widgets to surface, wireframe or points.
 .. ocv:function:: void setRepresentation(int representation)
 
     :param representation: Geometry representation which can be one of the following:
-    
+
         * **REPRESENTATION_POINTS**
         * **REPRESENTATION_WIREFRAME**
         * **REPRESENTATION_SURFACE**
-        
+
 viz::Color
 ----------
 .. ocv:class:: Color
@@ -545,11 +545,11 @@ This class wraps mesh attributes, and it can load a mesh from a ``ply`` file. ::
 
         //! Loads mesh from a given ply file
         static Mesh3d loadMesh(const String& file);
-        
+
     private:
         /* hidden */
     };
-    
+
 viz::Mesh3d::loadMesh
 ---------------------
 Loads a mesh from a ``ply`` file.
@@ -557,8 +557,8 @@ Loads a mesh from a ``ply`` file.
 .. ocv:function:: static Mesh3d loadMesh(const String& file)
 
     :param file: File name.
- 
- 
+
+
 viz::KeyboardEvent
 ------------------
 .. ocv:class:: KeyboardEvent
@@ -602,7 +602,7 @@ Constructs a KeyboardEvent.
     :param alt: If true, ``alt`` is pressed.
     :param ctrl: If true, ``ctrl`` is pressed.
     :param shift: If true, ``shift`` is pressed.
-    
+
 viz::MouseEvent
 ---------------
 .. ocv:class:: MouseEvent
@@ -622,7 +622,7 @@ This class represents a mouse event. ::
         Point pointer;
         unsigned int key_state;
     };
-    
+
 viz::MouseEvent::MouseEvent
 ---------------------------
 Constructs a MouseEvent.
@@ -635,7 +635,7 @@ Constructs a MouseEvent.
     :param alt: If true, ``alt`` is pressed.
     :param ctrl: If true, ``ctrl`` is pressed.
     :param shift: If true, ``shift`` is pressed.
-    
+
 viz::Camera
 -----------
 .. ocv:class:: Camera
@@ -651,23 +651,23 @@ that can extract the intrinsic parameters from ``field of view``, ``intrinsic ma
         Camera(const Vec2f &fov, const Size &window_size);
         Camera(const cv::Matx33f &K, const Size &window_size);
         Camera(const cv::Matx44f &proj, const Size &window_size);
-        
+
         inline const Vec2d & getClip() const { return clip_; }
         inline void setClip(const Vec2d &clip) { clip_ = clip; }
-        
+
         inline const Size & getWindowSize() const { return window_size_; }
         void setWindowSize(const Size &window_size);
-        
+
         inline const Vec2f & getFov() const { return fov_; }
         inline void setFov(const Vec2f & fov) { fov_ = fov; }
-        
+
         inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
         inline const Vec2f & getFocalLength() const { return focal_; }
-        
+
         void computeProjectionMatrix(Matx44f &proj) const;
-        
+
         static Camera KinectCamera(const Size &window_size);
-        
+
     private:
         /* hidden */
     };
@@ -690,7 +690,7 @@ Constructs a Camera.
     :param window_size: Size of the window.
 
     Principal point is at the center of the window by default.
-    
+
 .. ocv:function:: Camera(const cv::Matx33f &K, const Size &window_size)
 
     :param K: Intrinsic matrix of the camera.
@@ -708,7 +708,7 @@ Computes projection matrix using intrinsic parameters of the camera.
 .. ocv:function:: void computeProjectionMatrix(Matx44f &proj) const
 
     :param proj: Output projection matrix.
-        
+
 viz::Camera::KinectCamera
 -------------------------
 Creates a Kinect Camera.

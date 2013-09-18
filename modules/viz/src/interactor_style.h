@@ -85,7 +85,7 @@ namespace cv
 
             /** \brief Change the default keyboard modified from ALT to a different special key.*/
             inline void setKeyboardModifier(const KeyboardModifier &modifier) { modifier_ = modifier; }
-            
+
         protected:
             /** \brief Set to true after initialization is complete. */
             bool init_;
@@ -95,7 +95,7 @@ namespace cv
 
             /** \brief Actor map stored internally. */
             cv::Ptr<WidgetActorMap> widget_actor_map_;
-            
+
             /** \brief The current window width/height. */
             Vec2i win_size_;
 
@@ -107,7 +107,7 @@ namespace cv
 
             /** \brief A PNG writer for screenshot captures. */
             vtkSmartPointer<vtkPNGWriter> snapshot_writer_;
-            
+
             /** \brief Internal window to image filter. Needed by \a snapshot_writer_. */
             vtkSmartPointer<vtkWindowToImageFilter> wif_;
 

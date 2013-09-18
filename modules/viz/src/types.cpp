@@ -120,10 +120,10 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkSmartPointer<vtkPLYReader> reader = vtkSmartPointer<vtkPLYReader>::New();
         reader->SetFileName(file.c_str());
         reader->Update();
-        
+
         vtkSmartPointer<vtkPolyData> poly_data = reader->GetOutput();
         CV_Assert("File does not exist or file format is not supported." && poly_data);
-        
+
         vtkSmartPointer<vtkPoints> mesh_points = poly_data->GetPoints();
         vtkIdType nr_points = mesh_points->GetNumberOfPoints();
 
@@ -141,7 +141,7 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkUnsignedCharArray* poly_colors = 0;
         if (poly_data->GetPointData())
             poly_colors = vtkUnsignedCharArray::SafeDownCast(poly_data->GetPointData()->GetScalars());
-              
+
         if (poly_colors && (poly_colors->GetNumberOfComponents() == 3))
         {
             mesh.colors.create(1, nr_points, CV_8UC3);
@@ -164,9 +164,9 @@ struct cv::viz::Mesh3d::loadMeshImpl
         vtkIdType nr_cell_points;
         vtkCellArray * mesh_polygons = poly_data->GetPolys();
         mesh_polygons->InitTraversal();
-        
+
         mesh.polygons.create(1, mesh_polygons->GetSize(), CV_32SC1);
-        
+
         int* polygons = mesh.polygons.ptr<int>();
         while (mesh_polygons->GetNextCell(nr_cell_points, cell_points))
         {
@@ -213,30 +213,30 @@ cv::viz::Camera::Camera(const cv::Matx33f & K, const Size &window_size)
 }
 
 cv::viz::Camera::Camera(const Matx44f &proj, const Size &window_size)
-{   
+{
     CV_Assert(window_size.width > 0 && window_size.height > 0);
-    
+
     double near = proj(2,3) / (proj(2,2) - 1.0);
     double far = near * (proj(2,2) - 1.0) / (proj(2,2) + 1.0);
     double left = near * (proj(0,2)-1) / proj(0,0);
     double right = 2.0 * near / proj(0,0) + left;
     double bottom = near * (proj(1,2)-1) / proj(1,1);
     double top = 2.0 * near / proj(1,1) + bottom;
-    
+
     double epsilon = 2.2204460492503131e-16;
-    
+
     if (fabs(left-right) < epsilon) principal_point_[0] = static_cast<float>(window_size.width) * 0.5f;
-    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right); 
+    else principal_point_[0] = (left * static_cast<float>(window_size.width)) / (left - right);
     focal_[0] = -near * principal_point_[0] / left;
-    
-    if (fabs(top-bottom) < epsilon) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f; 
-    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom); 
+
+    if (fabs(top-bottom) < epsilon) principal_point_[1] = static_cast<float>(window_size.height) * 0.5f;
+    else principal_point_[1] = (top * static_cast<float>(window_size.height)) / (top - bottom);
     focal_[1] = near * principal_point_[1] / top;
-    
+
     setClip(Vec2d(near, far));
     fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
     fov_[1] = (atan2(principal_point_[1],focal_[1]) + atan2(window_size.height-principal_point_[1],focal_[1]));
-    
+
     window_size_ = window_size;
 }
 
@@ -244,33 +244,33 @@ void cv::viz::Camera::init(float f_x, float f_y, float c_x, float c_y, const Siz
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
     setClip(Vec2d(0.01, 1000.01));// Default clipping
-    
+
     fov_[0] = (atan2(c_x,f_x) + atan2(window_size.width-c_x,f_x));
     fov_[1] = (atan2(c_y,f_y) + atan2(window_size.height-c_y,f_y));
-    
+
     principal_point_[0] = c_x;
     principal_point_[1] = c_y;
-    
+
     focal_[0] = f_x;
     focal_[1] = f_y;
-    
+
     window_size_ = window_size;
 }
 
 void cv::viz::Camera::setWindowSize(const Size &window_size)
 {
     CV_Assert(window_size.width > 0 && window_size.height > 0);
-    
+
     // Get the scale factor and update the principal points
     float scalex = static_cast<float>(window_size.width) / static_cast<float>(window_size_.width);
     float scaley = static_cast<float>(window_size.height) / static_cast<float>(window_size_.height);
-    
+
     principal_point_[0] *= scalex;
     principal_point_[1] *= scaley;
     focal_ *= scaley;
     // Vertical field of view is fixed!  Update horizontal field of view
     fov_[0] = (atan2(principal_point_[0],focal_[0]) + atan2(window_size.width-principal_point_[0],focal_[0]));
-    
+
     window_size_ = window_size;
 }
 
@@ -280,12 +280,12 @@ void cv::viz::Camera::computeProjectionMatrix(Matx44f &proj) const
     double left = -clip_[0] * principal_point_[0] / focal_[0];
     double right = clip_[0] * (window_size_.width - principal_point_[0]) / focal_[0];
     double bottom = -clip_[0] * (window_size_.height - principal_point_[1]) / focal_[1];
-    
+
     double temp1 = 2.0 * clip_[0];
     double temp2 = 1.0 / (right - left);
     double temp3 = 1.0 / (top - bottom);
     double temp4 = 1.0 / (clip_[0] - clip_[1]);
-    
+
     proj = Matx44d::zeros();
     proj(0,0) = temp1 * temp2;
     proj(1,1) = temp1 * temp3;
@@ -300,7 +300,7 @@ cv::viz::Camera cv::viz::Camera::KinectCamera(const Size &window_size)
 {
     // Without distortion, RGB Camera
     // Received from http://nicolas.burrus.name/index.php/Research/KinectCalibration
-    Matx33f K = Matx33f::zeros();    
+    Matx33f K = Matx33f::zeros();
     K(0,0) = 5.2921508098293293e+02;
     K(0,2) = 3.2894272028759258e+02;
     K(1,1) = 5.2556393630057437e+02;

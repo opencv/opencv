@@ -88,7 +88,7 @@ namespace cv
 
             //! Loads mesh from a given ply file
             static cv::viz::Mesh3d loadMesh(const String& file);
-            
+
         private:
             struct loadMeshImpl;
         };
@@ -135,7 +135,7 @@ namespace cv
             Point pointer;
             unsigned int key_state;
         };
-        
+
         class CV_EXPORTS Camera
         {
         public:
@@ -143,26 +143,26 @@ namespace cv
             Camera(const Vec2f &fov, const Size &window_size);
             Camera(const cv::Matx33f &K, const Size &window_size);
             Camera(const cv::Matx44f &proj, const Size &window_size);
-            
+
             inline const Vec2d & getClip() const { return clip_; }
             inline void setClip(const Vec2d &clip) { clip_ = clip; }
-            
+
             inline const Size & getWindowSize() const { return window_size_; }
             void setWindowSize(const Size &window_size);
-            
+
             inline const Vec2f & getFov() const { return fov_; }
             inline void setFov(const Vec2f & fov) { fov_ = fov; }
-            
+
             inline const Vec2f & getPrincipalPoint() const { return principal_point_; }
             inline const Vec2f & getFocalLength() const { return focal_; }
-            
+
             void computeProjectionMatrix(Matx44f &proj) const;
-            
+
             static Camera KinectCamera(const Size &window_size);
-            
+
         private:
             void init(float f_x, float f_y, float c_x, float c_y, const Size &window_size);
-            
+
             Vec2d clip_;
             Vec2f fov_;
             Size window_size_;

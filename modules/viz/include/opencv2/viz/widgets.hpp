@@ -81,7 +81,7 @@ namespace cv
             SHADING_GOURAUD,
             SHADING_PHONG
         };
-        
+
         /////////////////////////////////////////////////////////////////////////////
         /// The base class for all widgets
         class CV_EXPORTS Widget
@@ -91,10 +91,10 @@ namespace cv
             Widget(const Widget& other);
             Widget& operator=(const Widget& other);
             ~Widget();
-            
+
             //! Create a widget directly from ply file
             static Widget fromPlyFile(const String &file_name);
-            
+
             //! Rendering properties of this particular widget
             void setRenderingProperty(int property, double value);
             double getRenderingProperty(int property) const;
@@ -201,10 +201,10 @@ namespace cv
             WGrid(const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
             //! Creates grid based on the plane equation
             WGrid(const Vec4f &coeffs, const Vec2i &dimensions, const Vec2d &spacing, const Color &color = Color::white());
-            
+
         private:
             struct GridImpl;
-        
+
         };
 
         class CV_EXPORTS WText3D : public Widget3D
@@ -224,15 +224,15 @@ namespace cv
             void setText(const String &text);
             String getText() const;
         };
-        
+
         class CV_EXPORTS WImageOverlay : public Widget2D
         {
         public:
             WImageOverlay(const Mat &image, const Rect &rect);
-            
+
             void setImage(const Mat &image);
         };
-        
+
         class CV_EXPORTS WImage3D : public Widget3D
         {
         public:
@@ -240,10 +240,10 @@ namespace cv
             WImage3D(const Mat &image, const Size &size);
             //! Creates 3D image at a given position, pointing in the direction of the normal, and having the up_vector orientation
             WImage3D(const Vec3f &position, const Vec3f &normal, const Vec3f &up_vector, const Mat &image, const Size &size);
-            
+
             void setImage(const Mat &image);
         };
-        
+
         class CV_EXPORTS WCameraPosition : public Widget3D
         {
         public:
@@ -257,27 +257,27 @@ namespace cv
             WCameraPosition(const Matx33f &K, const Mat &img, double scale = 1.0, const Color &color = Color::white());
             //! Creates frustum and display given image at the far plane
             WCameraPosition(const Vec2f &fov, const Mat &img, double scale = 1.0, const Color &color = Color::white());
-            
+
         private:
             struct ProjectImage;
         };
-        
+
         class CV_EXPORTS WTrajectory : public Widget3D
         {
         public:
             enum {DISPLAY_FRAMES = 1, DISPLAY_PATH = 2};
-            
+
             //! Displays trajectory of the given path either by coordinate frames or polyline
             WTrajectory(const std::vector<Affine3f> &path, int display_mode = WTrajectory::DISPLAY_PATH, const Color &color = Color::white(), double scale = 1.0);
             //! Displays trajectory of the given path by frustums
             WTrajectory(const std::vector<Affine3f> &path, const Matx33f &K, double scale = 1.0, const Color &color = Color::white());
             //! Displays trajectory of the given path by frustums
             WTrajectory(const std::vector<Affine3f> &path, const Vec2f &fov, double scale = 1.0, const Color &color = Color::white());
-            
+
         private:
             struct ApplyPath;
         };
-        
+
         class CV_EXPORTS WSpheresTrajectory: public Widget3D
         {
         public:
@@ -301,16 +301,16 @@ namespace cv
         {
         public:
             WCloudCollection();
-            
+
             //! Each point in cloud is mapped to a color in colors
             void addCloud(InputArray cloud, InputArray colors, const Affine3f &pose = Affine3f::Identity());
             //! All points in cloud have the same color
             void addCloud(InputArray cloud, const Color &color = Color::white(), const Affine3f &pose = Affine3f::Identity());
-            
+
         private:
             struct CreateCloudWidget;
         };
-        
+
         class CV_EXPORTS WCloudNormals : public Widget3D
         {
         public:
@@ -319,12 +319,12 @@ namespace cv
         private:
             struct ApplyCloudNormals;
         };
-        
+
         class CV_EXPORTS WMesh : public Widget3D
         {
         public:
             WMesh(const Mesh3d &mesh);
-            
+
         private:
             struct CopyImpl;
         };

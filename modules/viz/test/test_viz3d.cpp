@@ -110,23 +110,23 @@ TEST(Viz_viz3d, accuracy)
     for (int i = 0, j = 0; i <= 360; ++i, j+=5)
     {
         cam_path.push_back(viz::makeCameraPose(Point3f(0.5*cos(double(i)*CV_PI/180.0), 0.5*sin(double(j)*CV_PI/180.0), 0.5*sin(double(i)*CV_PI/180.0)),
-                                               Point3f(0.0,0.0,0.0), Point3f(0.0,1.0,0.0))); 
+                                               Point3f(0.0,0.0,0.0), Point3f(0.0,1.0,0.0)));
     }
-   
+
     int path_counter = 0;
     int cam_path_size = cam_path.size();
 
     // OTHER WIDGETS
     cv::Mat img = imread("opencv.png");
-    
+
     int downSample = 4;
-    
+
     int row_max = img.rows/downSample;
     int col_max = img.cols/downSample;
-    
+
     cv::Mat *clouds = new cv::Mat[img.cols/downSample];
     cv::Mat *colors = new cv::Mat[img.cols/downSample];
-    
+
     for (int col = 0; col < col_max; ++col)
     {
         clouds[col] = Mat::zeros(img.rows/downSample, 1, CV_32FC3);
@@ -137,7 +137,7 @@ TEST(Viz_viz3d, accuracy)
             colors[col].at<Vec3b>(row) = img.at<Vec3b>(row*downSample,col*downSample);
         }
     }
-    
+
     for (int col = 0; col < col_max; ++col)
     {
         std::stringstream strstrm;
@@ -146,16 +146,16 @@ TEST(Viz_viz3d, accuracy)
         viz.getWidget(strstrm.str()).setRenderingProperty(viz::POINT_SIZE, 3.0);
         viz.getWidget(strstrm.str()).setRenderingProperty(viz::OPACITY, 0.45);
     }
-    
+
     viz.showWidget("trajectory", viz::WTrajectory(cam_path, viz::WTrajectory::DISPLAY_PATH, viz::Color::yellow()));
     viz.showWidget("cam_text", viz::WText("Global View", Point2i(5,5), 28));
     viz.registerKeyboardCallback(keyboard_callback, (void *) &viz);
 
     int angle = 0;
-    
+
     while(!viz.wasStopped())
     {
-        if (path_counter == cam_path_size) 
+        if (path_counter == cam_path_size)
         {
             path_counter = 0;
         }
@@ -164,12 +164,12 @@ TEST(Viz_viz3d, accuracy)
         {
             viz.setViewerPose(cam_path[path_counter]);
         }
-        
+
         if (angle == 360) angle = 0;
 
         cam_1.cast<viz::WCameraPosition>().setPose(cam_path[path_counter]);
         cam_coordinates.cast<viz::WCameraPosition>().setPose(cam_path[path_counter++]);
-        
+
         for (int i = 0; i < col_max; ++i)
         {
             std::stringstream strstrm;

@@ -51,7 +51,7 @@
 
 cv::viz::Viz3d::Viz3d(const String& window_name) : impl_(0) { create(window_name); }
 
-cv::viz::Viz3d::Viz3d(const Viz3d& other) : impl_(other.impl_) 
+cv::viz::Viz3d::Viz3d(const Viz3d& other) : impl_(other.impl_)
 {
     if (impl_) CV_XADD(&impl_->ref_counter, 1);
 }

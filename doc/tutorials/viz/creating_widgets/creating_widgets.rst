@@ -21,7 +21,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
 .. code-block:: cpp
 
     #include <opencv2/viz.hpp>
-    #include <opencv2/viz/widget_accessor.hpp> 
+    #include <opencv2/viz/widget_accessor.hpp>
     #include <iostream>
 
     #include <vtkPoints.h>
@@ -43,7 +43,7 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
     class WTriangle : public viz::Widget3D
     {
         public:
-            WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white()); 
+            WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white());
     };
 
     /**
@@ -56,22 +56,22 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
         points->InsertNextPoint(pt1.x, pt1.y, pt1.z);
         points->InsertNextPoint(pt2.x, pt2.y, pt2.z);
         points->InsertNextPoint(pt3.x, pt3.y, pt3.z);
-        
+
         vtkSmartPointer<vtkTriangle> triangle = vtkSmartPointer<vtkTriangle>::New();
         triangle->GetPointIds()->SetId(0,0);
         triangle->GetPointIds()->SetId(1,1);
         triangle->GetPointIds()->SetId(2,2);
-        
+
         vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
         cells->InsertNextCell(triangle);
-        
+
         // Create a polydata object
         vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
-        
+
         // Add the geometry and topology to the polydata
         polyData->SetPoints(points);
         polyData->SetPolys(cells);
-        
+
         // Create mapper and actor
         vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     #if VTK_MAJOR_VERSION <= 5
@@ -79,13 +79,13 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
     #else
         mapper->SetInputData(polyData);
     #endif
-        
+
         vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
         actor->SetMapper(mapper);
-        
+
         // Store this actor in the widget in order that visualizer can access it
         viz::WidgetAccessor::setProp(*this, actor);
-        
+
         // Set the color of the widget. This has to be called after WidgetAccessor.
         setColor(color);
     }
@@ -94,22 +94,22 @@ You can download the code from :download:`here <../../../../samples/cpp/tutorial
      * @function main
      */
     int main()
-    {        
+    {
         /// Create a window
         viz::Viz3d myWindow("Creating Widgets");
-        
+
         /// Create a triangle widget
         WTriangle tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0), viz::Color::red());
-        
+
         /// Show widget in the visualizer window
         myWindow.showWidget("TRIANGLE", tw);
-        
+
         /// Start event loop
         myWindow.spin();
-        
+
         return 0;
     }
-    
+
 Explanation
 ===========
 
@@ -122,33 +122,33 @@ Here is the general structure of the program:
     class WTriangle : public viz::Widget3D
     {
         public:
-            WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white()); 
+            WTriangle(const Point3f &pt1, const Point3f &pt2, const Point3f &pt3, const viz::Color & color = viz::Color::white());
     };
-    
+
 * Assign a VTK actor to the widget.
 
 .. code-block:: cpp
 
     // Store this actor in the widget in order that visualizer can access it
     viz::WidgetAccessor::setProp(*this, actor);
-    
+
 * Set color of the widget.
 
 .. code-block:: cpp
 
     // Set the color of the widget. This has to be called after WidgetAccessor.
     setColor(color);
-    
+
 * Construct a triangle widget and display it in the window.
 
 .. code-block:: cpp
 
     /// Create a triangle widget
     WTriangle tw(Point3f(0.0,0.0,0.0), Point3f(1.0,1.0,1.0), Point3f(0.0,1.0,0.0), viz::Color::red());
-    
+
     /// Show widget in the visualizer window
     myWindow.showWidget("TRIANGLE", tw);
-    
+
 Results
 =======
 

@@ -81,18 +81,18 @@ namespace cv
             void setWidgetPose(const String &id, const Affine3f &pose);
             void updateWidgetPose(const String &id, const Affine3f &pose);
             Affine3f getWidgetPose(const String &id) const;
-            
+
             void setCamera(const Camera &camera);
             Camera getCamera() const;
             Affine3f getViewerPose();
             void setViewerPose(const Affine3f &pose);
-            
+
             void resetCameraViewpoint(const String &id);
             void resetCamera();
-            
+
             void convertToWindowCoordinates(const Point3d &pt, Point3d &window_coord);
             void converTo3DRay(const Point3d &window_coord, Point3d &origin, Vec3d &direction);
-            
+
             Size getWindowSize() const;
             void setWindowSize(const Size &window_size);
             String getWindowName() const;
@@ -107,19 +107,19 @@ namespace cv
 
             void registerKeyboardCallback(KeyboardCallback callback, void* cookie = 0);
             void registerMouseCallback(MouseCallback callback, void* cookie = 0);
-            
+
             void setRenderingProperty(const String &id, int property, double value);
             double getRenderingProperty(const String &id, int property);
-            
+
             void setDesiredUpdateRate(double rate);
             double getDesiredUpdateRate();
-            
+
             void setRepresentation(int representation);
         private:
 
             struct VizImpl;
             VizImpl* impl_;
-            
+
             void create(const String &window_name);
             void release();
         };

@@ -67,11 +67,11 @@ void cv::viz::InteractorStyle::Initialize()
 
     init_ = true;
     stereo_anaglyph_mask_default_ = true;
-    
+
     // Initialize the keyboard event callback as none
     keyboardCallback_ = 0;
     keyboard_callback_cookie_ = 0;
-    
+
     // Initialize the mouse event callback as none
     mouseCallback_ = 0;
     mouse_callback_cookie_ = 0;
@@ -197,7 +197,7 @@ void cv::viz::InteractorStyle::registerKeyboardCallback(void (*callback)(const K
 void
 cv::viz::InteractorStyle::OnKeyDown()
 {
-    
+
     CV_Assert("Interactor style not initialized. Please call Initialize() before continuing" && init_);
     CV_Assert("No renderer given! Use SetRendererCollection() before continuing." && renderer_);
 
@@ -482,7 +482,7 @@ cv::viz::InteractorStyle::OnKeyDown()
         {
             if (it == widget_actor_map_->end())
                 it = widget_actor_map_->begin();
-            
+
             vtkProp3D * actor = vtkProp3D::SafeDownCast(it->second);
             if (actor && actor->GetUserMatrix())
             {
@@ -554,7 +554,7 @@ void cv::viz::InteractorStyle::OnKeyUp()
     // Check if there is a keyboard callback registered
     if (keyboardCallback_)
       keyboardCallback_(event, keyboard_callback_cookie_);
-    
+
     Superclass::OnKeyUp();
 }
 
@@ -673,10 +673,10 @@ void cv::viz::InteractorStyle::OnMouseWheelBackward()
     // If a mouse callback registered, call it!
     if (mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
-    
+
     if (Interactor->GetRepeatCount() && mouseCallback_)
       mouseCallback_(event, mouse_callback_cookie_);
-      
+
     if (Interactor->GetAltKey())
     {
         // zoom

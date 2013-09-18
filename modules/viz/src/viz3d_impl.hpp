@@ -58,20 +58,20 @@ public:
     typedef cv::Ptr<VizImpl> Ptr;
     typedef Viz3d::KeyboardCallback KeyboardCallback;
     typedef Viz3d::MouseCallback MouseCallback;
-    
+
     int ref_counter;
 
     VizImpl(const String &name);
     virtual ~VizImpl();
-    
+
     void showWidget(const String &id, const Widget &widget, const Affine3f &pose = Affine3f::Identity());
     void removeWidget(const String &id);
     Widget getWidget(const String &id) const;
     void removeAllWidgets();
-    
+
     void setWidgetPose(const String &id, const Affine3f &pose);
     void updateWidgetPose(const String &id, const Affine3f &pose);
-    Affine3f getWidgetPose(const String &id) const; 
+    Affine3f getWidgetPose(const String &id) const;
 
     void setDesiredUpdateRate(double rate);
     double getDesiredUpdateRate();
@@ -86,7 +86,7 @@ public:
     void close()
     {
         stopped_ = true;
-        if (interactor_) 
+        if (interactor_)
         {
             interactor_->GetRenderWindow()->Finalize();
             interactor_->TerminateApp(); // This tends to close the window...
@@ -94,14 +94,14 @@ public:
     }
 
     void setRepresentation(int representation);
-    
+
     void setCamera(const Camera &camera);
     Camera getCamera() const;
 
     /** \brief Reset the camera to a given widget */
     void resetCameraViewpoint(const String& id);
     void resetCamera();
-    
+
     void setViewerPose(const Affine3f &pose);
     Affine3f getViewerPose();
 
@@ -182,7 +182,7 @@ private:
 
     /** \brief The render window interactor style. */
     vtkSmartPointer<InteractorStyle> style_;
-    
+
     /** \brief Internal list with actor pointers and name IDs for all widget actors */
     cv::Ptr<WidgetActorMap> widget_actor_map_;
 
@@ -245,7 +245,7 @@ namespace cv
                     }
                     return output;
                 }
-                
+
                 static _Out* copyColor(const Mat& source, _Out* output, const Mat& nan_mask)
                 {
                     CV_Assert(DataDepth<_Tp>::value == source.depth() && source.size() == nan_mask.size());
@@ -282,7 +282,7 @@ namespace cv
 
                 return table[nan_mask.depth() - 5](source, output, nan_mask);
             }
-            
+
             template<typename _Tp>
             static inline Vec<_Tp, 3>* copyColor(const Mat& source, Vec<_Tp, 3>* output, const Mat& nan_mask)
             {
@@ -328,7 +328,7 @@ namespace cv
 
         inline Vec3d vtkpoint(const Point3f& point) { return Vec3d(point.x, point.y, point.z); }
         template<typename _Tp> inline _Tp normalized(const _Tp& v) { return v * 1/cv::norm(v); }
-        
+
         struct ConvertToVtkImage
         {
             struct Impl
@@ -336,7 +336,7 @@ namespace cv
                 static void copyImageMultiChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
                 {
                     int i_chs = image.channels();
-            
+
                     for (int i = 0; i < image.rows; ++i)
                     {
                         const unsigned char * irows = image.ptr<unsigned char>(i);
@@ -349,7 +349,7 @@ namespace cv
                     }
                     output->Modified();
                 }
-                
+
                 static void copyImageSingleChannel(const Mat &image, vtkSmartPointer<vtkImageData> output)
                 {
                     for (int i = 0; i < image.rows; ++i)
@@ -364,7 +364,7 @@ namespace cv
                     output->Modified();
                 }
             };
-            
+
             static void convert(const Mat &image, vtkSmartPointer<vtkImageData> output)
             {
                 // Create the vtk image
@@ -376,7 +376,7 @@ namespace cv
 #else
                 output->AllocateScalars(VTK_UNSIGNED_CHAR, image.channels());
 #endif
-                
+
                 int i_chs = image.channels();
                 if (i_chs > 1)
                 {

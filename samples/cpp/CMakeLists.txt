@@ -82,7 +82,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   if(NOT HAVE_opencv_gpuarithm OR NOT HAVE_opencv_gpufilters)
     ocv_list_filterout(cpp_samples "/gpu/")
   endif()
-  
+
   ocv_list_filterout(cpp_samples "viz")
 
   foreach(sample_filename ${cpp_samples})
