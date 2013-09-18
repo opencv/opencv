@@ -25,7 +25,8 @@ def substitute(build, output_dir):
 
 if __name__ == "__main__":
     """
-    Usage: python build_info.py --os os_version_string
+    Usage: python build_info.py --jinja2 /path/to/jinja2/engine
+                                --os os_version_string
                                 --arch [bitness processor]
                                 --compiler [id version]
                                 --mex_arch arch_string

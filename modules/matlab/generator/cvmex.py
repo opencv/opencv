@@ -26,7 +26,8 @@ def substitute(cv, output_dir):
 
 if __name__ == "__main__":
     """
-    Usage: python cvmex.py  --opts [-list -of -opts]
+    Usage: python cvmex.py  --jinja2 /path/to/jinja2/engine
+                            --opts [-list -of -opts]
                             --include_dirs [-list -of -opencv_include_directories]
                             --lib_dir opencv_lib_directory
                             --libs [-lopencv_core -lopencv_imgproc ...]

@@ -124,9 +124,8 @@ opencv/modules/matlab (this module)
 
 * `CMakeLists.txt` (main cmake configuration file)
 * `README.md` (this file)
-* `compile.cmake` (the cmake help script for compiling generated source code)
+* `compile.cmake` (the cmake script for compiling generated source code)
 * `generator` (the folder containing generator code)
-  * `jinja2` (the binding templating engine)
   * `filters.py` (template filters)
   * `gen_matlab.py` (the binding generator control script)
   * `parse_tree.py` (python class to refactor the hdr_parser.py output)
@@ -135,7 +134,6 @@ opencv/modules/matlab (this module)
   * `mxarray.hpp` (C++ OOP-style interface for Matlab mxArray* class)
   * `bridge.hpp` (type conversions)
   * `map.hpp` (hash map interface for instance storage and method lookup)
-* `io` (FileStorage interface for .mat files)
 * `test` (generator, compiler and binding test scripts)
 
 
@@ -262,27 +260,40 @@ File Reference
 **gen_matlab.py**
 gen_matlab has the following call signature:
 
-  gen_matlab.py --hdrparser path/to/hdr_parser/dir
+  gen_matlab.py --jinja2 path/to/jinja2/engine
+          --hdrparser path/to/hdr_parser/dir
           --rstparser path/to/rst_parser/dir
           --moduleroot path/to/opencv/modules
-          --modules core imgproc highgui etc
+          --modules [core imgproc highgui ...]
           --extra namespace=/additional/header/to/parse
           --outdir /path/to/place/generated/src
 
 **build_info.py**
 build_info has the following call signature:
 
-  build_info.py --os operating_system_string
-          --arch bitness processor
-          --compiler id version
+  build_info.py --jinja2 path/to/jinja2/engine
+          --os operating_system_string
+          --arch [bitness processor]
+          --compiler [id version]
           --mex_arch arch_string
           --mex_script /path/to/mex/script
-          --cxx_flags -list -of -flags -to -passthrough
+          --cxx_flags [-list -of -flags -to -passthrough]
           --opencv_version version_string
           --commit commit_hash_if_using_git
           --modules core imgproc highgui etc
           --configuration Debug/Release
           --outdir path/to/place/build/info
+
+**cvmex.py**
+cvmex.py, the custom compiler generator, has the following call signature:
+
+  cvmex.py --jinja2 path/to/jinja2/engine
+          --opts [-list -of -opts]
+          --include_dirs [-list -of -opencv_include_directories]
+          --lib_dir opencv_lib_directory
+          --libs [-lopencv_core -lopencv_imgproc ...]
+          --flags [-Wall -opencv_build_flags ...]
+          --outdir /path/to/generated/output
 
 **parse_tree.py**
 To build a parse tree, first parse a set of headers, then invoke the parse tree to refactor the output:

@@ -379,10 +379,10 @@ public:
    *
    * e.g.
    * {
-   *    MxArray A<double>(5, 5);        // allocates memory
-   *    MxArray B<double>(5, 5);        // ditto
-   *    plhs[0] = A;                    // not allowed!!
-   *    plhs[0] = A.releaseOwnership(); // makes explicit that ownership is being released
+   *    MxArray A = MxArray::Matrix<double>(5, 5);  // allocates memory
+   *    MxArray B = MxArray::Matrix<double>(5, 5);  // ditto
+   *    plhs[0] = A;                                // not allowed!!
+   *    plhs[0] = A.releaseOwnership();             // makes explicit that ownership is being released
    * } // end of scope. B is released, A isn't
    *
    */
