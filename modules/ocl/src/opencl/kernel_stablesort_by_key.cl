@@ -65,7 +65,7 @@
 //  by a base pointer and left and right index for a particular candidate value.  The comparison operator is
 //  passed as a functor parameter my_comp
 //  This function returns an index that is the first index whos value would be equal to the searched value
-static uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
+inline uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
 {
     //  The values firstIndex and lastIndex get modified within the loop, narrowing down the potential sequence
     uint firstIndex = left;
@@ -101,7 +101,7 @@ static uint lowerBoundBinary( global K_T* data, uint left, uint right, K_T searc
 //  passed as a functor parameter my_comp
 //  This function returns an index that is the first index whos value would be greater than the searched value
 //  If the search value is not found in the sequence, upperbound returns the same result as lowerbound
-static uint upperBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
+inline uint upperBoundBinary( global K_T* data, uint left, uint right, K_T searchVal)
 {
     uint upperBound = lowerBoundBinary( data, left, right, searchVal );
 
