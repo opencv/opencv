@@ -72,16 +72,16 @@ Ptr<TrackerSamplerAlgorithm> TrackerSamplerAlgorithm::create( const String& trac
 {
   if( trackerSamplerType.find( "CSC" ) == 0 )
   {
-    return new TrackerSamplerCSC();
+    return Ptr<TrackerSamplerCSC>( new TrackerSamplerCSC() );
   }
 
   if( trackerSamplerType.find( "CS" ) == 0 )
   {
-    return new TrackerSamplerCS();
+    return Ptr<TrackerSamplerCS>( new TrackerSamplerCS() );
   }
 
   CV_Error( -1, "Tracker sampler algorithm type not supported" );
-  return 0;
+  return Ptr<TrackerSamplerAlgorithm>();
 }
 
 String TrackerSamplerAlgorithm::getClassName() const

@@ -63,9 +63,9 @@ bool Tracker::init( const Mat& image, const Rect& boundingBox )
   if( image.empty() )
     return false;
 
-  sampler = new TrackerSampler();
-  featureSet = new TrackerFeatureSet();
-  model = 0;
+  sampler = Ptr<TrackerSampler>( new TrackerSampler() );
+  featureSet = Ptr<TrackerFeatureSet>( new TrackerFeatureSet() );
+  model = Ptr<TrackerModel>();
 
   bool initTracker = initImpl( image, boundingBox );
 

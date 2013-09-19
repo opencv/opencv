@@ -56,7 +56,7 @@ TrackerStateEstimator::~TrackerStateEstimator()
 Ptr<TrackerTargetState> TrackerStateEstimator::estimate( const std::vector<ConfidenceMap>& confidenceMaps )
 {
   if( confidenceMaps.empty() )
-    return 0;
+    return Ptr<TrackerTargetState>();
 
   return estimateImpl( confidenceMaps );
 
@@ -76,16 +76,16 @@ Ptr<TrackerStateEstimator> TrackerStateEstimator::create( const String& trackeSt
 
   if( trackeStateEstimatorType.find( "SVM" ) == 0 )
   {
-    return new TrackerStateEstimatorSVM();
+    return Ptr<TrackerStateEstimatorSVM>( new TrackerStateEstimatorSVM() );
   }
 
   if( trackeStateEstimatorType.find( "BOOSTING" ) == 0 )
   {
-    return new TrackerStateEstimatorMILBoosting();
+    return Ptr<TrackerStateEstimatorMILBoosting>( new TrackerStateEstimatorMILBoosting() );
   }
 
   CV_Error( -1, "Tracker state estimator type not supported" );
-  return 0;
+  return Ptr<TrackerStateEstimator>();
 }
 
 String TrackerStateEstimator::getClassName() const
@@ -155,7 +155,7 @@ Ptr<TrackerTargetState> TrackerStateEstimatorMILBoosting::estimateImpl( const st
 {
   //run ClfMilBoost classify in order to compute next location
   if( currentConfidenceMap.empty() )
-    return 0;
+    return Ptr<TrackerTargetState>();
 
   Mat positiveStates;
   Mat negativeStates;
@@ -178,7 +178,7 @@ void TrackerStateEstimatorMILBoosting::prepareData( const ConfidenceMap& confide
 
   for ( size_t i = 0; i < confidenceMap.size(); i++ )
   {
-    Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first;
+    Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first.staticCast<TrackerMILTargetState>();
     if( currentTargetState->isTargetFg() )
       posCounter++;
     else
@@ -195,7 +195,7 @@ void TrackerStateEstimatorMILBoosting::prepareData( const ConfidenceMap& confide
   int nc = 0;
   for ( size_t i = 0; i < confidenceMap.size(); i++ )
   {
-    Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first;
+    Ptr<TrackerMILTargetState> currentTargetState = confidenceMap.at( i ).first.staticCast<TrackerMILTargetState>();
     Mat stateFeatures = currentTargetState->getFeatures();
 
     if( currentTargetState->isTargetFg() )
