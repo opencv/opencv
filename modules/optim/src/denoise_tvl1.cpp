@@ -18,6 +18,21 @@ namespace cv{namespace optim{
             double _scale;
     };
 
+#ifndef OPENCV_NOSTL
+    using std::transform;
+#else
+    template <class InputIterator, class InputIterator2, class OutputIterator, class BinaryOperator>
+    static OutputIterator transform (InputIterator first1, InputIterator last1, InputIterator2 first2,
+                                     OutputIterator result, BinaryOperator binary_op)
+    {
+        while (first1 != last1)
+        {
+            *result = binary_op(*first1, *first2);
+            ++result; ++first1; ++first2;
+        }
+        return result;
+    }
+#endif
     void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda, int niters){
 
         CV_Assert(observations.size()>0 && niters>0 && lambda>0);
@@ -68,7 +83,7 @@ namespace cv{namespace optim{
 
             //Rs = clip(Rs + sigma*(X-imgs), -clambda, clambda)
             for(count=0;count<(int)Rs.size();count++){
-                std::transform<MatIterator_<double>,MatConstIterator_<uchar>,MatIterator_<double>,AddFloatToCharScaled>(
+                transform<MatIterator_<double>,MatConstIterator_<uchar>,MatIterator_<double>,AddFloatToCharScaled>(
                         Rs[count].begin(),Rs[count].end(),observations[count].begin<uchar>(),
                         Rs[count].begin(),AddFloatToCharScaled(-sigma/255.0));
                 Rs[count]+=sigma*X;
