@@ -51,8 +51,9 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> gemmFixture;
 
-PERF_TEST_P(gemmFixture, DISABLED_gemm,
-            ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000)) // TODO not implemented
+#ifdef HAVE_CLAMDBLAS
+
+PERF_TEST_P(gemmFixture, gemm, ::testing::Values(OCL_SIZE_1000, OCL_SIZE_2000))
 {
     const Size srcSize = GetParam();
 
@@ -72,14 +73,16 @@ PERF_TEST_P(gemmFixture, DISABLED_gemm,
 
         oclDst.download(dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 0.01);
     }
     else if (RUN_PLAIN_IMPL)
     {
         TEST_CYCLE() cv::gemm(src1, src2, 1.0, src3, 1.0, dst);
 
-        SANITY_CHECK(dst);
+        SANITY_CHECK(dst, 0.01);
     }
     else
         OCL_PERF_ELSE
 }
+
+#endif

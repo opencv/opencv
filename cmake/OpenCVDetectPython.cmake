@@ -78,6 +78,7 @@ endif()
 
 if(BUILD_DOCS)
   find_host_program(SPHINX_BUILD sphinx-build)
+  find_host_program(PLANTUML plantuml)
   if(SPHINX_BUILD)
       execute_process(COMMAND "${SPHINX_BUILD}"
                       OUTPUT_QUIET

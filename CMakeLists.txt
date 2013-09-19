@@ -280,7 +280,7 @@ set(OPENCV_EXTRA_MODULES_PATH "" CACHE PATH "Where to look for additional OpenCV
 # ----------------------------------------------------------------------------
 #  Autodetect if we are in a GIT repository
 # ----------------------------------------------------------------------------
-find_package(Git QUIET)
+find_host_package(Git QUIET)
 
 if(GIT_FOUND)
   execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty --match "2.[0-9].[0-9]*"
@@ -392,6 +392,9 @@ endif()
 if(WITH_OPENCL)
   include(cmake/OpenCVDetectOpenCL.cmake)
 endif()
+
+# --- Matlab/Octave ---
+include(cmake/OpenCVFindMatlab.cmake)
 
 # ----------------------------------------------------------------------------
 # Solution folders:
@@ -829,6 +832,14 @@ if(NOT ANDROID)
 endif()
 status("    Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
 
+# ========================= matlab =========================
+status("")
+status("  Matlab:")
+status("    mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+if (MATLAB_FOUND)
+  status("    Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
+endif()
+
 # ========================== documentation ==========================
 if(BUILD_DOCS)
   status("")
@@ -840,6 +851,7 @@ if(BUILD_DOCS)
   endif()
   status("    Sphinx:"              HAVE_SPHINX              THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
   status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER        THEN "${PDFLATEX_COMPILER}" ELSE NO)
+  status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
 endif()
 
 # ========================== samples and tests ==========================

@@ -137,7 +137,7 @@ class CV_EXPORTS ERClassifierNM1 : public ERFilter::Callback
 {
 public:
     //Constructor
-    ERClassifierNM1();
+    ERClassifierNM1(const std::string& filename);
     // Destructor
     ~ERClassifierNM1() {};
 
@@ -153,7 +153,7 @@ class CV_EXPORTS ERClassifierNM2 : public ERFilter::Callback
 {
 public:
     //constructor
-    ERClassifierNM2();
+    ERClassifierNM2(const std::string& filename);
     // Destructor
     ~ERClassifierNM2() {};
 
@@ -988,24 +988,13 @@ int ERFilterNM::getNumRejected()
 
 
 // load default 1st stage classifier if found
-ERClassifierNM1::ERClassifierNM1()
+ERClassifierNM1::ERClassifierNM1(const std::string& filename)
 {
 
-    if (ifstream("./trained_classifierNM1.xml"))
-    {
-        // The file with default classifier exists
-        boost.load("./trained_classifierNM1.xml", "boost");
-    }
-    else if (ifstream("./training/trained_classifierNM1.xml"))
-    {
-        // The file with default classifier exists
-        boost.load("./training/trained_classifierNM1.xml", "boost");
-    }
+    if (ifstream(filename.c_str()))
+        boost.load( filename.c_str(), "boost" );
     else
-    {
-        // File not found
-        CV_Error(CV_StsBadArg, "Default classifier ./trained_classifierNM1.xml not found!");
-    }
+        CV_Error(CV_StsBadArg, "Default classifier file not found!");
 };
 
 double ERClassifierNM1::eval(const ERStat& stat)
@@ -1026,24 +1015,12 @@ double ERClassifierNM1::eval(const ERStat& stat)
 
 
 // load default 2nd stage classifier if found
-ERClassifierNM2::ERClassifierNM2()
+ERClassifierNM2::ERClassifierNM2(const std::string& filename)
 {
-
-    if (ifstream("./trained_classifierNM2.xml"))
-    {
-        // The file with default classifier exists
-        boost.load("./trained_classifierNM2.xml", "boost");
-    }
-    else if (ifstream("./training/trained_classifierNM2.xml"))
-    {
-        // The file with default classifier exists
-        boost.load("./training/trained_classifierNM2.xml", "boost");
-    }
+    if (ifstream(filename.c_str()))
+        boost.load( filename.c_str(), "boost" );
     else
-    {
-        // File not found
-        CV_Error(CV_StsBadArg, "Default classifier ./trained_classifierNM2.xml not found!");
-    }
+        CV_Error(CV_StsBadArg, "Default classifier file not found!");
 };
 
 double ERClassifierNM2::eval(const ERStat& stat)
@@ -1079,7 +1056,8 @@ double ERClassifierNM2::eval(const ERStat& stat)
     local minimum is greater than minProbabilityDiff).
 
     \param  cb                Callback with the classifier.
-                              if omitted tries to load a default classifier from file trained_classifierNM1.xml
+                              default classifier can be implicitly load with function loadClassifierNM1()
+                              from file in samples/cpp/trained_classifierNM1.xml
     \param  thresholdDelta    Threshold step in subsequent thresholds when extracting the component tree
     \param  minArea           The minimum area (% of image size) allowed for retreived ER's
     \param  minArea           The maximum area (% of image size) allowed for retreived ER's
@@ -1099,10 +1077,7 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
 
     Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
-    if (cb == NULL)
-        filter->setCallback(makePtr<ERClassifierNM1>());
-    else
-        filter->setCallback(cb);
+    filter->setCallback(cb);
 
     filter->setThresholdDelta(thresholdDelta);
     filter->setMinArea(minArea);
@@ -1123,7 +1098,8 @@ Ptr<ERFilter> createERFilterNM1(const Ptr<ERFilter::Callback>& cb, int threshold
     additional features: hole area ratio, convex hull ratio, and number of outer inflexion points.
 
     \param  cb             Callback with the classifier
-                           if omitted tries to load a default classifier from file trained_classifierNM2.xml
+                           default classifier can be implicitly load with function loadClassifierNM1()
+                           from file in samples/cpp/trained_classifierNM2.xml
     \param  minProbability The minimum probability P(er|character) allowed for retreived ER's
 */
 Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProbability)
@@ -1133,12 +1109,144 @@ Ptr<ERFilter> createERFilterNM2(const Ptr<ERFilter::Callback>& cb, float minProb
 
     Ptr<ERFilterNM> filter = makePtr<ERFilterNM>();
 
-    if (cb == NULL)
-        filter->setCallback(makePtr<ERClassifierNM2>());
-    else
-        filter->setCallback(cb);
+    filter->setCallback(cb);
 
     filter->setMinProbability(minProbability);
     return (Ptr<ERFilter>)filter;
+}
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM1.xml) returns a pointer to ERFilter::Callback.
+*/
+Ptr<ERFilter::Callback> loadClassifierNM1(const std::string& filename)
+
+{
+    return makePtr<ERClassifierNM1>(filename);
+}
+
+/*!
+    Allow to implicitly load the default classifier when creating an ERFilter object.
+    The function takes as parameter the XML or YAML file with the classifier model
+    (e.g. trained_classifierNM2.xml) returns a pointer to ERFilter::Callback.
+*/
+Ptr<ERFilter::Callback> loadClassifierNM2(const std::string& filename)
+{
+    return makePtr<ERClassifierNM2>(filename);
+}
+
+
+/* ------------------------------------------------------------------------------------*/
+/* -------------------------------- Compute Channels NM -------------------------------*/
+/* ------------------------------------------------------------------------------------*/
+
+
+void  get_gradient_magnitude(Mat& _grey_img, Mat& _gradient_magnitude);
+
+void get_gradient_magnitude(Mat& _grey_img, Mat& _gradient_magnitude)
+{
+    Mat C = Mat_<float>(_grey_img);
+
+    Mat kernel = (Mat_<float>(1,3) << -1,0,1);
+    Mat grad_x;
+    filter2D(C, grad_x, -1, kernel, Point(-1,-1), 0, BORDER_DEFAULT);
+
+    Mat kernel2 = (Mat_<float>(3,1) << -1,0,1);
+    Mat grad_y;
+    filter2D(C, grad_y, -1, kernel2, Point(-1,-1), 0, BORDER_DEFAULT);
+
+    magnitude( grad_x, grad_y, _gradient_magnitude);
+}
+
+
+/*!
+    Compute the diferent channels to be processed independently in the N&M algorithm
+    Neumann L., Matas J.: Real-Time Scene Text Localization and Recognition, CVPR 2012
+
+    In N&M algorithm, the combination of intensity (I), hue (H), saturation (S), and gradient
+    magnitude channels (Grad) are used in order to obatin high localization recall.
+    This implementation also the alternative combination of red (R), grren (G), blue (B),
+    lightness (L), and gradient magnitude (Grad).
+
+    \param  _src           Source image. Must be RGB CV_8UC3.
+    \param  _channels      Output vector<Mat> where computed channels are stored.
+    \param  _mode          Mode of operation. Currently the only available options are
+                           ERFILTER_NM_RGBLGrad and ERFILTER_NM_IHSGrad.
+
+*/
+void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels, int _mode)
+{
+
+    CV_Assert( ( _mode == ERFILTER_NM_RGBLGrad ) || ( _mode == ERFILTER_NM_IHSGrad ) );
+
+    Mat src = _src.getMat();
+    if( src.empty() )
+    {
+        _channels.release();
+        return;
+    }
+
+    // assert RGB image
+    CV_Assert(src.type() == CV_8UC3);
+
+    if (_mode == ERFILTER_NM_IHSGrad)
+    {
+        _channels.create( 4, 1, src.depth());
+
+        Mat hsv;
+        cvtColor(src, hsv, COLOR_RGB2HSV);
+        vector<Mat> channelsHSV;
+        split(hsv, channelsHSV);
+
+        for (int i = 0; i < src.channels(); i++)
+        {
+            _channels.create(src.rows, src.cols, CV_8UC1, i);
+            Mat channel = _channels.getMat(i);
+            channelsHSV.at(i).copyTo(channel);
+        }
+
+        Mat grey;
+        cvtColor(src, grey, COLOR_RGB2GRAY);
+        Mat gradient_magnitude = Mat_<float>(grey.size());
+        get_gradient_magnitude( grey, gradient_magnitude);
+        gradient_magnitude.convertTo(gradient_magnitude, CV_8UC1);
+
+        _channels.create(src.rows, src.cols, CV_8UC1, 3);
+        Mat channelGrad = _channels.getMat(3);
+        gradient_magnitude.copyTo(channelGrad);
+
+    } else if (_mode == ERFILTER_NM_RGBLGrad) {
+
+        _channels.create( 5, 1, src.depth());
+
+        vector<Mat> channelsRGB;
+        split(src, channelsRGB);
+        for (int i = 0; i < src.channels(); i++)
+        {
+            _channels.create(src.rows, src.cols, CV_8UC1, i);
+            Mat channel = _channels.getMat(i);
+            channelsRGB.at(i).copyTo(channel);
+        }
+
+        Mat hls;
+        cvtColor(src, hls, COLOR_RGB2HLS);
+        vector<Mat> channelsHLS;
+        split(hls, channelsHLS);
+
+        _channels.create(src.rows, src.cols, CV_8UC1, 3);
+        Mat channelL = _channels.getMat(3);
+        channelsHLS.at(1).copyTo(channelL);
+
+        Mat grey;
+        cvtColor(src, grey, COLOR_RGB2GRAY);
+        Mat gradient_magnitude = Mat_<float>(grey.size());
+        get_gradient_magnitude( grey, gradient_magnitude);
+        gradient_magnitude.convertTo(gradient_magnitude, CV_8UC1);
+
+        _channels.create(src.rows, src.cols, CV_8UC1, 4);
+        Mat channelGrad = _channels.getMat(4);
+        gradient_magnitude.copyTo(channelGrad);
+    }
 }
 }

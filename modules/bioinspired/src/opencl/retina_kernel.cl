@@ -43,6 +43,9 @@
 //
 //M*/
 
+//data (which is float) is aligend in 32 bytes
+#define WIDTH_MULTIPLE (32 >> 2)
+
 /////////////////////////////////////////////////////////
 //*******************************************************
 // basicretinafilter
@@ -116,22 +119,18 @@ kernel void horizontalAnticausalFilter(
 
     float4 result_v4 = (float4)(0), out_v4;
     float result = 0;
-    // we assume elements_per_row is multple of 4
-    for(int i = 0; i < 4; ++ i, -- optr)
+    // we assume elements_per_row is multple of WIDTH_MULTIPLE
+    for(int i = 0; i < WIDTH_MULTIPLE; ++ i, -- optr)
     {
-        if(i < elements_per_row - cols)
-        {
-            *optr = result;
-        }
-        else
+        if(i >= elements_per_row - cols)
         {
             result = *optr + _a * result;
-            *optr = result;
         }
+        *optr = result;
     }
     result_v4.x = result;
     optr -= 3;
-    for(int i = 1; i < elements_per_row / 4; ++i, optr -= 4)
+    for(int i = WIDTH_MULTIPLE / 4; i < elements_per_row / 4; ++i, optr -= 4)
     {
         // shift left, `offset` is type `size_t` so it cannot be negative
         out_v4 = vload4(0, optr);
@@ -223,23 +222,19 @@ kernel void horizontalAnticausalFilter_Irregular(
 
     float4 buf_v4, out_v4, res_v4 = (float4)(0);
     float result = 0;
-    // we assume elements_per_row is multple of 4
-    for(int i = 0; i < 4; ++ i, -- optr, -- bptr)
+    // we assume elements_per_row is multple of WIDTH_MULTIPLE
+    for(int i = 0; i < WIDTH_MULTIPLE; ++ i, -- optr, -- bptr)
     {
-        if(i < elements_per_row - cols)
-        {
-            *optr = result;
-        }
-        else
+        if(i >= elements_per_row - cols)
         {
             result = *optr + *bptr * result;
-            *optr = result;
         }
+        *optr = result;
     }
     res_v4.x = result;
     optr -= 3;
     bptr -= 3;
-    for(int i = 0; i < elements_per_row / 4 - 1; ++i, optr -= 4, bptr -= 4)
+    for(int i = WIDTH_MULTIPLE / 4; i < elements_per_row / 4; ++i, optr -= 4, bptr -= 4)
     {
         buf_v4 = vload4(0, bptr);
         out_v4 = vload4(0, optr);

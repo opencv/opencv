@@ -1,5 +1,6 @@
 /*M///////////////////////////////////////////////////////////////////////////////////////
-// IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
+//
+//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
 //
 //  By downloading, copying, installing or using the software you agree to this license.
 //  If you do not agree to this license, do not download, install,
@@ -9,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2008-2011, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -185,7 +185,7 @@ public:
         double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
 
 /**
- * Detect lines in the input image with the specified ROI.
+ * Detect lines in the input image.
  *
  * @param _image    A grayscale(CV_8UC1) input image.
  *                  If only a roi needs to be selected, use
@@ -194,8 +194,6 @@ public:
  * @param _lines    Return: A vector of Vec4i elements specifying the beginning and ending point of a line.
  *                          Where Vec4i is (x1, y1, x2, y2), point 1 is the start, point 2 - end.
  *                          Returned lines are strictly oriented depending on the gradient.
- * @param _roi      Return: ROI of the image, where lines are to be found. If specified, the returning
- *                          lines coordinates are image wise.
  * @param width     Return: Vector of widths of the regions, where the lines are found. E.g. Width of line.
  * @param prec      Return: Vector of precisions with which the lines are found.
  * @param nfa       Return: Vector containing number of false alarms in the line region, with precision of 10%.
@@ -216,18 +214,19 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    void drawSegments(InputOutputArray image, InputArray lines);
+    void drawSegments(InputOutputArray _image, InputArray lines);
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
  *
- * @param image     The image, where lines will be drawn.
- *                  Should have the size of the image, where the lines were found
+ * @param size      The size of the image, where lines1 and lines2 were found.
  * @param lines1    The first lines that need to be drawn. Color - Blue.
  * @param lines2    The second lines that need to be drawn. Color - Red.
+ * @param image     An optional image, where lines will be drawn.
+ *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, Mat* image = 0);
+    int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray());
 
 private:
     Mat image;
@@ -336,7 +335,7 @@ private:
  * @param rec       Return: The generated rectangle.
  */
     void region2rect(const std::vector<RegionPoint>& reg, const int reg_size, const double reg_angle,
-                    const double prec, const double p, rect& rec) const;
+                     const double prec, const double p, rect& rec) const;
 
 /**
  * Compute region's angle as the principal inertia axis of the region.
@@ -410,7 +409,7 @@ LineSegmentDetectorImpl::LineSegmentDetectorImpl(int _refine, double _scale, dou
               _n_bins > 0);
 }
 
-void LineSegmentDetectorImpl::detect(const InputArray _image, OutputArray _lines,
+void LineSegmentDetectorImpl::detect(InputArray _image, OutputArray _lines,
                 OutputArray _width, OutputArray _prec, OutputArray _nfa)
 {
     Mat_<double> img = _image.getMat();
@@ -1150,7 +1149,7 @@ inline bool LineSegmentDetectorImpl::isAligned(const int& address, const double&
 }
 
 
-void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, const InputArray lines)
+void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray lines)
 {
     CV_Assert(!_image.empty() && (_image.channels() == 1 || _image.channels() == 3));
 
@@ -1186,10 +1185,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, const InputA
 }
 
 
-int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray lines1, const InputArray lines2, Mat* _image)
+int LineSegmentDetectorImpl::compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image)
 {
     Size sz = size;
-    if (_image && _image->size() != size) sz = _image->size();
+    if (_image.needed() && _image.size() != size) sz = _image.size();
     CV_Assert(sz.area());
 
     Mat_<uchar> I1 = Mat_<uchar>::zeros(sz);
@@ -1219,14 +1218,11 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray 
     bitwise_xor(I1, I2, Ixor);
     int N = countNonZero(Ixor);
 
-    if (_image)
+    if (_image.needed())
     {
-        Mat Ig;
-        if (_image->channels() == 1)
-        {
-            cvtColor(*_image, *_image, CV_GRAY2BGR);
-        }
-        CV_Assert(_image->isContinuous() && I1.isContinuous() && I2.isContinuous());
+        CV_Assert(_image.channels() == 3);
+        Mat img = _image.getMatRef();
+        CV_Assert(img.isContinuous() && I1.isContinuous() && I2.isContinuous());
 
         for (unsigned int i = 0; i < I1.total(); ++i)
         {
@@ -1234,11 +1230,12 @@ int LineSegmentDetectorImpl::compareSegments(const Size& size, const InputArray 
             uchar i2 = I2.data[i];
             if (i1 || i2)
             {
-                _image->data[3*i + 1] = 0;
-                if (i1) _image->data[3*i] = 255;
-                else _image->data[3*i] = 0;
-                if (i2) _image->data[3*i + 2] = 255;
-                else _image->data[3*i + 2] = 0;
+                unsigned int base_idx = i * 3;
+                if (i1) img.data[base_idx] = 255;
+                else img.data[base_idx] = 0;
+                img.data[base_idx + 1] = 0;
+                if (i2) img.data[base_idx + 2] = 255;
+                else img.data[base_idx + 2] = 0;
             }
         }
     }

@@ -47,6 +47,45 @@
 
 namespace cv{namespace optim
 {
+class CV_EXPORTS Solver : public Algorithm
+{
+public:
+    class CV_EXPORTS Function
+    {
+    public:
+       virtual ~Function() {}
+       //! ndim - dimensionality
+       virtual double calc(const double* x) const = 0;
+    };
+
+    virtual Ptr<Function> getFunction() const = 0;
+    virtual void setFunction(const Ptr<Function>& f) = 0;
+
+    virtual TermCriteria getTermCriteria() const = 0;
+    virtual void setTermCriteria(const TermCriteria& termcrit) = 0;
+
+    // x contain the initial point before the call and the minima position (if algorithm converged) after. x is assumed to be (something that
+    // after getMat() will return) row-vector or column-vector. *It's size  and should
+    // be consisted with previous dimensionality data given, if any (otherwise, it determines dimensionality)*
+    virtual double minimize(InputOutputArray x) = 0;
+};
+
+//! downhill simplex class
+class CV_EXPORTS DownhillSolver : public Solver
+{
+public:
+    //! returns row-vector, even if the column-vector was given
+    virtual void getInitStep(OutputArray step) const=0;
+    //!This should be called at least once before the first call to minimize() and step is assumed to be (something that
+    //! after getMat() will return) row-vector or column-vector. *It's dimensionality determines the dimensionality of a problem.*
+    virtual void setInitStep(InputArray step)=0;
+};
+
+// both minRange & minError are specified by termcrit.epsilon; In addition, user may specify the number of iterations that the algorithm does.
+CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function>& f=Ptr<Solver::Function>(),
+        InputArray initStep=Mat_<double>(1,1,0.0),
+        TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
+
 //!the return codes for solveLP() function
 enum
 {
@@ -57,6 +96,7 @@ enum
 };
 
 CV_EXPORTS_W int solveLP(const Mat& Func, const Mat& Constr, Mat& z);
+CV_EXPORTS_W void denoise_TVL1(const std::vector<Mat>& observations,Mat& result, double lambda=1.0, int niters=30);
 }}// cv
 
 #endif
