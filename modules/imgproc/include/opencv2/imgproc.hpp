@@ -900,7 +900,7 @@ protected:
     Point2f bottomRight;
 };
 
-class LineSegmentDetector : public Algorithm
+class CV_EXPORTS_W LineSegmentDetector : public Algorithm
 {
 public:
 /**
@@ -922,7 +922,7 @@ public:
  *                              * 1 corresponds to 0.1 mean false alarms
  *                          This vector will be calculated _only_ when the objects type is REFINE_ADV
  */
-    virtual void detect(InputArray _image, OutputArray _lines,
+    CV_WRAP virtual void detect(InputArray _image, OutputArray _lines,
                         OutputArray width = noArray(), OutputArray prec = noArray(),
                         OutputArray nfa = noArray()) = 0;
 
@@ -933,7 +933,7 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @param lines     The lines that need to be drawn
  */
-    virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
+    CV_WRAP virtual void drawSegments(InputOutputArray _image, InputArray lines) = 0;
 
 /**
  * Draw both vectors on the image canvas. Uses blue for lines 1 and red for lines 2.
@@ -945,13 +945,13 @@ public:
  *                  Should have the size of the image, where the lines were found
  * @return          The number of mismatching pixels between lines1 and lines2.
  */
-    virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
+    CV_WRAP virtual int compareSegments(const Size& size, InputArray lines1, InputArray lines2, InputOutputArray _image = noArray()) = 0;
 
     virtual ~LineSegmentDetector() {};
 };
 
 //! Returns a pointer to a LineSegmentDetector class.
-CV_EXPORTS Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
+CV_EXPORTS_W Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(
     int _refine = LSD_REFINE_STD, double _scale = 0.8,
     double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5,
     double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024);
