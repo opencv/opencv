@@ -1311,28 +1311,3 @@ static bool lessOrEqual(double number1, double number2) {
 }
 
 };
-
-
-////////////////////////////////////////////// C API ///////////////////////////////////////////
-
-
-//! Find the minimum enclosing triangle and its area for the given set of points
-/*!
-* @param points         Set of points
-* @param triangle       Minimum area triangle enclosing the given set of points
-* @param area           Area of the minimum area enclosing triangle
-*/
-CV_IMPL void
-cvMinEnclosingTriangle( const CvArr* _points, CvArr* _triangle, double* _area ) {
-    cv::Mat points = cv::cvarrToMat(_points);
-    cv::Mat triangle = cv::cvarrToMat(_triangle);
-    double area = 0;
-
-    cv::minEnclosingTriangle(points, triangle, area);
-
-    if (_area) {
-        *_area = area;
-    }
-}
-
-/* End of file. */

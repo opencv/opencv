@@ -572,19 +572,15 @@ Finds a triangle of minimum area enclosing a 2D point set.
 
 .. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> triangle, area
 
-.. ocv:cfunction:: void cvMinEnclosingTriangle( const CvArr* points, CvArr* triangle, double* area )
-
     :param points: Input vector of 2D points with depth ``CV_32S`` or ``CV_32F``, stored in:
 
             * ``std::vector<>`` or ``Mat`` (C++ interface)
-
-            * ``CvSeq*`` or ``CvMat*`` (C interface)
 
             * Nx2 numpy array (Python interface)
 
     :param triangle: Output vector of three 2D points defining the vertices of the triangle. The depth of the OutputArray must be ``CV_32F``.
 
-    :param area: The area of the minimum enclosing triangle. The ``C`` interface of the function allows providing a ``NULL`` pointer for this parameter in order for the value of the area not to be returned.
+    :param area: The area of the minimum enclosing triangle.
 
 The output for a given 2D point set is shown in the image below. The 2D points are depicted in *red* and the enclosing triangle in *yellow*.
 
@@ -717,9 +713,9 @@ See below a sample output of the function where each image pixel is tested again
 
 .. [Hu62] M. Hu. *Visual Pattern Recognition by Moment Invariants*, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
 
-.. [KleeLaskowski85] Klee, V. and Laskowski, M.C., *Finding the smallest triangles containing a given convex polygon*, Journal of Algorithms, vol. 6, no. 3, pp. 359–375 (1985)
+.. [KleeLaskowski85] Klee, V. and Laskowski, M.C., *Finding the smallest triangles containing a given convex polygon*, Journal of Algorithms, vol. 6, no. 3, pp. 359-375 (1985)
 
-.. [ORourke86] O’Rourke, J., Aggarwal, A., Maddila, S., and Baldwin, M., *An optimal algorithm for finding minimal enclosing triangles*, Journal of Algorithms, vol. 7, no. 2, pp. 258–269 (1986)
+.. [ORourke86] O’Rourke, J., Aggarwal, A., Maddila, S., and Baldwin, M., *An optimal algorithm for finding minimal enclosing triangles*, Journal of Algorithms, vol. 7, no. 2, pp. 258-269 (1986)
 
 .. [Sklansky82] Sklansky, J., *Finding the Convex Hull of a Simple Polygon*. PRL 1 $number, pp 79-83 (1982)
 
