@@ -23,6 +23,7 @@
 *.idl          text
 *.java         text
 *.js           text
+*.m            text
 *.mk           text
 *.mm           text
 *.plist        text
