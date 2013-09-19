@@ -562,15 +562,11 @@ The function finds the four vertices of a rotated rectangle. This function is us
 
 minEnclosingTriangle
 ----------------------
-Finds a triangle of minimum area enclosing a 2D point set.
+Finds a triangle of minimum area enclosing a 2D point set and returns its area.
 
-.. ocv:function:: void minEnclosingTriangle( InputArray points, OutputArray triangle )
+.. ocv:function:: double minEnclosingTriangle( InputArray points, OutputArray triangle )
 
-.. ocv:function:: void minEnclosingTriangle( InputArray points, OutputArray triangle, double &area )
-
-.. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> triangle
-
-.. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> triangle, area
+.. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> retval, triangle
 
     :param points: Input vector of 2D points with depth ``CV_32S`` or ``CV_32F``, stored in:
 
@@ -580,9 +576,7 @@ Finds a triangle of minimum area enclosing a 2D point set.
 
     :param triangle: Output vector of three 2D points defining the vertices of the triangle. The depth of the OutputArray must be ``CV_32F``.
 
-    :param area: The area of the minimum enclosing triangle.
-
-The output for a given 2D point set is shown in the image below. The 2D points are depicted in *red* and the enclosing triangle in *yellow*.
+The function finds a triangle of minimum area enclosing the given set of 2D points and returns its area. The output for a given 2D point set is shown in the image below. 2D points are depicted in *red* and the enclosing triangle in *yellow*.
 
 .. image:: pics/minenclosingtriangle.png
     :height: 250px

@@ -801,7 +801,6 @@ protected:
 
     std::vector<cv::Point2f> convexPolygon;
     std::vector<cv::Point2f> triangle;
-    double area;
 };
 
 
@@ -827,7 +826,7 @@ void CV_MinTriangleTest::run_func()
 
     cv::cvarrToMat(points).convertTo(pointsAsVector, CV_32F);
 
-    cv::minEnclosingTriangle(pointsAsVector, triangle, area);
+    cv::minEnclosingTriangle(pointsAsVector, triangle);
     cv::convexHull(pointsAsVector, convexPolygon, true, true);
 }
 

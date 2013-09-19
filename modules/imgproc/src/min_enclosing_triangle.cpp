@@ -269,27 +269,17 @@ static void updateSidesCA();
 ///////////////////////////////////// Main functions /////////////////////////////////////
 
 
-//! Find the minimum enclosing triangle and its area for the given set of points
-/*!
-* @param points         Set of points
-* @param triangle       Minimum area triangle enclosing the given set of points
-* @param area           Area of the minimum area enclosing triangle
-*/
-void cv::minEnclosingTriangle(cv::InputArray points,
-                              CV_OUT cv::OutputArray triangle, CV_OUT double &area) {
-    minEnclosingTriangle::findMinEnclosingTriangle(points, triangle, area);
-}
-
-//! Find the minimum enclosing triangle and its area for the given set of points
+//! Find the minimum enclosing triangle for the given set of points and return its area
 /*!
 * @param points         Set of points
 * @param triangle       Minimum area triangle enclosing the given set of points
 */
-void cv::minEnclosingTriangle(cv::InputArray points,
-                              CV_OUT cv::OutputArray triangle) {
+double cv::minEnclosingTriangle(cv::InputArray points, CV_OUT cv::OutputArray triangle) {
     double area;
 
     minEnclosingTriangle::findMinEnclosingTriangle(points, triangle, area);
+
+    return area;
 }
 
 
