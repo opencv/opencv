@@ -50,41 +50,36 @@ using namespace std;
 using std::cout;
 using std::endl;
 
-namespace cv
+namespace cv { namespace ocl {
+
+class ProgramCache
 {
-    namespace ocl
-    {
-        class ProgramCache
-        {
-        protected:
-            ProgramCache();
-            friend class auto_ptr<ProgramCache>;
-            static auto_ptr<ProgramCache> programCache;
+protected:
+	ProgramCache();
+	~ProgramCache();
+	friend class std::auto_ptr<ProgramCache>;
+public:
+	static ProgramCache *getProgramCache();
 
-        public:
-            ~ProgramCache();
-            static ProgramCache *getProgramCache()
-            {
-                if( NULL == programCache.get())
-                    programCache.reset(new ProgramCache());
-                return programCache.get();
-            }
+	cl_program getProgram(const Context *ctx, const char **source, string kernelName,
+                          const char *build_options);
 
-            //lookup the binary given the file name
-            cl_program progLookup(string srcsign);
+	void releaseProgram();
+protected:
+	//lookup the binary given the file name
+	cl_program progLookup(string srcsign);
 
-            //add program to the cache
-            void addProgram(string srcsign, cl_program program);
-            void releaseProgram();
+	//add program to the cache
+	void addProgram(string srcsign, cl_program program);
 
-            map <string, cl_program> codeCache;
-            unsigned int cacheSize;
-            //The presumed watermark for the cache volume (256MB). Is it enough?
-            //We may need more delicate algorithms when necessary later.
-            //Right now, let's just leave it along.
-            static const unsigned MAX_PROG_CACHE_SIZE = 1024;
-        };
+	map <string, cl_program> codeCache;
+	unsigned int cacheSize;
 
-    }//namespace ocl
+	//The presumed watermark for the cache volume (256MB). Is it enough?
+	//We may need more delicate algorithms when necessary later.
+	//Right now, let's just leave it along.
+	static const unsigned MAX_PROG_CACHE_SIZE = 1024;
+};
 
+}//namespace ocl
 }//namespace cv

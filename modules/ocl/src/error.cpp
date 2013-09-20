@@ -152,19 +152,19 @@ namespace cv
             case CL_INVALID_GLOBAL_WORK_SIZE:
                 return "CL_INVALID_GLOBAL_WORK_SIZE";
                 //case CL_INVALID_PROPERTY:
-                //	return "CL_INVALID_PROPERTY";
+                //    return "CL_INVALID_PROPERTY";
                 //case CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR:
-                //	return "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR";
+                //    return "CL_INVALID_GL_SHAREGROUP_REFERENCE_KHR";
                 //case CL_PLATFORM_NOT_FOUND_KHR:
-                //	return "CL_PLATFORM_NOT_FOUND_KHR";
-                //	//case CL_INVALID_PROPERTY_EXT:
-                //	//    return "CL_INVALID_PROPERTY_EXT";
+                //    return "CL_PLATFORM_NOT_FOUND_KHR";
+                //    //case CL_INVALID_PROPERTY_EXT:
+                //    //    return "CL_INVALID_PROPERTY_EXT";
                 //case CL_DEVICE_PARTITION_FAILED_EXT:
-                //	return "CL_DEVICE_PARTITION_FAILED_EXT";
+                //    return "CL_DEVICE_PARTITION_FAILED_EXT";
                 //case CL_INVALID_PARTITION_COUNT_EXT:
-                //	return "CL_INVALID_PARTITION_COUNT_EXT";
+                //    return "CL_INVALID_PARTITION_COUNT_EXT";
                 //default:
-                //	return "unknown error code";
+                //    return "unknown error code";
             }
             static char buf[256];
             sprintf(buf, "%d", err);

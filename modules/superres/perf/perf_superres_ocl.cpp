@@ -107,9 +107,6 @@ PERF_TEST_P(Size_MatType, SuperResolution_BTVL1_OCL,
     Combine(Values(szSmall64, szSmall128),
     Values(MatType(CV_8UC1), MatType(CV_8UC3))))
 {
-    std::vector<cv::ocl::Info>info;
-    cv::ocl::getDevice(info);
-
     declare.time(5 * 60);
 
     const Size size = std::tr1::get<0>(GetParam());

@@ -95,7 +95,10 @@ namespace cv
                 con_struct -> cmax_disc_term    = max_disc_term;
                 con_struct -> cdisc_single_jump = disc_single_jump;
 
-                cl_con_struct = load_constant(*((cl_context*)getoclContext()), *((cl_command_queue*)getoclCommandQueue()), (void *)con_struct,
+                Context* clCtx = Context::getContext();
+                cl_context clContext = *(cl_context*)(clCtx->getOpenCLContextPtr());
+                cl_command_queue clCmdQueue = *(cl_command_queue*)(clCtx->getOpenCLCommandQueuePtr());
+                cl_con_struct = load_constant(clContext, clCmdQueue, (void *)con_struct,
                                               sizeof(con_struct_t));
 
                 delete con_struct;
