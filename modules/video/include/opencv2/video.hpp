@@ -45,6 +45,7 @@
 #define __OPENCV_VIDEO_HPP__
 
 #include "opencv2/video/tracking.hpp"
+#include "opencv2/video/tracker.hpp"
 #include "opencv2/video/background_segm.hpp"
 
 namespace cv
