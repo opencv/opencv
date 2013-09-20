@@ -15,8 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//		Dachuan Zhao, dachuan@multicorewareinc.com
-//		Yao Wang, yao@multicorewareinc.com
+//        Dachuan Zhao, dachuan@multicorewareinc.com
+//        Yao Wang, yao@multicorewareinc.com
 //
 //
 // Redistribution and use in source and binary forms, with or without modification,

@@ -101,15 +101,15 @@ namespace cv
             for(size_t i = 0; i < args.size(); i ++)
                 openCLSafeCall(clSetKernelArg(kernel, i, args[i].first, args[i].second));
 
-            openCLSafeCall(clEnqueueNDRangeKernel((cl_command_queue)clCxt->oclCommandQueue(), kernel, 3, NULL, globalThreads,
+            openCLSafeCall(clEnqueueNDRangeKernel(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr(), kernel, 3, NULL, globalThreads,
                                                   localThreads, 0, NULL, NULL));
 
             switch(finish_mode)
             {
             case CLFINISH:
-                clFinish((cl_command_queue)clCxt->oclCommandQueue());
+                clFinish(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr());
             case CLFLUSH:
-                clFlush((cl_command_queue)clCxt->oclCommandQueue());
+                clFlush(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr());
                 break;
             case DISABLE:
             default:
@@ -178,7 +178,7 @@ namespace cv
 #ifdef CL_VERSION_1_2
             //this enables backwards portability to
             //run on OpenCL 1.1 platform if library binaries are compiled with OpenCL 1.2 support
-            if(Context::getContext()->supportsFeature(Context::CL_VER_1_2))
+            if(Context::getContext()->supportsFeature(FEATURE_CL_VER_1_2))
             {
                 cl_image_desc desc;
                 desc.image_type       = CL_MEM_OBJECT_IMAGE2D;
@@ -191,13 +191,13 @@ namespace cv
                 desc.buffer           = NULL;
                 desc.num_mip_levels   = 0;
                 desc.num_samples      = 0;
-                texture = clCreateImage((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
+                texture = clCreateImage(*(cl_context*)mat.clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE, &format, &desc, NULL, &err);
             }
             else
 #endif
             {
                 texture = clCreateImage2D(
-                    (cl_context)mat.clCxt->oclContext(),
+                    *(cl_context*)mat.clCxt->getOpenCLContextPtr(),
                     CL_MEM_READ_WRITE,
                     &format,
                     mat.cols,
@@ -212,22 +212,22 @@ namespace cv
             cl_mem devData;
             if (mat.cols * mat.elemSize() != mat.step)
             {
-                devData = clCreateBuffer((cl_context)mat.clCxt->oclContext(), CL_MEM_READ_ONLY, mat.cols * mat.rows
+                devData = clCreateBuffer(*(cl_context*)mat.clCxt->getOpenCLContextPtr(), CL_MEM_READ_ONLY, mat.cols * mat.rows
                     * mat.elemSize(), NULL, NULL);
                 const size_t regin[3] = {mat.cols * mat.elemSize(), mat.rows, 1};
-                clEnqueueCopyBufferRect((cl_command_queue)mat.clCxt->oclCommandQueue(), (cl_mem)mat.data, devData, origin, origin,
+                clEnqueueCopyBufferRect(*(cl_command_queue*)mat.clCxt->getOpenCLCommandQueuePtr(), (cl_mem)mat.data, devData, origin, origin,
                     regin, mat.step, 0, mat.cols * mat.elemSize(), 0, 0, NULL, NULL);
-                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
+                clFlush(*(cl_command_queue*)mat.clCxt->getOpenCLCommandQueuePtr());
             }
             else
             {
                 devData = (cl_mem)mat.data;
             }
 
-            clEnqueueCopyBufferToImage((cl_command_queue)mat.clCxt->oclCommandQueue(), devData, texture, 0, origin, region, 0, NULL, 0);
+            clEnqueueCopyBufferToImage(*(cl_command_queue*)mat.clCxt->getOpenCLCommandQueuePtr(), devData, texture, 0, origin, region, 0, NULL, 0);
             if ((mat.cols * mat.elemSize() != mat.step))
             {
-                clFlush((cl_command_queue)mat.clCxt->oclCommandQueue());
+                clFlush(*(cl_command_queue*)mat.clCxt->getOpenCLCommandQueuePtr());
                 clReleaseMemObject(devData);
             }
 
@@ -259,7 +259,7 @@ namespace cv
             try
             {
                 cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
-                finish();
+                cv::ocl::finish();
                 _support = true;
             }
             catch (const cv::Exception& e)

@@ -157,7 +157,7 @@ cv::ocl::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size blo
 
     effect_size = Size(0, 0);
 
-    if (queryDeviceInfo<IS_CPU_DEVICE, bool>())
+    if (isCpuDevice())
         hog_device_cpu = true;
     else
         hog_device_cpu = false;
@@ -1670,9 +1670,9 @@ void cv::ocl::device::hog::compute_hists(int nbins,
     else
     {
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
-        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
-        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
+        sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
             localThreads, args, -1, -1, opt);
     }
@@ -1734,9 +1734,9 @@ void cv::ocl::device::hog::normalize_hists(int nbins,
     else
     {
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
-        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
-        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
+        sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, opt);
     }
@@ -1803,9 +1803,9 @@ void cv::ocl::device::hog::classify_hists(int win_height, int win_width,
     else
     {
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
-        int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+        size_t wave_size = queryWaveFrontSize(kernel);
         char opt[32] = {0};
-        sprintf(opt, "-D WAVE_SIZE=%d", wave_size);
+        sprintf(opt, "-D WAVE_SIZE=%d", (int)wave_size);
         openCLExecuteKernel(clCxt, &objdetect_hog, kernelName, globalThreads,
                              localThreads, args, -1, -1, opt);
     }

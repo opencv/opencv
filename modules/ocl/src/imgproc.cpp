@@ -289,7 +289,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
 
-                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -317,7 +317,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&map1.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&cols));
-                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double4), (void *)&borderValue));
                 }
@@ -380,7 +380,7 @@ namespace cv
                 args.push_back( make_pair(sizeof(cl_int), (void *)&src.rows));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
                 args.push_back( make_pair(sizeof(cl_int), (void *)&dst.rows));
-                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
                 {
                     args.push_back( make_pair(sizeof(cl_double), (void *)&ifx_d));
                     args.push_back( make_pair(sizeof(cl_double), (void *)&ify_d));
@@ -802,12 +802,12 @@ namespace cv
                 string kernelName = "warpAffine" + s[interpolation];
 
 
-                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
                 {
                     cl_int st;
-                    coeffs_cm = clCreateBuffer( (cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE, sizeof(F) * 2 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr(), (cl_mem)coeffs_cm, 1, 0, sizeof(F) * 2 * 3, coeffs, 0, 0, 0));
                 }
                 else
                 {
@@ -817,8 +817,8 @@ namespace cv
                         {
                             float_coeffs[m][n] = coeffs[m][n];
                         }
-                        coeffs_cm = clCreateBuffer( (cl_context)clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
-                        openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
+                        coeffs_cm = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE, sizeof(float) * 2 * 3, NULL, &st );
+                        openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 2 * 3, float_coeffs, 0, 0, 0));
 
                 }
                 //TODO: improve this kernel
@@ -872,12 +872,12 @@ namespace cv
                 string s[3] = {"NN", "Linear", "Cubic"};
                 string kernelName = "warpPerspective" + s[interpolation];
 
-                if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
+                if(src.clCxt->supportsFeature(FEATURE_CL_DOUBLE))
                 {
                     cl_int st;
-                    coeffs_cm = clCreateBuffer((cl_context) clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE, sizeof(double) * 3 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr(), (cl_mem)coeffs_cm, 1, 0, sizeof(double) * 3 * 3, coeffs, 0, 0, 0));
                 }
                 else
                 {
@@ -886,9 +886,9 @@ namespace cv
                         for(int n = 0; n < 3; n++)
                             float_coeffs[m][n] = coeffs[m][n];
 
-                    coeffs_cm = clCreateBuffer((cl_context) clCxt->oclContext(), CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
+                    coeffs_cm = clCreateBuffer(*(cl_context*)clCxt->getOpenCLContextPtr(), CL_MEM_READ_WRITE, sizeof(float) * 3 * 3, NULL, &st );
                     openCLVerifyCall(st);
-                    openCLSafeCall(clEnqueueWriteBuffer((cl_command_queue)clCxt->oclCommandQueue(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
+                    openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)clCxt->getOpenCLCommandQueuePtr(), (cl_mem)coeffs_cm, 1, 0, sizeof(float) * 3 * 3, float_coeffs, 0, 0, 0));
                 }
                 //TODO: improve this kernel
                 size_t blkSizeX = 16, blkSizeY = 16;
@@ -994,7 +994,7 @@ namespace cv
         void integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
         {
             CV_Assert(src.type() == CV_8UC1);
-            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1192,7 +1192,7 @@ namespace cv
         void cornerHarris_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize,
                           double k, int borderType)
         {
-            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1211,7 +1211,7 @@ namespace cv
 
         void cornerMinEigenVal_dxdy(const oclMat &src, oclMat &dst, oclMat &dx, oclMat &dy, int blockSize, int ksize, int borderType)
         {
-            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+            if(!src.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
             {
                 CV_Error(CV_GpuNotSupported, "select device don't support double");
             }
@@ -1512,17 +1512,17 @@ namespace cv
                 String kernelName = "calcLut";
                 size_t localThreads[3]  = { 32, 8, 1 };
                 size_t globalThreads[3] = { tilesX * localThreads[0], tilesY * localThreads[1], 1 };
-                bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+                bool is_cpu = isCpuDevice();
                 if (is_cpu)
                     openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, (char*)" -D CPU");
                 else
                 {
                     cl_kernel kernel = openCLGetKernelFromSource(Context::getContext(), &imgproc_clahe, kernelName);
-                    int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+                    size_t wave_size = queryWaveFrontSize(kernel);
                     openCLSafeCall(clReleaseKernel(kernel));
 
                     static char opt[20] = {0};
-                    sprintf(opt, " -D WAVE_SIZE=%d", wave_size);
+                    sprintf(opt, " -D WAVE_SIZE=%d", (int)wave_size);
                     openCLExecuteKernel(Context::getContext(), &imgproc_clahe, kernelName, globalThreads, localThreads, args, -1, -1, opt);
                 }
             }

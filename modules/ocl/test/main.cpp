@@ -80,18 +80,18 @@ int main(int argc, char **argv)
     const char *keys =
         "{ h | help     | false              | print help message }"
         "{ t | type     | gpu                | set device type:cpu or gpu}"
-        "{ p | platform | 0                  | set platform id }"
+        "{ p | platform | -1                 | set platform id }"
         "{ d | device   | 0                  | set device id }";
 
     CommandLineParser cmd(argc, argv, keys);
     if (cmd.get<bool>("help"))
     {
-        cout << "Avaible options besides goole test option:" << endl;
+        cout << "Available options besides google test option:" << endl;
         cmd.printParams();
         return 0;
     }
     string type = cmd.get<string>("type");
-    unsigned int pid = cmd.get<unsigned int>("platform");
+    int pid = cmd.get<int>("platform");
     int device = cmd.get<int>("device");
 
     print_info();
@@ -100,24 +100,29 @@ int main(int argc, char **argv)
     {
         flag = CVCL_DEVICE_TYPE_CPU;
     }
-    std::vector<cv::ocl::Info> oclinfo;
-    int devnums = getDevice(oclinfo, flag);
-    if(devnums <= device || device < 0)
+
+    cv::ocl::PlatformsInfo platformsInfo;
+    cv::ocl::getOpenCLPlatforms(platformsInfo);
+    if (pid >= (int)platformsInfo.size())
     {
-        std::cout << "device invalid\n";
-        return -1;
-    }
-    if(pid >= oclinfo.size())
-    {
-        std::cout << "platform invalid\n";
-        return -1;
+        std::cout << "platform is invalid\n";
+        return 1;
     }
 
-    setDevice(oclinfo[pid], device);
+    cv::ocl::DevicesInfo devicesInfo;
+    int devnums = cv::ocl::getOpenCLDevices(devicesInfo, flag, (pid < 0) ? NULL : platformsInfo[pid]);
+    if (device < 0 || device >= devnums)
+    {
+        std::cout << "device/platform invalid\n";
+        return 1;
+    }
 
+    cv::ocl::setDevice(devicesInfo[device]);
     setBinaryDiskCache(CACHE_UPDATE);
 
-    cout << "Device type:" << type << endl << "Device name:" << oclinfo[pid].DeviceName[device] << endl;
+    cout << "Device type: " << type << endl
+            << "Platform name: " << devicesInfo[device]->platform->platformName << endl
+            << "Device name: " << devicesInfo[device]->deviceName << endl;
     return RUN_ALL_TESTS();
 }
 

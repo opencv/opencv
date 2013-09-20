@@ -338,7 +338,7 @@ void cv::ocl::GoodFeaturesToTrackDetector_OCL::downloadPoints(const oclMat &poin
     CV_DbgAssert(points.type() == CV_32FC2);
     points_v.resize(points.cols);
     openCLSafeCall(clEnqueueReadBuffer(
-        *reinterpret_cast<cl_command_queue*>(getoclCommandQueue()),
+        *(cl_command_queue*)getClCommandQueuePtr(),
         reinterpret_cast<cl_mem>(points.data),
         CL_TRUE,
         0,

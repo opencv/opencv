@@ -74,7 +74,7 @@ namespace cv
             }
             cl_kernel kernel;
             kernel = openCLGetKernelFromSource(clCxt, source, kernelName, optBufPtr);
-            size_t wave_size = queryDeviceInfo<WAVEFRONT_SIZE, size_t>(kernel);
+            size_t wave_size = queryWaveFrontSize(kernel);
             CV_Assert(clReleaseKernel(kernel) == CL_SUCCESS);
             sprintf(optBufPtr, "-D WAVE_SIZE=%d", static_cast<int>(wave_size));
             openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, channels, depth, optBufPtr);

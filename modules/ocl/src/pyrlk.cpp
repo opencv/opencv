@@ -125,7 +125,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
     args.push_back( make_pair( sizeof(cl_int), (void *)&iters ));
     args.push_back( make_pair( sizeof(cl_char), (void *)&calcErr ));
 
-    bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+    bool is_cpu = isCpuDevice();
     if (is_cpu)
     {
         openCLExecuteKernel(clCxt, &pyrlk, kernelName, globalThreads, localThreads, args, I.oclchannels(), I.depth(), (char*)" -D CPU");
@@ -139,7 +139,7 @@ static void lkSparse_run(oclMat &I, oclMat &J,
             stringstream idxStr;
             idxStr << kernelName << "_C" << I.oclchannels() << "_D" << I.depth();
             cl_kernel kernel = openCLGetKernelFromSource(clCxt, &pyrlk, idxStr.str());
-            int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);
+            int wave_size = (int)queryWaveFrontSize(kernel);
             openCLSafeCall(clReleaseKernel(kernel));
 
             static char opt[32] = {0};

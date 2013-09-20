@@ -245,7 +245,7 @@ static void matchDispatcher(const oclMat &query, const oclMat &train, const oclM
 {
     const oclMat zeroMask;
     const oclMat &tempMask = mask.data ? mask : zeroMask;
-    bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+    bool is_cpu = isCpuDevice();
     if (query.cols <= 64)
     {
         matchUnrolledCached<16, 64>(query, train, tempMask, trainIdx, distance, distType);
@@ -265,7 +265,7 @@ static void matchDispatcher(const oclMat &query, const oclMat *trains, int n, co
 {
     const oclMat zeroMask;
     const oclMat &tempMask = mask.data ? mask : zeroMask;
-    bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+    bool is_cpu = isCpuDevice();
     if (query.cols <= 64)
     {
         matchUnrolledCached<16, 64>(query, trains, n, tempMask, trainIdx, imgIdx, distance, distType);
@@ -286,7 +286,7 @@ static void matchDispatcher(const oclMat &query, const oclMat &train, float maxD
 {
     const oclMat zeroMask;
     const oclMat &tempMask = mask.data ? mask : zeroMask;
-    bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+    bool is_cpu = isCpuDevice();
     if (query.cols <= 64)
     {
         matchUnrolledCached<16, 64>(query, train, maxDistance, tempMask, trainIdx, distance, nMatches, distType);
@@ -469,7 +469,7 @@ static void calcDistanceDispatcher(const oclMat &query, const oclMat &train, con
 static void match2Dispatcher(const oclMat &query, const oclMat &train, const oclMat &mask,
                       const oclMat &trainIdx, const oclMat &distance, int distType)
 {
-    bool is_cpu = queryDeviceInfo<IS_CPU_DEVICE, bool>();
+    bool is_cpu = isCpuDevice();
     if (query.cols <= 64)
     {
         knn_matchUnrolledCached<16, 64>(query, train, mask, trainIdx, distance, distType);

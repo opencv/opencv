@@ -56,7 +56,7 @@ int main(int argc, char ** argv)
     const char * keys =
         "{ h | help     | false              | print help message }"
         "{ t | type     | gpu                | set device type:cpu or gpu}"
-        "{ p | platform | 0                  | set platform id }"
+        "{ p | platform | -1                 | set platform id }"
         "{ d | device   | 0                  | set device id }";
 
     CommandLineParser cmd(argc, argv, keys);
@@ -68,28 +68,34 @@ int main(int argc, char ** argv)
     }
 
     string type = cmd.get<string>("type");
-    unsigned int pid = cmd.get<unsigned int>("platform");
+    int pid = cmd.get<int>("platform");
     int device = cmd.get<int>("device");
 
     int flag = type == "cpu" ? cv::ocl::CVCL_DEVICE_TYPE_CPU :
                                cv::ocl::CVCL_DEVICE_TYPE_GPU;
 
-    std::vector<cv::ocl::Info> oclinfo;
-    int devnums = cv::ocl::getDevice(oclinfo, flag);
-    if (devnums <= device || device < 0)
+    cv::ocl::PlatformsInfo platformsInfo;
+    cv::ocl::getOpenCLPlatforms(platformsInfo);
+    if (pid >= (int)platformsInfo.size())
     {
-        std::cout << "device invalid\n";
-        return -1;
+        std::cout << "platform is invalid\n";
+        return 1;
     }
 
-    if (pid >= oclinfo.size())
+    cv::ocl::DevicesInfo devicesInfo;
+    int devnums = cv::ocl::getOpenCLDevices(devicesInfo, flag, (pid < 0) ? NULL : platformsInfo[pid]);
+    if (device < 0 || device >= devnums)
     {
-        std::cout << "platform invalid\n";
-        return -1;
+        std::cout << "device/platform invalid\n";
+        return 1;
     }
 
-    cv::ocl::setDevice(oclinfo[pid], device);
+    cv::ocl::setDevice(devicesInfo[device]);
     cv::ocl::setBinaryDiskCache(cv::ocl::CACHE_UPDATE);
+
+    cout << "Device type:" << type << endl
+            << "Platform name:" << devicesInfo[device]->platform->platformName << endl
+            << "Device name:" << devicesInfo[device]->deviceName << endl;
 
     CV_PERF_TEST_MAIN_INTERNALS(ocl, impls)
 }
