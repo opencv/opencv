@@ -6,11 +6,11 @@
 #include "opencv2/core/utility.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/video.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/cudaoptflow.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 template <typename T>
 inline T mapVal(T x, T a, T b, T c, T d)

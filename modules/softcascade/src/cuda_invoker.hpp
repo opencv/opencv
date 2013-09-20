@@ -44,7 +44,7 @@
 #ifndef __OPENCV_ICF_HPP__
 #define __OPENCV_ICF_HPP__
 
-#include "opencv2/core/gpu_types.hpp"
+#include "opencv2/core/cuda_types.hpp"
 #include "cuda_runtime_api.h"
 
 #if defined __CUDACC__
@@ -128,8 +128,8 @@ struct CascadeInvoker
 {
     CascadeInvoker(): levels(0), stages(0), nodes(0), leaves(0), scales(0) {}
 
-    CascadeInvoker(const cv::gpu::PtrStepSzb& _levels, const cv::gpu::PtrStepSzf& _stages,
-                   const cv::gpu::PtrStepSzb& _nodes,  const cv::gpu::PtrStepSzf& _leaves)
+    CascadeInvoker(const cv::cuda::PtrStepSzb& _levels, const cv::cuda::PtrStepSzf& _stages,
+                   const cv::cuda::PtrStepSzb& _nodes,  const cv::cuda::PtrStepSzf& _leaves)
     : levels((const Level*)_levels.ptr()),
       stages((const float*)_stages.ptr()),
       nodes((const Node*)_nodes.ptr()), leaves((const float*)_leaves.ptr()),
@@ -144,7 +144,7 @@ struct CascadeInvoker
 
     int scales;
 
-    void operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv, cv::gpu::PtrStepSz<uchar4> objects,
+    void operator()(const cv::cuda::PtrStepSzb& roi, const cv::cuda::PtrStepSzi& hogluv, cv::cuda::PtrStepSz<uchar4> objects,
         const int downscales, const cudaStream_t& stream = 0) const;
 
     template<bool isUp>

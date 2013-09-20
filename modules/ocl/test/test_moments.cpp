@@ -23,12 +23,12 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
         mat1 = randomMat(rng, size, type, 5, 16, false);
     }
 
-    void Compare(Moments& cpu, Moments& gpu)
+    void Compare(Moments& cpu_moments, Moments& gpu_moments)
     {
         Mat gpu_dst, cpu_dst;
-        HuMoments(cpu, cpu_dst);
-        HuMoments(gpu, gpu_dst);
-        EXPECT_MAT_NEAR(gpu_dst,cpu_dst, .5);
+        HuMoments(cpu_moments, cpu_dst);
+        HuMoments(gpu_moments, gpu_dst);
+        EXPECT_MAT_NEAR(gpu_dst, cpu_dst, .5);
     }
 
 };

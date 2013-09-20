@@ -22,7 +22,7 @@
 #endif
 
 // declare major namespaces to avoid errors on unknown namespace
-namespace cv { namespace gpu {} namespace ocl {} }
+namespace cv { namespace cuda {} namespace ocl {} }
 
 namespace perf
 {
@@ -96,7 +96,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             for(int i = 0, pos = 0; i < (int)(sizeof(vals)/sizeof(int)); ++i) {         \
@@ -112,7 +112,7 @@ private:
             *os << "UNKNOWN";                                                           \
         }                                                                               \
         static ::testing::internal::ParamGenerator<class_name> all() {                  \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             static class_name vals[] = { __VA_ARGS__ };                                 \
             return ::testing::ValuesIn(vals);                                           \
         }                                                                               \
@@ -126,7 +126,7 @@ private:
         class_name(int val = 0) : val_(val) {}                                          \
         operator int() const { return val_; }                                           \
         void PrintTo(std::ostream* os) const {                                          \
-            using namespace cv;using namespace cv::gpu; using namespace cv::ocl;        \
+            using namespace cv;using namespace cv::cuda; using namespace cv::ocl;        \
             const int vals[] = { __VA_ARGS__ };                                         \
             const char* svals = #__VA_ARGS__;                                           \
             int value = val_;                                                           \
@@ -210,7 +210,7 @@ public:
   static bool targetDevice();
 };
 
-#define PERF_RUN_GPU()  ::perf::GpuPerf::targetDevice()
+#define PERF_RUN_CUDA()  ::perf::GpuPerf::targetDevice()
 
 /*****************************************************************************************\
 *                            Container for performance metrics                            *

@@ -43,7 +43,6 @@
 #define VARNAME(A) #A
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
 using namespace cvtest;
 
 

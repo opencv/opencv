@@ -142,13 +142,13 @@ The function is parallelized with the TBB library.
 If you are using the C version, make sure you call ``cv::initModule_nonfree()`` from ``nonfree/nonfree.hpp``.
 
 
-gpu::SURF_GPU
--------------
-.. ocv:class:: gpu::SURF_GPU
+cuda::SURF_CUDA
+---------------
+.. ocv:class:: cuda::SURF_CUDA
 
 Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
 
-    class SURF_GPU
+    class SURF_CUDA
     {
     public:
         enum KeypointLayout
@@ -164,9 +164,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
         };
 
         //! the default constructor
-        SURF_GPU();
+        SURF_CUDA();
         //! the full constructor taking all the necessary parameters
-        explicit SURF_GPU(double _hessianThreshold, int _nOctaves=4,
+        explicit SURF_CUDA(double _hessianThreshold, int _nOctaves=4,
              int _nOctaveLayers=2, bool _extended=false, float _keypointsRatio=0.01f);
 
         //! returns the descriptor size in float's (64 or 128)
@@ -225,9 +225,9 @@ Class used for extracting Speeded Up Robust Features (SURF) from an image. ::
     };
 
 
-The class ``SURF_GPU`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
+The class ``SURF_CUDA`` implements Speeded Up Robust Features descriptor. There is a fast multi-scale Hessian keypoint detector that can be used to find the keypoints (which is the default option). But the descriptors can also be computed for the user-specified keypoints. Only 8-bit grayscale images are supported.
 
-The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
+The class ``SURF_CUDA`` can store results in the GPU and CPU memory. It provides functions to convert results between CPU and GPU version ( ``uploadKeypoints``, ``downloadKeypoints``, ``downloadDescriptors`` ). The format of CPU results is the same as ``SURF`` results. GPU results are stored in ``GpuMat``. The ``keypoints`` matrix is :math:`\texttt{nFeatures} \times 7` matrix with the ``CV_32FC1`` type.
 
 * ``keypoints.ptr<float>(X_ROW)[i]`` contains x coordinate of the i-th feature.
 * ``keypoints.ptr<float>(Y_ROW)[i]`` contains y coordinate of the i-th feature.
@@ -239,7 +239,7 @@ The class ``SURF_GPU`` can store results in the GPU and CPU memory. It provides 
 
 The ``descriptors`` matrix is :math:`\texttt{nFeatures} \times \texttt{descriptorSize}` matrix with the ``CV_32FC1`` type.
 
-The class ``SURF_GPU`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
+The class ``SURF_CUDA`` uses some buffers and provides access to it. All buffers can be safely released between function calls.
 
 .. seealso:: :ocv:class:`SURF`
 
