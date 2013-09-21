@@ -19,6 +19,8 @@ namespace cv{namespace optim{
         Ptr<Solver::Function> _Function;
         TermCriteria _termcrit;
         Mat _step;
+        Mat_<double> buf_x;
+
     private:
         inline void createInitialSimplex(Mat_<double>& simplex,Mat& step);
         inline double innerDownhillSimplex(cv::Mat_<double>& p,double MinRange,double MinError,int& nfunk,
@@ -209,7 +211,10 @@ namespace cv{namespace optim{
         Mat_<double> proxy_x;
 
         if(x_mat.rows>1){
-            proxy_x=x_mat.t();
+            buf_x.create(1,_step.cols);
+            Mat_<double> proxy(_step.cols,1,(double*)buf_x.data);
+            x_mat.copyTo(proxy);
+            proxy_x=buf_x;
         }else{
             proxy_x=x_mat;
         }

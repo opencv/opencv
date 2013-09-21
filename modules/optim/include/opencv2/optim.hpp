@@ -55,6 +55,7 @@ public:
     public:
        virtual ~Function() {}
        virtual double calc(const double* x) const = 0;
+       virtual void getGradient(const double* /*x*/,double* /*grad*/) {}
     };
 
     virtual Ptr<Function> getFunction() const = 0;
@@ -86,17 +87,7 @@ CV_EXPORTS_W Ptr<DownhillSolver> createDownhillSolver(const Ptr<Solver::Function
         TermCriteria termcrit=TermCriteria(TermCriteria::MAX_ITER+TermCriteria::EPS,5000,0.000001));
 
 //! conjugate gradient method
-class CV_EXPORTS ConjGradSolver : public Solver
-{
-public:
-    class CV_EXPORTS Function : public Solver::Function
-    {
-    public:
-       //! gradient is like the first derivative for multivar function
-       virtual void getGradient(const double* x,double* buf)const=0;
-       //! Jacobian is like the second derivative
-       virtual void getJacobian(const double* x)const=0;
-    };
+class CV_EXPORTS ConjGradSolver : public Solver{
 };
 
 CV_EXPORTS_W Ptr<ConjGradSolver> createConjGradSolver(const Ptr<Solver::Function>& f=Ptr<ConjGradSolver::Function>(),
