@@ -51,6 +51,8 @@
 
 #ifdef __cplusplus
 
+#include "init.hpp"
+
 #ifndef SKIP_INCLUDES
 #include <limits.h>
 #include <algorithm>

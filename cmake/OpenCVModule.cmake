@@ -517,13 +517,12 @@ macro(ocv_create_module)
     )
   endif()
 
+  # available in CMake 2.8.11: target_compile_definitions(${the_module} PRIVATE OPENCV_MODULE)
+  ocv_target_compile_definitions(TARGET ${the_module} DEFINE OPENCV_MODULE)
+
   if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
       OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    if(MSVC)
-      set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
-    else()
-      add_definitions(-DCVAPI_EXPORTS)
-    endif()
+    set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
   endif()
 
   if(MSVC)
