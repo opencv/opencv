@@ -17,7 +17,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   set(OPTIONAL_DOC_LIST "")
 
 
-  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann gpu photo stitching nonfree contrib legacy bioinspired)
+  set(OPENCV2_BASE_MODULES core imgproc highgui video calib3d features2d objdetect ml flann photo stitching nonfree contrib legacy bioinspired)
 
   # build lists of modules to be documented
   set(OPENCV2_MODULES "")
@@ -67,9 +67,14 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   set(OPENCV_DOC_DEPS conf.py ${OPENCV_FILES_REF} ${OPENCV_FILES_REF_PICT}
            ${OPENCV_FILES_UG} ${OPENCV_FILES_TUT} ${OPENCV_FILES_TUT_PICT})
 
+  set(BUILD_PLANTUML "")
+  if(PLANTUML)
+    set(BUILD_PLANTUML "-tplantuml")
+  endif()
+
   if(PDFLATEX_COMPILER)
     add_custom_target(docs
-      COMMAND ${SPHINX_BUILD} -b latex -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. .
+      COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b latex -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. .
       COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/pics ${CMAKE_CURRENT_BINARY_DIR}/doc/opencv1/pics
       COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
       COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/patch_refman_latex.py" opencv2refman.tex
@@ -103,7 +108,7 @@ if(BUILD_DOCS AND HAVE_SPHINX)
   endif()
 
   add_custom_target(html_docs
-    COMMAND ${SPHINX_BUILD} -b html -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ./_html
+    COMMAND ${SPHINX_BUILD} ${BUILD_PLANTUML} -b html -c ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/.. ./_html
     COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${OPENCV_DOC_DEPS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

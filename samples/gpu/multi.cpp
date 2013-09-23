@@ -9,7 +9,7 @@
 #include <iostream>
 #include "cvconfig.h"
 #include "opencv2/core/core.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/cudaarithm.hpp"
 
 #ifdef HAVE_TBB
 #  include "tbb/tbb_stddef.h"
@@ -42,7 +42,7 @@ int main()
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 struct Worker { void operator()(int device_id) const; };
 
@@ -56,12 +56,12 @@ int main()
     }
     for (int i = 0; i < num_devices; ++i)
     {
-        cv::gpu::printShortCudaDeviceInfo(i);
+        cv::cuda::printShortCudaDeviceInfo(i);
 
         DeviceInfo dev_info(i);
         if (!dev_info.isCompatible())
         {
-            std::cout << "GPU module isn't built for GPU #" << i << " ("
+            std::cout << "CUDA module isn't built for GPU #" << i << " ("
                  << dev_info.name() << ", CC " << dev_info.majorVersion()
                  << dev_info.minorVersion() << "\n";
             return -1;
@@ -92,7 +92,7 @@ void Worker::operator()(int device_id) const
     // GPU works
     GpuMat d_src(src);
     GpuMat d_dst;
-    gpu::transpose(d_src, d_dst);
+    cuda::transpose(d_src, d_dst);
 
     // Check results
     bool passed = cv::norm(dst - Mat(d_dst), NORM_INF) < 1e-3;

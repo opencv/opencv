@@ -269,11 +269,11 @@ TEST_F(SuperResolution, BTVL1)
     RunTest(cv::superres::createSuperResolution_BTVL1());
 }
 
-#if defined(HAVE_CUDA) && defined(HAVE_OPENCV_GPUARITHM) && defined(HAVE_OPENCV_GPUWARPING) && defined(HAVE_OPENCV_GPUFILTERS)
+#if defined(HAVE_CUDA) && defined(HAVE_OPENCV_CUDAARITHM) && defined(HAVE_OPENCV_CUDAWARPING) && defined(HAVE_OPENCV_CUDAFILTERS)
 
-TEST_F(SuperResolution, BTVL1_GPU)
+TEST_F(SuperResolution, BTVL1_CUDA)
 {
-    RunTest(cv::superres::createSuperResolution_BTVL1_GPU());
+    RunTest(cv::superres::createSuperResolution_BTVL1_CUDA());
 }
 
 #endif

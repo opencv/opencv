@@ -63,7 +63,7 @@ namespace cv
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Empty();
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Video(const String& fileName);
-        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_GPU(const String& fileName);
+        CV_EXPORTS Ptr<FrameSource> createFrameSource_Video_CUDA(const String& fileName);
 
         CV_EXPORTS Ptr<FrameSource> createFrameSource_Camera(int deviceId = 0);
 
@@ -91,7 +91,7 @@ namespace cv
         // S. Farsiu , D. Robinson, M. Elad, P. Milanfar. Fast and robust multiframe super resolution.
         // Dennis Mitzel, Thomas Pock, Thomas Schoenemann, Daniel Cremers. Video Super Resolution using Duality Based TV-L1 Optical Flow.
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1();
-        CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_GPU();
+        CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_CUDA();
         CV_EXPORTS Ptr<SuperResolution> createSuperResolution_BTVL1_OCL();
     }
 }

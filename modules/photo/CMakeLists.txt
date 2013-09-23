@@ -4,4 +4,4 @@ if(HAVE_CUDA)
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wmissing-declarations)
 endif()
 
-ocv_define_module(photo opencv_imgproc OPTIONAL opencv_gpuarithm opencv_gpuimgproc)
+ocv_define_module(photo opencv_imgproc OPTIONAL opencv_cudaarithm opencv_cudaimgproc)

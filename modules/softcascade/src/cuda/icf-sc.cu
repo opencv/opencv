@@ -76,7 +76,7 @@ typedef unsigned char uchar;
         shrank[ y * outPitch + x] = shrink<FACTOR>(ptr, inPitch, y, x);
     }
 
-    void shrink(const cv::gpu::PtrStepSzb& channels, cv::gpu::PtrStepSzb shrunk)
+    void shrink(const cv::cuda::PtrStepSzb& channels, cv::cuda::PtrStepSzb shrunk)
     {
         dim3 block(32, 8);
         dim3 grid(shrunk.cols / 32, shrunk.rows / 8);
@@ -124,7 +124,7 @@ typedef unsigned char uchar;
         luvg[luvgPitch * (y + 2 * 480) + x] = v;
     }
 
-    void bgr2Luv(const cv::gpu::PtrStepSzb& bgr, cv::gpu::PtrStepSzb luv)
+    void bgr2Luv(const cv::cuda::PtrStepSzb& bgr, cv::cuda::PtrStepSzb luv)
     {
         dim3 block(32, 8);
         dim3 grid(bgr.cols / 32, bgr.rows / 8);
@@ -206,7 +206,7 @@ typedef unsigned char uchar;
     texture<uchar,  cudaTextureType2D, cudaReadModeElementType> tgray;
 
     template<bool isDefaultNum>
-    __global__ void gray2hog(cv::gpu::PtrStepSzb mag)
+    __global__ void gray2hog(cv::cuda::PtrStepSzb mag)
     {
         const int x = blockIdx.x * blockDim.x + threadIdx.x;
         const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -221,7 +221,7 @@ typedef unsigned char uchar;
         mag( 480 * fast_angle_bin<isDefaultNum>(dy, dx) + y, x) = cmag;
     }
 
-    void gray2hog(const cv::gpu::PtrStepSzb& gray, cv::gpu::PtrStepSzb mag, const int bins)
+    void gray2hog(const cv::cuda::PtrStepSzb& gray, cv::cuda::PtrStepSzb mag, const int bins)
     {
         dim3 block(32, 8);
         dim3 grid(gray.cols / 32, gray.rows / 8);
@@ -250,7 +250,7 @@ typedef unsigned char uchar;
         hog[((fh * bin) + y) * hogPitch + x] = val;
     }
 
-    void fillBins(cv::gpu::PtrStepSzb hogluv, const cv::gpu::PtrStepSzf& nangle,
+    void fillBins(cv::cuda::PtrStepSzb hogluv, const cv::cuda::PtrStepSzf& nangle,
                   const int fw,  const int fh, const int bins, cudaStream_t stream )
     {
         const uchar* mag = (const uchar*)hogluv.ptr(fh * bins);
@@ -324,8 +324,8 @@ typedef unsigned char uchar;
         }
     }
 
-    void suppress(const cv::gpu::PtrStepSzb& objects, cv::gpu::PtrStepSzb overlaps, cv::gpu::PtrStepSzi ndetections,
-        cv::gpu::PtrStepSzb suppressed, cudaStream_t stream)
+    void suppress(const cv::cuda::PtrStepSzb& objects, cv::cuda::PtrStepSzb overlaps, cv::cuda::PtrStepSzi ndetections,
+        cv::cuda::PtrStepSzb suppressed, cudaStream_t stream)
     {
         int block = 192;
         int grid = 1;
@@ -527,8 +527,8 @@ __global__ void soft_cascade(const CascadeInvoker<Policy> invoker, Detection* ob
 }
 
 template<typename Policy>
-void CascadeInvoker<Policy>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
-    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
+void CascadeInvoker<Policy>::operator()(const cv::cuda::PtrStepSzb& roi, const cv::cuda::PtrStepSzi& hogluv,
+    cv::cuda::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const
 {
     int fw = roi.rows;
     int fh = roi.cols;
@@ -560,7 +560,7 @@ void CascadeInvoker<Policy>::operator()(const cv::gpu::PtrStepSzb& roi, const cv
     }
 }
 
-template void CascadeInvoker<GK107PolicyX4>::operator()(const cv::gpu::PtrStepSzb& roi, const cv::gpu::PtrStepSzi& hogluv,
-    cv::gpu::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
+template void CascadeInvoker<GK107PolicyX4>::operator()(const cv::cuda::PtrStepSzb& roi, const cv::cuda::PtrStepSzi& hogluv,
+    cv::cuda::PtrStepSz<uchar4> objects, const int downscales, const cudaStream_t& stream) const;
 
 }}}

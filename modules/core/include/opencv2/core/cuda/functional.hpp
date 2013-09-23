@@ -40,8 +40,8 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_FUNCTIONAL_HPP__
-#define __OPENCV_GPU_FUNCTIONAL_HPP__
+#ifndef __OPENCV_CUDA_FUNCTIONAL_HPP__
+#define __OPENCV_CUDA_FUNCTIONAL_HPP__
 
 #include <functional>
 #include "saturate_cast.hpp"
@@ -49,7 +49,7 @@
 #include "type_traits.hpp"
 #include "device_functions.h"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     // Function Objects
     template<typename Argument, typename Result> struct unary_function : public std::unary_function<Argument, Result> {};
@@ -298,7 +298,7 @@ namespace cv { namespace gpu { namespace cudev
 
     // Min/Max Operations
 
-#define OPENCV_GPU_IMPLEMENT_MINMAX(name, type, op) \
+#define OPENCV_CUDA_IMPLEMENT_MINMAX(name, type, op) \
     template <> struct name<type> : binary_function<type, type, type> \
     { \
         __device__ __forceinline__ type operator()(type lhs, type rhs) const {return op(lhs, rhs);} \
@@ -316,15 +316,15 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ maximum(const maximum&) {}
     };
 
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, uchar, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, schar, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, char, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, ushort, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, short, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, int, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, uint, ::max)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, float, ::fmax)
-    OPENCV_GPU_IMPLEMENT_MINMAX(maximum, double, ::fmax)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, uchar, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, schar, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, char, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, ushort, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, short, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, int, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, uint, ::max)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, float, ::fmax)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(maximum, double, ::fmax)
 
     template <typename T> struct minimum : binary_function<T, T, T>
     {
@@ -336,17 +336,17 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ minimum(const minimum&) {}
     };
 
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, uchar, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, schar, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, char, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, ushort, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, short, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, int, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, uint, ::min)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, float, ::fmin)
-    OPENCV_GPU_IMPLEMENT_MINMAX(minimum, double, ::fmin)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, uchar, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, schar, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, char, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, ushort, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, short, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, int, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, uint, ::min)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, float, ::fmin)
+    OPENCV_CUDA_IMPLEMENT_MINMAX(minimum, double, ::fmin)
 
-#undef OPENCV_GPU_IMPLEMENT_MINMAX
+#undef OPENCV_CUDA_IMPLEMENT_MINMAX
 
     // Math functions
 
@@ -451,7 +451,7 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ abs_func(const abs_func&) {}
     };
 
-#define OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(name, func) \
+#define OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(name, func) \
     template <typename T> struct name ## _func : unary_function<T, float> \
     { \
         __device__ __forceinline__ float operator ()(typename TypeTraits<T>::ParameterType v) const \
@@ -471,7 +471,7 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
-#define OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(name, func) \
+#define OPENCV_CUDA_IMPLEMENT_BIN_FUNCTOR(name, func) \
     template <typename T> struct name ## _func : binary_function<T, T, float> \
     { \
         __device__ __forceinline__ float operator ()(typename TypeTraits<T>::ParameterType v1, typename TypeTraits<T>::ParameterType v2) const \
@@ -491,33 +491,33 @@ namespace cv { namespace gpu { namespace cudev
         __host__ __device__ __forceinline__ name ## _func(const name ## _func&) {} \
     };
 
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sqrt, ::sqrt)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp, ::exp)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp2, ::exp2)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(exp10, ::exp10)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log, ::log)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log2, ::log2)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(log10, ::log10)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sin, ::sin)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cos, ::cos)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tan, ::tan)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asin, ::asin)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acos, ::acos)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atan, ::atan)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(sinh, ::sinh)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(cosh, ::cosh)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(tanh, ::tanh)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(asinh, ::asinh)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(acosh, ::acosh)
-    OPENCV_GPU_IMPLEMENT_UN_FUNCTOR(atanh, ::atanh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(sqrt, ::sqrt)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(exp, ::exp)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(exp2, ::exp2)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(exp10, ::exp10)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(log, ::log)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(log2, ::log2)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(log10, ::log10)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(sin, ::sin)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(cos, ::cos)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(tan, ::tan)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(asin, ::asin)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(acos, ::acos)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(atan, ::atan)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(sinh, ::sinh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(cosh, ::cosh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(tanh, ::tanh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(asinh, ::asinh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(acosh, ::acosh)
+    OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR(atanh, ::atanh)
 
-    OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(hypot, ::hypot)
-    OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(atan2, ::atan2)
-    OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR(pow, ::pow)
+    OPENCV_CUDA_IMPLEMENT_BIN_FUNCTOR(hypot, ::hypot)
+    OPENCV_CUDA_IMPLEMENT_BIN_FUNCTOR(atan2, ::atan2)
+    OPENCV_CUDA_IMPLEMENT_BIN_FUNCTOR(pow, ::pow)
 
-    #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR
-    #undef OPENCV_GPU_IMPLEMENT_UN_FUNCTOR_NO_DOUBLE
-    #undef OPENCV_GPU_IMPLEMENT_BIN_FUNCTOR
+    #undef OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR
+    #undef OPENCV_CUDA_IMPLEMENT_UN_FUNCTOR_NO_DOUBLE
+    #undef OPENCV_CUDA_IMPLEMENT_BIN_FUNCTOR
 
     template<typename T> struct hypot_sqr_func : binary_function<T, T, float>
     {
@@ -782,8 +782,8 @@ namespace cv { namespace gpu { namespace cudev
 
     template <typename Func> struct TransformFunctorTraits : DefaultTransformFunctorTraits<Func> {};
 
-#define OPENCV_GPU_TRANSFORM_FUNCTOR_TRAITS(type) \
+#define OPENCV_CUDA_TRANSFORM_FUNCTOR_TRAITS(type) \
     template <> struct TransformFunctorTraits< type > : DefaultTransformFunctorTraits< type >
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_GPU_FUNCTIONAL_HPP__
+#endif // __OPENCV_CUDA_FUNCTIONAL_HPP__

@@ -44,7 +44,7 @@
 
 using namespace cv;
 using namespace cv::detail;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 #ifdef HAVE_OPENCV_NONFREE
 #include "opencv2/nonfree.hpp"
@@ -125,7 +125,7 @@ private:
     float match_conf_;
 };
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 class GpuMatcher : public FeaturesMatcher
 {
 public:
@@ -200,7 +200,7 @@ void CpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     LOG("1->2 & 2->1 matches: " << matches_info.matches.size() << endl);
 }
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
 void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &features2, MatchesInfo& matches_info)
 {
     matches_info.matches.clear();
@@ -211,7 +211,7 @@ void GpuMatcher::match(const ImageFeatures &features1, const ImageFeatures &feat
     descriptors1_.upload(features1.descriptors);
     descriptors2_.upload(features2.descriptors);
 
-    BFMatcher_GPU matcher(NORM_L2);
+    BFMatcher_CUDA matcher(NORM_L2);
     MatchesSet matches;
 
     // Find 1->2 matches
@@ -531,7 +531,7 @@ BestOf2NearestMatcher::BestOf2NearestMatcher(bool try_use_gpu, float match_conf,
 {
     (void)try_use_gpu;
 
-#ifdef HAVE_OPENCV_GPUFEATURES2D
+#ifdef HAVE_OPENCV_CUDAFEATURES2D
     if (try_use_gpu && getCudaEnabledDeviceCount() > 0)
     {
         impl_ = makePtr<GpuMatcher>(match_conf);

@@ -3,18 +3,13 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/utility.hpp"
-#include "opencv2/gpu.hpp"
+#include "opencv2/cudabgsegm.hpp"
+#include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
-
-#include "opencv2/opencv_modules.hpp"
-
-#ifdef HAVE_OPENCV_NONFREE
-#  include "opencv2/nonfree/gpu.hpp"
-#endif
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 enum Method
 {
@@ -75,10 +70,10 @@ int main(int argc, const char** argv)
 
     GpuMat d_frame(frame);
 
-    Ptr<BackgroundSubtractor> mog = gpu::createBackgroundSubtractorMOG();
-    Ptr<BackgroundSubtractor> mog2 = gpu::createBackgroundSubtractorMOG2();
-    Ptr<BackgroundSubtractor> gmg = gpu::createBackgroundSubtractorGMG(40);
-    Ptr<BackgroundSubtractor> fgd = gpu::createBackgroundSubtractorFGD();
+    Ptr<BackgroundSubtractor> mog = cuda::createBackgroundSubtractorMOG();
+    Ptr<BackgroundSubtractor> mog2 = cuda::createBackgroundSubtractorMOG2();
+    Ptr<BackgroundSubtractor> gmg = cuda::createBackgroundSubtractorGMG(40);
+    Ptr<BackgroundSubtractor> fgd = cuda::createBackgroundSubtractorFGD();
 
     GpuMat d_fgmask;
     GpuMat d_fgimg;

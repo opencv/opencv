@@ -44,12 +44,12 @@
 #include "opencv2/videostab/wobble_suppression.hpp"
 #include "opencv2/videostab/ring_buffer.hpp"
 
-#ifdef HAVE_OPENCV_GPUWARPING
-#  include "opencv2/gpuwarping.hpp"
+#ifdef HAVE_OPENCV_CUDAWARPING
+#  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPU
-#  include "opencv2/gpu.hpp"
+#ifdef HAVE_OPENCV_CUDA
+#  include "opencv2/cuda.hpp"
 #endif
 
 
@@ -122,8 +122,8 @@ void MoreAccurateMotionWobbleSuppressor::suppress(int idx, const Mat &frame, Mat
 }
 
 
-#ifdef HAVE_OPENCV_GPUWARPING
-void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const gpu::GpuMat &frame, gpu::GpuMat &result)
+#if defined(HAVE_OPENCV_CUDA) && defined(HAVE_OPENCV_CUDAWARPING)
+void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const cuda::GpuMat &frame, cuda::GpuMat &result)
 {
     CV_Assert(motions_ && stabilizationMotions_);
 
@@ -141,12 +141,12 @@ void MoreAccurateMotionWobbleSuppressorGpu::suppress(int idx, const gpu::GpuMat 
     Mat ML = S1 * getMotion(k1, idx, *motions2_) * getMotion(k1, idx, *motions_).inv() * S1.inv();
     Mat MR = S1 * getMotion(idx, k2, *motions2_).inv() * getMotion(idx, k2, *motions_) * S1.inv();
 
-    gpu::calcWobbleSuppressionMaps(k1, idx, k2, frame.size(), ML, MR, mapx_, mapy_);
+    cuda::calcWobbleSuppressionMaps(k1, idx, k2, frame.size(), ML, MR, mapx_, mapy_);
 
     if (result.data == frame.data)
-        result = gpu::GpuMat(frame.size(), frame.type());
+        result = cuda::GpuMat(frame.size(), frame.type());
 
-    gpu::remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
+    cuda::remap(frame, result, mapx_, mapy_, INTER_LINEAR, BORDER_REPLICATE);
 }
 
 

@@ -40,14 +40,14 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
-#define __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+#ifndef __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__
+#define __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__
 
 #include "saturate_cast.hpp"
 #include "vec_traits.hpp"
 #include "vec_math.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     //////////////////////////////////////////////////////////////
     // BrdConstant
@@ -709,6 +709,6 @@ namespace cv { namespace gpu { namespace cudev
         int width;
         D val;
     };
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // __OPENCV_GPU_BORDER_INTERPOLATE_HPP__
+#endif // __OPENCV_CUDA_BORDER_INTERPOLATE_HPP__

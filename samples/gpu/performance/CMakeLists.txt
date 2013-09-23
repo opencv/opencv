@@ -8,7 +8,7 @@ if(HAVE_opencv_nonfree)
 endif()
 
 add_executable(${the_target} ${sources} ${headers})
-target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
 if(HAVE_opencv_nonfree)
   target_link_libraries(${the_target} opencv_nonfree)
@@ -16,7 +16,7 @@ endif()
 
 set_target_properties(${the_target} PROPERTIES
     OUTPUT_NAME "performance_gpu"
-    PROJECT_LABEL "(EXAMPLE_GPU) performance")
+    PROJECT_LABEL "(EXAMPLE_CUDA) performance")
 
 if(ENABLE_SOLUTION_FOLDERS)
   set_target_properties(${the_target} PROPERTIES FOLDER "samples//gpu")
@@ -27,8 +27,8 @@ if(WIN32)
 endif()
 
 if(INSTALL_C_EXAMPLES AND NOT WIN32)
-  file(GLOB GPU_FILES performance/*.cpp performance/*.h)
-  install(FILES ${GPU_FILES}
+  file(GLOB CUDA_FILES performance/*.cpp performance/*.h)
+  install(FILES ${CUDA_FILES}
           DESTINATION share/OpenCV/samples/gpu/performance
           PERMISSIONS OWNER_READ GROUP_READ WORLD_READ)
 endif()
