@@ -8,12 +8,12 @@ Class-specific Extremal Regions for Scene Text Detection
 
 The scene text detection algorithm described below has been initially proposed by Lukás Neumann & Jiri Matas [Neumann12]. The main idea behind Class-specific Extremal Regions is similar to the MSER in that suitable Extremal Regions (ERs) are selected from the whole component tree of the image. However, this technique differs from MSER in that selection of suitable ERs is done by a sequential classifier trained for character detection, i.e. dropping the stability requirement of MSERs and selecting class-specific (not necessarily stable) regions.
 
-The component tree of an image is constructed by thresholding by an increassing value step-by-step from 0 to 255 and then linking the obtained connected components from successive levels in a hierarchy by their inclusion relation:
+The component tree of an image is constructed by thresholding by an increasing value step-by-step from 0 to 255 and then linking the obtained connected components from successive levels in a hierarchy by their inclusion relation:
 
 .. image:: pics/component_tree.png
     :width: 100%
 
-The component tree may conatain a huge number of regions even for a very simple image as shown in the previous image. This number can easily reach the order of 1 x 10^6 regions for an average 1 Megapixel image. In order to efficiently select suitable regions among all the ERs the algorithm make use of a sequential classifier with two differentianted stages.
+The component tree may conatain a huge number of regions even for a very simple image as shown in the previous image. This number can easily reach the order of 1 x 10^6 regions for an average 1 Megapixel image. In order to efficiently select suitable regions among all the ERs the algorithm make use of a sequential classifier with two differentiated stages.
 
 In the first stage incrementally computable descriptors (area, perimeter, bounding box, and euler number) are computed (in O(1)) for each region r and used as features for a classifier which estimates the class-conditional probability p(r|character). Only the ERs which correspond to local maximum of the probability p(r|character) are selected (if their probability is above a global limit p_min and the difference between local maximum and local minimum is greater than a \delta_min value).
 
@@ -206,4 +206,4 @@ Find groups of Extremal Regions that are organized as text blocks.
 
 This function implements the grouping algorithm described in [Gomez13]. Notice that this implementation constrains the results to horizontally-aligned text and latin script (since ERFilter classifiers are trained only for latin script detection).
 
-The algorithm combines two different clustering techniques in a single parameter-free procedure to detect groups of regions organized as text. The maximally meaningful groups are fist detected in several feature spaces, where each feature space is a combination of proximity information (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.), thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to combine all these hypotheses to get the final estimate. Each of the resulting groups are finally heuristically validated in order to assest if they form a valid horizontally-aligned text block.
+The algorithm combines two different clustering techniques in a single parameter-free procedure to detect groups of regions organized as text. The maximally meaningful groups are fist detected in several feature spaces, where each feature space is a combination of proximity information (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.), thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to combine all these hypotheses to get the final estimate. Each of the resulting groups are finally heuristically validated in order to assess if they form a valid horizontally-aligned text block.
