@@ -55,13 +55,14 @@ public:
         weights(tringleWeights())
     {
     }
-    
-    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times, InputArray input_response)
+
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response)
     {
         std::vector<Mat> images;
         src.getMatVector(images);
+        Mat times = _times.getMat();
 
-        CV_Assert(images.size() == times.size());
+        CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
         CV_Assert(images[0].depth() == CV_8U);
 
@@ -79,12 +80,12 @@ public:
             response.at<Vec3f>(0) = response.at<Vec3f>(1);
         }
         log(response, response);
-        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 &&
                   response.channels() == channels);
 
         Mat exp_values(times);
         log(exp_values, exp_values);
-    
+
         result = Mat::zeros(size, CV_32FCC);
         std::vector<Mat> result_split;
         split(result, result_split);
@@ -117,7 +118,7 @@ public:
         exp(result, result);
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray times)
     {
         process(src, dst, times, Mat());
     }
@@ -129,21 +130,21 @@ protected:
 
 Ptr<MergeDebevec> createMergeDebevec()
 {
-    return new MergeDebevecImpl;
+    return makePtr<MergeDebevecImpl>();
 }
 
 class MergeMertensImpl : public MergeMertens
 {
 public:
-    MergeMertensImpl(float wcon, float wsat, float wexp) :
-        wcon(wcon),
-        wsat(wsat),
-        wexp(wexp),
-        name("MergeMertens")
+    MergeMertensImpl(float _wcon, float _wsat, float _wexp) :
+        name("MergeMertens"),
+        wcon(_wcon),
+        wsat(_wsat),
+        wexp(_wexp)
     {
     }
-    
-    void process(InputArrayOfArrays src, OutputArrayOfArrays dst, const std::vector<float>& times, InputArray response)
+
+    void process(InputArrayOfArrays src, OutputArrayOfArrays dst, InputArray, InputArray)
     {
         process(src, dst);
     }
@@ -217,7 +218,7 @@ public:
             weights[i] /= weight_sum;
             Mat img;
             images[i].convertTo(img, CV_32F, 1.0f/255.0f);
-            
+
             std::vector<Mat> img_pyr, weight_pyr;
             buildPyramid(img, img_pyr, maxlevel);
             buildPyramid(weights[i], weight_pyr, maxlevel);
@@ -283,7 +284,7 @@ protected:
 
 Ptr<MergeMertens> createMergeMertens(float wcon, float wsat, float wexp)
 {
-    return new MergeMertensImpl(wcon, wsat, wexp);
+    return makePtr<MergeMertensImpl>(wcon, wsat, wexp);
 }
 
 class MergeRobertsonImpl : public MergeRobertson
@@ -294,13 +295,14 @@ public:
         weight(RobertsonWeights())
     {
     }
-    
-    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times, InputArray input_response)
+
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times, InputArray input_response)
     {
         std::vector<Mat> images;
         src.getMatVector(images);
+        Mat times = _times.getMat();
 
-        CV_Assert(images.size() == times.size());
+        CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
         CV_Assert(images[0].depth() == CV_8U);
 
@@ -312,11 +314,12 @@ public:
 
         Mat response = input_response.getMat();
         if(response.empty()) {
-            response = linearResponse(channels) / (LDR_SIZE / 2.0f);
+            float middle = LDR_SIZE / 2.0f;
+            response = linearResponse(channels) / middle;
         }
-        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 && 
+        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 &&
                   response.channels() == channels);
-    
+
         result = Mat::zeros(images[0].size(), CV_32FCC);
         Mat wsum = Mat::zeros(images[0].size(), CV_32FCC);
         for(size_t i = 0; i < images.size(); i++) {
@@ -324,13 +327,13 @@ public:
             LUT(images[i], weight, w);
             LUT(images[i], response, im);
 
-            result += times[i] * w.mul(im);
-            wsum += pow(times[i], 2) * w;
+            result += times.at<float>(i) * w.mul(im);
+            wsum += times.at<float>(i) * times.at<float>(i) * w;
         }
         result = result.mul(1 / wsum);
     }
 
-    void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times)
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray times)
     {
         process(src, dst, times, Mat());
     }
@@ -342,7 +345,7 @@ protected:
 
 Ptr<MergeRobertson> createMergeRobertson()
 {
-    return new MergeRobertsonImpl;
+    return makePtr<MergeRobertsonImpl>();
 }
 
 }

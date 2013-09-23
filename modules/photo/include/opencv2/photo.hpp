@@ -127,12 +127,12 @@ public:
     CV_WRAP virtual void setSigmaColor(float sigma_color) = 0;
 };
 
-CV_EXPORTS_W Ptr<TonemapDurand> 
+CV_EXPORTS_W Ptr<TonemapDurand>
 createTonemapDurand(float gamma = 1.0f, float contrast = 4.0f, float saturation = 1.0f, float sigma_space = 2.0f, float sigma_color = 2.0f);
 
 // "Dynamic Range Reduction Inspired by Photoreceptor Physiology", Reinhard, Devlin, 2005
 
-class CV_EXPORTS_W TonemapReinhardDevlin : public Tonemap
+class CV_EXPORTS_W TonemapReinhard : public Tonemap
 {
 public:
     CV_WRAP virtual float getIntensity() const = 0;
@@ -145,8 +145,8 @@ public:
     CV_WRAP virtual void setColorAdaptation(float color_adapt) = 0;
 };
 
-CV_EXPORTS_W Ptr<TonemapReinhardDevlin> 
-createTonemapReinhardDevlin(float gamma = 1.0f, float intensity = 0.0f, float light_adapt = 1.0f, float color_adapt = 0.0f);
+CV_EXPORTS_W Ptr<TonemapReinhard>
+createTonemapReinhard(float gamma = 1.0f, float intensity = 0.0f, float light_adapt = 1.0f, float color_adapt = 0.0f);
 
 // "Perceptual Framework for Contrast Processing of High Dynamic Range Images", Mantiuk et al., 2006
 
@@ -160,29 +160,29 @@ public:
     CV_WRAP virtual void setSaturation(float saturation) = 0;
 };
 
-CV_EXPORTS_W Ptr<TonemapMantiuk> 
+CV_EXPORTS_W Ptr<TonemapMantiuk>
 createTonemapMantiuk(float gamma = 1.0f, float scale = 0.7f, float saturation = 1.0f);
 
-class CV_EXPORTS_W ExposureAlign : public Algorithm
+class CV_EXPORTS_W AlignExposures : public Algorithm
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
+                                 InputArray times, InputArray response) = 0;
 };
 
 // "Fast, Robust Image Registration for Compositing High Dynamic Range Photographs from Handheld Exposures", Ward, 2003
 
-class CV_EXPORTS_W AlignMTB : public ExposureAlign
+class CV_EXPORTS_W AlignMTB : public AlignExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
+                                 InputArray times, InputArray response) = 0;
 
     CV_WRAP virtual void process(InputArrayOfArrays src, std::vector<Mat>& dst) = 0;
 
-    CV_WRAP virtual void calculateShift(InputArray img0, InputArray img1, Point& shift) = 0;
+    CV_WRAP virtual Point calculateShift(InputArray img0, InputArray img1) = 0;
     CV_WRAP virtual void shiftMat(InputArray src, OutputArray dst, const Point shift) = 0;
-    CV_WRAP virtual void computeBitmaps(Mat& img, Mat& tb, Mat& eb) = 0;
+    CV_WRAP virtual void computeBitmaps(InputArray img, OutputArray tb, OutputArray eb) = 0;
 
     CV_WRAP virtual int getMaxBits() const = 0;
     CV_WRAP virtual void setMaxBits(int max_bits) = 0;
@@ -196,20 +196,20 @@ public:
 
 CV_EXPORTS_W Ptr<AlignMTB> createAlignMTB(int max_bits = 6, int exclude_range = 4, bool cut = true);
 
-class CV_EXPORTS_W ExposureCalibrate : public Algorithm
+class CV_EXPORTS_W CalibrateCRF : public Algorithm
 {
 public:
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
 // "Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
 
-class CV_EXPORTS_W CalibrateDebevec : public ExposureCalibrate
+class CV_EXPORTS_W CalibrateDebevec : public CalibrateCRF
 {
 public:
     CV_WRAP virtual float getLambda() const = 0;
     CV_WRAP virtual void setLambda(float lambda) = 0;
-    
+
     CV_WRAP virtual int getSamples() const = 0;
     CV_WRAP virtual void setSamples(int samples) = 0;
 
@@ -221,46 +221,46 @@ CV_EXPORTS_W Ptr<CalibrateDebevec> createCalibrateDebevec(int samples = 70, floa
 
 // "Dynamic range improvement through multiple exposures", Robertson et al., 1999
 
-class CV_EXPORTS_W CalibrateRobertson : public ExposureCalibrate
+class CV_EXPORTS_W CalibrateRobertson : public CalibrateCRF
 {
 public:
     CV_WRAP virtual int getMaxIter() const = 0;
     CV_WRAP virtual void setMaxIter(int max_iter) = 0;
-    
+
     CV_WRAP virtual float getThreshold() const = 0;
     CV_WRAP virtual void setThreshold(float threshold) = 0;
-    
+
     CV_WRAP virtual Mat getRadiance() const = 0;
 };
 
 CV_EXPORTS_W Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter = 30, float threshold = 0.01f);
 
-class CV_EXPORTS_W ExposureMerge : public Algorithm
+class CV_EXPORTS_W MergeExposures : public Algorithm
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
+                                 InputArray times, InputArray response) = 0;
 };
 
 // "Recovering High Dynamic Range Radiance Maps from Photographs", Debevec, Malik, 1997
 
-class CV_EXPORTS_W MergeDebevec : public ExposureMerge
+class CV_EXPORTS_W MergeDebevec : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
+                                 InputArray times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
 CV_EXPORTS_W Ptr<MergeDebevec> createMergeDebevec();
 
 // "Exposure Fusion", Mertens et al., 2007
 
-class CV_EXPORTS_W MergeMertens : public ExposureMerge
+class CV_EXPORTS_W MergeMertens : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
+                                 InputArray times, InputArray response) = 0;
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst) = 0;
 
     CV_WRAP virtual float getContrastWeight() const = 0;
@@ -273,17 +273,17 @@ public:
     CV_WRAP virtual void setExposureWeight(float exposure_weight) = 0;
 };
 
-CV_EXPORTS_W Ptr<MergeMertens> 
+CV_EXPORTS_W Ptr<MergeMertens>
 createMergeMertens(float contrast_weight = 1.0f, float saturation_weight = 1.0f, float exposure_weight = 0.0f);
 
 // "Dynamic range improvement through multiple exposures", Robertson et al., 1999
 
-class CV_EXPORTS_W MergeRobertson : public ExposureMerge
+class CV_EXPORTS_W MergeRobertson : public MergeExposures
 {
 public:
     CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst,
-                                 const std::vector<float>& times, InputArray response) = 0;
-    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, const std::vector<float>& times) = 0;
+                                 InputArray times, InputArray response) = 0;
+    CV_WRAP virtual void process(InputArrayOfArrays src, OutputArray dst, InputArray times) = 0;
 };
 
 CV_EXPORTS_W Ptr<MergeRobertson> createMergeRobertson();

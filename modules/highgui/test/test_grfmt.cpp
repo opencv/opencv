@@ -479,11 +479,7 @@ TEST(Highgui_WebP, encode_decode_lossless_webp)
 TEST(Highgui_WebP, encode_decode_lossy_webp)
 {
     cvtest::TS& ts = *cvtest::TS::ptr();
-<<<<<<< HEAD
-    string input = string(ts.get_data_path()) + "/../cv/shared/lena.png";
-=======
     std::string input = std::string(ts.get_data_path()) + "../cv/shared/lena.png";
->>>>>>> 99a43257d5912ff215016e1cf5f4e0c2a934b72f
     cv::Mat img = cv::imread(input);
     ASSERT_FALSE(img.empty());
 
@@ -533,24 +529,24 @@ TEST(Highgui_WebP, encode_decode_with_alpha_webp)
 TEST(Highgui_Hdr, regression)
 {
     string folder = string(cvtest::TS::ptr()->get_data_path()) + "/readwrite/";
-	string name_rle = folder + "rle.hdr";
-	string name_no_rle = folder + "no_rle.hdr";
-	Mat img_rle = imread(name_rle, -1);
-	ASSERT_FALSE(img_rle.empty()) << "Could not open " << name_rle;
-	Mat img_no_rle = imread(name_no_rle, -1);
-	ASSERT_FALSE(img_no_rle.empty()) << "Could not open " << name_no_rle;
+    string name_rle = folder + "rle.hdr";
+    string name_no_rle = folder + "no_rle.hdr";
+    Mat img_rle = imread(name_rle, -1);
+    ASSERT_FALSE(img_rle.empty()) << "Could not open " << name_rle;
+    Mat img_no_rle = imread(name_no_rle, -1);
+    ASSERT_FALSE(img_no_rle.empty()) << "Could not open " << name_no_rle;
 
-	double min = 0.0, max = 1.0;
-	minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
+    double min = 0.0, max = 1.0;
+    minMaxLoc(abs(img_rle - img_no_rle), &min, &max);
     ASSERT_FALSE(max > DBL_EPSILON);
-	string tmp_file_name = tempfile(".hdr");
-	vector<int>param(1); 
-	for(int i = 0; i < 2; i++) {
-		param[0] = i;
-		imwrite(tmp_file_name, img_rle, param);
-		Mat written_img = imread(tmp_file_name, -1);
-		ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
-		minMaxLoc(abs(img_rle - written_img), &min, &max);
+    string tmp_file_name = tempfile(".hdr");
+    vector<int>param(1);
+    for(int i = 0; i < 2; i++) {
+        param[0] = i;
+        imwrite(tmp_file_name, img_rle, param);
+        Mat written_img = imread(tmp_file_name, -1);
+        ASSERT_FALSE(written_img.empty()) << "Could not open " << tmp_file_name;
+        minMaxLoc(abs(img_rle - written_img), &min, &max);
         ASSERT_FALSE(max > DBL_EPSILON);
-	}
+    }
 }

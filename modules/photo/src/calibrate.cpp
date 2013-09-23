@@ -48,25 +48,26 @@
 
 namespace cv
 {
-    
+
 class CalibrateDebevecImpl : public CalibrateDebevec
 {
 public:
-    CalibrateDebevecImpl(int samples, float lambda, bool random) :
-        samples(samples),
-        lambda(lambda),
+    CalibrateDebevecImpl(int _samples, float _lambda, bool _random) :
         name("CalibrateDebevec"),
-        w(tringleWeights()),
-        random(random)
+        samples(_samples),
+        lambda(_lambda),
+        random(_random),
+        w(tringleWeights())
     {
     }
-    
-    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
+
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times)
     {
         std::vector<Mat> images;
         src.getMatVector(images);
+        Mat times = _times.getMat();
 
-        CV_Assert(images.size() == times.size());
+        CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
         CV_Assert(images[0].depth() == CV_8U);
 
@@ -75,14 +76,14 @@ public:
 
         dst.create(LDR_SIZE, 1, CV_32FCC);
         Mat result = dst.getMat();
-        
+
         std::vector<Point> sample_points;
         if(random) {
             for(int i = 0; i < samples; i++) {
                 sample_points.push_back(Point(rand() % images[0].cols, rand() % images[0].rows));
             }
         } else {
-            int x_points = sqrt(static_cast<double>(samples) * images[0].cols / images[0].rows);
+            int x_points = static_cast<int>(sqrt(static_cast<double>(samples) * images[0].cols / images[0].rows));
             int y_points = samples / x_points;
             int step_x = images[0].cols / x_points;
             int step_y = images[0].rows / y_points;
@@ -106,7 +107,7 @@ public:
                     int val = images[j].ptr()[3*(sample_points[i].y * images[j].cols + sample_points[j].x) + channel];
                     A.at<float>(eq, val) = w.at<float>(val);
                     A.at<float>(eq, LDR_SIZE + i) = -w.at<float>(val);
-                    B.at<float>(eq, 0) = w.at<float>(val) * log(times[j]);        
+                    B.at<float>(eq, 0) = w.at<float>(val) * log(times.at<float>(j));
                     eq++;
                 }
             }
@@ -151,7 +152,7 @@ public:
         samples = fn["samples"];
         lambda = fn["lambda"];
         int random_val = fn["random"];
-        random = static_cast<bool>(random_val);
+        random = (random_val != 0);
     }
 
 protected:
@@ -164,26 +165,27 @@ protected:
 
 Ptr<CalibrateDebevec> createCalibrateDebevec(int samples, float lambda, bool random)
 {
-    return new CalibrateDebevecImpl(samples, lambda, random);
+    return makePtr<CalibrateDebevecImpl>(samples, lambda, random);
 }
 
 class CalibrateRobertsonImpl : public CalibrateRobertson
 {
 public:
-    CalibrateRobertsonImpl(int max_iter, float threshold) :
-        max_iter(max_iter),
-        threshold(threshold),
+    CalibrateRobertsonImpl(int _max_iter, float _threshold) :
         name("CalibrateRobertson"),
+        max_iter(_max_iter),
+        threshold(_threshold),
         weight(RobertsonWeights())
     {
     }
-    
-    void process(InputArrayOfArrays src, OutputArray dst, std::vector<float>& times)
+
+    void process(InputArrayOfArrays src, OutputArray dst, InputArray _times)
     {
         std::vector<Mat> images;
         src.getMatVector(images);
+        Mat times = _times.getMat();
 
-        CV_Assert(images.size() == times.size());
+        CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
         CV_Assert(images[0].depth() == CV_8U);
 
@@ -205,7 +207,7 @@ public:
         }
         card = 1.0 / card;
 
-        Ptr<MergeRobertson> merge = createMergeRobertson();        
+        Ptr<MergeRobertson> merge = createMergeRobertson();
         for(int iter = 0; iter < max_iter; iter++) {
 
             radiance = Mat::zeros(images[0].size(), CV_32FCC);
@@ -217,7 +219,7 @@ public:
                 float* rad_ptr = radiance.ptr<float>();
                 for(size_t pos = 0; pos < images[i].total(); pos++) {
                     for(int c = 0; c < channels; c++, ptr++, rad_ptr++) {
-                        new_response.at<Vec3f>(*ptr)[c] += times[i] * *rad_ptr;
+                        new_response.at<Vec3f>(*ptr)[c] += times.at<float>(i) * *rad_ptr;
                     }
                 }
             }
@@ -228,7 +230,7 @@ public:
                     new_response.at<Vec3f>(i)[c] /= middle;
                 }
             }
-            float diff = sum(sum(abs(new_response - response)))[0] / channels;
+            float diff = static_cast<float>(sum(sum(abs(new_response - response)))[0] / channels);
             new_response.copyTo(response);
             if(diff < threshold) {
                 break;
@@ -268,7 +270,7 @@ protected:
 
 Ptr<CalibrateRobertson> createCalibrateRobertson(int max_iter, float threshold)
 {
-    return new CalibrateRobertsonImpl(max_iter, threshold);
+    return makePtr<CalibrateRobertsonImpl>(max_iter, threshold);
 }
 
 }

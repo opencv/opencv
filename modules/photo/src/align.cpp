@@ -50,16 +50,16 @@ namespace cv
 class AlignMTBImpl : public AlignMTB
 {
 public:
-    AlignMTBImpl(int max_bits, int exclude_range, bool cut) :
-        max_bits(max_bits),
-        exclude_range(exclude_range),
-        cut(cut),
-        name("AlignMTB")
+    AlignMTBImpl(int _max_bits, int _exclude_range, bool _cut) :
+        name("AlignMTB"),
+        max_bits(_max_bits),
+        exclude_range(_exclude_range),
+        cut(_cut)
     {
     }
-    
+
     void process(InputArrayOfArrays src, std::vector<Mat>& dst,
-                 const std::vector<float>& times, InputArray response)
+                 InputArray, InputArray)
     {
         process(src, dst);
     }
@@ -68,7 +68,7 @@ public:
     {
         std::vector<Mat> src;
         _src.getMatVector(src);
-        
+
         checkImageDimensions(src);
         dst.resize(src.size());
 
@@ -85,8 +85,7 @@ public:
             }
             Mat gray;
             cvtColor(src[i], gray, COLOR_RGB2GRAY);
-            Point shift;
-            calculateShift(gray_base, gray, shift);
+            Point shift = calculateShift(gray_base, gray);
             shifts.push_back(shift);
             shiftMat(src[i], dst[i], shift);
         }
@@ -113,7 +112,7 @@ public:
         }
     }
 
-    void calculateShift(InputArray _img0, InputArray _img1, Point& shift)
+    Point calculateShift(InputArray _img0, InputArray _img1)
     {
         Mat img0 = _img0.getMat();
         Mat img1 = _img1.getMat();
@@ -126,11 +125,11 @@ public:
         std::vector<Mat> pyr0;
         std::vector<Mat> pyr1;
         buildPyr(img0, pyr0, maxlevel);
-        buildPyr(img1, pyr1, maxlevel);    
-    
-        shift = Point(0, 0);
+        buildPyr(img1, pyr1, maxlevel);
+
+        Point shift(0, 0);
         for(int level = maxlevel; level >= 0; level--) {
-        
+
             shift *= 2;
             Mat tb1, tb2, eb1, eb2;
             computeBitmaps(pyr0[level], tb1, eb1);
@@ -151,14 +150,15 @@ public:
                     if(err < min_err) {
                         new_shift = test_shift;
                         min_err = err;
-                    }        
+                    }
                 }
             }
             shift = new_shift;
         }
+        return shift;
     }
 
-    void shiftMat(InputArray _src, OutputArray _dst, const Point shift) 
+    void shiftMat(InputArray _src, OutputArray _dst, const Point shift)
     {
         Mat src = _src.getMat();
         _dst.create(src.size(), src.type());
@@ -186,7 +186,7 @@ public:
     {
         fs << "name" << name
            << "max_bits" << max_bits
-           << "exclude_range" << exclude_range 
+           << "exclude_range" << exclude_range
            << "cut" << static_cast<int>(cut);
     }
 
@@ -197,11 +197,15 @@ public:
         max_bits = fn["max_bits"];
         exclude_range = fn["exclude_range"];
         int cut_val = fn["cut"];
-        cut = static_cast<bool>(cut_val);
+        cut = (cut_val != 0);
     }
 
-    void computeBitmaps(Mat& img, Mat& tb, Mat& eb)
+    void computeBitmaps(InputArray _img, OutputArray _tb, OutputArray _eb)
     {
+        Mat img = _img.getMat();
+        _tb.create(img.size(), CV_8U);
+        _eb.create(img.size(), CV_8U);
+        Mat tb = _tb.getMat(), eb = _eb.getMat();
         int median = getMedian(img);
         compare(img, median, tb, CMP_GT);
         compare(abs(img - median), exclude_range, eb, CMP_GT);
@@ -230,7 +234,7 @@ protected:
         }
     }
 
-    void buildPyr(Mat& img, std::vector<Mat>& pyr, int maxlevel) 
+    void buildPyr(Mat& img, std::vector<Mat>& pyr, int maxlevel)
     {
         pyr.resize(maxlevel + 1);
         pyr[0] = img.clone();
@@ -242,7 +246,7 @@ protected:
     int getMedian(Mat& img)
     {
         int channels = 0;
-        Mat hist; 
+        Mat hist;
         int hist_size = LDR_SIZE;
         float range[] = {0, LDR_SIZE} ;
         const float* ranges[] = {range};
@@ -260,8 +264,7 @@ protected:
 
 Ptr<AlignMTB> createAlignMTB(int max_bits, int exclude_range, bool cut)
 {
-    return new AlignMTBImpl(max_bits, exclude_range, cut);
+    return makePtr<AlignMTBImpl>(max_bits, exclude_range, cut);
 }
 
 }
-

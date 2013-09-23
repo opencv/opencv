@@ -155,7 +155,7 @@ As always, we would be happy to hear your comments and receive your contribution
                  :height: 80pt
                  :width:  80pt
                  :alt: photo Icon
-				 
+
 *  :ref:`Table-Of-Content-GPU`
 
    .. tabularcolumns:: m{100pt} m{300pt}

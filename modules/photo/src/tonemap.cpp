@@ -50,17 +50,17 @@ namespace cv
 class TonemapImpl : public Tonemap
 {
 public:
-    TonemapImpl(float gamma) : gamma(gamma), name("Tonemap")
+    TonemapImpl(float _gamma) : name("Tonemap"), gamma(_gamma)
     {
     }
 
-    void process(InputArray _src, OutputArray _dst) 
+    void process(InputArray _src, OutputArray _dst)
     {
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat dst = _dst.getMat();
-        
+
         double min, max;
         minMaxLoc(src, &min, &max);
         if(max - min > DBL_EPSILON) {
@@ -95,27 +95,27 @@ protected:
 
 Ptr<Tonemap> createTonemap(float gamma)
 {
-    return new TonemapImpl(gamma);
+    return makePtr<TonemapImpl>(gamma);
 }
 
 class TonemapDragoImpl : public TonemapDrago
 {
 public:
-    TonemapDragoImpl(float gamma, float saturation, float bias) : 
-        gamma(gamma), 
-        saturation(saturation),
-        bias(bias),
-        name("TonemapDrago")
+    TonemapDragoImpl(float _gamma, float _saturation, float _bias) :
+        name("TonemapDrago"),
+        gamma(_gamma),
+        saturation(_saturation),
+        bias(_bias)
     {
     }
 
-    void process(InputArray _src, OutputArray _dst) 
+    void process(InputArray _src, OutputArray _dst)
     {
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
         _dst.create(src.size(), CV_32FC3);
         Mat img = _dst.getMat();
-        
+
         Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
 
@@ -139,7 +139,7 @@ public:
         div.release();
 
         mapLuminance(img, img, gray_img, map, saturation);
-        
+
         linear->setGamma(gamma);
         linear->process(img, img);
     }
@@ -177,23 +177,23 @@ protected:
 
 Ptr<TonemapDrago> createTonemapDrago(float gamma, float saturation, float bias)
 {
-    return new TonemapDragoImpl(gamma, saturation, bias);
+    return makePtr<TonemapDragoImpl>(gamma, saturation, bias);
 }
- 
+
 class TonemapDurandImpl : public TonemapDurand
 {
 public:
-    TonemapDurandImpl(float gamma, float contrast, float saturation,  float sigma_color, float sigma_space) : 
-        gamma(gamma), 
-        contrast(contrast),
-        saturation(saturation),
-        sigma_color(sigma_color),
-        sigma_space(sigma_space),
-        name("TonemapDurand")
+    TonemapDurandImpl(float _gamma, float _contrast, float _saturation, float _sigma_color, float _sigma_space) :
+        name("TonemapDurand"),
+        gamma(_gamma),
+        contrast(_contrast),
+        saturation(_saturation),
+        sigma_color(_sigma_color),
+        sigma_space(_sigma_space)
     {
     }
 
-    void process(InputArray _src, OutputArray _dst) 
+    void process(InputArray _src, OutputArray _dst)
     {
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -208,7 +208,7 @@ public:
         log(gray_img, log_img);
         Mat map_img;
         bilateralFilter(log_img, map_img, -1, sigma_color, sigma_space);
-        
+
         double min, max;
         minMaxLoc(map_img, &min, &max);
         float scale = contrast / static_cast<float>(max - min);
@@ -238,8 +238,8 @@ public:
     {
         fs << "name" << name
            << "gamma" << gamma
-           << "contrast" << contrast 
-           << "sigma_color" << sigma_color 
+           << "contrast" << contrast
+           << "sigma_color" << sigma_color
            << "sigma_space" << sigma_space
            << "saturation" << saturation;
     }
@@ -257,23 +257,23 @@ public:
 
 protected:
     String name;
-    float gamma, saturation, contrast, sigma_color, sigma_space;
+    float gamma, contrast, saturation, sigma_color, sigma_space;
 };
 
 Ptr<TonemapDurand> createTonemapDurand(float gamma, float contrast, float saturation, float sigma_color, float sigma_space)
 {
-    return new TonemapDurandImpl(gamma, contrast, saturation, sigma_color, sigma_space);
+    return makePtr<TonemapDurandImpl>(gamma, contrast, saturation, sigma_color, sigma_space);
 }
 
-class TonemapReinhardDevlinImpl : public TonemapReinhardDevlin
+class TonemapReinhardImpl : public TonemapReinhard
 {
 public:
-    TonemapReinhardDevlinImpl(float gamma, float intensity, float light_adapt, float color_adapt) : 
-        gamma(gamma), 
-        intensity(intensity),
-        light_adapt(light_adapt),
-        color_adapt(color_adapt),
-        name("TonemapReinhardDevlin")
+    TonemapReinhardImpl(float _gamma, float _intensity, float _light_adapt, float _color_adapt) :
+        name("TonemapReinhard"),
+        gamma(_gamma),
+        intensity(_intensity),
+        light_adapt(_light_adapt),
+        color_adapt(_color_adapt)
     {
     }
 
@@ -285,7 +285,7 @@ public:
         Mat img = _dst.getMat();
         Ptr<Tonemap> linear = createTonemap(1.0f);
         linear->process(src, img);
-        
+
         Mat gray_img;
         cvtColor(img, gray_img, COLOR_RGB2GRAY);
         Mat log_img;
@@ -310,11 +310,11 @@ public:
             Mat adapt = color_adapt * channels[i] + (1.0f - color_adapt) * gray_img;
             adapt = light_adapt * adapt + (1.0f - light_adapt) * global;
             pow(intensity * adapt, map_key, adapt);
-            channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));        
+            channels[i] = channels[i].mul(1.0f / (adapt + channels[i]));
         }
         gray_img.release();
         merge(channels, img);
-        
+
         linear->setGamma(gamma);
         linear->process(img, img);
     }
@@ -335,8 +335,8 @@ public:
     {
         fs << "name" << name
            << "gamma" << gamma
-           << "intensity" << intensity 
-           << "light_adapt" << light_adapt 
+           << "intensity" << intensity
+           << "light_adapt" << light_adapt
            << "color_adapt" << color_adapt;
     }
 
@@ -355,23 +355,23 @@ protected:
     float gamma, intensity, light_adapt, color_adapt;
 };
 
-Ptr<TonemapReinhardDevlin> createTonemapReinhardDevlin(float gamma, float contrast, float sigma_color, float sigma_space)
+Ptr<TonemapReinhard> createTonemapReinhard(float gamma, float contrast, float sigma_color, float sigma_space)
 {
-    return new TonemapReinhardDevlinImpl(gamma, contrast, sigma_color, sigma_space);
+    return makePtr<TonemapReinhardImpl>(gamma, contrast, sigma_color, sigma_space);
 }
 
 class TonemapMantiukImpl : public TonemapMantiuk
 {
 public:
-    TonemapMantiukImpl(float gamma, float scale, float saturation) : 
-        gamma(gamma), 
-        scale(scale),
-        saturation(saturation),
-        name("TonemapMantiuk")
+    TonemapMantiukImpl(float _gamma, float _scale, float _saturation) :
+        name("TonemapMantiuk"),
+        gamma(_gamma),
+        scale(_scale),
+        saturation(_saturation)
     {
     }
 
-    void process(InputArray _src, OutputArray _dst) 
+    void process(InputArray _src, OutputArray _dst)
     {
         Mat src = _src.getMat();
         CV_Assert(!src.empty());
@@ -389,8 +389,8 @@ public:
         getContrast(log_img, x_contrast, y_contrast);
 
         for(size_t i = 0; i < x_contrast.size(); i++) {
-            mapContrast(x_contrast[i], scale);
-            mapContrast(y_contrast[i], scale);
+            mapContrast(x_contrast[i]);
+            mapContrast(y_contrast[i]);
         }
 
         Mat right(src.size(), CV_32F);
@@ -442,7 +442,7 @@ public:
     {
         fs << "name" << name
            << "gamma" << gamma
-           << "scale" << scale 
+           << "scale" << scale
            << "saturation" << saturation;
     }
 
@@ -468,7 +468,7 @@ protected:
         dst = dst.mul(sign);
     }
 
-    void mapContrast(Mat& contrast, float scale)
+    void mapContrast(Mat& contrast)
     {
         const float response_power = 0.4185f;
         signedPow(contrast, response_power, contrast);
@@ -525,7 +525,7 @@ protected:
 
 Ptr<TonemapMantiuk> createTonemapMantiuk(float gamma, float scale, float saturation)
 {
-    return new TonemapMantiukImpl(gamma, scale, saturation);
+    return makePtr<TonemapMantiukImpl>(gamma, scale, saturation);
 }
 
 }

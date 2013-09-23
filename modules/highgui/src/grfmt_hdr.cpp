@@ -49,10 +49,10 @@ namespace cv
 
 HdrDecoder::HdrDecoder()
 {
-	m_signature = "#?RGBE";
-	m_signature_alt = "#?RADIANCE";
-	file = NULL;
-	m_type = CV_32FC3;
+    m_signature = "#?RGBE";
+    m_signature_alt = "#?RADIANCE";
+    file = NULL;
+    m_type = CV_32FC3;
 }
 
 HdrDecoder::~HdrDecoder()
@@ -61,61 +61,61 @@ HdrDecoder::~HdrDecoder()
 
 size_t HdrDecoder::signatureLength() const
 {
-	return m_signature.size() > m_signature_alt.size() ?
-		   m_signature.size() : m_signature_alt.size();
+    return m_signature.size() > m_signature_alt.size() ?
+           m_signature.size() : m_signature_alt.size();
 }
 
 bool  HdrDecoder::readHeader()
 {
-	file = fopen(m_filename.c_str(), "rb");
-	if(!file) {
-		return false;
-	}
-	RGBE_ReadHeader(file, &m_width, &m_height, NULL);
-	if(m_width <= 0 || m_height <= 0) {
-		fclose(file); 
-		file = NULL;
-		return false;
-	}
-	return true;
+    file = fopen(m_filename.c_str(), "rb");
+    if(!file) {
+        return false;
+    }
+    RGBE_ReadHeader(file, &m_width, &m_height, NULL);
+    if(m_width <= 0 || m_height <= 0) {
+        fclose(file);
+        file = NULL;
+        return false;
+    }
+    return true;
 }
 
 bool HdrDecoder::readData(Mat& _img)
 {
-	Mat img(m_height, m_width, CV_32FC3);
-	if(!file) {
-		if(!readHeader()) {
-			return false;
-		}
-	}
-	RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
-	fclose(file); file = NULL;
-	
-	if(_img.depth() == img.depth()) {
-		img.convertTo(_img, _img.type());
-	} else {
-		img.convertTo(_img, _img.type(), 255);
-	}
-	return true;
+    Mat img(m_height, m_width, CV_32FC3);
+    if(!file) {
+        if(!readHeader()) {
+            return false;
+        }
+    }
+    RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
+    fclose(file); file = NULL;
+
+    if(_img.depth() == img.depth()) {
+        img.convertTo(_img, _img.type());
+    } else {
+        img.convertTo(_img, _img.type(), 255);
+    }
+    return true;
 }
 
 bool HdrDecoder::checkSignature( const String& signature ) const
 {
-	if(signature.size() >= m_signature.size() && 
-	   (!memcmp(signature.c_str(), m_signature.c_str(), m_signature.size()) || 
-	   !memcmp(signature.c_str(), m_signature_alt.c_str(), m_signature_alt.size())))
-	   return true;
-	return false;
+    if(signature.size() >= m_signature.size() &&
+       (!memcmp(signature.c_str(), m_signature.c_str(), m_signature.size()) ||
+       !memcmp(signature.c_str(), m_signature_alt.c_str(), m_signature_alt.size())))
+       return true;
+    return false;
 }
 
 ImageDecoder HdrDecoder::newDecoder() const
 {
-	return new HdrDecoder;
+    return makePtr<HdrDecoder>();
 }
 
 HdrEncoder::HdrEncoder()
 {
-	m_description = "Radiance HDR (*.hdr;*.pic)";
+    m_description = "Radiance HDR (*.hdr;*.pic)";
 }
 
 HdrEncoder::~HdrEncoder()
@@ -124,41 +124,41 @@ HdrEncoder::~HdrEncoder()
 
 bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
 {
-	Mat img;
-	CV_Assert(input_img.channels() == 3 || input_img.channels() == 1);
-	if(input_img.channels() == 1) {
-		 std::vector<Mat> splitted(3, input_img);
-		 merge(splitted, img);
-	} else {
-		input_img.copyTo(img);
-	}
-	if(img.depth() != CV_32F) {
-		img.convertTo(img, CV_32FC3, 1/255.0f);
-	}
-	CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);
-	FILE *fout = fopen(m_filename.c_str(), "wb");
-	if(!fout) {
-		return false;
-	}
+    Mat img;
+    CV_Assert(input_img.channels() == 3 || input_img.channels() == 1);
+    if(input_img.channels() == 1) {
+         std::vector<Mat> splitted(3, input_img);
+         merge(splitted, img);
+    } else {
+        input_img.copyTo(img);
+    }
+    if(img.depth() != CV_32F) {
+        img.convertTo(img, CV_32FC3, 1/255.0f);
+    }
+    CV_Assert(params.empty() || params[0] == HDR_NONE || params[0] == HDR_RLE);
+    FILE *fout = fopen(m_filename.c_str(), "wb");
+    if(!fout) {
+        return false;
+    }
 
-	RGBE_WriteHeader(fout, img.cols, img.rows, NULL);
-	if(params.empty() || params[0] == HDR_RLE) {
-		RGBE_WritePixels_RLE(fout, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
-	} else {
-		RGBE_WritePixels(fout, const_cast<float*>(img.ptr<float>()), img.cols * img.rows);
-	}
+    RGBE_WriteHeader(fout, img.cols, img.rows, NULL);
+    if(params.empty() || params[0] == HDR_RLE) {
+        RGBE_WritePixels_RLE(fout, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
+    } else {
+        RGBE_WritePixels(fout, const_cast<float*>(img.ptr<float>()), img.cols * img.rows);
+    }
 
-	fclose(fout);
-	return true;
+    fclose(fout);
+    return true;
 }
 
 ImageEncoder HdrEncoder::newEncoder() const
 {
-	return new HdrEncoder;
+    return makePtr<HdrEncoder>();
 }
 
 bool HdrEncoder::isFormatSupported( int depth ) const {
-	return depth != CV_64F;
+    return depth != CV_64F;
 }
 
 }

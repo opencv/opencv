@@ -59,15 +59,10 @@ struct ImageCodecInitializer
 {
     ImageCodecInitializer()
     {
-<<<<<<< HEAD
-        decoders.push_back( new BmpDecoder );
-        encoders.push_back( new BmpEncoder );
-		decoders.push_back( new HdrDecoder );
-        encoders.push_back( new HdrEncoder );
-=======
         decoders.push_back( makePtr<BmpDecoder>() );
         encoders.push_back( makePtr<BmpEncoder>() );
->>>>>>> 99a43257d5912ff215016e1cf5f4e0c2a934b72f
+        decoders.push_back( makePtr<HdrDecoder>() );
+        encoders.push_back( makePtr<HdrEncoder>() );
     #ifdef HAVE_JPEG
         decoders.push_back( makePtr<JpegDecoder>() );
         encoders.push_back( makePtr<JpegEncoder>() );

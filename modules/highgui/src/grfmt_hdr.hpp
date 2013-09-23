@@ -58,29 +58,29 @@ enum HdrCompression
 class HdrDecoder : public BaseImageDecoder
 {
 public:
-	HdrDecoder();
-	~HdrDecoder();
-	bool readHeader();
-	bool readData( Mat& img );
-	bool checkSignature( const String& signature ) const;
-	ImageDecoder newDecoder() const;
-	size_t signatureLength() const;
+    HdrDecoder();
+    ~HdrDecoder();
+    bool readHeader();
+    bool readData( Mat& img );
+    bool checkSignature( const String& signature ) const;
+    ImageDecoder newDecoder() const;
+    size_t signatureLength() const;
 protected:
-	String m_signature_alt;
-	FILE *file;
+    String m_signature_alt;
+    FILE *file;
 };
 
 // ... writer
 class HdrEncoder : public BaseImageEncoder
 {
 public:
-	HdrEncoder();
-	~HdrEncoder();
-	bool write( const Mat& img, const std::vector<int>& params );
-	ImageEncoder newEncoder() const;
-	bool isFormatSupported( int depth ) const;
+    HdrEncoder();
+    ~HdrEncoder();
+    bool write( const Mat& img, const std::vector<int>& params );
+    ImageEncoder newEncoder() const;
+    bool isFormatSupported( int depth ) const;
 protected:
-	
+
 };
 
 }

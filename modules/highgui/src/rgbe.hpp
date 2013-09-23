@@ -51,13 +51,13 @@
 
 typedef struct {
   int valid;            /* indicate which fields are valid */
-  char programtype[16]; /* listed at beginning of file to identify it 
-                         * after "#?".  defaults to "RGBE" */ 
-  float gamma;          /* image has already been gamma corrected with 
+  char programtype[16]; /* listed at beginning of file to identify it
+                         * after "#?".  defaults to "RGBE" */
+  float gamma;          /* image has already been gamma corrected with
                          * given gamma.  defaults to 1.0 (no correction) */
   float exposure;       /* a value of 1.0 in an image corresponds to
-			 * <exposure> watts/steradian/m^2. 
-			 * defaults to 1.0 */
+       * <exposure> watts/steradian/m^2.
+       * defaults to 1.0 */
 } rgbe_header_info;
 
 /* flags indicating which fields in an rgbe_header_info are valid */
@@ -82,11 +82,8 @@ int RGBE_ReadPixels(FILE *fp, float *data, int numpixels);
 /* read or write run length encoded files */
 /* must be called to read or write whole scanlines */
 int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
-			 int num_scanlines);
+       int num_scanlines);
 int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
-			int num_scanlines);
+      int num_scanlines);
 
 #endif/*_RGBE_HDR_H_*/
-
-
-
