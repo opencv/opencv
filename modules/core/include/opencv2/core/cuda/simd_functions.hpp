@@ -70,8 +70,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
-#define __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
+#ifndef __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__
+#define __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__
 
 #include "common.hpp"
 
@@ -123,7 +123,7 @@
   vmin4(a,b)      per-byte unsigned minimum: min(a, b)
 */
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     // 2
 
@@ -906,4 +906,4 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-#endif // __OPENCV_GPU_SIMD_FUNCTIONS_HPP__
+#endif // __OPENCV_CUDA_SIMD_FUNCTIONS_HPP__

@@ -490,7 +490,7 @@ namespace ogl
     class CV_EXPORTS Arrays;
 }
 
-namespace gpu
+namespace cuda
 {
     class CV_EXPORTS GpuMat;
     class CV_EXPORTS CudaMem;

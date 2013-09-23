@@ -2,7 +2,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#if defined(HAVE_OPENCV_GPUCODEC)
+#if defined(HAVE_OPENCV_CUDACODEC)
 
 #include <string>
 #include <vector>
@@ -11,7 +11,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/opengl.hpp>
-#include <opencv2/gpucodec.hpp>
+#include <opencv2/cudacodec.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/contrib.hpp>
 
@@ -24,13 +24,13 @@ int main(int argc, const char* argv[])
 
     cv::namedWindow("CPU", cv::WINDOW_NORMAL);
     cv::namedWindow("GPU", cv::WINDOW_OPENGL);
-    cv::gpu::setGlDevice();
+    cv::cuda::setGlDevice();
 
     cv::Mat frame;
     cv::VideoCapture reader(fname);
 
-    cv::gpu::GpuMat d_frame;
-    cv::Ptr<cv::gpucodec::VideoReader> d_reader = cv::gpucodec::createVideoReader(fname);
+    cv::cuda::GpuMat d_frame;
+    cv::Ptr<cv::cudacodec::VideoReader> d_reader = cv::cudacodec::createVideoReader(fname);
 
     cv::TickMeter tm;
     std::vector<double> cpu_times;
@@ -78,7 +78,7 @@ int main(int argc, const char* argv[])
 
 int main()
 {
-    std::cout << "OpenCV was built without GPU Video decoding support\n" << std::endl;
+    std::cout << "OpenCV was built without CUDA Video decoding support\n" << std::endl;
     return 0;
 }
 

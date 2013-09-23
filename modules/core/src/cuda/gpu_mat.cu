@@ -48,17 +48,17 @@
 
 #else
 
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::cudev;
 
 /////////////////////////////////////////////////////
 /// create
 
-void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
+void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 {
     CV_DbgAssert( _rows >= 0 && _cols >= 0 );
 
@@ -108,7 +108,7 @@ void cv::gpu::GpuMat::create(int _rows, int _cols, int _type)
 /////////////////////////////////////////////////////
 /// release
 
-void cv::gpu::GpuMat::release()
+void cv::cuda::GpuMat::release()
 {
     if (refcount && CV_XADD(refcount, -1) == 1)
     {
@@ -124,7 +124,7 @@ void cv::gpu::GpuMat::release()
 /////////////////////////////////////////////////////
 /// upload
 
-void cv::gpu::GpuMat::upload(InputArray arr)
+void cv::cuda::GpuMat::upload(InputArray arr)
 {
     Mat mat = arr.getMat();
 
@@ -135,7 +135,7 @@ void cv::gpu::GpuMat::upload(InputArray arr)
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(data, step, mat.data, mat.step, cols * elemSize(), rows, cudaMemcpyHostToDevice) );
 }
 
-void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
+void cv::cuda::GpuMat::upload(InputArray arr, Stream& _stream)
 {
     Mat mat = arr.getMat();
 
@@ -150,7 +150,7 @@ void cv::gpu::GpuMat::upload(InputArray arr, Stream& _stream)
 /////////////////////////////////////////////////////
 /// download
 
-void cv::gpu::GpuMat::download(OutputArray _dst) const
+void cv::cuda::GpuMat::download(OutputArray _dst) const
 {
     CV_DbgAssert( !empty() );
 
@@ -160,7 +160,7 @@ void cv::gpu::GpuMat::download(OutputArray _dst) const
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToHost) );
 }
 
-void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
+void cv::cuda::GpuMat::download(OutputArray _dst, Stream& _stream) const
 {
     CV_DbgAssert( !empty() );
 
@@ -174,7 +174,7 @@ void cv::gpu::GpuMat::download(OutputArray _dst, Stream& _stream) const
 /////////////////////////////////////////////////////
 /// copyTo
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst) const
 {
     CV_DbgAssert( !empty() );
 
@@ -184,7 +184,7 @@ void cv::gpu::GpuMat::copyTo(OutputArray _dst) const
     CV_CUDEV_SAFE_CALL( cudaMemcpy2D(dst.data, dst.step, data, step, cols * elemSize(), rows, cudaMemcpyDeviceToDevice) );
 }
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, Stream& _stream) const
 {
     CV_DbgAssert( !empty() );
 
@@ -220,7 +220,7 @@ namespace
     }
 }
 
-void cv::gpu::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream) const
+void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream) const
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -279,7 +279,7 @@ namespace
     }
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar value, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar value, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -333,7 +333,7 @@ GpuMat& cv::gpu::GpuMat::setTo(Scalar value, Stream& stream)
     return *this;
 }
 
-GpuMat& cv::gpu::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
+GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
 {
     CV_DbgAssert( !empty() );
     CV_DbgAssert( depth() <= CV_64F && channels() <= 4 );
@@ -412,7 +412,7 @@ namespace
     }
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) const
 {
     if (rtype < 0)
         rtype = type();
@@ -453,7 +453,7 @@ void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) con
     funcs[sdepth][ddepth](reshape(1), dst.reshape(1), stream);
 }
 
-void cv::gpu::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const
+void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, double beta, Stream& stream) const
 {
     if (rtype < 0)
         rtype = type();

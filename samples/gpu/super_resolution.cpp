@@ -32,7 +32,7 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     if (name == "farneback")
     {
         if (useGpu)
-            return createOptFlow_Farneback_GPU();
+            return createOptFlow_Farneback_CUDA();
         else
             return createOptFlow_Farneback();
     }
@@ -41,14 +41,14 @@ static Ptr<DenseOpticalFlowExt> createOptFlow(const string& name, bool useGpu)
     else if (name == "tvl1")
     {
         if (useGpu)
-            return createOptFlow_DualTVL1_GPU();
+            return createOptFlow_DualTVL1_CUDA();
         else
             return createOptFlow_DualTVL1();
     }
     else if (name == "brox")
-        return createOptFlow_Brox_GPU();
+        return createOptFlow_Brox_CUDA();
     else if (name == "pyrlk")
-        return createOptFlow_PyrLK_GPU();
+        return createOptFlow_PyrLK_CUDA();
     else
     {
         cerr << "Incorrect Optical Flow algorithm - " << name << endl;
@@ -167,7 +167,7 @@ int main(int argc, const char* argv[])
 #endif
     {
         if (useCuda)
-            superRes = createSuperResolution_BTVL1_GPU();
+            superRes = createSuperResolution_BTVL1_CUDA();
         else
             superRes = createSuperResolution_BTVL1();
 
@@ -188,7 +188,7 @@ int main(int argc, const char* argv[])
         // Try to use gpu Video Decoding
         try
         {
-            frameSource = createFrameSource_Video_GPU(inputVideoName);
+            frameSource = createFrameSource_Video_CUDA(inputVideoName);
             Mat frame;
             frameSource->nextFrame(frame);
         }

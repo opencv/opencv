@@ -43,13 +43,13 @@
 #define __OPENCV_SOFTCASCADE_TEST_UTILITY_HPP__
 
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/ts.hpp"
 
 //////////////////////////////////////////////////////////////////////
 // Gpu devices
 //! return true if device supports specified feature and gpu module was built with support the feature.
-bool supportFeature(const cv::gpu::DeviceInfo& info, cv::gpu::FeatureSet feature);
+bool supportFeature(const cv::cuda::DeviceInfo& info, cv::cuda::FeatureSet feature);
 
 
 #if defined(HAVE_CUDA)
@@ -61,15 +61,15 @@ public:
     void load(int i);
     void loadAll();
 
-    const std::vector<cv::gpu::DeviceInfo>& values() const { return devices_; }
+    const std::vector<cv::cuda::DeviceInfo>& values() const { return devices_; }
 
 private:
-    std::vector<cv::gpu::DeviceInfo> devices_;
+    std::vector<cv::cuda::DeviceInfo> devices_;
     DeviceManager() {loadAll();}
 };
 # define ALL_DEVICES testing::ValuesIn(DeviceManager::instance().values())
 #else
-# define ALL_DEVICES testing::ValuesIn(std::vector<cv::gpu::DeviceInfo>())
+# define ALL_DEVICES testing::ValuesIn(std::vector<cv::cuda::DeviceInfo>())
 #endif
 
-#endif // __OPENCV_GPU_TEST_UTILITY_HPP__
+#endif // __OPENCV_CUDA_TEST_UTILITY_HPP__

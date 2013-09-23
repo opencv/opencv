@@ -44,7 +44,7 @@
 #include "test_precomp.hpp"
 
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 using namespace cv::cudev;
 using namespace cvtest;
 

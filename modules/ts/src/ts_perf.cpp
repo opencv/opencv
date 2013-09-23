@@ -1,7 +1,7 @@
 #include "precomp.hpp"
 
 #ifdef HAVE_CUDA
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #endif
 
 #ifdef ANDROID
@@ -647,7 +647,7 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
         "{   perf_max_deviation          |1.0      |}"
         "{   help h                      |false    |print help info}"
 #ifdef HAVE_CUDA
-        "{   perf_cuda_device            |0        |run GPU test suite onto specific CUDA capable device}"
+        "{   perf_cuda_device            |0        |run CUDA test suite onto specific CUDA capable device}"
         "{   perf_cuda_info_only         |false    |print an information about system and an available CUDA devices and then exit.}"
 #endif
     ;
@@ -708,18 +708,18 @@ void TestBase::Init(const std::vector<std::string> & availableImpls,
 
 #ifdef HAVE_CUDA
 
-    param_cuda_device      = std::max(0, std::min(cv::gpu::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
+    param_cuda_device      = std::max(0, std::min(cv::cuda::getCudaEnabledDeviceCount(), args.get<int>("perf_cuda_device")));
 
     if (param_impl == "cuda")
     {
-        cv::gpu::DeviceInfo info(param_cuda_device);
+        cv::cuda::DeviceInfo info(param_cuda_device);
         if (!info.isCompatible())
         {
-            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current GPU module build.\n[----------]\n", info.name()), fflush(stdout);
+            printf("[----------]\n[ FAILURE  ] \tDevice %s is NOT compatible with current CUDA module build.\n[----------]\n", info.name()), fflush(stdout);
             exit(-1);
         }
 
-        cv::gpu::setDevice(param_cuda_device);
+        cv::cuda::setDevice(param_cuda_device);
 
         printf("[----------]\n[ GPU INFO ] \tRun test suite on %s GPU.\n[----------]\n", info.name()), fflush(stdout);
     }
@@ -744,7 +744,7 @@ void TestBase::RecordRunParameters()
 #ifdef HAVE_CUDA
     if (param_impl == "cuda")
     {
-        cv::gpu::DeviceInfo info(param_cuda_device);
+        cv::cuda::DeviceInfo info(param_cuda_device);
         ::testing::Test::RecordProperty("cv_cuda_gpu", info.name());
     }
 #endif
@@ -1203,7 +1203,7 @@ void TestBase::RunPerfTestBody()
         metrics.terminationReason = performance_metrics::TERM_EXCEPTION;
         #ifdef HAVE_CUDA
             if (e.code == cv::Error::GpuApiCallError)
-                cv::gpu::resetDevice();
+                cv::cuda::resetDevice();
         #endif
         FAIL() << "Expected: PerfTestBody() doesn't throw an exception.\n  Actual: it throws cv::Exception:\n  " << e.what();
     }

@@ -41,7 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 
 
 #ifdef HAVE_CUDA
@@ -156,11 +156,11 @@ namespace
 #endif
 }
 
-class SCascadeTestRoi : public ::testing::TestWithParam<std::tr1::tuple<cv::gpu::DeviceInfo, std::string, std::string, int> >
+class SCascadeTestRoi : public ::testing::TestWithParam<std::tr1::tuple<cv::cuda::DeviceInfo, std::string, std::string, int> >
 {
     virtual void SetUp()
     {
-        cv::gpu::setDevice(get<0>(GetParam()).deviceID());
+        cv::cuda::setDevice(get<0>(GetParam()).deviceID());
     }
 };
 
@@ -176,7 +176,7 @@ TEST_P(SCascadeTestRoi, Detect)
 
     ASSERT_TRUE(cascade.load(fs.getFirstTopLevelNode()));
 
-    cv::gpu::GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat colored(coloredCpu), objectBoxes(1, 16384, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(0);
 
     int nroi = get<3>(GetParam());
@@ -185,7 +185,7 @@ TEST_P(SCascadeTestRoi, Detect)
     for (int i = 0; i < nroi; ++i)
     {
         cv::Rect r = getFromTable(rng(10));
-        cv::gpu::GpuMat sub(rois, r);
+        cv::cuda::GpuMat sub(rois, r);
         sub.setTo(1);
         cv::rectangle(result, r, cv::Scalar(0, 0, 255, 255), 1);
     }
@@ -230,7 +230,7 @@ struct Fixture
 };
 }
 
-typedef std::tr1::tuple<cv::gpu::DeviceInfo, Fixture> SCascadeTestAllFixture;
+typedef std::tr1::tuple<cv::cuda::DeviceInfo, Fixture> SCascadeTestAllFixture;
 class SCascadeTestAll : public ::testing::TestWithParam<SCascadeTestAllFixture>
 {
 protected:
@@ -239,7 +239,7 @@ protected:
 
     virtual void SetUp()
     {
-        cv::gpu::setDevice(get<0>(GetParam()).deviceID());
+        cv::cuda::setDevice(get<0>(GetParam()).deviceID());
         xml = path(get<1>(GetParam()).path);
         expected = get<1>(GetParam()).expected;
     }
@@ -257,7 +257,7 @@ TEST_P(SCascadeTestAll, detect)
     cv::Mat coloredCpu = cv::imread(path("images/image_00000000_0.png"));
     ASSERT_FALSE(coloredCpu.empty());
 
-    cv::gpu::GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat colored(coloredCpu), objectBoxes, rois(colored.size(), CV_8UC1);
     rois.setTo(1);
 
     cascade.detect(colored, rois, objectBoxes);
@@ -294,10 +294,10 @@ TEST_P(SCascadeTestAll, detectStream)
     cv::Mat coloredCpu = cv::imread(path("images/image_00000000_0.png"));
     ASSERT_FALSE(coloredCpu.empty());
 
-    cv::gpu::GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
+    cv::cuda::GpuMat colored(coloredCpu), objectBoxes(1, 100000, CV_8UC1), rois(colored.size(), CV_8UC1);
     rois.setTo(cv::Scalar::all(1));
 
-    cv::gpu::Stream s;
+    cv::cuda::Stream s;
 
     objectBoxes.setTo(0);
     cascade.detect(colored, rois, objectBoxes, s);

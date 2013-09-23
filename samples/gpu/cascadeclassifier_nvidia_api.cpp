@@ -6,14 +6,12 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
-#include "opencv2/gpu/gpu.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/core/cuda.hpp"
+#include "opencv2/cudalegacy.hpp"
+#include "opencv2/highgui.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/objdetect.hpp"
 #include "opencv2/objdetect/objdetect_c.h"
-
-#ifdef HAVE_CUDA
-#include "opencv2/gpulegacy.hpp"
-#endif
 
 using namespace std;
 using namespace cv;
@@ -162,10 +160,10 @@ int main(int argc, const char** argv)
     cout << "Syntax: exename <cascade_file> <image_or_video_or_cameraid>" << endl;
     cout << "=========================================" << endl;
 
-    ncvAssertPrintReturn(cv::gpu::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without GPU support", -1);
+    ncvAssertPrintReturn(cv::cuda::getCudaEnabledDeviceCount() != 0, "No GPU found or the library is compiled without CUDA support", -1);
     ncvAssertPrintReturn(argc == 3, "Invalid number of arguments", -1);
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     string cascadeName = argv[1];
     string inputName = argv[2];

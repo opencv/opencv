@@ -10,11 +10,13 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/gpu/gpu.hpp"
+#include "opencv2/cuda.hpp"
+#include "opencv2/cudaimgproc.hpp"
+#include "opencv2/cudawarping.hpp"
 
 using namespace std;
 using namespace cv;
-using namespace cv::gpu;
+using namespace cv::cuda;
 
 
 static void help()
@@ -51,7 +53,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 {
     if (src.channels() == 3)
     {
-        cv::gpu::cvtColor( src, gray, COLOR_BGR2GRAY );
+        cv::cuda::cvtColor( src, gray, COLOR_BGR2GRAY );
     }
     else
     {
@@ -62,7 +64,7 @@ static void convertAndResize(const GpuMat& src, GpuMat& gray, GpuMat& resized, d
 
     if (scale != 1)
     {
-        cv::gpu::resize(gray, resized, sz);
+        cv::cuda::resize(gray, resized, sz);
     }
     else
     {
@@ -128,10 +130,10 @@ int main(int argc, const char *argv[])
 
     if (getCudaEnabledDeviceCount() == 0)
     {
-        return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
+        return cerr << "No GPU found or the library is compiled without CUDA support" << endl, -1;
     }
 
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     string cascadeName;
     string inputName;
@@ -170,7 +172,7 @@ int main(int argc, const char *argv[])
         }
     }
 
-    CascadeClassifier_GPU cascade_gpu;
+    CascadeClassifier_CUDA cascade_gpu;
     if (!cascade_gpu.load(cascadeName))
     {
         return cerr << "ERROR: Could not load cascade classifier \"" << cascadeName << "\"" << endl, help(), -1;

@@ -5,9 +5,10 @@
 #include <iomanip>
 #include <stdexcept>
 #include <opencv2/core/utility.hpp>
-#include "opencv2/gpu.hpp"
+#include "opencv2/cuda.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/objdetect.hpp"
+#include "opencv2/imgproc.hpp"
 
 using namespace std;
 using namespace cv;
@@ -194,7 +195,7 @@ Args Args::read(int argc, char** argv)
 
 App::App(const Args& s)
 {
-    cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+    cv::cuda::printShortCudaDeviceInfo(cv::cuda::getDevice());
 
     args = s;
     cout << "\nControls:\n"
@@ -246,13 +247,13 @@ void App::run()
     // Create HOG descriptors and detectors here
     vector<float> detector;
     if (win_size == Size(64, 128))
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector64x128();
+        detector = cv::cuda::HOGDescriptor::getPeopleDetector64x128();
     else
-        detector = cv::gpu::HOGDescriptor::getPeopleDetector48x96();
+        detector = cv::cuda::HOGDescriptor::getPeopleDetector48x96();
 
-    cv::gpu::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
-                                   cv::gpu::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
-                                   cv::gpu::HOGDescriptor::DEFAULT_NLEVELS);
+    cv::cuda::HOGDescriptor gpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9,
+                                   cv::cuda::HOGDescriptor::DEFAULT_WIN_SIGMA, 0.2, gamma_corr,
+                                   cv::cuda::HOGDescriptor::DEFAULT_NLEVELS);
     cv::HOGDescriptor cpu_hog(win_size, Size(16, 16), Size(8, 8), Size(8, 8), 9, 1, -1,
                               HOGDescriptor::L2Hys, 0.2, gamma_corr, cv::HOGDescriptor::DEFAULT_NLEVELS);
     gpu_hog.setSVMDetector(detector);
@@ -289,7 +290,7 @@ void App::run()
         }
 
         Mat img_aux, img, img_to_show;
-        gpu::GpuMat gpu_img;
+        cuda::GpuMat gpu_img;
 
         // Iterate over all frames
         while (running && !frame.empty())

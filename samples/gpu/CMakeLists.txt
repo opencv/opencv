@@ -1,11 +1,12 @@
-SET(OPENCV_GPU_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
+SET(OPENCV_CUDA_SAMPLES_REQUIRED_DEPS opencv_core opencv_flann opencv_imgproc opencv_highgui
                                      opencv_ml opencv_video opencv_objdetect opencv_features2d
-                                     opencv_calib3d opencv_legacy opencv_contrib opencv_gpu
+                                     opencv_calib3d opencv_legacy opencv_contrib opencv_cuda
                                      opencv_nonfree opencv_softcascade opencv_superres
-                                     opencv_gpuarithm opencv_gpufilters opencv_gpuwarping opencv_gpuimgproc
-                                     opencv_gpufeatures2d opencv_gpuoptflow opencv_gpubgsegm
-                                     opencv_gpustereo opencv_gpulegacy)
-ocv_check_dependencies(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+                                     opencv_cudaarithm opencv_cudafilters opencv_cudawarping opencv_cudaimgproc
+                                     opencv_cudafeatures2d opencv_cudaoptflow opencv_cudabgsegm
+                                     opencv_cudastereo opencv_cudalegacy)
+
+ocv_check_dependencies(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
 if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   set(project "gpu")
@@ -13,7 +14,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
 
   project("${project}_samples")
 
-  ocv_include_modules(${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+  ocv_include_modules(${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
   ocv_include_directories(
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia"
     "${OpenCV_SOURCE_DIR}/modules/gpu/src/nvidia/core"
@@ -23,8 +24,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/nonfree/include")
   endif()
 
-  if(HAVE_opencv_gpucodec)
-    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/gpucodec/include")
+  if(HAVE_opencv_cudacodec)
+    ocv_include_directories("${OpenCV_SOURCE_DIR}/modules/cudacodec/include")
   endif()
 
   if(HAVE_CUDA)
@@ -42,11 +43,11 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   # ---------------------------------------------
   #      Define executable targets
   # ---------------------------------------------
-  MACRO(OPENCV_DEFINE_GPU_EXAMPLE name srcs)
+  MACRO(OPENCV_DEFINE_CUDA_EXAMPLE name srcs)
     set(the_target "example_${project}_${name}")
     add_executable(${the_target} ${srcs})
 
-    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_GPU_SAMPLES_REQUIRED_DEPS})
+    target_link_libraries(${the_target} ${OPENCV_LINKER_LIBS} ${OPENCV_CUDA_SAMPLES_REQUIRED_DEPS})
 
     if(HAVE_CUDA)
         target_link_libraries(${the_target} ${CUDA_CUDA_LIBRARY})
@@ -55,8 +56,8 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
     if(HAVE_opencv_nonfree)
       target_link_libraries(${the_target} opencv_nonfree)
     endif()
-    if(HAVE_opencv_gpucodec)
-      target_link_libraries(${the_target} opencv_gpucodec)
+    if(HAVE_opencv_cudacodec)
+      target_link_libraries(${the_target} opencv_cudacodec)
     endif()
 
     if(HAVE_OPENCL)
@@ -84,7 +85,7 @@ if(BUILD_EXAMPLES AND OCV_DEPENDENCIES_FOUND)
   foreach(sample_filename ${all_samples})
     get_filename_component(sample ${sample_filename} NAME_WE)
     file(GLOB sample_srcs RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${sample}.*)
-    OPENCV_DEFINE_GPU_EXAMPLE(${sample} ${sample_srcs})
+    OPENCV_DEFINE_CUDA_EXAMPLE(${sample} ${sample_srcs})
   endforeach()
 
   include("performance/CMakeLists.txt")

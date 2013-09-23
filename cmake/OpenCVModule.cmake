@@ -86,7 +86,7 @@ endmacro()
 # Usage:
 #   ocv_add_module(<name> [INTERNAL|BINDINGS] [REQUIRED] [<list of dependencies>] [OPTIONAL <list of optional dependencies>])
 # Example:
-#   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui opencv_flann OPTIONAL opencv_gpu)
+#   ocv_add_module(yaom INTERNAL opencv_core opencv_highgui opencv_flann OPTIONAL opencv_cuda)
 macro(ocv_add_module _name)
   string(TOLOWER "${_name}" name)
   string(REGEX REPLACE "^opencv_" "" ${name} "${name}")

@@ -45,11 +45,11 @@
 
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/core_c.h"
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
 
 #include "opencv2/core/private.hpp"
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
 #include <assert.h>
 #include <ctype.h>

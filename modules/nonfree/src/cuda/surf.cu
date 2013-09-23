@@ -42,7 +42,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
+#ifdef HAVE_OPENCV_CUDAARITHM
 
 #include "opencv2/core/cuda/common.hpp"
 #include "opencv2/core/cuda/limits.hpp"
@@ -52,7 +52,7 @@
 #include "opencv2/core/cuda/functional.hpp"
 #include "opencv2/core/cuda/filters.hpp"
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -79,7 +79,7 @@ namespace cv { namespace gpu { namespace cudev
     }
 }}}
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     namespace surf
     {
@@ -626,7 +626,7 @@ namespace cv { namespace gpu { namespace cudev
                 }
 
                 plus<float> op;
-                cudev::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
+                device::reduce<32>(smem_tuple(s_sumx + threadIdx.y * 32, s_sumy + threadIdx.y * 32),
                                    thrust::tie(sumx, sumy), threadIdx.x, thrust::make_tuple(op, op));
 
                 const float temp_mod = sumx * sumx + sumy * sumy;
@@ -955,6 +955,6 @@ namespace cv { namespace gpu { namespace cudev
             }
         }
     } // namespace surf
-}}} // namespace cv { namespace gpu { namespace cudev
+}}} // namespace cv { namespace cuda { namespace cudev
 
-#endif // HAVE_OPENCV_GPUARITHM
+#endif // HAVE_OPENCV_CUDAARITHM

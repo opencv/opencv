@@ -40,10 +40,10 @@
 //
 //M*/
 
-#ifndef __OPENCV_GPU_DEVICE_BLOCK_HPP__
-#define __OPENCV_GPU_DEVICE_BLOCK_HPP__
+#ifndef __OPENCV_CUDA_DEVICE_BLOCK_HPP__
+#define __OPENCV_CUDA_DEVICE_BLOCK_HPP__
 
-namespace cv { namespace gpu { namespace cudev
+namespace cv { namespace cuda { namespace device
 {
     struct Block
     {
@@ -200,4 +200,4 @@ namespace cv { namespace gpu { namespace cudev
     };
 }}}
 
-#endif /* __OPENCV_GPU_DEVICE_BLOCK_HPP__ */
+#endif /* __OPENCV_CUDA_DEVICE_BLOCK_HPP__ */
