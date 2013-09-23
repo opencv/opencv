@@ -357,7 +357,7 @@ int main(int argc, char* argv[])
     if (features_type == "surf")
     {
 #ifdef HAVE_OPENCV_NONFREE
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             finder = makePtr<SurfFeaturesFinderGpu>();
         else
 #endif
@@ -552,8 +552,8 @@ int main(int argc, char* argv[])
     // Warp images and their masks
 
     Ptr<WarperCreator> warper_creator;
-#ifdef HAVE_OPENCV_GPUWARPING
-    if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+#ifdef HAVE_OPENCV_CUDAWARPING
+    if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
     {
         if (warp_type == "plane")
             warper_creator = makePtr<cv::PlaneWarperGpu>();
@@ -635,8 +635,8 @@ int main(int argc, char* argv[])
         seam_finder = makePtr<detail::VoronoiSeamFinder>();
     else if (seam_find_type == "gc_color")
     {
-#ifdef HAVE_OPENCV_GPU
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+#ifdef HAVE_OPENCV_CUDA
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR);
         else
 #endif
@@ -644,8 +644,8 @@ int main(int argc, char* argv[])
     }
     else if (seam_find_type == "gc_colorgrad")
     {
-#ifdef HAVE_OPENCV_GPU
-        if (try_gpu && gpu::getCudaEnabledDeviceCount() > 0)
+#ifdef HAVE_OPENCV_CUDA
+        if (try_gpu && cuda::getCudaEnabledDeviceCount() > 0)
             seam_finder = makePtr<detail::GraphCutSeamFinderGpu>(GraphCutSeamFinderBase::COST_COLOR_GRAD);
         else
 #endif

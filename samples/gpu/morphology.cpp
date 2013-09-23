@@ -2,8 +2,8 @@
 
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
-#include "opencv2/gpufilters.hpp"
-#include "opencv2/gpuimgproc.hpp"
+#include "opencv2/cudafilters.hpp"
+#include "opencv2/cudaimgproc.hpp"
 
 using namespace std;
 using namespace cv;
@@ -24,7 +24,7 @@ private:
     static void OpenCloseCallback(int, void*);
     static void ErodeDilateCallback(int, void*);
 
-    gpu::GpuMat src, dst;
+    cuda::GpuMat src, dst;
 
     int element_shape;
 
@@ -57,14 +57,14 @@ App::App(int argc, const char* argv[])
     if (src.channels() == 3)
     {
         // gpu support only 4th channel images
-        gpu::GpuMat src4ch;
-        gpu::cvtColor(src, src4ch, COLOR_BGR2BGRA);
+        cuda::GpuMat src4ch;
+        cuda::cvtColor(src, src4ch, COLOR_BGR2BGRA);
         src = src4ch;
     }
 
     help();
 
-    gpu::printShortCudaDeviceInfo(gpu::getDevice());
+    cuda::printShortCudaDeviceInfo(cuda::getDevice());
 }
 
 int App::run()
@@ -132,12 +132,12 @@ void App::OpenClose()
 
     if (n < 0)
     {
-        Ptr<gpu::Filter> openFilter = gpu::createMorphologyFilter(MORPH_OPEN, src.type(), element);
+        Ptr<cuda::Filter> openFilter = cuda::createMorphologyFilter(MORPH_OPEN, src.type(), element);
         openFilter->apply(src, dst);
     }
     else
     {
-        Ptr<gpu::Filter> closeFilter = gpu::createMorphologyFilter(MORPH_CLOSE, src.type(), element);
+        Ptr<cuda::Filter> closeFilter = cuda::createMorphologyFilter(MORPH_CLOSE, src.type(), element);
         closeFilter->apply(src, dst);
     }
 
@@ -154,12 +154,12 @@ void App::ErodeDilate()
 
     if (n < 0)
     {
-        Ptr<gpu::Filter> erodeFilter = gpu::createMorphologyFilter(MORPH_ERODE, src.type(), element);
+        Ptr<cuda::Filter> erodeFilter = cuda::createMorphologyFilter(MORPH_ERODE, src.type(), element);
         erodeFilter->apply(src, dst);
     }
     else
     {
-        Ptr<gpu::Filter> dilateFilter = gpu::createMorphologyFilter(MORPH_DILATE, src.type(), element);
+        Ptr<cuda::Filter> dilateFilter = cuda::createMorphologyFilter(MORPH_DILATE, src.type(), element);
         dilateFilter->apply(src, dst);
     }
 

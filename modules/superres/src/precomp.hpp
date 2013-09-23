@@ -48,37 +48,37 @@
 
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/core/gpu.hpp"
+#include "opencv2/core/cuda.hpp"
 #include "opencv2/core/opengl.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/video/tracking.hpp"
 #include "opencv2/core/private.hpp"
 
-#include "opencv2/core/private.gpu.hpp"
+#include "opencv2/core/private.cuda.hpp"
 
-#ifdef HAVE_OPENCV_GPUARITHM
-#  include "opencv2/gpuarithm.hpp"
+#ifdef HAVE_OPENCV_CUDAARITHM
+#  include "opencv2/cudaarithm.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUWARPING
-#  include "opencv2/gpuwarping.hpp"
+#ifdef HAVE_OPENCV_CUDAWARPING
+#  include "opencv2/cudawarping.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUFILTERS
-#  include "opencv2/gpufilters.hpp"
+#ifdef HAVE_OPENCV_CUDAFILTERS
+#  include "opencv2/cudafilters.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUIMGPROC
-#  include "opencv2/gpuimgproc.hpp"
+#ifdef HAVE_OPENCV_CUDAIMGPROC
+#  include "opencv2/cudaimgproc.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUOPTFLOW
-#  include "opencv2/gpuoptflow.hpp"
+#ifdef HAVE_OPENCV_CUDAOPTFLOW
+#  include "opencv2/cudaoptflow.hpp"
 #endif
 
-#ifdef HAVE_OPENCV_GPUCODEC
-#  include "opencv2/gpucodec.hpp"
+#ifdef HAVE_OPENCV_CUDACODEC
+#  include "opencv2/cudacodec.hpp"
 #endif
 
 #ifdef HAVE_OPENCV_OCL

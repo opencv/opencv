@@ -50,7 +50,7 @@ namespace cv
 {
     namespace ocl
     {
-        //! Speeded up robust features, port from GPU module.
+        //! Speeded up robust features, port from CUDA module.
         ////////////////////////////////// SURF //////////////////////////////////////////
 
         class CV_EXPORTS SURF_OCL

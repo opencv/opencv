@@ -93,14 +93,14 @@ public:
     template<typename _Tp> _InputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _InputArray(const Matx<_Tp, m, n>& matx);
     _InputArray(const double& val);
-    _InputArray(const gpu::GpuMat& d_mat);
+    _InputArray(const cuda::GpuMat& d_mat);
     _InputArray(const ogl::Buffer& buf);
-    _InputArray(const gpu::CudaMem& cuda_mem);
+    _InputArray(const cuda::CudaMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
 
     virtual Mat getMat(int i=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
-    virtual gpu::GpuMat getGpuMat() const;
+    virtual cuda::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
 
     virtual int kind() const;
@@ -142,9 +142,9 @@ public:
     _OutputArray();
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
-    _OutputArray(gpu::GpuMat& d_mat);
+    _OutputArray(cuda::GpuMat& d_mat);
     _OutputArray(ogl::Buffer& buf);
-    _OutputArray(gpu::CudaMem& cuda_mem);
+    _OutputArray(cuda::CudaMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(std::vector<std::vector<_Tp> >& vec);
@@ -155,9 +155,9 @@ public:
 
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
-    _OutputArray(const gpu::GpuMat& d_mat);
+    _OutputArray(const cuda::GpuMat& d_mat);
     _OutputArray(const ogl::Buffer& buf);
-    _OutputArray(const gpu::CudaMem& cuda_mem);
+    _OutputArray(const cuda::CudaMem& cuda_mem);
     template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const std::vector<_Tp>& vec);
     template<typename _Tp> _OutputArray(const std::vector<std::vector<_Tp> >& vec);
@@ -170,9 +170,9 @@ public:
     virtual bool fixedType() const;
     virtual bool needed() const;
     virtual Mat& getMatRef(int i=-1) const;
-    virtual gpu::GpuMat& getGpuMatRef() const;
+    virtual cuda::GpuMat& getGpuMatRef() const;
     virtual ogl::Buffer& getOGlBufferRef() const;
-    virtual gpu::CudaMem& getCudaMemRef() const;
+    virtual cuda::CudaMem& getCudaMemRef() const;
     virtual void create(Size sz, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int rows, int cols, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
     virtual void create(int dims, const int* size, int type, int i=-1, bool allowTransposed=false, int fixedDepthMask=0) const;
@@ -506,7 +506,7 @@ public:
     //Mat(const void* img, bool copyData=false);
 
     //! download data from GpuMat
-    explicit Mat(const gpu::GpuMat& m);
+    explicit Mat(const cuda::GpuMat& m);
 
     //! destructor - calls release()
     ~Mat();

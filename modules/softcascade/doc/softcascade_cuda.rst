@@ -51,7 +51,7 @@ softcascade::SCascade::detect
 ------------------------------
 Apply cascade to an input frame and return the vector of Decection objcts.
 
-.. ocv:function:: void softcascade::SCascade::detect(InputArray image, InputArray rois, OutputArray objects, cv::gpu::Stream& stream = cv::gpu::Stream::Null()) const
+.. ocv:function:: void softcascade::SCascade::detect(InputArray image, InputArray rois, OutputArray objects, cv::cuda::Stream& stream = cv::cuda::Stream::Null()) const
 
     :param image: a frame on which detector will be applied.
 
