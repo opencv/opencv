@@ -70,7 +70,7 @@ An Chi based cost extraction. ::
     CV_EXPORTS_W Ptr<HistogramCostExtractor> createChiHistogramCostExtractor(int nDummies=25, float defaultCost=0.2);
 
 EMDL1HistogramCostExtractor
--------------------------
+---------------------------
 .. ocv:class:: EMDL1HistogramCostExtractor : public HistogramCostExtractor
 
 An EMD-L1 based cost extraction. ::

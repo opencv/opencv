@@ -42,7 +42,7 @@
 
 /*
  * Implementation of the paper Shape Matching and Object Recognition Using Shape Contexts
- * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013. 
+ * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013.
  */
 #include "precomp.hpp"
 //#include "opencv2/highgui.hpp"
@@ -176,7 +176,7 @@ protected:
         {
           for (int j=0; j<contourMat.cols; j++)
           {
-              disMatrix.at<float>(i,j) = norm( cv::Mat(contourMat.at<cv::Point2f>(0,i)-contourMat.at<cv::Point2f>(0,j)), cv::NORM_L2 );
+              disMatrix.at<float>(i,j) = (float)norm( cv::Mat(contourMat.at<cv::Point2f>(0,i)-contourMat.at<cv::Point2f>(0,j)), cv::NORM_L2 );
               if (_meanDistance<0)
               {
                   if (queryInliers.size()>0)
@@ -193,7 +193,7 @@ protected:
 
         if (_meanDistance<0)
         {
-          meanDistance=mean(disMatrix, mask)[0];
+          meanDistance=(float)mean(disMatrix, mask)[0];
         }
         else
         {
@@ -239,7 +239,7 @@ protected:
                           float refAngle = atan2(refPt.y, refPt.x);
                           angleMatrix.at<float>(i,j) -= refAngle;
                       }
-                      angleMatrix.at<float>(i,j) = fmod(angleMatrix.at<float>(i,j)+FLT_EPSILON,2*CV_PI)+CV_PI;
+                      angleMatrix.at<float>(i,j) = float(fmod(double(angleMatrix.at<float>(i,j)+(double)FLT_EPSILON),2*CV_PI)+CV_PI);
                       //angleMatrix.at<float>(i,j) = 1+floor( angleMatrix.at<float>(i,j)*nAngularBins/(2*CV_PI) );
                   }
               }
@@ -426,7 +426,7 @@ protected:
             for (j = 0; j < costMatrix.rows; j++)
             {
                 d[j] = costMatrix.at<float>(freerow,j) - v[j];
-                pred[j] = freerow;
+                pred[j] = float(freerow);
                 collist[j] = j;        // init column list.
             }
 
@@ -479,7 +479,7 @@ protected:
                         v2 = costMatrix.at<float>(i,j) - v[j] - h;
                         if (v2 < d[j])
                         {
-                            pred[j] = i;
+                            pred[j] = float(i);
                             if (v2 == min)
                             {
                                 if (colsol[j] < 0)
@@ -511,7 +511,7 @@ protected:
             // reset row and column assignments along the alternating path.
             do
             {
-                i = pred[endofpath];
+                i = int(pred[endofpath]);
                 colsol[endofpath] = i;
                 j1 = endofpath;
                 endofpath = rowsol[i];
@@ -526,7 +526,7 @@ protected:
         {
             double minval;
             minMaxIdx(trueCostMatrix.row(nrow), &minval);
-            leftcost+=minval;
+            leftcost+=float(minval);
         }
         leftcost /= trueCostMatrix.rows;
 
@@ -535,7 +535,7 @@ protected:
         {
             double minval;
             minMaxIdx(trueCostMatrix.col(ncol), &minval);
-            rightcost+=minval;
+            rightcost+=float(minval);
         }
         rightcost /= trueCostMatrix.cols;
 
@@ -815,7 +815,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
                 {
                     float xx = sset1.at<Point2f>(0,pt).x;
                     float yy = sset1.at<Point2f>(0,pt).y;
-                    float val = std::exp( -( (xx-jj)*(xx-jj) + (yy-ii)*(yy-ii) )/(2*sigma*sigma) ) / (sigma*sigma*2*CV_PI);
+                    float val = float(std::exp( -float( (xx-jj)*(xx-jj) + (yy-ii)*(yy-ii) )/(2*sigma*sigma) ) / (sigma*sigma*2*CV_PI));
                     gaussWindow.at<float>(ii,jj) += val;
                 }
             }
@@ -831,7 +831,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
                 appIm.at<float>(ii,jj) = elema*elemb;
             }
         }
-        iAppearance = cv::sum(appIm)[0]/sset1.cols;
+        iAppearance = float(cv::sum(appIm)[0]/sset1.cols);
     }
     sDistance = matcher.getMatchingCost();
 

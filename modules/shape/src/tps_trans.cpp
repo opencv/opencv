@@ -104,7 +104,7 @@ protected:
     String name_;
 };
 
-static double distance(Point2f p, Point2f q)
+static float distance(Point2f p, Point2f q)
 {
     Point2f diff = p - q;
     float norma = diff.x*diff.x + diff.y*diff.y;// - 2*diff.x*diff.y;
@@ -237,7 +237,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
         {
             if (i==j)
             {
-                matK.at<float>(i,j)=regularizationParameter;
+                matK.at<float>(i,j)=float(regularizationParameter);
             }
             else
             {

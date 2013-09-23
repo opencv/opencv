@@ -41,11 +41,11 @@
 //M*/
 
 /*
- * Implementation of an optimized EMD for histograms based in 
- * the papers "EMD-L1: An efficient and Robust Algorithm 
- * for comparing histogram-based descriptors", by Haibin Ling and 
+ * Implementation of an optimized EMD for histograms based in
+ * the papers "EMD-L1: An efficient and Robust Algorithm
+ * for comparing histogram-based descriptors", by Haibin Ling and
  * Kazunori Okuda; and "The Earth Mover's Distance is the Mallows
- * Distance: Some Insights from Statistics", by Elizaveta Levina and 
+ * Distance: Some Insights from Statistics", by Elizaveta Levina and
  * Peter Bickel, based on HAIBIN LING AND KAZUNORI OKADA implementation.
  */
  
@@ -393,9 +393,9 @@ bool EmdL1::greedySolution3()
 
                 //- determine which direction to move, either right or upward
                 dFlow = D[i1][i2][i3];
-                f1 = i1<(binsDim1-1)?fabs(dFlow+d1s[i1+1]):VHIGH;
-                f2 = i2<(binsDim2-1)?fabs(dFlow+d2s[i2+1]):VHIGH;
-                f3 = i3<(binsDim3-1)?fabs(dFlow+d3s[i3+1]):VHIGH;
+                f1 = i1<(binsDim1-1)?(float)fabs(dFlow+d1s[i1+1]):VHIGH;
+                f2 = i2<(binsDim2-1)?(float)fabs(dFlow+d2s[i2+1]):VHIGH;
+                f3 = i3<(binsDim3-1)?(float)fabs(dFlow+d3s[i3+1]):VHIGH;
 
                 if(f1<f2 && f1<f3)
                 {
@@ -791,4 +791,3 @@ float cv::EMDL1(InputArray _signature1, InputArray _signature2)
     EmdL1 emdl1;
     return emdl1.getEMDL1(signature1, signature2);
 }
-

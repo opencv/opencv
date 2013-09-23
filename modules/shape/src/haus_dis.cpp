@@ -88,7 +88,7 @@ public:
     {
         CV_Assert( (String)fn["name"] == name_ );
         distanceFlag = (int)fn["distance"];
-        rankProportion = (int)fn["rank"];
+        rankProportion = (float)fn["rank"];
     }
 
 private:
@@ -111,7 +111,7 @@ static float _apply(const Mat &set1, const Mat &set2, int distType, double propR
         for (int c=0; c<disMat.cols; c++)
         {
             Point2f diff = set1.at<Point2f>(0,r)-set2.at<Point2f>(0,c);
-            disMat.at<float>(r,c) = norm(Mat(diff), distType);
+            disMat.at<float>(r,c) = (float)norm(Mat(diff), distType);
         }
     }
 
@@ -147,5 +147,3 @@ Ptr <HausdorffDistanceExtractor> createHausdorffDistanceExtractor(int distanceFl
 }
 
 } // cv
-
-

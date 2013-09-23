@@ -48,7 +48,7 @@ int main(int argc, char** argv)
     BFMatcher matcher(NORM_L2);
     vector<DMatch> matches;
     matcher.match(descriptors1, descriptors2, matches);
-    
+
     // drawing the results
     namedWindow("matches", 1);
     Mat img_matches;

@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     imshow("QUERY", queryToShow);
     moveWindow("TEST", 0,0);
     vector<Point> contQuery = simpleContour(query);
-    int bestMatch;
+    int bestMatch = 0;
     float bestDis=FLT_MAX;
     for ( int ii=1; ii<=20; ii++ )
     {

@@ -88,7 +88,7 @@ public:
     virtual void read(const FileNode& fn)
     {
         CV_Assert( (String)fn["name"] == name_ );
-        fullAffine = (int)fn["affine_type"];
+        fullAffine = (bool)int(fn["affine_type"]);
     }
 
 private:
