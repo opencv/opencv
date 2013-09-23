@@ -63,13 +63,7 @@ KNearestNeighbour::KNearestNeighbour()
 KNearestNeighbour::~KNearestNeighbour()
 {
     clear();
-}
-
-KNearestNeighbour::KNearestNeighbour(const Mat& train_data, const Mat& responses,
-                                     const Mat& sample_idx, bool is_regression, int max_k)
-{
-    max_k = max_k;
-    CvKNearest::train(train_data, responses, sample_idx, is_regression, max_k);
+    samples_ocl.release();
 }
 
 void KNearestNeighbour::clear()

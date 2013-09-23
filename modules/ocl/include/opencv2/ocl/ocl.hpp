@@ -1900,8 +1900,6 @@ namespace cv
         public:
             KNearestNeighbour();
             ~KNearestNeighbour();
-            KNearestNeighbour(const Mat& trainData, const Mat& labels,
-                const Mat& sampleIdx = Mat().setTo(Scalar::all(0)), bool isRegression = false, int max_k = 32);
 
             bool train(const Mat& trainData, Mat& labels, Mat& sampleIdx = Mat().setTo(Scalar::all(0)),
                 bool isRegression = false, int max_k = 32, bool updateBase = false);
@@ -1911,9 +1909,6 @@ namespace cv
             void find_nearest(const oclMat& samples, int k, oclMat& lables);
 
         private:
-            int max_k, var_count;
-            int total;
-            bool regression;
             oclMat samples_ocl;
         };
     }
