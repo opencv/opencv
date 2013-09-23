@@ -24,38 +24,39 @@ public:
         return x[0]*x[0]+x[1]*x[1]+x[2]*x[2]+x[3]*x[3];
     }
     void getGradient(const double* x,double* grad){
-        for(int i=0;i<4;i++,grad++,x++){
-            grad[0]=2*x[0];
+        for(int i=0;i<4;i++){
+            grad[i]=2*x[i];
         }
     }
 };
-//TODO: test transp/usual x
-/*class RosenbrockF:public cv::optim::Solver::Function{
+class RosenbrockF:public cv::optim::Solver::Function{
     double calc(const double* x)const{
         return 100*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0])+(1-x[0])*(1-x[0]);
     }
-};*/
+    void getGradient(const double* x,double* grad){
+            grad[0]=-2*(1-x[0])-400*(x[1]-x[0]*x[0])*x[0];
+            grad[1]=200*(x[1]-x[0]*x[0]);
+    }
+};
 
 TEST(Optim_ConjGrad, regression_basic){
     cv::Ptr<cv::optim::ConjGradSolver> solver=cv::optim::createConjGradSolver();
 #if 1
     {
         cv::Ptr<cv::optim::Solver::Function> ptr_F(new SphereF());
-        cv::Mat x=(cv::Mat_<double>(1,2)<<1.0,1.0),
-            etalon_x=(cv::Mat_<double>(1,2)<<0.0,0.0);
+        cv::Mat x=(cv::Mat_<double>(4,1)<<50.0,10.0,1.0,-10.0),
+            etalon_x=(cv::Mat_<double>(1,4)<<0.0,0.0,0.0,0.0);
         double etalon_res=0.0;
-        return;
         mytest(solver,ptr_F,x,etalon_x,etalon_res);
     }
 #endif
-#if 0
+#if 1
     {
         cv::Ptr<cv::optim::Solver::Function> ptr_F(new RosenbrockF());
         cv::Mat x=(cv::Mat_<double>(2,1)<<0.0,0.0),
-            step=(cv::Mat_<double>(2,1)<<0.5,+0.5),
             etalon_x=(cv::Mat_<double>(2,1)<<1.0,1.0);
         double etalon_res=0.0;
-        mytest(solver,ptr_F,x,step,etalon_x,etalon_res);
+        mytest(solver,ptr_F,x,etalon_x,etalon_res);
     }
 #endif
 }
