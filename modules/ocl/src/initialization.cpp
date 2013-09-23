@@ -50,6 +50,10 @@
 #include <fstream>
 #include "binarycaching.hpp"
 
+#if defined(WIN32)
+#include <windows.h>
+#endif
+
 using namespace cv;
 using namespace cv::ocl;
 using namespace std;
@@ -193,14 +197,24 @@ namespace cv
             memset(extra_options, 0, 512);
         }
 
+#if defined(WIN32)
+        static bool __termination = false;
+#endif
+
         void Info::Impl::releaseResources()
         {
             devnum = -1;
 
             if(clCmdQueue)
             {
-                //temporarily disable command queue release as it causes program hang at exit
-                //openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
+#ifdef WIN32
+                // if process is on termination stage (ExitProcess was called and other threads were terminated)
+                // then disable command queue release because it may cause program hang
+                if (!__termination)
+#endif
+                {
+                    openCLSafeCall(clReleaseCommandQueue(clCmdQueue));
+                }
                 clCmdQueue = 0;
             }
 
@@ -1009,7 +1023,10 @@ namespace cv
         void Context::release()
         {
             if (impl)
+            {
                 impl->release();
+                impl = NULL;
+            }
             programCache->releaseProgram();
         }
 
@@ -1085,6 +1102,33 @@ namespace cv
             impl = m.impl->copy();
             DeviceName = m.DeviceName;
         }
+
+        static void shutdownCallback(void *)
+        {
+#if defined(WIN32)
+            CV_Assert(!__termination); // should be called before ExitProgram()
+#endif
+            Context* ctx = Context::getContext();
+            ctx->release();
+        }
+        static void* shutdownHandle = cv::core::OpenCV_RegisterShutdownCallback(shutdownCallback, NULL);
+
     }//namespace ocl
 
 }//namespace cv
+
+
+#if defined(WIN32) && defined(CVAPI_EXPORTS)
+
+extern "C"
+BOOL WINAPI DllMain(HINSTANCE /*hInst*/, DWORD fdwReason, LPVOID lpReserved)
+{
+    if (fdwReason == DLL_PROCESS_DETACH)
+    {
+        if (lpReserved != NULL) // called after ExitProcess() call
+            cv::ocl::__termination = true;
+    }
+    return TRUE;
+}
+
+#endif
