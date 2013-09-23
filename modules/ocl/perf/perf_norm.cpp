@@ -55,7 +55,7 @@ typedef TestBaseWithParam<Size_NormType> normFixture;
 
 PERF_TEST_P(normFixture, norm,
             ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(NORM_INF, NORM_L1, NORM_L2)))
+                               OCL_PERF_ENUM((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)))
 {
     const Size_NormType params = GetParam();
     const Size srcSize = get<0>(params);
