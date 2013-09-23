@@ -1,11 +1,11 @@
-Shape Distance and Common Interfaces 
+Shape Distance and Common Interfaces
 ====================================
 
 .. highlight:: cpp
 
 Shape Distance algorithms in OpenCV are derivated from a common interface that allows you to
 switch between them in a practical way for solving the same problem with different methods.
-Thus, all objects that implement shape distance measures inherit the 
+Thus, all objects that implement shape distance measures inherit the
 :ocv:class:`ShapeDistanceExtractor` interface.
 
 
@@ -123,7 +123,7 @@ ShapeContextDistanceExtractor::setShapeContextWeight
 ----------------------------------------------------
 Set the weight of the shape context distance in the final value of the shape distance.
 The shape context distance between two shapes is defined as the symmetric sum of shape
-context matching costs over best matching points. 
+context matching costs over best matching points.
 The final value of the shape distance is a user-defined linear combination of the shape
 context distance, an image appearance distance, and a bending energy.
 

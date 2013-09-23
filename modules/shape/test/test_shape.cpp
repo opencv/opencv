@@ -81,7 +81,7 @@ CV_ShapeTest::~CV_ShapeTest()
 }
 
 vector <Point2f> CV_ShapeTest::convertContourType(const Mat& currentQuery, int n)
-{    
+{
     vector<vector<Point> > _contoursQuery;
     vector <Point2f> contoursQuery;
     findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);

@@ -55,4 +55,4 @@ CV_EXPORTS float EMDL1(InputArray signature1, InputArray signature2);
 
 }//namespace cv
 
-#endif 
+#endif

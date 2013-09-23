@@ -156,7 +156,7 @@ void NormHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, I
             if (i<scd1.rows && j<scd2.rows)
             {
                 Mat columnDiff = scd1.row(i)-scd2.row(j);
-                costMatrix.at<float>(i,j)=norm(columnDiff, flag);
+                costMatrix.at<float>(i,j)=(float)norm(columnDiff, flag);
             }
             else
             {
@@ -288,11 +288,11 @@ void EMDHistogramCostExtractorImpl::buildCostMatrix(InputArray _descriptors1, In
                 sig2.col(0)=scd2.row(j).t();
                 for (int k=0; k<sig1.rows; k++)
                 {
-                    sig1.at<float>(k,1)=k;
+                    sig1.at<float>(k,1)=float(k);
                 }
                 for (int k=0; k<sig2.rows; k++)
                 {
-                    sig2.at<float>(k,1)=k;
+                    sig2.at<float>(k,1)=float(k);
                 }
 
                 costMatrix.at<float>(i,j) = cv::EMD(sig1, sig2, flag);
@@ -543,5 +543,3 @@ Ptr <HistogramCostExtractor> createEMDL1HistogramCostExtractor(int nDummies, flo
 }
 
 } // cv
-
-

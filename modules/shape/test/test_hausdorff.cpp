@@ -87,7 +87,7 @@ vector<Point2f> CV_HaussTest::normalizeContour(const vector<Point> &contour)
             else
             {
                 disMat.at<float>(ii,jj)=
-                    fabs(contour[ii].x*contour[jj].x)+fabs(contour[ii].y*contour[jj].y);
+                    float(fabs(double(contour[ii].x*contour[jj].x)))+float(fabs(double(contour[ii].y*contour[jj].y)));
             }
         }
         meanpt.x+=contour[ii].x;
@@ -95,7 +95,7 @@ vector<Point2f> CV_HaussTest::normalizeContour(const vector<Point> &contour)
     }
     meanpt.x/=contour.size();
     meanpt.y/=contour.size();
-    meanVal=cv::mean(disMat)[0];
+    meanVal=float(cv::mean(disMat)[0]);
     for (size_t ii=0; ii<contour.size(); ii++)
     {
         output[ii].x = (contour[ii].x-meanpt.x)/meanVal;
@@ -274,7 +274,7 @@ void CV_HaussTest::run(int /* */)
 {
     mpegTest();
     displayMPEGResults();
-	ts->set_failed_test_info(cvtest::TS::OK);	
+    ts->set_failed_test_info(cvtest::TS::OK);
 }
 
 TEST(Hauss, regression) { CV_HaussTest test; test.safe_run(); }
