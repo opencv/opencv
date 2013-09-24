@@ -82,8 +82,7 @@ namespace cv
         extern const char *arithm_bitwise_binary_scalar;
         extern const char *arithm_bitwise_binary_scalar_mask;
         extern const char *arithm_bitwise_not;
-        extern const char *arithm_compare_eq;
-        extern const char *arithm_compare_ne;
+        extern const char *arithm_compare;
         extern const char *arithm_transpose;
         extern const char *arithm_flip;
         extern const char *arithm_flip_rc;
@@ -268,76 +267,55 @@ void cv::ocl::absdiff(const oclMat &src1, const Scalar &src2, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  compare ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-static void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName, const char **kernelString)
-{
-    dst.create(src1.size(), CV_8UC1);
-    CV_Assert(src1.oclchannels() == 1);
-    CV_Assert(src1.type() == src2.type());
-    Context  *clCxt = src1.clCxt;
-    int depth = src1.depth();
-    int vector_lengths[7] = {4, 0, 4, 4, 4, 4, 4};
-    size_t vector_length = vector_lengths[depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols  + offset_cols, vector_length);
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
 
-    int dst_step1 = dst.cols * dst.elemSize();
+static void compare_run(const oclMat &src1, const oclMat &src2, oclMat &dst, int cmpOp,
+                        string kernelName, const char **kernelString)
+{
+    CV_Assert(src1.type() == src2.type());
+    dst.create(src1.size(), CV_8UC1);
+    Context *clCxt = src1.clCxt;
+
+    int depth = src1.depth();
+    size_t localThreads[3]  = { 64, 4, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
+
+    int src1step1 = src1.step1(), src1offset1 = src1.offset / src1.elemSize1();
+    int src2step1 = src2.step1(), src2offset1 = src2.offset / src2.elemSize1();
+    int dststep1 = dst.step1(), dstoffset1 = dst.offset / dst.elemSize1();
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * operationMap[] = { "==", ">", ">=", "<", "<=", "!=" };
+    std::string buildOptions = format("-D T=%s -D Operation=%s", typeMap[depth], operationMap[cmpOp]);
+
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1offset1 ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+
+    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int cmpOp)
 {
-    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
+    if (!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.depth() == CV_64F)
     {
         cout << "Selected device do not support double" << endl;
         return;
     }
-    string kernelName;
-    const char **kernelString = NULL;
-    switch( cmpOp )
-    {
-    case CMP_EQ:
-        kernelName = "arithm_compare_eq";
-        kernelString = &arithm_compare_eq;
-        break;
-    case CMP_GT:
-        kernelName = "arithm_compare_gt";
-        kernelString = &arithm_compare_eq;
-        break;
-    case CMP_GE:
-        kernelName = "arithm_compare_ge";
-        kernelString = &arithm_compare_eq;
-        break;
-    case CMP_NE:
-        kernelName = "arithm_compare_ne";
-        kernelString = &arithm_compare_ne;
-        break;
-    case CMP_LT:
-        kernelName = "arithm_compare_lt";
-        kernelString = &arithm_compare_ne;
-        break;
-    case CMP_LE:
-        kernelName = "arithm_compare_le";
-        kernelString = &arithm_compare_ne;
-        break;
-    default:
-        CV_Error(CV_StsBadArg, "Unknown comparison method");
-    }
-    compare_run(src1, src2, dst, kernelName, kernelString);
+
+    CV_Assert(src1.channels() == 1 && src2.channels() == 1);
+    CV_Assert(cmpOp >= CMP_EQ && cmpOp <= CMP_NE);
+
+    compare_run(src1, src2, dst, cmpOp, "arithm_compare", &arithm_compare);
 }
 
 //////////////////////////////////////////////////////////////////////////////
