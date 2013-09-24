@@ -793,100 +793,45 @@ void cv::ocl::flip(const oclMat &src, oclMat &dst, int flipCode)
 //////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////// LUT  //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-static void arithmetic_lut_run(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName)
-{
-    Context *clCxt = src1.clCxt;
-    int channels = src1.oclchannels();
-    int rows = src1.rows;
-    int cols = src1.cols;
-    //int step = src1.step;
-    int src_step = src1.step / src1.elemSize();
-    int dst_step = dst.step / dst.elemSize();
-    int whole_rows = src1.wholerows;
-    int whole_cols = src1.wholecols;
-    int src_offset = src1.offset / src1.elemSize();
-    int dst_offset = dst.offset / dst.elemSize();
-    int lut_offset = src2.offset / src2.elemSize();
-    int left_col = 0, right_col = 0;
-    size_t localSize[] = {16, 16, 1};
-    //cl_kernel kernel = openCLGetKernelFromSource(clCxt,&arithm_LUT,kernelName);
-    size_t globalSize[] = {(cols + localSize[0] - 1) / localSize[0] *localSize[0], (rows + localSize[1] - 1) / localSize[1] *localSize[1], 1};
-    if(channels == 1 && cols > 6)
-    {
-        left_col = 4 - (dst_offset & 3);
-        left_col &= 3;
-        dst_offset += left_col;
-        src_offset += left_col;
-        cols -= left_col;
-        right_col = cols & 3;
-        cols -= right_col;
-        globalSize[0] = (cols / 4 + localSize[0] - 1) / localSize[0] * localSize[0];
-    }
-    else if(channels == 1)
-    {
-        left_col = cols;
-        right_col = 0;
-        cols = 0;
-        globalSize[0] = 0;
-    }
-    CV_Assert(clCxt == dst.clCxt);
-    CV_Assert(src1.cols == dst.cols);
-    CV_Assert(src1.rows == dst.rows);
-    CV_Assert(src1.oclchannels() == dst.oclchannels());
-    //  CV_Assert(src1.step == dst.step);
-    vector<pair<size_t , const void *> > args;
 
-    if(globalSize[0] != 0)
-    {
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&channels ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&whole_rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&whole_cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&lut_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&src_step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-        openCLExecuteKernel(clCxt, &arithm_LUT, kernelName, globalSize, localSize, args, src1.oclchannels(), src1.depth());
-    }
-    if(channels == 1 && (left_col != 0 || right_col != 0))
-    {
-        src_offset = src1.offset;
-        dst_offset = dst.offset;
-        localSize[0] = 1;
-        localSize[1] = 256;
-        globalSize[0] = left_col + right_col;
-        globalSize[1] = (rows + localSize[1] - 1) / localSize[1] * localSize[1];
-        //kernel = openCLGetKernelFromSource(clCxt,&arithm_LUT,"LUT2");
-        args.clear();
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-        args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&left_col ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&channels ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&whole_rows ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&lut_offset ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&src_step ));
-        args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-        openCLExecuteKernel(clCxt, &arithm_LUT, "LUT2", globalSize, localSize, args, src1.oclchannels(), src1.depth());
-    }
+static void arithmetic_lut_run(const oclMat &src, const oclMat &lut, oclMat &dst, string kernelName)
+{
+    Context *clCxt = src.clCxt;
+    int sdepth = src.depth();
+    int src_step1 = src.step1(), dst_step1 = dst.step1();
+    int src_offset1 = src.offset / src.elemSize1(), dst_offset1 = dst.offset / dst.elemSize1();
+    int lut_offset1 = lut.offset / lut.elemSize1() + (sdepth == CV_8U ? 0 : 128) * lut.channels();
+    int cols1 = src.cols * src.oclchannels();
+
+    size_t localSize[] = { 16, 16, 1 };
+    size_t globalSize[] = { lut.channels() == 1 ? cols1 : src.cols, src.rows, 1 };
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    std::string buildOptions = format("-D srcT=%s -D dstT=%s", typeMap[sdepth], typeMap[dst.depth()]);
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&lut.data ));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols1));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&lut_offset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_offset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src_step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+
+    openCLExecuteKernel(clCxt, &arithm_LUT, kernelName, globalSize, localSize,
+                        args, lut.oclchannels(), -1, buildOptions.c_str());
 }
 
 void cv::ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 {
-    int cn = src.channels();
-    CV_Assert(src.depth() == CV_8U);
-    CV_Assert((lut.oclchannels() == 1 || lut.oclchannels() == cn) && lut.rows == 1 && lut.cols == 256);
+    int cn = src.channels(), depth = src.depth();
+    CV_Assert(depth == CV_8U || depth == CV_8S);
+    CV_Assert(lut.channels() == 1 || lut.channels() == src.channels());
+    CV_Assert(lut.rows == 1 && lut.cols == 256);
     dst.create(src.size(), CV_MAKETYPE(lut.depth(), cn));
-    //oclMat _lut(lut);
     string kernelName = "LUT";
     arithmetic_lut_run(src, lut, dst, kernelName);
 }
