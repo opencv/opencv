@@ -1159,28 +1159,6 @@ TEST_P(Pow, Mat)
 }
 
 
-struct MagnitudeSqr : ArithmTestBase {};
-
-TEST_P(MagnitudeSqr, Mat)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-        for(int i = 0; i < mat1.rows; ++i)
-            for(int j = 0; j < mat1.cols; ++j)
-            {
-                float val1 = mat1.at<float>(i, j);
-                float val2 = mat2.at<float>(i, j);
-                ((float *)(dst.data))[i * dst.step / 4 + j] = val1 * val1 + val2 * val2;
-            }
-
-        cv::ocl::oclMat clmat1(mat1), clmat2(mat2);
-        cv::ocl::magnitudeSqr(clmat1, clmat2, gdst);
-        Near(1);
-    }
-}
-
-
 struct AddWeighted : ArithmTestBase {};
 
 TEST_P(AddWeighted, Mat)
@@ -1301,10 +1279,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(Values(CV_8UC1, CV_32SC1, CV_32
 
 INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
 // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, MagnitudeSqr, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
 
 INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
                             Values(CV_8UC1, CV_32SC1, CV_32FC1),

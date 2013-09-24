@@ -84,7 +84,6 @@ namespace cv
         extern const char *arithm_bitwise_not;
         extern const char *arithm_compare_eq;
         extern const char *arithm_compare_ne;
-        extern const char *arithm_magnitudeSqr;
         extern const char *arithm_transpose;
         extern const char *arithm_flip;
         extern const char *arithm_flip_rc;
@@ -1909,93 +1908,6 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
     openCLExecuteKernel(clCxt, &arithm_addWeighted, "addWeighted", globalThreads, localThreads, args, -1, depth);
-}
-
-void cv::ocl::magnitudeSqr(const oclMat &src1, const oclMat &src2, oclMat &dst)
-{
-    CV_Assert(src1.type() == src2.type() && src1.size() == src2.size() &&
-              (src1.depth() == CV_32F ));
-
-    dst.create(src1.size(), src1.type());
-
-
-    Context *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-
-    int vector_lengths[4][7] = {{4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4}
-    };
-
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
-    size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    openCLExecuteKernel(clCxt, &arithm_magnitudeSqr, "magnitudeSqr", globalThreads, localThreads, args, 1, depth);
-}
-
-void cv::ocl::magnitudeSqr(const oclMat &src1, oclMat &dst)
-{
-    CV_Assert (src1.depth() == CV_32F );
-    CV_Assert(src1.size() == dst.size());
-
-    dst.create(src1.size(), CV_32FC1);
-
-
-    Context *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-
-    int vector_lengths[4][7] = {{4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4}
-    };
-
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
-    size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    openCLExecuteKernel(clCxt, &arithm_magnitudeSqr, "magnitudeSqr", globalThreads, localThreads, args, 2, depth);
 }
 
 static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernelName, const char **kernelString)

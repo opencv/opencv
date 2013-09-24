@@ -538,9 +538,6 @@ namespace cv
         //! computes magnitude of each (x(i), y(i)) vector
         // supports only CV_32F CV_64F type
         CV_EXPORTS void magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude);
-        CV_EXPORTS void magnitudeSqr(const oclMat &x, const oclMat &y, oclMat &magnitude);
-
-        CV_EXPORTS void magnitudeSqr(const oclMat &x, oclMat &magnitude);
 
         //! computes angle (angle(i)) of each (x(i), y(i)) vector
         // supports only CV_32F CV_64F type
