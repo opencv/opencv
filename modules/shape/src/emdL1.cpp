@@ -393,9 +393,9 @@ bool EmdL1::greedySolution3()
 
                 //- determine which direction to move, either right or upward
                 dFlow = D[i1][i2][i3];
-                f1 = i1<(binsDim1-1)?(float)fabs(float(dFlow+d1s[i1+1])):VHIGH;
-                f2 = i2<(binsDim2-1)?(float)fabs(float(dFlow+d2s[i2+1])):VHIGH;
-                f3 = i3<(binsDim3-1)?(float)fabs(float(dFlow+d3s[i3+1])):VHIGH;
+                f1 = i1<(binsDim1-1)?(float)fabs(double(dFlow+d1s[i1+1])):VHIGH;
+                f2 = i2<(binsDim2-1)?(float)fabs(double(dFlow+d2s[i2+1])):VHIGH;
+                f3 = i3<(binsDim3-1)?(float)fabs(double(dFlow+d3s[i3+1])):VHIGH;
 
                 if(f1<f2 && f1<f3)
                 {
