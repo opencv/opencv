@@ -1511,63 +1511,61 @@ oclMatExpr::operator oclMat() const
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// transpose ////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
 #define TILE_DIM      (32)
 #define BLOCK_ROWS    (256/TILE_DIM)
+
 static void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
 {
-    if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
+    Context  *clCxt = src.clCxt;
+    if (!clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
         return;
     }
 
-    CV_Assert(src.cols == dst.rows && src.rows == dst.cols);
-
-    Context  *clCxt = src.clCxt;
-    int channels = src.oclchannels();
-    int depth = src.depth();
-
-    int vector_lengths[4][7] = {{1, 0, 0, 0, 1, 1, 0},
-        {0, 0, 1, 1, 0, 0, 0},
-        {0, 0, 0, 0 , 0, 0, 0},
-        {1, 1, 0, 0, 0, 0, 0}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
-    int cols = divUp(src.cols + offset_cols, vector_length);
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char channelsString[] = { ' ', ' ', '2', '4', '4' };
+    std::string buildOptions = format("-D T=%s%c", typeMap[src.depth()],
+                                      channelsString[src.channels()]);
 
     size_t localThreads[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalThreads[3] = { cols, src.rows, 1 };
+    size_t globalThreads[3] = { src.cols, src.rows, 1 };
+
+    int srcstep1 = src.step / src.elemSize(), dststep1 = dst.step / dst.elemSize();
+    int srcoffset1 = src.offset / src.elemSize(), dstoffset1 = dst.offset / dst.elemSize();
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcstep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcoffset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1 ));
 
-    openCLExecuteKernel(clCxt, &arithm_transpose, kernelName, globalThreads, localThreads, args, channels, depth);
+    openCLExecuteKernel(clCxt, &arithm_transpose, kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 void cv::ocl::transpose(const oclMat &src, oclMat &dst)
 {
-    CV_Assert(src.type() == CV_8UC1  || src.type() == CV_8UC3 || src.type() == CV_8UC4  || src.type() == CV_8SC3  || src.type() == CV_8SC4  ||
-              src.type() == CV_16UC2 || src.type() == CV_16SC2 || src.type() == CV_32SC1 || src.type() == CV_32FC1);
+    CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
 
-    oclMat emptyMat;
-
-    if( src.data == dst.data && dst.cols == dst.rows )
-        transpose_run( src, emptyMat, "transposeI_");
+    if ( src.data == dst.data && src.cols == src.rows && dst.offset == src.offset
+            && dst.rows == dst.cols && src.cols == dst.cols)
+        transpose_run( src, dst, "transpose_inplace");
     else
     {
         dst.create(src.cols, src.rows, src.type());
         transpose_run( src, dst, "transpose");
     }
 }
+
+//////////////////////////////////////////////////////////////////////////////
+////////////////////////////// addWeighted ///////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, double beta, double gama, oclMat &dst)
 {
@@ -1633,6 +1631,10 @@ void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, 
                         args, -1, -1, buildOptions.c_str());
 }
 
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////// Pow //////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
 static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernelName, const char **kernelString)
 {
     CV_Assert(src1.cols == dst.cols && src1.rows == dst.rows);
@@ -1671,6 +1673,7 @@ static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
+
 void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 {
     if(!x.clCxt->supportsFeature(Context::CL_DOUBLE) && x.type() == CV_64F)
@@ -1685,6 +1688,11 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 
     arithmetic_pow_run(x, p, y, kernelName, &arithm_pow);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// setIdentity //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
 void cv::ocl::setIdentity(oclMat& src, double scalar)
 {
     CV_Assert(src.empty() == false && src.rows == src.cols);
@@ -1711,7 +1719,6 @@ void cv::ocl::setIdentity(oclMat& src, double scalar)
 
     }
 
-
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
@@ -1735,7 +1742,8 @@ void cv::ocl::setIdentity(oclMat& src, double scalar)
         {
             scalar_i = (int)scalar;
             args.push_back(make_pair(sizeof(cl_int), (void*)&scalar_i));
-        }else
+        }
+        else
         {
             scalar_f = (float)scalar;
             args.push_back(make_pair(sizeof(cl_float), (void*)&scalar_f));
