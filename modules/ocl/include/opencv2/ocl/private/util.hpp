@@ -167,6 +167,7 @@ namespace cv
         template<>
         bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
 
+        unsigned long CV_EXPORTS queryLocalMemInfo();
     }//namespace ocl
 
 }//namespace cv
