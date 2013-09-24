@@ -82,13 +82,13 @@ public:
     virtual void write(FileStorage& fs) const
     {
         fs << "name" << name_
-           << "affine_type" << fullAffine;
+           << "affine_type" << int(fullAffine);
     }
 
     virtual void read(const FileNode& fn)
     {
         CV_Assert( (String)fn["name"] == name_ );
-        fullAffine = (bool)int(fn["affine_type"]);
+        fullAffine = int(fn["affine_type"])?true:false;
     }
 
 private:
