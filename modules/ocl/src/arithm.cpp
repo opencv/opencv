@@ -817,39 +817,44 @@ void cv::ocl::LUT(const oclMat &src, const oclMat &lut, oclMat &dst)
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////// exp log /////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
 static void arithmetic_exp_log_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString)
 {
-    dst.create(src.size(), src.type());
-    CV_Assert(src.cols == dst.cols &&
-              src.rows == dst.rows );
-
-    CV_Assert(src.type() == dst.type());
-    CV_Assert( src.type() == CV_32F || src.type() == CV_64F);
-
     Context  *clCxt = src.clCxt;
-    if(!clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
+    if (!clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
         return;
     }
-    //int channels = dst.oclchannels();
-    int depth = dst.depth();
+
+    CV_Assert( src.depth() == CV_32F || src.depth() == CV_64F);
+    dst.create(src.size(), src.type());
+
+    int ddepth = dst.depth();
+    int cols1 = src.cols * src.oclchannels();
+    int srcoffset1 = src.offset / src.elemSize1(), dstoffset1 = dst.offset / dst.elemSize1();
+    int srcstep1 = src.step1(), dststep1 = dst.step1();
 
     size_t localThreads[3]  = { 64, 4, 1 };
     size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
+    std::string buildOptions = format("-D srcT=%s",
+                                      ddepth == CV_32F ? "float" : "double");
+
     vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcoffset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&srcstep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
 
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads,
+                        args, src.oclchannels(), -1, buildOptions.c_str());
 }
+
 void cv::ocl::exp(const oclMat &src, oclMat &dst)
 {
     arithmetic_exp_log_run(src, dst, "arithm_exp", &arithm_exp);
