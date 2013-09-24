@@ -1795,64 +1795,66 @@ void cv::ocl::transpose(const oclMat &src, oclMat &dst)
 
 void cv::ocl::addWeighted(const oclMat &src1, double alpha, const oclMat &src2, double beta, double gama, oclMat &dst)
 {
-    dst.create(src1.size(), src1.type());
-    CV_Assert(src1.cols ==  src2.cols && src2.cols == dst.cols &&
-              src1.rows ==  src2.rows && src2.rows == dst.rows);
-    CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
-
     Context *clCxt = src1.clCxt;
+    bool hasDouble = clCxt->supportsFeature(Context::CL_DOUBLE);
+    if (!hasDouble && src1.depth() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
+        return;
+    }
+
+    CV_Assert(src1.size() ==  src2.size() && src1.type() == src2.type());
+    dst.create(src1.size(), src1.type());
+
     int channels = dst.oclchannels();
     int depth = dst.depth();
 
+    int cols1 = src1.cols * channels;
+    int src1step1 = src1.step1(), src1offset1 = src1.offset / src1.elemSize1();
+    int src2step1 = src2.step1(), src2offset1 = src2.offset / src1.elemSize1();
+    int dststep1 = dst.step1(), dstoffset1 = dst.offset / dst.elemSize1();
 
-    int vector_lengths[4][7] = {{4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4},
-        {4, 0, 4, 4, 4, 4, 4}
-    };
-
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    std::string buildOptions = format("-D T=%s -D WT=%s -D convertToT=convert_%s%s",
+                                      typeMap[depth], hasDouble ? "double" : "float", typeMap[depth],
+                                      depth >= CV_32F ? "" : "_sat_rte");
 
     size_t localThreads[3]  = { 256, 1, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1};
+    size_t globalThreads[3] = { cols1, dst.rows, 1};
 
-    int dst_step1 = dst.cols * dst.elemSize();
-    int src1_step = (int) src1.step;
-    int src2_step = (int) src2.step;
-    int dst_step  = (int) dst.step;
-    float alpha_f = alpha, beta_f = beta, gama_f = gama;
+    float alpha_f = static_cast<float>(alpha),
+            beta_f = static_cast<float>(beta),
+            gama_f = static_cast<float>(gama);
+
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1_step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1offset1));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2_step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1));
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1));
 
-    if(src1.clCxt->supportsFeature(Context::CL_DOUBLE))
-    {
-        args.push_back( make_pair( sizeof(cl_double), (void *)&alpha ));
-        args.push_back( make_pair( sizeof(cl_double), (void *)&beta ));
-        args.push_back( make_pair( sizeof(cl_double), (void *)&gama ));
-    }
-    else
+    if (!hasDouble)
     {
         args.push_back( make_pair( sizeof(cl_float), (void *)&alpha_f ));
         args.push_back( make_pair( sizeof(cl_float), (void *)&beta_f ));
         args.push_back( make_pair( sizeof(cl_float), (void *)&gama_f ));
     }
+    else
+    {
+        args.push_back( make_pair( sizeof(cl_double), (void *)&alpha ));
+        args.push_back( make_pair( sizeof(cl_double), (void *)&beta ));
+        args.push_back( make_pair( sizeof(cl_double), (void *)&gama ));
+    }
 
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols1 ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
-    openCLExecuteKernel(clCxt, &arithm_addWeighted, "addWeighted", globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(clCxt, &arithm_addWeighted, "addWeighted", globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 static void arithmetic_pow_run(const oclMat &src1, double p, oclMat &dst, string kernelName, const char **kernelString)
