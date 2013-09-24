@@ -244,9 +244,6 @@ namespace cv
                     kernelName = "remapNNF1Constant";
             }
 
-            //int channels = dst.oclchannels();
-            //int depth = dst.depth();
-            //int type = src.type();
             size_t blkSizeX = 16, blkSizeY = 16;
             size_t glbSizeX;
             int cols = dst.cols;
@@ -499,21 +496,13 @@ namespace cv
                 openCLExecuteKernel(clCxt, &imgproc_median, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
             }
             else
-            {
                 CV_Error(CV_StsUnsupportedFormat, "Non-supported filter length");
-                //string kernelName = "medianFilter";
-                //args.push_back( make_pair( sizeof(cl_int),(void*)&m));
-
-                //openCLExecuteKernel(clCxt,&imgproc_median,kernelName,globalThreads,localThreads,args,src.oclchannels(),-1);
-            }
-
         }
 
         ////////////////////////////////////////////////////////////////////////
         // copyMakeBorder
         void copyMakeBorder(const oclMat &src, oclMat &dst, int top, int bottom, int left, int right, int bordertype, const Scalar &scalar)
         {
-            //CV_Assert(src.oclchannels() != 2);
             CV_Assert(top >= 0 && bottom >= 0 && left >= 0 && right >= 0);
             if((dst.cols != dst.wholecols) || (dst.rows != dst.wholerows)) //has roi
             {
@@ -529,10 +518,12 @@ namespace cv
             {
                 CV_Assert((src.cols >= left) && (src.cols >= right) && (src.rows >= top) && (src.rows >= bottom));
             }
+
             if(bordertype == cv::BORDER_REFLECT_101)
             {
                 CV_Assert((src.cols > left) && (src.cols > right) && (src.rows > top) && (src.rows > bottom));
             }
+
             dst.create(src.rows + top + bottom, src.cols + left + right, src.type());
             int srcStep = src.step1() / src.oclchannels();
             int dstStep = dst.step1() / dst.oclchannels();
@@ -732,19 +723,6 @@ namespace cv
             }
 
             openCLExecuteKernel(src.clCxt, &imgproc_copymakeboder, kernelName, globalThreads, localThreads, args, -1, -1, compile_option);
-            //uchar* cputemp=new uchar[32*dst.wholerows];
-            ////int* cpudata=new int[this->step*this->wholerows/sizeof(int)];
-            //openCLSafeCall(clEnqueueReadBuffer(src.clCxt->impl->clCmdQueue, (cl_mem)dst.data, CL_TRUE,
-            //						0, 32*dst.wholerows, cputemp, 0, NULL, NULL));
-            //for(int i=0;i<dst.wholerows;i++)
-            //{
-            //	for(int j=0;j<dst.wholecols;j++)
-            //	{
-            //		cout<< (int)cputemp[i*32+j]<<" ";
-            //	}
-            //	cout<<endl;
-            //}
-            //delete []cputemp;
         }
 
         ////////////////////////////////////////////////////////////////////////
@@ -1285,11 +1263,6 @@ namespace cv
 
             if( src.depth() != CV_8U || src.oclchannels() != 4 )
                 CV_Error( CV_StsUnsupportedFormat, "Only 8-bit, 4-channel images are supported" );
-
-            //            if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
-            //            {
-            //                CV_Error( CV_GpuNotSupported, "Selected device doesn't support double, so a deviation exists.\nIf the accuracy is acceptable, the error can be ignored.\n");
-            //            }
 
             dst.create( src.size(), CV_8UC4 );
 
