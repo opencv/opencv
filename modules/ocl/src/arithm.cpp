@@ -64,7 +64,6 @@ namespace cv
     {
         //////////////////////////////// OpenCL kernel strings /////////////////////
 
-        extern const char *transpose_kernel;
         extern const char *arithm_nonzero;
         extern const char *arithm_sum;
         extern const char *arithm_sum_3;
@@ -1265,9 +1264,8 @@ int cv::ocl::countNonZero(const oclMat &src)
         CV_Error(CV_GpuNotSupported, "select device don't support double");
     }
     CV_Assert(groupnum != 0);
-    groupnum = groupnum * 2;
+//    groupnum = groupnum * 2;
     int vlen = 8 , dbsize = groupnum * vlen;
-    //cl_ulong start, end;
     Context *clCxt = src.clCxt;
     string kernelName = "arithm_op_nonzero";
     int *p = new int[dbsize], nonzero = 0;
@@ -1529,7 +1527,7 @@ oclMatExpr::operator oclMat() const
 #define TILE_DIM      (32)
 #define BLOCK_ROWS    (256/TILE_DIM)
 
-static void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
+static void transpose_run(const oclMat &src, oclMat &dst, string kernelName, bool inplace = false)
 {
     Context  *clCxt = src.clCxt;
     if (!clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
@@ -1544,7 +1542,7 @@ static void transpose_run(const oclMat &src, oclMat &dst, string kernelName)
                                       channelsString[src.channels()]);
 
     size_t localThreads[3]  = { TILE_DIM, BLOCK_ROWS, 1 };
-    size_t globalThreads[3] = { src.cols, src.rows, 1 };
+    size_t globalThreads[3] = { src.cols, inplace ? src.rows : divUp(src.rows, TILE_DIM) * BLOCK_ROWS, 1 };
 
     int srcstep1 = src.step / src.elemSize(), dststep1 = dst.step / dst.elemSize();
     int srcoffset1 = src.offset / src.elemSize(), dstoffset1 = dst.offset / dst.elemSize();
@@ -1568,8 +1566,8 @@ void cv::ocl::transpose(const oclMat &src, oclMat &dst)
     CV_Assert(src.depth() <= CV_64F && src.channels() <= 4);
 
     if ( src.data == dst.data && src.cols == src.rows && dst.offset == src.offset
-            && dst.rows == dst.cols && src.cols == dst.cols)
-        transpose_run( src, dst, "transpose_inplace");
+         && dst.size() == src.size())
+        transpose_run( src, dst, "transpose_inplace", true);
     else
     {
         dst.create(src.cols, src.rows, src.type());
