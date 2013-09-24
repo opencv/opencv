@@ -158,8 +158,8 @@ namespace cv
             static void setContext(Info &oclinfo);
 
             enum {CL_DOUBLE, CL_UNIFIED_MEM, CL_VER_1_2};
-            bool supportsFeature(int ftype);
-            size_t computeUnits();
+            bool supportsFeature(int ftype) const;
+            size_t computeUnits() const;
             void* oclContext();
             void* oclCommandQueue();
         };
