@@ -62,11 +62,11 @@ namespace cv
 {
     namespace ocl
     {
-        ////////////////////////////////OpenCL kernel strings/////////////////////
+        //////////////////////////////// OpenCL kernel strings /////////////////////
+
         extern const char *transpose_kernel;
         extern const char *arithm_nonzero;
         extern const char *arithm_sum;
-        extern const char *arithm_2_mat;
         extern const char *arithm_sum_3;
         extern const char *arithm_minMax;
         extern const char *arithm_minMax_mask;
@@ -74,6 +74,7 @@ namespace cv
         extern const char *arithm_minMaxLoc_mask;
         extern const char *arithm_LUT;
         extern const char *arithm_add;
+        extern const char *arithm_add_mask;
         extern const char *arithm_add_scalar;
         extern const char *arithm_add_scalar_mask;
         extern const char *arithm_bitwise_binary;
@@ -83,9 +84,7 @@ namespace cv
         extern const char *arithm_bitwise_not;
         extern const char *arithm_compare_eq;
         extern const char *arithm_compare_ne;
-        extern const char *arithm_mul;
-        extern const char *arithm_div;
-        extern const char *arithm_absdiff;
+        extern const char *arithm_magnitudeSqr;
         extern const char *arithm_transpose;
         extern const char *arithm_flip;
         extern const char *arithm_flip_rc;
@@ -97,390 +96,176 @@ namespace cv
         extern const char *arithm_addWeighted;
         extern const char *arithm_phase;
         extern const char *arithm_pow;
-        extern const char *arithm_magnitudeSqr;
         extern const char *arithm_setidentity;
-        //extern const char * jhp_transpose_kernel;
-        int64 kernelrealtotal = 0;
-        int64 kernelalltotal = 0;
-        int64 reducetotal = 0;
-        int64 downloadtotal = 0;
-        int64 alltotal = 0;
     }
 }
+//////////////////////////////////////////////////////////////////////////////
+/////////////////////// add subtract multiply divide /////////////////////////
+//////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////// add subtract multiply divide /////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-template<typename T>
-void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
-                    string kernelName, const char **kernelString, void *_scalar, int op_type = 0)
+
+enum { ADD = 0, SUB, MUL, DIV, ABS_DIFF };
+
+static void arithmetic_run_generic(const oclMat &src1, const oclMat &src2, const Scalar & scalar, const oclMat & mask,
+                            oclMat &dst, int op_type, bool use_scalar = false)
 {
-    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
+    Context *clCxt = src1.clCxt;
+    bool hasDouble = clCxt->supportsFeature(Context::CL_DOUBLE);
+    if (!hasDouble && (src1.depth() == CV_64F || src2.depth() == CV_64F || dst.depth() == CV_64F))
     {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
         return;
     }
 
-    dst.create(src1.size(), src1.type());
-    CV_Assert(src1.cols == src2.cols && src2.cols == dst.cols &&
-              src1.rows == src2.rows && src2.rows == dst.rows);
-
-    CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
-    CV_Assert(src1.depth() != CV_8S);
-
-    Context  *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
-        {4, 0, 4, 4, 1, 1, 1},
-        {4, 0, 4, 4, 1, 1, 1},
-        {4, 0, 4, 4, 1, 1, 1}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-    T scalar;
-    if(_scalar != NULL)
-    {
-        double scalar1 = *((double *)_scalar);
-        scalar = (T)scalar1;
-        args.push_back( make_pair( sizeof(T), (void *)&scalar ));
-    }
-    switch(op_type)
-    {
-        case MAT_ADD:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth, "-D ARITHM_ADD");
-            break;
-        case MAT_SUB:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth, "-D ARITHM_SUB");
-            break;
-        default:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
-    }
-}
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst,
-                           string kernelName, const char **kernelString, int op_type = 0)
-{
-    arithmetic_run<char>(src1, src2, dst, kernelName, kernelString, (void *)NULL, op_type);
-}
-static void arithmetic_run(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask,
-                           string kernelName, const char **kernelString, int op_type = 0)
-{
-    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
-    {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-        return;
-    }
+    CV_Assert(src2.empty() || (!src2.empty() && src1.type() == src2.type() && src1.size() == src2.size()));
+    CV_Assert(mask.empty() || (!mask.empty() && mask.type() == CV_8UC1 && mask.size() == src1.size()));
+    CV_Assert(op_type >= ADD && op_type <= ABS_DIFF);
 
     dst.create(src1.size(), src1.type());
-    CV_Assert(src1.cols == src2.cols && src2.cols == dst.cols &&
-              src1.rows == src2.rows && src2.rows == dst.rows &&
-              src1.rows == mask.rows && src1.cols == mask.cols);
 
-    CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
-    CV_Assert(src1.depth() != CV_8S);
-    CV_Assert(mask.type() == CV_8U);
+    int oclChannels = src1.oclchannels(), depth = src1.depth();
+    int src1step1 = src1.step / src1.elemSize(), src1offset1 = src1.offset / src1.elemSize();
+    int src2step1 = src2.step / src2.elemSize(), src2offset1 = src2.offset / src2.elemSize();
+    int maskstep1 = mask.step, maskoffset1 = mask.offset / mask.elemSize();
+    int dststep1 = dst.step / dst.elemSize(), dstoffset1 = dst.offset / dst.elemSize();
+    oclMat m;
 
-    Context  *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
+    size_t localThreads[3]  = { 16, 16, 1 };
+    size_t globalThreads[3] = { dst.cols, dst.rows, 1 };
 
-    int vector_lengths[4][7] = {{4, 4, 2, 2, 1, 1, 1},
-        {2, 2, 1, 1, 1, 1, 1},
-        {4, 4, 2, 2 , 1, 1, 1},
-        {1, 1, 1, 1, 1, 1, 1}
-    };
+    std::string kernelName = op_type == ABS_DIFF ? "arithm_absdiff" : "arithm_binary_op";
 
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
-    int cols = divUp(dst.cols + offset_cols, vector_length);
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const WTypeMap[] = { "short", "short", "int", "int", "int", "float", "double" };
+    const char operationsMap[] = { '+', '-', '*', '/', '-' };
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    bool haveScalar = use_scalar || src2.empty();
 
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
+    int WDepth = depth;
+    if (haveScalar)
+        WDepth = hasDouble && WDepth == CV_64F ? CV_64F : CV_32F;
+    if (op_type == DIV)
+        WDepth = hasDouble ? CV_64F : CV_32F;
+    else if (op_type == MUL)
+        WDepth = hasDouble && (depth == CV_32S || depth == CV_64F) ? CV_64F : CV_32F;
 
-    int dst_step1 = dst.cols * dst.elemSize();
+    std::string buildOptions = format("-D T=%s%s -D WT=%s%s -D convertToT=convert_%s%s%s -D Operation=%c"
+                                      " -D convertToWT=convert_%s%s",
+                                      typeMap[depth], channelMap[oclChannels],
+                                      WTypeMap[WDepth], channelMap[oclChannels],
+                                      typeMap[depth], channelMap[oclChannels], (depth >= CV_32F ? "" : (depth == CV_32S ? "_rte" : "_sat_rte")),
+                                      operationsMap[op_type], WTypeMap[WDepth], channelMap[oclChannels]);
+
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&mask.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&mask.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1offset1 ));
 
-    switch (op_type)
+    if (!src2.empty())
     {
-        case MAT_ADD:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_ADD");
-            break;
-        case MAT_SUB:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_SUB");
-            break;
-        default:
-            openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth);
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&src2step1 ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
+
+        kernelName += "_mat";
     }
+
+    if (haveScalar)
+    {
+        const int WDepthMap[] = { CV_16S, CV_16S, CV_32S, CV_32S, CV_32S, CV_32F, CV_64F };
+        m.create(1, 1, CV_MAKE_TYPE(WDepthMap[WDepth], oclChannels));
+        m.setTo(scalar);
+
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&m.data ));
+
+        kernelName += "_scalar";
+    }
+
+    if (!mask.empty())
+    {
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&mask.data ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&maskstep1 ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&maskoffset1 ));
+
+        kernelName += "_mask";
+    }
+
+    if (op_type == DIV)
+        kernelName += "_div";
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1 ));
+
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
+
+    openCLExecuteKernel(clCxt, mask.empty() ?
+                            (!src2.empty() ? &arithm_add : &arithm_add_scalar) :
+                            (!src2.empty() ? &arithm_add_mask : &arithm_add_scalar_mask),
+                        kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
-void cv::ocl::add(const oclMat &src1, const oclMat &src2, oclMat &dst)
-{
-    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add, MAT_ADD);
-}
+
 void cv::ocl::add(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
 {
-    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add, MAT_ADD);
-}
-
-void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst)
-{
-    arithmetic_run(src1, src2, dst, "arithm_add", &arithm_add, MAT_SUB);
-}
-void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
-{
-    arithmetic_run(src1, src2, dst, mask, "arithm_add_with_mask", &arithm_add, MAT_SUB);
-}
-typedef void (*MulDivFunc)(const oclMat &src1, const oclMat &src2, oclMat &dst, string kernelName,
-                           const char **kernelString, void *scalar);
-
-void cv::ocl::multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
-{
-    if(src1.clCxt->supportsFeature(Context::CL_DOUBLE) && (src1.depth() == CV_64F))
-        arithmetic_run<double>(src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
-    else
-        arithmetic_run<float>(src1, src2, dst, "arithm_mul", &arithm_mul, (void *)(&scalar));
-}
-
-void cv::ocl::divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
-{
-
-    if(src1.clCxt->supportsFeature(Context::CL_DOUBLE))
-        arithmetic_run<double>(src1, src2, dst, "arithm_div", &arithm_div, (void *)(&scalar));
-    else
-        arithmetic_run<float>(src1, src2, dst, "arithm_div", &arithm_div, (void *)(&scalar));
-
-}
-template <typename WT , typename CL_WT>
-void arithmetic_scalar_run(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
-{
-    if(!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.type() == CV_64F)
-    {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-        return;
-    }
-
-    dst.create(src1.size(), src1.type());
-
-    CV_Assert(src1.cols == dst.cols && src1.rows == dst.rows &&
-              src1.type() == dst.type());
-
-    //CV_Assert(src1.depth() != CV_8S);
-
-    if(mask.data)
-    {
-        CV_Assert(mask.type() == CV_8U && src1.rows == mask.rows && src1.cols == mask.cols);
-    }
-
-    Context  *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    WT s[4] = { saturate_cast<WT>(src2.val[0]), saturate_cast<WT>(src2.val[1]),
-                saturate_cast<WT>(src2.val[2]), saturate_cast<WT>(src2.val[3])
-              };
-
-    int vector_lengths[4][7] = {{4, 0, 2, 2, 1, 1, 1},
-        {2, 0, 1, 1, 1, 1, 1},
-        {4, 0, 2, 2 , 1, 1, 1},
-        {1, 0, 1, 1, 1, 1, 1}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize()) & (vector_length - 1);
-    int cols = divUp(dst.cols + offset_cols, vector_length);
-
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src1.offset));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst.offset));
-
-    if(mask.data)
-    {
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.step ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&mask.offset));
-    }
-    args.push_back( make_pair( sizeof(CL_WT) ,  (void *)&s ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&src1.rows ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int) , (void *)&dst_step1 ));
-    if(isMatSubScalar != 0)
-        openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_SUB");
-    else
-        openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, channels, depth, "-D ARITHM_ADD");
-}
-
-static void arithmetic_scalar_run(const oclMat &src, oclMat &dst, string kernelName, const char **kernelString, double scalar)
-{
-    if(!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.type() == CV_64F)
-    {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-        return;
-    }
-
-    dst.create(src.size(), src.type());
-    CV_Assert(src.cols == dst.cols && src.rows == dst.rows);
-
-    CV_Assert(src.type() == dst.type());
-    CV_Assert(src.depth() != CV_8S);
-
-    Context  *clCxt = src.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
-        {4, 0, 4, 4, 1, 1, 1},
-        {4, 0, 4, 4 , 1, 1, 1},
-        {4, 0, 4, 4, 1, 1, 1}
-    };
-
-    size_t vector_length = vector_lengths[channels - 1][depth];
-    int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
-
-    size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
-
-    int dst_step1 = dst.cols * dst.elemSize();
-    vector<pair<size_t , const void *> > args;
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.offset ));
-    args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
-
-    float f_scalar = (float)scalar;
-    if(src.clCxt->supportsFeature(Context::CL_DOUBLE))
-        args.push_back( make_pair( sizeof(cl_double), (void *)&scalar ));
-    else
-    {
-        args.push_back( make_pair( sizeof(cl_float), (void *)&f_scalar));
-    }
-
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
-}
-
-typedef void (*ArithmeticFuncS)(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar);
-
-
-static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString, int isMatSubScalar)
-{
-    static ArithmeticFuncS tab[8] =
-    {
-        arithmetic_scalar_run<int, cl_int4>,
-        arithmetic_scalar_run<int, cl_int4>,
-        arithmetic_scalar_run<int, cl_int4>,
-        arithmetic_scalar_run<int, cl_int4>,
-        arithmetic_scalar_run<int, cl_int4>,
-        arithmetic_scalar_run<float, cl_float4>,
-        arithmetic_scalar_run<double, cl_double4>,
-        0
-    };
-    ArithmeticFuncS func = tab[src1.depth()];
-    if(func == 0)
-        cv::ocl::error("Unsupported arithmetic operation", __FILE__, __LINE__);
-    func(src1, src2, dst, mask, kernelName, kernelString, isMatSubScalar);
-}
-static void arithmetic_scalar(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask, string kernelName, const char **kernelString)
-{
-    arithmetic_scalar(src1, src2, dst, mask, kernelName, kernelString, 0);
+    arithmetic_run_generic(src1, src2, Scalar(), mask, dst, ADD);
 }
 
 void cv::ocl::add(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    string kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
-    const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
+    arithmetic_run_generic(src1, oclMat(), src2, mask, dst, ADD);
+}
 
-    arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString);
+void cv::ocl::subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask)
+{
+    arithmetic_run_generic(src1, src2, Scalar(), mask, dst, SUB);
 }
 
 void cv::ocl::subtract(const oclMat &src1, const Scalar &src2, oclMat &dst, const oclMat &mask)
 {
-    string kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
-    const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
-    arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString, 1);
+    arithmetic_run_generic(src1, oclMat(), src2, mask, dst, SUB);
 }
-void cv::ocl::subtract(const Scalar &src2, const oclMat &src1, oclMat &dst, const oclMat &mask)
+
+void cv::ocl::multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
 {
-    string kernelName = mask.data ? "arithm_s_add_with_mask" : "arithm_s_add";
-    const char **kernelString = mask.data ? &arithm_add_scalar_mask : &arithm_add_scalar;
-    arithmetic_scalar( src1, src2, dst, mask, kernelName, kernelString, -1);
+    const bool use_scalar = !(std::abs(scalar - 1.0) < std::numeric_limits<double>::epsilon());
+    arithmetic_run_generic(src1, src2, Scalar::all(scalar), oclMat(), dst, MUL, use_scalar);
 }
+
 void cv::ocl::multiply(double scalar, const oclMat &src, oclMat &dst)
 {
-    string kernelName = "arithm_muls";
-    arithmetic_scalar_run( src, dst, kernelName, &arithm_mul, scalar);
+    arithmetic_run_generic(src, oclMat(), Scalar::all(scalar), oclMat(), dst, MUL);
 }
-void cv::ocl::divide(double scalar, const oclMat &src,  oclMat &dst)
-{
-    if(!src.clCxt->supportsFeature(Context::CL_DOUBLE))
-    {
-        CV_Error(CV_GpuNotSupported, "Selected device don't support double\r\n");
-        return;
-    }
 
-    string kernelName =  "arithm_s_div";
-    arithmetic_scalar_run(src, dst, kernelName, &arithm_div, scalar);
+void cv::ocl::divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scalar)
+{
+    const bool use_scalar = !(std::abs(scalar - 1.0) < std::numeric_limits<double>::epsilon());
+    arithmetic_run_generic(src1, src2, Scalar::all(scalar), oclMat(), dst, DIV, use_scalar);
 }
+
+void cv::ocl::divide(double scalar, const oclMat &src, oclMat &dst)
+{
+    arithmetic_run_generic(src, oclMat(), Scalar::all(scalar), oclMat(), dst, DIV);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  Absdiff ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
+
 void cv::ocl::absdiff(const oclMat &src1, const oclMat &src2, oclMat &dst)
 {
-    arithmetic_run(src1, src2, dst, "arithm_absdiff", &arithm_absdiff);
+    arithmetic_run_generic(src1, src2, Scalar(), oclMat(), dst, ABS_DIFF);
 }
+
 void cv::ocl::absdiff(const oclMat &src1, const Scalar &src2, oclMat &dst)
 {
-    string kernelName = "arithm_s_absdiff";
-    oclMat mask;
-    arithmetic_scalar( src1, src2, dst, mask, kernelName, &arithm_absdiff);
+    arithmetic_run_generic(src1, oclMat(), src2, oclMat(), dst, ABS_DIFF);
 }
+
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////  compare ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////

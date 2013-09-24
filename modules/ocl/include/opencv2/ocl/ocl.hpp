@@ -409,40 +409,37 @@ namespace cv
         CV_EXPORTS void split(const oclMat &src, vector<oclMat> &dst);
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
+
         //#if defined DOUBLE_SUPPORT
         //typedef double F;
         //#else
         //typedef float F;
         //#endif
+
         //	CV_EXPORTS void addWeighted(const oclMat& a,F  alpha, const oclMat& b,F beta,F gama, oclMat& c);
         CV_EXPORTS void addWeighted(const oclMat &a, double  alpha, const oclMat &b, double beta, double gama, oclMat &c);
+
         //! adds one matrix to another (c = a + b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void add(const oclMat &a, const oclMat &b, oclMat &c);
-        //! adds one matrix to another (c = a + b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void add(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask);
+        CV_EXPORTS void add(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask = oclMat());
         //! adds scalar to a matrix (c = a + s)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void add(const oclMat &a, const Scalar &sc, oclMat &c, const oclMat &mask = oclMat());
+
         //! subtracts one matrix from another (c = a - b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void subtract(const oclMat &a, const oclMat &b, oclMat &c);
-        //! subtracts one matrix from another (c = a - b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void subtract(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask);
+        CV_EXPORTS void subtract(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask = oclMat());
         //! subtracts scalar from a matrix (c = a - s)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void subtract(const oclMat &a, const Scalar &sc, oclMat &c, const oclMat &mask = oclMat());
-        //! subtracts scalar from a matrix (c = a - s)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void subtract(const Scalar &sc, const oclMat &a, oclMat &c, const oclMat &mask = oclMat());
+
         //! computes element-wise product of the two arrays (c = a * b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void multiply(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);
         //! multiplies matrix to a number (dst = scalar * src)
         // supports CV_32FC1 only
         CV_EXPORTS void multiply(double scalar, const oclMat &src, oclMat &dst);
+
         //! computes element-wise quotient of the two arrays (c = a / b)
         // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
         CV_EXPORTS void divide(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);

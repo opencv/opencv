@@ -51,61 +51,29 @@
 #endif
 #endif
 
-///////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////// Add with scalar /////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// add with mask //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 
-__kernel void arithm_binary_op_scalar (__global T *src1, int src1_step, int src1_offset,
-                                 __global WT *scalar,
-                                 __global T *dst,  int dst_step,  int dst_offset,
-                                 int cols, int rows)
+__kernel void arithm_binary_op_mat_mask(__global T * src1, int src1_step, int src1_offset,
+                              __global T * src2, int src2_step, int src2_offset,
+                              __global uchar * mask, int mask_step, int mask_offset,
+                              __global T * dst, int dst_step, int dst_offset,
+                              int cols, int rows)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
     if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step, x + src1_offset);
-        int dst_index = mad24(y, dst_step, x + dst_offset);
+        int mask_index = mad24(y, mask_step, x + mask_offset);
+        if (mask[mask_index])
+        {
+            int src1_index = mad24(y, src1_step, x + src1_offset);
+            int src2_index = mad24(y, src2_step, x + src2_offset);
+            int dst_index  = mad24(y, dst_step, dst_offset + x);
 
-        dst[dst_index] = convertToT(convertToWT(src1[src1_index]) Operation scalar[0]);
-    }
-}
-
-__kernel void arithm_absdiff_scalar(__global T *src1, int src1_step, int src1_offset,
-                         __global WT *src2,
-                         __global T *dst, int dst_step, int dst_offset,
-                         int cols, int rows)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < cols && y < rows)
-    {
-        int src1_index = mad24(y, src1_step, x + src1_offset);
-        int dst_index  = mad24(y, dst_step, x + dst_offset);
-
-        WT value = convertToWT(src1[src1_index]) - src2[0];
-        value = value > (WT)(0) ? value : -value;
-        dst[dst_index] = convertToT(value);
-    }
-}
-
-// scalar divide to matrix
-__kernel void arithm_binary_op_scalar_div(__global T *src1, int src1_step, int src1_offset,
-                               __global WT *scalar,
-                               __global T *dst,  int dst_step,  int dst_offset,
-                               int cols, int rows)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if (x < cols && y < rows)
-    {
-        int src1_index = mad24(y, src1_step, x + src1_offset);
-        int dst_index = mad24(y, dst_step, x + dst_offset);
-
-        T zero = (T)(0);
-        dst[dst_index] = src1[src1_index] == zero ? zero : convertToT(scalar[0] / convertToWT(src1[src1_index]));
+            dst[dst_index] = convertToT(convertToWT(src1[src1_index]) Operation convertToWT(src2[src2_index]));
+        }
     }
 }
