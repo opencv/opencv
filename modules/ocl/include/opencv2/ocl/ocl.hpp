@@ -268,13 +268,12 @@ namespace cv
 
             //! returns deep copy of the oclMatrix, i.e. the data is copied
             oclMat clone() const;
-            //! copies the oclMatrix content to "m".
+
+            //! copies those oclMatrix elements to "m" that are marked with non-zero mask elements.
             // It calls m.create(this->size(), this->type()).
             // It supports any data type
-            void copyTo( oclMat &m ) const;
-            //! copies those oclMatrix elements to "m" that are marked with non-zero mask elements.
-            //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
-            void copyTo( oclMat &m, const oclMat &mask ) const;
+            void copyTo( oclMat &m, const oclMat &mask = oclMat()) const;
+
             //! converts oclMatrix to another datatype with optional scalng. See cvConvertScale.
             //It supports 8UC1 8UC4 32SC1 32SC4 32FC1 32FC4
             void convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const;
@@ -410,57 +409,51 @@ namespace cv
 
         ////////////////////////////// Arithmetics ///////////////////////////////////
 
-        //#if defined DOUBLE_SUPPORT
-        //typedef double F;
-        //#else
-        //typedef float F;
-        //#endif
+        //! adds one matrix to another with scale (dst = src1 * alpha + src2 * beta + gama)
+        CV_EXPORTS void addWeighted(const oclMat &src1, double  alpha, const oclMat &src2, double beta, double gama, oclMat &dst);
 
-        //	CV_EXPORTS void addWeighted(const oclMat& a,F  alpha, const oclMat& b,F beta,F gama, oclMat& c);
-        CV_EXPORTS void addWeighted(const oclMat &a, double  alpha, const oclMat &b, double beta, double gama, oclMat &c);
+        //! adds one matrix to another (dst = src1 + src2)
+        // supports all data types
+        CV_EXPORTS void add(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
+        //! adds scalar to a matrix (dst = src1 + s)
+        // supports all data types
+        CV_EXPORTS void add(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
 
-        //! adds one matrix to another (c = a + b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void add(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask = oclMat());
-        //! adds scalar to a matrix (c = a + s)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void add(const oclMat &a, const Scalar &sc, oclMat &c, const oclMat &mask = oclMat());
+        //! subtracts one matrix from another (dst = src1 - src2)
+        // supports all data types
+        CV_EXPORTS void subtract(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
+        //! subtracts scalar from a matrix (dst = src1 - s)
+        // supports all data types
+        CV_EXPORTS void subtract(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
 
-        //! subtracts one matrix from another (c = a - b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void subtract(const oclMat &a, const oclMat &b, oclMat &c, const oclMat &mask = oclMat());
-        //! subtracts scalar from a matrix (c = a - s)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void subtract(const oclMat &a, const Scalar &sc, oclMat &c, const oclMat &mask = oclMat());
-
-        //! computes element-wise product of the two arrays (c = a * b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void multiply(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);
+        //! computes element-wise product of the two arrays (dst = src1 * scale * src2)
+        // supports all data types
+        CV_EXPORTS void multiply(const oclMat &src1, const oclMat &src2, oclMat &dst, double scale = 1);
         //! multiplies matrix to a number (dst = scalar * src)
-        // supports CV_32FC1 only
+        // supports all data types
         CV_EXPORTS void multiply(double scalar, const oclMat &src, oclMat &dst);
 
-        //! computes element-wise quotient of the two arrays (c = a / b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void divide(const oclMat &a, const oclMat &b, oclMat &c, double scale = 1);
-        //! computes element-wise quotient of the two arrays (c = a / b)
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void divide(double scale, const oclMat &b, oclMat &c);
+        //! computes element-wise quotient of the two arrays (dst = src1 * scale / src2)
+        // supports all data types
+        CV_EXPORTS void divide(const oclMat &src1, const oclMat &src2, oclMat &dst, double scale = 1);
+        //! computes element-wise quotient of the two arrays (dst = scale / src)
+        // supports all data types
+        CV_EXPORTS void divide(double scale, const oclMat &src1, oclMat &dst);
 
-        //! compares elements of two arrays (c = a <cmpop> b)
-        // supports except CV_8SC1,CV_8SC2,CV8SC3,CV_8SC4 types
-        CV_EXPORTS void compare(const oclMat &a, const oclMat &b, oclMat &c, int cmpop);
+        //! compares elements of two arrays (dst = src1 <cmpop> src2)
+        // supports all data types
+        CV_EXPORTS void compare(const oclMat &src1, const oclMat &src2, oclMat &dst, int cmpop);
 
         //! transposes the matrix
-        // supports  CV_8UC1, 8UC4, 8SC4, 16UC2, 16SC2, 32SC1 and 32FC1.(the same as cuda)
+        // supports all data types
         CV_EXPORTS void transpose(const oclMat &src, oclMat &dst);
 
-        //! computes element-wise absolute difference of two arrays (c = abs(a - b))
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void absdiff(const oclMat &a, const oclMat &b, oclMat &c);
-        //! computes element-wise absolute difference of array and scalar (c = abs(a - s))
-        // supports all types except CV_8SC1,CV_8SC2,CV8SC3 and CV_8SC4
-        CV_EXPORTS void absdiff(const oclMat &a, const Scalar &s, oclMat &c);
+        //! computes element-wise absolute difference of two arrays (dst = abs(src1 - src2))
+        // supports all data types
+        CV_EXPORTS void absdiff(const oclMat &src1, const oclMat &src2, oclMat &dst);
+        //! computes element-wise absolute difference of array and scalar (dst = abs(src1 - s))
+        // supports all data types
+        CV_EXPORTS void absdiff(const oclMat &src1, const Scalar &s, oclMat &dst);
 
         //! computes mean value and standard deviation of all or selected array elements
         // supports except CV_32F,CV_64F
@@ -478,7 +471,7 @@ namespace cv
 
         //! reverses the order of the rows, columns or both in a matrix
         // supports all types
-        CV_EXPORTS void flip(const oclMat &a, oclMat &b, int flipCode);
+        CV_EXPORTS void flip(const oclMat &src, oclMat &dst, int flipCode);
 
         //! computes sum of array elements
         // disabled until fix crash
@@ -489,13 +482,11 @@ namespace cv
 
         //! finds global minimum and maximum array elements and returns their values
         // support all C1 types
-
         CV_EXPORTS void minMax(const oclMat &src, double *minVal, double *maxVal = 0, const oclMat &mask = oclMat());
         CV_EXPORTS void minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat& buf);
 
         //! finds global minimum and maximum array elements and returns their values with locations
         // support all C1 types
-
         CV_EXPORTS void minMaxLoc(const oclMat &src, double *minVal, double *maxVal = 0, Point *minLoc = 0, Point *maxLoc = 0,
                                   const oclMat &mask = oclMat());
 
@@ -524,27 +515,27 @@ namespace cv
         //  This is not truly a bilateral filter. Instead of using user provided fixed parameters,
         //  the function calculates a constant at each window based on local standard deviation,
         //  and use this constant to do filtering.
-        //  supports 8UC1 8UC3
+        //  supports 8UC1, 8UC3
         CV_EXPORTS void adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize, double sigmaSpace, Point anchor = Point(-1, -1), int borderType=BORDER_DEFAULT);
 
-        //! computes exponent of each matrix element (b = e**a)
-        // supports only CV_32FC1 type
-        CV_EXPORTS void exp(const oclMat &a, oclMat &b);
+        //! computes exponent of each matrix element (dst = e**src)
+        // supports only CV_32FC1, CV_64FC1 type
+        CV_EXPORTS void exp(const oclMat &src, oclMat &dst);
 
-        //! computes natural logarithm of absolute value of each matrix element: b = log(abs(a))
-        // supports only CV_32FC1 type
-        CV_EXPORTS void log(const oclMat &a, oclMat &b);
+        //! computes natural logarithm of absolute value of each matrix element: dst = log(abs(src))
+        // supports only CV_32FC1, CV_64FC1 type
+        CV_EXPORTS void log(const oclMat &src, oclMat &dst);
 
         //! computes magnitude of each (x(i), y(i)) vector
-        // supports only CV_32F CV_64F type
+        // supports only CV_32F, CV_64F type
         CV_EXPORTS void magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude);
 
         //! computes angle (angle(i)) of each (x(i), y(i)) vector
-        // supports only CV_32F CV_64F type
+        // supports only CV_32F, CV_64F type
         CV_EXPORTS void phase(const oclMat &x, const oclMat &y, oclMat &angle, bool angleInDegrees = false);
 
         //! the function raises every element of tne input array to p
-        //! support only CV_32F CV_64F type
+        // support only CV_32F, CV_64F type
         CV_EXPORTS void pow(const oclMat &x, double p, oclMat &y);
 
         //! converts Cartesian coordinates to polar
@@ -558,14 +549,17 @@ namespace cv
         //! perfroms per-elements bit-wise inversion
         // supports all types
         CV_EXPORTS void bitwise_not(const oclMat &src, oclMat &dst);
+
         //! calculates per-element bit-wise disjunction of two arrays
         // supports all types
         CV_EXPORTS void bitwise_or(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_or(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
+
         //! calculates per-element bit-wise conjunction of two arrays
         // supports all types
         CV_EXPORTS void bitwise_and(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
         CV_EXPORTS void bitwise_and(const oclMat &src1, const Scalar &s, oclMat &dst, const oclMat &mask = oclMat());
+
         //! calculates per-element bit-wise "exclusive or" operation
         // supports all types
         CV_EXPORTS void bitwise_xor(const oclMat &src1, const oclMat &src2, oclMat &dst, const oclMat &mask = oclMat());
@@ -585,12 +579,13 @@ namespace cv
         CV_EXPORTS oclMatExpr operator / (const oclMat &src1, const oclMat &src2);
 
         //! computes convolution of two images
-        //! support only CV_32FC1 type
+        // support only CV_32FC1 type
         CV_EXPORTS void convolve(const oclMat &image, const oclMat &temp1, oclMat &result);
 
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
         CV_EXPORTS void setIdentity(oclMat& src, double val);
+
         //////////////////////////////// Filter Engine ////////////////////////////////
 
         /*!
@@ -982,7 +977,7 @@ namespace cv
         // real to complex dft requires at least v1.8 clAmdFft
         // real to complex dft output is not the same with cpu version
         // real to complex and complex to real does not support DFT_ROWS
-        CV_EXPORTS void dft(const oclMat &src, oclMat &dst, Size dft_size = Size(0, 0), int flags = 0);
+        CV_EXPORTS void dft(const oclMat &src, oclMat &dst, Size dft_size = Size(), int flags = 0);
 
         //! implements generalized matrix product algorithm GEMM from BLAS
         // The functionality requires clAmdBlas library
