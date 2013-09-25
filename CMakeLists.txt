@@ -158,15 +158,16 @@ status("                        General configuration summary")
 status("==============================================================================")
 status("")
 if(OPENCV_VCSVERSION)
-  status("  Version control:")
+  status("  Version Control:")
   status("  ----------------")
   status("    git:" ${OPENCV_VCSVERSION})
 endif()
 
-# ========================== build platform ==========================
+# ============================== Build Platform ==============================
 status("")
 status("  Platform:")
 status("  ---------")
+
 status("    Host:"             ${CMAKE_HOST_SYSTEM_NAME} ${CMAKE_HOST_SYSTEM_VERSION} ${CMAKE_HOST_SYSTEM_PROCESSOR})
 if(CMAKE_CROSSCOMPILING)
   status("    Target:"         ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION} ${CMAKE_SYSTEM_PROCESSOR})
@@ -184,7 +185,11 @@ if(NOT CMAKE_GENERATOR MATCHES "Xcode|Visual Studio")
   status("    Configuration:"  ${CMAKE_BUILD_TYPE})
 endif()
 
-# ========================== C/C++ options ==========================
+# ============================== C/C++ Options ===============================
+status("")
+status("  C/C++:")
+status("  ------")
+
 if(CMAKE_CXX_COMPILER_VERSION)
   set(OPENCV_COMPILER_STR "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_COMPILER_ARG1} (ver ${CMAKE_CXX_COMPILER_VERSION})")
 elseif(CMAKE_COMPILER_IS_CLANGCXX)
@@ -196,9 +201,6 @@ else()
 endif()
 string(STRIP "${OPENCV_COMPILER_STR}" OPENCV_COMPILER_STR)
 
-status("")
-status("  C/C++:")
-status("  ------")
 status("    Built as dynamic libs?:" BUILD_SHARED_LIBS THEN YES ELSE NO)
 status("    C++ Compiler:"           ${OPENCV_COMPILER_STR})
 status("    C++ flags (Release):"    ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE})
@@ -215,10 +217,11 @@ else()
 endif()
 status("    Precompiled headers:"     PCHSupport_FOUND AND ENABLE_PRECOMPILED_HEADERS THEN YES ELSE NO)
 
-# ========================== OpenCV modules ==========================
+# ============================== OpenCV Modules ==============================
 status("")
-status("  OpenCV modules:")
+status("  OpenCV Modules:")
 status("  ---------------")
+
 string(REPLACE "opencv_" "" OPENCV_MODULES_BUILD_ST          "${OPENCV_MODULES_BUILD}")
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_USER_ST  "${OPENCV_MODULES_DISABLED_USER}")
 string(REPLACE "opencv_" "" OPENCV_MODULES_DISABLED_FORCE_ST "${OPENCV_MODULES_DISABLED_FORCE}")
@@ -243,11 +246,12 @@ status("    Disabled:"               OPENCV_MODULES_DISABLED_USER  THEN ${OPENCV
 status("    Disabled by dependency:" OPENCV_MODULES_DISABLED_AUTO  THEN ${OPENCV_MODULES_DISABLED_AUTO_ST}  ELSE "-")
 status("    Unavailable:"            OPENCV_MODULES_DISABLED_FORCE THEN ${OPENCV_MODULES_DISABLED_FORCE_ST} ELSE "-")
 
-# ========================== Android details ==========================
+# ============================= Android Details ==============================
 if(ANDROID)
   status("")
   status("  Android:")
   status("  --------")
+
   status("    Android ABI:" ${ANDROID_ABI})
   status("    STL type:" ${ANDROID_STL})
   status("    Native API level:" android-${ANDROID_NATIVE_API_LEVEL})
@@ -263,18 +267,19 @@ if(ANDROID)
   status("    Android examples:"    BUILD_ANDROID_EXAMPLES AND CAN_BUILD_ANDROID_PROJECTS         THEN YES ELSE NO)
 endif()
 
-# ================== Windows RT features ==================
+# ============================ Windows RT features ===========================
 if(WIN32)
 status("")
-    status("  Windows RT support:" HAVE_WINRT THEN YES ELSE NO)
+    status("  Windows RT Support:" HAVE_WINRT THEN YES ELSE NO)
     status("  -------------------")
+
     if (ENABLE_WINRT_MODE)
       status("    Windows SDK v8.0:" ${WINDOWS_SDK_PATH})
       status("    Visual Studio 2012:" ${VISUAL_STUDIO_PATH})
     endif()
 endif(WIN32)
 
-# ========================== GUI ==========================
+# =================================== GUI ====================================
 status("")
 status("  GUI:")
 status("  ----")
@@ -308,10 +313,11 @@ endif()
 
 status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE NO)
 
-# ========================== CODECS ==========================
+# ================================== Codecs ==================================
 status("")
 status("  Codecs:")
 status("  -------")
+
 status("    ZLib:" BUILD_ZLIB THEN "build (ver ${ZLIB_VERSION_STRING})" ELSE "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})")
 
 if(WITH_JPEG)
@@ -354,7 +360,7 @@ else()
   status("    OpenEXR:"  "NO")
 endif()
 
-# ========================== VIDEO Frameworks ==========================
+# ============================= Video Frameworks =============================
 status("")
 status("  Video Frameworks:")
 status("  -----------------")
@@ -408,10 +414,11 @@ if(DEFINED WITH_XINE)
   status("    Xine:"           HAVE_XINE         THEN "YES (ver ${ALIASOF_libxine_VERSION})" ELSE NO)
 endif(DEFINED WITH_XINE)
 
-# ========================== HARDWARE SUPPORT ==========================
+# ============================= Hardware Support =============================
 status("")
-status("  Hardware/device support:")
+status("  Hardware/device Support:")
 status("  ------------------------")
+
 if(ANDROID)
   if(HAVE_opencv_androidcamera)
     status("    AndroidNativeCamera:" BUILD_ANDROID_CAMERA_WRAPPER
@@ -467,7 +474,7 @@ if(DEFINED WITH_XIMEA)
   status("    XIMEA:"          HAVE_XIMEA          THEN YES                                        ELSE NO)
 endif(DEFINED WITH_XIMEA)
 
-# ========================== GPU/Concurrency ==========================
+# ============================= GPU/Concurrency ==============================
 status("")
 status("  GPU/Concurrency:")
 status("  ----------------")
@@ -500,10 +507,11 @@ if(HAVE_OPENCL)
   status("      Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
 endif()
 
-# =================== Core Extensions ==========================
+# ============================= Core Extensions ==============================
 status("")
-status("  Core extensions:")
+status("  Core Extensions:")
 status("  ----------------")
+
 status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 if(WITH_IPP AND IPP_FOUND)
   status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
@@ -512,9 +520,9 @@ else()
   status("    Use IPP:" WITH_IPP AND NOT IPP_FOUND  THEN "IPP not found" ELSE NO)
 endif()
 
-# =================== language bindings ==========================
+# ============================ Language Bindings =============================
 status("")
-status("  Language bindings:")
+status("  Language Bindings:")
 status("  ------------------")
 
 # Python
@@ -557,11 +565,12 @@ else()
   status("    Matlab:" "Disabled")
 endif()
 
-# ========================== documentation ==========================
+# ============================== Documentation ===============================
 if(BUILD_DOCS)
   status("")
   status("  Documentation:")
   status("  --------------")
+
   if(HAVE_SPHINX)
     status("    Build Documentation:" PDFLATEX_COMPILER      THEN YES ELSE "YES (only HTML and without math expressions)")
   else()
@@ -572,15 +581,16 @@ if(BUILD_DOCS)
   status("    PlantUML:"            PLANTUML                 THEN "${PLANTUML}" ELSE NO)
 endif()
 
-# ========================== samples and tests ==========================
+# ============================= Tests and Samples ============================
 status("")
-status("  Tests and samples:")
+status("  Tests and Samples:")
 status("  ------------------")
+
 status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
 status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES ELSE NO)
 status("    C/C++ Examples:"    BUILD_EXAMPLES                       THEN YES ELSE NO)
 
-# ========================== auxiliary ==========================
+# ================================ Auxiliary =================================
 status("")
 status("  Install path:" "${CMAKE_INSTALL_PREFIX}")
 status("  Config file: " "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
