@@ -4,7 +4,7 @@ Operations on Matrics
 .. highlight:: cpp
 
 ocl::oclMat::convertTo
-----------------------
+--------------------------
 Returns void
 
 .. ocv:function:: void ocl::oclMat::convertTo( oclMat &m, int rtype, double alpha = 1, double beta = 0 ) const
@@ -20,7 +20,7 @@ Returns void
 The method converts source pixel values to the target datatype. saturate cast is applied in the end to avoid possible overflows. Supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4.
 
 ocl::oclMat::copyTo
--------------------
+-----------------------
 Returns void
 
 .. ocv:function:: void ocl::oclMat::copyTo( oclMat &m, const oclMat &mask ) const
@@ -32,7 +32,7 @@ Returns void
 Copies the matrix to another one. Supports CV_8UC1, CV_8UC4, CV_32SC1, CV_32SC4, CV_32FC1, CV_32FC4
 
 ocl::oclMat::setTo
-------------------
+----------------------
 Returns oclMat
 
 .. ocv:function:: oclMat& ocl::oclMat::setTo(const Scalar &s, const oclMat &mask = oclMat())
@@ -83,6 +83,34 @@ Returns void
     :param mask: he optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed
 
 Computes per-element additon between two arrays or between array and a scalar. Supports all data types except CV_8S.
+
+ocl::addWeighted
+--------------------
+Computes the weighted sum of two arrays.
+
+.. ocv:function:: void ocl::addWeighted(const oclMat &a, double  alpha, const oclMat &b, double beta, double gama, oclMat &c)
+
+    :param a: First source array.
+
+    :param alpha: Weight for the first array elements.
+
+    :param b: Second source array of the same size and channel number as  ``src1`` .
+
+    :param beta: Weight for the second array elements.
+
+    :param c: Destination array that has the same size and number of channels as the input arrays.
+
+    :param gamma: Scalar added to each sum.
+
+The function ``addWeighted`` calculates the weighted sum of two arrays as follows:
+
+.. math::
+
+    \texttt{c} (I)= \texttt{saturate} ( \texttt{a} (I)* \texttt{alpha} +  \texttt{b} (I)* \texttt{beta} +  \texttt{gamma} )
+
+where ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
+
+.. seealso:: :ocv:func:`addWeighted`
 
 ocl::subtract
 ------------------
@@ -310,6 +338,22 @@ ocl::magnitude
 Returns void
 
 .. ocv:function:: void ocl::magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude)
+
+    :param x: The floating-point array of x-coordinates of the vectors
+
+    :param y: he floating-point array of y-coordinates of the vectors; must have the same size as x
+
+    :param magnitude: The destination array; will have the same size and same type as x
+
+The function magnitude calculates magnitude of 2D vectors formed from the corresponding elements of x and y arrays. Supports only CV_32F and CV_64F data type.
+
+ocl::magnitudeSqr
+---------------------
+Computes squared magnitudes of complex matrix elements.
+
+.. ocv:function:: void magnitudeSqr(const oclMat &x, oclMat &magnitude)
+
+.. ocv:function:: void magnitudeSqr(const oclMat &x, const oclMat &y, oclMat &magnitude)
 
     :param x: The floating-point array of x-coordinates of the vectors
 

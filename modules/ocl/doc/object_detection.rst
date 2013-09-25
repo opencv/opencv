@@ -4,7 +4,7 @@ Object Detection
 .. highlight:: cpp
 
 ocl::OclCascadeClassifier
--------------------------
+-----------------------------
 .. ocv:class:: ocl::OclCascadeClassifier : public CascadeClassifier
 
 Cascade classifier class used for object detection. Supports HAAR cascade classifier  in the form of cross link ::
@@ -12,12 +12,9 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
     class CV_EXPORTS OclCascadeClassifier : public CascadeClassifier
     {
     public:
-          OclCascadeClassifier() {};
-          ~OclCascadeClassifier() {};
-           CvSeq *oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage,
-                                      double scaleFactor,int minNeighbors,
-                                      int flags, CvSize minSize = cvSize(0, 0),
-                                      CvSize maxSize = cvSize(0, 0));
+            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
+                                              double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
+                                              Size minSize = Size(), Size maxSize = Size());
     };
 
 .. note::
@@ -26,13 +23,13 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
 
 ocl::OclCascadeClassifier::oclHaarDetectObjects
 ------------------------------------------------------
-Returns the detected objects by a list of rectangles
+Detects objects of different sizes in the input image.
 
-.. ocv:function:: CvSeq* ocl::OclCascadeClassifier::oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0))
+.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
 
     :param image:  Matrix of type CV_8U containing an image where objects should be detected.
 
-    :param imageobjectsBuff: Buffer to store detected objects (rectangles). If it is empty, it is allocated with the defaultsize. If not empty, the function searches not more than N  objects, where N = sizeof(objectsBufers data)/sizeof(cv::Rect).
+    :param faces: Vector of rectangles where each rectangle contains the detected object.
 
     :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 
@@ -40,10 +37,12 @@ Returns the detected objects by a list of rectangles
 
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
-Detects objects of different sizes in the input image,only tested for face detection now. The function returns the number of detected objects.
+    :param maxSize: Maximum possible object size. Objects larger than that are ignored.
+
+The function provides a very similar interface with that in CascadeClassifier class, except using oclMat as input image.
 
 ocl::MatchTemplateBuf
----------------------
+-------------------------
 .. ocv:struct:: ocl::MatchTemplateBuf
 
 Class providing memory buffers for :ocv:func:`ocl::matchTemplate` function, plus it allows to adjust some specific parameters. ::
@@ -60,7 +59,7 @@ Class providing memory buffers for :ocv:func:`ocl::matchTemplate` function, plus
 You can use field `user_block_size` to set specific block size for :ocv:func:`ocl::matchTemplate` function. If you leave its default value `Size(0,0)` then automatic estimation of block size will be used (which is optimized for speed). By varying `user_block_size` you can reduce memory requirements at the cost of speed.
 
 ocl::matchTemplate
-------------------
+----------------------
 Computes a proximity map for a raster template and an image where the template is searched for.
 
 .. ocv:function:: void ocl::matchTemplate(const oclMat& image, const oclMat& templ, oclMat& result, int method)

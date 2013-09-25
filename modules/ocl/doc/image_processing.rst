@@ -3,8 +3,102 @@ Image Processing
 
 .. highlight:: cpp
 
+ocl::meanShiftFiltering
+---------------------------
+Performs mean-shift filtering for each point of the source image.
+
+.. ocv:function:: void ocl::meanShiftFiltering(const oclMat &src, oclMat &dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dst: Destination image containing the color of mapped points. It has the same size and type as  ``src`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
+
+
+ocl::meanShiftProc
+----------------------
+Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
+
+.. ocv:function:: void ocl::meanShiftProc(const oclMat &src, oclMat &dstr, oclMat &dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dstr: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
+
+    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src`` size. The type is  ``CV_16SC2`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+.. seealso:: :ocv:func:`ocl::meanShiftFiltering`
+
+
+ocl::meanShiftSegmentation
+------------------------------
+Performs a mean-shift segmentation of the source image and eliminates small segments.
+
+.. ocv:function:: void ocl::meanShiftSegmentation(const oclMat &src, Mat &dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dst: Segmented image with the same size and type as  ``src`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param minsize: Minimum segment size. Smaller segments are merged.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+ocl::integral
+-----------------
+Computes an integral image.
+
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
+
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum)
+
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
+
+    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
+
+    :param sqsum: Sqsum values is ``CV_32FC1`` type.
+
+.. seealso:: :ocv:func:`integral`
+
+ocl::mulSpectrums
+---------------------
+Performs a per-element multiplication of two Fourier spectrums.
+
+.. ocv:function:: void ocl::mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false)
+
+    :param a: First spectrum.
+
+    :param b: Second spectrum with the same size and type as  ``a`` .
+
+    :param c: Destination spectrum.
+
+    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
+
+    :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
+
+    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
+
+.. seealso:: :ocv:func:`mulSpectrums`
+
 ocl::cornerHarris
-------------------
+---------------------
 Returns void
 
 .. ocv:function:: void ocl::cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT)
@@ -24,7 +118,7 @@ Returns void
 Calculate Harris corner.
 
 ocl::cornerMinEigenVal
-------------------------
+--------------------------
 Returns void
 
 .. ocv:function:: void ocl::cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT)
@@ -52,6 +146,19 @@ Returns void
     :param dst: The output histogram, a dense or sparse dims-dimensional
 
 Calculates histogram of one or more arrays. Supports only 8UC1 data type.
+
+ocl::equalizeHist
+---------------------
+Equalizes the histogram of a grayscale image.
+
+.. ocv:function:: void ocl::equalizeHist(const oclMat& src, oclMat& dst)
+
+    :param src: Source image.
+
+    :param dst: Destination image.
+
+.. seealso:: :ocv:func:`equalizeHist`
+
 
 ocl::remap
 ------------------
@@ -96,7 +203,7 @@ Returns void
 Resizes an image. Supports CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 , CV_32FC3 and CV_32FC4 data types.
 
 ocl::warpAffine
-------------------
+-------------------
 Returns void
 
 .. ocv:function:: void ocl::warpAffine(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
@@ -114,7 +221,7 @@ Returns void
 The function warpAffine transforms the source image using the specified matrix. Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC types.
 
 ocl::warpPerspective
----------------------
+------------------------
 Returns void
 
 .. ocv:function:: void ocl::warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
@@ -209,7 +316,7 @@ Builds transformation maps for perspective transformation.
 
 
 ocl::buildWarpAffineMaps
-------------------------
+----------------------------
 Builds transformation maps for affine transformation.
 
 .. ocv:function:: void ocl::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
@@ -226,109 +333,35 @@ Builds transformation maps for affine transformation.
 
 .. seealso:: :ocv:func:`ocl::warpAffine` , :ocv:func:`ocl::remap`
 
-ocl::PyrLKOpticalFlow
+ocl::HoughCircles
 ---------------------
-.. ocv:class:: ocl::PyrLKOpticalFlow
+Finds circles in a grayscale image using the Hough transform.
 
-Class used for calculating an optical flow. ::
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
 
-    class PyrLKOpticalFlow
-    {
-    public:
-        PyrLKOpticalFlow();
+.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
 
-        void sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts,
-            oclMat& status, oclMat* err = 0);
+    :param src: 8-bit, single-channel grayscale input image.
 
-        void dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0);
+    :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
 
-        Size winSize;
-        int maxLevel;
-        int iters;
-        double derivLambda;
-        bool useInitialFlow;
-        float minEigThreshold;
-        bool getMinEigenVals;
+    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
 
-        void releaseMemory();
-    };
+    :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
 
-The class can calculate an optical flow for a sparse feature set or dense optical flow using the iterative Lucas-Kanade method with pyramids.
+    :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
 
-.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
+    :param cannyThreshold: The higher threshold of the two passed to  the :ocv:func:`ocl::Canny`  edge detector (the lower one is twice smaller).
 
-.. note::
+    :param votesThreshold: The accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected.
 
-   (Ocl) An example the Lucas Kanade optical flow pyramid method can be found at opencv_source_code/samples/ocl/pyrlk_optical_flow.cpp
-   (Ocl) An example for square detection can be found at opencv_source_code/samples/ocl/squares.cpp
+    :param minRadius: Minimum circle radius.
 
-ocl::PyrLKOpticalFlow::sparse
------------------------------
-Calculate an optical flow for a sparse feature set.
+    :param maxRadius: Maximum circle radius.
 
-.. ocv:function:: void ocl::PyrLKOpticalFlow::sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts, oclMat& status, oclMat* err = 0)
+    :param maxCircles: Maximum number of output circles.
 
-    :param prevImg: First 8-bit input image (supports both grayscale and color images).
+    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
 
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
-
-    :param prevPts: Vector of 2D points for which the flow needs to be found. It must be one row matrix with CV_32FC2 type.
-
-    :param nextPts: Output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image. When ``useInitialFlow`` is true, the vector must have the same size as in the input.
-
-    :param status: Output status vector (CV_8UC1 type). Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
-
-    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
-
-.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
-
-
-
-ocl::PyrLKOpticalFlow::dense
------------------------------
-Calculate dense optical flow.
-
-.. ocv:function:: void ocl::PyrLKOpticalFlow::dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0)
-
-    :param prevImg: First 8-bit grayscale input image.
-
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
-
-    :param u: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
-
-    :param v: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
-
-    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
-
-
-
-ocl::PyrLKOpticalFlow::releaseMemory
-------------------------------------
-Releases inner buffers memory.
-
-.. ocv:function:: void ocl::PyrLKOpticalFlow::releaseMemory()
-
-
-ocl::interpolateFrames
-----------------------
-Interpolate frames (images) using provided optical flow (displacement field).
-
-.. ocv:function:: void ocl::interpolateFrames(const oclMat& frame0, const oclMat& frame1, const oclMat& fu, const oclMat& fv, const oclMat& bu, const oclMat& bv, float pos, oclMat& newFrame, oclMat& buf)
-
-    :param frame0: First frame (32-bit floating point images, single channel).
-
-    :param frame1: Second frame. Must have the same type and size as ``frame0`` .
-
-    :param fu: Forward horizontal displacement.
-
-    :param fv: Forward vertical displacement.
-
-    :param bu: Backward horizontal displacement.
-
-    :param bv: Backward vertical displacement.
-
-    :param pos: New frame position.
-
-    :param newFrame: Output image.
-
-    :param buf: Temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 oclMat: occlusion masks for first frame, occlusion masks for second, interpolated forward horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow, interpolated backward vertical flow.
+.. note:: Currently only non-ROI oclMat is supported for src.
+.. seealso:: :ocv:func:`HoughCircles`
