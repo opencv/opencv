@@ -45,7 +45,7 @@
  * Belongie et al., 2002 by Juan Manuel Perez for GSoC 2013.
  */
 #include "precomp.hpp"
-//#include "opencv2/highgui.hpp"
+#include "opencv2/core.hpp"
 /*
  * ShapeContextDescriptor class
  */
@@ -181,7 +181,7 @@ protected:
               {
                   if (queryInliers.size()>0)
                   {
-                      mask.at<char>(i,j)=char(queryInliers[j] & queryInliers[i]);
+                      mask.at<char>(i,j)=char(queryInliers[j] && queryInliers[i]);
                   }
                   else
                   {
@@ -641,14 +641,14 @@ public:
     virtual void setImages(InputArray _image1, InputArray _image2)
     {
         Mat image1_=_image1.getMat(), image2_=_image2.getMat();
-        CV_Assert((image1_.depth()==0) & (image2_.depth()==0));
+        CV_Assert((image1_.depth()==0) && (image2_.depth()==0));
         image1=image1_;
         image2=image2_;
     }
 
     virtual void getImages(OutputArray _image1, OutputArray _image2) const
     {
-        CV_Assert((!image1.empty()) & (!image2.empty()));
+        CV_Assert((!image1.empty()) && (!image2.empty()));
         _image1.create(image1.size(), image1.type());
         _image2.create(image2.size(), image2.type());
         _image1.getMat()=image1;
@@ -726,11 +726,11 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     else
         sset1.copyTo(set2);
 
-    CV_Assert((set1.channels()==2) & (set1.cols>0));
-    CV_Assert((set2.channels()==2) & (set2.cols>0));
+    CV_Assert((set1.channels()==2) && (set1.cols>0));
+    CV_Assert((set2.channels()==2) && (set2.cols>0));
     if (imageAppearanceWeight!=0)
     {
-        CV_Assert((!image1.empty()) & (!image2.empty()));
+        CV_Assert((!image1.empty()) && (!image2.empty()));
     }
 
     // Initializing Extractor, Descriptor structures and Matcher //
@@ -747,9 +747,9 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
 
     // Initializing some variables //
     std::vector<int> inliers1, inliers2;
-    bool isTPS=false;
-    if ( dynamic_cast<ThinPlateSplineShapeTransformer*>(&*transformer) )
-        isTPS=true;
+
+    Ptr<ThinPlateSplineShapeTransformer> transDown = transformer.dynamicCast<ThinPlateSplineShapeTransformer>();
+
     Mat warpedImage;
     for (int ii=0; ii<iterations; ii++)
     {
@@ -766,8 +766,8 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         matcher.matchDescriptors(set1SCD, set2SCD, matches, comparer, inliers1, inliers2);
 
         // apply TPS transform //
-        if ( isTPS )
-            dynamic_cast<ThinPlateSplineShapeTransformer*>(&*transformer)->setRegularizationParameter(beta);
+        if ( !transDown.empty() )
+            transDown->setRegularizationParameter(beta);
         transformer->estimateTransformation(set1, set2, matches);
         bEnergy += transformer->applyTransformation(set1, set1);
 
@@ -777,7 +777,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
             // Have to accumulate the transformation along all the iterations
             if (ii==0)
             {
-                if ( isTPS )
+                if ( !transDown.empty() )
                 {
                     image2.copyTo(warpedImage);
                 }
@@ -794,7 +794,7 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     if (imageAppearanceWeight!=0)
     {
         // compute appearance cost
-        if ( isTPS )
+        if ( !transDown.empty() )
         {
             resize(warpedImage, warpedImage, image1.size());
             Mat temp=(warpedImage-image1);

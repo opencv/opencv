@@ -71,7 +71,7 @@ public:
 
     virtual void setRankProportion(float _rankProportion)
     {
-        CV_Assert((_rankProportion>0) & (_rankProportion<=1));
+        CV_Assert((_rankProportion>0) && (_rankProportion<=1));
         rankProportion=_rankProportion;
     }
     virtual float getRankProportion() const {return rankProportion;}
@@ -135,8 +135,8 @@ float HausdorffDistanceExtractorImpl::computeDistance(InputArray contour1, Input
         set1.convertTo(set1, CV_32F);
     if (set2.type() != CV_32F)
         set2.convertTo(set2, CV_32F);
-    CV_Assert((set1.channels()==2) & (set1.cols>0));
-    CV_Assert((set2.channels()==2) & (set2.cols>0));
+    CV_Assert((set1.channels()==2) && (set1.cols>0));
+    CV_Assert((set2.channels()==2) && (set2.cols>0));
     return std::max( _apply(set1, set2, distanceFlag, rankProportion),
                      _apply(set2, set1, distanceFlag, rankProportion) );
 }

@@ -186,7 +186,7 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0));
+    CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
     if (pts1.type() != CV_32F)
@@ -230,7 +230,7 @@ void AffineTransformerImpl::estimateTransformation(InputArray _pts1, InputArray 
 float AffineTransformerImpl::applyTransformation(InputArray inPts, OutputArray outPts)
 {
     Mat pts1 = inPts.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0));
+    CV_Assert((pts1.channels()==2) && (pts1.cols>0));
 
     //Apply transformation in the complete set of points
     Mat fAffine;

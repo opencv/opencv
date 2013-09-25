@@ -169,7 +169,7 @@ float ThinPlateSplineShapeTransformerImpl::applyTransformation(InputArray inPts,
 {
     CV_Assert(tpsComputed);
     Mat pts1 = inPts.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0));
+    CV_Assert((pts1.channels()==2) && (pts1.cols>0));
 
     //Apply transformation in the complete set of points
     // Ensambling output //
@@ -192,7 +192,7 @@ void ThinPlateSplineShapeTransformerImpl::estimateTransformation(InputArray _pts
 {
     Mat pts1 = _pts1.getMat();
     Mat pts2 = _pts2.getMat();
-    CV_Assert((pts1.channels()==2) & (pts1.cols>0) & (pts2.channels()==2) & (pts2.cols>0));
+    CV_Assert((pts1.channels()==2) && (pts1.cols>0) && (pts2.channels()==2) && (pts2.cols>0));
     CV_Assert(_matches.size()>1);
 
     if (pts1.type() != CV_32F)
