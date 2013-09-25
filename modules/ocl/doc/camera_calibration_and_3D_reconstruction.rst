@@ -127,7 +127,7 @@ Class computing stereo correspondence using the belief propagation algorithm. ::
         float disc_single_jump;
         int msg_type;
     private:
-    	/* hidden */
+        /* hidden */
     };
 
 The class implements algorithm described in [Felzenszwalb2006]_ . It can compute own data cost (using a truncated linear model) or use a user-provided data cost.
@@ -257,7 +257,7 @@ Class computing stereo correspondence using the constant space belief propagatio
         int msg_type;
         bool use_local_init_data_cost;
     private:
-	/* hidden */
+        /* hidden */
     };
 
 The class implements algorithm described in [Yang2010]_. ``StereoConstantSpaceBP`` supports both local minimum and global minimum data cost initialization algorithms. For more details, see the paper mentioned above. By default, a local algorithm is used. To enable a global algorithm, set ``use_local_init_data_cost`` to ``false`` .
@@ -332,5 +332,3 @@ Enables the stereo correspondence operator that finds the disparity for the spec
     :param disparity: Output disparity map. If  ``disparity``  is empty, the output type is  ``CV_16SC1`` . Otherwise, the output type is  ``disparity.type()`` .
 
     :param stream: Stream for the asynchronous version.
-
-

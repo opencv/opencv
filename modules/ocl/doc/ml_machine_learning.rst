@@ -7,7 +7,7 @@ ocl::KNearestNeighbour
 --------------------------
 .. ocv:class:: ocl::KNearestNeighbour : public CvKNearest
 
-The class implements K-Nearest Neighbors model as described in the beginning of this section. 
+The class implements K-Nearest Neighbors model as described in the beginning of this section.
 
 ocl::KNearestNeighbour
 --------------------------
@@ -42,7 +42,7 @@ Trains the model.
 
     :param updateBase: Specifies whether the model is trained from scratch (``update_base=false``), or it is updated using the new training data (``update_base=true``). In the latter case, the parameter ``maxK`` must not be larger than the original value.
 
-The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations: 
+The method trains the K-Nearest model. It follows the conventions of the generic :ocv:func:`CvStatModel::train` approach with the following limitations:
 
 * Only ``CV_ROW_SAMPLE`` data layout is supported.
 * Input variables are all ordered.
@@ -53,7 +53,7 @@ ocl::KNearestNeighbour::find_nearest
 ----------------------------------------
 Finds the neighbors and predicts responses for input vectors.
 
-.. ocv:function:: float ocl::KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lables ) 
+.. ocv:function:: float ocl::KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lables )
 
     :param samples: Input samples stored by rows. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times number\_of\_features` size.
 
@@ -86,4 +86,3 @@ Finds centers of clusters and groups input samples around the clusters.
             * **KMEANS_USE_INITIAL_LABELS** During the first (and possibly the only) attempt, use the user-supplied labels instead of computing them from the initial centers. For the second and further attempts, use the random or semi-random centers. Use one of  ``KMEANS_*_CENTERS``  flag to specify the exact method.
 
     :param centers: Output matrix of the cluster centers, one row per each cluster center.
-

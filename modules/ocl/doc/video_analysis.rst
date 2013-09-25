@@ -261,7 +261,7 @@ Kalman filter class. ::
         oclMat gain; //!< Kalman gain matrix (K(k)): K(k)=P'(k)*Ht*inv(H*P'(k)*Ht+R)
         oclMat errorCovPost; //!< posteriori error estimate covariance matrix (P(k)): P(k)=(I-K(k)*H)*P'(k)
     private:
-	/* hidden */
+        /* hidden */
     };
 
 ocl::KalmanFilter::KalmanFilter
@@ -476,10 +476,10 @@ Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
         float fVarMin;
         float fVarMax;
 
-        float fCT; 
+        float fCT;
 
-        bool bShadowDetection; 
-        unsigned char nShadowDetection; 
+        bool bShadowDetection;
+        unsigned char nShadowDetection;
         float fTau;
 
     private:
@@ -564,13 +564,8 @@ Computes a background image.
     :param stream: Stream for the asynchronous version.
 
 
-
 ocl::MOG2::release
 ----------------------
 Releases all inner buffer's memory.
 
 .. ocv:function:: void ocl::MOG2::release()
-
-
-
-
