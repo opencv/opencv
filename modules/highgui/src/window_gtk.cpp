@@ -47,6 +47,7 @@
 
 #include "gtk/gtk.h"
 #include "gdk/gdkkeysyms.h"
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <stdio.h>
 
 #ifdef HAVE_OPENGL
@@ -758,7 +759,9 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
     (void)data;
 #endif
 
-  CvImageWidget *image_widget;
+  CvImageWidget *image_widget = NULL;
+  cairo_t *cr = NULL;
+  GdkPixbuf *pixbuf = NULL;
 
   g_return_val_if_fail (widget != NULL, FALSE);
   g_return_val_if_fail (CV_IS_IMAGE_WIDGET (widget), FALSE);
@@ -767,29 +770,30 @@ static gboolean cvImageWidget_expose(GtkWidget* widget, GdkEventExpose* event, g
   if (event->count > 0)
     return FALSE;
 
+  cr = gdk_cairo_create(widget->window);
   image_widget = CV_IMAGE_WIDGET (widget);
 
-  gdk_window_clear_area (widget->window,
-                         0, 0,
-                         widget->allocation.width,
-                         widget->allocation.height);
   if( image_widget->scaled_image ){
       // center image in available region
       int x0 = (widget->allocation.width - image_widget->scaled_image->cols)/2;
       int y0 = (widget->allocation.height - image_widget->scaled_image->rows)/2;
 
-      gdk_draw_rgb_image( widget->window, widget->style->fg_gc[GTK_STATE_NORMAL],
-          x0, y0, MIN(image_widget->scaled_image->cols, widget->allocation.width),
+      pixbuf = gdk_pixbuf_new_from_data(image_widget->scaled_image->data.ptr, GDK_COLORSPACE_RGB, false,
+          8, MIN(image_widget->scaled_image->cols, widget->allocation.width),
           MIN(image_widget->scaled_image->rows, widget->allocation.height),
-          GDK_RGB_DITHER_MAX, image_widget->scaled_image->data.ptr, image_widget->scaled_image->step );
+          image_widget->scaled_image->step, NULL, NULL);
+      gdk_cairo_set_source_pixbuf(cr, pixbuf, x0, y0);
   }
   else if( image_widget->original_image ){
-      gdk_draw_rgb_image( widget->window, widget->style->fg_gc[GTK_STATE_NORMAL],
-          0, 0,
-          MIN(image_widget->original_image->cols, widget->allocation.width),
-           MIN(image_widget->original_image->rows, widget->allocation.height),
-          GDK_RGB_DITHER_MAX, image_widget->original_image->data.ptr, image_widget->original_image->step );
+      pixbuf = gdk_pixbuf_new_from_data(image_widget->original_image->data.ptr, GDK_COLORSPACE_RGB, false,
+          8, MIN(image_widget->original_image->cols, widget->allocation.width),
+          MIN(image_widget->original_image->rows, widget->allocation.height),
+          image_widget->original_image->step, NULL, NULL);
+      gdk_cairo_set_source_pixbuf(cr, pixbuf, 0, 0);
   }
+
+  cairo_paint(cr);
+  cairo_destroy(cr);
   return TRUE;
 }
 
