@@ -33,7 +33,7 @@ include(cmake/OpenCVDetectCXXCompiler.cmake)
 include(cmake/OpenCVVersion.cmake)
 
 # 1. 3rd party plugins/components to build from source
-# ===================================================
+# ========================================================
 OCV_OPTION(BUILD_JASPER               "Build libjasper from source"        WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_JPEG                 "Build libjpeg from source"          WIN32 OR ANDROID OR APPLE )
 OCV_OPTION(BUILD_OPENEXR              "Build openexr from source"          WIN32 OR ANDROID OR APPLE )
@@ -43,7 +43,7 @@ OCV_OPTION(BUILD_TIFF                 "Build libtiff from source"          WIN32
 OCV_OPTION(BUILD_ZLIB                 "Build zlib from source"             WIN32 OR APPLE )
 
 # 2. 3rd party plugins/components
-# ===================================================
+# ========================================================
 # GUI
 OCV_OPTION(WITH_CARBON                "Use Carbon for UI instead of Cocoa"          OFF  IF APPLE )
 OCV_OPTION(WITH_DSHOW                 "Build HighGUI with DirectShow support"       ON   IF (WIN32 AND NOT ARM) )
@@ -91,7 +91,7 @@ OCV_OPTION(WITH_EIGEN                 "Include Eigen2/Eigen3 support"           
 OCV_OPTION(WITH_IPP                   "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
 
 # 3. Build components
-# ===================================================
+# ========================================================
 OCV_OPTION(BUILD_ANDROID_EXAMPLES     "Build examples for Android platform"         ON  IF ANDROID )
 OCV_OPTION(BUILD_ANDROID_PACKAGE      "Build platform-specific package for Google Play" OFF IF ANDROID )
 OCV_OPTION(BUILD_ANDROID_SERVICE      "Build OpenCV Manager for Google Play" OFF IF ANDROID AND ANDROID_SOURCE_TREE )
@@ -106,7 +106,7 @@ OCV_OPTION(BUILD_WITH_STATIC_CRT      "Enables use of staticaly linked CRT for s
 OCV_OPTION(BUILD_opencv_apps          "Build utility applications (used for example to train classifiers)" (NOT ANDROID) IF (NOT IOS) )
 
 # 4. Build options
-# ===================================================
+# ========================================================
 OCV_OPTION(ENABLE_NOISY_WARNINGS      "Show all warnings even if they are too noisy"             OFF )
 OCV_OPTION(ENABLE_OMIT_FRAME_POINTER  "Enable -fomit-frame-pointer for GCC"                      ON   IF CMAKE_COMPILER_IS_GNUCXX AND NOT (APPLE AND CMAKE_COMPILER_IS_CLANGCXX) )
 OCV_OPTION(ENABLE_POWERPC             "Enable PowerPC for GCC"                                   ON   IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_SYSTEM_PROCESSOR MATCHES powerpc.*) )
@@ -117,7 +117,7 @@ OCV_OPTION(ENABLE_WINRT_MODE          "Build with Windows Runtime support"      
 OCV_OPTION(OPENCV_WARNINGS_ARE_ERRORS "Treat warnings as errors"                                 OFF )
 
 # 5. Optimization options
-# ===================================================
+# ========================================================
 OCV_OPTION(ENABLE_FAST_MATH           "Enable -ffast-math (not recommended for GCC 4.6.x)"       OFF  IF (CMAKE_COMPILER_IS_GNUCXX AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE                 "Enable SSE instructions"                                  ON   IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 OCV_OPTION(ENABLE_SSE2                "Enable SSE2 instructions"                                 ON   IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
@@ -128,14 +128,14 @@ OCV_OPTION(ENABLE_SSSE3               "Enable SSSE3 instructions"               
 OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                                  OFF  IF ((MSVC OR CMAKE_COMPILER_IS_GNUCXX) AND (X86 OR X86_64)) )
 
 # 6. Language bindings
-# ===================================================
+# ========================================================
 OCV_OPTION(BUILD_JAVA_BINDINGS        "Build java language bindings"    OFF)
 OCV_OPTION(BUILD_JAVA_FAT_LIB         "Create fat java wrapper containing the whole OpenCV library" OFF)
 OCV_OPTION(BUILD_MATLAB_BINDINGS      "Build matlab language bindings"  OFF)
 OCV_OPTION(BUILD_PYTHON_BINDINGS      "Build python language bindings"  OFF)
 
 # 7. Installation options
-# ===================================================
+# ========================================================
 OCV_OPTION(INSTALL_ANDROID_EXAMPLES "Install Android examples"  OFF IF ANDROID )
 OCV_OPTION(INSTALL_C_EXAMPLES       "Install C examples"        OFF )
 OCV_OPTION(INSTALL_PYTHON_EXAMPLES  "Install Python examples"   OFF )
