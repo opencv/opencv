@@ -186,6 +186,21 @@ As always, we would be happy to hear your comments and receive your contribution
                     :width:  80pt
                     :alt: gpu icon
 
+*  :ref:`Table-Of-Content-Viz`
+
+   .. tabularcolumns:: m{100pt} m{300pt}
+   .. cssclass:: toctableopencv
+
+   =========== =======================================================
+      |Viz|     These tutorials show how to use Viz module effectively.
+
+   =========== =======================================================
+
+     .. |Viz| image:: images/viz.jpg
+                   :height: 80pt
+                   :width:  80pt
+                   :alt: viz icon
+
 *  :ref:`Table-Of-Content-General`
 
       .. tabularcolumns:: m{100pt} m{300pt}
@@ -221,4 +236,5 @@ As always, we would be happy to hear your comments and receive your contribution
    gpu/table_of_content_gpu/table_of_content_gpu
    bioinspired/table_of_content_bioinspired/table_of_content_bioinspired
    ios/table_of_content_ios/table_of_content_ios
+   viz/table_of_content_viz/table_of_content_viz
    general/table_of_content_general/table_of_content_general
