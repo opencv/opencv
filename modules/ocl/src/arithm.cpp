@@ -354,13 +354,11 @@ Scalar arithmetic_sum(const oclMat &src, int type = 0)
     CV_Assert(groupnum != 0);
     int vlen = src.oclchannels() == 3 ? 12 : 8, dbsize = groupnum * vlen;
     Context *clCxt = src.clCxt;
-    T *p = new T[dbsize];
+
+    AutoBuffer<T> _buf(dbsize);
+    T *p = (T*)_buf;
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
-    Scalar s;
-    s.val[0] = 0.0;
-    s.val[1] = 0.0;
-    s.val[2] = 0.0;
-    s.val[3] = 0.0;
+    Scalar s = Scalar::all(0.0);
     arithmetic_sum_buffer_run(src, dstBuffer, vlen, groupnum, type);
 
     memset(p, 0, dbsize * sizeof(T));
@@ -370,7 +368,7 @@ Scalar arithmetic_sum(const oclMat &src, int type = 0)
         for (int j = 0; j < src.oclchannels(); j++, i++)
             s.val[j] += p[i];
     }
-    delete[] p;
+
     openCLFree(dstBuffer);
     return s;
 }
@@ -1160,8 +1158,10 @@ void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
     else
         arithmetic_minMaxLoc_mask_run(src, mask, dstBuffer, vlen, groupnum);
 
-    T *p = new T[groupnum * vlen * 4];
+    AutoBuffer<T> _buf(groupnum * vlen * 4);
+    T *p = (T*)_buf;
     memset(p, 0, dbsize);
+
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize);
     for (int i = 0; i < vlen * (int)groupnum; i++)
     {
@@ -1197,7 +1197,6 @@ void arithmetic_minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
         else
             maxLoc->x = maxLoc->y = -1;
     }
-    delete[] p;
 
     openCLSafeCall(clReleaseMemObject(dstBuffer));
 }
@@ -1266,7 +1265,9 @@ int cv::ocl::countNonZero(const oclMat &src)
     int vlen = 8 , dbsize = groupnum * vlen;
     Context *clCxt = src.clCxt;
     string kernelName = "arithm_op_nonzero";
-    int *p = new int[dbsize], nonzero = 0;
+
+    AutoBuffer<int> _buf(dbsize);
+    int *p = (int*)_buf, nonzero = 0;
     cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
     arithmetic_countNonZero_run(src, dstBuffer, vlen, groupnum, kernelName);
 
@@ -1275,7 +1276,6 @@ int cv::ocl::countNonZero(const oclMat &src)
     for (int i = 0; i < dbsize; i++)
         nonzero += p[i];
 
-    delete[] p;
     openCLSafeCall(clReleaseMemObject(dstBuffer));
     return nonzero;
 }
