@@ -18,6 +18,7 @@ project(OpenCV CXX C)
 
 # ----------------------------------------------------------------------------
 # USER-CONFIGURABLE OPTIONS
+# ----------------------------------------------------------------------------
 # There are 7 types of user-configurable components:
 #   1. 3rd party source plugins     plugins to build from source
 #   2. 3rd party plugins            existing plugins to use/link
@@ -71,20 +72,20 @@ OCV_OPTION(WITH_UNICAP                "Include Unicap support (GPL)"            
 OCV_OPTION(WITH_V4L                   "Include Video 4 Linux support"               ON   IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_VFW                   "Include Video for Windows support"           ON   IF WIN32 )
 OCV_OPTION(WITH_XINE                  "Include Xine support (GPL)"                  OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
-# hardware
+# Hardware
 OCV_OPTION(WITH_1394                  "Include IEEE1394 support"                    ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_GIGEAPI               "Include Smartek GigE support"                ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_OPENNI                "Include OpenNI support"                      OFF  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_PVAPI                 "Include Prosilica GigE support"              ON   IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_XIMEA                 "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
-# codec
+# Codecs
 OCV_OPTION(WITH_JASPER                "Include JPEG2K support"                      ON   IF (NOT IOS) )
 OCV_OPTION(WITH_JPEG                  "Include JPEG support"                        ON)
 OCV_OPTION(WITH_OPENEXR               "Include ILM support via OpenEXR"             ON   IF (NOT IOS) )
 OCV_OPTION(WITH_PNG                   "Include PNG support"                         ON)
 OCV_OPTION(WITH_TIFF                  "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_WEBP                  "Include WebP support"                        ON   IF (NOT IOS) )
-# core extensions
+# Core extensions
 OCV_OPTION(WITH_CLP                   "Include Clp support (EPL)"                   OFF)
 OCV_OPTION(WITH_EIGEN                 "Include Eigen2/Eigen3 support"               ON)
 OCV_OPTION(WITH_IPP                   "Include Intel IPP support"                   OFF  IF (MSVC OR X86 OR X86_64) )
@@ -98,7 +99,7 @@ OCV_OPTION(BUILD_DOCS                 "Create build rules for OpenCV Documentati
 OCV_OPTION(BUILD_EXAMPLES             "Build all examples"                          OFF )
 OCV_OPTION(BUILD_PACKAGE              "Enables 'make package_source' command"       ON )
 OCV_OPTION(BUILD_PERF_TESTS           "Build performance tests"                     OFF )
-OCV_OPTION(BUILD_SHARED_LIBS          "Build shared libraries (.dll/.so) instead of static ones (.lib/.a)" NOT (ANDROID OR IOS) )
+OCV_OPTION(BUILD_SHARED_LIBS          "Build shared libraries (.dll/.so/.dylib) instead of static ones (.lib/.a)" NOT (ANDROID OR IOS) )
 OCV_OPTION(BUILD_TESTS                "Build accuracy & regression tests"           OFF )
 OCV_OPTION(BUILD_WITH_DEBUG_INFO      "Include debug info into debug libs (not MSCV only)" ON )
 OCV_OPTION(BUILD_WITH_STATIC_CRT      "Enables use of staticaly linked CRT for staticaly linked OpenCV" ON IF MSVC )
