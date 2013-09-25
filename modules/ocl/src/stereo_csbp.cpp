@@ -96,6 +96,10 @@ namespace cv
     {
         namespace stereoCSBP
         {
+            static inline int divUp(int total, int grain)
+            {
+                return (total + grain - 1) / grain;
+            }
             static string get_kernel_name(string kernel_name, int data_type)
             {
                 stringstream idxStr;
@@ -125,7 +129,10 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8 ,1};
-                size_t globalThreads[] = { w, h, 1 };
+                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
+                    divUp(h, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int cdisp_step1 = msg_step * h;
                 openCLVerifyKernel(clCxt, kernel,  localThreads);
@@ -212,7 +219,10 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8 ,1};
-                size_t globalThreads[] = { w, h, 1 };
+                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
+                    divUp(h, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int disp_step = msg_step * h;
                 openCLVerifyKernel(clCxt, kernel, localThreads);
@@ -244,7 +254,10 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = { w, h, 1 };
+                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
+                    divUp(h, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int disp_step = msg_step * h;
                 openCLVerifyKernel(clCxt, kernel, localThreads);
@@ -275,10 +288,14 @@ namespace cv
                     init_data_cost_reduce_caller(left, right, temp, rthis, msg_step, h, w, level);
 
                 if(rthis.use_local_init_data_cost == true)
+                {
                     get_first_initial_local_caller(data_cost_selected, disp_selected_pyr, temp, rthis, h, w, nr_plane, msg_step);
+                }
                 else
+                {
                     get_first_initial_global_caller(data_cost_selected, disp_selected_pyr, temp, rthis, h, w,
                         nr_plane, msg_step);
+                }
             }
 
             ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -297,8 +314,11 @@ namespace cv
 
                 cl_kernel kernel = openCLGetKernelFromSource(clCxt, &stereocsbp, kernelName);
 
-                size_t localThreads[]  = { 32, 8, 1 };
-                size_t globalThreads[] = { w, h, 1 };
+                size_t localThreads[]  = {32, 8, 1};
+                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
+                    divUp(h, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int disp_step1 = msg_step1 * h;
                 int disp_step2 = msg_step2 * h2;
@@ -407,7 +427,10 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = { w, h, 1 };
+                size_t globalThreads[] = {divUp(w, localThreads[0]) *localThreads[0],
+                    divUp(h, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int disp_step1 = msg_step1 * h;
                 int disp_step2 = msg_step2 * h2;
@@ -508,7 +531,10 @@ namespace cv
 
                 //size_t blockSize = 256;
                 size_t localThreads[]  = {32, 8, 1};
-                size_t globalThreads[] = { disp.cols, disp.rows, 1 };
+                size_t globalThreads[] = {divUp(disp.cols, localThreads[0]) *localThreads[0],
+                    divUp(disp.rows, localThreads[1]) *localThreads[1],
+                    1
+                };
 
                 int step_size = disp.step / disp.elemSize();
                 int disp_step = disp.rows * msg_step;
