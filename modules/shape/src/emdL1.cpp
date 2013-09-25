@@ -60,7 +60,7 @@
 float EmdL1::getEMDL1(cv::Mat &sig1, cv::Mat &sig2)
 {
     // Initialization
-    CV_Assert((sig1.rows==sig2.rows) & (sig1.cols==sig2.cols) & (!sig1.empty()) & (!sig2.empty()));
+    CV_Assert((sig1.rows==sig2.rows) && (sig1.cols==sig2.cols) && (!sig1.empty()) && (!sig2.empty()));
     if(!initBaseTrees(sig1.rows, 1))
         return -1;
 
