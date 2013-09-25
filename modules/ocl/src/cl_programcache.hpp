@@ -44,41 +44,42 @@
 
 #include "precomp.hpp"
 
-using namespace cv;
-using namespace cv::ocl;
-using namespace std;
-using std::cout;
-using std::endl;
-
-namespace cv { namespace ocl {
+namespace cv {
+namespace ocl {
 
 class ProgramCache
 {
 protected:
-	ProgramCache();
-	~ProgramCache();
-	friend class std::auto_ptr<ProgramCache>;
+    ProgramCache();
+    ~ProgramCache();
+    friend class std::auto_ptr<ProgramCache>;
 public:
-	static ProgramCache *getProgramCache();
+    static ProgramCache *getProgramCache();
 
-	cl_program getProgram(const Context *ctx, const char **source, string kernelName,
+    cl_program getProgram(const Context *ctx, const cv::ocl::ProgramEntry* source,
                           const char *build_options);
 
-	void releaseProgram();
+    void releaseProgram();
 protected:
-	//lookup the binary given the file name
-	cl_program progLookup(string srcsign);
+    //lookup the binary given the file name
+    // (with acquired mutexCache)
+    cl_program progLookup(const string& srcsign);
 
-	//add program to the cache
-	void addProgram(string srcsign, cl_program program);
+    //add program to the cache
+    // (with acquired mutexCache)
+    void addProgram(const string& srcsign, cl_program program);
 
-	map <string, cl_program> codeCache;
-	unsigned int cacheSize;
+    map <string, cl_program> codeCache;
+    unsigned int cacheSize;
 
-	//The presumed watermark for the cache volume (256MB). Is it enough?
-	//We may need more delicate algorithms when necessary later.
-	//Right now, let's just leave it along.
-	static const unsigned MAX_PROG_CACHE_SIZE = 1024;
+    //The presumed watermark for the cache volume (256MB). Is it enough?
+    //We may need more delicate algorithms when necessary later.
+    //Right now, let's just leave it along.
+    static const unsigned MAX_PROG_CACHE_SIZE = 1024;
+
+    // acquire both mutexes in this order: 1) mutexFiles 2) mutexCache
+    static cv::Mutex mutexFiles;
+    static cv::Mutex mutexCache;
 };
 
 }//namespace ocl

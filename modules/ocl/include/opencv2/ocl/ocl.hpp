@@ -199,24 +199,6 @@ namespace cv
 
         void CV_EXPORTS finish();
 
-        //! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **source, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
-
-        //! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
-        CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt ,
-                                                        const char **fileName, const int numFiles, string kernelName,
-                                                        size_t globalThreads[3], size_t localThreads[3],
-                                                        std::vector< std::pair<size_t, const void *> > &args,
-                                                        int channels, int depth, const char *build_options,
-                                                        bool finish = true, bool measureKernelTime = false,
-                                                        bool cleanUp = true);
-
         //! Enable or disable OpenCL program binary caching onto local disk
         // After a program (*.cl files in opencl/ folder) is built at runtime, we allow the
         // compiled OpenCL program to be cached to the path automatically as "path/*.clb"
@@ -233,12 +215,11 @@ namespace cv
             CACHE_DEBUG   = 0x1 << 0, // cache OpenCL binary when built in debug mode (only work with MSVC)
             CACHE_RELEASE = 0x1 << 1, // default behavior, only cache when built in release mode (only work with MSVC)
             CACHE_ALL     = CACHE_DEBUG | CACHE_RELEASE, // always cache opencl binary
-            CACHE_UPDATE  = 0x1 << 2  // if the binary cache file with the same name is already on the disk, it will be updated.
         };
         CV_EXPORTS void setBinaryDiskCache(int mode = CACHE_RELEASE, cv::String path = "./");
 
         //! set where binary cache to be saved to
-        CV_EXPORTS void setBinpath(const char *path);
+        CV_EXPORTS void setBinaryPath(const char *path);
 
         class CV_EXPORTS oclMatExpr;
         //////////////////////////////// oclMat ////////////////////////////////

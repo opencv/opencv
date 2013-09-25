@@ -55,11 +55,11 @@ namespace cv
 {
     namespace ocl
     {
-        const char noImage2dOption [] = "-D DISABLE_IMAGE2D";
+        static const char noImage2dOption[] = "-D DISABLE_IMAGE2D";
 
         static bool use_image2d = false;
 
-        static void openCLExecuteKernelSURF(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernelSURF(Context *clCxt, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
             size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth)
         {
             char optBuf [100] = {0};

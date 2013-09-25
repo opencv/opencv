@@ -20,6 +20,7 @@ namespace cv
 {
 namespace ocl
 {
+
 ")
 
 foreach(cl ${cl_list})
@@ -43,12 +44,22 @@ foreach(cl ${cl_list})
 
   string(REGEX REPLACE "\"$" "" lines "${lines}") # unneeded " at the eof
 
-  set(STR_CPP "${STR_CPP}const char* ${cl_filename}=\"${lines};\n")
-  set(STR_HPP "${STR_HPP}extern const char* ${cl_filename};\n")
+  string(MD5 hash "${lines}")
+
+  set(STR_CPP "${STR_CPP}const struct ProgramEntry ${cl_filename}={\"${cl_filename}\",\n\"${lines}, \"${hash}\"};\n")
+  set(STR_HPP "${STR_HPP}extern const struct ProgramEntry ${cl_filename};\n")
 endforeach()
 
 set(STR_CPP "${STR_CPP}}\n}\n")
 set(STR_HPP "${STR_HPP}}\n}\n")
 
-file(WRITE ${OUTPUT} "${STR_CPP}")
-file(WRITE ${OUTPUT_HPP} "${STR_HPP}")
+file(WRITE "${OUTPUT}" "${STR_CPP}")
+
+if(EXISTS "${OUTPUT_HPP}")
+  file(READ "${OUTPUT_HPP}" hpp_lines)
+endif()
+if("${hpp_lines}" STREQUAL "${STR_HPP}")
+  message(STATUS "${OUTPUT_HPP} contains same content")
+else()
+  file(WRITE "${OUTPUT_HPP}" "${STR_HPP}")
+endif()

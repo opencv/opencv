@@ -72,7 +72,7 @@ namespace cv
     namespace ocl
     {
         // provide additional methods for the user to interact with the command queue after a task is fired
-        static void openCLExecuteKernel_2(Context *clCxt , const char **source, string kernelName, size_t globalThreads[3],
+        static void openCLExecuteKernel_2(Context *clCxt, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
                                    int depth, char *build_options, FLUSH_MODE finish_mode)
         {
@@ -118,14 +118,14 @@ namespace cv
             openCLSafeCall(clReleaseKernel(kernel));
         }
 
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel2(Context *clCxt, const cv::ocl::ProgramEntry* source, string kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   vector< pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode)
         {
             openCLExecuteKernel2(clCxt, source, kernelName, globalThreads, localThreads, args,
                                  channels, depth, NULL, finish_mode);
         }
-        void openCLExecuteKernel2(Context *clCxt , const char **source, string kernelName,
+        void openCLExecuteKernel2(Context *clCxt, const cv::ocl::ProgramEntry* source, string kernelName,
                                   size_t globalThreads[3], size_t localThreads[3],
                                   vector< pair<size_t, const void *> > &args, int channels, int depth, char *build_options, FLUSH_MODE finish_mode)
 
@@ -249,7 +249,7 @@ namespace cv
 
         bool support_image2d(Context *clCxt)
         {
-            static const char * _kernel_string = "__kernel void test_func(image2d_t img) {}";
+            const cv::ocl::ProgramEntry _kernel = {NULL, "__kernel void test_func(image2d_t img) {}", NULL};
             static bool _isTested = false;
             static bool _support = false;
             if(_isTested)
@@ -258,7 +258,7 @@ namespace cv
             }
             try
             {
-                cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel_string, "test_func");
+                cv::ocl::openCLGetKernelFromSource(clCxt, &_kernel, "test_func");
                 cv::ocl::finish();
                 _support = true;
             }

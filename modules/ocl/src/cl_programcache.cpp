@@ -48,85 +48,93 @@
 #include "precomp.hpp"
 #include <iomanip>
 #include <fstream>
-#include "binarycaching.hpp"
+#include "cl_programcache.hpp"
 
+#if defined _MSC_VER && _MSC_VER >= 1200
+#  pragma warning( disable: 4100 4244 4267 4510 4512 4610)
+#endif
 #undef __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
 namespace cv { namespace ocl {
+
+#define MAX_PROG_CACHE_SIZE 1024
 /*
  * The binary caching system to eliminate redundant program source compilation.
  * Strictly, this is not a cache because we do not implement evictions right now.
  * We shall add such features to trade-off memory consumption and performance when necessary.
  */
 
+cv::Mutex ProgramCache::mutexFiles;
+cv::Mutex ProgramCache::mutexCache;
+
 std::auto_ptr<ProgramCache> _programCache;
 ProgramCache* ProgramCache::getProgramCache()
 {
-	if (NULL == _programCache.get())
-		_programCache.reset(new ProgramCache());
-	return _programCache.get();
+    if (NULL == _programCache.get())
+        _programCache.reset(new ProgramCache());
+    return _programCache.get();
 }
 
 ProgramCache::ProgramCache()
 {
-	codeCache.clear();
-	cacheSize = 0;
+    codeCache.clear();
+    cacheSize = 0;
 }
 
 ProgramCache::~ProgramCache()
 {
-	releaseProgram();
+    releaseProgram();
 }
 
-cl_program ProgramCache::progLookup(string srcsign)
+cl_program ProgramCache::progLookup(const string& srcsign)
 {
-	map<string, cl_program>::iterator iter;
-	iter = codeCache.find(srcsign);
-	if(iter != codeCache.end())
-		return iter->second;
-	else
-		return NULL;
+    map<string, cl_program>::iterator iter;
+    iter = codeCache.find(srcsign);
+    if(iter != codeCache.end())
+        return iter->second;
+    else
+        return NULL;
 }
 
-void ProgramCache::addProgram(string srcsign , cl_program program)
+void ProgramCache::addProgram(const string& srcsign, cl_program program)
 {
-	if(!progLookup(srcsign))
-	{
-		codeCache.insert(map<string, cl_program>::value_type(srcsign, program));
-	}
+    if (!progLookup(srcsign))
+    {
+        clRetainProgram(program);
+        codeCache.insert(map<string, cl_program>::value_type(srcsign, program));
+    }
 }
 
 void ProgramCache::releaseProgram()
 {
-	map<string, cl_program>::iterator iter;
-	for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
-	{
-		openCLSafeCall(clReleaseProgram(iter->second));
-	}
-	codeCache.clear();
-	cacheSize = 0;
+    map<string, cl_program>::iterator iter;
+    for(iter = codeCache.begin(); iter != codeCache.end(); iter++)
+    {
+        openCLSafeCall(clReleaseProgram(iter->second));
+    }
+    codeCache.clear();
+    cacheSize = 0;
 }
 
-static int enable_disk_cache =
+static int enable_disk_cache = true ||
 #ifdef _DEBUG
         false;
 #else
         true;
 #endif
-static int update_disk_cache = false;
 static String binpath = "";
 
 void setBinaryDiskCache(int mode, String path)
 {
+    enable_disk_cache = 0;
+    binpath = "";
+
     if(mode == CACHE_NONE)
     {
-        update_disk_cache = 0;
-        enable_disk_cache = 0;
         return;
     }
-    update_disk_cache |= (mode & CACHE_UPDATE) == CACHE_UPDATE;
-    enable_disk_cache |=
+    enable_disk_cache =
 #ifdef _DEBUG
         (mode & CACHE_DEBUG)   == CACHE_DEBUG;
 #else
@@ -138,108 +146,286 @@ void setBinaryDiskCache(int mode, String path)
     }
 }
 
-void setBinpath(const char *path)
+void setBinaryPath(const char *path)
 {
     binpath = path;
 }
 
-int savetofile(const Context*,  cl_program &program, const char *fileName)
+static const int MAX_ENTRIES = 64;
+
+struct ProgramFileCache
 {
-    size_t binarySize;
-    openCLSafeCall(clGetProgramInfo(program,
-                            CL_PROGRAM_BINARY_SIZES,
-                            sizeof(size_t),
-                            &binarySize, NULL));
-    char* binary = (char*)malloc(binarySize);
-    if(binary == NULL)
+    struct CV_DECL_ALIGNED(1) ProgramFileHeader
     {
-        CV_Error(CV_StsNoMem, "Failed to allocate host memory.");
-    }
-    openCLSafeCall(clGetProgramInfo(program,
-                            CL_PROGRAM_BINARIES,
-                            sizeof(char *),
-                            &binary,
-                            NULL));
+        int hashLength;
+        //char hash[];
+    };
 
-    FILE *fp = fopen(fileName, "wb+");
-    if(fp != NULL)
+    struct CV_DECL_ALIGNED(1) ProgramFileTable
     {
-        fwrite(binary, binarySize, 1, fp);
-        free(binary);
-        fclose(fp);
-    }
-    return 1;
-}
+        int numberOfEntries;
+        //int firstEntryOffset[];
+    };
 
-cl_program ProgramCache::getProgram(const Context *ctx, const char **source, string kernelName,
-                                    const char *build_options)
-{
-    cl_program program;
-    cl_int status = 0;
-    stringstream src_sign;
-    string srcsign;
-    string filename;
-
-    if (NULL != build_options)
+    struct CV_DECL_ALIGNED(1) ProgramFileConfigurationEntry
     {
-        src_sign << (int64)(*source) << getClContext(ctx) << "_" << build_options;
-    }
-    else
-    {
-        src_sign << (int64)(*source) << getClContext(ctx);
-    }
-    srcsign = src_sign.str();
+        int nextEntry;
+        int dataSize;
+        int optionsLength;
+        //char options[];
+        // char data[];
+    };
 
-    program = NULL;
-    program = ProgramCache::getProgramCache()->progLookup(srcsign);
+    string fileName_;
+    const char* hash_;
+    std::fstream f;
 
-    if (!program)
+    ProgramFileCache(const string& fileName, const char* hash)
+        : fileName_(fileName), hash_(hash)
     {
-        //config build programs
-        std::string all_build_options;
-        if (!ctx->getDeviceInfo().compilationExtraOptions.empty())
-            all_build_options += ctx->getDeviceInfo().compilationExtraOptions;
-        if (build_options != NULL)
+        if (hash_ != NULL)
         {
-            all_build_options += " ";
-            all_build_options += build_options;
+            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            if(f.is_open())
+            {
+                int hashLength = 0;
+                f.read((char*)&hashLength, sizeof(int));
+                std::vector<char> fhash(hashLength + 1);
+                f.read(&fhash[0], hashLength);
+                if (f.eof() || strncmp(hash_, &fhash[0], hashLength) != 0)
+                {
+                    f.close();
+                    remove(fileName_.c_str());
+                    return;
+                }
+            }
         }
-        filename = binpath + kernelName + "_" + ctx->getDeviceInfo().deviceName + all_build_options + ".clb";
+    }
 
-        FILE *fp = enable_disk_cache ? fopen(filename.c_str(), "rb") : NULL;
-        if(fp == NULL || update_disk_cache)
+    int getHash(const string& options)
+    {
+        int hash = 0;
+        for (size_t i = 0; i < options.length(); i++)
         {
-            if(fp != NULL)
-                fclose(fp);
+            hash = (hash << 2) ^ (hash >> 17) ^ options[i];
+        }
+        return (hash + (hash >> 16)) & (MAX_ENTRIES - 1);
+    }
 
-            program = clCreateProgramWithSource(
-                          getClContext(ctx), 1, source, NULL, &status);
-            openCLVerifyCall(status);
-            cl_device_id device = getClDeviceID(ctx);
-            status = clBuildProgram(program, 1, &device, all_build_options.c_str(), NULL, NULL);
-            if(status == CL_SUCCESS && enable_disk_cache)
-                savetofile(ctx, program, filename.c_str());
+    bool readConfigurationFromFile(const string& options, std::vector<char>& buf)
+    {
+        if (hash_ == NULL)
+            return false;
+
+        if (!f.is_open())
+            return false;
+
+        f.seekg(0, std::fstream::end);
+        size_t fileSize = (size_t)f.tellg();
+        if (fileSize == 0)
+        {
+            std::cerr << "Invalid file (empty): " << fileName_ << std::endl;
+            f.close();
+            remove(fileName_.c_str());
+            return false;
+        }
+        f.seekg(0, std::fstream::beg);
+
+        int hashLength = 0;
+        f.read((char*)&hashLength, sizeof(int));
+        CV_Assert(hashLength > 0);
+        f.seekg(sizeof(hashLength) + hashLength, std::fstream::beg);
+
+        int numberOfEntries = 0;
+        f.read((char*)&numberOfEntries, sizeof(int));
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            std::cerr << "Invalid file: " << fileName_ << std::endl;
+            f.close();
+            remove(fileName_.c_str());
+            return false;
+        }
+
+        std::vector<int> firstEntryOffset(numberOfEntries);
+        f.read((char*)&firstEntryOffset[0], sizeof(int)*numberOfEntries);
+
+        int entryNum = getHash(options);
+
+        int entryOffset = firstEntryOffset[entryNum];
+        ProgramFileConfigurationEntry entry;
+        while (entryOffset > 0)
+        {
+            f.seekg(entryOffset, std::fstream::beg);
+            assert(sizeof(entry) == sizeof(int)*3);
+            f.read((char*)&entry, sizeof(entry));
+            std::vector<char> foptions(entry.optionsLength);
+            if ((int)options.length() == entry.optionsLength)
+            {
+                if (entry.optionsLength > 0)
+                    f.read(&foptions[0], entry.optionsLength);
+                if (memcmp(&foptions[0], options.c_str(), entry.optionsLength) == 0)
+                {
+                    buf.resize(entry.dataSize);
+                    f.read(&buf[0], entry.dataSize);
+                    f.seekg(0, std::fstream::beg);
+                    return true;
+                }
+            }
+            if (entry.nextEntry <= 0)
+                break;
+            entryOffset = entry.nextEntry;
+        }
+        return false;
+    }
+
+    bool writeConfigurationToFile(const string& options, std::vector<char>& buf)
+    {
+        if (hash_ == NULL)
+            return true; // don't save dynamic kernels
+
+        if (!f.is_open())
+        {
+            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            if (!f.is_open())
+            {
+                f.open(fileName_.c_str(), ios::out|ios::binary);
+                if (!f.is_open())
+                    return false;
+            }
+        }
+
+        f.seekg(0, std::fstream::end);
+        size_t fileSize = (size_t)f.tellg();
+        if (fileSize == 0)
+        {
+            f.seekp(0, std::fstream::beg);
+            int hashLength = strlen(hash_);
+            f.write((char*)&hashLength, sizeof(int));
+            f.write(hash_, hashLength);
+
+            int numberOfEntries = MAX_ENTRIES;
+            f.write((char*)&numberOfEntries, sizeof(int));
+            std::vector<int> firstEntryOffset(MAX_ENTRIES, 0);
+            f.write((char*)&firstEntryOffset[0], sizeof(int)*numberOfEntries);
+            f.close();
+            f.open(fileName_.c_str(), ios::in|ios::out|ios::binary);
+            CV_Assert(f.is_open());
+            f.seekg(0, std::fstream::end);
+            fileSize = (size_t)f.tellg();
+        }
+        f.seekg(0, std::fstream::beg);
+
+        int hashLength = 0;
+        f.read((char*)&hashLength, sizeof(int));
+        CV_Assert(hashLength > 0);
+        f.seekg(sizeof(hashLength) + hashLength, std::fstream::beg);
+
+        int numberOfEntries = 0;
+        f.read((char*)&numberOfEntries, sizeof(int));
+        CV_Assert(numberOfEntries > 0);
+        if (numberOfEntries != MAX_ENTRIES)
+        {
+            std::cerr << "Invalid file: " << fileName_ << std::endl;
+            f.close();
+            remove(fileName_.c_str());
+            return false;
+        }
+
+        size_t tableEntriesOffset = (size_t)f.tellg();
+        std::vector<int> firstEntryOffset(numberOfEntries);
+        f.read((char*)&firstEntryOffset[0], sizeof(int)*numberOfEntries);
+
+        int entryNum = getHash(options);
+
+        int entryOffset = firstEntryOffset[entryNum];
+        ProgramFileConfigurationEntry entry;
+        while (entryOffset > 0)
+        {
+            f.seekg(entryOffset, std::fstream::beg);
+            assert(sizeof(entry) == sizeof(int)*3);
+            f.read((char*)&entry, sizeof(entry));
+            std::vector<char> foptions(entry.optionsLength);
+            if ((int)options.length() == entry.optionsLength)
+            {
+                if (entry.optionsLength > 0)
+                    f.read(&foptions[0], entry.optionsLength);
+                CV_Assert(memcmp(&foptions, options.c_str(), entry.optionsLength) != 0);
+            }
+            if (entry.nextEntry <= 0)
+                break;
+            entryOffset = entry.nextEntry;
+        }
+        if (entryOffset > 0)
+        {
+            f.seekp(entryOffset, std::fstream::beg);
+            entry.nextEntry = fileSize;
+            f.write((char*)&entry, sizeof(entry));
         }
         else
         {
-            fseek(fp, 0, SEEK_END);
-            size_t binarySize = ftell(fp);
-            fseek(fp, 0, SEEK_SET);
-            char *binary = new char[binarySize];
-            CV_Assert(1 == fread(binary, binarySize, 1, fp));
-            fclose(fp);
-            cl_int status = 0;
-            cl_device_id device = getClDeviceID(ctx);
-            program = clCreateProgramWithBinary(getClContext(ctx),
-                                                1,
-                                                &device,
-                                                (const size_t *)&binarySize,
-                                                (const unsigned char **)&binary,
-                                                NULL,
-                                                &status);
+            firstEntryOffset[entryNum] = fileSize;
+            f.seekp(tableEntriesOffset, std::fstream::beg);
+            f.write((char*)&firstEntryOffset[0], sizeof(int)*numberOfEntries);
+        }
+        f.seekp(fileSize, std::fstream::beg);
+        entry.nextEntry = 0;
+        entry.dataSize = buf.size();
+        entry.optionsLength = options.length();
+        f.write((char*)&entry, sizeof(entry));
+        f.write(options.c_str(), entry.optionsLength);
+        f.write(&buf[0], entry.dataSize);
+        return true;
+    }
+
+    cl_program getOrBuildProgram(const Context* ctx, const cv::ocl::ProgramEntry* source, const string& options)
+    {
+        cl_int status = 0;
+        cl_program program = NULL;
+        std::vector<char> binary;
+        if (!enable_disk_cache || !readConfigurationFromFile(options, binary))
+        {
+            program = clCreateProgramWithSource(getClContext(ctx), 1, (const char**)&source->programStr, NULL, &status);
             openCLVerifyCall(status);
-            status = clBuildProgram(program, 1, &device, all_build_options.c_str(), NULL, NULL);
-            delete[] binary;
+            cl_device_id device = getClDeviceID(ctx);
+            status = clBuildProgram(program, 1, &device, options.c_str(), NULL, NULL);
+            if(status == CL_SUCCESS)
+            {
+                if (enable_disk_cache)
+                {
+                    size_t binarySize;
+                    openCLSafeCall(clGetProgramInfo(program,
+                                            CL_PROGRAM_BINARY_SIZES,
+                                            sizeof(size_t),
+                                            &binarySize, NULL));
+
+                    std::vector<char> binary(binarySize);
+
+                    char* ptr = &binary[0];
+                    openCLSafeCall(clGetProgramInfo(program,
+                                            CL_PROGRAM_BINARIES,
+                                            sizeof(char*),
+                                            &ptr,
+                                            NULL));
+
+                    if (!writeConfigurationToFile(options, binary))
+                    {
+                        std::cerr << "Can't write data to file: " << fileName_ << std::endl;
+                    }
+                }
+            }
+        }
+        else
+        {
+            cl_device_id device = getClDeviceID(ctx);
+            size_t size = binary.size();
+            const char* ptr = &binary[0];
+            program = clCreateProgramWithBinary(getClContext(ctx),
+                    1, &device,
+                    (const size_t *)&size, (const unsigned char **)&ptr,
+                    NULL, &status);
+            openCLVerifyCall(status);
+            status = clBuildProgram(program, 1, &device, options.c_str(), NULL, NULL);
         }
 
         if(status != CL_SUCCESS)
@@ -259,53 +445,77 @@ cl_program ProgramCache::getProgram(const Context *ctx, const char **source, str
                 memset(buildLog, 0, buildLogSize);
                 openCLSafeCall(clGetProgramBuildInfo(program, getClDeviceID(ctx),
                                                      CL_PROGRAM_BUILD_LOG, buildLogSize, buildLog, NULL));
-                std::cout << "\n\t\t\tBUILD LOG\n";
+                std::cout << "\nBUILD LOG: " << options << "\n";
                 std::cout << buildLog << endl;
                 delete [] buildLog;
             }
             openCLVerifyCall(status);
         }
-        //Cache the binary for future use if build_options is null
-        if( (this->cacheSize += 1) < MAX_PROG_CACHE_SIZE)
-            this->addProgram(srcsign, program);
-        else
-            cout << "Warning: code cache has been full.\n";
+        return program;
+    }
+};
+
+cl_program ProgramCache::getProgram(const Context *ctx, const cv::ocl::ProgramEntry* source,
+                                    const char *build_options)
+{
+    stringstream src_sign;
+
+    src_sign << (int64)(source->programStr);
+    src_sign << getClContext(ctx);
+    if (NULL != build_options)
+    {
+        src_sign << "_" << build_options;
+    }
+
+    {
+        cv::AutoLock lockCache(mutexCache);
+        cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
+        if (!!program)
+        {
+            clRetainProgram(program);
+            return program;
+        }
+    }
+
+    cv::AutoLock lockCache(mutexFiles);
+
+    // second check
+    {
+        cv::AutoLock lockCache(mutexCache);
+        cl_program program = ProgramCache::getProgramCache()->progLookup(src_sign.str());
+        if (!!program)
+        {
+            clRetainProgram(program);
+            return program;
+        }
+    }
+
+    string all_build_options;
+    if (!ctx->getDeviceInfo().compilationExtraOptions.empty())
+        all_build_options += ctx->getDeviceInfo().compilationExtraOptions;
+    if (build_options != NULL)
+    {
+        all_build_options += " ";
+        all_build_options += build_options;
+    }
+    const DeviceInfo& devInfo = ctx->getDeviceInfo();
+    string filename = binpath + (source->name ? source->name : "NULL") + "_" + devInfo.platform->platformName + "_" + devInfo.deviceName + ".clb";
+
+    ProgramFileCache programFileCache(filename, source->programHash);
+    cl_program program = programFileCache.getOrBuildProgram(ctx, source, all_build_options);
+
+    //Cache the binary for future use if build_options is null
+    if( (this->cacheSize += 1) < MAX_PROG_CACHE_SIZE)
+    {
+        cv::AutoLock lockCache(mutexCache);
+        this->addProgram(src_sign.str(), program);
+    }
+    else
+    {
+        cout << "Warning: code cache has been full.\n";
     }
     return program;
 }
-
-//// Converts the contents of a file into a string
-//static int convertToString(const char *filename, std::string& s)
-//{
-//    size_t size;
-//    char*  str;
-//
-//    std::fstream f(filename, (std::fstream::in | std::fstream::binary));
-//    if(f.is_open())
-//    {
-//        size_t fileSize;
-//        f.seekg(0, std::fstream::end);
-//        size = fileSize = (size_t)f.tellg();
-//        f.seekg(0, std::fstream::beg);
-//
-//        str = new char[size+1];
-//        if(!str)
-//        {
-//            f.close();
-//            return -1;
-//        }
-//
-//        f.read(str, fileSize);
-//        f.close();
-//        str[size] = '\0';
-//
-//        s = str;
-//        delete[] str;
-//        return 0;
-//    }
-//    printf("Error: Failed to open file %s\n", filename);
-//    return -1;
-//}
 
 } // namespace ocl
 } // namespace cv
