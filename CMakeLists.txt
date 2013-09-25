@@ -27,6 +27,8 @@ project(OpenCV CXX C)
 #   7. Installation options         mangle paths, RPATHS, etc
 # ----------------------------------------------------------------------------
 include(cmake/OpenCVUtils.cmake)
+include(cmake/OpenCVDetectCXXCompiler.cmake)
+include(cmake/OpenCVVersion.cmake)
 
 # 1. 3rd party plugins/components to build from source
 # ===================================================
@@ -50,8 +52,8 @@ OCV_OPTION(WITH_QT                    "Build with Qt Backend support"           
 OCV_OPTION(WITH_WIN32UI               "Build with Win32 UI Backend support"         ON   IF WIN32 )
 # GPU/concurrency
 OCV_OPTION(WITH_CSTRIPES              "Include C= support"                          OFF  IF WIN32 )
-OCV_OPTION(WITH_CUBLAS                "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUDA                  "Include NVidia Cuda Runtime support"                                         ON  IF (NOT ANDROID AND NOT IOS) )
+OCV_OPTION(WITH_CUBLAS                "Include NVidia Cuda Basic Linear Algebra Subprograms (BLAS) library support" OFF IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_CUFFT                 "Include NVidia Cuda Fast Fourier Transform (FFT) library support"            ON  IF (NOT ANDROID AND NOT IOS) )
 OCV_OPTION(WITH_NVCUVID               "Include NVidia Video Decoding library support"                               OFF IF (NOT ANDROID AND NOT IOS AND NOT APPLE) )
 OCV_OPTION(WITH_OPENCL                "Include OpenCL Runtime support"              ON  IF (NOT ANDROID AND NOT IOS) )
@@ -141,8 +143,6 @@ OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help wi
 # ----------------------------------------------------------------------------
 #  END USER-CONFIGURABLE OPTIONS
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVDetectCXXCompiler.cmake)
-include(cmake/OpenCVVersion.cmake)
 include(cmake/OpenCVPostamble.cmake)
 
 
