@@ -8,6 +8,9 @@
 # This does its best to prevent users from trashing the source tree
 # however CMakeFiles/ and CMakeCache.txt will (unfortunately) still be created
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
+  # this is a hack suggested on the cmake message boards to prevent cmake
+  # from writing the CMakeCache.txt file after an in-source build attempt
+  # which then causes future off-tree builds to fail
   file(MAKE_DIRECTORY CMakeCache.txt)
   message(FATAL_ERROR "
   =========================================================================
@@ -20,7 +23,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   =========================================================================\n")
 endif()
 
-# Following block can broke build in case of cross-compilng
+# Following block can break build in case of cross-compilng
 # but CMAKE_CROSSCOMPILING variable will be set only on project(OpenCV) command
 # so we will try to detect crosscompiling by presense of CMAKE_TOOLCHAIN_FILE
 if(NOT CMAKE_TOOLCHAIN_FILE)
