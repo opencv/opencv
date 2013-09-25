@@ -488,7 +488,7 @@
       <val>-3.7338696420192719e-02</val></rng2></descriptors></surf_full--full---stitching-a3-png->
  <!-- resumed -->
 
-<Image_GPU_SURF--GPU_SURF---gpu-perf-aloe-png->
+<Image_CUDA_SURF--CUDA_SURF---gpu-perf-aloe-png->
   <gpu_keypoints-pt>
     <kind>65536</kind>
     <type>13</type>
@@ -608,113 +608,5 @@
     <rng2>
       <x>27</x>
       <y>13227</y>
-      <val>2.3819475900381804e-03</val></rng2></gpu_descriptors></Image_GPU_SURF--GPU_SURF---gpu-perf-aloe-png->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---1->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>585</x>
-      <y>177</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>124</x>
-      <y>234</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---1->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---3->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>114</x>
-      <y>571</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>347</x>
-      <y>431</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---3->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---4->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>767</x>
-      <y>575</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>222</x>
-      <y>568</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>641</x>
-      <y>537</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-768x576-avi---4->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---1->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>790</x>
-      <y>960</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>549</x>
-      <y>435</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---1->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---3->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>589</x>
-      <y>875</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>1297</x>
-      <y>834</y>
-      <val>255.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---3->
-<Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---4->
-  <gpu_foreground>
-    <kind>65536</kind>
-    <type>0</type>
-    <min>0.</min>
-    <max>255.</max>
-    <last>
-      <x>1919</x>
-      <y>1079</y>
-      <val>0.</val></last>
-    <rng1>
-      <x>346</x>
-      <y>113</y>
-      <val>0.</val></rng1>
-    <rng2>
-      <x>882</x>
-      <y>903</y>
-      <val>0.</val></rng2></gpu_foreground></Video_Cn_GPU_VIBE--GPU_VIBE----gpu-video-1920x1080-avi---4->
+      <val>2.3819475900381804e-03</val></rng2></gpu_descriptors></Image_CUDA_SURF--CUDA_SURF---gpu-perf-aloe-png->
 </opencv_storage>

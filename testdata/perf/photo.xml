@@ -157,7 +157,7 @@
       <cn>2</cn>
       <val>184.</val></rng2></inpaintedArea></InpaintArea_InpaintingMethod_inpaint--inpaint---128x128--INPAINT_TELEA->
  <!-- resumed -->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---640x480--CV_8U--Gray--21--5->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---640x480--CV_8U--Gray--21--5->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -174,8 +174,8 @@
     <rng2>
       <x>190</x>
       <y>389</y>
-      <val>119.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---640x480--CV_8U--Gray--21--5->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---640x480--CV_8U--BGR--21--5->
+      <val>119.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---640x480--CV_8U--Gray--21--5->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---640x480--CV_8U--BGR--21--5->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -193,8 +193,8 @@
     <rng2>
       <x>303</x>
       <y>193</y>
-      <val>198.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---640x480--CV_8U--BGR--21--5->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---1280x720--CV_8U--Gray--21--5->
+      <val>198.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---640x480--CV_8U--BGR--21--5->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---1280x720--CV_8U--Gray--21--5->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -211,8 +211,8 @@
     <rng2>
       <x>210</x>
       <y>22</y>
-      <val>81.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---1280x720--CV_8U--Gray--21--5->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---1280x720--CV_8U--BGR--21--5->
+      <val>81.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---1280x720--CV_8U--Gray--21--5->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---1280x720--CV_8U--BGR--21--5->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -231,8 +231,8 @@
       <x>1269</x>
       <y>656</y>
       <cn>2</cn>
-      <val>246.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_NonLocalMeans--GPU_NonLocalMeans---1280x720--CV_8U--BGR--21--5->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---640x480--CV_8U--Gray--21--7->
+      <val>246.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_NonLocalMeans--CUDA_NonLocalMeans---1280x720--CV_8U--BGR--21--5->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---640x480--CV_8U--Gray--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -249,8 +249,8 @@
     <rng2>
       <x>556</x>
       <y>39</y>
-      <val>245.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---640x480--CV_8U--Gray--21--7->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---640x480--CV_8U--BGR--21--7->
+      <val>245.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---640x480--CV_8U--Gray--21--7->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---640x480--CV_8U--BGR--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -267,8 +267,8 @@
     <rng2>
       <x>186</x>
       <y>361</y>
-      <val>134.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---640x480--CV_8U--BGR--21--7->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---1280x720--CV_8U--Gray--21--7->
+      <val>134.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---640x480--CV_8U--BGR--21--7->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---1280x720--CV_8U--Gray--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -285,8 +285,8 @@
     <rng2>
       <x>476</x>
       <y>51</y>
-      <val>186.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---1280x720--CV_8U--Gray--21--7->
-<Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---1280x720--CV_8U--BGR--21--7->
+      <val>186.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---1280x720--CV_8U--Gray--21--7->
+<Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---1280x720--CV_8U--BGR--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>0</type>
@@ -303,8 +303,8 @@
     <rng2>
       <x>903</x>
       <y>484</y>
-      <val>57.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_GPU_FastNonLocalMeans--GPU_FastNonLocalMeans---1280x720--CV_8U--BGR--21--7->
-<Sz_Depth_WinSz_BlockSz_GPU_FastNonLocalMeansColored--GPU_FastNonLocalMeansColored---640x480--CV_8U--21--7->
+      <val>57.</val></rng2></gpu_dst></Sz_Depth_Cn_WinSz_BlockSz_CUDA_FastNonLocalMeans--CUDA_FastNonLocalMeans---1280x720--CV_8U--BGR--21--7->
+<Sz_Depth_WinSz_BlockSz_CUDA_FastNonLocalMeansColored--CUDA_FastNonLocalMeansColored---640x480--CV_8U--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -321,8 +321,8 @@
     <rng2>
       <x>193</x>
       <y>173</y>
-      <val>189.</val></rng2></gpu_dst></Sz_Depth_WinSz_BlockSz_GPU_FastNonLocalMeansColored--GPU_FastNonLocalMeansColored---640x480--CV_8U--21--7->
-<Sz_Depth_WinSz_BlockSz_GPU_FastNonLocalMeansColored--GPU_FastNonLocalMeansColored---1280x720--CV_8U--21--7->
+      <val>189.</val></rng2></gpu_dst></Sz_Depth_WinSz_BlockSz_CUDA_FastNonLocalMeansColored--CUDA_FastNonLocalMeansColored---640x480--CV_8U--21--7->
+<Sz_Depth_WinSz_BlockSz_CUDA_FastNonLocalMeansColored--CUDA_FastNonLocalMeansColored---1280x720--CV_8U--21--7->
   <gpu_dst>
     <kind>65536</kind>
     <type>16</type>
@@ -341,5 +341,5 @@
       <x>1003</x>
       <y>609</y>
       <cn>2</cn>
-      <val>190.</val></rng2></gpu_dst></Sz_Depth_WinSz_BlockSz_GPU_FastNonLocalMeansColored--GPU_FastNonLocalMeansColored---1280x720--CV_8U--21--7->
+      <val>190.</val></rng2></gpu_dst></Sz_Depth_WinSz_BlockSz_CUDA_FastNonLocalMeansColored--CUDA_FastNonLocalMeansColored---1280x720--CV_8U--21--7->
 </opencv_storage>
