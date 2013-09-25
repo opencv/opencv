@@ -110,3 +110,11 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*|ARM.*")
   set(ARM 1)
 endif()
+
+# ----------------------------------------------------------------------------
+#  Check the compiler
+# ----------------------------------------------------------------------------
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
+endif()
