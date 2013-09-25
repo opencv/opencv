@@ -539,7 +539,7 @@ if(BUILD_PYTHON_BINDINGS)
     status("      packages path:" PYTHON_EXECUTABLE         THEN "${PYTHON_PACKAGES_PATH}"                                    ELSE "-")
   endif()
 else()
-  status("    Python:" "Disabled")
+  status("    Python:" "NO")
 endif()
 
 # Java/Scala
@@ -551,7 +551,7 @@ if (BUILD_JAVA_BINDINGS)
   endif()
   status("      Java tests:"    BUILD_TESTS AND (CAN_BUILD_ANDROID_PROJECTS OR HAVE_opencv_java)            THEN YES ELSE NO)
 else()
-  status("    Java:" "Disabled")
+  status("    Java:" "NO")
 endif()
 
 # Matlab
@@ -562,7 +562,7 @@ if (BUILD_MATLAB_BINDINGS)
     status("      Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
   endif()
 else()
-  status("    Matlab:" "Disabled")
+  status("    Matlab:" "NO")
 endif()
 
 # ============================== Documentation ===============================
