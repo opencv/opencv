@@ -126,7 +126,7 @@ OCV_OPTION(ENABLE_AVX                 "Enable AVX instructions"                 
 # 6. Language bindings
 # ===================================================
 OCV_OPTION(BUILD_JAVA_BINDINGS        "Build java language bindings"    OFF)
-OCV_OPTION(BUILD_FAT_JAVA_LIB         "Create fat java wrapper containing the whole OpenCV library" OFF)
+OCV_OPTION(BUILD_JAVA_FAT_LIB         "Create fat java wrapper containing the whole OpenCV library" OFF)
 OCV_OPTION(BUILD_MATLAB_BINDINGS      "Build matlab language bindings"  OFF)
 OCV_OPTION(BUILD_PYTHON_BINDINGS      "Build python language bindings"  OFF)
 
