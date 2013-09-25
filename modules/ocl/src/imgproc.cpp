@@ -1108,7 +1108,7 @@ namespace cv
             CV_Assert(Dx.offset == 0 && Dy.offset == 0);
         }
 
-        static void corner_ocl(const char *src_str, string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
+        static void corner_ocl(const cv::ocl::ProgramEntry* source, string kernelName, int block_size, float k, oclMat &Dx, oclMat &Dy,
                         oclMat &dst, int border_type)
         {
             char borderType[30];
@@ -1160,7 +1160,7 @@ namespace cv
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.cols));
             args.push_back( make_pair(sizeof(cl_int), (void *)&dst.step));
             args.push_back( make_pair( sizeof(cl_float) , (void *)&k));
-            openCLExecuteKernel(dst.clCxt, &src_str, kernelName, gt, lt, args, -1, -1, build_options);
+            openCLExecuteKernel(dst.clCxt, source, kernelName, gt, lt, args, -1, -1, build_options);
         }
 
         void cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize,
@@ -1181,7 +1181,7 @@ namespace cv
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
+            corner_ocl(&imgproc_calcHarris, "calcHarris", blockSize, static_cast<float>(k), dx, dy, dst, borderType);
         }
 
         void cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int borderType)
@@ -1200,7 +1200,7 @@ namespace cv
             CV_Assert(borderType == cv::BORDER_CONSTANT || borderType == cv::BORDER_REFLECT101 || borderType == cv::BORDER_REPLICATE || borderType == cv::BORDER_REFLECT);
             extractCovData(src, dx, dy, blockSize, ksize, borderType);
             dst.create(src.size(), CV_32F);
-            corner_ocl(imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, dx, dy, dst, borderType);
+            corner_ocl(&imgproc_calcMinEigenVal, "calcMinEigenVal", blockSize, 0, dx, dy, dst, borderType);
         }
         /////////////////////////////////// MeanShiftfiltering ///////////////////////////////////////////////
         static void meanShiftFiltering_gpu(const oclMat &src, oclMat dst, int sp, int sr, int maxIter, float eps)
@@ -1749,7 +1749,7 @@ namespace cv
 }
 //////////////////////////////////convolve////////////////////////////////////////////////////
 
-static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const char **kernelString)
+static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, string kernelName, const cv::ocl::ProgramEntry* source)
 {
     CV_Assert(src.depth() == CV_32FC1);
     CV_Assert(temp1.depth() == CV_32F);
@@ -1784,7 +1784,7 @@ static void convolve_run(const oclMat &src, const oclMat &temp1, oclMat &dst, st
     args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.rows ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&temp1.cols ));
 
-    openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
+    openCLExecuteKernel(clCxt, source, kernelName, globalThreads, localThreads, args, -1, depth);
 }
 void cv::ocl::convolve(const oclMat &x, const oclMat &t, oclMat &y)
 {

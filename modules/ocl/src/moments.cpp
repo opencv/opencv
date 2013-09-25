@@ -229,7 +229,7 @@ static void ocl_cvMoments( const void* array, CvMoments* mom, int binary )
             CV_Error( CV_StsBadArg, "The passed sequence is not a valid contour" );
     }
 
-    if( !moments )
+    if( !mom )
         CV_Error( CV_StsNullPtr, "" );
 
     memset( mom, 0, sizeof(*mom));

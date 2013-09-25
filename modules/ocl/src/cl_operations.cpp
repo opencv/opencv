@@ -48,10 +48,7 @@
 #include "precomp.hpp"
 #include <iomanip>
 #include <fstream>
-#include "binarycaching.hpp"
-
-#undef __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#include "cl_programcache.hpp"
 
 //#define PRINT_KERNEL_RUN_TIME
 #define RUN_TIMES 100
@@ -60,7 +57,8 @@
 #endif
 //#define AMD_DOUBLE_DIFFER
 
-namespace cv { namespace ocl {
+namespace cv {
+namespace ocl {
 
 DevMemType gDeviceMemType = DEVICE_MEM_DEFAULT;
 DevMemRW gDeviceMemRW = DEVICE_MEM_R_W;
@@ -179,21 +177,22 @@ void openCLFree(void *devPtr)
     openCLSafeCall(clReleaseMemObject((cl_mem)devPtr));
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const char **source, string kernelName)
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName)
 {
     return openCLGetKernelFromSource(ctx, source, kernelName, NULL);
 }
 
-cl_kernel openCLGetKernelFromSource(const Context *ctx, const char **source, string kernelName,
+cl_kernel openCLGetKernelFromSource(const Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
                                     const char *build_options)
 {
     cl_kernel kernel;
     cl_int status = 0;
     CV_Assert(ProgramCache::getProgramCache() != NULL);
-    cl_program program = ProgramCache::getProgramCache()->getProgram(ctx, source, kernelName, build_options);
+    cl_program program = ProgramCache::getProgramCache()->getProgram(ctx, source, build_options);
     CV_Assert(program != NULL);
     kernel = clCreateKernel(program, kernelName.c_str(), &status);
     openCLVerifyCall(status);
+    openCLVerifyCall(clReleaseProgram(program));
     return kernel;
 }
 
@@ -213,7 +212,7 @@ void openCLVerifyKernel(const Context *ctx, cl_kernel kernel, size_t *localThrea
 static double total_execute_time = 0;
 static double total_kernel_time = 0;
 #endif
-void openCLExecuteKernel_(Context *ctx , const char **source, string kernelName, size_t globalThreads[3],
+void openCLExecuteKernel_(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName, size_t globalThreads[3],
                           size_t localThreads[3],  vector< pair<size_t, const void *> > &args, int channels,
                           int depth, const char *build_options)
 {
@@ -275,14 +274,14 @@ void openCLExecuteKernel_(Context *ctx , const char **source, string kernelName,
     openCLSafeCall(clReleaseKernel(kernel));
 }
 
-void openCLExecuteKernel(Context *ctx , const char **source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
                          vector< pair<size_t, const void *> > &args, int channels, int depth)
 {
     openCLExecuteKernel(ctx, source, kernelName, globalThreads, localThreads, args,
                         channels, depth, NULL);
 }
-void openCLExecuteKernel(Context *ctx , const char **source, string kernelName,
+void openCLExecuteKernel(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
                          vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options)
 
@@ -316,7 +315,7 @@ void openCLExecuteKernel(Context *ctx , const char **source, string kernelName,
 #endif
 }
 
-double openCLExecuteKernelInterop(Context *ctx , const char **source, string kernelName,
+double openCLExecuteKernelInterop(Context *ctx, const cv::ocl::ProgramEntry* source, string kernelName,
                          size_t globalThreads[3], size_t localThreads[3],
                          vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
                          bool finish, bool measureKernelTime, bool cleanUp)
@@ -391,29 +390,6 @@ double openCLExecuteKernelInterop(Context *ctx , const char **source, string ker
     return kernelTime;
 }
 
-//double openCLExecuteKernelInterop(Context *ctx , const char **fileName, const int numFiles, string kernelName,
-//                         size_t globalThreads[3], size_t localThreads[3],
-//                         vector< pair<size_t, const void *> > &args, int channels, int depth, const char *build_options,
-//                         bool finish, bool measureKernelTime, bool cleanUp)
-//
-//{
-//    std::vector<std::string> fsource;
-//    for (int i = 0 ; i < numFiles ; i++)
-//    {
-//        std::string str;
-//        if (convertToString(fileName[i], str) >= 0)
-//            fsource.push_back(str);
-//    }
-//    const char **source = new const char *[numFiles];
-//    for (int i = 0 ; i < numFiles ; i++)
-//        source[i] = fsource[i].c_str();
-//    double kernelTime = openCLExecuteKernelInterop(ctx ,source, kernelName, globalThreads, localThreads,
-//                         args, channels, depth, build_options, finish, measureKernelTime, cleanUp);
-//    fsource.clear();
-//    delete []source;
-//    return kernelTime;
-//}
-
 cl_mem load_constant(cl_context context, cl_command_queue command_queue, const void *value,
                      const size_t size)
 {
@@ -427,7 +403,6 @@ cl_mem load_constant(cl_context context, cl_command_queue command_queue, const v
                                         value, 0, 0, 0));
 
     return con_struct;
-
 }
 
 }//namespace ocl

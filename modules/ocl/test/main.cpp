@@ -118,7 +118,6 @@ int main(int argc, char **argv)
     }
 
     cv::ocl::setDevice(devicesInfo[device]);
-    setBinaryDiskCache(CACHE_UPDATE);
 
     cout << "Device type: " << type << endl
             << "Platform name: " << devicesInfo[device]->platform->platformName << endl

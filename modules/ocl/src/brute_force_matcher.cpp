@@ -45,10 +45,14 @@
 //M*/
 
 #include "precomp.hpp"
+#include <functional>
+#include <iterator>
+#include <vector>
 #include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
+using namespace std;
 
 static const int OPT_SIZE = 100;
 

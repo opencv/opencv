@@ -48,15 +48,16 @@
 #include "precomp.hpp"
 #include <iomanip>
 #include <fstream>
-#include "binarycaching.hpp"
+#include "cl_programcache.hpp"
 
+#if defined _MSC_VER && _MSC_VER >= 1200
+#  pragma warning( disable: 4100 4101 4127 4244 4267 4510 4512 4610)
+#endif
 #undef __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
-namespace cv { namespace ocl {
-
-extern void fft_teardown();
-extern void clBlasTeardown();
+namespace cv {
+namespace ocl {
 
 struct PlatformInfoImpl
 {
@@ -174,7 +175,7 @@ static int initializeOpenCLDevices()
                 deviceInfo.info.platform = &platformInfo.info;
                 platformInfo.deviceIDs[j] = deviceInfo.info._id;
 
-                cl_device_type type = -1;
+                cl_device_type type = cl_device_type(-1);
                 openCLSafeCall(device.getInfo(CL_DEVICE_TYPE, &type));
                 deviceInfo.info.deviceType = DeviceType(type);
 
@@ -182,7 +183,7 @@ static int initializeOpenCLDevices()
                 openCLSafeCall(device.getInfo(CL_DEVICE_VERSION, &deviceInfo.info.deviceVersion));
                 openCLSafeCall(device.getInfo(CL_DEVICE_NAME, &deviceInfo.info.deviceName));
                 openCLSafeCall(device.getInfo(CL_DEVICE_VENDOR, &deviceInfo.info.deviceVendor));
-                cl_uint vendorID = -1;
+                cl_uint vendorID = 0;
                 openCLSafeCall(device.getInfo(CL_DEVICE_VENDOR_ID, &vendorID));
                 deviceInfo.info.deviceVendorId = vendorID;
                 openCLSafeCall(device.getInfo(CL_DRIVER_VERSION, &deviceInfo.info.deviceDriverVersion));
@@ -347,9 +348,6 @@ static bool __termination = false;
 
 ContextImpl::~ContextImpl()
 {
-    fft_teardown();
-    clBlasTeardown();
-
 #ifdef WIN32
     // if process is on termination stage (ExitProcess was called and other threads were terminated)
     // then disable command queue release because it may cause program hang
@@ -370,8 +368,14 @@ ContextImpl::~ContextImpl()
     clContext = NULL;
 }
 
+void fft_teardown();
+void clBlasTeardown();
+
 void ContextImpl::cleanupContext(void)
 {
+    fft_teardown();
+    clBlasTeardown();
+
     cv::AutoLock lock(currentContextMutex);
     if (currentContext)
         delete currentContext;
@@ -381,6 +385,15 @@ void ContextImpl::cleanupContext(void)
 void ContextImpl::setContext(const DeviceInfo* deviceInfo)
 {
     CV_Assert(deviceInfo->_id >= 0 && deviceInfo->_id < (int)global_devices.size());
+
+    {
+        cv::AutoLock lock(currentContextMutex);
+        if (currentContext)
+        {
+            if (currentContext->deviceInfo._id == deviceInfo->_id)
+                return;
+        }
+    }
 
     DeviceInfoImpl& infoImpl = global_devices[deviceInfo->_id];
     CV_Assert(deviceInfo == &infoImpl.info);
@@ -463,6 +476,30 @@ int getOpenCLDevices(std::vector<const DeviceInfo*> &devices, int deviceType, co
             {
                 devices.push_back(deviceInfo);
             }
+        }
+    }
+
+    if (currentContext == NULL)
+    {
+        // select default device
+        const DeviceInfo* selectedDevice = NULL;
+        for (size_t i = 0; i < devices.size(); i++)
+        {
+            const DeviceInfo* dev = devices[i];
+            if (dev->deviceType == CL_DEVICE_TYPE_GPU)
+            {
+                selectedDevice = dev;
+                break;
+            }
+            else if (dev->deviceType == CL_DEVICE_TYPE_CPU && (selectedDevice == NULL))
+            {
+                selectedDevice = dev;
+            }
+        }
+
+        if (selectedDevice)
+        {
+            setDevice(selectedDevice);
         }
     }
 

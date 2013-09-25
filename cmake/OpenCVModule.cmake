@@ -445,6 +445,8 @@ macro(ocv_glob_module_sources)
     source_group("Src\\Cuda"      FILES ${lib_cuda_srcs} ${lib_cuda_hdrs})
   endif()
 
+  source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
+
   file(GLOB cl_kernels "src/opencl/*.cl")
 
   if(HAVE_OPENCL AND cl_kernels)
@@ -457,7 +459,6 @@ macro(ocv_glob_module_sources)
     list(APPEND lib_srcs ${cl_kernels} "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.cpp" "${CMAKE_CURRENT_BINARY_DIR}/opencl_kernels.hpp")
   endif()
 
-  source_group("Src" FILES ${lib_srcs} ${lib_int_hdrs})
   source_group("Include" FILES ${lib_hdrs})
   source_group("Include\\detail" FILES ${lib_hdrs_detail})
 

@@ -55,6 +55,13 @@ namespace cv
 namespace ocl
 {
 
+struct ProgramEntry
+{
+    const char* name;
+    const char* programStr;
+    const char* programHash;
+};
+
 inline cl_device_id getClDeviceID(const Context *ctx)
 {
     return *(cl_device_id*)(ctx->getOpenCLDeviceIDPtr());
@@ -78,40 +85,38 @@ enum openCLMemcpyKind
 };
 ///////////////////////////OpenCL call wrappers////////////////////////////
 void CV_EXPORTS openCLMallocPitch(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                  size_t widthInBytes, size_t height);
+        size_t widthInBytes, size_t height);
 void CV_EXPORTS openCLMallocPitchEx(Context *clCxt, void **dev_ptr, size_t *pitch,
-                                    size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
+        size_t widthInBytes, size_t height, DevMemRW rw_type, DevMemType mem_type);
 void CV_EXPORTS openCLMemcpy2D(Context *clCxt, void *dst, size_t dpitch,
-                               const void *src, size_t spitch,
-                               size_t width, size_t height, openCLMemcpyKind kind, int channels = -1);
+        const void *src, size_t spitch,
+        size_t width, size_t height, openCLMemcpyKind kind, int channels = -1);
 void CV_EXPORTS openCLCopyBuffer2D(Context *clCxt, void *dst, size_t dpitch, int dst_offset,
-                                   const void *src, size_t spitch,
-                                   size_t width, size_t height, int src_offset);
+        const void *src, size_t spitch,
+        size_t width, size_t height, int src_offset);
 void CV_EXPORTS openCLFree(void *devPtr);
 cl_mem CV_EXPORTS openCLCreateBuffer(Context *clCxt, size_t flag, size_t size);
 void CV_EXPORTS openCLReadBuffer(Context *clCxt, cl_mem dst_buffer, void *host_buffer, size_t size);
 cl_kernel CV_EXPORTS openCLGetKernelFromSource(const Context *clCxt,
-                                               const char **source, std::string kernelName);
+        const cv::ocl::ProgramEntry* source, std::string kernelName);
 cl_kernel CV_EXPORTS openCLGetKernelFromSource(const Context *clCxt,
-                                               const char **source, std::string kernelName, const char *build_options);
+        const cv::ocl::ProgramEntry* source, std::string kernelName, const char *build_options);
 void CV_EXPORTS openCLVerifyKernel(const Context *clCxt, cl_kernel kernel, size_t *localThreads);
-void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, string kernelName, std::vector< std::pair<size_t, const void *> > &args,
-                         int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
-void CV_EXPORTS openCLExecuteKernel_(Context *clCxt , const char **source, std::string kernelName,
-                          size_t globalThreads[3], size_t localThreads[3],
-                          std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
-void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
-                         size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth);
-void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
-                         size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                         int depth, const char *build_options);
+void CV_EXPORTS openCLExecuteKernel(Context *clCxt , const cv::ocl::ProgramEntry* source, string kernelName, std::vector< std::pair<size_t, const void *> > &args,
+        int globalcols , int globalrows, size_t blockSize = 16, int kernel_expand_depth = -1, int kernel_expand_channel = -1);
+void CV_EXPORTS openCLExecuteKernel_(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName,
+        size_t globalThreads[3], size_t localThreads[3],
+        std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, const char *build_options);
+void CV_EXPORTS openCLExecuteKernel(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName, size_t globalThreads[3],
+        size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth);
+void CV_EXPORTS openCLExecuteKernel(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName, size_t globalThreads[3],
+        size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
+        int depth, const char *build_options);
 
 cl_mem CV_EXPORTS load_constant(cl_context context, cl_command_queue command_queue, const void *value,
-                     const size_t size);
+        const size_t size);
 
 cl_mem CV_EXPORTS openCLMalloc(cl_context clCxt, size_t size, cl_mem_flags flags, void *host_ptr);
-
-int CV_EXPORTS savetofile(const Context *clcxt,  cl_program &program, const char *fileName);
 
 enum FLUSH_MODE
 {
@@ -120,11 +125,12 @@ enum FLUSH_MODE
     DISABLE
 };
 
-void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
-void CV_EXPORTS openCLExecuteKernel2(Context *clCxt , const char **source, std::string kernelName, size_t globalThreads[3],
-                          size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
-                          int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+void CV_EXPORTS openCLExecuteKernel2(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName, size_t globalThreads[3],
+        size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels, int depth, FLUSH_MODE finish_mode = DISABLE);
+void CV_EXPORTS openCLExecuteKernel2(Context *clCxt, const cv::ocl::ProgramEntry* source, std::string kernelName, size_t globalThreads[3],
+        size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,
+        int depth, char *build_options, FLUSH_MODE finish_mode = DISABLE);
+
 // bind oclMat to OpenCL image textures
 // note:
 //   1. there is no memory management. User need to explicitly release the resource
@@ -182,6 +188,24 @@ inline size_t roundUp(size_t sz, size_t n)
     size_t result = t - rem;
     return result;
 }
+
+//! Calls a kernel, by string. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt,
+        const cv::ocl::ProgramEntry* source, string kernelName,
+        size_t globalThreads[3], size_t localThreads[3],
+        std::vector< std::pair<size_t, const void *> > &args,
+        int channels, int depth, const char *build_options,
+        bool finish = true, bool measureKernelTime = false,
+        bool cleanUp = true);
+
+//! Calls a kernel, by file. Pass globalThreads = NULL, and cleanUp = true, to finally clean-up without executing.
+CV_EXPORTS double openCLExecuteKernelInterop(Context *clCxt,
+        const cv::ocl::ProgramEntry* source, const int numFiles, string kernelName,
+        size_t globalThreads[3], size_t localThreads[3],
+        std::vector< std::pair<size_t, const void *> > &args,
+        int channels, int depth, const char *build_options,
+        bool finish = true, bool measureKernelTime = false,
+        bool cleanUp = true);
 
 }//namespace ocl
 }//namespace cv
