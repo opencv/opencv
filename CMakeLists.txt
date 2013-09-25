@@ -312,41 +312,44 @@ status("    OpenGL support:" HAVE_OPENGL THEN "YES (${OPENGL_LIBRARIES})" ELSE N
 status("")
 status("  Codecs:")
 status("  -------")
-status("    ZLib:"         BUILD_ZLIB    THEN "build (ver ${ZLIB_VERSION_STRING})"               ELSE "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})")
+status("    ZLib:" BUILD_ZLIB THEN "build (ver ${ZLIB_VERSION_STRING})" ELSE "${ZLIB_LIBRARIES} (ver ${ZLIB_VERSION_STRING})")
 
 if(WITH_JPEG)
-  status("    JPEG:"       JPEG_FOUND    THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})"        ELSE "build (ver ${JPEG_LIB_VERSION})")
+  status("    JPEG:" JPEG_FOUND THEN "${JPEG_LIBRARY} (ver ${JPEG_LIB_VERSION})" ELSE "build (ver ${JPEG_LIB_VERSION})")
 else()
-  status("    JPEG:"       "NO")
+  status("    JPEG:" "NO")
 endif()
 
 if(WITH_WEBP)
-  status("    WEBP:"       WEBP_FOUND    THEN "${WEBP_LIBRARY} (ver ${WEBP_VERSION})"        ELSE "build (ver ${WEBP_VERSION})")
+  status("    WEBP:" WEBP_FOUND THEN "${WEBP_LIBRARY} (ver ${WEBP_VERSION})" ELSE "build (ver ${WEBP_VERSION})")
 else()
-  status("    WEBP:"       "NO")
+  status("    WEBP:" "NO")
 endif()
 
 if(WITH_PNG)
-  status("    PNG:"        PNG_FOUND     THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})"              ELSE "build (ver ${PNG_VERSION})")
+  status("    PNG:" PNG_FOUND THEN "${PNG_LIBRARY} (ver ${PNG_VERSION})" ELSE "build (ver ${PNG_VERSION})")
 else()
-  status("    PNG:"        "NO")
+  status("    PNG:" "NO")
 endif()
+
 if(WITH_TIFF)
   if(TIFF_VERSION_STRING AND TIFF_FOUND)
-    status("    TIFF:"     "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
+    status("    TIFF:" "${TIFF_LIBRARY} (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
   else()
-    status("    TIFF:"     TIFF_FOUND    THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})"            ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
+    status("    TIFF:"  TIFF_FOUND THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION})" ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
   endif()
 else()
-  status("    TIFF:"       "NO")
+  status("    TIFF:" "NO")
 endif()
+
 if(WITH_JASPER)
-  status("    JPEG 2000:"  JASPER_FOUND  THEN "${JASPER_LIBRARY} (ver ${JASPER_VERSION_STRING})" ELSE "build (ver ${JASPER_VERSION_STRING})")
+  status("    JPEG 2000:" JASPER_FOUND THEN "${JASPER_LIBRARY} (ver ${JASPER_VERSION_STRING})" ELSE "build (ver ${JASPER_VERSION_STRING})")
 else()
-  status("    JPEG 2000:"  "NO")
+  status("    JPEG 2000:" "NO")
 endif()
+
 if(WITH_OPENEXR)
-  status("    OpenEXR:"  OPENEXR_FOUND  THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
+  status("    OpenEXR:" OPENEXR_FOUND THEN "${OPENEXR_LIBRARIES} (ver ${OPENEXR_VERSION})" ELSE "build (ver ${OPENEXR_VERSION})")
 else()
   status("    OpenEXR:"  "NO")
 endif()
@@ -389,20 +392,20 @@ if(DEFINED WITH_GSTREAMER)
 endif(DEFINED WITH_GSTREAMER)
 
 if(DEFINED WITH_QUICKTIME)
-  status("    QuickTime:"      HAVE_QUICKTIME      THEN YES                                        ELSE NO)
-  status("    QTKit:"          HAVE_QTKIT          THEN YES                                        ELSE NO)
+  status("    QuickTime:"      HAVE_QUICKTIME   THEN YES    ELSE NO)
+  status("    QTKit:"          HAVE_QTKIT       THEN YES    ELSE NO)
 endif(DEFINED WITH_QUICKTIME)
 
 if(DEFINED WITH_DSHOW)
-  status("    DirectShow:"     HAVE_DSHOW     THEN YES                                        ELSE NO)
+  status("    DirectShow:"     HAVE_DSHOW       THEN YES    ELSE NO)
 endif(DEFINED WITH_DSHOW)
 
 if(DEFINED WITH_MSMF)
-  status("    Media Foundation:" HAVE_MSMF    THEN YES                                        ELSE NO)
+  status("    Media Foundation:" HAVE_MSMF      THEN YES    ELSE NO)
 endif(DEFINED WITH_MSMF)
 
 if(DEFINED WITH_XINE)
-  status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
+  status("    Xine:"           HAVE_XINE         THEN "YES (ver ${ALIASOF_libxine_VERSION})" ELSE NO)
 endif(DEFINED WITH_XINE)
 
 # ========================== HARDWARE SUPPORT ==========================
@@ -430,6 +433,11 @@ if(DEFINED WITH_OPENNI)
                                                    THEN "YES (${OPENNI_PRIME_SENSOR_MODULE})"      ELSE NO)
 endif(DEFINED WITH_OPENNI)
 
+if(DEFINED WITH_UNICAP)
+  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"   ELSE NO)
+  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"     ELSE NO)
+endif(DEFINED WITH_UNICAP)
+
 if(DEFINED WITH_PVAPI)
   status("    PvAPI:"          HAVE_PVAPI          THEN YES                                        ELSE NO)
 endif(DEFINED WITH_PVAPI)
@@ -437,11 +445,6 @@ endif(DEFINED WITH_PVAPI)
 if(DEFINED WITH_GIGEAPI)
   status("    GigEVisionSDK:"  HAVE_GIGE_API       THEN YES                                        ELSE NO)
 endif(DEFINED WITH_GIGEAPI)
-
-if(DEFINED WITH_UNICAP)
-  status("    UniCap:"         HAVE_UNICAP         THEN "YES (ver ${ALIASOF_libunicap_VERSION})"   ELSE NO)
-  status("    UniCap ucil:"    HAVE_UNICAP_UCIL    THEN "YES (ver ${ALIASOF_libucil_VERSION})"     ELSE NO)
-endif(DEFINED WITH_UNICAP)
 
 if(DEFINED WITH_V4L)
   if(HAVE_CAMV4L)
@@ -501,21 +504,20 @@ endif()
 status("")
 status("  Core extensions:")
 status("  ----------------")
+status("    Use Eigen:" HAVE_EIGEN THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 if(WITH_IPP AND IPP_FOUND)
   status("    Use IPP:" "${IPP_LATEST_VERSION_STR} [${IPP_LATEST_VERSION_MAJOR}.${IPP_LATEST_VERSION_MINOR}.${IPP_LATEST_VERSION_BUILD}]")
   status("         at:" "${IPP_ROOT_DIR}")
 else()
-  status("    Use IPP:"   WITH_IPP AND NOT IPP_FOUND THEN "IPP not found" ELSE NO)
+  status("    Use IPP:" WITH_IPP AND NOT IPP_FOUND  THEN "IPP not found" ELSE NO)
 endif()
-
-status("    Use Eigen:"       HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
 
 # =================== language bindings ==========================
 status("")
 status("  Language bindings:")
 status("  ------------------")
 
-# python
+# Python
 if(BUILD_PYTHON_BINDINGS)
   status("    Python:")
   status("      Interpreter:"     PYTHONINTERP_FOUND  THEN "${PYTHON_EXECUTABLE} (ver ${PYTHON_VERSION_STRING})"       ELSE NO)
@@ -532,7 +534,7 @@ else()
   status("    Python:" "Disabled")
 endif()
 
-# java
+# Java/Scala
 if (BUILD_JAVA_BINDINGS)
   status("    Java:")
   status("      ant:"           ANT_EXECUTABLE      THEN "${ANT_EXECUTABLE} (ver ${ANT_VERSION})"                    ELSE NO)
@@ -544,10 +546,10 @@ else()
   status("    Java:" "Disabled")
 endif()
 
-# matlab
+# Matlab
 if (BUILD_MATLAB_BINDINGS)
   status("    Matlab:")
-  status("      mex:"         MATLAB_MEX_SCRIPT  THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
+  status("      mex:"         MATLAB_MEX_SCRIPT     THEN  "${MATLAB_MEX_SCRIPT}"   ELSE NO)
   if (MATLAB_FOUND)
     status("      Compiler/generator:" MEX_WORKS    THEN  "Working"                ELSE "Not working (bindings will not be generated)")
   endif()
@@ -585,12 +587,8 @@ status("  Config file: " "${OPENCV_CONFIG_FILE_INCLUDE_DIR}/cvconfig.h")
 status("==============================================================================")
 status("")
 
+
+# ----------------------------------------------------------------------------
+# FINALIZE AND PRINT
+# ----------------------------------------------------------------------------
 ocv_finalize_status()
-
-
-# ----------------------------------------------------------------------------
-# Warn in the case of in-source build
-# ----------------------------------------------------------------------------
-if("${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
-  message(WARNING "The source directory is the same as binary directory. \"make clean\" may damage the source tree")
-endif()
