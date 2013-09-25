@@ -1,7 +1,12 @@
 # ----------------------------------------------------------------------------
-#  OpenCVPostamble.cmake
+#  OpenCVConfigure.cmake
+#  The main OpenCV cmake configuration helper
 #  The following options can be parsed once the "project(OpenCV ...)"
 #  OpenCV options and CXXCompiler have been specified.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+#  Standard paths
 # ----------------------------------------------------------------------------
 
 # Add these standard paths to the search paths for FIND_LIBRARY

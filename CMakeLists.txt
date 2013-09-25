@@ -143,7 +143,7 @@ OCV_OPTION(INSTALL_TO_MANGLED_PATHS "Enables mangled install paths, that help wi
 # ----------------------------------------------------------------------------
 #  END USER-CONFIGURABLE OPTIONS
 # ----------------------------------------------------------------------------
-include(cmake/OpenCVPostamble.cmake)
+include(cmake/OpenCVConfigure.cmake)
 
 
 # ----------------------------------------------------------------------------
