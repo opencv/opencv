@@ -15,6 +15,7 @@ endif()
 include(cmake/OpenCVPreamble.cmake)
 project(OpenCV CXX C)
 
+
 # ----------------------------------------------------------------------------
 # USER-CONFIGURABLE OPTIONS
 # There are 7 types of user-configurable components:
@@ -403,7 +404,6 @@ if(DEFINED WITH_XINE)
   status("    Xine:"           HAVE_XINE           THEN "YES (ver ${ALIASOF_libxine_VERSION})"     ELSE NO)
 endif(DEFINED WITH_XINE)
 
-
 # ========================== HARDWARE SUPPORT ==========================
 status("")
 status("  Hardware/device support:")
@@ -496,7 +496,6 @@ if(HAVE_OPENCL)
   status("      Use AMDBLAS:"          HAVE_CLAMDBLAS THEN YES ELSE NO)
 endif()
 
-
 # =================== Core Extensions ==========================
 status("")
 status("  Core extensions:")
@@ -509,7 +508,6 @@ else()
 endif()
 
 status("    Use Eigen:"       HAVE_EIGEN       THEN "YES (ver ${EIGEN_WORLD_VERSION}.${EIGEN_MAJOR_VERSION}.${EIGEN_MINOR_VERSION})" ELSE NO)
-
 
 # =================== language bindings ==========================
 status("")
@@ -587,6 +585,7 @@ status("========================================================================
 status("")
 
 ocv_finalize_status()
+
 
 # ----------------------------------------------------------------------------
 # Warn in the case of in-source build
