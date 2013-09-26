@@ -226,7 +226,7 @@ endif()
 # ----------------------------------------------------------------------------
 
 # --- Python Support, required for all language bindings ---
-if (BUILD_PYTHON_BINDINGS OR BUILD_JAVA_BINDINGS OR ANDROID OR BUILD_MATLAB_BINDINGS)
+if (BUILD_PYTHON_BINDINGS OR BUILD_JAVA_BINDINGS OR BUILD_MATLAB_BINDINGS OR ANDROID OR BUILD_DOCS)
   include(cmake/OpenCVDetectPython.cmake)
 endif()
 

@@ -563,28 +563,22 @@ else()
   status("    Matlab:" "NO")
 endif()
 
-# ============================== Documentation ===============================
+# ============================= Tests and Support ============================
 status("")
-status("  Documentation:")
-status("  --------------")
-
-if(BUILD_DOCS AND HAVE_SPHINX)
-  status("    Build Documentation:" PDFLATEX_COMPILER  THEN YES ELSE "YES (only HTML and without math expressions)")
-  status("    Sphinx:"              HAVE_SPHINX        THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
-  status("    PdfLaTeX compiler:"   PDFLATEX_COMPILER  THEN "${PDFLATEX_COMPILER}" ELSE NO)
-  status("    PlantUML:"            PLANTUML           THEN "${PLANTUML}" ELSE NO)
-else()
-  status("    Build Documentation:" NO)
-endif()
-
-# ============================= Tests and Samples ============================
-status("")
-status("  Tests and Samples:")
+status("  Tests and Support:")
 status("  ------------------")
 
-status("    Tests:"             BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
-status("    Performance tests:" BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES ELSE NO)
-status("    C/C++ Examples:"    BUILD_EXAMPLES                       THEN YES ELSE NO)
+status("    Correctness tests:"     BUILD_TESTS AND HAVE_opencv_ts       THEN YES ELSE NO)
+status("    Performance tests:"     BUILD_PERF_TESTS AND HAVE_opencv_ts  THEN YES ELSE NO)
+status("    C/C++ Examples:"        BUILD_EXAMPLES                       THEN YES ELSE NO)
+if(BUILD_DOCS AND HAVE_SPHINX)
+  status("    Documentation:"       PDFLATEX_COMPILER  THEN YES ELSE "YES (only HTML and without math expressions)")
+  status("      Sphinx:"            HAVE_SPHINX        THEN "${SPHINX_BUILD} (ver ${SPHINX_VERSION})" ELSE NO)
+  status("      PdfLaTeX compiler:" PDFLATEX_COMPILER  THEN "${PDFLATEX_COMPILER}" ELSE NO)
+  status("      PlantUML:"          PLANTUML           THEN "${PLANTUML}" ELSE NO)
+else()
+  status("    Documentation:" NO)
+endif()
 
 # ================================ Auxiliary =================================
 status("")
