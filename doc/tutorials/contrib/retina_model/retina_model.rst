@@ -44,7 +44,7 @@ In the following image, as your retina does, local luminance adaptation, spatial
    :align: center
 
 
-*Note :* image sample can be downloaded from the `OpenEXR website <http://www.openexr.com>`_. Regarding this demonstration, before retina processing, input image has been linearly rescaled within 0-255 keeping its channels float format. 5% of its histogram ends has been cut (mostly removes wrong HDR pixels). Check out the sample *opencv/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp* for similar processing. The following demonstration will only consider classical 8bit/channel images.
+*Note :* image sample can be downloaded from the `OpenEXR website <http://www.openexr.com>`_. Regarding this demonstration, before retina processing, input image has been linearly rescaled within 0-255 keeping its channels float format. 5% of its histogram ends has been cut (mostly removes wrong HDR pixels). Check out the sample *opencv/samples/cpp/OpenEXRimages_HDR_Retina_toneMapping.cpp* for similar processing. The following demonstration will only consider classical 8bit/channel images.
 
 The retina model output channels
 ================================

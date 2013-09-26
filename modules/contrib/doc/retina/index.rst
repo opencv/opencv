@@ -65,8 +65,8 @@ The retina can be settled up with various parameters, by default, the retina can
 
 .. Sample code::
 
-   * An example on retina tone mapping can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
-   * An example on retina tone mapping on video input can be found at opencv_source_code/samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp
+   * An example on retina tone mapping can be found at opencv_source_code/samples/cpp/OpenEXRimages_HDR_Retina_toneMapping.cpp
+   * An example on retina tone mapping on video input can be found at opencv_source_code/samples/cpp/OpenEXRimages_HDR_Retina_toneMapping.cpp
    * A complete example illustrating the retina interface can be found at opencv_source_code/samples/cpp/retinaDemo.cpp
 
 Description
@@ -121,13 +121,13 @@ Take a look at the provided C++ examples provided with OpenCV :
    **Note :** This demo generates the file *RetinaDefaultParameters.xml* which contains the default parameters of the retina. Then, rename this as *RetinaSpecificParameters.xml*, adjust the parameters the way you want and reload the program to check the effect.
 
 
-* **samples/cpp/OpenEXRimages_HighDynamicRange_Retina_toneMapping.cpp** shows how to use the retina to perform High Dynamic Range (HDR) luminance compression
+* **samples/cpp/OpenEXRimages_HDR_Retina_toneMapping.cpp** shows how to use the retina to perform High Dynamic Range (HDR) luminance compression
 
    Then, take a HDR image using bracketing with your camera and generate an OpenEXR image and then process it using the demo.
 
    Typical use, supposing that you have the OpenEXR image *memorial.exr* (present in the samples/cpp/ folder)
 
-   **OpenCVReleaseFolder/bin/OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr**
+   **OpenCVReleaseFolder/bin/OpenEXRimages_HDR_Retina_toneMapping memorial.exr**
 
       Note that some sliders are made available to allow you to play with luminance compression.
 
