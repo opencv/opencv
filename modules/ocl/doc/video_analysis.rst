@@ -361,7 +361,7 @@ Computes a background image.
 
 ocl::MOG
 ------------
-.. ocv:class:: ocl::MOG : public cv::ocl::BackgroundSubtractor
+.. ocv:class:: ocl::MOG
 
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm. ::
 
@@ -441,7 +441,7 @@ Releases all inner buffer's memory.
 
 ocl::MOG2
 -------------
-.. ocv:class:: ocl::MOG2 : public cv::ocl::BackgroundSubtractor
+.. ocv:class:: ocl::MOG2
 
 Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
 
