@@ -17,7 +17,7 @@ project(OpenCV CXX C)
 
 
 # ----------------------------------------------------------------------------
-# USER-CONFIGURABLE OPTIONS
+#  USER-CONFIGURABLE OPTIONS
 # ----------------------------------------------------------------------------
 # There are 7 types of user-configurable components:
 #   1. 3rd party source plugins     plugins to build from source
@@ -149,7 +149,7 @@ include(cmake/OpenCVConfigure.cmake)
 
 
 # ----------------------------------------------------------------------------
-#  Summary:
+#  SUMMARY
 # ----------------------------------------------------------------------------
 status("")
 status("==============================================================================")
