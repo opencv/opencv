@@ -12,7 +12,10 @@ ocl. OpenCL-accelerated Computer Vision
     matrix_reductions
     image_filtering
     image_processing
+    ml_machine_learning
     object_detection
     feature_detection_and_description
+    video_analysis
+    camera_calibration_and_3D_reconstruction
 ..    camera_calibration_and_3d_reconstruction
 ..    video

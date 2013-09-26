@@ -4,7 +4,7 @@ Matrix Reductions
 .. highlight:: cpp
 
 ocl::countNonZero
-------------------
+---------------------
 Returns the number of non-zero elements in src
 
 .. ocv:function:: int ocl::countNonZero(const oclMat &src)
@@ -55,9 +55,19 @@ Returns the sum of matrix elements for each channel
 
 .. ocv:function:: Scalar ocl::sum(const oclMat &m)
 
-    :param m: The Source image of all depth
+    :param m: The Source image of all depth.
 
 Counts the sum of matrix elements for each channel.
+
+ocl::absSum
+---------------
+Returns the sum of absolute values for matrix elements.
+
+.. ocv:function:: Scalar ocl::absSum(const oclMat &m)
+
+    :param m: The Source image of all depth.
+
+Counts the abs sum of matrix elements for each channel.
 
 ocl::sqrSum
 ------------------
@@ -65,6 +75,6 @@ Returns the squared sum of matrix elements for each channel
 
 .. ocv:function:: Scalar ocl::sqrSum(const oclMat &m)
 
-    :param m: The Source image of all depth
+    :param m: The Source image of all depth.
 
 Counts the squared sum of matrix elements for each channel.
