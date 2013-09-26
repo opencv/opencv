@@ -471,7 +471,7 @@ namespace cv
 
         //! computes norm of array
         // supports NORM_INF, NORM_L1, NORM_L2
-        // supports only CV_8UC1 type
+        // supports CV_8UC1/3/4, CV_32S1/3/4, CV_32FC1/3/4 types
         CV_EXPORTS double norm(const oclMat &src1, int normType = NORM_L2);
 
         //! computes norm of the difference between two arrays

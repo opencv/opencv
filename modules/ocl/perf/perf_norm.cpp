@@ -50,12 +50,16 @@ using std::tr1::tuple;
 using std::tr1::get;
 
 ///////////// norm////////////////////////
+typedef tuple<cv::Size, int> Size_NormType;
+typedef TestBaseWithParam<Size_NormType> normFixture;
 
-typedef TestBaseWithParam<Size> normFixture;
-
-PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't work properly
+PERF_TEST_P(normFixture, norm,
+            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+                               OCL_PERF_ENUM((int)NORM_INF, (int)NORM_L1, (int)NORM_L2)))
 {
-    const Size srcSize = GetParam();
+    const Size_NormType params = GetParam();
+    const Size srcSize = get<0>(params);
+    const int normType = get<1>(params);
     const std::string impl = getSelectedImpl();
     double value = 0.0;
 
@@ -63,18 +67,20 @@ PERF_TEST_P(normFixture, DISABLED_norm, OCL_TYPICAL_MAT_SIZES) // TODO doesn't w
     declare.in(src1, src2);
     randu(src1, 0, 1);
     randu(src2, 0, 1);
+    if (srcSize == OCL_SIZE_4000)
+        declare.time(8);
 
     if (RUN_OCL_IMPL)
     {
         ocl::oclMat oclSrc1(src1), oclSrc2(src2);
 
-        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, NORM_INF);
+        OCL_TEST_CYCLE() value = cv::ocl::norm(oclSrc1, oclSrc2, normType);
 
         SANITY_CHECK(value);
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() value = cv::norm(src1, src2, NORM_INF);
+        TEST_CYCLE() value = cv::norm(src1, src2, normType);
 
         SANITY_CHECK(value);
     }

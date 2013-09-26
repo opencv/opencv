@@ -1201,7 +1201,36 @@ TEST_P(AddWeighted, Mat)
     }
 }
 
-
+////////////////////////////////norm/////////////////////////////////////////////////
+//struct Norm : ArithmTestBase {};
+PARAM_TEST_CASE(Norm, MatType, int, bool)
+{
+    cv::Mat mat1, mat2;
+    cv::ocl::oclMat gmat1, gmat2;
+    int type, norm_type;
+    bool isRelative;
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        norm_type = GET_PARAM(1);
+        isRelative = GET_PARAM(2);
+        cv::RNG &rng = TS::ptr()->get_rng();
+        cv::Size size(MWIDTH, MHEIGHT);
+        mat1 = randomMat(rng, size, type, 0, 256, false);
+        mat2 = randomMat(rng, size, type, 0, 256, false);
+        gmat1.upload(mat1);
+        gmat2.upload(mat2);
+    }
+};
+TEST_P(Norm, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        double cpures = cv::norm(mat1, mat2, isRelative ? norm_type|NORM_RELATIVE : norm_type);
+        double gpures = cv::ocl::norm(gmat1, gmat2, isRelative ? norm_type|NORM_RELATIVE : norm_type);
+        EXPECT_NEAR(cpures, gpures, .5);
+    }
+}
 
 
 //********test****************
@@ -1310,6 +1339,9 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
                             Values(CV_8UC1, CV_32SC1, CV_32FC1),
                             Values(false))); // Values(false) is the reserved parameter
 
-
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(
+    Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
+    Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2),
+    Values(true, false))); // relative or not
 
 #endif // HAVE_OPENCL
