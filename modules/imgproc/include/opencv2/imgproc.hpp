@@ -1455,6 +1455,9 @@ CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
 CV_EXPORTS_W void minEnclosingCircle( InputArray points,
                                       CV_OUT Point2f& center, CV_OUT float& radius );
 
+//! computes the minimal enclosing triangle for a set of points and returns its area
+CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray triangle );
+
 //! matches two contours using one of the available algorithms
 CV_EXPORTS_W double matchShapes( InputArray contour1, InputArray contour2,
                                  int method, double parameter );
