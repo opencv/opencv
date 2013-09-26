@@ -77,26 +77,6 @@ Computes an integral image.
 
 .. seealso:: :ocv:func:`integral`
 
-ocl::mulSpectrums
----------------------
-Performs a per-element multiplication of two Fourier spectrums.
-
-.. ocv:function:: void ocl::mulSpectrums(const oclMat &a, const oclMat &b, oclMat &c, int flags, float scale, bool conjB = false)
-
-    :param a: First spectrum.
-
-    :param b: Second spectrum with the same size and type as  ``a`` .
-
-    :param c: Destination spectrum.
-
-    :param flags: Mock parameter used for CPU/GPU interfaces similarity.
-
-    :param conjB: Optional flag to specify if the second spectrum needs to be conjugated before the multiplication.
-
-    Only full (not packed) ``CV_32FC2`` complex spectrums in the interleaved format are supported for now.
-
-.. seealso:: :ocv:func:`mulSpectrums`
-
 ocl::cornerHarris
 ---------------------
 Returns void
@@ -151,11 +131,11 @@ ocl::equalizeHist
 ---------------------
 Equalizes the histogram of a grayscale image.
 
-.. ocv:function:: void ocl::equalizeHist(const oclMat& src, oclMat& dst)
+.. ocv:function:: void ocl::equalizeHist(const oclMat &mat_src, oclMat &mat_dst)
 
-    :param src: Source image.
+    :param mat_src: Source image.
 
-    :param dst: Destination image.
+    :param mat_dst: Destination image.
 
 .. seealso:: :ocv:func:`equalizeHist`
 
@@ -332,36 +312,3 @@ Builds transformation maps for affine transformation.
     :param ymap: Y values with  ``CV_32FC1`` type.
 
 .. seealso:: :ocv:func:`ocl::warpAffine` , :ocv:func:`ocl::remap`
-
-ocl::HoughCircles
----------------------
-Finds circles in a grayscale image using the Hough transform.
-
-.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
-
-.. ocv:function:: void ocl::HoughCircles(const oclMat& src, oclMat& circles, HoughCirclesBuf& buf, int method, float dp, float minDist, int cannyThreshold, int votesThreshold, int minRadius, int maxRadius, int maxCircles = 4096)
-
-    :param src: 8-bit, single-channel grayscale input image.
-
-    :param circles: Output vector of found circles. Each vector is encoded as a 3-element floating-point vector  :math:`(x, y, radius)` .
-
-    :param method: Detection method to use. Currently, the only implemented method is  ``CV_HOUGH_GRADIENT`` , which is basically  *21HT* , described in  [Yuen90]_.
-
-    :param dp: Inverse ratio of the accumulator resolution to the image resolution. For example, if  ``dp=1`` , the accumulator has the same resolution as the input image. If  ``dp=2`` , the accumulator has half as big width and height.
-
-    :param minDist: Minimum distance between the centers of the detected circles. If the parameter is too small, multiple neighbor circles may be falsely detected in addition to a true one. If it is too large, some circles may be missed.
-
-    :param cannyThreshold: The higher threshold of the two passed to  the :ocv:func:`ocl::Canny`  edge detector (the lower one is twice smaller).
-
-    :param votesThreshold: The accumulator threshold for the circle centers at the detection stage. The smaller it is, the more false circles may be detected.
-
-    :param minRadius: Minimum circle radius.
-
-    :param maxRadius: Maximum circle radius.
-
-    :param maxCircles: Maximum number of output circles.
-
-    :param buf: Optional buffer to avoid extra memory allocations (for many calls with the same sizes).
-
-.. note:: Currently only non-ROI oclMat is supported for src.
-.. seealso:: :ocv:func:`HoughCircles`

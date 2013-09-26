@@ -351,9 +351,9 @@ ocl::magnitudeSqr
 ---------------------
 Computes squared magnitudes of complex matrix elements.
 
-.. ocv:function:: void magnitudeSqr(const oclMat &x, oclMat &magnitude)
+.. ocv:function:: void ocl::magnitudeSqr(const oclMat &x, oclMat &magnitude)
 
-.. ocv:function:: void magnitudeSqr(const oclMat &x, const oclMat &y, oclMat &magnitude)
+.. ocv:function:: void ocl::magnitudeSqr(const oclMat &x, const oclMat &y, oclMat &magnitude)
 
     :param x: The floating-point array of x-coordinates of the vectors
 

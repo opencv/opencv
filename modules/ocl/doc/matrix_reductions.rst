@@ -63,7 +63,7 @@ ocl::absSum
 ---------------
 Returns the sum of absolute values for matrix elements.
 
-.. ocv:function:: Scalar ocl::absSum(const oclMat& src)
+.. ocv:function:: Scalar ocl::absSum(const oclMat &m)
 
     :param m: The Source image of all depth.
 

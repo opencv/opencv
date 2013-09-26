@@ -5,7 +5,7 @@ ml.Machine Learning
 
 ocl::KNearestNeighbour
 --------------------------
-.. ocv:class:: ocl::KNearestNeighbour : public CvKNearest
+.. ocv:class:: ocl::KNearestNeighbour: public CvKNearest
 
 The class implements K-Nearest Neighbors model as described in the beginning of this section.
 
@@ -53,7 +53,7 @@ ocl::KNearestNeighbour::find_nearest
 ----------------------------------------
 Finds the neighbors and predicts responses for input vectors.
 
-.. ocv:function:: float ocl::KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lables )
+.. ocv:function:: void ocl::KNearestNeighbour::find_nearest(const oclMat& samples, int k, oclMat& lables )
 
     :param samples: Input samples stored by rows. It is a single-precision floating-point matrix of :math:`number\_of\_samples \times number\_of\_features` size.
 

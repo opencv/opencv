@@ -12,9 +12,11 @@ Cascade classifier class used for object detection. Supports HAAR cascade classi
     class CV_EXPORTS OclCascadeClassifier : public CascadeClassifier
     {
     public:
-            void detectMultiScale(oclMat &image, CV_OUT std::vector<cv::Rect>& faces,
-                                              double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0,
-                                              Size minSize = Size(), Size maxSize = Size());
+            OclCascadeClassifier(){};
+            ~OclCascadeClassifier(){};
+            CvSeq* oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor,
+                                  int minNeighbors, int flags, CvSize minSize = cvSize(0, 0),
+                                  CvSize maxSize = cvSize(0, 0));
     };
 
 .. note::
@@ -25,16 +27,16 @@ ocl::OclCascadeClassifier::oclHaarDetectObjects
 ------------------------------------------------------
 Detects objects of different sizes in the input image.
 
-.. ocv:function:: void ocl::OclCascadeClassifier::detectMultiScale(oclMat &image, std::vector<cv::Rect>& faces, double scaleFactor = 1.1, int minNeighbors = 3, int flags = 0, Size minSize = Size(), Size maxSize = Size())
+.. ocv:function:: void ocl::OclCascadeClassifier::oclHaarDetectObjects(oclMat &gimg, CvMemStorage *storage, double scaleFactor, int minNeighbors, int flags, CvSize minSize = cvSize(0, 0), CvSize maxSize = cvSize(0, 0))
 
-    :param image:  Matrix of type CV_8U containing an image where objects should be detected.
-
-    :param faces: Vector of rectangles where each rectangle contains the detected object.
+    :param gimage:  Matrix of type CV_8U containing an image where objects should be detected.
 
     :param scaleFactor: Parameter specifying how much the image size is reduced at each image scale.
 
     :param minNeighbors: Parameter specifying how many neighbors each candidate rectangle should have to retain it.
-
+	
+    :param flags: Parameter with the same meaning for an old cascade as in the function ``cvHaarDetectObjects``. It is not used for a new cascade.
+	
     :param minSize: Minimum possible object size. Objects smaller than that are ignored.
 
     :param maxSize: Maximum possible object size. Objects larger than that are ignored.
