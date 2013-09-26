@@ -4,7 +4,7 @@ Data Structures and Utility Functions
 .. highlight:: cpp
 
 ocl::Info
----------
+-------------
 .. ocv:class:: ocl::Info
 
 this class should be maintained by the user and be passed to getDevice
@@ -42,7 +42,7 @@ Returns void
 If you call this function and set a valid path, the OCL module will save the compiled kernel to the address in the first time and reload the binary since that. It can save compilation time at the runtime.
 
 ocl::getoclContext
-------------------
+----------------------
 Returns the pointer to the opencl context
 
 .. ocv:function:: void* ocl::getoclContext()
