@@ -148,7 +148,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# OpenCV compiler and linker options
+#  OpenCV compiler and linker options
 # ----------------------------------------------------------------------------
 # In case of Makefiles if the user does not setup CMAKE_BUILD_TYPE, assume it's Release:
 if(CMAKE_GENERATOR MATCHES "Makefiles|Ninja" AND "${CMAKE_BUILD_TYPE}" STREQUAL "")
@@ -159,8 +159,8 @@ include(cmake/OpenCVCompilerOptions.cmake)
 
 
 # ----------------------------------------------------------------------------
-# Use statically or dynamically linked CRT?
-# Default: dynamic
+#  Use statically or dynamically linked CRT?
+#  Default: dynamic
 # ----------------------------------------------------------------------------
 if(MSVC)
   include(cmake/OpenCVCRTLinkage.cmake)
@@ -172,7 +172,7 @@ endif(WIN32 AND NOT MINGW)
 
 
 # ----------------------------------------------------------------------------
-#       CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
+#  CHECK FOR SYSTEM LIBRARIES, OPTIONS, ETC..
 # ----------------------------------------------------------------------------
 if(UNIX)
   find_package(PkgConfig QUIET)
@@ -222,7 +222,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# Language bindings
+#  Language bindings
 # ----------------------------------------------------------------------------
 
 # --- Python Support, required for all language bindings ---
@@ -256,7 +256,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# Solution folders:
+#  Solution folders
 # ----------------------------------------------------------------------------
 if(ENABLE_SOLUTION_FOLDERS)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -268,7 +268,7 @@ include(cmake/OpenCVExtraTargets.cmake)
 
 
 # ----------------------------------------------------------------------------
-# Process subdirectories
+#  Process subdirectories
 # ----------------------------------------------------------------------------
 
 # opencv.hpp and legacy headers
@@ -307,7 +307,7 @@ endif()
 
 
 # ----------------------------------------------------------------------------
-# Finalization: generate configuration-based files
+#  Finalization: generate configuration-based files
 # ----------------------------------------------------------------------------
 ocv_track_build_dependencies()
 
