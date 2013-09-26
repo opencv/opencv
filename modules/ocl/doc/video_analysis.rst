@@ -302,7 +302,7 @@ ocl::KalmanFilter::predict
 ------------------------------
 Computes a predicted state.
 
-.. ocv:function:: const Mat& ocl::KalmanFilter::predict(const oclMat& control=oclMat())
+.. ocv:function:: const oclMat& ocl::KalmanFilter::predict(const oclMat& control=oclMat())
 
     :param control: The optional input control
 
@@ -311,7 +311,7 @@ ocl::KalmanFilter::correct
 -----------------------------
 Updates the predicted state from the measurement.
 
-.. ocv:function:: const Mat& ocl::KalmanFilter::correct(const oclMat& measurement)
+.. ocv:function:: const oclMat& ocl::KalmanFilter::correct(const oclMat& measurement)
 
     :param measurement: The measured system parameters
 
@@ -361,7 +361,7 @@ Computes a background image.
 
 ocl::MOG
 ------------
-.. ocv:class:: ocl::MOG: public cv::ocl::BackgroundSubtractor
+.. ocv:class:: ocl::MOG : public cv::ocl::BackgroundSubtractor
 
 Gaussian Mixture-based Backbround/Foreground Segmentation Algorithm. ::
 
@@ -441,7 +441,7 @@ Releases all inner buffer's memory.
 
 ocl::MOG2
 -------------
-.. ocv:class:: ocl::MOG2: public cv::ocl::BackgroundSubtractor
+.. ocv:class:: ocl::MOG2 : public cv::ocl::BackgroundSubtractor
 
 Gaussian Mixture-based Background/Foreground Segmentation Algorithm. ::
 

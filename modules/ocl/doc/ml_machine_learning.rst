@@ -5,7 +5,7 @@ ml.Machine Learning
 
 ocl::KNearestNeighbour
 --------------------------
-.. ocv:class:: ocl::KNearestNeighbour: public CvKNearest
+.. ocv:class:: ocl::KNearestNeighbour : public CvKNearest
 
 The class implements K-Nearest Neighbors model as described in the beginning of this section.
 
