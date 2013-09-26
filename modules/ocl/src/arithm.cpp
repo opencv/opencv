@@ -875,7 +875,25 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
     {
     case NORM_INF:
         double minValue;
-        minMax(tmp, &minValue, &result);
+        if(tmp.channels() == 1)
+            minMax(tmp, &minValue, &result);
+        else
+        {
+            std::vector<oclMat> mats;
+            split(tmp, mats);
+            for(int i = 0; i < mats.size(); i++)
+            {
+                if(i == 0)
+                    minMax(mats[i], &minValue, &result);
+                else
+                {
+                    double tmp_result;
+                    minMax(mats[i], &minValue, &tmp_result);
+                    if(tmp_result > result)
+                        result = tmp_result;
+                }
+            }
+        }
         break;
     case NORM_L1:
         r = sum(tmp);
