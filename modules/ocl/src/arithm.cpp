@@ -881,7 +881,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
         {
             std::vector<oclMat> mats;
             split(tmp, mats);
-            for(int i = 0; i < mats.size(); i++)
+            for(unsigned int i = 0; i < mats.size(); i++)
             {
                 if(i == 0)
                     minMax(mats[i], &minValue, &result);
