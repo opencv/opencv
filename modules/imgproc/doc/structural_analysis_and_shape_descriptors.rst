@@ -560,6 +560,41 @@ The function finds the four vertices of a rotated rectangle. This function is us
 
 
 
+minEnclosingTriangle
+----------------------
+Finds a triangle of minimum area enclosing a 2D point set and returns its area.
+
+.. ocv:function:: double minEnclosingTriangle( InputArray points, OutputArray triangle )
+
+.. ocv:pyfunction:: cv2.minEnclosingTriangle(points[, triangle]) -> retval, triangle
+
+    :param points: Input vector of 2D points with depth ``CV_32S`` or ``CV_32F``, stored in:
+
+            * ``std::vector<>`` or ``Mat`` (C++ interface)
+
+            * Nx2 numpy array (Python interface)
+
+    :param triangle: Output vector of three 2D points defining the vertices of the triangle. The depth of the OutputArray must be ``CV_32F``.
+
+The function finds a triangle of minimum area enclosing the given set of 2D points and returns its area. The output for a given 2D point set is shown in the image below. 2D points are depicted in *red* and the enclosing triangle in *yellow*.
+
+.. image:: pics/minenclosingtriangle.png
+    :height: 250px
+    :width: 250px
+    :alt: Sample output of the minimum enclosing triangle function
+
+The implementation of the algorithm is based on O'Rourke's [ORourke86]_ and Klee and Laskowski's [KleeLaskowski85]_ papers. O'Rourke provides a
+:math:`\theta(n)`
+algorithm for finding the minimal enclosing triangle of a 2D convex polygon with ``n`` vertices. Since the :ocv:func:`minEnclosingTriangle` function takes a 2D point set as input an additional preprocessing step of computing the convex hull of the 2D point set is required. The complexity of the :ocv:func:`convexHull` function is
+:math:`O(n log(n))` which is higher than
+:math:`\theta(n)`.
+Thus the overall complexity of the function is
+:math:`O(n log(n))`.
+
+.. note:: See ``opencv_source/samples/cpp/minarea.cpp`` for a usage example.
+
+
+
 minEnclosingCircle
 ----------------------
 Finds a circle of the minimum area enclosing a 2D point set.
@@ -671,6 +706,10 @@ See below a sample output of the function where each image pixel is tested again
 .. [Fitzgibbon95] Andrew W. Fitzgibbon, R.B.Fisher. *A Buyer's Guide to Conic Fitting*. Proc.5th British Machine Vision Conference, Birmingham, pp. 513-522, 1995.
 
 .. [Hu62] M. Hu. *Visual Pattern Recognition by Moment Invariants*, IRE Transactions on Information Theory, 8:2, pp. 179-187, 1962.
+
+.. [KleeLaskowski85] Klee, V. and Laskowski, M.C., *Finding the smallest triangles containing a given convex polygon*, Journal of Algorithms, vol. 6, no. 3, pp. 359-375 (1985)
+
+.. [ORourke86] O’Rourke, J., Aggarwal, A., Maddila, S., and Baldwin, M., *An optimal algorithm for finding minimal enclosing triangles*, Journal of Algorithms, vol. 7, no. 2, pp. 258-269 (1986)
 
 .. [Sklansky82] Sklansky, J., *Finding the Convex Hull of a Simple Polygon*. PRL 1 $number, pp 79-83 (1982)
 
