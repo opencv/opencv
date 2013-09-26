@@ -685,7 +685,7 @@ rotatedRectangleIntersection
 Finds out if there is any intersection between two rotated rectangles. If there is then the vertices of the interesecting region are returned as well.
 
 .. ocv:function:: int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  )
-.. ocv:pyfunction:: cv2.rotatedRectangleIntersection( rect1, rect2 ) -> retval, intersectingRegion 
+.. ocv:pyfunction:: cv2.rotatedRectangleIntersection( rect1, rect2 ) -> retval, intersectingRegion
 
     :param rect1: First rectangle
 
@@ -699,7 +699,7 @@ The following values are returned by the function:
 
     * INTERSECT_NONE=0 - No intersection
 
-    * INTERSECT_PARTIAL=1 - There is a partial intersection 
+    * INTERSECT_PARTIAL=1 - There is a partial intersection
 
     * INTERSECT_FULL=2 - One of the rectangle is fully enclosed in the other
 

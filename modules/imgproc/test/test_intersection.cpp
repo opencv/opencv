@@ -115,7 +115,7 @@ void CV_RotatedRectangleIntersectionTest::test1()
 
     vector<Point2f> vertices;
 
-    int ret = rotatedRectangleIntersection(rect1, rect2, vertices);  
+    int ret = rotatedRectangleIntersection(rect1, rect2, vertices); 
 
     CV_Assert(ret == INTERSECT_NONE);
     CV_Assert(vertices.empty());
