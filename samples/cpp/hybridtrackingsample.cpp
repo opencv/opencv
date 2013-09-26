@@ -11,10 +11,6 @@
  *
  */
 
-//#include <cv.h>
-//#include <ml.h>
-//#include <cvaux.h>
-//#include <highgui.h>
 #include <stdio.h>
 #include <time.h>
 #include <iostream>
