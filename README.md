@@ -2,7 +2,7 @@ OpenCV
 ======
 **Open Source Computer Vision Library**
 
-OpenCV is an open source computer vision and machine learning library written in C++, with a strong focus on computational efficiency and real-time applications. It is supported on Windows, Linux, Mac, iOS and Android platforms, with language bindings to C, Python and Java.
+OpenCV is an open source computer vision and machine learning library written in C++, with a strong focus on computational efficiency and real-time applications. It is supported on Windows, Linux, Mac, iOS and Android platforms, with language bindings to C, Python, Java and Matlab.
 
 The library has over 2500 optimized algorithms tailored towards image processing, computational photography, object detection, camera calibration, structure from motion, tracking, concurrent/GPU processing and more.
 
@@ -27,7 +27,7 @@ Contributing
 ------------
 OpenCV uses the git protocol exclusively for version control, and the Github pull request mechanism for code contributions/patches. Before starting work on a pull request, please read the contributor's guide at <http://code.opencv.org/projects/opencv/wiki/How_to_contribute>.
 
-To streamline the review process, please note in particular:
+To streamline the review process, note in particular:
 
 * One pull request per issue,
 * Choose the right base branch,
