@@ -347,19 +347,14 @@ static void copy_to_with_mask(const oclMat &src, oclMat &dst, const oclMat &mask
                         localThreads, args, -1, -1, compile_option);
 }
 
-void cv::ocl::oclMat::copyTo( oclMat &m ) const
-{
-    CV_DbgAssert(!this->empty());
-    m.create(size(), type());
-    openCLCopyBuffer2D(clCxt, m.data, m.step, m.offset,
-                       data, step, cols * elemSize(), rows, offset);
-}
-
 void cv::ocl::oclMat::copyTo( oclMat &mat, const oclMat &mask) const
 {
     if (mask.empty())
     {
-        copyTo(mat);
+        CV_DbgAssert(!this->empty());
+        mat.create(size(), type());
+        openCLCopyBuffer2D(clCxt, mat.data, mat.step, mat.offset,
+                           data, step, cols * elemSize(), rows, offset);
     }
     else
     {

@@ -51,25 +51,29 @@
 #endif
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////addWeighted//////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////// add with mask //////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////
 
-__kernel void addWeighted(__global T * src1, int src1_step1, int src1_offset1,
-                              __global T * src2, int src2_step1, int src2_offset1,
-                              __global T * dst, int dst_step1, int dst_offset1,
-                              WT alpha, WT beta, WT gama,
-                              int cols1, int rows)
+__kernel void arithm_binary_op_mat_mask(__global T * src1, int src1_step, int src1_offset,
+                              __global T * src2, int src2_step, int src2_offset,
+                              __global uchar * mask, int mask_step, int mask_offset,
+                              __global T * dst, int dst_step, int dst_offset,
+                              int cols, int rows)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if (x < cols1 && y < rows)
+    if (x < cols && y < rows)
     {
-        int src1_index = mad24(y, src1_step1, x + src1_offset1);
-        int src2_index = mad24(y, src2_step1, x + src2_offset1);
-        int dst_index = mad24(y, dst_step1, x + dst_offset1);
+        int mask_index = mad24(y, mask_step, x + mask_offset);
+        if (mask[mask_index])
+        {
+            int src1_index = mad24(y, src1_step, x + src1_offset);
+            int src2_index = mad24(y, src2_step, x + src2_offset);
+            int dst_index  = mad24(y, dst_step, dst_offset + x);
 
-        dst[dst_index] = convertToT(src1[src1_index]*alpha + src2[src2_index]*beta + gama);
+            dst[dst_index] = convertToT(convertToWT(src1[src1_index]) Operation convertToWT(src2[src2_index]));
+        }
     }
 }

@@ -55,10 +55,9 @@
 /////////////////////////////////////////////addWeighted//////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-__kernel void addWeighted(__global T * src1, int src1_step1, int src1_offset1,
+__kernel void arithm_compare(__global T * src1, int src1_step1, int src1_offset1,
                               __global T * src2, int src2_step1, int src2_offset1,
-                              __global T * dst, int dst_step1, int dst_offset1,
-                              WT alpha, WT beta, WT gama,
+                              __global uchar * dst, int dst_step1, int dst_offset1,
                               int cols1, int rows)
 {
     int x = get_global_id(0);
@@ -70,6 +69,6 @@ __kernel void addWeighted(__global T * src1, int src1_step1, int src1_offset1,
         int src2_index = mad24(y, src2_step1, x + src2_offset1);
         int dst_index = mad24(y, dst_step1, x + dst_offset1);
 
-        dst[dst_index] = convertToT(src1[src1_index]*alpha + src2[src2_index]*beta + gama);
+        dst[dst_index] = convert_uchar(src1[src1_index] Operation src2[src2_index] ? 255 : 0);
     }
 }
