@@ -53,17 +53,26 @@ using namespace perf;
 
 typedef TestBaseWithParam<Size> BruteForceMatcherFixture;
 
-PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too big difference between implementations
+PERF_TEST_P(BruteForceMatcherFixture, match,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
     vector<DMatch> matches;
     Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
     declare.in(query, train).time(srcSize.height == 2000 ? 9 : 4 );
-    randu(query, 0.0f, 1.0f);
-    randu(train, 0.0f, 1.0f);
 
+    query.setTo(0);
+    train.setTo(0);
+    for(int i=0; i<srcSize.height; i++)
+    {
+        int peak = (1+i/srcSize.width) * 200;
+        //for each query, we select one dimention higher value
+        query.at<float>(i, i%srcSize.width) = peak;
+        //for each train, we set the correspoding dimention with the same value plus a sand
+        int sand = randu<int>() % 20;
+        train.at<float>(srcSize.height-i-1, i%srcSize.width) = peak + sand;
+    }
     if (RUN_PLAIN_IMPL)
     {
         BFMatcher matcher(NORM_L2);
@@ -88,16 +97,27 @@ PERF_TEST_P(BruteForceMatcherFixture, DISABLED_match,
         OCL_PERF_ELSE
 }
 
-PERF_TEST_P(BruteForceMatcherFixture, DISABLED_knnMatch,
-            OCL_BFMATCHER_TYPICAL_MAT_SIZES) // TODO too big difference between implementations
+PERF_TEST_P(BruteForceMatcherFixture, knnMatch,
+            OCL_BFMATCHER_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
     vector<vector<DMatch> > matches(2);
     Mat query(srcSize, CV_32F), train(srcSize, CV_32F);
-    randu(query, 0.0f, 1.0f);
-    randu(train, 0.0f, 1.0f);
 
+    query.setTo(0);
+    train.setTo(0);
+    for(int i=0; i<srcSize.height-1; i++)
+    {
+        int peak = (1+i/(srcSize.width-1)) * 200;
+        // for each query, we set two dimention higher values
+        query.at<float>(i, i%(srcSize.width-1)) = peak;
+        query.at<float>(i, i%(srcSize.width-1)+1) = peak;
+        //for each train, we set the correspoding dimentions with the same values plus sands
+        int sand = randu<int>() % 10;
+        train.at<float>(srcSize.height-i-1, i%(srcSize.width-1)) = peak + sand;
+        train.at<float>(srcSize.height-i-1, i%(srcSize.width-1)+1) = peak - sand;
+    }
     declare.in(query, train);
     if (srcSize.height == 2000)
         declare.time(9);
