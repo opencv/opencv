@@ -1341,7 +1341,7 @@ INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
 
 INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(
     Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-    Values(NORM_INF, NORM_L1, NORM_L2),
+    Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2),
     Values(true, false))); // relative or not
 
 #endif // HAVE_OPENCL
