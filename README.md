@@ -10,6 +10,7 @@ With a thriving community of over 47 thousand users, OpenCV is used extensively 
 
 Installation Guide
 ------------------
+OpenCV uses the cmake build system to configure the library for your environment. For seasoned programmers, setup is as simple as invoking `cmake /path/to/opencv/root` from an off-tree build directory. For a detailed list of dependencies and install guides for your platform, head to:
 
 * <http://opencv.org/quickstart.html>
 
@@ -24,7 +25,7 @@ Further Resources
 
 Contributing
 ------------
-OpenCV uses the git protocol exclusively for version control, and the Github pull request mechanism for code contributions/patches. Before starting work on a pull request, please read the contributors guide at <http://code.opencv.org/projects/opencv/wiki/How_to_contribute>.
+OpenCV uses the git protocol exclusively for version control, and the Github pull request mechanism for code contributions/patches. Before starting work on a pull request, please read the contributor's guide at <http://code.opencv.org/projects/opencv/wiki/How_to_contribute>.
 
 To streamline the review process, please note in particular:
 
