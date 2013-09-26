@@ -415,19 +415,19 @@ TEST_P(convertC3C4, Accuracy)
 }
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, ConvertTo, Combine(
-                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
-                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F/*, CV_64F*/),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F/*, CV_64F*/),
                             Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, CopyTo, Combine(
-                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F/*, CV_64F*/),
                             testing::Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, SetTo, Combine(
-                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F/*, CV_64F*/),
                             testing::Range(1, 5), Bool()));
 
 INSTANTIATE_TEST_CASE_P(MatrixOperation, convertC3C4, Combine(
-                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F),
+                            Values(CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F/*, CV_64F*/),
                             Bool()));
 #endif
