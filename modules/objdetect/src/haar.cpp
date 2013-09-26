@@ -1564,7 +1564,7 @@ cvHaarDetectObjectsForROC( const CvArr* _img,
         int use_ipp = cascade->hid_cascade->ipp_stages != 0;
 
         if( use_ipp )
-            normImg = cvCreateMat( img->rows, img->cols, CV_32FC1 );
+            normImg.reset(cvCreateMat( img->rows, img->cols, CV_32FC1));
 #endif
         imgSmall.reset(cvCreateMat( img->rows + 1, img->cols + 1, CV_8UC1 ));
 
