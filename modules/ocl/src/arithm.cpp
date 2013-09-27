@@ -596,7 +596,6 @@ void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, cons
 //////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////// norm /////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
-
 double cv::ocl::norm(const oclMat &src1, int normType)
 {
     return norm(src1, oclMat(src1.size(), src1.type(), Scalar::all(0)), normType);
@@ -606,51 +605,50 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 {
     bool isRelative = (normType & NORM_RELATIVE) != 0;
     normType &= 7;
-    CV_Assert(src1.depth() <= CV_32S && src1.type() == src2.type() && ( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2));
-    int channels = src1.oclchannels(), i = 0, *p;
-    double r = 0;
-    oclMat gm1(src1.size(), src1.type());
-    int min_int = (normType == NORM_INF ? CL_INT_MIN : 0);
-    Mat m(1, 1, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(min_int));
-    oclMat gm2(m), emptyMat;
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
+    double result = 0;
+    oclMat tmp;
+    Scalar r;
+    absdiff(src1, src2, tmp);
     switch(normType)
     {
     case NORM_INF:
-        //  arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_minMax_run(gm1,emptyMat, gm2,"arithm_op_max");
-        m = (gm2);
-        p = (int *)m.data;
-        r = -std::numeric_limits<double>::max();
-        for (i = 0; i < channels; i++)
+        double minValue;
+        if(tmp.channels() == 1)
+            minMax(tmp, &minValue, &result);
+        else
         {
-            r = std::max(r, (double)p[i]);
+            std::vector<oclMat> mats;
+            split(tmp, mats);
+            for(unsigned int i = 0; i < mats.size(); i++)
+            {
+                if(i == 0)
+                    minMax(mats[i], &minValue, &result);
+                else
+                {
+                    double tmp_result;
+                    minMax(mats[i], &minValue, &tmp_result);
+                    if(tmp_result > result)
+                        result = tmp_result;
+                }
+            }
         }
         break;
     case NORM_L1:
-        //arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_sum_run(gm1, gm2,"arithm_op_sum");
-        m = (gm2);
-        p = (int *)m.data;
-        for (i = 0; i < channels; i++)
-        {
-            r = r + (double)p[i];
-        }
+        r = sum(tmp);
+        for(int i = 0; i < src1.channels(); i++)
+            result += r.val[i];
         break;
     case NORM_L2:
-        //arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_sum_run(gm1, gm2,"arithm_op_squares_sum");
-        m = (gm2);
-        p = (int *)m.data;
-        for (i = 0; i < channels; i++)
-        {
-            r = r + (double)p[i];
-        }
-        r = std::sqrt(r);
+        r = sqrSum(tmp);
+        for(int i = 0; i < src1.channels(); i++)
+            result += r.val[i];
+        result = std::sqrt(result);
         break;
     }
-    if (isRelative)
-        r = r / norm(src2, normType);
-    return r;
+    if(isRelative)
+        result = result / norm(src2, normType);
+    return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
