@@ -68,7 +68,6 @@ namespace cv
         extern const char *arithm_sum;
         extern const char *arithm_sum_3;
         extern const char *arithm_minMax;
-        extern const char *arithm_minMax_mask;
         extern const char *arithm_minMaxLoc;
         extern const char *arithm_minMaxLoc_mask;
         extern const char *arithm_LUT;
@@ -455,139 +454,121 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
 //////////////////////////////////// minMax  /////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_minMax_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen , int groupnum, string kernelName)
+template <typename T, typename WT>
+static void arithmetic_minMax_run(const oclMat &src, const oclMat & mask, cl_mem &dst, int groupnum, string kernelName)
 {
-    vector<pair<size_t , const void *> > args;
-    int all_cols = src.step / (vlen * src.elemSize1());
-    int pre_cols = (src.offset % src.step) / (vlen * src.elemSize1());
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / (vlen * src.elemSize1()) - 1;
+    int all_cols = src.step / src.elemSize();
+    int pre_cols = (src.offset % src.step) / src.elemSize();
+    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
     int invalid_cols = pre_cols + sec_cols;
-    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / (vlen * src.elemSize1());
-    int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
-    char build_options[50];
-    sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
+    int cols = all_cols - invalid_cols , elemnum = cols * src.rows;
+    int offset = src.offset / src.elemSize();
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+
+    ostringstream stream;
+    stream << "-D T=" << typeMap[src.depth()] << channelMap[src.channels()];
+    stream << " -D MAX_VAL=" << (WT)numeric_limits<T>::max();
+    stream << " -D MIN_VAL=" << (WT)numeric_limits<T>::min();
+    string buildOptions = stream.str();
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
+
+    int minvalid_cols = 0, moffset = 0;
     if (!mask.empty())
     {
-        int mall_cols = mask.step / (vlen * mask.elemSize1());
-        int mpre_cols = (mask.offset % mask.step) / (vlen * mask.elemSize1());
-        int msec_cols = mall_cols - (mask.offset % mask.step + mask.cols * mask.elemSize() - 1) / (vlen * mask.elemSize1()) - 1;
-        int minvalid_cols = mpre_cols + msec_cols;
-        int moffset = mask.offset / (vlen * mask.elemSize1());
+        int mall_cols = mask.step / mask.elemSize();
+        int mpre_cols = (mask.offset % mask.step) / mask.elemSize();
+        int msec_cols = mall_cols - (mask.offset % mask.step + mask.cols * mask.elemSize() - 1) / mask.elemSize() - 1;
+        minvalid_cols = mpre_cols + msec_cols;
+        moffset = mask.offset / mask.elemSize();
 
+        args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&minvalid_cols ));
         args.push_back( make_pair( sizeof(cl_int) , (void *)&moffset ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
+
+        kernelName += "_mask";
     }
-    args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
-    openCLExecuteKernel(src.clCxt, &arithm_minMax, kernelName, gt, lt, args, -1, -1, build_options);
+
+    size_t globalThreads[3] = {groupnum * 256, 1, 1};
+    size_t localThreads[3] = {256, 1, 1};
+
+    openCLExecuteKernel(src.clCxt, &arithm_minMax, kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
-
-static void arithmetic_minMax_mask_run(const oclMat &src, const oclMat &mask, cl_mem &dst, int vlen, int groupnum, string kernelName)
-{
-    vector<pair<size_t , const void *> > args;
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
-    char build_options[50];
-    if (src.oclchannels() == 1)
-    {
-        int cols = (src.cols - 1) / vlen + 1;
-        int invalid_cols = src.step / (vlen * src.elemSize1()) - cols;
-        int offset = src.offset / src.elemSize1();
-        int repeat_me = vlen - (mask.cols % vlen == 0 ? vlen : mask.cols % vlen);
-        int minvalid_cols = mask.step / (vlen * mask.elemSize1()) - cols;
-        int moffset = mask.offset / mask.elemSize1();
-        int elemnum = cols * src.rows;
-        sprintf(build_options, "-D DEPTH_%d -D REPEAT_E%d", src.depth(), repeat_me);
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&elemnum));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&minvalid_cols ));
-        args.push_back( make_pair( sizeof(cl_int) , (void *)&moffset ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&mask.data ));
-        args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-        openCLExecuteKernel(src.clCxt, &arithm_minMax_mask, kernelName, gt, lt, args, -1, -1, build_options);
-    }
-}
-
-template <typename T> void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
+template <typename T, typename WT>
+void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
                                              const oclMat &mask, oclMat &buf)
 {
     size_t groupnum = src.clCxt->computeUnits();
     CV_Assert(groupnum != 0);
-    groupnum = groupnum * 2;
-    int vlen = 8;
-    int dbsize = groupnum * 2 * vlen * sizeof(T) ;
 
+    int dbsize = groupnum * 2 * src.elemSize();
     ensureSizeIsEnough(1, dbsize, CV_8UC1, buf);
 
     cl_mem buf_data = reinterpret_cast<cl_mem>(buf.data);
-
-    if (mask.empty())
-    {
-        arithmetic_minMax_run(src, mask, buf_data, vlen, groupnum, "arithm_op_minMax");
-    }
-    else
-    {
-        arithmetic_minMax_mask_run(src, mask, buf_data, vlen, groupnum, "arithm_op_minMax_mask");
-    }
+    arithmetic_minMax_run<T, WT>(src, mask, buf_data, groupnum, "arithm_op_minMax");
 
     Mat matbuf = Mat(buf);
     T *p = matbuf.ptr<T>();
     if (minVal != NULL)
     {
         *minVal = std::numeric_limits<double>::max();
-        for (int i = 0; i < vlen * (int)groupnum; i++)
-        {
+        for (int i = 0, end = src.oclchannels() * (int)groupnum; i < end; i++)
             *minVal = *minVal < p[i] ? *minVal : p[i];
-        }
     }
     if (maxVal != NULL)
     {
         *maxVal = -std::numeric_limits<double>::max();
-        for (int i = vlen * (int)groupnum; i < 2 * vlen * (int)groupnum; i++)
-        {
+        for (int i = src.oclchannels() * (int)groupnum, end = i << 1; i < end; i++)
             *maxVal = *maxVal > p[i] ? *maxVal : p[i];
-        }
     }
 }
 
-typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf);
+
 void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
 {
     oclMat buf;
     minMax_buf(src, minVal, maxVal, mask, buf);
 }
 
+typedef void (*minMaxFunc)(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf);
+
 void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask, oclMat &buf)
 {
-    CV_Assert(src.oclchannels() == 1);
+    CV_Assert(src.channels() == 1);
+    CV_Assert(src.size() == mask.size() || mask.empty());
+    CV_Assert(src.step % src.elemSize() == 0);
+
+    if (minVal == NULL && maxVal == NULL)
+        return;
+
     if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
+
     static minMaxFunc functab[8] =
     {
-        arithmetic_minMax<uchar>,
-        arithmetic_minMax<char>,
-        arithmetic_minMax<ushort>,
-        arithmetic_minMax<short>,
-        arithmetic_minMax<int>,
-        arithmetic_minMax<float>,
-        arithmetic_minMax<double>,
+        arithmetic_minMax<uchar, int>,
+        arithmetic_minMax<char, int>,
+        arithmetic_minMax<ushort, int>,
+        arithmetic_minMax<short, int>,
+        arithmetic_minMax<int, int>,
+        arithmetic_minMax<float, float>,
+        arithmetic_minMax<double, double>,
         0
     };
+
     minMaxFunc func;
     func = functab[src.depth()];
     func(src, minVal, maxVal, mask, buf);

@@ -753,7 +753,7 @@ TEST_P(MinMax, MAT)
     }
 }
 
-TEST_P(MinMax, DISABLED_MASK)
+TEST_P(MinMax, MASK)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
