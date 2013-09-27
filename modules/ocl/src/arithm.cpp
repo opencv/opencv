@@ -1209,21 +1209,22 @@ void cv::ocl::minMaxLoc(const oclMat &src, double *minVal, double *maxVal,
 ///////////////////////////// countNonZero ///////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, string kernelName)
+static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int groupnum, string kernelName)
 {
-    vector<pair<size_t , const void *> > args;
-    int all_cols = src.step / (vlen * src.elemSize1());
-    int pre_cols = (src.offset % src.step) / (vlen * src.elemSize1());
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / (vlen * src.elemSize1()) - 1;
+    int ochannels = src.oclchannels();
+    int all_cols = src.step / src.elemSize();
+    int pre_cols = (src.offset % src.step) / src.elemSize();
+    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
     int invalid_cols = pre_cols + sec_cols;
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / (vlen * src.elemSize1());
-    int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
+    int offset = src.offset / src.elemSize();
 
-    char build_options[50];
-    sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d", src.depth(), repeat_s, repeat_e);
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+    string buildOptions = format("-D srcT=%s%s -D dstT=int%s", typeMap[src.depth()], channelMap[ochannels],
+                                 channelMap[ochannels]);
 
+    vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
@@ -1231,33 +1232,44 @@ static void arithmetic_countNonZero_run(const oclMat &src, cl_mem &dst, int vlen
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
-    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, gt, lt, args, -1, -1, build_options);
+
+    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t localThreads[3] = { 256, 1, 1 };
+
+    openCLExecuteKernel(src.clCxt, &arithm_nonzero, kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 int cv::ocl::countNonZero(const oclMat &src)
 {
-    size_t groupnum = src.clCxt->computeUnits();
+    CV_Assert(src.step % src.elemSize() == 0);
+    CV_Assert(src.channels() == 1);
+
+    Context *clCxt = src.clCxt;
     if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "selected device doesn't support double");
     }
+
+    size_t groupnum = src.clCxt->computeUnits();
     CV_Assert(groupnum != 0);
-    int vlen = 8 , dbsize = groupnum * vlen;
-    Context *clCxt = src.clCxt;
+    int dbsize = groupnum;
+
     string kernelName = "arithm_op_nonzero";
 
     AutoBuffer<int> _buf(dbsize);
     int *p = (int*)_buf, nonzero = 0;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
-    arithmetic_countNonZero_run(src, dstBuffer, vlen, groupnum, kernelName);
-
     memset(p, 0, dbsize * sizeof(int));
+
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(int));
+    arithmetic_countNonZero_run(src, dstBuffer, groupnum, kernelName);
     openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(int));
+
     for (int i = 0; i < dbsize; i++)
         nonzero += p[i];
 
     openCLSafeCall(clReleaseMemObject(dstBuffer));
+
     return nonzero;
 }
 
