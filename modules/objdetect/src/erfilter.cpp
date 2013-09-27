@@ -235,10 +235,7 @@ void ERFilterNM::er_tree_extract( InputArray image )
 
     if (thresholdDelta > 1)
     {
-        Mat tmp;
-        src.copyTo(tmp);
-        src.release();
-        src = (image.getMat() / thresholdDelta) -1;
+        src = (src / thresholdDelta) -1;
     }
 
     const unsigned char * image_data = src.data;
@@ -2721,6 +2718,28 @@ float extract_features(InputOutputArray src, vector<ERStat> &regions, vector<ERF
     return max_stroke;
 }
 
+static bool edge_comp (Vec4f i,Vec4f j)
+{
+    Point a = Point(cvRound(i[0]), cvRound(i[1]));
+    Point b = Point(cvRound(i[2]), cvRound(i[3]));
+    double edist_i = cv::norm(a-b);
+    a = Point(cvRound(j[0]), cvRound(j[1]));
+    b = Point(cvRound(j[2]), cvRound(j[3]));
+    double edist_j = cv::norm(a-b);
+    return (edist_i<edist_j);
+}
+
+static bool find_vertex(vector<Point> &vertex, Point &p)
+{
+    for (int i=0; i<(int)vertex.size(); i++)
+    {
+        if (vertex.at(i) == p)
+            return true;
+    }
+    return false;
+}
+
+
 /*!
     Find groups of Extremal Regions that are organized as text blocks. This function implements
     the grouping algorithm described in:
@@ -2734,15 +2753,24 @@ float extract_features(InputOutputArray src, vector<ERStat> &regions, vector<ERF
     (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.),
     thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to
     combine all these hypotheses to get the final estimate. Each of the resulting groups are finally
-    heuristically validated in order to assest if they form a valid horizontally-aligned text block.
+    validated by a classifier in order to assest if they form a valid horizontally-aligned text block.
 
     \param  src            Vector of sinle channel images CV_8UC1 from wich the regions were extracted.
     \param  regions        Vector of ER's retreived from the ERFilter algorithm from each channel
+    \param  filename       The XML or YAML file with the classifier model (e.g. trained_classifier_erGrouping.xml)
+    \param  minProbability The minimum probability for accepting a group
     \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
 */
-void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, std::vector<Rect > &text_boxes)
+void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, const std::string& filename, float minProbability, std::vector<Rect > &text_boxes)
 {
+
     // TODO assert correct vector<Mat>
+
+    CvBoost group_boost;
+    if (ifstream(filename.c_str()))
+        group_boost.load( filename.c_str(), "boost" );
+    else
+        CV_Error(CV_StsBadArg, "erGrouping: Default classifier file not found!");
 
     std::vector<Mat> src;
     _src.getMatVector(src);
@@ -2868,18 +2896,22 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, std::
         free(D);
 
 
+
         /* --------------------------------- Groups Validation --------------------------------*/
         /* Examine each of the clusters in order to assest if they are valid text lines or not */
         /* ------------------------------------------------------------------------------------*/
 
-        // remove non-horizontally-aligned groups
-        vector<Rect> groups_rects;
+        vector<vector<float> > data_arrays(meaningful_clusters.size());
+        vector<Rect> groups_rects(meaningful_clusters.size());
+
+        // Collect group level features and classify the group
         for (int i=(int)meaningful_clusters.size()-1; i>=0; i--)
         {
 
             Rect group_rect;
             float sumx=0, sumy=0, sumxy=0, sumx2=0;
 
+            // linear regression slope helps discriminating horizontal aligned groups
             for (int j=0; j<(int)meaningful_clusters.at(i).size();j++)
             {
                 if (j==0)
@@ -2907,105 +2939,69 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, std::
             float a1=((int)meaningful_clusters.at(i).size()*sumxy-sumx*sumy) /
                ((int)meaningful_clusters.at(i).size()*sumx2-sumx*sumx);
 
-            if (abs(a1) > 0.13)
-                meaningful_clusters.erase(meaningful_clusters.begin()+i);
+            vector<float> data;
+            if (a1 != a1)
+                data_arrays.at(i).push_back(1.f);
             else
-                groups_rects.insert(groups_rects.begin(), group_rect);
+                data_arrays.at(i).push_back(a1);
 
-        }
+            groups_rects.at(i) = group_rect;
 
-        //TODO if group has less than 5 chars we can infer that is a single line so an additional rule can
-        //     be added here in order to reject non-colinear small groups
-
-
-        /* TODO this is better code for detecting non-horizontally-aligned groups but only works for
-         * single lines so we need here a way to split the rejected groups into several line hypothesis
-         * and recursively apply the text line validation test until no more splits can be done
-
-        vector<Rect> groups_rects;
-
-        for (int i=meaningful_clusters.size()-1; i>=0; i--)
-        {
-
-            Rect group_rect;
-
-            for (int j=0; j<(int)meaningful_clusters.at(i).size();j++)
-            {
-                if (j==0)
-                {
-                    group_rect = regions.at(c).at(meaningful_clusters.at(i).at(j)).rect;
-                } else {
-                    group_rect = group_rect | regions.at(c).at(meaningful_clusters.at(i).at(j)).rect;
-                }
-            }
-
-            float group_y_center = 0;
-            for (int j=0; j<(int)meaningful_clusters.at(i).size();j++)
-            {
-                int region_y_center = regions.at(c).at(meaningful_clusters.at(i).at(j)).rect.y +
-                                      regions.at(c).at(meaningful_clusters.at(i).at(j)).rect.height/2;
-                group_y_center += region_y_center;
-            }
-            group_y_center = group_y_center / (int)meaningful_clusters.at(i).size();
-
-            float err = 0;
-            for (int j=0; j<(int)meaningful_clusters.at(i).size();j++)
-            {
-                int region_y_center = regions.at(c).at(meaningful_clusters.at(i).at(j)).rect.y +
-                                      regions.at(c).at(meaningful_clusters.at(i).at(j)).rect.height/2;
-                err += pow(group_y_center-region_y_center, 2);
-            }
-            err = sqrt(err / (int)meaningful_clusters.at(i).size());
-            err = err / group_rect.height;
-
-            if (err > 0.17)
-                meaningful_clusters.erase(meaningful_clusters.begin()+i);
-            else
-                groups_rects.insert(groups_rects.begin(), group_rect);
-
-        } */
-
-        // check for colinear groups that can be merged
-        for (int i=0; i<(int)meaningful_clusters.size(); i++)
-        {
-            int ay1 = groups_rects.at(i).y;
-            int ay2 = groups_rects.at(i).y + groups_rects.at(i).height;
-            int ax1 = groups_rects.at(i).x;
-            int ax2 = groups_rects.at(i).x + groups_rects.at(i).width;
-            for (int j=(int)meaningful_clusters.size()-1; j>i; j--)
-            {
-                int by1 = groups_rects.at(j).y;
-                int by2 = groups_rects.at(j).y + groups_rects.at(j).height;
-                int bx1 = groups_rects.at(j).x;
-                int bx2 = groups_rects.at(j).x + groups_rects.at(j).width;
-
-                int y_intersection = min(ay2,by2) - max(ay1,by1);
-
-                if (y_intersection > 0.75*(max(groups_rects.at(i).height,groups_rects.at(j).height)))
-                {
-                    int xdist = min(abs(ax2-bx1),abs(bx2-ax1));
-                    if (xdist < 0.75*(max(groups_rects.at(i).height,groups_rects.at(j).height)))
-                    {
-                        for (int r=0; r<(int)meaningful_clusters.at(j).size(); r++)
-                            meaningful_clusters.at(i).push_back(meaningful_clusters.at(j).at(r));
-                        meaningful_clusters.erase(meaningful_clusters.begin()+j);
-                        groups_rects.erase(groups_rects.begin()+j);
-                    }
-                }
-
-            }
-        }
-
-        // remove groups with less than 3 non-overlapping regions
-        for (int i=(int)meaningful_clusters.size()-1; i>=0; i--)
-        {
-
+            // group probability mean
             double group_probability_mean = 0;
-            Rect group_rect;
+            // number of non-overlapping regions
             vector<Rect> individual_components;
 
+            // The variance of several similarity features is also helpful
+            vector<float> strokes;
+            vector<float> grad_magnitudes;
+            vector<float> intensities;
+            vector<float> bg_intensities;
+
+            // We'll try to remove groups with repetitive patterns using averaged SAD
+            // SAD = Sum of Absolute Differences
+            Mat grey = img;
+            Mat sad = Mat::zeros(regions.at(c).at(meaningful_clusters.at(i).at(0)).rect.size() , CV_8UC1);
+            Mat region_mask = Mat::zeros(grey.rows+2, grey.cols+2, CV_8UC1);
+            float sad_value = 0;
+            Mat ratios = Mat::zeros(1, (int)meaningful_clusters.at(i).size(), CV_32FC1);
+            //Mat holes  = Mat::zeros(1, (int)meaningful_clusters.at(i).size(), CV_32FC1);
+
             for (int j=0; j<(int)meaningful_clusters.at(i).size();j++)
             {
+                ERStat *stat = &regions.at(c).at(meaningful_clusters.at(i).at(j));
+
+                //Fill the region
+                Mat region = region_mask(Rect(Point(stat->rect.x,stat->rect.y),
+                                              Point(stat->rect.br().x+2,stat->rect.br().y+2)));
+                region = Scalar(0);
+                int newMaskVal = 255;
+                int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
+                Rect rect;
+
+                floodFill( grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
+                           region, Point(stat->pixel%grey.cols - stat->rect.x, stat->pixel/grey.cols - stat->rect.y),
+                           Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
+
+                Mat mask = Mat::zeros(regions.at(c).at(meaningful_clusters.at(i).at(0)).rect.size() , CV_8UC1);
+                resize(region, mask, mask.size());
+                mask = mask - 254;
+                if (j!=0)
+                {
+                    // accumulate Sum of Absolute Differences
+                    absdiff(sad, mask, sad);
+                    Scalar s = sum(sad);
+                    sad_value += (float)s[0]/(sad.rows*sad.cols);
+                }
+                mask.copyTo(sad);
+                ratios.at<float>(0,j) = (float)min(stat->rect.width, stat->rect.height) /
+                                               max(stat->rect.width, stat->rect.height);
+                //holes.at<float>(0,j) = (float)stat->hole_area_ratio;
+
+                strokes.push_back((float)features.at(meaningful_clusters.at(i).at(j)).stroke_mean);
+                grad_magnitudes.push_back((float)features.at(meaningful_clusters.at(i).at(j)).gradient_mean);
+                intensities.push_back(features.at(meaningful_clusters.at(i).at(j)).intensity_mean);
+                bg_intensities.push_back(features.at(meaningful_clusters.at(i).at(j)).boundary_intensity_mean);
                 group_probability_mean += regions.at(c).at(meaningful_clusters.at(i).at(j)).probability;
 
                 if (j==0)
@@ -3036,112 +3032,108 @@ void erGrouping(InputArrayOfArrays _src, vector<vector<ERStat> > &regions, std::
             }
             group_probability_mean = group_probability_mean / meaningful_clusters.at(i).size();
 
+            data_arrays.at(i).insert(data_arrays.at(i).begin(),(float)individual_components.size());
 
-            if (individual_components.size()<3) // || (group_probability_mean < 0.5)
+            // variance of widths and heights help to discriminate groups with high height variability
+            vector<int> widths;
+            vector<int> heights;
+            // the MST edge orientations histogram may be dominated by the horizontal axis orientation
+            Subdiv2D subdiv(Rect(0,0,src.at(0).cols,src.at(0).rows));
+
+            for (int r=0; r < (int)individual_components.size(); r++)
             {
-                meaningful_clusters.erase(meaningful_clusters.begin()+i);
-                groups_rects.erase(groups_rects.begin()+i);
-                continue;
+                widths.push_back(individual_components.at(r).width);
+                heights.push_back(individual_components.at(r).height);
+
+                Point2f fp( (float)individual_components.at(r).x + individual_components.at(r).width/2,
+                            (float)individual_components.at(r).y + individual_components.at(r).height/2 );
+                subdiv.insert(fp);
             }
 
-        }
+            Scalar mean, std;
+            meanStdDev(Mat(widths), mean, std);
+            data_arrays.at(i).push_back((float)(std[0]/mean[0]));
+            data_arrays.at(i).push_back((float)mean[0]);
+            meanStdDev(Mat(heights), mean, std);
+            data_arrays.at(i).push_back((float)(std[0]/mean[0]));
 
-        // TODO remove groups with high height variability
+            vector<Vec4f> edgeList;
+            subdiv.getEdgeList(edgeList);
+            std::sort (edgeList.begin(), edgeList.end(), edge_comp);
+            vector<Point> mst_vertices;
 
-        // Try to remove groups with repetitive patterns
-        for (int i=(int)meaningful_clusters.size()-1; i>=0; i--)
-        {
-            Mat grey = img;
-            Mat sad = Mat::zeros(regions.at(c).at(meaningful_clusters.at(i).at(0)).rect.size() , CV_8UC1);
-            Mat region_mask = Mat::zeros(grey.rows+2, grey.cols+2, CV_8UC1);
-            float sad_value = 0;
-            Mat ratios = Mat::zeros(1, (int)meaningful_clusters.at(i).size(), CV_32FC1);
-            Mat holes  = Mat::zeros(1, (int)meaningful_clusters.at(i).size(), CV_32FC1);
+            int horiz_edges = 0, non_horiz_edges = 0;
+            vector<float> edge_distances;
 
-            for (int r=0; r<(int)meaningful_clusters.at(i).size(); r++)
+            for( size_t k = 0; k < edgeList.size(); k++ )
             {
-                ERStat *stat = &regions.at(c).at(meaningful_clusters.at(i).at(r));
-
-                //Fill the region
-                Mat region = region_mask(Rect(Point(stat->rect.x,stat->rect.y),
-                                              Point(stat->rect.br().x+2,stat->rect.br().y+2)));
-                region = Scalar(0);
-                int newMaskVal = 255;
-                int flags = 4 + (newMaskVal << 8) + FLOODFILL_FIXED_RANGE + FLOODFILL_MASK_ONLY;
-                Rect rect;
-
-                floodFill( grey(Rect(Point(stat->rect.x,stat->rect.y),Point(stat->rect.br().x,stat->rect.br().y))),
-                           region, Point(stat->pixel%grey.cols - stat->rect.x, stat->pixel/grey.cols - stat->rect.y),
-                           Scalar(255), &rect, Scalar(stat->level), Scalar(0), flags );
-
-                Mat mask = Mat::zeros(regions.at(c).at(meaningful_clusters.at(i).at(0)).rect.size() , CV_8UC1);
-                resize(region, mask, mask.size());
-                mask = mask - 254;
-                if (r!=0)
+                Vec4f e = edgeList[k];
+                Point pt0 = Point(cvRound(e[0]), cvRound(e[1]));
+                Point pt1 = Point(cvRound(e[2]), cvRound(e[3]));
+                if (((pt0.x>0)&&(pt0.x<src.at(0).cols)&&(pt0.y>0)&&(pt0.y<src.at(0).rows) &&
+                     (pt1.x>0)&&(pt1.x<src.at(0).cols)&&(pt1.y>0)&&(pt1.y<src.at(0).rows)) &&
+                    ((!find_vertex(mst_vertices,pt0)) ||
+                     (!find_vertex(mst_vertices,pt1))))
                 {
-                    //  using Sum of Absolute Differences
-                    absdiff(sad, mask, sad);
-                    Scalar s = sum(sad);
-                    sad_value += (float)s[0]/(sad.rows*sad.cols);
+                    double angle = atan2((double)(pt0.y-pt1.y),(double)(pt0.x-pt1.x));
+                    //if ( (abs(angle) < 0.35) || (abs(angle) > 5.93) || ((abs(angle) > 2.79)&&(abs(angle) < 3.49)) )
+                    if ( (abs(angle) < 0.25) || (abs(angle) > 6.03) || ((abs(angle) > 2.88)&&(abs(angle) < 3.4)) )
+                    {
+                        horiz_edges++;
+                        edge_distances.push_back((float)norm(pt0-pt1));
+                    }
+                    else
+                        non_horiz_edges++;
+                    mst_vertices.push_back(pt0);
+                    mst_vertices.push_back(pt1);
                 }
-                mask.copyTo(sad);
-                ratios.at<float>(0,r) = (float)min(stat->rect.width, stat->rect.height) /
-                                               max(stat->rect.width, stat->rect.height);
-                holes.at<float>(0,r) = (float)stat->hole_area_ratio;
-
             }
-            Scalar mean,std;
-            meanStdDev( holes, mean, std);
-            float holes_mean = (float)mean[0];
+
+            if (horiz_edges == 0)
+                data_arrays.at(i).push_back(0.f);
+            else
+                data_arrays.at(i).push_back((float)horiz_edges/(horiz_edges+non_horiz_edges));
+
+            // remove groups where objects are not equidistant enough
+            Scalar dist_mean, dist_std;
+            meanStdDev(Mat(edge_distances),dist_mean, dist_std);
+            if (dist_std[0] == 0)
+                data_arrays.at(i).push_back(0.f);
+            else
+                data_arrays.at(i).push_back((float)(dist_std[0]/dist_mean[0]));
+
+            if (dist_mean[0] == 0)
+                data_arrays.at(i).push_back(0.f);
+            else
+                data_arrays.at(i).push_back((float)dist_mean[0]/data_arrays.at(i).at(3));
+
+            //meanStdDev( holes, mean, std);
+            //float holes_mean = (float)mean[0];
             meanStdDev( ratios, mean, std);
 
-            // Set empirically
-            if (((float)sad_value / ((int)meaningful_clusters.at(i).size()-1) < 0.12) ||
-                (((float)sad_value / ((int)meaningful_clusters.at(i).size()-1) < 0.175)&&(holes_mean < 0.015))||
-                //TODO this must be num of non-overlapping regions.at(c) and probably 7 is ok!
-                ((holes_mean < 0.005)&&((int)meaningful_clusters.at(i).size()>10)))
+            data_arrays.at(i).push_back((float)sad_value / ((int)meaningful_clusters.at(i).size()-1));
+            meanStdDev( Mat(strokes), mean, std);
+            data_arrays.at(i).push_back((float)(std[0]/mean[0]));
+            meanStdDev( Mat(grad_magnitudes), mean, std);
+            data_arrays.at(i).push_back((float)(std[0]/mean[0]));
+            meanStdDev( Mat(intensities), mean, std);
+            data_arrays.at(i).push_back((float)std[0]);
+            meanStdDev( Mat(bg_intensities), mean, std);
+            data_arrays.at(i).push_back((float)std[0]);
+
+            // Validate only groups with more than 2 non-overlapping regions
+            if (data_arrays.at(i).at(0) > 2)
             {
-                meaningful_clusters.erase(meaningful_clusters.begin()+i);
-                groups_rects.erase(groups_rects.begin()+i);
+                data_arrays.at(i).insert(data_arrays.at(i).begin(),0.f);
+                float votes = group_boost.predict( Mat(data_arrays.at(i)), Mat(), Range::all(), false, true );
+                // Logistic Correction returns a probability value (in the range(0,1))
+                double probability = (double)1-(double)1/(1+exp(-2*votes));
+
+                if (probability > minProbability)
+                    text_boxes.push_back(groups_rects.at(i));
             }
         }
 
-        // remove small groups inside others
-        vector<int> groups_to_remove;
-        for (int i=0; i<(int)meaningful_clusters.size()-1; i++)
-        {
-            for (int j=i+1; j<(int)meaningful_clusters.size(); j++)
-            {
-
-                Rect intersection = groups_rects.at(i) & groups_rects.at(j);
-
-                if (intersection == groups_rects.at(i))
-                   groups_to_remove.push_back(i);
-                if (intersection == groups_rects.at(j))
-                   groups_to_remove.push_back(j);
-
-            }
-        }
-
-        if (!groups_to_remove.empty())
-        {
-            int last_removed = -1;
-            std::sort(groups_to_remove.begin(), groups_to_remove.end());
-            for (int i=(int)groups_to_remove.size()-1; i>=0; i--)
-            {
-                if (groups_to_remove.at(i) == last_removed)
-                    continue;
-                else
-                    last_removed = groups_to_remove.at(i);
-
-                meaningful_clusters.erase(meaningful_clusters.begin()+groups_to_remove.at(i));
-                groups_rects.erase(groups_rects.begin()+groups_to_remove.at(i));
-            }
-        }
-        groups_to_remove.clear();
-
-        for (int i=0; i<(int)groups_rects.size(); i++)
-            text_boxes.push_back(groups_rects.at(i));
     }
 
     // check for colinear groups that can be merged
