@@ -54,34 +54,15 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iomanip>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 namespace cv
 {
     namespace ocl
     {
-
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        extern const char *meanShift;
-        extern const char *imgproc_copymakeboder;
-        extern const char *imgproc_median;
-        extern const char *imgproc_threshold;
-        extern const char *imgproc_resize;
-        extern const char *imgproc_remap;
-        extern const char *imgproc_warpAffine;
-        extern const char *imgproc_warpPerspective;
-        extern const char *imgproc_integral_sum;
-        extern const char *imgproc_integral;
-        extern const char *imgproc_histogram;
-        extern const char *imgproc_bilateral;
-        extern const char *imgproc_calcHarris;
-        extern const char *imgproc_calcMinEigenVal;
-        extern const char *imgproc_convolve;
-        extern const char *imgproc_clahe;
         ////////////////////////////////////OpenCL call wrappers////////////////////////////
 
         template <typename T> struct index_and_sizeof;

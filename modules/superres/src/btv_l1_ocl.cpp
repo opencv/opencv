@@ -56,6 +56,7 @@ cv::Ptr<cv::superres::SuperResolution> cv::superres::createSuperResolution_BTVL1
 }
 
 #else
+#include "opencl_kernels.hpp"
 
 using namespace std;
 using namespace cv;
@@ -67,8 +68,6 @@ namespace cv
 {
     namespace ocl
     {
-        extern const char* superres_btvl1;
-
         float* btvWeights_ = NULL;
         size_t btvWeights_size = 0;
     }

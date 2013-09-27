@@ -42,22 +42,13 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <iomanip>
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
 
 static bool use_cpu_sorter = true;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *imgproc_gftt;
-    }
-}
 
 namespace
 {

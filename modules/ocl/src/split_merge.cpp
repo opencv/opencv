@@ -44,29 +44,11 @@
 //M*/
 
 #include "precomp.hpp"
-#include <vector>
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-
-using std::cout;
-using std::endl;
-
-////////////////////////////////////////////////////////////////////////
-///////////////// oclMat merge and split ///////////////////////////////
-////////////////////////////////////////////////////////////////////////
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *merge_mat;
-        extern const char *split_mat;
-    }
-}
 namespace cv
 {
     namespace ocl

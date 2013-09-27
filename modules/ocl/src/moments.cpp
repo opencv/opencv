@@ -44,13 +44,12 @@
 //
 //M*/
 #include "precomp.hpp"
-#include <iostream>
+#include "opencl_kernels.hpp"
+
 namespace cv
 {
 namespace ocl
 {
-extern const char *moments;
-
 // The function calculates center of gravity and the central second order moments
 static void icvCompleteMomentState( CvMoments* moments )
 {

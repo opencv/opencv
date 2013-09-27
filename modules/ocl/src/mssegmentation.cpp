@@ -43,8 +43,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
-using namespace std;
+using namespace cv;
+using namespace cv::ocl;
 
 // Auxiliray stuff
 namespace

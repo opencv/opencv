@@ -45,21 +45,19 @@
 //
 //M*/
 
-/* Haar features calculation */
-//#define EMU
-
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
+
+/* Haar features calculation */
+//#define EMU
 
 namespace cv
 {
     namespace ocl
     {
-        extern const char *pyr_up;
-
         void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst)
         {
             int depth = src.depth(), channels = src.channels(), oclChannels = src.oclchannels();

@@ -45,21 +45,12 @@
 //
 //M*/
 
-
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
-using namespace std;
 using namespace cv;
 using namespace cv::ocl;
 
-namespace cv
-{
-namespace ocl
-{
-extern const char *pyrlk;
-extern const char *pyrlk_no_image;
-}
-}
 struct dim3
 {
     unsigned int x, y, z;

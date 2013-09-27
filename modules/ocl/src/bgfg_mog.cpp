@@ -44,14 +44,15 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
+
 using namespace cv;
 using namespace cv::ocl;
+
 namespace cv
 {
     namespace ocl
     {
-        extern const char* bgfg_mog;
-
         typedef struct _contant_struct
         {
             cl_float c_Tb;
