@@ -66,7 +66,6 @@ namespace cv
 
         extern const char *arithm_nonzero;
         extern const char *arithm_sum;
-        extern const char *arithm_sum_3;
         extern const char *arithm_minMax;
         extern const char *arithm_minMaxLoc;
         extern const char *arithm_minMaxLoc_mask;
@@ -317,21 +316,28 @@ void cv::ocl::compare(const oclMat &src1, const oclMat &src2, oclMat &dst , int 
 ////////////////////////////////// sum  //////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-//type = 0 sum,type = 1 absSum,type = 2 sqrSum
-static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen , int groupnum, int type = 0)
+enum { SUM = 0, ABS_SUM, SQR_SUM };
+
+static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int groupnum, int type, int ddepth)
 {
-    vector<pair<size_t , const void *> > args;
-    int all_cols = src.step / (vlen * src.elemSize1());
-    int pre_cols = (src.offset % src.step) / (vlen * src.elemSize1());
-    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / (vlen * src.elemSize1()) - 1;
+    int ochannels = src.oclchannels();
+    int all_cols = src.step / src.elemSize();
+    int pre_cols = (src.offset % src.step) / src.elemSize();
+    int sec_cols = all_cols - (src.offset % src.step + src.cols * src.elemSize() - 1) / src.elemSize() - 1;
     int invalid_cols = pre_cols + sec_cols;
     int cols = all_cols - invalid_cols , elemnum = cols * src.rows;;
-    int offset = src.offset / (vlen * src.elemSize1());
-    int repeat_s = src.offset / src.elemSize1() - offset * vlen;
-    int repeat_e = (offset + cols) * vlen - src.offset / src.elemSize1() - src.cols * src.oclchannels();
-    char build_options[512];
-    CV_Assert(type == 0 || type == 1 || type == 2);
-    sprintf(build_options, "-D DEPTH_%d -D REPEAT_S%d -D REPEAT_E%d -D FUNC_TYPE_%d", src.depth(), repeat_s, repeat_e, type);
+    int offset = src.offset / src.elemSize();
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const funcMap[] = { "FUNC_SUM", "FUNC_ABS_SUM", "FUNC_SQR_SUM" };
+    const char * const channelMap[] = { " ", " ", "2", "4", "4" };
+    string buildOptions = format("-D srcT=%s%s -D dstT=%s%s -D convertToDstT=convert_%s%s -D %s",
+                                 typeMap[src.depth()], channelMap[ochannels],
+                                 typeMap[ddepth], channelMap[ochannels],
+                                 typeMap[ddepth], channelMap[ochannels],
+                                 funcMap[type]);
+
+    vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_int) , (void *)&cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&invalid_cols ));
     args.push_back( make_pair( sizeof(cl_int) , (void *)&offset));
@@ -339,55 +345,63 @@ static void arithmetic_sum_buffer_run(const oclMat &src, cl_mem &dst, int vlen ,
     args.push_back( make_pair( sizeof(cl_int) , (void *)&groupnum));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&src.data));
     args.push_back( make_pair( sizeof(cl_mem) , (void *)&dst ));
-    size_t gt[3] = {groupnum * 256, 1, 1}, lt[3] = {256, 1, 1};
-    if (src.oclchannels() != 3)
-        openCLExecuteKernel(src.clCxt, &arithm_sum, "arithm_op_sum", gt, lt, args, -1, -1, build_options);
-    else
-        openCLExecuteKernel(src.clCxt, &arithm_sum_3, "arithm_op_sum_3", gt, lt, args, -1, -1, build_options);
+    size_t globalThreads[3] = { groupnum * 256, 1, 1 };
+    size_t localThreads[3] = { 256, 1, 1 };
+
+    openCLExecuteKernel(src.clCxt, &arithm_sum, "arithm_op_sum", globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 template <typename T>
-Scalar arithmetic_sum(const oclMat &src, int type = 0)
+Scalar arithmetic_sum(const oclMat &src, int type, int ddepth)
 {
+    CV_Assert(src.step % src.elemSize() == 0);
+
     size_t groupnum = src.clCxt->computeUnits();
     CV_Assert(groupnum != 0);
-    int vlen = src.oclchannels() == 3 ? 12 : 8, dbsize = groupnum * vlen;
+
+    int dbsize = groupnum * src.oclchannels();
     Context *clCxt = src.clCxt;
 
     AutoBuffer<T> _buf(dbsize);
     T *p = (T*)_buf;
-    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
-    Scalar s = Scalar::all(0.0);
-    arithmetic_sum_buffer_run(src, dstBuffer, vlen, groupnum, type);
-
     memset(p, 0, dbsize * sizeof(T));
-    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(T));
-    for (int i = 0; i < dbsize;)
-    {
-        for (int j = 0; j < src.oclchannels(); j++, i++)
-            s.val[j] += p[i];
-    }
 
+    cl_mem dstBuffer = openCLCreateBuffer(clCxt, CL_MEM_WRITE_ONLY, dbsize * sizeof(T));
+    arithmetic_sum_buffer_run(src, dstBuffer, groupnum, type, ddepth);
+    openCLReadBuffer(clCxt, dstBuffer, (void *)p, dbsize * sizeof(T));
     openCLFree(dstBuffer);
+
+    Scalar s = Scalar::all(0.0);
+    for (int i = 0; i < dbsize;)
+         for (int j = 0; j < src.oclchannels(); j++, i++)
+            s.val[j] += p[i];
+
     return s;
 }
 
-typedef Scalar (*sumFunc)(const oclMat &src, int type);
+typedef Scalar (*sumFunc)(const oclMat &src, int type, int ddepth);
+
 Scalar cv::ocl::sum(const oclMat &src)
 {
     if (!src.clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
-    static sumFunc functab[2] =
+    static sumFunc functab[3] =
     {
+        arithmetic_sum<int>,
         arithmetic_sum<float>,
         arithmetic_sum<double>
     };
 
-    sumFunc func;
-    func = functab[(int)src.clCxt->supportsFeature(Context::CL_DOUBLE)];
-    return func(src, 0);
+    bool hasDouble = src.clCxt->supportsFeature(Context::CL_DOUBLE);
+    int ddepth = std::max(src.depth(), CV_32S);
+    if (!hasDouble && ddepth == CV_64F)
+        ddepth = CV_32F;
+
+    sumFunc func = functab[ddepth - CV_32S];
+    return func(src, SUM, ddepth);
 }
 
 Scalar cv::ocl::absSum(const oclMat &src)
@@ -396,15 +410,20 @@ Scalar cv::ocl::absSum(const oclMat &src)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
-    static sumFunc functab[2] =
+    static sumFunc functab[3] =
     {
+        arithmetic_sum<int>,
         arithmetic_sum<float>,
         arithmetic_sum<double>
     };
 
-    sumFunc func;
-    func = functab[(int)src.clCxt->supportsFeature(Context::CL_DOUBLE)];
-    return func(src, 1);
+    bool hasDouble = src.clCxt->supportsFeature(Context::CL_DOUBLE);
+    int ddepth = std::max(src.depth(), CV_32S);
+    if (!hasDouble && ddepth == CV_64F)
+        ddepth = CV_32F;
+
+    sumFunc func = functab[ddepth - CV_32S];
+    return func(src, ABS_SUM, ddepth);
 }
 
 Scalar cv::ocl::sqrSum(const oclMat &src)
@@ -413,15 +432,20 @@ Scalar cv::ocl::sqrSum(const oclMat &src)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
-    static sumFunc functab[2] =
+    static sumFunc functab[3] =
     {
+        arithmetic_sum<int>,
         arithmetic_sum<float>,
         arithmetic_sum<double>
     };
 
-    sumFunc func;
-    func = functab[(int)src.clCxt->supportsFeature(Context::CL_DOUBLE)];
-    return func(src, 2);
+    bool hasDouble = src.clCxt->supportsFeature(Context::CL_DOUBLE);
+    int ddepth = std::max(src.depth(), CV_32S);
+    if (!hasDouble && ddepth == CV_64F)
+        ddepth = CV_32F;
+
+    sumFunc func = functab[ddepth - CV_32S];
+    return func(src, SQR_SUM, ddepth);
 }
 
 //////////////////////////////////////////////////////////////////////////////
