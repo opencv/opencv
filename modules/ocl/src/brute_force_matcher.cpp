@@ -45,22 +45,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
-#include <functional>
-#include <iterator>
-#include <vector>
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ////////////////////////////////////OpenCL kernel strings//////////////////////////
-        extern const char *brute_force_match;
-    }
-}
 
 static const int OPT_SIZE = 100;
 

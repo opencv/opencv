@@ -45,51 +45,11 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-#if !defined (HAVE_OPENCL)
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        void cv::ocl::StereoConstantSpaceBP::estimateRecommendedParams(int, int, int &, int &, int &, int &)
-        {
-            throw_nogpu();
-        }
-        cv::ocl::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, int)
-        {
-            throw_nogpu();
-        }
-        cv::ocl::StereoConstantSpaceBP::StereoConstantSpaceBP(int, int, int, int, float, float,
-            float, float, int, int)
-        {
-            throw_nogpu();
-        }
-
-        void cv::ocl::StereoConstantSpaceBP::operator()(const oclMat &, const oclMat &, oclMat &)
-        {
-            throw_nogpu();
-        }
-    }
-}
-
-#else /* !defined (HAVE_OPENCL) */
-
-namespace cv
-{
-    namespace ocl
-    {
-
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *stereocsbp;
-    }
-
-}
 namespace cv
 {
     namespace ocl
@@ -755,5 +715,3 @@ void cv::ocl::StereoConstantSpaceBP::operator()(const oclMat &left, const oclMat
     operators[msg_type](*this, u, d, l, r, disp_selected_pyr, data_cost, data_cost_selected, temp, out,
         left, right, disp);
 }
-
-#endif /* !defined (HAVE_OPENCL) */

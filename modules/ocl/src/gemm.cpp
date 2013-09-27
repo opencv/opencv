@@ -43,7 +43,6 @@
 //
 //M*/
 
-#include <iomanip>
 #include "precomp.hpp"
 
 namespace cv { namespace ocl {

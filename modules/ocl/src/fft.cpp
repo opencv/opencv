@@ -42,12 +42,10 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
-#include <iomanip>
 #include "precomp.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
 #if !defined HAVE_CLAMDFFT
 void cv::ocl::dft(const oclMat&, oclMat&, Size, int)

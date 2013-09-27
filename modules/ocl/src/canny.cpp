@@ -44,19 +44,10 @@
 //M*/
 
 #include "precomp.hpp"
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
-
-namespace cv
-{
-    namespace ocl
-    {
-        ///////////////////////////OpenCL kernel strings///////////////////////////
-        extern const char *imgproc_canny;
-    }
-}
 
 cv::ocl::CannyBuf::CannyBuf(const oclMat &dx_, const oclMat &dy_) : dx(dx_), dy(dy_), counter(NULL)
 {

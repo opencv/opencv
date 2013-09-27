@@ -46,30 +46,19 @@
 //M*/
 
 #include "precomp.hpp"
-
-#define ALIGN 32
-#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
+#include "opencl_kernels.hpp"
 
 using namespace cv;
 using namespace cv::ocl;
-using namespace std;
 
-////////////////////////////////////////////////////////////////////////
-//////////////////////////////// oclMat ////////////////////////////////
-////////////////////////////////////////////////////////////////////////
+#define ALIGN 32
+#define GPU_MATRIX_MALLOC_STEP(step) (((step) + ALIGN - 1) / ALIGN) * ALIGN
 
 // helper routines
 namespace cv
 {
     namespace ocl
     {
-        /////////////////////////// OpenCL kernel strings ///////////////////////////
-
-        extern const char *operator_copyToM;
-        extern const char *operator_convertTo;
-        extern const char *operator_setTo;
-        extern const char *operator_setToM;
-        extern const char *convertC3C4;
         extern DevMemType gDeviceMemType;
         extern DevMemRW gDeviceMemRW;
     }
