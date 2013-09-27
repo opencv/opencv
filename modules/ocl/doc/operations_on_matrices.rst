@@ -88,17 +88,17 @@ ocl::addWeighted
 --------------------
 Computes the weighted sum of two arrays.
 
-.. ocv:function:: void ocl::addWeighted(const oclMat &a, double  alpha, const oclMat &b, double beta, double gama, oclMat &c)
+.. ocv:function:: void ocl::addWeighted(const oclMat& src1, double  alpha, const oclMat& src2, double beta, double gama, oclMat& dst)
 
-    :param a: First source array.
+    :param src1: First source array.
 
     :param alpha: Weight for the first array elements.
 
-    :param b: Second source array of the same size and channel number as  ``src1`` .
+    :param src2: Second source array of the same size and channel number as  ``src1`` .
 
     :param beta: Weight for the second array elements.
 
-    :param c: Destination array that has the same size and number of channels as the input arrays.
+    :param dst: Destination array that has the same size and number of channels as the input arrays.
 
     :param gamma: Scalar added to each sum.
 
@@ -338,22 +338,6 @@ ocl::magnitude
 Returns void
 
 .. ocv:function:: void ocl::magnitude(const oclMat &x, const oclMat &y, oclMat &magnitude)
-
-    :param x: The floating-point array of x-coordinates of the vectors
-
-    :param y: he floating-point array of y-coordinates of the vectors; must have the same size as x
-
-    :param magnitude: The destination array; will have the same size and same type as x
-
-The function magnitude calculates magnitude of 2D vectors formed from the corresponding elements of x and y arrays. Supports only CV_32F and CV_64F data type.
-
-ocl::magnitudeSqr
----------------------
-Computes squared magnitudes of complex matrix elements.
-
-.. ocv:function:: void ocl::magnitudeSqr(const oclMat &x, oclMat &magnitude)
-
-.. ocv:function:: void ocl::magnitudeSqr(const oclMat &x, const oclMat &y, oclMat &magnitude)
 
     :param x: The floating-point array of x-coordinates of the vectors
 
