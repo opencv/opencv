@@ -1301,6 +1301,37 @@ TEST_P(AddWeighted, Mat)
     }
 }
 
+////////////////////////////////norm/////////////////////////////////////////////////
+
+PARAM_TEST_CASE(Norm, MatType, int, bool)
+{
+    cv::Mat mat1, mat2;
+    cv::ocl::oclMat gmat1, gmat2;
+    int type, norm_type;
+    bool isRelative;
+    virtual void SetUp()
+    {
+        type = GET_PARAM(0);
+        norm_type = GET_PARAM(1);
+        isRelative = GET_PARAM(2);
+        cv::RNG &rng = TS::ptr()->get_rng();
+        cv::Size size(MWIDTH, MHEIGHT);
+        mat1 = randomMat(rng, size, type, 0, 256, false);
+        mat2 = randomMat(rng, size, type, 0, 256, false);
+        gmat1.upload(mat1);
+        gmat2.upload(mat2);
+    }
+};
+
+TEST_P(Norm, Mat)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        double cpures = cv::norm(mat1, mat2, isRelative ? norm_type|NORM_RELATIVE : norm_type);
+        double gpures = cv::ocl::norm(gmat1, gmat2, isRelative ? norm_type|NORM_RELATIVE : norm_type);
+        EXPECT_NEAR(cpures, gpures, .5);
+    }
+}
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool())); // +
@@ -1328,5 +1359,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(testing::Range(CV_8U, CV_US
 INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
 INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
 INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(Values(CV_8U, CV_32S, CV_32F), Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2), Values(true, false)));
 
 #endif // HAVE_OPENCL
