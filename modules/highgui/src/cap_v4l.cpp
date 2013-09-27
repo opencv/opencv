@@ -248,10 +248,6 @@ make & enjoy!
 #define CHANNEL_NUMBER 1
 #define MAX_CAMERAS 8
 
-// Extra global values declared for error capture
-#define CAPV4L2_CAMERA_UNPLUGGED 2
-#define CAPV4L2_OK 1
-#define CAPV4L2_FAIL 0
 
 // default and maximum number of V4L buffers, not including last, 'special' buffer
 #define MAX_V4L_BUFFERS 10
@@ -1240,10 +1236,10 @@ static int read_frame_v4l2(CvCaptureCAM_V4L* capture) {
    //set timestamp in capture struct to be timestamp of most recent frame
    capture->timestamp = buf.timestamp;
 
-   return CAPV4L2_CAMERA_UNPLUGGED;
+   return 1;
 }
 
-static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
+static void mainloop_v4l2(CvCaptureCAM_V4L* capture) {
     unsigned int count;
 
     count = 1;
@@ -1277,11 +1273,8 @@ static int mainloop_v4l2(CvCaptureCAM_V4L* capture) {
                 break;
             }
 
-            switch(int readresult = read_frame_v4l2(capture) )
-                case CAM_UNPLUGGED:
-                  return CAPV4L2_FAIL;
-                default:
-                  return CAPV4L2_OK;
+            if (read_frame_v4l2 (capture))
+                break;
         }
     }
 }
@@ -1361,10 +1354,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
      {
         // skip first frame. it is often bad -- this is unnotied in traditional apps,
         //  but could be fatal if bad jpeg is enabled
-        if(!mainloop_v4l2(capture)){
-            fprintf( stderr, "HIGHGUI ERROR: V4L: Could not capture image.\n");
-            return 0;
-        }
+        mainloop_v4l2(capture);
      }
 #endif
 
@@ -1377,10 +1367,7 @@ static int icvGrabFrameCAM_V4L(CvCaptureCAM_V4L* capture) {
    if (V4L2_SUPPORT == 1)
    {
 
-    if(!mainloop_v4l2(capture)){
-        fprintf( stderr, "HIGHGUI ERROR: V4L: Could not capture image.\n");
-        return 0;
-    }
+     mainloop_v4l2(capture);
 
    }
 #endif /* HAVE_CAMV4L2 */
