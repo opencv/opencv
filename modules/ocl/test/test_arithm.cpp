@@ -1022,7 +1022,7 @@ TEST_P(MinMaxLoc, MASK)
 
 typedef ArithmTestBase Sum;
 
-TEST_P(Sum, DISABLED_MAT)
+TEST_P(Sum, MAT)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
     {
@@ -1031,7 +1031,121 @@ TEST_P(Sum, DISABLED_MAT)
         Scalar cpures = cv::sum(src1_roi);
         Scalar gpures = cv::ocl::sum(gsrc1);
 
-        //check results
+        // check results
+        EXPECT_NEAR(cpures[0], gpures[0], 0.1);
+        EXPECT_NEAR(cpures[1], gpures[1], 0.1);
+        EXPECT_NEAR(cpures[2], gpures[2], 0.1);
+        EXPECT_NEAR(cpures[3], gpures[3], 0.1);
+    }
+}
+
+typedef ArithmTestBase SqrSum;
+
+template <typename T, typename WT>
+static Scalar sqrSum(const Mat & src)
+{
+    Scalar sum = Scalar::all(0);
+    int cn = src.channels();
+    WT data[4] = { 0, 0, 0, 0 };
+
+    int cols = src.cols * cn;
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const T * const sdata = src.ptr<T>(y);
+        for (int x = 0; x < cols; )
+            for (int i = 0; i < cn; ++i, ++x)
+            {
+                WT t = static_cast<WT>(sdata[x]);
+                data[i] += t * t;
+            }
+    }
+
+    for (int i = 0; i < cn; ++i)
+        sum[i] = static_cast<double>(data[i]);
+
+    return sum;
+}
+
+typedef Scalar (*sumFunc)(const Mat &);
+
+TEST_P(SqrSum, MAT)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        static sumFunc funcs[] = { sqrSum<uchar, int>,
+                                 sqrSum<char, int>,
+                                 sqrSum<ushort, int>,
+                                 sqrSum<short, int>,
+                                 sqrSum<int, int>,
+                                 sqrSum<float, double>,
+                                 sqrSum<double, double>,
+                                 0 };
+
+        sumFunc func = funcs[src1_roi.depth()];
+        CV_Assert(func != 0);
+
+        Scalar cpures = func(src1_roi);
+        Scalar gpures = cv::ocl::sqrSum(gsrc1);
+
+        // check results
+        EXPECT_NEAR(cpures[0], gpures[0], 1.0);
+        EXPECT_NEAR(cpures[1], gpures[1], 1.0);
+        EXPECT_NEAR(cpures[2], gpures[2], 1.0);
+        EXPECT_NEAR(cpures[3], gpures[3], 1.0);
+    }
+}
+
+typedef ArithmTestBase AbsSum;
+
+template <typename T, typename WT>
+static Scalar absSum(const Mat & src)
+{
+    Scalar sum = Scalar::all(0);
+    int cn = src.channels();
+    WT data[4] = { 0, 0, 0, 0 };
+
+    int cols = src.cols * cn;
+    for (int y = 0; y < src.rows; ++y)
+    {
+        const T * const sdata = src.ptr<T>(y);
+        for (int x = 0; x < cols; )
+            for (int i = 0; i < cn; ++i, ++x)
+            {
+                WT t = static_cast<WT>(sdata[x]);
+                data[i] += t >= 0 ? t : -t;
+            }
+    }
+
+    for (int i = 0; i < cn; ++i)
+        sum[i] = static_cast<double>(data[i]);
+
+    return sum;
+}
+
+TEST_P(AbsSum, MAT)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        static sumFunc funcs[] = { absSum<uchar, int>,
+                                 absSum<char, int>,
+                                 absSum<ushort, int>,
+                                 absSum<short, int>,
+                                 absSum<int, int>,
+                                 absSum<float, double>,
+                                 absSum<double, double>,
+                                 0 };
+
+        sumFunc func = funcs[src1_roi.depth()];
+        CV_Assert(func != 0);
+
+        Scalar cpures = func(src1_roi);
+        Scalar gpures = cv::ocl::absSum(gsrc1);
+
+        // check results
         EXPECT_NEAR(cpures[0], gpures[0], 0.1);
         EXPECT_NEAR(cpures[1], gpures[1], 0.1);
         EXPECT_NEAR(cpures[2], gpures[2], 0.1);
@@ -1319,6 +1433,8 @@ INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(testing::Range(CV_8U, CV_USRTYPE1)
 INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
 INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, SqrSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, AbsSum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
 INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
 INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
