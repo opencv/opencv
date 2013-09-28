@@ -260,8 +260,10 @@ double cv::PSNR(InputArray _src1, InputArray _src2)
 {
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     CV_Assert( src1.depth() == CV_8U );
-    double diff = std::sqrt(norm(src1, src2, NORM_L2SQR)/(src1.total()*src1.channels()));
-    return 20*log10(255./(diff+DBL_EPSILON));
+    double diff = norm(src1, src2, NORM_L2SQR) / (src1.total()*src1.channels());
+    // better/faster:  log(255/sqrt(x))=log(255)-log(x)*0.5f;  log(255/y)=log(255)-log(y);
+    return (diff>DBL_EPSILON) ? 20*log10(255.) - 10*log10(diff) : 20*log10(255./DBL_EPSILON); // returns 30..50
+    // http://en.wikipedia.org/wiki/PSNR
 }
 
 
