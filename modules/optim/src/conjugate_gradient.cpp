@@ -37,11 +37,11 @@ namespace cv{namespace optim{
         print_matrix(d);
 
         for(int i=0;i<SEC_METHOD_ITERATIONS;i++){
-            _f->getGradient((double*)x.data,(double*)buf1.data); 
+            _f->getGradient((double*)x.data,(double*)buf1.data);
             dprintf(("buf1:\n"));
             print_matrix(buf1);
             x=x+sigma*d;
-            _f->getGradient((double*)x.data,(double*)buf2.data); 
+            _f->getGradient((double*)x.data,(double*)buf2.data);
             dprintf(("buf2:\n"));
             print_matrix(buf2);
             double d1=buf1.dot(d), d2=buf2.dot(d);
@@ -85,10 +85,8 @@ namespace cv{namespace optim{
             proxy_x=x_mat;
         }
         _Function->getGradient((double*)proxy_x.data,(double*)d.data);
-        if(true){
         d*=-1.0;
         d.copyTo(r);
-        }else{((double*)d.data)[1]=42.0;}
 
         //here everything goes. check that everything is setted properly
         dprintf(("proxy_x\n"));print_matrix(proxy_x);
