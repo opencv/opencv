@@ -2485,12 +2485,16 @@ struct RGB888toYUV420pInvoker: public ParallelLoopBody
                 y[2*k + dst_->step + 0] = saturate_cast<uchar>(y10 >> ITUR_BT_601_SHIFT);
                 y[2*k + dst_->step + 1] = saturate_cast<uchar>(y11 >> ITUR_BT_601_SHIFT);
 
-                const int shifted128 = (128 << ITUR_BT_601_SHIFT);
-                int u00 = ITUR_BT_601_CRU * r00 + ITUR_BT_601_CGU * g00 + ITUR_BT_601_CBU * b00 + halfShift + shifted128;
-                int v00 = ITUR_BT_601_CBU * r00 + ITUR_BT_601_CGV * g00 + ITUR_BT_601_CBV * b00 + halfShift + shifted128;
+                const int halfShift_4 = halfShift << 2;
+                const int shifted128_4 = (128 << (ITUR_BT_601_SHIFT + 2));
+                int r4 = r00 + r01 + r10 + r11 + 2;
+                int g4 = g00 + g01 + g10 + g11 + 2;
+                int b4 = b00 + b01 + b10 + b11 + 2;
+                int u4 = ITUR_BT_601_CRU * r4 + ITUR_BT_601_CGU * g4 + ITUR_BT_601_CBU * b4 + halfShift_4 + shifted128_4;
+                int v4 = ITUR_BT_601_CBU * r4 + ITUR_BT_601_CGV * g4 + ITUR_BT_601_CBV * b4 + halfShift_4 + shifted128_4;
 
-                u[k] = saturate_cast<uchar>(u00 >> ITUR_BT_601_SHIFT);
-                v[k] = saturate_cast<uchar>(v00 >> ITUR_BT_601_SHIFT);
+                u[k] = saturate_cast<uchar>(u4 >> (ITUR_BT_601_SHIFT + 2));
+                v[k] = saturate_cast<uchar>(v4 >> (ITUR_BT_601_SHIFT + 2));
             }
         }
     }
