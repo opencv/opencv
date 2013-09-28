@@ -59,7 +59,7 @@ public:
   {
     isAsymmetricGrid = _isAsymmetricGrid;
     squareSize = 1.0f;
-    maxRectifiedDistance = (float)(squareSize / 2.0);
+    maxRectifiedDistance = (float)(squareSize * 0.5f);
   }
   void findGrid(const std::vector<cv::Point2f> points, cv::Size patternSize, std::vector<cv::Point2f>& centers);
 
