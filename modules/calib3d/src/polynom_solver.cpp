@@ -7,7 +7,7 @@ using namespace std;
 
 int solve_deg2(double a, double b, double c, double & x1, double & x2)
 {
-  double delta = b * b - 4 * a * c;
+  double delta = (b * b) - (4 * a * c);
 
   if (delta < 0) return 0;
 
@@ -34,7 +34,7 @@ int solve_deg3(double a, double b, double c, double d,
 {
   if (a == 0) {
     // Solve second order sytem
-    if (b == 0)	{
+    if (b == 0) {
       // Solve first order system
       if (c == 0)
     return 0;
@@ -54,8 +54,8 @@ int solve_deg3(double a, double b, double c, double d,
   double d_a = inv_a * d;
 
   // Solve the cubic equation
-  double Q = (3 * c_a - b_a2) / 9;
-  double R = (9 * b_a * c_a - 27 * d_a - 2 * b_a * b_a2) / 54;
+  double Q = (3 * c_a - b_a2) * (1.0/9);
+  double R = (9 * b_a * c_a - 27 * d_a - 2 * b_a * b_a2) * (1.0/54);
   double Q3 = Q * Q * Q;
   double D = Q3 + R * R;
   double b_a_3 = (1. / 3.) * b_a;
@@ -74,10 +74,10 @@ int solve_deg3(double a, double b, double c, double d,
   if (D <= 0) {
     // Three real roots
     double theta = acos(R / sqrt(-Q3));
-    double sqrt_Q = sqrt(-Q);
-    x0 = 2 * sqrt_Q * cos(theta             / 3.0) - b_a_3;
-    x1 = 2 * sqrt_Q * cos((theta + 2 * CV_PI)/ 3.0) - b_a_3;
-    x2 = 2 * sqrt_Q * cos((theta + 4 * CV_PI)/ 3.0) - b_a_3;
+    double sqrt_Q = 2 * sqrt(-Q); // 2x
+    x0 = sqrt_Q * cos( theta              *(1/3.0)) - b_a_3;
+    x1 = sqrt_Q * cos((theta + 2 * CV_PI) *(1/3.0)) - b_a_3;
+    x2 = sqrt_Q * cos((theta + 4 * CV_PI) *(1/3.0)) - b_a_3;
 
     return 3;
   }
