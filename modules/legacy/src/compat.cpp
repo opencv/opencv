@@ -251,8 +251,8 @@ double cvPseudoInverse( const CvArr* src, CvArr* dst )
 void cvConvexHull( CvPoint* points, int num_points, CvRect*,
                    int orientation, int* hull, int* hullsize )
 {
-    CvMat points1 = cvMat( 1, num_points, CV_32SC2, points );
-    CvMat hull1 = cvMat( 1, num_points, CV_32SC1, hull );
+    const CvMat points1 = cvMat( 1, num_points, CV_32SC2, points );
+          CvMat hull1   = cvMat( 1, num_points, CV_32SC1, hull );
 
     cvConvexHull2( &points1, &hull1, orientation, 0 );
     *hullsize = hull1.cols;
@@ -276,8 +276,8 @@ void cvMinAreaRect( CvPoint* points, int n, int, int, int, int,
 void  cvFitLine3D( CvPoint3D32f* points, int count, int dist,
                    void *param, float reps, float aeps, float* line )
 {
-    CvMat mat = cvMat( 1, count, CV_32FC3, points );
-    float _param = param != NULL ? *(float*)param : 0.f;
+    const CvMat mat = cvMat( 1, count, CV_32FC3, points );
+    const float _param = param != NULL ? *(float*)param : 0.f;
     assert( dist != CV_DIST_USER );
     cvFitLine( &mat, dist, _param, reps, aeps, line );
 }
@@ -286,8 +286,8 @@ void  cvFitLine3D( CvPoint3D32f* points, int count, int dist,
 void  cvFitLine2D( CvPoint2D32f* points, int count, int dist,
                    void *param, float reps, float aeps, float* line )
 {
-    CvMat mat = cvMat( 1, count, CV_32FC2, points );
-    float _param = param != NULL ? *(float*)param : 0.f;
+    const CvMat mat = cvMat( 1, count, CV_32FC2, points );
+    const float _param = param != NULL ? *(float*)param : 0.f;
     assert( dist != CV_DIST_USER );
     cvFitLine( &mat, dist, _param, reps, aeps, line );
 }
@@ -304,8 +304,8 @@ void cvFitEllipse( const CvPoint2D32f* points, int count, CvBox2D* box )
 void  cvProject3D( CvPoint3D32f* points3D, int count,
                    CvPoint2D32f* points2D, int xIndx, int yIndx)
 {
-    CvMat src = cvMat( 1, count, CV_32FC3, points3D );
-    CvMat dst = cvMat( 1, count, CV_32FC2, points2D );
+    const CvMat src = cvMat( 1, count, CV_32FC3, points3D );
+          CvMat dst = cvMat( 1, count, CV_32FC2, points2D );
     float m[6] = {0,0,0,0,0,0};
     CvMat M = cvMat( 2, 3, CV_32F, m );
 
@@ -520,7 +520,7 @@ int cvFindChessBoardCornerGuesses( const void* arr, void*,
 
 /* Calibrates camera using multiple views of calibration pattern */
 void cvCalibrateCamera( int image_count, int* _point_counts,
-    CvSize image_size, CvPoint2D32f* _image_points, CvPoint3D32f* _object_points,
+    CvSize image_size, CvPoint2D32f* _image_points, CvPoint3D32f* _object_points, // read_only_pointers should be const
     float* _distortion_coeffs, float* _camera_matrix, float* _translation_vectors,
     float* _rotation_matrices, int flags )
 {
@@ -545,7 +545,7 @@ void cvCalibrateCamera( int image_count, int* _point_counts,
 
 
 void cvCalibrateCamera_64d( int image_count, int* _point_counts,
-    CvSize image_size, CvPoint2D64f* _image_points, CvPoint3D64f* _object_points,
+    CvSize image_size, CvPoint2D64f* _image_points, CvPoint3D64f* _object_points, // read_only_pointers should be const
     double* _distortion_coeffs, double* _camera_matrix, double* _translation_vectors,
     double* _rotation_matrices, int flags )
 {
