@@ -96,6 +96,8 @@ static void readDirectory( const string& directoryName, vector<string>& filename
             else
                 filenames.push_back( string(dent->d_name) );
         }
+
+        closedir( dir );
     }
 #endif
 
