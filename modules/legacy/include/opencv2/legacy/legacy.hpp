@@ -543,20 +543,20 @@ typedef struct CvContourOrientation
 #define CV_CAMERA_TO_WARP 1
 #define CV_WARP_TO_CAMERA 2
 
-CVAPI(int) icvConvertWarpCoordinates(double coeffs[3][3],
+CVAPI(int) icvConvertWarpCoordinates(const double coeffs[3][3],
                                 CvPoint2D32f* cameraPoint,
                                 CvPoint2D32f* warpPoint,
                                 int direction);
 
-CVAPI(int) icvGetSymPoint3D(  CvPoint3D64f pointCorner,
-                            CvPoint3D64f point1,
-                            CvPoint3D64f point2,
-                            CvPoint3D64f *pointSym2);
+CVAPI(int) icvGetSymPoint3D( const CvPoint3D64f pointCorner,
+                            const CvPoint3D64f point1,
+                            const CvPoint3D64f point2,
+                                  CvPoint3D64f *pointSym2);
 
-CVAPI(void) icvGetPieceLength3D(CvPoint3D64f point1,CvPoint3D64f point2,double* dist);
+CVAPI(void) icvGetPieceLength3D(const CvPoint3D64f point1,const CvPoint3D64f point2,double* dist);
 
 CVAPI(int) icvCompute3DPoint(    double alpha,double betta,
-                            CvStereoLineCoeff* coeffs,
+                            const CvStereoLineCoeff* coeffs,
                             CvPoint3D64f* point);
 
 CVAPI(int) icvCreateConvertMatrVect( double*     rotMatr1,
@@ -566,10 +566,10 @@ CVAPI(int) icvCreateConvertMatrVect( double*     rotMatr1,
                                 double*     convRotMatr,
                                 double*     convTransVect);
 
-CVAPI(int) icvConvertPointSystem(CvPoint3D64f  M2,
+CVAPI(int) icvConvertPointSystem(const CvPoint3D64f  M2,
                             CvPoint3D64f* M1,
-                            double*     rotMatr,
-                            double*     transVect
+                            const double*     rotMatr,
+                            const double*     transVect
                             );
 
 CVAPI(int) icvComputeCoeffForStereo(  CvStereoCamera* stereoCamera);
@@ -665,15 +665,15 @@ CVAPI(void) icvGetCrossPiecePiece( CvPoint2D64f p1_start,CvPoint2D64f p1_end,
                             CvPoint2D64f* cross,
                             int* result);
 
-CVAPI(void) icvGetPieceLength(CvPoint2D64f point1,CvPoint2D64f point2,double* dist);
+CVAPI(void) icvGetPieceLength(const CvPoint2D64f point1,const CvPoint2D64f point2,double* dist);
 
 CVAPI(void) icvGetCrossRectDirect(    CvSize imageSize,
                             double a,double b,double c,
                             CvPoint2D64f *start,CvPoint2D64f *end,
                             int* result);
 
-CVAPI(void) icvProjectPointToImage(   CvPoint3D64f point,
-                            double* camMatr,double* rotMatr,double* transVect,
+CVAPI(void) icvProjectPointToImage(   const CvPoint3D64f point,
+                            const double* camMatr,const double* rotMatr,const double* transVect,
                             CvPoint2D64f* projPoint);
 
 CVAPI(void) icvGetQuadsTransform( CvSize        imageSize,
@@ -706,16 +706,16 @@ CVAPI(void) icvGetMiddleAnglePoint(   CvPoint2D64f basePoint,
                             CvPoint2D64f point1,CvPoint2D64f point2,
                             CvPoint2D64f* midPoint);
 
-CVAPI(void) icvGetNormalDirect(double* direct,CvPoint2D64f point,double* normDirect);
+CVAPI(void) icvGetNormalDirect(const double* direct,const CvPoint2D64f point,double* normDirect);
 
-CVAPI(double) icvGetVect(CvPoint2D64f basePoint,CvPoint2D64f point1,CvPoint2D64f point2);
+CVAPI(double) icvGetVect(const CvPoint2D64f basePoint,const CvPoint2D64f point1,const CvPoint2D64f point2);
 
-CVAPI(void) icvProjectPointToDirect(  CvPoint2D64f point,double* lineCoeff,
+CVAPI(void) icvProjectPointToDirect(  const CvPoint2D64f point,const double* lineCoeff,
                             CvPoint2D64f* projectPoint);
 
-CVAPI(void) icvGetDistanceFromPointToDirect( CvPoint2D64f point,double* lineCoef,double*dist);
+CVAPI(void) icvGetDistanceFromPointToDirect( const CvPoint2D64f point,const double* lineCoef,double*dist);
 
-CVAPI(IplImage*) icvCreateIsometricImage( IplImage* src, IplImage* dst,
+CVAPI(IplImage*) icvCreateIsometricImage( const IplImage* src, IplImage* dst,
                               int desired_depth, int desired_num_channels );
 
 CVAPI(void) cvDeInterlace( const CvArr* frame, CvArr* fieldEven, CvArr* fieldOdd );
