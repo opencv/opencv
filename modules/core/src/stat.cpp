@@ -1899,7 +1899,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
         CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
                 ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
         size_t total_size = src1.total();
-        int rows = src1.size[0], cols = (int)(total_size/rows);
+        const int rows = src1.size[0], cols = (int)(total_size/rows);
         if( src1.dims == 2 || (src1.isContinuous() && src2.isContinuous() && mask.isContinuous() && cols > 0 && (size_t)rows*cols == total_size)
             && (normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR) )
         {
@@ -2219,7 +2219,7 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
             if( blockSum && (count + blockSize >= intSumBlockSize || (i+1 >= it.nplanes && j+bsz >= total)) )
             {
                 result.d += isum;
-                isum = 0;
+                isum  = 0;
                 count = 0;
             }
             ptrs[0] += bsz*esz;
@@ -2572,7 +2572,7 @@ void cv::findNonZero( InputArray _src, OutputArray _idx )
 {
     Mat src = _src.getMat();
     CV_Assert( src.type() == CV_8UC1 );
-    int n = countNonZero(src);
+    const int n = countNonZero(src);
     if( _idx.kind() == _InputArray::MAT && !_idx.getMatRef().isContinuous() )
         _idx.release();
     _idx.create(n, 1, CV_32SC2);
