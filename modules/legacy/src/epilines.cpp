@@ -50,6 +50,7 @@
 
 #define EPS64D 1e-9
 
+typedef double*  CvVect64d; // legacy\compat.hpp
 
 /* static local func */
 
