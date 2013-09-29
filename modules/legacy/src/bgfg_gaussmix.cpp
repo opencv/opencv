@@ -344,7 +344,7 @@ typedef struct CvGaussBGStatModel2Data
 //shadow detection performed per pixel
 // should work for rgb data, could be usefull for gray scale and depth data as well
 //  See: Prati,Mikic,Trivedi,Cucchiarra,"Detecting Moving Shadows...",IEEE PAMI,2003.
-CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
+CV_INLINE int _icvRemoveShadowGMM(const float* data, const int nD,
                                   unsigned char nModes,
                                   CvPBGMMGaussian* pGMM,
                                   float m_fTb,
@@ -352,16 +352,13 @@ CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
                                   float m_fTau)
 {
     float tWeight = 0;
-    float numerator, denominator;
     // check all the components  marked as background:
-    for (int iModes=0;iModes<nModes;iModes++)
+    for (int iModes=0; iModes<nModes; iModes++)
     {
-
         CvPBGMMGaussian g=pGMM[iModes];
+        float numerator = 0.0f, denominator = 0.0f;
 
-        numerator = 0.0f;
-        denominator = 0.0f;
-        for (int iD=0;iD<nD;iD++)
+        for (int iD=0; iD<nD; iD++)
         {
             numerator   += data[iD]  * g.mean[iD];
             denominator += g.mean[iD]* g.mean[iD];
@@ -380,13 +377,13 @@ CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
 
             float dist2a=0.0f;
 
-            for (int iD=0;iD<nD;iD++)
+            for (int iD=0; iD<nD; iD++)
             {
                 float dD= a*g.mean[iD] - data[iD];
                 dist2a += (dD*dD);
             }
 
-            if (dist2a<m_fTb*g.variance*a*a)
+            if (dist2a < m_fTb*g.variance*a*a)
             {
                 return 2;
             }
@@ -415,7 +412,7 @@ CV_INLINE int _icvRemoveShadowGMM(float* data, int nD,
 //IEEE Trans. on Pattern Analysis and Machine Intelligence, vol.26, no.5, pages 651-656, 2004
 //http://www.zoranz.net/Publications/zivkovic2004PAMI.pdf
 
-CV_INLINE int _icvUpdateGMM(float* data, int nD,
+CV_INLINE int _icvUpdateGMM(const float* data, const int nD,
                             unsigned char* pModesUsed,
                             CvPBGMMGaussian* pGMM,
                             int m_nM,
@@ -430,59 +427,59 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
 {
     //calculate distances to the modes (+ sort)
     //here we need to go in descending order!!!
-    bool bBackground=0;//return value -> true - the pixel classified as background
+    bool bBackground = 0;//return value -> true - the pixel classified as background
 
     //internal:
-    bool bFitsPDF=0;//if it remains zero a new GMM mode will be added
-    float m_fOneMinAlpha=1-m_fAlphaT;
-    unsigned char nModes=*pModesUsed;//current number of modes in GMM
-    float totalWeight=0.0f;
+    bool bFitsPDF = 0;//if it remains zero a new GMM mode will be added
+    const float m_fOneMinAlpha = 1-m_fAlphaT;
+    unsigned char nModes = *pModesUsed;//current number of modes in GMM
+    float totalWeight = 0.0f;
 
     //////
     //go through all modes
-    int iMode=0;
-    CvPBGMMGaussian* pGauss=pGMM;
-    for (;iMode<nModes;iMode++,pGauss++)
+    int iMode = 0;
+    CvPBGMMGaussian* pGauss = pGMM;
+    for (; iMode<nModes; iMode++,pGauss++)
     {
         float weight = pGauss->weight;//need only weight if fit is found
-        weight=m_fOneMinAlpha*weight+m_fPrune;
+        weight = (m_fOneMinAlpha*weight) + m_fPrune;
 
         ////
         //fit not found yet
         if (!bFitsPDF)
         {
             //check if it belongs to some of the remaining modes
-            float var=pGauss->variance;
+            float var = pGauss->variance;
 
             //calculate difference and distance
-            float dist2=0.0f;
+            float dist2 = 0.0f;
 #if (CV_BGFG_MOG2_NDMAX==1)
             float dData=pGauss->mean[0]-data[0];
             dist2=dData*dData;
 #else
             float dData[CV_BGFG_MOG2_NDMAX];
 
-            for (int iD=0;iD<nD;iD++)
+            for (int iD=0; iD<nD; iD++)
             {
-                dData[iD]=pGauss->mean[iD]-data[iD];
-                dist2+=dData[iD]*dData[iD];
+                dData[iD] = pGauss->mean[iD]-data[iD];
+                dist2 += dData[iD]*dData[iD];
             }
 #endif
             //background? - m_fTb - usually larger than m_fTg
-            if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
-                bBackground=1;
+            if ((totalWeight<m_fTB) && (dist2<m_fTb*var))
+                bBackground = 1;
 
             //check fit
-            if (dist2<m_fTg*var)
+            if (dist2 < m_fTg*var)
             {
                 /////
                 //belongs to the mode - bFitsPDF becomes 1
-                bFitsPDF=1;
+                bFitsPDF = 1;
 
                 //update distribution
 
                 //update weight
-                weight+=m_fAlphaT;
+                weight += m_fAlphaT;
 
                 float k = m_fAlphaT/weight;
 
@@ -490,7 +487,7 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
 #if (CV_BGFG_MOG2_NDMAX==1)
                 pGauss->mean[0]-=k*dData;
 #else
-                for (int iD=0;iD<nD;iD++)
+                for (int iD=0; iD<nD; iD++)
                 {
                     pGauss->mean[iD]-=k*dData[iD];
                 }
@@ -504,7 +501,7 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
                 //sort
                 //all other weights are at the same place and
                 //only the matched (iModes) is higher -> just find the new place for it
-                for (int iLocal = iMode;iLocal>0;iLocal--)
+                for (int iLocal = iMode; iLocal>0; iLocal--)
                 {
                     //check one up
                     if (weight < (pGMM[iLocal-1].weight))
@@ -517,7 +514,7 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
                         CvPBGMMGaussian temp = pGMM[iLocal];
                         pGMM[iLocal] = pGMM[iLocal-1];
                         pGMM[iLocal-1] = temp;
-                        pGauss--;
+                        pGauss --;
                     }
                 }
                 //belongs to the mode - bFitsPDF becomes 1
@@ -526,22 +523,26 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
         }//!bFitsPDF)
 
         //check prune
-        if (weight<-m_fPrune)
+        if (weight < -m_fPrune)
         {
-            weight=0.0;
-            nModes--;
+            weight = 0.0;
+            nModes --;
         }
 
-        pGauss->weight=weight;//update weight by the calculated value
-        totalWeight+=weight;
+        pGauss->weight = weight;//update weight by the calculated value
+        totalWeight += weight;
     }
     //go through all modes
     //////
 
-    //renormalize weights
-    for (iMode = 0; iMode < nModes; iMode++)
+    if (nModes > 0)
     {
-        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
+        const float inv = 1.0f / totalWeight;
+        //renormalize weights
+        for (iMode = 0; iMode < nModes; iMode++)
+        {
+            pGMM[iMode].weight = pGMM[iMode].weight * inv;
+        }
     }
 
     //make new mode if needed and exit
@@ -550,37 +551,37 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
         if (nModes==m_nM)
         {
             //replace the weakest
-            pGauss=pGMM+m_nM-1;
+            pGauss = pGMM+m_nM-1;
         }
         else
         {
             //add a new one
-            pGauss=pGMM+nModes;
-            nModes++;
+            pGauss = pGMM+nModes;
+            nModes ++;
         }
 
-        if (nModes==1)
+        if (nModes == 1)
         {
-            pGauss->weight=1;
+            pGauss->weight = 1;
         }
         else
         {
-            pGauss->weight=m_fAlphaT;
+            pGauss->weight = m_fAlphaT;
 
             //renormalize all weights
             for (iMode = 0; iMode < nModes-1; iMode++)
             {
-                pGMM[iMode].weight *=m_fOneMinAlpha;
+                pGMM[iMode].weight *= m_fOneMinAlpha;
             }
         }
 
         //init
         memcpy(pGauss->mean,data,nD*sizeof(float));
-        pGauss->variance=m_fVarInit;
+        pGauss->variance = m_fVarInit;
 
         //sort
         //find the new place for it
-        for (int iLocal = nModes-1;iLocal>0;iLocal--)
+        for (int iLocal = nModes-1; iLocal>0; iLocal--)
         {
             //check one up
             if (m_fAlphaT < (pGMM[iLocal-1].weight))
@@ -598,7 +599,7 @@ CV_INLINE int _icvUpdateGMM(float* data, int nD,
     }
 
     //set the number of modes
-    *pModesUsed=nModes;
+    *pModesUsed = nModes;
 
     return bBackground;
 }
@@ -622,26 +623,26 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
     bool bBackground=0;//return value -> true - the pixel classified as background
 
     //internal:
-    bool bFitsPDF=0;//if it remains zero a new GMM mode will be added
-    float m_fOneMinAlpha=1-m_fAlphaT;
-    unsigned char nModes=*pModesUsed;//current number of modes in GMM
-    float totalWeight=0.0f;
+    bool bFitsPDF = 0;//if it remains zero a new GMM mode will be added
+    const float m_fOneMinAlpha = 1-m_fAlphaT;
+    unsigned char nModes = *pModesUsed;//current number of modes in GMM
+    float totalWeight = 0.0f;
 
     //////
     //go through all modes
-    int iMode=0;
-    CvPBGMMGaussian* pGauss=pGMM;
-    for (;iMode<nModes;iMode++,pGauss++)
+    int iMode = 0;
+    CvPBGMMGaussian* pGauss = pGMM;
+    for (; iMode<nModes; iMode++,pGauss++)
     {
         float weight = pGauss->weight;//need only weight if fit is found
-        weight=m_fOneMinAlpha*weight+m_fPrune;
+        weight = (m_fOneMinAlpha*weight) + m_fPrune;
 
         ////
         //fit not found yet
         if (!bFitsPDF)
         {
             //check if it belongs to some of the remaining modes
-            float var=pGauss->variance;
+            float var = pGauss->variance;
 
             //calculate difference and distance
             float muR = pGauss->mean[0];
@@ -652,25 +653,25 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
             float dG=muG - g;
             float dB=muB - b;
 
-            float dist2=(dR*dR+dG*dG+dB*dB);
+            float dist2 = (dR*dR+dG*dG+dB*dB);
 
             //background? - m_fTb - usually larger than m_fTg
-            if ((totalWeight<m_fTB)&&(dist2<m_fTb*var))
-                bBackground=1;
+            if ((totalWeight<m_fTB) && (dist2<m_fTb*var))
+                bBackground = 1;
 
             //check fit
-            if (dist2<m_fTg*var)
+            if (dist2 < m_fTg*var)
             {
                 /////
                 //belongs to the mode - bFitsPDF becomes 1
-                bFitsPDF=1;
+                bFitsPDF = 1;
 
                 //update distribution
 
                 //update weight
-                weight+=m_fAlphaT;
+                weight += m_fAlphaT;
 
-                float k = m_fAlphaT/weight;
+                float k = m_fAlphaT / weight;
 
                 //update mean
                 pGauss->mean[0] = muR - k*(dR);
@@ -685,7 +686,7 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
                 //sort
                 //all other weights are at the same place and
                 //only the matched (iModes) is higher -> just find the new place for it
-                for (int iLocal = iMode;iLocal>0;iLocal--)
+                for (int iLocal = iMode; iLocal>0; iLocal--)
                 {
                     //check one up
                     if (weight < (pGMM[iLocal-1].weight))
@@ -698,7 +699,7 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
                         CvPBGMMGaussian temp = pGMM[iLocal];
                         pGMM[iLocal] = pGMM[iLocal-1];
                         pGMM[iLocal-1] = temp;
-                        pGauss--;
+                        pGauss --;
                     }
                 }
                 //belongs to the mode - bFitsPDF becomes 1
@@ -708,22 +709,26 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
         }//!bFitsPDF)
 
         //check prunning
-        if (weight<-m_fPrune)
+        if (weight < -m_fPrune)
         {
-            weight=0.0;
-            nModes--;
+            weight = 0.0;
+            nModes --;
         }
 
-        pGauss->weight=weight;
-        totalWeight+=weight;
+        pGauss->weight = weight;
+        totalWeight += weight;
     }
     //go through all modes
     //////
 
-    //renormalize weights
-    for (iMode = 0; iMode < nModes; iMode++)
+    if (nModes > 0)
     {
-        pGMM[iMode].weight = pGMM[iMode].weight/totalWeight;
+        const float inv = 1.0f / totalWeight;
+        //renormalize weights
+        for (iMode = 0; iMode < nModes; iMode++)
+        {
+            pGMM[iMode].weight = pGMM[iMode].weight * inv;
+        }
     }
 
     //make new mode if needed and exit
@@ -732,40 +737,40 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
         if (nModes==m_nM)
         {
             //replace the weakest
-            pGauss=pGMM+m_nM-1;
+            pGauss = pGMM+m_nM-1;
         }
         else
         {
             //add a new one
-            pGauss=pGMM+nModes;
-            nModes++;
+            pGauss = pGMM+nModes;
+            nModes ++;
         }
 
-        if (nModes==1)
+        if (nModes == 1)
         {
-            pGauss->weight=1;
+            pGauss->weight = 1;
         }
         else
         {
-            pGauss->weight=m_fAlphaT;
+            pGauss->weight = m_fAlphaT;
 
             //renormalize all weights
             for (iMode = 0; iMode < nModes-1; iMode++)
             {
-                pGMM[iMode].weight *=m_fOneMinAlpha;
+                pGMM[iMode].weight *= m_fOneMinAlpha;
             }
         }
 
         //init
-        pGauss->mean[0]=r;
-        pGauss->mean[1]=g;
-        pGauss->mean[2]=b;
+        pGauss->mean[0] = r;
+        pGauss->mean[1] = g;
+        pGauss->mean[2] = b;
 
-        pGauss->variance=m_fVarInit;
+        pGauss->variance = m_fVarInit;
 
         //sort
         //find the new place for it
-        for (int iLocal = nModes-1;iLocal>0;iLocal--)
+        for (int iLocal = nModes-1; iLocal>0; iLocal--)
         {
             //check one up
             if (m_fAlphaT < (pGMM[iLocal-1].weight))
@@ -783,7 +788,7 @@ CV_INLINE int _icvUpdateGMM_C3(float r,float g, float b,
     }
 
     //set the number of modes
-    *pModesUsed=nModes;
+    *pModesUsed = nModes;
 
     return bBackground;
 }
@@ -820,18 +825,18 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
 
     int x, y;
     float data[CV_BGFG_MOG2_NDMAX];
-    float prune=-alpha*fCT;
+    const float prune = -alpha*fCT;
 
     //general nD
 
-    if (nD!=3)
+    if (nD != 3)
     {
         switch (CV_MAT_DEPTH(src->type))
         {
             case CV_8U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    uchar* sptr = src->data.ptr + src->step*y;
+                    const uchar* sptr  = src->data.ptr + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -851,7 +856,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    short* sptr = src->data.s + src->step*y;
+                    const short* sptr = src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -871,7 +876,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
+                    const unsigned short* sptr = (unsigned short*) (src->data.s + src->step*y);
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -891,7 +896,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    int* sptr = src->data.i + src->step*y;
+                    const int* sptr = src->data.i + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -911,7 +916,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    float* sptr = src->data.fl + src->step*y;
+                    const float* sptr = src->data.fl + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -929,7 +934,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_64F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    double* sptr = src->data.db + src->step*y;
+                    const double* sptr = src->data.db + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -954,13 +959,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_8U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    uchar* sptr = src->data.ptr + src->step*y;
+                    const uchar* sptr = src->data.ptr + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -974,13 +979,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    short* sptr = src->data.s + src->step*y;
+                    const short* sptr = src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -994,13 +999,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_16U:
                 for( y = 0; y < size.height; y++ )
                 {
-                    unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
+                    const unsigned short* sptr = (unsigned short*) src->data.s + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1014,13 +1019,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32S:
                 for( y = 0; y < size.height; y++ )
                 {
-                    int* sptr = src->data.i + src->step*y;
+                    const int* sptr = src->data.i + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1034,7 +1039,7 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_32F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    float* sptr = src->data.fl + src->step*y;
+                    const float* sptr = src->data.fl + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
@@ -1052,13 +1057,13 @@ static void icvUpdatePixelBackgroundGMM2( const CvArr* srcarr, CvArr* dstarr ,
             case CV_64F:
                 for( y = 0; y < size.height; y++ )
                 {
-                    double* sptr = src->data.db + src->step*y;
+                    const double* sptr = src->data.db + src->step*y;
                     uchar* pDataOutput = dst->data.ptr + dst->step*y;
                     for( x = 0; x < size.width; x++,
                         pGMM+=nM,pUsedModes++,pDataOutput++,sptr+=nD)
                     {
                         //convert data
-                        data[0]=float(sptr[0]),data[1]=float(sptr[1]),data[2]=float(sptr[2]);
+                        data[0]=float(sptr[0]), data[1]=float(sptr[1]), data[2]=float(sptr[2]);
                         //update GMM model
                         int result = _icvUpdateGMM_C3(data[0],data[1],data[2],pUsedModes,pGMM,nM,alpha, fTb, fTB, fTg, fVarInit, fVarMax, fVarMin,prune);
                         //detect shadows in the foreground
@@ -1097,7 +1102,7 @@ CV_IMPL CvBGStatModel*
 cvCreateGaussianBGModel2( IplImage* first_frame, CvGaussBGStatModel2Params* parameters )
 {
     CvGaussBGModel2* bg_model = 0;
-    int w,h;
+    int w, h;
 
     CV_FUNCNAME( "cvCreateGaussianBGModel2" );
 
@@ -1239,7 +1244,7 @@ icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model )
     if ((curr_frame->height!=bg_model->params.nHeight)||(curr_frame->width!=bg_model->params.nWidth)||(curr_frame->nChannels!=bg_model->params.nND))
         CV_Error( CV_StsBadSize, "the image not the same size as the reserved GMM background model");
 
-    float alpha=bg_model->params.fAlphaT;
+    float alpha = bg_model->params.fAlphaT;
     bg_model->countFrames++;
 
     //faster initial updates - increase value of alpha
@@ -1272,7 +1277,7 @@ icvUpdateGaussianBGModel2( IplImage* curr_frame, CvGaussBGModel2*  bg_model )
                                  alpha);
 
     //foreground filtering
-    if (bg_model->params.bPostFiltering==1)
+    if (bg_model->params.bPostFiltering == 1)
     {
         int region_count = 0;
         CvSeq *first_seq = NULL, *prev_seq = NULL, *seq = NULL;

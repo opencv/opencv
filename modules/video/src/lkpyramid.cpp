@@ -163,21 +163,25 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
 
-    int j, cn = I.channels(), cn2 = cn*2;
+    int j;
+    const int cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
-    int derivDepth = DataType<deriv_type>::depth;
+    const int derivDepth = DataType<deriv_type>::depth;
 
     Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
     Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+    const float inv_winArea_05 = (float) (1 / (2.0 * winSize.width * winSize.height));
+    const float inv_winArea_cn32 = (float) (1 / (32.0*cn*winSize.width*winSize.height));
 
     for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {
-        Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
+        const float inv_lev = (float)(1./(1 << level));
+        Point2f prevPt = prevPts[ptidx] * inv_lev;
         Point2f nextPt;
         if( level == maxLevel )
         {
             if( flags & OPTFLOW_USE_INITIAL_FLOW )
-                nextPt = nextPts[ptidx]*(float)(1./(1 << level));
+                nextPt = nextPts[ptidx] * inv_lev;
             else
                 nextPt = prevPt;
         }
@@ -190,7 +194,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         iprevPt.x = cvFloor(prevPt.x);
         iprevPt.y = cvFloor(prevPt.y);
 
-        if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
+        if( iprevPt.x < -winSize.width  || iprevPt.x >= derivI.cols ||
             iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
         {
             if( level == 0 )
@@ -206,7 +210,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
         const int W_BITS = 14, W_BITS1 = 14;
-        const float FLT_SCALE = 1.f/(1 << 20);
+        const float FLT_SCALE = 1.f / (1 << 20);
         int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
         int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
@@ -314,7 +318,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         float D = A11*A22 - A12*A12;
         float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
-                        4.f*A12*A12))/(2*winSize.width*winSize.height);
+                        4.f*A12*A12)) * (inv_winArea_05); // (2*winSize.width*winSize.height);
 
         if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
             err[ptidx] = (float)minEig;
@@ -326,7 +330,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             continue;
         }
 
-        D = 1.f/D;
+        D = 1.f / D;
 
         nextPt -= halfWin;
         Point2f prevDelta;
@@ -421,7 +425,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             b2 *= FLT_SCALE;
 
             Point2f delta( (float)((A12*b2 - A22*b1) * D),
-                          (float)((A12*b1 - A11*b2) * D));
+                           (float)((A12*b1 - A11*b2) * D));
             //delta = -delta;
 
             nextPt += delta;
@@ -476,7 +480,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     errval += std::abs((float)diff);
                 }
             }
-            err[ptidx] = errval * 1.f/(32*winSize.width*cn*winSize.height);
+            err[ptidx] = errval * inv_winArea_cn32; //(32*winSize.width*cn*winSize.height);
         }
     }
 }
@@ -528,7 +532,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
     Mat prevLevel = pyramid.getMatRef(0);
     Mat thisLevel = prevLevel;
 
-    for(int level = 0; level <= maxLevel; ++level)
+    for (int level = 0; level <= maxLevel; ++level)
     {
         if (level != 0)
         {
@@ -547,7 +551,7 @@ int cv::buildOpticalFlowPyramid(InputArray _img, OutputArrayOfArrays pyramid, Si
             temp.adjustROI(-winSize.height, -winSize.height, -winSize.width, -winSize.width);
         }
 
-        if(withDerivatives)
+        if (withDerivatives)
         {
             Mat& deriv = pyramid.getMatRef(level * pyrstep + 1);
 
@@ -1240,15 +1244,16 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
 
     int i, j, k, l;
 
-    CvSize patchSize = cvSize( winSize.width * 2 + 1, winSize.height * 2 + 1 );
-    int patchLen = patchSize.width * patchSize.height;
-    int patchStep = patchSize.width * sizeof( patchI[0] );
+    const CvSize patchSize = cvSize( winSize.width * 2 + 1, winSize.height * 2 + 1 );
+    const int patchLen  = patchSize.width * patchSize.height;
+    const int patchStep = patchSize.width * sizeof( patchI[0] );
+    const double inv_patch_area = 1.0 / (patchSize.width*patchSize.height);
 
     CvSize srcPatchSize = cvSize( patchSize.width + 2, patchSize.height + 2 );
-    int srcPatchLen = srcPatchSize.width * srcPatchSize.height;
+    int srcPatchLen  = srcPatchSize.width * srcPatchSize.height;
     int srcPatchStep = srcPatchSize.width * sizeof( patchI[0] );
     CvSize imgSize;
-    float eps = (float)MIN(winSize.width, winSize.height);
+    const float eps = (float)MIN(winSize.width, winSize.height);
 
     imgA = cvGetMat( imgA, &stubA );
     imgB = cvGetMat( imgB, &stubB );
@@ -1352,8 +1357,8 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
        to the bottom (original image) */
     for( l = level; l >= 0; l-- )
     {
-        CvSize levelSize = size[l];
-        int levelStep = step[l];
+        const CvSize levelSize = size[l];
+        const int levelStep = step[l];
 
         /* find flow for each given point at the particular level */
         for( i = 0; i < count; i++ )
@@ -1463,7 +1468,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                 }
             }
 
-            meanI /= patchSize.width*patchSize.height;
+            meanI *= inv_patch_area; //patchSize.width*patchSize.height;
 
             G[8] = G[4];
             G[9] = G[5];
@@ -1502,7 +1507,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                     for( x = -winSize.width; x <= winSize.width; x++, k++ )
                         meanJ += patchJ[k];
 
-                meanJ = meanJ / (patchSize.width * patchSize.height) - meanI;
+                meanJ = meanJ * inv_patch_area - meanI;
 
                 for( y = -winSize.height, k = 0; y <= winSize.height; y++ )
                 {
@@ -1694,7 +1699,6 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
     CvMat stubA, *A = cvGetMat( matA, &stubA );
     CvMat stubB, *B = cvGetMat( matB, &stubB );
     CvSize sz0, sz1;
-    int cn, equal_sizes;
     int i, j, k, k1;
     int count_x, count_y, count = 0;
     double scale = 1;
@@ -1715,7 +1719,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
 
     if( CV_MAT_TYPE(A->type) == CV_8UC1 || CV_MAT_TYPE(A->type) == CV_8UC3 )
     {
-        cn = CV_MAT_CN(A->type);
+        const int cn = CV_MAT_CN(A->type);
         sz0 = cvGetSize(A);
         sz1 = cvSize(WIDTH, HEIGHT);
 
@@ -1724,7 +1728,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         sz1.width = cvRound( sz0.width * scale );
         sz1.height = cvRound( sz0.height * scale );
 
-        equal_sizes = sz1.width == sz0.width && sz1.height == sz0.height;
+        const int equal_sizes = sz1.width == sz0.width && sz1.height == sz0.height;
 
         if( !equal_sizes || cn != 1 )
         {
@@ -1761,8 +1765,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         for( i = 0, k = 0; i < count_y; i++ )
             for( j = 0; j < count_x; j++, k++ )
             {
-                pA[k].x = (j+0.5f)*sz1.width/count_x;
-                pA[k].y = (i+0.5f)*sz1.height/count_y;
+                pA[k].x = (j+0.5f)*sz1.width *(1.0f/count_x);
+                pA[k].y = (i+0.5f)*sz1.height*(1.0f/count_y);
             }
 
         // find the corresponding points in B
@@ -1839,9 +1843,12 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                 if( j < i )
                     continue;
 
-                if( i+1 == RANSAC_SIZE0 )
+                if( (i+1) == RANSAC_SIZE0 )
                 {
                     // additional check for non-complanar vectors
+                    const double eps = 0.01;
+                    double tmp;
+
                     a[0] = pA[idx[0]];
                     a[1] = pA[idx[1]];
                     a[2] = pA[idx[2]];
@@ -1852,13 +1859,15 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
 
                     double dax1 = a[1].x - a[0].x, day1 = a[1].y - a[0].y;
                     double dax2 = a[2].x - a[0].x, day2 = a[2].y - a[0].y;
+                    tmp = dax1*day2 - day1*dax2;
+                    if( (tmp*tmp) < (eps*eps) * ((dax1*dax1+day1*day1) * (dax2*dax2+day2*day2)) )
+                        continue; // sqrt(a)*sqrt(b) == sqrt(a*b), fabs(c)<sqrt(d) == c*c<d
+
                     double dbx1 = b[1].x - b[0].x, dby1 = b[1].y - b[0].y;
                     double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
-                    const double eps = 0.01;
-
-                    if( fabs(dax1*day2 - day1*dax2) < eps*sqrt(dax1*dax1+day1*day1)*sqrt(dax2*dax2+day2*day2) ||
-                        fabs(dbx1*dby2 - dby1*dbx2) < eps*sqrt(dbx1*dbx1+dby1*dby1)*sqrt(dbx2*dbx2+dby2*dby2) )
-                        continue;
+                    tmp = dbx1*dby2 - dby1*dbx2;
+                    if( (tmp*tmp) < (eps*eps) * ((dbx1*dbx1+dby1*dby1) * (dbx2*dbx2+dby2*dby2)) )
+                        continue; // sqrt(a)*sqrt(b) == sqrt(a*b), fabs(c)<sqrt(d) == c*c<d
                 }
                 break;
             }
@@ -1897,9 +1906,10 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         }
     }
 
+    const double inv = 1 / scale;
     icvGetRTMatrix( pA, pB, good_count, &M, full_affine );
-    m[2] /= scale;
-    m[5] /= scale;
+    m[2] *= inv;
+    m[5] *= inv;
     cvConvert( &M, matM );
 
     return 1;

@@ -168,7 +168,7 @@ static void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *statu
 
             /* fill derivate by point */
 
-            double tmp3 = 1/(piX[2]*piX[2]);
+            double tmp3 = 1 / (piX[2]*piX[2]);
 
             double tmp1 = -piX[0]*tmp3;
             double tmp2 = -piX[1]*tmp3;
@@ -187,7 +187,7 @@ static void icvComputeDerivateProj(CvMat *points4D,CvMat *projMatr, CvMat *statu
                 cvmSet(derivProj,currVisPoint*2+1,8+i,X[i]*tmp2);//y' p3i
             }
 
-            currVisPoint++;
+            currVisPoint ++;
         }
     }
 
@@ -312,14 +312,14 @@ static void icvComputeDerivatePoints(CvMat *points4D,CvMat *projMatr, CvMat *pre
             piX[1] = X[0]*p[4] + X[1]*p[5] + X[2]*p[6]  + X[3]*p[7];
             piX[2] = X[0]*p[8] + X[1]*p[9] + X[2]*p[10] + X[3]*p[11];
 
-            double tmp3 = 1/(piX[2]*piX[2]);
+            double tmp3 = 1 / (piX[2]*piX[2]);
 
             for(int j = 0; j < 2; j++ )//for x and y
             {
                 for(int i = 0; i < 4; i++ )// for X,Y,Z,W
                 {
                     cvmSet( derivPoint,
-                            j, currVisPoint*4+i,
+                            j, currVisPoint*4 + i,
                             (p[j*4+i]*piX[2]-p[8+i]*piX[j]) * tmp3  );
                 }
             }
@@ -421,7 +421,7 @@ static void icvComputeMatrixVAll(int numImages,CvMat **pointDeriv,CvMat **presPo
         {
             if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
             {
-                shifts[currImage]++;
+                shifts[currImage] ++;
             }
         }
     }
@@ -701,7 +701,7 @@ static void icvComputeJacErrorPoint(int numImages,CvMat **pointDeriv,CvMat **pro
         {
             if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
             {
-                shifts[currImage]++;
+                shifts[currImage] ++;
             }
         }
     }
@@ -818,7 +818,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
         {
             if( cvmGet(presPoints[currImage],0,currPoint) > 0 )
             {
-                double x,y;
+                double x, y;
                 x = cvmGet(projPoints[currImage],0,currPoint);
                 y = cvmGet(projPoints[currImage],1,currPoint);
                 for( int k = 0; k < 4; k++ )
@@ -866,9 +866,9 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
                     double  dx,dy;
                     cvGetCol(points4D,&point4D,curPoint);
                     cvmMul(projMatrs[currImage],&point4D,&point3D);
-                    double w = point3D_dat[2];
-                    double x = point3D_dat[0] / w;
-                    double y = point3D_dat[1] / w;
+                    double w = 1 / point3D_dat[2];
+                    double x = point3D_dat[0] * w;
+                    double y = point3D_dat[1] * w;
 
                     dx = cvmGet(projPoints[currImage],0,curPoint) - x;
                     dy = cvmGet(projPoints[currImage],1,curPoint) - y;
@@ -878,7 +878,7 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
                         cvmSet(projError[currImage],1,curPoint,dy);
                     }
                     totalError += sqrt(dx*dx+dy*dy);
-                    numVis++;
+                    numVis ++;
                 }
             }
 
@@ -972,9 +972,9 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
 #endif
 
                 cvmMul(projMatrs[currImage],&point4D,&point3D);
-                double w = point3D_dat[2];
-                cvmSet(projPoints[currImage],0,currVisPoint,point3D_dat[0]/w);
-                cvmSet(projPoints[currImage],1,currVisPoint,point3D_dat[1]/w);
+                double w = 1 / point3D_dat[2];
+                cvmSet(projPoints[currImage],0,currVisPoint,point3D_dat[0]*w);
+                cvmSet(projPoints[currImage],1,currVisPoint,point3D_dat[1]*w);
 
 #ifdef TRACK_BUNDLE
                 {
@@ -984,13 +984,13 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
                                  point3D_dat[0],
                                  point3D_dat[1],
                                  point3D_dat[2],
-                                 point3D_dat[0]/w,
-                                 point3D_dat[1]/w
+                                 point3D_dat[0]*w,
+                                 point3D_dat[1]*w
                                  );
                     fclose(file);
                 }
 #endif
-                currVisPoint++;
+                currVisPoint ++;
             }
         }
     }

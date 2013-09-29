@@ -210,7 +210,7 @@ void cvLevenbergMarquardtOptimization(pointer_LMJac JacobianFunction,
                 /* Compute relative change of required parameter vectorX. change = norm(curr-prev) / norm(curr) )  */
                 change = cvNorm(vectX, vectNewX, CV_RELATIVE_L2);
 
-                alpha /= 10;
+                alpha *= 0.1; // == /10
                 cvCopy(vectNewX,vectX);
                 break;
             }

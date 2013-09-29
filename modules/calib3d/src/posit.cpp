@@ -63,10 +63,10 @@ static  CvStatus  icvCreatePOSITObject( CvPoint3D32f *points,
     /* buffer for storing object vectors = N*3*float */
     /* buffer for storing image vectors = N*2*float */
 
-    int N = numPoints - 1;
-    int inv_matr_size = N * 3 * sizeof( float );
-    int obj_vec_size = inv_matr_size;
-    int img_vec_size = N * 2 * sizeof( float );
+    const int N = numPoints - 1;
+    const int inv_matr_size = N * 3 * sizeof( float );
+    const int obj_vec_size  = inv_matr_size;
+    const int img_vec_size  = N * 2 * sizeof( float );
     CvPOSITObject *pObject;
 
     /* check bad arguments */
@@ -115,9 +115,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
 {
     int i, j, k;
     int count = 0, converged = 0;
-    float inorm, jnorm, invInorm, invJnorm, invScale, scale = 0, inv_Z = 0;
+    float invScale, scale = 0, inv_Z = 0;
     float diff = (float)criteria.epsilon;
-    float inv_focalLength = 1 / focalLength;
 
     /* Check bad arguments */
     if( imagePoints == NULL )
@@ -138,9 +137,10 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         return CV_BADFACTOR_ERR;
 
     /* init variables */
-    int N = pObject->N;
+    const float inv_focalLength = 1 / focalLength;
+    const int N = pObject->N;
+    const float *invMatrix = pObject->inv_matr;
     float *objectVectors = pObject->obj_vecs;
-    float *invMatrix = pObject->inv_matr;
     float *imgVectors = pObject->img_vecs;
 
     while( !converged )
@@ -186,13 +186,15 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         {
             for( j = 0; j < 3; j++ )
             {
-                rotation[3*i+j] /*[i][j]*/ = 0;
+                rotation[(3*i)+j] /*[i][j]*/ = 0;
                 for( k = 0; k < N; k++ )
                 {
-                    rotation[3*i+j] /*[i][j]*/ += invMatrix[j * N + k] * imgVectors[i * N + k];
+                    rotation[(3*i)+j] /*[i][j]*/ += invMatrix[j * N + k] * imgVectors[i * N + k];
                 }
             }
         }
+
+        float inorm, jnorm, invInorm, invJnorm;
 
         inorm = rotation[0] /*[0][0]*/ * rotation[0] /*[0][0]*/ +
                 rotation[1] /*[0][1]*/ * rotation[1] /*[0][1]*/ +
@@ -226,17 +228,17 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         rotation[8] /*->m[2][2]*/ = rotation[0] /*->m[0][0]*/ * rotation[4] /*->m[1][1]*/ -
                                     rotation[1] /*->m[0][1]*/ * rotation[3] /*->m[1][0]*/;
 
-        scale = (inorm + jnorm) / 2.0f;
+        scale = (inorm + jnorm) * 0.5f;
         inv_Z = scale * inv_focalLength;
 
-        count++;
-        converged = ((criteria.type & CV_TERMCRIT_EPS) && (diff < criteria.epsilon));
+        count ++;
+        converged  = ((criteria.type & CV_TERMCRIT_EPS) && (diff < criteria.epsilon));
         converged |= ((criteria.type & CV_TERMCRIT_ITER) && (count == criteria.max_iter));
     }
     invScale = 1 / scale;
     translation[0] = imagePoints[0].x * invScale;
     translation[1] = imagePoints[0].y * invScale;
-    translation[2] = 1 / inv_Z;
+    translation[2] = invScale * focalLength; // =1/inv_Z;
 
     return CV_NO_ERR;
 }
@@ -314,11 +316,11 @@ icvPseudoInverse3D( float *a, float *b, int n, int method )
             {
                 float a0 = a[k];
                 float a1 = a[n + k];
-                float a2 = a[2 * n + k];
+                float a2 = a[(2 * n) + k];
 
                 b[k] = (p00 * a0 + p01 * a1 + p02 * a2) * inv_det;
                 b[n + k] = (p01 * a0 + p11 * a1 + p12 * a2) * inv_det;
-                b[2 * n + k] = (p02 * a0 + p12 * a1 + p22 * a2) * inv_det;
+                b[(2 * n) + k] = (p02 * a0 + p12 * a1 + p22 * a2) * inv_det;
             }
         }
     }

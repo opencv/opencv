@@ -47,12 +47,13 @@ void epnp::choose_control_points(void)
 {
   // Take C0 as the reference points centroid:
   cws[0][0] = cws[0][1] = cws[0][2] = 0;
+  const double inoc = 1.0 / number_of_correspondences;
   for(int i = 0; i < number_of_correspondences; i++)
     for(int j = 0; j < 3; j++)
       cws[0][j] += pws[3 * i + j];
 
   for(int j = 0; j < 3; j++)
-    cws[0][j] /= number_of_correspondences;
+    cws[0][j] *= inoc;
 
 
   // Take C1, C2, and C3 from PCA on the reference points:
@@ -73,7 +74,7 @@ void epnp::choose_control_points(void)
   cvReleaseMat(&PW0);
 
   for(int i = 1; i < 4; i++) {
-    double k = sqrt(dc[i - 1] / number_of_correspondences);
+    double k = sqrt(dc[i - 1] * inoc);
     for(int j = 0; j < 3; j++)
       cws[i][j] = cws[0][j] + k * uct[3 * (i - 1) + j];
   }
@@ -220,7 +221,7 @@ double epnp::dot(const double * v1, const double * v2)
 void epnp::estimate_R_and_t(double R[3][3], double t[3])
 {
   double pc0[3], pw0[3];
-
+  const double inoc = 1.0 / number_of_correspondences;
   pc0[0] = pc0[1] = pc0[2] = 0.0;
   pw0[0] = pw0[1] = pw0[2] = 0.0;
 
@@ -234,8 +235,8 @@ void epnp::estimate_R_and_t(double R[3][3], double t[3])
     }
   }
   for(int j = 0; j < 3; j++) {
-    pc0[j] /= number_of_correspondences;
-    pw0[j] /= number_of_correspondences;
+    pc0[j] *= inoc;
+    pw0[j] *= inoc;
   }
 
   double abt[3 * 3], abt_d[3], abt_u[3 * 3], abt_v[3 * 3];
@@ -330,7 +331,7 @@ double epnp::reprojection_error(const double R[3][3], const double t[3])
 void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
              double * betas)
 {
-  double l_6x4[6 * 4], b4[4];
+  double l_6x4[6 * 4], b4[4], inv;
   CvMat L_6x4 = cvMat(6, 4, CV_64F, l_6x4);
   CvMat B4    = cvMat(4, 1, CV_64F, b4);
 
@@ -343,16 +344,16 @@ void epnp::find_betas_approx_1(const CvMat * L_6x10, const CvMat * Rho,
 
   cvSolve(&L_6x4, Rho, &B4, CV_SVD);
 
+  betas[0] = sqrt( fabs(b4[0]) );
+  inv = 1 / betas[0];
   if (b4[0] < 0) {
-    betas[0] = sqrt(-b4[0]);
-    betas[1] = -b4[1] / betas[0];
-    betas[2] = -b4[2] / betas[0];
-    betas[3] = -b4[3] / betas[0];
+    betas[1] = -b4[1] * inv;
+    betas[2] = -b4[2] * inv;
+    betas[3] = -b4[3] * inv;
   } else {
-    betas[0] = sqrt(b4[0]);
-    betas[1] = b4[1] / betas[0];
-    betas[2] = b4[2] / betas[0];
-    betas[3] = b4[3] / betas[0];
+    betas[1] = b4[1] * inv;
+    betas[2] = b4[2] * inv;
+    betas[3] = b4[3] * inv;
   }
 }
 
@@ -374,11 +375,10 @@ void epnp::find_betas_approx_2(const CvMat * L_6x10, const CvMat * Rho,
 
   cvSolve(&L_6x3, Rho, &B3, CV_SVD);
 
+  betas[0] = sqrt( fabs(b3[0]) );
   if (b3[0] < 0) {
-    betas[0] = sqrt(-b3[0]);
     betas[1] = (b3[2] < 0) ? sqrt(-b3[2]) : 0.0;
   } else {
-    betas[0] = sqrt(b3[0]);
     betas[1] = (b3[2] > 0) ? sqrt(b3[2]) : 0.0;
   }
 
@@ -408,11 +408,10 @@ void epnp::find_betas_approx_3(const CvMat * L_6x10, const CvMat * Rho,
 
   cvSolve(&L_6x5, Rho, &B5, CV_SVD);
 
+  betas[0] = sqrt( fabs(b5[0]) );
   if (b5[0] < 0) {
-    betas[0] = sqrt(-b5[0]);
     betas[1] = (b5[2] < 0) ? sqrt(-b5[2]) : 0.0;
   } else {
-    betas[0] = sqrt(b5[0]);
     betas[1] = (b5[2] > 0) ? sqrt(b5[2]) : 0.0;
   }
   if (b5[1] < 0) betas[0] = -betas[0];

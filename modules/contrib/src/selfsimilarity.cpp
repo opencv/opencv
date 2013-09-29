@@ -123,14 +123,15 @@ Size SelfSimDescriptor::getGridSize( Size imgSize, Size winStride ) const
 // TODO: optimized with SSE2
 void SelfSimDescriptor::SSD(const Mat& img, Point pt, Mat& ssd) const
 {
-    int x, y, dx, dy, r0 = largeSize/2, r1 = smallSize/2;
-    int step = (int)img.step;
+    int x, y;
+    const int r0 = largeSize/2, r1 = smallSize/2;
+    const int step = (int)img.step;
     for( y = -r0; y <= r0; y++ )
     {
         float* sptr = ssd.ptr<float>(y+r0) + r0;
         for( x = -r0; x <= r0; x++ )
         {
-            int sum = 0;
+            int dx, dy, sum = 0;
             const uchar* src0 = img.ptr<uchar>(y + pt.y - r1) + x + pt.x;
             const uchar* src1 = img.ptr<uchar>(pt.y - r1) + pt.x;
             for( dy = -r1; dy <= r1; dy++, src0 += step, src1 += step )
@@ -149,13 +150,13 @@ void SelfSimDescriptor::compute(const Mat& img, vector<float>& descriptors, Size
                                 const vector<Point>& locations) const
 {
     CV_Assert( img.depth() == CV_8U );
-
+    int i;
     winStride.width = std::max(winStride.width, 1);
     winStride.height = std::max(winStride.height, 1);
-    Size gridSize = getGridSize(img.size(), winStride);
-    int i, nwindows = locations.empty() ? gridSize.width*gridSize.height : (int)locations.size();
-    int border = largeSize/2 + smallSize/2;
-    int fsize = (int)getDescriptorSize();
+    const Size gridSize = getGridSize(img.size(), winStride);
+    const int nwindows = locations.empty() ? gridSize.width*gridSize.height : (int)locations.size();
+    const int border = largeSize/2 + smallSize/2;
+    const int fsize = (int)getDescriptorSize();
     vector<float> tempFeature(fsize+1);
     descriptors.resize(fsize*nwindows + 1);
     Mat ssd(largeSize, largeSize, CV_32F), mappingMask;
@@ -231,9 +232,9 @@ void SelfSimDescriptor::computeLogPolarMapping(Mat& mappingMask) const
     //	<==> log_10 (radius) / numberOfDistanceBuckets = log_10 (m)
     //	<==> m = 10 ^ log_10(m) = 10 ^ [log_10 (radius) / numberOfDistanceBuckets]
     //
-    int radius = largeSize/2, angleBucketSize = 360 / numberOfAngles;
-    int fsize = (int)getDescriptorSize();
-    double inv_log10m = (double)numberOfDistanceBuckets/log10((double)radius);
+    const int radius = largeSize/2, angleBucketSize = 360 / numberOfAngles;
+    const int fsize = (int)getDescriptorSize();
+    const float inv_log10m = (float)numberOfDistanceBuckets / log10((float)radius);
 
     for (int y=-radius ; y<=radius ; y++)
     {
@@ -241,11 +242,11 @@ void SelfSimDescriptor::computeLogPolarMapping(Mat& mappingMask) const
         for (int x=-radius ; x<=radius ; x++)
         {
             int index = fsize;
-            float dist = (float)std::sqrt((float)x*x + (float)y*y);
-            int distNo = dist > 0 ? cvRound(log10(dist)*inv_log10m) : 0;
+            float dist = (float) ((float)x*x + (float)y*y); // std::sqrt, log(sqrt(x))==log(x)*0.5
+            int distNo = (dist > 0) ? cvRound(log10(dist)*0.5f*inv_log10m) : 0;
             if( startDistanceBucket <= distNo && distNo < numberOfDistanceBuckets )
             {
-                float angle = std::atan2( (float)y, (float)x ) / (float)CV_PI * 180.0f;
+                float angle = std::atan2( (float)y, (float)x ) * (180.0f / (float)CV_PI);
                 if (angle < 0) angle += 360.0f;
                 int angleInt = (cvRound(angle) + angleBucketSize/2) % 360;
                 int angleIndex = angleInt / angleBucketSize;
