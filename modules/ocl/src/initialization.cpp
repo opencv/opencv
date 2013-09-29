@@ -1013,7 +1013,7 @@ namespace cv
             programCache->releaseProgram();
         }
 
-        bool Context::supportsFeature(int ftype)
+        bool Context::supportsFeature(int ftype) const
         {
             switch(ftype)
             {
@@ -1028,7 +1028,7 @@ namespace cv
             }
         }
 
-        size_t Context::computeUnits()
+        size_t Context::computeUnits() const
         {
             return impl->maxComputeUnits;
         }

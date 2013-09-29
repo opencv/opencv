@@ -48,7 +48,7 @@
 #define MHEIGHT 256
 
 #define MIN_VALUE 171
-#define MAX_VALUE 351
+#define MAX_VALUE 357
 
 //#define RANDOMROI
 int randomInt(int minVal, int maxVal);
