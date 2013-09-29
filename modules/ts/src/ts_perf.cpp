@@ -476,6 +476,9 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
                     if (violations > 0)
                     {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \""
                                << node.name() << "[" <<  idx << "]\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
@@ -530,6 +533,9 @@ void Regression::verify(cv::FileNode node, cv::InputArray array, double eps, ERR
                     int violations = countViolations(expected, actual, diff, eps, &maxv, &maxa);
                     if (violations > 0)
                     {
+                        if(expected.total() * expected.channels() < 12)
+                            std::cout << " Expected: " << std::endl << expected << std::endl << " Actual:" << std::endl << actual << std::endl;
+
                         FAIL() << "  Relative difference (" << maxv << " of " << maxa << " allowed) between argument \"" << node.name()
                                << "\" and expected value is greater than " << eps << " in " << violations << " points";
                     }
