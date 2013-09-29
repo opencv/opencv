@@ -1245,8 +1245,8 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
     int i, j, k, l;
 
     const CvSize patchSize = cvSize( winSize.width * 2 + 1, winSize.height * 2 + 1 );
-    int patchLen  = patchSize.width * patchSize.height;
-    int patchStep = patchSize.width * sizeof( patchI[0] );
+    const int patchLen  = patchSize.width * patchSize.height;
+    const int patchStep = patchSize.width * sizeof( patchI[0] );
     const double inv_patch_area = 1.0 / (patchSize.width*patchSize.height);
 
     CvSize srcPatchSize = cvSize( patchSize.width + 2, patchSize.height + 2 );
@@ -1468,7 +1468,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                 }
             }
 
-            meanI *= inv_patch_area; //patchSize.width*patchSize.height;
+            meanI /= patchSize.width*patchSize.height;//*= inv_patch_area; //patchSize.width*patchSize.height;
 
             G[8] = G[4];
             G[9] = G[5];
@@ -1507,7 +1507,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                     for( x = -winSize.width; x <= winSize.width; x++, k++ )
                         meanJ += patchJ[k];
 
-                meanJ = meanJ * inv_patch_area - meanI;
+                meanJ = meanJ /(patchSize.width*patchSize.height) - meanI;//* inv_patch_area - meanI;
 
                 for( y = -winSize.height, k = 0; y <= winSize.height; y++ )
                 {
@@ -1699,7 +1699,6 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
     CvMat stubA, *A = cvGetMat( matA, &stubA );
     CvMat stubB, *B = cvGetMat( matB, &stubB );
     CvSize sz0, sz1;
-    int cn, equal_sizes;
     int i, j, k, k1;
     int count_x, count_y, count = 0;
     double scale = 1;
@@ -1720,7 +1719,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
 
     if( CV_MAT_TYPE(A->type) == CV_8UC1 || CV_MAT_TYPE(A->type) == CV_8UC3 )
     {
-        cn = CV_MAT_CN(A->type);
+        const int cn = CV_MAT_CN(A->type);
         sz0 = cvGetSize(A);
         sz1 = cvSize(WIDTH, HEIGHT);
 
@@ -1729,7 +1728,7 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         sz1.width = cvRound( sz0.width * scale );
         sz1.height = cvRound( sz0.height * scale );
 
-        equal_sizes = sz1.width == sz0.width && sz1.height == sz0.height;
+        const int equal_sizes = sz1.width == sz0.width && sz1.height == sz0.height;
 
         if( !equal_sizes || cn != 1 )
         {
@@ -1766,8 +1765,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         for( i = 0, k = 0; i < count_y; i++ )
             for( j = 0; j < count_x; j++, k++ )
             {
-                pA[k].x = (j+0.5f)*sz1.width /count_x;
-                pA[k].y = (i+0.5f)*sz1.height/count_y;
+                pA[k].x = (j+0.5f)*sz1.width *(1.0f/count_x);
+                pA[k].y = (i+0.5f)*sz1.height*(1.0f/count_y);
             }
 
         // find the corresponding points in B
@@ -1902,10 +1901,10 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         }
     }
 
-    const double inv = 1 * scale;
+    const double inv = 1 / scale;
     icvGetRTMatrix( pA, pB, good_count, &M, full_affine );
-    m[2] /= inv;
-    m[5] /= inv;
+    m[2] *= inv;
+    m[5] *= inv;
     cvConvert( &M, matM );
 
     return 1;
