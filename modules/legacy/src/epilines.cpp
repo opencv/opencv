@@ -2138,6 +2138,7 @@ CV_IMPL IplImage* icvCreateIsometricImage( const IplImage* src, IplImage* dst,
     return dst;
 }
 
+#if 0 // _matrix.h
 static int
 icvCvt_32f_64d( const float *src, double *dst, int size ) // cover in _matrix.h
 {
@@ -2175,7 +2176,7 @@ icvCvt_64d_32f( const double *src, float *dst, int size ) // cover in _matrix.h
 
     return CV_OK;
 }
-
+#endif
 /*----------------------------------------------------------------------------------*/
 
 #if 0
@@ -2797,10 +2798,10 @@ static int icvSelectBestRt(         int           numImages,
     CvPoint3D64d *points1, *points2;
 
     projImagePoints1 = (numberPnt_max <= NOALLOC_NUMPNT) ? stack_CvPoint2D64d : (CvPoint2D64d*)malloc(numberPnt_max*2*sizeof(CvPoint2D64d));
-    projImagePoints2 = projImagePoints1 + numberPnt;
+    projImagePoints2 = projImagePoints1 + numberPnt_max;
 
     points1 = (numberPnt_max <= NOALLOC_NUMPNT) ? stack_CvPoint3D64d : (CvPoint3D64d*)malloc(numberPnt_max*2*sizeof(CvPoint3D64d));
-    points2 = points1 + numberPnt;
+    points2 = points1 + numberPnt_max;
 
     if ( !projImagePoints1 || !points1 ) {
         return CV_OUTOFMEM_ERR;
