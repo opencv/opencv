@@ -51,10 +51,14 @@
 #define EPS64D 1e-9
 
 #if 1  /* legacy\compat.hpp - header problem */
-typedef double*  CvVect64d;
-typedef double*  CvMatr64d;
-typedef CvPoint2D64f CvPoint2D64d;
-typedef CvPoint3D64f CvPoint3D64d;
+#define CvVect64d double*
+#define CvMatr64d double*
+#define CvPoint2D64d CvPoint2D64f
+#define CvPoint3D64d CvPoint3D64f
+//typedef double*  CvVect64d;
+//typedef double*  CvMatr64d;
+//typedef CvPoint2D64f CvPoint2D64d;
+//typedef CvPoint3D64f CvPoint3D64d;
 #endif
 
 /* static local func */
