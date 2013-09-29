@@ -1733,8 +1733,8 @@ CV_IMPL double cvCalibrateCamera2( const CvMat* objectPoints,
                 cvGEMM( _Je, _err, 1, 0, 0, &_part, CV_GEMM_A_T );
             }
 
-            const double errNorm = cvNorm( &_mp, 0, NORM_L2SQR );
-            reprojErr += errNorm; // x == sqrt(x)*sqrt(x)
+            const double errNorm = cvNorm( &_mp, 0, CV_L2 );
+            reprojErr += errNorm*errNorm; // NORM_L2SQR: x == sqrt(x)*sqrt(x) -- fast and precise
         }
         if( _errNorm )
             *_errNorm = reprojErr;
