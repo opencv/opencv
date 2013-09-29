@@ -1846,6 +1846,9 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                 if( (i+1) == RANSAC_SIZE0 )
                 {
                     // additional check for non-complanar vectors
+                    const double eps = 0.01;
+                    double tmp;
+
                     a[0] = pA[idx[0]];
                     a[1] = pA[idx[1]];
                     a[2] = pA[idx[2]];
@@ -1856,13 +1859,15 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
 
                     double dax1 = a[1].x - a[0].x, day1 = a[1].y - a[0].y;
                     double dax2 = a[2].x - a[0].x, day2 = a[2].y - a[0].y;
+                    tmp = dax1*day2 - day1*dax2;
+                    if( (tmp*tmp) < (eps*eps) * ((dax1*dax1+day1*day1) * (dax2*dax2+day2*day2)) )
+                        continue; // sqrt(a)*sqrt(b) == sqrt(a*b), fabs(c)<sqrt(d) == c*c<d
+
                     double dbx1 = b[1].x - b[0].x, dby1 = b[1].y - b[0].y;
                     double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
-                    const double eps = 0.01;
-
-                    if( fabs(dax1*day2 - day1*dax2) < eps*sqrt((dax1*dax1+day1*day1) * (dax2*dax2+day2*day2)) ||
-                        fabs(dbx1*dby2 - dby1*dbx2) < eps*sqrt((dbx1*dbx1+dby1*dby1) * (dbx2*dbx2+dby2*dby2)) )
-                        continue; // sqrt(a)*sqrt(b) == sqrt(a*b)
+                    tmp = dbx1*dby2 - dby1*dbx2;
+                    if( (tmp*tmp) < (eps*eps) * ((dbx1*dbx1+dby1*dby1) * (dbx2*dbx2+dby2*dby2)) )
+                        continue; // sqrt(a)*sqrt(b) == sqrt(a*b), fabs(c)<sqrt(d) == c*c<d
                 }
                 break;
             }
