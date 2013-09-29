@@ -669,7 +669,7 @@ CV_IMPL int cvRodrigues2( const CvMat* src, CvMat* dst, CvMat* jacobian )
         }
         else
         {
-            const double vth = 0.5f / sqrt(s); // = 1/(2*s);
+            double vth = 0.5f / sqrt(s); // = 1/(2*s);
 
             if( jacobian )
             {
@@ -1811,7 +1811,7 @@ void cvCalibrationMatrixValues( const CvMat *calibMatr, CvSize imgSize,
     if( (apertureWidth != 0.0) && (apertureHeight != 0.0)) {
         mx = imgWidth  / apertureWidth;
         my = imgHeight / apertureHeight;
-        if (focalLength | principalPoint) inv_mx = 1.0 / mx;
+        if (focalLength || principalPoint) inv_mx = 1.0 / mx;
     } else {
         mx = 1.0;
         my = (pasp) ? (*pasp) : (alphay / alphax); // warning: possible NULL
