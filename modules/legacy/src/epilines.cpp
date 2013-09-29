@@ -53,6 +53,8 @@
 #if 1  /* legacy\compat.hpp - header problem */
 typedef double*  CvVect64d;
 typedef double*  CvMatr64d;
+typedef CvPoint2D64f CvPoint2D64d;
+typedef CvPoint3D64f CvPoint3D64d;
 #endif
 
 /* static local func */
