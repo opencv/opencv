@@ -50,7 +50,10 @@
 
 #define EPS64D 1e-9
 
-typedef double*  CvVect64d; // legacy\compat.hpp
+#if 1  /* legacy\compat.hpp - header problem */
+typedef double*  CvVect64d;
+typedef double*  CvMatr64d;
+#endif
 
 /* static local func */
 
