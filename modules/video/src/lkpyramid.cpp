@@ -1766,8 +1766,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         for( i = 0, k = 0; i < count_y; i++ )
             for( j = 0; j < count_x; j++, k++ )
             {
-                pA[k].x = (j+0.5f)*sz1.width *(1.0f/count_x);
-                pA[k].y = (i+0.5f)*sz1.height*(1.0f/count_y);
+                pA[k].x = (j+0.5f)*sz1.width /count_x;
+                pA[k].y = (i+0.5f)*sz1.height/count_y;
             }
 
         // find the corresponding points in B
@@ -1902,10 +1902,10 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         }
     }
 
-    const double inv = 1 / scale;
+    const double inv = 1 * scale;
     icvGetRTMatrix( pA, pB, good_count, &M, full_affine );
-    m[2] *= inv;
-    m[5] *= inv;
+    m[2] /= inv;
+    m[5] /= inv;
     cvConvert( &M, matM );
 
     return 1;
