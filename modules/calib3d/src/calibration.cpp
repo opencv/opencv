@@ -2501,7 +2501,7 @@ void cvStereoRectify( const CvMat* _cameraMatrix1, const CvMat* _cameraMatrix2,
         s = s0 * (1 - alpha) + (s1 * alpha);
         fc_new *= s;
     }
-    
+
     cc_new[0] = cvPoint2D64f(cx1, cy1);
     cc_new[1] = cvPoint2D64f(cx2, cy2);
 

@@ -1969,7 +1969,7 @@ void icvGetCutPiece(   CvVect64d areaLineCoef1,CvVect64d areaLineCoef2,
             maxPoint = projPoint;
         }
     }
-    
+
 
     /* We know maximum and minimum points. Now we can compute cut lines */
 
