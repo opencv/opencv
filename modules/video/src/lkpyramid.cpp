@@ -1468,7 +1468,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                 }
             }
 
-            meanI /= patchSize.width*patchSize.height;//*= inv_patch_area; //patchSize.width*patchSize.height;
+            meanI *= inv_patch_area; //patchSize.width*patchSize.height;
 
             G[8] = G[4];
             G[9] = G[5];
@@ -1507,7 +1507,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                     for( x = -winSize.width; x <= winSize.width; x++, k++ )
                         meanJ += patchJ[k];
 
-                meanJ = meanJ /(patchSize.width*patchSize.height) - meanI;//* inv_patch_area - meanI;
+                meanJ = meanJ * inv_patch_area - meanI;
 
                 for( y = -winSize.height, k = 0; y <= winSize.height; y++ )
                 {
@@ -1860,8 +1860,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
                     double dbx2 = b[2].x - b[0].x, dby2 = b[2].y - b[0].y;
                     const double eps = 0.01;
 
-                    if( fabs(dax1*day2 - day1*dax2) < eps*sqrt(dax1*dax1+day1*day1 * dax2*dax2+day2*day2) ||
-                        fabs(dbx1*dby2 - dby1*dbx2) < eps*sqrt(dbx1*dbx1+dby1*dby1 * dbx2*dbx2+dby2*dby2) )
+                    if( fabs(dax1*day2 - day1*dax2) < eps*sqrt((dax1*dax1+day1*day1) * (dax2*dax2+day2*day2)) ||
+                        fabs(dbx1*dby2 - dby1*dbx2) < eps*sqrt((dbx1*dbx1+dby1*dby1) * (dbx2*dbx2+dby2*dby2)) )
                         continue; // sqrt(a)*sqrt(b) == sqrt(a*b)
                 }
                 break;
