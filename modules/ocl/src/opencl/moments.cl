@@ -183,16 +183,16 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
                 x3 += xxp * x;
             }
 
-            x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3 + x0.s4 + x0.s5 + x0.s6 + x0.s7 
+            x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3 + x0.s4 + x0.s5 + x0.s6 + x0.s7
                 + x0.s8 + x0.s9 + x0.sa + x0.sb + x0.sc + x0.sd + x0.se + x0.sf;
 
-            x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3 + x1.s4 + x1.s5 + x1.s6 + x1.s7 
+            x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3 + x1.s4 + x1.s5 + x1.s6 + x1.s7
                 + x1.s8 + x1.s9 + x1.sa + x1.sb + x1.sc + x1.sd + x1.se + x1.sf;
 
-            x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3 + x2.s4 + x2.s5 + x2.s6 + x2.s7 
+            x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3 + x2.s4 + x2.s5 + x2.s6 + x2.s7
                 + x2.s8 + x2.s9 + x2.sa + x2.sb + x2.sc + x2.sd + x2.se + x2.sf;
 
-            x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3 + x3.s4 + x3.s5 + x3.s6 + x3.s7 
+            x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3 + x3.s4 + x3.s5 + x3.s6 + x3.s7
                 + x3.s8 + x3.s9 + x3.sa + x3.sb + x3.sc + x3.sd + x3.se + x3.sf;
 
             F x0_ = 0;
@@ -235,16 +235,16 @@ __kernel void CvMoments(__global F* src_data, int src_rows, int src_cols, int sr
                 x3 += xxp * x;
             }
 
-            x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3 + x0.s4 + x0.s5 + x0.s6 + x0.s7 
+            x0.s0 = x0.s0 + x0.s1 + x0.s2 + x0.s3 + x0.s4 + x0.s5 + x0.s6 + x0.s7
                 + x0.s8 + x0.s9 + x0.sa + x0.sb + x0.sc + x0.sd + x0.se + x0.sf;
 
-            x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3 + x1.s4 + x1.s5 + x1.s6 + x1.s7 
+            x1.s0 = x1.s0 + x1.s1 + x1.s2 + x1.s3 + x1.s4 + x1.s5 + x1.s6 + x1.s7
                 + x1.s8 + x1.s9 + x1.sa + x1.sb + x1.sc + x1.sd + x1.se + x1.sf;
 
-            x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3 + x2.s4 + x2.s5 + x2.s6 + x2.s7 
+            x2.s0 = x2.s0 + x2.s1 + x2.s2 + x2.s3 + x2.s4 + x2.s5 + x2.s6 + x2.s7
                 + x2.s8 + x2.s9 + x2.sa + x2.sb + x2.sc + x2.sd + x2.se + x2.sf;
 
-            x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3 + x3.s4 + x3.s5 + x3.s6 + x3.s7 
+            x3.s0 = x3.s0 + x3.s1 + x3.s2 + x3.s3 + x3.s4 + x3.s5 + x3.s6 + x3.s7
                 + x3.s8 + x3.s9 + x3.sa + x3.sb + x3.sc + x3.sd + x3.se + x3.sf;
         }
 

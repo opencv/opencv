@@ -219,7 +219,7 @@ namespace cv
         {
             CV_Assert(!binary);
             const int TILE_SIZE = 256; //must be 256!!
-            int type, depth, cn, coi = 0;
+            int type, cn, coi = 0;
             CvMat stub, *mat = (CvMat*)array;
             CvContour contourHeader;
             CvSeq* contour = 0;
@@ -256,7 +256,6 @@ namespace cv
             }
 
             type = CV_MAT_TYPE( mat->type );
-            depth = CV_MAT_DEPTH( type );
             cn = CV_MAT_CN( type );
 
             cv::Size size = cvGetMatSize( mat );
