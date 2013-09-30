@@ -1709,63 +1709,35 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 /////////////////////////////// setIdentity //////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-void cv::ocl::setIdentity(oclMat& src, double scalar)
+void cv::ocl::setIdentity(oclMat& src, const Scalar & scalar)
 {
-    CV_Assert(src.empty() == false && src.rows == src.cols);
-    CV_Assert(src.type() == CV_32SC1 || src.type() == CV_32FC1);
-    int src_step = src.step/src.elemSize();
     Context  *clCxt = Context::getContext();
-    size_t local_threads[] = {16, 16, 1};
-    size_t global_threads[] = {src.cols, src.rows, 1};
-
-    string kernelName = "setIdentityKernel";
-    if (src.type() == CV_32FC1)
-        kernelName += "_F1";
-    else if (src.type() == CV_32SC1)
-        kernelName += "_I1";
-    else
+    if (!clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
     {
-        kernelName += "_D1";
-        if (!(clCxt->supportsFeature(Context::CL_DOUBLE)))
-        {
-            oclMat temp;
-            src.convertTo(temp, CV_32FC1);
-            temp.copyTo(src);
-        }
-
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
+        return;
     }
+
+    CV_Assert(src.step % src.elemSize() == 0);
+
+    int src_step1 = src.step / src.elemSize(), src_offset1 = src.offset / src.elemSize();
+    size_t local_threads[] = { 16, 16, 1 };
+    size_t global_threads[] = { src.cols, src.rows, 1 };
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+    string buildOptions = format("-D T=%s%s", typeMap[src.depth()], channelMap[src.oclchannels()]);
 
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src_step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src_offset1 ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&src.cols));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src_step ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src.rows));
 
-    int scalar_i = 0;
-    float scalar_f = 0.0f;
-    if (clCxt->supportsFeature(Context::CL_DOUBLE))
-    {
-        if (src.type() == CV_32SC1)
-        {
-            scalar_i = (int)scalar;
-            args.push_back(make_pair(sizeof(cl_int), (void*)&scalar_i));
-        }
-        else
-            args.push_back(make_pair(sizeof(cl_double), (void*)&scalar));
-    }
-    else
-    {
-        if (src.type() == CV_32SC1)
-        {
-            scalar_i = (int)scalar;
-            args.push_back(make_pair(sizeof(cl_int), (void*)&scalar_i));
-        }
-        else
-        {
-            scalar_f = (float)scalar;
-            args.push_back(make_pair(sizeof(cl_float), (void*)&scalar_f));
-        }
-    }
+    oclMat sc(1, 1, src.type(), scalar);
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&sc.data ));
 
-    openCLExecuteKernel(clCxt, &arithm_setidentity, kernelName, global_threads, local_threads, args, -1, -1);
+    openCLExecuteKernel(clCxt, &arithm_setidentity, "setIdentity", global_threads, local_threads,
+                        args, -1, -1, buildOptions.c_str());
 }
