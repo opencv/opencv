@@ -111,6 +111,7 @@
 #define CV_CPU_POPCNT  8
 #define CV_CPU_AVX    10
 #define CV_CPU_NEON   11
+// when adding to this list remember to update the enum in core/utility.cpp
 #define CV_HARDWARE_MAX_FEATURE 255
 
 // do not include SSE/AVX/NEON headers for NVCC compiler
