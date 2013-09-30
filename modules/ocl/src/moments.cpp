@@ -357,4 +357,3 @@ namespace cv
         }
     }
 }
-
