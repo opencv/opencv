@@ -44,6 +44,8 @@
 #include <math.h>
 #include <vector>
 
+namespace cv
+{
 /*
  * ShapeContextDescriptor class
  */
@@ -126,3 +128,6 @@ protected:
                    std::vector<int> &inliers2, int sizeScd1=0, int sizeScd2=0);
 
 };
+
+}
+

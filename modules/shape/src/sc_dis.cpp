@@ -166,7 +166,7 @@ public:
         sigma = (float)fn["sigma"];
     }
 
-private:
+protected:
     int nAngularBins;
     int nRadialBins;
     float innerRadius;
@@ -182,8 +182,6 @@ private:
     float imageAppearanceWeight;
     float shapeContextWeight;
     float sigma;
-
-protected:
     String name_;
 };
 
@@ -226,7 +224,9 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
     Ptr<ThinPlateSplineShapeTransformer> transDown = transformer.dynamicCast<ThinPlateSplineShapeTransformer>();
 
     Mat warpedImage;
-    for (int ii=0; ii<iterations; ii++)
+    int ii, jj, pt;
+
+    for (ii=0; ii<iterations; ii++)
     {
         // Extract SCD descriptor in the set1 //
         set1SCE.extractSCD(set1, set1SCD, inliers1);
@@ -282,11 +282,11 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
             multiply(temp, temp, diffIm);
         }
         gaussWindow = Mat::zeros(warpedImage.rows, warpedImage.cols, CV_32F);
-        for (int pt=0; pt<sset1.cols; pt++)
+        for (pt=0; pt<sset1.cols; pt++)
         {
-            for (int ii=0; ii<diffIm.rows; ii++)
+            for (ii=0; ii<diffIm.rows; ii++)
             {
-                for (int jj=0; jj<diffIm.cols; jj++)
+                for (jj=0; jj<diffIm.cols; jj++)
                 {
                     float xx = sset1.at<Point2f>(0,pt).x;
                     float yy = sset1.at<Point2f>(0,pt).y;
@@ -297,9 +297,9 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         }
 
         Mat appIm(diffIm.rows, diffIm.cols, CV_32F);
-        for (int ii=0; ii<diffIm.rows; ii++)
+        for (ii=0; ii<diffIm.rows; ii++)
         {
-            for (int jj=0; jj<diffIm.cols; jj++)
+            for (jj=0; jj<diffIm.cols; jj++)
             {
                 float elema=float( diffIm.at<uchar>(ii,jj) )/255;
                 float elemb=gaussWindow.at<float>(ii,jj);
@@ -319,8 +319,6 @@ Ptr <ShapeContextDistanceExtractor> createShapeContextDistanceExtractor(int nAng
     return Ptr <ShapeContextDistanceExtractor> ( new ShapeContextDistanceExtractorImpl(nAngularBins, nRadialBins, innerRadius,
                                                                                        outerRadius, iterations, comparer, transformer) );
 }
-
-} // cv
 
 //! SCD
 void SCD::extractSCD(cv::Mat &contour, cv::Mat &descriptors, const std::vector<int> &queryInliers, const float _meanDistance)
@@ -779,3 +777,6 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
             inliers2[kc]=0;
     }
 }
+
+}
+
