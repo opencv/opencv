@@ -235,7 +235,8 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         set2SCE.extractSCD(set2, set2SCD, inliers2, set1SCE.getMeanDistance());
 
         // regularization parameter with annealing rate annRate //
-        beta=std::pow(set1SCE.getMeanDistance(),2);
+        beta=set1SCE.getMeanDistance();
+        beta *= beta;
 
         // match //
         matcher.matchDescriptors(set1SCD, set2SCD, matches, comparer, inliers1, inliers2);
@@ -284,13 +285,12 @@ float ShapeContextDistanceExtractorImpl::computeDistance(InputArray contour1, In
         gaussWindow = Mat::zeros(warpedImage.rows, warpedImage.cols, CV_32F);
         for (pt=0; pt<sset1.cols; pt++)
         {
+            Point2f p = sset1.at<Point2f>(0,pt);
             for (ii=0; ii<diffIm.rows; ii++)
             {
                 for (jj=0; jj<diffIm.cols; jj++)
                 {
-                    float xx = sset1.at<Point2f>(0,pt).x;
-                    float yy = sset1.at<Point2f>(0,pt).y;
-                    float val = float(std::exp( -float( (xx-jj)*(xx-jj) + (yy-ii)*(yy-ii) )/(2*sigma*sigma) ) / (sigma*sigma*2*CV_PI));
+                    float val = float(std::exp( -float( (p.x-jj)*(p.x-jj) + (p.y-ii)*(p.y-ii) )/(2*sigma*sigma) ) / (sigma*sigma*2*CV_PI));
                     gaussWindow.at<float>(ii,jj) += val;
                 }
             }
