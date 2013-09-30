@@ -37,7 +37,7 @@ Finds edges in an image using the [Canny86]_ algorithm.
 
 
 ocl::BruteForceMatcher_OCL_base
--------------------------------
+-----------------------------------
 .. ocv:class:: ocl::BruteForceMatcher_OCL_base
 
 Brute-force descriptor matcher. For each descriptor in the first set, this matcher finds the closest descriptor in the second set by trying each one. This descriptor matcher supports masking permissible matches between descriptor sets. ::
@@ -153,7 +153,7 @@ The class ``BruteForceMatcher_OCL_base`` has an interface similar to the class :
 
 
 ocl::BruteForceMatcher_OCL_base::match
---------------------------------------
+------------------------------------------
 Finds the best match for each descriptor from a query set with train descriptors.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::match(const oclMat& query, const oclMat& train, std::vector<DMatch>& matches, const oclMat& mask = oclMat())
@@ -169,14 +169,14 @@ Finds the best match for each descriptor from a query set with train descriptors
 
 
 ocl::BruteForceMatcher_OCL_base::makeGpuCollection
---------------------------------------------------
+------------------------------------------------------
 Performs a GPU collection of train descriptors and masks in a suitable format for the :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchCollection` function.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::makeGpuCollection(oclMat& trainCollection, oclMat& maskCollection, const vector<oclMat>& masks = std::vector<oclMat>())
 
 
 ocl::BruteForceMatcher_OCL_base::matchDownload
-----------------------------------------------
+--------------------------------------------------
 Downloads matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: static void ocl::BruteForceMatcher_OCL_base::matchDownload( const oclMat& trainIdx, const oclMat& distance, std::vector<DMatch>& matches )
@@ -185,7 +185,7 @@ Downloads matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::matc
 
 
 ocl::BruteForceMatcher_OCL_base::matchConvert
----------------------------------------------
+-------------------------------------------------
 Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::matchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::matchConvert(const Mat& trainIdx, const Mat& distance, std::vector<DMatch>&matches)
@@ -195,7 +195,7 @@ Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::match
 
 
 ocl::BruteForceMatcher_OCL_base::knnMatch
------------------------------------------
+---------------------------------------------
 Finds the ``k`` best matches for each descriptor from a query set with train descriptors.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::knnMatch(const oclMat& query, const oclMat& train, std::vector< std::vector<DMatch> >&matches, int k, const oclMat& mask = oclMat(), bool compactResult = false)
@@ -226,7 +226,7 @@ The third variant of the method stores the results in GPU memory.
 
 
 ocl::BruteForceMatcher_OCL_base::knnMatchDownload
--------------------------------------------------
+-----------------------------------------------------
 Downloads matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::knnMatchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::knnMatch2Collection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::knnMatchDownload(const oclMat& trainIdx, const oclMat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
@@ -238,7 +238,7 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 
 ocl::BruteForceMatcher_OCL_base::knnMatchConvert
-------------------------------------------------
+----------------------------------------------------
 Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::knnMatchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::knnMatch2Collection` to CPU vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::knnMatchConvert(const Mat& trainIdx, const Mat& distance, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
@@ -250,7 +250,7 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 
 ocl::BruteForceMatcher_OCL_base::radiusMatch
---------------------------------------------
+------------------------------------------------
 For each query descriptor, finds the best matches with a distance less than a given threshold.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::radiusMatch(const oclMat& query, const oclMat& train, std::vector< std::vector<DMatch> >&matches, float maxDistance, const oclMat& mask = oclMat(), bool compactResult = false)
@@ -283,7 +283,7 @@ The third variant of the method stores the results in GPU memory and does not st
 
 
 ocl::BruteForceMatcher_OCL_base::radiusMatchDownload
-----------------------------------------------------
+--------------------------------------------------------
 Downloads matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiusMatchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::radiusMatchDownload(const oclMat& trainIdx, const oclMat& distance, const oclMat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
@@ -296,7 +296,7 @@ If ``compactResult`` is ``true`` , the ``matches`` vector does not contain match
 
 
 ocl::BruteForceMatcher_OCL_base::radiusMatchConvert
----------------------------------------------------
+-------------------------------------------------------
 Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiusMatchSingle` or :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiusMatchCollection` to vector with :ocv:class:`DMatch`.
 
 .. ocv:function:: void ocl::BruteForceMatcher_OCL_base::radiusMatchConvert(const Mat& trainIdx, const Mat& distance, const Mat& nMatches, std::vector< std::vector<DMatch> >&matches, bool compactResult = false)
@@ -306,7 +306,7 @@ Converts matrices obtained via :ocv:func:`ocl::BruteForceMatcher_OCL_base::radiu
 If ``compactResult`` is ``true`` , the ``matches`` vector does not contain matches for fully masked-out query descriptors.
 
 ocl::HOGDescriptor
-------------------
+----------------------
 
 .. ocv:struct:: ocl::HOGDescriptor
 
