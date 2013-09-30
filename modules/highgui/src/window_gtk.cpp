@@ -154,7 +154,7 @@ cvImageWidget_realize (GtkWidget *widget)
   g_return_if_fail (widget != NULL);
   g_return_if_fail (CV_IS_IMAGE_WIDGET (widget));
 
-  gtk_widget_set_realized(widget, true);
+  gtk_widget_set_realized(widget, TRUE);
 
   attributes.x = widget->allocation.x;
   attributes.y = widget->allocation.y;
