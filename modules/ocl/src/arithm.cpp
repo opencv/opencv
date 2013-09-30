@@ -461,8 +461,8 @@ void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
         m2(sz, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(0));
     oclMat dst1(m1), dst2(m2);
 
-    //arithmetic_sum_run(src, dst1,"arithm_op_sum");
-    //arithmetic_sum_run(src, dst2,"arithm_op_squares_sum");
+//    arithmetic_sum_run(src, dst1, "arithm_op_sum");
+//    arithmetic_sum_run(src, dst2, "arithm_op_squares_sum");
 
     m1 = (Mat)dst1;
     m2 = (Mat)dst2;
@@ -557,7 +557,6 @@ void arithmetic_minMax(const oclMat &src, double *minVal, double *maxVal,
             *maxVal = *maxVal > p[i] ? *maxVal : p[i];
     }
 }
-
 
 void cv::ocl::minMax(const oclMat &src, double *minVal, double *maxVal, const oclMat &mask)
 {
@@ -928,47 +927,38 @@ static void arithmetic_phase_run(const oclMat &src1, const oclMat &src2, oclMat 
         return;
     }
 
-    CV_Assert(src1.cols == src2.cols && src2.cols == dst.cols && src1.rows == src2.rows && src2.rows == dst.rows);
-    CV_Assert(src1.type() == src2.type() && src1.type() == dst.type());
-
     Context  *clCxt = src1.clCxt;
-    int channels = dst.oclchannels();
-    int depth = dst.depth();
-
-    size_t vector_length = 1;
-    int offset_cols = ((dst.offset % dst.step) / dst.elemSize1()) & (vector_length - 1);
-    int cols = divUp(dst.cols * channels + offset_cols, vector_length);
+    int depth = dst.depth(), cols1 = src1.cols * src1.oclchannels();
+    int src1step1 = src1.step / src1.elemSize1(), src1offset1 = src1.offset / src1.elemSize1();
+    int src2step1 = src2.step / src2.elemSize1(), src2offset1 = src2.offset / src2.elemSize1();
+    int dststep1 = dst.step / dst.elemSize1(), dstoffset1 = dst.offset / dst.elemSize1();
 
     size_t localThreads[3]  = { 64, 4, 1 };
-    size_t globalThreads[3] = { cols, dst.rows, 1 };
+    size_t globalThreads[3] = { cols1, dst.rows, 1 };
 
-    int dst_step1 = dst.cols * dst.elemSize();
     vector<pair<size_t , const void *> > args;
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1offset1 ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&src2.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
     args.push_back( make_pair( sizeof(cl_mem), (void *)&dst.data ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.step ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst.offset ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dststep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&dstoffset1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&cols1 ));
     args.push_back( make_pair( sizeof(cl_int), (void *)&dst.rows ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&cols ));
-    args.push_back( make_pair( sizeof(cl_int), (void *)&dst_step1 ));
 
     openCLExecuteKernel(clCxt, kernelString, kernelName, globalThreads, localThreads, args, -1, depth);
 }
 
-void cv::ocl::phase(const oclMat &x, const oclMat &y, oclMat &Angle , bool angleInDegrees)
+void cv::ocl::phase(const oclMat &x, const oclMat &y, oclMat &Angle, bool angleInDegrees)
 {
     CV_Assert(x.type() == y.type() && x.size() == y.size() && (x.depth() == CV_32F || x.depth() == CV_64F));
+    CV_Assert(x.step % x.elemSize() == 0 && y.step % y.elemSize() == 0);
+
     Angle.create(x.size(), x.type());
-    string kernelName = angleInDegrees ? "arithm_phase_indegrees" : "arithm_phase_inradians";
-    if (angleInDegrees)
-        arithmetic_phase_run(x, y, Angle, kernelName, &arithm_phase);
-    else
-        arithmetic_phase_run(x, y, Angle, kernelName, &arithm_phase);
+    arithmetic_phase_run(x, y, Angle, angleInDegrees ? "arithm_phase_indegrees" : "arithm_phase_inradians", &arithm_phase);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1539,8 +1529,8 @@ oclMatExpr::operator oclMat() const
 /////////////////////////////// transpose ////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 
-#define TILE_DIM      (32)
-#define BLOCK_ROWS    (256/TILE_DIM)
+#define TILE_DIM   (32)
+#define BLOCK_ROWS (256 / TILE_DIM)
 
 static void transpose_run(const oclMat &src, oclMat &dst, string kernelName, bool inplace = false)
 {
