@@ -4,7 +4,7 @@ Operations on Matrics
 .. highlight:: cpp
 
 ocl::oclMat::convertTo
-----------------------
+--------------------------
 Returns void
 
 .. ocv:function:: void ocl::oclMat::convertTo(oclMat &m, int rtype, double alpha = 1, double beta = 0) const
@@ -20,7 +20,7 @@ Returns void
 The method converts source pixel values to the target datatype. Saturate cast is applied in the end to avoid possible overflows. Supports all data types.
 
 ocl::oclMat::copyTo
--------------------
+-----------------------
 Returns void
 
 .. ocv:function:: void ocl::oclMat::copyTo(oclMat &m, const oclMat &mask = oclMat()) const
@@ -32,7 +32,7 @@ Returns void
 Copies the matrix to another one. Supports all data types.
 
 ocl::oclMat::setTo
-------------------
+----------------------
 Returns oclMat
 
 .. ocv:function:: oclMat& ocl::oclMat::setTo(const Scalar &s, const oclMat &mask = oclMat())
@@ -80,6 +80,34 @@ Returns void
     :param mask: the optional operation mask, 8-bit single channel array; specifies elements of the destination array to be changed.
 
 Computes per-element additon between two arrays or between array and a scalar. Supports all data types.
+
+ocl::addWeighted
+--------------------
+Computes the weighted sum of two arrays.
+
+.. ocv:function:: void ocl::addWeighted(const oclMat& src1, double  alpha, const oclMat& src2, double beta, double gama, oclMat& dst)
+
+    :param src1: First source array.
+
+    :param alpha: Weight for the first array elements.
+
+    :param src2: Second source array of the same size and channel number as  ``src1`` .
+
+    :param beta: Weight for the second array elements.
+
+    :param dst: Destination array that has the same size and number of channels as the input arrays.
+
+    :param gamma: Scalar added to each sum.
+
+The function ``addWeighted`` calculates the weighted sum of two arrays as follows:
+
+.. math::
+
+    \texttt{c} (I)= \texttt{saturate} ( \texttt{a} (I)* \texttt{alpha} +  \texttt{b} (I)* \texttt{beta} +  \texttt{gamma} )
+
+where ``I`` is a multi-dimensional index of array elements. In case of multi-channel arrays, each channel is processed independently.
+
+.. seealso:: :ocv:func:`addWeighted`
 
 ocl::subtract
 ------------------
