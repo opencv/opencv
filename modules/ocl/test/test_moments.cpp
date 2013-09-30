@@ -22,7 +22,7 @@ PARAM_TEST_CASE(MomentsTest, MatType, bool)
         test_contours = GET_PARAM(1);
         cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(10*MWIDTH, 10*MHEIGHT);
-        mat1 = randomMat(rng, size, type, 5, 16, false);
+        mat1 = randomMat(rng, size, type, 0, 256, false);
     }
 
     void Compare(Moments& cpu, Moments& gpu)
@@ -68,5 +68,5 @@ TEST_P(MomentsTest, Mat)
     }
 }
 INSTANTIATE_TEST_CASE_P(OCL_ImgProc, MomentsTest, Combine(
-                            Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_64FC1), Values(true,false)));
+    Values(CV_8UC1, CV_16UC1, CV_16SC1, CV_32FC1, CV_64FC1), Values(false, true)));
 #endif // HAVE_OPENCL

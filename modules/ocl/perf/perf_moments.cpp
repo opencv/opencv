@@ -49,41 +49,42 @@
 using namespace perf;
 using std::tr1::tuple;
 using std::tr1::get;
+using namespace cv;
+using namespace cv::ocl;
+using namespace cvtest;
+using namespace testing;
+using namespace std;
+
 
 ///////////// Moments ////////////////////////
 
 typedef Size_MatType MomentsFixture;
 
-PERF_TEST_P(MomentsFixture, DISABLED_Moments,
-            ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
-                               OCL_PERF_ENUM(CV_8UC1, CV_16SC1, CV_32FC1, CV_64FC1)))  // TODO does not work properly (see below)
+PERF_TEST_P(MomentsFixture, Moments,
+    ::testing::Combine(OCL_TYPICAL_MAT_SIZES,
+    OCL_PERF_ENUM( CV_8UC1, CV_16SC1, CV_16UC1, CV_32FC1, CV_64FC1)))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
     const int type = get<1>(params);
 
-    Mat src(srcSize, type), dst(7, 1, CV_64F);
+    Mat  src(srcSize, type), dst(7, 1, CV_64F);
+    randu(src, 0, 255);
+
     const bool binaryImage = false;
     cv::Moments mom;
-
-    declare.in(src, WARMUP_RNG).out(dst);
-
+    cv::InputArray array_(src);
     if (RUN_OCL_IMPL)
     {
-        ocl::oclMat oclSrc(src);
-
-        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(oclSrc, binaryImage); // TODO Use oclSrc
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
+        OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(array_, binaryImage);
+        
     }
     else if (RUN_PLAIN_IMPL)
     {
-        TEST_CYCLE() mom = cv::moments(src, binaryImage);
-        cv::HuMoments(mom, dst);
-
-        SANITY_CHECK(dst);
+        TEST_CYCLE() mom = cv::moments(array_, binaryImage);
     }
     else
         OCL_PERF_ELSE
+    cv::HuMoments(mom, dst);
+    SANITY_CHECK(dst,.5);
 }
