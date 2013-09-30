@@ -48,6 +48,60 @@
 
 namespace cv {
 
+class StdMatAllocator : public MatAllocator
+{
+public:
+    UMatData* allocate(int dims, const int* sizes, int type, size_t* step, int flags) const
+    {
+        size_t total = CV_ELEM_SIZE(type);
+        for( int i = 0; i < dims; i++ )
+            total *= sizes[i];
+        total = alignSize(total, (int)sizeof(void*));
+        uchar* data = (uchar*)fastMalloc(total + sizeof(UMatData));
+        UMatData* u = (UMatData*)(data + total);
+        u->init();
+
+        size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
+        data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*u));
+        u = (int*)(data + totalsize);
+        u->init();
+        refcount = &u->refcount;
+        *refcount = 1;
+    }
+
+    void deallocate(UMatData* data) const
+    {
+        
+    }
+
+    bool map(UMatData* data, int mapflags) const
+    {
+
+    }
+
+    bool unmap(UMatData* data, int mapflags, bool async) const
+    {
+
+    }
+
+    void download(UMatData* data, void* dst, size_t srcofs[], size_t sz[], size_t dststep[], bool async) const
+    {
+
+    }
+
+    void upload(UMatData* data, const void* src, size_t dstofs[], size_t sz[], size_t srcstep[], bool async) const
+    {
+
+    }
+};
+
+
+MatAllocator* Mat::stdAllocator()
+{
+    static StdMatAllocator allocator;
+    return &allocator;
+}
+
 void swap( Mat& a, Mat& b )
 {
     std::swap(a.flags, b.flags);
@@ -60,6 +114,7 @@ void swap( Mat& a, Mat& b )
     std::swap(a.dataend, b.dataend);
     std::swap(a.datalimit, b.datalimit);
     std::swap(a.allocator, b.allocator);
+    std::swap(a.u, b.u);
 
     std::swap(a.size.p, b.size.p);
     std::swap(a.step.p, b.step.p);
@@ -209,8 +264,10 @@ void Mat::create(int d, const int* _sizes, int _type)
         if( !allocator )
         {
             size_t totalsize = alignSize(step.p[0]*size.p[0], (int)sizeof(*refcount));
-            data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*refcount));
-            refcount = (int*)(data + totalsize);
+            data = datastart = (uchar*)fastMalloc(totalsize + (int)sizeof(*u));
+            u = (int*)(data + totalsize);
+            u->init();
+            refcount = &u->refcount;
             *refcount = 1;
         }
         else

@@ -55,6 +55,8 @@
 namespace cv
 {
 
+enum { ACCESS_READ=1, ACCESS_WRITE=2 };
+
 //////////////////////// Input/Output Array Arguments /////////////////////////////////
 
 /*!
@@ -79,7 +81,9 @@ public:
         OPENGL_BUFFER     = 7 << KIND_SHIFT,
         CUDA_MEM          = 8 << KIND_SHIFT,
         GPU_MAT           = 9 << KIND_SHIFT,
-        OCL_MAT           =10 << KIND_SHIFT
+        OCL_MAT           =10 << KIND_SHIFT,
+        UMAT              =11 << KIND_SHIFT,
+        UEXPR             =12 << KIND_SHIFT
     };
 
     _InputArray();
@@ -97,8 +101,11 @@ public:
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const gpu::CudaMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
+    _InputArray(const UMat& um);
+    _InputArray(const UMatExpr& uexpr);
 
-    virtual Mat getMat(int i=-1) const;
+    virtual Mat getMat(int i=-1, int accessFlags=ACCESS_READ+ACCESS_WRITE) const;
+    virtual UMat getUMat(int i=-1) const;
     virtual void getMatVector(std::vector<Mat>& mv) const;
     virtual gpu::GpuMat getGpuMat() const;
     virtual ogl::Buffer getOGlBuffer() const;
@@ -152,6 +159,7 @@ public:
     template<typename _Tp> _OutputArray(Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(_Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(Matx<_Tp, m, n>& matx);
+    _OutputArray(UMat& m);
 
     _OutputArray(const Mat& m);
     _OutputArray(const std::vector<Mat>& vec);
@@ -165,6 +173,7 @@ public:
     template<typename _Tp> _OutputArray(const Mat_<_Tp>& m);
     template<typename _Tp> _OutputArray(const _Tp* vec, int n);
     template<typename _Tp, int m, int n> _OutputArray(const Matx<_Tp, m, n>& matx);
+    _OutputArray(const UMat& m);
 
     virtual bool fixedSize() const;
     virtual bool fixedType() const;
@@ -195,6 +204,8 @@ CV_EXPORTS OutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
 
+struct CV_EXPORTS UMatData;
+
 /*!
    Custom array allocator
 
@@ -204,11 +215,19 @@ class CV_EXPORTS MatAllocator
 public:
     MatAllocator() {}
     virtual ~MatAllocator() {}
-    virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
-                          uchar*& datastart, uchar*& data, size_t* step) = 0;
-    virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
-};
 
+    // let's comment it off for now to detect and fix all the uses of allocator
+    //virtual void allocate(int dims, const int* sizes, int type, int*& refcount,
+    //                      uchar*& datastart, uchar*& data, size_t* step) = 0;
+    //virtual void deallocate(int* refcount, uchar* datastart, uchar* data) = 0;
+
+    virtual UMatData* allocate(int dims, const int* sizes, int type, int flags) const = 0;
+    virtual void deallocate(UMatData* data) const = 0;
+    virtual bool map(UMatData* data, int mapflags) const = 0;
+    virtual bool unmap(UMatData* data, int mapflags, bool async) const = 0;
+    virtual void download(UMatData* data, void* dst, size_t srcofs[], size_t sz[], size_t dststep[], bool async) const = 0;
+    virtual void upload(UMatData* data, const void* src, size_t dstofs[], size_t sz[], size_t srcstep[], bool async) const = 0;
+};
 
 
 //////////////////////////////// MatCommaInitializer //////////////////////////////////
@@ -240,11 +259,59 @@ protected:
 };
 
 
-
-
 /////////////////////////////////////// Mat ///////////////////////////////////////////
 
-/*!
+// note that umatdata might be allocated together with the matrix data, not as a separate object.
+// therefore, it does not have constructor or destructor;
+// it should be explicitly initialized using init().
+struct CV_EXPORTS UMatData
+{
+    void init();
+
+    // provide atomic access to the structure
+    void lock();
+    void unlock();
+
+    int urefcount;
+    int refcount;
+    uchar* data;
+    size_t size;
+    int dims;
+    size_t wholestep[3];
+
+    int mapflags;
+    void* handle;
+};
+
+struct CV_EXPORTS MatSize
+{
+    MatSize(int* _p);
+    Size operator()() const;
+    const int& operator[](int i) const;
+    int& operator[](int i);
+    operator const int*() const;
+    bool operator == (const MatSize& sz) const;
+    bool operator != (const MatSize& sz) const;
+
+    int* p;
+};
+
+struct CV_EXPORTS MatStep
+{
+    MatStep();
+    MatStep(size_t s);
+    const size_t& operator[](int i) const;
+    size_t& operator[](int i);
+    operator size_t() const;
+    MatStep& operator = (size_t s);
+
+    size_t* p;
+    size_t buf[2];
+protected:
+    MatStep& operator = (const MatStep&);
+};
+
+ /*!
    The n-dimensional matrix class.
 
    The class represents an n-dimensional dense numerical array that can act as
@@ -748,37 +815,14 @@ public:
 
     //! custom allocator
     MatAllocator* allocator;
+    //! and the standard allocator
+    static MatAllocator* stdAllocator();
 
-    struct CV_EXPORTS MSize
-    {
-        MSize(int* _p);
-        Size operator()() const;
-        const int& operator[](int i) const;
-        int& operator[](int i);
-        operator const int*() const;
-        bool operator == (const MSize& sz) const;
-        bool operator != (const MSize& sz) const;
+    //! interaction with UMat
+    UMatData* u;
 
-        int* p;
-    };
-
-    struct CV_EXPORTS MStep
-    {
-        MStep();
-        MStep(size_t s);
-        const size_t& operator[](int i) const;
-        size_t& operator[](int i);
-        operator size_t() const;
-        MStep& operator = (size_t s);
-
-        size_t* p;
-        size_t buf[2];
-    protected:
-        MStep& operator = (const MStep&);
-    };
-
-    MSize size;
-    MStep step;
+    MatSize size;
+    MatStep step;
 
 protected:
 };
@@ -1000,6 +1044,204 @@ typedef Mat_<Vec2d> Mat2d;
 typedef Mat_<Vec3d> Mat3d;
 typedef Mat_<Vec4d> Mat4d;
 
+
+class CV_EXPORTS UMatExpr;
+
+class CV_EXPORTS UMat
+{
+public:
+    //! default constructor
+    UMat();
+    //! constructs 2D matrix of the specified size and type
+    // (_type is CV_8UC1, CV_64FC3, CV_32SC(12) etc.)
+    UMat(int rows, int cols, int type);
+    UMat(Size size, int type);
+    //! constucts 2D matrix and fills it with the specified value _s.
+    UMat(int rows, int cols, int type, const Scalar& s);
+    UMat(Size size, int type, const Scalar& s);
+
+    //! constructs n-dimensional matrix
+    UMat(int ndims, const int* sizes, int type);
+    UMat(int ndims, const int* sizes, int type, const Scalar& s);
+
+    //! copy constructor
+    UMat(const UMat& m);
+    //! constructor for matrix headers pointing to user-allocated data
+    UMat(int rows, int cols, int type, void* data, size_t step=AUTO_STEP);
+    UMat(Size size, int type, void* data, size_t step=AUTO_STEP);
+    UMat(int ndims, const int* sizes, int type, void* data, const size_t* steps=0);
+
+    //! creates a matrix header for a part of the bigger matrix
+    UMat(const UMat& m, const Range& rowRange, const Range& colRange=Range::all());
+    UMat(const UMat& m, const Rect& roi);
+    UMat(const UMat& m, const Range* ranges);
+    //! builds matrix from std::vector with or without copying the data
+    template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
+    //! builds matrix from cv::Vec; the data is copied by default
+    template<typename _Tp, int n> explicit UMat(const Vec<_Tp, n>& vec, bool copyData=true);
+    //! builds matrix from cv::Matx; the data is copied by default
+    template<typename _Tp, int m, int n> explicit UMat(const Matx<_Tp, m, n>& mtx, bool copyData=true);
+    //! builds matrix from a 2D point
+    template<typename _Tp> explicit UMat(const Point_<_Tp>& pt, bool copyData=true);
+    //! builds matrix from a 3D point
+    template<typename _Tp> explicit UMat(const Point3_<_Tp>& pt, bool copyData=true);
+    //! builds matrix from comma initializer
+    template<typename _Tp> explicit UMat(const MatCommaInitializer_<_Tp>& commaInitializer);
+
+    //! destructor - calls release()
+    ~UMat();
+    //! assignment operators
+    UMat& operator = (const UMat& m);
+    UMat& operator = (const UMatExpr& expr);
+
+    //! returns a new matrix header for the specified row
+    UMat row(int y) const;
+    //! returns a new matrix header for the specified column
+    UMat col(int x) const;
+    //! ... for the specified row span
+    UMat rowRange(int startrow, int endrow) const;
+    UMat rowRange(const Range& r) const;
+    //! ... for the specified column span
+    UMat colRange(int startcol, int endcol) const;
+    UMat colRange(const Range& r) const;
+    //! ... for the specified diagonal
+    // (d=0 - the main diagonal,
+    //  >0 - a diagonal from the lower half,
+    //  <0 - a diagonal from the upper half)
+    UMat diag(int d=0) const;
+    //! constructs a square diagonal matrix which main diagonal is vector "d"
+    static UMat diag(const UMat& d);
+
+    //! returns deep copy of the matrix, i.e. the data is copied
+    UMat clone() const;
+    //! copies the matrix content to "m".
+    // It calls m.create(this->size(), this->type()).
+    void copyTo( OutputArray m ) const;
+    //! copies those matrix elements to "m" that are marked with non-zero mask elements.
+    void copyTo( OutputArray m, InputArray mask ) const;
+    //! converts matrix to another datatype with optional scalng. See cvConvertScale.
+    void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
+
+    void assignTo( UMat& m, int type=-1 ) const;
+
+    //! sets every matrix element to s
+    UMat& operator = (const Scalar& s);
+    //! sets some of the matrix elements to s, according to the mask
+    UMat& setTo(InputArray value, InputArray mask=noArray());
+    //! creates alternative matrix header for the same data, with different
+    // number of channels and/or different number of rows. see cvReshape.
+    UMat reshape(int cn, int rows=0) const;
+    UMat reshape(int cn, int newndims, const int* newsz) const;
+
+    //! matrix transposition by means of matrix expressions
+    UMatExpr t() const;
+    //! matrix inversion by means of matrix expressions
+    UMatExpr inv(int method=DECOMP_LU) const;
+    //! per-element matrix multiplication by means of matrix expressions
+    UMatExpr mul(InputArray m, double scale=1) const;
+
+    //! computes cross-product of 2 3D vectors
+    UMat cross(InputArray m) const;
+    //! computes dot-product
+    double dot(InputArray m) const;
+
+    //! Matlab-style matrix initialization
+    static UMatExpr zeros(int rows, int cols, int type);
+    static UMatExpr zeros(Size size, int type);
+    static UMatExpr zeros(int ndims, const int* sz, int type);
+    static UMatExpr ones(int rows, int cols, int type);
+    static UMatExpr ones(Size size, int type);
+    static UMatExpr ones(int ndims, const int* sz, int type);
+    static UMatExpr eye(int rows, int cols, int type);
+    static UMatExpr eye(Size size, int type);
+
+    //! allocates new matrix data unless the matrix already has specified size and type.
+    // previous data is unreferenced if needed.
+    void create(int rows, int cols, int type);
+    void create(Size size, int type);
+    void create(int ndims, const int* sizes, int type);
+
+    //! increases the reference counter; use with care to avoid memleaks
+    void addref();
+    //! decreases reference counter;
+    // deallocates the data when reference counter reaches 0.
+    void release();
+
+    //! deallocates the matrix data
+    void deallocate();
+    //! internal use function; properly re-allocates _size, _step arrays
+    void copySize(const UMat& m);
+
+    //! locates matrix header within a parent matrix. See below
+    void locateROI( Size& wholeSize, Point& ofs ) const;
+    //! moves/resizes the current matrix ROI inside the parent matrix.
+    UMat& adjustROI( int dtop, int dbottom, int dleft, int dright );
+    //! extracts a rectangular sub-matrix
+    // (this is a generalized form of row, rowRange etc.)
+    UMat operator()( Range rowRange, Range colRange ) const;
+    UMat operator()( const Rect& roi ) const;
+    UMat operator()( const Range* ranges ) const;
+
+    //! returns true iff the matrix data is continuous
+    // (i.e. when there are no gaps between successive rows).
+    // similar to CV_IS_MAT_CONT(cvmat->type)
+    bool isContinuous() const;
+
+    //! returns true if the matrix is a submatrix of another matrix
+    bool isSubmatrix() const;
+
+    //! returns element size in bytes,
+    // similar to CV_ELEM_SIZE(cvmat->type)
+    size_t elemSize() const;
+    //! returns the size of element channel in bytes.
+    size_t elemSize1() const;
+    //! returns element type, similar to CV_MAT_TYPE(cvmat->type)
+    int type() const;
+    //! returns element type, similar to CV_MAT_DEPTH(cvmat->type)
+    int depth() const;
+    //! returns element type, similar to CV_MAT_CN(cvmat->type)
+    int channels() const;
+    //! returns step/elemSize1()
+    size_t step1(int i=0) const;
+    //! returns true if matrix data is NULL
+    bool empty() const;
+    //! returns the total number of matrix elements
+    size_t total() const;
+
+    //! returns N if the matrix is 1-channel (N x ptdim) or ptdim-channel (1 x N) or (N x 1); negative number otherwise
+    int checkVector(int elemChannels, int depth=-1, bool requireContinuous=true) const;
+
+    enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
+    enum { MAGIC_MASK = 0xFFFF0000, TYPE_MASK = 0x00000FFF, DEPTH_MASK = 7 };
+
+    /*! includes several bit-fields:
+         - the magic signature
+         - continuity flag
+         - depth
+         - number of channels
+     */
+    int flags;
+    //! the matrix dimensionality, >= 2
+    int dims;
+    //! the number of rows and columns or (-1, -1) when the matrix has more than 2 dimensions
+    int rows, cols;
+
+    //! custom allocator
+    MatAllocator* allocator;
+    //! and the standard allocator
+    static MatAllocator* stdAllocator();
+
+    // black-box container of UMat data
+    UMatData* u;
+
+    // offset of the submatrix (or 0)
+    size_t offset;
+
+    MatSize size;
+    MatStep step;
+
+protected:
+};
 
 
 /////////////////////////// multi-dimensional sparse matrix //////////////////////////
