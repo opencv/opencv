@@ -454,23 +454,15 @@ Scalar cv::ocl::sqrSum(const oclMat &src)
 
 void cv::ocl::meanStdDev(const oclMat &src, Scalar &mean, Scalar &stddev)
 {
-    CV_Assert(src.depth() <= CV_32S);
-    cv::Size sz(1, 1);
-    int channels = src.oclchannels();
-    Mat m1(sz, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(0)),
-        m2(sz, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(0));
-    oclMat dst1(m1), dst2(m2);
+    double total = 1.0 / src.size().area();
 
-//    arithmetic_sum_run(src, dst1, "arithm_op_sum");
-//    arithmetic_sum_run(src, dst2, "arithm_op_squares_sum");
+    mean = sum(src);
+    stddev = sqrSum(src);
 
-    m1 = (Mat)dst1;
-    m2 = (Mat)dst2;
-    int i = 0, *p = (int *)m1.data, *q = (int *)m2.data;
-    for (; i < channels; i++)
+    for (int i = 0; i < 4; ++i)
     {
-        mean.val[i] = (double)p[i] / (src.cols * src.rows);
-        stddev.val[i] = std::sqrt(std::max((double) q[i] / (src.cols * src.rows) - mean.val[i] * mean.val[i] , 0.));
+        mean[i] *= total;
+        stddev[i] = std::sqrt(std::max(stddev[i] * total - mean.val[i] * mean.val[i] , 0.));
     }
 }
 
