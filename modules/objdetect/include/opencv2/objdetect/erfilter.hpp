@@ -250,14 +250,17 @@ CV_EXPORTS void computeNMChannels(InputArray _src, OutputArrayOfArrays _channels
     (x,y coordinates) and a similarity measure (intensity, color, size, gradient magnitude, etc.),
     thus providing a set of hypotheses of text groups. Evidence Accumulation framework is used to
     combine all these hypotheses to get the final estimate. Each of the resulting groups are finally
-    heuristically validated in order to assest if they form a valid horizontally-aligned text block.
+    validated using a classifier in order to assest if they form a valid horizontally-aligned text block.
 
     \param  src            Vector of sinle channel images CV_8UC1 from wich the regions were extracted.
     \param  regions        Vector of ER's retreived from the ERFilter algorithm from each channel
+    \param  filename       The XML or YAML file with the classifier model (e.g. trained_classifier_erGrouping.xml)
+    \param  minProbability The minimum probability for accepting a group
     \param  groups         The output of the algorithm are stored in this parameter as list of rectangles.
 */
 CV_EXPORTS void erGrouping(InputArrayOfArrays src, std::vector<std::vector<ERStat> > &regions,
-                                                   std::vector<Rect> &groups);
+                                                   const std::string& filename, float minProbablity,
+                                                   std::vector<Rect > &groups);
 
 }
 #endif // _OPENCV_ERFILTER_HPP_
