@@ -464,7 +464,6 @@ TEST_P(Mul, Scalar)
     }
 }
 
-
 TEST_P(Mul, Mat_Scalar)
 {
     for (int j = 0; j < LOOP_TIMES; j++)
@@ -506,7 +505,6 @@ TEST_P(Div, Scalar)
         Near(gdst1.depth() >= CV_32F ? 1e-3 : 1);
     }
 }
-
 
 TEST_P(Div, Mat_Scalar)
 {
@@ -1173,17 +1171,27 @@ TEST_P(CountNonZero, MAT)
 
 typedef ArithmTestBase Phase;
 
-TEST_P(Phase, DISABLED_Mat)
+TEST_P(Phase, angleInDegrees)
 {
-    for (int angelInDegrees = 0; angelInDegrees < 2; angelInDegrees++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
-        for (int j = 0; j < LOOP_TIMES; j++)
-        {
-            random_roi();
-            cv::phase(src1_roi, src2_roi, dst1_roi, angelInDegrees ? true : false);
-            cv::ocl::phase(gsrc1, gsrc2, gdst1, angelInDegrees ? true : false);
-            Near(1e-2);
-        }
+        random_roi();
+        cv::phase(src1_roi, src2_roi, dst1_roi, true);
+        cv::ocl::phase(gsrc1, gsrc2, gdst1, true);
+
+        Near(1e-2);
+    }
+}
+
+TEST_P(Phase, angleInRadians)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+        cv::phase(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::phase(gsrc1, gsrc2, gdst1);
+
+        Near(1e-2);
     }
 }
 
