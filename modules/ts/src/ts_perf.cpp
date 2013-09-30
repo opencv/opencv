@@ -107,7 +107,7 @@ Regression& Regression::instance()
 
 Regression& Regression::add(TestBase* test, const std::string& name, cv::InputArray array, double eps, ERROR_TYPE err)
 {
-    if(test) test->verified = true;
+    if(test) test->setVerified();
     return instance()(name, array, eps, err);
 }
 
