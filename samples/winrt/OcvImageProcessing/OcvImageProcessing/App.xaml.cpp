@@ -30,8 +30,8 @@ using namespace Windows::UI::Xaml::Navigation;
 /// </summary>
 App::App()
 {
-	InitializeComponent();
-	Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
+    InitializeComponent();
+    Suspending += ref new SuspendingEventHandler(this, &App::OnSuspending);
 }
 
 /// <summary>
@@ -42,53 +42,53 @@ App::App()
 /// <param name="args">Details about the launch request and process.</param>
 void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEventArgs^ args)
 {
-	auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
+    auto rootFrame = dynamic_cast<Frame^>(Window::Current->Content);
 
-	// Do not repeat app initialization when the Window already has content,
-	// just ensure that the window is active
-	if (rootFrame == nullptr)
-	{
-		// Create a Frame to act as the navigation context and associate it with
-		// a SuspensionManager key
-		rootFrame = ref new Frame();
+    // Do not repeat app initialization when the Window already has content,
+    // just ensure that the window is active
+    if (rootFrame == nullptr)
+    {
+        // Create a Frame to act as the navigation context and associate it with
+        // a SuspensionManager key
+        rootFrame = ref new Frame();
 
-		if (args->PreviousExecutionState == ApplicationExecutionState::Terminated)
-		{
-			// TODO: Restore the saved session state only when appropriate, scheduling the
-			// final launch steps after the restore is complete
+        if (args->PreviousExecutionState == ApplicationExecutionState::Terminated)
+        {
+            // TODO: Restore the saved session state only when appropriate, scheduling the
+            // final launch steps after the restore is complete
 
-		}
+        }
 
-		if (rootFrame->Content == nullptr)
-		{
-			// When the navigation stack isn't restored navigate to the first page,
-			// configuring the new page by passing required information as a navigation
-			// parameter
-			if (!rootFrame->Navigate(TypeName(MainPage::typeid), args->Arguments))
-			{
-				throw ref new FailureException("Failed to create initial page");
-			}
-		}
-		// Place the frame in the current Window
-		Window::Current->Content = rootFrame;
-		// Ensure the current window is active
-		Window::Current->Activate();
-	}
-	else
-	{
-		if (rootFrame->Content == nullptr)
-		{
-			// When the navigation stack isn't restored navigate to the first page,
-			// configuring the new page by passing required information as a navigation
-			// parameter
-			if (!rootFrame->Navigate(TypeName(MainPage::typeid), args->Arguments))
-			{
-				throw ref new FailureException("Failed to create initial page");
-			}
-		}
-		// Ensure the current window is active
-		Window::Current->Activate();
-	}
+        if (rootFrame->Content == nullptr)
+        {
+            // When the navigation stack isn't restored navigate to the first page,
+            // configuring the new page by passing required information as a navigation
+            // parameter
+            if (!rootFrame->Navigate(TypeName(MainPage::typeid), args->Arguments))
+            {
+                throw ref new FailureException("Failed to create initial page");
+            }
+        }
+        // Place the frame in the current Window
+        Window::Current->Content = rootFrame;
+        // Ensure the current window is active
+        Window::Current->Activate();
+    }
+    else
+    {
+        if (rootFrame->Content == nullptr)
+        {
+            // When the navigation stack isn't restored navigate to the first page,
+            // configuring the new page by passing required information as a navigation
+            // parameter
+            if (!rootFrame->Navigate(TypeName(MainPage::typeid), args->Arguments))
+            {
+                throw ref new FailureException("Failed to create initial page");
+            }
+        }
+        // Ensure the current window is active
+        Window::Current->Activate();
+    }
 }
 
 /// <summary>
@@ -100,8 +100,8 @@ void App::OnLaunched(Windows::ApplicationModel::Activation::LaunchActivatedEvent
 /// <param name="e">Details about the suspend request.</param>
 void App::OnSuspending(Object^ sender, SuspendingEventArgs^ e)
 {
-	(void) sender;	// Unused parameter
-	(void) e;	// Unused parameter
+    (void) sender; // Unused parameter
+    (void) e;      // Unused parameter
 
-	//TODO: Save application state and stop any background activity
+    //TODO: Save application state and stop any background activity
 }

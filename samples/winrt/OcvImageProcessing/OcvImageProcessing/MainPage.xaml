@@ -8,8 +8,16 @@
     mc:Ignorable="d">
 
     <Grid Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
-        <Image x:Name="PreviewWidget" HorizontalAlignment="Left" Height="748" Margin="10,10,0,0" VerticalAlignment="Top" Width="1146"/>
-        <Button Content="Button" HorizontalAlignment="Left" Margin="1161,10,0,0" VerticalAlignment="Top" Width="195" Height="63" Click="Button_Click"/>
+        <Image x:Name="PreviewWidget" HorizontalAlignment="Left" Height="512" Margin="10,10,0,0" VerticalAlignment="Top" Width="512"/>
+        <Button Content="Apply" HorizontalAlignment="Left" Margin="527,71,0,0" VerticalAlignment="Top" Width="293" Height="63" Click="Button_Click"/>
+        <ComboBox x:Name="FilterTypeWidget" HorizontalAlignment="Left" Margin="527,10,0,0" VerticalAlignment="Top" Width="293" Height="56" SelectedIndex="0">
+            <ComboBoxItem Content="Preview"/>
+            <ComboBoxItem Content="GrayScale"/>
+            <ComboBoxItem Content="Canny"/>
+            <ComboBoxItem Content="Blur"/>
+            <ComboBoxItem Content="Features"/>
+            <ComboBoxItem Content="Sepia"/>
+        </ComboBox>
 
     </Grid>
 </Page>
