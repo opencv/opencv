@@ -609,7 +609,7 @@ double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
     CV_Assert(!src1.empty());
     CV_Assert(src2.empty() || (src1.type() == src2.type() && src1.size() == src2.size()));
 
-    if (!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.depth() == CV_64F)
+    if (!src1.clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src1.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
     }
@@ -1256,7 +1256,7 @@ int cv::ocl::countNonZero(const oclMat &src)
         CV_Error(CV_GpuNotSupported, "selected device doesn't support double");
     }
 
-    size_t groupnum = src.clCxt->computeUnits();
+    size_t groupnum = src.clCxt->getDeviceInfo().maxComputeUnits;
     CV_Assert(groupnum != 0);
     int dbsize = groupnum;
 
@@ -1703,7 +1703,7 @@ void cv::ocl::pow(const oclMat &x, double p, oclMat &y)
 void cv::ocl::setIdentity(oclMat& src, const Scalar & scalar)
 {
     Context  *clCxt = Context::getContext();
-    if (!clCxt->supportsFeature(Context::CL_DOUBLE) && src.depth() == CV_64F)
+    if (!clCxt->supportsFeature(FEATURE_CL_DOUBLE) && src.depth() == CV_64F)
     {
         CV_Error(CV_GpuNotSupported, "Selected device doesn't support double\r\n");
         return;
