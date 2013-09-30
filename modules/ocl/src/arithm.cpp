@@ -64,6 +64,7 @@ namespace cv
     {
         //////////////////////////////// OpenCL kernel strings /////////////////////
 
+        extern const char *arithm_absdiff_nonsaturate;
         extern const char *arithm_nonzero;
         extern const char *arithm_sum;
         extern const char *arithm_minMax;
@@ -435,14 +436,12 @@ Scalar cv::ocl::sqrSum(const oclMat &src)
     static sumFunc functab[3] =
     {
         arithmetic_sum<int>,
-        arithmetic_sum<float>,
+        arithmetic_sum<double>,
         arithmetic_sum<double>
     };
 
     bool hasDouble = src.clCxt->supportsFeature(Context::CL_DOUBLE);
-    int ddepth = std::max(src.depth(), CV_32S);
-    if (!hasDouble && ddepth == CV_64F)
-        ddepth = CV_32F;
+    int ddepth = src.depth() <= CV_32S ? CV_32S : (hasDouble ? CV_64F : CV_32F);
 
     sumFunc func = functab[ddepth - CV_32S];
     return func(src, SQR_SUM, ddepth);
@@ -595,57 +594,102 @@ void cv::ocl::minMax_buf(const oclMat &src, double *minVal, double *maxVal, cons
 
 double cv::ocl::norm(const oclMat &src1, int normType)
 {
-    return norm(src1, oclMat(src1.size(), src1.type(), Scalar::all(0)), normType);
+    CV_Assert((normType & NORM_RELATIVE) == 0);
+    return norm(src1, oclMat(), normType);
+}
+
+static void arithm_absdiff_nonsaturate_run(const oclMat & src1, const oclMat & src2, oclMat & diff)
+{
+    CV_Assert(src1.step % src1.elemSize() == 0 && (src2.empty() || src2.step % src2.elemSize() == 0));
+    Context *clCxt = src1.clCxt;
+
+    int ddepth = CV_64F;
+    diff.create(src1.size(), CV_MAKE_TYPE(ddepth, src1.channels()));
+
+    int oclChannels = src1.oclchannels(), sdepth = src1.depth();
+    int src1step1 = src1.step / src1.elemSize(), src1offset1 = src1.offset / src1.elemSize();
+    int src2step1 = src2.step / src2.elemSize(), src2offset1 = src2.offset / src2.elemSize();
+    int diffstep1 = diff.step / diff.elemSize(), diffoffset1 = diff.offset / diff.elemSize();
+
+    string kernelName = "arithm_absdiff_nonsaturate";
+    size_t localThreads[3]  = { 16, 16, 1 };
+    size_t globalThreads[3] = { diff.cols, diff.rows, 1 };
+
+    const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float", "double" };
+    const char * const channelMap[] = { "", "", "2", "4", "4" };
+
+    std::string buildOptions = format("-D srcT=%s%s -D dstT=%s%s -D convertToDstT=convert_%s%s",
+                                      typeMap[sdepth], channelMap[oclChannels],
+                                      typeMap[ddepth], channelMap[oclChannels],
+                                      typeMap[ddepth], channelMap[oclChannels]);
+
+    vector<pair<size_t , const void *> > args;
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&src1.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1step1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1offset1 ));
+
+    if (!src2.empty())
+    {
+        args.push_back( make_pair( sizeof(cl_mem), (void *)&src2.data ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&src2step1 ));
+        args.push_back( make_pair( sizeof(cl_int), (void *)&src2offset1 ));
+
+        kernelName += "_binary";
+    }
+
+    args.push_back( make_pair( sizeof(cl_mem), (void *)&diff.data ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&diffstep1 ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&diffoffset1 ));
+
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.cols ));
+    args.push_back( make_pair( sizeof(cl_int), (void *)&src1.rows ));
+
+    openCLExecuteKernel(clCxt, &arithm_absdiff_nonsaturate,
+                        kernelName, globalThreads, localThreads,
+                        args, -1, -1, buildOptions.c_str());
 }
 
 double cv::ocl::norm(const oclMat &src1, const oclMat &src2, int normType)
 {
+    CV_Assert(!src1.empty());
+    CV_Assert(src2.empty() || (src1.type() == src2.type() && src1.size() == src2.size()));
+
+    if (!src1.clCxt->supportsFeature(Context::CL_DOUBLE) && src1.depth() == CV_64F)
+    {
+        CV_Error(CV_GpuNotSupported, "Selected device doesn't support double");
+    }
+
     bool isRelative = (normType & NORM_RELATIVE) != 0;
-    normType &= 7;
-    CV_Assert(src1.depth() <= CV_32S && src1.type() == src2.type() && ( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2));
-    int channels = src1.oclchannels(), i = 0, *p;
+    normType &= NORM_TYPE_MASK;
+    CV_Assert(normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2);
+
+    Scalar s;
+    int cn = src1.channels();
     double r = 0;
-    oclMat gm1(src1.size(), src1.type());
-    int min_int = (normType == NORM_INF ? CL_INT_MIN : 0);
-    Mat m(1, 1, CV_MAKETYPE(CV_32S, channels), cv::Scalar::all(min_int));
-    oclMat gm2(m), emptyMat;
-    switch(normType)
+    oclMat diff;
+    arithm_absdiff_nonsaturate_run(src1, src2, diff);
+
+    switch (normType)
     {
     case NORM_INF:
-        //  arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_minMax_run(gm1,emptyMat, gm2,"arithm_op_max");
-        m = (gm2);
-        p = (int *)m.data;
-        r = -std::numeric_limits<double>::max();
-        for (i = 0; i < channels; i++)
-        {
-            r = std::max(r, (double)p[i]);
-        }
+        diff = diff.reshape(1);
+        minMax(diff, NULL, &r);
         break;
     case NORM_L1:
-        //arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_sum_run(gm1, gm2,"arithm_op_sum");
-        m = (gm2);
-        p = (int *)m.data;
-        for (i = 0; i < channels; i++)
-        {
-            r = r + (double)p[i];
-        }
+        s = sum(diff);
+        for (int i = 0; i < cn; ++i)
+            r += s[i];
         break;
     case NORM_L2:
-        //arithmetic_run(src1, src2, gm1, "arithm_op_absdiff");
-        //arithmetic_sum_run(gm1, gm2,"arithm_op_squares_sum");
-        m = (gm2);
-        p = (int *)m.data;
-        for (i = 0; i < channels; i++)
-        {
-            r = r + (double)p[i];
-        }
+        s = sqrSum(diff);
+        for (int i = 0; i < cn; ++i)
+            r += s[i];
         r = std::sqrt(r);
         break;
     }
     if (isRelative)
         r = r / norm(src2, normType);
+
     return r;
 }
 
