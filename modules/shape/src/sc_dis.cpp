@@ -779,4 +779,3 @@ void SCDMatcher::hungarian(cv::Mat &costMatrix, std::vector<cv::DMatch> &outMatc
 }
 
 }
-
