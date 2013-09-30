@@ -220,8 +220,8 @@ PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
 
         cv::RNG &rng = TS::ptr()->get_rng();
 
-        src1 = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
-        src2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, -15440, 14450, false);
+        src1 = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 2, 11, false);
+        src2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, -1540, 1740, false);
         dst1 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
         dst2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
         mask = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), CV_8UC1, 0, 2, false);
@@ -1440,7 +1440,7 @@ TEST_P(SetIdentity, Mat)
     }
 }
 
-//////////////////////////////// setIdentity /////////////////////////////////////////////////
+//////////////////////////////// meanStdDev /////////////////////////////////////////////////
 
 typedef ArithmTestBase MeanStdDev;
 
@@ -1458,10 +1458,68 @@ TEST_P(MeanStdDev, Mat)
 
         for (int i = 0; i < 4; ++i)
         {
-            EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 1e-5);
+            EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 0.1);
             EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
         }
     }
+}
+
+//////////////////////////////// Norm /////////////////////////////////////////////////
+
+typedef ArithmTestBase Norm;
+
+TEST_P(Norm, NORM_INF)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_INF;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
+TEST_P(Norm, NORM_L1)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_L1;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
+}
+
+TEST_P(Norm, NORM_L2)
+{
+    for (int relative = 0; relative < 2; ++relative)
+        for (int j = 0; j < LOOP_TIMES; j++)
+        {
+            random_roi();
+
+            int type = NORM_L2;
+            if (relative == 1)
+                type |= NORM_RELATIVE;
+
+            const double cpuRes = cv::norm(src1_roi, src2_roi, type);
+            const double gpuRes = cv::ocl::norm(gsrc1, gsrc2, type);
+
+            EXPECT_NEAR(cpuRes, gpuRes, 0.1);
+        }
 }
 
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
@@ -1495,5 +1553,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Ra
 INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Norm, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 
 #endif // HAVE_OPENCL
