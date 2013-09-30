@@ -1440,6 +1440,30 @@ TEST_P(SetIdentity, Mat)
     }
 }
 
+//////////////////////////////// setIdentity /////////////////////////////////////////////////
+
+typedef ArithmTestBase MeanStdDev;
+
+TEST_P(MeanStdDev, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        Scalar cpu_mean, cpu_stddev;
+        Scalar gpu_mean, gpu_stddev;
+
+        cv::meanStdDev(src1_roi, cpu_mean, cpu_stddev);
+        cv::ocl::meanStdDev(gsrc1, gpu_mean, gpu_stddev);
+
+        for (int i = 0; i < 4; ++i)
+        {
+            EXPECT_NEAR(cpu_mean[i], gpu_mean[i], 1e-5);
+            EXPECT_NEAR(cpu_stddev[i], gpu_stddev[i], 0.1);
+        }
+    }
+}
+
 //////////////////////////////////////// Instantiation /////////////////////////////////////////
 
 INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool()));
@@ -1470,5 +1494,6 @@ INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYP
 INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 INSTANTIATE_TEST_CASE_P(Arithm, SetIdentity, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MeanStdDev, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
 
 #endif // HAVE_OPENCL
