@@ -77,7 +77,6 @@ PERF_TEST_P(MomentsFixture, Moments,
     if (RUN_OCL_IMPL)
     {
         OCL_TEST_CYCLE() mom = cv::ocl::ocl_moments(array_, binaryImage);
-        
     }
     else if (RUN_PLAIN_IMPL)
     {
