@@ -1900,6 +1900,26 @@ namespace cv
         private:
             oclMat samples_ocl;
         };
+        /*!***************  SVM  *************!*/
+        class CV_EXPORTS CvSVM_OCL : public CvSVM
+        {
+        public:
+            CvSVM_OCL();
+
+            CvSVM_OCL(const cv::Mat& trainData, const cv::Mat& responses,
+                      const cv::Mat& varIdx=cv::Mat(), const cv::Mat& sampleIdx=cv::Mat(),
+                      CvSVMParams params=CvSVMParams());
+            CV_WRAP float predict( const int row_index, Mat& src, bool returnDFVal=false ) const;
+            CV_WRAP void predict( cv::InputArray samples, cv::OutputArray results ) const;
+            CV_WRAP float predict( const cv::Mat& sample, bool returnDFVal=false ) const;
+            float predict( const CvMat* samples, CV_OUT CvMat* results ) const;
+
+        protected:
+            float predict( const int row_index, int row_len, Mat& src, bool returnDFVal=false ) const;
+            void create_kernel();
+            void create_solver();
+        };
+        /*!***************  END  *************!*/
     }
 }
 #if defined _MSC_VER && _MSC_VER >= 1200
