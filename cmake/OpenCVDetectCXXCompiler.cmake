@@ -18,6 +18,7 @@ if((CMAKE_COMPILER_IS_CLANGCXX OR CMAKE_COMPILER_IS_CLANGCC) AND NOT CMAKE_GENER
   set(ENABLE_PRECOMPILED_HEADERS OFF CACHE BOOL "" FORCE)
 endif()
 
+
 # ----------------------------------------------------------------------------
 # Detect Intel ICC compiler -- for -fPIC in 3rdparty ( UNIX ONLY ):
 #  see  include/opencv/cxtypes.h file for related   ICC & CV_ICC defines.
@@ -45,6 +46,7 @@ endif()
 if(MSVC AND CMAKE_C_COMPILER MATCHES "icc")
   set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
 endif()
+
 
 # ----------------------------------------------------------------------------
 # Detect GNU version:
@@ -109,4 +111,13 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*|amd64.*|AMD64.*")
   set(X86 1)
 elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*|ARM.*")
   set(ARM 1)
+endif()
+
+
+# ----------------------------------------------------------------------------
+#  Check the compiler
+# ----------------------------------------------------------------------------
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to deterimine the bitness of target platform.
+  Please check your CMake and compiler installation. If you are crosscompiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()

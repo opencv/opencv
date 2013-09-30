@@ -1,7 +1,7 @@
 # ----------------------------------------------------------------------------
 #  CMake file for java support
 # ----------------------------------------------------------------------------
-if(IOS OR NOT PYTHON_EXECUTABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7)))
+if(NOT BUILD_JAVA_BINDINGS OR IOS OR NOT PYTHON_EXECUTABLE OR NOT ANT_EXECUTABLE OR NOT (JNI_FOUND OR (ANDROID AND ANDROID_NATIVE_API_LEVEL GREATER 7)))
   ocv_module_disable(java)
 endif()
 
@@ -278,7 +278,7 @@ add_library(${the_module} SHARED ${handwrittren_h_sources} ${handwrittren_cpp_so
                                 "${JAR_FILE}" "${JAR_FILE}.dephelper")
 set_target_properties(${the_module} PROPERTIES COMPILE_DEFINITIONS OPENCV_NOSTL)
 
-if(BUILD_FAT_JAVA_LIB)
+if(BUILD_JAVA_FAT_LIB)
   set(__deps ${OPENCV_MODULE_${the_module}_DEPS} ${OPENCV_MODULES_BUILD})
   list(REMOVE_ITEM __deps ${the_module} opencv_ts)
   ocv_list_unique(__deps)

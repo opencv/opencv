@@ -48,7 +48,7 @@ endmacro()
 #  Architecture checks
 # ----------------------------------------------------------------------------
 # make sure we're on a supported architecture with Matlab and python installed
-if (IOS OR ANDROID OR NOT MATLAB_FOUND)
+if (NOT BUILD_MATLAB_BINDINGS OR IOS OR ANDROID OR NOT MATLAB_FOUND)
     ocv_module_disable(matlab)
     return()
 elseif (NOT PYTHONLIBS_FOUND)
