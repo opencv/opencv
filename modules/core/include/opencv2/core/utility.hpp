@@ -190,20 +190,25 @@ CV_EXPORTS_W double getTickFrequency();
 */
 CV_EXPORTS_W int64 getCPUTickCount();
 
+//! Available CPU features. Currently, the following features are recognized:
+enum {
+      CPU_MMX       = 1,
+      CPU_SSE       = 2,
+      CPU_SSE2      = 3,
+      CPU_SSE3      = 4,
+      CPU_SSSE3     = 5,
+      CPU_SSE4_1    = 6,
+      CPU_SSE4_2    = 7,
+      CPU_POPCNT    = 8,
+      CPU_AVX       = 10,
+      CPU_NEON      = 11
+     };
+// remember to keep this list identical to the one in cvdef.h
+
 /*!
   Returns SSE etc. support status
 
   The function returns true if certain hardware features are available.
-  Currently, the following features are recognized:
-  - CV_CPU_MMX - MMX
-  - CV_CPU_SSE - SSE
-  - CV_CPU_SSE2 - SSE 2
-  - CV_CPU_SSE3 - SSE 3
-  - CV_CPU_SSSE3 - SSSE 3
-  - CV_CPU_SSE4_1 - SSE 4.1
-  - CV_CPU_SSE4_2 - SSE 4.2
-  - CV_CPU_POPCNT - POPCOUNT
-  - CV_CPU_AVX - AVX
 
   \note {Note that the function output is not static. Once you called cv::useOptimized(false),
   most of the hardware acceleration is disabled and thus the function will returns false,
