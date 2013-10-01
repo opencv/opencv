@@ -53,7 +53,20 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-extern string workdir;
+#if defined(HAVE_XINE)         || \
+    defined(HAVE_GSTREAMER)    || \
+    defined(HAVE_QUICKTIME)    || \
+    defined(HAVE_AVFOUNDATION) || \
+    defined(HAVE_FFMPEG)       || \
+    defined(WIN32)
+
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 1
+#else
+#  define BUILD_WITH_VIDEO_INPUT_SUPPORT 0
+#endif
+
+#if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 //////////////////////////////////////////////////////
 // MOG
 
@@ -223,5 +236,7 @@ INSTANTIATE_TEST_CASE_P(OCL_Video, mog2, testing::Combine(
     testing::Values(UseGray(true), UseGray(false)),
     testing::Values(DetectShadow(true), DetectShadow(false)),
     Values(true, false)));
+
+#endif
 
 #endif

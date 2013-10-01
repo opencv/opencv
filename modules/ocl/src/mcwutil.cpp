@@ -71,12 +71,6 @@ namespace cv
 {
     namespace ocl
     {
-
-        inline int divUp(int total, int grain)
-        {
-            return (total + grain - 1) / grain;
-        }
-
         // provide additional methods for the user to interact with the command queue after a task is fired
         static void openCLExecuteKernel_2(Context *clCxt , const char **source, String kernelName, size_t globalThreads[3],
                                    size_t localThreads[3],  std::vector< std::pair<size_t, const void *> > &args, int channels,

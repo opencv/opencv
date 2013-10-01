@@ -69,24 +69,11 @@ static void pyrdown_run(const oclMat &src, const oclMat &dst)
     CV_Assert(src.depth() != CV_8S);
 
     Context  *clCxt = src.clCxt;
-    //int channels = dst.channels();
-    //int depth = dst.depth();
-
     String kernelName = "pyrDown";
-
-    //int vector_lengths[4][7] = {{4, 0, 4, 4, 1, 1, 1},
-    //    {4, 0, 4, 4, 1, 1, 1},
-    //    {4, 0, 4, 4, 1, 1, 1},
-    //    {4, 0, 4, 4, 1, 1, 1}
-    //};
-
-    //size_t vector_length = vector_lengths[channels-1][depth];
-    //int offset_cols = (dst.offset / dst.elemSize1()) & (vector_length - 1);
 
     size_t localThreads[3]  = { 256, 1, 1 };
     size_t globalThreads[3] = { src.cols, dst.rows, 1};
 
-    //int dst_step1 = dst.cols * dst.elemSize();
     std::vector<std::pair<size_t , const void *> > args;
     args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data ));
     args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step ));
@@ -103,7 +90,9 @@ static void pyrdown_run(const oclMat &src, const oclMat &dst)
 
 void cv::ocl::pyrDown(const oclMat &src, oclMat &dst)
 {
-    CV_Assert(src.depth() <= CV_32F && src.channels() <= 4);
+    int depth = src.depth(), channels = src.channels();
+    CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F);
+    CV_Assert(channels == 1 || channels == 3 || channels == 4);
 
     dst.create((src.rows + 1) / 2, (src.cols + 1) / 2, src.type());
 

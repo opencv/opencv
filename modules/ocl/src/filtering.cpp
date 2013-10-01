@@ -69,20 +69,10 @@ extern const char *filtering_adaptive_bilateral;
 
 namespace
 {
-inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
-}
-
-namespace
-{
 inline void normalizeAnchor(int &anchor, int ksize)
 {
     if (anchor < 0)
-    {
         anchor = ksize >> 1;
-    }
 
     CV_Assert(0 <= anchor && anchor < ksize);
 }
@@ -96,9 +86,7 @@ inline void normalizeAnchor(Point &anchor, const Size &ksize)
 inline void normalizeROI(Rect &roi, const Size &ksize, const Point &anchor, const Size &src_size)
 {
     if (roi == Rect(0, 0, -1, -1))
-    {
         roi = Rect(0, 0, src_size.width, src_size.height);
-    }
 
     CV_Assert(ksize.height > 0 && ksize.width > 0 && ((ksize.height & 1) == 1) && ((ksize.width & 1) == 1));
     CV_Assert((anchor.x == -1 && anchor.y == -1) || (anchor.x == ksize.width >> 1 && anchor.y == ksize.height >> 1));
@@ -111,10 +99,7 @@ inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8
     int scale = nDivisor && (kernel.depth() == CV_32F || kernel.depth() == CV_64F) ? 256 : 1;
 
     if (nDivisor)
-    {
         *nDivisor = scale;
-    }
-
     Mat temp(kernel.size(), type);
     kernel.convertTo(temp, type, scale);
     Mat cont_krnl = temp.reshape(1, 1);
@@ -124,9 +109,7 @@ inline void normalizeKernel(const Mat &kernel, oclMat &gpu_krnl, int type = CV_8
         int count = cont_krnl.cols >> 1;
 
         for (int i = 0; i < count; ++i)
-        {
             std::swap(cont_krnl.at<int>(0, i), cont_krnl.at<int>(0, cont_krnl.cols - 1 - i));
-        }
     }
 
     gpu_krnl.upload(cont_krnl);
@@ -146,7 +129,7 @@ public:
     {
         Size src_size = src.size();
 
-        // Delete those two clause below which exist before, However, the result is alos correct
+        // Delete those two clause below which exist before, However, the result is also correct
         // dst.create(src_size, src.type());
         // dst = Scalar(0.0);
 
@@ -411,23 +394,8 @@ public:
     {
         Filter2DEngine_GPU::apply(src, dst);
 
-        //if (iters > 1)
-        //{
-        // Size wholesize;
-        // Point ofs;
-        // dst.locateROI(wholesize,ofs);
-        // int rows = dst.rows, cols = dst.cols;
-        // dst.adjustROI(ofs.y,-ofs.y-rows+dst.wholerows,ofs.x,-ofs.x-cols+dst.wholecols);
-        // dst.copyTo(morfBuf);
-        // dst.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-        // morfBuf.adjustROI(-ofs.y,ofs.y+rows-dst.wholerows,-ofs.x,ofs.x+cols-dst.wholecols);
-        // //morfBuf.create(src.size(),src.type());
-        // //Filter2DEngine_GPU::apply(dst, morfBuf);
-        // //morfBuf.copyTo(dst);
-        //}
         for (int i = 1; i < iters; ++i)
         {
-            //dst.swap(morfBuf);
             Size wholesize;
             Point ofs;
             dst.locateROI(wholesize, ofs);
@@ -627,8 +595,6 @@ static void GPUFilter2D(const oclMat &src, oclMat &dst, const oclMat &mat_kernel
     int localWidth = localThreads[0] + paddingPixels;
     int localHeight = localThreads[1] + paddingPixels;
 
-    // 260 = divup((localThreads[0] + filterWidth * 2), 4) * 4
-    // 6   = (ROWS_PER_GROUP_WHICH_IS_4 + filterWidth * 2)
     size_t localMemSize = ksize_3x3 ? 260 * 6 * src.elemSize() : (localWidth * localHeight) * src.elemSize();
 
     int vector_lengths[4][7] = {{4, 4, 4, 4, 4, 4, 4},
@@ -739,24 +705,16 @@ public:
     virtual void apply(const oclMat &src, oclMat &dst, Rect roi = Rect(0, 0, -1, -1))
     {
         Size src_size = src.size();
-        //int src_type = src.type();
 
         int cn = src.oclchannels();
-        //dst.create(src_size, src_type);
-        //dst = Scalar(0.0);
-        //dstBuf.create(src_size, src_type);
         dstBuf.create(src_size.height + ksize.height - 1, src_size.width, CV_MAKETYPE(CV_32F, cn));
-        //dstBuf = Scalar(0.0);
 
         normalizeROI(roi, ksize, anchor, src_size);
 
         srcROI = src(roi);
         dstROI = dst(roi);
-        //dstBufROI = dstBuf(roi);
 
         (*rowFilter)(srcROI, dstBuf);
-        //Mat rm(dstBufROI);
-        //std::cout << "rm " << rm << endl;
         (*columnFilter)(dstBuf, dstROI);
     }
 
@@ -1343,11 +1301,8 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     CV_Assert(src.oclchannels() == dst.oclchannels());
     CV_Assert(ksize == (anchor << 1) + 1);
     int src_pix_per_row, dst_pix_per_row;
-    //int src_offset_x, src_offset_y;
     int dst_offset_in_pixel;
     src_pix_per_row = src.step / src.elemSize();
-    //src_offset_x = (src.offset % src.step) / src.elemSize();
-    //src_offset_y = src.offset / src.step;
     dst_pix_per_row = dst.step / dst.elemSize();
     dst_offset_in_pixel = dst.offset / dst.elemSize();
 
@@ -1359,8 +1314,6 @@ void linearColumnFilter_gpu(const oclMat &src, const oclMat &dst, oclMat mat_ker
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholecols));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src.wholerows));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&src_pix_per_row));
-    //args.push_back(std::make_pair(sizeof(cl_int),(void*)&src_offset_x));
-    //args.push_back(std::make_pair(sizeof(cl_int),(void*)&src_offset_y));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_pix_per_row));
     args.push_back(std::make_pair(sizeof(cl_int), (void *)&dst_offset_in_pixel));
     args.push_back(std::make_pair(sizeof(cl_mem), (void *)&mat_kernel.data));
@@ -1379,23 +1332,11 @@ Ptr<BaseColumnFilter_GPU> cv::ocl::getLinearColumnFilter_GPU(int /*bufType*/, in
         linearColumnFilter_gpu<int>,
         linearColumnFilter_gpu<float>
     };
-    /*
-    CV_Assert(dstType == CV_8UC4 || dstType == CV_8SC4 || dstType == CV_16UC2 ||
-    dstType == CV_16SC2 || dstType == CV_32SC1 || dstType == CV_32FC1);
-    CV_Assert(bufType == CV_8UC4 || bufType == CV_8SC4 || bufType == CV_16UC2 ||
-    bufType == CV_16SC2 || bufType == CV_32SC1 || bufType == CV_32FC1);
 
-    Mat temp(columnKernel.size(), CV_32SC1);
-    columnKernel.convertTo(temp, CV_32SC1);
-    Mat cont_krnl = temp.reshape(1, 1);
-    */
     Mat temp = columnKernel.reshape(1, 1);
     oclMat mat_kernel(temp);
 
     int ksize = temp.cols;
-
-    //CV_Assert(ksize < 16);
-
     normalizeAnchor(anchor, ksize);
 
     return makePtr<GpuLinearColumnFilter>(ksize, anchor, mat_kernel,
@@ -1433,11 +1374,8 @@ void cv::ocl::sepFilter2D(const oclMat &src, oclMat &dst, int ddepth, const Mat 
     }
 
     if (ddepth < 0)
-    {
         ddepth = src.depth();
-    }
 
-    //CV_Assert(ddepth == src.depth());
     dst.create(src.size(), CV_MAKETYPE(ddepth, src.channels()));
 
     Ptr<FilterEngine_GPU> f = createSeparableLinearFilter_GPU(src.type(), dst.type(), kernelX, kernelY, anchor, delta, bordertype);
@@ -1464,18 +1402,10 @@ void cv::ocl::Sobel(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy, 
         // usually the smoothing part is the slowest to compute,
         // so try to scale it instead of the faster differenciating part
         if (dx == 0)
-        {
             kx *= scale;
-        }
         else
-        {
             ky *= scale;
-        }
     }
-
-    // Mat kx_, ky_;
-    //ky.convertTo(ky_,CV_32S,1<<8);
-    //kx.convertTo(kx_,CV_32S,1<<8);
 
     sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, borderType);
 }
@@ -1490,18 +1420,10 @@ void cv::ocl::Scharr(const oclMat &src, oclMat &dst, int ddepth, int dx, int dy,
         // usually the smoothing part is the slowest to compute,
         // so try to scale it instead of the faster differenciating part
         if (dx == 0)
-        {
             kx *= scale;
-        }
         else
-        {
             ky *= scale;
-        }
     }
-
-    // Mat kx_, ky_;
-    //ky.convertTo(ky_,CV_32S,1<<8);
-    //kx.convertTo(kx_,CV_32S,1<<8);
 
     sepFilter2D(src, dst, ddepth, kx, ky, Point(-1, -1), delta, bordertype);
 }
@@ -1524,9 +1446,7 @@ void cv::ocl::Laplacian(const oclMat &src, oclMat &dst, int ddepth, int ksize, d
     Mat kernel(3, 3, CV_32S, (void *)K[ksize == 3]);
 
     if (scale != 1)
-    {
         kernel *= scale;
-    }
 
     filter2D(src, dst, ddepth, kernel, Point(-1, -1));
 }
@@ -1545,14 +1465,10 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
 
     // automatic detection of kernel size from sigma
     if (ksize.width <= 0 && sigma1 > 0)
-    {
         ksize.width = cvRound(sigma1 * (depth == CV_8U ? 3 : 4) * 2 + 1) | 1;
-    }
 
     if (ksize.height <= 0 && sigma2 > 0)
-    {
         ksize.height = cvRound(sigma2 * (depth == CV_8U ? 3 : 4) * 2 + 1) | 1;
-    }
 
     CV_Assert(ksize.width > 0 && ksize.width % 2 == 1 && ksize.height > 0 && ksize.height % 2 == 1);
 
@@ -1563,17 +1479,10 @@ Ptr<FilterEngine_GPU> cv::ocl::createGaussianFilter_GPU(int type, Size ksize, do
     Mat ky;
 
     if (ksize.height == ksize.width && std::abs(sigma1 - sigma2) < DBL_EPSILON)
-    {
         ky = kx;
-    }
     else
-    {
         ky = getGaussianKernel(ksize.height, sigma2, std::max(depth, CV_32F));
-    }
 
-    //Mat kx_, ky_;
-    //kx.convertTo(kx_,CV_32S,1<<8);
-    //ky.convertTo(ky_,CV_32S,1<<8);
     return createSeparableLinearFilter_GPU(type, type, kx, ky, Point(-1, -1), 0.0, bordertype);
 }
 
@@ -1604,14 +1513,10 @@ void cv::ocl::GaussianBlur(const oclMat &src, oclMat &dst, Size ksize, double si
     if (bordertype != BORDER_CONSTANT)
     {
         if (src.rows == 1)
-        {
             ksize.height = 1;
-        }
 
         if (src.cols == 1)
-        {
             ksize.width = 1;
-        }
     }
 
     Ptr<FilterEngine_GPU> f = createGaussianFilter_GPU(src.type(), ksize, sigma1, sigma2, bordertype);
@@ -1637,6 +1542,7 @@ void cv::ocl::adaptiveBilateralFilter(const oclMat& src, oclMat& dst, Size ksize
     {
         lut.at<float>(idx++) = sigma2 / (sigma2 + x * x + y * y);
     }
+
     oclMat dlut(lut);
     int depth = src.depth();
     int cn = src.oclchannels();

@@ -842,54 +842,6 @@ PERF_TEST_P(PowFixture, pow, OCL_TYPICAL_MAT_SIZES)
         OCL_PERF_ELSE
 }
 
-///////////// MagnitudeSqr////////////////////////
-
-typedef TestBaseWithParam<Size> MagnitudeSqrFixture;
-
-PERF_TEST_P(MagnitudeSqrFixture, MagnitudeSqr, OCL_TYPICAL_MAT_SIZES)
-{
-    const Size srcSize = GetParam();
-
-    Mat src1(srcSize, CV_32FC1), src2(srcSize, CV_32FC1),
-            dst(srcSize, CV_32FC1);
-    declare.in(src1, src2, WARMUP_RNG).out(dst);
-
-    if (RUN_OCL_IMPL)
-    {
-        ocl::oclMat oclSrc1(src1), oclSrc2(src2), oclDst(srcSize, src1.type());
-
-        OCL_TEST_CYCLE() cv::ocl::magnitudeSqr(oclSrc1, oclSrc2, oclDst);
-
-        oclDst.download(dst);
-
-        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
-    }
-    else if (RUN_PLAIN_IMPL)
-    {
-        ASSERT_EQ(1, src1.channels());
-
-        TEST_CYCLE()
-        {
-            for (int y = 0; y < srcSize.height; ++y)
-            {
-                const float * const src1Data = reinterpret_cast<float *>(src1.data + src1.step * y);
-                const float * const src2Data = reinterpret_cast<float *>(src2.data + src2.step * y);
-                float * const dstData = reinterpret_cast<float *>(dst.data + dst.step * y);
-                for (int x = 0; x < srcSize.width; ++x)
-                {
-                    float t0 = src1Data[x] * src1Data[x];
-                    float t1 = src2Data[x] * src2Data[x];
-                    dstData[x] = t0 + t1;
-                }
-            }
-        }
-
-        SANITY_CHECK(dst, 1e-6, ERROR_RELATIVE);
-    }
-    else
-        OCL_PERF_ELSE
-}
-
 ///////////// AddWeighted////////////////////////
 
 typedef Size_MatType AddWeightedFixture;

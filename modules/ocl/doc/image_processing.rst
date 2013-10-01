@@ -3,8 +3,82 @@ Image Processing
 
 .. highlight:: cpp
 
+ocl::meanShiftFiltering
+---------------------------
+Performs mean-shift filtering for each point of the source image.
+
+.. ocv:function:: void ocl::meanShiftFiltering(const oclMat &src, oclMat &dst, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dst: Destination image containing the color of mapped points. It has the same size and type as  ``src`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+It maps each point of the source image into another point. As a result, you have a new color and new position of each point.
+
+
+ocl::meanShiftProc
+----------------------
+Performs a mean-shift procedure and stores information about processed points (their colors and positions) in two images.
+
+.. ocv:function:: void ocl::meanShiftProc(const oclMat &src, oclMat &dstr, oclMat &dstsp, int sp, int sr, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dstr: Destination image containing the color of mapped points. The size and type is the same as  ``src`` .
+
+    :param dstsp: Destination image containing the position of mapped points. The size is the same as  ``src`` size. The type is  ``CV_16SC2`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+.. seealso:: :ocv:func:`ocl::meanShiftFiltering`
+
+
+ocl::meanShiftSegmentation
+------------------------------
+Performs a mean-shift segmentation of the source image and eliminates small segments.
+
+.. ocv:function:: void ocl::meanShiftSegmentation(const oclMat &src, Mat &dst, int sp, int sr, int minsize, TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5, 1))
+
+    :param src: Source image. Only  ``CV_8UC4`` images are supported for now.
+
+    :param dst: Segmented image with the same size and type as  ``src`` .
+
+    :param sp: Spatial window radius.
+
+    :param sr: Color window radius.
+
+    :param minsize: Minimum segment size. Smaller segments are merged.
+
+    :param criteria: Termination criteria. See :ocv:class:`TermCriteria`.
+
+ocl::integral
+-----------------
+Computes an integral image.
+
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum, oclMat &sqsum)
+
+.. ocv:function:: void ocl::integral(const oclMat &src, oclMat &sum)
+
+    :param src: Source image. Only  ``CV_8UC1`` images are supported for now.
+
+    :param sum: Integral image containing 32-bit unsigned integer values packed into  ``CV_32SC1`` .
+
+    :param sqsum: Sqsum values is ``CV_32FC1`` type.
+
+.. seealso:: :ocv:func:`integral`
+
 ocl::cornerHarris
-------------------
+---------------------
 Returns void
 
 .. ocv:function:: void ocl::cornerHarris(const oclMat &src, oclMat &dst, int blockSize, int ksize, double k, int bordertype = cv::BORDER_DEFAULT)
@@ -24,7 +98,7 @@ Returns void
 Calculate Harris corner.
 
 ocl::cornerMinEigenVal
-------------------------
+--------------------------
 Returns void
 
 .. ocv:function:: void ocl::cornerMinEigenVal(const oclMat &src, oclMat &dst, int blockSize, int ksize, int bordertype = cv::BORDER_DEFAULT)
@@ -52,6 +126,19 @@ Returns void
     :param dst: The output histogram, a dense or sparse dims-dimensional
 
 Calculates histogram of one or more arrays. Supports only 8UC1 data type.
+
+ocl::equalizeHist
+---------------------
+Equalizes the histogram of a grayscale image.
+
+.. ocv:function:: void ocl::equalizeHist(const oclMat &mat_src, oclMat &mat_dst)
+
+    :param mat_src: Source image.
+
+    :param mat_dst: Destination image.
+
+.. seealso:: :ocv:func:`equalizeHist`
+
 
 ocl::remap
 ------------------
@@ -96,7 +183,7 @@ Returns void
 Resizes an image. Supports CV_8UC1, CV_8UC3, CV_8UC4, CV_32FC1 , CV_32FC3 and CV_32FC4 data types.
 
 ocl::warpAffine
-------------------
+-------------------
 Returns void
 
 .. ocv:function:: void ocl::warpAffine(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
@@ -114,7 +201,7 @@ Returns void
 The function warpAffine transforms the source image using the specified matrix. Supports INTER_NEAREST, INTER_LINEAR, INTER_CUBIC types.
 
 ocl::warpPerspective
----------------------
+------------------------
 Returns void
 
 .. ocv:function:: void ocl::warpPerspective(const oclMat &src, oclMat &dst, const Mat &M, Size dsize, int flags = INTER_LINEAR)
@@ -209,7 +296,7 @@ Builds transformation maps for perspective transformation.
 
 
 ocl::buildWarpAffineMaps
-------------------------
+----------------------------
 Builds transformation maps for affine transformation.
 
 .. ocv:function:: void ocl::buildWarpAffineMaps(const Mat& M, bool inverse, Size dsize, oclMat& xmap, oclMat& ymap)
@@ -225,114 +312,6 @@ Builds transformation maps for affine transformation.
     :param ymap: Y values with  ``CV_32FC1`` type.
 
 .. seealso:: :ocv:func:`ocl::warpAffine` , :ocv:func:`ocl::remap`
-
-ocl::PyrLKOpticalFlow
----------------------
-.. ocv:class:: ocl::PyrLKOpticalFlow
-
-Class used for calculating an optical flow. ::
-
-    class PyrLKOpticalFlow
-    {
-    public:
-        PyrLKOpticalFlow();
-
-        void sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts,
-            oclMat& status, oclMat* err = 0);
-
-        void dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0);
-
-        Size winSize;
-        int maxLevel;
-        int iters;
-        double derivLambda;
-        bool useInitialFlow;
-        float minEigThreshold;
-        bool getMinEigenVals;
-
-        void releaseMemory();
-    };
-
-The class can calculate an optical flow for a sparse feature set or dense optical flow using the iterative Lucas-Kanade method with pyramids.
-
-.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
-
-.. note::
-
-   (Ocl) An example the Lucas Kanade optical flow pyramid method can be found at opencv_source_code/samples/ocl/pyrlk_optical_flow.cpp
-   (Ocl) An example for square detection can be found at opencv_source_code/samples/ocl/squares.cpp
-
-ocl::PyrLKOpticalFlow::sparse
------------------------------
-Calculate an optical flow for a sparse feature set.
-
-.. ocv:function:: void ocl::PyrLKOpticalFlow::sparse(const oclMat& prevImg, const oclMat& nextImg, const oclMat& prevPts, oclMat& nextPts, oclMat& status, oclMat* err = 0)
-
-    :param prevImg: First 8-bit input image (supports both grayscale and color images).
-
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
-
-    :param prevPts: Vector of 2D points for which the flow needs to be found. It must be one row matrix with CV_32FC2 type.
-
-    :param nextPts: Output vector of 2D points (with single-precision floating-point coordinates) containing the calculated new positions of input features in the second image. When ``useInitialFlow`` is true, the vector must have the same size as in the input.
-
-    :param status: Output status vector (CV_8UC1 type). Each element of the vector is set to 1 if the flow for the corresponding features has been found. Otherwise, it is set to 0.
-
-    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
-
-.. seealso:: :ocv:func:`calcOpticalFlowPyrLK`
-
-
-
-ocl::PyrLKOpticalFlow::dense
------------------------------
-Calculate dense optical flow.
-
-.. ocv:function:: void ocl::PyrLKOpticalFlow::dense(const oclMat& prevImg, const oclMat& nextImg, oclMat& u, oclMat& v, oclMat* err = 0)
-
-    :param prevImg: First 8-bit grayscale input image.
-
-    :param nextImg: Second input image of the same size and the same type as  ``prevImg`` .
-
-    :param u: Horizontal component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
-
-    :param v: Vertical component of the optical flow of the same size as input images, 32-bit floating-point, single-channel
-
-    :param err: Output vector (CV_32FC1 type) that contains the difference between patches around the original and moved points or min eigen value if ``getMinEigenVals`` is checked. It can be NULL, if not needed.
-
-
-
-ocl::PyrLKOpticalFlow::releaseMemory
-------------------------------------
-Releases inner buffers memory.
-
-.. ocv:function:: void ocl::PyrLKOpticalFlow::releaseMemory()
-
-
-ocl::interpolateFrames
-----------------------
-Interpolate frames (images) using provided optical flow (displacement field).
-
-.. ocv:function:: void ocl::interpolateFrames(const oclMat& frame0, const oclMat& frame1, const oclMat& fu, const oclMat& fv, const oclMat& bu, const oclMat& bv, float pos, oclMat& newFrame, oclMat& buf)
-
-    :param frame0: First frame (32-bit floating point images, single channel).
-
-    :param frame1: Second frame. Must have the same type and size as ``frame0`` .
-
-    :param fu: Forward horizontal displacement.
-
-    :param fv: Forward vertical displacement.
-
-    :param bu: Backward horizontal displacement.
-
-    :param bv: Backward vertical displacement.
-
-    :param pos: New frame position.
-
-    :param newFrame: Output image.
-
-    :param buf: Temporary buffer, will have width x 6*height size, CV_32FC1 type and contain 6 oclMat: occlusion masks for first frame, occlusion masks for second, interpolated forward horizontal flow, interpolated forward vertical flow, interpolated backward horizontal flow, interpolated backward vertical flow.
-
 
 ocl::HoughCircles
 -----------------
