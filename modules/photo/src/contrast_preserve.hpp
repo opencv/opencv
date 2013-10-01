@@ -74,10 +74,40 @@ class Decolor
 };
 
 int rounding(double a);
+double power(double term, int p);
+double sqroot(double m);
 
 int rounding(double a)
 {
     return int(a + 0.5);
+}
+
+double power(double term, int p)
+{
+    double res = 1.0;
+    for(int i=0;i<p;i++)
+    {
+        res *= term;
+    }
+    return res;
+}
+
+double sqroot(double m)
+{
+    double i=0;
+    double x1,x2;
+    while( (i*i) <= m )
+        i+=0.1;
+    x1=i;
+    for(int j=0;j<10;j++)
+    {
+        x2=m;
+        x2/=x1;
+        x2+=x1;
+        x2/=2;
+        x1=x2;
+    }
+    return x2;
 }
 
 float sigma = .02;
@@ -99,7 +129,7 @@ double Decolor::energyCalcu(vector <double> &Cg, vector < vector <double> > &pol
     }
 
     for(unsigned int i=0;i<polyGrad[0].size();i++)
-        P.push_back(-1.0*log(exp(-1.0*pow(temp[i],2)/sigma) + exp(-1.0*pow(temp1[i],2)/sigma)));
+        P.push_back(-1.0*log(exp(-1.0*power(temp[i],2)/sigma) + exp(-1.0*power(temp1[i],2)/sigma)));
 
     double sum = 0.0;
     for(unsigned int i=0;i<polyGrad[0].size();i++)
@@ -205,7 +235,7 @@ void Decolor::colorGrad(Mat img, vector <double> &Cg)
     double res =0.0;
     for(unsigned int i=0;i<ImL.size();i++)
     {
-        res=sqrt(pow(ImL[i],2) + pow(Ima[i],2) + pow(Imb[i],2))/100;
+        res=sqroot(power(ImL[i],2) + power(Ima[i],2) + power(Imb[i],2))/100;
         Cg.push_back(res);
     }
     lab.release();
@@ -391,8 +421,8 @@ void Decolor::grad_system(Mat img, vector < vector < double > > &polyGrad,
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
                             curIm.at<float>(i,j)=
-                                pow(red.at<float>(i,j),r)*pow(green.at<float>(i,j),g)*
-                                pow(blue.at<float>(i,j),b);
+                                power(red.at<float>(i,j),r)*power(green.at<float>(i,j),g)*
+                                power(blue.at<float>(i,j),b);
                     vector <double> curGrad;
                     gradvector(curIm,curGrad);
                     add_to_vector_poly(polyGrad,curGrad);
@@ -485,8 +515,8 @@ void Decolor::grayImContruct(vector <double> &wei, Mat img, Mat &Gray)
                     for(int i = 0;i<h;i++)
                         for(int j=0;j<w;j++)
                             Gray.at<float>(i,j)=Gray.at<float>(i,j) +
-                                (float) wei[kk]*pow(red.at<float>(i,j),r)*pow(green.at<float>(i,j),g)*
-                                pow(blue.at<float>(i,j),b);
+                                (float) wei[kk]*power(red.at<float>(i,j),r)*power(green.at<float>(i,j),g)*
+                                power(blue.at<float>(i,j),b);
 
                     kk=kk+1;
                 }
