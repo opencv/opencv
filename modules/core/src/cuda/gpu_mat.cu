@@ -55,6 +55,54 @@ using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudev;
 
+namespace
+{
+    class DefaultAllocator : public GpuMat::Allocator
+    {
+    public:
+        bool allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize);
+        void free(uchar* devPtr, int* refcount);
+    };
+
+    bool DefaultAllocator::allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize)
+    {
+        if (rows > 1 && cols > 1)
+        {
+            CV_CUDEV_SAFE_CALL( cudaMallocPitch(devPtr, step, elemSize * cols, rows) );
+        }
+        else
+        {
+            // Single row or single column must be continuous
+            CV_CUDEV_SAFE_CALL( cudaMalloc(devPtr, elemSize * cols * rows) );
+            *step = elemSize * cols;
+        }
+
+        *refcount = static_cast<int*>(fastMalloc(sizeof(int)));
+
+        return true;
+    }
+
+    void DefaultAllocator::free(uchar* devPtr, int* refcount)
+    {
+        cudaFree(devPtr);
+        fastFree(refcount);
+    }
+
+    DefaultAllocator cudaDefaultAllocator;
+    GpuMat::Allocator* g_defaultAllocator = &cudaDefaultAllocator;
+}
+
+GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
+{
+    return g_defaultAllocator;
+}
+
+void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
+{
+    CV_Assert( allocator != 0 );
+    g_defaultAllocator = allocator;
+}
+
 /////////////////////////////////////////////////////
 /// create
 
@@ -76,19 +124,17 @@ void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
         rows = _rows;
         cols = _cols;
 
-        size_t esz = elemSize();
+        uchar* devPtr;
+        const size_t esz = elemSize();
 
-        void* devPtr;
+        bool allocSuccess = allocator->allocate(&devPtr, &step, &refcount, rows, cols, esz);
 
-        if (rows > 1 && cols > 1)
+        if (!allocSuccess)
         {
-            CV_CUDEV_SAFE_CALL( cudaMallocPitch(&devPtr, &step, esz * cols, rows) );
-        }
-        else
-        {
-            // Single row or single column must be continuous
-            CV_CUDEV_SAFE_CALL( cudaMalloc(&devPtr, esz * cols * rows) );
-            step = esz * cols;
+            // custom allocator fails, try default allocator
+            allocator = defaultAllocator();
+            allocSuccess = allocator->allocate(&devPtr, &step, &refcount, rows, cols, esz);
+            CV_Assert( allocSuccess );
         }
 
         if (esz * cols == step)
@@ -110,11 +156,10 @@ void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 
 void cv::cuda::GpuMat::release()
 {
+    CV_DbgAssert( allocator != 0 );
+
     if (refcount && CV_XADD(refcount, -1) == 1)
-    {
-        cudaFree(datastart);
-        fastFree(refcount);
-    }
+        allocator->free(datastart, refcount);
 
     data = datastart = dataend = 0;
     step = rows = cols = 0;

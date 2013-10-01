@@ -61,16 +61,29 @@ namespace cv { namespace cuda {
 class CV_EXPORTS GpuMat
 {
 public:
+    class CV_EXPORTS Allocator
+    {
+    public:
+        virtual ~Allocator() {}
+
+        virtual bool allocate(uchar** devPtr, size_t* step, int** refcount, int rows, int cols, size_t elemSize) = 0;
+        virtual void free(uchar* devPtr, int* refcount) = 0;
+    };
+
+    //! default allocator
+    static Allocator* defaultAllocator();
+    static void setDefaultAllocator(Allocator* allocator);
+
     //! default constructor
-    GpuMat();
+    explicit GpuMat(Allocator* allocator = defaultAllocator());
 
     //! constructs GpuMat of the specified size and type
-    GpuMat(int rows, int cols, int type);
-    GpuMat(Size size, int type);
+    GpuMat(int rows, int cols, int type, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Allocator* allocator = defaultAllocator());
 
     //! constucts GpuMat and fills it with the specified value _s
-    GpuMat(int rows, int cols, int type, Scalar s);
-    GpuMat(Size size, int type, Scalar s);
+    GpuMat(int rows, int cols, int type, Scalar s, Allocator* allocator = defaultAllocator());
+    GpuMat(Size size, int type, Scalar s, Allocator* allocator = defaultAllocator());
 
     //! copy constructor
     GpuMat(const GpuMat& m);
@@ -84,7 +97,7 @@ public:
     GpuMat(const GpuMat& m, Rect roi);
 
     //! builds GpuMat from host memory (Blocking call)
-    explicit GpuMat(InputArray arr);
+    explicit GpuMat(InputArray arr, Allocator* allocator = defaultAllocator());
 
     //! destructor - calls release()
     ~GpuMat();
@@ -249,6 +262,9 @@ public:
     //! helper fields used in locateROI and adjustROI
     uchar* datastart;
     uchar* dataend;
+
+    //! allocator
+    Allocator* allocator;
 };
 
 //! creates continuous matrix
