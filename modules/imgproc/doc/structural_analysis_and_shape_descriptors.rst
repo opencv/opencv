@@ -716,3 +716,32 @@ See below a sample output of the function where each image pixel is tested again
 .. [Suzuki85] Suzuki, S. and Abe, K., *Topological Structural Analysis of Digitized Binary Images by Border Following*. CVGIP 30 1, pp 32-46 (1985)
 
 .. [TehChin89] Teh, C.H. and Chin, R.T., *On the Detection of Dominant Points on Digital Curve*. PAMI 11 8, pp 859-872 (1989)
+
+
+
+rotatedRectangleIntersection
+-------------------------------
+Finds out if there is any intersection between two rotated rectangles. If there is then the vertices of the interesecting region are returned as well.
+
+.. ocv:function:: int rotatedRectangleIntersection( const RotatedRect& rect1, const RotatedRect& rect2, OutputArray intersectingRegion  )
+.. ocv:pyfunction:: cv2.rotatedRectangleIntersection( rect1, rect2 ) -> retval, intersectingRegion
+
+    :param rect1: First rectangle
+
+    :param rect2: Second rectangle
+
+    :param intersectingRegion: The output array of the verticies of the intersecting region. It returns at most 8 vertices. Stored as ``std::vector<cv::Point2f>`` or ``cv::Mat`` as Mx1 of type CV_32FC2.
+
+    :param pointCount: The number of vertices.
+
+The following values are returned by the function:
+
+    * INTERSECT_NONE=0 - No intersection
+
+    * INTERSECT_PARTIAL=1 - There is a partial intersection
+
+    * INTERSECT_FULL=2 - One of the rectangle is fully enclosed in the other
+
+Below are some examples of intersection configurations. The hatched pattern indicates the intersecting region and the red vertices are returned by the function.
+
+.. image:: pics/intersection.png
