@@ -32,7 +32,7 @@ Video Analysis
                  :width:  90pt
 
 
-*  :ref:`background_subtraction`
+*  :ref:`py_background_subtraction`
 
   .. tabularcolumns:: m{100pt} m{300pt}
   .. cssclass:: toctableopencv

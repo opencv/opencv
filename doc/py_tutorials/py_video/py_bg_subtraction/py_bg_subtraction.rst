@@ -1,4 +1,4 @@
-.. _background_subtraction:
+.. _py_background_subtraction:
 
 
 Background Subtraction
