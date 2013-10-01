@@ -55,7 +55,7 @@ double norm_m(double);
 
 double norm_m(double E)
 {
-    return sqrt(power(E,2));
+    return sqrt(pow(E,2));
 }
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
@@ -136,8 +136,8 @@ void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)
         double ans1 = 0.0;
         for(unsigned int i =0;i<alf.size();i++)
         {
-            ans = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * power(temp[i],2))/power(sigma,2));
-            ans1 =((1 - alf[i])/2) * exp((-1.0 * 0.5 * power(temp1[i],2))/power(sigma,2));
+            ans = ((1 + alf[i])/2) * exp((-1.0 * 0.5 * pow(temp[i],2))/pow(sigma,2));
+            ans1 =((1 - alf[i])/2) * exp((-1.0 * 0.5 * pow(temp1[i],2))/pow(sigma,2));
             G_pos.push_back(ans);
             G_neg.push_back(ans1);
         }
