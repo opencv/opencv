@@ -357,7 +357,7 @@ Calculates the up-right bounding rectangle of a point set.
 
 The function calculates and returns the minimal up-right bounding rectangle for the specified point set.
 
-
+.. note:: Developer should keep in mind that the boundingRect function can return negative indexes and that it can raise problems in following functionality. You should always check the values before usage.
 
 
 contourArea
