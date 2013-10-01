@@ -40,7 +40,7 @@ if(UNIX)
   endif()
 endif()
 
-ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow)
+ocv_warnings_disable(CMAKE_C_FLAGS -Wunused-variable -Wshadow -Wmaybe-uninitialized)
 ocv_warnings_disable(CMAKE_C_FLAGS /wd4244 /wd4267) # vs2005
 
 set_target_properties(${WEBP_LIBRARY}
