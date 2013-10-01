@@ -584,7 +584,8 @@ namespace cv
 
         CV_EXPORTS void cvtColor(const oclMat &src, oclMat &dst, int code , int dcn = 0);
 
-        CV_EXPORTS void setIdentity(oclMat& src, double val);
+        //! initializes a scaled identity matrix
+        CV_EXPORTS void setIdentity(oclMat& src, const Scalar & val = Scalar(1));
 
         //////////////////////////////// Filter Engine ////////////////////////////////
 

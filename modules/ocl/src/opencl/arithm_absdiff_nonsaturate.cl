@@ -15,7 +15,8 @@
 // Third party copyrights are property of their respective owners.
 //
 // @Authors
-//    Shengen Yan,yanshengen@gmail.com
+//    Jia Haipeng, jiahaipeng95@gmail.com
+//
 //
 // Redistribution and use in source and binary forms, with or without modification,
 // are permitted provided that the following conditions are met:
@@ -51,54 +52,42 @@
 #endif
 #endif
 
-#if defined (FUNC_SUM)
-#define FUNC(a, b) b += a;
-#endif
-#if defined (FUNC_ABS_SUM)
-#define FUNC(a, b) b += a >= 0 ? a : -a;
-#endif
-#if defined (FUNC_SQR_SUM)
-#define FUNC(a, b) b += a * a;
-#endif
-
-/**************************************Array buffer SUM**************************************/
-
-__kernel void arithm_op_sum(int cols,int invalid_cols,int offset,int elemnum,int groupnum,
-                                __global srcT *src, __global dstT *dst)
+__kernel void arithm_absdiff_nonsaturate_binary(__global srcT *src1, int src1_step, int src1_offset,
+                         __global srcT *src2, int src2_step, int src2_offset,
+                         __global dstT *dst, int dst_step, int dst_offset,
+                         int cols, int rows)
 {
-   unsigned int lid = get_local_id(0);
-   unsigned int gid = get_group_id(0);
-   unsigned int id = get_global_id(0);
-   unsigned int idx = offset + id + (id / cols) * invalid_cols;
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-   __local dstT localmem_sum[128];
-   dstT sum = (dstT)(0), temp;
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, src1_step, x + src1_offset);
+        int src2_index = mad24(y, src2_step, x + src2_offset);
+        int dst_index  = mad24(y, dst_step, x + dst_offset);
 
-   for (int grainSize = groupnum << 8; id < elemnum; id += grainSize)
-   {
-       idx = offset + id + (id / cols) * invalid_cols;
-       temp = convertToDstT(src[idx]);
-       FUNC(temp, sum);
-   }
+        dstT t0 = convertToDstT(src1[src1_index]);
+        dstT t1 = convertToDstT(src2[src2_index]);
+        dstT t2 = t0 - t1;
 
-   if (lid > 127)
-       localmem_sum[lid - 128] = sum;
-   barrier(CLK_LOCAL_MEM_FENCE);
+        dst[dst_index] = t2 >= 0 ? t2 : -t2;
+    }
+}
 
-   if (lid < 128)
-       localmem_sum[lid] = sum + localmem_sum[lid];
-   barrier(CLK_LOCAL_MEM_FENCE);
+__kernel void arithm_absdiff_nonsaturate(__global srcT *src1, int src1_step, int src1_offset,
+                         __global dstT *dst, int dst_step, int dst_offset,
+                         int cols, int rows)
+{
+    int x = get_global_id(0);
+    int y = get_global_id(1);
 
-   for (int lsize = 64; lsize > 0; lsize >>= 1)
-   {
-       if (lid < lsize)
-       {
-           int lid2 = lsize + lid;
-           localmem_sum[lid] = localmem_sum[lid] + localmem_sum[lid2];
-       }
-       barrier(CLK_LOCAL_MEM_FENCE);
-   }
+    if (x < cols && y < rows)
+    {
+        int src1_index = mad24(y, src1_step, x + src1_offset);
+        int dst_index  = mad24(y, dst_step, x + dst_offset);
 
-   if (lid == 0)
-       dst[gid] = localmem_sum[0];
+        dstT t0 = convertToDstT(src1[src1_index]);
+
+        dst[dst_index] = t0 >= 0 ? t0 : -t0;
+    }
 }
