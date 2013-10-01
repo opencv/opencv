@@ -133,59 +133,6 @@ double cv::cuda::norm(InputArray _src, int normType, InputArray _mask, GpuMat& b
     return std::max(std::abs(min_val), std::abs(max_val));
 }
 
-double cv::cuda::norm(InputArray _src1, InputArray _src2, GpuMat& buf, int normType)
-{
-#if CUDA_VERSION < 5050
-    (void) buf;
-
-    typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2, NppiSize oSizeROI, Npp64f* pRetVal);
-
-    static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
-#else
-    typedef NppStatus (*func_t)(const Npp8u* pSrc1, int nSrcStep1, const Npp8u* pSrc2, int nSrcStep2,
-        NppiSize oSizeROI, Npp64f* pRetVal, Npp8u * pDeviceBuffer);
-
-    typedef NppStatus (*buf_size_func_t)(NppiSize oSizeROI, int* hpBufferSize);
-
-    static const func_t funcs[] = {nppiNormDiff_Inf_8u_C1R, nppiNormDiff_L1_8u_C1R, nppiNormDiff_L2_8u_C1R};
-
-    static const buf_size_func_t buf_size_funcs[] = {nppiNormDiffInfGetBufferHostSize_8u_C1R, nppiNormDiffL1GetBufferHostSize_8u_C1R, nppiNormDiffL2GetBufferHostSize_8u_C1R};
-#endif
-
-    GpuMat src1 = _src1.getGpuMat();
-    GpuMat src2 = _src2.getGpuMat();
-
-    CV_Assert( src1.type() == CV_8UC1 );
-    CV_Assert( src1.size() == src2.size() && src1.type() == src2.type() );
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 );
-
-    NppiSize sz;
-    sz.width  = src1.cols;
-    sz.height = src1.rows;
-
-    const int funcIdx = normType >> 1;
-
-    DeviceBuffer dbuf;
-
-#if CUDA_VERSION < 5050
-    nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf) );
-#else
-    int bufSize;
-    buf_size_funcs[funcIdx](sz, &bufSize);
-
-    ensureSizeIsEnough(1, bufSize, CV_8UC1, buf);
-
-    nppSafeCall( funcs[funcIdx](src1.ptr<Npp8u>(), static_cast<int>(src1.step), src2.ptr<Npp8u>(), static_cast<int>(src2.step), sz, dbuf, buf.data) );
-#endif
-
-    cudaSafeCall( cudaDeviceSynchronize() );
-
-    double retVal;
-    dbuf.download(&retVal);
-
-    return retVal;
-}
-
 ////////////////////////////////////////////////////////////////////////
 // meanStdDev
 
