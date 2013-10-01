@@ -161,7 +161,7 @@ PERF_TEST_P(setToFixture, setTo,
 typedef tuple<Size, int, int> uploadParams;
 typedef TestBaseWithParam<uploadParams> uploadFixture;
 
-PERF_TEST_P(uploadFixture, DISABLED_upload,
+PERF_TEST_P(uploadFixture, upload,
             testing::Combine(
                 OCL_TYPICAL_MAT_SIZES,
                 testing::Range(CV_8U, CV_64F),
@@ -190,15 +190,14 @@ PERF_TEST_P(uploadFixture, DISABLED_upload,
     else
         OCL_PERF_ELSE
 
-    int value = 0;
-    SANITY_CHECK(value);
+    SANITY_CHECK_NOTHING();
 }
 
 /////////////////// download ///////////////////////////
 
 typedef TestBaseWithParam<uploadParams> downloadFixture;
 
-PERF_TEST_P(downloadFixture, DISABLED_download,
+PERF_TEST_P(downloadFixture, download,
             testing::Combine(
                 OCL_TYPICAL_MAT_SIZES,
                 testing::Range(CV_8U, CV_64F),
@@ -227,6 +226,5 @@ PERF_TEST_P(downloadFixture, DISABLED_download,
     else
         OCL_PERF_ELSE
 
-    int value = 0;
-    SANITY_CHECK(value);
+    SANITY_CHECK_NOTHING();
 }
