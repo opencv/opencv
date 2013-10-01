@@ -509,11 +509,11 @@ Line segment detector class, following the algorithm described at [Rafael12]_.
 .. ocv:class:: LineSegmentDetector : public Algorithm
 
 
-createLineSegmentDetectorPtr
-----------------------------
+createLineSegmentDetector
+-------------------------
 Creates a smart pointer to a LineSegmentDetector object and initializes it.
 
-.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetectorPtr(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
+.. ocv:function:: Ptr<LineSegmentDetector> createLineSegmentDetector(int _refine = LSD_REFINE_STD, double _scale = 0.8, double _sigma_scale = 0.6, double _quant = 2.0, double _ang_th = 22.5, double _log_eps = 0, double _density_th = 0.7, int _n_bins = 1024)
 
     :param _refine: The way found lines will be refined:
 

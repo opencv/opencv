@@ -137,6 +137,7 @@ typedef Ptr<StereoSGBM> Ptr_StereoSGBM;
 
 typedef Ptr<cv::softcascade::ChannelFeatureBuilder> Ptr_ChannelFeatureBuilder;
 typedef Ptr<CLAHE> Ptr_CLAHE;
+typedef Ptr<LineSegmentDetector > Ptr_LineSegmentDetector;
 
 typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 
