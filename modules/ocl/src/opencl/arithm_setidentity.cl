@@ -42,6 +42,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+
 #if defined (DOUBLE_SUPPORT)
 #ifdef cl_khr_fp64
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
@@ -50,51 +51,19 @@
 #endif
 #endif
 
-
-#if defined (DOUBLE_SUPPORT)
-#define DATA_TYPE double
-#else
-#define DATA_TYPE float
-#endif
-
-__kernel void setIdentityKernel_F1(__global float* src, int src_row, int src_col, int src_step, DATA_TYPE scalar)
+__kernel void setIdentity(__global T * src, int src_step, int src_offset,
+    int cols, int rows, __global const T * scalar)
 {
     int x = get_global_id(0);
     int y = get_global_id(1);
 
-    if(x < src_col && y < src_row)
+    if (x < cols && y < rows)
     {
-        if(x == y)
-            src[y * src_step + x] = scalar;
+        int src_index = mad24(y, src_step, src_offset + x);
+
+        if (x == y)
+            src[src_index] = *scalar;
         else
-            src[y * src_step + x] = 0 * scalar;
-    }
-}
-
-__kernel void setIdentityKernel_D1(__global DATA_TYPE* src, int src_row, int src_col, int src_step, DATA_TYPE scalar)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < src_col && y < src_row)
-    {
-        if(x == y)
-            src[y * src_step + x] = scalar;
-        else
-            src[y * src_step + x] = 0 * scalar;
-    }
-}
-
-__kernel void setIdentityKernel_I1(__global int* src, int src_row, int src_col, int src_step, int scalar)
-{
-    int x = get_global_id(0);
-    int y = get_global_id(1);
-
-    if(x < src_col && y < src_row)
-    {
-        if(x == y)
-            src[y * src_step + x] = scalar;
-        else
-            src[y * src_step + x] = 0 * scalar;
+            src[src_index] = 0;
     }
 }
