@@ -6,7 +6,7 @@ if(APPLE)
 else(APPLE)
   #find_package(OpenCL QUIET)
 
-  if (NOT OPENCL_FOUND)
+  if(NOT OPENCL_FOUND)
     find_path(OPENCL_ROOT_DIR
               NAMES OpenCL/cl.h CL/cl.h include/CL/cl.h include/nvidia-current/CL/cl.h
               PATHS ENV OCLROOT ENV AMDAPPSDKROOT ENV CUDA_PATH ENV INTELOCLSDKROOT
@@ -20,18 +20,29 @@ else(APPLE)
               DOC "OpenCL include directory"
               NO_DEFAULT_PATH)
 
-    if (X86_64)
-      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win64 lib/x86_64 lib/x64)
-    elseif (X86)
-      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win32 lib/x86)
-    endif()
+    if((NOT DEFINED OPENCL_LIBRARY) OR (OPENCL_LIBRARY MATCHES NOTFOUND))
+      message(STATUS "Find OpenCL library...")
+      set(OPENCL_POSSIBLE_LIB_SUFFIXES lib) # default
+      if(WIN32)
+        if(X86_64)
+          set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win64 lib/x86_64 lib/x64)
+        elseif(X86)
+          set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/Win32 lib/x86)
+        endif()
+      elseif(UNIX)
+        if(X86_64)
+          set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/x86_64 lib64 lib)
+        elseif(X86)
+          set(OPENCL_POSSIBLE_LIB_SUFFIXES lib/x86 lib32 lib)
+        endif()
+      endif()
 
-    find_library(OPENCL_LIBRARY
-              NAMES OpenCL
-              HINTS ${OPENCL_ROOT_DIR}
-              PATH_SUFFIXES ${OPENCL_POSSIBLE_LIB_SUFFIXES}
-              DOC "OpenCL library"
-              NO_DEFAULT_PATH)
+      find_library(OPENCL_LIBRARY
+                   NAMES OpenCL
+                   HINTS ${OPENCL_ROOT_DIR}
+                   PATH_SUFFIXES ${OPENCL_POSSIBLE_LIB_SUFFIXES}
+                   DOC "OpenCL library")
+    endif()
 
     mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)
     include(FindPackageHandleStandardArgs)
