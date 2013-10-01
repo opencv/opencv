@@ -153,6 +153,7 @@ OCV_OPTION(WITH_CSTRIPES       "Include C= support"                          OFF
 OCV_OPTION(WITH_TIFF           "Include TIFF support"                        ON   IF (NOT IOS) )
 OCV_OPTION(WITH_UNICAP         "Include Unicap support (GPL)"                OFF  IF (UNIX AND NOT APPLE AND NOT ANDROID) )
 OCV_OPTION(WITH_V4L            "Include Video 4 Linux support"               ON   IF (UNIX AND NOT ANDROID) )
+OCV_OPTION(WITH_LIBV4L         "Use libv4l for Video 4 Linux support"        ON   IF (UNIX AND NOT ANDROID) )
 OCV_OPTION(WITH_DSHOW          "Build HighGUI with DirectShow support"       ON   IF (WIN32 AND NOT ARM) )
 OCV_OPTION(WITH_MSMF           "Build HighGUI with Media Foundation support" OFF  IF WIN32 )
 OCV_OPTION(WITH_XIMEA          "Include XIMEA cameras support"               OFF  IF (NOT ANDROID AND NOT APPLE) )
