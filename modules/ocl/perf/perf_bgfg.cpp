@@ -167,7 +167,7 @@ PERF_TEST_P(VideoMOGFixture, MOG,
 typedef tuple<string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> VideoMOG2Fixture;
 
-PERF_TEST_P(VideoMOG2Fixture, MOG2,
+PERF_TEST_P(VideoMOG2Fixture, DISABLED_MOG2, // TODO Disabled: random hungs on buildslave
             ::testing::Combine(::testing::Values("gpu/video/768x576.avi", "gpu/video/1920x1080.avi"),
             ::testing::Values(1, 3)))
 {
