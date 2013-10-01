@@ -55,7 +55,7 @@ double norm_m(double);
 
 double norm_m(double E)
 {
-    return sqroot(power(E,2));
+    return sqrt(power(E,2));
 }
 
 void cv::decolor(InputArray _src, OutputArray _dst, OutputArray _color_boost)

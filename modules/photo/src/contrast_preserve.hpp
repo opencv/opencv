@@ -235,7 +235,7 @@ void Decolor::colorGrad(Mat img, vector <double> &Cg)
     double res =0.0;
     for(unsigned int i=0;i<ImL.size();i++)
     {
-        res=sqroot(power(ImL[i],2) + power(Ima[i],2) + power(Imb[i],2))/100;
+        res=sqrt(power(ImL[i],2) + power(Ima[i],2) + power(Imb[i],2))/100;
         Cg.push_back(res);
     }
     lab.release();
