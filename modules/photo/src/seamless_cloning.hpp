@@ -75,6 +75,18 @@ class Cloning
         void texture_flatten(Mat &I, Mat &mask, Mat &wmask, double low_threshold, double high_threhold, int kernel_size, Mat &final);
 };
 
+double power(double term, int p);
+
+double power(double term, int p)
+{
+    double res = 1.0;
+    for(int i=0;i<p;i++)
+    {
+        res *= term;
+    }
+    return res;
+}
+
 void Cloning::getGradientx( const Mat &img, Mat &gx)
 {
     int w = img.size().width;
@@ -728,7 +740,7 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alph
             {
 
                 mag.at<float>(i,j*channel+c) =
-                    sqrt(pow(srx32.at<float>(i,j*channel+c),2) + pow(sry32.at<float>(i,j*channel+c),2));
+                    sqrt(power(srx32.at<float>(i,j*channel+c),2) + power(sry32.at<float>(i,j*channel+c),2));
             }
 
     for(int i=0;i < h; i++)
@@ -738,9 +750,9 @@ void Cloning::illum_change(Mat &I, Mat &mask, Mat &wmask, Mat &final, float alph
                 if(srx32.at<float>(i,j*channel+c) != 0)
                 {
                     srx32.at<float>(i,j*channel+c) =
-                        pow(alpha,beta)*srx32.at<float>(i,j*channel+c)*pow(mag.at<float>(i,j*channel+c),-1*beta);
+                        power(alpha,beta)*srx32.at<float>(i,j*channel+c)*power(mag.at<float>(i,j*channel+c),-1*beta);
                     sry32.at<float>(i,j*channel+c) =
-                        pow(alpha,beta)*sry32.at<float>(i,j*channel+c)*pow(mag.at<float>(i,j*channel+c),-1*beta);
+                        power(alpha,beta)*sry32.at<float>(i,j*channel+c)*power(mag.at<float>(i,j*channel+c),-1*beta);
                 }
             }
 
