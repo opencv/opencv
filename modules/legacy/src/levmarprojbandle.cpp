@@ -866,9 +866,9 @@ void icvReconstructPoints4DStatus(CvMat** projPoints, CvMat **projMatrs, CvMat**
                     double  dx,dy;
                     cvGetCol(points4D,&point4D,curPoint);
                     cvmMul(projMatrs[currImage],&point4D,&point3D);
-                    double w = point3D_dat[2];
-                    double x = point3D_dat[0] / w;
-                    double y = point3D_dat[1] / w;
+                    double w = 1 / point3D_dat[2];
+                    double x = point3D_dat[0] * w;
+                    double y = point3D_dat[1] * w;
 
                     dx = cvmGet(projPoints[currImage],0,curPoint) - x;
                     dy = cvmGet(projPoints[currImage],1,curPoint) - y;
@@ -972,9 +972,9 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
 #endif
 
                 cvmMul(projMatrs[currImage],&point4D,&point3D);
-                double w = point3D_dat[2];
-                cvmSet(projPoints[currImage],0,currVisPoint,point3D_dat[0]/w);
-                cvmSet(projPoints[currImage],1,currVisPoint,point3D_dat[1]/w);
+                double w = 1 / point3D_dat[2];
+                cvmSet(projPoints[currImage],0,currVisPoint,point3D_dat[0]*w);
+                cvmSet(projPoints[currImage],1,currVisPoint,point3D_dat[1]*w);
 
 #ifdef TRACK_BUNDLE
                 {
@@ -984,8 +984,8 @@ static void icvProjPointsStatusFunc( int numImages, CvMat *points4D, CvMat **pro
                                  point3D_dat[0],
                                  point3D_dat[1],
                                  point3D_dat[2],
-                                 point3D_dat[0]/w,
-                                 point3D_dat[1]/w
+                                 point3D_dat[0]*w,
+                                 point3D_dat[1]*w
                                  );
                     fclose(file);
                 }
@@ -1681,7 +1681,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
                     normAll2 += currNorm2 * currNorm2;
 
                     /* compute change */
-                    change = sqrt(normAll1) / sqrt(normAll2);
+                    change = sqrt(normAll1 / normAll2);
 
 
 //#ifdef TRACK_BUNDLE
@@ -1700,7 +1700,7 @@ void cvOptimizeLevenbergMarquardtBundle( CvMat** projMatrs, CvMat** observProjPo
 
                 }
 
-                alpha /= 10;
+                alpha *= 0.1;
                 for(int currImage = 0; currImage < numImages; currImage++ )
                 {
                     cvCopy(newVectorX_projMatrs[currImage],vectorX_projMatrs[currImage]);
