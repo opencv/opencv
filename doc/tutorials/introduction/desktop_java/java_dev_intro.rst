@@ -7,10 +7,9 @@ Introduction to Java Development
 
 As of OpenCV 2.4.4, OpenCV supports desktop Java development using nearly the same interface as for
 Android development. This guide will help you to create your first Java (or Scala) application using OpenCV.
-We will use either `Eclipse <http://eclipse.org/>`_, `Apache Ant <http://ant.apache.org/>`_ or the
-`Simple Build Tool (SBT) <http://www.scala-sbt.org/>`_ to build the application.
+We will use either `Apache Ant <http://ant.apache.org/>`_ or `Simple Build Tool (SBT) <http://www.scala-sbt.org/>`_ to build the application.
 
-For further reading after this guide, look at the :ref:`Android_Dev_Intro` tutorials.
+If you want to use Eclipse head to :ref:`Java_Eclipse`. For further reading after this guide, look at the :ref:`Android_Dev_Intro` tutorials.
 
 What we'll do in this guide
 ===========================
@@ -19,7 +18,7 @@ In this guide, we will:
 
 * Get OpenCV with desktop Java support
 
-* Create an ``Ant``, ``Eclipse`` or ``SBT`` project
+* Create an ``Ant`` or ``SBT`` project
 
 * Write a simple OpenCV application in Java or Scala
 
@@ -233,97 +232,6 @@ Java sample with Ant
         :alt: run app with Ant
         :align: center
 
-Java project in Eclipse
-=======================
-
-Now let's look at the possiblity of using OpenCV in Java when developing in Eclipse IDE.
-
-* Create a new Eclipse workspace
-* Create a new Java project via :guilabel:`File --> New --> Java Project`
-
-  .. image:: images/eclipse_new_java_prj.png
-     :alt: Eclipse: new Java project
-     :align: center
-
-  Call it say "HelloCV".
-
-* Open :guilabel:`Java Build Path` tab on :guilabel:`Project Properties` dialog
-  and configure additional library (OpenCV) reference (jar and native library location):
-
-  .. image:: images/eclipse_user_lib.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib2.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib3.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib4.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib5.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib6.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib7.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-  |
-
-  .. image:: images/eclipse_user_lib8.png
-     :alt: Eclipse: external JAR
-     :align: center
-
-
-* Add a new Java class (say ``Main``) containing the application entry:
-
-  .. image:: images/eclipse_main_class.png
-     :alt: Eclipse: Main class
-     :align: center
-
-* Put some simple OpenCV calls there, e.g.:
-
-  .. code-block:: java
-
-    import org.opencv.core.Core;
-    import org.opencv.core.CvType;
-    import org.opencv.core.Mat;
-
-    public class Main {
-        public static void main(String[] args) {
-            System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-            Mat m  = Mat.eye(3, 3, CvType.CV_8UC1);
-            System.out.println("m = " + m.dump());
-        }
-    }
-
-* Press :guilabel:`Run` button and find the identity matrix content in the Eclipse ``Console`` window.
-
-  .. image:: images/eclipse_run.png
-     :alt: Eclipse: run
-     :align: center
 
 SBT project for Java and Scala
 ==============================

@@ -287,11 +287,17 @@ bool CvCaptureCAM::grabFrame(double timeOut) {
     double sleepTime = 0.005;
     double total = 0;
 
-    NSDate *loopUntil = [NSDate dateWithTimeIntervalSinceNow:sleepTime];
-    while (![capture updateImage] && (total += sleepTime)<=timeOut &&
-           [[NSRunLoop currentRunLoop] runMode: NSDefaultRunLoopMode
-                                    beforeDate:loopUntil])
-        loopUntil = [NSDate dateWithTimeIntervalSinceNow:sleepTime];
+    // If the capture is launched in a separate thread, then
+    // [NSRunLoop currentRunLoop] is not the same as in the main thread, and has no timer.
+    //see https://developer.apple.com/library/mac/#documentation/Cocoa/Reference/Foundation/Classes/nsrunloop_Class/Reference/Reference.html
+    // "If no input sources or timers are attached to the run loop, this
+    // method exits immediately"
+    // using usleep() is not a good alternative, because it may block the GUI.
+    // Create a dummy timer so that runUntilDate does not exit immediately:
+    [NSTimer scheduledTimerWithTimeInterval:100 target:nil selector:@selector(doFireTimer:) userInfo:nil repeats:YES];
+    while (![capture updateImage] && (total += sleepTime)<=timeOut) {
+        [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:sleepTime]];
+    }
 
     [localpool drain];
 
@@ -336,9 +342,11 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
     }
 
     if (cameraNum >= 0) {
-        int nCameras = [devices count];
-        if( cameraNum < 0 || cameraNum >= nCameras )
+        NSUInteger nCameras = [devices count];
+        if( (NSUInteger)cameraNum >= nCameras ) {
+            [localpool drain];
             return 0;
+        }
         device = [devices objectAtIndex:cameraNum] ;
     } else {
         device = [QTCaptureDevice defaultInputDeviceWithMediaType:QTMediaTypeVideo]  ;
@@ -402,6 +410,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
 
         grabFrame(60);
 
+        [localpool drain];
         return 1;
     }
 
@@ -431,6 +440,7 @@ void CvCaptureCAM::setWidthHeight() {
 
 
 double CvCaptureCAM::getProperty(int property_id){
+    int retval;
     NSAutoreleasePool* localpool = [[NSAutoreleasePool alloc] init];
 
     NSArray* connections = [mCaptureDeviceInput	connections];
@@ -440,15 +450,18 @@ double CvCaptureCAM::getProperty(int property_id){
     int width=s1.width, height=s1.height;
     switch (property_id) {
         case CV_CAP_PROP_FRAME_WIDTH:
-            return width;
+            retval = width;
+            break;
         case CV_CAP_PROP_FRAME_HEIGHT:
-            return height;
+            retval = height;
+            break;
         default:
-            return 0;
+            retval = 0;
+            break;
     }
 
     [localpool drain];
-
+    return retval;
 }
 
 bool CvCaptureCAM::setProperty(int property_id, double value) {
@@ -496,13 +509,15 @@ bool CvCaptureCAM::setProperty(int property_id, double value) {
 @implementation CaptureDelegate
 
 - (id)init {
-    [super init];
-    newFrame = 0;
-    imagedata = NULL;
-    bgr_imagedata = NULL;
-    currSize = 0;
-    image = NULL;
-    bgr_image = NULL;
+    self = [super init];
+    if (self) {
+        newFrame = 0;
+        imagedata = NULL;
+        bgr_imagedata = NULL;
+        currSize = 0;
+        image = NULL;
+        bgr_image = NULL;
+    }
     return self;
 }
 
@@ -577,26 +592,26 @@ didDropVideoFrameWithSampleBuffer:(QTSampleBuffer *)sampleBuffer
         memcpy(imagedata, baseaddress, currSize);
 
         if (image == NULL) {
-            image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 4);
+            image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 4);
         }
-        image->width =width;
-        image->height = height;
+        image->width = (int)width;
+        image->height = (int)height;
         image->nChannels = 4;
         image->depth = IPL_DEPTH_8U;
-        image->widthStep = rowBytes;
+        image->widthStep = (int)rowBytes;
         image->imageData = imagedata;
-        image->imageSize = currSize;
+        image->imageSize = (int)currSize;
 
         if (bgr_image == NULL) {
-            bgr_image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 3);
+            bgr_image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
         }
-        bgr_image->width =width;
-        bgr_image->height = height;
+        bgr_image->width = (int)width;
+        bgr_image->height = (int)height;
         bgr_image->nChannels = 3;
         bgr_image->depth = IPL_DEPTH_8U;
-        bgr_image->widthStep = rowBytes;
+        bgr_image->widthStep = (int)rowBytes;
         bgr_image->imageData = bgr_imagedata;
-        bgr_image->imageSize = currSize;
+        bgr_image->imageSize = (int)currSize;
 
         cvCvtColor(image, bgr_image, CV_BGRA2BGR);
 
@@ -750,29 +765,29 @@ IplImage* CvCaptureFile::retrieveFramePixelBuffer() {
         }
 
         if (image == NULL) {
-            image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 4);
+            image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 4);
         }
 
-        image->width =width;
-        image->height = height;
+        image->width = (int)width;
+        image->height = (int)height;
         image->nChannels = 4;
         image->depth = IPL_DEPTH_8U;
-        image->widthStep = rowBytes;
+        image->widthStep = (int)rowBytes;
         image->imageData = imagedata;
-        image->imageSize = currSize;
+        image->imageSize = (int)currSize;
 
 
         if (bgr_image == NULL) {
-            bgr_image = cvCreateImageHeader(cvSize(width,height), IPL_DEPTH_8U, 3);
+            bgr_image = cvCreateImageHeader(cvSize((int)width,(int)height), IPL_DEPTH_8U, 3);
         }
 
-        bgr_image->width =width;
-        bgr_image->height = height;
+        bgr_image->width = (int)width;
+        bgr_image->height = (int)height;
         bgr_image->nChannels = 3;
         bgr_image->depth = IPL_DEPTH_8U;
-        bgr_image->widthStep = rowBytes;
+        bgr_image->widthStep = (int)rowBytes;
         bgr_image->imageData = bgr_imagedata;
-        bgr_image->imageSize = currSize;
+        bgr_image->imageSize = (int)currSize;
 
         cvCvtColor(image, bgr_image,CV_BGRA2BGR);
 

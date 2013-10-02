@@ -522,11 +522,7 @@ macro(ocv_create_module)
 
   if((NOT DEFINED OPENCV_MODULE_TYPE AND BUILD_SHARED_LIBS)
       OR (DEFINED OPENCV_MODULE_TYPE AND OPENCV_MODULE_TYPE STREQUAL SHARED))
-    if(MSVC)
-      set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
-    else()
-      add_definitions(-DCVAPI_EXPORTS)
-    endif()
+    set_target_properties(${the_module} PROPERTIES DEFINE_SYMBOL CVAPI_EXPORTS)
   endif()
 
   if(MSVC)

@@ -50,10 +50,6 @@
 //
 //M*/
 
-//#define PRINT_CPU_TIME 1000
-//#define PRINT_TIME
-
-
 #include "test_precomp.hpp"
 #include <iomanip>
 
@@ -65,392 +61,506 @@ using namespace cvtest;
 using namespace testing;
 using namespace std;
 
-PARAM_TEST_CASE(ArithmTestBase, MatType, bool)
+//////////////////////////////// LUT /////////////////////////////////////////////////
+
+PARAM_TEST_CASE(Lut, int, int, bool, bool)
 {
-    int type;
-    cv::Scalar val;
+    int lut_depth;
+    int cn;
+    bool use_roi, same_cn;
 
-    //src mat
-    cv::Mat mat1;
-    cv::Mat mat2;
-    cv::Mat mask;
+    // src mat
+    cv::Mat src;
+    cv::Mat lut;
     cv::Mat dst;
-    cv::Mat dst1; //bak, for two outputs
 
-    // set up roi
-    int roicols;
-    int roirows;
-    int src1x;
-    int src1y;
-    int src2x;
-    int src2y;
-    int dstx;
-    int dsty;
-    int maskx;
-    int masky;
-
-    //src mat with roi
-    cv::Mat mat1_roi;
-    cv::Mat mat2_roi;
-    cv::Mat mask_roi;
+    // src mat with roi
+    cv::Mat src_roi;
+    cv::Mat lut_roi;
     cv::Mat dst_roi;
-    cv::Mat dst1_roi; //bak
 
-    //ocl dst mat for testing
+    // ocl dst mat for testing
     cv::ocl::oclMat gdst_whole;
-    cv::ocl::oclMat gdst1_whole; //bak
 
-    //ocl mat with roi
-    cv::ocl::oclMat gmat1;
-    cv::ocl::oclMat gmat2;
+    // ocl mat with roi
+    cv::ocl::oclMat gsrc;
+    cv::ocl::oclMat glut;
     cv::ocl::oclMat gdst;
-    cv::ocl::oclMat gdst1;   //bak
-    cv::ocl::oclMat gmask;
 
     virtual void SetUp()
     {
-        type = GET_PARAM(0);
+        lut_depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        same_cn = GET_PARAM(2);
+        use_roi = GET_PARAM(3);
+
+        const int src_type = CV_MAKE_TYPE(CV_8U, cn);
+        const int lut_type = CV_MAKE_TYPE(lut_depth, same_cn ? cn : 1);
+        const int dst_type = CV_MAKE_TYPE(lut_depth, cn);
 
         cv::RNG &rng = TS::ptr()->get_rng();
 
-        cv::Size size(MWIDTH, MHEIGHT);
-
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        //mat2 = randomMat(rng, size, type, 5, 16, false);
-        mat2 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-        dst1  = randomMat(rng, size, type, 5, 16, false);
-        mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
-
-        cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
-
-        val = cv::Scalar(rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0), rng.uniform(-10.0, 10.0));
-
+        src = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), src_type, 0, 256, false);
+        lut = randomMat(rng, use_roi ? randomSize(260, 300) : Size(256, 1), lut_type, 5, 16, false);
+        dst = randomMat(rng, use_roi ? randomSize(MIN_VALUE, MAX_VALUE) : src.size(), dst_type, 5, 16, false);
     }
 
     void random_roi()
     {
-#ifdef RANDOMROI
-        //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-        roicols = rng.uniform(1, mat1.cols);
-        roirows = rng.uniform(1, mat1.rows);
-        src1x   = rng.uniform(0, mat1.cols - roicols);
-        src1y   = rng.uniform(0, mat1.rows - roirows);
-        dstx    = rng.uniform(0, dst.cols  - roicols);
-        dsty    = rng.uniform(0, dst.rows  - roirows);
-        maskx   = rng.uniform(0, mask.cols - roicols);
-        masky   = rng.uniform(0, mask.rows - roirows);
-        src2x   = rng.uniform(0, mat2.cols - roicols);
-        src2y   = rng.uniform(0, mat2.rows - roirows);
-#else
-        roicols = mat1.cols;
-        roirows = mat1.rows;
-        src1x = 0;
-        src1y = 0;
-        dstx = 0;
-        dsty = 0;
-        maskx   = 0;
-        masky   = 0;
-        src2x   = 0;
-        src2y   = 0;
-#endif
-        mat1_roi = mat1(Rect(src1x, src1y, roicols, roirows));
-        mat2_roi = mat2(Rect(src2x, src2y, roicols, roirows));
-        mask_roi = mask(Rect(maskx, masky, roicols, roirows));
-        dst_roi  = dst(Rect(dstx, dsty, roicols, roirows));
-        dst1_roi = dst1(Rect(dstx, dsty, roicols, roirows));
+        // set up roi
+        int roicols, roirows;
+        int srcx, srcy;
+        int lutx, luty;
+        int dstx, dsty;
+
+        if (use_roi)
+        {
+            // randomize ROI
+            cv::RNG &rng = TS::ptr()->get_rng();
+
+            roicols = rng.uniform(1, MIN_VALUE);
+            roirows = rng.uniform(1, MIN_VALUE);
+
+            srcx = rng.uniform(0, src.cols - roicols);
+            srcy = rng.uniform(0, src.rows - roirows);
+            lutx = rng.uniform(0, lut.cols - 256);
+            luty = rng.uniform(0, lut.rows - 1);
+
+            dstx = rng.uniform(0, dst.cols - roicols);
+            dsty = rng.uniform(0, dst.rows - roirows);
+        }
+        else
+        {
+            roicols = src.cols;
+            roirows = src.rows;
+            srcx = srcy = 0;
+            lutx = luty = 0;
+            dstx = dsty = 0;
+        }
+
+        src_roi = src(Rect(srcx, srcy, roicols, roirows));
+        lut_roi = lut(Rect(lutx, luty, 256, 1));
+        dst_roi = dst(Rect(dstx, dsty, roicols, roirows));
 
         gdst_whole = dst;
         gdst = gdst_whole(Rect(dstx, dsty, roicols, roirows));
 
-        gdst1_whole = dst1;
-        gdst1 = gdst1_whole(Rect(dstx, dsty, roicols, roirows));
-
-        gmat1 = mat1_roi;
-        gmat2 = mat2_roi;
-        gmask = mask_roi; //end
+        gsrc = src_roi;
+        glut = lut_roi;
     }
 
     void Near(double threshold = 0.)
     {
         EXPECT_MAT_NEAR(dst, Mat(gdst_whole), threshold);
+        EXPECT_MAT_NEAR(dst_roi, Mat(gdst), threshold);
+    }
+};
+
+TEST_P(Lut, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::LUT(src_roi, lut_roi, dst_roi);
+        cv::ocl::LUT(gsrc, glut, gdst);
+
+        Near();
+    }
+}
+
+///////////////////////// ArithmTestBase ///////////////////////////
+
+PARAM_TEST_CASE(ArithmTestBase, int, int, bool)
+{
+    int depth;
+    int cn;
+    bool use_roi;
+    cv::Scalar val;
+
+    // src mat
+    cv::Mat src1;
+    cv::Mat src2;
+    cv::Mat mask;
+    cv::Mat dst1;
+    cv::Mat dst2; // for two outputs
+
+    // set up roi
+    int roicols, roirows;
+    int src1x, src1y;
+    int src2x, src2y;
+    int dst1x, dst1y;
+    int dst2x, dst2y;
+    int maskx, masky;
+
+    // src mat with roi
+    cv::Mat src1_roi;
+    cv::Mat src2_roi;
+    cv::Mat mask_roi;
+    cv::Mat dst1_roi;
+    cv::Mat dst2_roi; // for two outputs
+
+    // ocl dst mat for testing
+    cv::ocl::oclMat gdst1_whole;
+    cv::ocl::oclMat gdst2_whole; // for two outputs
+
+    // ocl mat with roi
+    cv::ocl::oclMat gsrc1;
+    cv::ocl::oclMat gsrc2;
+    cv::ocl::oclMat gdst1;
+    cv::ocl::oclMat gdst2; // for two outputs
+    cv::ocl::oclMat gmask;
+
+    virtual void SetUp()
+    {
+        depth = GET_PARAM(0);
+        cn = GET_PARAM(1);
+        use_roi = GET_PARAM(2);
+        const int type = CV_MAKE_TYPE(depth, cn);
+
+        cv::RNG &rng = TS::ptr()->get_rng();
+
+        src1 = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
+        src2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, -15440, 14450, false);
+        dst1 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
+        dst2 = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), type, 5, 16, false);
+        mask = randomMat(rng, !use_roi ? src1.size() : randomSize(MIN_VALUE, MAX_VALUE), CV_8UC1, 0, 2, false);
+
+        cv::threshold(mask, mask, 0.5, 255., CV_8UC1);
+
+        val = cv::Scalar(rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0),
+                         rng.uniform(-100.0, 100.0), rng.uniform(-100.0, 100.0));
+    }
+
+    void random_roi()
+    {
+        if (use_roi)
+        {
+            // randomize ROI
+            cv::RNG &rng = TS::ptr()->get_rng();
+
+            roicols = rng.uniform(1, MIN_VALUE);
+            roirows = rng.uniform(1, MIN_VALUE);
+
+            src1x = rng.uniform(0, src1.cols - roicols);
+            src1y = rng.uniform(0, src1.rows - roirows);
+            src2x = rng.uniform(0, src2.cols - roicols);
+            src2y = rng.uniform(0, src2.rows - roirows);
+
+            dst1x = rng.uniform(0, dst1.cols - roicols);
+            dst1y = rng.uniform(0, dst1.rows - roirows);
+            dst2x = rng.uniform(0, dst2.cols - roicols);
+            dst2y = rng.uniform(0, dst2.rows - roirows);
+
+            maskx = rng.uniform(0, mask.cols - roicols);
+            masky = rng.uniform(0, mask.rows - roirows);
+        }
+        else
+        {
+            roicols = src1.cols;
+            roirows = src1.rows;
+            src1x = src1y = 0;
+            src2x = src2y = 0;
+            dst1x = dst1y = 0;
+            dst2x = dst2y = 0;
+            maskx = masky = 0;
+        }
+
+        src1_roi = src1(Rect(src1x, src1y, roicols, roirows));
+        src2_roi = src2(Rect(src2x, src2y, roicols, roirows));
+        mask_roi = mask(Rect(maskx, masky, roicols, roirows));
+        dst1_roi = dst1(Rect(dst1x, dst1y, roicols, roirows));
+        dst2_roi = dst2(Rect(dst2x, dst2y, roicols, roirows));
+
+        gdst1_whole = dst1;
+        gdst1 = gdst1_whole(Rect(dst1x, dst1y, roicols, roirows));
+
+        gdst2_whole = dst2;
+        gdst2 = gdst2_whole(Rect(dst2x, dst2y, roicols, roirows));
+
+        gsrc1 = src1_roi;
+        gsrc2 = src2_roi;
+        gmask = mask_roi;
+    }
+
+    void Near(double threshold = 0.)
+    {
+        EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
+        EXPECT_MAT_NEAR(dst1_roi, Mat(gdst1), threshold);
     }
 
     void Near1(double threshold = 0.)
     {
-        EXPECT_MAT_NEAR(dst1, Mat(gdst1_whole), threshold);
+        EXPECT_MAT_NEAR(dst2, Mat(gdst2_whole), threshold);
+        EXPECT_MAT_NEAR(dst2_roi, Mat(gdst2), threshold);
     }
-
 };
-////////////////////////////////lut/////////////////////////////////////////////////
-struct Lut : ArithmTestBase {};
-#define VARNAME(A) string(#A);
 
+//////////////////////////////// Exp /////////////////////////////////////////////////
 
-TEST_P(Lut, Mat)
-{
-
-    cv::Mat mat2(3, 512, CV_8UC1);
-    cv::RNG &rng = TS::ptr()->get_rng();
-    rng.fill(mat2, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(256));
-
-    for(int j = 0; j < LOOP_TIMES; j ++)
-    {
-        random_roi();
-
-        src2x = rng.uniform( 0, mat2.cols - 256);
-        src2y = rng.uniform (0, mat2.rows - 1);
-
-        cv::Mat mat2_roi = mat2(Rect(src2x, src2y, 256, 1));
-
-        cv::ocl::oclMat gmat2(mat2_roi);
-
-        cv::LUT(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::LUT(gmat1, gmat2, gdst);
-        Near(0);
-    }
-}
-
-
-////////////////////////////////exp/////////////////////////////////////////////////
-struct Exp : ArithmTestBase {};
+typedef ArithmTestBase Exp;
 
 TEST_P(Exp, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::exp(mat1_roi, dst_roi);
-        cv::ocl::exp(gmat1, gdst);
+        cv::exp(src1_roi, dst1_roi);
+        cv::ocl::exp(gsrc1, gdst1);
+
         Near(2);
     }
 }
 
+//////////////////////////////// Log /////////////////////////////////////////////////
 
-////////////////////////////////log/////////////////////////////////////////////////
-struct Log : ArithmTestBase {};
+typedef ArithmTestBase Log;
 
 TEST_P(Log, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::log(mat1_roi, dst_roi);
-        cv::ocl::log(gmat1, gdst);
+        cv::log(src1_roi, dst1_roi);
+        cv::ocl::log(gsrc1, gdst1);
         Near(1);
     }
 }
 
+//////////////////////////////// Add /////////////////////////////////////////////////
 
-////////////////////////////////add/////////////////////////////////////////////////
-struct Add : ArithmTestBase {};
+typedef ArithmTestBase Add;
 
 TEST_P(Add, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::add(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::add(gmat1, gmat2, gdst);
+        cv::add(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::add(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
 TEST_P(Add, Mat_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::add(mat1_roi, mat2_roi, dst_roi, mask_roi);
-        cv::ocl::add(gmat1, gmat2, gdst, gmask);
+        cv::add(src1_roi, src2_roi, dst1_roi, mask_roi);
+        cv::ocl::add(gsrc1, gsrc2, gdst1, gmask);
         Near(0);
     }
 }
 
 TEST_P(Add, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::add(mat1_roi, val, dst_roi);
-        cv::ocl::add(gmat1, val, gdst);
+        cv::add(src1_roi, val, dst1_roi);
+        cv::ocl::add(gsrc1, val, gdst1);
         Near(1e-5);
     }
 }
 
 TEST_P(Add, Scalar_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::add(mat1_roi, val, dst_roi, mask_roi);
-        cv::ocl::add(gmat1, val, gdst, gmask);
+        cv::add(src1_roi, val, dst1_roi, mask_roi);
+        cv::ocl::add(gsrc1, val, gdst1, gmask);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// Sub /////////////////////////////////////////////////
 
-
-////////////////////////////////sub/////////////////////////////////////////////////
-struct Sub : ArithmTestBase {};
+typedef ArithmTestBase Sub;
 
 TEST_P(Sub, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::subtract(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::subtract(gmat1, gmat2, gdst);
+        cv::subtract(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::subtract(gsrc1, gsrc2, gdst1);
+
         Near(0);
     }
 }
 
 TEST_P(Sub, Mat_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::subtract(mat1_roi, mat2_roi, dst_roi, mask_roi);
-        cv::ocl::subtract(gmat1, gmat2, gdst, gmask);
+        cv::subtract(src1_roi, src2_roi, dst1_roi, mask_roi);
+        cv::ocl::subtract(gsrc1, gsrc2, gdst1, gmask);
         Near(0);
     }
 }
 
 TEST_P(Sub, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::subtract(mat1_roi, val, dst_roi);
-        cv::ocl::subtract(gmat1, val, gdst);
+        cv::subtract(src1_roi, val, dst1_roi);
+        cv::ocl::subtract(gsrc1, val, gdst1);
+
         Near(1e-5);
     }
 }
 
 TEST_P(Sub, Scalar_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::subtract(mat1_roi, val, dst_roi, mask_roi);
-        cv::ocl::subtract(gmat1, val, gdst, gmask);
+        cv::subtract(src1_roi, val, dst1_roi, mask_roi);
+        cv::ocl::subtract(gsrc1, val, gdst1, gmask);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// Mul /////////////////////////////////////////////////
 
-
-////////////////////////////////Mul/////////////////////////////////////////////////
-struct Mul : ArithmTestBase {};
+typedef ArithmTestBase Mul;
 
 TEST_P(Mul, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::multiply(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::multiply(gmat1, gmat2, gdst);
+        cv::multiply(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::multiply(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
-TEST_P(Mul, Mat_Scalar)
+TEST_P(Mul, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-        double s = rng.uniform(-10.0, 10.0);
+        cv::multiply(val[0], src1_roi, dst1_roi);
+        cv::ocl::multiply(val[0], gsrc1, gdst1);
 
-        cv::multiply(mat1_roi, mat2_roi, dst_roi, s);
-        cv::ocl::multiply(gmat1, gmat2, gdst, s);
-        Near(.001);
+        Near(gdst1.depth() >= CV_32F ? 1e-3 : 1);
     }
 }
 
 
-
-struct Div : ArithmTestBase {};
-
-TEST_P(Div, Mat)
+TEST_P(Mul, Mat_Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::divide(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::divide(gmat1, gmat2, gdst);
+        cv::multiply(src1_roi, src2_roi, dst1_roi, val[0]);
+        cv::ocl::multiply(gsrc1, gsrc2, gdst1, val[0]);
+
+        Near(gdst1.depth() >= CV_32F ? 1e-3 : 1);
+    }
+}
+
+//////////////////////////////// Div /////////////////////////////////////////////////
+
+typedef ArithmTestBase Div;
+
+TEST_P(Div, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::divide(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::divide(gsrc1, gsrc2, gdst1);
         Near(1);
     }
 }
 
-TEST_P(Div, Mat_Scalar)
+TEST_P(Div, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-        double s = rng.uniform(-10.0, 10.0);
+        cv::divide(val[0], src1_roi, dst1_roi);
+        cv::ocl::divide(val[0], gsrc1, gdst1);
 
-        cv::divide(mat1_roi, mat2_roi, dst_roi, s);
-        cv::ocl::divide(gmat1, gmat2, gdst, s);
-        Near(.001);
+        Near(gdst1.depth() >= CV_32F ? 1e-3 : 1);
     }
 }
 
 
-struct Absdiff : ArithmTestBase {};
-
-TEST_P(Absdiff, Mat)
+TEST_P(Div, Mat_Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::absdiff(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::absdiff(gmat1, gmat2, gdst);
+        cv::divide(src1_roi, src2_roi, dst1_roi, val[0]);
+        cv::ocl::divide(gsrc1, gsrc2, gdst1, val[0]);
+
+        Near(gdst1.depth() >= CV_32F ? 1e-3 : 1);
+    }
+}
+
+//////////////////////////////// Absdiff /////////////////////////////////////////////////
+
+typedef ArithmTestBase Absdiff;
+
+TEST_P(Absdiff, Mat)
+{
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::absdiff(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::absdiff(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
 TEST_P(Absdiff, Mat_Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::absdiff(mat1_roi, val, dst_roi);
-        cv::ocl::absdiff(gmat1, val, gdst);
+        cv::absdiff(src1_roi, val, dst1_roi);
+        cv::ocl::absdiff(gsrc1, val, gdst1);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// CartToPolar /////////////////////////////////////////////////
 
-
-struct CartToPolar : ArithmTestBase {};
+typedef ArithmTestBase CartToPolar;
 
 TEST_P(CartToPolar, angleInDegree)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::cartToPolar(mat1_roi, mat2_roi, dst_roi, dst1_roi, 1);
-        cv::ocl::cartToPolar(gmat1, gmat2, gdst, gdst1, 1);
+        cv::cartToPolar(src1_roi, src2_roi, dst1_roi, dst2_roi, true);
+        cv::ocl::cartToPolar(gsrc1, gsrc2, gdst1, gdst2, true);
         Near(.5);
         Near1(.5);
     }
@@ -458,28 +568,30 @@ TEST_P(CartToPolar, angleInDegree)
 
 TEST_P(CartToPolar, angleInRadians)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::cartToPolar(mat1_roi, mat2_roi, dst_roi, dst1_roi, 0);
-        cv::ocl::cartToPolar(gmat1, gmat2, gdst, gdst1, 0);
+        cv::cartToPolar(src1_roi, src2_roi, dst1_roi, dst2_roi);
+        cv::ocl::cartToPolar(gsrc1, gsrc2, gdst1, gdst2);
         Near(.5);
         Near1(.5);
     }
 }
 
+//////////////////////////////// PolarToCart /////////////////////////////////////////////////
 
-struct PolarToCart : ArithmTestBase {};
+typedef ArithmTestBase PolarToCart;
 
 TEST_P(PolarToCart, angleInDegree)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::polarToCart(mat1_roi, mat2_roi, dst_roi, dst1_roi, 1);
-        cv::ocl::polarToCart(gmat1, gmat2, gdst, gdst1, 1);
+        cv::polarToCart(src1_roi, src2_roi, dst1_roi, dst2_roi, true);
+        cv::ocl::polarToCart(gsrc1, gsrc2, gdst1, gdst2, true);
+
         Near(.5);
         Near1(.5);
     }
@@ -487,144 +599,179 @@ TEST_P(PolarToCart, angleInDegree)
 
 TEST_P(PolarToCart, angleInRadians)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::polarToCart(mat1_roi, mat2_roi, dst_roi, dst1_roi, 0);
-        cv::ocl::polarToCart(gmat1, gmat2, gdst, gdst1, 0);
+        cv::polarToCart(src1_roi, src2_roi, dst1_roi, dst2_roi);
+        cv::ocl::polarToCart(gsrc1, gsrc2, gdst1, gdst2);
+
         Near(.5);
         Near1(.5);
     }
 }
 
+//////////////////////////////// Magnitude /////////////////////////////////////////////////
 
-
-
-struct Magnitude : ArithmTestBase {};
+typedef ArithmTestBase Magnitude;
 
 TEST_P(Magnitude, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::magnitude(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::magnitude(gmat1, gmat2, gdst);
-        Near(1e-5);
+        cv::magnitude(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::magnitude(gsrc1, gsrc2, gdst1);
+        Near(depth == CV_64F ? 1e-5 : 1e-2);
     }
 }
 
+//////////////////////////////// Transpose /////////////////////////////////////////////////
 
-struct Transpose : ArithmTestBase {};
+typedef ArithmTestBase Transpose;
 
 TEST_P(Transpose, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::transpose(mat1_roi, dst_roi);
-        cv::ocl::transpose(gmat1, gdst);
+        cv::transpose(src1_roi, dst1_roi);
+        cv::ocl::transpose(gsrc1, gdst1);
+
         Near(1e-5);
     }
 }
 
+TEST_P(Transpose, SquareInplace)
+{
+    cv::RNG &rng = TS::ptr()->get_rng();
+    int value = randomInt(MIN_VALUE, MAX_VALUE);
+    src1 = randomMat(rng, Size(value, value), CV_MAKE_TYPE(depth, cn), 5, 16, false);
 
-struct Flip : ArithmTestBase {};
+    if (use_roi)
+    {
+        roirows = roicols = randomInt(1, src1.cols);
+
+        src1x = randomInt(0, src1.cols - roicols);
+        src1y = randomInt(0, src1.rows - roirows);
+    }
+    else
+    {
+        roicols = roirows = src1.cols;
+        src1x = src1y = 0;
+    }
+
+    Rect r(src1x, src1y, roicols, roirows);
+    src1_roi = src1(r);
+    gdst1_whole = src1;
+    gdst1 = gdst1_whole(r);
+
+    for (int j = 0; j < LOOP_TIMES; j++)
+    {
+        cv::transpose(src1_roi, src1_roi);
+        cv::ocl::transpose(gdst1, gdst1);
+
+        EXPECT_MAT_NEAR(src1, Mat(gdst1_whole), 0.0);
+        EXPECT_MAT_NEAR(src1_roi, Mat(gdst1), 0.0);
+    }
+}
+
+//////////////////////////////// Flip /////////////////////////////////////////////////
+
+typedef ArithmTestBase Flip;
 
 TEST_P(Flip, X)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::flip(mat1_roi, dst_roi, 0);
-        cv::ocl::flip(gmat1, gdst, 0);
+        cv::flip(src1_roi, dst1_roi, 0);
+        cv::ocl::flip(gsrc1, gdst1, 0);
         Near(1e-5);
     }
 }
 
 TEST_P(Flip, Y)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::flip(mat1_roi, dst_roi, 1);
-        cv::ocl::flip(gmat1, gdst, 1);
+        cv::flip(src1_roi, dst1_roi, 1);
+        cv::ocl::flip(gsrc1, gdst1, 1);
         Near(1e-5);
     }
 }
 
 TEST_P(Flip, BOTH)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::flip(mat1_roi, dst_roi, -1);
-        cv::ocl::flip(gmat1, gdst, -1);
+        cv::flip(src1_roi, dst1_roi, -1);
+        cv::ocl::flip(gsrc1, gdst1, -1);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// MinMax /////////////////////////////////////////////////
 
-struct MinMax : ArithmTestBase {};
+typedef ArithmTestBase MinMax;
 
 TEST_P(MinMax, MAT)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        double minVal, maxVal;
-        cv::Point minLoc, maxLoc;
 
-        if (mat1.depth() != CV_8S)
-        {
-            cv::minMaxLoc(mat1_roi, &minVal, &maxVal, &minLoc, &maxLoc);
-        }
+        double minVal, maxVal;
+
+        if (src1.depth() != CV_8S)
+            cv::minMaxIdx(src1_roi, &minVal, &maxVal, NULL, NULL);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < mat1_roi.rows; ++i)
-                for (int j = 0; j < mat1_roi.cols; ++j)
+            for (int i = 0; i < src1_roi.rows; ++i)
+                for (int j = 0; j < src1_roi.cols; ++j)
                 {
-                    signed char val = mat1_roi.at<signed char>(i, j);
+                    signed char val = src1_roi.at<signed char>(i, j);
                     if (val < minVal) minVal = val;
-                    if (val > maxVal) maxVal = val;
+                    else if (val > maxVal) maxVal = val;
                 }
         }
 
         double minVal_, maxVal_;
-        cv::ocl::minMax(gmat1, &minVal_, &maxVal_);
+        cv::ocl::minMax(gsrc1, &minVal_, &maxVal_);
 
         EXPECT_DOUBLE_EQ(minVal_, minVal);
         EXPECT_DOUBLE_EQ(maxVal_, maxVal);
     }
 }
 
-TEST_P(MinMax, MASK)
+TEST_P(MinMax, DISABLED_MASK)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
+
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
 
-        if (mat1.depth() != CV_8S)
-        {
-            cv::minMaxLoc(mat1_roi, &minVal, &maxVal, &minLoc, &maxLoc, mask_roi);
-        }
+        if (src1.depth() != CV_8S)
+            cv::minMaxLoc(src1_roi, &minVal, &maxVal, &minLoc, &maxLoc, mask_roi);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < mat1_roi.rows; ++i)
-                for (int j = 0; j < mat1_roi.cols; ++j)
+            for (int i = 0; i < src1_roi.rows; ++i)
+                for (int j = 0; j < src1_roi.cols; ++j)
                 {
-                    signed char val = mat1_roi.at<signed char>(i, j);
+                    signed char val = src1_roi.at<signed char>(i, j);
                     unsigned char m = mask_roi.at<unsigned char>(i, j);
                     if (val < minVal && m) minVal = val;
                     if (val > maxVal && m) maxVal = val;
@@ -632,36 +779,37 @@ TEST_P(MinMax, MASK)
         }
 
         double minVal_, maxVal_;
-        cv::ocl::minMax(gmat1, &minVal_, &maxVal_, gmask);
+        cv::ocl::minMax(gsrc1, &minVal_, &maxVal_, gmask);
 
-        EXPECT_DOUBLE_EQ(minVal_, minVal);
-        EXPECT_DOUBLE_EQ(maxVal_, maxVal);
+        EXPECT_DOUBLE_EQ(minVal, minVal_);
+        EXPECT_DOUBLE_EQ(maxVal, maxVal_);
     }
 }
 
+//////////////////////////////// MinMaxLoc /////////////////////////////////////////////////
 
-struct MinMaxLoc : ArithmTestBase {};
+typedef ArithmTestBase MinMaxLoc;
 
 TEST_P(MinMaxLoc, MAT)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
+
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        int depth = mat1.depth();
+        int depth = src1.depth();
+
         if (depth != CV_8S)
-        {
-            cv::minMaxLoc(mat1_roi, &minVal, &maxVal, &minLoc, &maxLoc);
-        }
+            cv::minMaxLoc(src1_roi, &minVal, &maxVal, &minLoc, &maxLoc);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < mat1_roi.rows; ++i)
-                for (int j = 0; j < mat1_roi.cols; ++j)
+            for (int i = 0; i < src1_roi.rows; ++i)
+                for (int j = 0; j < src1_roi.cols; ++j)
                 {
-                    signed char val = mat1_roi.at<signed char>(i, j);
+                    signed char val = src1_roi.at<signed char>(i, j);
                     if (val < minVal)
                     {
                         minVal = val;
@@ -679,71 +827,71 @@ TEST_P(MinMaxLoc, MAT)
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;
-        cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::ocl::oclMat());
+        cv::ocl::minMaxLoc(gsrc1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, cv::ocl::oclMat());
 
         double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
-        if(depth == 0)
+        if (depth == 0)
         {
-            minlocVal = mat1_roi.at<unsigned char>(minLoc);
-            minlocVal_ = mat1_roi.at<unsigned char>(minLoc_);
-            maxlocVal = mat1_roi.at<unsigned char>(maxLoc);
-            maxlocVal_ = mat1_roi.at<unsigned char>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<unsigned char>(minLoc_) - mat1_roi.at<unsigned char>(minLoc));
-            error1 = ::abs(mat1_roi.at<unsigned char>(maxLoc_) - mat1_roi.at<unsigned char>(maxLoc));
+            minlocVal = src1_roi.at<unsigned char>(minLoc);
+            minlocVal_ = src1_roi.at<unsigned char>(minLoc_);
+            maxlocVal = src1_roi.at<unsigned char>(maxLoc);
+            maxlocVal_ = src1_roi.at<unsigned char>(maxLoc_);
+            error0 = ::abs(src1_roi.at<unsigned char>(minLoc_) - src1_roi.at<unsigned char>(minLoc));
+            error1 = ::abs(src1_roi.at<unsigned char>(maxLoc_) - src1_roi.at<unsigned char>(maxLoc));
         }
-        if(depth == 1)
+        if (depth == 1)
         {
-            minlocVal = mat1_roi.at<signed char>(minLoc);
-            minlocVal_ = mat1_roi.at<signed char>(minLoc_);
-            maxlocVal = mat1_roi.at<signed char>(maxLoc);
-            maxlocVal_ = mat1_roi.at<signed char>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<signed char>(minLoc_) - mat1_roi.at<signed char>(minLoc));
-            error1 = ::abs(mat1_roi.at<signed char>(maxLoc_) - mat1_roi.at<signed char>(maxLoc));
+            minlocVal = src1_roi.at<signed char>(minLoc);
+            minlocVal_ = src1_roi.at<signed char>(minLoc_);
+            maxlocVal = src1_roi.at<signed char>(maxLoc);
+            maxlocVal_ = src1_roi.at<signed char>(maxLoc_);
+            error0 = ::abs(src1_roi.at<signed char>(minLoc_) - src1_roi.at<signed char>(minLoc));
+            error1 = ::abs(src1_roi.at<signed char>(maxLoc_) - src1_roi.at<signed char>(maxLoc));
         }
-        if(depth == 2)
+        if (depth == 2)
         {
-            minlocVal = mat1_roi.at<unsigned short>(minLoc);
-            minlocVal_ = mat1_roi.at<unsigned short>(minLoc_);
-            maxlocVal = mat1_roi.at<unsigned short>(maxLoc);
-            maxlocVal_ = mat1_roi.at<unsigned short>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<unsigned short>(minLoc_) - mat1_roi.at<unsigned short>(minLoc));
-            error1 = ::abs(mat1_roi.at<unsigned short>(maxLoc_) - mat1_roi.at<unsigned short>(maxLoc));
+            minlocVal = src1_roi.at<unsigned short>(minLoc);
+            minlocVal_ = src1_roi.at<unsigned short>(minLoc_);
+            maxlocVal = src1_roi.at<unsigned short>(maxLoc);
+            maxlocVal_ = src1_roi.at<unsigned short>(maxLoc_);
+            error0 = ::abs(src1_roi.at<unsigned short>(minLoc_) - src1_roi.at<unsigned short>(minLoc));
+            error1 = ::abs(src1_roi.at<unsigned short>(maxLoc_) - src1_roi.at<unsigned short>(maxLoc));
         }
-        if(depth == 3)
+        if (depth == 3)
         {
-            minlocVal = mat1_roi.at<signed short>(minLoc);
-            minlocVal_ = mat1_roi.at<signed short>(minLoc_);
-            maxlocVal = mat1_roi.at<signed short>(maxLoc);
-            maxlocVal_ = mat1_roi.at<signed short>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<signed short>(minLoc_) - mat1_roi.at<signed short>(minLoc));
-            error1 = ::abs(mat1_roi.at<signed short>(maxLoc_) - mat1_roi.at<signed short>(maxLoc));
+            minlocVal = src1_roi.at<signed short>(minLoc);
+            minlocVal_ = src1_roi.at<signed short>(minLoc_);
+            maxlocVal = src1_roi.at<signed short>(maxLoc);
+            maxlocVal_ = src1_roi.at<signed short>(maxLoc_);
+            error0 = ::abs(src1_roi.at<signed short>(minLoc_) - src1_roi.at<signed short>(minLoc));
+            error1 = ::abs(src1_roi.at<signed short>(maxLoc_) - src1_roi.at<signed short>(maxLoc));
         }
-        if(depth == 4)
+        if (depth == 4)
         {
-            minlocVal = mat1_roi.at<int>(minLoc);
-            minlocVal_ = mat1_roi.at<int>(minLoc_);
-            maxlocVal = mat1_roi.at<int>(maxLoc);
-            maxlocVal_ = mat1_roi.at<int>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<int>(minLoc_) - mat1_roi.at<int>(minLoc));
-            error1 = ::abs(mat1_roi.at<int>(maxLoc_) - mat1_roi.at<int>(maxLoc));
+            minlocVal = src1_roi.at<int>(minLoc);
+            minlocVal_ = src1_roi.at<int>(minLoc_);
+            maxlocVal = src1_roi.at<int>(maxLoc);
+            maxlocVal_ = src1_roi.at<int>(maxLoc_);
+            error0 = ::abs(src1_roi.at<int>(minLoc_) - src1_roi.at<int>(minLoc));
+            error1 = ::abs(src1_roi.at<int>(maxLoc_) - src1_roi.at<int>(maxLoc));
         }
-        if(depth == 5)
+        if (depth == 5)
         {
-            minlocVal = mat1_roi.at<float>(minLoc);
-            minlocVal_ = mat1_roi.at<float>(minLoc_);
-            maxlocVal = mat1_roi.at<float>(maxLoc);
-            maxlocVal_ = mat1_roi.at<float>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<float>(minLoc_) - mat1_roi.at<float>(minLoc));
-            error1 = ::abs(mat1_roi.at<float>(maxLoc_) - mat1_roi.at<float>(maxLoc));
+            minlocVal = src1_roi.at<float>(minLoc);
+            minlocVal_ = src1_roi.at<float>(minLoc_);
+            maxlocVal = src1_roi.at<float>(maxLoc);
+            maxlocVal_ = src1_roi.at<float>(maxLoc_);
+            error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
+            error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
-        if(depth == 6)
+        if (depth == 6)
         {
-            minlocVal = mat1_roi.at<double>(minLoc);
-            minlocVal_ = mat1_roi.at<double>(minLoc_);
-            maxlocVal = mat1_roi.at<double>(maxLoc);
-            maxlocVal_ = mat1_roi.at<double>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<double>(minLoc_) - mat1_roi.at<double>(minLoc));
-            error1 = ::abs(mat1_roi.at<double>(maxLoc_) - mat1_roi.at<double>(maxLoc));
+            minlocVal = src1_roi.at<double>(minLoc);
+            minlocVal_ = src1_roi.at<double>(minLoc_);
+            maxlocVal = src1_roi.at<double>(maxLoc);
+            maxlocVal_ = src1_roi.at<double>(maxLoc_);
+            error0 = ::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
+            error1 = ::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
         }
 
         EXPECT_DOUBLE_EQ(minVal_, minVal);
@@ -756,27 +904,24 @@ TEST_P(MinMaxLoc, MAT)
     }
 }
 
-
 TEST_P(MinMaxLoc, MASK)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         double minVal, maxVal;
         cv::Point minLoc, maxLoc;
-        int depth = mat1.depth();
+        int depth = src1.depth();
         if (depth != CV_8S)
-        {
-            cv::minMaxLoc(mat1_roi, &minVal, &maxVal, &minLoc, &maxLoc, mask_roi);
-        }
+            cv::minMaxLoc(src1_roi, &minVal, &maxVal, &minLoc, &maxLoc, mask_roi);
         else
         {
             minVal = std::numeric_limits<double>::max();
             maxVal = -std::numeric_limits<double>::max();
-            for (int i = 0; i < mat1_roi.rows; ++i)
-                for (int j = 0; j < mat1_roi.cols; ++j)
+            for (int i = 0; i < src1_roi.rows; ++i)
+                for (int j = 0; j < src1_roi.cols; ++j)
                 {
-                    signed char val = mat1_roi.at<signed char>(i, j);
+                    signed char val = src1_roi.at<signed char>(i, j);
                     unsigned char m = mask_roi.at<unsigned char>(i , j);
                     if (val < minVal && m)
                     {
@@ -795,72 +940,72 @@ TEST_P(MinMaxLoc, MASK)
 
         double minVal_, maxVal_;
         cv::Point minLoc_, maxLoc_;
-        cv::ocl::minMaxLoc(gmat1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, gmask);
+        cv::ocl::minMaxLoc(gsrc1, &minVal_, &maxVal_, &minLoc_, &maxLoc_, gmask);
 
         double error0 = 0., error1 = 0., minlocVal = 0., minlocVal_ = 0., maxlocVal = 0., maxlocVal_ = 0.;
-        if(minLoc_.x == -1 || minLoc_.y == -1 || maxLoc_.x == -1 || maxLoc_.y == -1) continue;
-        if(depth == 0)
+        if (minLoc_.x == -1 || minLoc_.y == -1 || maxLoc_.x == -1 || maxLoc_.y == -1) continue;
+        if (depth == 0)
         {
-            minlocVal = mat1_roi.at<unsigned char>(minLoc);
-            minlocVal_ = mat1_roi.at<unsigned char>(minLoc_);
-            maxlocVal = mat1_roi.at<unsigned char>(maxLoc);
-            maxlocVal_ = mat1_roi.at<unsigned char>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<unsigned char>(minLoc_) - mat1_roi.at<unsigned char>(minLoc));
-            error1 = ::abs(mat1_roi.at<unsigned char>(maxLoc_) - mat1_roi.at<unsigned char>(maxLoc));
+            minlocVal = src1_roi.at<unsigned char>(minLoc);
+            minlocVal_ = src1_roi.at<unsigned char>(minLoc_);
+            maxlocVal = src1_roi.at<unsigned char>(maxLoc);
+            maxlocVal_ = src1_roi.at<unsigned char>(maxLoc_);
+            error0 = ::abs(src1_roi.at<unsigned char>(minLoc_) - src1_roi.at<unsigned char>(minLoc));
+            error1 = ::abs(src1_roi.at<unsigned char>(maxLoc_) - src1_roi.at<unsigned char>(maxLoc));
         }
-        if(depth == 1)
+        if (depth == 1)
         {
-            minlocVal = mat1_roi.at<signed char>(minLoc);
-            minlocVal_ = mat1_roi.at<signed char>(minLoc_);
-            maxlocVal = mat1_roi.at<signed char>(maxLoc);
-            maxlocVal_ = mat1_roi.at<signed char>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<signed char>(minLoc_) - mat1_roi.at<signed char>(minLoc));
-            error1 = ::abs(mat1_roi.at<signed char>(maxLoc_) - mat1_roi.at<signed char>(maxLoc));
+            minlocVal = src1_roi.at<signed char>(minLoc);
+            minlocVal_ = src1_roi.at<signed char>(minLoc_);
+            maxlocVal = src1_roi.at<signed char>(maxLoc);
+            maxlocVal_ = src1_roi.at<signed char>(maxLoc_);
+            error0 = ::abs(src1_roi.at<signed char>(minLoc_) - src1_roi.at<signed char>(minLoc));
+            error1 = ::abs(src1_roi.at<signed char>(maxLoc_) - src1_roi.at<signed char>(maxLoc));
         }
-        if(depth == 2)
+        if (depth == 2)
         {
-            minlocVal = mat1_roi.at<unsigned short>(minLoc);
-            minlocVal_ = mat1_roi.at<unsigned short>(minLoc_);
-            maxlocVal = mat1_roi.at<unsigned short>(maxLoc);
-            maxlocVal_ = mat1_roi.at<unsigned short>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<unsigned short>(minLoc_) - mat1_roi.at<unsigned short>(minLoc));
-            error1 = ::abs(mat1_roi.at<unsigned short>(maxLoc_) - mat1_roi.at<unsigned short>(maxLoc));
+            minlocVal = src1_roi.at<unsigned short>(minLoc);
+            minlocVal_ = src1_roi.at<unsigned short>(minLoc_);
+            maxlocVal = src1_roi.at<unsigned short>(maxLoc);
+            maxlocVal_ = src1_roi.at<unsigned short>(maxLoc_);
+            error0 = ::abs(src1_roi.at<unsigned short>(minLoc_) - src1_roi.at<unsigned short>(minLoc));
+            error1 = ::abs(src1_roi.at<unsigned short>(maxLoc_) - src1_roi.at<unsigned short>(maxLoc));
         }
-        if(depth == 3)
+        if (depth == 3)
         {
-            minlocVal = mat1_roi.at<signed short>(minLoc);
-            minlocVal_ = mat1_roi.at<signed short>(minLoc_);
-            maxlocVal = mat1_roi.at<signed short>(maxLoc);
-            maxlocVal_ = mat1_roi.at<signed short>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<signed short>(minLoc_) - mat1_roi.at<signed short>(minLoc));
-            error1 = ::abs(mat1_roi.at<signed short>(maxLoc_) - mat1_roi.at<signed short>(maxLoc));
+            minlocVal = src1_roi.at<signed short>(minLoc);
+            minlocVal_ = src1_roi.at<signed short>(minLoc_);
+            maxlocVal = src1_roi.at<signed short>(maxLoc);
+            maxlocVal_ = src1_roi.at<signed short>(maxLoc_);
+            error0 = ::abs(src1_roi.at<signed short>(minLoc_) - src1_roi.at<signed short>(minLoc));
+            error1 = ::abs(src1_roi.at<signed short>(maxLoc_) - src1_roi.at<signed short>(maxLoc));
         }
-        if(depth == 4)
+        if (depth == 4)
         {
-            minlocVal = mat1_roi.at<int>(minLoc);
-            minlocVal_ = mat1_roi.at<int>(minLoc_);
-            maxlocVal = mat1_roi.at<int>(maxLoc);
-            maxlocVal_ = mat1_roi.at<int>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<int>(minLoc_) - mat1_roi.at<int>(minLoc));
-            error1 = ::abs(mat1_roi.at<int>(maxLoc_) - mat1_roi.at<int>(maxLoc));
+            minlocVal = src1_roi.at<int>(minLoc);
+            minlocVal_ = src1_roi.at<int>(minLoc_);
+            maxlocVal = src1_roi.at<int>(maxLoc);
+            maxlocVal_ = src1_roi.at<int>(maxLoc_);
+            error0 = ::abs(src1_roi.at<int>(minLoc_) - src1_roi.at<int>(minLoc));
+            error1 = ::abs(src1_roi.at<int>(maxLoc_) - src1_roi.at<int>(maxLoc));
         }
-        if(depth == 5)
+        if (depth == 5)
         {
-            minlocVal = mat1_roi.at<float>(minLoc);
-            minlocVal_ = mat1_roi.at<float>(minLoc_);
-            maxlocVal = mat1_roi.at<float>(maxLoc);
-            maxlocVal_ = mat1_roi.at<float>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<float>(minLoc_) - mat1_roi.at<float>(minLoc));
-            error1 = ::abs(mat1_roi.at<float>(maxLoc_) - mat1_roi.at<float>(maxLoc));
+            minlocVal = src1_roi.at<float>(minLoc);
+            minlocVal_ = src1_roi.at<float>(minLoc_);
+            maxlocVal = src1_roi.at<float>(maxLoc);
+            maxlocVal_ = src1_roi.at<float>(maxLoc_);
+            error0 = ::abs(src1_roi.at<float>(minLoc_) - src1_roi.at<float>(minLoc));
+            error1 = ::abs(src1_roi.at<float>(maxLoc_) - src1_roi.at<float>(maxLoc));
         }
-        if(depth == 6)
+        if (depth == 6)
         {
-            minlocVal = mat1_roi.at<double>(minLoc);
-            minlocVal_ = mat1_roi.at<double>(minLoc_);
-            maxlocVal = mat1_roi.at<double>(maxLoc);
-            maxlocVal_ = mat1_roi.at<double>(maxLoc_);
-            error0 = ::abs(mat1_roi.at<double>(minLoc_) - mat1_roi.at<double>(minLoc));
-            error1 = ::abs(mat1_roi.at<double>(maxLoc_) - mat1_roi.at<double>(maxLoc));
+            minlocVal = src1_roi.at<double>(minLoc);
+            minlocVal_ = src1_roi.at<double>(minLoc_);
+            maxlocVal = src1_roi.at<double>(maxLoc);
+            maxlocVal_ = src1_roi.at<double>(maxLoc_);
+            error0 = ::abs(src1_roi.at<double>(minLoc_) - src1_roi.at<double>(minLoc));
+            error1 = ::abs(src1_roi.at<double>(maxLoc_) - src1_roi.at<double>(maxLoc));
         }
 
         EXPECT_DOUBLE_EQ(minVal_, minVal);
@@ -873,16 +1018,18 @@ TEST_P(MinMaxLoc, MASK)
     }
 }
 
+//////////////////////////////// Sum /////////////////////////////////////////////////
 
-struct Sum : ArithmTestBase {};
+typedef ArithmTestBase Sum;
 
-TEST_P(Sum, MAT)
+TEST_P(Sum, DISABLED_MAT)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        Scalar cpures = cv::sum(mat1_roi);
-        Scalar gpures = cv::ocl::sum(gmat1);
+
+        Scalar cpures = cv::sum(src1_roi);
+        Scalar gpures = cv::ocl::sum(gsrc1);
 
         //check results
         EXPECT_NEAR(cpures[0], gpures[0], 0.1);
@@ -892,424 +1039,294 @@ TEST_P(Sum, MAT)
     }
 }
 
+//////////////////////////////// CountNonZero /////////////////////////////////////////////////
 
-struct CountNonZero : ArithmTestBase {};
+typedef ArithmTestBase CountNonZero;
 
 TEST_P(CountNonZero, MAT)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        int cpures = cv::countNonZero(mat1_roi);
-        int gpures = cv::ocl::countNonZero(gmat1);
+        int cpures = cv::countNonZero(src1_roi);
+        int gpures = cv::ocl::countNonZero(gsrc1);
 
         EXPECT_DOUBLE_EQ((double)cpures, (double)gpures);
     }
 }
 
+//////////////////////////////// Phase /////////////////////////////////////////////////
 
+typedef ArithmTestBase Phase;
 
-////////////////////////////////phase/////////////////////////////////////////////////
-struct Phase : ArithmTestBase {};
-
-TEST_P(Phase, Mat)
+TEST_P(Phase, DISABLED_Mat)
 {
-    if(mat1.depth() != CV_32F && mat1.depth() != CV_64F)
+    for (int angelInDegrees = 0; angelInDegrees < 2; angelInDegrees++)
     {
-        cout << "\tUnsupported type\t\n";
-    }
-    for(int angelInDegrees = 0; angelInDegrees < 2; angelInDegrees++)
-    {
-        for(int j = 0; j < LOOP_TIMES; j++)
+        for (int j = 0; j < LOOP_TIMES; j++)
         {
             random_roi();
-            cv::phase(mat1_roi, mat2_roi, dst_roi, angelInDegrees ? true : false);
-            cv::ocl::phase(gmat1, gmat2, gdst, angelInDegrees ? true : false);
+            cv::phase(src1_roi, src2_roi, dst1_roi, angelInDegrees ? true : false);
+            cv::ocl::phase(gsrc1, gsrc2, gdst1, angelInDegrees ? true : false);
             Near(1e-2);
         }
     }
 }
 
+//////////////////////////////// Bitwise_and /////////////////////////////////////////////////
 
-////////////////////////////////bitwise_and/////////////////////////////////////////////////
-struct Bitwise_and : ArithmTestBase {};
+typedef ArithmTestBase Bitwise_and;
 
 TEST_P(Bitwise_and, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_and(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::bitwise_and(gmat1, gmat2, gdst);
+        cv::bitwise_and(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::bitwise_and(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_and, Mat_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_and(mat1_roi, mat2_roi, dst_roi, mask_roi);
-        cv::ocl::bitwise_and(gmat1, gmat2, gdst, gmask);
+        cv::bitwise_and(src1_roi, src2_roi, dst1_roi, mask_roi);
+        cv::ocl::bitwise_and(gsrc1, gsrc2, gdst1, gmask);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_and, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_and(mat1_roi, val, dst_roi);
-        cv::ocl::bitwise_and(gmat1, val, gdst);
+        cv::bitwise_and(src1_roi, val, dst1_roi);
+        cv::ocl::bitwise_and(gsrc1, val, gdst1);
         Near(1e-5);
     }
 }
 
 TEST_P(Bitwise_and, Scalar_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_and(mat1_roi, val, dst_roi, mask_roi);
-        cv::ocl::bitwise_and(gmat1, val, gdst, gmask);
+        cv::bitwise_and(src1_roi, val, dst1_roi, mask_roi);
+        cv::ocl::bitwise_and(gsrc1, val, gdst1, gmask);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// Bitwise_or /////////////////////////////////////////////////
 
-
-////////////////////////////////bitwise_or/////////////////////////////////////////////////
-
-struct Bitwise_or : ArithmTestBase {};
+typedef ArithmTestBase Bitwise_or;
 
 TEST_P(Bitwise_or, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_or(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::bitwise_or(gmat1, gmat2, gdst);
+        cv::bitwise_or(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::bitwise_or(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_or, Mat_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_or(mat1_roi, mat2_roi, dst_roi, mask_roi);
-        cv::ocl::bitwise_or(gmat1, gmat2, gdst, gmask);
+        cv::bitwise_or(src1_roi, src2_roi, dst1_roi, mask_roi);
+        cv::ocl::bitwise_or(gsrc1, gsrc2, gdst1, gmask);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_or, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_or(mat1_roi, val, dst_roi);
-        cv::ocl::bitwise_or(gmat1, val, gdst);
+        cv::bitwise_or(src1_roi, val, dst1_roi);
+        cv::ocl::bitwise_or(gsrc1, val, gdst1);
         Near(1e-5);
     }
 }
 
 TEST_P(Bitwise_or, Scalar_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_or(mat1_roi, val, dst_roi, mask_roi);
-        cv::ocl::bitwise_or(gmat1, val, gdst, gmask);
+        cv::bitwise_or(src1_roi, val, dst1_roi, mask_roi);
+        cv::ocl::bitwise_or(gsrc1, val, gdst1, gmask);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// Bitwise_xor /////////////////////////////////////////////////
 
-
-////////////////////////////////bitwise_xor/////////////////////////////////////////////////
-
-struct Bitwise_xor : ArithmTestBase {};
+typedef ArithmTestBase Bitwise_xor;
 
 TEST_P(Bitwise_xor, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_xor(mat1_roi, mat2_roi, dst_roi);
-        cv::ocl::bitwise_xor(gmat1, gmat2, gdst);
+        cv::bitwise_xor(src1_roi, src2_roi, dst1_roi);
+        cv::ocl::bitwise_xor(gsrc1, gsrc2, gdst1);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_xor, Mat_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_xor(mat1_roi, mat2_roi, dst_roi, mask_roi);
-        cv::ocl::bitwise_xor(gmat1, gmat2, gdst, gmask);
+        cv::bitwise_xor(src1_roi, src2_roi, dst1_roi, mask_roi);
+        cv::ocl::bitwise_xor(gsrc1, gsrc2, gdst1, gmask);
         Near(0);
     }
 }
 
 TEST_P(Bitwise_xor, Scalar)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_xor(mat1_roi, val, dst_roi);
-        cv::ocl::bitwise_xor(gmat1, val, gdst);
+        cv::bitwise_xor(src1_roi, val, dst1_roi);
+        cv::ocl::bitwise_xor(gsrc1, val, gdst1);
         Near(1e-5);
     }
 }
 
 TEST_P(Bitwise_xor, Scalar_Mask)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_xor(mat1_roi, val, dst_roi, mask_roi);
-        cv::ocl::bitwise_xor(gmat1, val, gdst, gmask);
+        cv::bitwise_xor(src1_roi, val, dst1_roi, mask_roi);
+        cv::ocl::bitwise_xor(gsrc1, val, gdst1, gmask);
         Near(1e-5);
     }
 }
 
+//////////////////////////////// Bitwise_not /////////////////////////////////////////////////
 
-////////////////////////////////bitwise_not/////////////////////////////////////////////////
-
-struct Bitwise_not : ArithmTestBase {};
+typedef ArithmTestBase Bitwise_not;
 
 TEST_P(Bitwise_not, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
 
-        cv::bitwise_not(mat1_roi, dst_roi);
-        cv::ocl::bitwise_not(gmat1, gdst);
+        cv::bitwise_not(src1_roi, dst1_roi);
+        cv::ocl::bitwise_not(gsrc1, gdst1);
         Near(0);
     }
 }
 
+//////////////////////////////// Compare /////////////////////////////////////////////////
 
-////////////////////////////////compare/////////////////////////////////////////////////
-struct Compare : ArithmTestBase {};
+typedef ArithmTestBase Compare;
 
 TEST_P(Compare, Mat)
 {
-    if(mat1.type() == CV_8SC1)
-        //if(mat1.type() != CV_8UC1 || mat1.type()!= CV_16UC1 || mat1.type()!= CV_16SC1|| mat1.type()!= CV_32SC1 || mat1.type()!= CV_32FC1|| mat1.type()!= CV_64FC1)
-    {
-        cout << "\tUnsupported type\t\n";
-    }
-
-    int cmp_codes[] = {CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE};
-    //const char *cmp_str[] = {"CMP_EQ", "CMP_GT", "CMP_GE", "CMP_LT", "CMP_LE", "CMP_NE"};
+    int cmp_codes[] = { CMP_EQ, CMP_GT, CMP_GE, CMP_LT, CMP_LE, CMP_NE };
     int cmp_num = sizeof(cmp_codes) / sizeof(int);
 
     for (int i = 0; i < cmp_num; ++i)
-    {
-
-        for(int j = 0; j < LOOP_TIMES; j++)
+        for (int j = 0; j < LOOP_TIMES; j++)
         {
             random_roi();
 
-            cv::compare(mat1_roi, mat2_roi, dst_roi, cmp_codes[i]);
-            cv::ocl::compare(gmat1, gmat2, gdst, cmp_codes[i]);
+            cv::compare(src1_roi, src2_roi, dst1_roi, cmp_codes[i]);
+            cv::ocl::compare(gsrc1, gsrc2, gdst1, cmp_codes[i]);
+
             Near(0);
         }
-    }
-
 }
 
+//////////////////////////////// Pow /////////////////////////////////////////////////
 
-struct Pow : ArithmTestBase {};
+typedef ArithmTestBase Pow;
 
 TEST_P(Pow, Mat)
 {
-    if(mat1.depth() != CV_32F && mat1.depth() != CV_64F)
-    {
-        cout << "\tUnsupported type\t\n";
-    }
-
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
         double p = 4.5;
-        cv::pow(mat1_roi, p, dst_roi);
-        cv::ocl::pow(gmat1, p, gdst);
+        cv::pow(src1_roi, p, dst1_roi);
+        cv::ocl::pow(gsrc1, p, gdst1);
         Near(1);
     }
 }
 
+//////////////////////////////// AddWeighted /////////////////////////////////////////////////
 
-struct MagnitudeSqr : ArithmTestBase {};
-
-TEST_P(MagnitudeSqr, Mat)
-{
-    for(int j = 0; j < LOOP_TIMES; j++)
-    {
-        random_roi();
-        for(int i = 0; i < mat1.rows; ++i)
-            for(int j = 0; j < mat1.cols; ++j)
-            {
-                float val1 = mat1.at<float>(i, j);
-                float val2 = mat2.at<float>(i, j);
-                ((float *)(dst.data))[i * dst.step / 4 + j] = val1 * val1 + val2 * val2;
-            }
-
-        cv::ocl::oclMat clmat1(mat1), clmat2(mat2);
-        cv::ocl::magnitudeSqr(clmat1, clmat2, gdst);
-        Near(1);
-    }
-}
-
-
-struct AddWeighted : ArithmTestBase {};
+typedef ArithmTestBase AddWeighted;
 
 TEST_P(AddWeighted, Mat)
 {
-    for(int j = 0; j < LOOP_TIMES; j++)
+    for (int j = 0; j < LOOP_TIMES; j++)
     {
         random_roi();
-        double alpha = 2.0, beta = 1.0, gama = 3.0;
 
+        const double alpha = 2.0, beta = 1.0, gama = 3.0;
 
-        cv::addWeighted(mat1_roi, alpha, mat2_roi, beta, gama, dst_roi);
-
-        //	cv::ocl::oclMat clmat1(mat1),clmat2(mat2),cldst;
-
-        cv::ocl::addWeighted(gmat1, alpha, gmat2, beta, gama, gdst);
+        cv::addWeighted(src1_roi, alpha, src2_roi, beta, gama, dst1_roi);
+        cv::ocl::addWeighted(gsrc1, alpha, gsrc2, beta, gama, gdst1);
 
         Near(1e-5);
     }
 }
 
+//////////////////////////////////////// Instantiation /////////////////////////////////////////
 
-
-
-//********test****************
-
-INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false)));
-
-INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false)));
-
-INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-
-INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(
-                            Values(CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(
-                            Values(CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(
-                            Values(CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1),
-                            Values(false)));
-
-INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1),
-                            Values(false)));
-
-INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(
-                            Values(CV_8U, CV_32S, CV_32F),
-                            Values(false)));
-
-INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(
-                            Values(CV_8U, CV_32S, CV_32F),
-                            Values(false)));
-
-
-INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-// Values(false) is the reserved parameter
-
-
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32SC3, CV_32SC4, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-//Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-//Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-//Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(
-                            Values(CV_8UC1, CV_8UC3, CV_8UC4, CV_32SC1, CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-//Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(Values(CV_8UC1, CV_32SC1, CV_32FC1), Values(false)));
-// Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32FC1, CV_32FC3, CV_32FC4), Values(false)));
-// Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, MagnitudeSqr, Combine(
-                            Values(CV_32FC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
-
-INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(
-                            Values(CV_8UC1, CV_32SC1, CV_32FC1),
-                            Values(false))); // Values(false) is the reserved parameter
-
-
+INSTANTIATE_TEST_CASE_P(Arithm, Lut, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool(), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Exp, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Log, Combine(testing::Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Add, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Sub, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Mul, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Div, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, Absdiff, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, CartToPolar, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, PolarToCart, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Magnitude, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Transpose, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Flip, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, MinMax, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, MinMaxLoc, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Sum, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool()));
+INSTANTIATE_TEST_CASE_P(Arithm, CountNonZero, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Phase, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_and, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_or, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_xor, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Bitwise_not, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Compare, Combine(testing::Range(CV_8U, CV_USRTYPE1), Values(1), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, Pow, Combine(Values(CV_32F, CV_64F), testing::Range(1, 5), Bool())); // +
+INSTANTIATE_TEST_CASE_P(Arithm, AddWeighted, Combine(testing::Range(CV_8U, CV_USRTYPE1), testing::Range(1, 5), Bool())); // +
 
 #endif // HAVE_OPENCL

@@ -1610,7 +1610,8 @@ double cv::norm( InputArray _src, int normType, InputArray _mask )
     int depth = src.depth(), cn = src.channels();
 
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
+               normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src.type() == CV_8U) );
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)
@@ -1981,7 +1982,8 @@ double cv::norm( InputArray _src1, InputArray _src2, int normType, InputArray _m
     CV_Assert( src1.size == src2.size && src1.type() == src2.type() );
 
     normType &= 7;
-    CV_Assert( normType == NORM_INF || normType == NORM_L1 || normType == NORM_L2 || normType == NORM_L2SQR ||
+    CV_Assert( normType == NORM_INF || normType == NORM_L1 ||
+               normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
 #if defined (HAVE_IPP) && (IPP_VERSION_MAJOR >= 7)

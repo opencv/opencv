@@ -81,11 +81,6 @@ namespace cv
     }
 }
 
-static inline size_t divUp(size_t total, size_t grain)
-{
-    return (total + grain - 1) / grain;
-}
-
 static inline int calcSize(int octave, int layer)
 {
     /* Wavelet size at first layer of first octave. */

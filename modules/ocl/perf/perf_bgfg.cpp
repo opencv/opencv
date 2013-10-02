@@ -44,12 +44,14 @@
 //
 //M*/
 #include "perf_precomp.hpp"
+
 using namespace perf;
 using namespace std;
 using namespace cv::ocl;
 using namespace cv;
 using std::tr1::tuple;
 using std::tr1::get;
+
 #if defined(HAVE_XINE)         || \
     defined(HAVE_GSTREAMER)    || \
     defined(HAVE_QUICKTIME)    || \
@@ -63,6 +65,7 @@ using std::tr1::get;
 #endif
 
 #if BUILD_WITH_VIDEO_INPUT_SUPPORT
+
 static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output)
 {
     for(int i = 0; i< (int)(input.size()); i++)
@@ -70,6 +73,7 @@ static void cvtFrameFmt(vector<Mat>& input, vector<Mat>& output)
         cvtColor(input[i], output[i], COLOR_RGB2GRAY);
     }
 }
+
 //prepare data for CPU
 static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer)
 {
@@ -88,15 +92,15 @@ static void prepareData(VideoCapture& cap, int cn, vector<Mat>& frame_buffer)
     else
         frame_buffer = frame_buffer_init;
 }
+
 //copy CPU data to GPU
 static void prepareData(vector<Mat>& frame_buffer, vector<oclMat>& frame_buffer_ocl)
 {
     for(int i = 0; i < (int)frame_buffer.size(); i++)
         frame_buffer_ocl.push_back(cv::ocl::oclMat(frame_buffer[i]));
 }
-#endif
+
 ///////////// MOG ////////////////////////
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef tuple<string, int, double> VideoMOGParamType;
 typedef TestBaseWithParam<VideoMOGParamType> VideoMOGFixture;
@@ -137,7 +141,8 @@ PERF_TEST_P(VideoMOGFixture, MOG,
             }
         }
         SANITY_CHECK(foreground);
-    }else if(RUN_OCL_IMPL)
+    }
+    else if(RUN_OCL_IMPL)
     {
         prepareData(frame_buffer, frame_buffer_ocl);
         CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
@@ -152,13 +157,12 @@ PERF_TEST_P(VideoMOGFixture, MOG,
         }
         foreground_d.download(foreground);
         SANITY_CHECK(foreground);
-    }else
+    }
+    else
         OCL_PERF_ELSE
 }
-#endif
 
 ///////////// MOG2 ////////////////////////
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef tuple<string, int> VideoMOG2ParamType;
 typedef TestBaseWithParam<VideoMOG2ParamType> VideoMOG2Fixture;
@@ -196,7 +200,8 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
             }
         }
         SANITY_CHECK(foreground);
-    }else if(RUN_OCL_IMPL)
+    }
+    else if(RUN_OCL_IMPL)
     {
         prepareData(frame_buffer, frame_buffer_ocl);
         CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
@@ -211,13 +216,12 @@ PERF_TEST_P(VideoMOG2Fixture, MOG2,
         }
         foreground_d.download(foreground);
         SANITY_CHECK(foreground);
-    }else
+    }
+    else
         OCL_PERF_ELSE
 }
-#endif
 
 ///////////// MOG2_GetBackgroundImage //////////////////
-#if BUILD_WITH_VIDEO_INPUT_SUPPORT
 
 typedef TestBaseWithParam<VideoMOG2ParamType> Video_MOG2GetBackgroundImage;
 
@@ -259,7 +263,8 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
             mog2->getBackgroundImage(background);
         }
         SANITY_CHECK(background);
-    }else if(RUN_OCL_IMPL)
+    }
+    else if(RUN_OCL_IMPL)
     {
         prepareData(frame_buffer, frame_buffer_ocl);
         CV_Assert((int)(frame_buffer_ocl.size()) == nFrame);
@@ -276,7 +281,9 @@ PERF_TEST_P(Video_MOG2GetBackgroundImage, MOG2,
         }
         background_d.download(background);
         SANITY_CHECK(background);
-    }else
+    }
+    else
         OCL_PERF_ELSE
 }
+
 #endif

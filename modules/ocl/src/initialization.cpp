@@ -282,11 +282,6 @@ namespace cv
             return 0;
         }
 
-        inline int divUp(int total, int grain)
-        {
-            return (total + grain - 1) / grain;
-        }
-
         int getDevice(std::vector<Info> &oclinfo, int devicetype)
         {
             //TODO: cache oclinfo vector
@@ -687,6 +682,16 @@ namespace cv
             CV_Assert( localThreads[0] * localThreads[1] * localThreads[2] <= clCxt->impl->maxWorkGroupSize );
         }
 
+        static inline size_t roundUp(size_t sz, size_t n)
+        {
+            // we don't assume that n is a power of 2 (see alignSize)
+            // equal to divUp(sz, n) * n
+            size_t t = sz + n - 1;
+            size_t rem = t % n;
+            size_t result = t - rem;
+            return result;
+        }
+
 #ifdef PRINT_KERNEL_RUN_TIME
         static double total_execute_time = 0;
         static double total_kernel_time = 0;
@@ -710,11 +715,10 @@ namespace cv
 
             if ( localThreads != NULL)
             {
-                globalThreads[0] = divUp(globalThreads[0], localThreads[0]) * localThreads[0];
-                globalThreads[1] = divUp(globalThreads[1], localThreads[1]) * localThreads[1];
-                globalThreads[2] = divUp(globalThreads[2], localThreads[2]) * localThreads[2];
+                globalThreads[0] = roundUp(globalThreads[0], localThreads[0]);
+                globalThreads[1] = roundUp(globalThreads[1], localThreads[1]);
+                globalThreads[2] = roundUp(globalThreads[2], localThreads[2]);
 
-                //size_t blockSize = localThreads[0] * localThreads[1] * localThreads[2];
                 cv::ocl::openCLVerifyKernel(clCxt, kernel, localThreads);
             }
             for(size_t i = 0; i < args.size(); i ++)
@@ -744,10 +748,6 @@ namespace cv
 
             execute_time = (double)(end_time - start_time) / (1000 * 1000);
             total_time = (double)(end_time - queue_time) / (1000 * 1000);
-
-            //	std::cout << setiosflags(ios::left) << setw(15) << execute_time;
-            //	std::cout << setiosflags(ios::left) << setw(15) << total_time - execute_time;
-            //	std::cout << setiosflags(ios::left) << setw(15) << total_time << std::endl;
 
             total_execute_time += execute_time;
             total_kernel_time += total_time;
@@ -1016,7 +1016,7 @@ namespace cv
             programCache->releaseProgram();
         }
 
-        bool Context::supportsFeature(int ftype)
+        bool Context::supportsFeature(int ftype) const
         {
             switch(ftype)
             {
@@ -1031,7 +1031,7 @@ namespace cv
             }
         }
 
-        size_t Context::computeUnits()
+        size_t Context::computeUnits() const
         {
             return impl->maxComputeUnits;
         }
@@ -1039,6 +1039,14 @@ namespace cv
         size_t Context::maxWorkGroupSize()
         {
             return impl->maxWorkGroupSize;
+        }
+
+        unsigned long queryLocalMemInfo()
+        {
+            Info::Impl* impl = Context::getContext()->impl;
+            cl_ulong local_memory_size = 0;
+            clGetDeviceInfo(impl->devices[impl->devnum], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), (void*)&local_memory_size, 0);
+            return local_memory_size;
         }
 
         void* Context::oclContext()

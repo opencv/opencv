@@ -58,13 +58,29 @@ namespace cv
     namespace ocl
     {
         extern const char *pyr_up;
+
         void pyrUp(const cv::ocl::oclMat &src, cv::ocl::oclMat &dst)
         {
+            int depth = src.depth(), channels = src.channels(), oclChannels = src.oclchannels();
+
+            CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_16S || depth == CV_32F);
+            CV_Assert(channels == 1 || channels == 3 || channels == 4);
+
             dst.create(src.rows * 2, src.cols * 2, src.type());
 
             Context *clCxt = src.clCxt;
 
+            const char * const typeMap[] = { "uchar", "char", "ushort", "short", "int", "float" };
+            char buildOptions[250], convertString[50];
+            const char * const channelsString = oclChannels == 1 ? "" : "4";
+            sprintf(convertString, "convert_%s%s_sat_rte", typeMap[depth], channelsString);
+            sprintf(buildOptions, "-D Type=%s%s -D floatType=float%s -D convertToType=%s -D convertToFloat=%s",
+                    typeMap[depth], channelsString, channelsString,
+                    depth == CV_32F ? "" : convertString,
+                    oclChannels == 4 ? "convert_float4" : "(float)");
+
             const String kernelName = "pyrUp";
+            int dststep = dst.step / dst.elemSize(), srcstep = src.step / src.elemSize();
 
             std::vector< std::pair<size_t, const void *> > args;
             args.push_back( std::make_pair( sizeof(cl_mem), (void *)&src.data));
@@ -75,14 +91,15 @@ namespace cv
             args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.cols));
             args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.offset));
             args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.offset));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&src.step));
-            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dst.step));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&srcstep));
+            args.push_back( std::make_pair( sizeof(cl_int), (void *)&dststep));
 
             size_t globalThreads[3] = {dst.cols, dst.rows, 1};
             size_t localThreads[3]  = {16, 16, 1};
 
 
-            openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, src.oclchannels(), src.depth());
+            openCLExecuteKernel(clCxt, &pyr_up, kernelName, globalThreads, localThreads, args, -1, -1,
+                                buildOptions);
         }
     }
 }

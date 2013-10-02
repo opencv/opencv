@@ -357,14 +357,13 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
     std::vector< std::pair<size_t, const void *> > args;
     size_t localThreads[3]  = {128, 1, 1};
 
-#define DIVUP(a, b) ((a)+(b)-1)/(b)
     int count_i[1] = {0};
     while(count > 0)
     {
         openCLSafeCall(clEnqueueWriteBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count_i, 0, NULL, NULL));
 
         args.clear();
-        size_t globalThreads[3] = {std::min(count, 65535u) * 128, DIVUP(count, 65535), 1};
+        size_t globalThreads[3] = {std::min(count, 65535u) * 128, divUp(count, 65535), 1};
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&map.data));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&st1.data));
         args.push_back( std::make_pair( sizeof(cl_mem), (void *)&st2.data));
@@ -379,7 +378,6 @@ void canny::edgesHysteresisGlobal_gpu(oclMat &map, oclMat &st1, oclMat &st2, voi
         openCLSafeCall(clEnqueueReadBuffer(*(cl_command_queue*)getoclCommandQueue(), (cl_mem)counter, 1, 0, sizeof(int), &count, 0, NULL, NULL));
         std::swap(st1, st2);
     }
-#undef DIVUP
 }
 
 void canny::getEdges_gpu(oclMat &map, oclMat &dst, int rows, int cols)

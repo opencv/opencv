@@ -17,10 +17,10 @@
 static void help(std::string errorMessage)
 {
     std::cout<<"Program init error : "<<errorMessage<<std::endl;
-    std::cout<<"\nProgram call procedure : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping [OpenEXR image to process]"<<std::endl;
+    std::cout<<"\nProgram call procedure : ./OpenEXRimages_HDR_Retina_toneMapping [OpenEXR image to process]"<<std::endl;
     std::cout<<"\t[OpenEXR image to process] : the input HDR image to process, must be an OpenEXR format, see http://www.openexr.com/ to get some samples or create your own using camera bracketing and Photoshop or equivalent software for OpenEXR image synthesis"<<std::endl;
     std::cout<<"\nExamples:"<<std::endl;
-    std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping memorial.exr"<<std::endl;
+    std::cout<<"\t-Image processing : ./OpenEXRimages_HDR_Retina_toneMapping memorial.exr"<<std::endl;
 }
 
 // simple procedure for 1D curve tracing

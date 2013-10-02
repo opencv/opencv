@@ -1734,13 +1734,13 @@ const _Tp& SparseMat::value(const Node* n) const
 inline
 SparseMat::Node* SparseMat::node(size_t nidx)
 {
-    return (Node*)&hdr->pool[nidx];
+    return (Node*)(void*)&hdr->pool[nidx];
 }
 
 inline
 const SparseMat::Node* SparseMat::node(size_t nidx) const
 {
-    return (const Node*)&hdr->pool[nidx];
+    return (const Node*)(const void*)&hdr->pool[nidx];
 }
 
 inline
@@ -2488,7 +2488,7 @@ const _Tp& SparseMatConstIterator::value() const
 inline
 const SparseMat::Node* SparseMatConstIterator::node() const
 {
-    return (ptr && m && m->hdr) ? (const SparseMat::Node*)(ptr - m->hdr->valueOffset) : 0;
+    return (ptr && m && m->hdr) ? (const SparseMat::Node*)(const void*)(ptr - m->hdr->valueOffset) : 0;
 }
 
 inline
