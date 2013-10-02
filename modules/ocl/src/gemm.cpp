@@ -73,7 +73,7 @@ void cv::ocl::clBlasTeardown()
 }
 
 #else
-#include "clAmdBlas.h"
+#include "opencv2/ocl/cl_runtime/clamdblas_runtime.hpp"
 using namespace cv;
 
 static bool clBlasInitialized = false;

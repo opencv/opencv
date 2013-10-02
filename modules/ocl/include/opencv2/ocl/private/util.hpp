@@ -48,11 +48,7 @@
 
 #include "opencv2/ocl/ocl.hpp"
 
-#if defined __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/opencl.h>
-#endif
+#include "opencv2/ocl/cl_runtime/cl_runtime.hpp"
 
 namespace cv
 {
