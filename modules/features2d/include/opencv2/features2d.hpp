@@ -517,7 +517,7 @@ CV_EXPORTS void FAST( InputArray image, CV_OUT std::vector<KeyPoint>& keypoints,
 class CV_EXPORTS_W FastFeatureDetector : public FeatureDetector
 {
 public:
-    enum
+    enum Type
     {
       TYPE_5_8 = 0, TYPE_7_12 = 1, TYPE_9_16 = 2
     };
