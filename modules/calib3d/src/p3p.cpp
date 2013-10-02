@@ -11,8 +11,8 @@ void p3p::init_inverse_parameters()
 {
     inv_fx = 1. / fx;
     inv_fy = 1. / fy;
-    cx_fx = cx / fx;
-    cy_fy = cy / fy;
+    cx_fx = cx * inv_fx; // cx/fx
+    cy_fy = cy * inv_fy; // cy/fy
 }
 
 p3p::p3p(cv::Mat cameraMatrix)
@@ -76,8 +76,9 @@ bool p3p::solve(double R[3][3], double t[3],
         double X3p = Rs[i][0][0] * X3 + Rs[i][0][1] * Y3 + Rs[i][0][2] * Z3 + ts[i][0];
         double Y3p = Rs[i][1][0] * X3 + Rs[i][1][1] * Y3 + Rs[i][1][2] * Z3 + ts[i][1];
         double Z3p = Rs[i][2][0] * X3 + Rs[i][2][1] * Y3 + Rs[i][2][2] * Z3 + ts[i][2];
-        double mu3p = cx + fx * X3p / Z3p;
-        double mv3p = cy + fy * Y3p / Z3p;
+        Z3p = 1 / Z3p;
+        double mu3p = cx + fx * X3p * Z3p;
+        double mv3p = cy + fy * Y3p * Z3p;
         double reproj = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
         if (i == 0 || min_reproj > reproj) {
             ns = i;
@@ -268,17 +269,17 @@ bool p3p::align(double M_end[3][3],
 {
     // Centroids:
     double C_start[3], C_end[3];
-    for(int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3;
-    C_start[0] = (X0 + X1 + X2) / 3;
-    C_start[1] = (Y0 + Y1 + Y2) / 3;
-    C_start[2] = (Z0 + Z1 + Z2) / 3;
+    for(int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) * (1.0/3);
+    C_start[0] = (X0 + X1 + X2) * (1.0/3);
+    C_start[1] = (Y0 + Y1 + Y2) * (1.0/3);
+    C_start[2] = (Z0 + Z1 + Z2) * (1.0/3);
 
     // Covariance matrix s:
     double s[3 * 3];
     for(int j = 0; j < 3; j++) {
-        s[0 * 3 + j] = (X0 * M_end[0][j] + X1 * M_end[1][j] + X2 * M_end[2][j]) / 3 - C_end[j] * C_start[0];
-        s[1 * 3 + j] = (Y0 * M_end[0][j] + Y1 * M_end[1][j] + Y2 * M_end[2][j]) / 3 - C_end[j] * C_start[1];
-        s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) / 3 - C_end[j] * C_start[2];
+        s[0 * 3 + j] = (X0 * M_end[0][j] + X1 * M_end[1][j] + X2 * M_end[2][j]) * (1.0/3) - C_end[j] * C_start[0];
+        s[1 * 3 + j] = (Y0 * M_end[0][j] + Y1 * M_end[1][j] + Y2 * M_end[2][j]) * (1.0/3) - C_end[j] * C_start[1];
+        s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) * (1.0/3) - C_end[j] * C_start[2];
     }
 
     double Qs[16], evs[4], U[16];
@@ -352,7 +353,7 @@ bool p3p::jacobi_4x4(double * A, double * D, double * U)
         if (sum == 0.0)
             return true;
 
-        double tresh =  (iter < 3) ? 0.2 * sum / 16. : 0.0;
+        double tresh =  (iter < 3) ? sum * (0.2 / 16.) : 0.0;
         for(int i = 0; i < 3; i++) {
             double * pAij = A + 5 * i + 1;
             for(int j = i + 1 ; j < 4; j++) {

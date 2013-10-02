@@ -65,6 +65,13 @@ void drawPoints(const vector<Point2f> &points, Mat &outImage, int radius = 2,  S
 }
 #endif
 
+static float norm2sqr(const Point2f pt);
+/* norm*norm, no sqrt */
+static float norm2sqr(const Point2f pt)
+{
+    return (pt.x*pt.x) + (pt.y*pt.y);
+}
+
 void CirclesGridClusterFinder::hierarchicalClustering(const vector<Point2f> points, const Size &patternSz, vector<Point2f> &patternPoints)
 {
 #ifdef HAVE_TEGRA_OPTIMIZATION
@@ -195,7 +202,7 @@ void CirclesGridClusterFinder::findCorners(const std::vector<cv::Point2f> &hull2
   {
     Point2f vec1 = hull2f[(i+1) % hull2f.size()] - hull2f[i % hull2f.size()];
     Point2f vec2 = hull2f[(i-1 + static_cast<int>(hull2f.size())) % hull2f.size()] - hull2f[i % hull2f.size()];
-    float angle = (float)(vec1.ddot(vec2) / (norm(vec1) * norm(vec2)));
+    float angle = (float)(vec1.ddot(vec2) / std::sqrt(norm2sqr(vec1) * norm2sqr(vec2)));
     angles.push_back(angle);
   }
 
@@ -337,8 +344,8 @@ void CirclesGridClusterFinder::getSortedCorners(const std::vector<cv::Point2f> &
 
   if(!isAsymmetricGrid)
   {
-    double dist1 = norm(sortedCorners[0] - sortedCorners[1]);
-    double dist2 = norm(sortedCorners[1] - sortedCorners[2]);
+    float dist1 = norm2sqr(sortedCorners[0] - sortedCorners[1]);
+    float dist2 = norm2sqr(sortedCorners[1] - sortedCorners[2]);
 
     if((dist1 > dist2 && patternSize.height > patternSize.width) || (dist1 < dist2 && patternSize.height < patternSize.width))
     {
@@ -611,6 +618,8 @@ bool CirclesGridFinder::findHoles()
 
 void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vectors) const
 {
+  const float dd = parameters.minRNGEdgeSwitchDist * parameters.minRNGEdgeSwitchDist;
+
   for (size_t i = 0; i < rng.getVerticesCount(); i++)
   {
     Graph::Neighbors neighbors1 = rng.getNeighbors(i);
@@ -623,8 +632,7 @@ void CirclesGridFinder::rng2gridGraph(Graph &rng, std::vector<cv::Point2f> &vect
         {
           Point2f vec1 = keypoints[i] - keypoints[*it1];
           Point2f vec2 = keypoints[*it1] - keypoints[*it2];
-          if (norm(vec1 - vec2) < parameters.minRNGEdgeSwitchDist || norm(vec1 + vec2)
-              < parameters.minRNGEdgeSwitchDist)
+          if (norm2sqr(vec1 - vec2) < dd || norm2sqr(vec1 + vec2) < dd)
             continue;
 
           vectors.push_back(keypoints[i] - keypoints[*it2]);
@@ -695,9 +703,9 @@ bool CirclesGridFinder::isDetectionCorrect()
       }
 
       size_t largeWidth = patternSize.width;
-      size_t largeHeight = (size_t)ceil(patternSize.height / 2.);
+      size_t largeHeight = (size_t)ceil(patternSize.height * 0.5);
       size_t smallWidth = patternSize.width;
-      size_t smallHeight = (size_t)floor(patternSize.height / 2.);
+      size_t smallHeight = (size_t)floor(patternSize.height * 0.5);
 
       size_t sw = smallWidth, sh = smallHeight, lw = largeWidth, lh = largeHeight;
       if (largeHoles->size() != largeHeight)
@@ -861,7 +869,7 @@ size_t CirclesGridFinder::findNearestKeypoint(Point2f pt) const
   double minDist = std::numeric_limits<double>::max();
   for (size_t i = 0; i < keypoints.size(); i++)
   {
-    double dist = norm(pt - keypoints[i]);
+    double dist = norm2sqr(pt - keypoints[i]);
     if (dist < minDist)
     {
       minDist = dist;
@@ -874,7 +882,7 @@ size_t CirclesGridFinder::findNearestKeypoint(Point2f pt) const
 void CirclesGridFinder::addPoint(Point2f pt, vector<size_t> &points)
 {
   size_t ptIdx = findNearestKeypoint(pt);
-  if (norm(keypoints[ptIdx] - pt) > parameters.minDistanceToAddKeypoint)
+  if (norm2sqr(keypoints[ptIdx] - pt) > parameters.minDistanceToAddKeypoint*parameters.minDistanceToAddKeypoint)
   {
     Point2f kpt = Point2f(pt);
     keypoints.push_back(kpt);
@@ -1110,7 +1118,7 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
   }
 
   const float minBasisDif = 2;
-  if (norm(basis[0] - basis[1]) < minBasisDif)
+  if (norm2sqr(basis[0] - basis[1]) < minBasisDif*minBasisDif)
     CV_Error(0, "degenerate basis" );
 
   vector<vector<Point2f> > clusters(2), hulls(2);
@@ -1132,10 +1140,11 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
     convexHull(Mat(clusters[i]), hulls[i]);
   }
 
+  const int keypoints_size = keypoints.size();
   basisGraphs.resize(basis.size(), Graph(keypoints.size()));
-  for (size_t i = 0; i < keypoints.size(); i++)
+  for (int i = 0; i < keypoints_size; i++)
   {
-    for (size_t j = 0; j < keypoints.size(); j++)
+    for (int j = 0; j < keypoints_size; j++)
     {
       if (i == j)
         continue;
@@ -1157,28 +1166,32 @@ void CirclesGridFinder::findBasis(const vector<Point2f> &samples, vector<Point2f
 
 void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors, Mat *drawImage) const
 {
-  rng = Graph(keypoints.size());
+  const int keypoints_size = keypoints.size();
+  static const Scalar aColor = Scalar(255, 0, 0);
+  static const Scalar bColor = Scalar(0, 0, 255);
+
+  rng = Graph(keypoints_size);
   vectors.clear();
 
   //TODO: use more fast algorithm instead of naive N^3
-  for (size_t i = 0; i < keypoints.size(); i++)
+  for (int i = 0; i < keypoints_size; i++)
   {
-    for (size_t j = 0; j < keypoints.size(); j++)
+    for (int j = 0; j < keypoints_size; j++)
     {
       if (i == j)
         continue;
 
       Point2f vec = keypoints[i] - keypoints[j];
-      double dist = norm(vec);
+      double dist = norm2sqr(vec);
 
       bool isNeighbors = true;
-      for (size_t k = 0; k < keypoints.size(); k++)
+      for (int k = 0; k < keypoints_size; k++)
       {
         if (k == i || k == j)
           continue;
 
-        double dist1 = norm(keypoints[i] - keypoints[k]);
-        double dist2 = norm(keypoints[j] - keypoints[k]);
+        double dist1 = norm2sqr(keypoints[i] - keypoints[k]);
+        double dist2 = norm2sqr(keypoints[j] - keypoints[k]);
         if (dist1 < dist && dist2 < dist)
         {
           isNeighbors = false;
@@ -1192,9 +1205,9 @@ void CirclesGridFinder::computeRNG(Graph &rng, std::vector<cv::Point2f> &vectors
         vectors.push_back(keypoints[i] - keypoints[j]);
         if (drawImage != 0)
         {
-          line(*drawImage, keypoints[i], keypoints[j], Scalar(255, 0, 0), 2);
-          circle(*drawImage, keypoints[i], 3, Scalar(0, 0, 255), -1);
-          circle(*drawImage, keypoints[j], 3, Scalar(0, 0, 255), -1);
+          line(*drawImage, keypoints[i], keypoints[j], aColor, 2);
+          circle(*drawImage, keypoints[i], 3, bColor, -1);
+          circle(*drawImage, keypoints[j], 3, bColor, -1);
         }
       }
     }
@@ -1264,8 +1277,8 @@ size_t CirclesGridFinder::findLongestPath(vector<Graph> &basisGraphs, Path &best
     if (longestPaths.empty() || (maxVal == longestPaths[0].length && graphIdx == bestGraphIdx))
     {
       Path path = Path(maxLoc.x, maxLoc.y, cvRound(maxVal));
-      CV_Assert(maxLoc.x >= 0 && maxLoc.y >= 0)
-        ;
+      CV_Assert(maxLoc.x >= 0 && maxLoc.y >= 0);
+
       size_t id1 = static_cast<size_t> (maxLoc.x);
       size_t id2 = static_cast<size_t> (maxLoc.y);
       computeShortestPath(predecessorMatrix, id1, id2, path.vertices);
@@ -1359,8 +1372,10 @@ void CirclesGridFinder::drawHoles(const Mat &srcImage, Mat &drawImage) const
   const int holeRadius = 3;
   const int holeThickness = -1;
 
+  // static stops memory defrag
   //const Scalar holeColor = Scalar(0, 0, 255);
-  const Scalar holeColor = Scalar(0, 255, 0);
+  static const Scalar holeColor = Scalar(0, 255, 0);
+  static const Scalar lineColor = Scalar(255, 0, 0);
 
   if (srcImage.channels() == 1)
     cvtColor(srcImage, drawImage, CV_GRAY2RGB);
@@ -1372,9 +1387,9 @@ void CirclesGridFinder::drawHoles(const Mat &srcImage, Mat &drawImage) const
     for (size_t j = 0; j < holes[i].size(); j++)
     {
       if (j != holes[i].size() - 1)
-        line(drawImage, keypoints[holes[i][j]], keypoints[holes[i][j + 1]], Scalar(255, 0, 0), 2);
+        line(drawImage, keypoints[holes[i][j]], keypoints[holes[i][j + 1]], lineColor, 2);
       if (i != holes.size() - 1)
-        line(drawImage, keypoints[holes[i][j]], keypoints[holes[i + 1][j]], Scalar(255, 0, 0), 2);
+        line(drawImage, keypoints[holes[i][j]], keypoints[holes[i + 1][j]], lineColor, 2);
 
       //circle(drawImage, keypoints[holes[i][j]], holeRadius, holeColor, holeThickness);
       circle(drawImage, keypoints[holes[i][j]], holeRadius, holeColor, holeThickness);
@@ -1417,8 +1432,7 @@ void CirclesGridFinder::getAsymmetricHoles(std::vector<cv::Point2f> &outHoles) c
   vector<Point> largeCornerIndices, smallCornerIndices;
   vector<Point> firstSteps, secondSteps;
   size_t cornerIdx = getFirstCorner(largeCornerIndices, smallCornerIndices, firstSteps, secondSteps);
-  CV_Assert(largeHoles != 0 && smallHoles != 0)
-    ;
+  CV_Assert(largeHoles != 0 && smallHoles != 0);
 
   Point srcLargePos = largeCornerIndices[cornerIdx];
   Point srcSmallPos = smallCornerIndices[cornerIdx];
@@ -1482,8 +1496,7 @@ void CirclesGridFinder::getCornerSegments(const vector<vector<size_t> > &points,
   secondSteps.clear();
   int h = (int)points.size();
   int w = (int)points[0].size();
-  CV_Assert(h >= 2 && w >= 2)
-    ;
+  CV_Assert(h >= 2 && w >= 2);
 
   //all 8 segments with one end in a corner
   vector<Segment> corner;

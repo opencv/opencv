@@ -115,9 +115,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
 {
     int i, j, k;
     int count = 0, converged = 0;
-    float inorm, jnorm, invInorm, invJnorm, invScale, scale = 0, inv_Z = 0;
+    float invScale, scale = 0, inv_Z = 0;
     float diff = (float)criteria.epsilon;
-    float inv_focalLength = 1 / focalLength;
 
     /* Check bad arguments */
     if( imagePoints == NULL )
@@ -138,7 +137,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         return CV_BADFACTOR_ERR;
 
     /* init variables */
-    int N = pObject->N;
+    const float inv_focalLength = 1 / focalLength;
+    const int N = pObject->N;
     float *objectVectors = pObject->obj_vecs;
     float *invMatrix = pObject->inv_matr;
     float *imgVectors = pObject->img_vecs;
@@ -156,6 +156,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         }
         else
         {
+            float inorm, jnorm, invInorm, invJnorm;
             diff = 0;
             /* Compute new SOP (scaled orthograthic projection) image from pose */
             for( i = 0; i < N; i++ )
@@ -226,7 +227,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         rotation[8] /*->m[2][2]*/ = rotation[0] /*->m[0][0]*/ * rotation[4] /*->m[1][1]*/ -
                                     rotation[1] /*->m[0][1]*/ * rotation[3] /*->m[1][0]*/;
 
-        scale = (inorm + jnorm) / 2.0f;
+        scale = (inorm + jnorm) * 0.5f;
         inv_Z = scale * inv_focalLength;
 
         count++;
@@ -236,7 +237,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
     invScale = 1 / scale;
     translation[0] = imagePoints[0].x * invScale;
     translation[1] = imagePoints[0].y * invScale;
-    translation[2] = 1 / inv_Z;
+    translation[2] = invScale * focalLength; // =1/inv_Z;
 
     return CV_NO_ERR;
 }
