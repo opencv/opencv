@@ -156,7 +156,6 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
         }
         else
         {
-            float inorm, jnorm, invInorm, invJnorm;
             diff = 0;
             /* Compute new SOP (scaled orthograthic projection) image from pose */
             for( i = 0; i < N; i++ )
@@ -194,6 +193,8 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
                 }
             }
         }
+
+        float inorm, jnorm, invInorm, invJnorm;
 
         inorm = rotation[0] /*[0][0]*/ * rotation[0] /*[0][0]*/ +
                 rotation[1] /*[0][1]*/ * rotation[1] /*[0][1]*/ +
@@ -237,7 +238,7 @@ static  CvStatus  icvPOSIT( CvPOSITObject *pObject, CvPoint2D32f *imagePoints,
     invScale = 1 / scale;
     translation[0] = imagePoints[0].x * invScale;
     translation[1] = imagePoints[0].y * invScale;
-    translation[2] = invScale * focalLength; // =1/inv_Z;
+    translation[2] = invScale * focalLength; /* =1/inv_Z; */
 
     return CV_NO_ERR;
 }
