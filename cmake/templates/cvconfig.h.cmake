@@ -82,6 +82,9 @@
 /* GTK+ 2.x toolkit */
 #cmakedefine HAVE_GTK
 
+/* GTK+ 3.x toolkit */
+#cmakedefine HAVE_GTK3
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #cmakedefine HAVE_INTTYPES_H 1
 
