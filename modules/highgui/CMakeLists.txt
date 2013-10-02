@@ -50,6 +50,8 @@ file(GLOB grfmt_hdrs src/grfmt*.hpp)
 file(GLOB grfmt_srcs src/grfmt*.cpp)
 list(APPEND grfmt_hdrs src/bitstrm.hpp)
 list(APPEND grfmt_srcs src/bitstrm.cpp)
+list(APPEND grfmt_hdrs src/rgbe.hpp)
+list(APPEND grfmt_srcs src/rgbe.cpp)
 
 source_group("Src\\grfmts" FILES ${grfmt_hdrs} ${grfmt_srcs})
 

@@ -40,101 +40,50 @@
 //
 //M*/
 
-#ifndef _GRFMT_TIFF_H_
-#define _GRFMT_TIFF_H_
+#ifndef _RGBE_HDR_H_
+#define _RGBE_HDR_H_
 
-#include "grfmt_base.hpp"
+// posted to http://www.graphics.cornell.edu/~bjw/
+// written by Bruce Walter  (bjw@graphics.cornell.edu)  5/26/95
+// based on code written by Greg Ward
 
-namespace cv
-{
+#include <stdio.h>
 
-// native simple TIFF codec
-enum TiffCompression
-{
-    TIFF_UNCOMP = 1,
-    TIFF_HUFFMAN = 2,
-    TIFF_PACKBITS = 32773
-};
+typedef struct {
+  int valid;            /* indicate which fields are valid */
+  char programtype[16]; /* listed at beginning of file to identify it
+                         * after "#?".  defaults to "RGBE" */
+  float gamma;          /* image has already been gamma corrected with
+                         * given gamma.  defaults to 1.0 (no correction) */
+  float exposure;       /* a value of 1.0 in an image corresponds to
+       * <exposure> watts/steradian/m^2.
+       * defaults to 1.0 */
+} rgbe_header_info;
 
-enum TiffByteOrder
-{
-    TIFF_ORDER_II = 0x4949,
-    TIFF_ORDER_MM = 0x4d4d
-};
+/* flags indicating which fields in an rgbe_header_info are valid */
+#define RGBE_VALID_PROGRAMTYPE 0x01
+#define RGBE_VALID_GAMMA       0x02
+#define RGBE_VALID_EXPOSURE    0x04
 
+/* return codes for rgbe routines */
+#define RGBE_RETURN_SUCCESS 0
+#define RGBE_RETURN_FAILURE -1
 
-enum  TiffTag
-{
-    TIFF_TAG_WIDTH  = 256,
-    TIFF_TAG_HEIGHT = 257,
-    TIFF_TAG_BITS_PER_SAMPLE = 258,
-    TIFF_TAG_COMPRESSION = 259,
-    TIFF_TAG_PHOTOMETRIC = 262,
-    TIFF_TAG_STRIP_OFFSETS = 273,
-    TIFF_TAG_STRIP_COUNTS = 279,
-    TIFF_TAG_SAMPLES_PER_PIXEL = 277,
-    TIFF_TAG_ROWS_PER_STRIP = 278,
-    TIFF_TAG_PLANAR_CONFIG = 284,
-    TIFF_TAG_COLOR_MAP = 320
-};
+/* read or write headers */
+/* you may set rgbe_header_info to null if you want to */
+int RGBE_WriteHeader(FILE *fp, int width, int height, rgbe_header_info *info);
+int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info);
 
+/* read or write pixels */
+/* can read or write pixels in chunks of any size including single pixels*/
+int RGBE_WritePixels(FILE *fp, float *data, int numpixels);
+int RGBE_ReadPixels(FILE *fp, float *data, int numpixels);
 
-enum TiffFieldType
-{
-    TIFF_TYPE_BYTE = 1,
-    TIFF_TYPE_SHORT = 3,
-    TIFF_TYPE_LONG = 4
-};
+/* read or write run length encoded files */
+/* must be called to read or write whole scanlines */
+int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
+       int num_scanlines);
+int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
+      int num_scanlines);
 
-
-#ifdef HAVE_TIFF
-
-// libtiff based TIFF codec
-
-class TiffDecoder : public BaseImageDecoder
-{
-public:
-    TiffDecoder();
-    virtual ~TiffDecoder();
-
-    bool  readHeader();
-    bool  readData( Mat& img );
-    void  close();
-
-    size_t signatureLength() const;
-    bool checkSignature( const String& signature ) const;
-    ImageDecoder newDecoder() const;
-
-protected:
-    void* m_tif;
-    int normalizeChannelsNumber(int channels) const;
-    bool readHdrData(Mat& img);
-    bool m_hdr;
-};
-
-#endif
-
-// ... and writer
-class TiffEncoder : public BaseImageEncoder
-{
-public:
-    TiffEncoder();
-    virtual ~TiffEncoder();
-
-    bool isFormatSupported( int depth ) const;
-
-    bool  write( const Mat& img, const std::vector<int>& params );
-    ImageEncoder newEncoder() const;
-
-protected:
-    void  writeTag( WLByteStream& strm, TiffTag tag,
-                    TiffFieldType fieldType,
-                    int count, int value );
-
-    bool writeLibTiff( const Mat& img, const std::vector<int>& params );
-    bool writeHdr( const Mat& img );
-};
-
-}
-
-#endif/*_GRFMT_TIFF_H_*/
+#endif/*_RGBE_HDR_H_*/
