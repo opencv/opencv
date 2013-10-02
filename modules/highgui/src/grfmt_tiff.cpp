@@ -47,6 +47,7 @@
 
 #include "precomp.hpp"
 #include "grfmt_tiff.hpp"
+#include <opencv2/imgproc.hpp>
 
 namespace cv
 {
@@ -71,6 +72,7 @@ TiffDecoder::TiffDecoder()
         TIFFSetErrorHandler( GrFmtSilentTIFFErrorHandler );
         TIFFSetWarningHandler( GrFmtSilentTIFFErrorHandler );
     }
+    m_hdr = false;
 }
 
 
@@ -133,6 +135,14 @@ bool TiffDecoder::readHeader()
 
             m_width = wdth;
             m_height = hght;
+            if((bpp == 32 && ncn == 3) || photometric == PHOTOMETRIC_LOGLUV)
+            {
+                m_type = CV_32FC3;
+                m_hdr = true;
+                return true;
+            }
+            m_hdr = false;
+
             if( bpp > 8 &&
                ((photometric != 2 && photometric != 1) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
@@ -171,6 +181,10 @@ bool TiffDecoder::readHeader()
 
 bool  TiffDecoder::readData( Mat& img )
 {
+    if(m_hdr && img.type() == CV_32FC3)
+    {
+        return readHdrData(img);
+    }
     bool result = false;
     bool color = img.channels() > 1;
     uchar* data = img.data;
@@ -380,6 +394,37 @@ bool  TiffDecoder::readData( Mat& img )
     return result;
 }
 
+bool TiffDecoder::readHdrData(Mat& img)
+{
+    int rows_per_strip = 0, photometric = 0;
+    if(!m_tif)
+    {
+        return false;
+    }
+    TIFF *tif = static_cast<TIFF*>(m_tif);
+    TIFFGetField(tif, TIFFTAG_ROWSPERSTRIP, &rows_per_strip);
+    TIFFGetField( tif, TIFFTAG_PHOTOMETRIC, &photometric );
+    TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
+    int size = 3 * m_width * m_height * sizeof (float);
+    int strip_size = 3 * m_width * rows_per_strip;
+    float *ptr = img.ptr<float>();
+    for (size_t i = 0; i < TIFFNumberOfStrips(tif); i++, ptr += strip_size)
+    {
+        TIFFReadEncodedStrip(tif, i, ptr, size);
+        size -= strip_size * sizeof(float);
+    }
+    close();
+    if(photometric == PHOTOMETRIC_LOGLUV)
+    {
+        cvtColor(img, img, COLOR_XYZ2BGR);
+    }
+    else
+    {
+        cvtColor(img, img, COLOR_RGB2BGR);
+    }
+    return true;
+}
+
 #endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -405,7 +450,11 @@ ImageEncoder TiffEncoder::newEncoder() const
 
 bool TiffEncoder::isFormatSupported( int depth ) const
 {
+#ifdef HAVE_TIFF
+    return depth == CV_8U || depth == CV_16U || depth == CV_32F;
+#else
     return depth == CV_8U || depth == CV_16U;
+#endif
 }
 
 void  TiffEncoder::writeTag( WLByteStream& strm, TiffTag tag,
@@ -557,6 +606,33 @@ bool  TiffEncoder::writeLibTiff( const Mat& img, const std::vector<int>& params)
     return true;
 }
 
+bool TiffEncoder::writeHdr(const Mat& _img)
+{
+    Mat img;
+    cvtColor(_img, img, COLOR_BGR2XYZ);
+    TIFF* tif = TIFFOpen(m_filename.c_str(), "w");
+    if (!tif)
+    {
+        return false;
+    }
+    TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, img.cols);
+    TIFFSetField(tif, TIFFTAG_IMAGELENGTH, img.rows);
+    TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 3);
+    TIFFSetField(tif, TIFFTAG_COMPRESSION, COMPRESSION_SGILOG);
+    TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_LOGLUV);
+    TIFFSetField(tif, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+    TIFFSetField(tif, TIFFTAG_SGILOGDATAFMT, SGILOGDATAFMT_FLOAT);
+    TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, 1);
+    int strip_size = 3 * img.cols;
+    float *ptr = const_cast<float*>(img.ptr<float>());
+    for (int i = 0; i < img.rows; i++, ptr += strip_size)
+    {
+        TIFFWriteEncodedStrip(tif, i, ptr, strip_size * sizeof(float));
+    }
+    TIFFClose(tif);
+    return true;
+}
+
 #endif
 
 #ifdef HAVE_TIFF
@@ -568,6 +644,12 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& /*params*/)
     int channels = img.channels();
     int width = img.cols, height = img.rows;
     int depth = img.depth();
+#ifdef HAVE_TIFF
+    if(img.type() == CV_32FC3)
+    {
+        return writeHdr(img);
+    }
+#endif
 
     if (depth != CV_8U && depth != CV_16U)
         return false;

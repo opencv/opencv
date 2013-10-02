@@ -40,44 +40,49 @@
 //
 //M*/
 
-// This original code was written by
-//  Onkar Raut
-//  Graduate Student,
-//  University of North Carolina at Charlotte
+#ifndef _GRFMT_HDR_H_
+#define _GRFMT_HDR_H_
 
-#include "precomp.hpp"
+#include "grfmt_base.hpp"
 
-typedef double polyfit_type;
-
-void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
+namespace cv
 {
-    const int wdepth = DataType<polyfit_type>::depth;
-    int npoints = src_x.checkVector(1);
-    int nypoints = src_y.checkVector(1);
 
-    CV_Assert(npoints == nypoints && npoints >= order+1);
+enum HdrCompression
+{
+    HDR_NONE = 0,
+    HDR_RLE = 1
+};
 
-    Mat srcX = Mat_<polyfit_type>(src_x), srcY = Mat_<polyfit_type>(src_y);
+// Radiance rgbe (.hdr) reader
+class HdrDecoder : public BaseImageDecoder
+{
+public:
+    HdrDecoder();
+    ~HdrDecoder();
+    bool readHeader();
+    bool readData( Mat& img );
+    bool checkSignature( const String& signature ) const;
+    ImageDecoder newDecoder() const;
+    size_t signatureLength() const;
+protected:
+    String m_signature_alt;
+    FILE *file;
+};
 
-    Mat X = Mat::zeros(order + 1, npoints, wdepth);
-    polyfit_type* pSrcX = (polyfit_type*)srcX.data;
-    polyfit_type* pXData = (polyfit_type*)X.data;
-    int stepX = (int)(X.step/X.elemSize1());
-    for (int y = 0; y < order + 1; ++y)
-    {
-        for (int x = 0; x < npoints; ++x)
-        {
-            if (y == 0)
-                pXData[x] = 1;
-            else if (y == 1)
-                pXData[x + stepX] = pSrcX[x];
-            else pXData[x + y*stepX] = pSrcX[x]* pXData[x + (y-1)*stepX];
-        }
-    }
+// ... writer
+class HdrEncoder : public BaseImageEncoder
+{
+public:
+    HdrEncoder();
+    ~HdrEncoder();
+    bool write( const Mat& img, const std::vector<int>& params );
+    ImageEncoder newEncoder() const;
+    bool isFormatSupported( int depth ) const;
+protected:
 
-    Mat A, b, w;
-    mulTransposed(X, A, false);
-    b = X*srcY;
-    solve(A, b, w, DECOMP_SVD);
-    w.convertTo(dst, std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
+};
+
 }
+
+#endif/*_GRFMT_HDR_H_*/

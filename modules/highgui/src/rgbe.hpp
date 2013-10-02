@@ -40,44 +40,50 @@
 //
 //M*/
 
-// This original code was written by
-//  Onkar Raut
-//  Graduate Student,
-//  University of North Carolina at Charlotte
+#ifndef _RGBE_HDR_H_
+#define _RGBE_HDR_H_
 
-#include "precomp.hpp"
+// posted to http://www.graphics.cornell.edu/~bjw/
+// written by Bruce Walter  (bjw@graphics.cornell.edu)  5/26/95
+// based on code written by Greg Ward
 
-typedef double polyfit_type;
+#include <stdio.h>
 
-void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
-{
-    const int wdepth = DataType<polyfit_type>::depth;
-    int npoints = src_x.checkVector(1);
-    int nypoints = src_y.checkVector(1);
+typedef struct {
+  int valid;            /* indicate which fields are valid */
+  char programtype[16]; /* listed at beginning of file to identify it
+                         * after "#?".  defaults to "RGBE" */
+  float gamma;          /* image has already been gamma corrected with
+                         * given gamma.  defaults to 1.0 (no correction) */
+  float exposure;       /* a value of 1.0 in an image corresponds to
+       * <exposure> watts/steradian/m^2.
+       * defaults to 1.0 */
+} rgbe_header_info;
 
-    CV_Assert(npoints == nypoints && npoints >= order+1);
+/* flags indicating which fields in an rgbe_header_info are valid */
+#define RGBE_VALID_PROGRAMTYPE 0x01
+#define RGBE_VALID_GAMMA       0x02
+#define RGBE_VALID_EXPOSURE    0x04
 
-    Mat srcX = Mat_<polyfit_type>(src_x), srcY = Mat_<polyfit_type>(src_y);
+/* return codes for rgbe routines */
+#define RGBE_RETURN_SUCCESS 0
+#define RGBE_RETURN_FAILURE -1
 
-    Mat X = Mat::zeros(order + 1, npoints, wdepth);
-    polyfit_type* pSrcX = (polyfit_type*)srcX.data;
-    polyfit_type* pXData = (polyfit_type*)X.data;
-    int stepX = (int)(X.step/X.elemSize1());
-    for (int y = 0; y < order + 1; ++y)
-    {
-        for (int x = 0; x < npoints; ++x)
-        {
-            if (y == 0)
-                pXData[x] = 1;
-            else if (y == 1)
-                pXData[x + stepX] = pSrcX[x];
-            else pXData[x + y*stepX] = pSrcX[x]* pXData[x + (y-1)*stepX];
-        }
-    }
+/* read or write headers */
+/* you may set rgbe_header_info to null if you want to */
+int RGBE_WriteHeader(FILE *fp, int width, int height, rgbe_header_info *info);
+int RGBE_ReadHeader(FILE *fp, int *width, int *height, rgbe_header_info *info);
 
-    Mat A, b, w;
-    mulTransposed(X, A, false);
-    b = X*srcY;
-    solve(A, b, w, DECOMP_SVD);
-    w.convertTo(dst, std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
-}
+/* read or write pixels */
+/* can read or write pixels in chunks of any size including single pixels*/
+int RGBE_WritePixels(FILE *fp, float *data, int numpixels);
+int RGBE_ReadPixels(FILE *fp, float *data, int numpixels);
+
+/* read or write run length encoded files */
+/* must be called to read or write whole scanlines */
+int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
+       int num_scanlines);
+int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
+      int num_scanlines);
+
+#endif/*_RGBE_HDR_H_*/

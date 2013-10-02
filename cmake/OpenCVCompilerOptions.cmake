@@ -161,6 +161,10 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     endif()
   endif()
 
+  if(ENABLE_NEON)
+    add_extra_compiler_option(-mfpu=neon)
+  endif()
+
   # Profiling?
   if(ENABLE_PROFILING)
     add_extra_compiler_option("-pg -g")

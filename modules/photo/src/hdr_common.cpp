@@ -10,8 +10,7 @@
 //                           License Agreement
 //                For Open Source Computer Vision Library
 //
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
+// Copyright (C) 2013, OpenCV Foundation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -40,44 +39,67 @@
 //
 //M*/
 
-// This original code was written by
-//  Onkar Raut
-//  Graduate Student,
-//  University of North Carolina at Charlotte
-
 #include "precomp.hpp"
+#include "opencv2/photo.hpp"
+#include "hdr_common.hpp"
 
-typedef double polyfit_type;
-
-void cv::polyfit(const Mat& src_x, const Mat& src_y, Mat& dst, int order)
+namespace cv
 {
-    const int wdepth = DataType<polyfit_type>::depth;
-    int npoints = src_x.checkVector(1);
-    int nypoints = src_y.checkVector(1);
 
-    CV_Assert(npoints == nypoints && npoints >= order+1);
+void checkImageDimensions(const std::vector<Mat>& images)
+{
+    CV_Assert(!images.empty());
+    int width = images[0].cols;
+    int height = images[0].rows;
+    int type = images[0].type();
 
-    Mat srcX = Mat_<polyfit_type>(src_x), srcY = Mat_<polyfit_type>(src_y);
-
-    Mat X = Mat::zeros(order + 1, npoints, wdepth);
-    polyfit_type* pSrcX = (polyfit_type*)srcX.data;
-    polyfit_type* pXData = (polyfit_type*)X.data;
-    int stepX = (int)(X.step/X.elemSize1());
-    for (int y = 0; y < order + 1; ++y)
-    {
-        for (int x = 0; x < npoints; ++x)
-        {
-            if (y == 0)
-                pXData[x] = 1;
-            else if (y == 1)
-                pXData[x + stepX] = pSrcX[x];
-            else pXData[x + y*stepX] = pSrcX[x]* pXData[x + (y-1)*stepX];
-        }
+    for(size_t i = 0; i < images.size(); i++) {
+        CV_Assert(images[i].cols == width && images[i].rows == height);
+        CV_Assert(images[i].type() == type);
     }
-
-    Mat A, b, w;
-    mulTransposed(X, A, false);
-    b = X*srcY;
-    solve(A, b, w, DECOMP_SVD);
-    w.convertTo(dst, std::max(std::max(src_x.depth(), src_y.depth()), CV_32F));
 }
+
+Mat tringleWeights()
+{
+    Mat w(LDR_SIZE, 1, CV_32F);
+    int half = LDR_SIZE / 2;
+    for(int i = 0; i < LDR_SIZE; i++) {
+        w.at<float>(i) = i < half ? i + 1.0f : LDR_SIZE - i;
+    }
+    return w;
+}
+
+Mat RobertsonWeights()
+{
+    Mat weight(LDR_SIZE, 1, CV_32FC3);
+    float q = (LDR_SIZE - 1) / 4.0f;
+    for(int i = 0; i < LDR_SIZE; i++) {
+        float value = i / q - 2.0f;
+        value = exp(-value * value);
+        weight.at<Vec3f>(i) = Vec3f::all(value);
+    }
+    return weight;
+}
+
+void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
+{
+    std::vector<Mat> channels(3);
+    split(src, channels);
+    for(int i = 0; i < 3; i++) {
+        channels[i] = channels[i].mul(1.0f / lum);
+        pow(channels[i], saturation, channels[i]);
+        channels[i] = channels[i].mul(new_lum);
+    }
+    merge(channels, dst);
+}
+
+Mat linearResponse(int channels)
+{
+    Mat response = Mat(LDR_SIZE, 1, CV_MAKETYPE(CV_32F, channels));
+    for(int i = 0; i < LDR_SIZE; i++) {
+        response.at<Vec3f>(i) = Vec3f::all(static_cast<float>(i));
+    }
+    return response;
+}
+
+};
