@@ -91,7 +91,6 @@ PARAM_TEST_CASE(FilterTestBase,
     {
 #ifdef RANDOMROI
         //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(2, mat1.cols);
         roirows = rng.uniform(2, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -201,7 +200,6 @@ struct ErodeDilate : FilterTestBase
         type = GET_PARAM(0);
         iterations = GET_PARAM(3);
         Init(type);
-        //		rng.fill(kernel, cv::RNG::UNIFORM, cv::Scalar::all(0), cv::Scalar::all(3));
         kernel = randomMat(Size(3, 3), CV_8UC1, 0, 3);
     }
 
@@ -304,7 +302,6 @@ struct GaussianBlur : FilterTestBase
         ksize = GET_PARAM(1);
         bordertype = GET_PARAM(3);
         Init(type);
-        cv::RNG &rng = TS::ptr()->get_rng();
         sigma1 = rng.uniform(0.1, 1.0);
         sigma2 = rng.uniform(0.1, 1.0);
     }
@@ -368,7 +365,6 @@ struct Bilateral : FilterTestBase
         ksize = GET_PARAM(1);
         bordertype = GET_PARAM(3);
         Init(type);
-        cv::RNG &rng = TS::ptr()->get_rng();
         sigmacolor = rng.uniform(20, 100);
         sigmaspace = rng.uniform(10, 40);
     }

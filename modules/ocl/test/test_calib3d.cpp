@@ -46,9 +46,9 @@
 #include "test_precomp.hpp"
 #include <iomanip>
 
-#ifdef HAVE_OPENCL
-
 using namespace cv;
+
+#ifdef HAVE_OPENCL
 
 PARAM_TEST_CASE(StereoMatchBM, int, int)
 {

@@ -351,33 +351,32 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
         type3 = GET_PARAM(2);
         type4 = GET_PARAM(3);
         type5 = GET_PARAM(4);
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
         double min = 1, max = 20;
 
         if(type1 != nulltype)
         {
-            mat1 = randomMat(rng, size, type1, min, max, false);
+            mat1 = randomMat(size, type1, min, max, false);
             clmat1 = mat1;
         }
         if(type2 != nulltype)
         {
-            mat2 = randomMat(rng, size, type2, min, max, false);
+            mat2 = randomMat(size, type2, min, max, false);
             clmat2 = mat2;
         }
         if(type3 != nulltype)
         {
-            dst  = randomMat(rng, size, type3, min, max, false);
+            dst  = randomMat(size, type3, min, max, false);
             cldst = dst;
         }
         if(type4 != nulltype)
         {
-            dst1 = randomMat(rng, size, type4, min, max, false);
+            dst1 = randomMat(size, type4, min, max, false);
             cldst1 = dst1;
         }
         if(type5 != nulltype)
         {
-            mask = randomMat(rng, size, CV_8UC1, 0, 2,  false);
+            mask = randomMat(size, CV_8UC1, 0, 2,  false);
             cv::threshold(mask, mask, 0.5, 255., type5);
             clmask = mask;
         }
@@ -388,7 +387,6 @@ PARAM_TEST_CASE(ImgprocTestBase, MatType, MatType, MatType, MatType, MatType, bo
     {
 #ifdef RANDOMROI
         //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -482,7 +480,6 @@ struct CopyMakeBorder : ImgprocTestBase {};
 TEST_P(CopyMakeBorder, Mat)
 {
     int bordertype[] = {cv::BORDER_CONSTANT, cv::BORDER_REPLICATE, cv::BORDER_REFLECT, cv::BORDER_WRAP, cv::BORDER_REFLECT_101};
-    cv::RNG &rng = TS::ptr()->get_rng();
     int top = rng.uniform(0, 10);
     int bottom = rng.uniform(0, 10);
     int left = rng.uniform(0, 10);
@@ -634,22 +631,17 @@ PARAM_TEST_CASE(WarpTestBase, MatType, int)
     virtual void SetUp()
     {
         type = GET_PARAM(0);
-        //dsize = GET_PARAM(1);
         interpolation = GET_PARAM(1);
-
-        cv::RNG &rng = TS::ptr()->get_rng();
         size = cv::Size(MWIDTH, MHEIGHT);
 
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-
+        mat1 = randomMat(size, type, 5, 16, false);
+        dst  = randomMat(size, type, 5, 16, false);
     }
 
     void random_roi()
     {
 #ifdef RANDOMROI
         //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
         src_roicols = rng.uniform(1, mat1.cols);
         src_roirows = rng.uniform(1, mat1.rows);
         dst_roicols = rng.uniform(1, dst.cols);
@@ -798,23 +790,22 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
         interpolation = GET_PARAM(3);
         bordertype = GET_PARAM(4);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size srcSize = cv::Size(MWIDTH, MHEIGHT);
         cv::Size map1Size = cv::Size(MWIDTH, MHEIGHT);
         double min = 5, max = 16;
 
         if(srcType != nulltype)
         {
-            src = randomMat(rng, srcSize, srcType, min, max, false);
+            src = randomMat(srcSize, srcType, min, max, false);
         }
         if((map1Type == CV_16SC2 && map2Type == nulltype) || (map1Type == CV_32FC2 && map2Type == nulltype))
         {
-            map1 = randomMat(rng, map1Size, map1Type, min, max, false);
+            map1 = randomMat(map1Size, map1Type, min, max, false);
         }
         else if (map1Type == CV_32FC1 && map2Type == CV_32FC1)
         {
-            map1 = randomMat(rng, map1Size, map1Type, min, max, false);
-            map2 = randomMat(rng, map1Size, map1Type, min, max, false);
+            map1 = randomMat(map1Size, map1Type, min, max, false);
+            map2 = randomMat(map1Size, map1Type, min, max, false);
         }
 
         else
@@ -823,7 +814,7 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
             return;
         }
 
-        dst = randomMat(rng, map1Size, srcType, min, max, false);
+        dst = randomMat(map1Size, srcType, min, max, false);
         switch (src.channels())
         {
         case 1:
@@ -843,8 +834,6 @@ PARAM_TEST_CASE(Remap, MatType, MatType, MatType, int, int)
     }
     void random_roi()
     {
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         dst_roicols = rng.uniform(1, dst.cols);
         dst_roirows = rng.uniform(1, dst.rows);
 
@@ -954,8 +943,6 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
         fy = GET_PARAM(3);
         interpolation = GET_PARAM(4);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         cv::Size size(MWIDTH, MHEIGHT);
 
         if(dsize == cv::Size() && !(fx > 0 && fy > 0))
@@ -970,8 +957,8 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
             dsize.height = (int)(size.height * fy);
         }
 
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, dsize, type, 5, 16, false);
+        mat1 = randomMat(size, type, 5, 16, false);
+        dst  = randomMat(dsize, type, 5, 16, false);
 
     }
 
@@ -979,7 +966,6 @@ PARAM_TEST_CASE(Resize, MatType, cv::Size, double, double, int)
     {
 #ifdef RANDOMROI
         //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
         src_roicols = rng.uniform(1, mat1.cols);
         src_roirows = rng.uniform(1, mat1.rows);
         dst_roicols = (int)(src_roicols * fx);
@@ -1070,18 +1056,16 @@ PARAM_TEST_CASE(Threshold, MatType, ThreshOp)
         type = GET_PARAM(0);
         threshOp = GET_PARAM(1);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size(MWIDTH, MHEIGHT);
 
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
+        mat1 = randomMat(size, type, 5, 16, false);
+        dst  = randomMat(size, type, 5, 16, false);
     }
 
     void random_roi()
     {
 #ifdef RANDOMROI
         //randomize ROI
-        cv::RNG &rng = TS::ptr()->get_rng();
         roicols = rng.uniform(1, mat1.cols);
         roirows = rng.uniform(1, mat1.rows);
         src1x   = rng.uniform(0, mat1.cols - roicols);
@@ -1167,22 +1151,18 @@ PARAM_TEST_CASE(meanShiftTestBase, MatType, MatType, int, int, cv::TermCriteria)
         sr       = GET_PARAM(3);
         crit     = GET_PARAM(4);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         // MWIDTH=256, MHEIGHT=256. defined in utility.hpp
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
-        src = randomMat(rng, size, type, 5, 16, false);
-        dst = randomMat(rng, size, type, 5, 16, false);
-        dstCoor = randomMat(rng, size, typeCoor, 5, 16, false);
+        src = randomMat(size, type, 5, 16, false);
+        dst = randomMat(size, type, 5, 16, false);
+        dstCoor = randomMat(size, typeCoor, 5, 16, false);
 
     }
 
     void random_roi()
     {
 #ifdef RANDOMROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         //randomize ROI
         roicols = rng.uniform(1, src.cols);
         roirows = rng.uniform(1, src.rows);
@@ -1295,18 +1275,15 @@ PARAM_TEST_CASE(histTestBase, MatType, MatType)
     {
         type_src   = GET_PARAM(0);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
         cv::Size size = cv::Size(MWIDTH, MHEIGHT);
 
-        src = randomMat(rng, size, type_src, 0, 256, false);
+        src = randomMat(size, type_src, 0, 256, false);
 
     }
 
     void random_roi()
     {
 #ifdef RANDOMROI
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         //randomize ROI
         roicols = rng.uniform(1, src.cols);
         roirows = rng.uniform(1, src.rows);
@@ -1360,8 +1337,7 @@ PARAM_TEST_CASE(CLAHE, cv::Size, double)
         gridSize = GET_PARAM(0);
         clipLimit = GET_PARAM(1);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-        src = randomMat(rng, cv::Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
+        src = randomMat(cv::Size(MWIDTH, MHEIGHT), CV_8UC1, 0, 256, false);
         g_src.upload(src);
     }
 };
@@ -1413,19 +1389,15 @@ PARAM_TEST_CASE(ConvolveTestBase, MatType, bool)
     {
         type = GET_PARAM(0);
 
-        cv::RNG &rng = TS::ptr()->get_rng();
-
         cv::Size size(MWIDTH, MHEIGHT);
 
-        mat1 = randomMat(rng, size, type, 5, 16, false);
-        mat2 = randomMat(rng, size, type, 5, 16, false);
-        dst  = randomMat(rng, size, type, 5, 16, false);
-        dst1  = randomMat(rng, size, type, 5, 16, false);
+        mat1 = randomMat(size, type, 5, 16, false);
+        mat2 = randomMat(size, type, 5, 16, false);
+        dst  = randomMat(size, type, 5, 16, false);
+        dst1  = randomMat(size, type, 5, 16, false);
     }
     void random_roi()
     {
-        cv::RNG &rng = TS::ptr()->get_rng();
-
 #ifdef RANDOMROI
         //randomize ROI
         roicols = rng.uniform(1, mat1.cols);
@@ -1530,7 +1502,7 @@ PARAM_TEST_CASE(ColumnSum, cv::Size)
 
 TEST_P(ColumnSum, Accuracy)
 {
-    cv::Mat src = randomMat(size, CV_32FC1);
+    cv::Mat src = randomMat(size, CV_32FC1, 0, 255);
     cv::ocl::oclMat d_dst;
     cv::ocl::oclMat d_src(src);
 

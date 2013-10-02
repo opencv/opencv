@@ -69,8 +69,6 @@ TEST_P(Kalman, Accuracy)
     const double max_init = 1;
     const double max_noise = 0.1;
 
-    cv::RNG &rng = TS::ptr()->get_rng();
-
     Mat sample_mat(Dim, 1, CV_32F), temp_mat;
     oclMat Sample(Dim, 1, CV_32F);
     oclMat Temp(Dim, 1, CV_32F);
@@ -78,7 +76,7 @@ TEST_P(Kalman, Accuracy)
 
     Size size(Sample.cols, Sample.rows);
 
-    sample_mat =  randomMat(rng, size, Sample.type(), -max_init, max_init, false);
+    sample_mat =  randomMat(size, Sample.type(), -max_init, max_init, false);
     Sample.upload(sample_mat);
 
     //ocl start
@@ -120,7 +118,7 @@ TEST_P(Kalman, Accuracy)
         cv::gemm(kalman_filter_cpu.transitionMatrix, sample_mat, 1, cv::Mat(), 0, Temp_cpu);
 
         Size size1(Temp.cols, Temp.rows);
-        Mat temp = randomMat(rng, size1, Temp.type(), 0, 0xffff, false);
+        Mat temp = randomMat(size1, Temp.type(), 0, 0xffff, false);
 
 
         cv::multiply(2, temp, temp);
