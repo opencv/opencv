@@ -46,6 +46,12 @@
                                     Base Image Filter
 \****************************************************************************************/
 
+#if defined HAVE_IPP && IPP_VERSION_MAJOR*100 + IPP_VERSION_MINOR >= 701
+#define USE_IPP_SEP_FILTERS 1
+#else
+#undef USE_IPP_SEP_FILTERS
+#endif
+
 namespace cv
 {
 
@@ -1401,21 +1407,53 @@ struct RowVec_32f
     RowVec_32f( const Mat& _kernel )
     {
         kernel = _kernel;
+        haveSSE = checkHardwareSupport(CV_CPU_SSE);
+#ifdef USE_IPP_SEP_FILTERS
+        bufsz = -1;
+#endif
     }
 
     int operator()(const uchar* _src, uchar* _dst, int width, int cn) const
     {
-        if( !checkHardwareSupport(CV_CPU_SSE) )
-            return 0;
-
-        int i = 0, k, _ksize = kernel.rows + kernel.cols - 1;
+        int _ksize = kernel.rows + kernel.cols - 1;
+        const float* src0 = (const float*)_src;
         float* dst = (float*)_dst;
         const float* _kx = (const float*)kernel.data;
+
+#ifdef USE_IPP_SEP_FILTERS
+        IppiSize roisz = { width, 1 };
+        if( (cn == 1 || cn == 3) && width >= _ksize*8 )
+        {
+            if( bufsz < 0 )
+            {
+                if( (cn == 1 && ippiFilterRowBorderPipelineGetBufferSize_32f_C1R(roisz, _ksize, &bufsz) < 0) ||
+                    (cn == 3 && ippiFilterRowBorderPipelineGetBufferSize_32f_C3R(roisz, _ksize, &bufsz) < 0))
+                    return 0;
+            }
+            AutoBuffer<uchar> buf(bufsz + 64);
+            uchar* bufptr = alignPtr((uchar*)buf, 32);
+            int step = (int)(width*sizeof(dst[0])*cn);
+            float borderValue[] = {0.f, 0.f, 0.f};
+            // here is the trick. IPP needs border type and extrapolates the row. We did it already.
+            // So we pass anchor=0 and ignore the right tail of results since they are incorrect there.
+            if( (cn == 1 && ippiFilterRowBorderPipeline_32f_C1R(src0, step, &dst, roisz, _kx, _ksize, 0,
+                                                                ippBorderRepl, borderValue[0], bufptr) < 0) ||
+                (cn == 3 && ippiFilterRowBorderPipeline_32f_C3R(src0, step, &dst, roisz, _kx, _ksize, 0,
+                                                                ippBorderRepl, borderValue, bufptr) < 0))
+                return 0;
+            return width - _ksize + 1;
+        }
+#endif
+
+        if( !haveSSE )
+            return 0;
+
+        int i = 0, k;
         width *= cn;
 
         for( ; i <= width - 8; i += 8 )
         {
-            const float* src = (const float*)_src + i;
+            const float* src = src0 + i;
             __m128 f, s0 = _mm_setzero_ps(), s1 = s0, x0, x1;
             for( k = 0; k < _ksize; k++, src += cn )
             {
@@ -1434,6 +1472,10 @@ struct RowVec_32f
     }
 
     Mat kernel;
+    bool haveSSE;
+#ifdef USE_IPP_SEP_FILTERS
+    mutable int bufsz;
+#endif
 };
 
 

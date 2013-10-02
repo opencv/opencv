@@ -43,9 +43,15 @@
 #define __OPENCV_TEST_UTILITY_HPP__
 #include "opencv2/core.hpp"
 
+
 #define LOOP_TIMES 1
+
 #define MWIDTH 256
 #define MHEIGHT 256
+
+#define MIN_VALUE 171
+#define MAX_VALUE 357
+
 //#define RANDOMROI
 int randomInt(int minVal, int maxVal);
 double randomDouble(double minVal, double maxVal);
@@ -75,6 +81,7 @@ double checkSimilarity(const cv::Mat &m1, const cv::Mat &m2);
 //oclMat create
 cv::ocl::oclMat createMat_ocl(cv::Size size, int type, bool useRoi = false);
 cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
+
 #define EXPECT_MAT_NORM(mat, eps) \
 { \
     EXPECT_LE(checkNorm(cv::Mat(mat)), eps) \
@@ -86,14 +93,7 @@ cv::ocl::oclMat loadMat_ocl(const cv::Mat& m, bool useRoi = false);
    ASSERT_EQ(mat1.size(), mat2.size()); \
    EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps); \
 }
-/*
-#define EXPECT_MAT_NEAR(mat1, mat2, eps,s) \
-{ \
-    ASSERT_EQ(mat1.type(), mat2.type()); \
-    ASSERT_EQ(mat1.size(), mat2.size()); \
-    EXPECT_LE(checkNorm(cv::Mat(mat1), cv::Mat(mat2)), eps)<<s; \
-}
-*/
+
 #define EXPECT_MAT_SIMILAR(mat1, mat2, eps) \
 { \
     ASSERT_EQ(mat1.type(), mat2.type()); \

@@ -1,6 +1,6 @@
 
 //============================================================================
-// Name        : OpenEXRimages_HighDynamicRange_Retina_toneMapping_video.cpp
+// Name        : OpenEXRimages_HDR_Retina_toneMapping_video.cpp
 // Author      : Alexandre Benoit (benoit.alexandre.vision@gmail.com)
 // Version     : 0.2
 // Copyright   : Alexandre Benoit, LISTIC Lab, december 2011
@@ -21,14 +21,14 @@
 static void help(std::string errorMessage)
 {
     std::cout<<"Program init error : "<<errorMessage<<std::endl;
-    std::cout<<"\nProgram call procedure : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping [OpenEXR image sequence to process] [OPTIONNAL start frame] [OPTIONNAL end frame]"<<std::endl;
+    std::cout<<"\nProgram call procedure : ./OpenEXRimages_HDR_Retina_toneMapping [OpenEXR image sequence to process] [OPTIONNAL start frame] [OPTIONNAL end frame]"<<std::endl;
     std::cout<<"\t[OpenEXR image sequence to process] : std::sprintf style ready prototype filename of the input HDR images to process, must be an OpenEXR format, see http://www.openexr.com/ to get some samples or create your own using camera bracketing and Photoshop or equivalent software for OpenEXR image synthesis"<<std::endl;
     std::cout<<"\t\t => WARNING : image index number of digits cannot exceed 10"<<std::endl;
     std::cout<<"\t[start frame] : the starting frame tat should be considered"<<std::endl;
     std::cout<<"\t[end frame] : the ending frame tat should be considered"<<std::endl;
     std::cout<<"\nExamples:"<<std::endl;
-    std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping_video memorial%3d.exr 20 45"<<std::endl;
-    std::cout<<"\t-Image processing : ./OpenEXRimages_HighDynamicRange_Retina_toneMapping_video memorial%3d.exr 20 45 log"<<std::endl;
+    std::cout<<"\t-Image processing : ./OpenEXRimages_HDR_Retina_toneMapping_video memorial%3d.exr 20 45"<<std::endl;
+    std::cout<<"\t-Image processing : ./OpenEXRimages_HDR_Retina_toneMapping_video memorial%3d.exr 20 45 log"<<std::endl;
     std::cout<<"\t ==> to process images from memorial020d.exr to memorial045d.exr"<<std::endl;
 
 }

@@ -124,11 +124,6 @@ namespace cv
 
 using namespace ::cv::ocl::device;
 
-static inline int divUp(int total, int grain)
-{
-    return (total + grain - 1) / grain;
-}
-
 cv::ocl::HOGDescriptor::HOGDescriptor(Size win_size_, Size block_size_, Size block_stride_,
                                       Size cell_size_, int nbins_, double win_sigma_,
                                       double threshold_L2hys_, bool gamma_correction_, int nlevels_)
@@ -1671,7 +1666,8 @@ void cv::ocl::device::hog::compute_hists(int nbins,
     {
         openCLExecuteKernel2(clCxt, &objdetect_hog, kernelName, globalThreads,
             localThreads, args, -1, -1, "-D CPU");
-    }else
+    }
+    else
     {
         cl_kernel kernel = openCLGetKernelFromSource(clCxt, &objdetect_hog, kernelName);
         int wave_size = queryDeviceInfo<WAVEFRONT_SIZE, int>(kernel);

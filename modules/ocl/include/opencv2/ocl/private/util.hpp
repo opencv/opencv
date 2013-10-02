@@ -174,6 +174,8 @@ namespace cv
         size_t CV_EXPORTS queryDeviceInfo<WAVEFRONT_SIZE, size_t>(cl_kernel kernel);
         template<>
         bool CV_EXPORTS queryDeviceInfo<IS_CPU_DEVICE, bool>(cl_kernel kernel);
+
+        unsigned long CV_EXPORTS queryLocalMemInfo();
     }//namespace ocl
 
 }//namespace cv

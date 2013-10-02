@@ -1880,12 +1880,10 @@ public:
           IppiRect dstroi = { 0, dsty, dstwidth, dstheight - dsty };
           int bufsize;
           ippiResizeGetBufSize( srcroi, dstroi, cn, mode, &bufsize );
-          Ipp8u *buf;
-          buf = ippsMalloc_8u( bufsize );
-          IppStatus sts;
-          if( func( src.data, ippiSize(src.cols, src.rows), (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, inv_scale_x, inv_scale_y, 0, 0, mode, buf ) < 0 )
+          AutoBuffer<uchar> buf(bufsize + 64);
+          uchar* bufptr = alignPtr((uchar*)buf, 32);
+          if( func( src.data, ippiSize(src.cols, src.rows), (int)src.step[0], srcroi, dst.data, (int)dst.step[0], dstroi, inv_scale_x, inv_scale_y, 0, 0, mode, bufptr ) < 0 )
               *ok = false;
-          ippsFree(buf);
       }
 private:
     Mat &src;

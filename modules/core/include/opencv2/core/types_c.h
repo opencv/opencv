@@ -523,11 +523,11 @@ CV_INLINE  double  cvmGet( const CvMat* mat, int row, int col )
             (unsigned)col < (unsigned)mat->cols );
 
     if( type == CV_32FC1 )
-        return ((float*)(mat->data.ptr + (size_t)mat->step*row))[col];
+        return ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col];
     else
     {
         assert( type == CV_64FC1 );
-        return ((double*)(mat->data.ptr + (size_t)mat->step*row))[col];
+        return ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col];
     }
 }
 
@@ -540,11 +540,11 @@ CV_INLINE  void  cvmSet( CvMat* mat, int row, int col, double value )
             (unsigned)col < (unsigned)mat->cols );
 
     if( type == CV_32FC1 )
-        ((float*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
+        ((float*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (float)value;
     else
     {
         assert( type == CV_64FC1 );
-        ((double*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
+        ((double*)(void*)(mat->data.ptr + (size_t)mat->step*row))[col] = (double)value;
     }
 }
 
