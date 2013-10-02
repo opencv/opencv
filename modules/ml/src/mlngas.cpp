@@ -79,9 +79,9 @@ bool NeuralGas::init() {
 
         x = rng.next() % (distribution.cols - 1);
         y = rng.next() % (distribution.rows - 1);
-        
+
         Scalar tmp_vector( distribution.at<float>(y,x) );
-        		
+
         node.id = i;
         node.rank = 0;
         node.ref_vector = tmp_vector;
@@ -89,7 +89,7 @@ bool NeuralGas::init() {
 
         nodes.push_back( node );
     }
-	
+
     return ok;
 }
 
@@ -116,13 +116,12 @@ bool NeuralGas::train( Scalar _input ) {
     }
 
     // Calculate the distance of each node`s reference vector from the projected input vector.
-	
     double temp = 0.0;
     double val = 0.0;
-	
+
     for( int i=0; i<total_nodes; i++ ) {
         NeuralGas::GasNode curr = nodes.at( i );
-		
+
         curr.distance = 0.0;
 
         Scalar ref_vector = curr.ref_vector;
