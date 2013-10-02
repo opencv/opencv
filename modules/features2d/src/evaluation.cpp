@@ -65,17 +65,17 @@ template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _
         x1 = x2 = 0;
         return 0;
     }
+    _Tp s = 1/(2*a);
     if( d > 0 )
     {
         d = std::sqrt(d);
-        double s = 1/(2*a);
         x1 = (-b - d)*s;
         x2 = (-b + d)*s;
         if( x1 > x2 )
             std::swap(x1, x2);
         return 2;
     }
-    x1 = x2 = -b/(2*a);
+    x1 = x2 = -b*s;// -b/(2*a)
     return 1;
 }
 
@@ -83,10 +83,10 @@ template<typename _Tp> static int solveQuadratic(_Tp a, _Tp b, _Tp c, _Tp& x1, _
 #undef _S
 static inline Point2f applyHomography( const Mat_<double>& H, const Point2f& pt )
 {
-    double z = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
+    float z = (float) (H(2,0)*pt.x + H(2,1)*pt.y + H(2,2));
     if( z )
     {
-        double w = 1./z;
+        const float w = 1.f / z; /* float gives same precision here */
         return Point2f( (float)((H(0,0)*pt.x + H(0,1)*pt.y + H(0,2))*w), (float)((H(1,0)*pt.x + H(1,1)*pt.y + H(1,2))*w) );
     }
     return Point2f( numeric_limits<float>::max(), numeric_limits<float>::max() );
@@ -97,15 +97,16 @@ static inline void linearizeHomographyAt( const Mat_<double>& H, const Point2f& 
     A.create(2,2);
     double p1 = H(0,0)*pt.x + H(0,1)*pt.y + H(0,2),
            p2 = H(1,0)*pt.x + H(1,1)*pt.y + H(1,2),
-           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2),
-           p3_2 = p3*p3;
+           p3 = H(2,0)*pt.x + H(2,1)*pt.y + H(2,2);
+
     if( p3 )
     {
-        A(0,0) = H(0,0)/p3 - p1*H(2,0)/p3_2; // fxdx
-        A(0,1) = H(0,1)/p3 - p1*H(2,1)/p3_2; // fxdy
+        double inv_p3 = 1/p3, p3_2 = inv_p3*inv_p3;
+        A(0,0) = (H(0,0)*inv_p3) - H(2,0)*(p1*p3_2); // fxdx
+        A(0,1) = (H(0,1)*inv_p3) - H(2,1)*(p1*p3_2); // fxdy
 
-        A(1,0) = H(1,0)/p3 - p2*H(2,0)/p3_2; // fydx
-        A(1,1) = H(1,1)/p3 - p2*H(2,1)/p3_2; // fydx
+        A(1,0) = (H(1,0)*inv_p3) - H(2,0)*(p2*p3_2); // fydx
+        A(1,1) = (H(1,1)*inv_p3) - H(2,1)*(p2*p3_2); // fydx
     }
     else
         A.setTo(Scalar::all(numeric_limits<double>::max()));
@@ -143,10 +144,11 @@ EllipticKeyPoint::EllipticKeyPoint( const Point2f& _center, const Scalar& _ellip
     ellipse = _ellipse;
 
     double a = ellipse[0], b = ellipse[1], c = ellipse[2];
-    double ac_b2 = a*c - b*b;
-    double x1, x2;
-    solveQuadratic(1., -(a+c), ac_b2, x1, x2);
-    axes.width = (float)(1/sqrt(x1));
+    float  ac_b2 = (float) ((a*c) - (b*b)); // float is enough here!
+    float x1,x2;
+    solveQuadratic(1.f, -(float)(a+c), ac_b2, x1, x2);
+    ac_b2 = 1 / ac_b2;
+    axes.width  = (float)(1/sqrt(x1)); // NAN possible
     axes.height = (float)(1/sqrt(x2));
 
     boundingBox.width = (float)sqrt(ellipse[2]/ac_b2);
@@ -186,7 +188,7 @@ void EllipticKeyPoint::convert( const vector<KeyPoint>& src, vector<EllipticKeyP
         for( size_t i = 0; i < src.size(); i++ )
         {
             float rad = src[i].size/2;
-            assert( rad );
+            assert( rad ); // CV_Assert?
             float fac = 1.f/(rad*rad);
             dst[i] = EllipticKeyPoint( src[i].pt, Scalar(fac, 0, fac) );
         }
@@ -318,24 +320,23 @@ struct SIdx
 static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keypoints1, const vector<EllipticKeyPoint>& keypoints2t,
                                             bool commonPart, vector<SIdx>& overlaps, float minOverlap )
 {
+    const size_t keypoints1_size  = keypoints1.size();
+    const size_t keypoints2t_size = keypoints2t.size();
     CV_Assert( minOverlap >= 0.f );
     overlaps.clear();
     if( keypoints1.empty() || keypoints2t.empty() )
         return;
 
     overlaps.clear();
-    overlaps.reserve(cvRound(keypoints1.size() * keypoints2t.size() * 0.01));
+    overlaps.reserve(cvRound(keypoints1_size * keypoints2t_size * 0.01f));
 
-    for( size_t i1 = 0; i1 < keypoints1.size(); i1++ )
+    for( size_t i1 = 0; i1 < keypoints1_size; i1++ )
     {
         EllipticKeyPoint kp1 = keypoints1[i1];
-        float maxDist = sqrt(kp1.axes.width*kp1.axes.height),
-              fac = 30.f/maxDist;
-        if( !commonPart )
-            fac=3;
-
-        maxDist = maxDist*4;
-        fac = 1.f/(fac*fac);
+        float maxDist = (kp1.axes.width * kp1.axes.height);
+        //fac = sqrt(maxDist) * (1.0f/30);
+        float fac = ( !commonPart ) ? 1.0f / (3*3) : maxDist * (1.0f/(30*30));
+        float maxDist_sqr = maxDist * (4*4); //maxDist = sqrt(maxDist) * 4; // unused
 
         EllipticKeyPoint keypoint1a = EllipticKeyPoint( kp1.center, Scalar(fac*kp1.ellipse[0], fac*kp1.ellipse[1], fac*kp1.ellipse[2]) );
 
@@ -343,8 +344,9 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
         {
             EllipticKeyPoint kp2 = keypoints2t[i2];
             Point2f diff = kp2.center - kp1.center;
+            float norm_sqr = (diff.x*diff.x) + (diff.y*diff.y);
 
-            if( norm(diff) < maxDist )
+            if( norm_sqr < maxDist_sqr ) // norm(diff) < maxDist, avoid sqrt
             {
                 EllipticKeyPoint keypoint2a = EllipticKeyPoint( kp2.center, Scalar(fac*kp2.ellipse[0], fac*kp2.ellipse[1], fac*kp2.ellipse[2]) );
                 //find the largest eigenvalue
@@ -360,11 +362,11 @@ static void computeOneToOneMatchedOverlaps( const vector<EllipticKeyPoint>& keyp
                 int mina = (maxx-minx) < (maxy-miny) ? (maxx-minx) : (maxy-miny) ;
 
                 //compute the area
-                float dr = (float)mina/50.f;
+                float dr = (float)mina*(1/50.f);
                 int N = (int)floor((float)(maxx - minx) / dr);
                 IntersectAreaCounter ac( dr, minx, miny, maxy, diff, keypoint1a.ellipse, keypoint2a.ellipse );
                 parallel_reduce( BlockedRange(0, N+1), ac );
-                if( ac.bna > 0 )
+                if( ac.bna > 0 ) // bna>=0, bua>=0
                 {
                     float ov =  (float)ac.bna / (float)ac.bua;
                     if( ov >= minOverlap )
