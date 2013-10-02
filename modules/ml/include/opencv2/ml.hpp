@@ -2155,7 +2155,7 @@ CV_EXPORTS bool initModule_ml(void);
 \****************************************************************************************/
 
 class CV_EXPORTS NeuralGas : public CvStatModel {
- 
+
 public:
     struct CV_EXPORTS GasNode {
         int id;
