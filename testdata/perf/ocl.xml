@@ -951,36 +951,6 @@
       <x>424</x>
       <y>184</y>
       <val>7.7660880982875824e-002</val></rng2></flowy></FarnebackOpticalFlowFixture_FarnebackOpticalFlow--FarnebackOpticalFlow----7--1-5---OPTFLOW_FARNEBACK_GAUSSIAN--true->
-<normFixture_norm--norm--1000x1000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></normFixture_norm--norm--1000x1000>
-<normFixture_norm--norm--2000x2000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></normFixture_norm--norm--2000x2000>
-<normFixture_norm--norm--4000x4000>
-  <value>
-    <kind>131072</kind>
-    <type>6</type>
-    <val type_id="opencv-matrix">
-      <rows>1</rows>
-      <cols>1</cols>
-      <dt>d</dt>
-      <data>
-        0.</data></val></value></normFixture_norm--norm--4000x4000>
 <MomentsFixture_Moments--Moments---1000x1000--8UC1->
   <dst>
     <kind>65536</kind>
@@ -7946,4 +7916,66 @@
       <x>0</x>
       <y>1433</y>
       <val>1.</val></rng2></best_label></KNNFixture_KNN--KNN---4000->
+ <!-- resumed -->
+
+<normFixture_norm--norm---1000x1000--8UC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></value></normFixture_norm--norm---1000x1000--8UC1->
+<normFixture_norm--norm---1000x1000--32FC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1801015625000000e+03</data></val></value></normFixture_norm--norm---1000x1000--32FC1->
+<normFixture_norm--norm---2000x2000--8UC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></value></normFixture_norm--norm---2000x2000--8UC1->
+<normFixture_norm--norm---2000x2000--32FC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1842363281250000e+03</data></val></value></normFixture_norm--norm---2000x2000--32FC1->
+<normFixture_norm--norm---4000x4000--8UC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        255.</data></val></value></normFixture_norm--norm---4000x4000--8UC1->
+<normFixture_norm--norm---4000x4000--32FC1->
+  <value>
+    <kind>131072</kind>
+    <type>6</type>
+    <val type_id="opencv-matrix">
+      <rows>1</rows>
+      <cols>1</cols>
+      <dt>d</dt>
+      <data>
+        8.1874501953125000e+03</data></val></value></normFixture_norm--norm---4000x4000--32FC1->
 </opencv_storage>
