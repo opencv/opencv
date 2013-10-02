@@ -169,15 +169,18 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
     Mat IWinBuf(winSize, CV_MAKETYPE(derivDepth, cn), (deriv_type*)_buf);
     Mat derivIWinBuf(winSize, CV_MAKETYPE(derivDepth, cn2), (deriv_type*)_buf + winSize.area()*cn);
+    const float inv_winArea_05 = (float) (1 / (2.0 * winSize.width * winSize.height));
+    const float inv_winArea_cn32 = (float) (1 / (32.0*cn*winSize.width*winSize.height));
 
     for( int ptidx = range.start; ptidx < range.end; ptidx++ )
     {
-        Point2f prevPt = prevPts[ptidx]*(float)(1./(1 << level));
+        const float inv_lev = (float)(1./(1 << level));
+        Point2f prevPt = prevPts[ptidx] * inv_lev;
         Point2f nextPt;
         if( level == maxLevel )
         {
             if( flags & OPTFLOW_USE_INITIAL_FLOW )
-                nextPt = nextPts[ptidx]*(float)(1./(1 << level));
+                nextPt = nextPts[ptidx] * inv_lev;
             else
                 nextPt = prevPt;
         }
@@ -314,7 +317,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         float D = A11*A22 - A12*A12;
         float minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
-                        4.f*A12*A12))/(2*winSize.width*winSize.height);
+                        4.f*A12*A12)) * (inv_winArea_05); // (2*winSize.width*winSize.height);
 
         if( err && (flags & CV_LKFLOW_GET_MIN_EIGENVALS) != 0 )
             err[ptidx] = (float)minEig;
@@ -476,7 +479,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     errval += std::abs((float)diff);
                 }
             }
-            err[ptidx] = errval * 1.f/(32*winSize.width*cn*winSize.height);
+            err[ptidx] = errval * inv_winArea_cn32; //(32*winSize.width*cn*winSize.height);
         }
     }
 }
@@ -1243,6 +1246,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
     CvSize patchSize = cvSize( winSize.width * 2 + 1, winSize.height * 2 + 1 );
     int patchLen = patchSize.width * patchSize.height;
     int patchStep = patchSize.width * sizeof( patchI[0] );
+    double inv_patch_area = 1.0 / (patchSize.width*patchSize.height);
 
     CvSize srcPatchSize = cvSize( patchSize.width + 2, patchSize.height + 2 );
     int srcPatchLen = srcPatchSize.width * srcPatchSize.height;
@@ -1463,7 +1467,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                 }
             }
 
-            meanI /= patchSize.width*patchSize.height;
+            meanI *= inv_patch_area; //patchSize.width*patchSize.height;
 
             G[8] = G[4];
             G[9] = G[5];
@@ -1502,7 +1506,7 @@ cvCalcAffineFlowPyrLK( const void* arrA, const void* arrB,
                     for( x = -winSize.width; x <= winSize.width; x++, k++ )
                         meanJ += patchJ[k];
 
-                meanJ = meanJ / (patchSize.width * patchSize.height) - meanI;
+                meanJ = meanJ * inv_patch_area - meanI;
 
                 for( y = -winSize.height, k = 0; y <= winSize.height; y++ )
                 {
@@ -1761,8 +1765,8 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         for( i = 0, k = 0; i < count_y; i++ )
             for( j = 0; j < count_x; j++, k++ )
             {
-                pA[k].x = (j+0.5f)*sz1.width/count_x;
-                pA[k].y = (i+0.5f)*sz1.height/count_y;
+                pA[k].x = (j+0.5f)*sz1.width *(1.0f/count_x);
+                pA[k].y = (i+0.5f)*sz1.height*(1.0f/count_y);
             }
 
         // find the corresponding points in B
@@ -1897,9 +1901,10 @@ cvEstimateRigidTransform( const CvArr* matA, const CvArr* matB, CvMat* matM, int
         }
     }
 
+    const double inv = 1 / scale;
     icvGetRTMatrix( pA, pB, good_count, &M, full_affine );
-    m[2] /= scale;
-    m[5] /= scale;
+    m[2] *= inv;
+    m[5] *= inv;
     cvConvert( &M, matM );
 
     return 1;
