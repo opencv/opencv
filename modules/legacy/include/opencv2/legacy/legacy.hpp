@@ -543,7 +543,7 @@ typedef struct CvContourOrientation
 #define CV_CAMERA_TO_WARP 1
 #define CV_WARP_TO_CAMERA 2
 
-CVAPI(int) icvConvertWarpCoordinates(double coeffs[3][3],
+CVAPI(int) icvConvertWarpCoordinates(const double coeffs[3][3],
                                 CvPoint2D32f* cameraPoint,
                                 CvPoint2D32f* warpPoint,
                                 int direction);
@@ -715,7 +715,7 @@ CVAPI(void) icvProjectPointToDirect(  CvPoint2D64f point,double* lineCoeff,
 
 CVAPI(void) icvGetDistanceFromPointToDirect( CvPoint2D64f point,double* lineCoef,double*dist);
 
-CVAPI(IplImage*) icvCreateIsometricImage( IplImage* src, IplImage* dst,
+CVAPI(IplImage*) icvCreateIsometricImage(const IplImage* src, IplImage* dst,
                               int desired_depth, int desired_num_channels );
 
 CVAPI(void) cvDeInterlace( const CvArr* frame, CvArr* fieldEven, CvArr* fieldOdd );
