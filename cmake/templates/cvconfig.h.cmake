@@ -108,6 +108,8 @@
 
 /* OpenCL Support */
 #cmakedefine HAVE_OPENCL
+#cmakedefine HAVE_OPENCL11
+#cmakedefine HAVE_OPENCL12
 
 /* OpenEXR codec */
 #cmakedefine HAVE_OPENEXR
