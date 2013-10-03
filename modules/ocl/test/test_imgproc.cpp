@@ -579,7 +579,19 @@ TEST_P(cornerHarris, Mat)
 
 struct integral : ImgprocTestBase {};
 
-TEST_P(integral, Mat)
+TEST_P(integral, Mat1)
+{
+    for(int j = 0; j < LOOP_TIMES; j++)
+    {
+        random_roi();
+
+        cv::ocl::integral(clmat1_roi, cldst_roi);
+        cv::integral(mat1_roi, dst_roi);
+        Near(0);
+    }
+}
+
+TEST_P(integral, Mat2)
 {
     for(int j = 0; j < LOOP_TIMES; j++)
     {
