@@ -50,6 +50,15 @@
 #include <fstream>
 #include "cl_programcache.hpp"
 
+// workaround for OpenCL C++ bindings
+#if defined(HAVE_OPENCL12)
+#include "opencv2/ocl/cl_runtime/cl_runtime_opencl12_wrappers.hpp"
+#elif defined(HAVE_OPENCL11)
+#include "opencv2/ocl/cl_runtime/cl_runtime_opencl11_wrappers.hpp"
+#else
+#error Invalid OpenCL configuration
+#endif
+
 #if defined _MSC_VER && _MSC_VER >= 1200
 #  pragma warning( disable: 4100 4244 4267 4510 4512 4610)
 #endif
