@@ -402,7 +402,7 @@ PARAM_TEST_CASE(convertC3C4, MatType, bool)
         int type = CV_MAKE_TYPE(depth, 3);
 
         cv::RNG &rng = TS::ptr()->get_rng();
-        src = randomMat(rng, randomSize(MIN_VALUE, MAX_VALUE), type, 0, 40, false);
+        src = randomMat(rng, randomSize(1, MAX_VALUE), type, 0, 40, false);
     }
 
     void random_roi()
