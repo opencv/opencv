@@ -198,7 +198,7 @@ PERF_TEST_P(cornerHarrisFixture, cornerHarris,
 
 typedef TestBaseWithParam<Size> integralFixture;
 
-PERF_TEST_P(integralFixture, DISABLED_integral, OCL_TYPICAL_MAT_SIZES) // TODO does not work properly
+PERF_TEST_P(integralFixture, integral, OCL_TYPICAL_MAT_SIZES)
 {
     const Size srcSize = GetParam();
 
